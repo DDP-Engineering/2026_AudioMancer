@@ -16,6 +16,24 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+## [0.1.1] - 2026-04-04
+
+### Added
+
+- adapted `config.py` baseline and configuration/settings component documentation
+- focused configuration contract test for the config and settings scaffold
+- adapted `settings.json` baseline preserved from `04_Software/DDP_Audiomancer/settings.json`
+
+### Changed
+
+- application scaffold documentation and tests to reflect the preserved config/settings contract
+- main window setup to use the shared configuration values for title and dimensions
+- callable Doxygen docstrings to match the stricter repository documentation format
+
+### Fixed
+
+- `pyproject.toml` encoding so `uv sync --extra dev` parses and resolves correctly
+
 ## [0.1.0] - 2026-04-04
 
 ### Added

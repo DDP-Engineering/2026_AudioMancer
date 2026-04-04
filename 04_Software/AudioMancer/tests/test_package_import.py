@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env python3
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
@@ -24,9 +24,12 @@ import audiomancer
 
 def test_package_exposes_main() -> None:
     """
-    @brief Verify the package exports the application entrypoint.
-    @return None.
-    @version 0.1.0
+    @brief      Verify the package exports the application entrypoint.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-04
+    @version    0.1.0
     """
     assert callable(audiomancer.main)
     assert audiomancer.__version__ == "0.1.0"

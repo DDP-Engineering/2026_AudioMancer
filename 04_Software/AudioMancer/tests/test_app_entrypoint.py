@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env python3
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
@@ -24,28 +24,85 @@ import audiomancer.app as app_module
 
 
 class _FakeApplication:
-    """@brief Lightweight QApplication fake for startup tests."""
+    """
+    @brief      Lightweight QApplication fake for startup tests.
+    @details    Captures bootstrap interactions without starting the real Qt
+                event loop.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-04
+    @version    0.1.0
+    """
 
     def __init__(self, argv) -> None:
+        """
+        @brief      Initialize the fake application.
+        @param[in]  argv Process argument list passed by the bootstrap.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-04
+        @version    0.1.0
+        """
         self.argv = argv
         self.application_name = None
         self.exec_called = False
 
     def setApplicationName(self, application_name: str) -> None:
+        """
+        @brief      Store the requested application name.
+        @param[in]  application_name Application name set by the bootstrap.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-04
+        @version    0.1.0
+        """
         self.application_name = application_name
 
     def exec(self) -> int:
+        """
+        @brief      Simulate execution of the Qt event loop.
+        @return     Fixed process exit code for assertions.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-04
+        @version    0.1.0
+        """
         self.exec_called = True
         return 123
 
 
 class _FakeMainWindow:
-    """@brief Lightweight main-window fake for startup tests."""
+    """
+    @brief      Lightweight main-window fake for startup tests.
+    @details    Records whether the bootstrap requests the window to be shown.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-04
+    @version    0.1.0
+    """
 
     def __init__(self) -> None:
+        """
+        @brief      Initialize the fake window.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-04
+        @version    0.1.0
+        """
         self.show_called = False
 
     def show(self) -> None:
+        """
+        @brief      Record that the bootstrap requested the window to be shown.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-04
+        @version    0.1.0
+        """
         self.show_called = True
 
 
@@ -54,10 +111,13 @@ class _FakeMainWindow:
 
 def test_main_creates_application_and_shows_window(monkeypatch) -> None:
     """
-    @brief Verify the application bootstrap creates and shows the UI shell.
-    @param[in] monkeypatch Pytest monkeypatch fixture.
-    @return None.
-    @version 0.1.0
+    @brief      Verify the application bootstrap creates and shows the UI shell.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-04
+    @version    0.1.0
     """
     created = {}
 

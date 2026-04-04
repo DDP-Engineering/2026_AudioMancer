@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env python3
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
@@ -24,10 +24,13 @@ from audiomancer.ui.main_window import MainWindow
 
 def test_main_window_can_be_created(qtbot) -> None:
     """
-    @brief Verify the main window can be created in a Qt test context.
-    @param[in] qtbot Qt test helper fixture.
-    @return None.
-    @version 0.1.0
+    @brief      Verify the main window can be created in a Qt test context.
+    @param[in]  qtbot Qt test helper fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-04
+    @version    0.1.0
     """
     window = MainWindow()
     qtbot.addWidget(window)

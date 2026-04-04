@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env python3
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
@@ -35,11 +35,12 @@ APPLICATION_NAME = "AudioMancer"
 
 def main() -> int:
     """
-    @brief Start the AudioMancer desktop application.
-    @details Creates the Qt application object, opens the main window, and
-             hands control to the Qt event loop.
-    @return Process exit code returned by QApplication.exec().
-    @version 0.1.0
+    @brief      Start the AudioMancer desktop application.
+    @return     Process exit code returned by QApplication.exec().
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-04
+    @version    0.1.0
     """
     application = QApplication(sys.argv)
     application.setApplicationName(APPLICATION_NAME)
