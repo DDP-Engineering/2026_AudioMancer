@@ -1,0 +1,47 @@
+﻿# Copyright (c) 2026 DDP Engineering
+# This software is licensed under the GNU Affero General Public License v3.0
+# (AGPL-3.0) with additional Non-Commercial restriction.
+# See the LICENSE.txt and LICENSE_NC.txt files for full license details.
+# OS / Explorer noise
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Python caches and virtual environments
+__pycache__/
+*.py[cod]
+*$py.class
+.python-version
+.venv/
+venv/
+env/
+ENV/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.hypothesis/
+.tox/
+.nox/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+
+# Build artifacts
+build/
+dist/
+.eggs/
+*.egg-info/
+*.egg
+
+# Editor / IDE state
+.idea/
+.vscode/
+.history/
+
+# Codex local state
+.codex/local/
+
+# Delivery outputs
+07_Delivery/.build_*/
+07_Delivery/releases/
