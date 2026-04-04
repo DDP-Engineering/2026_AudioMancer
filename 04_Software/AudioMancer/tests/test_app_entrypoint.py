@@ -13,7 +13,7 @@
          Qt application and main window correctly.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-04
-@version 0.1.1
+@version 0.1.2
 """
 
 # IMPORTS
@@ -119,7 +119,7 @@ def test_main_creates_application_and_shows_window(monkeypatch) -> None:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-04
-    @version    0.1.1
+    @version    0.1.2
     """
     created = {}
 
@@ -150,9 +150,14 @@ def test_main_creates_application_and_shows_window(monkeypatch) -> None:
 
         return _FakeLogger()
 
+    def _load_settings():
+        created['load_settings_called'] = True
+        return {"language": "en"}
+
     monkeypatch.setattr(app_module, 'initialize_logging', _initialize_logging)
     monkeypatch.setattr(app_module, 'shutdown_logging', _shutdown_logging)
     monkeypatch.setattr(app_module, 'get_component_logger', _get_component_logger)
+    monkeypatch.setattr(app_module, 'load_settings', _load_settings)
     monkeypatch.setattr(app_module, 'QApplication', _create_application)
     monkeypatch.setattr(app_module, 'MainWindow', _create_window)
 
@@ -160,6 +165,7 @@ def test_main_creates_application_and_shows_window(monkeypatch) -> None:
 
     assert exit_code == 123
     assert created['initialize_logging_called'] is True
+    assert created['load_settings_called'] is True
     assert created['shutdown_logging_called'] is True
     assert created['logger_request'] == ('app', None)
     assert created['application'].application_name == app_module.APPLICATION_NAME
@@ -198,18 +204,24 @@ def test_main_logs_exception_and_shuts_down(monkeypatch) -> None:
 
         return _FakeLogger()
 
+    def _load_settings():
+        created['load_settings_called'] = True
+        return {"language": "en"}
+
     def _create_application(argv):
         raise RuntimeError("bootstrap failure")
 
     monkeypatch.setattr(app_module, 'initialize_logging', _initialize_logging)
     monkeypatch.setattr(app_module, 'shutdown_logging', _shutdown_logging)
     monkeypatch.setattr(app_module, 'get_component_logger', _get_component_logger)
+    monkeypatch.setattr(app_module, 'load_settings', _load_settings)
     monkeypatch.setattr(app_module, 'QApplication', _create_application)
 
     with pytest.raises(RuntimeError, match="bootstrap failure"):
         app_module.main()
 
     assert created['initialize_logging_called'] is True
+    assert created['load_settings_called'] is True
     assert created['shutdown_logging_called'] is True
     assert created['logger_request'] == ('app', None)
     assert created['exception_messages'][0][1]['event'] == 'fatal-bootstrap-error'

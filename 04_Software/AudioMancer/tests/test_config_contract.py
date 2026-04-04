@@ -13,7 +13,7 @@
          settings scaffold exist with the expected baseline contract.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-04
-@version 0.1.0
+@version 0.1.1
 """
 
 # IMPORTS
@@ -22,6 +22,7 @@ import json
 from pathlib import Path
 
 from audiomancer import config
+from audiomancer.services import settings_service
 
 # PUBLIC API
 
@@ -43,24 +44,20 @@ def test_config_exposes_expected_identity_and_window_defaults() -> None:
     assert config.DEFAULT_MAIN_WINDOW_MIN_HEIGHT == 620
 
 
-def test_settings_json_scaffold_contains_expected_keys() -> None:
+def test_settings_json_scaffold_matches_service_defaults() -> None:
     """
-    @brief      Verify the persisted settings scaffold contains the expected adapted keys and defaults.
+    @brief      Verify the persisted settings scaffold matches code-owned service defaults.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-04
-    @version    0.1.1
+    @version    0.1.2
     """
     settings_path = config.APP_SETTINGS_PATH
     payload = json.loads(Path(settings_path).read_text(encoding="utf-8"))
 
-    assert payload["language"] == config.DEFAULT_LANGUAGE
-    assert payload["ui_text_scale"] == config.DEFAULT_UI_TEXT_SCALE
-    assert payload["default_ai_chunking_strategy"] == "scene"
-    assert payload["default_analysis_provider"] == "local_analysis_placeholder"
-    assert len(payload["llm_profiles"]) == 3
-    assert payload["default_ai_cleanup_profile_id"] == "llm-profile-d02b1cea-6028-4048-9662-9d11a67c47a6"
+    assert payload == settings_service.build_default_settings()
+    assert settings_path == config.APP_SETTINGS_PATH
 
 
 # END OF FILE

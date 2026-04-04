@@ -18,15 +18,18 @@ by the initial `AudioMancer` application baseline.
 - provide the initial persisted `settings.json` shape for later settings work
 - preserve the earlier Audiomancer definitions in an adapted form for the new project
 
-It does not yet implement settings loading, validation, or UI editing.
+It now includes settings loading, validation, self-healing, and save behavior
+through a dedicated settings service, but it still does not implement settings
+UI editing.
 
 ## 3. Implementation Overview
 
 The current baseline consists of:
 
 - `src/audiomancer/config.py`
+- `src/audiomancer/services/settings_service.py`
 - `settings.json`
-- one focused contract test for the configuration and settings scaffold
+- focused contract and service tests for the configuration and settings scaffold
 
 The configuration module currently centralizes:
 
@@ -47,9 +50,9 @@ Current logging defaults define:
 - stable component identifiers for initial modules
 
 The persisted settings scaffold is adapted from the earlier `DDP_Audiomancer`
-application settings payload. It preserves the useful provider and LLM profile
-shape while removing old project-path bindings that should not carry into the
-new repository.
+application settings payload. It preserves the useful settings shape while
+removing old project-path bindings and currently starts with no default LLM
+profiles in the new repository.
 
 ## 4. Dependencies
 
@@ -70,12 +73,14 @@ Outputs:
 
 - constants consumed by future modules
 - persisted default settings payload in `settings.json`
+- validated in-memory settings payloads returned by the settings service
 
 ## 6. Data Contracts
 
 Current stable contracts are:
 
 - `audiomancer.config`
+- `audiomancer.services.settings_service`
 - `04_Software/AudioMancer/settings.json`
 
 The settings scaffold currently includes fields for:
@@ -83,7 +88,7 @@ The settings scaffold currently includes fields for:
 - language and recent projects
 - default project and runtime-model paths
 - provider profile placeholders
-- preserved LLM profile definitions and selected defaults
+- LLM profile storage with no default selected profile-id fields
 - AI cleanup and chunking profile defaults
 - notification and UI text-scale preferences
 
@@ -117,11 +122,20 @@ default_level = config.DEFAULT_LOG_LEVEL
 components = config.AVAILABLE_LOG_COMPONENTS
 ```
 
+Settings service example:
+
+```python
+from audiomancer.services.settings_service import load_settings
+
+settings_payload = load_settings()
+```
+
 ## 9. Validation And Tests
 
 Current automated checks:
 
 - `tests/test_config_contract.py`
+- `tests/test_settings_service.py`
 
 Minimum validation after changes:
 
@@ -130,7 +144,6 @@ Minimum validation after changes:
 
 ## 10. Limitations And Future Work
 
-- settings are still a static scaffold file
-- no settings model exists yet in the new project
-- no settings persistence service exists yet in the new project
-- preserved provider and LLM profile definitions will likely be normalized later into explicit models
+- settings are still JSON-object based and not modeled with typed classes yet
+- unknown extra settings keys are preserved but not explicitly validated
+- provider and LLM profile settings will likely be normalized later into explicit models

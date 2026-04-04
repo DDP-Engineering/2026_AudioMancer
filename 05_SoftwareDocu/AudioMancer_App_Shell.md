@@ -18,14 +18,16 @@ It provides the first executable boundary for the future application.
 - create and show the main window
 - provide a minimal visible UI shell for validation
 
-It does not yet own workflow orchestration, persistence, or domain processing.
-It now initializes and shuts down the shared application logging service.
+It does not yet own workflow orchestration or domain processing.
+It now initializes the shared settings and logging services at startup and
+shuts down logging on exit.
 
 ## 3. Implementation Overview
 
 The initial shell consists of:
 
 - `audiomancer.app.main()` as the thin startup entrypoint
+- `audiomancer.services.settings_service` as the settings bootstrap
 - `audiomancer.services.logging_service` as the per-run logging bootstrap
 - `audiomancer.ui.main_window.MainWindow` as the first UI root
 - a placeholder central label proving the desktop shell launches correctly
@@ -33,6 +35,7 @@ The initial shell consists of:
 ## 4. Dependencies
 
 - Internal dependencies:
+  `audiomancer.services.settings_service`
   `audiomancer.services.logging_service`
   `audiomancer.ui.main_window`
 - External dependencies:
@@ -48,6 +51,7 @@ Outputs:
 
 - a running Qt application instance
 - a visible main window for operator validation
+- a validated app settings payload loaded from `settings.json`
 - one new per-run application log file under `Logs/`
 - process exit code from the Qt event loop
 

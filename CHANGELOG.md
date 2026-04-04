@@ -16,6 +16,21 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+## [0.1.4] - 2026-04-04
+
+### Added
+
+- shared `settings_service` for `settings.json` creation, loading, validation, self-healing, saving, and startup integration
+- focused tests for settings lifecycle behavior and a dedicated `05_SoftwareDocu/AudioMancer_Settings_Service.md` component document
+
+### Changed
+
+- settings defaults now start with no seeded LLM profiles and no selected LLM profile-id fields
+- settings validation now emits more detailed repair/load/save lifecycle logs and uses decorator-based trace logging on the public settings-service API
+- package version updated to `0.1.4`
+
+### Fixed
+
 ## [0.1.3] - 2026-04-04
 
 ### Added

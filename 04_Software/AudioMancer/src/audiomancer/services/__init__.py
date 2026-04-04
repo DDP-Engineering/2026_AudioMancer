@@ -12,12 +12,19 @@
 @details Exposes reusable application services that support the desktop shell.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-04
-@version 0.1.0
+@version 0.1.1
 """
 
 # IMPORTS
 
 from .logging_service import get_component_logger, initialize_logging, shutdown_logging, trace_function
+from .settings_service import (
+    build_default_settings,
+    ensure_settings_file,
+    load_settings,
+    save_settings,
+    validate_settings,
+)
 
 # PUBLIC API
 
@@ -26,6 +33,11 @@ __all__ = [
     "initialize_logging",
     "shutdown_logging",
     "trace_function",
+    "build_default_settings",
+    "ensure_settings_file",
+    "load_settings",
+    "save_settings",
+    "validate_settings",
 ]
 
 # END OF FILE

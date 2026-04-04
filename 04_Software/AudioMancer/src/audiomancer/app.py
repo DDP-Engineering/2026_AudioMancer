@@ -13,7 +13,7 @@
          starts the event loop for the initial UI scaffold.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-04
-@version 0.1.1
+@version 0.1.2
 @example
     uv run audiomancer
 """
@@ -26,6 +26,7 @@ from PySide6.QtWidgets import QApplication
 
 from . import config
 from .services.logging_service import get_component_logger, initialize_logging, shutdown_logging
+from .services.settings_service import load_settings
 from .ui.main_window import MainWindow
 
 # CONSTANTS
@@ -42,7 +43,7 @@ def main() -> int:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-04
-    @version    0.1.1
+    @version    0.1.2
     """
     log_file_path = initialize_logging()
     logger = get_component_logger("app")
@@ -52,6 +53,7 @@ def main() -> int:
     )
 
     try:
+        load_settings()
         application = QApplication(sys.argv)
         application.setApplicationName(APPLICATION_NAME)
 
