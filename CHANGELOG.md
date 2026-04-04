@@ -16,6 +16,20 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+## [0.1.3] - 2026-04-04
+
+### Added
+
+- dedicated `05_SoftwareDocu/AudioMancer_Logging_Service.md` component documentation for the runtime logging service
+- repo-local Codex skill under `.codex/skills/write-component-documentation/` for creating and updating `05_SoftwareDocu/` component documents using the repository template and established style
+
+### Changed
+
+- `05_SoftwareDocu/README.md` now lists the logging service document
+- package version updated to `0.1.3`
+
+### Fixed
+
 ## [0.1.2] - 2026-04-04
 
 ### Added

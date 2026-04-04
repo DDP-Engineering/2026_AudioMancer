@@ -1,0 +1,4 @@
+interface:
+  display_name: "Write Component Documentation"
+  short_description: "Write 05_SoftwareDocu component docs"
+  default_prompt: "Use $write-component-documentation to create or update a component document under 05_SoftwareDocu using the repository template and current implementation."
