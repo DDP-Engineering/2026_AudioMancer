@@ -13,7 +13,7 @@
          application can be launched and validated end to end.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-04
-@version 0.1.0
+@version 0.1.1
 """
 
 # IMPORTS
@@ -22,6 +22,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QLabel, QMainWindow
 
 from audiomancer import config
+from audiomancer.services.logging_service import get_component_logger
 
 # CONSTANTS
 
@@ -31,6 +32,7 @@ WINDOW_HEIGHT = config.DEFAULT_MAIN_WINDOW_HEIGHT
 WINDOW_MIN_WIDTH = config.DEFAULT_MAIN_WINDOW_MIN_WIDTH
 WINDOW_MIN_HEIGHT = config.DEFAULT_MAIN_WINDOW_MIN_HEIGHT
 PLACEHOLDER_TEXT = "AudioMancer initial scaffold is running."
+LOGGER = get_component_logger("main_window")
 
 # PUBLIC API
 
@@ -43,7 +45,7 @@ class MainWindow(QMainWindow):
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-04
-    @version    0.1.1
+    @version    0.1.2
     """
 
     def __init__(self) -> None:
@@ -60,6 +62,10 @@ class MainWindow(QMainWindow):
         self.resize(WINDOW_WIDTH, WINDOW_HEIGHT)
         self.setMinimumSize(WINDOW_MIN_WIDTH, WINDOW_MIN_HEIGHT)
         self.setCentralWidget(self._build_placeholder_label())
+        LOGGER.info(
+            "Main window initialized",
+            extra={"func_name": "__init__", "event": "ui-ready"},
+        )
 
     # LOCAL HELPERS
 

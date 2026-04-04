@@ -13,10 +13,12 @@
          Qt application and main window correctly.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-04
-@version 0.1.0
+@version 0.1.1
 """
 
 # IMPORTS
+
+import pytest
 
 import audiomancer.app as app_module
 
@@ -117,7 +119,7 @@ def test_main_creates_application_and_shows_window(monkeypatch) -> None:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-04
-    @version    0.1.0
+    @version    0.1.1
     """
     created = {}
 
@@ -129,15 +131,88 @@ def test_main_creates_application_and_shows_window(monkeypatch) -> None:
         created['window'] = _FakeMainWindow()
         return created['window']
 
+    def _initialize_logging():
+        created['initialize_logging_called'] = True
+        return "fake-log-path"
+
+    def _shutdown_logging():
+        created['shutdown_logging_called'] = True
+
+    def _get_component_logger(component_name, level_name=None):
+        created['logger_request'] = (component_name, level_name)
+
+        class _FakeLogger:
+            def info(self, message, extra=None):
+                created.setdefault('info_messages', []).append((message, extra))
+
+            def exception(self, message, extra=None):
+                created.setdefault('exception_messages', []).append((message, extra))
+
+        return _FakeLogger()
+
+    monkeypatch.setattr(app_module, 'initialize_logging', _initialize_logging)
+    monkeypatch.setattr(app_module, 'shutdown_logging', _shutdown_logging)
+    monkeypatch.setattr(app_module, 'get_component_logger', _get_component_logger)
     monkeypatch.setattr(app_module, 'QApplication', _create_application)
     monkeypatch.setattr(app_module, 'MainWindow', _create_window)
 
     exit_code = app_module.main()
 
     assert exit_code == 123
+    assert created['initialize_logging_called'] is True
+    assert created['shutdown_logging_called'] is True
+    assert created['logger_request'] == ('app', None)
     assert created['application'].application_name == app_module.APPLICATION_NAME
     assert created['application'].exec_called is True
     assert created['window'].show_called is True
+
+
+def test_main_logs_exception_and_shuts_down(monkeypatch) -> None:
+    """
+    @brief      Verify bootstrap exceptions are logged and still trigger shutdown.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-04
+    @version    0.1.0
+    """
+    created = {}
+
+    def _initialize_logging():
+        created['initialize_logging_called'] = True
+        return "fake-log-path"
+
+    def _shutdown_logging():
+        created['shutdown_logging_called'] = True
+
+    def _get_component_logger(component_name, level_name=None):
+        created['logger_request'] = (component_name, level_name)
+
+        class _FakeLogger:
+            def info(self, message, extra=None):
+                created.setdefault('info_messages', []).append((message, extra))
+
+            def exception(self, message, extra=None):
+                created.setdefault('exception_messages', []).append((message, extra))
+
+        return _FakeLogger()
+
+    def _create_application(argv):
+        raise RuntimeError("bootstrap failure")
+
+    monkeypatch.setattr(app_module, 'initialize_logging', _initialize_logging)
+    monkeypatch.setattr(app_module, 'shutdown_logging', _shutdown_logging)
+    monkeypatch.setattr(app_module, 'get_component_logger', _get_component_logger)
+    monkeypatch.setattr(app_module, 'QApplication', _create_application)
+
+    with pytest.raises(RuntimeError, match="bootstrap failure"):
+        app_module.main()
+
+    assert created['initialize_logging_called'] is True
+    assert created['shutdown_logging_called'] is True
+    assert created['logger_request'] == ('app', None)
+    assert created['exception_messages'][0][1]['event'] == 'fatal-bootstrap-error'
 
 
 # END OF FILE

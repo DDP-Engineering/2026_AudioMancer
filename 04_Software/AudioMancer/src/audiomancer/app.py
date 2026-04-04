@@ -13,7 +13,7 @@
          starts the event loop for the initial UI scaffold.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-04
-@version 0.1.0
+@version 0.1.1
 @example
     uv run audiomancer
 """
@@ -24,11 +24,13 @@ import sys
 
 from PySide6.QtWidgets import QApplication
 
+from . import config
+from .services.logging_service import get_component_logger, initialize_logging, shutdown_logging
 from .ui.main_window import MainWindow
 
 # CONSTANTS
 
-APPLICATION_NAME = "AudioMancer"
+APPLICATION_NAME = config.APP_NAME
 
 # PUBLIC API
 
@@ -40,15 +42,40 @@ def main() -> int:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-04
-    @version    0.1.0
+    @version    0.1.1
     """
-    application = QApplication(sys.argv)
-    application.setApplicationName(APPLICATION_NAME)
+    log_file_path = initialize_logging()
+    logger = get_component_logger("app")
+    logger.info(
+        "AudioMancer bootstrap started",
+        extra={"func_name": "main", "event": "startup"},
+    )
 
-    window = MainWindow()
-    window.show()
+    try:
+        application = QApplication(sys.argv)
+        application.setApplicationName(APPLICATION_NAME)
 
-    return application.exec()
+        window = MainWindow()
+        window.show()
+
+        exit_code = application.exec()
+        logger.info(
+            "AudioMancer bootstrap finished",
+            extra={
+                "func_name": "main",
+                "event": "shutdown",
+                "result": f"exit_code={exit_code}",
+            },
+        )
+        return exit_code
+    except Exception:
+        logger.exception(
+            f"AudioMancer bootstrap failed. Log file: {log_file_path}",
+            extra={"func_name": "main", "event": "fatal-bootstrap-error"},
+        )
+        raise
+    finally:
+        shutdown_logging()
 
 
 # END OF FILE

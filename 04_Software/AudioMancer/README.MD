@@ -15,6 +15,7 @@ This folder contains the initial Python application scaffold for `AudioMancer`.
 - `settings.json` provides the current persisted app-settings scaffold.
 - `src/audiomancer/` contains the Python package.
 - `src/audiomancer/config.py` defines the current developer-owned defaults and file names.
+- `src/audiomancer/services/logging_service.py` provides per-run app logging and optional trace helpers.
 - `tests/` contains focused automated tests for the scaffold.
 
 ## Environment Setup
@@ -40,6 +41,14 @@ You can also run:
 ```powershell
 uv run python -m audiomancer
 ```
+
+## Runtime Logging
+
+- Each app launch creates a new log file under `Logs/` in the app root.
+- Log files use the pattern `AudioMancer_YYYYMMDD_HHMMSS.log`.
+- Runtime logging writes to both the log file and stdout.
+- Supported log output formats are `text` and `json`.
+- Logging defaults and per-component overrides are currently defined in `src/audiomancer/config.py`.
 
 ## Run Tests
 

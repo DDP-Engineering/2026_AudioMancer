@@ -37,6 +37,15 @@ The configuration module currently centralizes:
 - export defaults
 - logging defaults
 
+Current logging defaults define:
+
+- app log directory naming
+- default log output mode
+- default global log level
+- per-component log-level overrides
+- retention period for old run logs
+- stable component identifiers for initial modules
+
 The persisted settings scaffold is adapted from the earlier `DDP_Audiomancer`
 application settings payload. It preserves the useful provider and LLM profile
 shape while removing old project-path bindings that should not carry into the
@@ -97,6 +106,15 @@ from audiomancer import config
 
 app_name = config.APP_NAME
 settings_path = config.APP_SETTINGS_PATH
+```
+
+Logging example:
+
+```python
+from audiomancer import config
+
+default_level = config.DEFAULT_LOG_LEVEL
+components = config.AVAILABLE_LOG_COMPONENTS
 ```
 
 ## 9. Validation And Tests

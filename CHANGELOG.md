@@ -16,6 +16,24 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+## [0.1.2] - 2026-04-04
+
+### Added
+
+- shared runtime logging service for the AudioMancer desktop app with per-run log files, component loggers, and optional decorator tracing
+- focused tests for logging initialization, cleanup, structured output, and trace logging
+
+### Changed
+
+- app bootstrap now initializes logging at startup and shuts it down on exit or bootstrap failure
+- main window initialization now emits a component log message
+- software and application documentation now describe the logging service behavior and configuration ownership
+- package version updated to `0.1.2`
+
+### Fixed
+
+- repository ignore rules now exclude generated runtime logs under `04_Software/AudioMancer/Logs/`
+
 ## [0.1.1] - 2026-04-04
 
 ### Added

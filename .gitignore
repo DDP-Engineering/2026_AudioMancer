@@ -45,3 +45,6 @@ dist/
 # Delivery outputs
 07_Delivery/.build_*/
 07_Delivery/releases/
+
+# Runtime logs
+04_Software/AudioMancer/Logs/

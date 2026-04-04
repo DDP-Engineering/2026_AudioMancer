@@ -12,3 +12,4 @@ Implementation-focused software documentation and component notes.
 
 - `AudioMancer_App_Shell.md` documents the initial desktop application shell.
 - `AudioMancer_Config_And_Settings.md` documents the adapted configuration and settings scaffold.
+- The app shell document also covers the shared runtime logging bootstrap.
