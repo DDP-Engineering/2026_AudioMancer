@@ -14,7 +14,7 @@
          settings service.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-05
-@version 0.5.1
+@version 0.5.2
 """
 
 # IMPORTS
@@ -403,6 +403,15 @@ class AiSettingsPage(QWidget):
     # LOCAL HELPERS
 
     def _create_default_profile(self, label: str) -> dict[str, object]:
+        """
+        @brief      Build a new default AI profile payload for the editor.
+        @param[in]  label Initial operator-facing profile label.
+        @return     Default profile payload ready for insertion.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-05
+        @version    0.1.0
+        """
         profile = copy.deepcopy(_DEFAULT_PROFILE_TEMPLATE)
         profile["id"] = self._generate_profile_id()
         profile["label"] = label
@@ -412,6 +421,14 @@ class AiSettingsPage(QWidget):
         return profile
 
     def _generate_profile_id(self) -> str:
+        """
+        @brief      Generate one stable-looking unique profile identifier.
+        @return     Generated profile identifier string.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-05
+        @version    0.1.0
+        """
         return f"llm_profile_{uuid4().hex[:12]}"
 
     def _load_model_options_for_profile(self, profile: dict[str, object]) -> None:
@@ -446,6 +463,14 @@ class AiSettingsPage(QWidget):
         self._suspend_override_tracking = False
 
     def _reload_profile_list(self) -> None:
+        """
+        @brief      Rebuild the profile-list widget from the in-memory payload.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-05
+        @version    0.1.0
+        """
         current_profile_id = self._current_profile_id()
         self._profile_list.blockSignals(True)
         self._profile_list.clear()
@@ -461,6 +486,14 @@ class AiSettingsPage(QWidget):
             self._profile_list.setCurrentRow(current_row)
 
     def _reload_default_profile_combos(self) -> None:
+        """
+        @brief      Rebuild the default-profile selectors from enabled profiles.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-05
+        @version    0.1.0
+        """
         current_cleanup = self._optional_combo_value(self._default_cleanup_combo)
         current_chunking = self._optional_combo_value(self._default_chunking_combo)
         current_character = self._optional_combo_value(self._default_character_combo)
@@ -483,6 +516,15 @@ class AiSettingsPage(QWidget):
         self._set_optional_combo(self._default_character_combo, current_character)
 
     def _load_selected_profile_into_editor(self, row: int) -> None:
+        """
+        @brief      Load the selected list-row profile into the editor widgets.
+        @param[in]  row Selected profile-list row index.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-05
+        @version    0.1.0
+        """
         if self._loading_profile:
             return
         if row < 0 or row >= len(self._profiles):
@@ -490,6 +532,15 @@ class AiSettingsPage(QWidget):
         self._load_profile_into_editor(self._profiles[row])
 
     def _load_profile_into_editor(self, profile: dict[str, object]) -> None:
+        """
+        @brief      Populate the editor widgets from one profile payload.
+        @param[in]  profile Source profile payload.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-05
+        @version    0.1.0
+        """
         self._loading_profile = True
         self._load_model_options_for_profile(profile)
         self._label_edit.setText(str(profile["label"]))
@@ -508,6 +559,14 @@ class AiSettingsPage(QWidget):
         self._loading_profile = False
 
     def _sync_editor_to_current_profile(self) -> None:
+        """
+        @brief      Copy the current editor state back into the selected profile.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-05
+        @version    0.1.0
+        """
         current_profile = self._current_profile()
         if current_profile is None or self._loading_profile:
             return
@@ -560,12 +619,28 @@ class AiSettingsPage(QWidget):
             current_profile["user_overrode_context_window"] = True
 
     def _current_profile(self) -> dict[str, object] | None:
+        """
+        @brief      Return the currently selected profile payload when available.
+        @return     Selected profile payload or `None`.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-05
+        @version    0.1.0
+        """
         row = self._profile_list.currentRow()
         if row < 0 or row >= len(self._profiles):
             return None
         return self._profiles[row]
 
     def _current_profile_id(self) -> str | None:
+        """
+        @brief      Return the identifier of the selected profile-list item.
+        @return     Selected profile identifier or `None`.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-05
+        @version    0.1.0
+        """
         current_item = self._profile_list.currentItem()
         if current_item is None:
             return None
@@ -573,14 +648,41 @@ class AiSettingsPage(QWidget):
         return None if value in (None, "") else str(value)
 
     def _set_optional_combo(self, combo: QComboBox, value: object) -> None:
+        """
+        @brief      Select one optional combo-box value with fallback to `(none)`.
+        @param[in]  combo Target combo box.
+        @param[in]  value Desired stored value.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-05
+        @version    0.1.0
+        """
         index = combo.findData(value)
         combo.setCurrentIndex(0 if index < 0 else index)
 
     def _optional_combo_value(self, combo: QComboBox) -> str | None:
+        """
+        @brief      Read one optional combo-box value normalized for persistence.
+        @param[in]  combo Source combo box.
+        @return     Selected string value or `None`.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-05
+        @version    0.1.0
+        """
         value = combo.currentData()
         return None if value in (None, "") else str(value)
 
     def _add_profile(self) -> None:
+        """
+        @brief      Append one new editable profile to the in-memory list.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-05
+        @version    0.1.0
+        """
         self._sync_editor_to_current_profile()
         self._profiles.append(
             self._create_default_profile(f"AI Profile {len(self._profiles) + 1}")
@@ -590,6 +692,14 @@ class AiSettingsPage(QWidget):
         self._profile_list.setCurrentRow(len(self._profiles) - 1)
 
     def _remove_selected_profile(self) -> None:
+        """
+        @brief      Remove the selected profile and repair dependent selectors.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-05
+        @version    0.1.0
+        """
         row = self._profile_list.currentRow()
         if row < 0 or len(self._profiles) <= 1:
             return

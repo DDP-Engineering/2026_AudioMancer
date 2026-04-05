@@ -13,7 +13,7 @@
          presentational page without any connected functionality.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-05
-@version 0.1.0
+@version 0.1.1
 """
 
 # IMPORTS
@@ -175,6 +175,15 @@ class AiTranslationPage(QWidget):
         self._translated_group = translated_group
 
     def apply_language(self, language: str) -> None:
+        """
+        @brief      Apply one translated UI language to the page widgets.
+        @param[in]  language Runtime UI language code.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-05
+        @version    0.1.0
+        """
         self._title_label.setText(
             f"<h2>{ui_state_service.translate('ai_translation.title', language)}</h2>"
         )

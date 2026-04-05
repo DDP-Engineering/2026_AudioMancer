@@ -13,7 +13,7 @@
          AI Settings connectivity flow.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-05
-@version 0.1.1
+@version 0.1.2
 """
 
 # IMPORTS
@@ -25,7 +25,27 @@ from audiomancer.services import ai_backend_service
 
 
 def test_probe_profile_normalizes_openai_compatible_models(monkeypatch) -> None:
+    """
+    @brief      Verify OpenAI-compatible model lists are normalized correctly.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-05
+    @version    0.1.0
+    """
     def _fake_read_json(url, headers, timeout_seconds):
+        """
+        @brief      Return a fake OpenAI-compatible model-list payload.
+        @param[in]  url Requested endpoint URL.
+        @param[in]  headers Ignored request headers.
+        @param[in]  timeout_seconds Requested timeout.
+        @return     Fake JSON payload.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-05
+        @version    0.1.0
+        """
         assert url == "http://127.0.0.1:1234/v1/models"
         assert timeout_seconds == config.DEFAULT_AI_CONNECT_TIMEOUT_SECONDS
         return {"data": [{"id": "qwen3-8b"}, {"id": "llama-3.1-8b"}]}
@@ -50,7 +70,27 @@ def test_probe_profile_normalizes_openai_compatible_models(monkeypatch) -> None:
 
 
 def test_probe_profile_normalizes_ollama_models(monkeypatch) -> None:
+    """
+    @brief      Verify Ollama model lists are normalized correctly.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-05
+    @version    0.1.0
+    """
     def _fake_read_json(url, headers, timeout_seconds):
+        """
+        @brief      Return a fake Ollama tags payload.
+        @param[in]  url Requested endpoint URL.
+        @param[in]  headers Ignored request headers.
+        @param[in]  timeout_seconds Requested timeout.
+        @return     Fake JSON payload.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-05
+        @version    0.1.0
+        """
         assert url == "http://localhost:11434/api/tags"
         return {"models": [{"name": "qwen3:8b"}, {"name": "llama3.1:8b"}]}
 
@@ -70,7 +110,26 @@ def test_probe_profile_normalizes_ollama_models(monkeypatch) -> None:
 
 
 def test_probe_profile_maps_backend_failures(monkeypatch) -> None:
+    """
+    @brief      Verify provider probe failures are surfaced as failed results.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-05
+    @version    0.1.0
+    """
     def _fake_probe(*args, **kwargs):
+        """
+        @brief      Raise one fake backend connectivity failure.
+        @param[in]  args Ignored positional arguments.
+        @param[in]  kwargs Ignored keyword arguments.
+        @return     None.
+        @exception  urllib.error.URLError Always raised for the fake probe.
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-05
+        @version    0.1.0
+        """
         raise error.URLError("connection refused")
 
     monkeypatch.setattr(

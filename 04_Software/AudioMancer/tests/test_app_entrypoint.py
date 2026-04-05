@@ -13,7 +13,7 @@
          Qt application and main window correctly.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-04
-@version 0.1.2
+@version 0.1.3
 """
 
 # IMPORTS
@@ -124,34 +124,113 @@ def test_main_creates_application_and_shows_window(monkeypatch) -> None:
     created = {}
 
     def _create_application(argv):
+        """
+        @brief      Create one fake Qt application instance.
+        @param[in]  argv Process argument vector.
+        @return     Fake application instance.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-05
+        @version    0.1.0
+        """
         created['application'] = _FakeApplication(argv)
         return created['application']
 
     def _create_window(*args, **kwargs):
+        """
+        @brief      Create one fake main window and capture the input payload.
+        @param[in]  args Ignored positional arguments.
+        @param[in]  kwargs Window-construction keyword arguments.
+        @return     Fake main window instance.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-05
+        @version    0.1.0
+        """
         created['window_settings_payload'] = kwargs.get('settings_payload')
         created['window'] = _FakeMainWindow()
         return created['window']
 
     def _initialize_logging():
+        """
+        @brief      Record one fake logging bootstrap call.
+        @return     Fake log-path marker.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-05
+        @version    0.1.0
+        """
         created['initialize_logging_called'] = True
         return "fake-log-path"
 
     def _shutdown_logging():
+        """
+        @brief      Record one fake logging shutdown call.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-05
+        @version    0.1.0
+        """
         created['shutdown_logging_called'] = True
 
     def _get_component_logger(component_name, level_name=None):
+        """
+        @brief      Return one fake component logger for the bootstrap test.
+        @param[in]  component_name Requested component name.
+        @param[in]  level_name Optional requested level override.
+        @return     Fake logger instance.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-05
+        @version    0.1.0
+        """
         created['logger_request'] = (component_name, level_name)
 
         class _FakeLogger:
+            """
+            @brief      Minimal logger fake used by the bootstrap tests.
+            @author     Eng. Dan Dumitru Pasare
+            @date       2026-04-05
+            @version    0.1.0
+            """
             def info(self, message, extra=None):
+                """
+                @brief      Record one info log event.
+                @param[in]  message Logged message text.
+                @param[in]  extra Optional structured extras.
+                @return     None.
+                @exception  None
+                @author     Eng. Dan Dumitru Pasare
+                @date       2026-04-05
+                @version    0.1.0
+                """
                 created.setdefault('info_messages', []).append((message, extra))
 
             def exception(self, message, extra=None):
+                """
+                @brief      Record one exception log event.
+                @param[in]  message Logged message text.
+                @param[in]  extra Optional structured extras.
+                @return     None.
+                @exception  None
+                @author     Eng. Dan Dumitru Pasare
+                @date       2026-04-05
+                @version    0.1.0
+                """
                 created.setdefault('exception_messages', []).append((message, extra))
 
         return _FakeLogger()
 
     def _load_settings():
+        """
+        @brief      Return one fake loaded settings payload.
+        @return     Loaded settings payload.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-05
+        @version    0.1.0
+        """
         created['load_settings_called'] = True
         created['loaded_settings_payload'] = {"language": "en"}
         return created['loaded_settings_payload']
@@ -189,30 +268,99 @@ def test_main_logs_exception_and_shuts_down(monkeypatch) -> None:
     created = {}
 
     def _initialize_logging():
+        """
+        @brief      Record one fake logging bootstrap call.
+        @return     Fake log-path marker.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-05
+        @version    0.1.0
+        """
         created['initialize_logging_called'] = True
         return "fake-log-path"
 
     def _shutdown_logging():
+        """
+        @brief      Record one fake logging shutdown call.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-05
+        @version    0.1.0
+        """
         created['shutdown_logging_called'] = True
 
     def _get_component_logger(component_name, level_name=None):
+        """
+        @brief      Return one fake component logger for the failure path.
+        @param[in]  component_name Requested component name.
+        @param[in]  level_name Optional requested level override.
+        @return     Fake logger instance.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-05
+        @version    0.1.0
+        """
         created['logger_request'] = (component_name, level_name)
 
         class _FakeLogger:
+            """
+            @brief      Minimal logger fake used by the failure-path test.
+            @author     Eng. Dan Dumitru Pasare
+            @date       2026-04-05
+            @version    0.1.0
+            """
             def info(self, message, extra=None):
+                """
+                @brief      Record one info log event.
+                @param[in]  message Logged message text.
+                @param[in]  extra Optional structured extras.
+                @return     None.
+                @exception  None
+                @author     Eng. Dan Dumitru Pasare
+                @date       2026-04-05
+                @version    0.1.0
+                """
                 created.setdefault('info_messages', []).append((message, extra))
 
             def exception(self, message, extra=None):
+                """
+                @brief      Record one exception log event.
+                @param[in]  message Logged message text.
+                @param[in]  extra Optional structured extras.
+                @return     None.
+                @exception  None
+                @author     Eng. Dan Dumitru Pasare
+                @date       2026-04-05
+                @version    0.1.0
+                """
                 created.setdefault('exception_messages', []).append((message, extra))
 
         return _FakeLogger()
 
     def _load_settings():
+        """
+        @brief      Return one fake loaded settings payload.
+        @return     Loaded settings payload.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-05
+        @version    0.1.0
+        """
         created['load_settings_called'] = True
         created['loaded_settings_payload'] = {"language": "en"}
         return created['loaded_settings_payload']
 
     def _create_application(argv):
+        """
+        @brief      Raise the fake bootstrap failure during app creation.
+        @param[in]  argv Process argument vector.
+        @return     None.
+        @exception  RuntimeError Always raised for this test path.
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-05
+        @version    0.1.0
+        """
         raise RuntimeError("bootstrap failure")
 
     monkeypatch.setattr(app_module, 'initialize_logging', _initialize_logging)

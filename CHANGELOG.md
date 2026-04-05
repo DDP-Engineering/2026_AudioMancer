@@ -16,6 +16,20 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+## [0.3.2] - 2026-04-05
+
+### Added
+
+### Changed
+
+- added the missing callable-level Doxygen-style docstrings across the recent AI settings, localization, startup, logging, and main-window test changes so the codebase matches the repository documentation rules
+- updated the affected Python module `@version` tags for the documentation-compliance pass
+- package version updated to `0.3.2`
+
+### Fixed
+
+- fixed the remaining `AGENTS.md` and `Code_Style.md` compliance gaps for file and function documentation in the recently changed Python files
+
 ## [0.3.1] - 2026-04-05
 
 ### Added

@@ -13,7 +13,7 @@
          and merged settings payload generation.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-05
-@version 0.2.1
+@version 0.2.2
 """
 
 # IMPORTS
@@ -23,6 +23,15 @@ from audiomancer.ui.pages.ai_settings_page import AiSettingsPage
 
 
 def test_ai_settings_page_loads_profiles_and_builds_merged_settings(qtbot) -> None:
+    """
+    @brief      Verify AI settings load into widgets and rebuild merged state.
+    @param[in]  qtbot Qt test helper fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-05
+    @version    0.1.0
+    """
     page = AiSettingsPage()
     qtbot.addWidget(page)
 
@@ -74,6 +83,15 @@ def test_ai_settings_page_loads_profiles_and_builds_merged_settings(qtbot) -> No
 
 
 def test_ai_settings_page_adds_and_removes_profiles(qtbot) -> None:
+    """
+    @brief      Verify the page can add and remove in-memory profiles.
+    @param[in]  qtbot Qt test helper fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-05
+    @version    0.1.0
+    """
     page = AiSettingsPage()
     qtbot.addWidget(page)
 
@@ -89,6 +107,15 @@ def test_ai_settings_page_adds_and_removes_profiles(qtbot) -> None:
 
 
 def test_ai_settings_page_applies_probe_result_and_updates_status(qtbot) -> None:
+    """
+    @brief      Verify probe results refresh discovered model options.
+    @param[in]  qtbot Qt test helper fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-05
+    @version    0.1.0
+    """
     page = AiSettingsPage()
     qtbot.addWidget(page)
 
@@ -127,6 +154,15 @@ def test_ai_settings_page_applies_probe_result_and_updates_status(qtbot) -> None
 
 
 def test_ai_settings_page_marks_manual_overrides(qtbot) -> None:
+    """
+    @brief      Verify manual editor changes set the override flags.
+    @param[in]  qtbot Qt test helper fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-05
+    @version    0.1.0
+    """
     page = AiSettingsPage()
     qtbot.addWidget(page)
 

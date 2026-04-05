@@ -13,7 +13,7 @@
          pages, and status bar are created without workflow functionality.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-05
-@version 0.5.2
+@version 0.5.3
 """
 
 # IMPORTS
@@ -196,6 +196,16 @@ def test_about_dialog_loads_translated_license_text_for_romanian(qtbot) -> None:
 
 
 def test_main_window_saves_settings_dialog_payload(monkeypatch, qtbot) -> None:
+    """
+    @brief      Verify saving Settings persists and reapplies runtime UI state.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  qtbot Qt test helper fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-05
+    @version    0.1.0
+    """
     persisted_payload = {
         "language": "en",
         "ui_text_scale": "normal",
@@ -209,9 +219,26 @@ def test_main_window_saves_settings_dialog_payload(monkeypatch, qtbot) -> None:
     saved_payloads = []
 
     def _fake_load_settings():
+        """
+        @brief      Return the current fake persisted settings payload.
+        @return     Copy of the fake persisted settings payload.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-05
+        @version    0.1.0
+        """
         return dict(persisted_payload)
 
     def _fake_save_settings(payload):
+        """
+        @brief      Capture and merge one fake saved settings payload.
+        @param[in]  payload Settings payload to persist.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-05
+        @version    0.1.0
+        """
         saved_payloads.append(dict(payload))
         persisted_payload.update(payload)
 
@@ -248,6 +275,16 @@ def test_main_window_saves_settings_dialog_payload(monkeypatch, qtbot) -> None:
 
 
 def test_main_window_reloads_dialogs_and_discards_unsaved_changes(monkeypatch, qtbot) -> None:
+    """
+    @brief      Verify dialog cancel actions discard unsaved editor changes.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  qtbot Qt test helper fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-05
+    @version    0.1.0
+    """
     persisted_payload = {
         "language": "en",
         "ui_text_scale": "normal",
@@ -297,6 +334,16 @@ def test_main_window_reloads_dialogs_and_discards_unsaved_changes(monkeypatch, q
 
 
 def test_settings_dialog_reopens_with_translated_labels(monkeypatch, qtbot) -> None:
+    """
+    @brief      Verify reopened Settings labels respect the persisted language.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  qtbot Qt test helper fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-05
+    @version    0.1.0
+    """
     persisted_payload = {
         "language": "ro",
         "ui_text_scale": "normal",
@@ -325,6 +372,16 @@ def test_settings_dialog_reopens_with_translated_labels(monkeypatch, qtbot) -> N
 
 
 def test_main_window_connect_ai_profile_shows_success_popup(monkeypatch, qtbot) -> None:
+    """
+    @brief      Verify a successful AI connect shows translated popup feedback.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  qtbot Qt test helper fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-05
+    @version    0.1.0
+    """
     persisted_payload = {
         "language": "en",
         "ui_text_scale": "normal",
@@ -389,6 +446,16 @@ def test_main_window_connect_ai_profile_shows_success_popup(monkeypatch, qtbot) 
 
 
 def test_main_window_connect_ai_profile_shows_failure_popup(monkeypatch, qtbot) -> None:
+    """
+    @brief      Verify a failed AI connect shows translated popup feedback.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  qtbot Qt test helper fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-05
+    @version    0.1.0
+    """
     persisted_payload = {
         "language": "en",
         "ui_text_scale": "normal",

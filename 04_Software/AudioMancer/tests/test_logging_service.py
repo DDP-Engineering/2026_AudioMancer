@@ -13,7 +13,7 @@
          overrides, and optional function-trace behavior.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-04
-@version 0.1.0
+@version 0.1.1
 """
 
 # IMPORTS
@@ -178,6 +178,15 @@ def test_trace_function_logs_start_finish_and_duration(tmp_path, monkeypatch) ->
 
     @logging_service.trace_function(logger)
     def traced_function(value: list[int]) -> dict[str, int]:
+        """
+        @brief      Return a compact result payload for trace logging tests.
+        @param[in]  value Input integer list.
+        @return     Dictionary carrying the observed item count.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-05
+        @version    0.1.0
+        """
         return {"count": len(value)}
 
     result = traced_function([1, 2, 3])
@@ -212,6 +221,15 @@ def test_trace_function_logs_exception_and_reraises(tmp_path, monkeypatch) -> No
 
     @logging_service.trace_function(logger)
     def failing_function(payload: str) -> None:
+        """
+        @brief      Raise a runtime error to exercise exception tracing.
+        @param[in]  payload Error message payload.
+        @return     None.
+        @exception  RuntimeError Always raised for this test path.
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-05
+        @version    0.1.0
+        """
         raise RuntimeError(payload)
 
     with pytest.raises(RuntimeError, match="boom"):
@@ -245,6 +263,15 @@ def test_trace_function_truncates_long_values(tmp_path, monkeypatch) -> None:
 
     @logging_service.trace_function(logger)
     def traced_function(payload: str) -> str:
+        """
+        @brief      Echo one payload so truncation can be asserted in the trace.
+        @param[in]  payload Input string payload.
+        @return     Echoed payload string.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-05
+        @version    0.1.0
+        """
         return payload
 
     traced_function("x" * 300)

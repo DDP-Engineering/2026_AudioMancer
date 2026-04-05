@@ -13,7 +13,7 @@
          generation for the operator-facing settings dialog.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-05
-@version 0.1.0
+@version 0.1.1
 """
 
 # IMPORTS
@@ -22,6 +22,15 @@ from audiomancer.ui.pages.settings_page import SettingsPage
 
 
 def test_settings_page_loads_and_builds_merged_settings(qtbot) -> None:
+    """
+    @brief      Verify the settings page loads and rebuilds persisted values.
+    @param[in]  qtbot Qt test helper fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-05
+    @version    0.1.0
+    """
     page = SettingsPage()
     qtbot.addWidget(page)
 
