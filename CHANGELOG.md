@@ -20,7 +20,7 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
-- added a static `AI Settings` dialog cloned from `DDP_Audiomancer` with AI profile listing, provider configuration fields, default-profile selectors, and save/cancel actions
+- added a static `AI Settings` dialog with AI profile listing, provider configuration fields, default-profile selectors, and save/cancel actions
 - extended the focused UI test to verify the cloned AI Settings controls are present in the main shell
 
 ### Changed
@@ -53,12 +53,12 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
-- added a static `Characters` page cloned from `DDP_Audiomancer` with matching discovery controls, character list, editable profile form, and evidence panels
+- added a static `Characters` page with discovery controls, character list, editable profile form, and evidence panels
 - extended the focused UI test to verify the cloned characters controls are present in the main shell
 
 ### Changed
 
-- replaced the `Characters` placeholder page in the copied shell with the new presentational cloned page
+- replaced the `Characters` placeholder page in the application shell with the new presentational page
 - reduced the static `Character Profile` panel height so the page fits the window better
 - package version updated to `0.1.10`
 
@@ -68,12 +68,12 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
-- added a static `AI Translation` page cloned from `DDP_Audiomancer` with matching target-language selection, translation-profile selection, chunk list, progress display, source/translation editors, and review action layout
+- added a static `AI Translation` page with target-language selection, translation-profile selection, chunk list, progress display, source/translation editors, and review action layout
 - extended the focused UI test to verify the cloned translation controls are present in the main shell
 
 ### Changed
 
-- replaced the `AI Translation` placeholder page in the copied shell with the new presentational cloned page
+- replaced the `AI Translation` placeholder page in the application shell with the new presentational page
 - reduced the static `Chunk List` section height on the AI Translation page by about 20 percent for closer visual fit
 - repository validation guidance now prefers `uv run ...` for Python validation and tests in `04_Software/AudioMancer/`
 - package version updated to `0.1.9`
@@ -84,12 +84,12 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
-- added a static `Text Chunking` page cloned from `DDP_Audiomancer` with matching deterministic chunking, AI chunking, cleaned-text reference, chunk list, selected-chunk preview, and notes layout
+- added a static `Text Chunking` page with deterministic chunking, AI chunking, cleaned-text reference, chunk list, selected-chunk preview, and notes layout
 - extended the focused UI test to verify the cloned chunking controls are present in the main shell
 
 ### Changed
 
-- replaced the `Text Chunking` placeholder page in the copied shell with the new presentational cloned page
+- replaced the `Text Chunking` placeholder page in the application shell with the new presentational page
 - package version updated to `0.1.8`
 
 ### Fixed
@@ -98,12 +98,12 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
-- added a static `Text Cleanup` page cloned from `DDP_Audiomancer` with matching extraction, deterministic cleanup, AI cleanup, preview, and notes layout
+- added a static `Text Cleanup` page with extraction, deterministic cleanup, AI cleanup, preview, and notes layout
 - added focused UI-test coverage to verify the cloned cleanup controls are present in the main shell
 
 ### Changed
 
-- replaced the `Text Cleanup` placeholder page in the copied shell with the new presentational cloned page
+- replaced the `Text Cleanup` placeholder page in the application shell with the new presentational page
 - package version updated to `0.1.7`
 
 ### Fixed
@@ -112,7 +112,7 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
-- added a real About dialog based on the `DDP_Audiomancer` version with a scrollable read-only license text area
+- added a real About dialog with a scrollable read-only license text area
 - added app-root `LICENSE.txt` and `LICENSE_NC.txt` files for About dialog display and delivery packaging
 - added focused test coverage for the About dialog license content and updated subtitle/layout expectations
 
@@ -129,13 +129,13 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
-- copied the `DDP_Audiomancer` main-window shell structure into `AudioMancer` with a toolbar, navigation sidebar, stacked pages, status bar, and placeholder dialogs
+- added the main-window shell structure for `AudioMancer` with a toolbar, navigation sidebar, stacked pages, status bar, and placeholder dialogs
 - added presentational UI support modules for navigation, status display, the home/project page, generic placeholder pages, and a new static narrator page
 - inserted a `Narrator` workflow page between `Characters` and `Narration Plan` with profile selection, description entry, preview controls, and a reserved blank workspace area
 
 ### Changed
 
-- replaced the earlier custom placeholder main window with a source-matched `DDP_Audiomancer`-style shell adapted to the `AudioMancer` package
+- replaced the earlier custom placeholder main window with the current `AudioMancer` application shell
 - adjusted the Home / Project workflow-progress panel sizing and default empty project-stage text to better match the intended initial state and layout
 - removed UI logging from the main window in line with the rule that logging is reserved for backend implementation only
 - updated package, test, and shell documentation to describe the copied UI structure
@@ -196,7 +196,7 @@ All notable changes to this project will be documented in this file.
 
 - adapted `config.py` baseline and configuration/settings component documentation
 - focused configuration contract test for the config and settings scaffold
-- adapted `settings.json` baseline preserved from `04_Software/DDP_Audiomancer/settings.json`
+- adapted the `settings.json` baseline for the local application scaffold
 
 ### Changed
 
