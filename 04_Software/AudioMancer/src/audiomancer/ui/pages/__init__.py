@@ -18,6 +18,7 @@
 
 # IMPORTS
 
+from .ai_translation_page import AiTranslationPage
 from .home_page import HomeProjectPage
 from .narrator_page import NarratorPage
 from .placeholder_page import PlaceholderPage
@@ -27,6 +28,7 @@ from .text_cleanup_page import TextCleanupPage
 # PUBLIC API
 
 __all__ = [
+    "AiTranslationPage",
     "HomeProjectPage",
     "NarratorPage",
     "PlaceholderPage",

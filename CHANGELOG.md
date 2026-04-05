@@ -16,6 +16,22 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+## [0.1.9] - 2026-04-05
+
+### Added
+
+- added a static `AI Translation` page cloned from `DDP_Audiomancer` with matching target-language selection, translation-profile selection, chunk list, progress display, source/translation editors, and review action layout
+- extended the focused UI test to verify the cloned translation controls are present in the main shell
+
+### Changed
+
+- replaced the `AI Translation` placeholder page in the copied shell with the new presentational cloned page
+- reduced the static `Chunk List` section height on the AI Translation page by about 20 percent for closer visual fit
+- repository validation guidance now prefers `uv run ...` for Python validation and tests in `04_Software/AudioMancer/`
+- package version updated to `0.1.9`
+
+### Fixed
+
 ## [0.1.8] - 2026-04-05
 
 ### Added

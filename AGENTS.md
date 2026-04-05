@@ -55,6 +55,15 @@ For Python changes, run at minimum:
 
 - `python -m py_compile <changed_file.py>`
 
+For the `04_Software/AudioMancer/` application subtree, prefer `uv run ...`
+for Python-based validation and test commands when the project environment is
+managed by `uv`.
+
+Examples:
+
+- `uv run python -m py_compile <changed_file.py>`
+- `uv run pytest tests/<targeted_test>.py`
+
 When behavior changes:
 
 - add or update targeted tests
