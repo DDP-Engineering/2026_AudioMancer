@@ -30,6 +30,7 @@ The initial shell consists of:
 
 - `audiomancer.app.main()` as the thin startup entrypoint
 - `audiomancer.services.settings_service` as the settings bootstrap
+- `audiomancer.services.ai_backend_service` as the backend probe and model-discovery service for AI profiles
 - `audiomancer.services.logging_service` as the per-run logging bootstrap
 - `audiomancer.ui.main_window.MainWindow` as the first UI root
 - copied sidebar, status-bar, and page widgets under `audiomancer.ui`
@@ -42,6 +43,8 @@ The initial shell consists of:
 - an AI settings dialog that loads and saves AI profiles plus default cleanup,
   chunking, and character-extraction selections through the shared settings
   service
+- functional AI Settings connect flow with backend probing, discovered model
+  refresh, and popup result feedback
 - a static narrator-profile manager aligned to Qwen3 `VoiceDesign` and
   `CustomVoice` concepts, including profile listing, language selection,
   prompt-based voice definition, and a reserved preview area

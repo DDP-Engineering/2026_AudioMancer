@@ -14,7 +14,7 @@
          pages presentational only and free of workflow behavior.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-05
-@version 0.6.0
+@version 0.8.0
 """
 
 # IMPORTS
@@ -30,6 +30,7 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QMainWindow,
+    QMessageBox,
     QPlainTextEdit,
     QStackedWidget,
     QToolBar,
@@ -38,6 +39,7 @@ from PySide6.QtWidgets import (
 )
 
 from audiomancer import config
+from audiomancer.services import ai_backend_service
 from audiomancer.services import settings_service
 from audiomancer.services import ui_state_service
 from audiomancer.ui.navigation_sidebar import NavigationSidebar
@@ -82,7 +84,7 @@ class MainWindow(QMainWindow):
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-05
-    @version    0.6.0
+    @version    0.8.0
     """
 
     PAGE_ORDER = (
@@ -110,7 +112,7 @@ class MainWindow(QMainWindow):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-05
-        @version    0.6.0
+        @version    0.8.0
         """
         super().__init__(parent)
         self.setWindowTitle(_build_window_title())
@@ -313,7 +315,7 @@ class MainWindow(QMainWindow):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-05
-        @version    0.1.0
+        @version    0.2.0
         """
         self._settings_dialog = QDialog(self)
         self._settings_dialog.setWindowTitle(
@@ -344,6 +346,9 @@ class MainWindow(QMainWindow):
         self._ai_settings_dialog.resize(920, 640)
         ai_layout = QVBoxLayout(self._ai_settings_dialog)
         self._ai_settings_page = AiSettingsPage(self._ai_settings_dialog)
+        self._ai_settings_page._connect_button.clicked.connect(
+            self._connect_ai_profile_from_dialog
+        )
         self._ai_settings_page._cancel_button.clicked.connect(
             self._ai_settings_dialog.close
         )
@@ -395,6 +400,52 @@ class MainWindow(QMainWindow):
                 "status.saved_ai_settings",
                 str(self._settings_payload.get("language", config.DEFAULT_LANGUAGE)),
             )
+        )
+
+    def _connect_ai_profile_from_dialog(self) -> None:
+        """
+        @brief      Probe the selected AI profile and show operator feedback.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-05
+        @version    0.2.0
+        """
+        current_language = str(
+            self._settings_payload.get("language", config.DEFAULT_LANGUAGE)
+        )
+        current_profile = self._ai_settings_page.build_current_profile_payload()
+        if current_profile is None:
+            return
+
+        probe_result = ai_backend_service.probe_profile(current_profile)
+        self._ai_settings_page.apply_probe_result(probe_result)
+
+        if probe_result.success:
+            QMessageBox.information(
+                self._ai_settings_dialog,
+                ui_state_service.translate(
+                    "ai_settings.popup_success_title",
+                    current_language,
+                ),
+                (
+                    f"{ui_state_service.translate('ai_settings.popup_success_message', current_language)}\n"
+                    f"{ui_state_service.translate('ai_settings.popup_discovered_models', current_language)}: "
+                    f"{probe_result.discovered_model_count}"
+                ),
+            )
+            return
+
+        QMessageBox.warning(
+            self._ai_settings_dialog,
+            ui_state_service.translate(
+                "ai_settings.popup_failure_title",
+                current_language,
+            ),
+            (
+                f"{ui_state_service.translate('ai_settings.popup_failure_message', current_language)}\n"
+                f"{probe_result.message}"
+            ),
         )
 
     def _apply_current_ui_settings(self) -> None:

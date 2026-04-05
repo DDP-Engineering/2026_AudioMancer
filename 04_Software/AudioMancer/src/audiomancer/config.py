@@ -13,7 +13,7 @@
          file support used by the current AudioMancer implementation scaffold.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-04
-@version 0.1.3
+@version 0.1.5
 """
 
 # IMPORTS
@@ -132,6 +132,9 @@ DEFAULT_LLM_MAX_OUTPUT_TOKENS = 1024
 # @brief Default timeout in seconds for AI provider requests.
 DEFAULT_LLM_REQUEST_TIMEOUT_SECONDS = 90
 
+# @brief Default timeout in seconds for AI backend connect/probe requests.
+DEFAULT_AI_CONNECT_TIMEOUT_SECONDS = 3
+
 # @brief Default temperature for AI cleanup and chunking requests.
 DEFAULT_LLM_TEMPERATURE = 0.2
 
@@ -200,6 +203,7 @@ LOG_LEVEL_OPTIONS = ("CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG", "NOTSET")
 # @brief Stable component logger identifiers used for per-component overrides.
 AVAILABLE_LOG_COMPONENTS = (
     "app",
+    "ai_backend",
     "main_window",
     "settings",
     "ui_state",

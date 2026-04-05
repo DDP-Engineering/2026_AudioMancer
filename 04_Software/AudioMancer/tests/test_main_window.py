@@ -13,7 +13,7 @@
          pages, and status bar are created without workflow functionality.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-05
-@version 0.4.2
+@version 0.5.2
 """
 
 # IMPORTS
@@ -322,6 +322,126 @@ def test_settings_dialog_reopens_with_translated_labels(monkeypatch, qtbot) -> N
     assert window._settings_dialog.windowTitle() == "Setari"
     assert window._settings_page._language_label.text() == "Limba"
     assert window._settings_page._text_size_label.text() == "Dimensiune Text Interfata"
+
+
+def test_main_window_connect_ai_profile_shows_success_popup(monkeypatch, qtbot) -> None:
+    persisted_payload = {
+        "language": "en",
+        "ui_text_scale": "normal",
+        "play_completion_beep": False,
+        "llm_profiles": [{
+            "id": "profile_1",
+            "label": "Stored Profile",
+            "backend_kind": "lmstudio",
+            "base_url": "http://127.0.0.1:1234/v1",
+            "api_key": "",
+            "model_name": "qwen3-8b",
+            "context_window": 8192,
+            "max_output_tokens": 1024,
+            "request_timeout_seconds": 90,
+            "temperature": 0.2,
+            "supports_structured_output": False,
+            "enabled": True,
+        }],
+        "default_ai_cleanup_profile_id": "profile_1",
+        "default_ai_chunking_profile_id": "profile_1",
+        "default_ai_chunking_strategy": "paragraph",
+        "default_character_extraction_profile_id": "profile_1",
+    }
+    popup_calls = []
+
+    monkeypatch.setattr(
+        main_window_module.ai_backend_service,
+        "probe_profile",
+        lambda profile: main_window_module.ai_backend_service.ProviderProbeResult(
+            success=True,
+            message="Connection successful. Discovered 2 models.",
+            discovered_models=[
+                main_window_module.ai_backend_service.ModelDescriptor(
+                    id="qwen3-8b",
+                    label="qwen3-8b",
+                ),
+                main_window_module.ai_backend_service.ModelDescriptor(
+                    id="llama-3.1-8b",
+                    label="llama-3.1-8b",
+                ),
+            ],
+            discovered_model_count=2,
+            discovered_context_window=None,
+            selected_model_valid=True,
+        ),
+    )
+    monkeypatch.setattr(
+        main_window_module.QMessageBox,
+        "information",
+        lambda *args: popup_calls.append(args),
+    )
+
+    window = MainWindow(settings_payload=dict(persisted_payload))
+    qtbot.addWidget(window)
+
+    window.show_ai_settings_dialog()
+    window._ai_settings_page._connect_button.click()
+
+    assert popup_calls
+    assert "Connection successful." in popup_calls[0][2]
+    assert "Discovered models: 2" in popup_calls[0][2]
+
+
+def test_main_window_connect_ai_profile_shows_failure_popup(monkeypatch, qtbot) -> None:
+    persisted_payload = {
+        "language": "en",
+        "ui_text_scale": "normal",
+        "play_completion_beep": False,
+        "llm_profiles": [{
+            "id": "profile_1",
+            "label": "Stored Profile",
+            "backend_kind": "lmstudio",
+            "base_url": "http://127.0.0.1:1234/v1",
+            "api_key": "",
+            "model_name": "qwen3-8b",
+            "context_window": 8192,
+            "max_output_tokens": 1024,
+            "request_timeout_seconds": 90,
+            "temperature": 0.2,
+            "supports_structured_output": False,
+            "enabled": True,
+        }],
+        "default_ai_cleanup_profile_id": "profile_1",
+        "default_ai_chunking_profile_id": "profile_1",
+        "default_ai_chunking_strategy": "paragraph",
+        "default_character_extraction_profile_id": "profile_1",
+    }
+    popup_calls = []
+
+    monkeypatch.setattr(
+        main_window_module.ai_backend_service,
+        "probe_profile",
+        lambda profile: main_window_module.ai_backend_service.ProviderProbeResult(
+            success=False,
+            message="Connection failed: request timed out.",
+            discovered_models=[],
+            discovered_model_count=0,
+            discovered_context_window=None,
+            selected_model_valid=False,
+        ),
+    )
+    monkeypatch.setattr(
+        main_window_module.QMessageBox,
+        "warning",
+        lambda *args: popup_calls.append(args),
+    )
+
+    window = MainWindow(settings_payload=dict(persisted_payload))
+    qtbot.addWidget(window)
+
+    window.show_ai_settings_dialog()
+    window._ai_settings_page._connect_button.click()
+
+    assert popup_calls
+    assert popup_calls[0][2] == (
+        "Connection failed.\nConnection failed: request timed out."
+    )
 
 
 # END OF FILE

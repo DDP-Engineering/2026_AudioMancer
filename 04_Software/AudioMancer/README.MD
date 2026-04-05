@@ -19,11 +19,13 @@ It now includes a static main-window shell copied from
 - `src/audiomancer/config.py` defines the current developer-owned defaults and file names.
 - `src/audiomancer/services/logging_service.py` provides per-run app logging and optional trace helpers.
 - `src/audiomancer/services/settings_service.py` provides load, validate, self-heal, and save behavior for `settings.json`.
+- `src/audiomancer/services/ai_backend_service.py` provides backend probe and model-discovery helpers for AI provider profiles.
 - `src/audiomancer/ui/` provides the copied toolbar, sidebar, page, and status-bar shell used by the first desktop window.
 - the `Settings` dialog now loads and saves `language`, `interface text size`, and `play completion beep` through the shared settings service.
 - saving `Settings` now applies the selected UI language and global text size to the running shell.
 - the current shell supports runtime English/Romanian UI switching through one centralized UI-state service.
 - the `AI Settings` dialog now loads and saves AI profiles plus the default cleanup, chunking, and character-extraction selections through the shared settings service.
+- the `AI Settings` dialog now supports backend connection probing, discovered model refresh, and popup feedback with discovered-model counts.
 - the static `Narrator` page now includes a presentational Qwen3-style profile manager with profile listing, custom-profile actions, voice-source selection, language selectors, voice-designer prompt fields, and a reserved preview panel.
 - `LICENSE.txt`, `LICENSE_NC.txt`, `LICENSE_ro.txt`, and `LICENSE_NC_ro.txt` are stored in the app root so the About dialog can display English or Romanian license text and the delivered app keeps the license set at the app-root level.
 - the About dialog now includes the main license text and the non-commercial addendum in a scrollable read-only text area, localized to the current UI language when a companion translation file exists.
@@ -68,6 +70,7 @@ uv run python -m audiomancer
 - Persisted settings are validated and self-healed at startup.
 - Updated settings can be saved back through the shared settings service from both `Settings` and `AI Settings`.
 - Saved language and text-size changes are applied immediately to the running UI shell.
+- Saved AI provider settings now include persisted connection-discovery state for each configured profile.
 
 ## Run Tests
 

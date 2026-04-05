@@ -13,11 +13,12 @@
          and merged settings payload generation.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-05
-@version 0.1.0
+@version 0.2.1
 """
 
 # IMPORTS
 
+from audiomancer.services.ai_backend_service import ModelDescriptor, ProviderProbeResult
 from audiomancer.ui.pages.ai_settings_page import AiSettingsPage
 
 
@@ -85,6 +86,75 @@ def test_ai_settings_page_adds_and_removes_profiles(qtbot) -> None:
 
     page._remove_selected_profile()
     assert page._profile_list.count() == 1
+
+
+def test_ai_settings_page_applies_probe_result_and_updates_status(qtbot) -> None:
+    page = AiSettingsPage()
+    qtbot.addWidget(page)
+
+    page.load_settings({
+        "language": "en",
+        "llm_profiles": [{
+            "id": "profile_a",
+            "label": "Profile A",
+            "backend_kind": "lmstudio",
+            "base_url": "http://127.0.0.1:1234/v1",
+            "api_key": "",
+            "model_name": "missing-model",
+            "context_window": 8192,
+            "max_output_tokens": 1024,
+            "request_timeout_seconds": 90,
+            "temperature": 0.2,
+            "supports_structured_output": True,
+            "enabled": True,
+        }],
+    })
+
+    page.apply_probe_result(ProviderProbeResult(
+        success=True,
+        message="Connection successful. Discovered 2 models.",
+        discovered_models=[
+            ModelDescriptor(id="qwen3-8b", label="qwen3-8b"),
+            ModelDescriptor(id="llama-3.1-8b", label="llama-3.1-8b"),
+        ],
+        discovered_model_count=2,
+        discovered_context_window=None,
+        selected_model_valid=False,
+    ))
+
+    assert page._model_combo.count() == 2
+    assert page._model_combo.currentText() == "qwen3-8b"
+
+
+def test_ai_settings_page_marks_manual_overrides(qtbot) -> None:
+    page = AiSettingsPage()
+    qtbot.addWidget(page)
+
+    page.load_settings({
+        "llm_profiles": [{
+            "id": "profile_a",
+            "label": "Profile A",
+            "backend_kind": "lmstudio",
+            "base_url": "http://127.0.0.1:1234/v1",
+            "api_key": "",
+            "model_name": "qwen3-8b",
+            "context_window": 8192,
+            "max_output_tokens": 1024,
+            "request_timeout_seconds": 90,
+            "temperature": 0.2,
+            "supports_structured_output": False,
+            "enabled": True,
+        }],
+    })
+
+    page._model_combo.setCurrentText("custom-model")
+    page._context_window_spin.setValue(4096)
+
+    profile_payload = page.build_current_profile_payload()
+
+    assert profile_payload is not None
+    assert profile_payload["user_overrode_model_name"] is True
+    assert profile_payload["user_overrode_context_window"] is True
 
 
 # END OF FILE

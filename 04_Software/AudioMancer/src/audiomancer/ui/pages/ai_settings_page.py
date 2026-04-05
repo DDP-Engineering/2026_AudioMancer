@@ -14,7 +14,7 @@
          settings service.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-05
-@version 0.3.0
+@version 0.5.1
 """
 
 # IMPORTS
@@ -40,6 +40,7 @@ from PySide6.QtWidgets import (
 )
 
 from audiomancer import config
+from audiomancer.services.ai_backend_service import ProviderProbeResult
 from audiomancer.services import ui_state_service
 
 # CONSTANTS
@@ -75,7 +76,7 @@ class AiSettingsPage(QWidget):
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-05
-    @version    0.3.0
+    @version    0.5.0
     """
 
     def __init__(self, parent=None) -> None:
@@ -86,11 +87,14 @@ class AiSettingsPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-05
-        @version    0.3.0
+        @version    0.5.1
         """
         super().__init__(parent)
         self._profiles: list[dict[str, object]] = []
         self._loading_profile = False
+        self._current_language = config.DEFAULT_LANGUAGE
+        self._discovered_model_options: dict[str, list[tuple[str, str]]] = {}
+        self._suspend_override_tracking = False
 
         layout = QVBoxLayout(self)
         self._title_label = QLabel("<h2>AI Settings</h2>")
@@ -190,12 +194,7 @@ class AiSettingsPage(QWidget):
         form_layout.addRow(self._max_output_label, self._max_output_spin)
         form_layout.addRow(self._timeout_label, self._timeout_spin)
         form_layout.addRow(self._temperature_label, self._temperature_spin)
-        editor_layout.addLayout(form_layout)
-        editor_layout.addWidget(self._supports_structured_checkbox)
-
-        defaults_group = QWidget(self)
-        defaults_layout = QFormLayout(defaults_group)
-        defaults_layout.setContentsMargins(0, 0, 0, 0)
+        form_layout.addRow("", self._supports_structured_checkbox)
 
         self._default_cleanup_combo = QComboBox(self)
         self._default_chunking_combo = QComboBox(self)
@@ -213,20 +212,20 @@ class AiSettingsPage(QWidget):
             self,
         )
 
-        defaults_layout.addRow(
+        form_layout.addRow(
             self._default_cleanup_label, self._default_cleanup_combo
         )
-        defaults_layout.addRow(
+        form_layout.addRow(
             self._default_chunking_label, self._default_chunking_combo
         )
-        defaults_layout.addRow(
+        form_layout.addRow(
             self._default_strategy_label, self._default_strategy_combo
         )
-        defaults_layout.addRow(
+        form_layout.addRow(
             self._default_character_label,
             self._default_character_combo,
         )
-        editor_layout.addWidget(defaults_group)
+        editor_layout.addLayout(form_layout)
 
         content_row.addWidget(editor_container, 2)
         layout.addLayout(content_row, 1)
@@ -239,6 +238,13 @@ class AiSettingsPage(QWidget):
         button_row.addWidget(self._save_button)
         button_row.addStretch(1)
         layout.addLayout(button_row)
+
+        self._model_combo.currentTextChanged.connect(
+            self._on_model_name_edited
+        )
+        self._context_window_spin.valueChanged.connect(
+            self._on_context_window_edited
+        )
 
         self.load_settings({
             "llm_profiles": [],
@@ -256,7 +262,7 @@ class AiSettingsPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-05
-        @version    0.1.0
+        @version    0.2.0
         """
         source_profiles = settings_payload.get("llm_profiles", [])
         if not isinstance(source_profiles, list):
@@ -308,7 +314,7 @@ class AiSettingsPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-05
-        @version    0.1.0
+        @version    0.2.0
         """
         self._sync_editor_to_current_profile()
         merged_settings = copy.deepcopy(existing_settings_payload)
@@ -330,6 +336,70 @@ class AiSettingsPage(QWidget):
         )
         return merged_settings
 
+    def build_current_profile_payload(self) -> dict[str, object] | None:
+        """
+        @brief      Build one payload snapshot from the selected profile editor.
+        @return     Copy of the selected profile payload or None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-05
+        @version    0.2.0
+        """
+        self._sync_editor_to_current_profile()
+        current_profile = self._current_profile()
+        if current_profile is None:
+            return None
+        return copy.deepcopy(current_profile)
+
+    def apply_probe_result(self, probe_result: ProviderProbeResult) -> None:
+        """
+        @brief      Apply one backend probe result to the selected profile.
+        @param[in]  probe_result Normalized backend probe result.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-05
+        @version    0.1.0
+        """
+        current_profile = self._current_profile()
+        if current_profile is None:
+            return
+
+        current_profile["discovery_succeeded"] = probe_result.success
+        current_profile["discovery_message"] = probe_result.message
+        current_profile["discovered_context_window"] = (
+            probe_result.discovered_context_window
+        )
+
+        model_options = [
+            (model.id, model.label)
+            for model in probe_result.discovered_models
+        ]
+        self._discovered_model_options[str(current_profile["id"])] = model_options
+
+        if model_options:
+            selected_model_name = str(current_profile.get("model_name", "")).strip()
+            if (
+                not bool(current_profile.get("user_overrode_model_name", False))
+                and not probe_result.selected_model_valid
+            ):
+                selected_model_name = model_options[0][0]
+                current_profile["model_name"] = selected_model_name
+            if probe_result.selected_model_valid and selected_model_name:
+                current_profile["discovered_model_name"] = selected_model_name
+            else:
+                current_profile["discovered_model_name"] = model_options[0][0]
+        else:
+            current_profile["discovered_model_name"] = ""
+
+        if (
+            probe_result.discovered_context_window is not None
+            and not bool(current_profile.get("user_overrode_context_window", False))
+        ):
+            current_profile["context_window"] = probe_result.discovered_context_window
+
+        self._load_profile_into_editor(current_profile)
+
     # LOCAL HELPERS
 
     def _create_default_profile(self, label: str) -> dict[str, object]:
@@ -343,6 +413,37 @@ class AiSettingsPage(QWidget):
 
     def _generate_profile_id(self) -> str:
         return f"llm_profile_{uuid4().hex[:12]}"
+
+    def _load_model_options_for_profile(self, profile: dict[str, object]) -> None:
+        """
+        @brief      Reload the model selector choices for one profile.
+        @param[in]  profile Target profile payload.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-05
+        @version    0.1.0
+        """
+        selected_model_name = str(profile.get("model_name", "")).strip()
+        discovered_options = self._discovered_model_options.get(
+            str(profile["id"]),
+            [],
+        )
+        self._suspend_override_tracking = True
+        self._model_combo.blockSignals(True)
+        self._model_combo.clear()
+        if discovered_options:
+            for model_id, label in discovered_options:
+                self._model_combo.addItem(label, model_id)
+        else:
+            self._model_combo.addItems((
+                "qwen3-8b",
+                "qwen2.5-7b-instruct",
+                "llama-3.1-8b-instruct",
+            ))
+        self._model_combo.setCurrentText(selected_model_name)
+        self._model_combo.blockSignals(False)
+        self._suspend_override_tracking = False
 
     def _reload_profile_list(self) -> None:
         current_profile_id = self._current_profile_id()
@@ -390,6 +491,7 @@ class AiSettingsPage(QWidget):
 
     def _load_profile_into_editor(self, profile: dict[str, object]) -> None:
         self._loading_profile = True
+        self._load_model_options_for_profile(profile)
         self._label_edit.setText(str(profile["label"]))
         self._enabled_checkbox.setChecked(bool(profile["enabled"]))
         self._backend_combo.setCurrentText(str(profile["backend_kind"]))
@@ -424,6 +526,38 @@ class AiSettingsPage(QWidget):
         )
         self._reload_profile_list()
         self._reload_default_profile_combos()
+
+    def _on_model_name_edited(self, _value: str) -> None:
+        """
+        @brief      Mark the selected model name as manually overridden.
+        @param[in]  _value Ignored current model text.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-05
+        @version    0.1.0
+        """
+        if self._loading_profile or self._suspend_override_tracking:
+            return
+        current_profile = self._current_profile()
+        if current_profile is not None:
+            current_profile["user_overrode_model_name"] = True
+
+    def _on_context_window_edited(self, _value: int) -> None:
+        """
+        @brief      Mark the selected context window as manually overridden.
+        @param[in]  _value Ignored current numeric value.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-05
+        @version    0.1.0
+        """
+        if self._loading_profile or self._suspend_override_tracking:
+            return
+        current_profile = self._current_profile()
+        if current_profile is not None:
+            current_profile["user_overrode_context_window"] = True
 
     def _current_profile(self) -> dict[str, object] | None:
         row = self._profile_list.currentRow()
@@ -480,8 +614,9 @@ class AiSettingsPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-05
-        @version    0.2.0
+        @version    0.4.0
         """
+        self._current_language = language
         self._title_label.setText(
             f"<h2>{ui_state_service.translate('ai_settings.title', language)}</h2>"
         )
@@ -555,6 +690,5 @@ class AiSettingsPage(QWidget):
                     0,
                     ui_state_service.translate("ai_settings.none", language),
                 )
-
 
 # END OF FILE

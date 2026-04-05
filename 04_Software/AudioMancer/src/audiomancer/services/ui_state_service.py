@@ -13,7 +13,7 @@
          application through one centralized string catalog and scale mapping.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-05
-@version 0.2.0
+@version 0.4.0
 """
 
 # IMPORTS
@@ -103,6 +103,14 @@ _UI_STRINGS = {
         "ai_settings.cancel": "Cancel",
         "ai_settings.save": "Save AI Settings",
         "ai_settings.no_profiles": "(no profiles)",
+        "ai_settings.not_connected": "Not connected yet.",
+        "ai_settings.connection_status": "Connection status",
+        "ai_settings.connection_failed": "Connection failed",
+        "ai_settings.popup_success_title": "Connection Successful",
+        "ai_settings.popup_failure_title": "Connection Failed",
+        "ai_settings.popup_discovered_models": "Discovered models",
+        "ai_settings.popup_success_message": "Connection successful.",
+        "ai_settings.popup_failure_message": "Connection failed.",
         "text_cleanup.title": "Text Cleanup",
         "text_cleanup.extract": "Extract Text",
         "text_cleanup.clean": "Deterministic Cleanup",
@@ -261,6 +269,14 @@ _UI_STRINGS = {
         "ai_settings.cancel": "Anuleaza",
         "ai_settings.save": "Salveaza Setarile AI",
         "ai_settings.no_profiles": "(fara profiluri)",
+        "ai_settings.not_connected": "Nu este conectat inca.",
+        "ai_settings.connection_status": "Stare conexiune",
+        "ai_settings.connection_failed": "Conexiune esuata",
+        "ai_settings.popup_success_title": "Conectare Reusita",
+        "ai_settings.popup_failure_title": "Conectare Esuata",
+        "ai_settings.popup_discovered_models": "Modele descoperite",
+        "ai_settings.popup_success_message": "Conectare reusita.",
+        "ai_settings.popup_failure_message": "Conectarea a esuat.",
         "text_cleanup.title": "Curatare Text",
         "text_cleanup.extract": "Extrage Textul",
         "text_cleanup.clean": "Curatare Determinista",

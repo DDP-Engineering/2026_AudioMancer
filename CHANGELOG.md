@@ -16,6 +16,26 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+## [0.3.1] - 2026-04-05
+
+### Added
+
+- added `audiomancer.services.ai_backend_service` with normalized backend probing and model-discovery support for `lmstudio`, `ollama`, and `openai_compatible` AI profiles
+- added focused automated coverage for backend probing, discovered-model normalization, AI Settings profile discovery updates, and translated connect popup feedback
+
+### Changed
+
+- the `AI Settings` dialog now supports real `Connect` probing, discovered-model refresh, popup feedback with discovered-model counts, and persisted discovery state for saved profiles
+- AI backend probing now uses a dedicated short connect timeout from `config.py` instead of the longer workflow request timeout
+- refined the `AI Settings` layout by removing the inline connect-status message, aligning the default-profile selectors with the main form rows, and moving `Structured output supported` under `Temperature`
+- completed the connect-result translation path so localized popup messages no longer mix English success text into Romanian UI sessions
+- updated application and shell documentation to describe the functional AI Settings connect flow
+- package version updated to `0.3.1`
+
+### Fixed
+
+- fixed the AI Settings connect popup so operator-facing success feedback is fully translated for the active UI language
+
 ## [0.3.0] - 2026-04-05
 
 ### Added
