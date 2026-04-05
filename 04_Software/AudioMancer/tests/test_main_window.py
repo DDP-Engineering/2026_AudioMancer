@@ -13,7 +13,7 @@
          pages, and status bar are created without workflow functionality.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-05
-@version 0.3.3
+@version 0.3.5
 """
 
 # IMPORTS
@@ -24,6 +24,7 @@ from PySide6.QtWidgets import (
     QLabel,
     QListWidget,
     QPlainTextEdit,
+    QPushButton,
     QStackedWidget,
     QToolBar,
 )
@@ -41,12 +42,15 @@ def test_main_window_can_be_created(qtbot) -> None:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-05
-    @version    0.3.3
+    @version    0.3.5
     """
     window = MainWindow()
     qtbot.addWidget(window)
 
-    assert window.windowTitle() == "AudioMancer"
+    assert (
+        window.windowTitle()
+        == "AudioMancer | Transform written words into real audio experience!"
+    )
     assert window.centralWidget() is not None
     assert len(window.findChildren(QToolBar)) == 1
     assert len(window.findChildren(QListWidget)) >= 2
@@ -63,6 +67,10 @@ def test_main_window_can_be_created(qtbot) -> None:
     assert any(
         group_box.title() == "Narrator Voice Profile"
         for group_box in window.findChildren(QGroupBox)
+    )
+    assert any(
+        button.text() == "Deterministic Cleanup"
+        for button in window.findChildren(QPushButton)
     )
 
 
@@ -82,7 +90,10 @@ def test_about_dialog_includes_license_text(qtbot) -> None:
     dialog = window._build_about_dialog()
     text_box = dialog.findChild(QPlainTextEdit, "aboutLicenseTextBox")
 
-    assert dialog.windowTitle() == "About AudioMancer"
+    assert (
+        dialog.windowTitle()
+        == "AudioMancer | Transform written words into real audio experience! | About"
+    )
     assert dialog.width() == 510
     assert text_box is not None
     assert any(

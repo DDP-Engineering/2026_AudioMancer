@@ -14,7 +14,7 @@
          pages presentational only and free of workflow behavior.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-05
-@version 0.3.3
+@version 0.3.5
 """
 
 # IMPORTS
@@ -41,6 +41,7 @@ from audiomancer.ui.navigation_sidebar import NavigationSidebar
 from audiomancer.ui.pages.home_page import HomeProjectPage
 from audiomancer.ui.pages.narrator_page import NarratorPage
 from audiomancer.ui.pages.placeholder_page import PlaceholderPage
+from audiomancer.ui.pages.text_cleanup_page import TextCleanupPage
 from audiomancer.ui.status_bar import AudiomancerStatusBar
 
 # CONSTANTS
@@ -50,6 +51,7 @@ WINDOW_WIDTH = config.DEFAULT_MAIN_WINDOW_WIDTH
 WINDOW_HEIGHT = config.DEFAULT_MAIN_WINDOW_HEIGHT
 WINDOW_MIN_WIDTH = config.DEFAULT_MAIN_WINDOW_MIN_WIDTH
 WINDOW_MIN_HEIGHT = config.DEFAULT_MAIN_WINDOW_MIN_HEIGHT
+TAGLINE_TEXT = "Transform written words into real audio experience!"
 LICENSE_PATH = config.APP_ROOT / "LICENSE.txt"
 LICENSE_NC_PATH = config.APP_ROOT / "LICENSE_NC.txt"
 
@@ -66,7 +68,7 @@ class MainWindow(QMainWindow):
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-05
-    @version    0.3.3
+    @version    0.3.5
     """
 
     PAGE_ORDER = (
@@ -89,10 +91,10 @@ class MainWindow(QMainWindow):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-05
-        @version    0.3.2
+        @version    0.3.5
         """
         super().__init__(parent)
-        self.setWindowTitle(WINDOW_TITLE)
+        self.setWindowTitle(_build_window_title())
         self.resize(WINDOW_WIDTH, WINDOW_HEIGHT)
         self.setMinimumSize(WINDOW_MIN_WIDTH, WINDOW_MIN_HEIGHT)
         self._page_registry: dict[str, QWidget] = {}
@@ -251,12 +253,7 @@ class MainWindow(QMainWindow):
 
         pages = {
             "home": home_page,
-            "text_cleanup": PlaceholderPage(
-                "Text Cleanup",
-                "This page matches the copied shell only. Cleanup behavior is "
-                "not implemented in AudioMancer yet.",
-                self,
-            ),
+            "text_cleanup": TextCleanupPage(self),
             "text_chunking": PlaceholderPage(
                 "Text Chunking",
                 "This page matches the copied shell only. Chunking behavior is "
@@ -309,7 +306,7 @@ class MainWindow(QMainWindow):
         @version    0.1.0
         """
         self._settings_dialog = QDialog(self)
-        self._settings_dialog.setWindowTitle("Settings")
+        self._settings_dialog.setWindowTitle(_build_window_title("Settings"))
         self._settings_dialog.resize(680, 560)
         settings_layout = QVBoxLayout(self._settings_dialog)
         settings_layout.addWidget(PlaceholderPage(
@@ -320,7 +317,9 @@ class MainWindow(QMainWindow):
         ))
 
         self._ai_settings_dialog = QDialog(self)
-        self._ai_settings_dialog.setWindowTitle("AI Settings")
+        self._ai_settings_dialog.setWindowTitle(
+            _build_window_title("AI Settings")
+        )
         self._ai_settings_dialog.resize(920, 640)
         ai_layout = QVBoxLayout(self._ai_settings_dialog)
         ai_layout.addWidget(PlaceholderPage(
@@ -340,7 +339,7 @@ class MainWindow(QMainWindow):
         @version    0.1.0
         """
         dialog = QDialog(self)
-        dialog.setWindowTitle("About AudioMancer")
+        dialog.setWindowTitle(_build_window_title("About"))
         dialog.resize(510, 620)
 
         layout = QVBoxLayout(dialog)
@@ -429,6 +428,22 @@ def _read_text_file(path: Path) -> str:
     if not path.exists():
         return f"File not found: {path}"
     return path.read_text(encoding="utf-8").strip()
+
+
+def _build_window_title(context: str | None = None) -> str:
+    """
+    @brief      Build the shared title-bar text for AudioMancer windows.
+    @param[in]  context Optional trailing window-specific context.
+    @return     Formatted title-bar text.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-05
+    @version    0.1.0
+    """
+    title = f"{WINDOW_TITLE} | {TAGLINE_TEXT}"
+    if context:
+        return f"{title} | {context}"
+    return title
 
 
 # END OF FILE

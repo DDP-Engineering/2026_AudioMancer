@@ -16,6 +16,20 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+## [0.1.7] - 2026-04-05
+
+### Added
+
+- added a static `Text Cleanup` page cloned from `DDP_Audiomancer` with matching extraction, deterministic cleanup, AI cleanup, preview, and notes layout
+- added focused UI-test coverage to verify the cloned cleanup controls are present in the main shell
+
+### Changed
+
+- replaced the `Text Cleanup` placeholder page in the copied shell with the new presentational cloned page
+- package version updated to `0.1.7`
+
+### Fixed
+
 ## [0.1.6] - 2026-04-05
 
 ### Added
