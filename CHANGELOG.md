@@ -16,7 +16,7 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
-## [0.2.1] - 2026-04-05
+## [0.3.0] - 2026-04-05
 
 ### Added
 
@@ -33,7 +33,7 @@ All notable changes to this project will be documented in this file.
 - the About dialog now loads localized license text based on the current UI language, with fallback to the English license files when no localized pair exists
 - `ui_state_service` now emits backend-service logging for translation and runtime UI-apply actions
 - updated software and shell documentation to describe runtime UI apply behavior and localized license assets
-- package version updated to `0.2.1`
+- package version updated to `0.3.0`
 
 ### Fixed
 
