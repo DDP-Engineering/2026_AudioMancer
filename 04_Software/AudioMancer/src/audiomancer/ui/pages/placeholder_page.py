@@ -20,6 +20,8 @@
 
 from PySide6.QtWidgets import QLabel, QVBoxLayout, QWidget
 
+from audiomancer.services import ui_state_service
+
 
 # PUBLIC API
 
@@ -46,11 +48,12 @@ class PlaceholderPage(QWidget):
         @version    0.1.0
         """
         super().__init__(parent)
+        self._title = title
         layout = QVBoxLayout(self)
-        title_label = QLabel(f"<h2>{title}</h2>")
+        self._title_label = QLabel(f"<h2>{title}</h2>")
         self._note_label = QLabel(note)
         self._note_label.setWordWrap(True)
-        layout.addWidget(title_label)
+        layout.addWidget(self._title_label)
         layout.addWidget(self._note_label)
         layout.addStretch(1)
 
@@ -65,6 +68,24 @@ class PlaceholderPage(QWidget):
         @version    0.1.0
         """
         self._note_label.setText(note)
+
+    def apply_language(self, language: str) -> None:
+        """
+        @brief      Apply one UI language to the placeholder page.
+        @param[in]  language Target UI language code.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-05
+        @version    0.1.0
+        """
+        key_base = self._title.lower().replace(" ", "_")
+        self._title_label.setText(
+            f"<h2>{ui_state_service.translate(f'placeholder.{key_base}.title', language)}</h2>"
+        )
+        self._note_label.setText(
+            ui_state_service.translate(f"placeholder.{key_base}.note", language)
+        )
 
 
 # END OF FILE

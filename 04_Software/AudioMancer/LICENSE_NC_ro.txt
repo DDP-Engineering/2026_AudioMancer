@@ -1,0 +1,36 @@
+RESTRICTIE SUPLIMENTARA DE UTILIZARE NECOMERCIALA
+
+Copyright (c) 2026 DDP Engineering
+
+Fara a limita permisiunile acordate prin GNU Affero General Public
+License v3.0, acest software nu poate fi utilizat, integral sau partial,
+in niciun scop comercial fara permisiunea scrisa explicita din partea
+DDP Engineering.
+
+Scopurile comerciale includ, fara a se limita la:
+- vanzarea software-ului sau a dispozitivelor care il contin
+- utilizarea lui in produse sau servicii contra cost
+- utilizarea lui pentru activitati de publicitate sau pentru activitati
+  generatoare de venit
+
+Aceasta restrictie nu afecteaza utilizarea necomerciala cu scop
+educational, personal sau de cercetare.
+
+Textul original in limba engleza este redat mai jos pentru referinta:
+
+Additional Non-Commercial Restriction
+
+Copyright (c) 2026 DDP Engineering
+
+Notwithstanding any permissions granted under the GNU Affero General
+Public License v3.0, this software may not be used, in whole or in part,
+for any commercial purpose without explicit written permission from
+DDP Engineering.
+
+Commercial purposes include, but are not limited to:
+- Selling the software or devices containing it
+- Using it in paid products or services
+- Using it for advertising or revenue-generating activities
+
+This restriction does not affect non-commercial educational,
+personal, or research use.

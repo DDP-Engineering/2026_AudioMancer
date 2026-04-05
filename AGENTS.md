@@ -46,6 +46,9 @@ documentation header in the same change.
 - Make changes incrementally.
 - Update documentation in the same change when behavior or contracts change.
 - Preserve public interfaces unless change is explicitly requested.
+- When changing any operator-facing UI text, labels, titles, buttons, menu
+  entries, page names, or dialog content, update the runtime UI translation
+  mechanism in the same change so the interface remains language-complete.
 - Keep repository instructions in `AGENTS.md` and broad style rules in
   documentation files.
 

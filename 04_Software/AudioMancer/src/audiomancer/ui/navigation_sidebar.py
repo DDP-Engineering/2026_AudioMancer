@@ -13,13 +13,15 @@
          DDP_Audiomancer main-window shell.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-05
-@version 0.1.0
+@version 0.2.0
 """
 
 # IMPORTS
 
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import QListWidget, QListWidgetItem
+
+from audiomancer.services import ui_state_service
 
 
 # PUBLIC API
@@ -31,7 +33,7 @@ class NavigationSidebar(QListWidget):
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-05
-    @version    0.1.0
+    @version    0.2.0
     """
 
     page_selected = Signal(str)
@@ -50,6 +52,7 @@ class NavigationSidebar(QListWidget):
         self.setAlternatingRowColors(True)
         self.setFixedWidth(176)
         self.itemSelectionChanged.connect(self._emit_selected_page)
+        self._page_labels: dict[str, str] = {}
 
     def add_page(self, page_id: str, label: str, enabled: bool) -> None:
         """
@@ -66,7 +69,41 @@ class NavigationSidebar(QListWidget):
         item = QListWidgetItem(label)
         item.setData(Qt.ItemDataRole.UserRole, page_id)
         self.addItem(item)
+        self._page_labels[page_id] = label
         self.set_page_enabled(page_id, enabled)
+
+    def set_page_label(self, page_id: str, label: str) -> None:
+        """
+        @brief      Update the display label for one registered page entry.
+        @param[in]  page_id Target page identifier.
+        @param[in]  label Human-readable page label.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-05
+        @version    0.1.0
+        """
+        item = self._find_item(page_id)
+        if item is None:
+            return
+        item.setText(label)
+        self._page_labels[page_id] = label
+
+    def apply_language(self, language: str) -> None:
+        """
+        @brief      Apply one UI language to the sidebar page labels.
+        @param[in]  language Target UI language code.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-05
+        @version    0.1.0
+        """
+        for page_id in self._page_labels:
+            self.set_page_label(
+                page_id,
+                ui_state_service.translate(f"sidebar.{page_id}", language),
+            )
 
     def set_page_enabled(self, page_id: str, enabled: bool) -> None:
         """

@@ -30,6 +30,8 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from audiomancer.services import ui_state_service
+
 
 # PUBLIC API
 
@@ -121,6 +123,44 @@ class TextCleanupPage(QWidget):
         notes_layout.addWidget(self._notes_edit)
         notes_group.setMaximumHeight(180)
         layout.addWidget(notes_group, 0)
+        self._extracted_group = extracted_group
+        self._cleaned_group = cleaned_group
+        self._notes_group = notes_group
+
+    def apply_language(self, language: str) -> None:
+        self._title_label.setText(
+            f"<h2>{ui_state_service.translate('text_cleanup.title', language)}</h2>"
+        )
+        self._extract_button.setText(
+            ui_state_service.translate("text_cleanup.extract", language)
+        )
+        self._clean_button.setText(
+            ui_state_service.translate("text_cleanup.clean", language)
+        )
+        self._ai_profile_label.setText(
+            ui_state_service.translate("text_cleanup.ai_profile", language)
+        )
+        self._ai_clean_button.setText(
+            ui_state_service.translate("text_cleanup.ai_clean", language)
+        )
+        self._extracted_group.setTitle(
+            ui_state_service.translate("text_cleanup.extracted_group", language)
+        )
+        self._cleaned_group.setTitle(
+            ui_state_service.translate("text_cleanup.cleaned_group", language)
+        )
+        self._notes_group.setTitle(
+            ui_state_service.translate("text_cleanup.notes_group", language)
+        )
+        self._extracted_text_edit.setPlainText(
+            ui_state_service.translate("text_cleanup.extracted_note", language)
+        )
+        self._cleaned_text_edit.setPlainText(
+            ui_state_service.translate("text_cleanup.cleaned_note", language)
+        )
+        self._notes_edit.setPlainText(
+            ui_state_service.translate("text_cleanup.notes_text", language)
+        )
 
 
 # END OF FILE

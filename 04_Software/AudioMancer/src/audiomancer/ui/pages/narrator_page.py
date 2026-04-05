@@ -14,7 +14,7 @@
          connected functionality.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-05
-@version 0.2.0
+@version 0.3.0
 """
 
 # IMPORTS
@@ -34,6 +34,8 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from audiomancer.services import ui_state_service
+
 # CONSTANTS
 
 SUPPORTED_LANGUAGES = (
@@ -51,7 +53,7 @@ class NarratorPage(QWidget):
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-05
-    @version    0.2.0
+    @version    0.3.0
     """
 
     def __init__(self, parent=None) -> None:
@@ -62,17 +64,19 @@ class NarratorPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-05
-        @version    0.2.0
+        @version    0.3.0
         """
         super().__init__(parent)
 
         layout = QVBoxLayout(self)
 
         header_row = QHBoxLayout()
-        header_row.addWidget(QLabel("<h2>Narrator</h2>"))
+        self._title_label = QLabel("<h2>Narrator</h2>")
+        header_row.addWidget(self._title_label)
         header_row.addStretch(1)
 
-        header_row.addWidget(QLabel("Narrator Language"))
+        self._language_label = QLabel("Narrator Language")
+        header_row.addWidget(self._language_label)
         self._narrator_language_combo = QComboBox(self)
         self._narrator_language_combo.addItems(SUPPORTED_LANGUAGES)
         header_row.addWidget(self._narrator_language_combo)
@@ -115,7 +119,8 @@ class NarratorPage(QWidget):
 
         self._profile_name_edit = QLineEdit(self)
         self._profile_name_edit.setText("Warm Storyteller")
-        setup_layout.addRow("Profile Name", self._profile_name_edit)
+        self._profile_name_label = QLabel("Profile Name", self)
+        setup_layout.addRow(self._profile_name_label, self._profile_name_edit)
         editor_container_layout.addWidget(setup_group)
 
         designer_group = QGroupBox("Voice Designer Prompt", self)
@@ -160,6 +165,60 @@ class NarratorPage(QWidget):
         self._main_splitter.setStretchFactor(1, 8)
         self._main_splitter.setSizes([300, 980])
         layout.addWidget(self._main_splitter, 1)
+        self._profiles_group = profiles_group
+        self._setup_group = setup_group
+        self._designer_group = designer_group
+        self._preview_group = preview_text_group
+
+    def apply_language(self, language: str) -> None:
+        """
+        @brief      Apply one UI language to the narrator page labels.
+        @param[in]  language Target UI language code.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-05
+        @version    0.1.0
+        """
+        self._title_label.setText(
+            f"<h2>{ui_state_service.translate('narrator.title', language)}</h2>"
+        )
+        self._language_label.setText(
+            ui_state_service.translate("narrator.language", language)
+        )
+        self._summary_label.setText(
+            ui_state_service.translate("narrator.summary", language)
+        )
+        self._profiles_group.setTitle(
+            ui_state_service.translate("narrator.profiles_group", language)
+        )
+        self._new_profile_button.setText(
+            ui_state_service.translate("narrator.new_profile", language)
+        )
+        self._setup_group.setTitle(
+            ui_state_service.translate("narrator.setup_group", language)
+        )
+        self._profile_name_label.setText(
+            ui_state_service.translate("narrator.profile_name", language)
+        )
+        self._designer_group.setTitle(
+            ui_state_service.translate("narrator.designer_group", language)
+        )
+        self._preview_group.setTitle(
+            ui_state_service.translate("narrator.preview_group", language)
+        )
+        self._create_profile_button.setText(
+            ui_state_service.translate("narrator.create_profile", language)
+        )
+        self._save_profile_button.setText(
+            ui_state_service.translate("narrator.save_profile", language)
+        )
+        self._delete_profile_button.setText(
+            ui_state_service.translate("narrator.delete_profile", language)
+        )
+        self._preview_toggle_button.setText(
+            ui_state_service.translate("narrator.preview", language)
+        )
 
 
 # END OF FILE

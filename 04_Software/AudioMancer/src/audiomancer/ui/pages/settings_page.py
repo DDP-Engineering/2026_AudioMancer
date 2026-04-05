@@ -29,6 +29,7 @@ from PySide6.QtWidgets import (
 )
 
 from audiomancer import config
+from audiomancer.services import ui_state_service
 
 # CONSTANTS
 
@@ -105,6 +106,8 @@ class SettingsPage(QWidget):
         button_row.addWidget(self._save_button)
         button_row.addStretch(1)
         layout.addLayout(button_row)
+        self._language_label = selector_row.itemAt(0).widget()
+        self._text_size_label = selector_row.itemAt(3).widget()
 
     def load_settings(self, settings_payload: dict[str, object]) -> None:
         """
@@ -155,6 +158,52 @@ class SettingsPage(QWidget):
             self._completion_beep_checkbox.isChecked()
         )
         return merged_settings
+
+    def apply_language(self, language: str) -> None:
+        """
+        @brief      Apply one UI language to the settings page labels.
+        @param[in]  language Target UI language code.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-05
+        @version    0.1.0
+        """
+        self._language_label.setText(
+            ui_state_service.translate("settings.language", language)
+        )
+        self._text_size_label.setText(
+            ui_state_service.translate("settings.text_size", language)
+        )
+        self._completion_beep_checkbox.setText(
+            ui_state_service.translate("settings.play_beep", language)
+        )
+        self._cancel_button.setText(
+            ui_state_service.translate("settings.cancel", language)
+        )
+        self._save_button.setText(
+            ui_state_service.translate("settings.save", language)
+        )
+        self._ui_text_scale_combo.setItemText(
+            self._ui_text_scale_combo.findData("very_small"),
+            ui_state_service.translate("settings.scale.very_small", language),
+        )
+        self._ui_text_scale_combo.setItemText(
+            self._ui_text_scale_combo.findData("small"),
+            ui_state_service.translate("settings.scale.small", language),
+        )
+        self._ui_text_scale_combo.setItemText(
+            self._ui_text_scale_combo.findData("normal"),
+            ui_state_service.translate("settings.scale.normal", language),
+        )
+        self._ui_text_scale_combo.setItemText(
+            self._ui_text_scale_combo.findData("large"),
+            ui_state_service.translate("settings.scale.large", language),
+        )
+        self._ui_text_scale_combo.setItemText(
+            self._ui_text_scale_combo.findData("very_large"),
+            ui_state_service.translate("settings.scale.very_large", language),
+        )
 
 
 # END OF FILE

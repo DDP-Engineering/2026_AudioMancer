@@ -19,6 +19,7 @@
 # IMPORTS
 
 from audiomancer import config
+from audiomancer.services import ui_state_service
 from PySide6.QtWidgets import (
     QComboBox,
     QGroupBox,
@@ -146,6 +147,48 @@ class TextChunkingPage(QWidget):
         notes_layout.addWidget(self._notes_edit)
         notes_group.setMaximumHeight(140)
         layout.addWidget(notes_group, 0)
+        self._cleaned_group = cleaned_group
+        self._chunk_list_group = chunk_list_group
+        self._chunk_preview_group = chunk_preview_group
+        self._notes_group = notes_group
+
+    def apply_language(self, language: str) -> None:
+        self._title_label.setText(
+            f"<h2>{ui_state_service.translate('text_chunking.title', language)}</h2>"
+        )
+        self._profile_label.setText(
+            ui_state_service.translate("text_chunking.ai_profile", language)
+        )
+        self._strategy_label.setText(
+            ui_state_service.translate("text_chunking.ai_strategy", language)
+        )
+        self._chunk_button.setText(
+            ui_state_service.translate("text_chunking.chunk", language)
+        )
+        self._ai_chunk_button.setText(
+            ui_state_service.translate("text_chunking.ai_chunk", language)
+        )
+        self._cleaned_group.setTitle(
+            ui_state_service.translate("text_chunking.cleaned_group", language)
+        )
+        self._chunk_list_group.setTitle(
+            ui_state_service.translate("text_chunking.chunk_list_group", language)
+        )
+        self._chunk_preview_group.setTitle(
+            ui_state_service.translate("text_chunking.selected_group", language)
+        )
+        self._notes_group.setTitle(
+            ui_state_service.translate("text_chunking.notes_group", language)
+        )
+        self._cleaned_text_edit.setPlainText(
+            ui_state_service.translate("text_chunking.cleaned_note", language)
+        )
+        self._chunk_text_edit.setPlainText(
+            ui_state_service.translate("text_chunking.selected_note", language)
+        )
+        self._notes_edit.setPlainText(
+            ui_state_service.translate("text_chunking.notes_text", language)
+        )
 
 
 # END OF FILE

@@ -13,7 +13,7 @@
          presentational page without any connected functionality.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-05
-@version 0.1.0
+@version 0.2.0
 """
 
 # IMPORTS
@@ -35,6 +35,8 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from audiomancer.services import ui_state_service
+
 
 # PUBLIC API
 
@@ -45,7 +47,7 @@ class CharactersPage(QWidget):
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-05
-    @version    0.1.0
+    @version    0.2.0
     """
 
     def __init__(self, parent=None) -> None:
@@ -56,13 +58,14 @@ class CharactersPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-05
-        @version    0.1.0
+        @version    0.2.0
         """
         super().__init__(parent)
 
         layout = QVBoxLayout(self)
         header_row = QHBoxLayout()
-        header_row.addWidget(QLabel("<h2>Characters</h2>"))
+        self._title_label = QLabel("<h2>Characters</h2>")
+        header_row.addWidget(self._title_label)
         header_row.addStretch(1)
 
         self._profile_label = QLabel("AI Profile")
@@ -169,19 +172,33 @@ class CharactersPage(QWidget):
             widget.setMinimumHeight(62)
             widget.setMaximumHeight(82)
 
-        editor_layout.addRow("Canonical Name", self._canonical_name_edit)
-        editor_layout.addRow("Aliases", self._aliases_edit)
-        editor_layout.addRow("Gender Hint", self._gender_hint_edit)
-        editor_layout.addRow("Age Band", self._age_band_edit)
-        editor_layout.addRow("Role Summary", self._role_summary_edit)
-        editor_layout.addRow("Description", self._description_edit)
-        editor_layout.addRow("Temperament", self._temperament_edit)
-        editor_layout.addRow("Social Status", self._social_status_edit)
-        editor_layout.addRow("Speaking Style", self._speaking_style_edit)
-        editor_layout.addRow("Accent / Dialect", self._accent_edit)
-        editor_layout.addRow("Voice Notes", self._voice_notes_edit)
-        editor_layout.addRow("Relationship Hints", self._relationships_edit)
-        editor_layout.addRow("Confidence", self._confidence_edit)
+        self._canonical_name_label = QLabel("Canonical Name", self)
+        self._aliases_label = QLabel("Aliases", self)
+        self._gender_hint_label = QLabel("Gender Hint", self)
+        self._age_band_label = QLabel("Age Band", self)
+        self._role_summary_label = QLabel("Role Summary", self)
+        self._description_label = QLabel("Description", self)
+        self._temperament_label = QLabel("Temperament", self)
+        self._social_status_label = QLabel("Social Status", self)
+        self._speaking_style_label = QLabel("Speaking Style", self)
+        self._accent_label = QLabel("Accent / Dialect", self)
+        self._voice_notes_label = QLabel("Voice Notes", self)
+        self._relationships_label = QLabel("Relationship Hints", self)
+        self._confidence_label = QLabel("Confidence", self)
+
+        editor_layout.addRow(self._canonical_name_label, self._canonical_name_edit)
+        editor_layout.addRow(self._aliases_label, self._aliases_edit)
+        editor_layout.addRow(self._gender_hint_label, self._gender_hint_edit)
+        editor_layout.addRow(self._age_band_label, self._age_band_edit)
+        editor_layout.addRow(self._role_summary_label, self._role_summary_edit)
+        editor_layout.addRow(self._description_label, self._description_edit)
+        editor_layout.addRow(self._temperament_label, self._temperament_edit)
+        editor_layout.addRow(self._social_status_label, self._social_status_edit)
+        editor_layout.addRow(self._speaking_style_label, self._speaking_style_edit)
+        editor_layout.addRow(self._accent_label, self._accent_edit)
+        editor_layout.addRow(self._voice_notes_label, self._voice_notes_edit)
+        editor_layout.addRow(self._relationships_label, self._relationships_edit)
+        editor_layout.addRow(self._confidence_label, self._confidence_edit)
         self._editor_scroll_area.setWidget(self._editor_form_widget)
         editor_group_layout.addWidget(self._editor_scroll_area)
         self._left_splitter.addWidget(editor_group)
@@ -212,6 +229,86 @@ class CharactersPage(QWidget):
         self._main_splitter.setStretchFactor(1, 3)
         self._main_splitter.setSizes([900, 300])
         layout.addWidget(self._main_splitter, 1)
+        self._list_group = list_group
+        self._editor_group = editor_group
+        self._evidence_group = evidence_group
+
+    def apply_language(self, language: str) -> None:
+        """
+        @brief      Apply one UI language to the characters page labels.
+        @param[in]  language Target UI language code.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-05
+        @version    0.1.0
+        """
+        self._title_label.setText(
+            f"<h2>{ui_state_service.translate('characters.title', language)}</h2>"
+        )
+        self._profile_label.setText(
+            ui_state_service.translate("characters.ai_profile", language)
+        )
+        self._start_button.setText(
+            ui_state_service.translate("characters.start", language)
+        )
+        self._clear_button.setText(
+            ui_state_service.translate("characters.reset", language)
+        )
+        self._summary_label.setText(
+            ui_state_service.translate("characters.summary", language)
+        )
+        self._list_group.setTitle(
+            ui_state_service.translate("characters.list_group", language)
+        )
+        self._editor_group.setTitle(
+            ui_state_service.translate("characters.profile_group", language)
+        )
+        self._evidence_group.setTitle(
+            ui_state_service.translate("characters.evidence_group", language)
+        )
+        self._canonical_name_label.setText(
+            ui_state_service.translate("characters.canonical_name", language)
+        )
+        self._aliases_label.setText(
+            ui_state_service.translate("characters.aliases", language)
+        )
+        self._gender_hint_label.setText(
+            ui_state_service.translate("characters.gender_hint", language)
+        )
+        self._age_band_label.setText(
+            ui_state_service.translate("characters.age_band", language)
+        )
+        self._role_summary_label.setText(
+            ui_state_service.translate("characters.role_summary", language)
+        )
+        self._description_label.setText(
+            ui_state_service.translate("characters.description", language)
+        )
+        self._temperament_label.setText(
+            ui_state_service.translate("characters.temperament", language)
+        )
+        self._social_status_label.setText(
+            ui_state_service.translate("characters.social_status", language)
+        )
+        self._speaking_style_label.setText(
+            ui_state_service.translate("characters.speaking_style", language)
+        )
+        self._accent_label.setText(
+            ui_state_service.translate("characters.accent", language)
+        )
+        self._voice_notes_label.setText(
+            ui_state_service.translate("characters.voice_notes", language)
+        )
+        self._relationships_label.setText(
+            ui_state_service.translate("characters.relationship_hints", language)
+        )
+        self._confidence_label.setText(
+            ui_state_service.translate("characters.confidence", language)
+        )
+        self._evidence_preview.setPlainText(
+            ui_state_service.translate("characters.evidence_note", language)
+        )
 
 
 # END OF FILE

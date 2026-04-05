@@ -13,13 +13,15 @@
          first AudioMancer window matches the same layout.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-05
-@version 0.1.0
+@version 0.3.0
 """
 
 # IMPORTS
 
 from PySide6.QtCore import Signal
 from PySide6.QtWidgets import QLabel, QProgressBar, QPushButton, QStatusBar
+
+from audiomancer.services import ui_state_service
 
 
 # PUBLIC API
@@ -31,7 +33,7 @@ class AudiomancerStatusBar(QStatusBar):
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-05
-    @version    0.1.0
+    @version    0.3.0
     """
 
     stop_requested = Signal()
@@ -47,6 +49,7 @@ class AudiomancerStatusBar(QStatusBar):
         @version    0.1.0
         """
         super().__init__(parent)
+        self._current_language = "en"
         self._activity_label = QLabel("")
         self._activity_label.setMinimumWidth(190)
         self._progress_bar = QProgressBar(self)
@@ -71,9 +74,36 @@ class AudiomancerStatusBar(QStatusBar):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-05
-        @version    0.1.0
+        @version    0.2.0
         """
-        self._stage_label.setText(f"Stage: {stage_name or 'idle'}")
+        stage_text = stage_name or ui_state_service.translate(
+            "status.idle", self._current_language
+        )
+        self._stage_label.setText(
+            f"{ui_state_service.translate('status.stage_prefix', self._current_language)}: {stage_text}"
+        )
+
+    def apply_language(self, language: str) -> None:
+        """
+        @brief      Apply one UI language to the status-bar static labels.
+        @param[in]  language Target UI language code.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-05
+        @version    0.2.0
+        """
+        self._current_language = language
+        self._stop_button.setText(
+            ui_state_service.translate("status.stop_ai", language)
+        )
+        stage_text = self._stage_label.text().split(":", maxsplit=1)
+        current_stage = stage_text[1].strip() if len(stage_text) == 2 else ""
+        if current_stage in ("idle", "inactiva"):
+            current_stage = ui_state_service.translate("status.idle", language)
+        self._stage_label.setText(
+            f"{ui_state_service.translate('status.stage_prefix', language)}: {current_stage}"
+        )
 
 
 # END OF FILE

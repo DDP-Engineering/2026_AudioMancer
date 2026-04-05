@@ -14,7 +14,7 @@
          pages presentational only and free of workflow behavior.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-05
-@version 0.4.0
+@version 0.6.0
 """
 
 # IMPORTS
@@ -24,6 +24,7 @@ from pathlib import Path
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QCloseEvent
 from PySide6.QtWidgets import (
+    QApplication,
     QDialogButtonBox,
     QDialog,
     QHBoxLayout,
@@ -38,6 +39,7 @@ from PySide6.QtWidgets import (
 
 from audiomancer import config
 from audiomancer.services import settings_service
+from audiomancer.services import ui_state_service
 from audiomancer.ui.navigation_sidebar import NavigationSidebar
 from audiomancer.ui.pages.ai_translation_page import AiTranslationPage
 from audiomancer.ui.pages.ai_settings_page import AiSettingsPage
@@ -60,6 +62,12 @@ WINDOW_MIN_HEIGHT = config.DEFAULT_MAIN_WINDOW_MIN_HEIGHT
 TAGLINE_TEXT = "Transform written words into real audio experience!"
 LICENSE_PATH = config.APP_ROOT / "LICENSE.txt"
 LICENSE_NC_PATH = config.APP_ROOT / "LICENSE_NC.txt"
+LICENSE_TRANSLATED_PATHS = {
+    "ro": (
+        config.APP_ROOT / "LICENSE_ro.txt",
+        config.APP_ROOT / "LICENSE_NC_ro.txt",
+    ),
+}
 
 
 # PUBLIC API
@@ -74,7 +82,7 @@ class MainWindow(QMainWindow):
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-05
-    @version    0.4.0
+    @version    0.6.0
     """
 
     PAGE_ORDER = (
@@ -102,7 +110,7 @@ class MainWindow(QMainWindow):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-05
-        @version    0.4.0
+        @version    0.6.0
         """
         super().__init__(parent)
         self.setWindowTitle(_build_window_title())
@@ -134,6 +142,7 @@ class MainWindow(QMainWindow):
         self._sidebar.page_selected.connect(self.set_current_page)
         self._sidebar.set_current_page("home")
         self.set_current_page("home")
+        self._apply_current_ui_settings()
 
     def set_current_page(self, page_id: str) -> None:
         """
@@ -172,7 +181,7 @@ class MainWindow(QMainWindow):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-05
-        @version    0.1.0
+        @version    0.2.0
         """
         self._ai_settings_page.load_settings(self._settings_payload)
         self._ai_settings_dialog.show()
@@ -186,7 +195,7 @@ class MainWindow(QMainWindow):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-05
-        @version    0.1.0
+        @version    0.2.0
         """
         self._build_about_dialog().exec()
 
@@ -199,7 +208,7 @@ class MainWindow(QMainWindow):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-05
-        @version    0.1.0
+        @version    0.2.0
         """
         self.statusBar().showMessage(message, timeout_ms)
 
@@ -212,7 +221,7 @@ class MainWindow(QMainWindow):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-05
-        @version    0.1.0
+        @version    0.2.0
         """
         toolbar = QToolBar("Main Toolbar", self)
         self._action_new_project = toolbar.addAction("New Project")
@@ -226,9 +235,7 @@ class MainWindow(QMainWindow):
         self._action_settings.triggered.connect(self.show_settings_dialog)
         self._action_ai_settings.triggered.connect(self.show_ai_settings_dialog)
         self._action_help.triggered.connect(
-            lambda: self.show_message(
-                "Help placeholder. This shell mirrors DDP_Audiomancer only.",
-            )
+            self._show_help_placeholder
         )
         self._action_about.triggered.connect(self.show_about_dialog)
         return toolbar
@@ -240,7 +247,7 @@ class MainWindow(QMainWindow):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-05
-        @version    0.1.0
+        @version    0.2.0
         """
         home_page = HomeProjectPage(self)
         home_page.set_project_state(
@@ -309,7 +316,12 @@ class MainWindow(QMainWindow):
         @version    0.1.0
         """
         self._settings_dialog = QDialog(self)
-        self._settings_dialog.setWindowTitle("Settings")
+        self._settings_dialog.setWindowTitle(
+            ui_state_service.translate(
+                "dialog.settings_title",
+                str(self._settings_payload.get("language", config.DEFAULT_LANGUAGE)),
+            )
+        )
         self._settings_dialog.resize(680, 560)
         settings_layout = QVBoxLayout(self._settings_dialog)
         self._settings_page = SettingsPage(self._settings_dialog)
@@ -323,7 +335,12 @@ class MainWindow(QMainWindow):
         settings_layout.addWidget(self._settings_page)
 
         self._ai_settings_dialog = QDialog(self)
-        self._ai_settings_dialog.setWindowTitle("AI Settings")
+        self._ai_settings_dialog.setWindowTitle(
+            ui_state_service.translate(
+                "dialog.ai_settings_title",
+                str(self._settings_payload.get("language", config.DEFAULT_LANGUAGE)),
+            )
+        )
         self._ai_settings_dialog.resize(920, 640)
         ai_layout = QVBoxLayout(self._ai_settings_dialog)
         self._ai_settings_page = AiSettingsPage(self._ai_settings_dialog)
@@ -348,8 +365,14 @@ class MainWindow(QMainWindow):
         merged_settings = self._settings_page.build_settings(self._settings_payload)
         settings_service.save_settings(merged_settings)
         self._settings_payload = settings_service.load_settings()
+        self._apply_current_ui_settings()
         self._settings_dialog.close()
-        self.show_message("Settings saved.")
+        self.show_message(
+            ui_state_service.translate(
+                "status.saved_settings",
+                str(self._settings_payload.get("language", config.DEFAULT_LANGUAGE)),
+            )
+        )
 
     def _save_ai_settings_from_dialog(self) -> None:
         """
@@ -365,8 +388,90 @@ class MainWindow(QMainWindow):
         )
         settings_service.save_settings(merged_settings)
         self._settings_payload = settings_service.load_settings()
+        self._apply_current_ui_settings()
         self._ai_settings_dialog.close()
-        self.show_message("AI settings saved.")
+        self.show_message(
+            ui_state_service.translate(
+                "status.saved_ai_settings",
+                str(self._settings_payload.get("language", config.DEFAULT_LANGUAGE)),
+            )
+        )
+
+    def _apply_current_ui_settings(self) -> None:
+        """
+        @brief      Apply persisted runtime UI settings to the current shell.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-05
+        @version    0.1.0
+        """
+        ui_state_service.apply_ui_settings(
+            QApplication.instance(),
+            self,
+            self._settings_payload,
+        )
+
+    def apply_language(self, language: str) -> None:
+        """
+        @brief      Apply one UI language across the visible shell widgets.
+        @param[in]  language Target UI language code.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-05
+        @version    0.1.0
+        """
+        self.setWindowTitle(ui_state_service.translate("window_title.main", language))
+        self._action_new_project.setText(
+            ui_state_service.translate("toolbar.new_project", language)
+        )
+        self._action_open_project.setText(
+            ui_state_service.translate("toolbar.open_project", language)
+        )
+        self._action_settings.setText(
+            ui_state_service.translate("toolbar.settings", language)
+        )
+        self._action_ai_settings.setText(
+            ui_state_service.translate("toolbar.ai_settings", language)
+        )
+        self._action_help.setText(
+            ui_state_service.translate("toolbar.help", language)
+        )
+        self._action_about.setText(
+            ui_state_service.translate("toolbar.about", language)
+        )
+        self._sidebar.apply_language(language)
+        self._status_bar.apply_language(language)
+        self._settings_dialog.setWindowTitle(
+            ui_state_service.translate("dialog.settings_title", language)
+        )
+        self._ai_settings_dialog.setWindowTitle(
+            ui_state_service.translate("dialog.ai_settings_title", language)
+        )
+        for widget in (
+            self._settings_page,
+            self._ai_settings_page,
+            *self._page_registry.values(),
+        ):
+            if hasattr(widget, "apply_language"):
+                widget.apply_language(language)
+
+    def _show_help_placeholder(self) -> None:
+        """
+        @brief      Show the translated shell help placeholder message.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-05
+        @version    0.1.0
+        """
+        self.show_message(
+            ui_state_service.translate(
+                "help.placeholder",
+                str(self._settings_payload.get("language", config.DEFAULT_LANGUAGE)),
+            )
+        )
 
     def _build_about_dialog(self) -> QDialog:
         """
@@ -378,7 +483,12 @@ class MainWindow(QMainWindow):
         @version    0.1.0
         """
         dialog = QDialog(self)
-        dialog.setWindowTitle("About")
+        current_language = str(
+            self._settings_payload.get("language", config.DEFAULT_LANGUAGE)
+        )
+        dialog.setWindowTitle(
+            ui_state_service.translate("dialog.about_title", current_language)
+        )
         dialog.resize(510, 620)
 
         layout = QVBoxLayout(dialog)
@@ -392,27 +502,30 @@ class MainWindow(QMainWindow):
         title_label.setTextFormat(Qt.TextFormat.RichText)
         layout.addWidget(title_label)
 
-        subtitle = QLabel("Transform written words into real audio experience!")
+        subtitle = QLabel(
+            ui_state_service.translate("about.subtitle", current_language)
+        )
         subtitle.setAlignment(Qt.AlignmentFlag.AlignHCenter)
         subtitle.setWordWrap(True)
         layout.addWidget(subtitle)
         layout.addSpacing(12)
 
-        details = QLabel(
-            "Eng. Dipl. Dan Dumitru Pasare\n"
-            "pasaredan1979@gmail.com"
-        )
+        details = QLabel(ui_state_service.translate("about.details", current_language))
         details.setAlignment(Qt.AlignmentFlag.AlignHCenter)
         layout.addWidget(details)
         layout.addSpacing(12)
 
-        license_label = QLabel("License")
+        license_label = QLabel(
+            ui_state_service.translate("about.license", current_language)
+        )
         layout.addWidget(license_label)
 
         license_text_box = QPlainTextEdit(dialog)
         license_text_box.setObjectName("aboutLicenseTextBox")
         license_text_box.setReadOnly(True)
-        license_text_box.setPlainText(self._load_about_license_text())
+        license_text_box.setPlainText(
+            self._load_about_license_text(current_language)
+        )
         layout.addWidget(license_text_box, 1)
 
         button_box = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok, dialog)
@@ -424,21 +537,23 @@ class MainWindow(QMainWindow):
         layout.addLayout(button_layout)
         return dialog
 
-    def _load_about_license_text(self) -> str:
+    def _load_about_license_text(self, language: str) -> str:
         """
         @brief      Load the main and addendum license text for the About dialog.
+        @param[in]  language Target UI language code.
         @return     Combined operator-facing license text.
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-05
-        @version    0.1.0
+        @version    0.2.0
         """
+        main_license_path, addendum_path = _resolve_license_paths(language)
         return (
-            _read_text_file(LICENSE_PATH)
+            _read_text_file(main_license_path)
             + "\n\n"
             + "=" * 78
             + "\n\n"
-            + _read_text_file(LICENSE_NC_PATH)
+            + _read_text_file(addendum_path)
         )
 
     def closeEvent(self, event: QCloseEvent) -> None:  # noqa: N802
@@ -467,6 +582,25 @@ def _read_text_file(path: Path) -> str:
     if not path.exists():
         return f"File not found: {path}"
     return path.read_text(encoding="utf-8").strip()
+
+
+def _resolve_license_paths(language: str) -> tuple[Path, Path]:
+    """
+    @brief      Resolve the localized license-file pair for one UI language.
+    @param[in]  language Target UI language code.
+    @return     Tuple of main-license path and addendum-license path.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-05
+    @version    0.1.0
+    """
+    localized_pair = LICENSE_TRANSLATED_PATHS.get(language)
+    if localized_pair is None:
+        return LICENSE_PATH, LICENSE_NC_PATH
+    main_license_path, addendum_path = localized_pair
+    if main_license_path.exists() and addendum_path.exists():
+        return main_license_path, addendum_path
+    return LICENSE_PATH, LICENSE_NC_PATH
 
 
 def _build_window_title(context: str | None = None) -> str:

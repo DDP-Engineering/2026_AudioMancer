@@ -32,6 +32,7 @@ from PySide6.QtWidgets import (
 )
 
 from audiomancer import config
+from audiomancer.services import ui_state_service
 
 
 # CONSTANTS
@@ -65,7 +66,8 @@ class AiTranslationPage(QWidget):
 
         layout = QVBoxLayout(self)
         header_row = QHBoxLayout()
-        header_row.addWidget(QLabel("<h2>AI Translation</h2>"))
+        self._title_label = QLabel("<h2>AI Translation</h2>")
+        header_row.addWidget(self._title_label)
         header_row.addStretch(1)
 
         self._language_label = QLabel("Target Language")
@@ -168,6 +170,53 @@ class AiTranslationPage(QWidget):
         bottom_row.addWidget(translated_group, 1)
 
         layout.addLayout(bottom_row, 1)
+        self._chunk_list_group = chunk_list_group
+        self._source_group = source_group
+        self._translated_group = translated_group
+
+    def apply_language(self, language: str) -> None:
+        self._title_label.setText(
+            f"<h2>{ui_state_service.translate('ai_translation.title', language)}</h2>"
+        )
+        self._language_label.setText(
+            ui_state_service.translate("ai_translation.target_language", language)
+        )
+        self._profile_label.setText(
+            ui_state_service.translate("ai_translation.ai_profile", language)
+        )
+        self._chunk_list_group.setTitle(
+            ui_state_service.translate("ai_translation.chunk_list_group", language)
+        )
+        self._start_button.setText(
+            ui_state_service.translate("ai_translation.start", language)
+        )
+        self._clear_button.setText(
+            ui_state_service.translate("ai_translation.reset", language)
+        )
+        self._approve_all_button.setText(
+            ui_state_service.translate("ai_translation.approve_all", language)
+        )
+        self._source_group.setTitle(
+            ui_state_service.translate("ai_translation.original_group", language)
+        )
+        self._translated_group.setTitle(
+            ui_state_service.translate("ai_translation.translated_group", language)
+        )
+        self._approved_progress_label.setText(
+            ui_state_service.translate("ai_translation.approved_chunks", language)
+        )
+        self._retranslate_button.setText(
+            ui_state_service.translate("ai_translation.retranslate", language)
+        )
+        self._approve_selected_button.setText(
+            ui_state_service.translate("ai_translation.approve_selected", language)
+        )
+        self._source_text_edit.setPlainText(
+            ui_state_service.translate("ai_translation.source_note", language)
+        )
+        self._translated_text_edit.setPlainText(
+            ui_state_service.translate("ai_translation.translated_note", language)
+        )
 
 
 # END OF FILE

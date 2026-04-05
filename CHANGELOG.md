@@ -16,6 +16,29 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+## [0.2.1] - 2026-04-05
+
+### Added
+
+- added `ui_state_service` as a dedicated runtime UI-state component for applying persisted UI language and text-size changes
+- added focused test coverage for runtime UI translation lookup, text-scale application, and translated About-dialog license loading
+- added Romanian app-root companion license files for the About dialog: `LICENSE_ro.txt` and `LICENSE_NC_ro.txt`
+- added a repository rule requiring every operator-facing UI text change to update the translation mechanism in the same change
+
+### Changed
+
+- `Settings` save now applies the selected UI language and text-size immediately across the running shell instead of waiting for restart
+- extended runtime English/Romanian translation coverage across the main toolbar, sidebar, status bar, settings dialogs, and current page shell labels
+- updated the Home / Project page layout so the source-selection button sits in the project summary block and the workflow-progress area regains vertical space at large UI text sizes
+- the About dialog now loads localized license text based on the current UI language, with fallback to the English license files when no localized pair exists
+- `ui_state_service` now emits backend-service logging for translation and runtime UI-apply actions
+- updated software and shell documentation to describe runtime UI apply behavior and localized license assets
+- package version updated to `0.2.1`
+
+### Fixed
+
+- fixed the Home / Project page so the workflow-progress panel fits better at the maximum interface text size
+
 ## [0.2.0] - 2026-04-05
 
 ### Added

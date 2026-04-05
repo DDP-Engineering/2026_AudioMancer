@@ -13,7 +13,7 @@
          the same first-page structure without implementing import behavior.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-05
-@version 0.1.1
+@version 0.2.0
 """
 
 # IMPORTS
@@ -22,6 +22,7 @@ from PySide6.QtCore import Signal
 from PySide6.QtGui import QColor, QFont
 from PySide6.QtWidgets import (
     QSizePolicy,
+    QGridLayout,
     QGroupBox,
     QHBoxLayout,
     QLabel,
@@ -31,6 +32,8 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
+
+from audiomancer.services import ui_state_service
 
 # CONSTANTS
 
@@ -50,7 +53,7 @@ class HomeProjectPage(QWidget):
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-05
-    @version    0.1.1
+    @version    0.2.0
     """
 
     import_requested = Signal()
@@ -63,67 +66,58 @@ class HomeProjectPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-05
-        @version    0.1.1
+        @version    0.2.0
         """
         super().__init__(parent)
         self._project_active = False
         self._source_locked = False
+        self._current_language = "en"
+        self._current_project_name: str | None = None
+        self._current_project_path: str | None = None
+        self._current_stage_name: str | None = None
+        self._current_source_summary: str | None = None
+        self._current_locked_source_name: str | None = None
+        self._stage_entries: list[dict[str, str]] = []
 
         layout = QVBoxLayout(self)
-        layout.addWidget(QLabel("<h2>Home / Project</h2>"))
+        self._title_label = QLabel("<h2>Home / Project</h2>")
+        layout.addWidget(self._title_label)
 
         summary_group = QGroupBox("Project Summary", self)
-        summary_layout = QVBoxLayout(summary_group)
+        summary_layout = QGridLayout(summary_group)
         self._name_label = QLabel("Project: none")
         self._path_label = QLabel("Path: none")
         self._path_label.setWordWrap(True)
         self._stage_label = QLabel("Stage: none")
         self._source_label = QLabel("Source: none")
         self._source_label.setWordWrap(True)
-        for widget in (
-            self._name_label,
-            self._path_label,
-            self._stage_label,
-            self._source_label,
-        ):
-            summary_layout.addWidget(widget)
-        layout.addWidget(summary_group)
-
-        source_group = QGroupBox("Source Import", self)
-        source_layout = QVBoxLayout(source_group)
-        source_note = QLabel(
-            "Each project is bound to exactly one source file. After the "
-            "source is imported, the selection is locked for that project."
-        )
-        source_note.setWordWrap(True)
-        source_layout.addWidget(source_note)
-        source_row = QHBoxLayout()
         self._import_button = QPushButton("Select Source File")
         self._import_button.clicked.connect(self.import_requested.emit)
-        source_row.addWidget(self._import_button)
-        source_row.addStretch(1)
-        source_layout.addLayout(source_row)
-        self._source_lock_label = QLabel("No source imported yet.")
-        self._source_lock_label.setWordWrap(True)
-        locked_font = QFont(self.font())
-        locked_font.setBold(True)
-        self._source_lock_label.setFont(locked_font)
-        self._source_lock_label.setStyleSheet("color: #7A1F1F;")
-        source_layout.addWidget(self._source_lock_label)
-        layout.addWidget(source_group)
+        summary_layout.addWidget(self._name_label, 0, 0)
+        summary_layout.addWidget(self._import_button, 0, 1)
+        summary_layout.addWidget(self._path_label, 1, 0, 1, 2)
+        summary_layout.addWidget(self._stage_label, 2, 0, 1, 2)
+        summary_layout.addWidget(self._source_label, 3, 0, 1, 2)
+        summary_layout.addWidget(self._source_lock_label_placeholder(), 4, 0, 1, 2)
+        summary_layout.setColumnStretch(0, 1)
+        summary_layout.setColumnStretch(1, 0)
+        layout.addWidget(summary_group)
 
         stage_group = QGroupBox("Workflow Progress", self)
         stage_group.setSizePolicy(
             QSizePolicy.Policy.Preferred,
             QSizePolicy.Policy.Expanding,
         )
-        stage_group.setMinimumHeight(340)
+        stage_group.setMinimumHeight(260)
         stage_layout = QVBoxLayout(stage_group)
         self._stage_list = QListWidget(self)
-        self._stage_list.setMinimumHeight(280)
+        self._stage_list.setMinimumHeight(220)
         stage_layout.addWidget(self._stage_list)
         layout.addWidget(stage_group, 3)
+        self._summary_group = summary_group
+        self._stage_group = stage_group
         self._refresh_import_button()
+        self._refresh_summary_labels()
 
     def set_project_state(
         self,
@@ -140,11 +134,12 @@ class HomeProjectPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-05
-        @version    0.1.0
+        @version    0.2.0
         """
-        self._name_label.setText(f"Project: {display_name or 'none'}")
-        self._path_label.setText(f"Path: {project_path or 'none'}")
-        self._stage_label.setText(f"Stage: {stage_name or 'idle'}")
+        self._current_project_name = display_name
+        self._current_project_path = project_path
+        self._current_stage_name = stage_name
+        self._refresh_summary_labels()
         self.set_project_active(bool(project_path))
 
     def set_source_summary(self, summary: str | None) -> None:
@@ -155,9 +150,10 @@ class HomeProjectPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-05
-        @version    0.1.0
+        @version    0.2.0
         """
-        self._source_label.setText(f"Source: {summary or 'none'}")
+        self._current_source_summary = summary
+        self._refresh_summary_labels()
 
     def set_project_active(self, is_active: bool) -> None:
         """
@@ -181,17 +177,21 @@ class HomeProjectPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-05
-        @version    0.1.0
+        @version    0.2.0
         """
         self._source_locked = is_locked
+        self._current_locked_source_name = source_name
         if is_locked:
             self._source_lock_label.setText(
-                "Locked source: "
-                f"{source_name or 'selected source'}. Create a new project to "
-                "use another file."
+                _build_locked_source_text(
+                    self._current_language,
+                    source_name,
+                )
             )
         else:
-            self._source_lock_label.setText("No source imported yet.")
+            self._source_lock_label.setText(
+                ui_state_service.translate("home.no_source", self._current_language)
+            )
         self._refresh_import_button()
 
     def set_stage_statuses(self, stages: list[dict[str, str]]) -> None:
@@ -202,14 +202,17 @@ class HomeProjectPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-05
-        @version    0.1.0
+        @version    0.2.0
         """
+        self._stage_entries = [dict(stage) for stage in stages]
         self._stage_list.clear()
-        for stage in stages:
+        for stage in self._stage_entries:
             status = stage.get("status", "not_started")
             note = stage.get("note", "")
             label = stage.get("label", "Unknown Stage")
-            item = QListWidgetItem(f"{_status_title(status)} | {label}")
+            item = QListWidgetItem(
+                f"{_status_title(status, self._current_language)} | {label}"
+            )
             item.setForeground(_STATUS_COLORS.get(
                 status, _STATUS_COLORS["not_started"]))
             if note:
@@ -229,11 +232,110 @@ class HomeProjectPage(QWidget):
             self._project_active and not self._source_locked
         )
 
+    def apply_language(self, language: str) -> None:
+        """
+        @brief      Apply one UI language to the home/project page.
+        @param[in]  language Target UI language code.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-05
+        @version    0.2.0
+        """
+        self._current_language = language
+        self._title_label.setText(
+            f"<h2>{ui_state_service.translate('home.title', language)}</h2>"
+        )
+        self._summary_group.setTitle(
+            ui_state_service.translate("home.summary_group", language)
+        )
+        self._stage_group.setTitle(
+            ui_state_service.translate("home.workflow_group", language)
+        )
+        self._import_button.setText(
+            ui_state_service.translate("home.select_source", language)
+        )
+        self._refresh_summary_labels()
+        if self._source_locked:
+            self._source_lock_label.setText(
+                _build_locked_source_text(language, self._current_locked_source_name)
+            )
+        else:
+            self._source_lock_label.setText(
+                ui_state_service.translate("home.no_source", language)
+            )
+        self.set_stage_statuses(self._stage_entries)
 
-def _status_title(status: str) -> str:
+    def _refresh_summary_labels(self) -> None:
+        """
+        @brief      Refresh the translated project summary values.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-05
+        @version    0.1.0
+        """
+        none_text = ui_state_service.translate("home.none", self._current_language)
+        idle_text = ui_state_service.translate("status.idle", self._current_language)
+        self._name_label.setText(
+            _build_summary_text(
+                "home.project",
+                self._current_language,
+                self._current_project_name or none_text,
+            )
+        )
+        self._path_label.setText(
+            _build_summary_text(
+                "home.path",
+                self._current_language,
+                self._current_project_path or none_text,
+            )
+        )
+        self._stage_label.setText(
+            _build_summary_text(
+                "home.stage",
+                self._current_language,
+                self._current_stage_name or idle_text,
+            )
+        )
+        self._source_label.setText(
+            _build_summary_text(
+                "home.source",
+                self._current_language,
+                self._current_source_summary or none_text,
+            )
+        )
+        self._source_lock_label.setText(
+            _build_source_status_text(
+                self._current_language,
+                self._source_locked,
+                self._current_locked_source_name,
+            )
+        )
+
+    def _source_lock_label_placeholder(self) -> QLabel:
+        """
+        @brief      Build the retained source-status label used in summary.
+        @return     Configured source-status label.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-05
+        @version    0.1.0
+        """
+        self._source_lock_label = QLabel("No source imported yet.")
+        self._source_lock_label.setWordWrap(True)
+        locked_font = QFont(self.font())
+        locked_font.setBold(True)
+        self._source_lock_label.setFont(locked_font)
+        self._source_lock_label.setStyleSheet("color: #7A1F1F;")
+        return self._source_lock_label
+
+
+def _status_title(status: str, language: str) -> str:
     """
     @brief      Convert one status token into operator-facing text.
     @param[in]  status Internal stage-status token.
+    @param[in]  language Target UI language code.
     @return     Human-readable status title.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
@@ -241,10 +343,65 @@ def _status_title(status: str) -> str:
     @version    0.1.0
     """
     if status == "finished":
-        return "Finished"
+        return ui_state_service.translate("home.status.finished", language)
     if status == "in_progress":
-        return "In Progress"
-    return "Not Started"
+        return ui_state_service.translate("home.status.in_progress", language)
+    return ui_state_service.translate("home.status.not_started", language)
+
+
+def _build_summary_text(label_key: str, language: str, value: str) -> str:
+    """
+    @brief      Build one translated summary line from label and value parts.
+    @param[in]  label_key Stable label translation key.
+    @param[in]  language Target UI language code.
+    @param[in]  value Operator-facing value text.
+    @return     One `Label: value` text string.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-05
+    @version    0.1.0
+    """
+    return f"{ui_state_service.translate(label_key, language)}: {value}"
+
+
+def _build_locked_source_text(language: str, source_name: str | None) -> str:
+    """
+    @brief      Build the translated locked-source status line.
+    @param[in]  language Target UI language code.
+    @param[in]  source_name Optional locked source display name.
+    @return     One translated locked-source text string.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-05
+    @version    0.1.0
+    """
+    resolved_source = source_name or "selected source"
+    return (
+        f"{ui_state_service.translate('home.locked_source_prefix', language)}: "
+        f"{resolved_source}"
+        f"{ui_state_service.translate('home.locked_source_suffix', language)}"
+    )
+
+
+def _build_source_status_text(
+    language: str,
+    is_locked: bool,
+    source_name: str | None,
+) -> str:
+    """
+    @brief      Build one translated source-status text line.
+    @param[in]  language Target UI language code.
+    @param[in]  is_locked True when the source selection is locked.
+    @param[in]  source_name Optional source display name.
+    @return     One translated source-status text line.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-05
+    @version    0.1.0
+    """
+    if is_locked:
+        return _build_locked_source_text(language, source_name)
+    return ui_state_service.translate("home.no_source", language)
 
 
 # END OF FILE

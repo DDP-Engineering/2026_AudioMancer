@@ -37,6 +37,8 @@ The initial shell consists of:
   sidebar, stacked pages, and dialogs
 - a settings dialog that loads and saves the persisted language, text-size,
   and completion-beep controls through the shared settings service
+- a runtime UI-state service that applies persisted language and text-size
+  changes to the running Qt shell after startup and after `Save Settings`
 - an AI settings dialog that loads and saves AI profiles plus default cleanup,
   chunking, and character-extraction selections through the shared settings
   service
@@ -44,9 +46,11 @@ The initial shell consists of:
   `CustomVoice` concepts, including profile listing, language selection,
   prompt-based voice definition, and a reserved preview area
 - an About dialog with scrollable AGPL license text and the non-commercial
-  addendum
-- app-root `LICENSE.txt` and `LICENSE_NC.txt` files used for the About dialog
-  and intended delivery layout
+  addendum, localized to the current UI language when localized companion
+  files are available
+- app-root `LICENSE.txt`, `LICENSE_NC.txt`, `LICENSE_ro.txt`, and
+  `LICENSE_NC_ro.txt` files used for the About dialog and intended delivery
+  layout
 
 ## 4. Dependencies
 
@@ -70,6 +74,7 @@ Outputs:
 - a static first-window layout that matches the source DDP_Audiomancer shell
 - a validated app settings payload loaded from `settings.json`
 - persisted updates from both the `Settings` and `AI Settings` dialogs
+- immediate runtime application of saved UI language and text-size changes
 - one new per-run application log file under `Logs/`
 - process exit code from the Qt event loop
 

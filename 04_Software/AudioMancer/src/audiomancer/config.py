@@ -13,7 +13,7 @@
          file support used by the current AudioMancer implementation scaffold.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-04
-@version 0.1.2
+@version 0.1.3
 """
 
 # IMPORTS
@@ -202,6 +202,7 @@ AVAILABLE_LOG_COMPONENTS = (
     "app",
     "main_window",
     "settings",
+    "ui_state",
 )
 
 # @brief Default flag controlling project-local AI exchange logging.
