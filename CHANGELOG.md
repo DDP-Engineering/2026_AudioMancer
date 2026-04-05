@@ -16,6 +16,23 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+## [0.3.3] - 2026-04-05
+
+### Added
+
+- added Windows and Linux release packaging scripts (`package_windows_release.ps1`, `package_linux_release.sh`) and entrypoint/spec helpers under `02_Tools/`
+- added VS Code workspace configuration (`2026_Audiomancer.code-workspace`)
+
+### Changed
+
+- removed legacy build scripts (`build_linux.sh`, `build_windows.ps1`, and `02_Tools/AudioMancer/README.MD`) in favor of the new packaging flow
+- updated tool, software, documentation, and delivery READMEs to reflect the new packaging structure
+- refreshed `settings.json` and `uv.lock` to stay in sync with the current dependency set
+- updated `05_SoftwareDocu/AudioMancer_App_Shell.md` to match the current application state
+- package version updated to `0.3.3`
+
+### Fixed
+
 ## [0.3.2] - 2026-04-05
 
 ### Added

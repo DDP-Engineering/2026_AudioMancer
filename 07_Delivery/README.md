@@ -8,3 +8,14 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
 
 Release packaging, delivery bundles, and distribution artifacts.
 
+Current Windows delivery artifacts are produced by:
+
+- `../02_Tools/package_windows_release.ps1`
+
+The expected archive naming pattern is:
+
+- `AudioMancer_Windows_x64_v<version>.zip`
+
+The delivery zip contains the portable Windows application bundle together with
+`settings.json` and the four license files required by the app root.
+

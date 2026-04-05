@@ -14,7 +14,7 @@
       "temperature": 0.1,
       "supports_structured_output": true,
       "enabled": true,
-      "discovered_model_name": "qwen3.5-9b-uncensored-hauhaucs-aggressive",
+      "discovered_model_name": "qwen/qwen3.5-9b",
       "discovered_context_window": null,
       "discovery_succeeded": true,
       "discovery_message": "Connection successful. Discovered 11 models.",

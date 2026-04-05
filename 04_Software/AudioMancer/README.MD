@@ -80,13 +80,15 @@ From this folder:
 uv run pytest
 ```
 
-## Packaging Placeholders
+## Packaging
 
-Packaging placeholders are stored under:
+Windows packaging automation is stored under:
 
-- `../../02_Tools/AudioMancer/build_windows.ps1`
-- `../../02_Tools/AudioMancer/build_linux.sh`
-- `../../02_Tools/AudioMancer/README.MD`
+- `../../02_Tools/package_windows_release.ps1`
+- `../../02_Tools/audiomancer_windows.spec`
+- `../../02_Tools/package_linux_release.sh`
 
-They define the intended future flow for `PyInstaller`-based builds and zip
-packaging.
+The Windows release script builds a portable `PyInstaller` bundle, stages the
+app together with `settings.json` and the four license files, writes a
+versioned delivery archive into `../../07_Delivery/`, and removes temporary
+build artifacts after a successful zip.

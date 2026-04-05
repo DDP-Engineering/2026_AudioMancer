@@ -133,5 +133,6 @@ Minimum validation after changes:
 - the current main window remains presentational only and does not wire
   workflow actions
 - no project persistence exists yet
-- no packaging spec exists yet
+- Windows portable packaging now exists through `02_Tools/package_windows_release.ps1`
+  and `02_Tools/audiomancer_windows.spec`
 - logging configuration is still developer-owned through `config.py`
