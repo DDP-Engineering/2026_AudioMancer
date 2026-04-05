@@ -1,7 +1,31 @@
 {
   "language": "en",
-  "llm_profiles": [],
-  "default_ai_chunking_strategy": "scene",
+  "llm_profiles": [
+    {
+      "id": "llm_profile_d97ac7392cf0",
+      "label": "Qwen3-9B",
+      "backend_kind": "lmstudio",
+      "base_url": "http://192.168.1.17:1234/v1",
+      "api_key": "lm-studio",
+      "model_name": "qwen3-8b",
+      "context_window": 8192,
+      "max_output_tokens": 1024,
+      "request_timeout_seconds": 90,
+      "temperature": 0.2,
+      "supports_structured_output": true,
+      "enabled": true,
+      "discovered_model_name": "",
+      "discovered_context_window": null,
+      "discovery_succeeded": false,
+      "discovery_message": "",
+      "user_overrode_model_name": false,
+      "user_overrode_context_window": false
+    }
+  ],
+  "default_ai_cleanup_profile_id": "llm_profile_d97ac7392cf0",
+  "default_ai_chunking_profile_id": "llm_profile_d97ac7392cf0",
+  "default_ai_chunking_strategy": "meaning",
+  "default_character_extraction_profile_id": "llm_profile_d97ac7392cf0",
   "play_completion_beep": true,
   "ui_text_scale": "normal"
 }

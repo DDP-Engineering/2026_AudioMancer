@@ -13,7 +13,7 @@
          starts the event loop for the initial UI scaffold.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-04
-@version 0.1.2
+@version 0.1.3
 @example
     uv run audiomancer
 """
@@ -43,7 +43,7 @@ def main() -> int:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-04
-    @version    0.1.2
+    @version    0.1.3
     """
     log_file_path = initialize_logging()
     logger = get_component_logger("app")
@@ -53,11 +53,11 @@ def main() -> int:
     )
 
     try:
-        load_settings()
+        settings_payload = load_settings()
         application = QApplication(sys.argv)
         application.setApplicationName(APPLICATION_NAME)
 
-        window = MainWindow()
+        window = MainWindow(settings_payload=settings_payload)
         window.show()
 
         exit_code = application.exec()

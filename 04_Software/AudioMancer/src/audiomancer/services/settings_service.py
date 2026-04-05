@@ -14,7 +14,7 @@
          settings file to the application root.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-04
-@version 0.1.5
+@version 0.1.6
 """
 
 # IMPORTS
@@ -50,6 +50,21 @@ _LLM_PROFILE_DEFAULTS = {
     "user_overrode_model_name": False,
     "user_overrode_context_window": False,
 }
+
+
+def _optional_profile_id(value: object) -> str | None:
+    """
+    @brief      Normalize one optional persisted profile identifier.
+    @param[in]  value Candidate optional profile id value.
+    @return     Normalized profile id or None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-05
+    @version    0.1.0
+    """
+    if value in (None, ""):
+        return None
+    return str(value)
 
 
 # HELPER FUNCTIONS
@@ -214,12 +229,15 @@ def build_default_settings() -> dict[str, Any]:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-04
-    @version    0.1.3
+    @version    0.1.4
     """
     return {
         "language": config.DEFAULT_LANGUAGE,
         "llm_profiles": [],
+        "default_ai_cleanup_profile_id": None,
+        "default_ai_chunking_profile_id": None,
         "default_ai_chunking_strategy": "scene",
+        "default_character_extraction_profile_id": None,
         "play_completion_beep": True,
         "ui_text_scale": config.DEFAULT_UI_TEXT_SCALE,
     }
@@ -234,7 +252,7 @@ def validate_settings(settings_payload: dict[str, Any]) -> dict[str, Any]:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-04
-    @version    0.1.4
+    @version    0.1.5
     """
     defaults = build_default_settings()
     normalized_settings = dict(settings_payload) if isinstance(settings_payload, dict) else {}
@@ -296,6 +314,31 @@ def validate_settings(settings_payload: dict[str, Any]) -> dict[str, Any]:
                 _validate_llm_profile(candidate_profile, _LLM_PROFILE_DEFAULTS, index)
             )
         normalized_settings["llm_profiles"] = validated_profiles
+
+    enabled_profile_ids = {
+        str(profile["id"])
+        for profile in normalized_settings["llm_profiles"]
+        if bool(profile.get("enabled", True)) and str(profile.get("id", "")).strip()
+    }
+
+    for field_name in (
+        "default_ai_cleanup_profile_id",
+        "default_ai_chunking_profile_id",
+        "default_character_extraction_profile_id",
+    ):
+        normalized_profile_id = _optional_profile_id(
+            normalized_settings.get(field_name)
+        )
+        if (
+            normalized_profile_id is not None
+            and normalized_profile_id not in enabled_profile_ids
+        ):
+            _log_settings_repair(
+                f"Repaired invalid '{field_name}' using the default value.",
+                field_name,
+            )
+            normalized_profile_id = defaults[field_name]
+        normalized_settings[field_name] = normalized_profile_id
 
     return normalized_settings
 

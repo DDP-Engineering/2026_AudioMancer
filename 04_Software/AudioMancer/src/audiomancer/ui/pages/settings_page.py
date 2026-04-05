@@ -13,7 +13,7 @@
          presentational page without any connected functionality.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-05
-@version 0.2.0
+@version 0.3.0
 """
 
 # IMPORTS
@@ -50,7 +50,7 @@ class SettingsPage(QWidget):
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-05
-    @version    0.2.0
+    @version    0.3.0
     """
 
     def __init__(self, parent=None) -> None:
@@ -61,7 +61,7 @@ class SettingsPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-05
-        @version    0.2.0
+        @version    0.3.0
         """
         super().__init__(parent)
 
@@ -105,6 +105,56 @@ class SettingsPage(QWidget):
         button_row.addWidget(self._save_button)
         button_row.addStretch(1)
         layout.addLayout(button_row)
+
+    def load_settings(self, settings_payload: dict[str, object]) -> None:
+        """
+        @brief      Load one settings payload into the page widgets.
+        @param[in]  settings_payload Combined application settings payload.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-05
+        @version    0.1.0
+        """
+        self._language_combo.setCurrentText(
+            str(settings_payload.get("language", config.DEFAULT_LANGUAGE))
+        )
+        ui_text_scale = str(
+            settings_payload.get("ui_text_scale", config.DEFAULT_UI_TEXT_SCALE)
+        )
+        index = self._ui_text_scale_combo.findData(ui_text_scale)
+        self._ui_text_scale_combo.setCurrentIndex(0 if index < 0 else index)
+        self._completion_beep_checkbox.setChecked(
+            bool(
+                settings_payload.get(
+                    "play_completion_beep",
+                    config.DEFAULT_PLAY_COMPLETION_BEEP,
+                )
+            )
+        )
+
+    def build_settings(
+        self,
+        existing_settings_payload: dict[str, object],
+    ) -> dict[str, object]:
+        """
+        @brief      Merge the page-owned fields into one settings payload.
+        @param[in]  existing_settings_payload Existing application settings.
+        @return     Merged settings payload containing settings-page changes.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-05
+        @version    0.1.0
+        """
+        merged_settings = dict(existing_settings_payload)
+        merged_settings["language"] = self._language_combo.currentText()
+        merged_settings["ui_text_scale"] = str(
+            self._ui_text_scale_combo.currentData()
+        )
+        merged_settings["play_completion_beep"] = (
+            self._completion_beep_checkbox.isChecked()
+        )
+        return merged_settings
 
 
 # END OF FILE

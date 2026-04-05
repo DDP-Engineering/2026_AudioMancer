@@ -14,7 +14,7 @@
          pages presentational only and free of workflow behavior.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-05
-@version 0.3.8
+@version 0.4.0
 """
 
 # IMPORTS
@@ -37,6 +37,7 @@ from PySide6.QtWidgets import (
 )
 
 from audiomancer import config
+from audiomancer.services import settings_service
 from audiomancer.ui.navigation_sidebar import NavigationSidebar
 from audiomancer.ui.pages.ai_translation_page import AiTranslationPage
 from audiomancer.ui.pages.ai_settings_page import AiSettingsPage
@@ -73,7 +74,7 @@ class MainWindow(QMainWindow):
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-05
-    @version    0.3.8
+    @version    0.4.0
     """
 
     PAGE_ORDER = (
@@ -88,21 +89,31 @@ class MainWindow(QMainWindow):
         ("export", "Export"),
     )
 
-    def __init__(self, parent=None) -> None:
+    def __init__(
+        self,
+        settings_payload: dict[str, object] | None = None,
+        parent=None,
+    ) -> None:
         """
         @brief      Initialize the copied main-window shell.
+        @param[in]  settings_payload Optional preloaded application settings.
         @param[in]  parent Optional parent widget.
         @return     None.
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-05
-        @version    0.3.8
+        @version    0.4.0
         """
         super().__init__(parent)
         self.setWindowTitle(_build_window_title())
         self.resize(WINDOW_WIDTH, WINDOW_HEIGHT)
         self.setMinimumSize(WINDOW_MIN_WIDTH, WINDOW_MIN_HEIGHT)
         self._page_registry: dict[str, QWidget] = {}
+        self._settings_payload = (
+            dict(settings_payload)
+            if isinstance(settings_payload, dict)
+            else settings_service.load_settings()
+        )
 
         self._toolbar = self._build_toolbar()
         self.addToolBar(Qt.ToolBarArea.TopToolBarArea, self._toolbar)
@@ -149,6 +160,7 @@ class MainWindow(QMainWindow):
         @date       2026-04-05
         @version    0.1.1
         """
+        self._settings_page.load_settings(self._settings_payload)
         self._settings_dialog.show()
         self._settings_dialog.raise_()
         self._settings_dialog.activateWindow()
@@ -162,6 +174,7 @@ class MainWindow(QMainWindow):
         @date       2026-04-05
         @version    0.1.0
         """
+        self._ai_settings_page.load_settings(self._settings_payload)
         self._ai_settings_dialog.show()
         self._ai_settings_dialog.raise_()
         self._ai_settings_dialog.activateWindow()
@@ -303,6 +316,10 @@ class MainWindow(QMainWindow):
         self._settings_page._cancel_button.clicked.connect(
             self._settings_dialog.close
         )
+        self._settings_page._save_button.clicked.connect(
+            self._save_settings_from_dialog
+        )
+        self._settings_page.load_settings(self._settings_payload)
         settings_layout.addWidget(self._settings_page)
 
         self._ai_settings_dialog = QDialog(self)
@@ -313,7 +330,43 @@ class MainWindow(QMainWindow):
         self._ai_settings_page._cancel_button.clicked.connect(
             self._ai_settings_dialog.close
         )
+        self._ai_settings_page._save_button.clicked.connect(
+            self._save_ai_settings_from_dialog
+        )
+        self._ai_settings_page.load_settings(self._settings_payload)
         ai_layout.addWidget(self._ai_settings_page)
+
+    def _save_settings_from_dialog(self) -> None:
+        """
+        @brief      Persist settings-page changes through the settings service.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-05
+        @version    0.1.0
+        """
+        merged_settings = self._settings_page.build_settings(self._settings_payload)
+        settings_service.save_settings(merged_settings)
+        self._settings_payload = settings_service.load_settings()
+        self._settings_dialog.close()
+        self.show_message("Settings saved.")
+
+    def _save_ai_settings_from_dialog(self) -> None:
+        """
+        @brief      Persist AI settings-page changes through the settings service.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-05
+        @version    0.1.0
+        """
+        merged_settings = self._ai_settings_page.build_settings(
+            self._settings_payload
+        )
+        settings_service.save_settings(merged_settings)
+        self._settings_payload = settings_service.load_settings()
+        self._ai_settings_dialog.close()
+        self.show_message("AI settings saved.")
 
     def _build_about_dialog(self) -> QDialog:
         """

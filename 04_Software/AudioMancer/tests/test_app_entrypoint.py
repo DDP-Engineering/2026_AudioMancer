@@ -127,7 +127,8 @@ def test_main_creates_application_and_shows_window(monkeypatch) -> None:
         created['application'] = _FakeApplication(argv)
         return created['application']
 
-    def _create_window():
+    def _create_window(*args, **kwargs):
+        created['window_settings_payload'] = kwargs.get('settings_payload')
         created['window'] = _FakeMainWindow()
         return created['window']
 
@@ -152,7 +153,8 @@ def test_main_creates_application_and_shows_window(monkeypatch) -> None:
 
     def _load_settings():
         created['load_settings_called'] = True
-        return {"language": "en"}
+        created['loaded_settings_payload'] = {"language": "en"}
+        return created['loaded_settings_payload']
 
     monkeypatch.setattr(app_module, 'initialize_logging', _initialize_logging)
     monkeypatch.setattr(app_module, 'shutdown_logging', _shutdown_logging)
@@ -168,6 +170,7 @@ def test_main_creates_application_and_shows_window(monkeypatch) -> None:
     assert created['load_settings_called'] is True
     assert created['shutdown_logging_called'] is True
     assert created['logger_request'] == ('app', None)
+    assert created['window_settings_payload'] == {"language": "en"}
     assert created['application'].application_name == app_module.APPLICATION_NAME
     assert created['application'].exec_called is True
     assert created['window'].show_called is True
@@ -206,7 +209,8 @@ def test_main_logs_exception_and_shuts_down(monkeypatch) -> None:
 
     def _load_settings():
         created['load_settings_called'] = True
-        return {"language": "en"}
+        created['loaded_settings_payload'] = {"language": "en"}
+        return created['loaded_settings_payload']
 
     def _create_application(argv):
         raise RuntimeError("bootstrap failure")

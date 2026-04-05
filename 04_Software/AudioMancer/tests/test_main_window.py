@@ -29,6 +29,7 @@ from PySide6.QtWidgets import (
     QToolBar,
 )
 
+import audiomancer.ui.main_window as main_window_module
 from audiomancer.ui.main_window import MainWindow
 
 # PUBLIC API
@@ -142,6 +143,92 @@ def test_about_dialog_includes_license_text(qtbot) -> None:
     )
     assert "GNU AFFERO GENERAL PUBLIC LICENSE" in text_box.toPlainText()
     assert "Additional Non-Commercial Restriction" in text_box.toPlainText()
+
+
+def test_main_window_saves_settings_dialog_payload(monkeypatch, qtbot) -> None:
+    persisted_payload = {
+        "language": "en",
+        "ui_text_scale": "normal",
+        "play_completion_beep": False,
+        "llm_profiles": [],
+        "default_ai_cleanup_profile_id": None,
+        "default_ai_chunking_profile_id": None,
+        "default_ai_chunking_strategy": "paragraph",
+        "default_character_extraction_profile_id": None,
+    }
+    saved_payloads = []
+
+    def _fake_load_settings():
+        return dict(persisted_payload)
+
+    def _fake_save_settings(payload):
+        saved_payloads.append(dict(payload))
+        persisted_payload.update(payload)
+
+    monkeypatch.setattr(main_window_module.settings_service, "load_settings", _fake_load_settings)
+    monkeypatch.setattr(main_window_module.settings_service, "save_settings", _fake_save_settings)
+
+    window = MainWindow(settings_payload=dict(persisted_payload))
+    qtbot.addWidget(window)
+
+    window.show_settings_dialog()
+    window._settings_page._language_combo.setCurrentText("ro")
+    window._settings_page._completion_beep_checkbox.setChecked(True)
+    window._settings_page._save_button.click()
+
+    assert saved_payloads
+    assert persisted_payload["language"] == "ro"
+    assert persisted_payload["play_completion_beep"] is True
+    assert window._settings_dialog.isVisible() is False
+
+
+def test_main_window_reloads_dialogs_and_discards_unsaved_changes(monkeypatch, qtbot) -> None:
+    persisted_payload = {
+        "language": "en",
+        "ui_text_scale": "normal",
+        "play_completion_beep": False,
+        "llm_profiles": [
+            {
+                "id": "profile_1",
+                "label": "Stored Profile",
+                "backend_kind": "lmstudio",
+                "base_url": "http://127.0.0.1:1234/v1",
+                "api_key": "",
+                "model_name": "qwen3-8b",
+                "context_window": 8192,
+                "max_output_tokens": 1024,
+                "request_timeout_seconds": 90,
+                "temperature": 0.2,
+                "supports_structured_output": False,
+                "enabled": True,
+            }
+        ],
+        "default_ai_cleanup_profile_id": "profile_1",
+        "default_ai_chunking_profile_id": "profile_1",
+        "default_ai_chunking_strategy": "paragraph",
+        "default_character_extraction_profile_id": "profile_1",
+    }
+
+    monkeypatch.setattr(
+        main_window_module.settings_service,
+        "load_settings",
+        lambda: dict(persisted_payload),
+    )
+
+    window = MainWindow(settings_payload=dict(persisted_payload))
+    qtbot.addWidget(window)
+
+    window.show_settings_dialog()
+    window._settings_page._language_combo.setCurrentText("ro")
+    window._settings_page._cancel_button.click()
+    window.show_settings_dialog()
+    assert window._settings_page._language_combo.currentText() == "en"
+
+    window.show_ai_settings_dialog()
+    window._ai_settings_page._label_edit.setText("Unsaved Profile Name")
+    window._ai_settings_page._cancel_button.click()
+    window.show_ai_settings_dialog()
+    assert window._ai_settings_page._label_edit.text() == "Stored Profile"
 
 
 # END OF FILE

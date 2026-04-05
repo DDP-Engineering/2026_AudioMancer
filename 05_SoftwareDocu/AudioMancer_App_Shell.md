@@ -35,10 +35,11 @@ The initial shell consists of:
 - copied sidebar, status-bar, and page widgets under `audiomancer.ui`
 - a static DDP_Audiomancer-style main window layout with toolbar, navigation
   sidebar, stacked pages, and dialogs
-- a static settings dialog with operator-facing language, project-root,
-  provider-default, notification, recent-project, and save/cancel controls
-- a static AI settings dialog matching the source profile-management layout
-  with provider settings, profile defaults, and save/cancel controls
+- a settings dialog that loads and saves the persisted language, text-size,
+  and completion-beep controls through the shared settings service
+- an AI settings dialog that loads and saves AI profiles plus default cleanup,
+  chunking, and character-extraction selections through the shared settings
+  service
 - a static narrator-profile manager aligned to Qwen3 `VoiceDesign` and
   `CustomVoice` concepts, including profile listing, language selection,
   prompt-based voice definition, and a reserved preview area
@@ -68,6 +69,7 @@ Outputs:
 - a visible main window for operator validation
 - a static first-window layout that matches the source DDP_Audiomancer shell
 - a validated app settings payload loaded from `settings.json`
+- persisted updates from both the `Settings` and `AI Settings` dialogs
 - one new per-run application log file under `Logs/`
 - process exit code from the Qt event loop
 

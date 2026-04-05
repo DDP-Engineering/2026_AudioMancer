@@ -20,8 +20,8 @@ It now includes a static main-window shell copied from
 - `src/audiomancer/services/logging_service.py` provides per-run app logging and optional trace helpers.
 - `src/audiomancer/services/settings_service.py` provides load, validate, self-heal, and save behavior for `settings.json`.
 - `src/audiomancer/ui/` provides the copied toolbar, sidebar, page, and status-bar shell used by the first desktop window.
-- the static `Settings` dialog now includes language, default project-root, provider-default, notification, recent-project, and save/cancel controls.
-- the static `AI Settings` dialog now mirrors the DDP_Audiomancer layout with AI profile listing, provider form fields, default cleanup/chunking selectors, and save/cancel controls.
+- the `Settings` dialog now loads and saves `language`, `interface text size`, and `play completion beep` through the shared settings service.
+- the `AI Settings` dialog now loads and saves AI profiles plus the default cleanup, chunking, and character-extraction selections through the shared settings service.
 - the static `Narrator` page now includes a presentational Qwen3-style profile manager with profile listing, custom-profile actions, voice-source selection, language selectors, voice-designer prompt fields, and a reserved preview panel.
 - `LICENSE.txt` and `LICENSE_NC.txt` are stored in the app root so they can be displayed by the About dialog and shipped at the delivered app-root level.
 - the About dialog now includes the main license text and the non-commercial addendum in a scrollable read-only text area.
@@ -64,7 +64,7 @@ uv run python -m audiomancer
 - The app settings file is stored at `settings.json` in the app root.
 - Missing `settings.json` is created automatically from service-owned defaults.
 - Persisted settings are validated and self-healed at startup.
-- Updated settings can be saved back through the shared settings service.
+- Updated settings can be saved back through the shared settings service from both `Settings` and `AI Settings`.
 
 ## Run Tests
 

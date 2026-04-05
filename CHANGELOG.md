@@ -16,6 +16,23 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+## [0.2.0] - 2026-04-05
+
+### Added
+
+- added real save/load integration for the `Settings` and `AI Settings` dialogs through the shared settings service
+- added focused page tests for `Settings` and `AI Settings` load/build behavior plus dialog-integration coverage in the main window
+
+### Changed
+
+- `Settings` and `AI Settings` now reload persisted values when opened, discard unsaved edits on cancel, and save merged settings back into the shared `settings.json` payload
+- expanded the persisted settings schema to include AI default cleanup, chunking, and character-extraction profile selections alongside the simplified operator-facing settings
+- updated startup so the main window receives the validated settings payload at bootstrap and keeps one in-memory source of truth for dialog coordination
+- updated shell documentation to describe the now-wired settings persistence flow
+- package version updated to `0.2.0`
+
+### Fixed
+
 ## [0.1.13] - 2026-04-05
 
 ### Added
