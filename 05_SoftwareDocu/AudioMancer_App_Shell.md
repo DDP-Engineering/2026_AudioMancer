@@ -35,6 +35,10 @@ The initial shell consists of:
 - copied sidebar, status-bar, and page widgets under `audiomancer.ui`
 - a static DDP_Audiomancer-style main window layout with toolbar, navigation
   sidebar, stacked pages, and dialogs
+- an About dialog with scrollable AGPL license text and the non-commercial
+  addendum
+- app-root `LICENSE.txt` and `LICENSE_NC.txt` files used for the About dialog
+  and intended delivery layout
 
 ## 4. Dependencies
 

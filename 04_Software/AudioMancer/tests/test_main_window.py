@@ -13,7 +13,7 @@
          pages, and status bar are created without workflow functionality.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-05
-@version 0.3.1
+@version 0.3.3
 """
 
 # IMPORTS
@@ -21,7 +21,9 @@
 from PySide6.QtWidgets import (
     QDialog,
     QGroupBox,
+    QLabel,
     QListWidget,
+    QPlainTextEdit,
     QStackedWidget,
     QToolBar,
 )
@@ -39,7 +41,7 @@ def test_main_window_can_be_created(qtbot) -> None:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-05
-    @version    0.3.1
+    @version    0.3.3
     """
     window = MainWindow()
     qtbot.addWidget(window)
@@ -62,6 +64,33 @@ def test_main_window_can_be_created(qtbot) -> None:
         group_box.title() == "Narrator Voice Profile"
         for group_box in window.findChildren(QGroupBox)
     )
+
+
+def test_about_dialog_includes_license_text(qtbot) -> None:
+    """
+    @brief      Verify the About dialog exposes both license texts.
+    @param[in]  qtbot Qt test helper fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-05
+    @version    0.1.0
+    """
+    window = MainWindow()
+    qtbot.addWidget(window)
+
+    dialog = window._build_about_dialog()
+    text_box = dialog.findChild(QPlainTextEdit, "aboutLicenseTextBox")
+
+    assert dialog.windowTitle() == "About AudioMancer"
+    assert dialog.width() == 510
+    assert text_box is not None
+    assert any(
+        label.text() == "Transform written words into real audio experience!"
+        for label in dialog.findChildren(QLabel)
+    )
+    assert "GNU AFFERO GENERAL PUBLIC LICENSE" in text_box.toPlainText()
+    assert "Additional Non-Commercial Restriction" in text_box.toPlainText()
 
 
 # END OF FILE

@@ -16,6 +16,23 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+## [0.1.6] - 2026-04-05
+
+### Added
+
+- added a real About dialog based on the `DDP_Audiomancer` version with a scrollable read-only license text area
+- added app-root `LICENSE.txt` and `LICENSE_NC.txt` files for About dialog display and delivery packaging
+- added focused test coverage for the About dialog license content and updated subtitle/layout expectations
+
+### Changed
+
+- narrowed the About dialog, increased the `@2026` mark size, centered the `Ok` button, and updated the subtitle to `Transform written words into real audio experience!`
+- changed the About dialog license source to the `04_Software/AudioMancer/` app root so delivered builds can keep the license files beside the application
+- updated application and shell documentation to describe the About dialog and app-root license-file placement
+- package version updated to `0.1.6`
+
+### Fixed
+
 ## [0.1.5] - 2026-04-05
 
 ### Added

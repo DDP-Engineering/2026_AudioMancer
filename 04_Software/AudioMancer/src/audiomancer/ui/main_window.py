@@ -14,17 +14,22 @@
          pages presentational only and free of workflow behavior.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-05
-@version 0.3.1
+@version 0.3.3
 """
 
 # IMPORTS
 
+from pathlib import Path
+
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QCloseEvent
 from PySide6.QtWidgets import (
+    QDialogButtonBox,
     QDialog,
     QHBoxLayout,
+    QLabel,
     QMainWindow,
+    QPlainTextEdit,
     QStackedWidget,
     QToolBar,
     QVBoxLayout,
@@ -45,6 +50,8 @@ WINDOW_WIDTH = config.DEFAULT_MAIN_WINDOW_WIDTH
 WINDOW_HEIGHT = config.DEFAULT_MAIN_WINDOW_HEIGHT
 WINDOW_MIN_WIDTH = config.DEFAULT_MAIN_WINDOW_MIN_WIDTH
 WINDOW_MIN_HEIGHT = config.DEFAULT_MAIN_WINDOW_MIN_HEIGHT
+LICENSE_PATH = config.APP_ROOT / "LICENSE.txt"
+LICENSE_NC_PATH = config.APP_ROOT / "LICENSE_NC.txt"
 
 
 # PUBLIC API
@@ -59,7 +66,7 @@ class MainWindow(QMainWindow):
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-05
-    @version    0.3.1
+    @version    0.3.3
     """
 
     PAGE_ORDER = (
@@ -82,7 +89,7 @@ class MainWindow(QMainWindow):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-05
-        @version    0.3.1
+        @version    0.3.2
         """
         super().__init__(parent)
         self.setWindowTitle(WINDOW_TITLE)
@@ -152,6 +159,17 @@ class MainWindow(QMainWindow):
         self._ai_settings_dialog.raise_()
         self._ai_settings_dialog.activateWindow()
 
+    def show_about_dialog(self) -> None:
+        """
+        @brief      Show the customized about dialog with license text.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-05
+        @version    0.1.0
+        """
+        self._build_about_dialog().exec()
+
     def show_message(self, message: str, timeout_ms: int = 5000) -> None:
         """
         @brief      Show a transient status-bar message.
@@ -192,11 +210,7 @@ class MainWindow(QMainWindow):
                 "Help placeholder. This shell mirrors DDP_Audiomancer only.",
             )
         )
-        self._action_about.triggered.connect(
-            lambda: self.show_message(
-                "About placeholder. No workflow behavior is wired yet.",
-            )
-        )
+        self._action_about.triggered.connect(self.show_about_dialog)
         return toolbar
 
     def _build_pages(self) -> None:
@@ -316,6 +330,79 @@ class MainWindow(QMainWindow):
             self._ai_settings_dialog,
         ))
 
+    def _build_about_dialog(self) -> QDialog:
+        """
+        @brief      Build the About dialog for the AudioMancer shell.
+        @return     Configured Qt dialog instance.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-05
+        @version    0.1.0
+        """
+        dialog = QDialog(self)
+        dialog.setWindowTitle("About AudioMancer")
+        dialog.resize(510, 620)
+
+        layout = QVBoxLayout(dialog)
+
+        title_label = QLabel(
+            "<div style='text-align:center;'>"
+            "<span style='font-size:18pt; font-weight:700;'>AudioMancer</span>"
+            "<span style='font-size:11pt; vertical-align:super;'> @2026</span>"
+            "</div>"
+        )
+        title_label.setTextFormat(Qt.TextFormat.RichText)
+        layout.addWidget(title_label)
+
+        subtitle = QLabel("Transform written words into real audio experience!")
+        subtitle.setAlignment(Qt.AlignmentFlag.AlignHCenter)
+        subtitle.setWordWrap(True)
+        layout.addWidget(subtitle)
+        layout.addSpacing(12)
+
+        details = QLabel(
+            "Eng. Dipl. Dan Dumitru Pasare\n"
+            "pasaredan1979@gmail.com"
+        )
+        details.setAlignment(Qt.AlignmentFlag.AlignHCenter)
+        layout.addWidget(details)
+        layout.addSpacing(12)
+
+        license_label = QLabel("License")
+        layout.addWidget(license_label)
+
+        license_text_box = QPlainTextEdit(dialog)
+        license_text_box.setObjectName("aboutLicenseTextBox")
+        license_text_box.setReadOnly(True)
+        license_text_box.setPlainText(self._load_about_license_text())
+        layout.addWidget(license_text_box, 1)
+
+        button_box = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok, dialog)
+        button_box.accepted.connect(dialog.accept)
+        button_layout = QHBoxLayout()
+        button_layout.addStretch(1)
+        button_layout.addWidget(button_box)
+        button_layout.addStretch(1)
+        layout.addLayout(button_layout)
+        return dialog
+
+    def _load_about_license_text(self) -> str:
+        """
+        @brief      Load the main and addendum license text for the About dialog.
+        @return     Combined operator-facing license text.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-05
+        @version    0.1.0
+        """
+        return (
+            _read_text_file(LICENSE_PATH)
+            + "\n\n"
+            + "=" * 78
+            + "\n\n"
+            + _read_text_file(LICENSE_NC_PATH)
+        )
+
     def closeEvent(self, event: QCloseEvent) -> None:  # noqa: N802
         """
         @brief      Handle window close for the static shell.
@@ -327,6 +414,21 @@ class MainWindow(QMainWindow):
         @version    0.1.0
         """
         super().closeEvent(event)
+
+
+def _read_text_file(path: Path) -> str:
+    """
+    @brief      Read a UTF-8 text file for UI display.
+    @param[in]  path Absolute file path to read.
+    @return     Decoded text or a fallback message when unavailable.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-05
+    @version    0.1.0
+    """
+    if not path.exists():
+        return f"File not found: {path}"
+    return path.read_text(encoding="utf-8").strip()
 
 
 # END OF FILE

@@ -20,6 +20,8 @@ It now includes a static main-window shell copied from
 - `src/audiomancer/services/logging_service.py` provides per-run app logging and optional trace helpers.
 - `src/audiomancer/services/settings_service.py` provides load, validate, self-heal, and save behavior for `settings.json`.
 - `src/audiomancer/ui/` provides the copied toolbar, sidebar, page, and status-bar shell used by the first desktop window.
+- `LICENSE.txt` and `LICENSE_NC.txt` are stored in the app root so they can be displayed by the About dialog and shipped at the delivered app-root level.
+- the About dialog now includes the main license text and the non-commercial addendum in a scrollable read-only text area.
 - `tests/` contains focused automated tests for the scaffold.
 
 ## Environment Setup

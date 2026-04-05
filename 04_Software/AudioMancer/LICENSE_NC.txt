@@ -1,0 +1,16 @@
+Additional Non-Commercial Restriction
+
+Copyright (c) 2026 DDP Engineering
+
+Notwithstanding any permissions granted under the GNU Affero General
+Public License v3.0, this software may not be used, in whole or in part,
+for any commercial purpose without explicit written permission from
+DDP Engineering.
+
+Commercial purposes include, but are not limited to:
+- Selling the software or devices containing it
+- Using it in paid products or services
+- Using it for advertising or revenue-generating activities
+
+This restriction does not affect non-commercial educational,
+personal, or research use.
