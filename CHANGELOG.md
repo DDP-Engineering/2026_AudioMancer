@@ -16,6 +16,23 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+## [0.1.13] - 2026-04-05
+
+### Added
+
+- added a static `Settings` dialog with language, interface text size, completion-beep, and save/cancel controls
+- extended focused UI and settings-service coverage for the simplified settings dialog and reduced persisted settings schema
+
+### Changed
+
+- replaced the `Settings` placeholder dialog with the new presentational settings dialog and wired `Cancel` to close the dialog shell
+- simplified the `Settings` dialog by removing unused provider, project-root, notification, and recent-project controls and aligning the remaining selectors on one row
+- reduced the persisted settings schema and implementation to keep only the active operator-facing fields still used by the project
+- updated shell documentation to describe the simplified settings dialog and settings payload
+- package version updated to `0.1.13`
+
+### Fixed
+
 ## [0.1.12] - 2026-04-05
 
 ### Added

@@ -44,6 +44,7 @@ from audiomancer.ui.pages.characters_page import CharactersPage
 from audiomancer.ui.pages.home_page import HomeProjectPage
 from audiomancer.ui.pages.narrator_page import NarratorPage
 from audiomancer.ui.pages.placeholder_page import PlaceholderPage
+from audiomancer.ui.pages.settings_page import SettingsPage
 from audiomancer.ui.pages.text_chunking_page import TextChunkingPage
 from audiomancer.ui.pages.text_cleanup_page import TextCleanupPage
 from audiomancer.ui.status_bar import AudiomancerStatusBar
@@ -295,20 +296,17 @@ class MainWindow(QMainWindow):
         @version    0.1.0
         """
         self._settings_dialog = QDialog(self)
-        self._settings_dialog.setWindowTitle(_build_window_title("Settings"))
+        self._settings_dialog.setWindowTitle("Settings")
         self._settings_dialog.resize(680, 560)
         settings_layout = QVBoxLayout(self._settings_dialog)
-        settings_layout.addWidget(PlaceholderPage(
-            "Settings",
-            "The DDP_Audiomancer settings dialog shell is reserved here. "
-            "No settings behavior is wired in AudioMancer yet.",
-            self._settings_dialog,
-        ))
+        self._settings_page = SettingsPage(self._settings_dialog)
+        self._settings_page._cancel_button.clicked.connect(
+            self._settings_dialog.close
+        )
+        settings_layout.addWidget(self._settings_page)
 
         self._ai_settings_dialog = QDialog(self)
-        self._ai_settings_dialog.setWindowTitle(
-            _build_window_title("AI Settings")
-        )
+        self._ai_settings_dialog.setWindowTitle("AI Settings")
         self._ai_settings_dialog.resize(920, 640)
         ai_layout = QVBoxLayout(self._ai_settings_dialog)
         self._ai_settings_page = AiSettingsPage(self._ai_settings_dialog)
@@ -327,7 +325,7 @@ class MainWindow(QMainWindow):
         @version    0.1.0
         """
         dialog = QDialog(self)
-        dialog.setWindowTitle(_build_window_title("About"))
+        dialog.setWindowTitle("About")
         dialog.resize(510, 620)
 
         layout = QVBoxLayout(dialog)

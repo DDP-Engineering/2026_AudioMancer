@@ -104,6 +104,14 @@ def test_main_window_can_be_created(qtbot) -> None:
         button.text() == "Connect"
         for button in window.findChildren(QPushButton)
     )
+    assert any(
+        button.text() == "Save Settings"
+        for button in window.findChildren(QPushButton)
+    )
+    assert any(
+        label.text() == "Interface Text Size"
+        for label in window.findChildren(QLabel)
+    )
 
 
 def test_about_dialog_includes_license_text(qtbot) -> None:
@@ -124,7 +132,7 @@ def test_about_dialog_includes_license_text(qtbot) -> None:
 
     assert (
         dialog.windowTitle()
-        == "AudioMancer | Transform written words into real audio experience! | About"
+        == "About"
     )
     assert dialog.width() == 510
     assert text_box is not None

@@ -14,7 +14,7 @@
          settings file to the application root.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-04
-@version 0.1.4
+@version 0.1.5
 """
 
 # IMPORTS
@@ -92,20 +92,6 @@ def _write_settings_file(settings_payload: dict[str, Any]) -> None:
         json.dumps(settings_payload, indent=2, ensure_ascii=False) + "\n",
         encoding="utf-8",
     )
-
-
-def _valid_provider_ids(provider_group_name: str) -> set[str]:
-    """
-    @brief      Return the configured provider ids for one provider group.
-    @param[in]  provider_group_name Provider group key from config defaults.
-    @return     Set of valid provider ids.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-04
-    @version    0.1.0
-    """
-    provider_group = config.DEFAULT_PROVIDER_GROUPS.get(provider_group_name, [])
-    return {entry["id"] for entry in provider_group if isinstance(entry, dict) and "id" in entry}
 
 
 def _validate_llm_profile(
@@ -228,21 +214,13 @@ def build_default_settings() -> dict[str, Any]:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-04
-    @version    0.1.2
+    @version    0.1.3
     """
     return {
         "language": config.DEFAULT_LANGUAGE,
-        "recent_projects": [],
-        "default_projects_root": (config.APP_ROOT / "projects").as_posix(),
-        "local_model_store_path": (config.APP_ROOT / "runtime_models").as_posix(),
-        "default_analysis_provider": "local_analysis_placeholder",
-        "default_speech_provider": None,
-        "online_provider_profiles": [],
         "llm_profiles": [],
         "default_ai_chunking_strategy": "scene",
-        "notify_on_long_operation_complete": config.DEFAULT_NOTIFY_ON_LONG_OPERATION_COMPLETE,
         "play_completion_beep": True,
-        "show_completion_message": config.DEFAULT_SHOW_COMPLETION_MESSAGE,
         "ui_text_scale": config.DEFAULT_UI_TEXT_SCALE,
     }
 
@@ -256,7 +234,7 @@ def validate_settings(settings_payload: dict[str, Any]) -> dict[str, Any]:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-04
-    @version    0.1.3
+    @version    0.1.4
     """
     defaults = build_default_settings()
     normalized_settings = dict(settings_payload) if isinstance(settings_payload, dict) else {}
@@ -296,68 +274,7 @@ def validate_settings(settings_payload: dict[str, Any]) -> dict[str, Any]:
         )
         normalized_settings["default_ai_chunking_strategy"] = defaults["default_ai_chunking_strategy"]
 
-    if (
-        not isinstance(normalized_settings["default_projects_root"], str)
-        or not normalized_settings["default_projects_root"].strip()
-    ):
-        _log_settings_repair(
-            "Repaired invalid 'default_projects_root' using the default value.",
-            "default_projects_root",
-        )
-        normalized_settings["default_projects_root"] = defaults["default_projects_root"]
-
-    if (
-        not isinstance(normalized_settings["local_model_store_path"], str)
-        or not normalized_settings["local_model_store_path"].strip()
-    ):
-        _log_settings_repair(
-            "Repaired invalid 'local_model_store_path' using the default value.",
-            "local_model_store_path",
-        )
-        normalized_settings["local_model_store_path"] = defaults["local_model_store_path"]
-
-    if not isinstance(normalized_settings["recent_projects"], list):
-        _log_settings_repair(
-            "Repaired invalid 'recent_projects' using the default value.",
-            "recent_projects",
-        )
-        normalized_settings["recent_projects"] = copy.deepcopy(defaults["recent_projects"])
-    else:
-        normalized_settings["recent_projects"] = [
-            project_path for project_path in normalized_settings["recent_projects"]
-            if isinstance(project_path, str) and project_path.strip()
-        ]
-
-    if not isinstance(normalized_settings["online_provider_profiles"], list):
-        _log_settings_repair(
-            "Repaired invalid 'online_provider_profiles' using the default value.",
-            "online_provider_profiles",
-        )
-        normalized_settings["online_provider_profiles"] = copy.deepcopy(defaults["online_provider_profiles"])
-
-    analysis_provider_ids = _valid_provider_ids("analysis")
-    speech_provider_ids = _valid_provider_ids("speech")
-
-    if normalized_settings["default_analysis_provider"] not in analysis_provider_ids:
-        _log_settings_repair(
-            "Repaired invalid 'default_analysis_provider' using the default value.",
-            "default_analysis_provider",
-        )
-        normalized_settings["default_analysis_provider"] = defaults["default_analysis_provider"]
-
-    if normalized_settings["default_speech_provider"] is not None:
-        if normalized_settings["default_speech_provider"] not in speech_provider_ids:
-            _log_settings_repair(
-                "Repaired invalid 'default_speech_provider' using the default value.",
-                "default_speech_provider",
-            )
-            normalized_settings["default_speech_provider"] = defaults["default_speech_provider"]
-
-    for field_name in (
-        "notify_on_long_operation_complete",
-        "play_completion_beep",
-        "show_completion_message",
-    ):
+    for field_name in ("play_completion_beep",):
         if not isinstance(normalized_settings[field_name], bool):
             _log_settings_repair(
                 f"Repaired invalid '{field_name}' using the default value.",

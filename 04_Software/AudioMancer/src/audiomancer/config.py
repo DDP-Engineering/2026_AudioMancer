@@ -13,7 +13,7 @@
          file support used by the current AudioMancer implementation scaffold.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-04
-@version 0.1.1
+@version 0.1.2
 """
 
 # IMPORTS
@@ -33,13 +33,6 @@ APP_ROOT = Path(__file__).resolve().parents[2]
 
 # @brief Absolute path to the app-level settings file.
 APP_SETTINGS_PATH = APP_ROOT / "settings.json"
-
-# @brief Absolute path reserved for shared runtime model storage.
-RUNTIME_MODELS_PATH = APP_ROOT / "runtime_models"
-
-# @brief Default parent folder suggested when creating new projects.
-DEFAULT_PROJECTS_ROOT = str(APP_ROOT / "projects")
-
 
 # Project Workspace And Artifact Naming
 # @brief Standard non-operation directories created for each project workspace.
@@ -110,14 +103,8 @@ DEFAULT_UI_TEXT_SCALE = "normal"
 UI_TEXT_SCALE_OPTIONS = ("very_small", "small",
                          "normal", "large", "very_large")
 
-# @brief Default flag for long-operation completion notifications.
-DEFAULT_NOTIFY_ON_LONG_OPERATION_COMPLETE = True
-
 # @brief Default flag controlling whether the app plays a completion beep.
 DEFAULT_PLAY_COMPLETION_BEEP = False
-
-# @brief Default flag controlling whether the app shows a completion message.
-DEFAULT_SHOW_COMPLETION_MESSAGE = True
 
 # @brief Default initial main-window width.
 DEFAULT_MAIN_WINDOW_WIDTH = 1100
@@ -147,20 +134,6 @@ DEFAULT_LLM_REQUEST_TIMEOUT_SECONDS = 90
 
 # @brief Default temperature for AI cleanup and chunking requests.
 DEFAULT_LLM_TEMPERATURE = 0.2
-
-# @brief Placeholder provider groups exposed in the operator settings UI.
-DEFAULT_PROVIDER_GROUPS = {
-    "analysis": [
-        {"id": "local_analysis_placeholder", "label": "Local Analysis Placeholder"},
-        {"id": "online_analysis_placeholder",
-            "label": "Online Analysis Placeholder"},
-    ],
-    "speech": [
-        {"id": "local_speech_placeholder", "label": "Local Speech Placeholder"},
-        {"id": "online_speech_placeholder", "label": "Online Speech Placeholder"},
-    ],
-}
-
 
 # AI Workflow Defaults
 # @brief Default semantic AI chunking strategy.

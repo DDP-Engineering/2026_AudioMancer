@@ -13,7 +13,7 @@
          persisted settings self-healing, and validated save behavior.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-04
-@version 0.1.2
+@version 0.1.3
 """
 
 # IMPORTS
@@ -82,15 +82,7 @@ def test_load_settings_self_heals_missing_and_invalid_values(tmp_path, monkeypat
     invalid_settings["language"] = "fr"
     invalid_settings["ui_text_scale"] = "gigantic"
     invalid_settings["default_ai_chunking_strategy"] = "invalid"
-    invalid_settings["default_projects_root"] = 123
-    invalid_settings["local_model_store_path"] = None
-    invalid_settings["recent_projects"] = "bad"
-    invalid_settings["online_provider_profiles"] = {}
-    invalid_settings["notify_on_long_operation_complete"] = "yes"
     invalid_settings["play_completion_beep"] = "no"
-    invalid_settings["show_completion_message"] = 1
-    invalid_settings["default_analysis_provider"] = "bad-provider"
-    del invalid_settings["default_speech_provider"]
     settings_path.write_text(json.dumps(invalid_settings, indent=2), encoding="utf-8")
 
     loaded_settings = settings_service.load_settings()
@@ -99,15 +91,7 @@ def test_load_settings_self_heals_missing_and_invalid_values(tmp_path, monkeypat
     assert loaded_settings["language"] == defaults["language"]
     assert loaded_settings["ui_text_scale"] == defaults["ui_text_scale"]
     assert loaded_settings["default_ai_chunking_strategy"] == defaults["default_ai_chunking_strategy"]
-    assert loaded_settings["default_projects_root"] == defaults["default_projects_root"]
-    assert loaded_settings["local_model_store_path"] == defaults["local_model_store_path"]
-    assert loaded_settings["recent_projects"] == defaults["recent_projects"]
-    assert loaded_settings["online_provider_profiles"] == defaults["online_provider_profiles"]
-    assert loaded_settings["notify_on_long_operation_complete"] == defaults["notify_on_long_operation_complete"]
     assert loaded_settings["play_completion_beep"] == defaults["play_completion_beep"]
-    assert loaded_settings["show_completion_message"] == defaults["show_completion_message"]
-    assert loaded_settings["default_analysis_provider"] == defaults["default_analysis_provider"]
-    assert loaded_settings["default_speech_provider"] == defaults["default_speech_provider"]
     assert loaded_settings["llm_profiles"] == defaults["llm_profiles"]
     assert json.loads(settings_path.read_text(encoding="utf-8")) == loaded_settings
     assert "default_ai_cleanup_profile_id" not in loaded_settings

@@ -35,6 +35,8 @@ The initial shell consists of:
 - copied sidebar, status-bar, and page widgets under `audiomancer.ui`
 - a static DDP_Audiomancer-style main window layout with toolbar, navigation
   sidebar, stacked pages, and dialogs
+- a static settings dialog with operator-facing language, project-root,
+  provider-default, notification, recent-project, and save/cancel controls
 - a static AI settings dialog matching the source profile-management layout
   with provider settings, profile defaults, and save/cancel controls
 - a static narrator-profile manager aligned to Qwen3 `VoiceDesign` and

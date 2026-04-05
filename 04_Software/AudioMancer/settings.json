@@ -1,15 +1,7 @@
 {
   "language": "en",
-  "recent_projects": [],
-  "default_projects_root": "D:/ProjectsDDP/2026_AudioMancer/04_Software/AudioMancer/projects",
-  "local_model_store_path": "D:/ProjectsDDP/2026_AudioMancer/04_Software/AudioMancer/runtime_models",
-  "default_analysis_provider": "local_analysis_placeholder",
-  "default_speech_provider": null,
-  "online_provider_profiles": [],
   "llm_profiles": [],
   "default_ai_chunking_strategy": "scene",
-  "notify_on_long_operation_complete": true,
   "play_completion_beep": true,
-  "show_completion_message": true,
   "ui_text_scale": "normal"
 }
