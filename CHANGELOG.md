@@ -16,6 +16,24 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+## [0.1.5] - 2026-04-05
+
+### Added
+
+- copied the `DDP_Audiomancer` main-window shell structure into `AudioMancer` with a toolbar, navigation sidebar, stacked pages, status bar, and placeholder dialogs
+- added presentational UI support modules for navigation, status display, the home/project page, generic placeholder pages, and a new static narrator page
+- inserted a `Narrator` workflow page between `Characters` and `Narration Plan` with profile selection, description entry, preview controls, and a reserved blank workspace area
+
+### Changed
+
+- replaced the earlier custom placeholder main window with a source-matched `DDP_Audiomancer`-style shell adapted to the `AudioMancer` package
+- adjusted the Home / Project workflow-progress panel sizing and default empty project-stage text to better match the intended initial state and layout
+- removed UI logging from the main window in line with the rule that logging is reserved for backend implementation only
+- updated package, test, and shell documentation to describe the copied UI structure
+- package version updated to `0.1.5`
+
+### Fixed
+
 ## [0.1.4] - 2026-04-04
 
 ### Added

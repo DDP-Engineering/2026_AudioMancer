@@ -11,12 +11,14 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
 
 Defines the initial runnable desktop application shell for `AudioMancer`.
 It provides the first executable boundary for the future application.
+The shell now exposes a static main window copied from
+`DDP_Audiomancer` and adapted to the local package structure.
 
 ## 2. Responsibilities
 
 - start the Qt application
 - create and show the main window
-- provide a minimal visible UI shell for validation
+- provide the copied first visible operator-facing UI shell for validation
 
 It does not yet own workflow orchestration or domain processing.
 It now initializes the shared settings and logging services at startup and
@@ -30,7 +32,9 @@ The initial shell consists of:
 - `audiomancer.services.settings_service` as the settings bootstrap
 - `audiomancer.services.logging_service` as the per-run logging bootstrap
 - `audiomancer.ui.main_window.MainWindow` as the first UI root
-- a placeholder central label proving the desktop shell launches correctly
+- copied sidebar, status-bar, and page widgets under `audiomancer.ui`
+- a static DDP_Audiomancer-style main window layout with toolbar, navigation
+  sidebar, stacked pages, and dialogs
 
 ## 4. Dependencies
 
@@ -51,6 +55,7 @@ Outputs:
 
 - a running Qt application instance
 - a visible main window for operator validation
+- a static first-window layout that matches the source DDP_Audiomancer shell
 - a validated app settings payload loaded from `settings.json`
 - one new per-run application log file under `Logs/`
 - process exit code from the Qt event loop
@@ -104,6 +109,8 @@ Minimum validation after changes:
 ## 10. Limitations And Future Work
 
 - no workflow UI exists yet
+- the current main window remains presentational only and does not wire
+  workflow actions
 - no project persistence exists yet
 - no packaging spec exists yet
 - logging configuration is still developer-owned through `config.py`

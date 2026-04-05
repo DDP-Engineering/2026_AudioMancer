@@ -8,6 +8,8 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
 # AudioMancer Application
 
 This folder contains the initial Python application scaffold for `AudioMancer`.
+It now includes a static main-window shell copied from
+`DDP_Audiomancer` and adapted to the local package.
 
 ## Structure
 
@@ -17,6 +19,7 @@ This folder contains the initial Python application scaffold for `AudioMancer`.
 - `src/audiomancer/config.py` defines the current developer-owned defaults and file names.
 - `src/audiomancer/services/logging_service.py` provides per-run app logging and optional trace helpers.
 - `src/audiomancer/services/settings_service.py` provides load, validate, self-heal, and save behavior for `settings.json`.
+- `src/audiomancer/ui/` provides the copied toolbar, sidebar, page, and status-bar shell used by the first desktop window.
 - `tests/` contains focused automated tests for the scaffold.
 
 ## Environment Setup
