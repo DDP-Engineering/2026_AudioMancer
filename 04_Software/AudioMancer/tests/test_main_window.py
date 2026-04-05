@@ -13,7 +13,7 @@
          pages, and status bar are created without workflow functionality.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-05
-@version 0.3.5
+@version 0.3.6
 """
 
 # IMPORTS
@@ -42,7 +42,7 @@ def test_main_window_can_be_created(qtbot) -> None:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-05
-    @version    0.3.5
+    @version    0.3.6
     """
     window = MainWindow()
     qtbot.addWidget(window)
@@ -70,6 +70,10 @@ def test_main_window_can_be_created(qtbot) -> None:
     )
     assert any(
         button.text() == "Deterministic Cleanup"
+        for button in window.findChildren(QPushButton)
+    )
+    assert any(
+        button.text() == "Deterministic Chunking"
         for button in window.findChildren(QPushButton)
     )
 

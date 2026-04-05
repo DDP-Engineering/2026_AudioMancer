@@ -14,7 +14,7 @@
          pages presentational only and free of workflow behavior.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-05
-@version 0.3.5
+@version 0.3.6
 """
 
 # IMPORTS
@@ -41,6 +41,7 @@ from audiomancer.ui.navigation_sidebar import NavigationSidebar
 from audiomancer.ui.pages.home_page import HomeProjectPage
 from audiomancer.ui.pages.narrator_page import NarratorPage
 from audiomancer.ui.pages.placeholder_page import PlaceholderPage
+from audiomancer.ui.pages.text_chunking_page import TextChunkingPage
 from audiomancer.ui.pages.text_cleanup_page import TextCleanupPage
 from audiomancer.ui.status_bar import AudiomancerStatusBar
 
@@ -68,7 +69,7 @@ class MainWindow(QMainWindow):
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-05
-    @version    0.3.5
+    @version    0.3.6
     """
 
     PAGE_ORDER = (
@@ -91,7 +92,7 @@ class MainWindow(QMainWindow):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-05
-        @version    0.3.5
+        @version    0.3.6
         """
         super().__init__(parent)
         self.setWindowTitle(_build_window_title())
@@ -254,12 +255,7 @@ class MainWindow(QMainWindow):
         pages = {
             "home": home_page,
             "text_cleanup": TextCleanupPage(self),
-            "text_chunking": PlaceholderPage(
-                "Text Chunking",
-                "This page matches the copied shell only. Chunking behavior is "
-                "not implemented in AudioMancer yet.",
-                self,
-            ),
+            "text_chunking": TextChunkingPage(self),
             "ai_translation": PlaceholderPage(
                 "AI Translation",
                 "This page matches the copied shell only. Translation behavior "

@@ -16,6 +16,20 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+## [0.1.8] - 2026-04-05
+
+### Added
+
+- added a static `Text Chunking` page cloned from `DDP_Audiomancer` with matching deterministic chunking, AI chunking, cleaned-text reference, chunk list, selected-chunk preview, and notes layout
+- extended the focused UI test to verify the cloned chunking controls are present in the main shell
+
+### Changed
+
+- replaced the `Text Chunking` placeholder page in the copied shell with the new presentational cloned page
+- package version updated to `0.1.8`
+
+### Fixed
+
 ## [0.1.7] - 2026-04-05
 
 ### Added

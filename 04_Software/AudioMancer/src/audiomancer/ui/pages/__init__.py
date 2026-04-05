@@ -21,6 +21,7 @@
 from .home_page import HomeProjectPage
 from .narrator_page import NarratorPage
 from .placeholder_page import PlaceholderPage
+from .text_chunking_page import TextChunkingPage
 from .text_cleanup_page import TextCleanupPage
 
 # PUBLIC API
@@ -29,6 +30,7 @@ __all__ = [
     "HomeProjectPage",
     "NarratorPage",
     "PlaceholderPage",
+    "TextChunkingPage",
     "TextCleanupPage",
 ]
 
