@@ -13,7 +13,7 @@
          pages, and status bar are created without workflow functionality.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-05
-@version 0.3.7
+@version 0.3.8
 """
 
 # IMPORTS
@@ -42,7 +42,7 @@ def test_main_window_can_be_created(qtbot) -> None:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-05
-    @version    0.3.7
+    @version    0.3.8
     """
     window = MainWindow()
     qtbot.addWidget(window)
@@ -78,6 +78,10 @@ def test_main_window_can_be_created(qtbot) -> None:
     )
     assert any(
         button.text() == "Start Translation"
+        for button in window.findChildren(QPushButton)
+    )
+    assert any(
+        button.text() == "Start Discovery"
         for button in window.findChildren(QPushButton)
     )
 

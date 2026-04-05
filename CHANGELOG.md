@@ -16,6 +16,21 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+## [0.1.10] - 2026-04-05
+
+### Added
+
+- added a static `Characters` page cloned from `DDP_Audiomancer` with matching discovery controls, character list, editable profile form, and evidence panels
+- extended the focused UI test to verify the cloned characters controls are present in the main shell
+
+### Changed
+
+- replaced the `Characters` placeholder page in the copied shell with the new presentational cloned page
+- reduced the static `Character Profile` panel height so the page fits the window better
+- package version updated to `0.1.10`
+
+### Fixed
+
 ## [0.1.9] - 2026-04-05
 
 ### Added

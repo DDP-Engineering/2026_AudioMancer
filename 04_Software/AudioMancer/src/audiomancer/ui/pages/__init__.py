@@ -19,6 +19,7 @@
 # IMPORTS
 
 from .ai_translation_page import AiTranslationPage
+from .characters_page import CharactersPage
 from .home_page import HomeProjectPage
 from .narrator_page import NarratorPage
 from .placeholder_page import PlaceholderPage
@@ -29,6 +30,7 @@ from .text_cleanup_page import TextCleanupPage
 
 __all__ = [
     "AiTranslationPage",
+    "CharactersPage",
     "HomeProjectPage",
     "NarratorPage",
     "PlaceholderPage",
