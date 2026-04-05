@@ -35,6 +35,9 @@ The initial shell consists of:
 - copied sidebar, status-bar, and page widgets under `audiomancer.ui`
 - a static DDP_Audiomancer-style main window layout with toolbar, navigation
   sidebar, stacked pages, and dialogs
+- a static narrator-profile manager aligned to Qwen3 `VoiceDesign` and
+  `CustomVoice` concepts, including profile listing, language selection,
+  prompt-based voice definition, and a reserved preview area
 - an About dialog with scrollable AGPL license text and the non-commercial
   addendum
 - app-root `LICENSE.txt` and `LICENSE_NC.txt` files used for the About dialog

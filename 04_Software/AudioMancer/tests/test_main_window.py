@@ -65,7 +65,11 @@ def test_main_window_can_be_created(qtbot) -> None:
         for group_box in window.findChildren(QGroupBox)
     )
     assert any(
-        group_box.title() == "Narrator Voice Profile"
+        group_box.title() == "Narrator Profiles"
+        for group_box in window.findChildren(QGroupBox)
+    )
+    assert any(
+        group_box.title() == "Voice Designer Prompt"
         for group_box in window.findChildren(QGroupBox)
     )
     assert any(
@@ -82,6 +86,14 @@ def test_main_window_can_be_created(qtbot) -> None:
     )
     assert any(
         button.text() == "Start Discovery"
+        for button in window.findChildren(QPushButton)
+    )
+    assert any(
+        button.text() == "Preview"
+        for button in window.findChildren(QPushButton)
+    )
+    assert any(
+        button.text() == "Delete Profile"
         for button in window.findChildren(QPushButton)
     )
 

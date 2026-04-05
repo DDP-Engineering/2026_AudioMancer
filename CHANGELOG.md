@@ -16,6 +16,22 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+## [0.1.11] - 2026-04-05
+
+### Added
+
+- added a static `Narrator` page with a profile list, narrator-language selector, prompt-based profile editor, preview text area, and profile-management actions
+- extended the focused UI test to verify the narrator profile-management controls are present in the main shell
+
+### Changed
+
+- replaced the earlier simple narrator placeholder with a fuller operator-facing narrator profile manager
+- simplified the narrator page by removing delivery-direction, linked-role, model-source, and technical voice-source selectors so the UI stays focused on profile management only
+- updated shell documentation to describe the narrator profile manager layout
+- package version updated to `0.1.11`
+
+### Fixed
+
 ## [0.1.10] - 2026-04-05
 
 ### Added
