@@ -96,6 +96,14 @@ def test_main_window_can_be_created(qtbot) -> None:
         button.text() == "Delete Profile"
         for button in window.findChildren(QPushButton)
     )
+    assert any(
+        button.text() == "Save AI Settings"
+        for button in window.findChildren(QPushButton)
+    )
+    assert any(
+        button.text() == "Connect"
+        for button in window.findChildren(QPushButton)
+    )
 
 
 def test_about_dialog_includes_license_text(qtbot) -> None:

@@ -16,6 +16,23 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+## [0.1.12] - 2026-04-05
+
+### Added
+
+- added a static `AI Settings` dialog cloned from `DDP_Audiomancer` with AI profile listing, provider configuration fields, default-profile selectors, and save/cancel actions
+- extended the focused UI test to verify the cloned AI Settings controls are present in the main shell
+
+### Changed
+
+- replaced the `AI Settings` placeholder dialog with the new presentational cloned dialog
+- refined the AI Settings layout by moving `Connect` beside `Backend Kind`, moving profile add/remove controls below the profile list, aligning the default-profile selectors with the main form rows, and centering the bottom actions
+- updated the AI Settings form labels and control widths for closer visual fit, and wired the `Cancel` button to close the dialog shell
+- updated shell documentation to describe the cloned AI Settings dialog
+- package version updated to `0.1.12`
+
+### Fixed
+
 ## [0.1.11] - 2026-04-05
 
 ### Added

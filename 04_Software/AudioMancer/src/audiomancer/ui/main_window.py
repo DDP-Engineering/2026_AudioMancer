@@ -39,6 +39,7 @@ from PySide6.QtWidgets import (
 from audiomancer import config
 from audiomancer.ui.navigation_sidebar import NavigationSidebar
 from audiomancer.ui.pages.ai_translation_page import AiTranslationPage
+from audiomancer.ui.pages.ai_settings_page import AiSettingsPage
 from audiomancer.ui.pages.characters_page import CharactersPage
 from audiomancer.ui.pages.home_page import HomeProjectPage
 from audiomancer.ui.pages.narrator_page import NarratorPage
@@ -310,12 +311,11 @@ class MainWindow(QMainWindow):
         )
         self._ai_settings_dialog.resize(920, 640)
         ai_layout = QVBoxLayout(self._ai_settings_dialog)
-        ai_layout.addWidget(PlaceholderPage(
-            "AI Settings",
-            "The DDP_Audiomancer AI settings dialog shell is reserved here. "
-            "No AI settings behavior is wired in AudioMancer yet.",
-            self._ai_settings_dialog,
-        ))
+        self._ai_settings_page = AiSettingsPage(self._ai_settings_dialog)
+        self._ai_settings_page._cancel_button.clicked.connect(
+            self._ai_settings_dialog.close
+        )
+        ai_layout.addWidget(self._ai_settings_page)
 
     def _build_about_dialog(self) -> QDialog:
         """
