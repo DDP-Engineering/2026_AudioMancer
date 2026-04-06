@@ -13,7 +13,7 @@
          validation, project-root resolution, and open validation behavior.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-06
-@version 0.4.0
+@version 0.5.0
 """
 
 # IMPORTS
@@ -49,6 +49,11 @@ def test_create_project_creates_required_structure_and_manifest(tmp_path) -> Non
     assert manifest["display_name"] == "Book5_CAL_CAL"
     assert manifest["current_stage"] == config.DEFAULT_WORKFLOW_STAGE
     assert manifest["source_document"] is None
+    assert manifest["extracted_text_relative_path"] is None
+    assert manifest["extraction_report_relative_path"] is None
+    assert manifest["extraction_warning_count"] == 0
+    assert manifest["operations"]["extraction"]["status"] == "not_started"
+    assert manifest["operations"]["cleanup"]["folder_relative_path"] == "10_cleanup"
     assert (
         project_root / config.PROJECT_MANIFEST_FILE_NAME
     ).is_file()
@@ -307,6 +312,32 @@ def test_validate_project_manifest_accepts_structured_source_document() -> None:
 
     assert validated["source_document"] == manifest["source_document"]
     assert validated["current_stage"] == "source_selected"
+
+
+def test_validate_project_manifest_normalizes_operations_map() -> None:
+    """
+    @brief      Verify manifest validation fills the required per-operation state entries.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-06
+    @version    0.1.0
+    """
+    manifest = project_workspace_service.build_project_manifest("Book5_CAL_CAL")
+    manifest["operations"] = {
+        "extraction": {
+            "folder_relative_path": "00_extraction",
+            "status": "running",
+            "progress_current": 1,
+            "progress_total": 3,
+        }
+    }
+
+    validated = project_workspace_service.validate_project_manifest(manifest)
+
+    assert validated["operations"]["extraction"]["status"] == "running"
+    assert validated["operations"]["extraction"]["progress_current"] == 1
+    assert validated["operations"]["translation"]["status"] == "not_started"
 
 
 # END OF FILE

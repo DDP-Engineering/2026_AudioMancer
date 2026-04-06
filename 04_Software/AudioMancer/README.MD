@@ -22,6 +22,7 @@ It now includes a project-aware main-window shell copied from
 - `src/audiomancer/services/ai_backend_service.py` provides backend probe and model-discovery helpers for AI provider profiles.
 - `src/audiomancer/services/project_workspace_service.py` provides new/open project creation, validation, and manifest persistence.
 - `src/audiomancer/services/import_service.py` provides source-file validation, copy-into-project behavior, and source metadata creation.
+- `src/audiomancer/services/text_extraction_service.py` provides deterministic raw-text extraction, self-contained extraction artifacts, and resumable extraction state.
 - `src/audiomancer/ui/` provides the copied toolbar, sidebar, page, and status-bar shell used by the first desktop window.
 - the main toolbar now supports `New Project` and `Open Project`.
 - new projects create `00_extraction`, `10_cleanup`, `20_chunking`, `30_translation`, `40_character_discovery`, `50_narrator_definition`, `temp`, and one root `project.json`.
@@ -29,6 +30,10 @@ It now includes a project-aware main-window shell copied from
 - opening a recoverably corrupted project now offers a repair confirmation and can recreate/reset the corrupted step plus all downstream step folders while updating the manifest stage.
 - the Home page `Select Source File` action now imports exactly one source file into the project root, stores structured source metadata in `project.json`, and locks the source for that project.
 - supported source import formats are `.txt`, `.pdf`, `.rtf`, `.docx`, `.odt`, `.md`, and `.epub`.
+- the `Text Cleanup` page now runs deterministic text extraction for the imported source and writes self-contained artifacts into `00_extraction`.
+- extraction artifacts currently use `input_<original_name>`, `output_raw_text.txt`, `extraction_report.json`, and `state_operation.json`.
+- pressing `Extract Text` after a completed extraction now asks for confirmation before clearing extraction data and all downstream workflow folders.
+- pressing `Extract Text` after an unfinished extraction now continues from saved state when possible, or restarts safely from the copied extraction input snapshot.
 - project names are stored exactly as entered but are rejected when invalid for Windows or Linux folder creation.
 - the `Settings` dialog now loads and saves `language`, `interface text size`, and `play completion beep` through the shared settings service.
 - saving `Settings` now applies the selected UI language and global text size to the running shell.
@@ -95,6 +100,15 @@ Focused validation used for the current project-workspace implementation:
 uv run pytest tests/test_project_workspace_service.py
 uv run pytest tests/test_import_service.py
 uv run pytest tests/test_main_window.py
+```
+
+Focused validation used for the current extraction implementation:
+
+```powershell
+uv run pytest tests/test_text_extraction_service.py
+uv run pytest tests/test_text_cleanup_page.py
+uv run pytest tests/test_main_window.py
+uv run pytest tests/test_project_workspace_service.py
 ```
 
 ## Packaging

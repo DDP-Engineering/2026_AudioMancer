@@ -13,7 +13,7 @@
          application through one centralized string catalog and scale mapping.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-06
-@version 0.7.0
+@version 0.8.0
 """
 
 # IMPORTS
@@ -59,6 +59,7 @@ _UI_STRINGS = {
         "dialog.select_source_filter": "Supported source files (*.txt *.pdf *.rtf *.docx *.odt *.md *.epub)",
         "dialog.project_error_title": "Project Error",
         "dialog.project_repair_title": "Repair Project",
+        "dialog.confirm_extraction_rerun_title": "Confirm Extraction Rerun",
         "about.subtitle": "Transform written words into real audio experience!",
         "about.license": "License",
         "about.details": "Eng. Dipl. Dan Dumitru Pasare\npasaredan1979@gmail.com",
@@ -72,6 +73,7 @@ _UI_STRINGS = {
         "status.project_opened": "Project opened.",
         "status.project_repaired": "Project repaired and opened.",
         "status.source_imported": "Source file imported.",
+        "status.text_extracted": "Text extracted.",
         "sidebar.home": "Home / Project",
         "sidebar.text_cleanup": "Text Cleanup",
         "sidebar.text_chunking": "Text Chunking",
@@ -133,6 +135,12 @@ _UI_STRINGS = {
         "text_cleanup.extracted_note": "Raw extracted text will appear here after source processing.",
         "text_cleanup.cleaned_note": "Deterministic or AI-assisted cleanup output will appear here.",
         "text_cleanup.notes_text": "Import a source to begin text extraction.\nDeterministic cleanup and AI-assisted cleanup are not wired yet.",
+        "text_cleanup.note_no_project": "Create or open a project to begin text extraction.",
+        "text_cleanup.note_no_source": "Import a source file to begin extraction.",
+        "text_cleanup.note_ready": "Extraction is ready to run for the current source file.",
+        "text_cleanup.note_resume": "A previous extraction was not finalized. Press Extract Text to continue from progress {progress_current}/{progress_total}.",
+        "text_cleanup.note_report_summary": "Extracted {word_count} words across {line_count} lines. Pages: {page_count}.",
+        "text_cleanup.note_rerun_warning": "Running extraction again will replace the current extraction data and reset all following workflow data.",
         "text_chunking.title": "Text Chunking",
         "text_chunking.ai_profile": "AI Profile",
         "text_chunking.ai_strategy": "AI Strategy",
@@ -244,7 +252,9 @@ _UI_STRINGS = {
         "project.error_missing_parent": "Select the parent folder where the project should be created.",
         "project.error_missing_name": "Enter the exact project name.",
         "project.error_no_active_project": "Create or open a project before importing a source file.",
+        "project.error_missing_source": "Import a source file before running text extraction.",
         "project.error_locked_source": "This project already has a locked source file. Create a new project to use another source.",
+        "project.confirm_extraction_rerun": "Continuing will delete the current extraction data and all subsequent-step data, clear the following operation folders, and reset workflow progress. Continue?",
         "project.repair_step_prefix": "The project is corrupted at step",
         "project.repair_reset_suffix": "This repair will recreate and reset that step and all downstream step folders.",
         "project.repair_metadata_only": "This repair will update the project metadata to the last consistent workflow stage.",
@@ -268,6 +278,7 @@ _UI_STRINGS = {
         "dialog.select_source_filter": "Fisiere sursa acceptate (*.txt *.pdf *.rtf *.docx *.odt *.md *.epub)",
         "dialog.project_error_title": "Eroare Proiect",
         "dialog.project_repair_title": "Repara Proiectul",
+        "dialog.confirm_extraction_rerun_title": "Confirma Reluarea Extragerii",
         "about.subtitle": "Transforma cuvintele scrise intr-o experienta audio reala!",
         "about.license": "Licenta",
         "about.details": "Ing. Dipl. Dan Dumitru Pasare\npasaredan1979@gmail.com",
@@ -281,6 +292,7 @@ _UI_STRINGS = {
         "status.project_opened": "Proiectul a fost deschis.",
         "status.project_repaired": "Proiectul a fost reparat si deschis.",
         "status.source_imported": "Fisierul sursa a fost importat.",
+        "status.text_extracted": "Textul a fost extras.",
         "sidebar.home": "Acasa / Proiect",
         "sidebar.text_cleanup": "Curatare Text",
         "sidebar.text_chunking": "Segmentare Text",
@@ -342,6 +354,12 @@ _UI_STRINGS = {
         "text_cleanup.extracted_note": "Textul extras brut va aparea aici dupa procesarea sursei.",
         "text_cleanup.cleaned_note": "Rezultatul curatarii deterministe sau asistate de AI va aparea aici.",
         "text_cleanup.notes_text": "Importa o sursa pentru a incepe extragerea textului.\nCuratarea determinista si cea asistata de AI nu sunt inca conectate.",
+        "text_cleanup.note_no_project": "Creeaza sau deschide un proiect pentru a incepe extragerea textului.",
+        "text_cleanup.note_no_source": "Importa un fisier sursa pentru a incepe extragerea.",
+        "text_cleanup.note_ready": "Extragerea este pregatita pentru fisierul sursa curent.",
+        "text_cleanup.note_resume": "O extragere anterioara nu a fost finalizata. Apasa Extrage Textul pentru a continua de la progresul {progress_current}/{progress_total}.",
+        "text_cleanup.note_report_summary": "Au fost extrase {word_count} cuvinte pe {line_count} linii. Pagini: {page_count}.",
+        "text_cleanup.note_rerun_warning": "Rularea extragerii din nou va inlocui datele actuale de extragere si va reseta toate datele pasilor urmatori.",
         "text_chunking.title": "Segmentare Text",
         "text_chunking.ai_profile": "Profil AI",
         "text_chunking.ai_strategy": "Strategie AI",
@@ -453,7 +471,9 @@ _UI_STRINGS = {
         "project.error_missing_parent": "Selecteaza dosarul parinte in care trebuie creat proiectul.",
         "project.error_missing_name": "Introdu numele exact al proiectului.",
         "project.error_no_active_project": "Creeaza sau deschide un proiect inainte de a importa un fisier sursa.",
+        "project.error_missing_source": "Importa un fisier sursa inainte de a rula extragerea textului.",
         "project.error_locked_source": "Acest proiect are deja un fisier sursa blocat. Creeaza un proiect nou pentru a folosi alta sursa.",
+        "project.confirm_extraction_rerun": "Continuarea va sterge datele curente de extragere si toate datele pasilor urmatori, va goli folderele operatiilor urmatoare si va reseta progresul fluxului. Continui?",
         "project.repair_step_prefix": "Proiectul este corupt la pasul",
         "project.repair_reset_suffix": "Aceasta reparatie va recrea si reseta acel pas si toate folderele pasilor urmatori.",
         "project.repair_metadata_only": "Aceasta reparatie va actualiza metadatele proiectului la ultima etapa coerenta a fluxului.",

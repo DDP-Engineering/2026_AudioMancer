@@ -8,16 +8,18 @@
 # -----------------------------------------------------------------------------
 """
 @file text_cleanup_page.py
-@brief Static text extraction and cleanup page for AudioMancer.
-@details Clones the DDP_Audiomancer text-cleanup page layout as a purely
-         presentational page without any connected functionality.
+@brief Text extraction and cleanup page for AudioMancer.
+@details Provides the operator-facing extraction UI state for the first
+         deterministic text-processing slice while cleanup actions remain
+         unavailable.
 @author Eng. Dan Dumitru Pasare
-@date 2026-04-05
-@version 0.1.1
+@date 2026-04-06
+@version 0.2.0
 """
 
 # IMPORTS
 
+from PySide6.QtCore import Signal
 from PySide6.QtWidgets import (
     QComboBox,
     QGroupBox,
@@ -38,24 +40,29 @@ from audiomancer.services import ui_state_service
 
 class TextCleanupPage(QWidget):
     """
-    @brief      Display the static extraction and cleanup shell page.
+    @brief      Display extraction and placeholder cleanup controls for the active project.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-05
+    @date       2026-04-06
     @version    0.1.0
     """
 
+    extract_requested = Signal()
+
     def __init__(self, parent=None) -> None:
         """
-        @brief      Initialize the cloned text-cleanup page.
+        @brief      Initialize the extraction-aware text cleanup page.
         @param[in]  parent Optional parent widget.
         @return     None.
         @exception  None
         @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-05
-        @version    0.1.0
+        @date       2026-04-06
+        @version    0.1.1
         """
         super().__init__(parent)
+        self._project_active = False
+        self._busy = False
+        self._can_extract = False
 
         layout = QVBoxLayout(self)
         header_row = QHBoxLayout()
@@ -64,7 +71,7 @@ class TextCleanupPage(QWidget):
         header_row.addStretch(1)
 
         self._extract_button = QPushButton("Extract Text")
-        self._extract_button.setEnabled(False)
+        self._extract_button.clicked.connect(self.extract_requested.emit)
         header_row.addWidget(self._extract_button)
 
         self._clean_button = QPushButton("Deterministic Cleanup")
@@ -92,18 +99,12 @@ class TextCleanupPage(QWidget):
         extracted_layout = QVBoxLayout(extracted_group)
         self._extracted_text_edit = QPlainTextEdit(self)
         self._extracted_text_edit.setReadOnly(True)
-        self._extracted_text_edit.setPlainText(
-            "Raw extracted text will appear here after source processing."
-        )
         extracted_layout.addWidget(self._extracted_text_edit)
 
         cleaned_group = QGroupBox("Cleaned Text Preview", self)
         cleaned_layout = QVBoxLayout(cleaned_group)
         self._cleaned_text_edit = QPlainTextEdit(self)
         self._cleaned_text_edit.setReadOnly(True)
-        self._cleaned_text_edit.setPlainText(
-            "Deterministic or AI-assisted cleanup output will appear here."
-        )
         cleaned_layout.addWidget(self._cleaned_text_edit)
 
         splitter.addWidget(extracted_group)
@@ -116,16 +117,85 @@ class TextCleanupPage(QWidget):
         notes_layout = QVBoxLayout(notes_group)
         self._notes_edit = QPlainTextEdit(self)
         self._notes_edit.setReadOnly(True)
-        self._notes_edit.setPlainText(
-            "Import a source to begin text extraction.\n"
-            "Deterministic cleanup and AI-assisted cleanup are not wired yet."
-        )
         notes_layout.addWidget(self._notes_edit)
-        notes_group.setMaximumHeight(180)
+        notes_group.setMaximumHeight(120)
         layout.addWidget(notes_group, 0)
+
         self._extracted_group = extracted_group
         self._cleaned_group = cleaned_group
         self._notes_group = notes_group
+
+        self.set_project_active(False)
+        self.set_processing_state(
+            extracted_text=None,
+            cleaned_text=None,
+            notes=["Import a source to begin text extraction."],
+            can_extract=False,
+        )
+
+    def set_project_active(self, is_active: bool) -> None:
+        """
+        @brief      Enable or disable extraction controls based on project availability.
+        @param[in]  is_active True when a project is open.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-06
+        @version    0.1.0
+        """
+        self._project_active = is_active
+        self._apply_button_state()
+
+    def set_processing_state(
+        self,
+        extracted_text: str | None,
+        cleaned_text: str | None,
+        notes: list[str],
+        can_extract: bool,
+    ) -> None:
+        """
+        @brief      Refresh the page from extraction-state inputs.
+        @param[in]  extracted_text Extracted text preview or `None`.
+        @param[in]  cleaned_text Cleaned text preview or `None`.
+        @param[in]  notes Operator-facing cleanup/extraction notes.
+        @param[in]  can_extract True when extraction may run.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-06
+        @version    0.1.0
+        """
+        self._can_extract = can_extract
+        self._apply_button_state()
+        self._extracted_text_edit.setPlainText(extracted_text or "")
+        self._cleaned_text_edit.setPlainText(cleaned_text or "")
+        self._notes_edit.setPlainText("\n".join(notes))
+
+    def set_busy(self, is_busy: bool) -> None:
+        """
+        @brief      Disable extraction actions while the extraction handler is busy.
+        @param[in]  is_busy True while extraction is running.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-06
+        @version    0.1.0
+        """
+        self._busy = is_busy
+        self._apply_button_state()
+
+    def _apply_button_state(self) -> None:
+        """
+        @brief      Apply the current extraction-button state.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-06
+        @version    0.1.0
+        """
+        self._extract_button.setEnabled(
+            self._project_active and self._can_extract and not self._busy
+        )
 
     def apply_language(self, language: str) -> None:
         """
@@ -134,8 +204,8 @@ class TextCleanupPage(QWidget):
         @return     None.
         @exception  None
         @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-05
-        @version    0.1.0
+        @date       2026-04-06
+        @version    0.2.0
         """
         self._title_label.setText(
             f"<h2>{ui_state_service.translate('text_cleanup.title', language)}</h2>"
@@ -160,15 +230,6 @@ class TextCleanupPage(QWidget):
         )
         self._notes_group.setTitle(
             ui_state_service.translate("text_cleanup.notes_group", language)
-        )
-        self._extracted_text_edit.setPlainText(
-            ui_state_service.translate("text_cleanup.extracted_note", language)
-        )
-        self._cleaned_text_edit.setPlainText(
-            ui_state_service.translate("text_cleanup.cleaned_note", language)
-        )
-        self._notes_edit.setPlainText(
-            ui_state_service.translate("text_cleanup.notes_text", language)
         )
 
 

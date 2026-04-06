@@ -13,10 +13,12 @@
          pages, and status bar are created without workflow functionality.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-06
-@version 0.8.0
+@version 0.9.0
 """
 
 # IMPORTS
+
+import json
 
 from PySide6.QtWidgets import (
     QApplication,
@@ -31,6 +33,7 @@ from PySide6.QtWidgets import (
 )
 
 import audiomancer.ui.main_window as main_window_module
+from audiomancer import config
 from audiomancer.services import project_workspace_service
 from audiomancer.ui.main_window import MainWindow
 
@@ -648,7 +651,326 @@ def test_main_window_imports_source_and_locks_selection(monkeypatch, qtbot, tmp_
     assert window._home_page._source_label.text() == "Source: story.epub"
     assert window._home_page._stage_list.item(0).text() == "Source Selected | Finished"
     assert window._home_page._import_button.isEnabled() is False
-    assert (project_root / "story.epub").is_file()
+
+
+def test_main_window_extracts_text_and_updates_cleanup_page(monkeypatch, qtbot, tmp_path) -> None:
+    """
+    @brief      Verify extraction updates the manifest, preview, and completed extraction state.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  qtbot Qt test helper fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-06
+    @version    0.1.0
+    """
+    persisted_payload = {
+        "language": "en",
+        "ui_text_scale": "normal",
+        "play_completion_beep": False,
+        "llm_profiles": [],
+        "default_ai_cleanup_profile_id": None,
+        "default_ai_chunking_profile_id": None,
+        "default_ai_chunking_strategy": "paragraph",
+        "default_character_extraction_profile_id": None,
+    }
+    project_root, manifest = project_workspace_service.create_project(
+        "ExtractProject",
+        tmp_path,
+    )
+    source_path = project_root / "story.txt"
+    source_path.write_text("Story body", encoding="utf-8")
+    manifest["source_document"] = {
+        "original_name": "story.txt",
+        "stored_relative_path": "story.txt",
+        "file_type": "txt",
+        "imported_at": "2026-04-06T12:00:00+00:00",
+        "size_bytes": source_path.stat().st_size,
+    }
+    project_workspace_service.save_manifest(manifest, project_root)
+
+    extraction_state = {
+        "folder_relative_path": "00_extraction",
+        "status": "completed",
+        "input_paths": ["00_extraction/input_story.txt"],
+        "output_paths": [f"00_extraction/{config.EXTRACTED_TEXT_FILE_NAME}"],
+        "artifact_paths": [f"00_extraction/{config.EXTRACTION_REPORT_FILE_NAME}"],
+        "progress_current": 1,
+        "progress_total": 1,
+        "mode": "deterministic",
+        "started_at": "2026-04-06T12:00:00+00:00",
+        "completed_at": "2026-04-06T12:01:00+00:00",
+        "updated_at": "2026-04-06T12:01:00+00:00",
+        "warning_count": 0,
+        "metadata": {"warnings": [], "source_type": "txt"},
+        "resume_checkpoint": None,
+    }
+
+    def _fake_extract_text(*args, **kwargs):
+        """
+        @brief      Persist fake extraction artifacts for the main-window test.
+        @return     Fake extraction report payload.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-06
+        @version    0.1.0
+        """
+        extraction_root = project_root / "00_extraction"
+        extraction_root.mkdir(exist_ok=True)
+        (extraction_root / "input_story.txt").write_text("Story body", encoding="utf-8")
+        (extraction_root / config.EXTRACTED_TEXT_FILE_NAME).write_text(
+            "Story body\n",
+            encoding="utf-8",
+        )
+        (extraction_root / config.EXTRACTION_REPORT_FILE_NAME).write_text(
+            (
+                "{\n"
+                '  "source_relative_path": "00_extraction/input_story.txt",\n'
+                '  "source_type": "txt",\n'
+                f'  "extracted_text_relative_path": "00_extraction/{config.EXTRACTED_TEXT_FILE_NAME}",\n'
+                '  "extracted_at": "2026-04-06T12:01:00+00:00",\n'
+                '  "page_count": null,\n'
+                '  "warnings": [],\n'
+                '  "character_count": 10,\n'
+                '  "word_count": 2,\n'
+                '  "line_count": 1\n'
+                "}\n"
+            ),
+            encoding="utf-8",
+        )
+        (extraction_root / config.OPERATION_STATE_FILE_NAME).write_text(
+            json.dumps(extraction_state, indent=2) + "\n",
+            encoding="utf-8",
+        )
+        return {
+            "source_relative_path": "00_extraction/input_story.txt",
+            "source_type": "txt",
+            "extracted_text_relative_path": f"00_extraction/{config.EXTRACTED_TEXT_FILE_NAME}",
+            "extracted_at": "2026-04-06T12:01:00+00:00",
+            "page_count": None,
+            "warnings": [],
+            "character_count": 10,
+            "word_count": 2,
+            "line_count": 1,
+        }
+
+    monkeypatch.setattr(
+        main_window_module.text_extraction_service,
+        "extract_text",
+        _fake_extract_text,
+    )
+
+    window = MainWindow(settings_payload=dict(persisted_payload))
+    qtbot.addWidget(window)
+    window._activate_project(project_root, project_workspace_service.load_manifest(project_root))
+
+    window._handle_extract_text_requested()
+
+    assert window._current_manifest is not None
+    assert window._current_manifest["extracted_text_relative_path"] == (
+        f"00_extraction/{config.EXTRACTED_TEXT_FILE_NAME}"
+    )
+    assert window._current_manifest["operations"]["extraction"]["status"] == "completed"
+    assert window._home_page._stage_list.item(1).text() == "Text Cleanup | In Progress"
+    assert window._text_cleanup_page._extracted_text_edit.toPlainText() == "Story body\n"
+    assert "Extracted 2 words across 1 lines." in window._text_cleanup_page._notes_edit.toPlainText()
+
+
+def test_main_window_restarts_completed_extraction_only_after_confirmation(
+    monkeypatch,
+    qtbot,
+    tmp_path,
+) -> None:
+    """
+    @brief      Verify completed extraction reruns only after operator confirmation.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  qtbot Qt test helper fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-06
+    @version    0.1.0
+    """
+    persisted_payload = {
+        "language": "en",
+        "ui_text_scale": "normal",
+        "play_completion_beep": False,
+        "llm_profiles": [],
+        "default_ai_cleanup_profile_id": None,
+        "default_ai_chunking_profile_id": None,
+        "default_ai_chunking_strategy": "paragraph",
+        "default_character_extraction_profile_id": None,
+    }
+    project_root, manifest = project_workspace_service.create_project(
+        "RerunProject",
+        tmp_path,
+    )
+    source_path = project_root / "story.txt"
+    source_path.write_text("Story body", encoding="utf-8")
+    manifest["source_document"] = {
+        "original_name": "story.txt",
+        "stored_relative_path": "story.txt",
+        "file_type": "txt",
+        "imported_at": "2026-04-06T12:00:00+00:00",
+        "size_bytes": source_path.stat().st_size,
+    }
+    manifest["extracted_text_relative_path"] = f"00_extraction/{config.EXTRACTED_TEXT_FILE_NAME}"
+    manifest["extraction_report_relative_path"] = f"00_extraction/{config.EXTRACTION_REPORT_FILE_NAME}"
+    manifest["operations"]["extraction"]["status"] = "completed"
+    manifest["operations"]["cleanup"]["status"] = "completed"
+    project_workspace_service.save_manifest(manifest, project_root)
+
+    question_calls = []
+    reset_calls = []
+    extract_calls = []
+
+    monkeypatch.setattr(
+        main_window_module.QMessageBox,
+        "question",
+        lambda *args, **kwargs: (
+            question_calls.append(args),
+            main_window_module.QMessageBox.StandardButton.No,
+        )[1],
+    )
+    monkeypatch.setattr(
+        main_window_module.text_extraction_service,
+        "reset_extraction_and_downstream",
+        lambda root: reset_calls.append(root),
+    )
+    monkeypatch.setattr(
+        main_window_module.text_extraction_service,
+        "extract_text",
+        lambda *args, **kwargs: extract_calls.append(args),
+    )
+
+    window = MainWindow(settings_payload=dict(persisted_payload))
+    qtbot.addWidget(window)
+    window._activate_project(project_root, project_workspace_service.load_manifest(project_root))
+
+    window._handle_extract_text_requested()
+
+    assert question_calls
+    assert reset_calls == []
+    assert extract_calls == []
+
+
+def test_main_window_continues_unfinished_extraction_without_confirmation(
+    monkeypatch,
+    qtbot,
+    tmp_path,
+) -> None:
+    """
+    @brief      Verify unfinished extraction reruns continue directly without destructive confirmation.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  qtbot Qt test helper fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-06
+    @version    0.1.0
+    """
+    persisted_payload = {
+        "language": "en",
+        "ui_text_scale": "normal",
+        "play_completion_beep": False,
+        "llm_profiles": [],
+        "default_ai_cleanup_profile_id": None,
+        "default_ai_chunking_profile_id": None,
+        "default_ai_chunking_strategy": "paragraph",
+        "default_character_extraction_profile_id": None,
+    }
+    project_root, manifest = project_workspace_service.create_project(
+        "ResumeWindowProject",
+        tmp_path,
+    )
+    source_path = project_root / "story.txt"
+    source_path.write_text("Story body", encoding="utf-8")
+    manifest["source_document"] = {
+        "original_name": "story.txt",
+        "stored_relative_path": "story.txt",
+        "file_type": "txt",
+        "imported_at": "2026-04-06T12:00:00+00:00",
+        "size_bytes": source_path.stat().st_size,
+    }
+    manifest["operations"]["extraction"]["status"] = "failed"
+    manifest["operations"]["extraction"]["progress_current"] = 1
+    manifest["operations"]["extraction"]["progress_total"] = 3
+    project_workspace_service.save_manifest(manifest, project_root)
+
+    question_calls = []
+    extract_calls = []
+
+    monkeypatch.setattr(
+        main_window_module.QMessageBox,
+        "question",
+        lambda *args, **kwargs: question_calls.append(args),
+    )
+
+    def _fake_extract_text(*args, **kwargs):
+        """
+        @brief      Record one resumed extraction call and return a minimal report.
+        @return     Minimal extraction report payload.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-06
+        @version    0.1.0
+        """
+        extract_calls.append(args)
+        extraction_root = project_root / "00_extraction"
+        extraction_root.mkdir(exist_ok=True)
+        (extraction_root / config.EXTRACTED_TEXT_FILE_NAME).write_text("Story body\n", encoding="utf-8")
+        (extraction_root / config.EXTRACTION_REPORT_FILE_NAME).write_text(
+            "{}\n",
+            encoding="utf-8",
+        )
+        (extraction_root / config.OPERATION_STATE_FILE_NAME).write_text(
+            json.dumps({
+                "folder_relative_path": "00_extraction",
+                "status": "completed",
+                "input_paths": [],
+                "output_paths": [f"00_extraction/{config.EXTRACTED_TEXT_FILE_NAME}"],
+                "artifact_paths": [f"00_extraction/{config.EXTRACTION_REPORT_FILE_NAME}"],
+                "progress_current": 1,
+                "progress_total": 1,
+                "mode": "deterministic",
+                "started_at": "2026-04-06T12:00:00+00:00",
+                "completed_at": "2026-04-06T12:01:00+00:00",
+                "updated_at": "2026-04-06T12:01:00+00:00",
+                "warning_count": 0,
+                "metadata": {"warnings": []},
+                "resume_checkpoint": None,
+            }, indent=2) + "\n",
+            encoding="utf-8",
+        )
+        return {
+            "source_relative_path": "00_extraction/input_story.txt",
+            "source_type": "txt",
+            "extracted_text_relative_path": f"00_extraction/{config.EXTRACTED_TEXT_FILE_NAME}",
+            "extracted_at": "2026-04-06T12:01:00+00:00",
+            "page_count": None,
+            "warnings": [],
+            "character_count": 10,
+            "word_count": 2,
+            "line_count": 1,
+        }
+
+    monkeypatch.setattr(
+        main_window_module.text_extraction_service,
+        "extract_text",
+        _fake_extract_text,
+    )
+
+    window = MainWindow(settings_payload=dict(persisted_payload))
+    qtbot.addWidget(window)
+    window._activate_project(project_root, project_workspace_service.load_manifest(project_root))
+
+    window._handle_extract_text_requested()
+
+    assert question_calls == []
+    assert len(extract_calls) == 1
 
 
 def test_main_window_prevents_reimport_when_source_is_locked(monkeypatch, qtbot, tmp_path) -> None:

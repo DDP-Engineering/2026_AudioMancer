@@ -13,7 +13,7 @@
          settings scaffold exist with the expected baseline contract.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-06
-@version 0.3.0
+@version 0.8.0
 """
 
 # IMPORTS
@@ -47,6 +47,11 @@ def test_config_exposes_expected_identity_and_window_defaults() -> None:
     assert config.DEFAULT_WORKFLOW_STAGE == "project_created"
     assert config.SUPPORTED_SOURCE_SUFFIXES[".epub"] == "epub"
     assert config.SUPPORTED_SOURCE_SUFFIXES[".docx"] == "docx"
+    assert config.EXTRACTION_FOLDER_NAME == "00_extraction"
+    assert config.EXTRACTED_TEXT_FILE_NAME == "output_raw_text.txt"
+    assert config.EXTRACTION_REPORT_FILE_NAME == "extraction_report.json"
+    assert config.OPERATION_STATE_FILE_NAME == "state_operation.json"
+    assert "text_extraction" in config.AVAILABLE_LOG_COMPONENTS
 
 
 def test_settings_json_scaffold_matches_service_defaults() -> None:

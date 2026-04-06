@@ -13,8 +13,8 @@ Provides the project-persistence and source-import layer for `AudioMancer`.
 
 It gives the desktop shell a stable way to create a new project root, open an
 existing project from its root or one child folder, import one locked source
-document into the project root, and validate the current `project.json`
-contract used by the application shell.
+document into the project root, persist coarse workflow-operation state, and
+validate the current `project.json` contract used by the application shell.
 
 ## 2. Responsibilities
 
@@ -28,10 +28,11 @@ contract used by the application shell.
 - validate required folders and required manifest fields during open
 - detect recoverable corruption in workflow folders or stage metadata during open
 - repair the corrupted step and all downstream step folders after operator confirmation
+- persist extraction artifact paths and per-step operation state in the manifest
 - feed the main window with loaded project root and manifest state
 
-It does not yet own extraction artifacts, narrator content storage, or full
-workflow-state persistence beyond the current shell manifest.
+It does not extract text by itself, own narrator content storage, or implement
+the downstream cleanup, chunking, translation, or character-discovery logic.
 
 ## 3. Implementation Overview
 
@@ -69,7 +70,9 @@ High-level flow:
    `audiomancer.services.import_service`, stores the copied file in the
    project root, saves `source_document` in `project.json`, and advances the
    project to `source_selected`.
-7. `MainWindow` stores the active project root and manifest, updates the home
+7. After extraction completes, `MainWindow` stores the extraction artifact
+   paths and extraction operation state back into `project.json`.
+8. `MainWindow` stores the active project root and manifest, updates the home
    summary, updates workflow progress, and enables the workflow pages.
 
 ## 4. Dependencies
@@ -100,6 +103,8 @@ Outputs:
 - one root-level `project.json`
 - one copied source file stored directly in the project root
 - one loaded validated manifest dictionary for the UI shell
+- persisted extraction artifact references and per-operation state in
+  `project.json`
 - operator-visible status and validation feedback through the main window
 
 ## 6. Data Contracts
@@ -112,6 +117,10 @@ Current root manifest contract in `project.json`:
 - `updated_at`
 - `current_stage`
 - `source_document`
+- `extracted_text_relative_path`
+- `extraction_report_relative_path`
+- `extraction_warning_count`
+- `operations`
 - `narrator_profile_name`
 - `narrator_language`
 - `notes`
@@ -123,6 +132,31 @@ Current root manifest contract in `project.json`:
 - `file_type`
 - `imported_at`
 - `size_bytes`
+
+Current `operations` map keys:
+
+- `extraction`
+- `cleanup`
+- `chunking`
+- `translation`
+- `character_discovery`
+
+Each operation entry currently stores:
+
+- `folder_relative_path`
+- `status`
+- `input_paths`
+- `output_paths`
+- `artifact_paths`
+- `progress_current`
+- `progress_total`
+- `mode`
+- `started_at`
+- `completed_at`
+- `updated_at`
+- `warning_count`
+- `metadata`
+- `resume_checkpoint`
 
 Required folder contract:
 
@@ -217,6 +251,7 @@ Covered behaviors:
 - source import acceptance for supported file types
 - source import rejection for `.doc`
 - copied source metadata persistence and collision-safe file naming
+- manifest defaults for extraction fields and operation-state entries
 - main-window activation and workflow progress updates after create/open
 - main-window source import and lock behavior
 - main-window repair confirmation flow during open
@@ -228,10 +263,10 @@ Minimum validation after a change:
 
 ## 10. Limitations And Future Work
 
-- the manifest is intentionally smaller than the older `DDP_Audiomancer`
-  schema even after adding `source_document`
+- the manifest remains intentionally smaller than the older `DDP_Audiomancer`
+  schema even after adding extraction and operation-state fields
 - project open repair currently handles missing step folders and invalid
   `current_stage` metadata only
-- source import stores the original file only; text extraction for the newly
-  accepted formats is still future work in this repo
+- extraction artifacts are produced by a separate component documented in
+  `05_SoftwareDocu/AudioMancer_Text_Extraction_Service.md`
 - there is no migration layer yet for future manifest schema revisions

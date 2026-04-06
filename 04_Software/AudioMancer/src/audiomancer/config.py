@@ -13,7 +13,7 @@
          file support used by the current AudioMancer implementation scaffold.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-06
-@version 0.3.0
+@version 0.9.0
 """
 
 # IMPORTS
@@ -95,6 +95,9 @@ WINDOWS_RESERVED_DIRECTORY_NAMES = (
 # @brief Stable operation-folder file name for persisted state.
 OPERATION_STATE_FILE_NAME = "state_operation.json"
 
+# @brief Stable project folder name for text extraction artifacts.
+EXTRACTION_FOLDER_NAME = "00_extraction"
+
 # @brief Stable prefix used for copied operation-local input snapshots.
 OPERATION_INPUT_FILE_PREFIX = "input_"
 
@@ -118,7 +121,7 @@ SUPPORTED_SOURCE_SUFFIXES = {
 }
 
 # @brief File name used for persisted raw extracted text.
-EXTRACTED_TEXT_FILE_NAME = "raw_text.txt"
+EXTRACTED_TEXT_FILE_NAME = f"{OPERATION_OUTPUT_FILE_PREFIX}raw_text.txt"
 
 # @brief File name used for the extraction metadata report.
 EXTRACTION_REPORT_FILE_NAME = "extraction_report.json"
@@ -269,6 +272,7 @@ AVAILABLE_LOG_COMPONENTS = (
     "main_window",
     "settings",
     "project_workspace",
+    "text_extraction",
     "ui_state",
 )
 

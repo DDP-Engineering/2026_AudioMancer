@@ -14,11 +14,12 @@
          pages presentational only and free of workflow behavior.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-06
-@version 1.6.0
+@version 1.8.0
 """
 
 # IMPORTS
 
+import zipfile
 from pathlib import Path
 
 from PySide6.QtCore import Qt
@@ -45,6 +46,7 @@ from audiomancer.services import ai_backend_service
 from audiomancer.services import import_service
 from audiomancer.services import project_workspace_service
 from audiomancer.services import settings_service
+from audiomancer.services import text_extraction_service
 from audiomancer.services import ui_state_service
 from audiomancer.ui.navigation_sidebar import NavigationSidebar
 from audiomancer.ui.pages.ai_translation_page import AiTranslationPage
@@ -178,7 +180,7 @@ class MainWindow(QMainWindow):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-06
-        @version    0.2.0
+        @version    0.3.0
         """
         for page_id, _label in self.PAGE_ORDER:
             enabled = is_active or page_id == "home"
@@ -227,6 +229,10 @@ class MainWindow(QMainWindow):
         self._home_page.set_source_locked(source_name is not None, source_name)
         self._home_page.set_stage_statuses(self._build_stage_statuses(manifest))
         self._status_bar.set_stage(stage_name)
+        self._text_cleanup_page.set_project_active(project_root is not None)
+        self._text_cleanup_page.set_processing_state(
+            **self._build_text_cleanup_state(project_root, manifest)
+        )
 
     def show_settings_dialog(self) -> None:
         """
@@ -321,7 +327,7 @@ class MainWindow(QMainWindow):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-06
-        @version    0.4.0
+        @version    0.5.0
         """
         home_page = HomeProjectPage(self)
         self._home_page = home_page
@@ -335,9 +341,14 @@ class MainWindow(QMainWindow):
         home_page.set_stage_statuses(self._build_stage_statuses(None))
         home_page.import_requested.connect(self._handle_import_source_requested)
 
+        self._text_cleanup_page = TextCleanupPage(self)
+        self._text_cleanup_page.extract_requested.connect(
+            self._handle_extract_text_requested
+        )
+
         pages = {
             "home": home_page,
-            "text_cleanup": TextCleanupPage(self),
+            "text_cleanup": self._text_cleanup_page,
             "text_chunking": TextChunkingPage(self),
             "ai_translation": AiTranslationPage(self),
             "characters": CharactersPage(self),
@@ -443,7 +454,7 @@ class MainWindow(QMainWindow):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-06
-        @version    0.1.0
+        @version    0.2.0
         """
         merged_settings = self._ai_settings_page.build_settings(
             self._settings_payload
@@ -512,7 +523,7 @@ class MainWindow(QMainWindow):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-06
-        @version    0.1.0
+        @version    0.2.0
         """
         ui_state_service.apply_ui_settings(
             QApplication.instance(),
@@ -760,6 +771,105 @@ class MainWindow(QMainWindow):
             ui_state_service.translate("status.source_imported", current_language)
         )
 
+    def _handle_extract_text_requested(self) -> None:
+        """
+        @brief      Run deterministic source-text extraction for the active project.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-06
+        @version    0.1.0
+        """
+        current_language = str(
+            self._settings_payload.get("language", config.DEFAULT_LANGUAGE)
+        )
+        if self._current_project_root is None or self._current_manifest is None:
+            QMessageBox.warning(
+                self,
+                ui_state_service.translate("dialog.project_error_title", current_language),
+                ui_state_service.translate("project.error_no_active_project", current_language),
+            )
+            return
+        if _source_document_name(self._current_manifest) is None:
+            QMessageBox.warning(
+                self,
+                ui_state_service.translate("dialog.project_error_title", current_language),
+                ui_state_service.translate("project.error_missing_source", current_language),
+            )
+            return
+
+        extraction_operation = _manifest_operation(self._current_manifest, "extraction")
+        if str(extraction_operation.get("status", "not_started")) == "completed":
+            if not self._confirm_extraction_rerun(current_language):
+                return
+            text_extraction_service.reset_extraction_and_downstream(
+                self._current_project_root
+            )
+            reset_manifest = _build_manifest_after_extraction_reset(self._current_manifest)
+            project_workspace_service.save_manifest(
+                reset_manifest,
+                self._current_project_root,
+            )
+            self._current_manifest = project_workspace_service.load_manifest(
+                self._current_project_root
+            )
+
+        self._text_cleanup_page.set_busy(True)
+        try:
+            report_payload = text_extraction_service.extract_text(
+                self._current_project_root,
+                self._current_manifest,
+            )
+        except (FileNotFoundError, ValueError, zipfile.BadZipFile) as error:
+            failed_manifest = _update_manifest_after_failed_extraction(
+                self._current_manifest,
+                self._current_project_root,
+            )
+            project_workspace_service.save_manifest(
+                failed_manifest,
+                self._current_project_root,
+            )
+            self.show_project_state(
+                self._current_project_root,
+                project_workspace_service.load_manifest(self._current_project_root),
+            )
+            QMessageBox.warning(
+                self,
+                ui_state_service.translate("dialog.project_error_title", current_language),
+                str(error),
+            )
+            return
+        finally:
+            self._text_cleanup_page.set_busy(False)
+
+        updated_manifest = dict(self._current_manifest)
+        updated_manifest["extracted_text_relative_path"] = str(
+            report_payload["extracted_text_relative_path"]
+        )
+        updated_manifest["extraction_report_relative_path"] = (
+            f"{config.EXTRACTION_FOLDER_NAME}/{config.EXTRACTION_REPORT_FILE_NAME}"
+        )
+        updated_manifest["extraction_warning_count"] = len(
+            list(report_payload.get("warnings", []))
+        )
+        operations = _normalized_manifest_operations(updated_manifest)
+        operations["extraction"] = (
+            text_extraction_service.load_operation_state(self._current_project_root)
+            or operations["extraction"]
+        )
+        updated_manifest["operations"] = operations
+        project_workspace_service.save_manifest(
+            updated_manifest,
+            self._current_project_root,
+        )
+        self.show_project_state(
+            self._current_project_root,
+            project_workspace_service.load_manifest(self._current_project_root),
+        )
+        self.show_message(
+            ui_state_service.translate("status.text_extracted", current_language)
+        )
+
     def _confirm_project_repair(
         self,
         repair_result: dict[str, object],
@@ -799,6 +909,25 @@ class MainWindow(QMainWindow):
         )
         return decision == QMessageBox.StandardButton.Yes
 
+    def _confirm_extraction_rerun(self, language: str) -> bool:
+        """
+        @brief      Ask the operator whether one completed extraction should be rerun destructively.
+        @param[in]  language Current UI language code.
+        @return     True when the operator accepts the rerun reset.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-06
+        @version    0.1.0
+        """
+        decision = QMessageBox.question(
+            self,
+            ui_state_service.translate("dialog.confirm_extraction_rerun_title", language),
+            ui_state_service.translate("project.confirm_extraction_rerun", language),
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        return decision == QMessageBox.StandardButton.Yes
+
     def _activate_project(
         self,
         project_root: Path,
@@ -828,7 +957,7 @@ class MainWindow(QMainWindow):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-06
-        @version    0.1.0
+        @version    0.2.0
         """
         current_language = str(
             self._settings_payload.get("language", config.DEFAULT_LANGUAGE)
@@ -866,7 +995,63 @@ class MainWindow(QMainWindow):
                     current_language,
                 ),
             })
+        extraction_status = str(
+            _manifest_operation(manifest, "extraction").get("status", "not_started")
+        )
+        if (
+            _source_document_name(manifest) is not None
+            and extraction_status in {"running", "failed", "completed"}
+            and reached_index < 1
+        ):
+            statuses[0]["status"] = "finished"
+            statuses[1]["status"] = "in_progress"
         return statuses
+
+    def _build_text_cleanup_state(
+        self,
+        project_root: Path | None,
+        manifest: dict[str, object] | None,
+    ) -> dict[str, object]:
+        """
+        @brief      Build the operator-facing state payload for the text cleanup page.
+        @param[in]  project_root Active project root or `None`.
+        @param[in]  manifest Active project manifest or `None`.
+        @return     Keyword payload for `TextCleanupPage.set_processing_state`.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-06
+        @version    0.1.0
+        """
+        current_language = str(
+            self._settings_payload.get("language", config.DEFAULT_LANGUAGE)
+        )
+        if project_root is None or manifest is None:
+            return {
+                "extracted_text": None,
+                "cleaned_text": None,
+                "notes": [
+                    ui_state_service.translate("text_cleanup.note_no_project", current_language)
+                ],
+                "can_extract": False,
+            }
+
+        extracted_text = _read_optional_project_text(
+            project_root,
+            _optional_manifest_string(manifest.get("extracted_text_relative_path")),
+        )
+        report_payload = text_extraction_service.load_extraction_report(project_root)
+        operation_state = text_extraction_service.load_operation_state(project_root)
+        return {
+            "extracted_text": extracted_text,
+            "cleaned_text": None,
+            "notes": _build_text_cleanup_notes(
+                manifest,
+                report_payload,
+                operation_state,
+                current_language,
+            ),
+            "can_extract": _source_document_name(manifest) is not None,
+        }
 
     def _build_about_dialog(self) -> QDialog:
         """
@@ -1077,6 +1262,198 @@ def _source_document_name(manifest: dict[str, object] | None) -> str | None:
     if not isinstance(source_document, dict):
         return None
     return _optional_manifest_string(source_document.get("original_name"))
+
+
+def _manifest_operation(
+    manifest: dict[str, object] | None,
+    operation_kind: str,
+) -> dict[str, object]:
+    """
+    @brief      Return one normalized operation payload from the manifest.
+    @param[in]  manifest Active manifest payload or `None`.
+    @param[in]  operation_kind Operation-kind token to resolve.
+    @return     Operation payload or an empty default mapping.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-06
+    @version    0.1.0
+    """
+    if not isinstance(manifest, dict):
+        return {}
+    operations = manifest.get("operations")
+    if not isinstance(operations, dict):
+        return {}
+    operation_payload = operations.get(operation_kind)
+    return dict(operation_payload) if isinstance(operation_payload, dict) else {}
+
+
+def _normalized_manifest_operations(
+    manifest: dict[str, object],
+) -> dict[str, dict[str, object]]:
+    """
+    @brief      Ensure the manifest exposes every required operation entry.
+    @param[in]  manifest Active manifest payload.
+    @return     Normalized operations mapping.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-06
+    @version    0.1.0
+    """
+    operations = manifest.get("operations")
+    if not isinstance(operations, dict):
+        operations = {}
+    normalized: dict[str, dict[str, object]] = {}
+    for operation_kind, folder_name in (
+        ("extraction", config.EXTRACTION_FOLDER_NAME),
+        ("cleanup", "10_cleanup"),
+        ("chunking", "20_chunking"),
+        ("translation", "30_translation"),
+        ("character_discovery", "40_character_discovery"),
+    ):
+        candidate = operations.get(operation_kind)
+        if isinstance(candidate, dict):
+            normalized[operation_kind] = dict(candidate)
+            normalized[operation_kind].setdefault("folder_relative_path", folder_name)
+            normalized[operation_kind].setdefault("status", "not_started")
+        else:
+            normalized[operation_kind] = {
+                "folder_relative_path": folder_name,
+                "status": "not_started",
+                "input_paths": [],
+                "output_paths": [],
+                "artifact_paths": [],
+                "progress_current": 0,
+                "progress_total": 0,
+                "mode": None,
+                "started_at": None,
+                "completed_at": None,
+                "updated_at": None,
+                "warning_count": 0,
+                "metadata": {},
+                "resume_checkpoint": None,
+            }
+    return normalized
+
+
+def _build_manifest_after_extraction_reset(
+    manifest: dict[str, object],
+) -> dict[str, object]:
+    """
+    @brief      Build one manifest payload after a confirmed extraction rerun reset.
+    @param[in]  manifest Current manifest payload before reset.
+    @return     Reset manifest payload ready for persistence.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-06
+    @version    0.1.0
+    """
+    updated_manifest = dict(manifest)
+    updated_manifest["extracted_text_relative_path"] = None
+    updated_manifest["extraction_report_relative_path"] = None
+    updated_manifest["extraction_warning_count"] = 0
+    operations = _normalized_manifest_operations(updated_manifest)
+    for operation_kind in operations:
+        operations[operation_kind] = _normalized_manifest_operations({})[operation_kind]
+    updated_manifest["operations"] = operations
+    return updated_manifest
+
+
+def _update_manifest_after_failed_extraction(
+    manifest: dict[str, object],
+    project_root: Path,
+) -> dict[str, object]:
+    """
+    @brief      Build one manifest payload after extraction fails or remains unfinished.
+    @param[in]  manifest Current manifest payload.
+    @param[in]  project_root Active project root folder.
+    @return     Updated manifest payload with failed extraction-state data.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-06
+    @version    0.1.0
+    """
+    updated_manifest = dict(manifest)
+    operations = _normalized_manifest_operations(updated_manifest)
+    operations["extraction"] = (
+        text_extraction_service.load_operation_state(project_root)
+        or operations["extraction"]
+    )
+    updated_manifest["operations"] = operations
+    return updated_manifest
+
+
+def _read_optional_project_text(project_root: Path, relative_path: str | None) -> str | None:
+    """
+    @brief      Read one optional project-local text artifact.
+    @param[in]  project_root Active project root folder.
+    @param[in]  relative_path Optional project-relative text artifact path.
+    @return     Decoded text content or `None`.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-06
+    @version    0.1.0
+    """
+    if not relative_path:
+        return None
+    artifact_path = project_root / relative_path
+    if not artifact_path.is_file():
+        return None
+    return artifact_path.read_text(encoding="utf-8")
+
+
+def _build_text_cleanup_notes(
+    manifest: dict[str, object],
+    report_payload: dict[str, object] | None,
+    operation_state: dict[str, object] | None,
+    language: str,
+) -> list[str]:
+    """
+    @brief      Build operator-facing notes for the extraction slice of the cleanup page.
+    @param[in]  manifest Active project manifest payload.
+    @param[in]  report_payload Optional extraction report payload.
+    @param[in]  operation_state Optional extraction operation-state payload.
+    @param[in]  language Current UI language code.
+    @return     Ordered notes list for the cleanup page.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-06
+    @version    0.1.0
+    """
+    notes: list[str] = []
+    if _source_document_name(manifest) is None:
+        notes.append(ui_state_service.translate("text_cleanup.note_no_source", language))
+        return notes
+
+    operation_status = None if not isinstance(operation_state, dict) else str(operation_state.get("status", "not_started"))
+    if report_payload is not None:
+        page_text = report_payload.get("page_count")
+        page_summary = "n/a" if page_text in (None, "") else str(page_text)
+        notes.append(
+            ui_state_service.translate("text_cleanup.note_report_summary", language).format(
+                word_count=report_payload.get("word_count", 0),
+                line_count=report_payload.get("line_count", 0),
+                page_count=page_summary,
+            )
+        )
+        warnings = list(report_payload.get("warnings", []))
+        notes.extend(str(item) for item in warnings)
+        if operation_status == "completed":
+            notes.append(ui_state_service.translate("text_cleanup.note_rerun_warning", language))
+        return notes
+
+    if operation_status in {"running", "failed"}:
+        progress_current = 0 if not isinstance(operation_state, dict) else int(operation_state.get("progress_current", 0))
+        progress_total = 0 if not isinstance(operation_state, dict) else int(operation_state.get("progress_total", 0))
+        notes.append(
+            ui_state_service.translate("text_cleanup.note_resume", language).format(
+                progress_current=progress_current,
+                progress_total=progress_total,
+            )
+        )
+        return notes
+
+    notes.append(ui_state_service.translate("text_cleanup.note_ready", language))
+    return notes
 
 
 # END OF FILE

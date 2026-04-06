@@ -13,7 +13,7 @@
          using one minimal `project.json` manifest contract.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-06
-@version 0.5.0
+@version    0.7.0
 """
 
 # IMPORTS
@@ -47,7 +47,7 @@ def validate_project_name(name: str) -> None:
     @exception  ValueError Raised when the name is invalid.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.2.0
+        @version    0.3.0
     """
     if not name or not name.strip():
         raise ValueError("Project name cannot be empty.")
@@ -89,7 +89,7 @@ def create_project(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.2.0
+        @version    0.3.0
     """
     validate_project_name(name)
     resolved_parent = Path(parent_path)
@@ -321,6 +321,10 @@ def build_project_manifest(
         "updated_at": resolved_timestamp,
         "current_stage": config.DEFAULT_WORKFLOW_STAGE,
         "source_document": None,
+        "extracted_text_relative_path": None,
+        "extraction_report_relative_path": None,
+        "extraction_warning_count": 0,
+        "operations": _build_default_operation_states(),
         "narrator_profile_name": None,
         "narrator_language": None,
         "notes": "",
@@ -350,6 +354,10 @@ def validate_project_manifest(payload: object) -> ProjectManifestPayload:
         "updated_at": str(payload["updated_at"]),
         "current_stage": current_stage,
         "source_document": _normalize_source_document(payload.get("source_document")),
+        "extracted_text_relative_path": _optional_string(payload.get("extracted_text_relative_path")),
+        "extraction_report_relative_path": _optional_string(payload.get("extraction_report_relative_path")),
+        "extraction_warning_count": _non_negative_int(payload.get("extraction_warning_count", 0)),
+        "operations": _normalize_operations(payload.get("operations")),
         "narrator_profile_name": _optional_string(
             payload.get("narrator_profile_name")
         ),
@@ -388,7 +396,7 @@ def _validate_manifest_identity_fields(payload: object) -> None:
     @exception  ValueError Raised when the payload is invalid.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.1.0
+        @version    0.2.0
     """
     if not isinstance(payload, dict):
         raise ValueError("Project manifest payload must be a JSON object.")
@@ -408,7 +416,7 @@ def _first_missing_required_directory(project_root: Path) -> str | None:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.1.0
+        @version    0.2.0
     """
     for folder_name in config.PROJECT_REQUIRED_SUBDIRECTORIES:
         if not (project_root / folder_name).is_dir():
@@ -425,7 +433,7 @@ def _repair_stage_for_folder(folder_name: str, payload: dict[str, object]) -> st
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.1.0
+        @version    0.2.0
     """
     _ = folder_name
     return _derive_trustworthy_stage(payload)
@@ -508,6 +516,10 @@ def _build_repaired_manifest(
             else config.DEFAULT_WORKFLOW_STAGE
         ),
         "source_document": _normalize_source_document(payload.get("source_document")),
+        "extracted_text_relative_path": _optional_string(payload.get("extracted_text_relative_path")),
+        "extraction_report_relative_path": _optional_string(payload.get("extraction_report_relative_path")),
+        "extraction_warning_count": _non_negative_int(payload.get("extraction_warning_count", 0)),
+        "operations": _normalize_operations(payload.get("operations")),
         "narrator_profile_name": _optional_string(
             payload.get("narrator_profile_name")
         ),
@@ -519,6 +531,10 @@ def _build_repaired_manifest(
     ):
         repaired_manifest["narrator_profile_name"] = None
         repaired_manifest["narrator_language"] = None
+    repaired_manifest["operations"] = _reset_operations_for_stage(
+        dict(repaired_manifest["operations"]),
+        str(repaired_manifest["current_stage"]),
+    )
     return repaired_manifest
 
 
@@ -567,6 +583,23 @@ def _optional_string(value: object) -> str | None:
     return str(value)
 
 
+def _non_negative_int(value: object) -> int:
+    """
+    @brief      Normalize one optional integer manifest field to a non-negative value.
+    @param[in]  value Raw decoded JSON value.
+    @return     Normalized non-negative integer.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-06
+    @version    0.1.0
+    """
+    try:
+        resolved_value = int(value)
+    except (TypeError, ValueError):
+        return 0
+    return max(resolved_value, 0)
+
+
 def _normalize_source_document(value: object) -> dict[str, object] | None:
     """
     @brief      Normalize one optional structured source-document payload.
@@ -608,6 +641,156 @@ def _normalize_source_document(value: object) -> dict[str, object] | None:
         "imported_at": imported_at,
         "size_bytes": size_bytes,
     }
+
+
+def _build_default_operation_states() -> dict[str, dict[str, object]]:
+    """
+    @brief      Build the default operation-state mapping for one new project.
+    @return     Default project-local operation-state map.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-06
+    @version    0.1.0
+    """
+    return {
+        operation_kind: _default_operation_state(operation_kind)
+        for operation_kind in (
+            "extraction",
+            "cleanup",
+            "chunking",
+            "translation",
+            "character_discovery",
+        )
+    }
+
+
+def _default_operation_state(operation_kind: str) -> dict[str, object]:
+    """
+    @brief      Build one default operation-state payload.
+    @param[in]  operation_kind Stable operation-kind token.
+    @return     Default operation-state payload.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-06
+    @version    0.1.0
+    """
+    return {
+        "folder_relative_path": f"{_folder_name_for_operation(operation_kind)}",
+        "status": "not_started",
+        "input_paths": [],
+        "output_paths": [],
+        "artifact_paths": [],
+        "progress_current": 0,
+        "progress_total": 0,
+        "mode": None,
+        "started_at": None,
+        "completed_at": None,
+        "updated_at": None,
+        "warning_count": 0,
+        "metadata": {},
+        "resume_checkpoint": None,
+    }
+
+
+def _normalize_operations(value: object) -> dict[str, dict[str, object]]:
+    """
+    @brief      Normalize one optional manifest operations mapping.
+    @param[in]  value Raw decoded JSON value.
+    @return     Normalized operations mapping with every required operation key.
+    @exception  ValueError Raised when the operations payload is invalid.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-06
+    @version    0.1.0
+    """
+    operations = _build_default_operation_states()
+    if value in (None, ""):
+        return operations
+    if not isinstance(value, dict):
+        raise ValueError("Project manifest field 'operations' is invalid.")
+    for operation_kind in operations:
+        candidate = value.get(operation_kind)
+        if candidate in (None, ""):
+            continue
+        if not isinstance(candidate, dict):
+            raise ValueError(f"Project manifest field 'operations.{operation_kind}' is invalid.")
+        operations[operation_kind] = {
+            "folder_relative_path": str(
+                candidate.get(
+                    "folder_relative_path",
+                    _folder_name_for_operation(operation_kind),
+                )
+            ),
+            "status": str(candidate.get("status", "not_started")),
+            "input_paths": [str(item) for item in candidate.get("input_paths", [])],
+            "output_paths": [str(item) for item in candidate.get("output_paths", [])],
+            "artifact_paths": [str(item) for item in candidate.get("artifact_paths", [])],
+            "progress_current": _non_negative_int(candidate.get("progress_current", 0)),
+            "progress_total": _non_negative_int(candidate.get("progress_total", 0)),
+            "mode": _optional_string(candidate.get("mode")),
+            "started_at": _optional_string(candidate.get("started_at")),
+            "completed_at": _optional_string(candidate.get("completed_at")),
+            "updated_at": _optional_string(candidate.get("updated_at")),
+            "warning_count": _non_negative_int(candidate.get("warning_count", 0)),
+            "metadata": dict(candidate.get("metadata", {}))
+            if isinstance(candidate.get("metadata", {}), dict)
+            else {},
+            "resume_checkpoint": (
+                dict(candidate.get("resume_checkpoint"))
+                if isinstance(candidate.get("resume_checkpoint"), dict)
+                else None
+            ),
+        }
+    return operations
+
+
+def _reset_operations_for_stage(
+    operations: dict[str, dict[str, object]],
+    current_stage: str,
+) -> dict[str, dict[str, object]]:
+    """
+    @brief      Reset downstream operation-state entries that are not justified by one stage token.
+    @param[in]  operations Current normalized operations mapping.
+    @param[in]  current_stage Current repaired project stage token.
+    @return     Operations mapping with downstream steps reset.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-06
+    @version    0.1.0
+    """
+    allowed_operations: set[str]
+    if current_stage == "source_selected":
+        allowed_operations = {"extraction"}
+    elif current_stage == "text_cleanup_ready":
+        allowed_operations = {"extraction", "cleanup"}
+    elif current_stage == "text_chunking_ready":
+        allowed_operations = {"extraction", "cleanup", "chunking"}
+    else:
+        allowed_operations = set()
+
+    normalized_operations = dict(operations)
+    for operation_kind in tuple(normalized_operations.keys()):
+        if operation_kind not in allowed_operations:
+            normalized_operations[operation_kind] = _default_operation_state(operation_kind)
+    return normalized_operations
+
+
+def _folder_name_for_operation(operation_kind: str) -> str:
+    """
+    @brief      Map one operation token to its project folder name.
+    @param[in]  operation_kind Stable operation-kind token.
+    @return     Matching project-relative folder name.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-06
+    @version    0.1.0
+    """
+    return {
+        "extraction": config.EXTRACTION_FOLDER_NAME,
+        "cleanup": "10_cleanup",
+        "chunking": "20_chunking",
+        "translation": "30_translation",
+        "character_discovery": "40_character_discovery",
+    }.get(operation_kind, operation_kind)
 
 
 # END OF FILE
