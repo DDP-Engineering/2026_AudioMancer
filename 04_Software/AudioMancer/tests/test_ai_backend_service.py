@@ -12,8 +12,8 @@
 @details Verifies backend probe success/failure normalization for the current
          AI Settings connectivity flow.
 @author Eng. Dan Dumitru Pasare
-@date 2026-04-05
-@version 0.1.2
+@date 2026-04-06
+@version 0.2.0
 """
 
 # IMPORTS
@@ -60,10 +60,10 @@ def test_probe_profile_normalizes_openai_compatible_models(monkeypatch) -> None:
         "request_timeout_seconds": 30,
     })
 
-    assert result.success is True
-    assert result.discovered_model_count == 2
-    assert result.selected_model_valid is True
-    assert [model.id for model in result.discovered_models] == [
+    assert result["success"] is True
+    assert result["discovered_model_count"] == 2
+    assert result["selected_model_valid"] is True
+    assert [model["id"] for model in result["discovered_models"]] == [
         "qwen3-8b",
         "llama-3.1-8b",
     ]
@@ -104,9 +104,9 @@ def test_probe_profile_normalizes_ollama_models(monkeypatch) -> None:
         "request_timeout_seconds": 20,
     })
 
-    assert result.success is True
-    assert result.discovered_model_count == 2
-    assert result.selected_model_valid is False
+    assert result["success"] is True
+    assert result["discovered_model_count"] == 2
+    assert result["selected_model_valid"] is False
 
 
 def test_probe_profile_maps_backend_failures(monkeypatch) -> None:
@@ -146,6 +146,6 @@ def test_probe_profile_maps_backend_failures(monkeypatch) -> None:
         "request_timeout_seconds": 15,
     })
 
-    assert result.success is False
-    assert result.discovered_model_count == 0
-    assert "connection refused" in result.message
+    assert result["success"] is False
+    assert result["discovered_model_count"] == 0
+    assert "connection refused" in str(result["message"])

@@ -13,8 +13,8 @@
          helpers so the main window can coordinate persistence through the
          settings service.
 @author Eng. Dan Dumitru Pasare
-@date 2026-04-05
-@version 0.5.2
+@date 2026-04-06
+@version 0.6.0
 """
 
 # IMPORTS
@@ -40,7 +40,6 @@ from PySide6.QtWidgets import (
 )
 
 from audiomancer import config
-from audiomancer.services.ai_backend_service import ProviderProbeResult
 from audiomancer.services import ui_state_service
 
 # CONSTANTS
@@ -351,10 +350,10 @@ class AiSettingsPage(QWidget):
             return None
         return copy.deepcopy(current_profile)
 
-    def apply_probe_result(self, probe_result: ProviderProbeResult) -> None:
+    def apply_probe_result(self, probe_result: dict[str, object]) -> None:
         """
         @brief      Apply one backend probe result to the selected profile.
-        @param[in]  probe_result Normalized backend probe result.
+        @param[in]  probe_result Normalized backend probe result payload.
         @return     None.
         @exception  None
         @author     Eng. Dan Dumitru Pasare
@@ -365,15 +364,20 @@ class AiSettingsPage(QWidget):
         if current_profile is None:
             return
 
-        current_profile["discovery_succeeded"] = probe_result.success
-        current_profile["discovery_message"] = probe_result.message
+        current_profile["discovery_succeeded"] = bool(
+            probe_result.get("success", False)
+        )
+        current_profile["discovery_message"] = str(
+            probe_result.get("message", "")
+        )
         current_profile["discovered_context_window"] = (
-            probe_result.discovered_context_window
+            probe_result.get("discovered_context_window")
         )
 
         model_options = [
-            (model.id, model.label)
-            for model in probe_result.discovered_models
+            (str(model.get("id", "")), str(model.get("label", "")))
+            for model in probe_result.get("discovered_models", [])
+            if isinstance(model, dict) and str(model.get("id", "")).strip()
         ]
         self._discovered_model_options[str(current_profile["id"])] = model_options
 
@@ -381,11 +385,11 @@ class AiSettingsPage(QWidget):
             selected_model_name = str(current_profile.get("model_name", "")).strip()
             if (
                 not bool(current_profile.get("user_overrode_model_name", False))
-                and not probe_result.selected_model_valid
+                and not bool(probe_result.get("selected_model_valid", False))
             ):
                 selected_model_name = model_options[0][0]
                 current_profile["model_name"] = selected_model_name
-            if probe_result.selected_model_valid and selected_model_name:
+            if bool(probe_result.get("selected_model_valid", False)) and selected_model_name:
                 current_profile["discovered_model_name"] = selected_model_name
             else:
                 current_profile["discovered_model_name"] = model_options[0][0]
@@ -393,10 +397,12 @@ class AiSettingsPage(QWidget):
             current_profile["discovered_model_name"] = ""
 
         if (
-            probe_result.discovered_context_window is not None
+            probe_result.get("discovered_context_window") is not None
             and not bool(current_profile.get("user_overrode_context_window", False))
         ):
-            current_profile["context_window"] = probe_result.discovered_context_window
+            current_profile["context_window"] = int(
+                probe_result["discovered_context_window"]
+            )
 
         self._load_profile_into_editor(current_profile)
 

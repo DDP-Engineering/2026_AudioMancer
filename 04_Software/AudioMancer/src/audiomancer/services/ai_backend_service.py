@@ -13,14 +13,13 @@
          internal contract, and returns operator-facing connect feedback for
          the AI Settings page.
 @author Eng. Dan Dumitru Pasare
-@date 2026-04-05
-@version 0.1.1
+@date 2026-04-06
+@version 0.2.0
 """
 
 # IMPORTS
 
 import json
-from dataclasses import dataclass
 from typing import Any
 from urllib import error, parse, request
 
@@ -30,36 +29,8 @@ from .logging_service import get_component_logger, trace_function
 # CONSTANTS
 
 _AI_BACKEND_LOGGER = get_component_logger("ai_backend")
-
-
-@dataclass(slots=True)
-class ModelDescriptor:
-    """
-    @brief      Normalized model description discovered from one backend.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-05
-    @version    0.1.0
-    """
-
-    id: str
-    label: str
-
-
-@dataclass(slots=True)
-class ProviderProbeResult:
-    """
-    @brief      Normalized result of probing one AI backend profile.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-05
-    @version    0.1.0
-    """
-
-    success: bool
-    message: str
-    discovered_models: list[ModelDescriptor]
-    discovered_model_count: int
-    discovered_context_window: int | None
-    selected_model_valid: bool
+ModelDescriptorPayload = dict[str, str]
+ProviderProbeResultPayload = dict[str, object]
 
 
 def _ensure_trailing_endpoint(base_url: str, endpoint: str) -> str:
@@ -113,11 +84,11 @@ def _build_request_headers(profile_payload: dict[str, object]) -> dict[str, str]
 
 
 @trace_function(_AI_BACKEND_LOGGER)
-def probe_profile(profile_payload: dict[str, object]) -> ProviderProbeResult:
+def probe_profile(profile_payload: dict[str, object]) -> ProviderProbeResultPayload:
     """
     @brief      Probe one configured AI backend profile and discover models.
     @param[in]  profile_payload Normalized AI profile payload.
-    @return     Normalized probe result with discovered models and feedback.
+    @return     Normalized probe result payload with discovered models and feedback.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-05
@@ -129,20 +100,18 @@ def probe_profile(profile_payload: dict[str, object]) -> ProviderProbeResult:
     timeout_seconds = config.DEFAULT_AI_CONNECT_TIMEOUT_SECONDS
 
     if backend_kind not in config.LLM_BACKEND_OPTIONS:
-        return ProviderProbeResult(
+        return _build_probe_result(
             success=False,
             message=f"Unsupported backend kind: {backend_kind or '<empty>'}.",
             discovered_models=[],
-            discovered_model_count=0,
             discovered_context_window=None,
             selected_model_valid=False,
         )
     if not base_url:
-        return ProviderProbeResult(
+        return _build_probe_result(
             success=False,
             message="Base URL is empty.",
             discovered_models=[],
-            discovered_model_count=0,
             discovered_context_window=None,
             selected_model_valid=False,
         )
@@ -159,44 +128,40 @@ def probe_profile(profile_payload: dict[str, object]) -> ProviderProbeResult:
                 timeout_seconds,
             )
     except error.HTTPError as exception:
-        return ProviderProbeResult(
+        return _build_probe_result(
             success=False,
             message=f"Connection failed: HTTP {exception.code}.",
             discovered_models=[],
-            discovered_model_count=0,
             discovered_context_window=None,
             selected_model_valid=False,
         )
     except error.URLError as exception:
         reason = getattr(exception, "reason", exception)
-        return ProviderProbeResult(
+        return _build_probe_result(
             success=False,
             message=f"Connection failed: {reason}.",
             discovered_models=[],
-            discovered_model_count=0,
             discovered_context_window=None,
             selected_model_valid=False,
         )
     except TimeoutError:
-        return ProviderProbeResult(
+        return _build_probe_result(
             success=False,
             message="Connection failed: request timed out.",
             discovered_models=[],
-            discovered_model_count=0,
             discovered_context_window=None,
             selected_model_valid=False,
         )
     except ValueError as exception:
-        return ProviderProbeResult(
+        return _build_probe_result(
             success=False,
             message=f"Connection failed: {exception}.",
             discovered_models=[],
-            discovered_model_count=0,
             discovered_context_window=None,
             selected_model_valid=False,
         )
 
-    discovered_model_ids = {model.id for model in discovered_models}
+    discovered_model_ids = {model["id"] for model in discovered_models}
     selected_model_valid = (
         bool(selected_model_name)
         and selected_model_name in discovered_model_ids
@@ -204,11 +169,10 @@ def probe_profile(profile_payload: dict[str, object]) -> ProviderProbeResult:
     message = (
         f"Connection successful. Discovered {len(discovered_models)} models."
     )
-    return ProviderProbeResult(
+    return _build_probe_result(
         success=True,
         message=message,
         discovered_models=discovered_models,
-        discovered_model_count=len(discovered_models),
         discovered_context_window=None,
         selected_model_valid=selected_model_valid,
     )
@@ -217,7 +181,7 @@ def probe_profile(profile_payload: dict[str, object]) -> ProviderProbeResult:
 def _probe_openai_compatible_models(
     profile_payload: dict[str, object],
     timeout_seconds: int,
-) -> list[ModelDescriptor]:
+) -> list[ModelDescriptorPayload]:
     """
     @brief      Discover models from an OpenAI-compatible backend.
     @param[in]  profile_payload Normalized AI profile payload.
@@ -240,21 +204,21 @@ def _probe_openai_compatible_models(
     model_entries = payload.get("data")
     if not isinstance(model_entries, list):
         raise ValueError("backend returned an invalid models payload")
-    discovered_models: list[ModelDescriptor] = []
+    discovered_models: list[ModelDescriptorPayload] = []
     for model_entry in model_entries:
         if not isinstance(model_entry, dict):
             continue
         model_id = str(model_entry.get("id", "")).strip()
         if not model_id:
             continue
-        discovered_models.append(ModelDescriptor(id=model_id, label=model_id))
+        discovered_models.append({"id": model_id, "label": model_id})
     return discovered_models
 
 
 def _probe_ollama_models(
     profile_payload: dict[str, object],
     timeout_seconds: int,
-) -> list[ModelDescriptor]:
+) -> list[ModelDescriptorPayload]:
     """
     @brief      Discover models from an Ollama backend.
     @param[in]  profile_payload Normalized AI profile payload.
@@ -273,7 +237,7 @@ def _probe_ollama_models(
     model_entries = payload.get("models")
     if not isinstance(model_entries, list):
         raise ValueError("backend returned an invalid models payload")
-    discovered_models: list[ModelDescriptor] = []
+    discovered_models: list[ModelDescriptorPayload] = []
     for model_entry in model_entries:
         if not isinstance(model_entry, dict):
             continue
@@ -284,7 +248,7 @@ def _probe_ollama_models(
         ).strip()
         if not model_id:
             continue
-        discovered_models.append(ModelDescriptor(id=model_id, label=model_id))
+        discovered_models.append({"id": model_id, "label": model_id})
     return discovered_models
 
 
@@ -310,6 +274,36 @@ def _read_json(
     if not isinstance(payload, dict):
         raise ValueError("backend returned a non-object JSON payload")
     return payload
+
+
+def _build_probe_result(
+    success: bool,
+    message: str,
+    discovered_models: list[ModelDescriptorPayload],
+    discovered_context_window: int | None,
+    selected_model_valid: bool,
+) -> ProviderProbeResultPayload:
+    """
+    @brief      Build one normalized provider probe result payload.
+    @param[in]  success True when the backend probe succeeded.
+    @param[in]  message Operator-facing probe message.
+    @param[in]  discovered_models Normalized discovered model payloads.
+    @param[in]  discovered_context_window Optional discovered context window.
+    @param[in]  selected_model_valid True when the chosen model is valid.
+    @return     Normalized probe result dictionary.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-06
+    @version    0.1.0
+    """
+    return {
+        "success": success,
+        "message": message,
+        "discovered_models": list(discovered_models),
+        "discovered_model_count": len(discovered_models),
+        "discovered_context_window": discovered_context_window,
+        "selected_model_valid": selected_model_valid,
+    }
 
 
 # END OF FILE

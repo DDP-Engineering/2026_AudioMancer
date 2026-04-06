@@ -16,6 +16,18 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+## [0.4.1] - 2026-04-06
+
+### Added
+
+### Changed
+
+- refactored `audiomancer.services.ai_backend_service` to use fully functional dictionary payloads instead of dataclass-based result objects
+- updated the AI settings page, main-window connect popup flow, and focused AI tests to consume the new functional probe-result contract
+- package version updated to `0.4.1`
+
+### Fixed
+
 ## [0.4.0] - 2026-04-06
 
 ### Added

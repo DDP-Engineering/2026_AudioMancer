@@ -13,7 +13,7 @@
          pages, and status bar are created without workflow functionality.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-06
-@version 0.6.0
+@version 0.7.0
 """
 
 # IMPORTS
@@ -412,23 +412,17 @@ def test_main_window_connect_ai_profile_shows_success_popup(monkeypatch, qtbot) 
     monkeypatch.setattr(
         main_window_module.ai_backend_service,
         "probe_profile",
-        lambda profile: main_window_module.ai_backend_service.ProviderProbeResult(
-            success=True,
-            message="Connection successful. Discovered 2 models.",
-            discovered_models=[
-                main_window_module.ai_backend_service.ModelDescriptor(
-                    id="qwen3-8b",
-                    label="qwen3-8b",
-                ),
-                main_window_module.ai_backend_service.ModelDescriptor(
-                    id="llama-3.1-8b",
-                    label="llama-3.1-8b",
-                ),
+        lambda profile: {
+            "success": True,
+            "message": "Connection successful. Discovered 2 models.",
+            "discovered_models": [
+                {"id": "qwen3-8b", "label": "qwen3-8b"},
+                {"id": "llama-3.1-8b", "label": "llama-3.1-8b"},
             ],
-            discovered_model_count=2,
-            discovered_context_window=None,
-            selected_model_valid=True,
-        ),
+            "discovered_model_count": 2,
+            "discovered_context_window": None,
+            "selected_model_valid": True,
+        },
     )
     monkeypatch.setattr(
         main_window_module.QMessageBox,
@@ -486,14 +480,14 @@ def test_main_window_connect_ai_profile_shows_failure_popup(monkeypatch, qtbot) 
     monkeypatch.setattr(
         main_window_module.ai_backend_service,
         "probe_profile",
-        lambda profile: main_window_module.ai_backend_service.ProviderProbeResult(
-            success=False,
-            message="Connection failed: request timed out.",
-            discovered_models=[],
-            discovered_model_count=0,
-            discovered_context_window=None,
-            selected_model_valid=False,
-        ),
+        lambda profile: {
+            "success": False,
+            "message": "Connection failed: request timed out.",
+            "discovered_models": [],
+            "discovered_model_count": 0,
+            "discovered_context_window": None,
+            "selected_model_valid": False,
+        },
     )
     monkeypatch.setattr(
         main_window_module.QMessageBox,

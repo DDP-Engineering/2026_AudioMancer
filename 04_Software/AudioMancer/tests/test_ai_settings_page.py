@@ -12,13 +12,12 @@
 @details Verifies AI settings-page loading, profile editing, profile mutation,
          and merged settings payload generation.
 @author Eng. Dan Dumitru Pasare
-@date 2026-04-05
-@version 0.2.2
+@date 2026-04-06
+@version 0.3.0
 """
 
 # IMPORTS
 
-from audiomancer.services.ai_backend_service import ModelDescriptor, ProviderProbeResult
 from audiomancer.ui.pages.ai_settings_page import AiSettingsPage
 
 
@@ -137,17 +136,17 @@ def test_ai_settings_page_applies_probe_result_and_updates_status(qtbot) -> None
         }],
     })
 
-    page.apply_probe_result(ProviderProbeResult(
-        success=True,
-        message="Connection successful. Discovered 2 models.",
-        discovered_models=[
-            ModelDescriptor(id="qwen3-8b", label="qwen3-8b"),
-            ModelDescriptor(id="llama-3.1-8b", label="llama-3.1-8b"),
+    page.apply_probe_result({
+        "success": True,
+        "message": "Connection successful. Discovered 2 models.",
+        "discovered_models": [
+            {"id": "qwen3-8b", "label": "qwen3-8b"},
+            {"id": "llama-3.1-8b", "label": "llama-3.1-8b"},
         ],
-        discovered_model_count=2,
-        discovered_context_window=None,
-        selected_model_valid=False,
-    ))
+        "discovered_model_count": 2,
+        "discovered_context_window": None,
+        "selected_model_valid": False,
+    })
 
     assert page._model_combo.count() == 2
     assert page._model_combo.currentText() == "qwen3-8b"

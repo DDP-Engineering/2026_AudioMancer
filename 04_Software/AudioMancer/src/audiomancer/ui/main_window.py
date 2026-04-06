@@ -476,7 +476,7 @@ class MainWindow(QMainWindow):
         probe_result = ai_backend_service.probe_profile(current_profile)
         self._ai_settings_page.apply_probe_result(probe_result)
 
-        if probe_result.success:
+        if bool(probe_result.get("success", False)):
             QMessageBox.information(
                 self._ai_settings_dialog,
                 ui_state_service.translate(
@@ -486,7 +486,7 @@ class MainWindow(QMainWindow):
                 (
                     f"{ui_state_service.translate('ai_settings.popup_success_message', current_language)}\n"
                     f"{ui_state_service.translate('ai_settings.popup_discovered_models', current_language)}: "
-                    f"{probe_result.discovered_model_count}"
+                    f"{probe_result.get('discovered_model_count', 0)}"
                 ),
             )
             return
@@ -499,7 +499,7 @@ class MainWindow(QMainWindow):
             ),
             (
                 f"{ui_state_service.translate('ai_settings.popup_failure_message', current_language)}\n"
-                f"{probe_result.message}"
+                f"{probe_result.get('message', '')}"
             ),
         )
 
