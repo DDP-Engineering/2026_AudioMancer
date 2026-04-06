@@ -12,8 +12,8 @@
 @details Validates that the DDP_Audiomancer-style toolbar, sidebar, stacked
          pages, and status bar are created without workflow functionality.
 @author Eng. Dan Dumitru Pasare
-@date 2026-04-05
-@version 0.5.3
+@date 2026-04-06
+@version 0.6.0
 """
 
 # IMPORTS
@@ -31,6 +31,7 @@ from PySide6.QtWidgets import (
 )
 
 import audiomancer.ui.main_window as main_window_module
+from audiomancer.services import project_workspace_service
 from audiomancer.ui.main_window import MainWindow
 
 # PUBLIC API
@@ -43,8 +44,8 @@ def test_main_window_can_be_created(qtbot) -> None:
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-05
-    @version    0.3.9
+    @date       2026-04-06
+    @version    0.4.0
     """
     window = MainWindow(settings_payload={
         "language": "en",
@@ -123,6 +124,7 @@ def test_main_window_can_be_created(qtbot) -> None:
         label.text() == "Interface Text Size"
         for label in window.findChildren(QLabel)
     )
+    assert window._sidebar.item(1).flags() == main_window_module.Qt.ItemFlag.NoItemFlags
 
 
 def test_about_dialog_includes_license_text(qtbot) -> None:
@@ -132,7 +134,7 @@ def test_about_dialog_includes_license_text(qtbot) -> None:
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-05
+    @date       2026-04-06
     @version    0.1.0
     """
     window = MainWindow(settings_payload={
@@ -171,7 +173,7 @@ def test_about_dialog_loads_translated_license_text_for_romanian(qtbot) -> None:
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-05
+    @date       2026-04-06
     @version    0.1.0
     """
     window = MainWindow(settings_payload={
@@ -203,7 +205,7 @@ def test_main_window_saves_settings_dialog_payload(monkeypatch, qtbot) -> None:
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-05
+    @date       2026-04-06
     @version    0.1.0
     """
     persisted_payload = {
@@ -282,7 +284,7 @@ def test_main_window_reloads_dialogs_and_discards_unsaved_changes(monkeypatch, q
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-05
+    @date       2026-04-06
     @version    0.1.0
     """
     persisted_payload = {
@@ -341,7 +343,7 @@ def test_settings_dialog_reopens_with_translated_labels(monkeypatch, qtbot) -> N
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-05
+    @date       2026-04-06
     @version    0.1.0
     """
     persisted_payload = {
@@ -379,7 +381,7 @@ def test_main_window_connect_ai_profile_shows_success_popup(monkeypatch, qtbot) 
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-05
+    @date       2026-04-06
     @version    0.1.0
     """
     persisted_payload = {
@@ -453,7 +455,7 @@ def test_main_window_connect_ai_profile_shows_failure_popup(monkeypatch, qtbot) 
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-05
+    @date       2026-04-06
     @version    0.1.0
     """
     persisted_payload = {
@@ -509,6 +511,160 @@ def test_main_window_connect_ai_profile_shows_failure_popup(monkeypatch, qtbot) 
     assert popup_calls[0][2] == (
         "Connection failed.\nConnection failed: request timed out."
     )
+
+
+def test_main_window_creates_project_and_updates_shell(monkeypatch, qtbot, tmp_path) -> None:
+    """
+    @brief      Verify new-project creation activates the shell and project summary.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  qtbot Qt test helper fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-06
+    @version    0.1.0
+    """
+    persisted_payload = {
+        "language": "en",
+        "ui_text_scale": "normal",
+        "play_completion_beep": False,
+        "llm_profiles": [],
+        "default_ai_cleanup_profile_id": None,
+        "default_ai_chunking_profile_id": None,
+        "default_ai_chunking_strategy": "paragraph",
+        "default_character_extraction_profile_id": None,
+    }
+
+    monkeypatch.setattr(
+        main_window_module.QFileDialog,
+        "getExistingDirectory",
+        lambda *args, **kwargs: str(tmp_path),
+    )
+    monkeypatch.setattr(
+        main_window_module.QInputDialog,
+        "getText",
+        lambda *args, **kwargs: ("Book5_CAL_CAL", True),
+    )
+
+    window = MainWindow(settings_payload=dict(persisted_payload))
+    qtbot.addWidget(window)
+
+    window._handle_new_project_requested()
+
+    assert window._current_project_root == tmp_path / "Book5_CAL_CAL"
+    assert window._current_manifest is not None
+    assert window._current_manifest["display_name"] == "Book5_CAL_CAL"
+    assert window._home_page._name_label.text() == "Project: Book5_CAL_CAL"
+    assert window._sidebar.item(1).flags() != main_window_module.Qt.ItemFlag.NoItemFlags
+    assert any(
+        "Narrator Definition" in window._home_page._stage_list.item(index).text()
+        for index in range(window._home_page._stage_list.count())
+    )
+
+
+def test_main_window_opens_project_from_child_folder(monkeypatch, qtbot, tmp_path) -> None:
+    """
+    @brief      Verify open-project resolves the project root from a child folder.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  qtbot Qt test helper fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-06
+    @version    0.1.0
+    """
+    persisted_payload = {
+        "language": "en",
+        "ui_text_scale": "normal",
+        "play_completion_beep": False,
+        "llm_profiles": [],
+        "default_ai_cleanup_profile_id": None,
+        "default_ai_chunking_profile_id": None,
+        "default_ai_chunking_strategy": "paragraph",
+        "default_character_extraction_profile_id": None,
+    }
+    project_root, _manifest = project_workspace_service.create_project(
+        "Book5_CAL_CAL",
+        tmp_path,
+    )
+
+    monkeypatch.setattr(
+        main_window_module.QFileDialog,
+        "getExistingDirectory",
+        lambda *args, **kwargs: str(project_root / "40_character_discovery"),
+    )
+
+    window = MainWindow(settings_payload=dict(persisted_payload))
+    qtbot.addWidget(window)
+
+    window._handle_open_project_requested()
+
+    assert window._current_project_root == project_root
+    assert window._current_manifest is not None
+    assert window._current_manifest["display_name"] == "Book5_CAL_CAL"
+    assert window._home_page._path_label.text() == f"Path: {project_root}"
+
+
+def test_main_window_offers_repair_and_opens_repaired_project(
+    monkeypatch,
+    qtbot,
+    tmp_path,
+) -> None:
+    """
+    @brief      Verify open-project offers repair for recoverable corruption.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  qtbot Qt test helper fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-06
+    @version    0.1.0
+    """
+    persisted_payload = {
+        "language": "en",
+        "ui_text_scale": "normal",
+        "play_completion_beep": False,
+        "llm_profiles": [],
+        "default_ai_cleanup_profile_id": None,
+        "default_ai_chunking_profile_id": None,
+        "default_ai_chunking_strategy": "paragraph",
+        "default_character_extraction_profile_id": None,
+    }
+    project_root, _manifest = project_workspace_service.create_project(
+        "Book5_CAL_CAL",
+        tmp_path,
+    )
+    (project_root / "40_character_discovery").rmdir()
+    question_calls = []
+
+    monkeypatch.setattr(
+        main_window_module.QFileDialog,
+        "getExistingDirectory",
+        lambda *args, **kwargs: str(project_root),
+    )
+    monkeypatch.setattr(
+        main_window_module.QMessageBox,
+        "question",
+        lambda *args, **kwargs: (
+            question_calls.append(args),
+            main_window_module.QMessageBox.StandardButton.Yes,
+        )[1],
+    )
+
+    window = MainWindow(settings_payload=dict(persisted_payload))
+    qtbot.addWidget(window)
+
+    window._handle_open_project_requested()
+
+    assert question_calls
+    assert window._current_project_root == project_root
+    assert window._current_manifest is not None
+    assert (project_root / "40_character_discovery").is_dir()
+    assert window._current_manifest["current_stage"] == "project_created"
+    assert window._home_page._stage_list.item(0).text() == "Source Selected | Not Started"
 
 
 # END OF FILE

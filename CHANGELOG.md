@@ -16,6 +16,31 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+## [0.4.0] - 2026-04-06
+
+### Added
+
+- added the first persisted project-workspace flow for `AudioMancer` with `New Project` and `Open Project` support
+- added cross-platform exact project-name validation for Windows and Linux folder rules
+- added a minimal root-level `project.json` contract and a dedicated functional `project_workspace_service`
+- added focused tests for project creation, project open, repair handling, and the project-aware main-window shell
+- added `05_SoftwareDocu/AudioMancer_Project_Workspace.md` for the new project-workspace component
+
+### Changed
+
+- the main window now enables workflow pages only after one project is created or opened
+- the Home / Project workflow-progress list is now driven from `config.PROJECT_WORKFLOW_STAGES` and displays rows as `Step | Progress`
+- replaced the earlier custom new-project dialog with a simpler 2-popup flow using one folder picker and one name-input popup
+- removed the thin project controller layer and kept the project workflow direct and functional from `main_window.py` to `project_workspace_service.py`
+- refactored project manifest handling to validated dictionary payloads instead of a manifest class
+- package version updated to `0.4.0`
+
+### Fixed
+
+- fixed project open so recoverable corruption now offers a repair confirmation instead of failing generically
+- fixed project repair so the corrupted step and all downstream step folders are recreated/reset and the manifest stage is repaired consistently
+- fixed repaired-project workflow progress so empty downstream steps do not appear completed after repair
+
 ## [0.3.3] - 2026-04-05
 
 ### Added

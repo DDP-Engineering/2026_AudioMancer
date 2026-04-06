@@ -11,18 +11,19 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
 
 Defines the initial runnable desktop application shell for `AudioMancer`.
 It provides the first executable boundary for the future application.
-The shell now exposes a static main window copied from
-`DDP_Audiomancer` and adapted to the local package structure.
+The shell now exposes a main window copied from `DDP_Audiomancer` and adapted
+to the local package structure, including the first project new/open workflow.
 
 ## 2. Responsibilities
 
 - start the Qt application
 - create and show the main window
 - provide the copied first visible operator-facing UI shell for validation
+- create and open minimal persisted project workspaces through the toolbar
 
-It does not yet own workflow orchestration or domain processing.
-It now initializes the shared settings and logging services at startup and
-shuts down logging on exit.
+It does not yet own workflow orchestration or domain processing beyond project
+workspace activation. It now initializes the shared settings and logging
+services at startup and shuts down logging on exit.
 
 ## 3. Implementation Overview
 
@@ -31,11 +32,14 @@ The initial shell consists of:
 - `audiomancer.app.main()` as the thin startup entrypoint
 - `audiomancer.services.settings_service` as the settings bootstrap
 - `audiomancer.services.ai_backend_service` as the backend probe and model-discovery service for AI profiles
+- `audiomancer.services.project_workspace_service` as the minimal project creation, validation, and loading service
 - `audiomancer.services.logging_service` as the per-run logging bootstrap
 - `audiomancer.ui.main_window.MainWindow` as the first UI root
 - copied sidebar, status-bar, and page widgets under `audiomancer.ui`
 - a static DDP_Audiomancer-style main window layout with toolbar, navigation
   sidebar, stacked pages, and dialogs
+- toolbar-driven `New Project` and `Open Project` actions that activate the
+  first persisted project workflow
 - a settings dialog that loads and saves the persisted language, text-size,
   and completion-beep controls through the shared settings service
 - a runtime UI-state service that applies persisted language and text-size
@@ -74,7 +78,8 @@ Outputs:
 
 - a running Qt application instance
 - a visible main window for operator validation
-- a static first-window layout that matches the source DDP_Audiomancer shell
+- a first-window layout that matches the source DDP_Audiomancer shell
+- the ability to create or open one minimal persisted project workspace
 - a validated app settings payload loaded from `settings.json`
 - persisted updates from both the `Settings` and `AI Settings` dialogs
 - immediate runtime application of saved UI language and text-size changes
@@ -83,8 +88,6 @@ Outputs:
 
 ## 6. Data Contracts
 
-There are no business-domain data contracts yet.
-
 Current stable interface contracts are:
 
 - `audiomancer.app.main() -> int`
@@ -92,12 +95,15 @@ Current stable interface contracts are:
 - `audiomancer.services.logging_service.get_component_logger(...) -> logging.Logger`
 - `audiomancer.services.logging_service.shutdown_logging() -> None`
 - `audiomancer.services.logging_service.trace_function(logger)`
+- `audiomancer.services.project_workspace_service.create_project(...)`
+- `audiomancer.services.project_workspace_service.open_project(...)`
 - `audiomancer.ui.main_window.MainWindow`
 
 ## 7. Workflow Integration
 
 This component is the current top-level application entry boundary.
-It will later host or delegate to broader workflow modules as they are added.
+It now hosts project activation and will later host or delegate to broader
+workflow modules as they are added.
 
 ## 8. Usage
 
@@ -129,10 +135,8 @@ Minimum validation after changes:
 
 ## 10. Limitations And Future Work
 
-- no workflow UI exists yet
-- the current main window remains presentational only and does not wire
-  workflow actions
-- no project persistence exists yet
+- downstream workflow pages remain largely presentational after project open
+- project persistence currently uses a minimal manifest contract only
 - Windows portable packaging now exists through `02_Tools/package_windows_release.ps1`
   and `02_Tools/audiomancer_windows.spec`
 - logging configuration is still developer-owned through `config.py`

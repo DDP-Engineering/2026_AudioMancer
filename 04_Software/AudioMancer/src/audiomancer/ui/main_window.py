@@ -13,8 +13,8 @@
          and dialogs as the DDP_Audiomancer main window, while keeping the
          pages presentational only and free of workflow behavior.
 @author Eng. Dan Dumitru Pasare
-@date 2026-04-05
-@version 0.8.0
+@date 2026-04-06
+@version 1.5.0
 """
 
 # IMPORTS
@@ -27,7 +27,9 @@ from PySide6.QtWidgets import (
     QApplication,
     QDialogButtonBox,
     QDialog,
+    QFileDialog,
     QHBoxLayout,
+    QInputDialog,
     QLabel,
     QMainWindow,
     QMessageBox,
@@ -40,6 +42,7 @@ from PySide6.QtWidgets import (
 
 from audiomancer import config
 from audiomancer.services import ai_backend_service
+from audiomancer.services import project_workspace_service
 from audiomancer.services import settings_service
 from audiomancer.services import ui_state_service
 from audiomancer.ui.navigation_sidebar import NavigationSidebar
@@ -79,8 +82,8 @@ class MainWindow(QMainWindow):
     """
     @brief      Render the sidebar-driven AudioMancer desktop shell.
     @details    Mirrors the DDP_Audiomancer main-window structure with a top
-                toolbar, navigation sidebar, stacked content pages, and a
-                status bar, but intentionally leaves all actions unbound.
+                toolbar, navigation sidebar, stacked content pages, a status
+                bar, and the first project new/open workflow.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-05
@@ -111,14 +114,16 @@ class MainWindow(QMainWindow):
         @return     None.
         @exception  None
         @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-05
-        @version    0.8.0
+        @date       2026-04-06
+        @version    0.9.0
         """
         super().__init__(parent)
         self.setWindowTitle(_build_window_title())
         self.resize(WINDOW_WIDTH, WINDOW_HEIGHT)
         self.setMinimumSize(WINDOW_MIN_WIDTH, WINDOW_MIN_HEIGHT)
         self._page_registry: dict[str, QWidget] = {}
+        self._current_manifest: dict[str, object] | None = None
+        self._current_project_root: Path | None = None
         self._settings_payload = (
             dict(settings_payload)
             if isinstance(settings_payload, dict)
@@ -145,6 +150,8 @@ class MainWindow(QMainWindow):
         self._sidebar.set_current_page("home")
         self.set_current_page("home")
         self._apply_current_ui_settings()
+        self.set_project_active(False)
+        self.show_project_state(None, None)
 
     def set_current_page(self, page_id: str) -> None:
         """
@@ -153,7 +160,7 @@ class MainWindow(QMainWindow):
         @return     None.
         @exception  None
         @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-05
+        @date       2026-04-06
         @version    0.1.1
         """
         page = self._page_registry.get(page_id)
@@ -161,6 +168,64 @@ class MainWindow(QMainWindow):
             return
         self._stack.setCurrentWidget(page)
         self._sidebar.set_current_page(page_id)
+
+    def set_project_active(self, is_active: bool) -> None:
+        """
+        @brief      Enable or disable workflow pages based on project availability.
+        @param[in]  is_active True when a project is open.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-06
+        @version    0.1.0
+        """
+        for page_id, _label in self.PAGE_ORDER:
+            enabled = is_active or page_id == "home"
+            self._sidebar.set_page_enabled(page_id, enabled)
+        if not is_active:
+            self._sidebar.set_current_page("home")
+            self.set_current_page("home")
+        for widget in self._page_registry.values():
+            if hasattr(widget, "set_project_active"):
+                widget.set_project_active(is_active)
+
+    def show_project_state(
+        self,
+        project_root: Path | None,
+        manifest: dict[str, object] | None,
+    ) -> None:
+        """
+        @brief      Refresh shell-level project labels and workflow status state.
+        @param[in]  project_root Active project root or `None`.
+        @param[in]  manifest Active project manifest or `None`.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-06
+        @version    0.1.0
+        """
+        self._current_project_root = project_root
+        self._current_manifest = manifest
+        display_name = (
+            None if manifest is None else str(manifest.get("display_name") or "")
+        )
+        stage_name = (
+            None if manifest is None else str(manifest.get("current_stage") or "")
+        )
+        source_name = (
+            None
+            if manifest is None
+            else _optional_manifest_string(manifest.get("source_document_name"))
+        )
+        self._home_page.set_project_state(
+            display_name,
+            None if project_root is None else str(project_root),
+            stage_name,
+        )
+        self._home_page.set_source_summary(source_name)
+        self._home_page.set_source_locked(source_name is not None, source_name)
+        self._home_page.set_stage_statuses(self._build_stage_statuses(manifest))
+        self._status_bar.set_stage(stage_name)
 
     def show_settings_dialog(self) -> None:
         """
@@ -222,8 +287,8 @@ class MainWindow(QMainWindow):
         @return     Configured Qt toolbar.
         @exception  None
         @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-05
-        @version    0.2.0
+        @date       2026-04-06
+        @version    0.2.1
         """
         toolbar = QToolBar("Main Toolbar", self)
         self._action_new_project = toolbar.addAction("New Project")
@@ -236,6 +301,12 @@ class MainWindow(QMainWindow):
         self._action_about = toolbar.addAction("About")
         self._action_settings.triggered.connect(self.show_settings_dialog)
         self._action_ai_settings.triggered.connect(self.show_ai_settings_dialog)
+        self._action_new_project.triggered.connect(
+            self._handle_new_project_requested
+        )
+        self._action_open_project.triggered.connect(
+            self._handle_open_project_requested
+        )
         self._action_help.triggered.connect(
             self._show_help_placeholder
         )
@@ -248,10 +319,11 @@ class MainWindow(QMainWindow):
         @return     None.
         @exception  None
         @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-05
-        @version    0.2.0
+        @date       2026-04-06
+        @version    0.3.0
         """
         home_page = HomeProjectPage(self)
+        self._home_page = home_page
         home_page.set_project_state(
             display_name=None,
             project_path=None,
@@ -259,24 +331,7 @@ class MainWindow(QMainWindow):
         )
         home_page.set_source_summary(None)
         home_page.set_source_locked(False, None)
-        home_page.set_stage_statuses([
-            {"label": "Source Selected", "status": "not_started",
-             "note": "Create or open a project first."},
-            {"label": "Text Cleanup", "status": "not_started",
-             "note": "Import a source first."},
-            {"label": "Text Chunking", "status": "not_started",
-             "note": "Run cleanup first."},
-            {"label": "AI Translation", "status": "not_started",
-             "note": "Run chunking first."},
-            {"label": "Characters", "status": "not_started",
-             "note": "Chunks are not ready yet."},
-            {"label": "Narration Plan", "status": "not_started",
-             "note": "Characters are not ready yet."},
-            {"label": "Generation", "status": "not_started",
-             "note": "Narration plan is not ready yet."},
-            {"label": "Export", "status": "not_started",
-             "note": "Generated audio is not ready yet."},
-        ])
+        home_page.set_stage_statuses(self._build_stage_statuses(None))
 
         pages = {
             "home": home_page,
@@ -306,7 +361,7 @@ class MainWindow(QMainWindow):
             page = pages[page_id]
             self._page_registry[page_id] = page
             self._stack.addWidget(page)
-            self._sidebar.add_page(page_id, label, enabled=True)
+            self._sidebar.add_page(page_id, label, enabled=page_id == "home")
 
     def _build_dialogs(self) -> None:
         """
@@ -364,7 +419,7 @@ class MainWindow(QMainWindow):
         @return     None.
         @exception  None
         @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-05
+        @date       2026-04-06
         @version    0.1.0
         """
         merged_settings = self._settings_page.build_settings(self._settings_payload)
@@ -385,7 +440,7 @@ class MainWindow(QMainWindow):
         @return     None.
         @exception  None
         @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-05
+        @date       2026-04-06
         @version    0.1.0
         """
         merged_settings = self._ai_settings_page.build_settings(
@@ -408,7 +463,7 @@ class MainWindow(QMainWindow):
         @return     None.
         @exception  None
         @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-05
+        @date       2026-04-06
         @version    0.2.0
         """
         current_language = str(
@@ -454,7 +509,7 @@ class MainWindow(QMainWindow):
         @return     None.
         @exception  None
         @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-05
+        @date       2026-04-06
         @version    0.1.0
         """
         ui_state_service.apply_ui_settings(
@@ -470,8 +525,8 @@ class MainWindow(QMainWindow):
         @return     None.
         @exception  None
         @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-05
-        @version    0.1.0
+        @date       2026-04-06
+        @version    0.1.1
         """
         self.setWindowTitle(ui_state_service.translate("window_title.main", language))
         self._action_new_project.setText(
@@ -514,7 +569,7 @@ class MainWindow(QMainWindow):
         @return     None.
         @exception  None
         @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-05
+        @date       2026-04-06
         @version    0.1.0
         """
         self.show_message(
@@ -524,13 +579,244 @@ class MainWindow(QMainWindow):
             )
         )
 
+    def _handle_new_project_requested(self) -> None:
+        """
+        @brief      Collect inputs and create a new project workspace.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-06
+        @version    0.1.0
+        """
+        current_language = str(
+            self._settings_payload.get("language", config.DEFAULT_LANGUAGE)
+        )
+        selected_parent = QFileDialog.getExistingDirectory(
+            self,
+            ui_state_service.translate(
+                "dialog.select_project_parent_title",
+                current_language,
+            ),
+            str(self._current_project_root.parent)
+            if self._current_project_root is not None
+            else str(config.APP_ROOT),
+        )
+        if not selected_parent:
+            return
+
+        project_name, accepted = QInputDialog.getText(
+            self,
+            ui_state_service.translate("dialog.new_project_title", current_language),
+            ui_state_service.translate("project.project_name", current_language),
+        )
+        if not accepted:
+            return
+
+        project_name = project_name.strip()
+        if not project_name:
+            QMessageBox.warning(
+                self,
+                ui_state_service.translate("dialog.project_error_title", current_language),
+                ui_state_service.translate("project.error_missing_name", current_language),
+            )
+            return
+
+        try:
+            project_root, manifest = project_workspace_service.create_project(
+                project_name,
+                selected_parent,
+            )
+        except (FileExistsError, FileNotFoundError, ValueError) as error:
+            QMessageBox.warning(
+                self,
+                ui_state_service.translate("dialog.project_error_title", current_language),
+                str(error),
+            )
+            return
+
+        self._activate_project(project_root, manifest)
+        self.show_message(
+            ui_state_service.translate(
+                "status.project_created",
+                current_language,
+            )
+        )
+
+    def _handle_open_project_requested(self) -> None:
+        """
+        @brief      Let the operator select and open one existing project folder.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-06
+        @version    0.1.0
+        """
+        current_language = str(
+            self._settings_payload.get("language", config.DEFAULT_LANGUAGE)
+        )
+        selected_folder = QFileDialog.getExistingDirectory(
+            self,
+            ui_state_service.translate("dialog.open_project_title", current_language),
+            str(self._current_project_root or config.APP_ROOT),
+        )
+        if not selected_folder:
+            return
+
+        try:
+            open_result = project_workspace_service.open_project(selected_folder)
+        except (FileNotFoundError, ValueError) as error:
+            QMessageBox.warning(
+                self,
+                ui_state_service.translate("dialog.project_error_title", current_language),
+                str(error),
+            )
+            return
+
+        if str(open_result.get("status")) == "repair_required":
+            if not self._confirm_project_repair(open_result, current_language):
+                return
+            repaired_result = project_workspace_service.repair_project(open_result)
+            project_root = Path(str(repaired_result["project_root"]))
+            manifest = dict(repaired_result["manifest"])
+            self._activate_project(project_root, manifest)
+            self.show_message(
+                ui_state_service.translate(
+                    "status.project_repaired",
+                    current_language,
+                )
+            )
+            return
+
+        project_root = Path(str(open_result["project_root"]))
+        manifest = dict(open_result["manifest"])
+
+        self._activate_project(project_root, manifest)
+        self.show_message(
+            ui_state_service.translate(
+                "status.project_opened",
+                current_language,
+            )
+        )
+
+    def _confirm_project_repair(
+        self,
+        repair_result: dict[str, object],
+        language: str,
+    ) -> bool:
+        """
+        @brief      Ask the operator whether one recoverable project should be repaired.
+        @param[in]  repair_result Recoverable project repair result payload.
+        @param[in]  language Current UI language code.
+        @return     True when the operator accepts the repair.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-06
+        @version    0.1.0
+        """
+        if bool(repair_result.get("metadata_only", False)):
+            repair_detail = ui_state_service.translate(
+                "project.repair_metadata_only",
+                language,
+            )
+        else:
+            repair_detail = (
+                f"{ui_state_service.translate('project.repair_step_prefix', language)} "
+                f"{repair_result.get('corrupted_step')}. "
+                f"{ui_state_service.translate('project.repair_reset_suffix', language)}"
+            )
+        decision = QMessageBox.question(
+            self,
+            ui_state_service.translate("dialog.project_repair_title", language),
+            (
+                f"{repair_result.get('message')}\n\n"
+                f"{repair_detail}\n"
+                f"{ui_state_service.translate('project.repair_confirm', language)}"
+            ),
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.Yes,
+        )
+        return decision == QMessageBox.StandardButton.Yes
+
+    def _activate_project(
+        self,
+        project_root: Path,
+        manifest: dict[str, object],
+    ) -> None:
+        """
+        @brief      Apply one active project into the current shell state.
+        @param[in]  project_root Resolved active project root.
+        @param[in]  manifest Loaded active project manifest.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-06
+        @version    0.1.0
+        """
+        self.set_project_active(True)
+        self.show_project_state(project_root, manifest)
+
+    def _build_stage_statuses(
+        self,
+        manifest: dict[str, object] | None,
+    ) -> list[dict[str, str]]:
+        """
+        @brief      Build the home-page workflow progress list for one manifest.
+        @param[in]  manifest Active project manifest or `None`.
+        @return     Ordered stage-status entries for the home page.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-06
+        @version    0.1.0
+        """
+        current_language = str(
+            self._settings_payload.get("language", config.DEFAULT_LANGUAGE)
+        )
+        stage_tokens = _visible_workflow_stage_tokens()
+        if manifest is None:
+            return [
+                {
+                    "label": ui_state_service.translate(
+                        f"home.stage_label.{token}",
+                        current_language,
+                    ),
+                    "status": "not_started",
+                    "note": ui_state_service.translate(
+                        f"home.stage_note.inactive.{token}",
+                        current_language,
+                    ),
+                }
+                for token in stage_tokens
+            ]
+
+        reached_index = _stage_reached_index(
+            str(manifest.get("current_stage", config.DEFAULT_WORKFLOW_STAGE))
+        )
+        statuses: list[dict[str, str]] = []
+        for index, token in enumerate(stage_tokens):
+            statuses.append({
+                "label": ui_state_service.translate(
+                    f"home.stage_label.{token}",
+                    current_language,
+                ),
+                "status": (
+                    "finished"
+                    if reached_index > index
+                    else "in_progress" if reached_index == index else "not_started"
+                ),
+                "note": ui_state_service.translate(
+                    f"home.stage_note.active.{token}",
+                    current_language,
+                ),
+            })
+        return statuses
+
     def _build_about_dialog(self) -> QDialog:
         """
         @brief      Build the About dialog for the AudioMancer shell.
         @return     Configured Qt dialog instance.
         @exception  None
         @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-05
+        @date       2026-04-06
         @version    0.1.0
         """
         dialog = QDialog(self)
@@ -595,7 +881,7 @@ class MainWindow(QMainWindow):
         @return     Combined operator-facing license text.
         @exception  None
         @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-05
+        @date       2026-04-06
         @version    0.2.0
         """
         main_license_path, addendum_path = _resolve_license_paths(language)
@@ -614,7 +900,7 @@ class MainWindow(QMainWindow):
         @return     None.
         @exception  None
         @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-05
+        @date       2026-04-06
         @version    0.1.0
         """
         super().closeEvent(event)
@@ -668,6 +954,53 @@ def _build_window_title(context: str | None = None) -> str:
     if context:
         return f"{title} | {context}"
     return title
+
+
+def _stage_reached_index(current_stage: str | None) -> int:
+    """
+    @brief      Resolve one workflow-stage token into the home progress index.
+    @param[in]  current_stage Current manifest stage token.
+    @return     Zero-based reached stage index.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-06
+    @version    0.1.0
+    """
+    stage_sequence = config.PROJECT_WORKFLOW_STAGES
+    if current_stage not in stage_sequence:
+        return -1
+    return stage_sequence.index(current_stage) - 1
+
+
+def _visible_workflow_stage_tokens() -> tuple[str, ...]:
+    """
+    @brief      Return the visible workflow stages derived from shared config.
+    @return     Ordered stage tokens shown in the home workflow progress list.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-06
+    @version    0.1.0
+    """
+    return tuple(
+        stage_token
+        for stage_token in config.PROJECT_WORKFLOW_STAGES
+        if stage_token != config.DEFAULT_WORKFLOW_STAGE
+    )
+
+
+def _optional_manifest_string(value: object) -> str | None:
+    """
+    @brief      Normalize one optional manifest string used by the UI shell.
+    @param[in]  value Raw manifest field value.
+    @return     Normalized string or `None`.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-06
+    @version    0.1.0
+    """
+    if value in (None, ""):
+        return None
+    return str(value)
 
 
 # END OF FILE

@@ -12,8 +12,8 @@
 @details Centralizes application names, paths, defaults, artifact names, and
          file support used by the current AudioMancer implementation scaffold.
 @author Eng. Dan Dumitru Pasare
-@date 2026-04-04
-@version 0.1.5
+@date 2026-04-06
+@version 0.2.0
 """
 
 # IMPORTS
@@ -35,8 +35,62 @@ APP_ROOT = Path(__file__).resolve().parents[2]
 APP_SETTINGS_PATH = APP_ROOT / "settings.json"
 
 # Project Workspace And Artifact Naming
-# @brief Standard non-operation directories created for each project workspace.
-PROJECT_SUBDIRECTORIES = ("temp",)
+# @brief Stable manifest file name stored at the project root.
+PROJECT_MANIFEST_FILE_NAME = "project.json"
+
+# @brief Standard workflow directories created for each project workspace.
+PROJECT_REQUIRED_SUBDIRECTORIES = (
+    "00_extraction",
+    "10_cleanup",
+    "20_chunking",
+    "30_translation",
+    "40_character_discovery",
+    "50_narrator_definition",
+    "temp",
+)
+
+# @brief Stable ordered workflow stage identifiers used by the current project shell.
+PROJECT_WORKFLOW_STAGES = (
+    "project_created",
+    "source_selected",
+    "text_cleanup_ready",
+    "text_chunking_ready",
+    "translation_ready",
+    "character_discovery_ready",
+    "narrator_definition_ready",
+)
+
+# @brief Characters rejected for exact project folder names across Windows and Linux.
+INVALID_PROJECT_NAME_CHARACTERS = '<>:"/\\|?*\x00'
+
+# @brief Reserved Linux directory names that cannot be used as project roots.
+LINUX_RESERVED_DIRECTORY_NAMES = (".", "..")
+
+# @brief Reserved Windows device names that cannot be used as project roots.
+WINDOWS_RESERVED_DIRECTORY_NAMES = (
+    "CON",
+    "PRN",
+    "AUX",
+    "NUL",
+    "COM1",
+    "COM2",
+    "COM3",
+    "COM4",
+    "COM5",
+    "COM6",
+    "COM7",
+    "COM8",
+    "COM9",
+    "LPT1",
+    "LPT2",
+    "LPT3",
+    "LPT4",
+    "LPT5",
+    "LPT6",
+    "LPT7",
+    "LPT8",
+    "LPT9",
+)
 
 # @brief Stable operation-folder file name for persisted state.
 OPERATION_STATE_FILE_NAME = "state_operation.json"
@@ -206,6 +260,7 @@ AVAILABLE_LOG_COMPONENTS = (
     "ai_backend",
     "main_window",
     "settings",
+    "project_workspace",
     "ui_state",
 )
 

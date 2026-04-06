@@ -11,8 +11,8 @@
 @brief Service package exports for AudioMancer.
 @details Exposes reusable application services that support the desktop shell.
 @author Eng. Dan Dumitru Pasare
-@date 2026-04-04
-@version 0.1.1
+@date 2026-04-06
+@version 0.2.0
 """
 
 # IMPORTS
@@ -24,6 +24,15 @@ from .settings_service import (
     load_settings,
     save_settings,
     validate_settings,
+)
+from .project_workspace_service import (
+    create_project,
+    load_manifest,
+    open_project,
+    resolve_project_root,
+    save_manifest,
+    validate_project,
+    validate_project_name,
 )
 
 # PUBLIC API
@@ -38,6 +47,13 @@ __all__ = [
     "load_settings",
     "save_settings",
     "validate_settings",
+    "create_project",
+    "load_manifest",
+    "open_project",
+    "resolve_project_root",
+    "save_manifest",
+    "validate_project",
+    "validate_project_name",
 ]
 
 # END OF FILE

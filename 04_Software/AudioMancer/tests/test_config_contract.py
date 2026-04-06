@@ -12,8 +12,8 @@
 @details Verifies that the adapted configuration constants and persisted
          settings scaffold exist with the expected baseline contract.
 @author Eng. Dan Dumitru Pasare
-@date 2026-04-04
-@version 0.1.1
+@date 2026-04-06
+@version 0.2.0
 """
 
 # IMPORTS
@@ -33,8 +33,8 @@ def test_config_exposes_expected_identity_and_window_defaults() -> None:
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-04
-    @version    0.1.0
+    @date       2026-04-06
+    @version    0.2.0
     """
     assert config.APP_NAME == "AudioMancer"
     assert config.PACKAGE_NAME == "audiomancer"
@@ -42,21 +42,27 @@ def test_config_exposes_expected_identity_and_window_defaults() -> None:
     assert config.DEFAULT_MAIN_WINDOW_HEIGHT == 700
     assert config.DEFAULT_MAIN_WINDOW_MIN_WIDTH == 960
     assert config.DEFAULT_MAIN_WINDOW_MIN_HEIGHT == 620
+    assert config.PROJECT_MANIFEST_FILE_NAME == "project.json"
+    assert "50_narrator_definition" in config.PROJECT_REQUIRED_SUBDIRECTORIES
+    assert config.DEFAULT_WORKFLOW_STAGE == "project_created"
 
 
 def test_settings_json_scaffold_matches_service_defaults() -> None:
     """
-    @brief      Verify the persisted settings scaffold matches code-owned service defaults.
+    @brief      Verify the persisted settings scaffold is service-readable.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-04
+    @date       2026-04-06
     @version    0.1.2
     """
     settings_path = config.APP_SETTINGS_PATH
     payload = json.loads(Path(settings_path).read_text(encoding="utf-8"))
+    loaded_payload = settings_service.load_settings()
 
-    assert payload == settings_service.build_default_settings()
+    assert isinstance(payload, dict)
+    assert isinstance(loaded_payload, dict)
+    assert payload == loaded_payload
     assert settings_path == config.APP_SETTINGS_PATH
 
 

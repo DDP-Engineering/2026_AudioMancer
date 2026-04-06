@@ -12,8 +12,8 @@
 @details Copies the DDP_Audiomancer dashboard layout so the main window uses
          the same first-page structure without implementing import behavior.
 @author Eng. Dan Dumitru Pasare
-@date 2026-04-05
-@version 0.2.0
+@date 2026-04-06
+@version 0.3.0
 """
 
 # IMPORTS
@@ -65,8 +65,8 @@ class HomeProjectPage(QWidget):
         @return     None.
         @exception  None
         @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-05
-        @version    0.2.0
+        @date       2026-04-06
+        @version    0.3.0
         """
         super().__init__(parent)
         self._project_active = False
@@ -211,7 +211,7 @@ class HomeProjectPage(QWidget):
             note = stage.get("note", "")
             label = stage.get("label", "Unknown Stage")
             item = QListWidgetItem(
-                f"{_status_title(status, self._current_language)} | {label}"
+                f"{label} | {_status_title(status, self._current_language)}"
             )
             item.setForeground(_STATUS_COLORS.get(
                 status, _STATUS_COLORS["not_started"]))

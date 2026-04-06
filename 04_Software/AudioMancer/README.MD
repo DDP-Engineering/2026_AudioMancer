@@ -8,7 +8,7 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
 # AudioMancer Application
 
 This folder contains the initial Python application scaffold for `AudioMancer`.
-It now includes a static main-window shell copied from
+It now includes a project-aware main-window shell copied from
 `DDP_Audiomancer` and adapted to the local package.
 
 ## Structure
@@ -20,7 +20,13 @@ It now includes a static main-window shell copied from
 - `src/audiomancer/services/logging_service.py` provides per-run app logging and optional trace helpers.
 - `src/audiomancer/services/settings_service.py` provides load, validate, self-heal, and save behavior for `settings.json`.
 - `src/audiomancer/services/ai_backend_service.py` provides backend probe and model-discovery helpers for AI provider profiles.
+- `src/audiomancer/services/project_workspace_service.py` provides new/open project creation, validation, and manifest persistence.
 - `src/audiomancer/ui/` provides the copied toolbar, sidebar, page, and status-bar shell used by the first desktop window.
+- the main toolbar now supports `New Project` and `Open Project`.
+- new projects create `00_extraction`, `10_cleanup`, `20_chunking`, `30_translation`, `40_character_discovery`, `50_narrator_definition`, `temp`, and one root `project.json`.
+- opening a project now works from the project root or one selected child workflow folder.
+- opening a recoverably corrupted project now offers a repair confirmation and can recreate/reset the corrupted step plus all downstream step folders while updating the manifest stage.
+- project names are stored exactly as entered but are rejected when invalid for Windows or Linux folder creation.
 - the `Settings` dialog now loads and saves `language`, `interface text size`, and `play completion beep` through the shared settings service.
 - saving `Settings` now applies the selected UI language and global text size to the running shell.
 - the current shell supports runtime English/Romanian UI switching through one centralized UI-state service.
@@ -78,6 +84,13 @@ From this folder:
 
 ```powershell
 uv run pytest
+```
+
+Focused validation used for the current project-workspace implementation:
+
+```powershell
+uv run pytest tests/test_project_workspace_service.py
+uv run pytest tests/test_main_window.py
 ```
 
 ## Packaging
