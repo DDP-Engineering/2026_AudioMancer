@@ -13,7 +13,7 @@
          pages, and status bar are created without workflow functionality.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-06
-@version 0.7.0
+@version 0.8.0
 """
 
 # IMPORTS
@@ -599,6 +599,109 @@ def test_main_window_opens_project_from_child_folder(monkeypatch, qtbot, tmp_pat
     assert window._current_manifest is not None
     assert window._current_manifest["display_name"] == "Book5_CAL_CAL"
     assert window._home_page._path_label.text() == f"Path: {project_root}"
+
+
+def test_main_window_imports_source_and_locks_selection(monkeypatch, qtbot, tmp_path) -> None:
+    """
+    @brief      Verify source import updates the manifest, summary, and lock state.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  qtbot Qt test helper fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-06
+    @version    0.1.0
+    """
+    persisted_payload = {
+        "language": "en",
+        "ui_text_scale": "normal",
+        "play_completion_beep": False,
+        "llm_profiles": [],
+        "default_ai_cleanup_profile_id": None,
+        "default_ai_chunking_profile_id": None,
+        "default_ai_chunking_strategy": "paragraph",
+        "default_character_extraction_profile_id": None,
+    }
+    project_root, _manifest = project_workspace_service.create_project(
+        "Book5_CAL_CAL",
+        tmp_path,
+    )
+    source_path = tmp_path / "story.epub"
+    source_path.write_text("content", encoding="utf-8")
+
+    monkeypatch.setattr(
+        main_window_module.QFileDialog,
+        "getOpenFileName",
+        lambda *args, **kwargs: (str(source_path), ""),
+    )
+
+    window = MainWindow(settings_payload=dict(persisted_payload))
+    qtbot.addWidget(window)
+    window._activate_project(project_root, project_workspace_service.load_manifest(project_root))
+
+    window._handle_import_source_requested()
+
+    assert window._current_manifest is not None
+    assert window._current_manifest["current_stage"] == "source_selected"
+    assert window._current_manifest["source_document"]["original_name"] == "story.epub"
+    assert window._home_page._source_label.text() == "Source: story.epub"
+    assert window._home_page._stage_list.item(0).text() == "Source Selected | Finished"
+    assert window._home_page._import_button.isEnabled() is False
+    assert (project_root / "story.epub").is_file()
+
+
+def test_main_window_prevents_reimport_when_source_is_locked(monkeypatch, qtbot, tmp_path) -> None:
+    """
+    @brief      Verify importing again shows an error when the source is already locked.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  qtbot Qt test helper fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-06
+    @version    0.1.0
+    """
+    persisted_payload = {
+        "language": "en",
+        "ui_text_scale": "normal",
+        "play_completion_beep": False,
+        "llm_profiles": [],
+        "default_ai_cleanup_profile_id": None,
+        "default_ai_chunking_profile_id": None,
+        "default_ai_chunking_strategy": "paragraph",
+        "default_character_extraction_profile_id": None,
+    }
+    project_root, manifest = project_workspace_service.create_project(
+        "Book5_CAL_CAL",
+        tmp_path,
+    )
+    manifest["source_document"] = {
+        "original_name": "story.txt",
+        "stored_relative_path": "story.txt",
+        "file_type": "txt",
+        "imported_at": "2026-04-06T12:00:00+00:00",
+        "size_bytes": 4,
+    }
+    manifest["current_stage"] = "source_selected"
+    project_workspace_service.save_manifest(manifest, project_root)
+    popup_calls = []
+
+    monkeypatch.setattr(
+        main_window_module.QMessageBox,
+        "warning",
+        lambda *args, **kwargs: popup_calls.append(args),
+    )
+
+    window = MainWindow(settings_payload=dict(persisted_payload))
+    qtbot.addWidget(window)
+    window._activate_project(project_root, project_workspace_service.load_manifest(project_root))
+
+    window._handle_import_source_requested()
+
+    assert popup_calls
+    assert "locked source file" in popup_calls[0][2]
 
 
 def test_main_window_offers_repair_and_opens_repaired_project(

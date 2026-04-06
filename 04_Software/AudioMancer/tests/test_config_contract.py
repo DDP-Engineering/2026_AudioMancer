@@ -13,7 +13,7 @@
          settings scaffold exist with the expected baseline contract.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-06
-@version 0.2.0
+@version 0.3.0
 """
 
 # IMPORTS
@@ -45,6 +45,8 @@ def test_config_exposes_expected_identity_and_window_defaults() -> None:
     assert config.PROJECT_MANIFEST_FILE_NAME == "project.json"
     assert "50_narrator_definition" in config.PROJECT_REQUIRED_SUBDIRECTORIES
     assert config.DEFAULT_WORKFLOW_STAGE == "project_created"
+    assert config.SUPPORTED_SOURCE_SUFFIXES[".epub"] == "epub"
+    assert config.SUPPORTED_SOURCE_SUFFIXES[".docx"] == "docx"
 
 
 def test_settings_json_scaffold_matches_service_defaults() -> None:

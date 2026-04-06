@@ -13,7 +13,7 @@
          validation, project-root resolution, and open validation behavior.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-06
-@version 0.3.0
+@version 0.4.0
 """
 
 # IMPORTS
@@ -48,6 +48,7 @@ def test_create_project_creates_required_structure_and_manifest(tmp_path) -> Non
     assert project_root == tmp_path / "Book5_CAL_CAL"
     assert manifest["display_name"] == "Book5_CAL_CAL"
     assert manifest["current_stage"] == config.DEFAULT_WORKFLOW_STAGE
+    assert manifest["source_document"] is None
     assert (
         project_root / config.PROJECT_MANIFEST_FILE_NAME
     ).is_file()
@@ -258,7 +259,13 @@ def test_repair_project_fixes_invalid_current_stage_metadata_only(tmp_path) -> N
         "Book5_CAL_CAL",
         tmp_path,
     )
-    manifest["source_document_name"] = "source.pdf"
+    manifest["source_document"] = {
+        "original_name": "source.pdf",
+        "stored_relative_path": "source.pdf",
+        "file_type": "pdf",
+        "imported_at": "2026-04-06T12:00:00+00:00",
+        "size_bytes": 1024,
+    }
     manifest["current_stage"] = "broken_stage"
     manifest_path = project_root / config.PROJECT_MANIFEST_FILE_NAME
     manifest_path.write_text(
@@ -275,6 +282,31 @@ def test_repair_project_fixes_invalid_current_stage_metadata_only(tmp_path) -> N
     assert repaired_result["status"] == "ok"
     assert repaired_result["project_root"] == project_root
     assert repaired_result["manifest"]["current_stage"] == "source_selected"
+
+
+def test_validate_project_manifest_accepts_structured_source_document() -> None:
+    """
+    @brief      Verify manifest validation preserves one valid source-document payload.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-06
+    @version    0.1.0
+    """
+    manifest = project_workspace_service.build_project_manifest("Book5_CAL_CAL")
+    manifest["source_document"] = {
+        "original_name": "story.epub",
+        "stored_relative_path": "story.epub",
+        "file_type": "epub",
+        "imported_at": "2026-04-06T12:00:00+00:00",
+        "size_bytes": 2048,
+    }
+    manifest["current_stage"] = "source_selected"
+
+    validated = project_workspace_service.validate_project_manifest(manifest)
+
+    assert validated["source_document"] == manifest["source_document"]
+    assert validated["current_stage"] == "source_selected"
 
 
 # END OF FILE

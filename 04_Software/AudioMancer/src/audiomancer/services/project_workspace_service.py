@@ -13,7 +13,7 @@
          using one minimal `project.json` manifest contract.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-06
-@version 0.4.0
+@version 0.5.0
 """
 
 # IMPORTS
@@ -47,7 +47,7 @@ def validate_project_name(name: str) -> None:
     @exception  ValueError Raised when the name is invalid.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.1.0
+    @version    0.2.0
     """
     if not name or not name.strip():
         raise ValueError("Project name cannot be empty.")
@@ -89,7 +89,7 @@ def create_project(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.1.0
+    @version    0.2.0
     """
     validate_project_name(name)
     resolved_parent = Path(parent_path)
@@ -123,7 +123,7 @@ def save_manifest(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.1.0
+    @version    0.2.0
     """
     normalized_manifest = validate_project_manifest(manifest)
     normalized_manifest["updated_at"] = _utc_now_iso()
@@ -143,7 +143,7 @@ def resolve_project_root(selected_path: str | Path) -> Path:
     @exception  FileNotFoundError Raised when no project root can be resolved.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.1.0
+    @version    0.2.0
     """
     current_path = Path(selected_path)
     if not current_path.exists():
@@ -293,7 +293,7 @@ def _utc_now_iso() -> str:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.1.0
+    @version    0.2.0
     """
     return datetime.now(UTC).replace(microsecond=0).isoformat()
 
@@ -311,7 +311,7 @@ def build_project_manifest(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.1.0
+    @version    0.2.0
     """
     resolved_timestamp = timestamp_iso or _utc_now_iso()
     return {
@@ -320,7 +320,7 @@ def build_project_manifest(
         "created_at": resolved_timestamp,
         "updated_at": resolved_timestamp,
         "current_stage": config.DEFAULT_WORKFLOW_STAGE,
-        "source_document_name": None,
+        "source_document": None,
         "narrator_profile_name": None,
         "narrator_language": None,
         "notes": "",
@@ -336,7 +336,7 @@ def validate_project_manifest(payload: object) -> ProjectManifestPayload:
     @exception  ValueError Raised when the payload is invalid.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.1.0
+    @version    0.2.0
     """
     _validate_manifest_payload(payload)
     assert isinstance(payload, dict)
@@ -349,7 +349,7 @@ def validate_project_manifest(payload: object) -> ProjectManifestPayload:
         "created_at": str(payload["created_at"]),
         "updated_at": str(payload["updated_at"]),
         "current_stage": current_stage,
-        "source_document_name": _optional_string(payload.get("source_document_name")),
+        "source_document": _normalize_source_document(payload.get("source_document")),
         "narrator_profile_name": _optional_string(
             payload.get("narrator_profile_name")
         ),
@@ -366,7 +366,7 @@ def _validate_manifest_payload(payload: object) -> None:
     @exception  ValueError Raised when the payload is invalid.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.1.0
+    @version    0.2.0
     """
     _validate_manifest_identity_fields(payload)
     assert isinstance(payload, dict)
@@ -507,7 +507,7 @@ def _build_repaired_manifest(
             if reset_stage in config.PROJECT_WORKFLOW_STAGES
             else config.DEFAULT_WORKFLOW_STAGE
         ),
-        "source_document_name": _optional_string(payload.get("source_document_name")),
+        "source_document": _normalize_source_document(payload.get("source_document")),
         "narrator_profile_name": _optional_string(
             payload.get("narrator_profile_name")
         ),
@@ -532,7 +532,7 @@ def _derive_trustworthy_stage(payload: dict[str, object]) -> str:
     @date       2026-04-06
     @version    0.1.0
     """
-    if _optional_string(payload.get("source_document_name")) is not None:
+    if _normalize_source_document(payload.get("source_document")) is not None:
         return "source_selected"
     return config.DEFAULT_WORKFLOW_STAGE
 
@@ -565,6 +565,49 @@ def _optional_string(value: object) -> str | None:
     if value in (None, ""):
         return None
     return str(value)
+
+
+def _normalize_source_document(value: object) -> dict[str, object] | None:
+    """
+    @brief      Normalize one optional structured source-document payload.
+    @param[in]  value Raw decoded JSON value.
+    @return     Normalized source-document payload or `None`.
+    @exception  ValueError Raised when the payload is invalid.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-06
+    @version    0.1.0
+    """
+    if value in (None, ""):
+        return None
+    if not isinstance(value, dict):
+        raise ValueError("Project manifest field 'source_document' is invalid.")
+
+    original_name = value.get("original_name")
+    stored_relative_path = value.get("stored_relative_path")
+    file_type = value.get("file_type")
+    imported_at = value.get("imported_at")
+    size_bytes = value.get("size_bytes")
+
+    if not isinstance(original_name, str) or not original_name.strip():
+        raise ValueError("Project manifest field 'source_document.original_name' is invalid.")
+    if not isinstance(stored_relative_path, str) or not stored_relative_path.strip():
+        raise ValueError(
+            "Project manifest field 'source_document.stored_relative_path' is invalid."
+        )
+    if not isinstance(file_type, str) or file_type not in config.SUPPORTED_SOURCE_SUFFIXES.values():
+        raise ValueError("Project manifest field 'source_document.file_type' is invalid.")
+    if not isinstance(imported_at, str) or not imported_at.strip():
+        raise ValueError("Project manifest field 'source_document.imported_at' is invalid.")
+    if not isinstance(size_bytes, int) or size_bytes < 0:
+        raise ValueError("Project manifest field 'source_document.size_bytes' is invalid.")
+
+    return {
+        "original_name": original_name,
+        "stored_relative_path": stored_relative_path,
+        "file_type": file_type,
+        "imported_at": imported_at,
+        "size_bytes": size_bytes,
+    }
 
 
 # END OF FILE

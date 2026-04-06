@@ -13,7 +13,7 @@
          application through one centralized string catalog and scale mapping.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-06
-@version 0.6.0
+@version 0.7.0
 """
 
 # IMPORTS
@@ -55,6 +55,8 @@ _UI_STRINGS = {
         "dialog.new_project_title": "New Project",
         "dialog.open_project_title": "Open Project",
         "dialog.select_project_parent_title": "Select Project Parent Folder",
+        "dialog.select_source_title": "Select Source File",
+        "dialog.select_source_filter": "Supported source files (*.txt *.pdf *.rtf *.docx *.odt *.md *.epub)",
         "dialog.project_error_title": "Project Error",
         "dialog.project_repair_title": "Repair Project",
         "about.subtitle": "Transform written words into real audio experience!",
@@ -69,6 +71,7 @@ _UI_STRINGS = {
         "status.project_created": "Project created.",
         "status.project_opened": "Project opened.",
         "status.project_repaired": "Project repaired and opened.",
+        "status.source_imported": "Source file imported.",
         "sidebar.home": "Home / Project",
         "sidebar.text_cleanup": "Text Cleanup",
         "sidebar.text_chunking": "Text Chunking",
@@ -240,6 +243,8 @@ _UI_STRINGS = {
         "project.cancel": "Cancel",
         "project.error_missing_parent": "Select the parent folder where the project should be created.",
         "project.error_missing_name": "Enter the exact project name.",
+        "project.error_no_active_project": "Create or open a project before importing a source file.",
+        "project.error_locked_source": "This project already has a locked source file. Create a new project to use another source.",
         "project.repair_step_prefix": "The project is corrupted at step",
         "project.repair_reset_suffix": "This repair will recreate and reset that step and all downstream step folders.",
         "project.repair_metadata_only": "This repair will update the project metadata to the last consistent workflow stage.",
@@ -259,6 +264,8 @@ _UI_STRINGS = {
         "dialog.new_project_title": "Proiect Nou",
         "dialog.open_project_title": "Deschide Proiect",
         "dialog.select_project_parent_title": "Selecteaza Dosarul Parinte Al Proiectului",
+        "dialog.select_source_title": "Selecteaza Fisierul Sursa",
+        "dialog.select_source_filter": "Fisiere sursa acceptate (*.txt *.pdf *.rtf *.docx *.odt *.md *.epub)",
         "dialog.project_error_title": "Eroare Proiect",
         "dialog.project_repair_title": "Repara Proiectul",
         "about.subtitle": "Transforma cuvintele scrise intr-o experienta audio reala!",
@@ -273,6 +280,7 @@ _UI_STRINGS = {
         "status.project_created": "Proiectul a fost creat.",
         "status.project_opened": "Proiectul a fost deschis.",
         "status.project_repaired": "Proiectul a fost reparat si deschis.",
+        "status.source_imported": "Fisierul sursa a fost importat.",
         "sidebar.home": "Acasa / Proiect",
         "sidebar.text_cleanup": "Curatare Text",
         "sidebar.text_chunking": "Segmentare Text",
@@ -444,6 +452,8 @@ _UI_STRINGS = {
         "project.cancel": "Anuleaza",
         "project.error_missing_parent": "Selecteaza dosarul parinte in care trebuie creat proiectul.",
         "project.error_missing_name": "Introdu numele exact al proiectului.",
+        "project.error_no_active_project": "Creeaza sau deschide un proiect inainte de a importa un fisier sursa.",
+        "project.error_locked_source": "Acest proiect are deja un fisier sursa blocat. Creeaza un proiect nou pentru a folosi alta sursa.",
         "project.repair_step_prefix": "Proiectul este corupt la pasul",
         "project.repair_reset_suffix": "Aceasta reparatie va recrea si reseta acel pas si toate folderele pasilor urmatori.",
         "project.repair_metadata_only": "Aceasta reparatie va actualiza metadatele proiectului la ultima etapa coerenta a fluxului.",

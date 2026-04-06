@@ -14,5 +14,5 @@ Implementation-focused software documentation and component notes.
 - `AudioMancer_Config_And_Settings.md` documents the adapted configuration and settings scaffold.
 - `AudioMancer_Settings_Service.md` documents the shared settings lifecycle implementation.
 - `AudioMancer_Logging_Service.md` documents the shared runtime logging implementation.
-- `AudioMancer_Project_Workspace.md` documents the new/open project workspace layer and minimal `project.json` contract.
+- `AudioMancer_Project_Workspace.md` documents the new/open project workspace layer, source import flow, and current `project.json` contract.
 - The app shell document also covers the shared runtime logging bootstrap.

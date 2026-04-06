@@ -13,7 +13,7 @@
          file support used by the current AudioMancer implementation scaffold.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-06
-@version 0.2.0
+@version 0.3.0
 """
 
 # IMPORTS
@@ -107,7 +107,15 @@ OPERATION_ARTIFACT_FILE_PREFIX = "artifact_"
 
 # Source Import And Processing Artifacts
 # @brief Supported import suffixes mapped to persisted source-type ids.
-SUPPORTED_SOURCE_SUFFIXES = {".txt": "txt", ".pdf": "pdf"}
+SUPPORTED_SOURCE_SUFFIXES = {
+    ".txt": "txt",
+    ".pdf": "pdf",
+    ".rtf": "rtf",
+    ".docx": "docx",
+    ".odt": "odt",
+    ".md": "md",
+    ".epub": "epub",
+}
 
 # @brief File name used for persisted raw extracted text.
 EXTRACTED_TEXT_FILE_NAME = "raw_text.txt"

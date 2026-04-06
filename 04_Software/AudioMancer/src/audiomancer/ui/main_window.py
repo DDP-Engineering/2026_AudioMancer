@@ -14,7 +14,7 @@
          pages presentational only and free of workflow behavior.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-06
-@version 1.5.0
+@version 1.6.0
 """
 
 # IMPORTS
@@ -42,6 +42,7 @@ from PySide6.QtWidgets import (
 
 from audiomancer import config
 from audiomancer.services import ai_backend_service
+from audiomancer.services import import_service
 from audiomancer.services import project_workspace_service
 from audiomancer.services import settings_service
 from audiomancer.services import ui_state_service
@@ -177,7 +178,7 @@ class MainWindow(QMainWindow):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-06
-        @version    0.1.0
+        @version    0.2.0
         """
         for page_id, _label in self.PAGE_ORDER:
             enabled = is_active or page_id == "home"
@@ -202,7 +203,7 @@ class MainWindow(QMainWindow):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-06
-        @version    0.1.0
+        @version    0.2.0
         """
         self._current_project_root = project_root
         self._current_manifest = manifest
@@ -215,7 +216,7 @@ class MainWindow(QMainWindow):
         source_name = (
             None
             if manifest is None
-            else _optional_manifest_string(manifest.get("source_document_name"))
+            else _source_document_name(manifest)
         )
         self._home_page.set_project_state(
             display_name,
@@ -320,7 +321,7 @@ class MainWindow(QMainWindow):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-06
-        @version    0.3.0
+        @version    0.4.0
         """
         home_page = HomeProjectPage(self)
         self._home_page = home_page
@@ -332,6 +333,7 @@ class MainWindow(QMainWindow):
         home_page.set_source_summary(None)
         home_page.set_source_locked(False, None)
         home_page.set_stage_statuses(self._build_stage_statuses(None))
+        home_page.import_requested.connect(self._handle_import_source_requested)
 
         pages = {
             "home": home_page,
@@ -420,7 +422,7 @@ class MainWindow(QMainWindow):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-06
-        @version    0.1.0
+        @version    0.2.0
         """
         merged_settings = self._settings_page.build_settings(self._settings_payload)
         settings_service.save_settings(merged_settings)
@@ -698,6 +700,66 @@ class MainWindow(QMainWindow):
             )
         )
 
+    def _handle_import_source_requested(self) -> None:
+        """
+        @brief      Let the operator select and import one source file.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-06
+        @version    0.1.0
+        """
+        current_language = str(
+            self._settings_payload.get("language", config.DEFAULT_LANGUAGE)
+        )
+        if self._current_project_root is None or self._current_manifest is None:
+            QMessageBox.warning(
+                self,
+                ui_state_service.translate("dialog.project_error_title", current_language),
+                ui_state_service.translate("project.error_no_active_project", current_language),
+            )
+            return
+
+        if _source_document_name(self._current_manifest) is not None:
+            QMessageBox.warning(
+                self,
+                ui_state_service.translate("dialog.project_error_title", current_language),
+                ui_state_service.translate("project.error_locked_source", current_language),
+            )
+            return
+
+        selected_file, _selected_filter = QFileDialog.getOpenFileName(
+            self,
+            ui_state_service.translate("dialog.select_source_title", current_language),
+            str(self._current_project_root),
+            ui_state_service.translate("dialog.select_source_filter", current_language),
+        )
+        if not selected_file:
+            return
+
+        try:
+            source_document = import_service.import_source(
+                self._current_project_root,
+                selected_file,
+            )
+        except (FileNotFoundError, ValueError) as error:
+            QMessageBox.warning(
+                self,
+                ui_state_service.translate("dialog.project_error_title", current_language),
+                str(error),
+            )
+            return
+
+        updated_manifest = dict(self._current_manifest)
+        updated_manifest["source_document"] = source_document
+        updated_manifest["current_stage"] = "source_selected"
+        project_workspace_service.save_manifest(updated_manifest, self._current_project_root)
+        reloaded_manifest = project_workspace_service.load_manifest(self._current_project_root)
+        self.show_project_state(self._current_project_root, reloaded_manifest)
+        self.show_message(
+            ui_state_service.translate("status.source_imported", current_language)
+        )
+
     def _confirm_project_repair(
         self,
         repair_result: dict[str, object],
@@ -798,11 +860,7 @@ class MainWindow(QMainWindow):
                     f"home.stage_label.{token}",
                     current_language,
                 ),
-                "status": (
-                    "finished"
-                    if reached_index > index
-                    else "in_progress" if reached_index == index else "not_started"
-                ),
+                "status": "finished" if reached_index >= index else "not_started",
                 "note": ui_state_service.translate(
                     f"home.stage_note.active.{token}",
                     current_language,
@@ -1001,6 +1059,24 @@ def _optional_manifest_string(value: object) -> str | None:
     if value in (None, ""):
         return None
     return str(value)
+
+
+def _source_document_name(manifest: dict[str, object] | None) -> str | None:
+    """
+    @brief      Extract the display name of one persisted source document.
+    @param[in]  manifest Active manifest payload or `None`.
+    @return     Imported source display name or `None`.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-06
+    @version    0.1.0
+    """
+    if not isinstance(manifest, dict):
+        return None
+    source_document = manifest.get("source_document")
+    if not isinstance(source_document, dict):
+        return None
+    return _optional_manifest_string(source_document.get("original_name"))
 
 
 # END OF FILE
