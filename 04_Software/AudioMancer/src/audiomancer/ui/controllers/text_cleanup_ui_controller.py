@@ -9,12 +9,12 @@
 """
 @file text_cleanup_ui_controller.py
 @brief Text Cleanup page UI controller for AudioMancer.
-@details Handles extraction and deterministic cleanup workflows, including
-         progress dialog lifecycle, cancellation, rerun confirmations, and
-         manifest synchronization for the Text Cleanup page.
+@details Handles extraction, deterministic cleanup, and AI-assisted cleanup
+         workflows, including progress dialog lifecycle, cancellation, rerun
+         confirmations, and manifest synchronization for the Text Cleanup page.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-06
-@version 0.2.0
+@version 0.3.1
 """
 
 # IMPORTS
@@ -24,6 +24,7 @@ from typing import TYPE_CHECKING
 from PySide6.QtWidgets import QMessageBox
 
 from audiomancer import config
+from audiomancer.services import ai_cleanup_service
 from audiomancer.services import deterministic_cleanup_service
 from audiomancer.services import home_presenter_service
 from audiomancer.services import operation_runtime_service
@@ -163,6 +164,101 @@ def handle_deterministic_cleanup_requested(window: "MainWindow") -> None:
     )
 
 
+def handle_ai_cleanup_requested(window: "MainWindow", profile_id: str) -> None:
+    """
+    @brief      Run AI-assisted cleanup for the active project and selected profile.
+    @param[in]  window Active main window shell.
+    @param[in]  profile_id Selected AI cleanup profile id.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-06
+    @version    0.1.0
+    """
+    current_language = ui_state_service.current_language_from_settings(
+        window._settings_payload
+    )
+    if window._active_operation_kind is not None:
+        return
+    if window._current_project_root is None or window._current_manifest is None:
+        QMessageBox.warning(
+            window,
+            ui_state_service.translate("dialog.project_error_title", current_language),
+            ui_state_service.translate("project.error_no_active_project", current_language),
+        )
+        return
+    if not window._current_manifest.get("extracted_text_relative_path"):
+        QMessageBox.warning(
+            window,
+            ui_state_service.translate("dialog.project_error_title", current_language),
+            ui_state_service.translate(
+                "project.error_missing_extracted_text",
+                current_language,
+            ),
+        )
+        return
+
+    cleanup_operation = home_presenter_service.manifest_operation(
+        window._current_manifest,
+        "cleanup",
+    )
+    cleanup_status = str(cleanup_operation.get("status", "not_started"))
+    cleanup_mode = str(cleanup_operation.get("mode") or "")
+    resume_profile_id = _resume_ai_profile_id(window, cleanup_operation)
+    selected_profile = _resolve_ai_profile(
+        window._settings_payload,
+        resume_profile_id if cleanup_status in {"running", "failed"} and cleanup_mode == "ai_assisted" else profile_id,
+    )
+    if selected_profile is None:
+        QMessageBox.warning(
+            window,
+            ui_state_service.translate("dialog.project_error_title", current_language),
+            ui_state_service.translate("project.error_missing_ai_profile", current_language),
+        )
+        return
+
+    if cleanup_status in {"running", "failed"} and cleanup_mode == "ai_assisted":
+        pass
+    else:
+        if not confirm_ai_cleanup_start(window, current_language):
+            return
+        if cleanup_status == "completed":
+            if not confirm_ai_cleanup_rerun(window, current_language):
+                return
+            operation_runtime_service.reset_operation_data(
+                window._current_project_root,
+                "cleanup",
+                include_current=True,
+                keep_input_snapshots=False,
+            )
+            reset_manifest = text_cleanup_state_service.build_manifest_after_operation_reset(
+                window._current_manifest,
+                "cleanup",
+            )
+            project_workspace_service.save_manifest(reset_manifest, window._current_project_root)
+            window._current_manifest = project_workspace_service.load_manifest(
+                window._current_project_root
+            )
+
+    start_operation(
+        window,
+        operation_kind="cleanup",
+        operation_name=ui_state_service.translate("text_cleanup.ai_clean", current_language),
+        initial_message=ui_state_service.translate("progress.ai_cleaning", current_language),
+        worker_callable=lambda project_root, manifest, progress_callback=None, cancel_requested=None: (
+            ai_cleanup_service.clean_text(
+                project_root,
+                manifest,
+                selected_profile,
+                progress_callback=progress_callback,
+                cancel_requested=cancel_requested,
+            )
+        ),
+        success_handler=lambda result_payload: handle_cleanup_success(window, result_payload),
+        failure_handler=lambda error: handle_cleanup_failure(window, error),
+    )
+
+
 def start_operation(
     window: "MainWindow",
     operation_kind: str,
@@ -271,8 +367,9 @@ def is_cancel_requested(window: "MainWindow") -> bool:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.1.1
+    @version    0.1.2
     """
+    misc_ui_controller.process_pending_ui_events()
     return window._operation_cancel_requested
 
 
@@ -428,23 +525,26 @@ def handle_extraction_failure(window: "MainWindow", error: Exception) -> None:
 
 def handle_cleanup_success(window: "MainWindow", result_payload: object) -> None:
     """
-    @brief      Persist manifest state after one successful deterministic cleanup run.
+    @brief      Persist manifest state after one successful cleanup run.
     @param[in]  window Active main window shell.
     @param[in]  result_payload Successful cleanup result payload.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.1.0
+    @version    0.1.1
     """
-    _ = result_payload
+    cleanup_mode = None
+    if isinstance(result_payload, dict):
+        cleanup_mode = str(result_payload.get("cleanup_mode") or "")
     assert window._current_project_root is not None
     assert window._current_manifest is not None
     updated_manifest = dict(window._current_manifest)
     updated_manifest["current_stage"] = "text_chunking_ready"
     operations = text_cleanup_state_service.normalized_manifest_operations(updated_manifest)
     operations["cleanup"] = (
-        deterministic_cleanup_service.load_operation_state(window._current_project_root)
+        ai_cleanup_service.load_operation_state(window._current_project_root)
+        or deterministic_cleanup_service.load_operation_state(window._current_project_root)
         or operations["cleanup"]
     )
     updated_manifest["operations"] = operations
@@ -456,7 +556,7 @@ def handle_cleanup_success(window: "MainWindow", result_payload: object) -> None
     misc_ui_controller.show_message(
         window,
         ui_state_service.translate(
-            "status.text_cleaned",
+            "status.text_ai_cleaned" if cleanup_mode == "ai_assisted" else "status.text_cleaned",
             ui_state_service.current_language_from_settings(window._settings_payload),
         ),
     )
@@ -501,7 +601,8 @@ def sync_manifest_after_unsuccessful_operation(window: "MainWindow", operation_k
     operations = text_cleanup_state_service.normalized_manifest_operations(updated_manifest)
     if operation_kind == "cleanup":
         operations["cleanup"] = (
-            deterministic_cleanup_service.load_operation_state(window._current_project_root)
+            ai_cleanup_service.load_operation_state(window._current_project_root)
+            or deterministic_cleanup_service.load_operation_state(window._current_project_root)
             or operations["cleanup"]
         )
     elif operation_kind == "extraction":
@@ -557,5 +658,85 @@ def confirm_cleanup_rerun(window: "MainWindow", language: str) -> bool:
         QMessageBox.StandardButton.No,
     )
     return decision == QMessageBox.StandardButton.Yes
+
+
+def confirm_ai_cleanup_start(window: "MainWindow", language: str) -> bool:
+    """
+    @brief      Ask the operator whether one AI-assisted cleanup should start.
+    @param[in]  window Active main window shell.
+    @param[in]  language Current UI language code.
+    @return     True when the operator accepts the longer AI run.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-06
+    @version    0.1.0
+    """
+    decision = QMessageBox.question(
+        window,
+        ui_state_service.translate("dialog.confirm_ai_cleanup_title", language),
+        ui_state_service.translate("project.confirm_ai_cleanup", language),
+        QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+        QMessageBox.StandardButton.No,
+    )
+    return decision == QMessageBox.StandardButton.Yes
+
+
+def confirm_ai_cleanup_rerun(window: "MainWindow", language: str) -> bool:
+    """
+    @brief      Ask the operator whether one completed cleanup should be replaced by AI cleanup.
+    @param[in]  window Active main window shell.
+    @param[in]  language Current UI language code.
+    @return     True when the operator accepts the destructive AI rerun.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-06
+    @version    0.1.0
+    """
+    decision = QMessageBox.question(
+        window,
+        ui_state_service.translate("dialog.confirm_ai_cleanup_rerun_title", language),
+        ui_state_service.translate("project.confirm_ai_cleanup_rerun", language),
+        QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+        QMessageBox.StandardButton.No,
+    )
+    return decision == QMessageBox.StandardButton.Yes
+
+
+def _resolve_ai_profile(
+    settings_payload: dict[str, object],
+    profile_id: str | None,
+) -> dict[str, object] | None:
+    if not isinstance(settings_payload, dict) or not profile_id:
+        return None
+    raw_profiles = settings_payload.get("llm_profiles", [])
+    if not isinstance(raw_profiles, list):
+        return None
+    for profile in raw_profiles:
+        if not isinstance(profile, dict):
+            continue
+        if not bool(profile.get("enabled", True)):
+            continue
+        if str(profile.get("id", "")).strip() == str(profile_id).strip():
+            return dict(profile)
+    return None
+
+
+def _resume_ai_profile_id(
+    window: "MainWindow",
+    cleanup_operation: dict[str, object],
+) -> str | None:
+    metadata = cleanup_operation.get("metadata")
+    if isinstance(metadata, dict):
+        profile_id = metadata.get("ai_profile_id")
+        if profile_id not in (None, ""):
+            return str(profile_id)
+    state_payload = ai_cleanup_service.load_operation_state(window._current_project_root or "")
+    if isinstance(state_payload, dict):
+        state_metadata = state_payload.get("metadata")
+        if isinstance(state_metadata, dict):
+            profile_id = state_metadata.get("ai_profile_id")
+            if profile_id not in (None, ""):
+                return str(profile_id)
+    return None
 
 # END OF FILE

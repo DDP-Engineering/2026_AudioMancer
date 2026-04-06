@@ -13,7 +13,7 @@
          preview state updates for the cleanup page.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-06
-@version 0.2.0
+@version 0.3.0
 """
 
 # IMPORTS
@@ -29,7 +29,7 @@ def test_text_cleanup_page_enables_actions_only_with_project_inputs(qtbot) -> No
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.2.0
+    @version    0.3.0
     """
     page = TextCleanupPage()
     qtbot.addWidget(page)
@@ -43,10 +43,14 @@ def test_text_cleanup_page_enables_actions_only_with_project_inputs(qtbot) -> No
         notes=["Ready"],
         can_extract=True,
         can_clean=False,
+        can_ai_clean=False,
     )
 
     assert page._extract_button.isEnabled() is True
     assert page._clean_button.isEnabled() is False
+    assert page._ai_clean_button.isEnabled() is False
+
+    page.set_ai_profiles([("Cleanup Profile", "profile_1")], "profile_1")
 
     page.set_processing_state(
         extracted_text="Raw text",
@@ -54,14 +58,17 @@ def test_text_cleanup_page_enables_actions_only_with_project_inputs(qtbot) -> No
         notes=["Cleanup ready"],
         can_extract=True,
         can_clean=True,
+        can_ai_clean=True,
     )
 
     assert page._clean_button.isEnabled() is True
+    assert page._ai_clean_button.isEnabled() is True
 
     page.set_busy(True)
 
     assert page._extract_button.isEnabled() is False
     assert page._clean_button.isEnabled() is False
+    assert page._ai_clean_button.isEnabled() is False
 
 
 def test_text_cleanup_page_updates_previews_and_notes(qtbot) -> None:
@@ -72,7 +79,7 @@ def test_text_cleanup_page_updates_previews_and_notes(qtbot) -> None:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.2.0
+    @version    0.3.0
     """
     page = TextCleanupPage()
     qtbot.addWidget(page)
@@ -84,11 +91,45 @@ def test_text_cleanup_page_updates_previews_and_notes(qtbot) -> None:
         notes=["Warning A", "Warning B"],
         can_extract=True,
         can_clean=True,
+        can_ai_clean=True,
     )
 
     assert page._extracted_text_edit.toPlainText() == "Raw paragraph"
     assert page._cleaned_text_edit.toPlainText() == "Clean paragraph"
     assert page._notes_edit.toPlainText() == "Warning A\nWarning B"
+
+
+def test_text_cleanup_page_emits_selected_ai_profile(qtbot) -> None:
+    """
+    @brief      Verify AI-assisted cleanup emits the currently selected profile id.
+    @param[in]  qtbot Qt test helper fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-06
+    @version    0.1.0
+    """
+    page = TextCleanupPage()
+    qtbot.addWidget(page)
+    page.set_project_active(True)
+    page.set_ai_profiles(
+        [("Cleanup Profile", "profile_1"), ("Backup", "profile_2")],
+        "profile_2",
+    )
+    page.set_processing_state(
+        extracted_text="Raw text",
+        cleaned_text=None,
+        notes=["AI ready"],
+        can_extract=True,
+        can_clean=True,
+        can_ai_clean=True,
+    )
+
+    emitted_profile_ids: list[str] = []
+    page.ai_clean_requested.connect(emitted_profile_ids.append)
+    page._ai_clean_button.click()
+
+    assert emitted_profile_ids == ["profile_2"]
 
 
 # END OF FILE

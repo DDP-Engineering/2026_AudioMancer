@@ -13,7 +13,7 @@
          manifest reset payloads used by the Text Cleanup page workflows.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-06
-@version 0.2.0
+@version 0.3.0
 """
 
 # IMPORTS
@@ -45,7 +45,7 @@ def build_text_cleanup_state(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.1.1
+    @version    0.1.2
     """
     if project_root is None or manifest is None:
         return {
@@ -56,6 +56,7 @@ def build_text_cleanup_state(
             ],
             "can_extract": False,
             "can_clean": False,
+            "can_ai_clean": False,
         }
 
     extracted_text = read_optional_project_text(
@@ -95,6 +96,49 @@ def build_text_cleanup_state(
         ),
         "can_extract": home_presenter_service.source_document_name(manifest) is not None,
         "can_clean": extracted_text is not None,
+        "can_ai_clean": extracted_text is not None,
+    }
+
+
+def build_ai_cleanup_profile_state(
+    settings_payload: dict[str, object] | None,
+) -> dict[str, object]:
+    """
+    @brief      Build the AI cleanup profile-selector state from app settings.
+    @param[in]  settings_payload Active application settings payload.
+    @return     Selector payload with ordered entries and one selected id.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-06
+    @version    0.1.1
+    """
+    if not isinstance(settings_payload, dict):
+        return {"entries": [], "selected_profile_id": None}
+    raw_profiles = settings_payload.get("llm_profiles", [])
+    if not isinstance(raw_profiles, list):
+        return {"entries": [], "selected_profile_id": None}
+    entries: list[tuple[str, str | None]] = []
+    enabled_ids: list[str] = []
+    for profile in raw_profiles:
+        if not isinstance(profile, dict):
+            continue
+        if not bool(profile.get("enabled", True)):
+            continue
+        profile_id = str(profile.get("id", "")).strip()
+        if not profile_id:
+            continue
+        profile_label = str(profile.get("label", "")).strip() or profile_id
+        entries.append((profile_label, profile_id))
+        enabled_ids.append(profile_id)
+    preferred_profile_id = settings_payload.get("default_ai_cleanup_profile_id")
+    selected_profile_id = (
+        str(preferred_profile_id)
+        if preferred_profile_id in enabled_ids
+        else (enabled_ids[0] if enabled_ids else None)
+    )
+    return {
+        "entries": entries,
+        "selected_profile_id": selected_profile_id,
     }
 
 
@@ -107,7 +151,7 @@ def build_text_cleanup_notes(
     language: str,
 ) -> list[str]:
     """
-    @brief      Build operator-facing notes for extraction and deterministic cleanup.
+    @brief      Build operator-facing notes for extraction plus deterministic or AI cleanup.
     @param[in]  manifest Active project manifest payload.
     @param[in]  extraction_report_payload Optional extraction report payload.
     @param[in]  extraction_operation_state Optional extraction operation-state payload.
@@ -118,7 +162,7 @@ def build_text_cleanup_notes(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.1.0
+    @version    0.1.1
     """
     notes: list[str] = []
     if home_presenter_service.source_document_name(manifest) is None:
@@ -173,27 +217,42 @@ def build_text_cleanup_notes(
         if not isinstance(cleanup_operation_state, dict)
         else str(cleanup_operation_state.get("status", "not_started"))
     )
+    cleanup_mode = None
     if cleanup_report_payload is not None:
+        cleanup_mode = str(cleanup_report_payload.get("cleanup_mode") or "")
+        if not cleanup_mode and isinstance(cleanup_operation_state, dict):
+            cleanup_mode = str(cleanup_operation_state.get("mode") or "")
+    if cleanup_report_payload is not None:
+        summary_key = (
+            "text_cleanup.note_ai_cleanup_summary"
+            if cleanup_mode == "ai_assisted"
+            else "text_cleanup.note_cleanup_summary"
+        )
         notes.append(
-            ui_state_service.translate(
-                "text_cleanup.note_cleanup_summary",
-                language,
-            ).format(
+            ui_state_service.translate(summary_key, language).format(
                 paragraph_count=cleanup_report_payload.get("paragraph_count", 0),
                 removed_line_count=cleanup_report_payload.get("removed_line_count", 0),
                 chapter_count=cleanup_report_payload.get("detected_chapter_count", 0),
             )
         )
+        ai_profile_id = cleanup_report_payload.get("ai_profile_id")
+        if cleanup_mode == "ai_assisted" and ai_profile_id not in (None, ""):
+            notes.append(
+                ui_state_service.translate(
+                    "text_cleanup.note_ai_cleanup_profile",
+                    language,
+                ).format(profile_label=str(ai_profile_id))
+            )
         notes.extend(
             str(item) for item in list(cleanup_report_payload.get("warnings", []))
         )
         if cleanup_status == "completed":
-            notes.append(
-                ui_state_service.translate(
-                    "text_cleanup.note_cleanup_rerun_warning",
-                    language,
-                )
+            rerun_key = (
+                "text_cleanup.note_ai_cleanup_rerun_warning"
+                if cleanup_mode == "ai_assisted"
+                else "text_cleanup.note_cleanup_rerun_warning"
             )
+            notes.append(ui_state_service.translate(rerun_key, language))
         return notes
 
     if cleanup_status in {"running", "failed"}:
@@ -207,9 +266,24 @@ def build_text_cleanup_notes(
             if not isinstance(cleanup_operation_state, dict)
             else int(cleanup_operation_state.get("progress_total", 0))
         )
-        notes.append(ui_state_service.translate("text_cleanup.note_cleanup_ready", language))
+        running_mode = (
+            None
+            if not isinstance(cleanup_operation_state, dict)
+            else str(cleanup_operation_state.get("mode") or "")
+        )
+        ready_key = (
+            "text_cleanup.note_ai_cleanup_ready"
+            if running_mode == "ai_assisted"
+            else "text_cleanup.note_cleanup_ready"
+        )
+        resume_key = (
+            "text_cleanup.note_ai_cleanup_resume"
+            if running_mode == "ai_assisted"
+            else "text_cleanup.note_cleanup_resume"
+        )
+        notes.append(ui_state_service.translate(ready_key, language))
         notes.append(
-            ui_state_service.translate("text_cleanup.note_cleanup_resume", language).format(
+            ui_state_service.translate(resume_key, language).format(
                 progress_current=progress_current,
                 progress_total=progress_total,
             )
@@ -218,6 +292,7 @@ def build_text_cleanup_notes(
 
     notes.append(ui_state_service.translate("text_cleanup.note_cleanup_ready", language))
     return notes
+
 
 def normalized_manifest_operations(
     manifest: dict[str, object],

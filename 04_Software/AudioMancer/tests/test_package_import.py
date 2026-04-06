@@ -12,7 +12,7 @@
 @details Verifies that the package imports and exposes the expected entrypoint.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-04
-@version 0.1.4
+@version 0.1.5
 """
 
 # IMPORTS
@@ -29,10 +29,10 @@ def test_package_exposes_main() -> None:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-04
-    @version    0.1.4
+    @version    0.1.5
     """
     assert callable(audiomancer.main)
-    assert audiomancer.__version__ == "0.7.0"
+    assert audiomancer.__version__ == "0.8.0"
 
 
 # END OF FILE

@@ -1,0 +1,215 @@
+<!--
+Copyright (c) 2026 DDP Engineering
+This software is licensed under the GNU Affero General Public License v3.0
+(AGPL-3.0) with additional Non-Commercial restriction.
+See the LICENSE.txt and LICENSE_NC.txt files for full license details.
+-->
+
+# AudioMancer AI Cleanup Service
+
+## 1. Purpose
+
+Provides the AI-assisted cleanup slice for `AudioMancer`.
+
+It gives the `Text Cleanup` page one second cleanup mode that consumes the
+canonical extracted text, calls one configured AI provider through the profile
+selected in `AI Settings`, writes the cleaned result back into the shared
+`10_cleanup` workspace, and keeps one resumable checkpoint plus one per-run AI
+transaction log.
+
+## 2. Responsibilities
+
+- populate the `Text Cleanup` AI profile selector from enabled AI settings
+- start AI-assisted cleanup from the selected profile
+- confirm that AI cleanup can take longer before the run starts
+- confirm destructive reruns when cleanup is already completed
+- resume interrupted AI cleanup without the destructive rerun confirmation
+- load prompts from the application-root `prompts/` folder
+- call OpenAI-compatible `/v1/chat/completions` endpoints with the configured
+  model, timeout, temperature, and max-token settings
+- keep cancel requests responsive while one provider call is still waiting for
+  the model response
+- retry transient provider failures conservatively
+- normalize model JSON output before parsing
+- copy the AI cleanup input snapshot as `10_cleanup/input_<original_source_name>`
+- persist `10_cleanup/output_clean_text.txt`,
+  `10_cleanup/artifact_cleanup_report.json`, and
+  `10_cleanup/state_operation.json`
+- append project-local AI transaction records to
+  `10_cleanup/log_ai_transactions_<timestamp>.log`
+
+It does not own AI profile editing, model discovery, text extraction,
+chunking, translation, or character discovery.
+
+## 3. Implementation Overview
+
+The component is implemented in:
+
+- `04_Software/AudioMancer/src/audiomancer/services/ai_cleanup_service.py`
+- `04_Software/AudioMancer/src/audiomancer/services/llm_provider_service.py`
+- `04_Software/AudioMancer/src/audiomancer/services/prompt_template_service.py`
+- `04_Software/AudioMancer/src/audiomancer/ui/controllers/text_cleanup_ui_controller.py`
+- `04_Software/AudioMancer/src/audiomancer/ui/pages/text_cleanup_page.py`
+- `04_Software/AudioMancer/prompts/text_cleanup_system.txt`
+- `04_Software/AudioMancer/prompts/text_cleanup_user.txt`
+
+Main public entrypoints:
+
+- `text_cleanup_ui_controller.handle_ai_cleanup_requested(window, profile_id)`
+- `ai_cleanup_service.clean_text(project_root, manifest, ai_profile_payload, ...)`
+- `llm_provider_service.chat_json(profile_payload, system_prompt, user_prompt, ...)`
+- `prompt_template_service.load_prompt(...)`
+- `prompt_template_service.render_prompt(...)`
+
+High-level flow:
+
+1. `TextCleanupPage` emits `ai_clean_requested(profile_id)`.
+2. `text_cleanup_ui_controller` validates the active project, extracted-text
+   prerequisite, and selected or resumable AI profile.
+3. The controller shows the AI-length warning popup and, when needed, the
+   destructive cleanup-rerun confirmation.
+4. The shared modal progress dialog starts through the existing blocking
+   operation flow.
+5. `ai_cleanup_service` loads prompt files, splits extracted text into
+   paragraph-like units, windows them to fit the selected profile budget, and
+   resumes from `resume_checkpoint` when possible.
+6. `llm_provider_service` sends one chat-completion request per window,
+   appends request/response/failure records to the operation-local AI log, and
+   keeps polling for cancellation while the provider request runs in a small
+   helper thread.
+7. The AI cleanup service keeps units labeled `story` or `unknown`, rebuilds
+   the cleaned text, writes the shared cleanup artifacts, and stores
+   `mode="ai_assisted"` in the cleanup operation state.
+8. On success, the shell advances the workflow stage to `text_chunking_ready`.
+
+## 4. Dependencies
+
+- Internal dependencies:
+  `audiomancer.config`, `audiomancer.services.settings_service`,
+  `audiomancer.services.operation_runtime_service`,
+  `audiomancer.services.project_workspace_service`,
+  `audiomancer.services.ui_state_service`,
+  `audiomancer.ui.controllers.misc_ui_controller`
+- External dependencies:
+  Python standard library for JSON, hashing, regex, datetimes, filesystem
+  access, and `urllib`; `langdetect`; `PySide6`
+
+## 5. Inputs And Outputs
+
+Inputs:
+
+- active project root folder
+- current `project.json` manifest with `source_document` and
+  `extracted_text_relative_path`
+- selected enabled AI profile from `settings.json`
+- prompt files in `04_Software/AudioMancer/prompts/`
+- optional progress callback and cancellation callback
+
+Outputs:
+
+- `10_cleanup/input_<original_source_name>`
+- `10_cleanup/output_clean_text.txt`
+- `10_cleanup/artifact_cleanup_report.json`
+- `10_cleanup/state_operation.json`
+- `10_cleanup/log_ai_transactions_<timestamp>.log`
+- updated `project.json` cleanup operation entry with `mode="ai_assisted"`
+- updated `project.json` stage `text_chunking_ready` after successful cleanup
+
+## 6. Data Contracts
+
+Current prompt contract:
+
+- `text_cleanup_system.txt` owns the allowed cleanup labels and the required
+  JSON response shape
+- `text_cleanup_user.txt` must expose the `{units_block}` placeholder
+
+Current AI cleanup report fields extend the shared cleanup report with:
+
+- `cleanup_mode`
+- `ai_profile_id`
+- `ai_log_relative_path`
+
+Current AI cleanup operation-state invariants:
+
+- the operation kind remains `cleanup`; AI cleanup does not create a separate
+  workflow folder
+- `mode` is `ai_assisted`
+- `resume_checkpoint` stores `completed_window_count`,
+  `total_window_count`, `profile_id`, `input_fingerprint`, and accumulated
+  unit classifications
+- `metadata.ai_log_relative_path` points to the per-run AI transaction log
+
+Current AI transaction log behavior:
+
+- one `.log` file is created per AI cleanup run
+- each line is one JSON object with timestamped request, response, or failure
+  metadata
+
+## 7. Workflow Integration
+
+Upstream:
+
+- `AI Settings` provides the enabled profile list and
+  `default_ai_cleanup_profile_id`
+- `text_extraction_service.extract_text(...)` provides the canonical extracted
+  text input
+
+Downstream:
+
+- the shared cleanup preview and notes on the `Text Cleanup` page
+- future chunking consumes the same `10_cleanup/output_clean_text.txt`
+- confirmed AI cleanup reruns reset chunking, translation, and
+  character-discovery data
+
+## 8. Usage
+
+Operator flow:
+
+- configure and save at least one enabled AI profile in `AI Settings`
+- open `Text Cleanup`
+- select the desired AI profile
+- press `AI-Assisted Cleanup`
+- confirm the AI-length warning
+- confirm the destructive rerun warning when cleanup was already completed
+
+Service call pattern:
+
+```python
+from audiomancer.services import ai_cleanup_service
+
+report_payload = ai_cleanup_service.clean_text(
+    project_root,
+    manifest,
+    ai_profile_payload,
+)
+```
+
+## 9. Validation And Tests
+
+Automated tests:
+
+- `04_Software/AudioMancer/tests/test_ai_cleanup_service.py`
+- `04_Software/AudioMancer/tests/test_llm_provider_service.py`
+- `04_Software/AudioMancer/tests/test_prompt_template_service.py`
+- `04_Software/AudioMancer/tests/test_text_cleanup_page.py`
+- `04_Software/AudioMancer/tests/test_text_cleanup_ui_controller.py`
+
+Minimum validation after a change:
+
+- `uv run python -m py_compile <changed_file.py>`
+- focused `uv run pytest` for AI cleanup service, provider service, prompt
+  service, cleanup page, and cleanup controller tests
+
+## 10. Limitations And Future Work
+
+- the provider flow currently assumes an OpenAI-compatible
+  `/v1/chat/completions` interface for requests
+- AI cleanup is synchronous from the shell perspective and blocks the main
+  window through the modal progress dialog
+- transaction logs are newline-delimited JSON records inside a `.log` file, not
+  a richer indexed audit store
+- canceling during an in-flight provider call is cooperative; the shell stops
+  waiting immediately, but the abandoned background HTTP call may still finish
+  on its own shortly after
+- AI cleanup currently classifies paragraph-like units only; it does not yet
+  reuse deterministic page-aware heuristics during the AI phase

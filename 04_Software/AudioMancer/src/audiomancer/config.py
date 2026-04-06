@@ -13,7 +13,7 @@
          file support used by the current AudioMancer implementation scaffold.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-06
-@version 1.0.1
+@version 1.1.0
 """
 
 # IMPORTS
@@ -33,6 +33,9 @@ APP_ROOT = Path(__file__).resolve().parents[2]
 
 # @brief Absolute path to the app-level settings file.
 APP_SETTINGS_PATH = APP_ROOT / "settings.json"
+
+# @brief Absolute path to the application-owned prompt template folder.
+APP_PROMPTS_PATH = APP_ROOT / "prompts"
 
 # Project Workspace And Artifact Naming
 # @brief Stable manifest file name stored at the project root.
@@ -109,6 +112,9 @@ OPERATION_OUTPUT_FILE_PREFIX = "output_"
 
 # @brief Stable prefix used for operation artifacts and reports.
 OPERATION_ARTIFACT_FILE_PREFIX = "artifact_"
+
+# @brief Stable prefix used for project-local AI transaction logs.
+AI_TRANSACTION_LOG_FILE_PREFIX = "log_ai_transactions_"
 
 
 # Source Import And Processing Artifacts
@@ -192,13 +198,16 @@ DEFAULT_MAIN_WINDOW_MIN_HEIGHT = 620
 LLM_BACKEND_OPTIONS = ("lmstudio", "ollama", "openai_compatible")
 
 # @brief Default configured context window for AI profiles.
-DEFAULT_LLM_CONTEXT_WINDOW = 8192
+DEFAULT_LLM_CONTEXT_WINDOW = 16384
 
 # @brief Default configured maximum output tokens for AI profiles.
-DEFAULT_LLM_MAX_OUTPUT_TOKENS = 1024
+DEFAULT_LLM_MAX_OUTPUT_TOKENS = 8192
 
 # @brief Default timeout in seconds for AI provider requests.
-DEFAULT_LLM_REQUEST_TIMEOUT_SECONDS = 90
+DEFAULT_LLM_REQUEST_TIMEOUT_SECONDS = 300
+
+# @brief Default retry count for transient AI provider request failures.
+DEFAULT_LLM_REQUEST_RETRY_COUNT = 2
 
 # @brief Default timeout in seconds for AI backend connect/probe requests.
 DEFAULT_AI_CONNECT_TIMEOUT_SECONDS = 3
@@ -272,9 +281,12 @@ LOG_LEVEL_OPTIONS = ("CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG", "NOTSET")
 AVAILABLE_LOG_COMPONENTS = (
     "app",
     "ai_backend",
+    "ai_cleanup",
     "deterministic_cleanup",
+    "llm_provider",
     "main_window",
     "operation_runtime",
+    "prompt_template",
     "settings",
     "project_workspace",
     "text_extraction",

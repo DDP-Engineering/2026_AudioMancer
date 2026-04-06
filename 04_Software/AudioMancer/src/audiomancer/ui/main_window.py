@@ -14,7 +14,7 @@
          so the window remains a thin coordinator.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-06
-@version 1.12.0
+@version 1.13.0
 """
 
 # IMPORTS
@@ -75,8 +75,8 @@ class MainWindow(QMainWindow):
                 dedicated UI controllers plus page-specific state services.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.11.0
+        @date       2026-04-06
+        @version    0.12.0
     """
 
     PAGE_ORDER = (
@@ -104,7 +104,7 @@ class MainWindow(QMainWindow):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-06
-        @version    0.12.0
+        @version    0.13.0
         """
         super().__init__(parent)
         self.setWindowTitle(misc_ui_controller.build_window_title())
@@ -195,7 +195,7 @@ class MainWindow(QMainWindow):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-06
-        @version    0.3.1
+        @version    0.4.0
         """
         self._current_project_root = project_root
         self._current_manifest = manifest
@@ -224,6 +224,11 @@ class MainWindow(QMainWindow):
         )
         self._status_bar.set_stage(stage_name)
         self._text_cleanup_page.set_project_active(project_root is not None)
+        self._text_cleanup_page.set_ai_profiles(
+            **text_cleanup_state_service.build_ai_cleanup_profile_state(
+                self._settings_payload
+            )
+        )
         self._text_cleanup_page.set_processing_state(
             **text_cleanup_state_service.build_text_cleanup_state(
                 project_root,
@@ -325,7 +330,7 @@ class MainWindow(QMainWindow):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-06
-        @version    0.8.0
+        @version    0.8.1
         """
         current_language = ui_state_service.current_language_from_settings(
             self._settings_payload
@@ -352,6 +357,12 @@ class MainWindow(QMainWindow):
         )
         self._text_cleanup_page.clean_requested.connect(
             lambda: text_cleanup_ui_controller.handle_deterministic_cleanup_requested(self)
+        )
+        self._text_cleanup_page.ai_clean_requested.connect(
+            lambda profile_id: text_cleanup_ui_controller.handle_ai_cleanup_requested(
+                self,
+                profile_id,
+            )
         )
 
         pages = {

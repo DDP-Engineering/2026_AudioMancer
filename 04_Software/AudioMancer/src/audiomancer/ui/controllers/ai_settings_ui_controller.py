@@ -13,7 +13,7 @@
          feedback for AI backend connection probing.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-06
-@version 0.2.0
+@version 0.2.1
 """
 
 # IMPORTS
@@ -54,12 +54,13 @@ def save_ai_settings_from_dialog(window) -> None:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.1.1
+    @version    0.1.2
     """
     merged_settings = window._ai_settings_page.build_settings(window._settings_payload)
     settings_service.save_settings(merged_settings)
     window._settings_payload = settings_service.load_settings()
     settings_ui_controller.apply_current_ui_settings(window)
+    window.show_project_state(window._current_project_root, window._current_manifest)
     window._ai_settings_dialog.close()
     misc_ui_controller.show_message(
         window,

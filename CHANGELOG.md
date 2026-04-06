@@ -16,6 +16,25 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+## [0.8.0] - 2026-04-06
+
+### Added
+
+- added AI-assisted cleanup from the `Text Cleanup` page using the selected enabled AI profile from `AI Settings`
+- added prompt-template loading from the app-root `prompts/` folder plus OpenAI-compatible provider requests, JSON normalization, retry handling, and per-run AI transaction logs in `10_cleanup`
+- added focused tests and software documentation for AI cleanup, prompt loading, and provider-request handling
+
+### Changed
+
+- the `Text Cleanup` page now keeps the AI profile selector active by default and refreshes it from saved AI Settings profiles
+- AI-assisted cleanup now supports resumable cleanup state, shared progress-popup integration, and canonical cleanup artifacts in the existing `10_cleanup` workflow folder
+- package version updated to `0.8.0`
+
+### Fixed
+
+- fixed AI-assisted cleanup cancel handling so the progress popup remains responsive while waiting for model responses
+- fixed AI-assisted cleanup line-healing so more soft wraps and page-split continuations are merged back into one sentence
+
 ## [0.7.0] - 2026-04-06
 
 ### Added

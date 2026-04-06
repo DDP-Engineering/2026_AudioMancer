@@ -8,8 +8,8 @@
       "base_url": "http://192.168.1.17:1234/v1",
       "api_key": "lm-studio",
       "model_name": "qwen/qwen3.5-9b",
-      "context_window": 16384,
-      "max_output_tokens": 8192,
+      "context_window": 32768,
+      "max_output_tokens": 16384,
       "request_timeout_seconds": 500,
       "temperature": 0.1,
       "supports_structured_output": true,
@@ -34,10 +34,10 @@
       "temperature": 0.1,
       "supports_structured_output": true,
       "enabled": true,
-      "discovered_model_name": "qwen3.5-9b-uncensored-hauhaucs-aggressive",
+      "discovered_model_name": "openai/gpt-oss-20b",
       "discovered_context_window": null,
       "discovery_succeeded": true,
-      "discovery_message": "Connection successful. Discovered 11 models.",
+      "discovery_message": "Connection successful. Discovered 12 models.",
       "user_overrode_model_name": true,
       "user_overrode_context_window": true
     }

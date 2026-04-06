@@ -13,7 +13,7 @@
          dialogs, the common modal progress popup, and title-bar helpers.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-06
-@version 0.2.0
+@version 0.3.0
 """
 
 # IMPORTS
@@ -183,7 +183,7 @@ def create_progress_dialog(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.1.0
+    @version    0.1.1
     """
     window._operation_progress_dialog = OperationProgressDialog(window)
     window._operation_progress_dialog.cancel_requested.connect(cancel_callback)
@@ -192,7 +192,7 @@ def create_progress_dialog(
         initial_message,
         cancellable=True,
     )
-    QApplication.processEvents()
+    process_pending_ui_events()
 
 
 def update_progress_dialog(
@@ -209,10 +209,22 @@ def update_progress_dialog(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.1.0
+    @version    0.1.1
     """
     if window._operation_progress_dialog is not None:
         window._operation_progress_dialog.update_progress(percent, message)
+    process_pending_ui_events()
+
+
+def process_pending_ui_events() -> None:
+    """
+    @brief      Flush pending Qt events so modal progress interactions remain responsive.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-06
+    @version    0.1.0
+    """
     QApplication.processEvents()
 
 
