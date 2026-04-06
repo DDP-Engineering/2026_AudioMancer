@@ -16,6 +16,42 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+## [0.7.0] - 2026-04-06
+
+### Added
+
+- added deterministic text cleanup with project-local `10_cleanup` artifacts, resumable state, and cleanup output/report generation
+- added focused cleanup, page-controller, presenter-service, and runtime-reset test coverage plus matching software documentation updates
+
+### Changed
+
+- simplified and reused the modal progress flow for extraction and cleanup operations
+- improved extraction progress granularity for `pdf`, `rtf`, and `epub` processing so long-running work advances in visible steps
+- refactored the application shell toward page-oriented UI controllers and related presenter/state services
+- improved cleanup heuristics to better remove separator noise, preserve dialogue structure, and keep paragraph/newline structure more faithfully
+- package version updated to `0.7.0`
+
+### Fixed
+
+- fixed workflow progress so `text_chunking_ready` no longer marks `Text Chunking` as already completed
+
+## 0.6.0 - 2026-04-06
+
+- added deterministic text extraction from the `Text Cleanup` page with project-local `00_extraction` artifacts and resumable `state_operation.json`
+- added support for `.txt`, `.pdf`, `.rtf`, `.docx`, `.odt`, `.md`, and `.epub` text extraction using copied operation-local inputs
+- changed extraction manifest persistence to store extracted-text/report paths, warning counts, and per-step `operations` state in `project.json`
+- added destructive extraction rerun confirmation, downstream-folder reset behavior, and workflow-progress updates that mark `Text Cleanup` as in progress after extraction starts
+- fixed RTF validation to reject misnamed legacy `.doc` containers instead of generating corrupted output
+- added extraction-service, cleanup-page, main-window, and config/workspace test coverage plus component documentation for the extraction workflow
+
+## 0.5.0 - 2026-04-06
+
+- added source-file import from the Home page and locked the project to one imported source
+- changed `project.json` to persist structured `source_document` metadata
+- added support for `.txt`, `.pdf`, `.rtf`, `.docx`, `.odt`, `.md`, and `.epub` source import
+- added import-service coverage and main-window/workspace tests for source locking and manifest persistence
+- updated project workspace documentation and README to reflect the new import workflow
+
 ## [0.4.1] - 2026-04-06
 
 ### Added

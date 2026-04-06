@@ -13,12 +13,10 @@
          application through one centralized string catalog and scale mapping.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-06
-@version 0.8.0
+@version 0.10.0
 """
 
 # IMPORTS
-
-from copy import deepcopy
 
 from PySide6.QtGui import QFont
 from PySide6.QtWidgets import QApplication, QWidget
@@ -60,6 +58,10 @@ _UI_STRINGS = {
         "dialog.project_error_title": "Project Error",
         "dialog.project_repair_title": "Repair Project",
         "dialog.confirm_extraction_rerun_title": "Confirm Extraction Rerun",
+        "dialog.confirm_cleanup_rerun_title": "Confirm Cleanup Rerun",
+        "dialog.operation_progress_title": "{operation_name} In Progress",
+        "dialog.operation_progress_heading": "{operation_name} is running",
+        "dialog.operation_progress_cancel": "Cancel Operation",
         "about.subtitle": "Transform written words into real audio experience!",
         "about.license": "License",
         "about.details": "Eng. Dipl. Dan Dumitru Pasare\npasaredan1979@gmail.com",
@@ -74,6 +76,8 @@ _UI_STRINGS = {
         "status.project_repaired": "Project repaired and opened.",
         "status.source_imported": "Source file imported.",
         "status.text_extracted": "Text extracted.",
+        "status.text_cleaned": "Text cleaned.",
+        "status.operation_cancelled": "Operation cancelled.",
         "sidebar.home": "Home / Project",
         "sidebar.text_cleanup": "Text Cleanup",
         "sidebar.text_chunking": "Text Chunking",
@@ -141,6 +145,10 @@ _UI_STRINGS = {
         "text_cleanup.note_resume": "A previous extraction was not finalized. Press Extract Text to continue from progress {progress_current}/{progress_total}.",
         "text_cleanup.note_report_summary": "Extracted {word_count} words across {line_count} lines. Pages: {page_count}.",
         "text_cleanup.note_rerun_warning": "Running extraction again will replace the current extraction data and reset all following workflow data.",
+        "text_cleanup.note_cleanup_ready": "Deterministic cleanup is ready to run for the current extracted text.",
+        "text_cleanup.note_cleanup_resume": "A previous cleanup was not finalized. Press Deterministic Cleanup to continue from progress {progress_current}/{progress_total}.",
+        "text_cleanup.note_cleanup_summary": "Cleanup produced {paragraph_count} paragraphs, removed {removed_line_count} lines, and detected {chapter_count} chapter or scene headings.",
+        "text_cleanup.note_cleanup_rerun_warning": "Running deterministic cleanup again will replace the current cleanup data and reset chunking plus all following workflow data.",
         "text_chunking.title": "Text Chunking",
         "text_chunking.ai_profile": "AI Profile",
         "text_chunking.ai_strategy": "AI Strategy",
@@ -253,8 +261,12 @@ _UI_STRINGS = {
         "project.error_missing_name": "Enter the exact project name.",
         "project.error_no_active_project": "Create or open a project before importing a source file.",
         "project.error_missing_source": "Import a source file before running text extraction.",
+        "project.error_missing_extracted_text": "Run Extract Text before starting deterministic cleanup.",
         "project.error_locked_source": "This project already has a locked source file. Create a new project to use another source.",
         "project.confirm_extraction_rerun": "Continuing will delete the current extraction data and all subsequent-step data, clear the following operation folders, and reset workflow progress. Continue?",
+        "project.confirm_cleanup_rerun": "Continuing will delete the current cleanup data, clear chunking and all following operation folders, and reset workflow progress after extraction. Continue?",
+        "progress.extracting": "Text extraction in progress...",
+        "progress.cleaning": "Deterministic cleanup in progress...",
         "project.repair_step_prefix": "The project is corrupted at step",
         "project.repair_reset_suffix": "This repair will recreate and reset that step and all downstream step folders.",
         "project.repair_metadata_only": "This repair will update the project metadata to the last consistent workflow stage.",
@@ -279,6 +291,10 @@ _UI_STRINGS = {
         "dialog.project_error_title": "Eroare Proiect",
         "dialog.project_repair_title": "Repara Proiectul",
         "dialog.confirm_extraction_rerun_title": "Confirma Reluarea Extragerii",
+        "dialog.confirm_cleanup_rerun_title": "Confirma Reluarea Curatarii",
+        "dialog.operation_progress_title": "{operation_name} In Curs",
+        "dialog.operation_progress_heading": "{operation_name} ruleaza",
+        "dialog.operation_progress_cancel": "Anuleaza Operatia",
         "about.subtitle": "Transforma cuvintele scrise intr-o experienta audio reala!",
         "about.license": "Licenta",
         "about.details": "Ing. Dipl. Dan Dumitru Pasare\npasaredan1979@gmail.com",
@@ -293,6 +309,8 @@ _UI_STRINGS = {
         "status.project_repaired": "Proiectul a fost reparat si deschis.",
         "status.source_imported": "Fisierul sursa a fost importat.",
         "status.text_extracted": "Textul a fost extras.",
+        "status.text_cleaned": "Textul a fost curatat.",
+        "status.operation_cancelled": "Operatia a fost anulata.",
         "sidebar.home": "Acasa / Proiect",
         "sidebar.text_cleanup": "Curatare Text",
         "sidebar.text_chunking": "Segmentare Text",
@@ -360,6 +378,10 @@ _UI_STRINGS = {
         "text_cleanup.note_resume": "O extragere anterioara nu a fost finalizata. Apasa Extrage Textul pentru a continua de la progresul {progress_current}/{progress_total}.",
         "text_cleanup.note_report_summary": "Au fost extrase {word_count} cuvinte pe {line_count} linii. Pagini: {page_count}.",
         "text_cleanup.note_rerun_warning": "Rularea extragerii din nou va inlocui datele actuale de extragere si va reseta toate datele pasilor urmatori.",
+        "text_cleanup.note_cleanup_ready": "Curatarea determinista este pregatita pentru textul extras curent.",
+        "text_cleanup.note_cleanup_resume": "O curatare anterioara nu a fost finalizata. Apasa Curatare Determinista pentru a continua de la progresul {progress_current}/{progress_total}.",
+        "text_cleanup.note_cleanup_summary": "Curatarea a produs {paragraph_count} paragrafe, a eliminat {removed_line_count} linii si a detectat {chapter_count} titluri de capitol sau scena.",
+        "text_cleanup.note_cleanup_rerun_warning": "Rularea curatarii deterministe din nou va inlocui datele actuale de curatare si va reseta segmentarea plus toti pasii urmatori.",
         "text_chunking.title": "Segmentare Text",
         "text_chunking.ai_profile": "Profil AI",
         "text_chunking.ai_strategy": "Strategie AI",
@@ -472,8 +494,12 @@ _UI_STRINGS = {
         "project.error_missing_name": "Introdu numele exact al proiectului.",
         "project.error_no_active_project": "Creeaza sau deschide un proiect inainte de a importa un fisier sursa.",
         "project.error_missing_source": "Importa un fisier sursa inainte de a rula extragerea textului.",
+        "project.error_missing_extracted_text": "Ruleaza mai intai Extrage Textul inainte de a porni curatarea determinista.",
         "project.error_locked_source": "Acest proiect are deja un fisier sursa blocat. Creeaza un proiect nou pentru a folosi alta sursa.",
         "project.confirm_extraction_rerun": "Continuarea va sterge datele curente de extragere si toate datele pasilor urmatori, va goli folderele operatiilor urmatoare si va reseta progresul fluxului. Continui?",
+        "project.confirm_cleanup_rerun": "Continuarea va sterge datele curente de curatare, va goli segmentarea si toate folderele operatiilor urmatoare si va reseta progresul fluxului dupa extragere. Continui?",
+        "progress.extracting": "Extragerea textului este in curs...",
+        "progress.cleaning": "Curatarea determinista este in curs...",
         "project.repair_step_prefix": "Proiectul este corupt la pasul",
         "project.repair_reset_suffix": "Aceasta reparatie va recrea si reseta acel pas si toate folderele pasilor urmatori.",
         "project.repair_metadata_only": "Aceasta reparatie va actualiza metadatele proiectului la ultima etapa coerenta a fluxului.",
@@ -482,7 +508,6 @@ _UI_STRINGS = {
 }
 
 
-@trace_function(_UI_STATE_LOGGER)
 def translate(key: str, language: str | None) -> str:
     """
     @brief      Resolve one UI string for one application language.
@@ -492,7 +517,7 @@ def translate(key: str, language: str | None) -> str:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-05
-    @version    0.1.0
+    @version    0.1.1
     """
     resolved_language = language if language in _UI_STRINGS else _DEFAULT_LANGUAGE
     return _UI_STRINGS[resolved_language].get(
@@ -501,7 +526,6 @@ def translate(key: str, language: str | None) -> str:
     )
 
 
-@trace_function(_UI_STATE_LOGGER)
 def get_ui_strings(language: str | None) -> dict[str, str]:
     """
     @brief      Return a copy of the UI string catalog for one language.
@@ -510,10 +534,27 @@ def get_ui_strings(language: str | None) -> dict[str, str]:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-05
-    @version    0.1.0
+    @version    0.1.1
     """
     resolved_language = language if language in _UI_STRINGS else _DEFAULT_LANGUAGE
-    return deepcopy(_UI_STRINGS[resolved_language])
+    return _UI_STRINGS[resolved_language].copy()
+
+
+def current_language_from_settings(
+    settings_payload: dict[str, object] | None,
+) -> str:
+    """
+    @brief      Resolve the current UI language from one settings payload.
+    @param[in]  settings_payload Optional persisted settings mapping.
+    @return     Current UI language code or the configured default.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-06
+    @version    0.1.0
+    """
+    if not isinstance(settings_payload, dict):
+        return _DEFAULT_LANGUAGE
+    return str(settings_payload.get("language", _DEFAULT_LANGUAGE))
 
 
 @trace_function(_UI_STATE_LOGGER)

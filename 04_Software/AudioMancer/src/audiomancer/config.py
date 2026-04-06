@@ -13,7 +13,7 @@
          file support used by the current AudioMancer implementation scaffold.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-06
-@version 0.9.0
+@version 1.0.1
 """
 
 # IMPORTS
@@ -98,6 +98,9 @@ OPERATION_STATE_FILE_NAME = "state_operation.json"
 # @brief Stable project folder name for text extraction artifacts.
 EXTRACTION_FOLDER_NAME = "00_extraction"
 
+# @brief Stable project folder name for deterministic cleanup artifacts.
+CLEANUP_FOLDER_NAME = "10_cleanup"
+
 # @brief Stable prefix used for copied operation-local input snapshots.
 OPERATION_INPUT_FILE_PREFIX = "input_"
 
@@ -127,10 +130,10 @@ EXTRACTED_TEXT_FILE_NAME = f"{OPERATION_OUTPUT_FILE_PREFIX}raw_text.txt"
 EXTRACTION_REPORT_FILE_NAME = "extraction_report.json"
 
 # @brief File name used for persisted cleaned text.
-CLEANED_TEXT_FILE_NAME = "clean_text.txt"
+CLEANED_TEXT_FILE_NAME = f"{OPERATION_OUTPUT_FILE_PREFIX}clean_text.txt"
 
-# @brief File name used for cleanup and chunking metadata.
-CLEANUP_REPORT_FILE_NAME = "cleanup_report.json"
+# @brief File name used for cleanup metadata.
+CLEANUP_REPORT_FILE_NAME = f"{OPERATION_ARTIFACT_FILE_PREFIX}cleanup_report.json"
 
 # @brief File name used for the persisted chunk list artifact.
 CHUNK_ARTIFACT_FILE_NAME = "chunks.json"
@@ -269,7 +272,9 @@ LOG_LEVEL_OPTIONS = ("CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG", "NOTSET")
 AVAILABLE_LOG_COMPONENTS = (
     "app",
     "ai_backend",
+    "deterministic_cleanup",
     "main_window",
+    "operation_runtime",
     "settings",
     "project_workspace",
     "text_extraction",

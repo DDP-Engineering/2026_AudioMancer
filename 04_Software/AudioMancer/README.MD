@@ -22,8 +22,14 @@ It now includes a project-aware main-window shell copied from
 - `src/audiomancer/services/ai_backend_service.py` provides backend probe and model-discovery helpers for AI provider profiles.
 - `src/audiomancer/services/project_workspace_service.py` provides new/open project creation, validation, and manifest persistence.
 - `src/audiomancer/services/import_service.py` provides source-file validation, copy-into-project behavior, and source metadata creation.
-- `src/audiomancer/services/text_extraction_service.py` provides deterministic raw-text extraction, self-contained extraction artifacts, and resumable extraction state.
+- `src/audiomancer/services/text_extraction_service.py` provides deterministic raw-text extraction, self-contained extraction artifacts, resumable extraction state, and cancelable progress updates.
+- `src/audiomancer/services/deterministic_cleanup_service.py` provides deterministic cleanup, cleanup artifacts, and resumable cleanup state.
+- `src/audiomancer/services/operation_runtime_service.py` provides shared runtime helpers for long-running operation folders, resets, and progress conversion.
+- `src/audiomancer/services/home_presenter_service.py` provides pure manifest-to-view shaping for the Home page workflow progress and source summary.
+- `src/audiomancer/services/text_cleanup_state_service.py` provides Text Cleanup page state shaping plus extraction/cleanup manifest reset helpers.
 - `src/audiomancer/ui/` provides the copied toolbar, sidebar, page, and status-bar shell used by the first desktop window.
+- `src/audiomancer/ui/controllers/` provides page/window-oriented Qt controllers for Home, Text Cleanup, Settings, AI Settings, and shared shell UI helpers.
+- `src/audiomancer/ui/operation_progress_dialog.py` provides the reusable modal progress popup created on demand for synchronous blocking operations.
 - the main toolbar now supports `New Project` and `Open Project`.
 - new projects create `00_extraction`, `10_cleanup`, `20_chunking`, `30_translation`, `40_character_discovery`, `50_narrator_definition`, `temp`, and one root `project.json`.
 - opening a project now works from the project root or one selected child workflow folder.
@@ -31,9 +37,14 @@ It now includes a project-aware main-window shell copied from
 - the Home page `Select Source File` action now imports exactly one source file into the project root, stores structured source metadata in `project.json`, and locks the source for that project.
 - supported source import formats are `.txt`, `.pdf`, `.rtf`, `.docx`, `.odt`, `.md`, and `.epub`.
 - the `Text Cleanup` page now runs deterministic text extraction for the imported source and writes self-contained artifacts into `00_extraction`.
+- the `Text Cleanup` page now also runs deterministic cleanup into `10_cleanup` while preserving the original source file name for the cleanup input snapshot.
 - extraction artifacts currently use `input_<original_name>`, `output_raw_text.txt`, `extraction_report.json`, and `state_operation.json`.
+- cleanup artifacts currently use `input_<original_name>`, `output_clean_text.txt`, `artifact_cleanup_report.json`, and `state_operation.json`, with the cleanup output/report names defined centrally in `src/audiomancer/config.py`.
 - pressing `Extract Text` after a completed extraction now asks for confirmation before clearing extraction data and all downstream workflow folders.
+- pressing `Deterministic Cleanup` after a completed cleanup now asks for confirmation before clearing cleanup data plus chunking and all following workflow folders.
 - pressing `Extract Text` after an unfinished extraction now continues from saved state when possible, or restarts safely from the copied extraction input snapshot.
+- pressing `Deterministic Cleanup` after an unfinished cleanup now continues from saved state when possible.
+- long-running extraction and cleanup now run through one reusable modal progress dialog with a cancel button that blocks the main window while the operation is active.
 - project names are stored exactly as entered but are rejected when invalid for Windows or Linux folder creation.
 - the `Settings` dialog now loads and saves `language`, `interface text size`, and `play completion beep` through the shared settings service.
 - saving `Settings` now applies the selected UI language and global text size to the running shell.
@@ -109,6 +120,25 @@ uv run pytest tests/test_text_extraction_service.py
 uv run pytest tests/test_text_cleanup_page.py
 uv run pytest tests/test_main_window.py
 uv run pytest tests/test_project_workspace_service.py
+```
+
+Focused validation used for the current cleanup and operation-progress implementation:
+
+```powershell
+uv run pytest tests/test_operation_runtime_service.py
+uv run pytest tests/test_deterministic_cleanup_service.py
+uv run pytest tests/test_text_cleanup_page.py
+uv run pytest tests/test_main_window.py
+```
+
+Focused validation used for the current page-oriented UI controller split:
+
+```powershell
+uv run pytest tests/test_main_window.py
+uv run pytest tests/test_home_presenter_service.py
+uv run pytest tests/test_text_cleanup_state_service.py
+uv run pytest tests/test_home_ui_controller.py
+uv run pytest tests/test_text_cleanup_ui_controller.py
 ```
 
 ## Packaging

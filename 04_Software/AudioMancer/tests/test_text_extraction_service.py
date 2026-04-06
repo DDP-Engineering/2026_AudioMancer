@@ -13,7 +13,7 @@
          deterministic text extraction for the supported source formats.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-06
-@version 0.1.0
+@version 0.1.1
 """
 
 # IMPORTS
@@ -148,6 +148,10 @@ def test_extract_text_reports_pdf_warnings_and_total_pages(tmp_path) -> None:
         project_root / "00_extraction" / config.EXTRACTED_TEXT_FILE_NAME
     ).read_text(encoding="utf-8")
     assert output_text == "Story page two\n"
+    state_payload = json.loads(
+        (project_root / "00_extraction" / config.OPERATION_STATE_FILE_NAME).read_text(encoding="utf-8")
+    )
+    assert state_payload["progress_total"] == 2
 
 
 def test_extract_text_rejects_empty_pdf_without_ocr(tmp_path) -> None:
@@ -170,6 +174,72 @@ def test_extract_text_rejects_empty_pdf_without_ocr(tmp_path) -> None:
 
     with pytest.raises(ValueError, match="OCR is not supported"):
         text_extraction_service.extract_text(project_root, manifest)
+
+
+def test_extract_text_splits_rtf_into_multiple_progress_units(tmp_path) -> None:
+    """
+    @brief      Verify RTF extraction exposes paragraph-sized progress units.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-06
+    @version    0.1.0
+    """
+    project_root, manifest = project_workspace_service.create_project(
+        "RtfProgressProject",
+        tmp_path,
+    )
+    source_path = project_root / "story.rtf"
+    source_path.write_text(
+        r"{\rtf1\ansi Story first paragraph.\par\par Story second paragraph.}",
+        encoding="utf-8",
+    )
+    manifest["source_document"] = _build_source_document(source_path, "rtf")
+
+    text_extraction_service.extract_text(project_root, manifest)
+
+    state_payload = json.loads(
+        (project_root / "00_extraction" / config.OPERATION_STATE_FILE_NAME).read_text(encoding="utf-8")
+    )
+    assert state_payload["progress_total"] >= 2
+
+
+def test_extract_text_splits_epub_into_multiple_progress_units(tmp_path) -> None:
+    """
+    @brief      Verify EPUB extraction exposes multiple progress units when the source has multiple paragraphs.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-06
+    @version    0.1.0
+    """
+    project_root, manifest = project_workspace_service.create_project(
+        "EpubProgressProject",
+        tmp_path,
+    )
+    source_path = project_root / "story.epub"
+    book = epub.EpubBook()
+    book.set_identifier("progress-book")
+    book.set_title("Story")
+    book.set_language("en")
+    chapter = epub.EpubHtml(title="Chapter 1", file_name="chapter_1.xhtml", lang="en")
+    chapter.content = "<h1>Story</h1><p>Paragraph one.</p><p>Paragraph two.</p>"
+    book.add_item(chapter)
+    book.toc = (chapter,)
+    book.spine = ["nav", chapter]
+    book.add_item(epub.EpubNcx())
+    book.add_item(epub.EpubNav())
+    epub.write_epub(str(source_path), book, {})
+    manifest["source_document"] = _build_source_document(source_path, "epub")
+
+    text_extraction_service.extract_text(project_root, manifest)
+
+    state_payload = json.loads(
+        (project_root / "00_extraction" / config.OPERATION_STATE_FILE_NAME).read_text(encoding="utf-8")
+    )
+    assert state_payload["progress_total"] >= 2
 
 
 def test_extract_text_rejects_misnamed_legacy_doc_with_rtf_extension(tmp_path) -> None:

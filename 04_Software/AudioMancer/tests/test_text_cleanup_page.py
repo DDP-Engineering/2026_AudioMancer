@@ -9,11 +9,11 @@
 """
 @file test_text_cleanup_page.py
 @brief Focused Qt tests for the AudioMancer text-cleanup page.
-@details Verifies extraction-button enablement and preview state updates for
-         the extraction-only cleanup slice.
+@details Verifies extraction and deterministic-cleanup button enablement plus
+         preview state updates for the cleanup page.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-06
-@version 0.1.0
+@version 0.2.0
 """
 
 # IMPORTS
@@ -21,15 +21,15 @@
 from audiomancer.ui.pages.text_cleanup_page import TextCleanupPage
 
 
-def test_text_cleanup_page_enables_extract_only_with_project_and_source(qtbot) -> None:
+def test_text_cleanup_page_enables_actions_only_with_project_inputs(qtbot) -> None:
     """
-    @brief      Verify extraction becomes available only for an active project with source data.
+    @brief      Verify extraction and cleanup become available only when their inputs exist.
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.1.0
+    @version    0.2.0
     """
     page = TextCleanupPage()
     qtbot.addWidget(page)
@@ -42,13 +42,26 @@ def test_text_cleanup_page_enables_extract_only_with_project_and_source(qtbot) -
         cleaned_text=None,
         notes=["Ready"],
         can_extract=True,
+        can_clean=False,
     )
 
     assert page._extract_button.isEnabled() is True
+    assert page._clean_button.isEnabled() is False
+
+    page.set_processing_state(
+        extracted_text="Raw text",
+        cleaned_text=None,
+        notes=["Cleanup ready"],
+        can_extract=True,
+        can_clean=True,
+    )
+
+    assert page._clean_button.isEnabled() is True
 
     page.set_busy(True)
 
     assert page._extract_button.isEnabled() is False
+    assert page._clean_button.isEnabled() is False
 
 
 def test_text_cleanup_page_updates_previews_and_notes(qtbot) -> None:
@@ -59,7 +72,7 @@ def test_text_cleanup_page_updates_previews_and_notes(qtbot) -> None:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.1.0
+    @version    0.2.0
     """
     page = TextCleanupPage()
     qtbot.addWidget(page)
@@ -70,6 +83,7 @@ def test_text_cleanup_page_updates_previews_and_notes(qtbot) -> None:
         cleaned_text="Clean paragraph",
         notes=["Warning A", "Warning B"],
         can_extract=True,
+        can_clean=True,
     )
 
     assert page._extracted_text_edit.toPlainText() == "Raw paragraph"

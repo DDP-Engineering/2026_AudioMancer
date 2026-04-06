@@ -29,6 +29,8 @@ validate the current `project.json` contract used by the application shell.
 - detect recoverable corruption in workflow folders or stage metadata during open
 - repair the corrupted step and all downstream step folders after operator confirmation
 - persist extraction artifact paths and per-step operation state in the manifest
+- persist cleanup operation state and stage advancement after deterministic
+  cleanup completes
 - feed the main window with loaded project root and manifest state
 
 It does not extract text by itself, own narrator content storage, or implement
@@ -72,7 +74,10 @@ High-level flow:
    project to `source_selected`.
 7. After extraction completes, `MainWindow` stores the extraction artifact
    paths and extraction operation state back into `project.json`.
-8. `MainWindow` stores the active project root and manifest, updates the home
+8. After deterministic cleanup completes, `MainWindow` stores the cleanup
+   operation state back into `project.json` and advances the project to
+   `text_chunking_ready`.
+9. `MainWindow` stores the active project root and manifest, updates the home
    summary, updates workflow progress, and enables the workflow pages.
 
 ## 4. Dependencies
@@ -105,6 +110,7 @@ Outputs:
 - one loaded validated manifest dictionary for the UI shell
 - persisted extraction artifact references and per-operation state in
   `project.json`
+- persisted cleanup operation state in `project.json`
 - operator-visible status and validation feedback through the main window
 
 ## 6. Data Contracts
@@ -269,4 +275,6 @@ Minimum validation after a change:
   `current_stage` metadata only
 - extraction artifacts are produced by a separate component documented in
   `05_SoftwareDocu/AudioMancer_Text_Extraction_Service.md`
+- deterministic cleanup artifacts are produced by a separate component
+  documented in `05_SoftwareDocu/AudioMancer_Deterministic_Cleanup_Service.md`
 - there is no migration layer yet for future manifest schema revisions

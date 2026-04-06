@@ -14,13 +14,12 @@
          maintains resumable extraction state in `00_extraction`.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-06
-@version 0.3.0
+@version 0.4.2
 """
 
 # IMPORTS
 
 import json
-import shutil
 from datetime import UTC, datetime
 from html.parser import HTMLParser
 from pathlib import Path
@@ -35,6 +34,13 @@ from striprtf.striprtf import rtf_to_text
 
 from audiomancer import config
 from audiomancer.services.logging_service import get_component_logger, trace_function
+from audiomancer.services.operation_runtime_service import (
+    build_operation_input_snapshot_path,
+    progress_percent,
+    raise_if_cancelled,
+    relative_to_project,
+    reset_operation_data,
+)
 
 # CONSTANTS
 
@@ -47,6 +53,7 @@ _EXTRACTION_INPUT_PREFIX = "input_"
 _EXTRACTION_OUTPUT_NAME = config.EXTRACTED_TEXT_FILE_NAME
 _EXTRACTION_REPORT_NAME = config.EXTRACTION_REPORT_FILE_NAME
 _EXTRACTION_STATE_NAME = config.OPERATION_STATE_FILE_NAME
+_PAGE_BREAK_SEPARATOR = "\n\n\f\n\n"
 
 
 class _HtmlTextExtractor(HTMLParser):
@@ -142,17 +149,22 @@ class _HtmlTextExtractor(HTMLParser):
 def extract_text(
     project_root: str | Path,
     manifest: dict[str, object],
+    progress_callback=None,
+    cancel_requested=None,
 ) -> ExtractionReportPayload:
     """
     @brief      Extract source text for one active AudioMancer project.
     @param[in]  project_root Active project root folder.
     @param[in]  manifest Active project manifest payload.
+    @param[in]  progress_callback Optional zero-copy progress callback.
+    @param[in]  cancel_requested Optional zero-argument cancellation callback.
     @return     Extraction report payload describing the persisted artifacts.
     @exception  FileNotFoundError Raised when the imported source file is missing.
     @exception  ValueError Raised when no extractable text is available.
+    @exception  OperationCancelledError Raised when the operator cancels the run.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.2.0
+    @version    0.3.2
     """
     resolved_project_root = Path(project_root)
     source_document = _source_document_from_manifest(manifest)
@@ -169,6 +181,7 @@ def extract_text(
     file_type = str(source_document["file_type"])
     resume_state = _load_operation_state(state_path)
     warnings = _warnings_from_state(resume_state)
+    _emit_status(progress_callback, _preparation_message_for_file_type(file_type))
     if _supports_incremental_resume(file_type) and _can_resume_from_state(
         resume_state,
         input_snapshot_path,
@@ -180,6 +193,8 @@ def extract_text(
             state_path,
             file_type,
             warnings,
+            progress_callback,
+            cancel_requested,
         )
     else:
         progress_payload = _start_fresh_extraction(
@@ -188,10 +203,19 @@ def extract_text(
             state_path,
             file_type,
             warnings,
+            progress_callback,
+            cancel_requested,
         )
+
+    if not output_path.is_file():
+        if file_type == "pdf":
+            raise ValueError("PDF source did not contain extractable text. OCR is not supported in this phase.")
+        raise ValueError("Source did not contain extractable text.")
 
     normalized_text = _normalize_text(output_path.read_text(encoding="utf-8")).strip()
     if not normalized_text:
+        if file_type == "pdf":
+            raise ValueError("PDF source did not contain extractable text. OCR is not supported in this phase.")
         raise ValueError("Source did not contain extractable text.")
 
     final_text = normalized_text + "\n"
@@ -281,31 +305,14 @@ def reset_extraction_and_downstream(project_root: str | Path) -> None:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.1.0
+    @version    0.2.0
     """
-    resolved_project_root = Path(project_root)
-    for folder_name in (
-        "00_extraction",
-        "10_cleanup",
-        "20_chunking",
-        "30_translation",
-        "40_character_discovery",
-    ):
-        folder_path = resolved_project_root / folder_name
-        if not folder_path.exists():
-            folder_path.mkdir(parents=True, exist_ok=True)
-            continue
-        for child in list(folder_path.iterdir()):
-            if (
-                folder_name == "00_extraction"
-                and child.is_file()
-                and child.name.startswith(_EXTRACTION_INPUT_PREFIX)
-            ):
-                continue
-            if child.is_dir():
-                shutil.rmtree(child)
-            else:
-                child.unlink()
+    reset_operation_data(
+        project_root,
+        "extraction",
+        include_current=True,
+        keep_input_snapshots=True,
+    )
 
 
 # HELPER FUNCTIONS
@@ -317,6 +324,8 @@ def _start_fresh_extraction(
     state_path: Path,
     file_type: str,
     warnings: list[str],
+    progress_callback,
+    cancel_requested,
 ) -> dict[str, object]:
     """
     @brief      Start extraction from the beginning of one copied input snapshot.
@@ -329,7 +338,7 @@ def _start_fresh_extraction(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.2.0
+    @version    0.3.2
     """
     if output_path.exists():
         output_path.unlink()
@@ -347,6 +356,7 @@ def _start_fresh_extraction(
         total_units,
         warnings,
         file_type,
+        progress_callback,
     )
     _process_units(
         progress_units,
@@ -357,6 +367,8 @@ def _start_fresh_extraction(
         warnings,
         file_type,
         0,
+        progress_callback,
+        cancel_requested,
     )
     return {
         "started_at": started_at,
@@ -372,6 +384,8 @@ def _resume_extraction(
     state_path: Path,
     file_type: str,
     warnings: list[str],
+    progress_callback,
+    cancel_requested,
 ) -> dict[str, object]:
     """
     @brief      Continue one previously interrupted incremental extraction.
@@ -384,7 +398,7 @@ def _resume_extraction(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.2.0
+    @version    0.3.2
     """
     existing_state = _load_operation_state(state_path) or {}
     resume_checkpoint = dict(existing_state.get("resume_checkpoint") or {})
@@ -403,6 +417,7 @@ def _resume_extraction(
         total_units,
         warnings,
         file_type,
+        progress_callback,
     )
     _process_units(
         progress_units,
@@ -413,6 +428,8 @@ def _resume_extraction(
         warnings,
         file_type,
         next_unit_index,
+        progress_callback,
+        cancel_requested,
     )
     return {
         "started_at": started_at,
@@ -423,7 +440,7 @@ def _resume_extraction(
 
 
 def _process_units(
-    progress_units: list[str],
+    progress_units: list[object],
     input_snapshot_path: Path,
     output_path: Path,
     state_path: Path,
@@ -431,6 +448,8 @@ def _process_units(
     warnings: list[str],
     file_type: str,
     start_index: int,
+    progress_callback,
+    cancel_requested,
 ) -> None:
     """
     @brief      Process one ordered list of extracted text units into the output artifact.
@@ -446,14 +465,53 @@ def _process_units(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.2.0
+    @version    0.3.1
     """
     if start_index == 0 and output_path.exists():
         output_path.unlink()
 
     total_units = len(progress_units)
+    _emit_progress(progress_callback, start_index, total_units, "Text extraction in progress...")
+    if file_type == "pdf":
+        with fitz.open(input_snapshot_path) as document:
+            for unit_index in range(start_index, total_units):
+                raise_if_cancelled(cancel_requested)
+                page_index = int(progress_units[unit_index])
+                unit_text = _normalize_text(
+                    document.load_page(page_index).get_text("text")
+                ).strip()
+                if not unit_text:
+                    warnings.append(
+                        f"PDF page {page_index + 1} did not contain extractable text."
+                    )
+                if unit_text:
+                    prefix = ""
+                    if output_path.exists() and output_path.stat().st_size > 0:
+                        prefix = _PAGE_BREAK_SEPARATOR
+                    with output_path.open("a", encoding="utf-8") as handle:
+                        handle.write(prefix + unit_text)
+                _write_running_state(
+                    state_path,
+                    input_snapshot_path,
+                    output_path,
+                    started_at,
+                    unit_index + 1,
+                    total_units,
+                    warnings,
+                    file_type,
+                    progress_callback,
+                )
+                _emit_progress(
+                    progress_callback,
+                    unit_index + 1,
+                    total_units,
+                    "Text extraction in progress...",
+                )
+        return
+
     for unit_index in range(start_index, total_units):
-        unit_text = _normalize_text(progress_units[unit_index]).strip()
+        raise_if_cancelled(cancel_requested)
+        unit_text = _normalize_text(str(progress_units[unit_index])).strip()
         if unit_text:
             prefix = ""
             if output_path.exists() and output_path.stat().st_size > 0:
@@ -469,6 +527,13 @@ def _process_units(
             total_units,
             warnings,
             file_type,
+            progress_callback,
+        )
+        _emit_progress(
+            progress_callback,
+            unit_index + 1,
+            total_units,
+            "Text extraction in progress...",
         )
 
 
@@ -481,6 +546,7 @@ def _write_running_state(
     progress_total: int,
     warnings: list[str],
     file_type: str,
+    progress_callback,
 ) -> None:
     """
     @brief      Persist one running extraction state snapshot.
@@ -496,7 +562,7 @@ def _write_running_state(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.1.1
+    @version    0.2.0
     """
     project_root = state_path.parent.parent
     input_paths = []
@@ -525,6 +591,7 @@ def _write_running_state(
         json.dumps(running_state, indent=2, ensure_ascii=False) + "\n",
         encoding="utf-8",
     )
+    _ = progress_callback
 
 
 def _build_operation_state(
@@ -586,12 +653,12 @@ def _build_progress_units(source_path: Path, file_type: str) -> ExtractionUnitsP
     @exception  ValueError Raised when the source type is unsupported or empty.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.2.0
+    @version    0.2.1
     """
     if file_type in {"txt", "md"}:
         return {"units": _text_units_from_plain_text(source_path), "warnings": [], "page_count": None}
     if file_type == "pdf":
-        units, warnings = _text_units_from_pdf(source_path)
+        units, warnings = _pdf_progress_units(source_path)
         return {"units": units, "warnings": warnings, "page_count": len(units)}
     if file_type == "rtf":
         return {"units": _text_units_from_rtf(source_path), "warnings": [], "page_count": None}
@@ -622,30 +689,21 @@ def _text_units_from_plain_text(source_path: Path) -> list[str]:
     raise UnicodeDecodeError("text", b"", 0, 1, f"Unable to decode text source: {source_path}")
 
 
-def _text_units_from_pdf(source_path: Path) -> tuple[list[str], list[str]]:
+def _pdf_progress_units(source_path: Path) -> tuple[list[int], list[str]]:
     """
-    @brief      Extract one ordered page-text list from a PDF source.
+    @brief      Build one ordered page-index list for incremental PDF extraction.
     @param[in]  source_path Operation-local PDF source path.
-    @return     Tuple with ordered page-text list and warnings list.
+    @return     Tuple with ordered page-index list and static warnings list.
     @exception  ValueError Raised when the PDF contains no extractable text.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.2.0
+    @version    0.1.0
     """
-    page_units: list[str] = []
-    extracted_page_count = 0
-    warnings: list[str] = []
     with fitz.open(source_path) as document:
-        for page_index, page in enumerate(document, start=1):
-            text = _normalize_text(page.get_text("text")).strip()
-            page_units.append(text)
-            if not text:
-                warnings.append(f"PDF page {page_index} did not contain extractable text.")
-                continue
-            extracted_page_count += 1
-    if extracted_page_count == 0:
+        page_count = len(document)
+    if page_count == 0:
         raise ValueError("PDF source did not contain extractable text. OCR is not supported in this phase.")
-    return page_units, warnings
+    return list(range(page_count)), []
 
 
 def _text_units_from_rtf(source_path: Path) -> list[str]:
@@ -656,7 +714,7 @@ def _text_units_from_rtf(source_path: Path) -> list[str]:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.2.0
+    @version    0.2.1
     """
     source_bytes = source_path.read_bytes()
     if source_bytes.startswith(b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1"):
@@ -670,7 +728,8 @@ def _text_units_from_rtf(source_path: Path) -> list[str]:
         )
     for encoding_name in ("utf-8-sig", "utf-8", "cp1250", "cp1252", "latin-1"):
         try:
-            return [rtf_to_text(source_path.read_text(encoding=encoding_name))]
+            plain_text = rtf_to_text(source_path.read_text(encoding=encoding_name))
+            return _paragraph_units_from_text(plain_text)
         except UnicodeDecodeError:
             continue
     raise UnicodeDecodeError("text", b"", 0, 1, f"Unable to decode RTF source: {source_path}")
@@ -713,17 +772,33 @@ def _text_units_from_epub(source_path: Path) -> list[str]:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.1.0
+    @version    0.1.1
     """
     book = epub.read_epub(str(source_path), options={"ignore_ncx": False})
     units: list[str] = []
     for item in book.get_items_of_type(ebooklib.ITEM_DOCUMENT):
         parser = _HtmlTextExtractor()
         parser.feed(item.get_content().decode("utf-8", errors="ignore"))
-        plain_text = _normalize_text(parser.plain_text()).strip()
-        if plain_text:
-            units.append(plain_text)
+        units.extend(_paragraph_units_from_text(parser.plain_text()))
     return units
+
+
+def _paragraph_units_from_text(text: str) -> list[str]:
+    """
+    @brief      Split one extracted text payload into stable paragraph-sized units.
+    @param[in]  text Raw extracted text payload.
+    @return     Ordered non-empty paragraph unit list.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-06
+    @version    0.1.0
+    """
+    normalized = _normalize_text(text)
+    return [
+        paragraph.strip()
+        for paragraph in normalized.split("\n\n")
+        if paragraph.strip()
+    ]
 
 
 def _supports_incremental_resume(file_type: str) -> bool:
@@ -734,9 +809,9 @@ def _supports_incremental_resume(file_type: str) -> bool:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.1.0
+    @version    0.1.1
     """
-    return file_type in {"pdf", "docx", "odt", "epub"}
+    return file_type in {"pdf", "rtf", "docx", "odt", "epub"}
 
 
 def _can_resume_from_state(
@@ -793,17 +868,20 @@ def _ensure_input_snapshot(project_root: Path, source_document: dict[str, object
     @exception  FileNotFoundError Raised when the root-level source file is missing.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.1.0
+    @version    0.2.0
     """
     source_relative_path = str(source_document["stored_relative_path"])
     source_path = project_root / source_relative_path
     if not source_path.is_file():
         raise FileNotFoundError(f"Imported source file is missing: {source_path}")
 
-    extraction_dir = project_root / _EXTRACTION_FOLDER_NAME
-    input_snapshot_path = extraction_dir / f"{_EXTRACTION_INPUT_PREFIX}{Path(source_relative_path).name}"
+    input_snapshot_path = build_operation_input_snapshot_path(
+        project_root,
+        "extraction",
+        str(source_document.get("original_name") or Path(source_relative_path).name),
+    )
     if not input_snapshot_path.exists():
-        shutil.copy2(source_path, input_snapshot_path)
+        input_snapshot_path.write_bytes(source_path.read_bytes())
     return input_snapshot_path
 
 
@@ -842,6 +920,64 @@ def _warnings_from_state(state_payload: OperationStatePayload | None) -> list[st
     if not isinstance(warnings, list):
         return []
     return [str(item) for item in warnings]
+
+
+def _emit_progress(progress_callback, progress_current: int, progress_total: int, message: str) -> None:
+    """
+    @brief      Emit one optional extraction progress snapshot.
+    @param[in]  progress_callback Optional progress callback.
+    @param[in]  progress_current Completed unit count.
+    @param[in]  progress_total Total unit count.
+    @param[in]  message Operator-facing progress status message.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-06
+    @version    0.1.0
+    """
+    if callable(progress_callback):
+        progress_callback(
+            progress_current,
+            progress_total,
+            progress_percent(progress_current, progress_total),
+            message,
+        )
+
+
+def _emit_status(progress_callback, message: str) -> None:
+    """
+    @brief      Emit one immediate non-advancing extraction status update.
+    @param[in]  progress_callback Optional progress callback.
+    @param[in]  message Operator-facing status message.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-06
+    @version    0.1.0
+    """
+    if callable(progress_callback):
+        progress_callback(0, 1, 0, message)
+
+
+def _preparation_message_for_file_type(file_type: str) -> str:
+    """
+    @brief      Build one operator-facing preparation message for the selected extraction format.
+    @param[in]  file_type Normalized source-type token.
+    @return     Preparation status message.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-06
+    @version    0.1.0
+    """
+    return {
+        "pdf": "Preparing PDF page extraction...",
+        "rtf": "Preparing RTF text extraction...",
+        "epub": "Preparing EPUB content extraction...",
+        "docx": "Preparing document extraction...",
+        "odt": "Preparing document extraction...",
+        "txt": "Preparing text extraction...",
+        "md": "Preparing text extraction...",
+    }.get(file_type, "Preparing text extraction...")
 
 
 def _normalize_text(text: str) -> str:

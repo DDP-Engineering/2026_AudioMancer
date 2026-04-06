@@ -8,16 +8,12 @@
 # -----------------------------------------------------------------------------
 """
 @file __init__.py
-@brief Model package marker for AudioMancer.
-@details The current project-workspace implementation now uses validated
-         dictionary payloads directly and does not export model classes.
+@brief UI controller package for AudioMancer windows and shared shell helpers.
+@details Hosts page/window-oriented function-based UI controllers together
+         with one shared misc controller for cross-window shell behavior.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-06
 @version 0.2.0
 """
-
-# PUBLIC API
-
-__all__: list[str] = []
 
 # END OF FILE

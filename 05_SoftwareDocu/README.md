@@ -16,4 +16,5 @@ Implementation-focused software documentation and component notes.
 - `AudioMancer_Logging_Service.md` documents the shared runtime logging implementation.
 - `AudioMancer_Project_Workspace.md` documents the new/open project workspace layer, source import flow, and current `project.json` contract.
 - `AudioMancer_Text_Extraction_Service.md` documents the deterministic extraction workflow, artifacts, and rerun/reset behavior used by the Text Cleanup page.
+- `AudioMancer_Deterministic_Cleanup_Service.md` documents the deterministic cleanup workflow, cleanup artifacts, and resumable cleanup behavior used by the Text Cleanup page.
 - The app shell document also covers the shared runtime logging bootstrap.

@@ -13,7 +13,7 @@
          using one minimal `project.json` manifest contract.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-06
-@version    0.7.0
+@version    0.7.1
 """
 
 # IMPORTS
@@ -447,7 +447,7 @@ def _is_invalid_current_stage(payload: dict[str, object]) -> bool:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.1.0
+    @version    0.1.1
     """
     current_stage = payload.get("current_stage")
     return (
@@ -786,7 +786,7 @@ def _folder_name_for_operation(operation_kind: str) -> str:
     """
     return {
         "extraction": config.EXTRACTION_FOLDER_NAME,
-        "cleanup": "10_cleanup",
+        "cleanup": config.CLEANUP_FOLDER_NAME,
         "chunking": "20_chunking",
         "translation": "30_translation",
         "character_discovery": "40_character_discovery",

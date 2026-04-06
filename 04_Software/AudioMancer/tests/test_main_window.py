@@ -13,19 +13,19 @@
          pages, and status bar are created without workflow functionality.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-06
-@version 0.9.0
+@version 1.2.0
 """
 
 # IMPORTS
 
 import json
-
 from PySide6.QtWidgets import (
     QApplication,
     QDialog,
     QGroupBox,
     QLabel,
     QListWidget,
+    QMessageBox,
     QPlainTextEdit,
     QPushButton,
     QStackedWidget,
@@ -35,6 +35,10 @@ from PySide6.QtWidgets import (
 import audiomancer.ui.main_window as main_window_module
 from audiomancer import config
 from audiomancer.services import project_workspace_service
+from audiomancer.ui.controllers import ai_settings_ui_controller
+from audiomancer.ui.controllers import home_ui_controller
+from audiomancer.ui.controllers import settings_ui_controller
+from audiomancer.ui.controllers import text_cleanup_ui_controller
 from audiomancer.ui.main_window import MainWindow
 
 # PUBLIC API
@@ -128,6 +132,7 @@ def test_main_window_can_be_created(qtbot) -> None:
         for label in window.findChildren(QLabel)
     )
     assert window._sidebar.item(1).flags() == main_window_module.Qt.ItemFlag.NoItemFlags
+    assert window._operation_progress_dialog is None
 
 
 def test_about_dialog_includes_license_text(qtbot) -> None:
@@ -247,8 +252,8 @@ def test_main_window_saves_settings_dialog_payload(monkeypatch, qtbot) -> None:
         saved_payloads.append(dict(payload))
         persisted_payload.update(payload)
 
-    monkeypatch.setattr(main_window_module.settings_service, "load_settings", _fake_load_settings)
-    monkeypatch.setattr(main_window_module.settings_service, "save_settings", _fake_save_settings)
+    monkeypatch.setattr(settings_ui_controller.settings_service, "load_settings", _fake_load_settings)
+    monkeypatch.setattr(settings_ui_controller.settings_service, "save_settings", _fake_save_settings)
 
     window = MainWindow(settings_payload=dict(persisted_payload))
     qtbot.addWidget(window)
@@ -317,7 +322,7 @@ def test_main_window_reloads_dialogs_and_discards_unsaved_changes(monkeypatch, q
     }
 
     monkeypatch.setattr(
-        main_window_module.settings_service,
+        settings_ui_controller.settings_service,
         "load_settings",
         lambda: dict(persisted_payload),
     )
@@ -361,7 +366,7 @@ def test_settings_dialog_reopens_with_translated_labels(monkeypatch, qtbot) -> N
     }
 
     monkeypatch.setattr(
-        main_window_module.settings_service,
+        settings_ui_controller.settings_service,
         "load_settings",
         lambda: dict(persisted_payload),
     )
@@ -413,7 +418,7 @@ def test_main_window_connect_ai_profile_shows_success_popup(monkeypatch, qtbot) 
     popup_calls = []
 
     monkeypatch.setattr(
-        main_window_module.ai_backend_service,
+        ai_settings_ui_controller.ai_backend_service,
         "probe_profile",
         lambda profile: {
             "success": True,
@@ -428,7 +433,7 @@ def test_main_window_connect_ai_profile_shows_success_popup(monkeypatch, qtbot) 
         },
     )
     monkeypatch.setattr(
-        main_window_module.QMessageBox,
+        ai_settings_ui_controller.QMessageBox,
         "information",
         lambda *args: popup_calls.append(args),
     )
@@ -481,7 +486,7 @@ def test_main_window_connect_ai_profile_shows_failure_popup(monkeypatch, qtbot) 
     popup_calls = []
 
     monkeypatch.setattr(
-        main_window_module.ai_backend_service,
+        ai_settings_ui_controller.ai_backend_service,
         "probe_profile",
         lambda profile: {
             "success": False,
@@ -493,7 +498,7 @@ def test_main_window_connect_ai_profile_shows_failure_popup(monkeypatch, qtbot) 
         },
     )
     monkeypatch.setattr(
-        main_window_module.QMessageBox,
+        ai_settings_ui_controller.QMessageBox,
         "warning",
         lambda *args: popup_calls.append(args),
     )
@@ -534,12 +539,12 @@ def test_main_window_creates_project_and_updates_shell(monkeypatch, qtbot, tmp_p
     }
 
     monkeypatch.setattr(
-        main_window_module.QFileDialog,
+        home_ui_controller.QFileDialog,
         "getExistingDirectory",
         lambda *args, **kwargs: str(tmp_path),
     )
     monkeypatch.setattr(
-        main_window_module.QInputDialog,
+        home_ui_controller.QInputDialog,
         "getText",
         lambda *args, **kwargs: ("Book5_CAL_CAL", True),
     )
@@ -547,7 +552,7 @@ def test_main_window_creates_project_and_updates_shell(monkeypatch, qtbot, tmp_p
     window = MainWindow(settings_payload=dict(persisted_payload))
     qtbot.addWidget(window)
 
-    window._handle_new_project_requested()
+    window._action_new_project.trigger()
 
     assert window._current_project_root == tmp_path / "Book5_CAL_CAL"
     assert window._current_manifest is not None
@@ -588,7 +593,7 @@ def test_main_window_opens_project_from_child_folder(monkeypatch, qtbot, tmp_pat
     )
 
     monkeypatch.setattr(
-        main_window_module.QFileDialog,
+        home_ui_controller.QFileDialog,
         "getExistingDirectory",
         lambda *args, **kwargs: str(project_root / "40_character_discovery"),
     )
@@ -596,7 +601,7 @@ def test_main_window_opens_project_from_child_folder(monkeypatch, qtbot, tmp_pat
     window = MainWindow(settings_payload=dict(persisted_payload))
     qtbot.addWidget(window)
 
-    window._handle_open_project_requested()
+    window._action_open_project.trigger()
 
     assert window._current_project_root == project_root
     assert window._current_manifest is not None
@@ -634,7 +639,7 @@ def test_main_window_imports_source_and_locks_selection(monkeypatch, qtbot, tmp_
     source_path.write_text("content", encoding="utf-8")
 
     monkeypatch.setattr(
-        main_window_module.QFileDialog,
+        home_ui_controller.QFileDialog,
         "getOpenFileName",
         lambda *args, **kwargs: (str(source_path), ""),
     )
@@ -643,7 +648,7 @@ def test_main_window_imports_source_and_locks_selection(monkeypatch, qtbot, tmp_
     qtbot.addWidget(window)
     window._activate_project(project_root, project_workspace_service.load_manifest(project_root))
 
-    window._handle_import_source_requested()
+    window._home_page.import_requested.emit()
 
     assert window._current_manifest is not None
     assert window._current_manifest["current_stage"] == "source_selected"
@@ -756,7 +761,7 @@ def test_main_window_extracts_text_and_updates_cleanup_page(monkeypatch, qtbot, 
         }
 
     monkeypatch.setattr(
-        main_window_module.text_extraction_service,
+        text_cleanup_ui_controller.text_extraction_service,
         "extract_text",
         _fake_extract_text,
     )
@@ -764,8 +769,20 @@ def test_main_window_extracts_text_and_updates_cleanup_page(monkeypatch, qtbot, 
     window = MainWindow(settings_payload=dict(persisted_payload))
     qtbot.addWidget(window)
     window._activate_project(project_root, project_workspace_service.load_manifest(project_root))
+    monkeypatch.setattr(
+        text_cleanup_ui_controller,
+        "start_operation",
+        lambda _window, **kwargs: kwargs["success_handler"](
+            kwargs["worker_callable"](
+                _window._current_project_root,
+                dict(_window._current_manifest),
+                progress_callback=lambda *_args: None,
+                cancel_requested=lambda: False,
+            )
+        ),
+    )
 
-    window._handle_extract_text_requested()
+    window._text_cleanup_page.extract_requested.emit()
 
     assert window._current_manifest is not None
     assert window._current_manifest["extracted_text_relative_path"] == (
@@ -827,20 +844,20 @@ def test_main_window_restarts_completed_extraction_only_after_confirmation(
     extract_calls = []
 
     monkeypatch.setattr(
-        main_window_module.QMessageBox,
+        text_cleanup_ui_controller.QMessageBox,
         "question",
         lambda *args, **kwargs: (
             question_calls.append(args),
-            main_window_module.QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
         )[1],
     )
     monkeypatch.setattr(
-        main_window_module.text_extraction_service,
+        text_cleanup_ui_controller.text_extraction_service,
         "reset_extraction_and_downstream",
         lambda root: reset_calls.append(root),
     )
     monkeypatch.setattr(
-        main_window_module.text_extraction_service,
+        text_cleanup_ui_controller.text_extraction_service,
         "extract_text",
         lambda *args, **kwargs: extract_calls.append(args),
     )
@@ -849,7 +866,7 @@ def test_main_window_restarts_completed_extraction_only_after_confirmation(
     qtbot.addWidget(window)
     window._activate_project(project_root, project_workspace_service.load_manifest(project_root))
 
-    window._handle_extract_text_requested()
+    window._text_cleanup_page.extract_requested.emit()
 
     assert question_calls
     assert reset_calls == []
@@ -904,7 +921,7 @@ def test_main_window_continues_unfinished_extraction_without_confirmation(
     extract_calls = []
 
     monkeypatch.setattr(
-        main_window_module.QMessageBox,
+        text_cleanup_ui_controller.QMessageBox,
         "question",
         lambda *args, **kwargs: question_calls.append(args),
     )
@@ -958,7 +975,7 @@ def test_main_window_continues_unfinished_extraction_without_confirmation(
         }
 
     monkeypatch.setattr(
-        main_window_module.text_extraction_service,
+        text_cleanup_ui_controller.text_extraction_service,
         "extract_text",
         _fake_extract_text,
     )
@@ -966,11 +983,237 @@ def test_main_window_continues_unfinished_extraction_without_confirmation(
     window = MainWindow(settings_payload=dict(persisted_payload))
     qtbot.addWidget(window)
     window._activate_project(project_root, project_workspace_service.load_manifest(project_root))
+    monkeypatch.setattr(
+        text_cleanup_ui_controller,
+        "start_operation",
+        lambda _window, **kwargs: kwargs["success_handler"](
+            kwargs["worker_callable"](
+                _window._current_project_root,
+                dict(_window._current_manifest),
+                progress_callback=lambda *_args: None,
+                cancel_requested=lambda: False,
+            )
+        ),
+    )
 
-    window._handle_extract_text_requested()
+    window._text_cleanup_page.extract_requested.emit()
 
     assert question_calls == []
     assert len(extract_calls) == 1
+
+
+def test_main_window_exposes_modal_progress_dialog_and_cancel_signal(qtbot) -> None:
+    """
+    @brief      Verify the reusable operation-progress dialog is modal and emits cancellation.
+    @param[in]  qtbot Qt test helper fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-06
+    @version    0.1.0
+    """
+    window = MainWindow(settings_payload={
+        "language": "en",
+        "ui_text_scale": "normal",
+        "play_completion_beep": False,
+        "llm_profiles": [],
+        "default_ai_cleanup_profile_id": None,
+        "default_ai_chunking_profile_id": None,
+        "default_ai_chunking_strategy": "paragraph",
+        "default_character_extraction_profile_id": None,
+    })
+    qtbot.addWidget(window)
+    window._operation_progress_dialog = main_window_module.OperationProgressDialog(window)
+    cancel_calls = []
+    window._operation_progress_dialog.cancel_requested.connect(
+        lambda: cancel_calls.append(True)
+    )
+    window._operation_progress_dialog.start("Extract Text", "Text extraction in progress...")
+
+    assert window._operation_progress_dialog.windowModality() == main_window_module.Qt.WindowModality.ApplicationModal
+    assert window._operation_progress_dialog.isVisible() is True
+    cancel_button = window._operation_progress_dialog.findChild(QPushButton)
+    assert cancel_button is not None
+    qtbot.mouseClick(
+        cancel_button,
+        main_window_module.Qt.MouseButton.LeftButton,
+    )
+
+    assert cancel_calls == [True]
+
+
+def test_main_window_closes_progress_dialog_after_synchronous_completion(
+    qtbot,
+    tmp_path,
+) -> None:
+    """
+    @brief      Verify one synchronous modal operation closes the progress dialog after completion.
+    @param[in]  qtbot Qt test helper fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-06
+    @version    0.1.0
+    """
+    project_root, manifest = project_workspace_service.create_project("SynchronousProgressProject", tmp_path)
+    source_path = project_root / "story.txt"
+    source_path.write_text("Story body", encoding="utf-8")
+    manifest["source_document"] = {
+        "original_name": "story.txt",
+        "stored_relative_path": "story.txt",
+        "file_type": "txt",
+        "imported_at": "2026-04-06T12:00:00+00:00",
+        "size_bytes": source_path.stat().st_size,
+    }
+    project_workspace_service.save_manifest(manifest, project_root)
+
+    window = MainWindow(settings_payload={
+        "language": "en",
+        "ui_text_scale": "normal",
+        "play_completion_beep": False,
+        "llm_profiles": [],
+        "default_ai_cleanup_profile_id": None,
+        "default_ai_chunking_profile_id": None,
+        "default_ai_chunking_strategy": "paragraph",
+        "default_character_extraction_profile_id": None,
+    })
+    qtbot.addWidget(window)
+    window._activate_project(project_root, project_workspace_service.load_manifest(project_root))
+
+    success_payloads = []
+
+    def _worker_callable(_project_root, _manifest, progress_callback=None, cancel_requested=None):
+        progress_callback(0, 1, 0, "Starting...")
+        assert cancel_requested() is False
+        progress_callback(1, 1, 100, "Completed.")
+        return {"status": "ok"}
+
+    text_cleanup_ui_controller.start_operation(
+        window,
+        operation_kind="extraction",
+        operation_name="Extract Text",
+        initial_message="Text extraction in progress...",
+        worker_callable=_worker_callable,
+        success_handler=lambda payload: success_payloads.append(payload),
+        failure_handler=lambda error: (_ for _ in ()).throw(error),
+    )
+
+    assert success_payloads == [{"status": "ok"}]
+    assert window._operation_progress_dialog is None
+    assert window._active_operation_kind is None
+
+
+def test_main_window_runs_deterministic_cleanup_and_updates_preview(
+    monkeypatch,
+    qtbot,
+    tmp_path,
+) -> None:
+    """
+    @brief      Verify deterministic cleanup updates the manifest-facing UI state and cleaned preview.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  qtbot Qt test helper fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-06
+    @version    0.1.0
+    """
+    persisted_payload = {
+        "language": "en",
+        "ui_text_scale": "normal",
+        "play_completion_beep": False,
+        "llm_profiles": [],
+        "default_ai_cleanup_profile_id": None,
+        "default_ai_chunking_profile_id": None,
+        "default_ai_chunking_strategy": "paragraph",
+        "default_character_extraction_profile_id": None,
+    }
+    project_root, manifest = project_workspace_service.create_project("CleanupWindowProject", tmp_path)
+    source_path = project_root / "story.pdf"
+    source_path.write_text("placeholder", encoding="utf-8")
+    manifest["source_document"] = {
+        "original_name": "story.pdf",
+        "stored_relative_path": "story.pdf",
+        "file_type": "pdf",
+        "imported_at": "2026-04-06T12:00:00+00:00",
+        "size_bytes": source_path.stat().st_size,
+    }
+    manifest["extracted_text_relative_path"] = "00_extraction/output_raw_text.txt"
+    manifest["operations"]["extraction"]["status"] = "completed"
+    project_workspace_service.save_manifest(manifest, project_root)
+    extraction_root = project_root / "00_extraction"
+    extraction_root.mkdir(exist_ok=True)
+    (extraction_root / "output_raw_text.txt").write_text("Chapter I\n\nParagraph one.", encoding="utf-8")
+
+    def _fake_clean_text(*_args, progress_callback=None, cancel_requested=None, **_kwargs):
+        progress_callback(1, 1, 100, "Deterministic cleanup completed.")
+        cleanup_root = project_root / config.CLEANUP_FOLDER_NAME
+        cleanup_root.mkdir(exist_ok=True)
+        (cleanup_root / "input_story.pdf").write_text("Chapter I\n\nParagraph one.", encoding="utf-8")
+        (cleanup_root / config.CLEANED_TEXT_FILE_NAME).write_text("Chapter I\n\nParagraph one.\n", encoding="utf-8")
+        (cleanup_root / config.CLEANUP_REPORT_FILE_NAME).write_text(
+            json.dumps({
+                "input_relative_path": f"{config.CLEANUP_FOLDER_NAME}/input_story.pdf",
+                "cleaned_text_relative_path": f"{config.CLEANUP_FOLDER_NAME}/{config.CLEANED_TEXT_FILE_NAME}",
+                "cleaned_at": "2026-04-06T12:02:00+00:00",
+                "detected_language": "en",
+                "warnings": [],
+                "paragraph_count": 2,
+                "removed_line_count": 0,
+                "removed_header_footer_line_count": 0,
+                "removed_page_number_line_count": 0,
+                "detected_chapter_count": 1,
+            }, indent=2) + "\n",
+            encoding="utf-8",
+        )
+        (cleanup_root / "state_operation.json").write_text(
+            json.dumps({
+                "folder_relative_path": config.CLEANUP_FOLDER_NAME,
+                "status": "completed",
+                "input_paths": [f"{config.CLEANUP_FOLDER_NAME}/input_story.pdf"],
+                "output_paths": [f"{config.CLEANUP_FOLDER_NAME}/{config.CLEANED_TEXT_FILE_NAME}"],
+                "artifact_paths": [f"{config.CLEANUP_FOLDER_NAME}/{config.CLEANUP_REPORT_FILE_NAME}"],
+                "progress_current": 1,
+                "progress_total": 1,
+                "mode": "deterministic",
+                "started_at": "2026-04-06T12:00:00+00:00",
+                "completed_at": "2026-04-06T12:02:00+00:00",
+                "updated_at": "2026-04-06T12:02:00+00:00",
+                "warning_count": 0,
+                "metadata": {"warnings": []},
+                "resume_checkpoint": None,
+            }, indent=2) + "\n",
+            encoding="utf-8",
+        )
+        assert cancel_requested() is False
+        return {"paragraph_count": 2}
+
+    monkeypatch.setattr(text_cleanup_ui_controller.deterministic_cleanup_service, "clean_text", _fake_clean_text)
+
+    window = MainWindow(settings_payload=dict(persisted_payload))
+    qtbot.addWidget(window)
+    window._activate_project(project_root, project_workspace_service.load_manifest(project_root))
+    monkeypatch.setattr(
+        text_cleanup_ui_controller,
+        "start_operation",
+        lambda _window, **kwargs: kwargs["success_handler"](
+            kwargs["worker_callable"](
+                _window._current_project_root,
+                dict(_window._current_manifest),
+                progress_callback=lambda *_args: None,
+                cancel_requested=lambda: False,
+            )
+        ),
+    )
+
+    window._text_cleanup_page.clean_requested.emit()
+
+    assert window._current_manifest is not None
+    assert window._current_manifest["current_stage"] == "text_chunking_ready"
+    assert window._text_cleanup_page._cleaned_text_edit.toPlainText() == "Chapter I\n\nParagraph one.\n"
+    assert "Cleanup produced 2 paragraphs" in window._text_cleanup_page._notes_edit.toPlainText()
 
 
 def test_main_window_prevents_reimport_when_source_is_locked(monkeypatch, qtbot, tmp_path) -> None:
@@ -1011,7 +1254,7 @@ def test_main_window_prevents_reimport_when_source_is_locked(monkeypatch, qtbot,
     popup_calls = []
 
     monkeypatch.setattr(
-        main_window_module.QMessageBox,
+        home_ui_controller.QMessageBox,
         "warning",
         lambda *args, **kwargs: popup_calls.append(args),
     )
@@ -1020,7 +1263,7 @@ def test_main_window_prevents_reimport_when_source_is_locked(monkeypatch, qtbot,
     qtbot.addWidget(window)
     window._activate_project(project_root, project_workspace_service.load_manifest(project_root))
 
-    window._handle_import_source_requested()
+    window._home_page.import_requested.emit()
 
     assert popup_calls
     assert "locked source file" in popup_calls[0][2]
@@ -1060,23 +1303,23 @@ def test_main_window_offers_repair_and_opens_repaired_project(
     question_calls = []
 
     monkeypatch.setattr(
-        main_window_module.QFileDialog,
+        home_ui_controller.QFileDialog,
         "getExistingDirectory",
         lambda *args, **kwargs: str(project_root),
     )
     monkeypatch.setattr(
-        main_window_module.QMessageBox,
+        home_ui_controller.QMessageBox,
         "question",
         lambda *args, **kwargs: (
             question_calls.append(args),
-            main_window_module.QMessageBox.StandardButton.Yes,
+            QMessageBox.StandardButton.Yes,
         )[1],
     )
 
     window = MainWindow(settings_payload=dict(persisted_payload))
     qtbot.addWidget(window)
 
-    window._handle_open_project_requested()
+    window._action_open_project.trigger()
 
     assert question_calls
     assert window._current_project_root == project_root

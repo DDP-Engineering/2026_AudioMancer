@@ -9,12 +9,11 @@
 """
 @file text_cleanup_page.py
 @brief Text extraction and cleanup page for AudioMancer.
-@details Provides the operator-facing extraction UI state for the first
-         deterministic text-processing slice while cleanup actions remain
-         unavailable.
+@details Provides the operator-facing extraction and deterministic cleanup
+         state for the current text-processing slice.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-06
-@version 0.2.0
+@version 0.3.0
 """
 
 # IMPORTS
@@ -40,14 +39,15 @@ from audiomancer.services import ui_state_service
 
 class TextCleanupPage(QWidget):
     """
-    @brief      Display extraction and placeholder cleanup controls for the active project.
+    @brief      Display extraction and cleanup controls for the active project.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.1.0
+    @version    0.2.0
     """
 
     extract_requested = Signal()
+    clean_requested = Signal()
 
     def __init__(self, parent=None) -> None:
         """
@@ -57,12 +57,14 @@ class TextCleanupPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-06
-        @version    0.1.1
+        @version    0.2.0
         """
         super().__init__(parent)
         self._project_active = False
         self._busy = False
         self._can_extract = False
+        self._can_clean = False
+        self._busy_operation_name = None
 
         layout = QVBoxLayout(self)
         header_row = QHBoxLayout()
@@ -75,7 +77,7 @@ class TextCleanupPage(QWidget):
         header_row.addWidget(self._extract_button)
 
         self._clean_button = QPushButton("Deterministic Cleanup")
-        self._clean_button.setEnabled(False)
+        self._clean_button.clicked.connect(self.clean_requested.emit)
         header_row.addWidget(self._clean_button)
 
         self._ai_profile_label = QLabel("AI Profile")
@@ -131,6 +133,7 @@ class TextCleanupPage(QWidget):
             cleaned_text=None,
             notes=["Import a source to begin text extraction."],
             can_extract=False,
+            can_clean=False,
         )
 
     def set_project_active(self, is_active: bool) -> None:
@@ -152,6 +155,7 @@ class TextCleanupPage(QWidget):
         cleaned_text: str | None,
         notes: list[str],
         can_extract: bool,
+        can_clean: bool,
     ) -> None:
         """
         @brief      Refresh the page from extraction-state inputs.
@@ -159,42 +163,49 @@ class TextCleanupPage(QWidget):
         @param[in]  cleaned_text Cleaned text preview or `None`.
         @param[in]  notes Operator-facing cleanup/extraction notes.
         @param[in]  can_extract True when extraction may run.
+        @param[in]  can_clean True when deterministic cleanup may run.
         @return     None.
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-06
-        @version    0.1.0
+        @version    0.2.0
         """
         self._can_extract = can_extract
+        self._can_clean = can_clean
         self._apply_button_state()
         self._extracted_text_edit.setPlainText(extracted_text or "")
         self._cleaned_text_edit.setPlainText(cleaned_text or "")
         self._notes_edit.setPlainText("\n".join(notes))
 
-    def set_busy(self, is_busy: bool) -> None:
+    def set_busy(self, is_busy: bool, operation_name: str | None = None) -> None:
         """
-        @brief      Disable extraction actions while the extraction handler is busy.
-        @param[in]  is_busy True while extraction is running.
+        @brief      Disable page actions while one long-running operation is active.
+        @param[in]  is_busy True while the page operation is running.
+        @param[in]  operation_name Optional operator-facing busy operation label.
         @return     None.
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-06
-        @version    0.1.0
+        @version    0.2.0
         """
         self._busy = is_busy
+        self._busy_operation_name = operation_name if is_busy else None
         self._apply_button_state()
 
     def _apply_button_state(self) -> None:
         """
-        @brief      Apply the current extraction-button state.
+        @brief      Apply the current page button states.
         @return     None.
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-06
-        @version    0.1.0
+        @version    0.2.0
         """
         self._extract_button.setEnabled(
             self._project_active and self._can_extract and not self._busy
+        )
+        self._clean_button.setEnabled(
+            self._project_active and self._can_clean and not self._busy
         )
 
     def apply_language(self, language: str) -> None:
