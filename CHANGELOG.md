@@ -16,6 +16,22 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+## [0.9.0] - 2026-04-07
+
+### Added
+
+- added a complete deterministic Text Chunking workflow with dedicated runtime state, resumable progress, output artifacts, and one-chunk-per-paragraph processing
+- added a dedicated Text Chunking UI controller plus main-window wiring for start, resume, rerun confirmation, downstream reset handling, and manifest synchronization
+- added focused tests for deterministic chunking service behavior, chunking page behavior, chunking controller behavior, and main-window integration
+
+### Changed
+
+- upgraded the `Text Chunking` page to render cleaned-text preview, chunk list, selected chunk preview, localized notes, and deterministic action state
+- updated the chunking header layout so the `Deterministic Chunking` button appears before the AI-related controls
+- package version updated to `0.9.0`
+
+### Fixed
+
 ## [0.8.0] - 2026-04-06
 
 ### Added
