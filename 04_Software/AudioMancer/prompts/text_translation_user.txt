@@ -1,0 +1,18 @@
+Translate the following audiobook chunk into {target_language}.
+
+Requirements:
+- preserve the original meaning
+- preserve paragraph breaks whenever possible
+- keep character names, proper nouns, and invented terms consistent unless they clearly require translation
+- keep short standalone headings or standalone lines as standalone lines
+- avoid summaries, omissions, explanations, or added context
+- the value of "translated_text" must contain only the translated chunk text
+- return no text before or after the JSON object
+- escape inner quotes and embedded newlines correctly inside the JSON string value
+
+Return JSON only in the required shape:
+{"translated_text": "Translated text here."}
+
+SOURCE_TEXT_BEGIN
+{source_text}
+SOURCE_TEXT_END

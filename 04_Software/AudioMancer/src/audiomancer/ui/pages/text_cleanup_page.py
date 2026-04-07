@@ -13,7 +13,7 @@
          state for the current text-processing slice.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-06
-@version 0.4.0
+@version 0.5.0
 """
 
 # IMPORTS
@@ -58,7 +58,7 @@ class TextCleanupPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-06
-        @version    0.3.0
+        @version    0.4.0
         """
         super().__init__(parent)
         self._project_active = False
@@ -118,14 +118,15 @@ class TextCleanupPage(QWidget):
         splitter.addWidget(cleaned_group)
         splitter.setStretchFactor(0, 1)
         splitter.setStretchFactor(1, 1)
-        layout.addWidget(splitter, 3)
+        layout.addWidget(splitter, 6)
 
         notes_group = QGroupBox("Cleanup Notes", self)
         notes_layout = QVBoxLayout(notes_group)
         self._notes_edit = QPlainTextEdit(self)
         self._notes_edit.setReadOnly(True)
         notes_layout.addWidget(self._notes_edit)
-        notes_group.setMaximumHeight(120)
+        notes_group.setMinimumHeight(96)
+        notes_group.setMaximumHeight(112)
         layout.addWidget(notes_group, 0)
 
         self._extracted_group = extracted_group

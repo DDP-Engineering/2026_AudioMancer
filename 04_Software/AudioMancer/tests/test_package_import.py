@@ -32,7 +32,7 @@ def test_package_exposes_main() -> None:
     @version    0.1.5
     """
     assert callable(audiomancer.main)
-    assert audiomancer.__version__ == "0.10.0"
+    assert audiomancer.__version__ == "0.11.0"
 
 
 # END OF FILE

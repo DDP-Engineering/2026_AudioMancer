@@ -16,6 +16,24 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+## [0.11.0] - 2026-04-07
+
+### Added
+
+- added the complete AI-assisted translation workflow with canonical `30_translation` artifacts, resumable operation state, editable translated chunks, per-chunk retranslation, manual approval controls, and focused service/controller/page coverage
+
+### Changed
+
+- refined the Text Cleanup, Text Chunking, and AI Translation page layouts so note panels stay anchored at the bottom and the main text preview/edit areas use more of the vertical workspace
+- increased the AI Translation chunk-list height so at least three chunk rows remain visible in the review workflow
+- expanded the left navigation sidebar to better use the full shell height
+- normalized the new AI Translation service, state-service, controller, and page modules to the repository Doxygen/comment style
+- package version updated to `0.11.0`
+
+### Fixed
+
+- removed the remaining implicit bottom status bar recreation by changing shell messages to avoid `QStatusBar` creation
+
 ## [0.10.0] - 2026-04-07
 
 ### Added

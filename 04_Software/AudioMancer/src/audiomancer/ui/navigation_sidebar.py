@@ -13,13 +13,13 @@
          DDP_Audiomancer main-window shell.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-05
-@version 0.2.0
+@version 0.3.0
 """
 
 # IMPORTS
 
 from PySide6.QtCore import Qt, Signal
-from PySide6.QtWidgets import QListWidget, QListWidgetItem
+from PySide6.QtWidgets import QListWidget, QListWidgetItem, QSizePolicy
 
 from audiomancer.services import ui_state_service
 
@@ -46,11 +46,12 @@ class NavigationSidebar(QListWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-05
-        @version    0.1.0
+        @version    0.2.0
         """
         super().__init__(parent)
         self.setAlternatingRowColors(True)
         self.setFixedWidth(176)
+        self.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Expanding)
         self.itemSelectionChanged.connect(self._emit_selected_page)
         self._page_labels: dict[str, str] = {}
 

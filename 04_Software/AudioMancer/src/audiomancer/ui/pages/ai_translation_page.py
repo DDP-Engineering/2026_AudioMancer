@@ -8,16 +8,17 @@
 # -----------------------------------------------------------------------------
 """
 @file ai_translation_page.py
-@brief Static AI Translation page for AudioMancer.
-@details Clones the DDP_Audiomancer AI translation page layout as a purely
-         presentational page without any connected functionality.
+@brief AI Translation workflow page for AudioMancer.
+@details Provides target-language selection, translation profile selection,
+         chunk review, manual edits, approval controls, and progress display.
 @author Eng. Dan Dumitru Pasare
-@date 2026-04-05
-@version 0.1.1
+@date 2026-04-07
+@version 0.4.0
 """
 
 # IMPORTS
 
+from PySide6.QtCore import Signal
 from PySide6.QtWidgets import (
     QComboBox,
     QGroupBox,
@@ -32,147 +33,442 @@ from PySide6.QtWidgets import (
 )
 
 from audiomancer import config
+from audiomancer.services import ai_translation_service
 from audiomancer.services import ui_state_service
 
 
 # CONSTANTS
 
+
 _TRANSLATION_LANGUAGE_OPTIONS = list(config.TRANSLATION_LANGUAGE_OPTIONS)
-
-
-# PUBLIC API
 
 
 class AiTranslationPage(QWidget):
     """
-    @brief      Display the static AI translation shell page.
+    @brief      Display the functional AI Translation workflow surface.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-05
-    @version    0.1.0
+    @date       2026-04-07
+    @version    0.2.0
     """
+
+    start_translation_requested = Signal(str, str)
+    reset_translation_requested = Signal()
+    approve_all_requested = Signal()
+    approve_selected_requested = Signal(str)
+    retranslate_selected_requested = Signal(str, str, str)
+    translated_text_changed = Signal(str, str)
 
     def __init__(self, parent=None) -> None:
         """
-        @brief      Initialize the cloned AI translation page.
+        @brief      Initialize the functional AI Translation workflow page.
         @param[in]  parent Optional parent widget.
         @return     None.
         @exception  None
         @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-05
-        @version    0.1.0
+        @date       2026-04-07
+        @version    0.2.0
         """
         super().__init__(parent)
+        self._project_active = False
+        self._busy = False
+        self._stage_status = ai_translation_service.TRANSLATION_STAGE_NOT_STARTED
+        self._source_chunks: list[dict[str, object]] = []
+        self._display_chunks: list[dict[str, object]] = []
+        self._current_chunk_id: str | None = None
+        self._loading_translation_text = False
 
         layout = QVBoxLayout(self)
         header_row = QHBoxLayout()
         self._title_label = QLabel("<h2>AI Translation</h2>")
         header_row.addWidget(self._title_label)
         header_row.addStretch(1)
-
         self._language_label = QLabel("Target Language")
         header_row.addWidget(self._language_label)
-
         self._language_combo = QComboBox(self)
         for code, label in _TRANSLATION_LANGUAGE_OPTIONS:
             self._language_combo.addItem(label, code)
-        self._language_combo.setCurrentIndex(0)
-        self._language_combo.setEnabled(False)
         header_row.addWidget(self._language_combo)
-
         self._profile_label = QLabel("AI Profile")
         header_row.addWidget(self._profile_label)
-
         self._profile_combo = QComboBox(self)
-        self._profile_combo.addItem("(no profiles)", None)
-        self._profile_combo.setEnabled(False)
+        self._profile_combo.addItem("(none)", None)
         header_row.addWidget(self._profile_combo)
-
         layout.addLayout(header_row)
 
         top_row = QHBoxLayout()
         top_row.setSpacing(12)
-
-        chunk_list_group = QGroupBox("Chunk List", self)
-        chunk_list_layout = QVBoxLayout(chunk_list_group)
+        self._chunk_list_group = QGroupBox("Chunk List", self)
+        chunk_list_layout = QVBoxLayout(self._chunk_list_group)
         self._chunk_list = QListWidget(self)
-        self._chunk_list.addItems((
-            "[Pending] chunk_001 | Example first source chunk preview...",
-            "[Translated] chunk_002 | Example second source chunk preview...",
-            "[Approved] chunk_003 | Example third source chunk preview...",
-        ))
+        self._chunk_list.currentRowChanged.connect(self._show_selected_chunk)
         chunk_list_layout.addWidget(self._chunk_list)
-        chunk_list_group.setMinimumHeight(136)
-        chunk_list_group.setMaximumHeight(176)
-        top_row.addWidget(chunk_list_group, 5)
+        self._chunk_list_group.setMinimumHeight(150)
+        self._chunk_list_group.setMaximumHeight(176)
+        top_row.addWidget(self._chunk_list_group, 5)
 
-        top_actions_widget = QWidget(self)
-        top_actions_layout = QVBoxLayout(top_actions_widget)
-        top_actions_layout.setContentsMargins(0, 0, 0, 0)
-        top_actions_layout.setSpacing(8)
-
+        actions_widget = QWidget(self)
+        actions_layout = QVBoxLayout(actions_widget)
+        actions_layout.setContentsMargins(0, 0, 0, 0)
         self._start_button = QPushButton("Start Translation")
-        self._start_button.setEnabled(False)
-        top_actions_layout.addWidget(self._start_button)
-
-        self._clear_button = QPushButton("Reset Translation")
-        self._clear_button.setEnabled(False)
-        top_actions_layout.addWidget(self._clear_button)
-
+        self._start_button.clicked.connect(self._emit_start_translation)
+        actions_layout.addWidget(self._start_button)
+        self._reset_button = QPushButton("Reset Translation")
+        self._reset_button.clicked.connect(self.reset_translation_requested.emit)
+        actions_layout.addWidget(self._reset_button)
         self._approve_all_button = QPushButton("Approve All")
-        self._approve_all_button.setEnabled(False)
-        top_actions_layout.addWidget(self._approve_all_button)
-
-        top_actions_layout.addStretch(1)
-        top_row.addWidget(top_actions_widget, 2)
-        layout.addLayout(top_row)
+        self._approve_all_button.clicked.connect(self.approve_all_requested.emit)
+        actions_layout.addWidget(self._approve_all_button)
+        actions_layout.addStretch(1)
+        top_row.addWidget(actions_widget, 2)
+        layout.addLayout(top_row, 1)
 
         bottom_row = QHBoxLayout()
         bottom_row.setSpacing(12)
-
-        source_group = QGroupBox("Original Chunk", self)
-        source_layout = QVBoxLayout(source_group)
+        self._source_group = QGroupBox("Original Chunk", self)
+        source_layout = QVBoxLayout(self._source_group)
         self._source_text_edit = QPlainTextEdit(self)
         self._source_text_edit.setReadOnly(True)
-        self._source_text_edit.setPlainText(
-            "The source chunk selected from the list will appear here."
-        )
         source_layout.addWidget(self._source_text_edit)
-
         self._approved_progress_label = QLabel("Approved chunks: 0/0")
         source_layout.addWidget(self._approved_progress_label)
-
         self._approved_progress_bar = QProgressBar(self)
         self._approved_progress_bar.setTextVisible(True)
         self._approved_progress_bar.setFormat("%p%")
-        self._approved_progress_bar.setRange(0, 1)
-        self._approved_progress_bar.setValue(0)
         source_layout.addWidget(self._approved_progress_bar)
-        bottom_row.addWidget(source_group, 1)
+        bottom_row.addWidget(self._source_group, 1)
 
-        translated_group = QGroupBox("Translated Chunk", self)
-        translated_layout = QVBoxLayout(translated_group)
+        self._translated_group = QGroupBox("Translated Chunk", self)
+        translated_layout = QVBoxLayout(self._translated_group)
         self._translated_text_edit = QPlainTextEdit(self)
-        self._translated_text_edit.setPlainText(
-            "Translated text for the selected chunk will appear here."
-        )
+        self._translated_text_edit.textChanged.connect(self._handle_translated_text_changed)
         translated_layout.addWidget(self._translated_text_edit)
-
         action_row = QHBoxLayout()
         self._retranslate_button = QPushButton("Re-Translate Selected")
-        self._retranslate_button.setEnabled(False)
+        self._retranslate_button.clicked.connect(self._emit_retranslate_selected)
         action_row.addWidget(self._retranslate_button)
-
         self._approve_selected_button = QPushButton("Approve Selected")
-        self._approve_selected_button.setEnabled(False)
+        self._approve_selected_button.clicked.connect(self._emit_approve_selected)
         action_row.addWidget(self._approve_selected_button)
         translated_layout.addLayout(action_row)
-        bottom_row.addWidget(translated_group, 1)
+        bottom_row.addWidget(self._translated_group, 1)
+        layout.addLayout(bottom_row, 7)
 
-        layout.addLayout(bottom_row, 1)
-        self._chunk_list_group = chunk_list_group
-        self._source_group = source_group
-        self._translated_group = translated_group
+        self._notes_group = QGroupBox("Translation Notes", self)
+        notes_layout = QVBoxLayout(self._notes_group)
+        self._notes_edit = QPlainTextEdit(self)
+        self._notes_edit.setReadOnly(True)
+        notes_layout.addWidget(self._notes_edit)
+        self._notes_group.setMinimumHeight(96)
+        self._notes_group.setMaximumHeight(112)
+        layout.addWidget(self._notes_group, 0)
+        self.set_project_active(False)
+        self.set_translation_state([], [], ["Run text chunking before AI Translation."], config.DEFAULT_TRANSLATION_TARGET_LANGUAGE, None, ai_translation_service.TRANSLATION_STAGE_NOT_STARTED, 0, 0, 0)
+
+    def set_project_active(self, is_active: bool) -> None:
+        """
+        @brief      Enable or disable translation interactions for project state.
+        @param[in]  is_active True when a project is currently open.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-07
+        @version    0.1.0
+        """
+        self._project_active = is_active
+        self._apply_control_state()
+
+    def set_ai_profiles(self, entries: list[tuple[str, str | None]], selected_profile_id: str | None) -> None:
+        """
+        @brief      Populate the translation AI-profile selector.
+        @param[in]  entries Ordered label/id pairs for enabled profiles.
+        @param[in]  selected_profile_id Preferred selected profile id.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-07
+        @version    0.1.0
+        """
+        self._profile_combo.blockSignals(True)
+        self._profile_combo.clear()
+        if entries:
+            for label, profile_id in entries:
+                self._profile_combo.addItem(label, profile_id)
+            selected_index = next((index for index, _entry in enumerate(entries) if entries[index][1] == selected_profile_id), 0)
+            self._profile_combo.setCurrentIndex(selected_index)
+        else:
+            self._profile_combo.addItem("(none)", None)
+            self._profile_combo.setCurrentIndex(0)
+        self._profile_combo.blockSignals(False)
+        self._apply_control_state()
+
+    def set_translation_state(
+        self,
+        source_chunks: list[dict[str, object]],
+        translated_chunks: list[dict[str, object]],
+        notes: list[str],
+        target_language: str,
+        selected_profile_id: str | None,
+        stage_status: str,
+        translated_count: int,
+        approved_count: int,
+        total_count: int,
+    ) -> None:
+        """
+        @brief      Refresh the translation page from controller-provided state.
+        @param[in]  source_chunks Source chunk payloads from chunking.
+        @param[in]  translated_chunks Persisted translated chunk payloads.
+        @param[in]  notes Operator-facing translation notes.
+        @param[in]  target_language Active target language code.
+        @param[in]  selected_profile_id Active profile identifier or `None`.
+        @param[in]  stage_status Effective translation stage token.
+        @param[in]  translated_count Number of translated chunks.
+        @param[in]  approved_count Number of approved chunks.
+        @param[in]  total_count Total number of chunks.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-07
+        @version    0.1.0
+        """
+        self._source_chunks = sorted(list(source_chunks), key=lambda item: int(item.get("sequence_index", 0)))
+        self._display_chunks = _build_display_chunks(self._source_chunks, translated_chunks)
+        self._stage_status = stage_status
+        language_index = self._language_combo.findData(target_language)
+        self._language_combo.setCurrentIndex(0 if language_index < 0 else language_index)
+        if selected_profile_id is not None:
+            profile_index = self._profile_combo.findData(selected_profile_id)
+            if profile_index >= 0:
+                self._profile_combo.setCurrentIndex(profile_index)
+        current_chunk_id = self.selected_chunk_id()
+        self._chunk_list.clear()
+        for translated_chunk in self._display_chunks:
+            self._chunk_list.addItem(_format_chunk_list_item(translated_chunk))
+        self._approved_progress_bar.setRange(0, max(total_count, 1))
+        self._approved_progress_bar.setValue(min(approved_count, max(total_count, 1)))
+        self._approved_progress_label.setText(f"Approved chunks: {approved_count}/{total_count}")
+        self._notes_edit.setPlainText("\n".join(notes))
+        row_to_select = 0
+        if current_chunk_id is not None:
+            for index, chunk in enumerate(self._display_chunks):
+                if str(chunk.get("chunk_id", "")) == current_chunk_id:
+                    row_to_select = index
+                    break
+        if self._display_chunks:
+            self._chunk_list.setCurrentRow(row_to_select)
+        else:
+            self._show_selected_chunk(-1)
+        self._apply_control_state()
+
+    def set_busy(self, is_busy: bool) -> None:
+        """
+        @brief      Disable page actions while a blocking translation task runs.
+        @param[in]  is_busy True while the page is busy.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-07
+        @version    0.1.0
+        """
+        self._busy = is_busy
+        self._apply_control_state()
+
+    def current_profile_id(self) -> str | None:
+        """
+        @brief      Return the currently selected AI translation profile id.
+        @return     Selected profile identifier or `None`.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-07
+        @version    0.1.0
+        """
+        value = self._profile_combo.currentData()
+        return None if value in (None, "") else str(value)
+
+    def current_target_language(self) -> str:
+        """
+        @brief      Return the currently selected target language code.
+        @return     Selected target language code.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-07
+        @version    0.1.0
+        """
+        return str(self._language_combo.currentData() or config.DEFAULT_TRANSLATION_TARGET_LANGUAGE)
+
+    def selected_chunk_id(self) -> str | None:
+        """
+        @brief      Return the identifier of the currently selected chunk.
+        @return     Selected chunk id or `None`.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-07
+        @version    0.1.0
+        """
+        return self._current_chunk_id
+
+    def _apply_control_state(self) -> None:
+        """
+        @brief      Apply the current translation-page button and editor states.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-07
+        @version    0.1.0
+        """
+        has_source_chunks = bool(self._source_chunks)
+        has_started_translation = self._stage_status in {
+            "running",
+            "failed",
+            ai_translation_service.TRANSLATION_STAGE_IN_PROGRESS,
+            ai_translation_service.TRANSLATION_STAGE_COMPLETED,
+        }
+        has_translated_chunks = any(str(chunk.get("translated_text", "")).strip() for chunk in self._display_chunks)
+        selected_chunk = self._current_display_chunk()
+        has_selected_translation = selected_chunk is not None and bool(str(selected_chunk.get("translated_text", "")).strip())
+        selected_profile_id = self.current_profile_id()
+        self._language_combo.setEnabled(self._project_active and not self._busy and not has_started_translation and not has_translated_chunks)
+        self._profile_combo.setEnabled(self._project_active and not self._busy)
+        self._start_button.setEnabled(
+            self._project_active
+            and has_source_chunks
+            and not self._busy
+            and self._stage_status != ai_translation_service.TRANSLATION_STAGE_COMPLETED
+            and selected_profile_id is not None
+        )
+        self._reset_button.setEnabled(self._project_active and not self._busy and (has_started_translation or has_translated_chunks))
+        self._approve_all_button.setEnabled(
+            self._project_active
+            and not self._busy
+            and any(str(chunk.get("translated_text", "")).strip() and not bool(chunk.get("approved", False)) for chunk in self._display_chunks)
+        )
+        self._retranslate_button.setEnabled(
+            self._project_active
+            and not self._busy
+            and selected_chunk is not None
+            and selected_profile_id is not None
+        )
+        self._approve_selected_button.setEnabled(
+            self._project_active
+            and not self._busy
+            and has_selected_translation
+            and not bool(selected_chunk.get("approved", False))
+        )
+        self._translated_text_edit.setReadOnly(not self._project_active or self._busy or selected_chunk is None)
+        self._chunk_list.setEnabled(self._project_active)
+
+    def _show_selected_chunk(self, row: int) -> None:
+        """
+        @brief      Display the currently selected source and translated chunk texts.
+        @param[in]  row Currently selected list row.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-07
+        @version    0.1.0
+        """
+        if row < 0 or row >= len(self._display_chunks):
+            self._current_chunk_id = None
+            self._source_text_edit.clear()
+            self._loading_translation_text = True
+            self._translated_text_edit.clear()
+            self._loading_translation_text = False
+            self._apply_control_state()
+            return
+        selected_chunk = self._display_chunks[row]
+        self._current_chunk_id = str(selected_chunk.get("chunk_id", ""))
+        self._source_text_edit.setPlainText(str(selected_chunk.get("source_text", "")))
+        self._loading_translation_text = True
+        self._translated_text_edit.setPlainText(str(selected_chunk.get("translated_text", "")))
+        self._loading_translation_text = False
+        self._apply_control_state()
+
+    def _emit_start_translation(self) -> None:
+        """
+        @brief      Emit the start-or-continue translation request signal.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-07
+        @version    0.1.0
+        """
+        profile_id = self.current_profile_id()
+        if profile_id is not None:
+            self.start_translation_requested.emit(profile_id, self.current_target_language())
+
+    def _emit_retranslate_selected(self) -> None:
+        """
+        @brief      Emit the retranslation request for the currently selected chunk.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-07
+        @version    0.1.0
+        """
+        profile_id = self.current_profile_id()
+        chunk_id = self.selected_chunk_id()
+        if profile_id is not None and chunk_id is not None:
+            self.retranslate_selected_requested.emit(profile_id, self.current_target_language(), chunk_id)
+
+    def _emit_approve_selected(self) -> None:
+        """
+        @brief      Emit the approve-selected signal for the active chunk.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-07
+        @version    0.1.0
+        """
+        chunk_id = self.selected_chunk_id()
+        if chunk_id is not None:
+            self.approve_selected_requested.emit(chunk_id)
+
+    def _handle_translated_text_changed(self) -> None:
+        """
+        @brief      Persist and locally reflect edits to the translated text editor.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-07
+        @version    0.1.0
+        """
+        if self._loading_translation_text:
+            return
+        chunk_id = self.selected_chunk_id()
+        if chunk_id is None:
+            return
+        translated_text = self._translated_text_edit.toPlainText()
+        self.translated_text_changed.emit(chunk_id, translated_text)
+        selected_chunk = self._current_display_chunk()
+        if selected_chunk is not None:
+            previous_text = str(selected_chunk.get("translated_text", ""))
+            selected_chunk["translated_text"] = translated_text
+            if translated_text.strip():
+                if translated_text != previous_text:
+                    selected_chunk["approved"] = False
+                    selected_chunk["approved_at"] = None
+                selected_chunk["status"] = ai_translation_service.TRANSLATED_CHUNK_STATUS_APPROVED if bool(selected_chunk.get("approved", False)) else ai_translation_service.TRANSLATED_CHUNK_STATUS_TRANSLATED
+            else:
+                selected_chunk["approved"] = False
+                selected_chunk["approved_at"] = None
+                selected_chunk["status"] = ai_translation_service.TRANSLATED_CHUNK_STATUS_NOT_STARTED
+            current_item = self._chunk_list.currentItem()
+            if current_item is not None:
+                current_item.setText(_format_chunk_list_item(selected_chunk))
+        self._apply_control_state()
+
+    def _current_display_chunk(self) -> dict[str, object] | None:
+        """
+        @brief      Return the display-model payload for the selected chunk.
+        @return     Selected display-chunk payload or `None`.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-07
+        @version    0.1.0
+        """
+        if self._current_chunk_id is None:
+            return None
+        return next((chunk for chunk in self._display_chunks if str(chunk.get("chunk_id", "")) == self._current_chunk_id), None)
 
     def apply_language(self, language: str) -> None:
         """
@@ -181,51 +477,81 @@ class AiTranslationPage(QWidget):
         @return     None.
         @exception  None
         @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-05
+        @date       2026-04-07
         @version    0.1.0
         """
-        self._title_label.setText(
-            f"<h2>{ui_state_service.translate('ai_translation.title', language)}</h2>"
-        )
-        self._language_label.setText(
-            ui_state_service.translate("ai_translation.target_language", language)
-        )
-        self._profile_label.setText(
-            ui_state_service.translate("ai_translation.ai_profile", language)
-        )
-        self._chunk_list_group.setTitle(
-            ui_state_service.translate("ai_translation.chunk_list_group", language)
-        )
-        self._start_button.setText(
-            ui_state_service.translate("ai_translation.start", language)
-        )
-        self._clear_button.setText(
-            ui_state_service.translate("ai_translation.reset", language)
-        )
-        self._approve_all_button.setText(
-            ui_state_service.translate("ai_translation.approve_all", language)
-        )
-        self._source_group.setTitle(
-            ui_state_service.translate("ai_translation.original_group", language)
-        )
-        self._translated_group.setTitle(
-            ui_state_service.translate("ai_translation.translated_group", language)
-        )
-        self._approved_progress_label.setText(
-            ui_state_service.translate("ai_translation.approved_chunks", language)
-        )
-        self._retranslate_button.setText(
-            ui_state_service.translate("ai_translation.retranslate", language)
-        )
-        self._approve_selected_button.setText(
-            ui_state_service.translate("ai_translation.approve_selected", language)
-        )
-        self._source_text_edit.setPlainText(
-            ui_state_service.translate("ai_translation.source_note", language)
-        )
-        self._translated_text_edit.setPlainText(
-            ui_state_service.translate("ai_translation.translated_note", language)
-        )
+        self._title_label.setText(f"<h2>{ui_state_service.translate('ai_translation.title', language)}</h2>")
+        self._language_label.setText(ui_state_service.translate("ai_translation.target_language", language))
+        self._profile_label.setText(ui_state_service.translate("ai_translation.ai_profile", language))
+        self._chunk_list_group.setTitle(ui_state_service.translate("ai_translation.chunk_list_group", language))
+        self._start_button.setText(ui_state_service.translate("ai_translation.start", language))
+        self._reset_button.setText(ui_state_service.translate("ai_translation.reset", language))
+        self._approve_all_button.setText(ui_state_service.translate("ai_translation.approve_all", language))
+        self._source_group.setTitle(ui_state_service.translate("ai_translation.original_group", language))
+        self._translated_group.setTitle(ui_state_service.translate("ai_translation.translated_group", language))
+        self._notes_group.setTitle(ui_state_service.translate("ai_translation.notes_group", language))
+        self._retranslate_button.setText(ui_state_service.translate("ai_translation.retranslate", language))
+        self._approve_selected_button.setText(ui_state_service.translate("ai_translation.approve_selected", language))
+
+
+# HELPER FUNCTIONS
+
+
+def _build_display_chunks(source_chunks: list[dict[str, object]], translated_chunks: list[dict[str, object]]) -> list[dict[str, object]]:
+    """
+    @brief      Merge source chunks with persisted translated records for display.
+    @param[in]  source_chunks Source chunk payloads from chunking.
+    @param[in]  translated_chunks Persisted translated chunk payloads.
+    @return     Display-model chunk payloads ordered by source chunk sequence.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-07
+    @version    0.1.0
+    """
+    translated_by_id = {str(chunk.get("chunk_id", "")): dict(chunk) for chunk in translated_chunks}
+    display_chunks: list[dict[str, object]] = []
+    for source_chunk in source_chunks:
+        chunk_id = str(source_chunk.get("chunk_id", ""))
+        translated_chunk = translated_by_id.get(chunk_id)
+        if translated_chunk is None:
+            display_chunks.append({
+                "chunk_id": chunk_id,
+                "sequence_index": int(source_chunk.get("sequence_index", 0)),
+                "source_text": str(source_chunk.get("text", "")),
+                "translated_text": "",
+                "approved": False,
+                "approved_at": None,
+                "translated_at": None,
+                "translation_profile_id": None,
+                "target_language": config.DEFAULT_TRANSLATION_TARGET_LANGUAGE,
+                "status": ai_translation_service.TRANSLATED_CHUNK_STATUS_NOT_STARTED,
+            })
+            continue
+        translated_chunk["sequence_index"] = int(source_chunk.get("sequence_index", 0))
+        translated_chunk["source_text"] = str(source_chunk.get("text", ""))
+        display_chunks.append(translated_chunk)
+    return display_chunks
+
+
+def _format_chunk_list_item(chunk: dict[str, object]) -> str:
+    """
+    @brief      Format one translated-chunk row label for the chunk list.
+    @param[in]  chunk Display-model chunk payload.
+    @return     Human-readable list item label.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-07
+    @version    0.1.0
+    """
+    if bool(chunk.get("approved", False)):
+        status_label = "Approved"
+    elif str(chunk.get("translated_text", "")).strip():
+        status_label = "Translated"
+    else:
+        status_label = "Pending"
+    source_text = str(chunk.get("source_text", ""))
+    preview = source_text if len(source_text) <= 60 else source_text[:57] + "..."
+    return f"[{status_label}] {chunk.get('chunk_id', '')} | {preview}"
 
 
 # END OF FILE

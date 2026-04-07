@@ -116,7 +116,8 @@ def apply_language(window, language: str) -> None:
         ui_state_service.translate("toolbar.about", language)
     )
     window._sidebar.apply_language(language)
-    window._status_bar.apply_language(language)
+    if window._status_bar is not None:
+        window._status_bar.apply_language(language)
     window._settings_dialog.setWindowTitle(
         ui_state_service.translate("dialog.settings_title", language)
     )

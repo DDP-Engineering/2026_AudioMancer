@@ -57,6 +57,7 @@ def test_text_chunking_page_renders_chunks_and_selected_preview(qtbot) -> None:
     assert page._chunk_text_edit.toPlainText() == "Paragraph text"
     assert "Chunk artifact contains 1 chunks." in page._notes_edit.toPlainText()
     assert page.current_ai_strategy() == "paragraph"
+    assert page._notes_group.maximumHeight() == 112
 
 
 def test_text_chunking_page_keeps_selectors_readable_while_busy(qtbot) -> None:

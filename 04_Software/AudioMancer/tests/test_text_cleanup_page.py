@@ -97,6 +97,7 @@ def test_text_cleanup_page_updates_previews_and_notes(qtbot) -> None:
     assert page._extracted_text_edit.toPlainText() == "Raw paragraph"
     assert page._cleaned_text_edit.toPlainText() == "Clean paragraph"
     assert page._notes_edit.toPlainText() == "Warning A\nWarning B"
+    assert page._notes_group.maximumHeight() == 112
 
 
 def test_text_cleanup_page_emits_selected_ai_profile(qtbot) -> None:

@@ -34,11 +34,13 @@ from PySide6.QtWidgets import (
 )
 
 from audiomancer import config
+from audiomancer.services import ai_translation_state_service
 from audiomancer.services import home_presenter_service
 from audiomancer.services import settings_service
 from audiomancer.services import text_chunking_state_service
 from audiomancer.services import text_cleanup_state_service
 from audiomancer.services import ui_state_service
+from audiomancer.ui.controllers import ai_translation_ui_controller
 from audiomancer.ui.controllers import ai_settings_ui_controller
 from audiomancer.ui.controllers import home_ui_controller
 from audiomancer.ui.controllers import misc_ui_controller
@@ -56,7 +58,6 @@ from audiomancer.ui.pages.placeholder_page import PlaceholderPage
 from audiomancer.ui.pages.settings_page import SettingsPage
 from audiomancer.ui.pages.text_chunking_page import TextChunkingPage
 from audiomancer.ui.pages.text_cleanup_page import TextCleanupPage
-from audiomancer.ui.status_bar import AudiomancerStatusBar
 
 
 # CONSTANTS
@@ -133,8 +134,7 @@ class MainWindow(QMainWindow):
         self.addToolBar(Qt.ToolBarArea.TopToolBarArea, self._toolbar)
         self._sidebar = NavigationSidebar(self)
         self._stack = QStackedWidget(self)
-        self._status_bar = AudiomancerStatusBar(self)
-        self.setStatusBar(self._status_bar)
+        self._status_bar = None
 
         self._build_pages()
         self._build_dialogs()
@@ -228,7 +228,6 @@ class MainWindow(QMainWindow):
                 current_language,
             )
         )
-        self._status_bar.set_stage(stage_name)
         self._text_cleanup_page.set_project_active(project_root is not None)
         self._text_cleanup_page.set_ai_profiles(
             **text_cleanup_state_service.build_ai_cleanup_profile_state(
@@ -256,6 +255,20 @@ class MainWindow(QMainWindow):
                 self._settings_payload,
             )
         )
+        self._ai_translation_page.set_project_active(project_root is not None)
+        translation_state = ai_translation_state_service.build_ai_translation_state(
+            project_root,
+            manifest,
+            current_language,
+            self._settings_payload,
+        )
+        self._ai_translation_page.set_ai_profiles(
+            **ai_translation_state_service.build_ai_translation_profile_state(
+                self._settings_payload,
+                translation_state.get("selected_profile_id"),
+            )
+        )
+        self._ai_translation_page.set_translation_state(**translation_state)
 
     def show_settings_dialog(self) -> None:
         """
@@ -397,12 +410,47 @@ class MainWindow(QMainWindow):
                 strategy,
             )
         )
+        self._ai_translation_page = AiTranslationPage(self)
+        self._ai_translation_page.start_translation_requested.connect(
+            lambda profile_id, target_language: ai_translation_ui_controller.handle_start_translation_requested(
+                self,
+                profile_id,
+                target_language,
+            )
+        )
+        self._ai_translation_page.reset_translation_requested.connect(
+            lambda: ai_translation_ui_controller.handle_reset_translation_requested(self)
+        )
+        self._ai_translation_page.approve_all_requested.connect(
+            lambda: ai_translation_ui_controller.handle_approve_all_requested(self)
+        )
+        self._ai_translation_page.approve_selected_requested.connect(
+            lambda chunk_id: ai_translation_ui_controller.handle_approve_selected_requested(
+                self,
+                chunk_id,
+            )
+        )
+        self._ai_translation_page.retranslate_selected_requested.connect(
+            lambda profile_id, target_language, chunk_id: ai_translation_ui_controller.handle_retranslate_selected_requested(
+                self,
+                profile_id,
+                target_language,
+                chunk_id,
+            )
+        )
+        self._ai_translation_page.translated_text_changed.connect(
+            lambda chunk_id, translated_text: ai_translation_ui_controller.handle_translated_text_changed(
+                self,
+                chunk_id,
+                translated_text,
+            )
+        )
 
         pages = {
             "home": home_page,
             "text_cleanup": self._text_cleanup_page,
             "text_chunking": self._text_chunking_page,
-            "ai_translation": AiTranslationPage(self),
+            "ai_translation": self._ai_translation_page,
             "characters": CharactersPage(self),
             "narrator": NarratorPage(self),
             "narration_plan": PlaceholderPage(

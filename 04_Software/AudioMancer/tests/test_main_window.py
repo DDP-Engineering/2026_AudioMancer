@@ -9,8 +9,8 @@
 """
 @file test_main_window.py
 @brief Qt window tests for the copied AudioMancer main-window shell.
-@details Validates that the DDP_Audiomancer-style toolbar, sidebar, stacked
-         pages, and status bar are created without workflow functionality.
+@details Validates that the DDP_Audiomancer-style toolbar, sidebar, and stacked
+         pages are created without workflow functionality.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-06
 @version 1.3.0
@@ -29,6 +29,7 @@ from PySide6.QtWidgets import (
     QPlainTextEdit,
     QPushButton,
     QStackedWidget,
+    QStatusBar,
     QToolBar,
 )
 
@@ -36,6 +37,7 @@ import audiomancer.ui.main_window as main_window_module
 from audiomancer import config
 from audiomancer.services import deterministic_chunking_service
 from audiomancer.services import project_workspace_service
+from audiomancer.ui.controllers import ai_translation_ui_controller
 from audiomancer.ui.controllers import ai_settings_ui_controller
 from audiomancer.ui.controllers import home_ui_controller
 from audiomancer.ui.controllers import settings_ui_controller
@@ -135,6 +137,35 @@ def test_main_window_can_be_created(qtbot) -> None:
     )
     assert window._sidebar.item(1).flags() == main_window_module.Qt.ItemFlag.NoItemFlags
     assert window._operation_progress_dialog is None
+    assert window._status_bar is None
+
+
+def test_main_window_show_message_does_not_create_status_bar(qtbot) -> None:
+    """
+    @brief      Verify transient shell messages do not recreate a bottom status bar.
+    @param[in]  qtbot Qt test helper fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-07
+    @version    0.1.0
+    """
+    window = MainWindow(settings_payload={
+        "language": "en",
+        "ui_text_scale": "normal",
+        "play_completion_beep": False,
+        "llm_profiles": [],
+        "default_ai_cleanup_profile_id": None,
+        "default_ai_chunking_profile_id": None,
+        "default_ai_chunking_strategy": "paragraph",
+        "default_character_extraction_profile_id": None,
+    })
+    qtbot.addWidget(window)
+
+    window.show_message("Transient shell message")
+
+    assert window._status_bar is None
+    assert not window.findChildren(QStatusBar)
 
 
 def test_about_dialog_includes_license_text(qtbot) -> None:
@@ -1454,6 +1485,181 @@ def test_main_window_runs_ai_chunking_and_updates_preview(
     assert window._current_manifest["current_stage"] == "translation_ready"
     assert window._text_chunking_page._chunk_list.count() == 2
     assert window._text_chunking_page._ai_chunk_button.isEnabled() is True
+
+
+def test_main_window_runs_ai_translation_and_updates_preview(
+    monkeypatch,
+    qtbot,
+    tmp_path,
+) -> None:
+    """
+    @brief      Verify the main window wires AI translation and refreshes the translated preview after success.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  qtbot Qt test helper fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-07
+    @version    0.1.0
+    """
+    persisted_payload = {
+        "language": "en",
+        "ui_text_scale": "normal",
+        "play_completion_beep": False,
+        "llm_profiles": [{
+            "id": "profile_1",
+            "label": "Translation Profile",
+            "backend_kind": "lmstudio",
+            "base_url": "http://127.0.0.1:1234",
+            "api_key": "",
+            "model_name": "qwen3-8b",
+            "context_window": 4096,
+            "max_output_tokens": 512,
+            "request_timeout_seconds": 30,
+            "temperature": 0.2,
+            "supports_structured_output": False,
+            "enabled": True,
+        }],
+        "default_ai_cleanup_profile_id": None,
+        "default_ai_chunking_profile_id": None,
+        "default_ai_chunking_strategy": "paragraph",
+        "default_character_extraction_profile_id": None,
+    }
+    project_root, manifest = project_workspace_service.create_project(
+        "TranslationWindowProject",
+        tmp_path,
+    )
+    manifest["source_document"] = {
+        "original_name": "story.txt",
+        "stored_relative_path": "story.txt",
+        "file_type": "txt",
+        "imported_at": "2026-04-07T12:00:00+00:00",
+        "size_bytes": 4,
+    }
+    manifest["operations"]["chunking"]["status"] = "completed"
+    manifest["operations"]["chunking"]["output_paths"] = [
+        f"20_chunking/{config.CHUNK_ARTIFACT_FILE_NAME}"
+    ]
+    project_workspace_service.save_manifest(manifest, project_root)
+    chunk_root = project_root / "20_chunking"
+    chunk_root.mkdir(parents=True, exist_ok=True)
+    (chunk_root / config.CHUNK_ARTIFACT_FILE_NAME).write_text(
+        json.dumps([
+            {
+                "chunk_id": "chunk-0001",
+                "sequence_index": 1,
+                "chapter_label": None,
+                "text": "Original one",
+                "source_start_line": 1,
+                "source_end_line": 1,
+                "chunking_mode": "deterministic",
+                "semantic_strategy": None,
+                "scene_note": None,
+            }
+        ], indent=2) + "\n",
+        encoding="utf-8",
+    )
+
+    window = MainWindow(settings_payload=dict(persisted_payload))
+    qtbot.addWidget(window)
+    window._activate_project(project_root, project_workspace_service.load_manifest(project_root))
+    monkeypatch.setattr(
+        ai_translation_ui_controller,
+        "_start_operation",
+        lambda _window, **kwargs: ai_translation_ui_controller._sync_manifest_after_translation(
+            _window,
+            kwargs["worker_callable"](
+                _window._current_project_root,
+                dict(_window._current_manifest),
+                progress_callback=lambda *_args: None,
+                cancel_requested=lambda: False,
+            ),
+        ),
+    )
+    monkeypatch.setattr(
+        ai_translation_ui_controller.ai_translation_service,
+        "start_or_continue_translation",
+        lambda project_root, _manifest, _profile, target_language, progress_callback=None, cancel_requested=None: (
+            (project_root / "30_translation").mkdir(parents=True, exist_ok=True),
+            (project_root / "30_translation" / "input_output_chunks.json").write_text("[]\n", encoding="utf-8"),
+            (project_root / "30_translation" / config.TRANSLATED_CHUNKS_FILE_NAME).write_text(
+                json.dumps([{
+                    "chunk_id": "chunk-0001",
+                    "sequence_index": 1,
+                    "source_text": "Original one",
+                    "translated_text": "Tradus unu",
+                    "approved": False,
+                    "approved_at": None,
+                    "translated_at": "2026-04-07T12:01:00+00:00",
+                    "translation_profile_id": "profile_1",
+                    "target_language": target_language,
+                    "status": "translated",
+                }], indent=2) + "\n",
+                encoding="utf-8",
+            ),
+            (project_root / "30_translation" / config.TRANSLATION_REPORT_FILE_NAME).write_text(
+                json.dumps({
+                    "target_language": target_language,
+                    "translation_profile_id_last_used": "profile_1",
+                    "translation_stage_status": "completed",
+                    "translated_chunk_count": 1,
+                    "approved_chunk_count": 0,
+                    "total_chunk_count": 1,
+                    "updated_at": "2026-04-07T12:02:00+00:00",
+                    "warnings": [],
+                }, indent=2) + "\n",
+                encoding="utf-8",
+            ),
+            (project_root / "30_translation" / config.OPERATION_STATE_FILE_NAME).write_text(
+                json.dumps({
+                    "folder_relative_path": "30_translation",
+                    "status": "completed",
+                    "input_paths": ["30_translation/input_output_chunks.json"],
+                    "output_paths": [f"30_translation/{config.TRANSLATED_CHUNKS_FILE_NAME}"],
+                    "artifact_paths": [f"30_translation/{config.TRANSLATION_REPORT_FILE_NAME}"],
+                    "progress_current": 1,
+                    "progress_total": 1,
+                    "mode": "ai_assisted",
+                    "started_at": "2026-04-07T12:00:00+00:00",
+                    "completed_at": "2026-04-07T12:02:00+00:00",
+                    "updated_at": "2026-04-07T12:02:00+00:00",
+                    "warning_count": 0,
+                    "metadata": {
+                        "target_language": target_language,
+                        "translation_profile_id": "profile_1",
+                        "translated_chunk_count": 1,
+                        "approved_chunk_count": 0,
+                        "total_chunk_count": 1,
+                        "warnings": [],
+                        "translated_chunks": [],
+                        "source_chunk_count": 1,
+                        "log_relative_path": None,
+                    },
+                    "resume_checkpoint": None,
+                }, indent=2) + "\n",
+                encoding="utf-8",
+            ),
+            {
+                "target_language": target_language,
+                "translation_profile_id_last_used": "profile_1",
+                "translation_stage_status": "completed",
+                "translated_chunk_count": 1,
+                "approved_chunk_count": 0,
+                "total_chunk_count": 1,
+                "updated_at": "2026-04-07T12:02:00+00:00",
+                "warnings": [],
+            },
+        )[-1],
+    )
+
+    window._ai_translation_page.start_translation_requested.emit("profile_1", "ro")
+    window.show_project_state(project_root, project_workspace_service.load_manifest(project_root))
+
+    assert window._current_manifest is not None
+    assert window._current_manifest["current_stage"] == "translation_ready"
+    assert window._ai_translation_page._chunk_list.count() == 1
+    assert window._ai_translation_page._translated_text_edit.toPlainText() == "Tradus unu"
 
 
 def test_main_window_prevents_reimport_when_source_is_locked(monkeypatch, qtbot, tmp_path) -> None:

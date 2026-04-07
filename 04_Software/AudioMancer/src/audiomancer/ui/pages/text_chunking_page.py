@@ -13,7 +13,7 @@
          current cleaned-text reference plus persisted chunk previews.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-07
-@version 0.2.2
+@version 0.3.0
 """
 
 # IMPORTS
@@ -58,7 +58,7 @@ class TextChunkingPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-07
-        @version    0.2.2
+        @version    0.3.0
         """
         super().__init__(parent)
         self._chunks: list[dict[str, object]] = []
@@ -115,14 +115,14 @@ class TextChunkingPage(QWidget):
             "Cleaned text will appear here and serve as the chunking reference."
         )
         cleaned_layout.addWidget(self._cleaned_text_edit)
-        left_layout.addWidget(cleaned_group, 3)
+        left_layout.addWidget(cleaned_group, 5)
 
         chunk_list_group = QGroupBox("Chunk List", self)
         chunk_list_layout = QVBoxLayout(chunk_list_group)
         self._chunk_list = QListWidget(self)
         self._chunk_list.currentRowChanged.connect(self._show_selected_chunk)
         chunk_list_layout.addWidget(self._chunk_list)
-        left_layout.addWidget(chunk_list_group, 3)
+        left_layout.addWidget(chunk_list_group, 2)
         top_splitter.addWidget(left_container)
 
         chunk_preview_group = QGroupBox("Selected Chunk", self)
@@ -137,7 +137,7 @@ class TextChunkingPage(QWidget):
 
         top_splitter.setStretchFactor(0, 3)
         top_splitter.setStretchFactor(1, 2)
-        layout.addWidget(top_splitter, 4)
+        layout.addWidget(top_splitter, 6)
 
         notes_group = QGroupBox("Chunking Notes", self)
         notes_layout = QVBoxLayout(notes_group)
@@ -148,7 +148,8 @@ class TextChunkingPage(QWidget):
             "Deterministic and AI-assisted chunk generation will populate the chunk list and selected preview."
         )
         notes_layout.addWidget(self._notes_edit)
-        notes_group.setMaximumHeight(140)
+        notes_group.setMinimumHeight(96)
+        notes_group.setMaximumHeight(112)
         layout.addWidget(notes_group, 0)
         self._cleaned_group = cleaned_group
         self._chunk_list_group = chunk_list_group

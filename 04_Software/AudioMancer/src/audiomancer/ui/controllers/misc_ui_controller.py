@@ -13,7 +13,7 @@
          dialogs, the common modal progress popup, and title-bar helpers.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-06
-@version 0.3.0
+@version 0.4.0
 """
 
 # IMPORTS
@@ -29,6 +29,7 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QPlainTextEdit,
+    QToolTip,
     QVBoxLayout,
 )
 
@@ -66,7 +67,7 @@ def show_message(
     timeout_ms: int = 5000,
 ) -> None:
     """
-    @brief      Show a transient status-bar message.
+    @brief      Show a transient shell message without creating a status bar.
     @param[in]  window Active main window shell.
     @param[in]  message Operator-facing message text.
     @param[in]  timeout_ms Status-bar timeout in milliseconds.
@@ -74,9 +75,10 @@ def show_message(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.1.1
+    @version    0.2.0
     """
-    window.statusBar().showMessage(message, timeout_ms)
+    global_center = window.mapToGlobal(window.rect().center())
+    QToolTip.showText(global_center, message, window, window.rect(), timeout_ms)
 
 
 def show_help_placeholder(window: "MainWindow") -> None:

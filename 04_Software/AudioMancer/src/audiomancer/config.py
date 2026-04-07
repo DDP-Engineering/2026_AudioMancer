@@ -151,7 +151,7 @@ CHUNKING_REPORT_FILE_NAME = "chunking_report.json"
 TRANSLATED_CHUNKS_FILE_NAME = "translated_chunks.json"
 
 # @brief File name used for persisted translation session metadata.
-TRANSLATION_REPORT_FILE_NAME = "translation_report.json"
+TRANSLATION_REPORT_FILE_NAME = f"{OPERATION_ARTIFACT_FILE_PREFIX}translation_report.json"
 
 # @brief File name used for persisted discovered character profiles.
 CHARACTER_PROFILE_FILE_NAME = "character_profiles.json"
@@ -286,6 +286,7 @@ AVAILABLE_LOG_COMPONENTS = (
     "ai_backend",
     "ai_cleanup",
     "ai_chunking",
+    "ai_translation",
     "deterministic_cleanup",
     "deterministic_chunking",
     "llm_provider",
