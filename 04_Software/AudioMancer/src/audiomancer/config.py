@@ -12,8 +12,8 @@
 @details Centralizes application names, paths, defaults, artifact names, and
          file support used by the current AudioMancer implementation scaffold.
 @author Eng. Dan Dumitru Pasare
-@date 2026-04-06
-@version 1.1.0
+@date 2026-04-07
+@version 1.2.0
 """
 
 # IMPORTS
@@ -142,7 +142,7 @@ CLEANED_TEXT_FILE_NAME = f"{OPERATION_OUTPUT_FILE_PREFIX}clean_text.txt"
 CLEANUP_REPORT_FILE_NAME = f"{OPERATION_ARTIFACT_FILE_PREFIX}cleanup_report.json"
 
 # @brief File name used for the persisted chunk list artifact.
-CHUNK_ARTIFACT_FILE_NAME = "chunks.json"
+CHUNK_ARTIFACT_FILE_NAME = f"{OPERATION_OUTPUT_FILE_PREFIX}chunks.json"
 
 # @brief File name used for persisted chunking metadata.
 CHUNKING_REPORT_FILE_NAME = "chunking_report.json"
@@ -283,6 +283,7 @@ AVAILABLE_LOG_COMPONENTS = (
     "ai_backend",
     "ai_cleanup",
     "deterministic_cleanup",
+    "deterministic_chunking",
     "llm_provider",
     "main_window",
     "operation_runtime",

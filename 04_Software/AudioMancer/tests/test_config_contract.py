@@ -12,8 +12,8 @@
 @details Verifies that the adapted configuration constants and persisted
          settings scaffold exist with the expected baseline contract.
 @author Eng. Dan Dumitru Pasare
-@date 2026-04-06
-@version 0.8.0
+@date 2026-04-07
+@version 0.8.1
 """
 
 # IMPORTS
@@ -50,6 +50,8 @@ def test_config_exposes_expected_identity_and_window_defaults() -> None:
     assert config.EXTRACTION_FOLDER_NAME == "00_extraction"
     assert config.EXTRACTED_TEXT_FILE_NAME == "output_raw_text.txt"
     assert config.EXTRACTION_REPORT_FILE_NAME == "extraction_report.json"
+    assert config.CHUNK_ARTIFACT_FILE_NAME == "output_chunks.json"
+    assert config.CHUNKING_REPORT_FILE_NAME == "chunking_report.json"
     assert config.OPERATION_STATE_FILE_NAME == "state_operation.json"
     assert "text_extraction" in config.AVAILABLE_LOG_COMPONENTS
 

@@ -12,8 +12,8 @@
 @details Verifies percent conversion and downstream reset behavior shared by
          extraction, cleanup, and future workflow operations.
 @author Eng. Dan Dumitru Pasare
-@date 2026-04-06
-@version 0.1.1
+@date 2026-04-07
+@version 0.1.2
 """
 
 # IMPORTS
@@ -53,7 +53,7 @@ def test_reset_operation_data_clears_selected_and_downstream_folders(tmp_path) -
         "clean",
         encoding="utf-8",
     )
-    (project_root / "20_chunking" / "chunks.json").write_text("[]", encoding="utf-8")
+    (project_root / "20_chunking" / config.CHUNK_ARTIFACT_FILE_NAME).write_text("[]", encoding="utf-8")
     (project_root / "30_translation" / "translation.json").write_text("{}", encoding="utf-8")
 
     operation_runtime_service.reset_operation_data(

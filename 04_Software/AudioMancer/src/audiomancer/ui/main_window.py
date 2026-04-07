@@ -13,8 +13,8 @@
          behavior to dedicated UI controllers and page-specific state services
          so the window remains a thin coordinator.
 @author Eng. Dan Dumitru Pasare
-@date 2026-04-06
-@version 1.13.0
+@date 2026-04-07
+@version 1.14.0
 """
 
 # IMPORTS
@@ -36,12 +36,14 @@ from PySide6.QtWidgets import (
 from audiomancer import config
 from audiomancer.services import home_presenter_service
 from audiomancer.services import settings_service
+from audiomancer.services import text_chunking_state_service
 from audiomancer.services import text_cleanup_state_service
 from audiomancer.services import ui_state_service
 from audiomancer.ui.controllers import ai_settings_ui_controller
 from audiomancer.ui.controllers import home_ui_controller
 from audiomancer.ui.controllers import misc_ui_controller
 from audiomancer.ui.controllers import settings_ui_controller
+from audiomancer.ui.controllers import text_chunking_ui_controller
 from audiomancer.ui.controllers import text_cleanup_ui_controller
 from audiomancer.ui.navigation_sidebar import NavigationSidebar
 from audiomancer.ui.operation_progress_dialog import OperationProgressDialog
@@ -170,7 +172,7 @@ class MainWindow(QMainWindow):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-06
-        @version    0.4.0
+        @version    0.5.0
         """
         for page_id, _label in self.PAGE_ORDER:
             enabled = is_active or page_id == "home"
@@ -231,6 +233,19 @@ class MainWindow(QMainWindow):
         )
         self._text_cleanup_page.set_processing_state(
             **text_cleanup_state_service.build_text_cleanup_state(
+                project_root,
+                manifest,
+                current_language,
+            )
+        )
+        self._text_chunking_page.set_project_active(project_root is not None)
+        self._text_chunking_page.set_ai_profiles(
+            **text_chunking_state_service.build_ai_chunking_profile_state(
+                self._settings_payload
+            )
+        )
+        self._text_chunking_page.set_processing_state(
+            **text_chunking_state_service.build_text_chunking_state(
                 project_root,
                 manifest,
                 current_language,
@@ -329,8 +344,8 @@ class MainWindow(QMainWindow):
         @return     None.
         @exception  None
         @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-06
-        @version    0.8.1
+        @date       2026-04-07
+        @version    0.10.0
         """
         current_language = ui_state_service.current_language_from_settings(
             self._settings_payload
@@ -364,11 +379,17 @@ class MainWindow(QMainWindow):
                 profile_id,
             )
         )
+        self._text_chunking_page = TextChunkingPage(self)
+        self._text_chunking_page.chunk_requested.connect(
+            lambda: text_chunking_ui_controller.handle_deterministic_chunking_requested(
+                self
+            )
+        )
 
         pages = {
             "home": home_page,
             "text_cleanup": self._text_cleanup_page,
-            "text_chunking": TextChunkingPage(self),
+            "text_chunking": self._text_chunking_page,
             "ai_translation": AiTranslationPage(self),
             "characters": CharactersPage(self),
             "narrator": NarratorPage(self),

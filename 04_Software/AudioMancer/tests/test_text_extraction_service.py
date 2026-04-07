@@ -12,8 +12,8 @@
 @details Verifies self-contained extraction artifacts, resumable state, and
          deterministic text extraction for the supported source formats.
 @author Eng. Dan Dumitru Pasare
-@date 2026-04-06
-@version 0.1.1
+@date 2026-04-07
+@version 0.1.2
 """
 
 # IMPORTS
@@ -333,7 +333,7 @@ def test_reset_extraction_and_downstream_preserves_input_snapshot(tmp_path) -> N
     (extraction_root / "input_story.txt").write_text("snapshot", encoding="utf-8")
     (extraction_root / config.EXTRACTED_TEXT_FILE_NAME).write_text("output", encoding="utf-8")
     (project_root / "10_cleanup" / "cleanup.txt").write_text("cleanup", encoding="utf-8")
-    (project_root / "20_chunking" / "chunks.json").write_text("[]", encoding="utf-8")
+    (project_root / "20_chunking" / config.CHUNK_ARTIFACT_FILE_NAME).write_text("[]", encoding="utf-8")
 
     text_extraction_service.reset_extraction_and_downstream(project_root)
 

@@ -38,6 +38,7 @@ from audiomancer.services import project_workspace_service
 from audiomancer.ui.controllers import ai_settings_ui_controller
 from audiomancer.ui.controllers import home_ui_controller
 from audiomancer.ui.controllers import settings_ui_controller
+from audiomancer.ui.controllers import text_chunking_ui_controller
 from audiomancer.ui.controllers import text_cleanup_ui_controller
 from audiomancer.ui.main_window import MainWindow
 
@@ -1214,6 +1215,142 @@ def test_main_window_runs_deterministic_cleanup_and_updates_preview(
     assert window._current_manifest["current_stage"] == "text_chunking_ready"
     assert window._text_cleanup_page._cleaned_text_edit.toPlainText() == "Chapter I\n\nParagraph one.\n"
     assert "Cleanup produced 2 paragraphs" in window._text_cleanup_page._notes_edit.toPlainText()
+
+
+def test_main_window_runs_deterministic_chunking_and_updates_preview(
+    monkeypatch,
+    qtbot,
+    tmp_path,
+) -> None:
+    """
+    @brief      Verify deterministic chunking updates the manifest-facing UI state and chunk preview.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  qtbot Qt test helper fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-07
+    @version    0.1.0
+    """
+    persisted_payload = {
+        "language": "en",
+        "ui_text_scale": "normal",
+        "play_completion_beep": False,
+        "llm_profiles": [],
+        "default_ai_cleanup_profile_id": None,
+        "default_ai_chunking_profile_id": None,
+        "default_ai_chunking_strategy": "paragraph",
+        "default_character_extraction_profile_id": None,
+    }
+    project_root, manifest = project_workspace_service.create_project("ChunkWindowProject", tmp_path)
+    source_path = project_root / "story.pdf"
+    source_path.write_text("placeholder", encoding="utf-8")
+    manifest["source_document"] = {
+        "original_name": "story.pdf",
+        "stored_relative_path": "story.pdf",
+        "file_type": "pdf",
+        "imported_at": "2026-04-07T12:00:00+00:00",
+        "size_bytes": source_path.stat().st_size,
+    }
+    manifest["operations"]["cleanup"]["status"] = "completed"
+    manifest["operations"]["cleanup"]["output_paths"] = [f"{config.CLEANUP_FOLDER_NAME}/{config.CLEANED_TEXT_FILE_NAME}"]
+    project_workspace_service.save_manifest(manifest, project_root)
+    cleanup_root = project_root / config.CLEANUP_FOLDER_NAME
+    cleanup_root.mkdir(exist_ok=True)
+    (cleanup_root / config.CLEANED_TEXT_FILE_NAME).write_text("Chapter I\n\nParagraph one.\n", encoding="utf-8")
+
+    def _fake_chunk_text(*_args, progress_callback=None, cancel_requested=None, **_kwargs):
+        progress_callback(1, 1, 100, "Deterministic chunking completed.")
+        chunk_root = project_root / "20_chunking"
+        chunk_root.mkdir(exist_ok=True)
+        (chunk_root / "input_story.pdf").write_text("Chapter I\n\nParagraph one.\n", encoding="utf-8")
+        (chunk_root / config.CHUNK_ARTIFACT_FILE_NAME).write_text(
+            json.dumps([
+                {
+                    "chunk_id": "chunk-0001",
+                    "sequence_index": 1,
+                    "chapter_label": "Chapter I",
+                    "text": "Chapter I",
+                    "source_start_line": 1,
+                    "source_end_line": 1,
+                    "chunking_mode": "deterministic",
+                    "semantic_strategy": None,
+                    "scene_note": None,
+                },
+                {
+                    "chunk_id": "chunk-0002",
+                    "sequence_index": 2,
+                    "chapter_label": "Chapter I",
+                    "text": "Paragraph one.",
+                    "source_start_line": 3,
+                    "source_end_line": 3,
+                    "chunking_mode": "deterministic",
+                    "semantic_strategy": None,
+                    "scene_note": None,
+                },
+            ], indent=2) + "\n",
+            encoding="utf-8",
+        )
+        (chunk_root / config.CHUNKING_REPORT_FILE_NAME).write_text(
+            json.dumps({
+                "input_relative_path": "20_chunking/input_story.pdf",
+                "chunk_artifact_relative_path": f"20_chunking/{config.CHUNK_ARTIFACT_FILE_NAME}",
+                "chunked_at": "2026-04-07T12:02:00+00:00",
+                "warnings": [],
+                "chunk_count": 2,
+                "detected_chapter_count": 1,
+                "chunking_mode": "deterministic",
+            }, indent=2) + "\n",
+            encoding="utf-8",
+        )
+        (chunk_root / config.OPERATION_STATE_FILE_NAME).write_text(
+            json.dumps({
+                "folder_relative_path": "20_chunking",
+                "status": "completed",
+                "input_paths": ["20_chunking/input_story.pdf"],
+                "output_paths": [f"20_chunking/{config.CHUNK_ARTIFACT_FILE_NAME}"],
+                "artifact_paths": [f"20_chunking/{config.CHUNKING_REPORT_FILE_NAME}"],
+                "progress_current": 2,
+                "progress_total": 2,
+                "mode": "deterministic",
+                "started_at": "2026-04-07T12:00:00+00:00",
+                "completed_at": "2026-04-07T12:02:00+00:00",
+                "updated_at": "2026-04-07T12:02:00+00:00",
+                "warning_count": 0,
+                "metadata": {"warnings": [], "chunk_count": 2, "detected_chapter_count": 1},
+                "resume_checkpoint": None,
+            }, indent=2) + "\n",
+            encoding="utf-8",
+        )
+        assert cancel_requested() is False
+        return {"chunk_count": 2}
+
+    monkeypatch.setattr(text_chunking_ui_controller.deterministic_chunking_service, "chunk_text", _fake_chunk_text)
+
+    window = MainWindow(settings_payload=dict(persisted_payload))
+    qtbot.addWidget(window)
+    window._activate_project(project_root, project_workspace_service.load_manifest(project_root))
+    monkeypatch.setattr(
+        text_chunking_ui_controller,
+        "start_operation",
+        lambda _window, **kwargs: kwargs["success_handler"](
+            kwargs["worker_callable"](
+                _window._current_project_root,
+                dict(_window._current_manifest),
+                progress_callback=lambda *_args: None,
+                cancel_requested=lambda: False,
+            )
+        ),
+    )
+
+    window._text_chunking_page.chunk_requested.emit()
+
+    assert window._current_manifest is not None
+    assert window._current_manifest["current_stage"] == "translation_ready"
+    assert window._text_chunking_page._chunk_list.count() == 2
+    assert window._text_chunking_page._chunk_text_edit.toPlainText() == "Chapter I"
+    assert "Chunking produced 2 chunks" in window._text_chunking_page._notes_edit.toPlainText()
 
 
 def test_main_window_prevents_reimport_when_source_is_locked(monkeypatch, qtbot, tmp_path) -> None:

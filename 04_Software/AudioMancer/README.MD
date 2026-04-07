@@ -7,8 +7,8 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
 
 # AudioMancer Application
 
-This folder contains the initial Python application scaffold for `AudioMancer`.
-It now includes a project-aware main-window shell copied from
+This folder contains the current Python application implementation for
+`AudioMancer`. It includes a project-aware main-window shell copied from
 `DDP_Audiomancer` and adapted to the local package.
 
 ## Structure
@@ -24,7 +24,9 @@ It now includes a project-aware main-window shell copied from
 - `src/audiomancer/services/import_service.py` provides source-file validation, copy-into-project behavior, and source metadata creation.
 - `src/audiomancer/services/text_extraction_service.py` provides deterministic raw-text extraction, self-contained extraction artifacts, resumable extraction state, and cancelable progress updates.
 - `src/audiomancer/services/deterministic_cleanup_service.py` provides deterministic cleanup, cleanup artifacts, and resumable cleanup state.
+- `src/audiomancer/services/deterministic_chunking_service.py` provides deterministic chunking, chunk artifacts, and resumable chunking state.
 - `src/audiomancer/services/ai_cleanup_service.py` provides AI-assisted cleanup, resumable AI cleanup state, and operation-local AI transaction logging.
+- `src/audiomancer/services/text_chunking_state_service.py` provides Text Chunking page state shaping plus persisted chunk preview loading.
 - `src/audiomancer/services/llm_provider_service.py` provides OpenAI-compatible chat-completion requests, transient retry handling, responsive cooperative cancellation during model waits, JSON normalization, and optional AI transaction logging.
 - `src/audiomancer/services/prompt_template_service.py` provides strict prompt loading and placeholder rendering from the app-root `prompts/` folder.
 - `src/audiomancer/services/operation_runtime_service.py` provides shared runtime helpers for long-running operation folders, resets, and progress conversion.
@@ -32,6 +34,7 @@ It now includes a project-aware main-window shell copied from
 - `src/audiomancer/services/text_cleanup_state_service.py` provides Text Cleanup page state shaping plus extraction/cleanup manifest reset helpers.
 - `src/audiomancer/ui/` provides the copied toolbar, sidebar, page, and status-bar shell used by the first desktop window.
 - `src/audiomancer/ui/controllers/` provides page/window-oriented Qt controllers for Home, Text Cleanup, Settings, AI Settings, and shared shell UI helpers.
+- `src/audiomancer/ui/controllers/` now also includes a dedicated Text Chunking page controller for deterministic chunking actions and rerun/reset handling.
 - `src/audiomancer/ui/operation_progress_dialog.py` provides the reusable modal progress popup created on demand for synchronous blocking operations.
 - `prompts/` stores AI prompt templates loaded by AI-assisted cleanup and future AI workflows.
 - the main toolbar now supports `New Project` and `Open Project`.
@@ -43,15 +46,19 @@ It now includes a project-aware main-window shell copied from
 - the `Text Cleanup` page now runs deterministic text extraction for the imported source and writes self-contained artifacts into `00_extraction`.
 - the `Text Cleanup` page now also runs deterministic cleanup into `10_cleanup` while preserving the original source file name for the cleanup input snapshot.
 - the `Text Cleanup` page now also supports AI-assisted cleanup using the selected enabled AI profile from `AI Settings`.
+- the `Text Chunking` page now runs deterministic chunking into `20_chunking`, renders the current chunk list plus selected chunk preview, and resumes interrupted deterministic chunking runs.
 - extraction artifacts currently use `input_<original_name>`, `output_raw_text.txt`, `extraction_report.json`, and `state_operation.json`.
 - cleanup artifacts currently use `input_<original_name>`, `output_clean_text.txt`, `artifact_cleanup_report.json`, and `state_operation.json`, with the cleanup output/report names defined centrally in `src/audiomancer/config.py`.
+- chunking artifacts currently use `input_<original_name>`, `output_chunks.json`, `chunking_report.json`, and `state_operation.json`.
 - AI-assisted cleanup writes one project-local transaction log per run in `10_cleanup` using `log_ai_transactions_<timestamp>.log`.
 - pressing `Extract Text` after a completed extraction now asks for confirmation before clearing extraction data and all downstream workflow folders.
 - pressing `Deterministic Cleanup` after a completed cleanup now asks for confirmation before clearing cleanup data plus chunking and all following workflow folders.
 - pressing `AI-Assisted Cleanup` now first warns that AI operations can take longer, then asks for confirmation before clearing completed cleanup data plus chunking and all following workflow folders when a rerun is required.
+- pressing `Deterministic Chunking` after a completed chunking run now asks for confirmation before clearing chunking data plus all following workflow folders.
 - pressing `Extract Text` after an unfinished extraction now continues from saved state when possible, or restarts safely from the copied extraction input snapshot.
 - pressing `Deterministic Cleanup` after an unfinished cleanup now continues from saved state when possible.
 - pressing `AI-Assisted Cleanup` after an unfinished AI cleanup now resumes from the saved cleanup checkpoint and AI transaction log.
+- pressing `Deterministic Chunking` after an unfinished chunking run now resumes from the saved chunking checkpoint.
 - long-running extraction and cleanup now run through one reusable modal progress dialog with a cancel button that blocks the main window while the operation is active.
 - AI-assisted cleanup keeps the progress popup responsive while waiting for provider responses, so the cancel button is honored during long model calls.
 - project names are stored exactly as entered but are rejected when invalid for Windows or Linux folder creation.
@@ -148,6 +155,15 @@ uv run pytest tests/test_llm_provider_service.py
 uv run pytest tests/test_ai_cleanup_service.py
 uv run pytest tests/test_text_cleanup_page.py
 uv run pytest tests/test_text_cleanup_ui_controller.py
+```
+
+Focused validation used for the current deterministic chunking implementation:
+
+```powershell
+uv run pytest tests/test_deterministic_chunking_service.py
+uv run pytest tests/test_text_chunking_page.py
+uv run pytest tests/test_text_chunking_ui_controller.py
+uv run pytest tests/test_main_window.py
 ```
 
 Focused validation used for the current page-oriented UI controller split:
