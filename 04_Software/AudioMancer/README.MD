@@ -46,10 +46,12 @@ This folder contains the current Python application implementation for
 - the `Text Cleanup` page now runs deterministic text extraction for the imported source and writes self-contained artifacts into `00_extraction`.
 - the `Text Cleanup` page now also runs deterministic cleanup into `10_cleanup` while preserving the original source file name for the cleanup input snapshot.
 - the `Text Cleanup` page now also supports AI-assisted cleanup using the selected enabled AI profile from `AI Settings`.
+- AI-assisted cleanup now splits long inputs into smaller request windows, validates risky page-number and separator labels conservatively, and surfaces review warnings when the AI result looks suspicious.
 - the `Text Chunking` page now runs deterministic chunking into `20_chunking`, renders the current chunk list plus selected chunk preview, and resumes interrupted deterministic chunking runs.
+- the `Text Chunking` page now also supports AI-assisted chunking using the selected enabled AI profile plus the selected semantic strategy.
 - extraction artifacts currently use `input_<original_name>`, `output_raw_text.txt`, `extraction_report.json`, and `state_operation.json`.
 - cleanup artifacts currently use `input_<original_name>`, `output_clean_text.txt`, `artifact_cleanup_report.json`, and `state_operation.json`, with the cleanup output/report names defined centrally in `src/audiomancer/config.py`.
-- chunking artifacts currently use `input_<original_name>`, `output_chunks.json`, `chunking_report.json`, and `state_operation.json`.
+- chunking artifacts currently use `input_<original_name>`, `output_chunks.json`, `chunking_report.json`, and `state_operation.json`, with both deterministic and AI-assisted chunking updating the same canonical chunk output.
 - AI-assisted cleanup writes one project-local transaction log per run in `10_cleanup` using `log_ai_transactions_<timestamp>.log`.
 - pressing `Extract Text` after a completed extraction now asks for confirmation before clearing extraction data and all downstream workflow folders.
 - pressing `Deterministic Cleanup` after a completed cleanup now asks for confirmation before clearing cleanup data plus chunking and all following workflow folders.
@@ -59,6 +61,7 @@ This folder contains the current Python application implementation for
 - pressing `Deterministic Cleanup` after an unfinished cleanup now continues from saved state when possible.
 - pressing `AI-Assisted Cleanup` after an unfinished AI cleanup now resumes from the saved cleanup checkpoint and AI transaction log.
 - pressing `Deterministic Chunking` after an unfinished chunking run now resumes from the saved chunking checkpoint.
+- pressing `AI-Assisted Chunking` after an unfinished AI chunking run now resumes from the saved chunking checkpoint and AI transaction log.
 - long-running extraction and cleanup now run through one reusable modal progress dialog with a cancel button that blocks the main window while the operation is active.
 - AI-assisted cleanup keeps the progress popup responsive while waiting for provider responses, so the cancel button is honored during long model calls.
 - project names are stored exactly as entered but are rejected when invalid for Windows or Linux folder creation.

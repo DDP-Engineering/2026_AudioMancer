@@ -16,6 +16,24 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+## [0.10.0] - 2026-04-07
+
+### Added
+
+- added AI-assisted text chunking with canonical `20_chunking` outputs, resumable state, AI prompts, transaction logging, and focused service/controller/page coverage
+- added focused regression coverage for AI cleanup reliability and chunking-note state handling
+
+### Changed
+
+- hardened AI-assisted cleanup to split long requests into smaller windows, validate risky `page_number` and `separator` labels conservatively, and persist operator-visible warning details
+- updated chunking-page notes so active AI-assisted chunking shows an in-progress note instead of a misleading ready note
+- added Doxygen-style constant descriptions across the touched services and UI modules for documentation consistency
+- package version updated to `0.10.0`
+
+### Fixed
+
+- fixed AI-assisted cleanup so suspicious late-window label drift no longer silently removes valid story text without warning
+
 ## [0.9.0] - 2026-04-07
 
 ### Added

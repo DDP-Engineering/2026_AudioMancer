@@ -33,6 +33,7 @@ from audiomancer.services import ui_state_service
 
 # CONSTANTS
 
+# @brief Operator-facing labels for the supported UI text-scale presets.
 _UI_TEXT_SCALE_LABELS = {
     "very_small": "Very Small",
     "small": "Small",

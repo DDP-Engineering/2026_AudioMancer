@@ -13,7 +13,7 @@
          pages, and status bar are created without workflow functionality.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-06
-@version 1.2.0
+@version 1.3.0
 """
 
 # IMPORTS
@@ -34,6 +34,7 @@ from PySide6.QtWidgets import (
 
 import audiomancer.ui.main_window as main_window_module
 from audiomancer import config
+from audiomancer.services import deterministic_chunking_service
 from audiomancer.services import project_workspace_service
 from audiomancer.ui.controllers import ai_settings_ui_controller
 from audiomancer.ui.controllers import home_ui_controller
@@ -1351,6 +1352,108 @@ def test_main_window_runs_deterministic_chunking_and_updates_preview(
     assert window._text_chunking_page._chunk_list.count() == 2
     assert window._text_chunking_page._chunk_text_edit.toPlainText() == "Chapter I"
     assert "Chunking produced 2 chunks" in window._text_chunking_page._notes_edit.toPlainText()
+
+
+def test_main_window_runs_ai_chunking_and_updates_preview(
+    monkeypatch,
+    qtbot,
+    tmp_path,
+) -> None:
+    """
+    @brief      Verify the main window wires AI-assisted chunking and refreshes the chunk preview after success.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  qtbot Qt test helper fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-07
+    @version    0.1.0
+    """
+    persisted_payload = {
+        "language": "en",
+        "ui_text_scale": "normal",
+        "play_completion_beep": False,
+        "llm_profiles": [{
+            "id": "profile_1",
+            "label": "Chunking Profile",
+            "backend_kind": "lmstudio",
+            "base_url": "http://127.0.0.1:1234",
+            "api_key": "",
+            "model_name": "qwen3-8b",
+            "context_window": 4096,
+            "max_output_tokens": 512,
+            "request_timeout_seconds": 30,
+            "temperature": 0.2,
+            "supports_structured_output": False,
+            "enabled": True,
+        }],
+        "default_ai_cleanup_profile_id": None,
+        "default_ai_chunking_profile_id": "profile_1",
+        "default_ai_chunking_strategy": "scene",
+        "default_character_extraction_profile_id": None,
+    }
+    project_root, manifest = project_workspace_service.create_project(
+        "Book5_CAL_CAL",
+        tmp_path,
+    )
+    manifest["source_document"] = {
+        "original_name": "story.txt",
+        "stored_relative_path": "story.txt",
+        "file_type": "txt",
+        "imported_at": "2026-04-07T12:00:00+00:00",
+        "size_bytes": 4,
+    }
+    manifest["operations"]["cleanup"]["status"] = "completed"
+    manifest["operations"]["cleanup"]["output_paths"] = [
+        f"{config.CLEANUP_FOLDER_NAME}/{config.CLEANED_TEXT_FILE_NAME}"
+    ]
+    cleanup_root = project_root / config.CLEANUP_FOLDER_NAME
+    cleanup_root.mkdir(parents=True, exist_ok=True)
+    (cleanup_root / config.CLEANED_TEXT_FILE_NAME).write_text(
+        "Chapter I\n\nParagraph one.\n\nParagraph two.\n",
+        encoding="utf-8",
+    )
+    project_workspace_service.save_manifest(manifest, project_root)
+
+    window = MainWindow(settings_payload=dict(persisted_payload))
+    qtbot.addWidget(window)
+    window._activate_project(project_root, project_workspace_service.load_manifest(project_root))
+    monkeypatch.setattr(
+        text_chunking_ui_controller,
+        "start_operation",
+        lambda _window, **kwargs: kwargs["success_handler"](
+            kwargs["worker_callable"](
+                _window._current_project_root,
+                dict(_window._current_manifest),
+                progress_callback=lambda *_args: None,
+                cancel_requested=lambda: False,
+            )
+        ),
+    )
+    monkeypatch.setattr(
+        text_chunking_ui_controller.ai_chunking_service,
+        "chunk_text",
+        lambda project_root, manifest, _profile, _strategy, progress_callback=None, cancel_requested=None: (
+            deterministic_chunking_service.chunk_text(
+                project_root,
+                manifest,
+                progress_callback=progress_callback,
+                cancel_requested=cancel_requested,
+            )
+            | {
+                "chunking_mode": "ai_assisted",
+                "semantic_strategy": "scene",
+            }
+        ),
+    )
+
+    window._text_chunking_page.ai_chunk_requested.emit("profile_1", "scene")
+
+    assert window._current_manifest is not None
+    assert window._current_manifest["current_stage"] == "translation_ready"
+    assert window._text_chunking_page._chunk_list.count() == 2
+    assert window._text_chunking_page._ai_chunk_button.isEnabled() is True
 
 
 def test_main_window_prevents_reimport_when_source_is_locked(monkeypatch, qtbot, tmp_path) -> None:

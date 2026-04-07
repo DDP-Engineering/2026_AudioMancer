@@ -13,7 +13,7 @@
          lifecycle and deterministic chunking dispatch correctly.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-07
-@version 0.1.0
+@version 0.2.0
 """
 
 # IMPORTS
@@ -208,6 +208,187 @@ def test_text_chunking_ui_controller_completed_rerun_requires_confirmation(
     text_chunking_ui_controller.handle_deterministic_chunking_requested(window)
 
     assert start_calls == []
+
+
+def test_text_chunking_ui_controller_ai_chunk_request_uses_selected_profile_and_strategy(
+    monkeypatch,
+    qtbot,
+    tmp_path,
+) -> None:
+    """
+    @brief      Verify AI-assisted chunking dispatches through the controller helper with one selected profile and strategy.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  qtbot Qt test helper fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-07
+    @version    0.1.0
+    """
+    project_root, manifest = project_workspace_service.create_project(
+        "ControllerAiChunkDispatchProject",
+        tmp_path,
+    )
+    source_path = project_root / "story.txt"
+    source_path.write_text("Story", encoding="utf-8")
+    manifest["source_document"] = {
+        "original_name": "story.txt",
+        "stored_relative_path": "story.txt",
+        "file_type": "txt",
+        "imported_at": "2026-04-07T12:00:00+00:00",
+        "size_bytes": 10,
+    }
+    manifest["operations"]["cleanup"]["status"] = "completed"
+    manifest["operations"]["cleanup"]["output_paths"] = ["10_cleanup/output_clean_text.txt"]
+    cleanup_root = project_root / "10_cleanup"
+    cleanup_root.mkdir(exist_ok=True)
+    (cleanup_root / "output_clean_text.txt").write_text("Paragraph one.\n", encoding="utf-8")
+    project_workspace_service.save_manifest(manifest, project_root)
+
+    window = MainWindow(settings_payload={
+        "language": "en",
+        "ui_text_scale": "normal",
+        "play_completion_beep": False,
+        "llm_profiles": [{
+            "id": "profile_1",
+            "label": "Chunking Profile",
+            "backend_kind": "lmstudio",
+            "base_url": "http://127.0.0.1:1234",
+            "api_key": "",
+            "model_name": "qwen3-8b",
+            "context_window": 4096,
+            "max_output_tokens": 512,
+            "request_timeout_seconds": 30,
+            "temperature": 0.2,
+            "supports_structured_output": False,
+            "enabled": True,
+        }],
+        "default_ai_cleanup_profile_id": None,
+        "default_ai_chunking_profile_id": "profile_1",
+        "default_ai_chunking_strategy": "scene",
+        "default_character_extraction_profile_id": None,
+    })
+    qtbot.addWidget(window)
+    window._activate_project(project_root, project_workspace_service.load_manifest(project_root))
+
+    start_calls = []
+    monkeypatch.setattr(
+        text_chunking_ui_controller,
+        "start_operation",
+        lambda _window, **kwargs: start_calls.append(kwargs),
+    )
+    monkeypatch.setattr(
+        text_chunking_ui_controller.ai_chunking_service,
+        "chunk_text",
+        lambda *_args, **_kwargs: {"chunking_mode": "ai_assisted"},
+    )
+
+    text_chunking_ui_controller.handle_ai_chunking_requested(window, "profile_1", "scene")
+
+    assert len(start_calls) == 1
+    assert start_calls[0]["operation_kind"] == "chunking"
+    worker_callable = start_calls[0]["worker_callable"]
+    result = worker_callable(project_root, project_workspace_service.load_manifest(project_root))
+    assert result["chunking_mode"] == "ai_assisted"
+
+
+def test_text_chunking_ui_controller_ai_chunk_resume_skips_confirmation(
+    monkeypatch,
+    qtbot,
+    tmp_path,
+) -> None:
+    """
+    @brief      Verify interrupted AI chunking resumes without rerun confirmation.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  qtbot Qt test helper fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-07
+    @version    0.1.0
+    """
+    project_root, manifest = project_workspace_service.create_project(
+        "ControllerAiChunkResumeProject",
+        tmp_path,
+    )
+    manifest["source_document"] = {
+        "original_name": "story.txt",
+        "stored_relative_path": "story.txt",
+        "file_type": "txt",
+        "imported_at": "2026-04-07T12:00:00+00:00",
+        "size_bytes": 10,
+    }
+    manifest["operations"]["cleanup"]["status"] = "completed"
+    manifest["operations"]["cleanup"]["output_paths"] = ["10_cleanup/output_clean_text.txt"]
+    manifest["operations"]["chunking"] = {
+        "folder_relative_path": "20_chunking",
+        "status": "running",
+        "mode": "ai_assisted",
+        "metadata": {
+            "ai_profile_id": "profile_1",
+            "semantic_strategy": "scene",
+        },
+    }
+    cleanup_root = project_root / "10_cleanup"
+    cleanup_root.mkdir(exist_ok=True)
+    (cleanup_root / "output_clean_text.txt").write_text("Paragraph one.\n", encoding="utf-8")
+    project_workspace_service.save_manifest(manifest, project_root)
+
+    window = MainWindow(settings_payload={
+        "language": "en",
+        "ui_text_scale": "normal",
+        "play_completion_beep": False,
+        "llm_profiles": [{
+            "id": "profile_1",
+            "label": "Chunking Profile",
+            "backend_kind": "lmstudio",
+            "base_url": "http://127.0.0.1:1234",
+            "api_key": "",
+            "model_name": "qwen3-8b",
+            "context_window": 4096,
+            "max_output_tokens": 512,
+            "request_timeout_seconds": 30,
+            "temperature": 0.2,
+            "supports_structured_output": False,
+            "enabled": True,
+        }],
+        "default_ai_cleanup_profile_id": None,
+        "default_ai_chunking_profile_id": "profile_1",
+        "default_ai_chunking_strategy": "scene",
+        "default_character_extraction_profile_id": None,
+    })
+    qtbot.addWidget(window)
+    window._activate_project(project_root, project_workspace_service.load_manifest(project_root))
+
+    confirm_calls = []
+    monkeypatch.setattr(
+        text_chunking_ui_controller,
+        "confirm_ai_chunking_rerun",
+        lambda *_args: confirm_calls.append("rerun") or True,
+    )
+    start_calls = []
+    monkeypatch.setattr(
+        text_chunking_ui_controller,
+        "start_operation",
+        lambda _window, **kwargs: start_calls.append(kwargs),
+    )
+    monkeypatch.setattr(
+        text_chunking_ui_controller.ai_chunking_service,
+        "load_operation_state",
+        lambda _project_root: {
+            "metadata": {
+                "ai_profile_id": "profile_1",
+                "semantic_strategy": "scene",
+            }
+        },
+    )
+
+    text_chunking_ui_controller.handle_ai_chunking_requested(window, "profile_1", "scene")
+
+    assert confirm_calls == []
+    assert len(start_calls) == 1
 
 
 # END OF FILE

@@ -33,16 +33,20 @@ from .. import config
 
 # CONSTANTS
 
+# @brief Supported textual log-level names accepted by the logging service.
 _VALID_LEVEL_NAMES = set(config.LOG_LEVEL_OPTIONS)
+# @brief Default human-readable log-line format used by the text formatter.
 _TEXT_FORMAT = (
     "%(asctime)s | %(levelname)-8s | %(name)s | %(func_name)s | "
     "%(event)s | %(message)s"
 )
+# @brief Maximum serialized argument/result length recorded by trace logging.
 _TRACE_VALUE_MAX_LENGTH = 240
 
 
 # DATA MODELS / TYPEDEFINITIONS
 
+# @brief Generic callable type used by the trace decorator helpers.
 _CallableType = TypeVar("_CallableType", bound=Callable[..., Any])
 
 

@@ -44,6 +44,7 @@ from audiomancer.services import ui_state_service
 
 # CONSTANTS
 
+# @brief Default LLM profile scaffold used when the operator creates a new AI profile.
 _DEFAULT_PROFILE_TEMPLATE = {
     "id": "",
     "label": "",

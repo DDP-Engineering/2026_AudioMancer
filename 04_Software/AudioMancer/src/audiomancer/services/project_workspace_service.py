@@ -29,9 +29,13 @@ from audiomancer.services.logging_service import get_component_logger, trace_fun
 
 # CONSTANTS
 
+# @brief Component logger used by project workspace lifecycle helpers.
 _PROJECT_WORKSPACE_LOGGER = get_component_logger("project_workspace")
+# @brief Canonical project-manifest payload type persisted in `project.json`.
 ProjectManifestPayload = dict[str, object]
+# @brief Normalized project-open result payload returned by open helpers.
 ProjectOpenResult = dict[str, object]
+# @brief Ordered workflow folder list used for validation and repair checks.
 _STEP_FOLDERS_IN_ORDER = tuple(config.PROJECT_REQUIRED_SUBDIRECTORIES[:-1])
 
 

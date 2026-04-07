@@ -44,15 +44,25 @@ from audiomancer.services.operation_runtime_service import (
 
 # CONSTANTS
 
+# @brief Component logger used by deterministic text extraction.
 _EXTRACTION_LOGGER = get_component_logger("text_extraction")
+# @brief Persisted extraction operation-state payload type.
 OperationStatePayload = dict[str, object]
+# @brief Persisted extraction report payload type.
 ExtractionReportPayload = dict[str, object]
+# @brief Internal extraction-units payload type used during format-specific parsing.
 ExtractionUnitsPayload = dict[str, object]
+# @brief Stable extraction-folder name used for local artifact path construction.
 _EXTRACTION_FOLDER_NAME = config.EXTRACTION_FOLDER_NAME
+# @brief Stable prefix used for copied extraction input snapshots.
 _EXTRACTION_INPUT_PREFIX = "input_"
+# @brief Stable file name used for extracted raw text output.
 _EXTRACTION_OUTPUT_NAME = config.EXTRACTED_TEXT_FILE_NAME
+# @brief Stable file name used for the extraction report artifact.
 _EXTRACTION_REPORT_NAME = config.EXTRACTION_REPORT_FILE_NAME
+# @brief Stable file name used for persisted extraction runtime state.
 _EXTRACTION_STATE_NAME = config.OPERATION_STATE_FILE_NAME
+# @brief Canonical separator inserted between extracted pages for downstream cleanup.
 _PAGE_BREAK_SEPARATOR = "\n\n\f\n\n"
 
 

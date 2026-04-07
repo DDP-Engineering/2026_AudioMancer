@@ -13,7 +13,7 @@
          selected chunk preview behavior for deterministic chunking.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-07
-@version 0.1.0
+@version 0.2.0
 """
 
 # IMPORTS
@@ -86,6 +86,32 @@ def test_text_chunking_page_keeps_selectors_readable_while_busy(qtbot) -> None:
     assert page._ai_chunk_button.isEnabled() is False
     assert page._profile_combo.isEnabled() is True
     assert page._strategy_combo.isEnabled() is True
+
+
+def test_text_chunking_page_enables_ai_button_when_profiles_exist(qtbot) -> None:
+    """
+    @brief      Verify AI-assisted chunking is enabled only when a profile is selected and AI chunking is allowed.
+    @param[in]  qtbot Qt test helper fixture.
+    @return     None.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-07
+    @version    0.1.0
+    """
+    page = TextChunkingPage()
+    qtbot.addWidget(page)
+    page.set_project_active(True)
+    page.set_ai_profiles([("Profile One", "profile-1")], "profile-1")
+    page.set_processing_state(
+        cleaned_text="clean text",
+        chunks=[],
+        notes=["ready"],
+        can_chunk=True,
+        can_ai_chunk=True,
+    )
+
+    assert page._chunk_button.isEnabled() is True
+    assert page._ai_chunk_button.isEnabled() is True
 
 
 # END OF FILE

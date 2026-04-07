@@ -1,0 +1,18 @@
+Determine chunk boundaries for these ordered paragraphs using the "{strategy}" strategy.
+
+Decide after which paragraph ids a chunk should end.
+Use the paragraph order exactly as given.
+Prefer chunks that are natural reading units for audiobook work.
+If uncertain, prefer fewer boundaries rather than noisy over-segmentation.
+Be careful with:
+- explicit chapter headings
+- short standalone transition paragraphs
+- dialogue exchanges that should stay with their immediate narrative context
+- weak paragraph breaks where the next paragraph clearly continues the same idea, action, or scene
+
+Return JSON only in the required shape:
+{"break_after_unit_ids": ["paragraph-0003", "paragraph-0007"]}
+Return only the paragraph ids that should end a chunk.
+Do not use markdown fences or any extra text.
+
+{units_block}

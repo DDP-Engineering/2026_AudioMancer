@@ -38,13 +38,22 @@ from audiomancer.services.operation_runtime_service import (
 
 # CONSTANTS
 
+# @brief Component logger used by the deterministic chunking workflow.
 _CHUNKING_LOGGER = get_component_logger("deterministic_chunking")
+
+# @brief Supported chapter-heading detection patterns used to carry chapter metadata across chunks.
 _CHAPTER_PATTERNS = (
     re.compile(r"^(chapter|capitolul|scene|scena)\s+[\wIVXLCDM0-9][\wIVXLCDM0-9 .:-]*$", re.IGNORECASE),
     re.compile(r"^[IVXLCDM]+$", re.IGNORECASE),
 )
+
+# @brief Canonical chunk-record payload type persisted for downstream workflow steps.
 ChunkPayload = dict[str, object]
+
+# @brief Persisted deterministic chunking report payload type.
 ChunkingReportPayload = dict[str, object]
+
+# @brief Persisted deterministic chunking operation-state payload type.
 OperationStatePayload = dict[str, object]
 
 

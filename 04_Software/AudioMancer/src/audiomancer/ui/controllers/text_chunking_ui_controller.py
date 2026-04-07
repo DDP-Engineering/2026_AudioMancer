@@ -9,12 +9,12 @@
 """
 @file text_chunking_ui_controller.py
 @brief Text Chunking page UI controller for AudioMancer.
-@details Handles deterministic chunking workflows, including progress dialog
-         lifecycle, resumable reruns, destructive confirmation, and manifest
-         synchronization for the Text Chunking page.
+@details Handles deterministic and AI-assisted chunking workflows, including
+         progress dialog lifecycle, resumable reruns, destructive confirmation,
+         and manifest synchronization for the Text Chunking page.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-07
-@version 0.1.0
+@version 0.2.0
 """
 
 # IMPORTS
@@ -23,6 +23,8 @@ from typing import TYPE_CHECKING
 
 from PySide6.QtWidgets import QMessageBox
 
+from audiomancer import config
+from audiomancer.services import ai_chunking_service
 from audiomancer.services import deterministic_chunking_service
 from audiomancer.services import home_presenter_service
 from audiomancer.services import operation_runtime_service
@@ -42,6 +44,64 @@ def handle_deterministic_chunking_requested(window: "MainWindow") -> None:
     """
     @brief      Run deterministic text chunking for the active project.
     @param[in]  window Active main window shell.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-07
+    @version    0.1.1
+    """
+    current_language = ui_state_service.current_language_from_settings(
+        window._settings_payload
+    )
+    if window._active_operation_kind is not None:
+        return
+    if window._current_project_root is None or window._current_manifest is None:
+        QMessageBox.warning(
+            window,
+            ui_state_service.translate("dialog.project_error_title", current_language),
+            ui_state_service.translate("project.error_no_active_project", current_language),
+        )
+        return
+
+    cleanup_operation = home_presenter_service.manifest_operation(
+        window._current_manifest,
+        "cleanup",
+    )
+    cleanup_output_paths = cleanup_operation.get("output_paths", [])
+    if not isinstance(cleanup_output_paths, list) or not cleanup_output_paths:
+        QMessageBox.warning(
+            window,
+            ui_state_service.translate("dialog.project_error_title", current_language),
+            ui_state_service.translate("project.error_missing_cleaned_text", current_language),
+        )
+        return
+
+    chunking_operation = home_presenter_service.manifest_operation(
+        window._current_manifest,
+        "chunking",
+    )
+    if str(chunking_operation.get("status", "not_started")) == "completed":
+        if not confirm_chunking_rerun(window, current_language):
+            return
+        _reset_chunking_and_downstream(window)
+
+    start_operation(
+        window,
+        operation_kind="chunking",
+        operation_name=ui_state_service.translate("text_chunking.chunk", current_language),
+        initial_message=ui_state_service.translate("progress.chunking", current_language),
+        worker_callable=deterministic_chunking_service.chunk_text,
+        success_handler=lambda result_payload: handle_chunking_success(window, result_payload),
+        failure_handler=lambda error: handle_chunking_failure(window, error),
+    )
+
+
+def handle_ai_chunking_requested(window: "MainWindow", profile_id: str, strategy: str) -> None:
+    """
+    @brief      Run AI-assisted chunking for the active project and selected profile.
+    @param[in]  window Active main window shell.
+    @param[in]  profile_id Selected AI chunking profile id.
+    @param[in]  strategy Selected AI semantic chunking strategy.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
@@ -78,30 +138,61 @@ def handle_deterministic_chunking_requested(window: "MainWindow") -> None:
         window._current_manifest,
         "chunking",
     )
-    if str(chunking_operation.get("status", "not_started")) == "completed":
-        if not confirm_chunking_rerun(window, current_language):
-            return
-        operation_runtime_service.reset_operation_data(
-            window._current_project_root,
-            "chunking",
-            include_current=True,
-            keep_input_snapshots=False,
+    chunking_status = str(chunking_operation.get("status", "not_started"))
+    chunking_mode = str(chunking_operation.get("mode") or "")
+    resume_profile_id = _resume_ai_profile_id(window, chunking_operation)
+    resume_strategy = _resume_ai_strategy(window, chunking_operation)
+    selected_profile = _resolve_ai_profile(
+        window._settings_payload,
+        (
+            resume_profile_id
+            if chunking_status in {"running", "failed"} and chunking_mode == "ai_assisted"
+            else profile_id
+        ),
+    )
+    if selected_profile is None:
+        QMessageBox.warning(
+            window,
+            ui_state_service.translate("dialog.project_error_title", current_language),
+            ui_state_service.translate(
+                "project.error_missing_ai_chunking_profile",
+                current_language,
+            ),
         )
-        reset_manifest = text_cleanup_state_service.build_manifest_after_operation_reset(
-            window._current_manifest,
-            "chunking",
-        )
-        project_workspace_service.save_manifest(reset_manifest, window._current_project_root)
-        window._current_manifest = project_workspace_service.load_manifest(
-            window._current_project_root
-        )
+        return
+
+    selected_strategy = (
+        resume_strategy
+        if chunking_status in {"running", "failed"} and chunking_mode == "ai_assisted"
+        else strategy
+    )
+    if selected_strategy not in config.AI_CHUNKING_STRATEGY_OPTIONS:
+        selected_strategy = config.DEFAULT_AI_CHUNKING_STRATEGY
+
+    if not (
+        chunking_status in {"running", "failed"}
+        and chunking_mode == "ai_assisted"
+    ):
+        if chunking_status == "completed":
+            if not confirm_ai_chunking_rerun(window, current_language):
+                return
+            _reset_chunking_and_downstream(window)
 
     start_operation(
         window,
         operation_kind="chunking",
-        operation_name=ui_state_service.translate("text_chunking.chunk", current_language),
-        initial_message=ui_state_service.translate("progress.chunking", current_language),
-        worker_callable=deterministic_chunking_service.chunk_text,
+        operation_name=ui_state_service.translate("text_chunking.ai_chunk", current_language),
+        initial_message=ui_state_service.translate("progress.ai_chunking", current_language),
+        worker_callable=lambda project_root, manifest, progress_callback=None, cancel_requested=None: (
+            ai_chunking_service.chunk_text(
+                project_root,
+                manifest,
+                selected_profile,
+                selected_strategy,
+                progress_callback=progress_callback,
+                cancel_requested=cancel_requested,
+            )
+        ),
         success_handler=lambda result_payload: handle_chunking_success(window, result_payload),
         failure_handler=lambda error: handle_chunking_failure(window, error),
     )
@@ -129,7 +220,7 @@ def start_operation(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-07
-    @version    0.1.0
+    @version    0.1.1
     """
     assert window._current_project_root is not None
     assert window._current_manifest is not None
@@ -314,7 +405,7 @@ def handle_chunking_success(window: "MainWindow", result_payload: object) -> Non
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-07
-    @version    0.1.0
+    @version    0.1.1
     """
     _ = result_payload
     assert window._current_project_root is not None
@@ -322,10 +413,7 @@ def handle_chunking_success(window: "MainWindow", result_payload: object) -> Non
     updated_manifest = dict(window._current_manifest)
     updated_manifest["current_stage"] = "translation_ready"
     operations = text_cleanup_state_service.normalized_manifest_operations(updated_manifest)
-    operations["chunking"] = (
-        deterministic_chunking_service.load_operation_state(window._current_project_root)
-        or operations["chunking"]
-    )
+    operations["chunking"] = _load_chunking_operation_state(window) or operations["chunking"]
     updated_manifest["operations"] = operations
     project_workspace_service.save_manifest(updated_manifest, window._current_project_root)
     window.show_project_state(
@@ -335,7 +423,11 @@ def handle_chunking_success(window: "MainWindow", result_payload: object) -> Non
     misc_ui_controller.show_message(
         window,
         ui_state_service.translate(
-            "status.text_chunked",
+            (
+                "status.text_ai_chunked"
+                if str(operations["chunking"].get("mode") or "") == "ai_assisted"
+                else "status.text_chunked"
+            ),
             ui_state_service.current_language_from_settings(window._settings_payload),
         ),
     )
@@ -371,16 +463,13 @@ def sync_manifest_after_unsuccessful_operation(window: "MainWindow") -> None:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-07
-    @version    0.1.0
+    @version    0.1.1
     """
     if window._current_manifest is None or window._current_project_root is None:
         return
     updated_manifest = dict(window._current_manifest)
     operations = text_cleanup_state_service.normalized_manifest_operations(updated_manifest)
-    operations["chunking"] = (
-        deterministic_chunking_service.load_operation_state(window._current_project_root)
-        or operations["chunking"]
-    )
+    operations["chunking"] = _load_chunking_operation_state(window) or operations["chunking"]
     updated_manifest["operations"] = operations
     project_workspace_service.save_manifest(updated_manifest, window._current_project_root)
     window.show_project_state(
@@ -408,6 +497,109 @@ def confirm_chunking_rerun(window: "MainWindow", language: str) -> bool:
         QMessageBox.StandardButton.No,
     )
     return decision == QMessageBox.StandardButton.Yes
+
+
+def confirm_ai_chunking_rerun(window: "MainWindow", language: str) -> bool:
+    """
+    @brief      Ask the operator whether one completed AI chunking run should be rerun destructively.
+    @param[in]  window Active main window shell.
+    @param[in]  language Current UI language code.
+    @return     True when the operator accepts the rerun reset.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-07
+    @version    0.1.0
+    """
+    decision = QMessageBox.question(
+        window,
+        ui_state_service.translate("dialog.confirm_ai_chunking_rerun_title", language),
+        ui_state_service.translate("project.confirm_ai_chunking_rerun", language),
+        QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+        QMessageBox.StandardButton.No,
+    )
+    return decision == QMessageBox.StandardButton.Yes
+
+
+def _reset_chunking_and_downstream(window: "MainWindow") -> None:
+    assert window._current_project_root is not None
+    assert window._current_manifest is not None
+    operation_runtime_service.reset_operation_data(
+        window._current_project_root,
+        "chunking",
+        include_current=True,
+        keep_input_snapshots=False,
+    )
+    reset_manifest = text_cleanup_state_service.build_manifest_after_operation_reset(
+        window._current_manifest,
+        "chunking",
+    )
+    project_workspace_service.save_manifest(reset_manifest, window._current_project_root)
+    window._current_manifest = project_workspace_service.load_manifest(
+        window._current_project_root
+    )
+
+
+def _load_chunking_operation_state(window: "MainWindow") -> dict[str, object] | None:
+    if window._current_project_root is None:
+        return None
+    return deterministic_chunking_service.load_operation_state(window._current_project_root)
+
+
+def _resolve_ai_profile(
+    settings_payload: dict[str, object] | None,
+    profile_id: str | None,
+) -> dict[str, object] | None:
+    if not isinstance(settings_payload, dict) or not profile_id:
+        return None
+    raw_profiles = settings_payload.get("llm_profiles", [])
+    if not isinstance(raw_profiles, list):
+        return None
+    for profile in raw_profiles:
+        if not isinstance(profile, dict):
+            continue
+        if not bool(profile.get("enabled", True)):
+            continue
+        if str(profile.get("id", "")).strip() == str(profile_id).strip():
+            return dict(profile)
+    return None
+
+
+def _resume_ai_profile_id(
+    window: "MainWindow",
+    chunking_operation: dict[str, object],
+) -> str | None:
+    metadata = chunking_operation.get("metadata")
+    if isinstance(metadata, dict):
+        profile_id = metadata.get("ai_profile_id")
+        if profile_id not in (None, ""):
+            return str(profile_id)
+    state_payload = ai_chunking_service.load_operation_state(window._current_project_root or "")
+    if isinstance(state_payload, dict):
+        state_metadata = state_payload.get("metadata")
+        if isinstance(state_metadata, dict):
+            profile_id = state_metadata.get("ai_profile_id")
+            if profile_id not in (None, ""):
+                return str(profile_id)
+    return None
+
+
+def _resume_ai_strategy(
+    window: "MainWindow",
+    chunking_operation: dict[str, object],
+) -> str:
+    metadata = chunking_operation.get("metadata")
+    if isinstance(metadata, dict):
+        semantic_strategy = str(metadata.get("semantic_strategy", "")).strip()
+        if semantic_strategy in config.AI_CHUNKING_STRATEGY_OPTIONS:
+            return semantic_strategy
+    state_payload = ai_chunking_service.load_operation_state(window._current_project_root or "")
+    if isinstance(state_payload, dict):
+        state_metadata = state_payload.get("metadata")
+        if isinstance(state_metadata, dict):
+            semantic_strategy = str(state_metadata.get("semantic_strategy", "")).strip()
+            if semantic_strategy in config.AI_CHUNKING_STRATEGY_OPTIONS:
+                return semantic_strategy
+    return config.DEFAULT_AI_CHUNKING_STRATEGY
 
 
 # END OF FILE

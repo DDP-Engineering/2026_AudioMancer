@@ -14,7 +14,7 @@
          so the window remains a thin coordinator.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-07
-@version 1.14.0
+@version 1.15.0
 """
 
 # IMPORTS
@@ -61,9 +61,13 @@ from audiomancer.ui.status_bar import AudiomancerStatusBar
 
 # CONSTANTS
 
+# @brief Default initial main-window width used at shell startup.
 WINDOW_WIDTH = config.DEFAULT_MAIN_WINDOW_WIDTH
+# @brief Default initial main-window height used at shell startup.
 WINDOW_HEIGHT = config.DEFAULT_MAIN_WINDOW_HEIGHT
+# @brief Minimum allowed main-window width.
 WINDOW_MIN_WIDTH = config.DEFAULT_MAIN_WINDOW_MIN_WIDTH
+# @brief Minimum allowed main-window height.
 WINDOW_MIN_HEIGHT = config.DEFAULT_MAIN_WINDOW_MIN_HEIGHT
 
 
@@ -197,7 +201,7 @@ class MainWindow(QMainWindow):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-06
-        @version    0.4.0
+        @version    0.5.0
         """
         self._current_project_root = project_root
         self._current_manifest = manifest
@@ -249,6 +253,7 @@ class MainWindow(QMainWindow):
                 project_root,
                 manifest,
                 current_language,
+                self._settings_payload,
             )
         )
 
@@ -345,7 +350,7 @@ class MainWindow(QMainWindow):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-07
-        @version    0.10.0
+        @version    0.11.0
         """
         current_language = ui_state_service.current_language_from_settings(
             self._settings_payload
@@ -383,6 +388,13 @@ class MainWindow(QMainWindow):
         self._text_chunking_page.chunk_requested.connect(
             lambda: text_chunking_ui_controller.handle_deterministic_chunking_requested(
                 self
+            )
+        )
+        self._text_chunking_page.ai_chunk_requested.connect(
+            lambda profile_id, strategy: text_chunking_ui_controller.handle_ai_chunking_requested(
+                self,
+                profile_id,
+                strategy,
             )
         )
 

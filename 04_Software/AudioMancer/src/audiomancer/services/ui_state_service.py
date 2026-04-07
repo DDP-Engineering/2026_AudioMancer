@@ -13,7 +13,7 @@
          application through one centralized string catalog and scale mapping.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-07
-@version 0.12.0
+@version 0.14.0
 """
 
 # IMPORTS
@@ -26,7 +26,9 @@ from .logging_service import get_component_logger, trace_function
 
 # CONSTANTS
 
+# @brief Component logger used by runtime UI language and scale helpers.
 _UI_STATE_LOGGER = get_component_logger("ui_state")
+# @brief Scale-factor mapping applied to the base application font size.
 _UI_SCALE_FACTORS = {
     "very_small": 0.82,
     "small": 0.91,
@@ -35,9 +37,12 @@ _UI_SCALE_FACTORS = {
     "very_large": 1.24,
 }
 
+# @brief Default runtime UI language used as the catalog fallback.
 _DEFAULT_LANGUAGE = config.DEFAULT_LANGUAGE
+# @brief Lazily captured unscaled application font size used as the scaling baseline.
 _BASE_FONT_POINT_SIZE: float | None = None
 
+# @brief Centralized runtime UI string catalog keyed by language and stable identifier.
 _UI_STRINGS = {
     "en": {
         "window_title.main": "AudioMancer | Transform written words into real audio experience!",
@@ -60,6 +65,7 @@ _UI_STRINGS = {
         "dialog.confirm_extraction_rerun_title": "Confirm Extraction Rerun",
         "dialog.confirm_cleanup_rerun_title": "Confirm Cleanup Rerun",
         "dialog.confirm_chunking_rerun_title": "Confirm Chunking Rerun",
+        "dialog.confirm_ai_chunking_rerun_title": "Confirm AI Chunking Rerun",
         "dialog.confirm_ai_cleanup_title": "Start AI-Assisted Cleanup",
         "dialog.confirm_ai_cleanup_rerun_title": "Confirm AI Cleanup Rerun",
         "dialog.operation_progress_title": "{operation_name} In Progress",
@@ -81,6 +87,7 @@ _UI_STRINGS = {
         "status.text_cleaned": "Text cleaned.",
         "status.text_ai_cleaned": "AI-assisted cleanup completed.",
         "status.text_chunked": "Text chunked.",
+        "status.text_ai_chunked": "Text chunked with AI.",
         "status.operation_cancelled": "Operation cancelled.",
         "sidebar.home": "Home / Project",
         "sidebar.text_cleanup": "Text Cleanup",
@@ -157,6 +164,7 @@ _UI_STRINGS = {
         "text_cleanup.note_ai_cleanup_resume": "A previous AI-assisted cleanup was not finalized. Press AI-Assisted Cleanup to continue from progress {progress_current}/{progress_total}.",
         "text_cleanup.note_ai_cleanup_summary": "AI-assisted cleanup produced {paragraph_count} paragraphs, removed {removed_line_count} units, and detected {chapter_count} chapter or scene headings.",
         "text_cleanup.note_ai_cleanup_profile": "AI cleanup used profile: {profile_label}.",
+        "text_cleanup.note_ai_cleanup_review_warning": "AI-assisted cleanup completed with validation warnings. Review the cleaned text before chunking.",
         "text_cleanup.note_ai_cleanup_rerun_warning": "Running AI-assisted cleanup again will replace the current cleanup data and reset chunking plus all following workflow data.",
         "text_chunking.title": "Text Chunking",
         "text_chunking.ai_profile": "AI Profile",
@@ -174,9 +182,16 @@ _UI_STRINGS = {
         "text_chunking.note_no_source": "Import a source file and complete cleanup before chunking.",
         "text_chunking.note_missing_cleanup": "Run deterministic or AI-assisted cleanup before chunking.",
         "text_chunking.note_ready": "Deterministic chunking is ready to run for the current cleaned text.",
+        "text_chunking.note_in_progress": "Deterministic chunking is in progress at {progress_current}/{progress_total}.",
         "text_chunking.note_resume": "A previous chunking run was not finalized. Press Deterministic Chunking to continue from progress {progress_current}/{progress_total}.",
         "text_chunking.note_summary": "Chunking produced {chunk_count} chunks and detected {chapter_count} chapter or scene headings.",
         "text_chunking.note_rerun_warning": "Running deterministic chunking again will replace the current chunk data and reset translation plus all following workflow data.",
+        "text_chunking.note_no_ai_profile": "Enable at least one AI profile in AI Settings to run AI-assisted chunking.",
+        "text_chunking.note_ai_ready": "AI-assisted chunking is ready for the current cleaned text and selected AI profile.",
+        "text_chunking.note_ai_in_progress": "AI-assisted chunking is in progress at {progress_current}/{progress_total} using the {strategy} strategy.",
+        "text_chunking.note_ai_resume": "A previous AI-assisted chunking run was not finalized. Press AI-Assisted Chunking to continue from progress {progress_current}/{progress_total} using the {strategy} strategy.",
+        "text_chunking.note_ai_summary": "AI-assisted chunking produced {chunk_count} chunks, detected {chapter_count} chapter or scene headings, and used the {strategy} strategy.",
+        "text_chunking.note_ai_rerun_warning": "Running AI-assisted chunking again will replace the current chunk data and reset translation plus all following workflow data.",
         "ai_translation.title": "AI Translation",
         "ai_translation.target_language": "Target Language",
         "ai_translation.ai_profile": "AI Profile",
@@ -280,16 +295,19 @@ _UI_STRINGS = {
         "project.error_missing_extracted_text": "Run Extract Text before starting cleanup.",
         "project.error_missing_cleaned_text": "Run text cleanup before starting chunking.",
         "project.error_missing_ai_profile": "Select a valid AI profile before starting AI-assisted cleanup.",
+        "project.error_missing_ai_chunking_profile": "Select a valid AI profile before starting AI-assisted chunking.",
         "project.error_locked_source": "This project already has a locked source file. Create a new project to use another source.",
         "project.confirm_extraction_rerun": "Continuing will delete the current extraction data and all subsequent-step data, clear the following operation folders, and reset workflow progress. Continue?",
         "project.confirm_cleanup_rerun": "Continuing will delete the current cleanup data, clear chunking and all following operation folders, and reset workflow progress after extraction. Continue?",
         "project.confirm_chunking_rerun": "Continuing will delete the current chunking data, clear translation and all following operation folders, and reset workflow progress after cleanup. Continue?",
+        "project.confirm_ai_chunking_rerun": "Continuing will delete the current chunking data, clear translation and all following operation folders, and reset workflow progress after cleanup before starting new AI-assisted chunking. Continue?",
         "project.confirm_ai_cleanup": "AI-assisted cleanup can take longer because it sends multiple requests through the selected AI provider. Continue?",
         "project.confirm_ai_cleanup_rerun": "Continuing will delete the current cleanup data, clear chunking and all following operation folders, and reset workflow progress after extraction before starting a new AI-assisted cleanup. Continue?",
         "progress.extracting": "Text extraction in progress...",
         "progress.cleaning": "Deterministic cleanup in progress...",
         "progress.ai_cleaning": "AI-assisted cleanup in progress...",
         "progress.chunking": "Deterministic chunking in progress...",
+        "progress.ai_chunking": "AI-assisted chunking in progress...",
         "project.repair_step_prefix": "The project is corrupted at step",
         "project.repair_reset_suffix": "This repair will recreate and reset that step and all downstream step folders.",
         "project.repair_metadata_only": "This repair will update the project metadata to the last consistent workflow stage.",
@@ -316,6 +334,7 @@ _UI_STRINGS = {
         "dialog.confirm_extraction_rerun_title": "Confirma Reluarea Extragerii",
         "dialog.confirm_cleanup_rerun_title": "Confirma Reluarea Curatarii",
         "dialog.confirm_chunking_rerun_title": "Confirma Reluarea Segmentarii",
+        "dialog.confirm_ai_chunking_rerun_title": "Confirma Reluarea Segmentarii AI",
         "dialog.confirm_ai_cleanup_title": "Porneste Curatarea Asistata de AI",
         "dialog.confirm_ai_cleanup_rerun_title": "Confirma Reluarea Curatarii AI",
         "dialog.operation_progress_title": "{operation_name} In Curs",
@@ -337,6 +356,7 @@ _UI_STRINGS = {
         "status.text_cleaned": "Textul a fost curatat.",
         "status.text_ai_cleaned": "Curatarea asistata de AI a fost finalizata.",
         "status.text_chunked": "Textul a fost segmentat.",
+        "status.text_ai_chunked": "Textul a fost segmentat cu AI.",
         "status.operation_cancelled": "Operatia a fost anulata.",
         "sidebar.home": "Acasa / Proiect",
         "sidebar.text_cleanup": "Curatare Text",
@@ -413,6 +433,7 @@ _UI_STRINGS = {
         "text_cleanup.note_ai_cleanup_resume": "O curatare asistata de AI anterioara nu a fost finalizata. Apasa Curatare Asistata de AI pentru a continua de la progresul {progress_current}/{progress_total}.",
         "text_cleanup.note_ai_cleanup_summary": "Curatarea asistata de AI a produs {paragraph_count} paragrafe, a eliminat {removed_line_count} unitati si a detectat {chapter_count} titluri de capitol sau scena.",
         "text_cleanup.note_ai_cleanup_profile": "Curatarea AI a folosit profilul: {profile_label}.",
+        "text_cleanup.note_ai_cleanup_review_warning": "Curatarea asistata de AI s-a incheiat cu avertizari de validare. Revizuieste textul curatat inainte de segmentare.",
         "text_cleanup.note_ai_cleanup_rerun_warning": "Rularea curatarii asistate de AI din nou va inlocui datele actuale de curatare si va reseta segmentarea plus toti pasii urmatori.",
         "text_chunking.title": "Segmentare Text",
         "text_chunking.ai_profile": "Profil AI",
@@ -430,9 +451,16 @@ _UI_STRINGS = {
         "text_chunking.note_no_source": "Importa un fisier sursa si finalizeaza curatarea inainte de segmentare.",
         "text_chunking.note_missing_cleanup": "Ruleaza curatarea determinista sau asistata de AI inainte de segmentare.",
         "text_chunking.note_ready": "Segmentarea determinista este pregatita pentru textul curatat curent.",
+        "text_chunking.note_in_progress": "Segmentarea determinista este in curs la progresul {progress_current}/{progress_total}.",
         "text_chunking.note_resume": "O rulare anterioara de segmentare nu a fost finalizata. Apasa Segmentare Determinista pentru a continua de la progresul {progress_current}/{progress_total}.",
         "text_chunking.note_summary": "Segmentarea a produs {chunk_count} segmente si a detectat {chapter_count} titluri de capitol sau scena.",
         "text_chunking.note_rerun_warning": "Rularea segmentarii deterministe din nou va inlocui datele actuale de segmentare si va reseta traducerea plus toti pasii urmatori.",
+        "text_chunking.note_no_ai_profile": "Activeaza cel putin un profil AI in Setari AI pentru a rula segmentarea asistata de AI.",
+        "text_chunking.note_ai_ready": "Segmentarea asistata de AI este pregatita pentru textul curatat curent si profilul AI selectat.",
+        "text_chunking.note_ai_in_progress": "Segmentarea asistata de AI este in curs la progresul {progress_current}/{progress_total} folosind strategia {strategy}.",
+        "text_chunking.note_ai_resume": "O rulare anterioara de segmentare asistata de AI nu a fost finalizata. Apasa Segmentare Asistata de AI pentru a continua de la progresul {progress_current}/{progress_total} folosind strategia {strategy}.",
+        "text_chunking.note_ai_summary": "Segmentarea asistata de AI a produs {chunk_count} segmente, a detectat {chapter_count} titluri de capitol sau scena si a folosit strategia {strategy}.",
+        "text_chunking.note_ai_rerun_warning": "Rularea segmentarii asistate de AI din nou va inlocui datele actuale de segmentare si va reseta traducerea plus toti pasii urmatori.",
         "ai_translation.title": "Traducere AI",
         "ai_translation.target_language": "Limba Tinta",
         "ai_translation.ai_profile": "Profil AI",
@@ -536,16 +564,19 @@ _UI_STRINGS = {
         "project.error_missing_extracted_text": "Ruleaza mai intai Extrage Textul inainte de a porni curatarea.",
         "project.error_missing_cleaned_text": "Ruleaza curatarea textului inainte de a porni segmentarea.",
         "project.error_missing_ai_profile": "Selecteaza un profil AI valid inainte de a porni curatarea asistata de AI.",
+        "project.error_missing_ai_chunking_profile": "Selecteaza un profil AI valid inainte de a porni segmentarea asistata de AI.",
         "project.error_locked_source": "Acest proiect are deja un fisier sursa blocat. Creeaza un proiect nou pentru a folosi alta sursa.",
         "project.confirm_extraction_rerun": "Continuarea va sterge datele curente de extragere si toate datele pasilor urmatori, va goli folderele operatiilor urmatoare si va reseta progresul fluxului. Continui?",
         "project.confirm_cleanup_rerun": "Continuarea va sterge datele curente de curatare, va goli segmentarea si toate folderele operatiilor urmatoare si va reseta progresul fluxului dupa extragere. Continui?",
         "project.confirm_chunking_rerun": "Continuarea va sterge datele curente de segmentare, va goli traducerea si toate folderele operatiilor urmatoare si va reseta progresul fluxului dupa curatare. Continui?",
+        "project.confirm_ai_chunking_rerun": "Continuarea va sterge datele curente de segmentare, va goli traducerea si toate folderele operatiilor urmatoare si va reseta progresul fluxului dupa curatare inainte de a porni o noua segmentare asistata de AI. Continui?",
         "project.confirm_ai_cleanup": "Curatarea asistata de AI poate dura mai mult deoarece trimite mai multe cereri catre furnizorul AI selectat. Continui?",
         "project.confirm_ai_cleanup_rerun": "Continuarea va sterge datele curente de curatare, va goli segmentarea si toate folderele operatiilor urmatoare si va reseta progresul fluxului dupa extragere inainte de a porni o noua curatare asistata de AI. Continui?",
         "progress.extracting": "Extragerea textului este in curs...",
         "progress.cleaning": "Curatarea determinista este in curs...",
         "progress.ai_cleaning": "Curatarea asistata de AI este in curs...",
         "progress.chunking": "Segmentarea determinista este in curs...",
+        "progress.ai_chunking": "Segmentarea asistata de AI este in curs...",
         "project.repair_step_prefix": "Proiectul este corupt la pasul",
         "project.repair_reset_suffix": "Aceasta reparatie va recrea si reseta acel pas si toate folderele pasilor urmatori.",
         "project.repair_metadata_only": "Aceasta reparatie va actualiza metadatele proiectului la ultima etapa coerenta a fluxului.",

@@ -12,8 +12,8 @@
 @details Verifies that the Text Cleanup page state service derives previews,
          notes, and reset payloads from manifest and artifact data.
 @author Eng. Dan Dumitru Pasare
-@date 2026-04-06
-@version 0.1.0
+@date 2026-04-07
+@version 0.2.0
 """
 
 # IMPORTS
@@ -146,6 +146,92 @@ def test_build_text_cleanup_state_loads_previews_and_notes(tmp_path) -> None:
     assert cleanup_state["extracted_text"] == "Extracted text\n"
     assert cleanup_state["cleaned_text"] == "Cleaned text\n"
     assert any("Cleanup produced 3 paragraphs" in note for note in cleanup_state["notes"])
+
+
+def test_build_text_cleanup_state_surfaces_ai_cleanup_review_warning(tmp_path) -> None:
+    """
+    @brief      Verify AI cleanup notes include one review warning when validation warnings were persisted.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-07
+    @version    0.1.0
+    """
+    project_root, manifest = project_workspace_service.create_project(
+        "PresenterAiCleanupWarningProject",
+        tmp_path,
+    )
+    extraction_root = project_root / config.EXTRACTION_FOLDER_NAME
+    cleanup_root = project_root / config.CLEANUP_FOLDER_NAME
+    extraction_root.mkdir(exist_ok=True)
+    cleanup_root.mkdir(exist_ok=True)
+    (extraction_root / config.EXTRACTED_TEXT_FILE_NAME).write_text(
+        "Extracted text\n",
+        encoding="utf-8",
+    )
+    (cleanup_root / config.CLEANED_TEXT_FILE_NAME).write_text(
+        "Cleaned text\n",
+        encoding="utf-8",
+    )
+    (cleanup_root / config.CLEANUP_REPORT_FILE_NAME).write_text(
+        json.dumps({
+            "warnings": [
+                "AI cleanup corrected one invalid page-number label in window 1 and preserved the text for review."
+            ],
+            "warning_details": [
+                {
+                    "kind": "invalid_page_number_label_corrected",
+                    "message": "AI cleanup corrected one invalid page-number label in window 1 and preserved the text for review.",
+                }
+            ],
+            "paragraph_count": 3,
+            "removed_line_count": 2,
+            "detected_chapter_count": 1,
+            "cleanup_mode": "ai_assisted",
+            "ai_profile_id": "profile_1",
+        }, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    (cleanup_root / config.OPERATION_STATE_FILE_NAME).write_text(
+        json.dumps({
+            "folder_relative_path": config.CLEANUP_FOLDER_NAME,
+            "status": "completed",
+            "input_paths": [],
+            "output_paths": [f"{config.CLEANUP_FOLDER_NAME}/{config.CLEANED_TEXT_FILE_NAME}"],
+            "artifact_paths": [f"{config.CLEANUP_FOLDER_NAME}/{config.CLEANUP_REPORT_FILE_NAME}"],
+            "progress_current": 1,
+            "progress_total": 1,
+            "mode": "ai_assisted",
+            "started_at": "2026-04-07T12:00:00+00:00",
+            "completed_at": "2026-04-07T12:01:00+00:00",
+            "updated_at": "2026-04-07T12:01:00+00:00",
+            "warning_count": 1,
+            "metadata": {"warnings": [], "ai_profile_id": "profile_1"},
+            "resume_checkpoint": None,
+        }, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    manifest["source_document"] = {"original_name": "story.txt"}
+    manifest["extracted_text_relative_path"] = (
+        f"{config.EXTRACTION_FOLDER_NAME}/{config.EXTRACTED_TEXT_FILE_NAME}"
+    )
+    manifest["operations"]["cleanup"]["status"] = "completed"
+    manifest["operations"]["cleanup"]["mode"] = "ai_assisted"
+    manifest["operations"]["cleanup"]["output_paths"] = [
+        f"{config.CLEANUP_FOLDER_NAME}/{config.CLEANED_TEXT_FILE_NAME}"
+    ]
+
+    cleanup_state = text_cleanup_state_service.build_text_cleanup_state(
+        project_root,
+        manifest,
+        "en",
+    )
+
+    assert any(
+        "completed with validation warnings" in note
+        for note in cleanup_state["notes"]
+    )
 
 
 # END OF FILE

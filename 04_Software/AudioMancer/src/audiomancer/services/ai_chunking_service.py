@@ -1,0 +1,643 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+# -----------------------------------------------------------------------------
+# Copyright (c) 2026 DDP Engineering
+# This software is licensed under the GNU Affero General Public License v3.0
+# (AGPL-3.0) with additional Non-Commercial restriction.
+# See the LICENSE.txt and LICENSE_NC.txt files for full license details.
+# -----------------------------------------------------------------------------
+"""
+@file ai_chunking_service.py
+@brief AI-assisted text chunking helpers for AudioMancer.
+@details Consumes canonical cleaned text, asks one configured AI profile to
+         decide semantic chunk boundaries over ordered paragraphs, persists the
+         canonical chunk artifacts in `20_chunking`, and maintains resumable
+         window-based operation state plus AI transaction logging.
+@author Eng. Dan Dumitru Pasare
+@date 2026-04-07
+@version 0.1.0
+"""
+
+# IMPORTS
+
+import hashlib
+import json
+from datetime import UTC, datetime
+from pathlib import Path
+
+from audiomancer import config
+from audiomancer.services import deterministic_chunking_service
+from audiomancer.services import llm_provider_service
+from audiomancer.services import prompt_template_service
+from audiomancer.services.logging_service import get_component_logger, trace_function
+from audiomancer.services.operation_runtime_service import (
+    OperationCancelledError,
+    build_operation_artifact_path,
+    build_operation_input_snapshot_path,
+    build_operation_output_path,
+    progress_percent,
+    raise_if_cancelled,
+    relative_to_project,
+)
+
+# CONSTANTS
+
+# @brief Component logger used by the AI-assisted chunking workflow.
+_AI_CHUNKING_LOGGER = get_component_logger("ai_chunking")
+
+# @brief Strategy-specific paragraph window sizes used for AI chunk-boundary requests.
+_WINDOW_SIZE_BY_STRATEGY = {
+    "paragraph": 18,
+    "meaning": 14,
+    "scene": 10,
+}
+
+# @brief Canonical chunk-record payload type persisted for downstream workflow steps.
+ChunkPayload = dict[str, object]
+
+# @brief Persisted AI chunking report payload type.
+ChunkingReportPayload = dict[str, object]
+
+# @brief Persisted AI chunking operation-state payload type.
+OperationStatePayload = dict[str, object]
+
+
+# PUBLIC API
+
+
+@trace_function(_AI_CHUNKING_LOGGER)
+def chunk_text(
+    project_root: str | Path,
+    manifest: dict[str, object],
+    ai_profile_payload: dict[str, object],
+    semantic_strategy: str,
+    progress_callback=None,
+    cancel_requested=None,
+) -> ChunkingReportPayload:
+    """
+    @brief      Run AI-assisted chunking for one active project.
+    @param[in]  project_root Active project root folder.
+    @param[in]  manifest Active project manifest payload.
+    @param[in]  ai_profile_payload Selected validated AI profile payload.
+    @param[in]  semantic_strategy Selected semantic strategy token.
+    @param[in]  progress_callback Optional progress callback for the modal popup.
+    @param[in]  cancel_requested Optional zero-argument cancellation callback.
+    @return     Chunking report payload for the persisted AI chunking artifacts.
+    @exception  FileNotFoundError Raised when the cleaned input is missing.
+    @exception  ValueError Raised on missing profile data or unusable cleaned text.
+    @exception  OperationCancelledError Raised when the operator cancels the run.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-07
+    @version    0.1.0
+    """
+    resolved_project_root = Path(project_root)
+    source_document = manifest.get("source_document")
+    if not isinstance(source_document, dict):
+        raise ValueError("No imported source is available for AI-assisted chunking.")
+
+    cleanup_operation = dict(manifest.get("operations", {})).get("cleanup")
+    cleaned_relative_path = None
+    if isinstance(cleanup_operation, dict):
+        output_paths = cleanup_operation.get("output_paths", [])
+        if isinstance(output_paths, list) and output_paths:
+            cleaned_relative_path = str(output_paths[0])
+    if not cleaned_relative_path:
+        cleaned_relative_path = f"{config.CLEANUP_FOLDER_NAME}/{config.CLEANED_TEXT_FILE_NAME}"
+
+    profile_id = str(ai_profile_payload.get("id", "")).strip()
+    model_name = str(ai_profile_payload.get("model_name", "")).strip()
+    base_url = str(ai_profile_payload.get("base_url", "")).strip()
+    if not profile_id or not model_name or not base_url:
+        raise ValueError("AI-assisted chunking requires a valid enabled AI profile.")
+
+    if semantic_strategy not in config.AI_CHUNKING_STRATEGY_OPTIONS:
+        raise ValueError("AI-assisted chunking requires a valid semantic strategy.")
+
+    cleaned_path = resolved_project_root / cleaned_relative_path
+    if not cleaned_path.is_file():
+        raise FileNotFoundError("AI-assisted chunking requires cleaned text first.")
+
+    input_text = cleaned_path.read_text(encoding="utf-8")
+    paragraph_records = _build_paragraph_records(input_text)
+    if not paragraph_records:
+        raise ValueError("Cleaned text does not contain any paragraphs for AI chunking.")
+
+    original_name = str(source_document.get("original_name") or Path(cleaned_relative_path).name)
+    input_snapshot_path = build_operation_input_snapshot_path(
+        resolved_project_root,
+        "chunking",
+        original_name,
+    )
+    input_snapshot_path.write_text(input_text, encoding="utf-8")
+
+    output_path = build_operation_output_path(
+        resolved_project_root,
+        "chunking",
+        config.CHUNK_ARTIFACT_FILE_NAME,
+    )
+    report_path = build_operation_artifact_path(
+        resolved_project_root,
+        "chunking",
+        config.CHUNKING_REPORT_FILE_NAME,
+    )
+    state_path = build_operation_output_path(
+        resolved_project_root,
+        "chunking",
+        config.OPERATION_STATE_FILE_NAME,
+    )
+
+    prompt_template_service.validate_required_prompts(
+        ["text_chunking_system", "text_chunking_user"]
+    )
+    input_fingerprint = _compute_input_fingerprint(input_text)
+    windows = _build_windows(paragraph_records, semantic_strategy)
+    total_windows = len(windows)
+    if total_windows == 0:
+        raise ValueError("Cleaned text does not contain any paragraphs for AI chunking.")
+
+    existing_state = load_operation_state(resolved_project_root) or {}
+    started_at = str(existing_state.get("started_at") or _utc_now_iso())
+    start_window_index, committed_break_ids, log_relative_path = _restore_resume_state(
+        existing_state,
+        total_windows,
+        input_fingerprint,
+        profile_id,
+        semantic_strategy,
+    )
+    if start_window_index == 0:
+        output_path.write_text("[]\n", encoding="utf-8")
+
+    if not log_relative_path:
+        log_path = _build_ai_log_path(resolved_project_root, started_at)
+        log_relative_path = relative_to_project(resolved_project_root, log_path)
+    else:
+        log_path = resolved_project_root / log_relative_path
+    log_path.parent.mkdir(parents=True, exist_ok=True)
+    if not log_path.exists():
+        log_path.write_text("", encoding="utf-8")
+
+    _write_running_state(
+        state_path=state_path,
+        project_root=resolved_project_root,
+        input_snapshot_path=input_snapshot_path,
+        output_path=output_path,
+        report_path=None,
+        started_at=started_at,
+        progress_current=start_window_index,
+        progress_total=total_windows,
+        warnings=[],
+        paragraph_records=paragraph_records,
+        committed_break_ids=committed_break_ids,
+        profile_id=profile_id,
+        semantic_strategy=semantic_strategy,
+        input_fingerprint=input_fingerprint,
+        log_relative_path=log_relative_path,
+    )
+    _emit_progress(
+        progress_callback,
+        progress_current=start_window_index,
+        progress_total=total_windows,
+        message="Resuming AI-assisted chunking..." if start_window_index > 0 else "AI-assisted chunking in progress...",
+    )
+
+    system_prompt = prompt_template_service.render_prompt(
+        "text_chunking_system",
+        {"strategy": semantic_strategy},
+    )
+    for window_index in range(start_window_index, total_windows):
+        raise_if_cancelled(cancel_requested)
+        window_payload = windows[window_index]
+        window_records = paragraph_records[
+            int(window_payload["start_index"]): int(window_payload["end_index"]) + 1
+        ]
+        user_prompt = prompt_template_service.render_prompt(
+            "text_chunking_user",
+            {
+                "strategy": semantic_strategy,
+                "units_block": _build_units_block(window_records),
+            },
+        )
+        try:
+            response_payload = llm_provider_service.chat_json(
+                ai_profile_payload,
+                system_prompt,
+                user_prompt,
+                log_path=log_path,
+                log_context={
+                    "operation_kind": "chunking",
+                    "stage_label": "ai_chunking",
+                    "profile_id": profile_id,
+                    "semantic_strategy": semantic_strategy,
+                    "window_index": window_index + 1,
+                    "window_total": total_windows,
+                },
+                cancel_requested=cancel_requested,
+            )
+        except OperationCancelledError as error:
+            raise OperationCancelledError(
+                "AI-assisted chunking cancelled while waiting for the model response."
+            ) from error
+        committed_break_ids = _merge_committed_break_ids(
+            committed_break_ids,
+            _normalize_break_after_ids(response_payload, window_records),
+            paragraph_records,
+        )
+        processed_records = paragraph_records[: int(window_payload["end_index"]) + 1]
+        partial_chunks = _build_chunks_from_break_ids(
+            processed_records,
+            committed_break_ids,
+            semantic_strategy,
+        )
+        _write_chunk_payload(output_path, partial_chunks)
+        _write_running_state(
+            state_path=state_path,
+            project_root=resolved_project_root,
+            input_snapshot_path=input_snapshot_path,
+            output_path=output_path,
+            report_path=None,
+            started_at=started_at,
+            progress_current=window_index + 1,
+            progress_total=total_windows,
+            warnings=[],
+            paragraph_records=processed_records,
+            committed_break_ids=committed_break_ids,
+            profile_id=profile_id,
+            semantic_strategy=semantic_strategy,
+            input_fingerprint=input_fingerprint,
+            log_relative_path=log_relative_path,
+        )
+        _emit_progress(
+            progress_callback,
+            progress_current=window_index + 1,
+            progress_total=total_windows,
+            message="AI-assisted chunking in progress...",
+        )
+
+    chunks = _build_chunks_from_break_ids(
+        paragraph_records,
+        committed_break_ids,
+        semantic_strategy,
+    )
+    _write_chunk_payload(output_path, chunks)
+    chapter_count = _chapter_count_from_chunks(chunks)
+    warnings = deterministic_chunking_service._build_chunking_warnings(chapter_count)
+    report_payload: ChunkingReportPayload = {
+        "input_relative_path": relative_to_project(resolved_project_root, input_snapshot_path),
+        "chunk_artifact_relative_path": relative_to_project(resolved_project_root, output_path),
+        "chunked_at": _utc_now_iso(),
+        "warnings": warnings,
+        "chunk_count": len(chunks),
+        "detected_chapter_count": chapter_count,
+        "chunking_mode": "ai_assisted",
+        "ai_profile_id": profile_id,
+        "semantic_strategy": semantic_strategy,
+        "log_relative_path": log_relative_path,
+    }
+    report_path.write_text(
+        json.dumps(report_payload, indent=2, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
+    completed_state = _build_operation_state(
+        project_root=resolved_project_root,
+        input_snapshot_path=input_snapshot_path,
+        output_path=output_path,
+        report_path=report_path,
+        status="completed",
+        progress_current=total_windows,
+        progress_total=total_windows,
+        started_at=started_at,
+        completed_at=report_payload["chunked_at"],
+        warnings=warnings,
+        chunks=None,
+        committed_break_ids=committed_break_ids,
+        profile_id=profile_id,
+        semantic_strategy=semantic_strategy,
+        input_fingerprint=input_fingerprint,
+        log_relative_path=log_relative_path,
+        resume_checkpoint=None,
+    )
+    state_path.write_text(
+        json.dumps(completed_state, indent=2, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
+    _emit_progress(
+        progress_callback,
+        progress_current=total_windows,
+        progress_total=total_windows,
+        message="AI-assisted chunking completed.",
+    )
+    return report_payload
+
+
+@trace_function(_AI_CHUNKING_LOGGER)
+def load_operation_state(project_root: str | Path) -> OperationStatePayload | None:
+    """
+    @brief      Load one optional AI chunking operation-state payload.
+    @param[in]  project_root Active project root folder.
+    @return     Persisted chunking operation-state payload or `None`.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-07
+    @version    0.1.0
+    """
+    state_path = build_operation_output_path(project_root, "chunking", config.OPERATION_STATE_FILE_NAME)
+    if not state_path.is_file():
+        return None
+    return dict(json.loads(state_path.read_text(encoding="utf-8")))
+
+
+# LOCAL HELPERS
+
+
+def _emit_progress(progress_callback, progress_current: int, progress_total: int, message: str) -> None:
+    if callable(progress_callback):
+        progress_callback(
+            progress_current,
+            progress_total,
+            progress_percent(progress_current, progress_total),
+            message,
+        )
+
+
+def _compute_input_fingerprint(input_text: str) -> str:
+    return hashlib.sha256(input_text.encode("utf-8")).hexdigest()
+
+
+def _build_windows(
+    paragraph_records: list[dict[str, object]],
+    semantic_strategy: str,
+) -> list[dict[str, int]]:
+    window_size = _WINDOW_SIZE_BY_STRATEGY.get(
+        semantic_strategy,
+        _WINDOW_SIZE_BY_STRATEGY[config.DEFAULT_AI_CHUNKING_STRATEGY],
+    )
+    windows: list[dict[str, int]] = []
+    start_index = 0
+    while start_index < len(paragraph_records):
+        end_index = min(len(paragraph_records) - 1, start_index + window_size - 1)
+        windows.append({
+            "start_index": start_index,
+            "end_index": end_index,
+        })
+        start_index = end_index + 1
+    return windows
+
+
+def _build_paragraph_records(cleaned_text: str) -> list[dict[str, object]]:
+    records = deterministic_chunking_service._build_paragraph_records(cleaned_text)
+    for index, record in enumerate(records, start=1):
+        record["unit_id"] = f"paragraph-{index:04d}"
+    return records
+
+
+def _restore_resume_state(
+    existing_state: dict[str, object],
+    total_windows: int,
+    input_fingerprint: str,
+    profile_id: str,
+    semantic_strategy: str,
+) -> tuple[int, list[str], str | None]:
+    if str(existing_state.get("status", "")) not in {"running", "failed"}:
+        return 0, [], None
+    if str(existing_state.get("mode", "")) != "ai_assisted":
+        return 0, [], None
+    resume_checkpoint = dict(existing_state.get("resume_checkpoint") or {})
+    if str(resume_checkpoint.get("input_fingerprint", "")) != input_fingerprint:
+        return 0, [], None
+    if str(resume_checkpoint.get("profile_id", "")) != profile_id:
+        return 0, [], None
+    if str(resume_checkpoint.get("semantic_strategy", "")) != semantic_strategy:
+        return 0, [], None
+    if int(existing_state.get("progress_total", 0)) != total_windows:
+        return 0, [], None
+    start_window_index = int(resume_checkpoint.get("completed_window_count", 0))
+    committed_break_ids = [
+        str(item)
+        for item in list(resume_checkpoint.get("committed_break_ids", []))
+        if str(item).strip()
+    ]
+    log_relative_path = resume_checkpoint.get("log_relative_path")
+    return min(start_window_index, total_windows), committed_break_ids, (
+        None if log_relative_path in (None, "") else str(log_relative_path)
+    )
+
+
+def _build_units_block(paragraph_records: list[dict[str, object]]) -> str:
+    blocks: list[str] = []
+    for record in paragraph_records:
+        blocks.append(f"{record['unit_id']}\n{record['text']}")
+    return "\n\n".join(blocks).strip()
+
+
+def _normalize_break_after_ids(
+    response_payload: dict[str, object],
+    window_records: list[dict[str, object]],
+) -> list[str]:
+    valid_ids = {str(record["unit_id"]) for record in window_records}
+    raw_ids = response_payload.get("break_after_unit_ids", [])
+    if not isinstance(raw_ids, list):
+        return []
+    normalized: list[str] = []
+    for item in raw_ids:
+        resolved = str(item).strip()
+        if not resolved or resolved not in valid_ids or resolved in normalized:
+            continue
+        normalized.append(resolved)
+    return normalized
+
+
+def _merge_committed_break_ids(
+    existing_ids: list[str],
+    new_ids: list[str],
+    paragraph_records: list[dict[str, object]],
+) -> list[str]:
+    order = {
+        str(record["unit_id"]): index
+        for index, record in enumerate(paragraph_records)
+    }
+    merged = {
+        item
+        for item in existing_ids + new_ids
+        if item in order
+    }
+    return sorted(merged, key=lambda item: order[item])
+
+
+def _build_chunks_from_break_ids(
+    paragraph_records: list[dict[str, object]],
+    committed_break_ids: list[str],
+    semantic_strategy: str,
+) -> list[ChunkPayload]:
+    if not paragraph_records:
+        return []
+    boundary_ids = set(committed_break_ids)
+    chunks: list[ChunkPayload] = []
+    start_index = 0
+    current_chapter: str | None = None
+    chunk_index = 1
+    for record_index, paragraph_record in enumerate(paragraph_records):
+        chapter_label = deterministic_chunking_service._detect_chapter_label(
+            str(paragraph_record["text"])
+        )
+        if chapter_label is not None:
+            current_chapter = chapter_label
+        is_boundary = str(paragraph_record["unit_id"]) in boundary_ids
+        is_last_record = record_index == len(paragraph_records) - 1
+        if not is_boundary and not is_last_record:
+            continue
+        selected_records = paragraph_records[start_index: record_index + 1]
+        chunks.append({
+            "chunk_id": f"chunk-{chunk_index:04d}",
+            "sequence_index": chunk_index,
+            "chapter_label": current_chapter,
+            "text": "\n\n".join(str(item["text"]) for item in selected_records).strip(),
+            "source_start_line": int(selected_records[0]["line_start"]),
+            "source_end_line": int(selected_records[-1]["line_end"]),
+            "chunking_mode": "ai_assisted",
+            "semantic_strategy": semantic_strategy,
+            "scene_note": None,
+        })
+        chunk_index += 1
+        start_index = record_index + 1
+    return chunks
+
+
+def _write_chunk_payload(output_path: Path, chunks: list[ChunkPayload]) -> None:
+    output_path.write_text(
+        json.dumps(chunks, indent=2, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
+
+
+def _write_running_state(
+    state_path: Path,
+    project_root: Path,
+    input_snapshot_path: Path,
+    output_path: Path,
+    report_path: Path | None,
+    started_at: str,
+    progress_current: int,
+    progress_total: int,
+    warnings: list[str],
+    paragraph_records: list[dict[str, object]],
+    committed_break_ids: list[str],
+    profile_id: str,
+    semantic_strategy: str,
+    input_fingerprint: str,
+    log_relative_path: str,
+) -> None:
+    chunks = _build_chunks_from_break_ids(
+        paragraph_records,
+        committed_break_ids,
+        semantic_strategy,
+    )
+    state_payload = _build_operation_state(
+        project_root=project_root,
+        input_snapshot_path=input_snapshot_path,
+        output_path=output_path,
+        report_path=report_path,
+        status="running",
+        progress_current=progress_current,
+        progress_total=progress_total,
+        started_at=started_at,
+        completed_at=None,
+        warnings=warnings,
+        chunks=chunks,
+        committed_break_ids=committed_break_ids,
+        profile_id=profile_id,
+        semantic_strategy=semantic_strategy,
+        input_fingerprint=input_fingerprint,
+        log_relative_path=log_relative_path,
+        resume_checkpoint={
+            "input_fingerprint": input_fingerprint,
+            "profile_id": profile_id,
+            "semantic_strategy": semantic_strategy,
+            "completed_window_count": progress_current,
+            "total_window_count": progress_total,
+            "committed_break_ids": list(committed_break_ids),
+            "log_relative_path": log_relative_path,
+        },
+    )
+    state_path.write_text(
+        json.dumps(state_payload, indent=2, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
+
+
+def _build_operation_state(
+    project_root: Path,
+    input_snapshot_path: Path,
+    output_path: Path,
+    report_path: Path | None,
+    status: str,
+    progress_current: int,
+    progress_total: int,
+    started_at: str,
+    completed_at: str | None,
+    warnings: list[str],
+    chunks: list[ChunkPayload] | None,
+    committed_break_ids: list[str],
+    profile_id: str,
+    semantic_strategy: str,
+    input_fingerprint: str,
+    log_relative_path: str,
+    resume_checkpoint: dict[str, object] | None,
+) -> OperationStatePayload:
+    artifact_paths = [log_relative_path]
+    if report_path is not None and report_path.is_file():
+        artifact_paths.insert(0, relative_to_project(project_root, report_path))
+    return {
+        "folder_relative_path": "20_chunking",
+        "status": status,
+        "input_paths": [relative_to_project(project_root, input_snapshot_path)],
+        "output_paths": (
+            [relative_to_project(project_root, output_path)]
+            if output_path.is_file()
+            else []
+        ),
+        "artifact_paths": artifact_paths,
+        "progress_current": progress_current,
+        "progress_total": progress_total,
+        "mode": "ai_assisted",
+        "started_at": started_at,
+        "completed_at": completed_at,
+        "updated_at": _utc_now_iso(),
+        "warning_count": len(warnings),
+        "metadata": {
+            "warnings": list(warnings),
+            "chunk_count": 0 if chunks is None else len(chunks),
+            "detected_chapter_count": 0 if chunks is None else _chapter_count_from_chunks(chunks),
+            "chunks": None if chunks is None else list(chunks),
+            "ai_profile_id": profile_id,
+            "semantic_strategy": semantic_strategy,
+            "input_fingerprint": input_fingerprint,
+            "log_relative_path": log_relative_path,
+            "committed_break_ids": list(committed_break_ids),
+        },
+        "resume_checkpoint": None if resume_checkpoint is None else dict(resume_checkpoint),
+    }
+
+
+def _chapter_count_from_chunks(chunks: list[ChunkPayload]) -> int:
+    return deterministic_chunking_service._chapter_count_from_chunks(chunks)
+
+
+def _build_ai_log_path(project_root: Path, started_at: str) -> Path:
+    timestamp_token = (
+        started_at.replace("-", "")
+        .replace(":", "")
+        .replace("+", "_")
+        .replace(".", "")
+    )
+    return build_operation_output_path(
+        project_root,
+        "chunking",
+        f"{config.AI_TRANSACTION_LOG_FILE_PREFIX}{timestamp_token}.log",
+    )
+
+
+def _utc_now_iso() -> str:
+    return datetime.now(UTC).replace(microsecond=0).isoformat()
+
+
+# END OF FILE

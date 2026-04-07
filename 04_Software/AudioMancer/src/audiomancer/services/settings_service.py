@@ -29,7 +29,9 @@ from .logging_service import get_component_logger, trace_function
 
 # CONSTANTS
 
+# @brief Component logger used by settings load, validation, and save helpers.
 _SETTINGS_LOGGER = get_component_logger("settings")
+# @brief Default field scaffold applied to each persisted LLM profile payload.
 _LLM_PROFILE_DEFAULTS = {
     "id": "",
     "label": "",

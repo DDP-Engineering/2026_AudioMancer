@@ -42,9 +42,13 @@ if TYPE_CHECKING:
 
 # CONSTANTS
 
+# @brief Operator-facing application tagline shown in window and About UI.
 TAGLINE_TEXT = "Transform written words into real audio experience!"
+# @brief Default main license file path used by the About dialog.
 LICENSE_PATH = config.APP_ROOT / "LICENSE.txt"
+# @brief Default non-commercial addendum file path used by the About dialog.
 LICENSE_NC_PATH = config.APP_ROOT / "LICENSE_NC.txt"
+# @brief Optional translated license file pairs keyed by runtime UI language.
 LICENSE_TRANSLATED_PATHS = {
     "ro": (
         config.APP_ROOT / "LICENSE_ro.txt",

@@ -13,7 +13,7 @@
          file support used by the current AudioMancer implementation scaffold.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-07
-@version 1.2.0
+@version 1.4.0
 """
 
 # IMPORTS
@@ -216,6 +216,9 @@ DEFAULT_AI_CONNECT_TIMEOUT_SECONDS = 3
 DEFAULT_LLM_TEMPERATURE = 0.2
 
 # AI Workflow Defaults
+# @brief Default maximum cleanup-unit count sent in one AI cleanup request window.
+DEFAULT_AI_CLEANUP_MAX_WINDOW_UNITS = 24
+
 # @brief Default semantic AI chunking strategy.
 DEFAULT_AI_CHUNKING_STRATEGY = "paragraph"
 
@@ -282,6 +285,7 @@ AVAILABLE_LOG_COMPONENTS = (
     "app",
     "ai_backend",
     "ai_cleanup",
+    "ai_chunking",
     "deterministic_cleanup",
     "deterministic_chunking",
     "llm_provider",

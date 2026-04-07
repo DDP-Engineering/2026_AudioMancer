@@ -27,7 +27,9 @@ from audiomancer.services.logging_service import get_component_logger, trace_fun
 
 # CONSTANTS
 
+# @brief Component logger used by the source-import workflow.
 _IMPORT_LOGGER = get_component_logger("import_service")
+# @brief Normalized source-document payload type persisted in the project manifest.
 SourceDocumentPayload = dict[str, object]
 
 

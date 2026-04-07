@@ -13,7 +13,7 @@
          current cleaned-text reference plus persisted chunk previews.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-07
-@version 0.2.1
+@version 0.2.2
 """
 
 # IMPORTS
@@ -44,7 +44,7 @@ class TextChunkingPage(QWidget):
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-07
-    @version    0.2.1
+    @version    0.2.2
     """
 
     chunk_requested = Signal()
@@ -58,7 +58,7 @@ class TextChunkingPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-07
-        @version    0.2.1
+        @version    0.2.2
         """
         super().__init__(parent)
         self._chunks: list[dict[str, object]] = []
@@ -145,7 +145,7 @@ class TextChunkingPage(QWidget):
         self._notes_edit.setReadOnly(True)
         self._notes_edit.setPlainText(
             "Run cleanup before chunking.\n"
-            "Deterministic and AI-assisted chunk generation are not wired yet."
+            "Deterministic and AI-assisted chunk generation will populate the chunk list and selected preview."
         )
         notes_layout.addWidget(self._notes_edit)
         notes_group.setMaximumHeight(140)

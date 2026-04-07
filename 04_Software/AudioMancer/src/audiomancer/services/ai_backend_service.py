@@ -28,8 +28,13 @@ from .logging_service import get_component_logger, trace_function
 
 # CONSTANTS
 
+# @brief Component logger used by the AI backend probe helpers.
 _AI_BACKEND_LOGGER = get_component_logger("ai_backend")
+
+# @brief Normalized discovered-model payload type used by backend probes.
 ModelDescriptorPayload = dict[str, str]
+
+# @brief Normalized provider-probe result payload type returned to the UI layer.
 ProviderProbeResultPayload = dict[str, object]
 
 

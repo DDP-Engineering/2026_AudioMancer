@@ -27,6 +27,7 @@ from audiomancer import config
 
 # CONSTANTS
 
+# @brief Mapping from operation kind to its numbered project-workspace folder.
 _OPERATION_FOLDER_NAMES = {
     "extraction": config.EXTRACTION_FOLDER_NAME,
     "cleanup": config.CLEANUP_FOLDER_NAME,
@@ -34,6 +35,7 @@ _OPERATION_FOLDER_NAMES = {
     "translation": "30_translation",
     "character_discovery": "40_character_discovery",
 }
+# @brief Stable execution order used for downstream reset calculations.
 _OPERATION_ORDER = tuple(_OPERATION_FOLDER_NAMES.keys())
 
 

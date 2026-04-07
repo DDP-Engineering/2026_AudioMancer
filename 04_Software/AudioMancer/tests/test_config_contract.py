@@ -13,7 +13,7 @@
          settings scaffold exist with the expected baseline contract.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-07
-@version 0.8.1
+@version 0.8.2
 """
 
 # IMPORTS
@@ -53,6 +53,7 @@ def test_config_exposes_expected_identity_and_window_defaults() -> None:
     assert config.CHUNK_ARTIFACT_FILE_NAME == "output_chunks.json"
     assert config.CHUNKING_REPORT_FILE_NAME == "chunking_report.json"
     assert config.OPERATION_STATE_FILE_NAME == "state_operation.json"
+    assert "ai_chunking" in config.AVAILABLE_LOG_COMPONENTS
     assert "text_extraction" in config.AVAILABLE_LOG_COMPONENTS
 
 

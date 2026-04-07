@@ -37,6 +37,7 @@ from audiomancer.services import ui_state_service
 
 # CONSTANTS
 
+# @brief Workflow-status color palette used by the Home page stage list.
 _STATUS_COLORS = {
     "not_started": QColor("#A0A0A0"),
     "in_progress": QColor("#D6A300"),

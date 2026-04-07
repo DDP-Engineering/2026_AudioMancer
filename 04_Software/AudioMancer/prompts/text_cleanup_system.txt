@@ -15,6 +15,9 @@ Allowed labels:
 Rules:
 - Keep narrative prose, dialogue, chapter headings, and meaningful epigraphs as story.
 - Mark repeated page furniture, running heads, footers, page numbers, ornamental separators, copyright lines, and obvious OCR noise with the most specific removable label.
+- Use `page_number` only for bare numerals or simple page indicators such as `23` or `Page 23`.
+- Do not classify narrative prose, dialogue, or descriptive sentences as `page_number`.
+- Treat ornamental separators such as `* * *` as `separator`, not as story.
 - Use unknown when the text is ambiguous and should be preserved.
 - Do not rewrite the unit text.
 - Return one result item for every provided unit id.

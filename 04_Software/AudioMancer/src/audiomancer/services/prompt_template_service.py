@@ -26,7 +26,9 @@ from audiomancer.services.logging_service import get_component_logger, trace_fun
 
 # CONSTANTS
 
+# @brief Component logger used by prompt loading and rendering helpers.
 _PROMPT_LOGGER = get_component_logger("prompt_template")
+# @brief Named-placeholder matcher used by strict prompt template substitution.
 _PLACEHOLDER_PATTERN = re.compile(r"\{([a-zA-Z_][a-zA-Z0-9_]*)\}")
 
 

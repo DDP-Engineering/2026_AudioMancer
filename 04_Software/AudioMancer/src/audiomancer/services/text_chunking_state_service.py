@@ -13,13 +13,14 @@
          selectors, and operator notes used by the Text Chunking page.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-07
-@version 0.1.0
+@version 0.3.0
 """
 
 # IMPORTS
 
 from pathlib import Path
 
+from audiomancer import config
 from audiomancer.services import deterministic_chunking_service
 from audiomancer.services import home_presenter_service
 from audiomancer.services import text_cleanup_state_service
@@ -33,6 +34,7 @@ def build_text_chunking_state(
     project_root: Path | None,
     manifest: dict[str, object] | None,
     language: str,
+    settings_payload: dict[str, object] | None = None,
 ) -> dict[str, object]:
     """
     @brief      Build the operator-facing state payload for the text chunking page.
@@ -43,7 +45,7 @@ def build_text_chunking_state(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-07
-    @version    0.1.0
+    @version    0.3.0
     """
     if project_root is None or manifest is None:
         return {
@@ -52,7 +54,7 @@ def build_text_chunking_state(
             "notes": [ui_state_service.translate("text_chunking.note_no_project", language)],
             "can_chunk": False,
             "can_ai_chunk": False,
-            "selected_strategy": None,
+            "selected_strategy": _selected_ai_strategy(settings_payload),
         }
 
     cleanup_operation = home_presenter_service.manifest_operation(manifest, "cleanup")
@@ -68,6 +70,7 @@ def build_text_chunking_state(
     chunking_operation_state = deterministic_chunking_service.load_operation_state(project_root)
     chunks = deterministic_chunking_service.load_chunks(project_root)
     has_cleaned_text = cleaned_text is not None and bool(cleaned_text.strip())
+    has_ai_profiles = bool(build_ai_chunking_profile_state(settings_payload)["entries"])
     return {
         "cleaned_text": cleaned_text,
         "chunks": chunks,
@@ -76,11 +79,12 @@ def build_text_chunking_state(
             cleaned_text if has_cleaned_text else None,
             chunking_report_payload,
             chunking_operation_state,
+            has_ai_profiles,
             language,
         ),
         "can_chunk": has_cleaned_text,
-        "can_ai_chunk": False,
-        "selected_strategy": None,
+        "can_ai_chunk": has_cleaned_text and has_ai_profiles,
+        "selected_strategy": _selected_ai_strategy(settings_payload),
     }
 
 
@@ -94,7 +98,7 @@ def build_ai_chunking_profile_state(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-07
-    @version    0.1.0
+    @version    0.1.1
     """
     if not isinstance(settings_payload, dict):
         return {"entries": [], "selected_profile_id": None}
@@ -131,20 +135,22 @@ def build_text_chunking_notes(
     cleaned_text: str | None,
     chunking_report_payload: dict[str, object] | None,
     chunking_operation_state: dict[str, object] | None,
+    has_ai_profiles: bool,
     language: str,
 ) -> list[str]:
     """
-    @brief      Build operator-facing notes for deterministic chunking.
+    @brief      Build operator-facing notes for deterministic and AI chunking.
     @param[in]  manifest Active project manifest payload.
     @param[in]  cleaned_text Optional cleaned-text preview payload.
     @param[in]  chunking_report_payload Optional chunking report payload.
     @param[in]  chunking_operation_state Optional chunking operation-state payload.
+    @param[in]  has_ai_profiles True when one enabled AI profile is available.
     @param[in]  language Current UI language code.
     @return     Ordered notes list for the chunking page.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-07
-    @version    0.1.0
+    @version    0.3.0
     """
     notes: list[str] = []
     if home_presenter_service.source_document_name(manifest) is None:
@@ -159,22 +165,42 @@ def build_text_chunking_notes(
         if not isinstance(chunking_operation_state, dict)
         else str(chunking_operation_state.get("status", "not_started"))
     )
+    chunking_mode = (
+        ""
+        if not isinstance(chunking_operation_state, dict)
+        else str(chunking_operation_state.get("mode") or "")
+    )
     if chunking_report_payload is not None:
+        chunking_mode = str(chunking_report_payload.get("chunking_mode") or chunking_mode)
+        summary_key = (
+            "text_chunking.note_ai_summary"
+            if chunking_mode == "ai_assisted"
+            else "text_chunking.note_summary"
+        )
         notes.append(
             ui_state_service.translate(
-                "text_chunking.note_summary",
+                summary_key,
                 language,
             ).format(
                 chunk_count=chunking_report_payload.get("chunk_count", 0),
                 chapter_count=chunking_report_payload.get("detected_chapter_count", 0),
+                strategy=chunking_report_payload.get(
+                    "semantic_strategy",
+                    config.DEFAULT_AI_CHUNKING_STRATEGY,
+                ),
             )
         )
         notes.extend(str(item) for item in list(chunking_report_payload.get("warnings", [])))
         if chunking_status == "completed":
-            notes.append(ui_state_service.translate("text_chunking.note_rerun_warning", language))
+            rerun_key = (
+                "text_chunking.note_ai_rerun_warning"
+                if chunking_mode == "ai_assisted"
+                else "text_chunking.note_rerun_warning"
+            )
+            notes.append(ui_state_service.translate(rerun_key, language))
         return notes
 
-    if chunking_status in {"running", "failed"}:
+    if chunking_status == "running":
         progress_current = (
             0
             if not isinstance(chunking_operation_state, dict)
@@ -185,17 +211,73 @@ def build_text_chunking_notes(
             if not isinstance(chunking_operation_state, dict)
             else int(chunking_operation_state.get("progress_total", 0))
         )
-        notes.append(ui_state_service.translate("text_chunking.note_ready", language))
+        in_progress_key = (
+            "text_chunking.note_ai_in_progress"
+            if chunking_mode == "ai_assisted"
+            else "text_chunking.note_in_progress"
+        )
         notes.append(
-            ui_state_service.translate("text_chunking.note_resume", language).format(
+            ui_state_service.translate(in_progress_key, language).format(
                 progress_current=progress_current,
                 progress_total=progress_total,
+                strategy=(
+                    chunking_operation_state.get("metadata", {})
+                    if isinstance(chunking_operation_state.get("metadata"), dict)
+                    else {}
+                ).get("semantic_strategy", config.DEFAULT_AI_CHUNKING_STRATEGY),
+            )
+        )
+        return notes
+
+    if chunking_status == "failed":
+        progress_current = (
+            0
+            if not isinstance(chunking_operation_state, dict)
+            else int(chunking_operation_state.get("progress_current", 0))
+        )
+        progress_total = (
+            0
+            if not isinstance(chunking_operation_state, dict)
+            else int(chunking_operation_state.get("progress_total", 0))
+        )
+        resume_key = (
+            "text_chunking.note_ai_resume"
+            if chunking_mode == "ai_assisted"
+            else "text_chunking.note_resume"
+        )
+        notes.append(
+            ui_state_service.translate(resume_key, language).format(
+                progress_current=progress_current,
+                progress_total=progress_total,
+                strategy=(
+                    chunking_operation_state.get("metadata", {})
+                    if isinstance(chunking_operation_state.get("metadata"), dict)
+                    else {}
+                ).get("semantic_strategy", config.DEFAULT_AI_CHUNKING_STRATEGY),
             )
         )
         return notes
 
     notes.append(ui_state_service.translate("text_chunking.note_ready", language))
+    if has_ai_profiles:
+        notes.append(ui_state_service.translate("text_chunking.note_ai_ready", language))
+    else:
+        notes.append(ui_state_service.translate("text_chunking.note_no_ai_profile", language))
     return notes
+
+
+def _selected_ai_strategy(settings_payload: dict[str, object] | None) -> str:
+    if not isinstance(settings_payload, dict):
+        return config.DEFAULT_AI_CHUNKING_STRATEGY
+    candidate = str(
+        settings_payload.get(
+            "default_ai_chunking_strategy",
+            config.DEFAULT_AI_CHUNKING_STRATEGY,
+        )
+    )
+    if candidate not in config.AI_CHUNKING_STRATEGY_OPTIONS:
+        return config.DEFAULT_AI_CHUNKING_STRATEGY
+    return candidate
 
 
 # END OF FILE

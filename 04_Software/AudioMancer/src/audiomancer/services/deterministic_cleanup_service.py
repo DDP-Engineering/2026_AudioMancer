@@ -41,21 +41,32 @@ from audiomancer.services.operation_runtime_service import (
 
 # CONSTANTS
 
+# @brief Component logger used by the deterministic cleanup workflow.
 _CLEANUP_LOGGER = get_component_logger("deterministic_cleanup")
+# @brief Persisted deterministic cleanup report payload type.
 CleanupReportPayload = dict[str, object]
+# @brief Persisted deterministic cleanup operation-state payload type.
 OperationStatePayload = dict[str, object]
+# @brief Internal paragraph-line accumulator type used while rebuilding cleaned text.
 CleanupLineParts = list[tuple[str, bool]]
+# @brief Page-break separator pattern used to reconstruct extracted PDF pages.
 _PAGE_SPLIT_PATTERN = re.compile(r"\n\n\f\n\n")
+# @brief Conservative page-number matcher used during deterministic cleanup.
 _PAGE_NUMBER_PATTERN = re.compile(r"^(?:page\s+)?\d+(?:\s*/\s*\d+)?$", re.IGNORECASE)
+# @brief Supported chapter-heading detection patterns reused for cleanup summary metadata.
 _CHAPTER_PATTERNS = (
     re.compile(r"^(chapter|capitolul|scene|scena)\s+[\wIVXLCDM0-9][\wIVXLCDM0-9 .:-]*$", re.IGNORECASE),
     re.compile(r"^[IVXLCDM]+$", re.IGNORECASE),
 )
+# @brief Sentence-terminal matcher used to detect soft-wrapped paragraph continuation.
 _PARAGRAPH_TERMINAL_PATTERN = re.compile(r'[.!?\u2026](?:["\')\]\}]+)?$')
+# @brief Decorative-separator matcher used to remove non-story break lines.
 _SEPARATOR_LINE_PATTERN = re.compile(r"^[*#=_~.\-]{3,}$|^(?:[*#=_~.\-]\s+){2,}[*#=_~.\-]?$")
+# @brief Dialogue formatter rule that inserts line breaks before continued spoken text.
 _DIALOGUE_BREAK_AFTER_PUNCTUATION_PATTERN = re.compile(
     r'([:;.!?\u2026]["»”\']?)\s+-\s+(?=[A-ZĂÂÎȘȚ])'
 )
+# @brief Dialogue formatter rule that inserts line breaks after attributions and pauses.
 _DIALOGUE_BREAK_AFTER_ATTRIBUTION_PATTERN = re.compile(
     r'([,:])\s+-\s+(?=[A-ZĂÂÎȘȚ])'
 )

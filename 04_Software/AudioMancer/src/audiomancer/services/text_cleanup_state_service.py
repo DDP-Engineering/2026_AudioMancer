@@ -12,8 +12,8 @@
 @details Builds the extracted/cleaned preview state, operator notes, and
          manifest reset payloads used by the Text Cleanup page workflows.
 @author Eng. Dan Dumitru Pasare
-@date 2026-04-06
-@version 0.3.0
+@date 2026-04-07
+@version 0.4.0
 """
 
 # IMPORTS
@@ -109,8 +109,8 @@ def build_ai_cleanup_profile_state(
     @return     Selector payload with ordered entries and one selected id.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.1.1
+    @date       2026-04-07
+    @version    0.1.2
     """
     if not isinstance(settings_payload, dict):
         return {"entries": [], "selected_profile_id": None}
@@ -243,9 +243,19 @@ def build_text_cleanup_notes(
                     language,
                 ).format(profile_label=str(ai_profile_id))
             )
-        notes.extend(
-            str(item) for item in list(cleanup_report_payload.get("warnings", []))
-        )
+        cleanup_warnings = [
+            str(item)
+            for item in list(cleanup_report_payload.get("warnings", []))
+            if str(item).strip()
+        ]
+        if cleanup_mode == "ai_assisted" and cleanup_warnings:
+            notes.append(
+                ui_state_service.translate(
+                    "text_cleanup.note_ai_cleanup_review_warning",
+                    language,
+                )
+            )
+        notes.extend(cleanup_warnings)
         if cleanup_status == "completed":
             rerun_key = (
                 "text_cleanup.note_ai_cleanup_rerun_warning"

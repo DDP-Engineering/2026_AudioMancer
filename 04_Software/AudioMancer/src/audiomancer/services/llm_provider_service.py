@@ -34,6 +34,7 @@ from audiomancer.services.operation_runtime_service import OperationCancelledErr
 
 # CONSTANTS
 
+# @brief Component logger used by OpenAI-compatible provider requests.
 _LLM_PROVIDER_LOGGER = get_component_logger("llm_provider")
 
 
