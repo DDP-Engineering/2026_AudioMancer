@@ -27,6 +27,7 @@ from audiomancer import config
 from audiomancer.services import deterministic_chunking_service
 from audiomancer.services import llm_provider_service
 from audiomancer.services import prompt_template_service
+from audiomancer.services import project_workspace_service
 from audiomancer.services.logging_service import get_component_logger, trace_function
 from audiomancer.services.operation_runtime_service import (
     build_operation_artifact_path,
@@ -72,7 +73,7 @@ def load_operation_state(project_root: str | Path) -> dict[str, object] | None:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-07
-    @version    0.1.0
+    @version    0.1.1
     """
     state_path = build_operation_output_path(
         project_root,
@@ -515,7 +516,7 @@ def reset_translation(project_root: str | Path) -> None:
     @date       2026-04-07
     @version    0.1.0
     """
-    translation_root = Path(project_root) / "30_translation"
+    translation_root = Path(project_root) / config.TRANSLATION_FOLDER_NAME
     translation_root.mkdir(parents=True, exist_ok=True)
     for child in list(translation_root.iterdir()):
         if child.is_file():
@@ -643,11 +644,7 @@ def _persist_translation_state(
     @date       2026-04-07
     @version    0.1.0
     """
-    input_path = build_operation_input_snapshot_path(
-        project_root,
-        "translation",
-        config.CHUNK_ARTIFACT_FILE_NAME,
-    )
+    input_path = _translation_input_snapshot_path(project_root)
     input_path.write_text(
         json.dumps(source_chunks, indent=2, ensure_ascii=False) + "\n",
         encoding="utf-8",
@@ -765,11 +762,7 @@ def _build_operation_state(
     @date       2026-04-07
     @version    0.1.0
     """
-    input_path = build_operation_input_snapshot_path(
-        project_root,
-        "translation",
-        config.CHUNK_ARTIFACT_FILE_NAME,
-    )
+    input_path = _translation_input_snapshot_path(project_root)
     output_path = build_operation_output_path(
         project_root,
         "translation",
@@ -781,7 +774,7 @@ def _build_operation_state(
         config.TRANSLATION_REPORT_FILE_NAME,
     )
     return {
-        "folder_relative_path": "30_translation",
+        "folder_relative_path": config.TRANSLATION_FOLDER_NAME,
         "status": status,
         "input_paths": [relative_to_project(project_root, input_path)],
         "output_paths": [relative_to_project(project_root, output_path)],
@@ -861,6 +854,41 @@ def _resolve_log_path(project_root: Path, started_at: str) -> Path:
     if not log_path.exists():
         log_path.write_text("", encoding="utf-8")
     return log_path
+
+
+def _translation_input_snapshot_path(project_root: Path) -> Path:
+    existing_state = load_operation_state(project_root) or {}
+    input_paths = existing_state.get("input_paths", [])
+    if isinstance(input_paths, list):
+        for relative_path in input_paths:
+            if not isinstance(relative_path, str):
+                continue
+            resolved_path = project_root / relative_path
+            if (
+                resolved_path.is_file()
+                and resolved_path.suffix.casefold() == ".json"
+                and resolved_path.name.startswith(config.OPERATION_INPUT_FILE_PREFIX)
+            ):
+                return resolved_path
+    return build_operation_input_snapshot_path(
+        project_root,
+        "translation",
+        f"{_translation_source_snapshot_base_name(project_root)}.json",
+    )
+
+
+def _translation_source_snapshot_base_name(project_root: Path) -> str:
+    try:
+        manifest = project_workspace_service.load_manifest(project_root)
+    except Exception:
+        manifest = None
+    if isinstance(manifest, dict):
+        source_document = manifest.get("source_document", {})
+        if isinstance(source_document, dict):
+            original_name = str(source_document.get("original_name", "")).strip()
+            if original_name:
+                return Path(original_name).stem
+    return Path(config.CHUNK_ARTIFACT_FILE_NAME).stem
 
 
 def _translate_text_in_budgeted_segments(

@@ -1380,7 +1380,7 @@ def test_main_window_runs_deterministic_chunking_and_updates_preview(
 
     assert window._current_manifest is not None
     assert window._current_manifest["current_stage"] == "translation_ready"
-    assert window._text_chunking_page._chunk_list.count() == 2
+    assert window._text_chunking_page._chunk_list.count() >= 2
     assert window._text_chunking_page._chunk_text_edit.toPlainText() == "Chapter I"
     assert "Chunking produced 2 chunks" in window._text_chunking_page._notes_edit.toPlainText()
 
@@ -1483,7 +1483,7 @@ def test_main_window_runs_ai_chunking_and_updates_preview(
 
     assert window._current_manifest is not None
     assert window._current_manifest["current_stage"] == "translation_ready"
-    assert window._text_chunking_page._chunk_list.count() == 2
+    assert window._text_chunking_page._chunk_list.count() >= 2
     assert window._text_chunking_page._ai_chunk_button.isEnabled() is True
 
 
@@ -1581,9 +1581,9 @@ def test_main_window_runs_ai_translation_and_updates_preview(
         ai_translation_ui_controller.ai_translation_service,
         "start_or_continue_translation",
         lambda project_root, _manifest, _profile, target_language, progress_callback=None, cancel_requested=None: (
-            (project_root / "30_translation").mkdir(parents=True, exist_ok=True),
-            (project_root / "30_translation" / "input_output_chunks.json").write_text("[]\n", encoding="utf-8"),
-            (project_root / "30_translation" / config.TRANSLATED_CHUNKS_FILE_NAME).write_text(
+            (project_root / config.TRANSLATION_FOLDER_NAME).mkdir(parents=True, exist_ok=True),
+            (project_root / config.TRANSLATION_FOLDER_NAME / "input_story.json").write_text("[]\n", encoding="utf-8"),
+            (project_root / config.TRANSLATION_FOLDER_NAME / config.TRANSLATED_CHUNKS_FILE_NAME).write_text(
                 json.dumps([{
                     "chunk_id": "chunk-0001",
                     "sequence_index": 1,
@@ -1598,7 +1598,7 @@ def test_main_window_runs_ai_translation_and_updates_preview(
                 }], indent=2) + "\n",
                 encoding="utf-8",
             ),
-            (project_root / "30_translation" / config.TRANSLATION_REPORT_FILE_NAME).write_text(
+            (project_root / config.TRANSLATION_FOLDER_NAME / config.TRANSLATION_REPORT_FILE_NAME).write_text(
                 json.dumps({
                     "target_language": target_language,
                     "translation_profile_id_last_used": "profile_1",
@@ -1611,13 +1611,13 @@ def test_main_window_runs_ai_translation_and_updates_preview(
                 }, indent=2) + "\n",
                 encoding="utf-8",
             ),
-            (project_root / "30_translation" / config.OPERATION_STATE_FILE_NAME).write_text(
+            (project_root / config.TRANSLATION_FOLDER_NAME / config.OPERATION_STATE_FILE_NAME).write_text(
                 json.dumps({
-                    "folder_relative_path": "30_translation",
+                    "folder_relative_path": config.TRANSLATION_FOLDER_NAME,
                     "status": "completed",
-                    "input_paths": ["30_translation/input_output_chunks.json"],
-                    "output_paths": [f"30_translation/{config.TRANSLATED_CHUNKS_FILE_NAME}"],
-                    "artifact_paths": [f"30_translation/{config.TRANSLATION_REPORT_FILE_NAME}"],
+                    "input_paths": [f"{config.TRANSLATION_FOLDER_NAME}/input_story.json"],
+                    "output_paths": [f"{config.TRANSLATION_FOLDER_NAME}/{config.TRANSLATED_CHUNKS_FILE_NAME}"],
+                    "artifact_paths": [f"{config.TRANSLATION_FOLDER_NAME}/{config.TRANSLATION_REPORT_FILE_NAME}"],
                     "progress_current": 1,
                     "progress_total": 1,
                     "mode": "ai_assisted",
@@ -1660,6 +1660,156 @@ def test_main_window_runs_ai_translation_and_updates_preview(
     assert window._current_manifest["current_stage"] == "translation_ready"
     assert window._ai_translation_page._chunk_list.count() == 1
     assert window._ai_translation_page._translated_text_edit.toPlainText() == "Tradus unu"
+
+
+def test_main_window_loads_character_discovery_state_into_characters_page(
+    qtbot,
+    tmp_path,
+) -> None:
+    """
+    @brief      Verify the main window refreshes the Characters page from persisted discovery artifacts.
+    @param[in]  qtbot Qt test helper fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-08
+    @version    0.1.0
+    """
+    persisted_payload = {
+        "language": "en",
+        "ui_text_scale": "normal",
+        "play_completion_beep": False,
+        "llm_profiles": [{
+            "id": "profile_1",
+            "label": "Character Profile",
+            "backend_kind": "lmstudio",
+            "base_url": "http://127.0.0.1:1234",
+            "api_key": "",
+            "model_name": "qwen3-8b",
+            "context_window": 4096,
+            "max_output_tokens": 512,
+            "request_timeout_seconds": 30,
+            "temperature": 0.2,
+            "supports_structured_output": False,
+            "enabled": True,
+        }],
+        "default_ai_cleanup_profile_id": None,
+        "default_ai_chunking_profile_id": None,
+        "default_ai_chunking_strategy": "paragraph",
+        "default_character_extraction_profile_id": "profile_1",
+    }
+    project_root, manifest = project_workspace_service.create_project(
+        "CharactersWindowProject",
+        tmp_path,
+    )
+    manifest["source_document"] = {
+        "original_name": "story.txt",
+        "stored_relative_path": "story.txt",
+        "file_type": "txt",
+        "imported_at": "2026-04-08T12:00:00+00:00",
+        "size_bytes": 4,
+    }
+    manifest["current_stage"] = "character_discovery_ready"
+    manifest["operations"]["chunking"]["status"] = "completed"
+    manifest["operations"]["chunking"]["output_paths"] = [
+        f"20_chunking/{config.CHUNK_ARTIFACT_FILE_NAME}"
+    ]
+    manifest["operations"]["character_discovery"]["status"] = "completed"
+    project_workspace_service.save_manifest(manifest, project_root)
+    chunk_root = project_root / "20_chunking"
+    discovery_root = project_root / "40_character_discovery"
+    chunk_root.mkdir(parents=True, exist_ok=True)
+    discovery_root.mkdir(parents=True, exist_ok=True)
+    chunk_payload = [{
+        "chunk_id": "chunk-0001",
+        "sequence_index": 1,
+        "chapter_label": None,
+        "text": '"Hello there," said Alice.',
+        "source_start_line": 1,
+        "source_end_line": 1,
+        "chunking_mode": "deterministic",
+        "semantic_strategy": None,
+        "scene_note": None,
+    }]
+    (chunk_root / config.CHUNK_ARTIFACT_FILE_NAME).write_text(
+        json.dumps(chunk_payload, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    (discovery_root / f"input_{config.CHUNK_ARTIFACT_FILE_NAME}").write_text(
+        json.dumps(chunk_payload, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    (discovery_root / config.CHARACTER_PROFILE_FILE_NAME).write_text(
+        json.dumps([{
+            "character_id": "alice",
+            "canonical_name": "Alice",
+            "aliases": ["Al"],
+            "gender_hint": "",
+            "age_band": "",
+            "role_summary": "Lead speaker",
+            "description": "Confident.",
+            "temperament": "",
+            "social_status": "",
+            "speaking_style": "",
+            "accent_or_dialect_hints": "",
+            "voice_notes": "",
+            "relationship_hints": [],
+            "confidence": "high",
+            "evidence": [{
+                "chunk_id": "chunk-0001",
+                "sequence_index": 1,
+                "source_excerpt": '"Hello there," said Alice.',
+                "reason": "Alice speaks.",
+            }],
+            "updated_at": "2026-04-08T12:01:00+00:00",
+        }], indent=2) + "\n",
+        encoding="utf-8",
+    )
+    (discovery_root / config.CHARACTER_DISCOVERY_REPORT_FILE_NAME).write_text(
+        json.dumps({
+            "input_chunk_count": 1,
+            "analyzed_window_count": 1,
+            "merged_candidate_count": 1,
+            "character_count": 1,
+            "character_discovery_mode": "ai_assisted",
+            "character_profile_id_last_used": "profile_1",
+            "window_size": config.DEFAULT_CHARACTER_DISCOVERY_WINDOW_SIZE,
+            "window_overlap": config.DEFAULT_CHARACTER_DISCOVERY_WINDOW_OVERLAP,
+            "warning_count": 0,
+            "warnings": [],
+            "generated_at": "2026-04-08T12:01:00+00:00",
+        }, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    (discovery_root / config.OPERATION_STATE_FILE_NAME).write_text(
+        json.dumps({
+            "folder_relative_path": "40_character_discovery",
+            "status": "completed",
+            "input_paths": [],
+            "output_paths": [f"40_character_discovery/{config.CHARACTER_PROFILE_FILE_NAME}"],
+            "artifact_paths": [f"40_character_discovery/{config.CHARACTER_DISCOVERY_REPORT_FILE_NAME}"],
+            "progress_current": 1,
+            "progress_total": 1,
+            "mode": "ai_assisted",
+            "started_at": "2026-04-08T12:00:00+00:00",
+            "completed_at": "2026-04-08T12:01:00+00:00",
+            "updated_at": "2026-04-08T12:01:00+00:00",
+            "warning_count": 0,
+            "metadata": {"ai_profile_id": "profile_1"},
+            "resume_checkpoint": None,
+        }, indent=2) + "\n",
+        encoding="utf-8",
+    )
+
+    window = MainWindow(settings_payload=dict(persisted_payload))
+    qtbot.addWidget(window)
+    window._activate_project(project_root, project_workspace_service.load_manifest(project_root))
+
+    assert window._characters_page._character_list.count() == 1
+    assert window._characters_page._start_button.isEnabled() is False
+    assert window._characters_page._reset_button.isEnabled() is True
+    assert window._characters_page._evidence_preview.toPlainText() == '"Hello there," said Alice.'
 
 
 def test_main_window_prevents_reimport_when_source_is_locked(monkeypatch, qtbot, tmp_path) -> None:

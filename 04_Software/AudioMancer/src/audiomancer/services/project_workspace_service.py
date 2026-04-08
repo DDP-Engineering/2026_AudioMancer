@@ -13,7 +13,7 @@
          using one minimal `project.json` manifest contract.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-06
-@version    0.7.1
+@version    0.9.0
 """
 
 # IMPORTS
@@ -473,7 +473,7 @@ def _derive_consistent_stage(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.1.0
+    @version    0.1.1
     """
     _ = project_root
     return _derive_trustworthy_stage(payload)
@@ -761,21 +761,42 @@ def _reset_operations_for_stage(
     @date       2026-04-06
     @version    0.1.0
     """
-    allowed_operations: set[str]
-    if current_stage == "source_selected":
-        allowed_operations = {"extraction"}
-    elif current_stage == "text_cleanup_ready":
-        allowed_operations = {"extraction", "cleanup"}
-    elif current_stage == "text_chunking_ready":
-        allowed_operations = {"extraction", "cleanup", "chunking"}
-    else:
-        allowed_operations = set()
+    allowed_operations = _allowed_operations_for_stage(current_stage)
 
     normalized_operations = dict(operations)
     for operation_kind in tuple(normalized_operations.keys()):
         if operation_kind not in allowed_operations:
             normalized_operations[operation_kind] = _default_operation_state(operation_kind)
     return normalized_operations
+
+
+def _allowed_operations_for_stage(current_stage: str) -> set[str]:
+    """
+    @brief      Resolve the operation kinds that remain valid for one workflow stage.
+    @param[in]  current_stage Current repaired project stage token.
+    @return     Set of operation kinds that should be preserved.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-08
+    @version    0.1.0
+    """
+    if current_stage == "source_selected":
+        return {"extraction"}
+    if current_stage == "text_cleanup_ready":
+        return {"extraction", "cleanup"}
+    if current_stage == "text_chunking_ready":
+        return {"extraction", "cleanup", "chunking"}
+    if current_stage == "translation_ready":
+        return {"extraction", "cleanup", "chunking", "translation"}
+    if current_stage in {"character_discovery_ready", "narrator_definition_ready"}:
+        return {
+            "extraction",
+            "cleanup",
+            "chunking",
+            "translation",
+            "character_discovery",
+        }
+    return set()
 
 
 def _folder_name_for_operation(operation_kind: str) -> str:
@@ -791,9 +812,9 @@ def _folder_name_for_operation(operation_kind: str) -> str:
     return {
         "extraction": config.EXTRACTION_FOLDER_NAME,
         "cleanup": config.CLEANUP_FOLDER_NAME,
-        "chunking": "20_chunking",
-        "translation": "30_translation",
-        "character_discovery": "40_character_discovery",
+        "chunking": config.CHUNKING_FOLDER_NAME,
+        "translation": config.TRANSLATION_FOLDER_NAME,
+        "character_discovery": config.CHARACTER_DISCOVERY_FOLDER_NAME,
     }.get(operation_kind, operation_kind)
 
 

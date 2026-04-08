@@ -14,7 +14,7 @@
          so the window remains a thin coordinator.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-07
-@version 1.15.0
+@version 1.16.0
 """
 
 # IMPORTS
@@ -35,6 +35,7 @@ from PySide6.QtWidgets import (
 
 from audiomancer import config
 from audiomancer.services import ai_translation_state_service
+from audiomancer.services import character_discovery_state_service
 from audiomancer.services import home_presenter_service
 from audiomancer.services import settings_service
 from audiomancer.services import text_chunking_state_service
@@ -42,6 +43,7 @@ from audiomancer.services import text_cleanup_state_service
 from audiomancer.services import ui_state_service
 from audiomancer.ui.controllers import ai_translation_ui_controller
 from audiomancer.ui.controllers import ai_settings_ui_controller
+from audiomancer.ui.controllers import characters_ui_controller
 from audiomancer.ui.controllers import home_ui_controller
 from audiomancer.ui.controllers import misc_ui_controller
 from audiomancer.ui.controllers import settings_ui_controller
@@ -176,7 +178,7 @@ class MainWindow(QMainWindow):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-06
-        @version    0.5.0
+        @version    0.6.0
         """
         for page_id, _label in self.PAGE_ORDER:
             enabled = is_active or page_id == "home"
@@ -201,7 +203,7 @@ class MainWindow(QMainWindow):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-06
-        @version    0.5.0
+        @version    0.6.0
         """
         self._current_project_root = project_root
         self._current_manifest = manifest
@@ -269,6 +271,20 @@ class MainWindow(QMainWindow):
             )
         )
         self._ai_translation_page.set_translation_state(**translation_state)
+        self._characters_page.set_project_active(project_root is not None)
+        character_state = character_discovery_state_service.build_character_discovery_state(
+            project_root,
+            manifest,
+            current_language,
+            self._settings_payload,
+        )
+        self._characters_page.set_ai_profiles(
+            **character_discovery_state_service.build_character_discovery_profile_state(
+                self._settings_payload,
+                character_state.get("selected_profile_id"),
+            )
+        )
+        self._characters_page.set_character_state(**character_state)
 
     def show_settings_dialog(self) -> None:
         """
@@ -363,7 +379,7 @@ class MainWindow(QMainWindow):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-07
-        @version    0.11.0
+        @version    0.12.0
         """
         current_language = ui_state_service.current_language_from_settings(
             self._settings_payload
@@ -445,13 +461,29 @@ class MainWindow(QMainWindow):
                 translated_text,
             )
         )
+        self._characters_page = CharactersPage(self)
+        self._characters_page.start_discovery_requested.connect(
+            lambda profile_id: characters_ui_controller.handle_start_discovery_requested(
+                self,
+                profile_id,
+            )
+        )
+        self._characters_page.reset_discovery_requested.connect(
+            lambda: characters_ui_controller.handle_reset_discovery_requested(self)
+        )
+        self._characters_page.profile_changed.connect(
+            lambda profile_payload: characters_ui_controller.handle_profile_changed(
+                self,
+                profile_payload,
+            )
+        )
 
         pages = {
             "home": home_page,
             "text_cleanup": self._text_cleanup_page,
             "text_chunking": self._text_chunking_page,
             "ai_translation": self._ai_translation_page,
-            "characters": CharactersPage(self),
+            "characters": self._characters_page,
             "narrator": NarratorPage(self),
             "narration_plan": PlaceholderPage(
                 "Narration Plan",

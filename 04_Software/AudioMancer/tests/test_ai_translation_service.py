@@ -42,8 +42,8 @@ def test_ai_translation_service_creates_translation_artifacts(monkeypatch, tmp_p
         "ro",
     )
 
-    translation_root = project_root / "30_translation"
-    assert (translation_root / "input_output_chunks.json").is_file()
+    translation_root = project_root / config.TRANSLATION_FOLDER_NAME
+    assert (translation_root / "input_story.json").is_file()
     assert (translation_root / config.TRANSLATED_CHUNKS_FILE_NAME).is_file()
     assert (translation_root / config.TRANSLATION_REPORT_FILE_NAME).is_file()
     assert (translation_root / config.OPERATION_STATE_FILE_NAME).is_file()
@@ -76,7 +76,7 @@ def test_ai_translation_service_approve_and_edit_update_review_state(tmp_path) -
             completed_at=None,
             profile_id="profile-1",
             target_language="ro",
-            log_path=project_root / "30_translation" / "log_ai_transactions_20260407.log",
+            log_path=project_root / config.TRANSLATION_FOLDER_NAME / "log_ai_transactions_20260407.log",
             resume_checkpoint={"next_untranslated_chunk_id": "chunk-0002"},
         ),
     )
@@ -113,7 +113,7 @@ def test_ai_translation_service_resume_preserves_completed_chunks(monkeypatch, t
             completed_at=None,
             profile_id="profile-1",
             target_language="ro",
-            log_path=project_root / "30_translation" / "log_ai_transactions_20260407.log",
+            log_path=project_root / config.TRANSLATION_FOLDER_NAME / "log_ai_transactions_20260407.log",
             resume_checkpoint={"next_untranslated_chunk_id": "chunk-0002"},
         ),
     )

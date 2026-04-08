@@ -16,6 +16,24 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+## [0.12.0] - 2026-04-08
+
+### Added
+
+- added the complete AI-assisted character-discovery workflow with canonical `40_character_discovery` artifacts, resumable state, editable discovered profiles, source-evidence preview, prompt templates, and focused service/controller/page coverage
+- added dedicated character-discovery software documentation and README updates for the new workflow
+
+### Changed
+
+- centralized workflow folder names in `config.py` and updated the affected runtime, workspace, cleanup-state, chunking, translation, and character-discovery services to consume the shared definitions instead of hardcoded folder strings
+- translation and character-discovery input snapshots now preserve the imported source-document base name in `input_<book_name>` style artifact files
+- package version updated to `0.12.0`
+
+### Fixed
+
+- fixed downstream reset-stage handling so clearing character discovery returns the project to `translation_ready` instead of falling back to an earlier stage
+- fixed translation and character-discovery runtime path handling so persisted operation metadata stays aligned with the configured workflow folder names
+
 ## [0.11.1] - 2026-04-08
 
 ### Added

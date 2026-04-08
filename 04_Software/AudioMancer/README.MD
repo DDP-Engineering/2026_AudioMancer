@@ -27,8 +27,10 @@ This folder contains the current Python application implementation for
 - `src/audiomancer/services/deterministic_chunking_service.py` provides deterministic chunking, chunk artifacts, and resumable chunking state.
 - `src/audiomancer/services/ai_cleanup_service.py` provides AI-assisted cleanup, resumable AI cleanup state, and operation-local AI transaction logging.
 - `src/audiomancer/services/ai_translation_service.py` provides AI-assisted translation, translated chunk review records, and resumable translation state.
+- `src/audiomancer/services/character_discovery_service.py` provides AI-assisted character discovery, resumable character-profile synthesis, and persisted discovery artifacts under `40_character_discovery`.
 - `src/audiomancer/services/text_chunking_state_service.py` provides Text Chunking page state shaping plus persisted chunk preview loading.
 - `src/audiomancer/services/ai_translation_state_service.py` provides AI Translation page state shaping plus persisted translated chunk and review loading.
+- `src/audiomancer/services/character_discovery_state_service.py` provides Characters page state shaping plus persisted discovery profile and evidence loading.
 - `src/audiomancer/services/llm_provider_service.py` provides OpenAI-compatible chat-completion requests, transient retry handling, responsive cooperative cancellation during model waits, JSON normalization, and optional AI transaction logging.
 - `src/audiomancer/services/prompt_template_service.py` provides strict prompt loading and placeholder rendering from the app-root `prompts/` folder.
 - `src/audiomancer/services/operation_runtime_service.py` provides shared runtime helpers for long-running operation folders, resets, and progress conversion.
@@ -37,8 +39,9 @@ This folder contains the current Python application implementation for
 - `src/audiomancer/ui/` provides the copied toolbar, sidebar, page, and status-bar shell used by the first desktop window.
 - `src/audiomancer/ui/controllers/` provides page/window-oriented Qt controllers for Home, Text Cleanup, Settings, AI Settings, and shared shell UI helpers.
 - `src/audiomancer/ui/controllers/` now also includes a dedicated Text Chunking page controller for deterministic chunking actions and rerun/reset handling.
+- `src/audiomancer/ui/controllers/characters_ui_controller.py` provides the Character Discovery page controller for start, resume, reset, and manual profile-edit persistence.
 - `src/audiomancer/ui/operation_progress_dialog.py` provides the reusable modal progress popup created on demand for synchronous blocking operations.
-- `prompts/` stores AI prompt templates loaded by AI-assisted cleanup and future AI workflows.
+- `prompts/` stores AI prompt templates loaded by AI-assisted cleanup, translation, character discovery, and future AI workflows.
 - the main toolbar now supports `New Project` and `Open Project`.
 - new projects create `00_extraction`, `10_cleanup`, `20_chunking`, `30_translation`, `40_character_discovery`, `50_narrator_definition`, `temp`, and one root `project.json`.
 - opening a project now works from the project root or one selected child workflow folder.
@@ -52,10 +55,12 @@ This folder contains the current Python application implementation for
 - the `Text Chunking` page now runs deterministic chunking into `20_chunking`, renders the current chunk list plus selected chunk preview, and resumes interrupted deterministic chunking runs.
 - the `Text Chunking` page now also supports AI-assisted chunking using the selected enabled AI profile plus the selected semantic strategy.
 - the `AI Translation` page now translates canonical chunks into one selected target language, preserves per-chunk review state in `30_translation`, and supports chunk editing plus approval.
+- the `Characters` page now discovers speaking characters from canonical chunking output, persists editable character profiles in `40_character_discovery`, supports resumable AI runs, and shows source-evidence previews for each discovered character.
 - extraction artifacts currently use `input_<original_name>`, `output_raw_text.txt`, `extraction_report.json`, and `state_operation.json`.
 - cleanup artifacts currently use `input_<original_name>`, `output_clean_text.txt`, `artifact_cleanup_report.json`, and `state_operation.json`, with the cleanup output/report names defined centrally in `src/audiomancer/config.py`.
 - chunking artifacts currently use `input_<original_name>`, `output_chunks.json`, `chunking_report.json`, and `state_operation.json`, with both deterministic and AI-assisted chunking updating the same canonical chunk output.
 - translation artifacts currently use `input_output_chunks.json`, `output_translated_chunks.json`, `artifact_translation_report.json`, and `state_operation.json`, while leaving the canonical chunking output unchanged.
+- character-discovery artifacts currently use `input_output_chunks.json`, `input_output_clean_text.txt`, `output_character_profiles.json`, `artifact_character_discovery_report.json`, and `state_operation.json`.
 - AI-assisted cleanup writes one project-local transaction log per run in `10_cleanup` using `log_ai_transactions_<timestamp>.log`.
 - pressing `Extract Text` after a completed extraction now asks for confirmation before clearing extraction data and all downstream workflow folders.
 - pressing `Deterministic Cleanup` after a completed cleanup now asks for confirmation before clearing cleanup data plus chunking and all following workflow folders.
@@ -68,6 +73,8 @@ This folder contains the current Python application implementation for
 - pressing `AI-Assisted Chunking` after an unfinished AI chunking run now resumes from the saved chunking checkpoint and AI transaction log.
 - pressing `Start Translation` after an unfinished translation run now continues from the persisted translated chunk state and translates only the remaining chunks.
 - pressing `Reset Translation` now asks for confirmation, clears only `30_translation`, and unlocks the target-language selector for a fresh translation run.
+- pressing `Start Discovery` now shows one first-run information popup for long AI work, resumes interrupted discovery when possible, and stays disabled after successful completion until reset.
+- pressing `Reset Discovery` now clears `40_character_discovery` plus downstream narrator-definition data without extra confirmation and returns the workflow to `translation_ready`.
 - long-running extraction and cleanup now run through one reusable modal progress dialog with a cancel button that blocks the main window while the operation is active.
 - AI-assisted cleanup keeps the progress popup responsive while waiting for provider responses, so the cancel button is honored during long model calls.
 - project names are stored exactly as entered but are rejected when invalid for Windows or Linux folder creation.

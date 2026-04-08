@@ -14,7 +14,7 @@
          cleanup, and future long-running workflow operations.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-06
-@version 0.1.2
+@version 0.1.4
 """
 
 # IMPORTS
@@ -31,9 +31,10 @@ from audiomancer import config
 _OPERATION_FOLDER_NAMES = {
     "extraction": config.EXTRACTION_FOLDER_NAME,
     "cleanup": config.CLEANUP_FOLDER_NAME,
-    "chunking": "20_chunking",
-    "translation": "30_translation",
-    "character_discovery": "40_character_discovery",
+    "chunking": config.CHUNKING_FOLDER_NAME,
+    "translation": config.TRANSLATION_FOLDER_NAME,
+    "character_discovery": config.CHARACTER_DISCOVERY_FOLDER_NAME,
+    "narrator_definition": config.NARRATOR_DEFINITION_FOLDER_NAME,
 }
 # @brief Stable execution order used for downstream reset calculations.
 _OPERATION_ORDER = tuple(_OPERATION_FOLDER_NAMES.keys())

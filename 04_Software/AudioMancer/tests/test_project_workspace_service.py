@@ -340,4 +340,30 @@ def test_validate_project_manifest_normalizes_operations_map() -> None:
     assert validated["operations"]["translation"]["status"] == "not_started"
 
 
+def test_repair_manifest_preserves_character_discovery_for_narrator_stage() -> None:
+    """
+    @brief      Verify repaired narrator-stage manifests keep character discovery data intact.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-08
+    @version    0.1.0
+    """
+    manifest = project_workspace_service.build_project_manifest("Book5_CAL_CAL")
+    manifest["current_stage"] = "narrator_definition_ready"
+    manifest["operations"]["extraction"]["status"] = "completed"
+    manifest["operations"]["cleanup"]["status"] = "completed"
+    manifest["operations"]["chunking"]["status"] = "completed"
+    manifest["operations"]["translation"]["status"] = "completed"
+    manifest["operations"]["character_discovery"]["status"] = "completed"
+
+    repaired_manifest = project_workspace_service._build_repaired_manifest(
+        manifest,
+        "narrator_definition_ready",
+    )
+
+    assert repaired_manifest["operations"]["translation"]["status"] == "completed"
+    assert repaired_manifest["operations"]["character_discovery"]["status"] == "completed"
+
+
 # END OF FILE

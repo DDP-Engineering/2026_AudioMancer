@@ -13,7 +13,7 @@
          manifest reset payloads used by the Text Cleanup page workflows.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-07
-@version 0.4.0
+@version 0.5.0
 """
 
 # IMPORTS
@@ -323,9 +323,9 @@ def normalized_manifest_operations(
     for operation_kind, folder_name in (
         ("extraction", config.EXTRACTION_FOLDER_NAME),
         ("cleanup", config.CLEANUP_FOLDER_NAME),
-        ("chunking", "20_chunking"),
-        ("translation", "30_translation"),
-        ("character_discovery", "40_character_discovery"),
+        ("chunking", config.CHUNKING_FOLDER_NAME),
+        ("translation", config.TRANSLATION_FOLDER_NAME),
+        ("character_discovery", config.CHARACTER_DISCOVERY_FOLDER_NAME),
     ):
         candidate = operations.get(operation_kind)
         if isinstance(candidate, dict):
@@ -379,7 +379,7 @@ def build_manifest_after_operation_reset(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.1.0
+    @version    0.1.1
     """
     updated_manifest = dict(manifest)
     operations = normalized_manifest_operations(updated_manifest)
@@ -392,12 +392,16 @@ def build_manifest_after_operation_reset(
         for selected_kind in operations:
             operations[selected_kind] = default_operations[selected_kind]
     else:
-        updated_manifest["current_stage"] = "source_selected"
+        updated_manifest["current_stage"] = _stage_after_operation_reset(operation_kind)
         for selected_kind in operation_runtime_service.downstream_operation_kinds(
             operation_kind,
             include_current=True,
         ):
-            operations[selected_kind] = default_operations[selected_kind]
+            if selected_kind in default_operations:
+                operations[selected_kind] = default_operations[selected_kind]
+    if updated_manifest["current_stage"] != "narrator_definition_ready":
+        updated_manifest["narrator_profile_name"] = None
+        updated_manifest["narrator_language"] = None
     updated_manifest["operations"] = operations
     return updated_manifest
 
@@ -422,6 +426,18 @@ def read_optional_project_text(
     if not artifact_path.is_file():
         return None
     return artifact_path.read_text(encoding="utf-8")
+
+
+def _stage_after_operation_reset(operation_kind: str) -> str:
+    if operation_kind == "cleanup":
+        return "text_cleanup_ready"
+    if operation_kind == "chunking":
+        return "text_chunking_ready"
+    if operation_kind == "translation":
+        return "translation_ready"
+    if operation_kind == "character_discovery":
+        return "translation_ready"
+    return "source_selected"
 
 
 # END OF FILE

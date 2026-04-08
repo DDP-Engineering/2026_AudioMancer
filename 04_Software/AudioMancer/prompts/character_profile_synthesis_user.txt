@@ -1,0 +1,32 @@
+Synthesize one final voice-ready speaking-character profile from this merged candidate payload.
+
+Return exactly one JSON object with this shape:
+{
+  "canonical_name": "",
+  "aliases": [],
+  "gender_hint": "",
+  "age_band": "",
+  "role_summary": "",
+  "description": "",
+  "temperament": "",
+  "social_status": "",
+  "speaking_style": "",
+  "accent_or_dialect_hints": "",
+  "voice_notes": "",
+  "relationship_hints": [],
+  "confidence": "",
+  "evidence": [
+    {
+      "chunk_id": "",
+      "source_excerpt": "",
+      "reason": ""
+    }
+  ]
+}
+
+Do not invent unsupported details.
+Preserve the provided evidence chunk ids.
+If the payload does not support spoken dialogue, return empty strings and empty lists for the profile fields.
+Escape any inner quotes and embedded newlines correctly inside JSON string values.
+
+{character_payload}

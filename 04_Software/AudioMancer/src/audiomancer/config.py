@@ -13,7 +13,7 @@
          file support used by the current AudioMancer implementation scaffold.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-07
-@version 1.4.0
+@version 1.7.0
 """
 
 # IMPORTS
@@ -41,14 +41,32 @@ APP_PROMPTS_PATH = APP_ROOT / "prompts"
 # @brief Stable manifest file name stored at the project root.
 PROJECT_MANIFEST_FILE_NAME = "project.json"
 
+# @brief Stable project folder name for text extraction artifacts.
+EXTRACTION_FOLDER_NAME = "00_extraction"
+
+# @brief Stable project folder name for deterministic cleanup artifacts.
+CLEANUP_FOLDER_NAME = "10_cleanup"
+
+# @brief Stable project folder name for chunking artifacts.
+CHUNKING_FOLDER_NAME = "20_chunking"
+
+# @brief Stable project folder name for translation artifacts.
+TRANSLATION_FOLDER_NAME = "30_translation"
+
+# @brief Stable project folder name for character-discovery artifacts.
+CHARACTER_DISCOVERY_FOLDER_NAME = "40_character_discovery"
+
+# @brief Stable project folder name for narrator-definition artifacts.
+NARRATOR_DEFINITION_FOLDER_NAME = "50_narrator_definition"
+
 # @brief Standard workflow directories created for each project workspace.
 PROJECT_REQUIRED_SUBDIRECTORIES = (
-    "00_extraction",
-    "10_cleanup",
-    "20_chunking",
-    "30_translation",
-    "40_character_discovery",
-    "50_narrator_definition",
+    EXTRACTION_FOLDER_NAME,
+    CLEANUP_FOLDER_NAME,
+    CHUNKING_FOLDER_NAME,
+    TRANSLATION_FOLDER_NAME,
+    CHARACTER_DISCOVERY_FOLDER_NAME,
+    NARRATOR_DEFINITION_FOLDER_NAME,
     "temp",
 )
 
@@ -97,12 +115,6 @@ WINDOWS_RESERVED_DIRECTORY_NAMES = (
 
 # @brief Stable operation-folder file name for persisted state.
 OPERATION_STATE_FILE_NAME = "state_operation.json"
-
-# @brief Stable project folder name for text extraction artifacts.
-EXTRACTION_FOLDER_NAME = "00_extraction"
-
-# @brief Stable project folder name for deterministic cleanup artifacts.
-CLEANUP_FOLDER_NAME = "10_cleanup"
 
 # @brief Stable prefix used for copied operation-local input snapshots.
 OPERATION_INPUT_FILE_PREFIX = "input_"
@@ -154,10 +166,10 @@ TRANSLATED_CHUNKS_FILE_NAME = "translated_chunks.json"
 TRANSLATION_REPORT_FILE_NAME = f"{OPERATION_ARTIFACT_FILE_PREFIX}translation_report.json"
 
 # @brief File name used for persisted discovered character profiles.
-CHARACTER_PROFILE_FILE_NAME = "character_profiles.json"
+CHARACTER_PROFILE_FILE_NAME = f"{OPERATION_OUTPUT_FILE_PREFIX}character_profiles.json"
 
 # @brief File name used for persisted character-discovery metadata.
-CHARACTER_DISCOVERY_REPORT_FILE_NAME = "character_discovery_report.json"
+CHARACTER_DISCOVERY_REPORT_FILE_NAME = f"{OPERATION_ARTIFACT_FILE_PREFIX}character_discovery_report.json"
 
 
 # Workflow And UI Defaults
@@ -287,6 +299,7 @@ AVAILABLE_LOG_COMPONENTS = (
     "ai_cleanup",
     "ai_chunking",
     "ai_translation",
+    "character_discovery",
     "deterministic_cleanup",
     "deterministic_chunking",
     "llm_provider",

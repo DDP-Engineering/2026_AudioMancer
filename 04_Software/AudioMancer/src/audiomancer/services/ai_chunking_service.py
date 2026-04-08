@@ -88,7 +88,7 @@ def chunk_text(
     @exception  OperationCancelledError Raised when the operator cancels the run.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-07
-    @version    0.1.0
+        @version    0.1.1
     """
     resolved_project_root = Path(project_root)
     source_document = manifest.get("source_document")
@@ -587,7 +587,7 @@ def _build_operation_state(
     if report_path is not None and report_path.is_file():
         artifact_paths.insert(0, relative_to_project(project_root, report_path))
     return {
-        "folder_relative_path": "20_chunking",
+        "folder_relative_path": config.CHUNKING_FOLDER_NAME,
         "status": status,
         "input_paths": [relative_to_project(project_root, input_snapshot_path)],
         "output_paths": (

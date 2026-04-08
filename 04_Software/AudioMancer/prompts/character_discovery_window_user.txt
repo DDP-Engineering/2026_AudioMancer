@@ -1,0 +1,37 @@
+Review these ordered chunks and extract only character candidates who speak dialogue.
+
+Return exactly one JSON object with this shape:
+{
+  "characters": [
+    {
+      "canonical_name": "",
+      "aliases": [],
+      "gender_hint": "",
+      "age_band": "",
+      "role_summary": "",
+      "description": "",
+      "temperament": "",
+      "social_status": "",
+      "speaking_style": "",
+      "accent_or_dialect_hints": "",
+      "voice_notes": "",
+      "relationship_hints": [],
+      "confidence": "",
+      "evidence": [
+        {
+          "chunk_id": "",
+          "source_excerpt": "",
+          "reason": ""
+        }
+      ]
+    }
+  ]
+}
+
+Only include speaking characters supported by these chunks.
+Do not include characters mentioned only by narration.
+For each returned character, provide at least one evidence item tied to spoken dialogue or direct speech.
+Use each chunk id exactly as provided.
+Keep each source_excerpt short and escape any inner quotes correctly for JSON.
+
+{units_block}

@@ -234,4 +234,58 @@ def test_build_text_cleanup_state_surfaces_ai_cleanup_review_warning(tmp_path) -
     )
 
 
+def test_build_manifest_after_character_discovery_reset_returns_translation_ready() -> None:
+    """
+    @brief      Verify character-discovery reset preserves upstream state and returns the workflow to translation-ready.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-08
+    @version    0.1.0
+    """
+    manifest = {
+        "current_stage": "character_discovery_ready",
+        "extracted_text_relative_path": "00_extraction/output_raw_text.txt",
+        "extraction_report_relative_path": "00_extraction/extraction_report.json",
+        "extraction_warning_count": 0,
+        "narrator_profile_name": "Warm Narrator",
+        "narrator_language": "en",
+        "operations": {
+            "extraction": {
+                "folder_relative_path": config.EXTRACTION_FOLDER_NAME,
+                "status": "completed",
+                "output_paths": ["00_extraction/output_raw_text.txt"],
+            },
+            "cleanup": {
+                "folder_relative_path": config.CLEANUP_FOLDER_NAME,
+                "status": "completed",
+                "output_paths": ["10_cleanup/output_clean_text.txt"],
+            },
+            "chunking": {
+                "folder_relative_path": "20_chunking",
+                "status": "completed",
+            },
+            "translation": {
+                "folder_relative_path": "30_translation",
+                "status": "completed",
+            },
+            "character_discovery": {
+                "folder_relative_path": "40_character_discovery",
+                "status": "completed",
+            },
+        },
+    }
+
+    reset_manifest = text_cleanup_state_service.build_manifest_after_operation_reset(
+        manifest,
+        "character_discovery",
+    )
+
+    assert reset_manifest["current_stage"] == "translation_ready"
+    assert reset_manifest["operations"]["translation"]["status"] == "completed"
+    assert reset_manifest["operations"]["character_discovery"]["status"] == "not_started"
+    assert reset_manifest["narrator_profile_name"] is None
+    assert reset_manifest["narrator_language"] is None
+
+
 # END OF FILE
