@@ -10,13 +10,12 @@
 @file character_discovery_state_service.py
 @brief Character Discovery page state helpers for AudioMancer.
 @details Builds Characters-page selector state, notes, evidence previews, and
-         enablement flags from persisted project artifacts and settings.
+         manual-maintenance enablement flags from persisted project artifacts
+         and settings.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-08
-@version 0.2.0
+@version 0.3.0
 """
-
-# IMPORTS
 
 from pathlib import Path
 
@@ -24,9 +23,6 @@ from audiomancer.services import character_discovery_service
 from audiomancer.services import deterministic_chunking_service
 from audiomancer.services import home_presenter_service
 from audiomancer.services import ui_state_service
-
-
-# PUBLIC API
 
 
 def build_character_discovery_profile_state(
@@ -41,7 +37,7 @@ def build_character_discovery_profile_state(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-08
-    @version    0.1.1
+    @version    0.1.2
     """
     if not isinstance(settings_payload, dict):
         return {"entries": [], "selected_profile_id": None}
@@ -87,7 +83,7 @@ def build_character_discovery_state(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-08
-    @version    0.1.1
+    @version    0.1.2
     """
     if project_root is None or manifest is None:
         return {
@@ -99,6 +95,12 @@ def build_character_discovery_state(
             "source_chunk_map": {},
             "can_start": False,
             "can_reset": False,
+            "can_add": False,
+            "can_edit": False,
+            "can_save": False,
+            "can_delete": False,
+            "edit_mode": False,
+            "dirty": False,
         }
     source_chunks = deterministic_chunking_service.load_chunks(project_root)
     operation_state = character_discovery_service.load_operation_state(project_root)
@@ -118,12 +120,16 @@ def build_character_discovery_state(
     stage_status = _character_discovery_stage_status(report, operation_state)
     has_ai_profiles = bool(profile_state["entries"])
     has_chunking_output = bool(source_chunks)
+    has_discovery_result = bool(report or operation_state or profiles)
     can_start = (
         has_chunking_output
         and has_ai_profiles
         and stage_status != character_discovery_service.CHARACTER_DISCOVERY_STAGE_COMPLETED
     )
-    can_reset = bool(report or profiles or operation_state)
+    can_reset = has_discovery_result
+    can_add = has_discovery_result
+    can_edit = bool(profiles)
+    can_delete = bool(profiles)
     return {
         "profiles": profiles,
         "notes": build_character_discovery_notes(
@@ -131,6 +137,7 @@ def build_character_discovery_state(
             source_chunks,
             report,
             operation_state,
+            profiles,
             has_ai_profiles,
             language,
         ),
@@ -140,6 +147,12 @@ def build_character_discovery_state(
         "source_chunk_map": source_chunk_map,
         "can_start": can_start,
         "can_reset": can_reset,
+        "can_add": can_add,
+        "can_edit": can_edit,
+        "can_save": False,
+        "can_delete": can_delete,
+        "edit_mode": False,
+        "dirty": False,
     }
 
 
@@ -148,6 +161,7 @@ def build_character_discovery_notes(
     source_chunks: list[dict[str, object]],
     report: dict[str, object] | None,
     operation_state: dict[str, object] | None,
+    profiles: list[dict[str, object]],
     has_ai_profiles: bool,
     language: str,
 ) -> list[str]:
@@ -157,13 +171,14 @@ def build_character_discovery_notes(
     @param[in]  source_chunks Canonical source chunks from chunking.
     @param[in]  report Persisted character-discovery report or `None`.
     @param[in]  operation_state Persisted operation state or `None`.
+    @param[in]  profiles Persisted character profile payload list.
     @param[in]  has_ai_profiles True when at least one enabled AI profile exists.
     @param[in]  language Runtime UI language code.
     @return     Ordered notes for the Characters page.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-08
-    @version    0.1.0
+    @version    0.1.1
     """
     if home_presenter_service.source_document_name(manifest) is None:
         return [ui_state_service.translate("characters.note_no_source", language)]
@@ -173,7 +188,7 @@ def build_character_discovery_notes(
     if report is not None:
         notes.append(
             ui_state_service.translate("characters.note_summary", language).format(
-                character_count=int(report.get("character_count", 0)),
+                character_count=len(profiles),
                 analyzed_window_count=int(report.get("analyzed_window_count", 0)),
             )
         )
@@ -182,13 +197,22 @@ def build_character_discovery_notes(
             for item in list(report.get("warnings", []))
             if str(item).strip()
         )
+        notes.append(
+            ui_state_service.translate("characters.note_rerun_replaces_manual", language)
+        )
     if not has_ai_profiles:
         notes.append(ui_state_service.translate("characters.note_no_profile", language))
         return notes
     stage_status = _character_discovery_stage_status(report, operation_state)
     if stage_status == "running":
-        progress_current = 0 if operation_state is None else int(operation_state.get("progress_current", 0))
-        progress_total = len(source_chunks) if operation_state is None else int(operation_state.get("progress_total", len(source_chunks)))
+        progress_current = (
+            0 if operation_state is None else int(operation_state.get("progress_current", 0))
+        )
+        progress_total = (
+            len(source_chunks)
+            if operation_state is None
+            else int(operation_state.get("progress_total", len(source_chunks)))
+        )
         notes.append(
             ui_state_service.translate("characters.note_in_progress", language).format(
                 progress_current=progress_current,
@@ -196,8 +220,14 @@ def build_character_discovery_notes(
             )
         )
     elif stage_status == "failed":
-        progress_current = 0 if operation_state is None else int(operation_state.get("progress_current", 0))
-        progress_total = len(source_chunks) if operation_state is None else int(operation_state.get("progress_total", len(source_chunks)))
+        progress_current = (
+            0 if operation_state is None else int(operation_state.get("progress_current", 0))
+        )
+        progress_total = (
+            len(source_chunks)
+            if operation_state is None
+            else int(operation_state.get("progress_total", len(source_chunks)))
+        )
         notes.append(
             ui_state_service.translate("characters.note_resume", language).format(
                 progress_current=progress_current,
@@ -211,13 +241,20 @@ def build_character_discovery_notes(
     return notes
 
 
-# HELPER FUNCTIONS
-
-
 def _character_discovery_stage_status(
     report: dict[str, object] | None,
     operation_state: dict[str, object] | None,
 ) -> str:
+    """
+    @brief      Resolve the effective character-discovery stage token.
+    @param[in]  report Persisted character-discovery report or `None`.
+    @param[in]  operation_state Persisted operation state or `None`.
+    @return     Effective stage token for the Characters page state.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-08
+    @version    0.1.0
+    """
     if isinstance(operation_state, dict):
         operation_status = str(operation_state.get("status", ""))
         if operation_status in {"running", "failed"}:
@@ -233,6 +270,16 @@ def _persisted_profile_id(
     report: dict[str, object] | None,
     operation_state: dict[str, object] | None,
 ) -> str | None:
+    """
+    @brief      Read the last-used AI profile id from persisted discovery artifacts.
+    @param[in]  report Persisted character-discovery report or `None`.
+    @param[in]  operation_state Persisted operation state or `None`.
+    @return     Persisted AI profile identifier or `None`.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-08
+    @version    0.1.0
+    """
     if isinstance(report, dict):
         profile_id = report.get("character_profile_id_last_used")
         if profile_id not in (None, ""):

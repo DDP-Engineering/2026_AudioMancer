@@ -16,6 +16,25 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+## [0.13.0] - 2026-04-08
+
+### Added
+
+- added explicit manual character maintenance in the `Characters` page with `Add Character`, `Edit Character`, `Save Character`, and `Delete Character` actions, synthetic evidence for manual entries, and guarded unsaved-change prompts
+- added focused regression coverage for the guarded character manual-edit workflow across the character page, controller, state service, and persistence service
+
+### Changed
+
+- changed character profiles to be read-only by default and require explicit edit mode before any field changes can be saved
+- updated the character-discovery README and component documentation to describe the explicit save flow, manual profile management, and current discovery artifact naming
+- restored the callable-level Doxygen headers and local `@version` tags in the touched character-discovery page, controller, and service modules for repository documentation compliance
+- package version updated to `0.13.0`
+
+### Fixed
+
+- fixed character manual-edit persistence so added and deleted profiles keep the discovery operation `character_count` metadata synchronized
+- fixed character page selection handling so switching characters during an unsaved add or edit draft now prompts to save, discard, or cancel instead of silently losing changes
+
 ## [0.12.0] - 2026-04-08
 
 ### Added

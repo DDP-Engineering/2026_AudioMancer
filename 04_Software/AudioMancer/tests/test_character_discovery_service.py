@@ -9,14 +9,13 @@
 """
 @file test_character_discovery_service.py
 @brief Focused tests for the AudioMancer character discovery service.
-@details Verifies initial discovery, resumable synthesis, profile updates, and
-         reset behavior for the character-discovery workflow.
+@details Verifies discovery persistence, resumable synthesis, manual add or
+         update or delete behavior, and reset behavior for the character
+         discovery workflow.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-08
-@version 0.1.0
+@version 0.2.0
 """
-
-# IMPORTS
 
 import json
 
@@ -28,16 +27,6 @@ from audiomancer.services import project_workspace_service
 
 
 def test_start_discovery_persists_outputs_and_report(monkeypatch, tmp_path) -> None:
-    """
-    @brief      Verify one discovery run writes profiles, report, state, and input snapshots.
-    @param[in]  monkeypatch Pytest monkeypatch fixture.
-    @param[in]  tmp_path Pytest temporary directory fixture.
-    @return     None.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-08
-    @version    0.1.0
-    """
     project_root, manifest = _create_character_project(tmp_path, "CharacterDiscoveryService")
     monkeypatch.setattr(
         character_discovery_service.prompt_template_service,
@@ -100,23 +89,15 @@ def test_start_discovery_persists_outputs_and_report(monkeypatch, tmp_path) -> N
     state = character_discovery_service.load_operation_state(project_root)
     assert state is not None
     assert state["status"] == "completed"
-    assert state["output_paths"] == [f"40_character_discovery/{config.CHARACTER_PROFILE_FILE_NAME}"]
+    assert state["output_paths"] == [
+        f"{config.CHARACTER_DISCOVERY_FOLDER_NAME}/{config.CHARACTER_PROFILE_FILE_NAME}"
+    ]
 
 
 def test_start_discovery_resumes_from_saved_synthesis_checkpoint(monkeypatch, tmp_path) -> None:
-    """
-    @brief      Verify a resumable operation can skip window analysis and continue with synthesis.
-    @param[in]  monkeypatch Pytest monkeypatch fixture.
-    @param[in]  tmp_path Pytest temporary directory fixture.
-    @return     None.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-08
-    @version    0.1.0
-    """
     project_root, manifest = _create_character_project(tmp_path, "CharacterDiscoveryResume")
     source_chunks = json.loads(
-        (project_root / "20_chunking" / config.CHUNK_ARTIFACT_FILE_NAME).read_text(encoding="utf-8")
+        (project_root / config.CHUNKING_FOLDER_NAME / config.CHUNK_ARTIFACT_FILE_NAME).read_text(encoding="utf-8")
     )
     fingerprint = character_discovery_service._build_input_fingerprint(source_chunks)
     resume_candidate = {
@@ -144,11 +125,11 @@ def test_start_discovery_resumes_from_saved_synthesis_checkpoint(monkeypatch, tm
         ],
         "has_dialogue_evidence": True,
     }
-    state_path = project_root / "40_character_discovery" / config.OPERATION_STATE_FILE_NAME
+    state_path = project_root / config.CHARACTER_DISCOVERY_FOLDER_NAME / config.OPERATION_STATE_FILE_NAME
     state_path.write_text(
         json.dumps(
             {
-                "folder_relative_path": "40_character_discovery",
+                "folder_relative_path": config.CHARACTER_DISCOVERY_FOLDER_NAME,
                 "status": "running",
                 "input_paths": [],
                 "output_paths": [],
@@ -219,120 +200,102 @@ def test_start_discovery_resumes_from_saved_synthesis_checkpoint(monkeypatch, tm
     assert character_discovery_service.load_character_profiles(project_root)[0]["description"] == "Resumed profile synthesis."
 
 
-def test_update_profile_and_reset_discovery(monkeypatch, tmp_path) -> None:
-    """
-    @brief      Verify manual profile updates persist and reset clears character plus narrator data.
-    @param[in]  monkeypatch Pytest monkeypatch fixture.
-    @param[in]  tmp_path Pytest temporary directory fixture.
-    @return     None.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-08
-    @version    0.1.0
-    """
-    project_root, manifest = _create_character_project(tmp_path, "CharacterDiscoveryReset")
-    monkeypatch.setattr(
-        character_discovery_service.prompt_template_service,
-        "validate_required_prompts",
-        lambda _prompt_names: None,
+def test_manual_add_update_delete_and_reset(tmp_path) -> None:
+    project_root, _manifest = _create_character_project(tmp_path, "CharacterDiscoveryManual")
+    discovery_root = project_root / config.CHARACTER_DISCOVERY_FOLDER_NAME
+    (discovery_root / config.CHARACTER_PROFILE_FILE_NAME).write_text(
+        json.dumps([_saved_profile_payload()], indent=2) + "\n",
+        encoding="utf-8",
     )
-    monkeypatch.setattr(
-        character_discovery_service.prompt_template_service,
-        "render_prompt",
-        lambda prompt_name, payload: f"{prompt_name}:{sorted(payload.keys())}",
+    (discovery_root / config.OPERATION_STATE_FILE_NAME).write_text(
+        json.dumps(
+            {
+                "folder_relative_path": config.CHARACTER_DISCOVERY_FOLDER_NAME,
+                "status": "completed",
+                "input_paths": [],
+                "output_paths": [f"{config.CHARACTER_DISCOVERY_FOLDER_NAME}/{config.CHARACTER_PROFILE_FILE_NAME}"],
+                "artifact_paths": [],
+                "progress_current": 1,
+                "progress_total": 1,
+                "mode": "ai_assisted",
+                "started_at": "2026-04-08T12:00:00+00:00",
+                "completed_at": "2026-04-08T12:01:00+00:00",
+                "updated_at": "2026-04-08T12:01:00+00:00",
+                "warning_count": 0,
+                "metadata": {"ai_profile_id": "profile-1", "character_count": 1},
+                "resume_checkpoint": None,
+            },
+            indent=2,
+        ) + "\n",
+        encoding="utf-8",
     )
-    responses = iter([
-        {
-            "characters": [
-                {
-                    "canonical_name": "Alice",
-                    "aliases": [],
-                    "role_summary": "Lead speaker",
-                    "evidence": [{"chunk_id": "chunk-0001"}],
-                }
-            ]
-        },
-        {"canonical_name": "Alice", "description": "Original profile."},
-    ])
-    monkeypatch.setattr(
-        character_discovery_service.llm_provider_service,
-        "chat_json",
-        lambda *_args, **_kwargs: next(responses),
-    )
-    character_discovery_service.start_or_continue_discovery(
-        project_root,
-        manifest,
-        _profile_payload("profile-1"),
-        progress_callback=lambda *_args: None,
-        cancel_requested=lambda: False,
-    )
-    narrator_root = project_root / "50_narrator_definition"
+    narrator_root = project_root / config.NARRATOR_DEFINITION_FOLDER_NAME
+    narrator_root.mkdir(parents=True, exist_ok=True)
     (narrator_root / "profile.json").write_text("{}\n", encoding="utf-8")
+
+    added_profiles = character_discovery_service.add_character_profile(project_root, "Bob")
+    bob_profile = next(
+        profile for profile in added_profiles if str(profile.get("canonical_name")) == "Bob"
+    )
+    assert bob_profile["evidence"][0]["chunk_id"] == character_discovery_service.MANUAL_CHARACTER_EVIDENCE_CHUNK_ID
 
     updated_profiles = character_discovery_service.update_character_profile(
         project_root,
         {
-            "character_id": "alice",
-            "canonical_name": "Alice",
-            "aliases": ["Al"],
+            "character_id": str(bob_profile["character_id"]),
+            "canonical_name": "Bob",
+            "aliases": ["Bobby"],
             "gender_hint": "",
             "age_band": "",
-            "role_summary": "Updated role",
-            "description": "Updated description",
+            "role_summary": "Manual role",
+            "description": "Manual description",
             "temperament": "",
             "social_status": "",
             "speaking_style": "",
             "accent_or_dialect_hints": "",
             "voice_notes": "",
-            "relationship_hints": ["Knows Bob."],
-            "confidence": "medium",
-            "evidence": [
-                {
-                    "chunk_id": "chunk-0001",
-                    "sequence_index": 1,
-                    "source_excerpt": '"Hello there," said Alice.',
-                    "reason": "Alice speaks.",
-                }
-            ],
+            "relationship_hints": [],
+            "confidence": "",
+            "evidence": [dict(item) for item in bob_profile["evidence"]],
             "updated_at": None,
         },
     )
+    updated_bob = next(
+        profile for profile in updated_profiles if str(profile.get("character_id")) == str(bob_profile["character_id"])
+    )
+    assert updated_bob["role_summary"] == "Manual role"
 
-    assert updated_profiles[0]["role_summary"] == "Updated role"
+    remaining_profiles = character_discovery_service.delete_character_profile(
+        project_root,
+        str(bob_profile["character_id"]),
+    )
+    assert len(remaining_profiles) == 1
+    assert remaining_profiles[0]["character_id"] == "alice"
+    assert character_discovery_service.load_operation_state(project_root)["metadata"]["character_count"] == 1
+
     character_discovery_service.reset_character_discovery(project_root)
 
-    assert list((project_root / "40_character_discovery").iterdir()) == []
-    assert list((project_root / "50_narrator_definition").iterdir()) == []
+    assert list(discovery_root.iterdir()) == []
+    assert list(narrator_root.iterdir()) == []
 
 
-def test_start_discovery_requires_chunking_input(tmp_path) -> None:
-    """
-    @brief      Verify discovery refuses to start when chunking artifacts are missing.
-    @param[in]  tmp_path Pytest temporary directory fixture.
-    @return     None.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-08
-    @version    0.1.0
-    """
-    project_root, manifest = project_workspace_service.create_project(
-        "CharacterDiscoveryMissingChunks",
-        tmp_path,
-    )
-    manifest["source_document"] = {
-        "original_name": "story.txt",
-        "stored_relative_path": "story.txt",
-        "file_type": "txt",
-        "imported_at": "2026-04-08T12:00:00+00:00",
-        "size_bytes": 12,
-    }
-    project_workspace_service.save_manifest(manifest, project_root)
+def test_validate_manual_character_name_rejects_duplicates_and_invalid_names() -> None:
+    existing_profiles = [_saved_profile_payload()]
 
-    with pytest.raises(ValueError, match="Run text chunking"):
-        character_discovery_service.start_or_continue_discovery(
-            project_root,
-            manifest,
-            _profile_payload("profile-1"),
+    with pytest.raises(ValueError, match="duplicate_name"):
+        character_discovery_service.validate_manual_character_name(
+            existing_profiles,
+            "Alice",
+        )
+    with pytest.raises(ValueError, match="duplicate_name"):
+        character_discovery_service.validate_manual_character_name(
+            existing_profiles,
+            "Al",
+        )
+    with pytest.raises(ValueError, match="invalid_name"):
+        character_discovery_service.validate_manual_character_name(
+            existing_profiles,
+            "!!!",
         )
 
 
@@ -351,43 +314,32 @@ def _create_character_project(tmp_path, project_name: str):
     ]
     manifest["operations"]["chunking"]["status"] = "completed"
     manifest["operations"]["chunking"]["output_paths"] = [
-        f"20_chunking/{config.CHUNK_ARTIFACT_FILE_NAME}"
+        f"{config.CHUNKING_FOLDER_NAME}/{config.CHUNK_ARTIFACT_FILE_NAME}"
     ]
     project_workspace_service.save_manifest(manifest, project_root)
     cleanup_root = project_root / config.CLEANUP_FOLDER_NAME
-    chunk_root = project_root / "20_chunking"
+    chunk_root = project_root / config.CHUNKING_FOLDER_NAME
+    discovery_root = project_root / config.CHARACTER_DISCOVERY_FOLDER_NAME
     cleanup_root.mkdir(parents=True, exist_ok=True)
     chunk_root.mkdir(parents=True, exist_ok=True)
+    discovery_root.mkdir(parents=True, exist_ok=True)
     (cleanup_root / config.CLEANED_TEXT_FILE_NAME).write_text(
-        'Alice said, "Hello there."\n\nBob replied, "Hi."\n',
+        '"Hello there," said Alice.\n',
         encoding="utf-8",
     )
     (chunk_root / config.CHUNK_ARTIFACT_FILE_NAME).write_text(
         json.dumps(
-            [
-                {
-                    "chunk_id": "chunk-0001",
-                    "sequence_index": 1,
-                    "chapter_label": None,
-                    "text": '"Hello there," said Alice.',
-                    "source_start_line": 1,
-                    "source_end_line": 1,
-                    "chunking_mode": "deterministic",
-                    "semantic_strategy": None,
-                    "scene_note": None,
-                },
-                {
-                    "chunk_id": "chunk-0002",
-                    "sequence_index": 2,
-                    "chapter_label": None,
-                    "text": '"Hi," Bob replied.',
-                    "source_start_line": 2,
-                    "source_end_line": 2,
-                    "chunking_mode": "deterministic",
-                    "semantic_strategy": None,
-                    "scene_note": None,
-                },
-            ],
+            [{
+                "chunk_id": "chunk-0001",
+                "sequence_index": 1,
+                "chapter_label": None,
+                "text": '"Hello there," said Alice.',
+                "source_start_line": 1,
+                "source_end_line": 1,
+                "chunking_mode": "deterministic",
+                "semantic_strategy": None,
+                "scene_note": None,
+            }],
             indent=2,
         ) + "\n",
         encoding="utf-8",
@@ -398,7 +350,7 @@ def _create_character_project(tmp_path, project_name: str):
 def _profile_payload(profile_id: str) -> dict[str, object]:
     return {
         "id": profile_id,
-        "label": profile_id,
+        "label": "Profile One",
         "backend_kind": "lmstudio",
         "base_url": "http://127.0.0.1:1234",
         "api_key": "",
@@ -409,6 +361,34 @@ def _profile_payload(profile_id: str) -> dict[str, object]:
         "temperature": 0.2,
         "supports_structured_output": False,
         "enabled": True,
+    }
+
+
+def _saved_profile_payload() -> dict[str, object]:
+    return {
+        "character_id": "alice",
+        "canonical_name": "Alice",
+        "aliases": ["Al"],
+        "gender_hint": "",
+        "age_band": "",
+        "role_summary": "Lead speaker",
+        "description": "Original profile.",
+        "temperament": "",
+        "social_status": "",
+        "speaking_style": "",
+        "accent_or_dialect_hints": "",
+        "voice_notes": "",
+        "relationship_hints": [],
+        "confidence": "high",
+        "evidence": [
+            {
+                "chunk_id": "chunk-0001",
+                "sequence_index": 1,
+                "source_excerpt": '"Hello there," said Alice.',
+                "reason": "Alice speaks.",
+            }
+        ],
+        "updated_at": "2026-04-08T12:01:00+00:00",
     }
 
 

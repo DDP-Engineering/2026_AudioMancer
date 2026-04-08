@@ -55,6 +55,10 @@ CHARACTER_DISCOVERY_STAGE_NOT_STARTED = "not_started"
 CHARACTER_DISCOVERY_STAGE_IN_PROGRESS = "in_progress"
 # @brief Stable completed stage token used by the Characters page.
 CHARACTER_DISCOVERY_STAGE_COMPLETED = "completed"
+# @brief Stable chunk id used for manual character evidence entries.
+MANUAL_CHARACTER_EVIDENCE_CHUNK_ID = "manual"
+# @brief Stable note used for manual character evidence entries.
+MANUAL_CHARACTER_EVIDENCE_NOTE = "Added manually by the operator."
 
 # @brief Persisted character-profile payload type.
 CharacterProfilePayload = dict[str, object]
@@ -538,6 +542,70 @@ def start_or_continue_discovery(
 
 
 @trace_function(_CHARACTER_DISCOVERY_LOGGER)
+def add_character_profile(
+    project_root: str | Path,
+    canonical_name: str,
+) -> list[CharacterProfilePayload]:
+    """
+    @brief      Append one new manual character profile to the persisted list.
+    @param[in]  project_root Active project root folder.
+    @param[in]  canonical_name Validated canonical character name.
+    @return     Updated ordered character profile payload list.
+    @exception  ValueError Raised when the name is invalid or duplicated.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-08
+    @version    0.1.0
+    """
+    resolved_project_root = Path(project_root)
+    existing_profiles = load_character_profiles(resolved_project_root)
+    normalized_name = validate_manual_character_name(existing_profiles, canonical_name)
+    updated_profiles = list(existing_profiles)
+    updated_profiles.append(
+        _build_manual_character_profile(existing_profiles, normalized_name)
+    )
+    updated_profiles = sorted(updated_profiles, key=_profile_sort_key)
+    _write_character_profiles(resolved_project_root, updated_profiles)
+    return updated_profiles
+
+
+@trace_function(_CHARACTER_DISCOVERY_LOGGER)
+def validate_manual_character_name(
+    existing_profiles: list[dict[str, object]],
+    candidate_name: object,
+    exclude_character_id: str | None = None,
+) -> str:
+    """
+    @brief      Validate one manually entered character name.
+    @param[in]  existing_profiles Existing persisted character profile list.
+    @param[in]  candidate_name Candidate canonical name entered by the operator.
+    @param[in]  exclude_character_id Optional character id ignored during duplicate checks.
+    @return     Normalized stripped character name.
+    @exception  ValueError Raised when the name is invalid or already exists.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-08
+    @version    0.1.0
+    """
+    normalized_name = str(candidate_name or "").strip()
+    if not normalized_name or not any(char.isalnum() for char in normalized_name):
+        raise ValueError("invalid_name")
+    normalized_identity = _normalize_identity(normalized_name)
+    if not normalized_identity:
+        raise ValueError("invalid_name")
+    for profile in existing_profiles:
+        if (
+            exclude_character_id not in (None, "")
+            and str(profile.get("character_id", "")).strip() == exclude_character_id
+        ):
+            continue
+        names_to_check = [str(profile.get("canonical_name", ""))]
+        names_to_check.extend(str(alias) for alias in list(profile.get("aliases", [])))
+        for existing_name in names_to_check:
+            if _normalize_identity(existing_name) == normalized_identity:
+                raise ValueError("duplicate_name")
+    return normalized_name
+
+
+@trace_function(_CHARACTER_DISCOVERY_LOGGER)
 def update_character_profile(
     project_root: str | Path,
     profile_payload: dict[str, object],
@@ -557,11 +625,17 @@ def update_character_profile(
     if not selected_profile_id:
         raise ValueError("Character profile payload is missing character_id.")
     existing_profiles = load_character_profiles(resolved_project_root)
+    normalized_name = validate_manual_character_name(
+        existing_profiles,
+        profile_payload.get("canonical_name", ""),
+        exclude_character_id=selected_profile_id,
+    )
     updated_profiles: list[CharacterProfilePayload] = []
     found_profile = False
     for existing_profile in existing_profiles:
         if str(existing_profile.get("character_id", "")).strip() == selected_profile_id:
             merged_profile = dict(profile_payload)
+            merged_profile["canonical_name"] = normalized_name
             merged_profile["updated_at"] = _utc_now_iso()
             updated_profiles.append(merged_profile)
             found_profile = True
@@ -569,15 +643,39 @@ def update_character_profile(
             updated_profiles.append(dict(existing_profile))
     if not found_profile:
         raise ValueError(f"Unknown character profile: {selected_profile_id}")
-    output_path = build_operation_output_path(
-        resolved_project_root,
-        "character_discovery",
-        config.CHARACTER_PROFILE_FILE_NAME,
-    )
-    output_path.write_text(
-        json.dumps(updated_profiles, indent=2, ensure_ascii=False) + "\n",
-        encoding="utf-8",
-    )
+    updated_profiles = sorted(updated_profiles, key=_profile_sort_key)
+    _write_character_profiles(resolved_project_root, updated_profiles)
+    return updated_profiles
+
+
+@trace_function(_CHARACTER_DISCOVERY_LOGGER)
+def delete_character_profile(
+    project_root: str | Path,
+    character_id: str,
+) -> list[CharacterProfilePayload]:
+    """
+    @brief      Delete one persisted character profile from discovery output.
+    @param[in]  project_root Active project root folder.
+    @param[in]  character_id Selected character profile identifier.
+    @return     Updated ordered character profile payload list.
+    @exception  ValueError Raised when the character id is unknown.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-08
+    @version    0.1.0
+    """
+    resolved_project_root = Path(project_root)
+    selected_character_id = str(character_id).strip()
+    if not selected_character_id:
+        raise ValueError("Character profile payload is missing character_id.")
+    existing_profiles = load_character_profiles(resolved_project_root)
+    updated_profiles = [
+        dict(profile)
+        for profile in existing_profiles
+        if str(profile.get("character_id", "")).strip() != selected_character_id
+    ]
+    if len(updated_profiles) == len(existing_profiles):
+        raise ValueError(f"Unknown character profile: {selected_character_id}")
+    _write_character_profiles(resolved_project_root, updated_profiles)
     return updated_profiles
 
 
@@ -601,6 +699,128 @@ def reset_character_discovery(project_root: str | Path) -> None:
 
 
 # LOCAL HELPERS
+
+
+def _write_character_profiles(
+    project_root: Path,
+    profiles: list[CharacterProfilePayload],
+) -> None:
+    """
+    @brief      Persist the current character profile list and count metadata.
+    @param[in]  project_root Active project root folder.
+    @param[in]  profiles Ordered character profile payload list.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-08
+    @version    0.1.0
+    """
+    output_path = build_operation_output_path(
+        project_root,
+        "character_discovery",
+        config.CHARACTER_PROFILE_FILE_NAME,
+    )
+    output_path.write_text(
+        json.dumps(profiles, indent=2, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
+    _sync_character_count_metadata(project_root, len(profiles))
+
+
+def _build_manual_character_profile(
+    existing_profiles: list[CharacterProfilePayload],
+    canonical_name: str,
+) -> CharacterProfilePayload:
+    """
+    @brief      Build one persisted manual-character profile payload.
+    @param[in]  existing_profiles Existing persisted character profile list.
+    @param[in]  canonical_name Validated canonical character name.
+    @return     New manual character profile payload.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-08
+    @version    0.1.0
+    """
+    return {
+        "character_id": _next_manual_character_id(existing_profiles, canonical_name),
+        "canonical_name": canonical_name,
+        "aliases": [],
+        "gender_hint": "",
+        "age_band": "",
+        "role_summary": "",
+        "description": "",
+        "temperament": "",
+        "social_status": "",
+        "speaking_style": "",
+        "accent_or_dialect_hints": "",
+        "voice_notes": "",
+        "relationship_hints": [],
+        "confidence": "",
+        "evidence": [
+            {
+                "chunk_id": MANUAL_CHARACTER_EVIDENCE_CHUNK_ID,
+                "sequence_index": 0,
+                "source_excerpt": MANUAL_CHARACTER_EVIDENCE_NOTE,
+                "reason": MANUAL_CHARACTER_EVIDENCE_NOTE,
+            }
+        ],
+        "updated_at": _utc_now_iso(),
+    }
+
+
+def _next_manual_character_id(
+    existing_profiles: list[CharacterProfilePayload],
+    canonical_name: str,
+) -> str:
+    """
+    @brief      Generate one unique persisted identifier for a manual character.
+    @param[in]  existing_profiles Existing persisted character profile list.
+    @param[in]  canonical_name Validated canonical character name.
+    @return     Unique character identifier string.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-08
+    @version    0.1.0
+    """
+    base_slug = _slugify_character_id(canonical_name, len(existing_profiles) + 1)
+    existing_ids = {
+        str(profile.get("character_id", "")).strip() for profile in existing_profiles
+    }
+    if base_slug not in existing_ids:
+        return base_slug
+    suffix = 2
+    while f"{base_slug}_{suffix}" in existing_ids:
+        suffix += 1
+    return f"{base_slug}_{suffix}"
+
+
+def _sync_character_count_metadata(project_root: Path, character_count: int) -> None:
+    """
+    @brief      Update persisted operation metadata after manual list changes.
+    @param[in]  project_root Active project root folder.
+    @param[in]  character_count Current persisted character count.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-08
+    @version    0.1.0
+    """
+    state_payload = load_operation_state(project_root)
+    if not isinstance(state_payload, dict):
+        return
+    metadata = dict(state_payload.get("metadata") or {})
+    metadata["character_count"] = character_count
+    state_payload["metadata"] = metadata
+    state_payload["updated_at"] = _utc_now_iso()
+    state_path = build_operation_output_path(
+        project_root,
+        "character_discovery",
+        config.OPERATION_STATE_FILE_NAME,
+    )
+    state_path.write_text(
+        json.dumps(state_payload, indent=2, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
 
 
 def _persist_input_snapshots(

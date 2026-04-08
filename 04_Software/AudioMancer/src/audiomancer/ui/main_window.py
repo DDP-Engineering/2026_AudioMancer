@@ -471,10 +471,31 @@ class MainWindow(QMainWindow):
         self._characters_page.reset_discovery_requested.connect(
             lambda: characters_ui_controller.handle_reset_discovery_requested(self)
         )
-        self._characters_page.profile_changed.connect(
-            lambda profile_payload: characters_ui_controller.handle_profile_changed(
+        self._characters_page.add_character_requested.connect(
+            lambda: characters_ui_controller.handle_add_character_requested(self)
+        )
+        self._characters_page.edit_character_requested.connect(
+            lambda character_id: characters_ui_controller.handle_edit_character_requested(
+                self,
+                character_id,
+            )
+        )
+        self._characters_page.save_character_requested.connect(
+            lambda profile_payload: characters_ui_controller.handle_save_character_requested(
                 self,
                 profile_payload,
+            )
+        )
+        self._characters_page.delete_character_requested.connect(
+            lambda character_id: characters_ui_controller.handle_delete_character_requested(
+                self,
+                character_id,
+            )
+        )
+        self._characters_page.selection_change_requested.connect(
+            lambda character_id: characters_ui_controller.handle_selection_change_requested(
+                self,
+                character_id,
             )
         )
 

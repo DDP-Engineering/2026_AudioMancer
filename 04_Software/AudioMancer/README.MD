@@ -39,7 +39,7 @@ This folder contains the current Python application implementation for
 - `src/audiomancer/ui/` provides the copied toolbar, sidebar, page, and status-bar shell used by the first desktop window.
 - `src/audiomancer/ui/controllers/` provides page/window-oriented Qt controllers for Home, Text Cleanup, Settings, AI Settings, and shared shell UI helpers.
 - `src/audiomancer/ui/controllers/` now also includes a dedicated Text Chunking page controller for deterministic chunking actions and rerun/reset handling.
-- `src/audiomancer/ui/controllers/characters_ui_controller.py` provides the Character Discovery page controller for start, resume, reset, and manual profile-edit persistence.
+- `src/audiomancer/ui/controllers/characters_ui_controller.py` provides the Character Discovery page controller for start, resume, reset, guarded manual add/edit/save/delete actions, and explicit unsaved-change handling.
 - `src/audiomancer/ui/operation_progress_dialog.py` provides the reusable modal progress popup created on demand for synchronous blocking operations.
 - `prompts/` stores AI prompt templates loaded by AI-assisted cleanup, translation, character discovery, and future AI workflows.
 - the main toolbar now supports `New Project` and `Open Project`.
@@ -59,8 +59,8 @@ This folder contains the current Python application implementation for
 - extraction artifacts currently use `input_<original_name>`, `output_raw_text.txt`, `extraction_report.json`, and `state_operation.json`.
 - cleanup artifacts currently use `input_<original_name>`, `output_clean_text.txt`, `artifact_cleanup_report.json`, and `state_operation.json`, with the cleanup output/report names defined centrally in `src/audiomancer/config.py`.
 - chunking artifacts currently use `input_<original_name>`, `output_chunks.json`, `chunking_report.json`, and `state_operation.json`, with both deterministic and AI-assisted chunking updating the same canonical chunk output.
-- translation artifacts currently use `input_output_chunks.json`, `output_translated_chunks.json`, `artifact_translation_report.json`, and `state_operation.json`, while leaving the canonical chunking output unchanged.
-- character-discovery artifacts currently use `input_output_chunks.json`, `input_output_clean_text.txt`, `output_character_profiles.json`, `artifact_character_discovery_report.json`, and `state_operation.json`.
+- translation artifacts currently use `input_<original_name>.json`, `output_translated_chunks.json`, `artifact_translation_report.json`, and `state_operation.json`, while leaving the canonical chunking output unchanged.
+- character-discovery artifacts currently use `input_<original_name>.json`, `input_<original_name>.txt`, `output_character_profiles.json`, `artifact_character_discovery_report.json`, and `state_operation.json`.
 - AI-assisted cleanup writes one project-local transaction log per run in `10_cleanup` using `log_ai_transactions_<timestamp>.log`.
 - pressing `Extract Text` after a completed extraction now asks for confirmation before clearing extraction data and all downstream workflow folders.
 - pressing `Deterministic Cleanup` after a completed cleanup now asks for confirmation before clearing cleanup data plus chunking and all following workflow folders.
@@ -75,6 +75,8 @@ This folder contains the current Python application implementation for
 - pressing `Reset Translation` now asks for confirmation, clears only `30_translation`, and unlocks the target-language selector for a fresh translation run.
 - pressing `Start Discovery` now shows one first-run information popup for long AI work, resumes interrupted discovery when possible, and stays disabled after successful completion until reset.
 - pressing `Reset Discovery` now clears `40_character_discovery` plus downstream narrator-definition data without extra confirmation and returns the workflow to `translation_ready`.
+- discovered character profiles are now read-only by default, require explicit `Edit Character` before changes, and are saved only when `Save Character` is pressed.
+- the `Characters` page now also supports `Add Character` and `Delete Character`, guarded unsaved-change prompts, and one synthetic manual-evidence note for manually added profiles.
 - long-running extraction and cleanup now run through one reusable modal progress dialog with a cancel button that blocks the main window while the operation is active.
 - AI-assisted cleanup keeps the progress popup responsive while waiting for provider responses, so the cancel button is honored during long model calls.
 - project names are stored exactly as entered but are rejected when invalid for Windows or Linux folder creation.

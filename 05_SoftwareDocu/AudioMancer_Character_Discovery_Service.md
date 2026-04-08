@@ -28,8 +28,8 @@ manifest.
   and one per-run AI transaction log
 - expose Character Discovery page state, notes, and default AI-profile
   selection
-- handle page-level start, resume, reset, and immediate profile-edit
-  persistence
+- handle page-level start, resume, reset, guarded manual add or edit or save
+  or delete behavior, and unsaved-change prompts
 
 It does not own chunk creation, translation, narrator-definition editing, or
 AI profile persistence.
@@ -57,7 +57,10 @@ Main public service entrypoints:
 - `load_character_profiles(...)`
 - `load_character_discovery_report(...)`
 - `load_input_chunks(...)`
+- `add_character_profile(...)`
+- `validate_manual_character_name(...)`
 - `update_character_profile(...)`
+- `delete_character_profile(...)`
 - `reset_character_discovery(...)`
 
 High-level runtime flow:
@@ -80,9 +83,13 @@ High-level runtime flow:
 7. The controller syncs `operations["character_discovery"]` into
    `project.json`, sets `current_stage` to `character_discovery_ready`, and
    reloads the window state.
-8. Manual editor changes emit `profile_changed(dict)` and are saved
-   immediately through `update_character_profile(...)`.
-9. Reset clears `40_character_discovery` plus downstream
+8. The page keeps character fields read-only by default and only enters edit
+   mode after `Edit Character`.
+9. Manual add or edit changes are saved only through explicit
+   `Save Character`, while selection changes and destructive actions are
+   guarded by one `Save / Discard / Cancel` prompt when the current draft is
+   dirty.
+10. Reset clears `40_character_discovery` plus downstream
    `50_narrator_definition`, resets manifest state through
    `build_manifest_after_operation_reset(...)`, and returns the project to
    `translation_ready`.
@@ -112,8 +119,8 @@ Inputs:
 
 Outputs:
 
-- `40_character_discovery/input_output_chunks.json`
-- `40_character_discovery/input_output_clean_text.txt`
+- `40_character_discovery/input_<original_name>.json`
+- `40_character_discovery/input_<original_name>.txt`
 - `40_character_discovery/output_character_profiles.json`
 - `40_character_discovery/artifact_character_discovery_report.json`
 - `40_character_discovery/state_operation.json`
@@ -148,6 +155,13 @@ Evidence items currently store:
 - `source_excerpt`
 - `reason`
 
+Manual profiles use one synthetic evidence entry with:
+
+- `chunk_id = "manual"`
+- `sequence_index = 0`
+- `source_excerpt = "Added manually by the operator."`
+- `reason = "Added manually by the operator."`
+
 Report fields currently include:
 
 - `input_chunk_count`
@@ -170,6 +184,8 @@ Operation-state invariants:
 - completed discovery disables the page start action until reset
 - reset preserves upstream translation artifacts and clears downstream narrator
   data
+- manual add or delete operations update the persisted operation-state
+  `metadata.character_count` when a state file already exists
 
 Relevant config values in `src/audiomancer/config.py`:
 
@@ -223,7 +239,11 @@ Page integration points:
 
 - `CharactersPage.start_discovery_requested(str)`
 - `CharactersPage.reset_discovery_requested()`
-- `CharactersPage.profile_changed(dict)`
+- `CharactersPage.add_character_requested()`
+- `CharactersPage.edit_character_requested(str)`
+- `CharactersPage.save_character_requested(dict)`
+- `CharactersPage.delete_character_requested(str)`
+- `CharactersPage.selection_change_requested(str | None)`
 
 Required conditions:
 
@@ -248,7 +268,10 @@ Covered behaviors:
 
 - initial discovery output persistence
 - resumable synthesis checkpoints
-- manual profile update persistence
+- manual add or save or delete persistence
+- duplicate and invalid manual-name validation
+- explicit edit-mode enablement and save-button activation
+- guarded selection changes with unsaved drafts
 - reset behavior and stage rollback
 - profile-selector default resolution
 - page button enablement and evidence preview

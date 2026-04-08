@@ -10,13 +10,12 @@
 @file test_character_discovery_state_service.py
 @brief Focused tests for the AudioMancer character discovery state service.
 @details Verifies profile selector defaults and Characters page state shaping
-         for completed and resumable discovery states.
+         for completed discovery, manual-maintenance enablement, and missing AI
+         profile behavior.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-08
-@version 0.1.0
+@version 0.2.0
 """
-
-# IMPORTS
 
 import json
 
@@ -26,14 +25,6 @@ from audiomancer.services import project_workspace_service
 
 
 def test_profile_state_prefers_default_character_profile() -> None:
-    """
-    @brief      Verify selector state prefers the configured default character profile.
-    @return     None.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-08
-    @version    0.1.0
-    """
     profile_state = character_discovery_state_service.build_character_discovery_profile_state(
         {
             "llm_profiles": [
@@ -51,16 +42,7 @@ def test_profile_state_prefers_default_character_profile() -> None:
     assert profile_state["selected_profile_id"] == "profile_b"
 
 
-def test_build_character_state_uses_persisted_report_and_source_map(tmp_path) -> None:
-    """
-    @brief      Verify completed discovery state exposes notes, source chunks, and locked start behavior.
-    @param[in]  tmp_path Pytest temporary directory fixture.
-    @return     None.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-08
-    @version    0.1.0
-    """
+def test_build_character_state_exposes_manual_maintenance_flags(tmp_path) -> None:
     project_root, manifest = _create_project(tmp_path, "CharacterDiscoveryState")
 
     state = character_discovery_state_service.build_character_discovery_state(
@@ -77,21 +59,15 @@ def test_build_character_state_uses_persisted_report_and_source_map(tmp_path) ->
     assert state["stage_status"] == "completed"
     assert state["can_start"] is False
     assert state["can_reset"] is True
+    assert state["can_add"] is True
+    assert state["can_edit"] is True
+    assert state["can_delete"] is True
     assert state["source_chunk_map"]["chunk-0001"] == '"Hello there," said Alice.'
     assert any("Discovered 1 speaking characters" in note for note in state["notes"])
-    assert any("Reset Discovery" in note for note in state["notes"])
+    assert any("fresh discovery rerun replaces" in note for note in state["notes"])
 
 
 def test_build_character_state_requires_ai_profile_to_start(tmp_path) -> None:
-    """
-    @brief      Verify missing enabled AI profiles keep the start action disabled.
-    @param[in]  tmp_path Pytest temporary directory fixture.
-    @return     None.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-08
-    @version    0.1.0
-    """
     project_root, manifest = project_workspace_service.create_project(
         "CharacterDiscoveryNoProfile",
         tmp_path,
@@ -104,9 +80,11 @@ def test_build_character_state_requires_ai_profile_to_start(tmp_path) -> None:
         "size_bytes": 12,
     }
     manifest["operations"]["chunking"]["status"] = "completed"
-    manifest["operations"]["chunking"]["output_paths"] = [f"20_chunking/{config.CHUNK_ARTIFACT_FILE_NAME}"]
+    manifest["operations"]["chunking"]["output_paths"] = [
+        f"{config.CHUNKING_FOLDER_NAME}/{config.CHUNK_ARTIFACT_FILE_NAME}"
+    ]
     project_workspace_service.save_manifest(manifest, project_root)
-    chunk_root = project_root / "20_chunking"
+    chunk_root = project_root / config.CHUNKING_FOLDER_NAME
     chunk_root.mkdir(parents=True, exist_ok=True)
     (chunk_root / config.CHUNK_ARTIFACT_FILE_NAME).write_text(
         json.dumps(
@@ -147,11 +125,13 @@ def _create_project(tmp_path, name: str):
         "size_bytes": 16,
     }
     manifest["operations"]["chunking"]["status"] = "completed"
-    manifest["operations"]["chunking"]["output_paths"] = [f"20_chunking/{config.CHUNK_ARTIFACT_FILE_NAME}"]
+    manifest["operations"]["chunking"]["output_paths"] = [
+        f"{config.CHUNKING_FOLDER_NAME}/{config.CHUNK_ARTIFACT_FILE_NAME}"
+    ]
     manifest["operations"]["character_discovery"]["status"] = "completed"
     project_workspace_service.save_manifest(manifest, project_root)
-    chunk_root = project_root / "20_chunking"
-    discovery_root = project_root / "40_character_discovery"
+    chunk_root = project_root / config.CHUNKING_FOLDER_NAME
+    discovery_root = project_root / config.CHARACTER_DISCOVERY_FOLDER_NAME
     chunk_root.mkdir(parents=True, exist_ok=True)
     discovery_root.mkdir(parents=True, exist_ok=True)
     chunk_payload = [
@@ -171,7 +151,7 @@ def _create_project(tmp_path, name: str):
         json.dumps(chunk_payload, indent=2) + "\n",
         encoding="utf-8",
     )
-    (discovery_root / f"input_{config.CHUNK_ARTIFACT_FILE_NAME}").write_text(
+    (discovery_root / "input_story.json").write_text(
         json.dumps(chunk_payload, indent=2) + "\n",
         encoding="utf-8",
     )
@@ -226,11 +206,11 @@ def _create_project(tmp_path, name: str):
     (discovery_root / config.OPERATION_STATE_FILE_NAME).write_text(
         json.dumps(
             {
-                "folder_relative_path": "40_character_discovery",
+                "folder_relative_path": config.CHARACTER_DISCOVERY_FOLDER_NAME,
                 "status": "completed",
                 "input_paths": [],
-                "output_paths": [f"40_character_discovery/{config.CHARACTER_PROFILE_FILE_NAME}"],
-                "artifact_paths": [f"40_character_discovery/{config.CHARACTER_DISCOVERY_REPORT_FILE_NAME}"],
+                "output_paths": [f"{config.CHARACTER_DISCOVERY_FOLDER_NAME}/{config.CHARACTER_PROFILE_FILE_NAME}"],
+                "artifact_paths": [f"{config.CHARACTER_DISCOVERY_FOLDER_NAME}/{config.CHARACTER_DISCOVERY_REPORT_FILE_NAME}"],
                 "progress_current": 1,
                 "progress_total": 1,
                 "mode": "ai_assisted",
@@ -238,7 +218,7 @@ def _create_project(tmp_path, name: str):
                 "completed_at": "2026-04-08T12:01:00+00:00",
                 "updated_at": "2026-04-08T12:01:00+00:00",
                 "warning_count": 0,
-                "metadata": {"ai_profile_id": "profile-1"},
+                "metadata": {"ai_profile_id": "profile-1", "character_count": 1},
                 "resume_checkpoint": None,
             },
             indent=2,
