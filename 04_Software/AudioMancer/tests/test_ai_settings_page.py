@@ -54,6 +54,7 @@ def test_ai_settings_page_loads_profiles_and_builds_merged_settings(qtbot) -> No
         ],
         "default_ai_cleanup_profile_id": "profile_a",
         "default_ai_chunking_profile_id": "profile_a",
+        "default_ai_translation_profile_id": "profile_a",
         "default_ai_chunking_strategy": "scene",
         "default_character_extraction_profile_id": "profile_a",
         "ui_text_scale": "normal",
@@ -65,6 +66,7 @@ def test_ai_settings_page_loads_profiles_and_builds_merged_settings(qtbot) -> No
     assert page._label_edit.text() == "Profile A"
     assert page._backend_combo.currentText() == "ollama"
     assert page._default_cleanup_combo.currentData() == "profile_a"
+    assert page._default_translation_combo.currentData() == "profile_a"
     assert page._default_strategy_combo.currentData() == "scene"
 
     page._label_edit.setText("Profile A Updated")
@@ -79,6 +81,7 @@ def test_ai_settings_page_loads_profiles_and_builds_merged_settings(qtbot) -> No
     assert rebuilt["llm_profiles"][0]["base_url"] == "http://127.0.0.1:1234/v1"
     assert rebuilt["default_ai_chunking_strategy"] == "meaning"
     assert rebuilt["default_ai_cleanup_profile_id"] == "profile_a"
+    assert rebuilt["default_ai_translation_profile_id"] == "profile_a"
 
 
 def test_ai_settings_page_adds_and_removes_profiles(qtbot) -> None:

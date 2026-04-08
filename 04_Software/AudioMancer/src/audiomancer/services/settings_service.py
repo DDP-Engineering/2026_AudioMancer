@@ -14,7 +14,7 @@
          settings file to the application root.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-04
-@version 0.1.6
+@version 0.1.7
 """
 
 # IMPORTS
@@ -231,13 +231,14 @@ def build_default_settings() -> dict[str, Any]:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-04
-    @version    0.1.4
+    @version    0.1.5
     """
     return {
         "language": config.DEFAULT_LANGUAGE,
         "llm_profiles": [],
         "default_ai_cleanup_profile_id": None,
         "default_ai_chunking_profile_id": None,
+        "default_ai_translation_profile_id": None,
         "default_ai_chunking_strategy": "scene",
         "default_character_extraction_profile_id": None,
         "play_completion_beep": True,
@@ -254,7 +255,7 @@ def validate_settings(settings_payload: dict[str, Any]) -> dict[str, Any]:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-04
-    @version    0.1.5
+    @version    0.1.6
     """
     defaults = build_default_settings()
     normalized_settings = dict(settings_payload) if isinstance(settings_payload, dict) else {}
@@ -326,6 +327,7 @@ def validate_settings(settings_payload: dict[str, Any]) -> dict[str, Any]:
     for field_name in (
         "default_ai_cleanup_profile_id",
         "default_ai_chunking_profile_id",
+        "default_ai_translation_profile_id",
         "default_character_extraction_profile_id",
     ):
         normalized_profile_id = _optional_profile_id(

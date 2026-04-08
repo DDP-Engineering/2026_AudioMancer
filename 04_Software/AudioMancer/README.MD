@@ -74,7 +74,7 @@ This folder contains the current Python application implementation for
 - the `Settings` dialog now loads and saves `language`, `interface text size`, and `play completion beep` through the shared settings service.
 - saving `Settings` now applies the selected UI language and global text size to the running shell.
 - the current shell supports runtime English/Romanian UI switching through one centralized UI-state service.
-- the `AI Settings` dialog now loads and saves AI profiles plus the default cleanup, chunking, and character-extraction selections through the shared settings service.
+- the `AI Settings` dialog now loads and saves AI profiles plus the default cleanup, chunking, translation, and character-extraction selections through the shared settings service.
 - the `AI Settings` dialog now supports backend connection probing, discovered model refresh, and popup feedback with discovered-model counts.
 - the static `Narrator` page now includes a presentational Qwen3-style profile manager with profile listing, custom-profile actions, voice-source selection, language selectors, voice-designer prompt fields, and a reserved preview panel.
 - `LICENSE.txt`, `LICENSE_NC.txt`, `LICENSE_ro.txt`, and `LICENSE_NC_ro.txt` are stored in the app root so the About dialog can display English or Romanian license text and the delivered app keeps the license set at the app-root level.

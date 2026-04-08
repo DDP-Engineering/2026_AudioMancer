@@ -16,6 +16,21 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+## [0.11.1] - 2026-04-08
+
+### Added
+
+- added focused regression coverage for persisted default AI translation profile selection in the settings and translation-state services
+
+### Changed
+
+- the `AI Settings` dialog now loads, saves, and localizes a dedicated default translation profile selection alongside the existing cleanup, chunking, and character-extraction defaults
+- package version updated to `0.11.1`
+
+### Fixed
+
+- fixed AI Translation profile selection so it prefers the persisted default translation profile instead of always falling back to the first enabled profile
+
 ## [0.11.0] - 2026-04-07
 
 ### Added

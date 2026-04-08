@@ -90,6 +90,7 @@ def test_load_settings_self_heals_missing_and_invalid_values(tmp_path, monkeypat
     invalid_settings["default_ai_chunking_strategy"] = "invalid"
     invalid_settings["default_ai_cleanup_profile_id"] = "missing_profile"
     invalid_settings["default_ai_chunking_profile_id"] = "missing_profile"
+    invalid_settings["default_ai_translation_profile_id"] = "missing_profile"
     invalid_settings["default_character_extraction_profile_id"] = "missing_profile"
     invalid_settings["play_completion_beep"] = "no"
     settings_path.write_text(json.dumps(invalid_settings, indent=2), encoding="utf-8")
@@ -101,6 +102,7 @@ def test_load_settings_self_heals_missing_and_invalid_values(tmp_path, monkeypat
     assert loaded_settings["ui_text_scale"] == defaults["ui_text_scale"]
     assert loaded_settings["default_ai_cleanup_profile_id"] == defaults["default_ai_cleanup_profile_id"]
     assert loaded_settings["default_ai_chunking_profile_id"] == defaults["default_ai_chunking_profile_id"]
+    assert loaded_settings["default_ai_translation_profile_id"] == defaults["default_ai_translation_profile_id"]
     assert loaded_settings["default_ai_chunking_strategy"] == defaults["default_ai_chunking_strategy"]
     assert loaded_settings["default_character_extraction_profile_id"] == defaults["default_character_extraction_profile_id"]
     assert loaded_settings["play_completion_beep"] == defaults["play_completion_beep"]
@@ -185,12 +187,14 @@ def test_validate_settings_keeps_valid_enabled_default_profile_ids() -> None:
     }]
     candidate_settings["default_ai_cleanup_profile_id"] = "profile_1"
     candidate_settings["default_ai_chunking_profile_id"] = "profile_1"
+    candidate_settings["default_ai_translation_profile_id"] = "profile_1"
     candidate_settings["default_character_extraction_profile_id"] = "profile_1"
 
     validated_settings = settings_service.validate_settings(candidate_settings)
 
     assert validated_settings["default_ai_cleanup_profile_id"] == "profile_1"
     assert validated_settings["default_ai_chunking_profile_id"] == "profile_1"
+    assert validated_settings["default_ai_translation_profile_id"] == "profile_1"
     assert validated_settings["default_character_extraction_profile_id"] == "profile_1"
 
 

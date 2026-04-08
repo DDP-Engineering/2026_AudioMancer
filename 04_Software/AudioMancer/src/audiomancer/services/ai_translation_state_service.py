@@ -42,7 +42,7 @@ def build_ai_translation_profile_state(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-07
-    @version    0.1.0
+    @version    0.1.1
     """
     if not isinstance(settings_payload, dict):
         return {"entries": [], "selected_profile_id": None}
@@ -59,7 +59,18 @@ def build_ai_translation_profile_state(
             continue
         entries.append((str(profile.get("label", "")).strip() or profile_id, profile_id))
         enabled_ids.append(profile_id)
-    resolved_selected_id = selected_profile_id if selected_profile_id in enabled_ids else (enabled_ids[0] if enabled_ids else None)
+    default_profile_id = None
+    if isinstance(settings_payload, dict):
+        candidate_default_profile_id = settings_payload.get(
+            "default_ai_translation_profile_id"
+        )
+        if candidate_default_profile_id in enabled_ids:
+            default_profile_id = str(candidate_default_profile_id)
+    resolved_selected_id = (
+        selected_profile_id
+        if selected_profile_id in enabled_ids
+        else (default_profile_id if default_profile_id is not None else (enabled_ids[0] if enabled_ids else None))
+    )
     return {"entries": entries, "selected_profile_id": resolved_selected_id}
 
 
