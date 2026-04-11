@@ -10,12 +10,13 @@
 @file llm_provider_service.py
 @brief OpenAI-compatible request helpers for AudioMancer AI workflows.
 @details Sends chat-completion requests through configured AI profiles, retries
-         transient failures, normalizes JSON model output, and optionally
-         appends detailed transaction records to one operation-local log file
-         while keeping UI-driven cancellation responsive during provider waits.
+         transient failures, normalizes JSON model output, repairs malformed
+         JSON responses conservatively, and optionally appends detailed
+         transaction records to one operation-local log file while keeping
+         UI-driven cancellation responsive during provider waits.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-11
-@version 0.3.0
+@version 0.4.0
 """
 
 # IMPORTS
@@ -64,7 +65,7 @@ def chat_json(
     @exception  OperationCancelledError Raised when cooperative cancellation is requested.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-11
-    @version    0.3.0
+    @version    0.4.0
     """
     request_payload = {
         "model": str(profile_payload.get("model_name", "")).strip(),
@@ -101,13 +102,37 @@ def chat_json(
     attempts = max(1, config.DEFAULT_LLM_REQUEST_RETRY_COUNT + 1)
     last_error: Exception | None = None
     for attempt_index in range(1, attempts + 1):
+        raw_content: str | None = None
         try:
             raw_payload, raw_body = _request_chat_completion_with_cancellation(
                 profile_payload,
                 request_payload,
                 cancel_requested=cancel_requested,
             )
-            parsed_payload = _parse_json_content(_extract_message_content(raw_payload))
+            raw_content = _extract_message_content(raw_payload)
+            try:
+                parsed_payload = _parse_json_content(raw_content)
+            except ValueError as parse_error:
+                parsed_payload, repair_body, repaired_content = _repair_json_response_with_model(
+                    profile_payload,
+                    raw_content,
+                    cancel_requested=cancel_requested,
+                )
+                _append_ai_log(
+                    log_path,
+                    {
+                        "exchange_event": "response",
+                        "parsed_status": "parsed_success_after_repair",
+                        "attempt_index": attempt_index,
+                        "raw_response_body": raw_body,
+                        "raw_message_content": raw_content,
+                        "repair_error_text": str(parse_error),
+                        "repair_response_body": repair_body,
+                        "repair_message_content": repaired_content,
+                        **dict(log_context or {}),
+                    },
+                )
+                return parsed_payload
             _append_ai_log(
                 log_path,
                 {
@@ -115,6 +140,7 @@ def chat_json(
                     "parsed_status": "parsed_success",
                     "attempt_index": attempt_index,
                     "raw_response_body": raw_body,
+                    "raw_message_content": raw_content,
                     **dict(log_context or {}),
                 },
             )
@@ -128,6 +154,7 @@ def chat_json(
                     "parsed_status": "parsed_failure",
                     "attempt_index": attempt_index,
                     "error_text": str(error_object),
+                    "raw_message_content": raw_content,
                     **dict(log_context or {}),
                 },
             )
@@ -191,7 +218,7 @@ def _request_chat_completion(
     @exception  ValueError Raised when the provider returns an invalid JSON payload.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-11
-    @version    0.2.0
+    @version    0.3.0
     """
     endpoint = _build_chat_endpoint(str(profile_payload.get("base_url", "")))
     api_key = str(profile_payload.get("api_key", "")).strip()
@@ -342,9 +369,12 @@ def _parse_json_content(content: str) -> dict[str, object]:
         raise ValueError("AI provider returned an empty response.")
     try:
         payload = json.loads(normalized)
-    except json.JSONDecodeError:
+    except json.JSONDecodeError as error_object:
         trimmed = _trim_json_like_payload(normalized)
-        payload = json.loads(_repair_json_like_content(trimmed))
+        try:
+            payload = json.loads(_repair_json_like_content(trimmed))
+        except json.JSONDecodeError as repaired_error:
+            raise ValueError(str(repaired_error)) from error_object
     if not isinstance(payload, dict):
         raise ValueError("AI provider did not return a JSON object.")
     return dict(payload)
@@ -390,8 +420,11 @@ def _repair_json_like_content(content: str) -> str:
             escape_active = False
             continue
         if character == "\\":
-            repaired.append(character)
-            escape_active = True
+            if _is_valid_json_escape_sequence(content, index + 1):
+                repaired.append(character)
+                escape_active = True
+            else:
+                repaired.append("\\\\")
             continue
         if character in "\r\n":
             repaired.append("\\n")
@@ -404,7 +437,71 @@ def _repair_json_like_content(content: str) -> str:
                 repaired.append('\\"')
             continue
         repaired.append(character)
+    if escape_active:
+        repaired.append("\\")
     return "".join(repaired)
+
+
+def _is_valid_json_escape_sequence(content: str, escape_index: int) -> bool:
+    if escape_index >= len(content):
+        return False
+    escape_character = content[escape_index]
+    if escape_character in {'"', "\\", "/", "b", "f", "n", "r", "t"}:
+        return True
+    if escape_character != "u":
+        return False
+    return (
+        escape_index + 4 < len(content)
+        and all(
+            character in "0123456789abcdefABCDEF"
+            for character in content[escape_index + 1 : escape_index + 5]
+        )
+    )
+
+
+def _repair_json_response_with_model(
+    profile_payload: dict[str, object],
+    malformed_content: str,
+    cancel_requested=None,
+) -> tuple[dict[str, object], str, str]:
+    repair_request_payload = {
+        "model": str(profile_payload.get("model_name", "")).strip(),
+        "messages": [
+            {
+                "role": "system",
+                "content": (
+                    "You repair malformed JSON. Return one valid JSON object only. "
+                    "Preserve the original keys and values. Do not translate, summarize, "
+                    "or add commentary. If a string contains a literal backslash that "
+                    "breaks JSON escaping, escape the backslash so the string remains literal."
+                ),
+            },
+            {
+                "role": "user",
+                "content": (
+                    "Repair the following malformed JSON into one valid JSON object. "
+                    "Return only the repaired JSON object.\n\n"
+                    "MALFORMED_JSON_BEGIN\n"
+                    f"{malformed_content}\n"
+                    "MALFORMED_JSON_END"
+                ),
+            },
+        ],
+        "temperature": 0.0,
+        "max_tokens": int(
+            profile_payload.get(
+                "max_output_tokens",
+                config.DEFAULT_LLM_MAX_OUTPUT_TOKENS,
+            )
+        ),
+    }
+    repair_payload, repair_body = _request_chat_completion_with_cancellation(
+        profile_payload,
+        repair_request_payload,
+        cancel_requested=cancel_requested,
+    )
+    repaired_content = _extract_message_content(repair_payload)
+    return _parse_json_content(repaired_content), repair_body, repaired_content
 
 
 def _is_likely_string_terminator(content: str, quote_index: int) -> bool:

@@ -13,8 +13,8 @@ Provides the project-persistence and source-import layer for `AudioMancer`.
 
 It gives the desktop shell a stable way to create a new project root, open an
 existing project from its root or one child folder, import one locked source
-document into the project root, persist coarse workflow-operation state, and
-validate the current `project.json` contract used by the application shell.
+document into the project root, persist compact workflow-operation summaries,
+and validate the current `project.json` contract used by the application shell.
 
 ## 2. Responsibilities
 
@@ -28,9 +28,10 @@ validate the current `project.json` contract used by the application shell.
 - validate required folders and required manifest fields during open
 - detect recoverable corruption in workflow folders or stage metadata during open
 - repair the corrupted step and all downstream step folders after operator confirmation
-- persist extraction artifact paths and per-step operation state in the manifest
-- persist cleanup operation state and stage advancement after deterministic
-  cleanup completes
+- persist compact extraction, cleanup, chunking, translation, and
+  character-discovery summaries in the root manifest
+- keep detailed per-step state, reports, outputs, checkpoints, and AI logs in
+  the corresponding workflow folders
 - feed the main window with loaded project root and manifest state
 
 It does not extract text by itself, own narrator content storage, or implement
@@ -72,11 +73,11 @@ High-level flow:
    `audiomancer.services.import_service`, stores the copied file in the
    project root, saves `source_document` in `project.json`, and advances the
    project to `source_selected`.
-7. After extraction completes, `MainWindow` stores the extraction artifact
-   paths and extraction operation state back into `project.json`.
-8. After deterministic cleanup completes, `MainWindow` stores the cleanup
-   operation state back into `project.json` and advances the project to
-   `text_chunking_ready`.
+7. After one workflow step writes its full local state into the step folder,
+   `MainWindow` stores only the compact operation summary back into
+   `project.json`.
+8. After deterministic cleanup completes, `MainWindow` advances the project to
+   `text_chunking_ready` while keeping cleanup detail files in `10_cleanup`.
 9. `MainWindow` stores the active project root and manifest, updates the home
    summary, updates workflow progress, and enables the workflow pages.
 
@@ -108,9 +109,9 @@ Outputs:
 - one root-level `project.json`
 - one copied source file stored directly in the project root
 - one loaded validated manifest dictionary for the UI shell
-- persisted extraction artifact references and per-operation state in
-  `project.json`
-- persisted cleanup operation state in `project.json`
+- persisted compact operation summaries in `project.json`
+- persisted detailed operation state in workflow-local `state_operation.json`
+  files and related artifacts
 - operator-visible status and validation feedback through the main window
 
 ## 6. Data Contracts
@@ -147,13 +148,10 @@ Current `operations` map keys:
 - `translation`
 - `character_discovery`
 
-Each operation entry currently stores:
+Each compact operation entry stores:
 
 - `folder_relative_path`
 - `status`
-- `input_paths`
-- `output_paths`
-- `artifact_paths`
 - `progress_current`
 - `progress_total`
 - `mode`
@@ -161,8 +159,11 @@ Each operation entry currently stores:
 - `completed_at`
 - `updated_at`
 - `warning_count`
-- `metadata`
-- `resume_checkpoint`
+
+Detailed operation payloads such as input or output paths, metadata,
+checkpoints, translated chunks, warning details, and similar workflow
+internals are stored only in the corresponding workflow folder files such as
+`state_operation.json`, reports, and canonical output artifacts.
 
 Required folder contract:
 
@@ -270,11 +271,13 @@ Minimum validation after a change:
 ## 10. Limitations And Future Work
 
 - the manifest remains intentionally smaller than the older `DDP_Audiomancer`
-  schema even after adding extraction and operation-state fields
+  schema by storing only compact operation summaries at the project root
 - project open repair currently handles missing step folders and invalid
   `current_stage` metadata only
 - extraction artifacts are produced by a separate component documented in
   `05_SoftwareDocu/AudioMancer_Text_Extraction_Service.md`
 - deterministic cleanup artifacts are produced by a separate component
   documented in `05_SoftwareDocu/AudioMancer_Deterministic_Cleanup_Service.md`
-- there is no migration layer yet for future manifest schema revisions
+- existing projects with older detailed operation payloads remain readable, but
+  there is no automatic manifest migration layer yet for future schema
+  revisions

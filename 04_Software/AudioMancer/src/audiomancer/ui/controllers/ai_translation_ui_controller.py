@@ -12,8 +12,8 @@
 @details Handles translation start/continue, reset, approvals, chunk edits,
          selected-chunk retranslation, and modal progress lifecycle.
 @author Eng. Dan Dumitru Pasare
-@date 2026-04-07
-@version 0.2.0
+@date 2026-04-11
+@version 0.3.0
 """
 
 # IMPORTS
@@ -24,7 +24,7 @@ from PySide6.QtWidgets import QMessageBox
 
 from audiomancer import config
 from audiomancer.services import ai_translation_service
-from audiomancer.services import home_presenter_service
+from audiomancer.services import deterministic_chunking_service
 from audiomancer.services import operation_runtime_service
 from audiomancer.services import project_workspace_service
 from audiomancer.services import text_cleanup_state_service
@@ -51,8 +51,8 @@ def handle_start_translation_requested(
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-07
-    @version    0.1.0
+    @date       2026-04-11
+    @version    0.2.0
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._active_operation_kind is not None:
@@ -64,7 +64,7 @@ def handle_start_translation_requested(
             ui_state_service.translate("project.error_no_active_project", current_language),
         )
         return
-    if not _has_chunking_output(window._current_manifest):
+    if not _has_chunking_output(window._current_project_root):
         QMessageBox.warning(
             window,
             ui_state_service.translate("dialog.project_error_title", current_language),
@@ -331,7 +331,10 @@ def _sync_manifest_after_translation(window: "MainWindow", report: dict[str, obj
         return
     updated_manifest = dict(window._current_manifest)
     operations = text_cleanup_state_service.normalized_manifest_operations(updated_manifest)
-    operations["translation"] = operation_state
+    operations["translation"] = project_workspace_service.project_manifest_operation_summary(
+        "translation",
+        operation_state,
+    )
     updated_manifest["operations"] = operations
     updated_manifest["current_stage"] = "translation_ready"
     project_workspace_service.save_manifest(updated_manifest, window._current_project_root)
@@ -348,8 +351,8 @@ def _sync_manifest_from_disk(window: "MainWindow") -> None:
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-07
-    @version    0.1.0
+    @date       2026-04-11
+    @version    0.2.0
     """
     if window._current_project_root is None or window._current_manifest is None:
         return
@@ -357,7 +360,10 @@ def _sync_manifest_from_disk(window: "MainWindow") -> None:
     operations = text_cleanup_state_service.normalized_manifest_operations(updated_manifest)
     operation_state = ai_translation_service.load_operation_state(window._current_project_root)
     if operation_state is not None:
-        operations["translation"] = operation_state
+        operations["translation"] = project_workspace_service.project_manifest_operation_summary(
+            "translation",
+            operation_state,
+        )
     updated_manifest["operations"] = operations
     project_workspace_service.save_manifest(updated_manifest, window._current_project_root)
     window.show_project_state(
@@ -390,19 +396,19 @@ def _resolve_ai_profile(settings_payload: dict[str, object] | None, profile_id: 
     return None
 
 
-def _has_chunking_output(manifest: dict[str, object]) -> bool:
+def _has_chunking_output(project_root: str | None) -> bool:
     """
     @brief      Determine whether chunking output exists for translation input.
-    @param[in]  manifest Active project manifest payload.
-    @return     True when chunking output paths are present.
+    @param[in]  project_root Active project root path.
+    @return     True when chunking output records can be loaded from disk.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-07
     @version    0.1.0
     """
-    chunking_operation = home_presenter_service.manifest_operation(manifest, "chunking")
-    output_paths = chunking_operation.get("output_paths", [])
-    return isinstance(output_paths, list) and bool(output_paths)
+    if not project_root:
+        return False
+    return bool(deterministic_chunking_service.load_chunks(project_root))
 
 
 def _persisted_target_language(window: "MainWindow") -> str:

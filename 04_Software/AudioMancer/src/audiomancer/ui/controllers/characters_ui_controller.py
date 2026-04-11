@@ -13,8 +13,8 @@
          add or edit or save or delete actions, and modal progress lifecycle
          for the Characters page.
 @author Eng. Dan Dumitru Pasare
-@date 2026-04-08
-@version 0.3.0
+@date 2026-04-11
+@version 0.4.0
 """
 
 from typing import TYPE_CHECKING
@@ -22,7 +22,7 @@ from typing import TYPE_CHECKING
 from PySide6.QtWidgets import QInputDialog, QMessageBox
 
 from audiomancer.services import character_discovery_service
-from audiomancer.services import home_presenter_service
+from audiomancer.services import deterministic_chunking_service
 from audiomancer.services import project_workspace_service
 from audiomancer.services import text_cleanup_state_service
 from audiomancer.services import ui_state_service
@@ -57,7 +57,7 @@ def handle_start_discovery_requested(window: "MainWindow", profile_id: str) -> N
             ui_state_service.translate("project.error_no_active_project", current_language),
         )
         return
-    if not _has_chunking_output(window._current_manifest):
+    if not _has_chunking_output(window._current_project_root):
         QMessageBox.warning(
             window,
             ui_state_service.translate("dialog.project_error_title", current_language),
@@ -368,8 +368,8 @@ def handle_character_profile_changed(
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-08
-    @version    0.1.0
+    @date       2026-04-11
+    @version    0.2.0
     """
     handle_save_character_requested(window, profile_payload)
 
@@ -479,7 +479,12 @@ def _sync_manifest_after_discovery(
     updated_manifest = dict(window._current_manifest)
     operations = text_cleanup_state_service.normalized_manifest_operations(updated_manifest)
     if operation_state is not None:
-        operations["character_discovery"] = operation_state
+        operations["character_discovery"] = (
+            project_workspace_service.project_manifest_operation_summary(
+                "character_discovery",
+                operation_state,
+            )
+        )
     updated_manifest["operations"] = operations
     updated_manifest["current_stage"] = "character_discovery_ready"
     project_workspace_service.save_manifest(updated_manifest, window._current_project_root)
@@ -496,8 +501,8 @@ def _sync_manifest_after_manual_change(window: "MainWindow") -> None:
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-08
-    @version    0.1.0
+    @date       2026-04-11
+    @version    0.2.0
     """
     if window._current_project_root is None or window._current_manifest is None:
         return
@@ -507,7 +512,12 @@ def _sync_manifest_after_manual_change(window: "MainWindow") -> None:
         window._current_project_root
     )
     if operation_state is not None:
-        operations["character_discovery"] = operation_state
+        operations["character_discovery"] = (
+            project_workspace_service.project_manifest_operation_summary(
+                "character_discovery",
+                operation_state,
+            )
+        )
     updated_manifest["operations"] = operations
     updated_manifest["current_stage"] = "character_discovery_ready"
     project_workspace_service.save_manifest(updated_manifest, window._current_project_root)
@@ -520,8 +530,8 @@ def _sync_manifest_from_disk(window: "MainWindow") -> None:
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-08
-    @version    0.1.0
+    @date       2026-04-11
+    @version    0.2.0
     """
     if window._current_project_root is None or window._current_manifest is None:
         return
@@ -531,7 +541,12 @@ def _sync_manifest_from_disk(window: "MainWindow") -> None:
         window._current_project_root
     )
     if operation_state is not None:
-        operations["character_discovery"] = operation_state
+        operations["character_discovery"] = (
+            project_workspace_service.project_manifest_operation_summary(
+                "character_discovery",
+                operation_state,
+            )
+        )
     updated_manifest["operations"] = operations
     updated_manifest["current_stage"] = "translation_ready"
     project_workspace_service.save_manifest(updated_manifest, window._current_project_root)
@@ -827,21 +842,19 @@ def _effective_profile_id(window: "MainWindow", selected_profile_id: str) -> str
     return selected_profile_id
 
 
-def _has_chunking_output(manifest: dict[str, object]) -> bool:
+def _has_chunking_output(project_root: str | None) -> bool:
     """
     @brief      Check whether the manifest advertises chunking output artifacts.
-    @param[in]  manifest Active project manifest payload.
-    @return     `True` when chunking output paths are present.
+    @param[in]  project_root Active project root path.
+    @return     `True` when chunk output can be loaded from disk.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-08
     @version    0.1.0
     """
-    operations = text_cleanup_state_service.normalized_manifest_operations(manifest)
-    chunking_operation = operations.get("chunking", {})
-    if not isinstance(chunking_operation, dict):
+    if not project_root:
         return False
-    return bool(chunking_operation.get("output_paths"))
+    return bool(deterministic_chunking_service.load_chunks(project_root))
 
 
 def _cancel_active_operation(window: "MainWindow") -> None:

@@ -13,8 +13,8 @@
          workflows, including progress dialog lifecycle, cancellation, rerun
          confirmations, and manifest synchronization for the Text Cleanup page.
 @author Eng. Dan Dumitru Pasare
-@date 2026-04-06
-@version 0.3.1
+@date 2026-04-11
+@version 0.4.0
 """
 
 # IMPORTS
@@ -172,8 +172,8 @@ def handle_ai_cleanup_requested(window: "MainWindow", profile_id: str) -> None:
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.1.0
+    @date       2026-04-11
+    @version    0.2.0
     """
     current_language = ui_state_service.current_language_from_settings(
         window._settings_payload
@@ -482,9 +482,9 @@ def handle_extraction_success(window: "MainWindow", result_payload: object) -> N
         list(result_payload.get("warnings", []))
     )
     operations = text_cleanup_state_service.normalized_manifest_operations(updated_manifest)
-    operations["extraction"] = (
-        text_extraction_service.load_operation_state(window._current_project_root)
-        or operations["extraction"]
+    operations["extraction"] = project_workspace_service.project_manifest_operation_summary(
+        "extraction",
+        text_extraction_service.load_operation_state(window._current_project_root),
     )
     updated_manifest["operations"] = operations
     project_workspace_service.save_manifest(updated_manifest, window._current_project_root)
@@ -531,8 +531,8 @@ def handle_cleanup_success(window: "MainWindow", result_payload: object) -> None
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.1.1
+    @date       2026-04-11
+    @version    0.2.0
     """
     cleanup_mode = None
     if isinstance(result_payload, dict):
@@ -542,10 +542,10 @@ def handle_cleanup_success(window: "MainWindow", result_payload: object) -> None
     updated_manifest = dict(window._current_manifest)
     updated_manifest["current_stage"] = "text_chunking_ready"
     operations = text_cleanup_state_service.normalized_manifest_operations(updated_manifest)
-    operations["cleanup"] = (
+    operations["cleanup"] = project_workspace_service.project_manifest_operation_summary(
+        "cleanup",
         ai_cleanup_service.load_operation_state(window._current_project_root)
-        or deterministic_cleanup_service.load_operation_state(window._current_project_root)
-        or operations["cleanup"]
+        or deterministic_cleanup_service.load_operation_state(window._current_project_root),
     )
     updated_manifest["operations"] = operations
     project_workspace_service.save_manifest(updated_manifest, window._current_project_root)
@@ -570,8 +570,8 @@ def handle_cleanup_failure(window: "MainWindow", error: Exception) -> None:
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.1.0
+    @date       2026-04-11
+    @version    0.2.0
     """
     sync_manifest_after_unsuccessful_operation(window, "cleanup")
     QMessageBox.warning(
@@ -600,15 +600,15 @@ def sync_manifest_after_unsuccessful_operation(window: "MainWindow", operation_k
     updated_manifest = dict(window._current_manifest)
     operations = text_cleanup_state_service.normalized_manifest_operations(updated_manifest)
     if operation_kind == "cleanup":
-        operations["cleanup"] = (
+        operations["cleanup"] = project_workspace_service.project_manifest_operation_summary(
+            "cleanup",
             ai_cleanup_service.load_operation_state(window._current_project_root)
-            or deterministic_cleanup_service.load_operation_state(window._current_project_root)
-            or operations["cleanup"]
+            or deterministic_cleanup_service.load_operation_state(window._current_project_root),
         )
     elif operation_kind == "extraction":
-        operations["extraction"] = (
-            text_extraction_service.load_operation_state(window._current_project_root)
-            or operations["extraction"]
+        operations["extraction"] = project_workspace_service.project_manifest_operation_summary(
+            "extraction",
+            text_extraction_service.load_operation_state(window._current_project_root),
         )
     updated_manifest["operations"] = operations
     project_workspace_service.save_manifest(updated_manifest, window._current_project_root)

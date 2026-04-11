@@ -57,14 +57,9 @@ def build_text_chunking_state(
             "selected_strategy": _selected_ai_strategy(settings_payload),
         }
 
-    cleanup_operation = home_presenter_service.manifest_operation(manifest, "cleanup")
-    cleaned_text_relative_path = None
-    output_paths = cleanup_operation.get("output_paths", [])
-    if isinstance(output_paths, list) and output_paths:
-        cleaned_text_relative_path = str(output_paths[0])
     cleaned_text = text_cleanup_state_service.read_optional_project_text(
         project_root,
-        cleaned_text_relative_path,
+        f"{config.CLEANUP_FOLDER_NAME}/{config.CLEANED_TEXT_FILE_NAME}",
     )
     chunking_report_payload = deterministic_chunking_service.load_chunking_report(project_root)
     chunking_operation_state = deterministic_chunking_service.load_operation_state(project_root)

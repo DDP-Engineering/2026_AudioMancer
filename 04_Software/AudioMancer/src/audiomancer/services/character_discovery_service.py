@@ -13,8 +13,8 @@
          overlapping chunk windows, persists the `40_character_discovery`
          workflow artifacts, and maintains resumable AI operation state.
 @author Eng. Dan Dumitru Pasare
-@date 2026-04-08
-@version 0.1.0
+@date 2026-04-11
+@version 0.2.0
 """
 
 # IMPORTS
@@ -79,8 +79,8 @@ def load_operation_state(project_root: str | Path) -> OperationStatePayload | No
     @return     Persisted operation-state payload or `None`.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-08
-    @version    0.1.0
+    @date       2026-04-11
+    @version    0.2.0
     """
     state_path = build_operation_output_path(
         project_root,
@@ -843,20 +843,9 @@ def _persist_input_snapshots(
         json.dumps(source_chunks, indent=2, ensure_ascii=False) + "\n",
         encoding="utf-8",
     )
-    cleanup_operation = dict(manifest.get("operations", {})).get("cleanup", {})
-    cleanup_output_paths = (
-        cleanup_operation.get("output_paths", [])
-        if isinstance(cleanup_operation, dict)
-        else []
-    )
-    cleaned_text_relative_path = (
-        str(cleanup_output_paths[0])
-        if isinstance(cleanup_output_paths, list) and cleanup_output_paths
-        else None
-    )
     cleaned_text = text_cleanup_state_service.read_optional_project_text(
         project_root,
-        cleaned_text_relative_path,
+        f"{config.CLEANUP_FOLDER_NAME}/{config.CLEANED_TEXT_FILE_NAME}",
     )
     if cleaned_text is None:
         cleaned_text = "\n\n".join(

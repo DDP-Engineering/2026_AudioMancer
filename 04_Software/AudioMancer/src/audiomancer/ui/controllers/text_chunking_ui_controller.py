@@ -13,8 +13,8 @@
          progress dialog lifecycle, resumable reruns, destructive confirmation,
          and manifest synchronization for the Text Chunking page.
 @author Eng. Dan Dumitru Pasare
-@date 2026-04-07
-@version 0.2.0
+@date 2026-04-11
+@version 0.3.0
 """
 
 # IMPORTS
@@ -63,12 +63,11 @@ def handle_deterministic_chunking_requested(window: "MainWindow") -> None:
         )
         return
 
-    cleanup_operation = home_presenter_service.manifest_operation(
-        window._current_manifest,
-        "cleanup",
+    cleaned_text = text_cleanup_state_service.read_optional_project_text(
+        window._current_project_root,
+        f"{config.CLEANUP_FOLDER_NAME}/{config.CLEANED_TEXT_FILE_NAME}",
     )
-    cleanup_output_paths = cleanup_operation.get("output_paths", [])
-    if not isinstance(cleanup_output_paths, list) or not cleanup_output_paths:
+    if not cleaned_text or not cleaned_text.strip():
         QMessageBox.warning(
             window,
             ui_state_service.translate("dialog.project_error_title", current_language),
@@ -121,12 +120,11 @@ def handle_ai_chunking_requested(window: "MainWindow", profile_id: str, strategy
         )
         return
 
-    cleanup_operation = home_presenter_service.manifest_operation(
-        window._current_manifest,
-        "cleanup",
+    cleaned_text = text_cleanup_state_service.read_optional_project_text(
+        window._current_project_root,
+        f"{config.CLEANUP_FOLDER_NAME}/{config.CLEANED_TEXT_FILE_NAME}",
     )
-    cleanup_output_paths = cleanup_operation.get("output_paths", [])
-    if not isinstance(cleanup_output_paths, list) or not cleanup_output_paths:
+    if not cleaned_text or not cleaned_text.strip():
         QMessageBox.warning(
             window,
             ui_state_service.translate("dialog.project_error_title", current_language),
@@ -219,8 +217,8 @@ def start_operation(
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-07
-    @version    0.1.1
+    @date       2026-04-11
+    @version    0.2.0
     """
     assert window._current_project_root is not None
     assert window._current_manifest is not None
@@ -413,7 +411,10 @@ def handle_chunking_success(window: "MainWindow", result_payload: object) -> Non
     updated_manifest = dict(window._current_manifest)
     updated_manifest["current_stage"] = "translation_ready"
     operations = text_cleanup_state_service.normalized_manifest_operations(updated_manifest)
-    operations["chunking"] = _load_chunking_operation_state(window) or operations["chunking"]
+    operations["chunking"] = project_workspace_service.project_manifest_operation_summary(
+        "chunking",
+        _load_chunking_operation_state(window),
+    )
     updated_manifest["operations"] = operations
     project_workspace_service.save_manifest(updated_manifest, window._current_project_root)
     window.show_project_state(
@@ -462,14 +463,17 @@ def sync_manifest_after_unsuccessful_operation(window: "MainWindow") -> None:
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-07
-    @version    0.1.1
+    @date       2026-04-11
+    @version    0.2.0
     """
     if window._current_manifest is None or window._current_project_root is None:
         return
     updated_manifest = dict(window._current_manifest)
     operations = text_cleanup_state_service.normalized_manifest_operations(updated_manifest)
-    operations["chunking"] = _load_chunking_operation_state(window) or operations["chunking"]
+    operations["chunking"] = project_workspace_service.project_manifest_operation_summary(
+        "chunking",
+        _load_chunking_operation_state(window),
+    )
     updated_manifest["operations"] = operations
     project_workspace_service.save_manifest(updated_manifest, window._current_project_root)
     window.show_project_state(
@@ -542,7 +546,10 @@ def _reset_chunking_and_downstream(window: "MainWindow") -> None:
 def _load_chunking_operation_state(window: "MainWindow") -> dict[str, object] | None:
     if window._current_project_root is None:
         return None
-    return deterministic_chunking_service.load_operation_state(window._current_project_root)
+    return (
+        ai_chunking_service.load_operation_state(window._current_project_root)
+        or deterministic_chunking_service.load_operation_state(window._current_project_root)
+    )
 
 
 def _resolve_ai_profile(

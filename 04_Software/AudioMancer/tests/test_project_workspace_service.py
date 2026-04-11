@@ -12,8 +12,8 @@
 @details Verifies project creation, manifest persistence, folder-name
          validation, project-root resolution, and open validation behavior.
 @author Eng. Dan Dumitru Pasare
-@date 2026-04-06
-@version 0.5.0
+@date 2026-04-11
+@version 0.6.0
 """
 
 # IMPORTS
@@ -54,6 +54,8 @@ def test_create_project_creates_required_structure_and_manifest(tmp_path) -> Non
     assert manifest["extraction_warning_count"] == 0
     assert manifest["operations"]["extraction"]["status"] == "not_started"
     assert manifest["operations"]["cleanup"]["folder_relative_path"] == "10_cleanup"
+    assert "metadata" not in manifest["operations"]["extraction"]
+    assert "output_paths" not in manifest["operations"]["cleanup"]
     assert (
         project_root / config.PROJECT_MANIFEST_FILE_NAME
     ).is_file()
@@ -338,6 +340,93 @@ def test_validate_project_manifest_normalizes_operations_map() -> None:
     assert validated["operations"]["extraction"]["status"] == "running"
     assert validated["operations"]["extraction"]["progress_current"] == 1
     assert validated["operations"]["translation"]["status"] == "not_started"
+    assert "metadata" not in validated["operations"]["extraction"]
+    assert "output_paths" not in validated["operations"]["translation"]
+
+
+def test_save_manifest_projects_detailed_operation_state_to_compact_summary(tmp_path) -> None:
+    """
+    @brief      Verify saving the manifest strips duplicated detailed operation payload fields.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-11
+    @version    0.1.0
+    """
+    project_root, manifest = project_workspace_service.create_project(
+        "CompactManifestProject",
+        tmp_path,
+    )
+    manifest["operations"]["translation"] = {
+        "folder_relative_path": config.TRANSLATION_FOLDER_NAME,
+        "status": "completed",
+        "input_paths": [f"{config.TRANSLATION_FOLDER_NAME}/input_story.json"],
+        "output_paths": [f"{config.TRANSLATION_FOLDER_NAME}/{config.TRANSLATED_CHUNKS_FILE_NAME}"],
+        "artifact_paths": [f"{config.TRANSLATION_FOLDER_NAME}/{config.TRANSLATION_REPORT_FILE_NAME}"],
+        "progress_current": 8,
+        "progress_total": 8,
+        "mode": "ai_assisted",
+        "started_at": "2026-04-11T10:00:00+00:00",
+        "completed_at": "2026-04-11T10:10:00+00:00",
+        "updated_at": "2026-04-11T10:10:00+00:00",
+        "warning_count": 2,
+        "metadata": {
+            "translated_chunks": [{"chunk_id": "chunk-0001", "translated_text": "..."},],
+            "warnings": ["warning"],
+        },
+        "resume_checkpoint": {"next_untranslated_chunk_id": None},
+    }
+
+    project_workspace_service.save_manifest(manifest, project_root)
+
+    saved_payload = json.loads(
+        (project_root / config.PROJECT_MANIFEST_FILE_NAME).read_text(encoding="utf-8")
+    )
+    translation_operation = saved_payload["operations"]["translation"]
+    assert translation_operation["status"] == "completed"
+    assert translation_operation["progress_current"] == 8
+    assert translation_operation["warning_count"] == 2
+    assert "input_paths" not in translation_operation
+    assert "output_paths" not in translation_operation
+    assert "artifact_paths" not in translation_operation
+    assert "metadata" not in translation_operation
+    assert "resume_checkpoint" not in translation_operation
+
+
+def test_validate_project_manifest_accepts_legacy_detailed_operation_payloads() -> None:
+    """
+    @brief      Verify legacy manifests with detailed operation payloads still validate successfully.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-11
+    @version    0.1.0
+    """
+    manifest = project_workspace_service.build_project_manifest("LegacyManifest")
+    manifest["operations"]["cleanup"] = {
+        "folder_relative_path": config.CLEANUP_FOLDER_NAME,
+        "status": "completed",
+        "input_paths": [f"{config.CLEANUP_FOLDER_NAME}/input_story.txt"],
+        "output_paths": [f"{config.CLEANUP_FOLDER_NAME}/{config.CLEANED_TEXT_FILE_NAME}"],
+        "artifact_paths": [f"{config.CLEANUP_FOLDER_NAME}/{config.CLEANUP_REPORT_FILE_NAME}"],
+        "progress_current": 3,
+        "progress_total": 3,
+        "mode": "ai_assisted",
+        "started_at": "2026-04-11T10:00:00+00:00",
+        "completed_at": "2026-04-11T10:10:00+00:00",
+        "updated_at": "2026-04-11T10:10:00+00:00",
+        "warning_count": 1,
+        "metadata": {"warning_details": [{"kind": "detail"}]},
+        "resume_checkpoint": {"completed_window_count": 3},
+    }
+
+    validated = project_workspace_service.validate_project_manifest(manifest)
+
+    assert validated["operations"]["cleanup"]["status"] == "completed"
+    assert validated["operations"]["cleanup"]["mode"] == "ai_assisted"
+    assert validated["operations"]["cleanup"]["warning_count"] == 1
+    assert "metadata" not in validated["operations"]["cleanup"]
 
 
 def test_repair_manifest_preserves_character_discovery_for_narrator_stage() -> None:

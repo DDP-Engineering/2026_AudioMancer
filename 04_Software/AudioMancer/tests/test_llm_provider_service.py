@@ -13,12 +13,13 @@
          cleanup provider requests.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-11
-@version 0.3.0
+@version 0.4.0
 """
 
 # IMPORTS
 
 import io
+import json
 import time
 from urllib import error
 
@@ -231,6 +232,160 @@ def test_chat_json_retries_with_max_completion_tokens_when_required(
     assert '"max_completion_tokens": 256' in request_bodies[1]
     assert '"max_tokens": 256' not in request_bodies[1]
     assert payload["results"][0]["unit_id"] == "unit-0001"
+
+
+def test_chat_json_repairs_invalid_backslash_escapes_in_model_output(
+    monkeypatch,
+) -> None:
+    """
+    @brief      Verify malformed backslash escapes inside model JSON are repaired locally.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-11
+    @version    0.1.0
+    """
+    malformed_content = '{"translated_text":"Path C:\\Temp\\Books\\Dune"}'
+    monkeypatch.setattr(
+        llm_provider_service.request,
+        "urlopen",
+        lambda *_args, **_kwargs: _FakeResponse(
+            json.dumps({"choices": [{"message": {"content": malformed_content}}]})
+        ),
+    )
+
+    payload = llm_provider_service.chat_json(
+        {
+            "id": "profile_1",
+            "backend_kind": "openai_compatible",
+            "base_url": "https://api.openai.com/v1",
+            "model_name": "gpt-5.4-mini",
+            "request_timeout_seconds": 30,
+            "temperature": 0.1,
+            "max_output_tokens": 256,
+        },
+        "system",
+        "user",
+    )
+
+    assert payload["translated_text"] == "Path C:\\Temp\\Books\\Dune"
+
+
+def test_chat_json_repairs_non_json_output_with_followup_request(
+    monkeypatch,
+) -> None:
+    """
+    @brief      Verify one malformed non-JSON response can be repaired through one follow-up request.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-11
+    @version    0.1.0
+    """
+    request_bodies: list[str] = []
+
+    def _fake_urlopen(http_request, **_kwargs):
+        request_bodies.append(http_request.data.decode("utf-8"))
+        if len(request_bodies) == 1:
+            return _FakeResponse(
+                json.dumps(
+                    {
+                        "choices": [
+                            {
+                                "message": {
+                                    "content": "Translated text: Hello from the model."
+                                }
+                            }
+                        ]
+                    }
+                )
+            )
+        return _FakeResponse(
+            json.dumps(
+                {
+                    "choices": [
+                        {
+                            "message": {
+                                "content": '{"translated_text":"Hello from the model."}'
+                            }
+                        }
+                    ]
+                }
+            )
+        )
+
+    monkeypatch.setattr(llm_provider_service.request, "urlopen", _fake_urlopen)
+
+    payload = llm_provider_service.chat_json(
+        {
+            "id": "profile_1",
+            "backend_kind": "openai_compatible",
+            "base_url": "https://api.openai.com/v1",
+            "model_name": "gpt-5.4-mini",
+            "request_timeout_seconds": 30,
+            "temperature": 0.1,
+            "max_output_tokens": 256,
+        },
+        "system",
+        "user",
+    )
+
+    assert len(request_bodies) == 2
+    assert "Repair the following malformed JSON" in request_bodies[1]
+    assert payload["translated_text"] == "Hello from the model."
+
+
+def test_chat_json_logs_raw_message_content_on_parse_failure(
+    monkeypatch,
+    tmp_path,
+) -> None:
+    """
+    @brief      Verify parse failures persist the raw assistant content in the transaction log.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-11
+    @version    0.1.0
+    """
+    response_counter = {"count": 0}
+
+    def _fake_urlopen(*_args, **_kwargs):
+        response_counter["count"] += 1
+        if response_counter["count"] == 1:
+            return _FakeResponse(
+                json.dumps({"choices": [{"message": {"content": "not valid json"}}]})
+            )
+        return _FakeResponse(
+            json.dumps({"choices": [{"message": {"content": "still not valid json"}}]})
+        )
+
+    monkeypatch.setattr(llm_provider_service.request, "urlopen", _fake_urlopen)
+
+    try:
+        llm_provider_service.chat_json(
+            {
+                "id": "profile_1",
+                "backend_kind": "openai_compatible",
+                "base_url": "https://api.openai.com/v1",
+                "model_name": "gpt-5.4-mini",
+                "request_timeout_seconds": 30,
+                "temperature": 0.1,
+                "max_output_tokens": 256,
+            },
+            "system",
+            "user",
+            log_path=tmp_path / "transactions.log",
+        )
+    except ValueError:
+        log_text = (tmp_path / "transactions.log").read_text(encoding="utf-8")
+        assert "not valid json" in log_text
+        assert "raw_message_content" in log_text
+    else:  # pragma: no cover - defensive assertion path.
+        raise AssertionError("Expected JSON parse failure to be raised.")
 
 
 # END OF FILE

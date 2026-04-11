@@ -12,8 +12,8 @@
 @details Verifies runtime artifact naming, paragraph chunk generation, chapter
          metadata, and resumable cancellation state for deterministic chunking.
 @author Eng. Dan Dumitru Pasare
-@date 2026-04-07
-@version 0.1.0
+@date 2026-04-11
+@version 0.2.0
 """
 
 # IMPORTS
@@ -72,6 +72,48 @@ def test_chunking_writes_runtime_artifacts_and_detects_chapters(tmp_path) -> Non
     assert chunks[2]["source_start_line"] == 5
     assert report_payload["chunk_count"] == 3
     assert report_payload["detected_chapter_count"] == 1
+
+
+def test_chunking_uses_canonical_cleanup_output_with_compact_manifest(tmp_path) -> None:
+    """
+    @brief      Verify chunking reads the canonical cleanup artifact even when the manifest stores only compact operation summaries.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-11
+    @version    0.1.0
+    """
+    project_root, manifest = project_workspace_service.create_project(
+        "ChunkCompactManifest",
+        tmp_path,
+    )
+    source_path = project_root / "story.txt"
+    source_path.write_text("placeholder", encoding="utf-8")
+    manifest["source_document"] = {
+        "original_name": "story.txt",
+        "stored_relative_path": "story.txt",
+        "file_type": "txt",
+        "imported_at": "2026-04-07T12:00:00+00:00",
+        "size_bytes": source_path.stat().st_size,
+    }
+    manifest["operations"]["cleanup"]["status"] = "completed"
+    manifest["operations"]["cleanup"]["progress_current"] = 1
+    manifest["operations"]["cleanup"]["progress_total"] = 1
+    cleanup_root = project_root / config.CLEANUP_FOLDER_NAME
+    cleanup_root.mkdir(exist_ok=True)
+    (cleanup_root / config.CLEANED_TEXT_FILE_NAME).write_text(
+        "Paragraph one.\n\nParagraph two.\n",
+        encoding="utf-8",
+    )
+
+    report_payload = deterministic_chunking_service.chunk_text(project_root, manifest)
+
+    assert report_payload["chunk_count"] == 2
+    chunks = json.loads(
+        (project_root / config.CHUNKING_FOLDER_NAME / config.CHUNK_ARTIFACT_FILE_NAME).read_text(encoding="utf-8")
+    )
+    assert len(chunks) == 2
 
 
 def test_chunking_persists_resumable_state_after_cancellation(tmp_path) -> None:

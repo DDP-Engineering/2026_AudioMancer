@@ -12,8 +12,8 @@
 @details Creates, validates, saves, and opens file-based project workspaces
          using one minimal `project.json` manifest contract.
 @author Eng. Dan Dumitru Pasare
-@date 2026-04-06
-@version    0.9.0
+@date 2026-04-11
+@version    1.0.0
 """
 
 # IMPORTS
@@ -314,8 +314,8 @@ def build_project_manifest(
     @return     New normalized manifest payload.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.2.0
+    @date       2026-04-11
+    @version    0.3.0
     """
     resolved_timestamp = timestamp_iso or _utc_now_iso()
     return {
@@ -343,8 +343,8 @@ def validate_project_manifest(payload: object) -> ProjectManifestPayload:
     @return     Normalized manifest dictionary.
     @exception  ValueError Raised when the payload is invalid.
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.2.0
+    @date       2026-04-11
+    @version    0.3.0
     """
     _validate_manifest_payload(payload)
     assert isinstance(payload, dict)
@@ -367,6 +367,56 @@ def validate_project_manifest(payload: object) -> ProjectManifestPayload:
         ),
         "narrator_language": _optional_string(payload.get("narrator_language")),
         "notes": str(payload.get("notes", "")),
+    }
+
+
+def project_manifest_operation_summary(
+    operation_kind: str,
+    operation_payload: object | None = None,
+) -> dict[str, object]:
+    """
+    @brief      Project one detailed operation payload into the compact manifest summary shape.
+    @param[in]  operation_kind Stable workflow operation token.
+    @param[in]  operation_payload Candidate detailed or compact operation payload.
+    @return     Compact operation summary payload for `project.json`.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-11
+    @version    0.1.0
+    """
+    default_summary = _default_operation_state(operation_kind)
+    if not isinstance(operation_payload, dict):
+        return default_summary
+    return {
+        "folder_relative_path": str(
+            operation_payload.get(
+                "folder_relative_path",
+                default_summary["folder_relative_path"],
+            )
+        ),
+        "status": str(operation_payload.get("status", default_summary["status"])),
+        "progress_current": _non_negative_int(
+            operation_payload.get(
+                "progress_current",
+                default_summary["progress_current"],
+            )
+        ),
+        "progress_total": _non_negative_int(
+            operation_payload.get(
+                "progress_total",
+                default_summary["progress_total"],
+            )
+        ),
+        "mode": _optional_string(operation_payload.get("mode")),
+        "started_at": _optional_string(operation_payload.get("started_at")),
+        "completed_at": _optional_string(operation_payload.get("completed_at")),
+        "updated_at": _optional_string(operation_payload.get("updated_at")),
+        "warning_count": _non_negative_int(
+            operation_payload.get(
+                "warning_count",
+                default_summary["warning_count"],
+            )
+        ),
     }
 
 
@@ -653,8 +703,8 @@ def _build_default_operation_states() -> dict[str, dict[str, object]]:
     @return     Default project-local operation-state map.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.1.0
+    @date       2026-04-11
+    @version    0.2.0
     """
     return {
         operation_kind: _default_operation_state(operation_kind)
@@ -675,15 +725,12 @@ def _default_operation_state(operation_kind: str) -> dict[str, object]:
     @return     Default operation-state payload.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.1.0
+    @date       2026-04-11
+    @version    0.2.0
     """
     return {
         "folder_relative_path": f"{_folder_name_for_operation(operation_kind)}",
         "status": "not_started",
-        "input_paths": [],
-        "output_paths": [],
-        "artifact_paths": [],
         "progress_current": 0,
         "progress_total": 0,
         "mode": None,
@@ -691,8 +738,6 @@ def _default_operation_state(operation_kind: str) -> dict[str, object]:
         "completed_at": None,
         "updated_at": None,
         "warning_count": 0,
-        "metadata": {},
-        "resume_checkpoint": None,
     }
 
 
@@ -703,8 +748,8 @@ def _normalize_operations(value: object) -> dict[str, dict[str, object]]:
     @return     Normalized operations mapping with every required operation key.
     @exception  ValueError Raised when the operations payload is invalid.
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.1.0
+    @date       2026-04-11
+    @version    0.2.0
     """
     operations = _build_default_operation_states()
     if value in (None, ""):
@@ -717,33 +762,10 @@ def _normalize_operations(value: object) -> dict[str, dict[str, object]]:
             continue
         if not isinstance(candidate, dict):
             raise ValueError(f"Project manifest field 'operations.{operation_kind}' is invalid.")
-        operations[operation_kind] = {
-            "folder_relative_path": str(
-                candidate.get(
-                    "folder_relative_path",
-                    _folder_name_for_operation(operation_kind),
-                )
-            ),
-            "status": str(candidate.get("status", "not_started")),
-            "input_paths": [str(item) for item in candidate.get("input_paths", [])],
-            "output_paths": [str(item) for item in candidate.get("output_paths", [])],
-            "artifact_paths": [str(item) for item in candidate.get("artifact_paths", [])],
-            "progress_current": _non_negative_int(candidate.get("progress_current", 0)),
-            "progress_total": _non_negative_int(candidate.get("progress_total", 0)),
-            "mode": _optional_string(candidate.get("mode")),
-            "started_at": _optional_string(candidate.get("started_at")),
-            "completed_at": _optional_string(candidate.get("completed_at")),
-            "updated_at": _optional_string(candidate.get("updated_at")),
-            "warning_count": _non_negative_int(candidate.get("warning_count", 0)),
-            "metadata": dict(candidate.get("metadata", {}))
-            if isinstance(candidate.get("metadata", {}), dict)
-            else {},
-            "resume_checkpoint": (
-                dict(candidate.get("resume_checkpoint"))
-                if isinstance(candidate.get("resume_checkpoint"), dict)
-                else None
-            ),
-        }
+        operations[operation_kind] = project_manifest_operation_summary(
+            operation_kind,
+            candidate,
+        )
     return operations
 
 

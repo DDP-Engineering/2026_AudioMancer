@@ -31,7 +31,7 @@ This folder contains the current Python application implementation for
 - `src/audiomancer/services/text_chunking_state_service.py` provides Text Chunking page state shaping plus persisted chunk preview loading.
 - `src/audiomancer/services/ai_translation_state_service.py` provides AI Translation page state shaping plus persisted translated chunk and review loading.
 - `src/audiomancer/services/character_discovery_state_service.py` provides Characters page state shaping plus persisted discovery profile and evidence loading.
-- `src/audiomancer/services/llm_provider_service.py` provides OpenAI-compatible chat-completion requests, transient retry handling, responsive cooperative cancellation during model waits, JSON normalization, and optional AI transaction logging.
+- `src/audiomancer/services/llm_provider_service.py` provides OpenAI-compatible chat-completion requests, transient retry handling, conservative malformed-JSON repair, responsive cooperative cancellation during model waits, JSON normalization, and optional AI transaction logging.
 - `src/audiomancer/services/prompt_template_service.py` provides strict prompt loading and placeholder rendering from the app-root `prompts/` folder.
 - `src/audiomancer/services/operation_runtime_service.py` provides shared runtime helpers for long-running operation folders, resets, and progress conversion.
 - `src/audiomancer/services/home_presenter_service.py` provides pure manifest-to-view shaping for the Home page workflow progress and source summary.
@@ -46,6 +46,7 @@ This folder contains the current Python application implementation for
 - new projects create `00_extraction`, `10_cleanup`, `20_chunking`, `30_translation`, `40_character_discovery`, `50_narrator_definition`, `temp`, and one root `project.json`.
 - opening a project now works from the project root or one selected child workflow folder.
 - opening a recoverably corrupted project now offers a repair confirmation and can recreate/reset the corrupted step plus all downstream step folders while updating the manifest stage.
+- `project.json` now keeps only compact workflow summaries under `operations`, while detailed per-step runtime state remains authoritative in each workflow folder `state_operation.json` and related artifact files.
 - the Home page `Select Source File` action now imports exactly one source file into the project root, stores structured source metadata in `project.json`, and locks the source for that project.
 - supported source import formats are `.txt`, `.pdf`, `.rtf`, `.docx`, `.odt`, `.md`, and `.epub`.
 - the `Text Cleanup` page now runs deterministic text extraction for the imported source and writes self-contained artifacts into `00_extraction`.
@@ -80,6 +81,7 @@ This folder contains the current Python application implementation for
 - long-running extraction and cleanup now run through one reusable modal progress dialog with a cancel button that blocks the main window while the operation is active.
 - AI-assisted cleanup keeps the progress popup responsive while waiting for provider responses, so the cancel button is honored during long model calls.
 - OpenAI-compatible provider requests now retry automatically with `max_completion_tokens` when one remote API rejects `max_tokens`, while preserving the original payload shape for local providers that still expect `max_tokens`.
+- OpenAI-compatible provider requests now also retain raw assistant message content in the AI transaction log and can issue one follow-up JSON-repair request when a model returns malformed JSON text.
 - project names are stored exactly as entered but are rejected when invalid for Windows or Linux folder creation.
 - the `Settings` dialog now loads and saves `language`, `interface text size`, and `play completion beep` through the shared settings service.
 - saving `Settings` now applies the selected UI language and global text size to the running shell.

@@ -13,8 +13,8 @@
          persists chunk artifacts in `20_chunking`, and maintains resumable
          operation state for interrupted deterministic chunking runs.
 @author Eng. Dan Dumitru Pasare
-@date 2026-04-07
-@version 0.1.0
+@date 2026-04-11
+@version 0.2.0
 """
 
 # IMPORTS
@@ -78,22 +78,15 @@ def chunk_text(
     @exception  ValueError Raised when no chunkable paragraphs remain.
     @exception  OperationCancelledError Raised when the operator cancels the run.
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-07
-        @version    0.1.1
+    @date       2026-04-11
+        @version    0.2.0
     """
     resolved_project_root = Path(project_root)
     source_document = manifest.get("source_document")
     if not isinstance(source_document, dict):
         raise ValueError("No imported source is available for deterministic chunking.")
 
-    cleanup_operation = dict(manifest.get("operations", {})).get("cleanup")
-    cleaned_relative_path = None
-    if isinstance(cleanup_operation, dict):
-        output_paths = cleanup_operation.get("output_paths", [])
-        if isinstance(output_paths, list) and output_paths:
-            cleaned_relative_path = str(output_paths[0])
-    if not cleaned_relative_path:
-        cleaned_relative_path = f"{config.CLEANUP_FOLDER_NAME}/{config.CLEANED_TEXT_FILE_NAME}"
+    cleaned_relative_path = f"{config.CLEANUP_FOLDER_NAME}/{config.CLEANED_TEXT_FILE_NAME}"
 
     cleaned_path = resolved_project_root / cleaned_relative_path
     if not cleaned_path.is_file():

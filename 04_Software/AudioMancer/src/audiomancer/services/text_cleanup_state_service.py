@@ -24,6 +24,7 @@ from audiomancer import config
 from audiomancer.services import deterministic_cleanup_service
 from audiomancer.services import home_presenter_service
 from audiomancer.services import operation_runtime_service
+from audiomancer.services import project_workspace_service
 from audiomancer.services import text_extraction_service
 from audiomancer.services import ui_state_service
 
@@ -71,12 +72,10 @@ def build_text_cleanup_state(
     extraction_operation_state = text_extraction_service.load_operation_state(
         project_root
     )
-    cleanup_operation = home_presenter_service.manifest_operation(manifest, "cleanup")
-    cleanup_output_paths = cleanup_operation.get("output_paths", [])
-    cleaned_text_relative_path = None
-    if isinstance(cleanup_output_paths, list) and cleanup_output_paths:
-        cleaned_text_relative_path = str(cleanup_output_paths[0])
-    cleaned_text = read_optional_project_text(project_root, cleaned_text_relative_path)
+    cleaned_text = read_optional_project_text(
+        project_root,
+        f"{config.CLEANUP_FOLDER_NAME}/{config.CLEANED_TEXT_FILE_NAME}",
+    )
     cleanup_report_payload = deterministic_cleanup_service.load_cleanup_report(
         project_root
     )
@@ -313,8 +312,8 @@ def normalized_manifest_operations(
     @return     Normalized operations mapping.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.1.0
+    @date       2026-04-11
+    @version    0.2.0
     """
     operations = manifest.get("operations")
     if not isinstance(operations, dict):
@@ -328,27 +327,11 @@ def normalized_manifest_operations(
         ("character_discovery", config.CHARACTER_DISCOVERY_FOLDER_NAME),
     ):
         candidate = operations.get(operation_kind)
-        if isinstance(candidate, dict):
-            normalized[operation_kind] = dict(candidate)
-            normalized[operation_kind].setdefault("folder_relative_path", folder_name)
-            normalized[operation_kind].setdefault("status", "not_started")
-        else:
-            normalized[operation_kind] = {
-                "folder_relative_path": folder_name,
-                "status": "not_started",
-                "input_paths": [],
-                "output_paths": [],
-                "artifact_paths": [],
-                "progress_current": 0,
-                "progress_total": 0,
-                "mode": None,
-                "started_at": None,
-                "completed_at": None,
-                "updated_at": None,
-                "warning_count": 0,
-                "metadata": {},
-                "resume_checkpoint": None,
-            }
+        normalized[operation_kind] = project_workspace_service.project_manifest_operation_summary(
+            operation_kind,
+            candidate if isinstance(candidate, dict) else None,
+        )
+        normalized[operation_kind].setdefault("folder_relative_path", folder_name)
     return normalized
 
 

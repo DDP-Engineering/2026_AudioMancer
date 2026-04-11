@@ -16,6 +16,39 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+## [0.15.0] - 2026-04-11
+
+### Added
+
+- added focused provider-service regression coverage for malformed backslash escapes, follow-up JSON repair requests, and parse-failure raw-content logging
+
+### Changed
+
+- hardened shared OpenAI-compatible provider parsing so malformed JSON responses can be repaired conservatively, with one follow-up JSON-repair request when the original assistant content is not parseable
+- expanded provider transaction logging to retain raw assistant message content for JSON parse failures and repair attempts
+- package version updated to `0.15.0`
+
+### Fixed
+
+- fixed AI translation and other AI workflows aborting on some malformed model JSON outputs that contained invalid backslash escapes or otherwise broken JSON formatting
+
+## [0.14.0] - 2026-04-11
+
+### Added
+
+- added focused regression coverage for compact `project.json` operation summaries and for deterministic chunking with compact cleanup manifests
+
+### Changed
+
+- reduced the root `project.json` contract to compact per-operation summaries instead of duplicating detailed operation payloads already stored in workflow-local files
+- updated workspace, cleanup, chunking, translation, and character-discovery synchronization paths so detailed state remains authoritative in step-local `state_operation.json`, report, and output artifacts
+- updated workflow prerequisite checks to read canonical step-local artifacts instead of relying on manifest `output_paths`
+- package version updated to `0.14.0`
+
+### Fixed
+
+- fixed root-manifest growth caused by duplicated nested operation metadata such as translated chunks, warning details, and chunk-boundary internals
+
 ## [0.13.1] - 2026-04-11
 
 ### Added

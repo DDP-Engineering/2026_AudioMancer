@@ -14,8 +14,8 @@
          canonical chunk artifacts in `20_chunking`, and maintains resumable
          window-based operation state plus AI transaction logging.
 @author Eng. Dan Dumitru Pasare
-@date 2026-04-07
-@version 0.1.0
+@date 2026-04-11
+@version 0.2.0
 """
 
 # IMPORTS
@@ -87,22 +87,15 @@ def chunk_text(
     @exception  ValueError Raised on missing profile data or unusable cleaned text.
     @exception  OperationCancelledError Raised when the operator cancels the run.
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-07
-        @version    0.1.1
+    @date       2026-04-11
+        @version    0.2.0
     """
     resolved_project_root = Path(project_root)
     source_document = manifest.get("source_document")
     if not isinstance(source_document, dict):
         raise ValueError("No imported source is available for AI-assisted chunking.")
 
-    cleanup_operation = dict(manifest.get("operations", {})).get("cleanup")
-    cleaned_relative_path = None
-    if isinstance(cleanup_operation, dict):
-        output_paths = cleanup_operation.get("output_paths", [])
-        if isinstance(output_paths, list) and output_paths:
-            cleaned_relative_path = str(output_paths[0])
-    if not cleaned_relative_path:
-        cleaned_relative_path = f"{config.CLEANUP_FOLDER_NAME}/{config.CLEANED_TEXT_FILE_NAME}"
+    cleaned_relative_path = f"{config.CLEANUP_FOLDER_NAME}/{config.CLEANED_TEXT_FILE_NAME}"
 
     profile_id = str(ai_profile_payload.get("id", "")).strip()
     model_name = str(ai_profile_payload.get("model_name", "")).strip()

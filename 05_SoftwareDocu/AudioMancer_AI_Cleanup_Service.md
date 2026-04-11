@@ -31,7 +31,8 @@ transaction log.
 - keep cancel requests responsive while one provider call is still waiting for
   the model response
 - retry transient provider failures conservatively
-- normalize model JSON output before parsing
+- normalize model JSON output before parsing and attempt one conservative
+  malformed-JSON repair pass when the assistant content is not valid JSON
 - copy the AI cleanup input snapshot as `10_cleanup/input_<original_source_name>`
 - persist `10_cleanup/output_clean_text.txt`,
   `10_cleanup/artifact_cleanup_report.json`, and
@@ -76,9 +77,10 @@ High-level flow:
    resumes from `resume_checkpoint` when possible.
 6. `llm_provider_service` sends one chat-completion request per window,
    retries one compatibility-adjusted request when a provider rejects
-   `max_tokens`, appends request/response/failure records to the
-   operation-local AI log, and keeps polling for cancellation while the
-   provider request runs in a small helper thread.
+   `max_tokens`, attempts one follow-up JSON-repair request when the returned
+   assistant content is malformed, appends request or response or failure
+   records to the operation-local AI log, and keeps polling for cancellation
+   while the provider request runs in a small helper thread.
 7. The AI cleanup service keeps units labeled `story` or `unknown`, rebuilds
    the cleaned text, writes the shared cleanup artifacts, and stores
    `mode="ai_assisted"` in the cleanup operation state.
@@ -146,6 +148,8 @@ Current AI transaction log behavior:
 - one `.log` file is created per AI cleanup run
 - each line is one JSON object with timestamped request, response, or failure
   metadata
+- parse-failure and repair records now retain the raw assistant message
+  content to support postmortem diagnosis of malformed JSON outputs
 
 ## 7. Workflow Integration
 
@@ -214,5 +218,8 @@ Minimum validation after a change:
 - canceling during an in-flight provider call is cooperative; the shell stops
   waiting immediately, but the abandoned background HTTP call may still finish
   on its own shortly after
+- malformed JSON repair still depends on best-effort normalization and one
+  follow-up repair prompt; it is not yet equivalent to strict schema-enforced
+  structured output
 - AI cleanup currently classifies paragraph-like units only; it does not yet
   reuse deterministic page-aware heuristics during the AI phase
