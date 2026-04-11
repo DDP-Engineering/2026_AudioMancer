@@ -13,7 +13,7 @@
          and the persisted default AI translation profile selection.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-07
-@version 0.1.0
+@version 0.2.0
 """
 
 # IMPORTS
@@ -48,6 +48,40 @@ def test_build_ai_translation_profile_state_prefers_default_translation_profile(
         ("Profile B", "profile_b"),
     ]
     assert profile_state["selected_profile_id"] == "profile_b"
+
+
+def test_build_ai_translation_notes_include_persisted_token_usage() -> None:
+    """
+    @brief      Verify translation notes show one persisted token-usage summary.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-11
+    @version    0.1.0
+    """
+    notes = ai_translation_state_service.build_ai_translation_notes(
+        manifest={"source_document": {"original_name": "story.txt"}},
+        source_chunks=[{"chunk_id": "chunk-0001"}],
+        report={
+            "translated_chunk_count": 1,
+            "approved_chunk_count": 0,
+            "warnings": [],
+            "token_usage": {
+                "input_tokens": 220,
+                "output_tokens": 80,
+                "total_tokens": 300,
+                "usage_available": True,
+            },
+        },
+        operation_state={
+            "status": "completed",
+            "metadata": {},
+        },
+        has_ai_profiles=True,
+        language="en",
+    )
+
+    assert any("Input tokens: 220 | Output tokens: 80 | Total: 300" in note for note in notes)
 
 
 # END OF FILE

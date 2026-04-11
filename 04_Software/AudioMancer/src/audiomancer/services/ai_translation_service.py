@@ -13,7 +13,7 @@
          executes resumable translation over canonical chunking output.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-07
-@version 0.2.0
+@version 0.3.0
 """
 
 # IMPORTS
@@ -28,6 +28,7 @@ from audiomancer.services import deterministic_chunking_service
 from audiomancer.services import llm_provider_service
 from audiomancer.services import prompt_template_service
 from audiomancer.services import project_workspace_service
+from audiomancer.services import token_usage_service
 from audiomancer.services.logging_service import get_component_logger, trace_function
 from audiomancer.services.operation_runtime_service import (
     build_operation_artifact_path,
@@ -59,6 +60,7 @@ TRANSLATED_CHUNK_STATUS_TRANSLATED = "translated"
 TRANSLATED_CHUNK_STATUS_APPROVED = "approved"
 # @brief Mapping from translation language codes to display labels.
 _TRANSLATION_LANGUAGE_LABELS = dict(config.TRANSLATION_LANGUAGE_OPTIONS)
+TokenUsagePayload = dict[str, object]
 
 
 # PUBLIC API
@@ -94,7 +96,7 @@ def load_translation_report(project_root: str | Path) -> dict[str, object] | Non
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-07
-    @version    0.1.0
+    @version    0.2.0
     """
     report_path = build_operation_artifact_path(
         project_root,
@@ -173,6 +175,8 @@ def ensure_translation_records(
         translated_chunks.append(_normalize_translated_chunk(existing_chunk, target_language))
     if len(existing_by_id) != len(translated_chunks):
         synchronized = True
+    existing_operation_state = load_operation_state(project_root)
+    existing_report = load_translation_report(project_root)
     report = _rebuild_report(
         translated_chunks,
         target_language,
@@ -181,13 +185,14 @@ def ensure_translation_records(
             ["Source chunk set changed since translation started. Translation records were synchronized."]
             if synchronized else []
         ),
+        token_usage=_restore_persisted_token_usage(existing_report, existing_operation_state),
     )
     _persist_translation_state(
         project_root,
         source_chunks,
         translated_chunks,
         report,
-        operation_state=load_operation_state(project_root),
+        operation_state=existing_operation_state,
     )
     return source_chunks, translated_chunks, report
 
@@ -213,7 +218,7 @@ def start_or_continue_translation(
     @exception  ValueError When inputs are invalid or the model returns empty text.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-07
-    @version    0.1.0
+    @version    0.2.0
     """
     project_root = Path(project_root)
     profile_id = str(ai_profile_payload.get("id", "")).strip()
@@ -233,6 +238,7 @@ def start_or_continue_translation(
     )
     started_at = str((load_operation_state(project_root) or {}).get("started_at") or _utc_now_iso())
     log_path = _resolve_log_path(project_root, started_at)
+    token_usage = _restore_persisted_token_usage(report, load_operation_state(project_root))
     system_prompt = prompt_template_service.render_prompt(
         "text_translation_system",
         {"target_language": _language_label(target_language)},
@@ -245,13 +251,20 @@ def start_or_continue_translation(
         target_language,
         profile_id,
         log_path,
+        token_usage,
     )
-    _emit_progress(progress_callback, _translated_count(translated_chunks), len(translated_chunks), "AI translation in progress...")
+    _emit_progress(
+        progress_callback,
+        _translated_count(translated_chunks),
+        len(translated_chunks),
+        "AI translation in progress...",
+        token_usage,
+    )
     for chunk in translated_chunks:
         raise_if_cancelled(cancel_requested)
         if str(chunk.get("translated_text", "")).strip():
             continue
-        translated_text = _translate_text_in_budgeted_segments(
+        translated_text, token_usage = _translate_text_in_budgeted_segments(
             project_root,
             manifest,
             ai_profile_payload,
@@ -261,6 +274,9 @@ def start_or_continue_translation(
             int(chunk.get("sequence_index", 0)),
             len(translated_chunks),
             log_path,
+            token_usage,
+            progress_callback=progress_callback,
+            translated_chunk_count=_translated_count(translated_chunks),
             cancel_requested=cancel_requested,
         )
         if not translated_text.strip():
@@ -274,10 +290,31 @@ def start_or_continue_translation(
         chunk["translation_profile_id"] = profile_id
         chunk["target_language"] = target_language
         chunk["status"] = TRANSLATED_CHUNK_STATUS_TRANSLATED
-        report = _rebuild_report(translated_chunks, target_language, profile_id, warnings=list(report.get("warnings", [])))
-        _write_running_state(project_root, source_chunks, translated_chunks, started_at, target_language, profile_id, log_path)
+        report = _rebuild_report(
+            translated_chunks,
+            target_language,
+            profile_id,
+            warnings=list(report.get("warnings", [])),
+            token_usage=token_usage,
+        )
+        _write_running_state(
+            project_root,
+            source_chunks,
+            translated_chunks,
+            started_at,
+            target_language,
+            profile_id,
+            log_path,
+            token_usage,
+        )
         _persist_translation_state(project_root, source_chunks, translated_chunks, report, operation_state=load_operation_state(project_root))
-        _emit_progress(progress_callback, _translated_count(translated_chunks), len(translated_chunks), "AI translation in progress...")
+        _emit_progress(
+            progress_callback,
+            _translated_count(translated_chunks),
+            len(translated_chunks),
+            "AI translation in progress...",
+            token_usage,
+        )
     completed_at = _utc_now_iso()
     report = _rebuild_report(
         translated_chunks,
@@ -285,6 +322,7 @@ def start_or_continue_translation(
         profile_id,
         warnings=list(report.get("warnings", [])),
         updated_at=completed_at,
+        token_usage=token_usage,
     )
     operation_state = _build_operation_state(
         project_root,
@@ -298,9 +336,16 @@ def start_or_continue_translation(
         target_language=target_language,
         log_path=log_path,
         resume_checkpoint=None,
+        token_usage=token_usage,
     )
     _persist_translation_state(project_root, source_chunks, translated_chunks, report, operation_state=operation_state)
-    _emit_progress(progress_callback, len(translated_chunks), len(translated_chunks), "AI translation completed.")
+    _emit_progress(
+        progress_callback,
+        len(translated_chunks),
+        len(translated_chunks),
+        "AI translation completed.",
+        token_usage,
+    )
     return report
 
 
@@ -327,7 +372,7 @@ def retranslate_chunk(
     @exception  ValueError When the selected chunk is unknown or translation is empty.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-07
-    @version    0.1.0
+    @version    0.2.0
     """
     project_root = Path(project_root)
     profile_id = str(ai_profile_payload.get("id", "")).strip()
@@ -340,6 +385,7 @@ def retranslate_chunk(
     )
     started_at = str((load_operation_state(project_root) or {}).get("started_at") or _utc_now_iso())
     log_path = _resolve_log_path(project_root, started_at)
+    token_usage = _restore_persisted_token_usage(report, load_operation_state(project_root))
     system_prompt = prompt_template_service.render_prompt(
         "text_translation_system",
         {"target_language": _language_label(target_language)},
@@ -351,8 +397,17 @@ def retranslate_chunk(
     selected["translation_profile_id"] = profile_id
     selected["target_language"] = target_language
     selected["status"] = TRANSLATED_CHUNK_STATUS_NOT_STARTED
-    _write_running_state(project_root, source_chunks, translated_chunks, started_at, target_language, profile_id, log_path)
-    translated_text = _translate_text_in_budgeted_segments(
+    _write_running_state(
+        project_root,
+        source_chunks,
+        translated_chunks,
+        started_at,
+        target_language,
+        profile_id,
+        log_path,
+        token_usage,
+    )
+    translated_text, token_usage = _translate_text_in_budgeted_segments(
         project_root,
         manifest,
         ai_profile_payload,
@@ -362,6 +417,9 @@ def retranslate_chunk(
         int(selected.get("sequence_index", 0)),
         len(translated_chunks),
         log_path,
+        token_usage,
+        progress_callback=progress_callback,
+        translated_chunk_count=max(0, _translated_count(translated_chunks)),
         cancel_requested=cancel_requested,
     )
     if not translated_text.strip():
@@ -375,7 +433,13 @@ def retranslate_chunk(
     selected["translation_profile_id"] = profile_id
     selected["target_language"] = target_language
     selected["status"] = TRANSLATED_CHUNK_STATUS_TRANSLATED
-    report = _rebuild_report(translated_chunks, target_language, profile_id, warnings=list(report.get("warnings", [])))
+    report = _rebuild_report(
+        translated_chunks,
+        target_language,
+        profile_id,
+        warnings=list(report.get("warnings", [])),
+        token_usage=token_usage,
+    )
     operation_state = _build_operation_state(
         project_root,
         source_chunks,
@@ -388,9 +452,16 @@ def retranslate_chunk(
         target_language=target_language,
         log_path=log_path,
         resume_checkpoint=None,
+        token_usage=token_usage,
     )
     _persist_translation_state(project_root, source_chunks, translated_chunks, report, operation_state=operation_state)
-    _emit_progress(progress_callback, 1, 1, "Selected chunk re-translation completed.")
+    _emit_progress(
+        progress_callback,
+        1,
+        1,
+        "Selected chunk re-translation completed.",
+        token_usage,
+    )
     return report
 
 
@@ -435,7 +506,16 @@ def update_translated_text(
         selected["approved_at"] = None
         selected["translated_at"] = None
         selected["status"] = TRANSLATED_CHUNK_STATUS_NOT_STARTED
-    report = _rebuild_report(translated_chunks, target_language, profile_id, warnings=list(report.get("warnings", [])))
+    report = _rebuild_report(
+        translated_chunks,
+        target_language,
+        profile_id,
+        warnings=list(report.get("warnings", [])),
+        token_usage=_restore_persisted_token_usage(
+            report,
+            load_operation_state(project_root),
+        ),
+    )
     _persist_translation_state(project_root, source_chunks, translated_chunks, report, operation_state=load_operation_state(project_root))
     return report
 
@@ -469,7 +549,16 @@ def approve_chunk(
     selected["approved"] = True
     selected["approved_at"] = _utc_now_iso()
     selected["status"] = TRANSLATED_CHUNK_STATUS_APPROVED
-    report = _rebuild_report(translated_chunks, target_language, profile_id, warnings=list(report.get("warnings", [])))
+    report = _rebuild_report(
+        translated_chunks,
+        target_language,
+        profile_id,
+        warnings=list(report.get("warnings", [])),
+        token_usage=_restore_persisted_token_usage(
+            report,
+            load_operation_state(project_root),
+        ),
+    )
     _persist_translation_state(project_root, source_chunks, translated_chunks, report, operation_state=load_operation_state(project_root))
     return report
 
@@ -500,7 +589,16 @@ def approve_all(
         chunk["approved"] = True
         chunk["approved_at"] = approved_at
         chunk["status"] = TRANSLATED_CHUNK_STATUS_APPROVED
-    report = _rebuild_report(translated_chunks, target_language, profile_id, warnings=list(report.get("warnings", [])))
+    report = _rebuild_report(
+        translated_chunks,
+        target_language,
+        profile_id,
+        warnings=list(report.get("warnings", [])),
+        token_usage=_restore_persisted_token_usage(
+            report,
+            load_operation_state(project_root),
+        ),
+    )
     _persist_translation_state(project_root, source_chunks, translated_chunks, report, operation_state=load_operation_state(project_root))
     return report
 
@@ -577,7 +675,14 @@ def _normalize_translated_chunk(payload: dict[str, object], target_language: str
     }
 
 
-def _rebuild_report(translated_chunks: list[dict[str, object]], target_language: str, profile_id: str | None, warnings: list[str] | None = None, updated_at: str | None = None) -> dict[str, object]:
+def _rebuild_report(
+    translated_chunks: list[dict[str, object]],
+    target_language: str,
+    profile_id: str | None,
+    warnings: list[str] | None = None,
+    updated_at: str | None = None,
+    token_usage: TokenUsagePayload | None = None,
+) -> dict[str, object]:
     """
     @brief      Recompute the translation report from the current chunk records.
     @param[in]  translated_chunks Current translated chunk payloads.
@@ -589,7 +694,7 @@ def _rebuild_report(translated_chunks: list[dict[str, object]], target_language:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-07
-    @version    0.1.0
+    @version    0.2.0
     """
     translated_count = _translated_count(translated_chunks)
     approved_count = sum(1 for chunk in translated_chunks if bool(chunk.get("approved", False)))
@@ -608,6 +713,7 @@ def _rebuild_report(translated_chunks: list[dict[str, object]], target_language:
         "total_chunk_count": len(translated_chunks),
         "updated_at": updated_at or _utc_now_iso(),
         "warnings": list(warnings or []),
+        "token_usage": token_usage_service.coerce_token_usage(token_usage),
     }
 
 
@@ -687,6 +793,7 @@ def _write_running_state(
     target_language: str,
     profile_id: str,
     log_path: Path,
+    token_usage: TokenUsagePayload,
 ) -> None:
     """
     @brief      Persist the translation operation in the running state.
@@ -701,9 +808,14 @@ def _write_running_state(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-07
-    @version    0.1.0
+    @version    0.2.0
     """
-    report = _rebuild_report(translated_chunks, target_language, profile_id)
+    report = _rebuild_report(
+        translated_chunks,
+        target_language,
+        profile_id,
+        token_usage=token_usage,
+    )
     operation_state = _build_operation_state(
         project_root,
         source_chunks,
@@ -715,6 +827,7 @@ def _write_running_state(
         profile_id=profile_id,
         target_language=target_language,
         log_path=log_path,
+        token_usage=token_usage,
         resume_checkpoint={
             "next_untranslated_chunk_id": _next_untranslated_chunk_id(translated_chunks),
             "translated_chunk_count": report["translated_chunk_count"],
@@ -741,6 +854,7 @@ def _build_operation_state(
     profile_id: str | None,
     target_language: str,
     log_path: Path,
+    token_usage: TokenUsagePayload,
     resume_checkpoint: dict[str, object] | None,
 ) -> dict[str, object]:
     """
@@ -760,7 +874,7 @@ def _build_operation_state(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-07
-    @version    0.1.0
+    @version    0.2.0
     """
     input_path = _translation_input_snapshot_path(project_root)
     output_path = build_operation_output_path(
@@ -799,6 +913,7 @@ def _build_operation_state(
             "translated_chunks": translated_chunks,
             "source_chunk_count": len(source_chunks),
             "log_relative_path": relative_to_project(project_root, log_path),
+            "token_usage": token_usage_service.coerce_token_usage(token_usage),
         },
         "resume_checkpoint": None if resume_checkpoint is None else dict(resume_checkpoint),
     }
@@ -891,6 +1006,19 @@ def _translation_source_snapshot_base_name(project_root: Path) -> str:
     return Path(config.CHUNK_ARTIFACT_FILE_NAME).stem
 
 
+def _restore_persisted_token_usage(
+    report: dict[str, object] | None,
+    operation_state: dict[str, object] | None,
+) -> TokenUsagePayload:
+    metadata = {}
+    if isinstance(operation_state, dict):
+        metadata = operation_state.get("metadata", {})
+    return token_usage_service.restore_token_usage(
+        None if not isinstance(report, dict) else report.get("token_usage"),
+        metadata.get("token_usage") if isinstance(metadata, dict) else None,
+    )
+
+
 def _translate_text_in_budgeted_segments(
     project_root: Path,
     manifest: dict[str, object],
@@ -901,8 +1029,11 @@ def _translate_text_in_budgeted_segments(
     chunk_sequence_index: int,
     total_chunks: int,
     log_path: Path,
+    token_usage: TokenUsagePayload,
+    progress_callback=None,
+    translated_chunk_count: int = 0,
     cancel_requested=None,
-) -> str:
+) -> tuple[str, TokenUsagePayload]:
     """
     @brief      Translate one source chunk in budgeted AI request segments.
     @param[in]  project_root Active project root path.
@@ -915,11 +1046,11 @@ def _translate_text_in_budgeted_segments(
     @param[in]  total_chunks Total number of source chunks.
     @param[in]  log_path Operation-local AI transaction log path.
     @param[in]  cancel_requested Optional cancellation callback.
-    @return     Concatenated translated text for the chunk.
+    @return     Concatenated translated text plus updated cumulative token usage.
     @exception  ValueError When any translated segment is empty.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-07
-    @version    0.1.0
+    @version    0.2.0
     """
     usable_input_budget = _usable_input_budget(ai_profile_payload)
     translated_segments: list[str] = []
@@ -935,7 +1066,7 @@ def _translate_text_in_budgeted_segments(
                 "source_text": source_segment,
             },
         )
-        payload = llm_provider_service.chat_json(
+        response_result = llm_provider_service.chat_json(
             ai_profile_payload,
             system_prompt,
             user_prompt,
@@ -951,14 +1082,35 @@ def _translate_text_in_budgeted_segments(
             },
             cancel_requested=cancel_requested,
         )
+        token_usage = token_usage_service.merge_token_usage(
+            token_usage,
+            response_result.get("usage"),
+        )
+        _emit_progress(
+            progress_callback,
+            translated_chunk_count,
+            total_chunks,
+            "AI translation in progress...",
+            token_usage,
+        )
+        payload = dict(response_result.get("payload", {}))
         translated_text = str(payload.get("translated_text", "")).strip()
         if not translated_text:
             raise ValueError("AI translation returned an empty translated_text segment.")
         translated_segments.append(translated_text)
-    return "\n\n".join(segment for segment in translated_segments if segment.strip())
+    return (
+        "\n\n".join(segment for segment in translated_segments if segment.strip()),
+        token_usage,
+    )
 
 
-def _emit_progress(progress_callback, progress_current: int, progress_total: int, message: str) -> None:
+def _emit_progress(
+    progress_callback,
+    progress_current: int,
+    progress_total: int,
+    message: str,
+    token_usage: TokenUsagePayload | None = None,
+) -> None:
     """
     @brief      Emit one normalized translation progress callback update.
     @param[in]  progress_callback Optional progress callback.
@@ -969,7 +1121,7 @@ def _emit_progress(progress_callback, progress_current: int, progress_total: int
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-07
-    @version    0.1.0
+    @version    0.2.0
     """
     if callable(progress_callback):
         progress_callback(
@@ -977,6 +1129,7 @@ def _emit_progress(progress_callback, progress_current: int, progress_total: int
             progress_total,
             progress_percent(progress_current, progress_total),
             message,
+            token_usage,
         )
 
 

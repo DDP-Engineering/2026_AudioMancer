@@ -13,7 +13,7 @@
          dialogs, the common modal progress popup, and title-bar helpers.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-06
-@version 0.4.0
+@version 0.5.0
 """
 
 # IMPORTS
@@ -205,6 +205,7 @@ def update_progress_dialog(
     window: "MainWindow",
     percent: int,
     message: str,
+    token_usage=None,
 ) -> None:
     """
     @brief      Update the shared modal progress dialog when present.
@@ -215,10 +216,14 @@ def update_progress_dialog(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.1.1
+    @version    0.2.0
     """
     if window._operation_progress_dialog is not None:
-        window._operation_progress_dialog.update_progress(percent, message)
+        window._operation_progress_dialog.update_progress(
+            percent,
+            message,
+            token_usage,
+        )
     process_pending_ui_events()
 
 

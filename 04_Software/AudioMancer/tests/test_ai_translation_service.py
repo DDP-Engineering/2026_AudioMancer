@@ -7,7 +7,7 @@
          review-state updates, and approval helpers.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-07
-@version 0.1.0
+@version 0.2.0
 """
 
 import json
@@ -32,7 +32,15 @@ def test_ai_translation_service_creates_translation_artifacts(monkeypatch, tmp_p
     monkeypatch.setattr(
         ai_translation_service.llm_provider_service,
         "chat_json",
-        lambda *_args, **_kwargs: {"translated_text": "Translated text"},
+        lambda *_args, **_kwargs: {
+            "payload": {"translated_text": "Translated text"},
+            "usage": {
+                "input_tokens": 100,
+                "output_tokens": 25,
+                "total_tokens": 125,
+                "usage_available": True,
+            },
+        },
     )
 
     report = ai_translation_service.start_or_continue_translation(
@@ -48,6 +56,7 @@ def test_ai_translation_service_creates_translation_artifacts(monkeypatch, tmp_p
     assert (translation_root / config.TRANSLATION_REPORT_FILE_NAME).is_file()
     assert (translation_root / config.OPERATION_STATE_FILE_NAME).is_file()
     assert report["translated_chunk_count"] == 2
+    assert report["token_usage"]["total_tokens"] == 250
 
 
 def test_ai_translation_service_approve_and_edit_update_review_state(tmp_path) -> None:
@@ -77,6 +86,12 @@ def test_ai_translation_service_approve_and_edit_update_review_state(tmp_path) -
             profile_id="profile-1",
             target_language="ro",
             log_path=project_root / config.TRANSLATION_FOLDER_NAME / "log_ai_transactions_20260407.log",
+            token_usage={
+                "input_tokens": 11,
+                "output_tokens": 7,
+                "total_tokens": 18,
+                "usage_available": True,
+            },
             resume_checkpoint={"next_untranslated_chunk_id": "chunk-0002"},
         ),
     )
@@ -114,6 +129,12 @@ def test_ai_translation_service_resume_preserves_completed_chunks(monkeypatch, t
             profile_id="profile-1",
             target_language="ro",
             log_path=project_root / config.TRANSLATION_FOLDER_NAME / "log_ai_transactions_20260407.log",
+            token_usage={
+                "input_tokens": 20,
+                "output_tokens": 10,
+                "total_tokens": 30,
+                "usage_available": True,
+            },
             resume_checkpoint={"next_untranslated_chunk_id": "chunk-0002"},
         ),
     )
@@ -131,7 +152,15 @@ def test_ai_translation_service_resume_preserves_completed_chunks(monkeypatch, t
     monkeypatch.setattr(
         ai_translation_service.llm_provider_service,
         "chat_json",
-        lambda *_args, **_kwargs: calls.append("called") or {"translated_text": "New translation"},
+        lambda *_args, **_kwargs: calls.append("called") or {
+            "payload": {"translated_text": "New translation"},
+            "usage": {
+                "input_tokens": 50,
+                "output_tokens": 15,
+                "total_tokens": 65,
+                "usage_available": True,
+            },
+        },
     )
 
     report = ai_translation_service.start_or_continue_translation(
@@ -146,6 +175,7 @@ def test_ai_translation_service_resume_preserves_completed_chunks(monkeypatch, t
     assert translated_chunks[0]["translated_text"] == "Existing translation"
     assert translated_chunks[1]["translated_text"] == "New translation"
     assert report["translated_chunk_count"] == 2
+    assert report["token_usage"]["total_tokens"] == 95
 
 
 def _create_chunked_project(tmp_path, name: str):

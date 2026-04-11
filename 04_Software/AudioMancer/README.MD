@@ -28,10 +28,11 @@ This folder contains the current Python application implementation for
 - `src/audiomancer/services/ai_cleanup_service.py` provides AI-assisted cleanup, resumable AI cleanup state, and operation-local AI transaction logging.
 - `src/audiomancer/services/ai_translation_service.py` provides AI-assisted translation, translated chunk review records, and resumable translation state.
 - `src/audiomancer/services/character_discovery_service.py` provides AI-assisted character discovery, resumable character-profile synthesis, and persisted discovery artifacts under `40_character_discovery`.
+- `src/audiomancer/services/token_usage_service.py` provides shared normalization and cumulative merge helpers for provider-reported token usage.
 - `src/audiomancer/services/text_chunking_state_service.py` provides Text Chunking page state shaping plus persisted chunk preview loading.
 - `src/audiomancer/services/ai_translation_state_service.py` provides AI Translation page state shaping plus persisted translated chunk and review loading.
 - `src/audiomancer/services/character_discovery_state_service.py` provides Characters page state shaping plus persisted discovery profile and evidence loading.
-- `src/audiomancer/services/llm_provider_service.py` provides OpenAI-compatible chat-completion requests, transient retry handling, conservative malformed-JSON repair, responsive cooperative cancellation during model waits, JSON normalization, and optional AI transaction logging.
+- `src/audiomancer/services/llm_provider_service.py` provides OpenAI-compatible chat-completion requests, transient retry handling, conservative malformed-JSON repair, responsive cooperative cancellation during model waits, JSON normalization, normalized token-usage extraction, and optional AI transaction logging.
 - `src/audiomancer/services/prompt_template_service.py` provides strict prompt loading and placeholder rendering from the app-root `prompts/` folder.
 - `src/audiomancer/services/operation_runtime_service.py` provides shared runtime helpers for long-running operation folders, resets, and progress conversion.
 - `src/audiomancer/services/home_presenter_service.py` provides pure manifest-to-view shaping for the Home page workflow progress and source summary.
@@ -82,6 +83,9 @@ This folder contains the current Python application implementation for
 - AI-assisted cleanup keeps the progress popup responsive while waiting for provider responses, so the cancel button is honored during long model calls.
 - OpenAI-compatible provider requests now retry automatically with `max_completion_tokens` when one remote API rejects `max_tokens`, while preserving the original payload shape for local providers that still expect `max_tokens`.
 - OpenAI-compatible provider requests now also retain raw assistant message content in the AI transaction log and can issue one follow-up JSON-repair request when a model returns malformed JSON text.
+- AI-assisted cleanup, AI-assisted chunking, AI translation, and character discovery now accumulate provider-reported input, output, and total tokens when the backend exposes a standard `usage` object.
+- the shared modal progress dialog now shows live token counters for AI workflows and falls back to one localized “not reported by the backend” message when usage is unavailable.
+- AI workflow reports, `state_operation.json`, transaction logs, and page notes now persist or display normalized token usage without copying those counters into the compact root `project.json`.
 - project names are stored exactly as entered but are rejected when invalid for Windows or Linux folder creation.
 - the `Settings` dialog now loads and saves `language`, `interface text size`, and `play completion beep` through the shared settings service.
 - saving `Settings` now applies the selected UI language and global text size to the running shell.

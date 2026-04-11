@@ -68,7 +68,8 @@ def test_ai_chunking_writes_chunking_artifacts_and_log(tmp_path, monkeypatch) ->
         ai_chunking_service.llm_provider_service,
         "chat_json",
         lambda *_args, **_kwargs: {
-            "break_after_unit_ids": ["paragraph-0002"],
+            "payload": {"break_after_unit_ids": ["paragraph-0002"]},
+            "usage": {"input_tokens": 25, "output_tokens": 5, "total_tokens": 30, "usage_available": True},
         },
     )
 
@@ -144,7 +145,8 @@ def test_ai_chunking_ignores_invalid_boundaries_and_closes_last_chunk(tmp_path, 
         ai_chunking_service.llm_provider_service,
         "chat_json",
         lambda *_args, **_kwargs: {
-            "break_after_unit_ids": ["paragraph-9999"],
+            "payload": {"break_after_unit_ids": ["paragraph-9999"]},
+            "usage": {"input_tokens": 15, "output_tokens": 4, "total_tokens": 19, "usage_available": True},
         },
     )
 
@@ -216,7 +218,15 @@ def test_ai_chunking_resumes_from_saved_window_checkpoint(tmp_path, monkeypatch)
         response = next(responses)
         if isinstance(response, Exception):
             raise response
-        return response
+        return {
+            "payload": response,
+            "usage": {
+                "input_tokens": 40,
+                "output_tokens": 10,
+                "total_tokens": 50,
+                "usage_available": True,
+            },
+        }
 
     monkeypatch.setattr(ai_chunking_service.llm_provider_service, "chat_json", _chat_json)
 
@@ -246,7 +256,15 @@ def test_ai_chunking_resumes_from_saved_window_checkpoint(tmp_path, monkeypatch)
     monkeypatch.setattr(
         ai_chunking_service.llm_provider_service,
         "chat_json",
-        lambda *_args, **_kwargs: {"break_after_unit_ids": ["paragraph-0019"]},
+        lambda *_args, **_kwargs: {
+            "payload": {"break_after_unit_ids": ["paragraph-0019"]},
+            "usage": {
+                "input_tokens": 30,
+                "output_tokens": 5,
+                "total_tokens": 35,
+                "usage_available": True,
+            },
+        },
     )
 
     report_payload = ai_chunking_service.chunk_text(
@@ -268,6 +286,7 @@ def test_ai_chunking_resumes_from_saved_window_checkpoint(tmp_path, monkeypatch)
     )
 
     assert report_payload["chunk_count"] == 3
+    assert report_payload["token_usage"]["total_tokens"] == 85
     completed_state = json.loads((project_root / "20_chunking" / config.OPERATION_STATE_FILE_NAME).read_text(encoding="utf-8"))
     assert completed_state["status"] == "completed"
     assert completed_state["progress_current"] == 2

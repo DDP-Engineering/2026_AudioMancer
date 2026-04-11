@@ -1075,6 +1075,47 @@ def test_main_window_exposes_modal_progress_dialog_and_cancel_signal(qtbot) -> N
     assert cancel_calls == [True]
 
 
+def test_main_window_progress_dialog_shows_token_usage(qtbot) -> None:
+    """
+    @brief      Verify the shared progress dialog renders token usage when provided.
+    @param[in]  qtbot Qt test helper fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-11
+    @version    0.1.0
+    """
+    window = MainWindow(settings_payload={
+        "language": "en",
+        "ui_text_scale": "normal",
+        "play_completion_beep": False,
+        "llm_profiles": [],
+        "default_ai_cleanup_profile_id": None,
+        "default_ai_chunking_profile_id": None,
+        "default_ai_chunking_strategy": "paragraph",
+        "default_character_extraction_profile_id": None,
+    })
+    qtbot.addWidget(window)
+    window._operation_progress_dialog = main_window_module.OperationProgressDialog(window)
+    window._operation_progress_dialog.start("Translate", "AI translation in progress...")
+    window._operation_progress_dialog.update_progress(
+        42,
+        "AI translation in progress...",
+        {
+            "input_tokens": 123,
+            "output_tokens": 45,
+            "total_tokens": 168,
+            "usage_available": True,
+        },
+    )
+
+    label_texts = [
+        widget.text()
+        for widget in window._operation_progress_dialog.findChildren(main_window_module.QLabel)
+    ]
+    assert any("Input tokens: 123 | Output tokens: 45 | Total: 168" in text for text in label_texts)
+
+
 def test_main_window_closes_progress_dialog_after_synchronous_completion(
     qtbot,
     tmp_path,

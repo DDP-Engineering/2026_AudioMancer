@@ -13,7 +13,7 @@
          selected-chunk retranslation, and modal progress lifecycle.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-11
-@version 0.3.0
+@version 0.4.0
 """
 
 # IMPORTS
@@ -278,7 +278,12 @@ def _start_operation(window: "MainWindow", operation_name: str, initial_message:
         result_payload = worker_callable(
             window._current_project_root,
             dict(window._current_manifest),
-            progress_callback=lambda current, total, percent, message: misc_ui_controller.update_progress_dialog(window, percent, message),
+            progress_callback=lambda current, total, percent, message, token_usage=None: misc_ui_controller.update_progress_dialog(
+                window,
+                percent,
+                message,
+                token_usage,
+            ),
             cancel_requested=lambda: _is_cancel_requested(window),
         )
     except operation_runtime_service.OperationCancelledError as error:

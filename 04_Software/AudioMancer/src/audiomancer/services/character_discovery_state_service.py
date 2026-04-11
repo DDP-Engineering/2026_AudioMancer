@@ -14,7 +14,7 @@
          and settings.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-08
-@version 0.3.0
+@version 0.4.0
 """
 
 from pathlib import Path
@@ -22,6 +22,7 @@ from pathlib import Path
 from audiomancer.services import character_discovery_service
 from audiomancer.services import deterministic_chunking_service
 from audiomancer.services import home_presenter_service
+from audiomancer.services import token_usage_service
 from audiomancer.services import ui_state_service
 
 
@@ -192,6 +193,7 @@ def build_character_discovery_notes(
                 analyzed_window_count=int(report.get("analyzed_window_count", 0)),
             )
         )
+        notes.extend(_build_token_usage_notes(report, operation_state, language))
         notes.extend(
             str(item)
             for item in list(report.get("warnings", []))
@@ -200,6 +202,8 @@ def build_character_discovery_notes(
         notes.append(
             ui_state_service.translate("characters.note_rerun_replaces_manual", language)
         )
+    elif operation_state is not None:
+        notes.extend(_build_token_usage_notes(report, operation_state, language))
     if not has_ai_profiles:
         notes.append(ui_state_service.translate("characters.note_no_profile", language))
         return notes
@@ -239,6 +243,39 @@ def build_character_discovery_notes(
     else:
         notes.append(ui_state_service.translate("characters.note_ready", language))
     return notes
+
+
+def _build_token_usage_notes(
+    report: dict[str, object] | None,
+    operation_state: dict[str, object] | None,
+    language: str,
+) -> list[str]:
+    metadata = {}
+    if isinstance(operation_state, dict):
+        metadata = operation_state.get("metadata", {})
+    token_usage = token_usage_service.restore_token_usage(
+        None if not isinstance(report, dict) else report.get("token_usage"),
+        metadata.get("token_usage") if isinstance(metadata, dict) else None,
+    )
+    if bool(token_usage.get("usage_available", False)):
+        return [
+            ui_state_service.translate("ai.note_token_usage_summary", language).format(
+                input_tokens=format(int(token_usage["input_tokens"]), ","),
+                output_tokens=format(int(token_usage["output_tokens"]), ","),
+                total_tokens=format(int(token_usage["total_tokens"]), ","),
+            )
+        ]
+    if (
+        isinstance(report, dict)
+        and "token_usage" in report
+    ) or (
+        isinstance(metadata, dict)
+        and "token_usage" in metadata
+    ):
+        return [
+            ui_state_service.translate("ai.note_token_usage_unavailable", language)
+        ]
+    return []
 
 
 def _character_discovery_stage_status(

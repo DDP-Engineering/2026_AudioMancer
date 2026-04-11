@@ -60,12 +60,20 @@ def test_ai_cleanup_writes_cleanup_artifacts_and_log(tmp_path, monkeypatch) -> N
 
     responses = iter([
         {
-            "results": [
-                {"unit_id": "unit-0001", "label": "story"},
-                {"unit_id": "unit-0002", "label": "story"},
-                {"unit_id": "unit-0003", "label": "separator"},
-                {"unit_id": "unit-0004", "label": "story"},
-            ]
+            "payload": {
+                "results": [
+                    {"unit_id": "unit-0001", "label": "story"},
+                    {"unit_id": "unit-0002", "label": "story"},
+                    {"unit_id": "unit-0003", "label": "separator"},
+                    {"unit_id": "unit-0004", "label": "story"},
+                ]
+            },
+            "usage": {
+                "input_tokens": 20,
+                "output_tokens": 5,
+                "total_tokens": 25,
+                "usage_available": True,
+            },
         }
     ])
     monkeypatch.setattr(
@@ -144,9 +152,12 @@ def test_ai_cleanup_heals_soft_line_breaks_inside_one_phrase(tmp_path, monkeypat
         ai_cleanup_service.llm_provider_service,
         "chat_json",
         lambda *_args, **_kwargs: {
-            "results": [
-                {"unit_id": "unit-0001", "label": "story"},
-            ]
+            "payload": {
+                "results": [
+                    {"unit_id": "unit-0001", "label": "story"},
+                ]
+            },
+            "usage": {"input_tokens": 10, "output_tokens": 2, "total_tokens": 12, "usage_available": True},
         },
     )
 
@@ -212,9 +223,12 @@ def test_ai_cleanup_joins_unfinished_line_before_proper_name(tmp_path, monkeypat
         ai_cleanup_service.llm_provider_service,
         "chat_json",
         lambda *_args, **_kwargs: {
-            "results": [
-                {"unit_id": "unit-0001", "label": "story"},
-            ]
+            "payload": {
+                "results": [
+                    {"unit_id": "unit-0001", "label": "story"},
+                ]
+            },
+            "usage": {"input_tokens": 10, "output_tokens": 2, "total_tokens": 12, "usage_available": True},
         },
     )
 
@@ -281,11 +295,14 @@ def test_ai_cleanup_merges_page_split_continuation_paragraphs(tmp_path, monkeypa
         ai_cleanup_service.llm_provider_service,
         "chat_json",
         lambda *_args, **_kwargs: {
-            "results": [
-                {"unit_id": "unit-0001", "label": "story"},
-                {"unit_id": "unit-0002", "label": "page_number"},
-                {"unit_id": "unit-0003", "label": "story"},
-            ]
+            "payload": {
+                "results": [
+                    {"unit_id": "unit-0001", "label": "story"},
+                    {"unit_id": "unit-0002", "label": "page_number"},
+                    {"unit_id": "unit-0003", "label": "story"},
+                ]
+            },
+            "usage": {"input_tokens": 12, "output_tokens": 3, "total_tokens": 15, "usage_available": True},
         },
     )
 
@@ -359,14 +376,17 @@ def test_ai_cleanup_corrects_invalid_tail_labels_and_persists_warnings(tmp_path,
         ai_cleanup_service.llm_provider_service,
         "chat_json",
         lambda *_args, **_kwargs: {
-            "results": [
-                {"unit_id": "unit-0001", "label": "story"},
-                {"unit_id": "unit-0002", "label": "story"},
-                {"unit_id": "unit-0003", "label": "page_number"},
-                {"unit_id": "unit-0004", "label": "story"},
-                {"unit_id": "unit-0005", "label": "page_number"},
-                {"unit_id": "unit-0006", "label": "story"},
-            ]
+            "payload": {
+                "results": [
+                    {"unit_id": "unit-0001", "label": "story"},
+                    {"unit_id": "unit-0002", "label": "story"},
+                    {"unit_id": "unit-0003", "label": "page_number"},
+                    {"unit_id": "unit-0004", "label": "story"},
+                    {"unit_id": "unit-0005", "label": "page_number"},
+                    {"unit_id": "unit-0006", "label": "story"},
+                ]
+            },
+            "usage": {"input_tokens": 18, "output_tokens": 6, "total_tokens": 24, "usage_available": True},
         },
     )
 
@@ -452,10 +472,18 @@ def test_ai_cleanup_splits_long_input_into_multiple_windows(tmp_path, monkeypatc
         start_unit = (window_index - 1) * config.DEFAULT_AI_CLEANUP_MAX_WINDOW_UNITS + 1
         end_unit = min(start_unit + config.DEFAULT_AI_CLEANUP_MAX_WINDOW_UNITS - 1, 30)
         return {
-            "results": [
-                {"unit_id": f"unit-{unit_index:04d}", "label": "story"}
-                for unit_index in range(start_unit, end_unit + 1)
-            ]
+            "payload": {
+                "results": [
+                    {"unit_id": f"unit-{unit_index:04d}", "label": "story"}
+                    for unit_index in range(start_unit, end_unit + 1)
+                ]
+            },
+            "usage": {
+                "input_tokens": 50,
+                "output_tokens": 10,
+                "total_tokens": 60,
+                "usage_available": True,
+            },
         }
 
     monkeypatch.setattr(
@@ -483,6 +511,7 @@ def test_ai_cleanup_splits_long_input_into_multiple_windows(tmp_path, monkeypatc
 
     assert len(call_contexts) == 2
     assert report_payload["window_count"] == 2
+    assert report_payload["token_usage"]["total_tokens"] == 120
     assert call_contexts[0]["window_index"] == 1
     assert call_contexts[1]["window_index"] == 2
 

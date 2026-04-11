@@ -13,7 +13,7 @@
          states correctly.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-07
-@version 0.1.0
+@version 0.2.0
 """
 
 # IMPORTS
@@ -75,6 +75,43 @@ def test_build_text_chunking_notes_shows_resume_note_for_failed_ai_chunking() ->
 
     assert any("was not finalized" in note for note in notes)
     assert not any("in progress at 1/29" in note for note in notes)
+
+
+def test_build_text_chunking_notes_shows_persisted_token_usage_summary() -> None:
+    """
+    @brief      Verify AI chunking notes include one persisted token-usage summary.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-11
+    @version    0.1.0
+    """
+    notes = text_chunking_state_service.build_text_chunking_notes(
+        manifest={"source_document": {"original_name": "story.txt"}},
+        cleaned_text="Cleaned text",
+        chunking_report_payload={
+            "chunk_count": 4,
+            "detected_chapter_count": 1,
+            "chunking_mode": "ai_assisted",
+            "semantic_strategy": "scene",
+            "warnings": [],
+            "token_usage": {
+                "input_tokens": 120,
+                "output_tokens": 30,
+                "total_tokens": 150,
+                "usage_available": True,
+            },
+        },
+        chunking_operation_state={
+            "status": "completed",
+            "mode": "ai_assisted",
+            "metadata": {"semantic_strategy": "scene"},
+        },
+        has_ai_profiles=True,
+        language="en",
+    )
+
+    assert any("Input tokens: 120 | Output tokens: 30 | Total: 150" in note for note in notes)
 
 
 # END OF FILE

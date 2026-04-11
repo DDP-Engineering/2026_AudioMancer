@@ -12,10 +12,33 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- added shared backend-agnostic token-usage normalization and cumulative merge helpers for OpenAI-compatible AI workflows
+- added live AI token counters in the modal progress dialog plus persisted token-usage notes in cleanup, chunking, translation, and character-discovery page state
+- added provider-service and workflow regression coverage for normalized usage extraction and persisted token summaries
+- added `AudioMancer_LLM_Provider_Service.md` software documentation for the shared provider contract and token-usage behavior
+
 ### Changed
 
-- added repository ignore rules for one-off `09_Others/Test*/` folders so transient analysis outputs stay out of version control
-- package version updated to `0.15.1`
+- changed the shared OpenAI-compatible provider contract so `chat_json(...)` now returns parsed payload data plus normalized `usage`
+- changed AI cleanup, AI chunking, AI translation, and character discovery to accumulate provider-reported input, output, and total tokens in step-local reports, state files, and transaction logs
+- package version updated to `0.16.0`
+
+### Fixed
+
+## [0.16.0] - 2026-04-11
+
+### Added
+
+- added shared backend-agnostic token-usage normalization and cumulative merge helpers for OpenAI-compatible AI workflows
+- added live AI token counters in the modal progress dialog plus persisted token-usage notes in cleanup, chunking, translation, and character-discovery page state
+- added provider-service and workflow regression coverage for normalized usage extraction and persisted token summaries
+- added `AudioMancer_LLM_Provider_Service.md` software documentation for the shared provider contract and token-usage behavior
+
+### Changed
+
+- changed the shared OpenAI-compatible provider contract so `chat_json(...)` now returns parsed payload data plus normalized `usage`
+- changed AI cleanup, AI chunking, AI translation, and character discovery to accumulate provider-reported input, output, and total tokens in step-local reports, state files, and transaction logs
+- package version updated to `0.16.0`
 
 ### Fixed
 

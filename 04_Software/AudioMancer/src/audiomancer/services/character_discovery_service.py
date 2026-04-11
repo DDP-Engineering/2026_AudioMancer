@@ -14,7 +14,7 @@
          workflow artifacts, and maintains resumable AI operation state.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-11
-@version 0.2.0
+@version 0.3.0
 """
 
 # IMPORTS
@@ -29,6 +29,7 @@ from audiomancer import config
 from audiomancer.services import deterministic_chunking_service
 from audiomancer.services import llm_provider_service
 from audiomancer.services import prompt_template_service
+from audiomancer.services import token_usage_service
 from audiomancer.services import text_cleanup_state_service
 from audiomancer.services.logging_service import get_component_logger, trace_function
 from audiomancer.services.operation_runtime_service import (
@@ -66,6 +67,7 @@ CharacterProfilePayload = dict[str, object]
 CharacterDiscoveryReportPayload = dict[str, object]
 # @brief Persisted character-discovery operation-state payload type.
 OperationStatePayload = dict[str, object]
+TokenUsagePayload = dict[str, object]
 
 
 # PUBLIC API
@@ -101,7 +103,7 @@ def load_character_profiles(project_root: str | Path) -> list[CharacterProfilePa
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-08
-    @version    0.1.0
+    @version    0.2.0
     """
     output_path = build_operation_output_path(
         project_root,
@@ -246,6 +248,7 @@ def start_or_continue_discovery(
         profile_id,
         len(windows),
     )
+    token_usage = _restore_token_usage(existing_state)
     log_path = _resolve_log_path(resolved_project_root, started_at, log_relative_path)
     chunk_map = {
         str(chunk.get("chunk_id", "")): dict(chunk)
@@ -281,6 +284,7 @@ def start_or_continue_discovery(
         warnings=[],
         input_fingerprint=input_fingerprint,
         log_path=log_path,
+        token_usage=token_usage,
         resume_checkpoint={
             "input_fingerprint": input_fingerprint,
             "profile_id": profile_id,
@@ -306,6 +310,7 @@ def start_or_continue_discovery(
                 else "Character discovery in progress..."
             )
         ),
+        token_usage=token_usage,
     )
 
     system_prompt = prompt_template_service.render_prompt(
@@ -320,7 +325,7 @@ def start_or_continue_discovery(
             {"units_block": _build_units_block(window_records)},
         )
         try:
-            response_payload = llm_provider_service.chat_json(
+            response_result = llm_provider_service.chat_json(
                 ai_profile_payload,
                 system_prompt,
                 user_prompt,
@@ -338,6 +343,11 @@ def start_or_continue_discovery(
             raise OperationCancelledError(
                 "Character discovery cancelled while waiting for the model response."
             ) from error
+        response_payload = dict(response_result.get("payload", {}))
+        token_usage = token_usage_service.merge_token_usage(
+            token_usage,
+            response_result.get("usage"),
+        )
         raw_candidates.extend(
             _normalize_window_candidates(
                 response_payload.get("characters", []),
@@ -363,6 +373,7 @@ def start_or_continue_discovery(
             warnings=[],
             input_fingerprint=input_fingerprint,
             log_path=log_path,
+            token_usage=token_usage,
             resume_checkpoint={
                 "input_fingerprint": input_fingerprint,
                 "profile_id": profile_id,
@@ -380,6 +391,7 @@ def start_or_continue_discovery(
             window_index + 1,
             len(windows),
             "Character discovery in progress...",
+            token_usage=token_usage,
         )
 
     if not merged_candidates:
@@ -404,6 +416,7 @@ def start_or_continue_discovery(
         warnings=[],
         input_fingerprint=input_fingerprint,
         log_path=log_path,
+        token_usage=token_usage,
         resume_checkpoint={
             "input_fingerprint": input_fingerprint,
             "profile_id": profile_id,
@@ -430,7 +443,7 @@ def start_or_continue_discovery(
             },
         )
         try:
-            response_payload = llm_provider_service.chat_json(
+            response_result = llm_provider_service.chat_json(
                 ai_profile_payload,
                 system_prompt,
                 user_prompt,
@@ -448,6 +461,11 @@ def start_or_continue_discovery(
             raise OperationCancelledError(
                 "Character discovery cancelled while waiting for the model response."
             ) from error
+        response_payload = dict(response_result.get("payload", {}))
+        token_usage = token_usage_service.merge_token_usage(
+            token_usage,
+            response_result.get("usage"),
+        )
         synthesized_profiles.append(
             _build_profile_from_synthesis(response_payload, candidate)
         )
@@ -470,6 +488,7 @@ def start_or_continue_discovery(
             warnings=[],
             input_fingerprint=input_fingerprint,
             log_path=log_path,
+            token_usage=token_usage,
             resume_checkpoint={
                 "input_fingerprint": input_fingerprint,
                 "profile_id": profile_id,
@@ -487,6 +506,7 @@ def start_or_continue_discovery(
             len(windows) + len(synthesized_profiles),
             total_progress,
             "Character profile synthesis in progress...",
+            token_usage=token_usage,
         )
 
     ordered_profiles = sorted(synthesized_profiles, key=_profile_sort_key)
@@ -502,6 +522,7 @@ def start_or_continue_discovery(
         "warning_count": 0,
         "warnings": [],
         "generated_at": _utc_now_iso(),
+        "token_usage": token_usage,
     }
     output_path.write_text(
         json.dumps(ordered_profiles, indent=2, ensure_ascii=False) + "\n",
@@ -530,6 +551,7 @@ def start_or_continue_discovery(
         warnings=[],
         input_fingerprint=input_fingerprint,
         log_path=log_path,
+        token_usage=token_usage,
         resume_checkpoint=None,
     )
     _emit_progress(
@@ -537,6 +559,7 @@ def start_or_continue_discovery(
         total_progress,
         total_progress,
         "Character discovery completed.",
+        token_usage=token_usage,
     )
     return report_payload
 
@@ -972,6 +995,13 @@ def _restore_resume_state(
     )
 
 
+def _restore_token_usage(existing_state: dict[str, object]) -> TokenUsagePayload:
+    metadata = existing_state.get("metadata", {})
+    if not isinstance(metadata, dict):
+        return token_usage_service.empty_token_usage()
+    return token_usage_service.restore_token_usage(metadata.get("token_usage"))
+
+
 def _restore_mapping_list(payload: object) -> list[dict[str, object]]:
     if not isinstance(payload, list):
         return []
@@ -1024,6 +1054,7 @@ def _write_operation_state(
     warnings: list[str],
     input_fingerprint: str,
     log_path: Path,
+    token_usage: TokenUsagePayload,
     resume_checkpoint: dict[str, object] | None,
 ) -> None:
     artifact_paths = [relative_to_project(project_root, log_path)]
@@ -1061,6 +1092,7 @@ def _write_operation_state(
             "warnings": list(warnings),
             "input_fingerprint": input_fingerprint,
             "log_relative_path": relative_to_project(project_root, log_path),
+            "token_usage": token_usage_service.coerce_token_usage(token_usage),
         },
         "resume_checkpoint": (
             None
@@ -1433,6 +1465,7 @@ def _emit_progress(
     progress_current: int,
     progress_total: int,
     message: str,
+    token_usage: TokenUsagePayload | None = None,
 ) -> None:
     if callable(progress_callback):
         progress_callback(
@@ -1440,6 +1473,7 @@ def _emit_progress(
             progress_total,
             progress_percent(progress_current, progress_total),
             message,
+            token_usage,
         )
 
 

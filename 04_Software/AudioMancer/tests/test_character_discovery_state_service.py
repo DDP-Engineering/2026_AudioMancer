@@ -14,7 +14,7 @@
          profile behavior.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-08
-@version 0.2.0
+@version 0.3.0
 """
 
 import json
@@ -64,6 +64,7 @@ def test_build_character_state_exposes_manual_maintenance_flags(tmp_path) -> Non
     assert state["can_delete"] is True
     assert state["source_chunk_map"]["chunk-0001"] == '"Hello there," said Alice.'
     assert any("Discovered 1 speaking characters" in note for note in state["notes"])
+    assert any("Input tokens: 140 | Output tokens: 35 | Total: 175" in note for note in state["notes"])
     assert any("fresh discovery rerun replaces" in note for note in state["notes"])
 
 
@@ -198,6 +199,12 @@ def _create_project(tmp_path, name: str):
                 "warning_count": 0,
                 "warnings": [],
                 "generated_at": "2026-04-08T12:01:00+00:00",
+                "token_usage": {
+                    "input_tokens": 140,
+                    "output_tokens": 35,
+                    "total_tokens": 175,
+                    "usage_available": True,
+                },
             },
             indent=2,
         ) + "\n",
@@ -218,7 +225,16 @@ def _create_project(tmp_path, name: str):
                 "completed_at": "2026-04-08T12:01:00+00:00",
                 "updated_at": "2026-04-08T12:01:00+00:00",
                 "warning_count": 0,
-                "metadata": {"ai_profile_id": "profile-1", "character_count": 1},
+                "metadata": {
+                    "ai_profile_id": "profile-1",
+                    "character_count": 1,
+                    "token_usage": {
+                        "input_tokens": 140,
+                        "output_tokens": 35,
+                        "total_tokens": 175,
+                        "usage_available": True,
+                    },
+                },
                 "resume_checkpoint": None,
             },
             indent=2,

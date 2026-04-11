@@ -13,7 +13,7 @@
          selectors, and operator notes used by the Text Chunking page.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-07
-@version 0.3.0
+@version 0.4.0
 """
 
 # IMPORTS
@@ -24,6 +24,7 @@ from audiomancer import config
 from audiomancer.services import deterministic_chunking_service
 from audiomancer.services import home_presenter_service
 from audiomancer.services import text_cleanup_state_service
+from audiomancer.services import token_usage_service
 from audiomancer.services import ui_state_service
 
 
@@ -185,6 +186,14 @@ def build_text_chunking_notes(
                 ),
             )
         )
+        if chunking_mode == "ai_assisted":
+            notes.extend(
+                _build_token_usage_notes(
+                    chunking_report_payload,
+                    chunking_operation_state,
+                    language,
+                )
+            )
         notes.extend(str(item) for item in list(chunking_report_payload.get("warnings", [])))
         if chunking_status == "completed":
             rerun_key = (
@@ -222,6 +231,14 @@ def build_text_chunking_notes(
                 ).get("semantic_strategy", config.DEFAULT_AI_CHUNKING_STRATEGY),
             )
         )
+        if chunking_mode == "ai_assisted":
+            notes.extend(
+                _build_token_usage_notes(
+                    chunking_report_payload,
+                    chunking_operation_state,
+                    language,
+                )
+            )
         return notes
 
     if chunking_status == "failed":
@@ -251,6 +268,14 @@ def build_text_chunking_notes(
                 ).get("semantic_strategy", config.DEFAULT_AI_CHUNKING_STRATEGY),
             )
         )
+        if chunking_mode == "ai_assisted":
+            notes.extend(
+                _build_token_usage_notes(
+                    chunking_report_payload,
+                    chunking_operation_state,
+                    language,
+                )
+            )
         return notes
 
     notes.append(ui_state_service.translate("text_chunking.note_ready", language))
@@ -273,6 +298,39 @@ def _selected_ai_strategy(settings_payload: dict[str, object] | None) -> str:
     if candidate not in config.AI_CHUNKING_STRATEGY_OPTIONS:
         return config.DEFAULT_AI_CHUNKING_STRATEGY
     return candidate
+
+
+def _build_token_usage_notes(
+    report_payload: dict[str, object] | None,
+    operation_state: dict[str, object] | None,
+    language: str,
+) -> list[str]:
+    metadata = {}
+    if isinstance(operation_state, dict):
+        metadata = operation_state.get("metadata", {})
+    token_usage = token_usage_service.restore_token_usage(
+        None if not isinstance(report_payload, dict) else report_payload.get("token_usage"),
+        metadata.get("token_usage") if isinstance(metadata, dict) else None,
+    )
+    if bool(token_usage.get("usage_available", False)):
+        return [
+            ui_state_service.translate("ai.note_token_usage_summary", language).format(
+                input_tokens=format(int(token_usage["input_tokens"]), ","),
+                output_tokens=format(int(token_usage["output_tokens"]), ","),
+                total_tokens=format(int(token_usage["total_tokens"]), ","),
+            )
+        ]
+    if (
+        isinstance(report_payload, dict)
+        and "token_usage" in report_payload
+    ) or (
+        isinstance(metadata, dict)
+        and "token_usage" in metadata
+    ):
+        return [
+            ui_state_service.translate("ai.note_token_usage_unavailable", language)
+        ]
+    return []
 
 
 # END OF FILE

@@ -13,7 +13,7 @@
          application through one centralized string catalog and scale mapping.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-07
-@version 0.15.0
+@version 0.16.0
 """
 
 # IMPORTS
@@ -70,6 +70,8 @@ _UI_STRINGS = {
         "dialog.confirm_ai_cleanup_rerun_title": "Confirm AI Cleanup Rerun",
         "dialog.operation_progress_title": "{operation_name} In Progress",
         "dialog.operation_progress_cancel": "Cancel Operation",
+        "dialog.operation_progress_token_usage": "Input tokens: {input_tokens} | Output tokens: {output_tokens} | Total: {total_tokens}",
+        "dialog.operation_progress_token_usage_unavailable": "Token usage was not reported by the backend.",
         "about.subtitle": "Transform written words into real audio experience!",
         "about.license": "License",
         "about.details": "Eng. Dipl. Dan Dumitru Pasare\npasaredan1979@gmail.com",
@@ -224,6 +226,8 @@ _UI_STRINGS = {
         "ai_translation.note_resume": "A previous translation run was not finalized. Press Start Translation to continue from progress {progress_current}/{progress_total}.",
         "ai_translation.note_completed_locked": "Translation is completed. Reset Translation to change the language or start over.",
         "ai_translation.note_summary": "Translated chunks: {translated_count}/{total_count}. Approved chunks: {approved_count}/{total_count}.",
+        "ai.note_token_usage_summary": "Input tokens: {input_tokens} | Output tokens: {output_tokens} | Total: {total_tokens}",
+        "ai.note_token_usage_unavailable": "Token usage was not reported by the backend.",
         "characters.title": "Characters",
         "characters.ai_profile": "AI Profile",
         "characters.start": "Start Discovery",
@@ -392,6 +396,8 @@ _UI_STRINGS = {
         "dialog.confirm_ai_cleanup_rerun_title": "Confirma Reluarea Curatarii AI",
         "dialog.operation_progress_title": "{operation_name} In Curs",
         "dialog.operation_progress_cancel": "Anuleaza Operatia",
+        "dialog.operation_progress_token_usage": "Tokeni intrare: {input_tokens} | Tokeni iesire: {output_tokens} | Total: {total_tokens}",
+        "dialog.operation_progress_token_usage_unavailable": "Utilizarea tokenilor nu a fost raportata de backend.",
         "about.subtitle": "Transforma cuvintele scrise intr-o experienta audio reala!",
         "about.license": "Licenta",
         "about.details": "Ing. Dipl. Dan Dumitru Pasare\npasaredan1979@gmail.com",
@@ -546,6 +552,8 @@ _UI_STRINGS = {
         "ai_translation.note_resume": "O rulare anterioara de traducere nu a fost finalizata. Apasa Porneste Traducerea pentru a continua de la progresul {progress_current}/{progress_total}.",
         "ai_translation.note_completed_locked": "Traducerea este finalizata. Reseteaza Traducerea pentru a schimba limba sau a porni din nou.",
         "ai_translation.note_summary": "Segmente traduse: {translated_count}/{total_count}. Segmente aprobate: {approved_count}/{total_count}.",
+        "ai.note_token_usage_summary": "Tokeni intrare: {input_tokens} | Tokeni iesire: {output_tokens} | Total: {total_tokens}",
+        "ai.note_token_usage_unavailable": "Utilizarea tokenilor nu a fost raportata de backend.",
         "characters.title": "Personaje",
         "characters.ai_profile": "Profil AI",
         "characters.start": "Porneste Descoperirea",

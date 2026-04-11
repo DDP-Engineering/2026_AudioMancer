@@ -14,7 +14,7 @@
          and manifest synchronization for the Text Chunking page.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-11
-@version 0.3.0
+@version 0.4.0
 """
 
 # IMPORTS
@@ -236,13 +236,14 @@ def start_operation(
         result_payload = worker_callable(
             window._current_project_root,
             dict(window._current_manifest),
-            progress_callback=lambda progress_current, progress_total, percent, message: (
+            progress_callback=lambda progress_current, progress_total, percent, message, token_usage=None: (
                 handle_operation_progress(
                     window,
                     progress_current,
                     progress_total,
                     percent,
                     message,
+                    token_usage,
                 )
             ),
             cancel_requested=lambda: is_cancel_requested(window),
@@ -263,6 +264,7 @@ def handle_operation_progress(
     progress_total: int,
     percent: int,
     message: str,
+    token_usage=None,
 ) -> None:
     """
     @brief      Refresh the modal progress dialog for one running operation.
@@ -275,11 +277,11 @@ def handle_operation_progress(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-07
-    @version    0.1.0
+    @version    0.2.0
     """
     _ = progress_current
     _ = progress_total
-    misc_ui_controller.update_progress_dialog(window, percent, message)
+    misc_ui_controller.update_progress_dialog(window, percent, message, token_usage)
 
 
 def cancel_active_operation(window: "MainWindow") -> None:

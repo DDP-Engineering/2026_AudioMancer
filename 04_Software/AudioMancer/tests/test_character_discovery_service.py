@@ -40,27 +40,33 @@ def test_start_discovery_persists_outputs_and_report(monkeypatch, tmp_path) -> N
     )
     responses = iter([
         {
-            "characters": [
-                {
-                    "canonical_name": "Alice",
-                    "aliases": ["Al"],
-                    "role_summary": "Lead speaker",
-                    "evidence": [
-                        {
-                            "chunk_id": "chunk-0001",
-                            "reason": "Alice speaks in direct dialogue.",
-                        }
-                    ],
-                }
-            ]
+            "payload": {
+                "characters": [
+                    {
+                        "canonical_name": "Alice",
+                        "aliases": ["Al"],
+                        "role_summary": "Lead speaker",
+                        "evidence": [
+                            {
+                                "chunk_id": "chunk-0001",
+                                "reason": "Alice speaks in direct dialogue.",
+                            }
+                        ],
+                    }
+                ]
+            },
+            "usage": {"input_tokens": 60, "output_tokens": 15, "total_tokens": 75, "usage_available": True},
         },
         {
-            "canonical_name": "Alice",
-            "aliases": ["Al"],
-            "role_summary": "Lead speaker",
-            "description": "Confident young woman.",
-            "relationship_hints": ["Knows Bob."],
-            "confidence": "high",
+            "payload": {
+                "canonical_name": "Alice",
+                "aliases": ["Al"],
+                "role_summary": "Lead speaker",
+                "description": "Confident young woman.",
+                "relationship_hints": ["Knows Bob."],
+                "confidence": "high",
+            },
+            "usage": {"input_tokens": 40, "output_tokens": 20, "total_tokens": 60, "usage_available": True},
         },
     ])
     monkeypatch.setattr(
@@ -92,6 +98,7 @@ def test_start_discovery_persists_outputs_and_report(monkeypatch, tmp_path) -> N
     assert state["output_paths"] == [
         f"{config.CHARACTER_DISCOVERY_FOLDER_NAME}/{config.CHARACTER_PROFILE_FILE_NAME}"
     ]
+    assert report["token_usage"]["total_tokens"] == 135
 
 
 def test_start_discovery_resumes_from_saved_synthesis_checkpoint(monkeypatch, tmp_path) -> None:
@@ -176,9 +183,17 @@ def test_start_discovery_resumes_from_saved_synthesis_checkpoint(monkeypatch, tm
     def _fake_chat_json(*_args, **_kwargs):
         call_count["value"] += 1
         return {
-            "canonical_name": "Alice",
-            "description": "Resumed profile synthesis.",
-            "confidence": "high",
+            "payload": {
+                "canonical_name": "Alice",
+                "description": "Resumed profile synthesis.",
+                "confidence": "high",
+            },
+            "usage": {
+                "input_tokens": 70,
+                "output_tokens": 20,
+                "total_tokens": 90,
+                "usage_available": True,
+            },
         }
 
     monkeypatch.setattr(
@@ -197,6 +212,7 @@ def test_start_discovery_resumes_from_saved_synthesis_checkpoint(monkeypatch, tm
 
     assert call_count["value"] == 1
     assert report["character_count"] == 1
+    assert report["token_usage"]["total_tokens"] == 90
     assert character_discovery_service.load_character_profiles(project_root)[0]["description"] == "Resumed profile synthesis."
 
 

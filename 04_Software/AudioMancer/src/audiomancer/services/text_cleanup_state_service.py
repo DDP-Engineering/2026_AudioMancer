@@ -13,7 +13,7 @@
          manifest reset payloads used by the Text Cleanup page workflows.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-07
-@version 0.5.0
+@version 0.6.0
 """
 
 # IMPORTS
@@ -26,6 +26,7 @@ from audiomancer.services import home_presenter_service
 from audiomancer.services import operation_runtime_service
 from audiomancer.services import project_workspace_service
 from audiomancer.services import text_extraction_service
+from audiomancer.services import token_usage_service
 from audiomancer.services import ui_state_service
 
 
@@ -242,6 +243,14 @@ def build_text_cleanup_notes(
                     language,
                 ).format(profile_label=str(ai_profile_id))
             )
+        if cleanup_mode == "ai_assisted":
+            notes.extend(
+                _build_token_usage_notes(
+                    cleanup_report_payload,
+                    cleanup_operation_state,
+                    language,
+                )
+            )
         cleanup_warnings = [
             str(item)
             for item in list(cleanup_report_payload.get("warnings", []))
@@ -297,10 +306,51 @@ def build_text_cleanup_notes(
                 progress_total=progress_total,
             )
         )
+        if running_mode == "ai_assisted":
+            notes.extend(
+                _build_token_usage_notes(
+                    cleanup_report_payload,
+                    cleanup_operation_state,
+                    language,
+                )
+            )
         return notes
 
     notes.append(ui_state_service.translate("text_cleanup.note_cleanup_ready", language))
     return notes
+
+
+def _build_token_usage_notes(
+    report_payload: dict[str, object] | None,
+    operation_state: dict[str, object] | None,
+    language: str,
+) -> list[str]:
+    metadata = {}
+    if isinstance(operation_state, dict):
+        metadata = operation_state.get("metadata", {})
+    token_usage = token_usage_service.restore_token_usage(
+        None if not isinstance(report_payload, dict) else report_payload.get("token_usage"),
+        metadata.get("token_usage") if isinstance(metadata, dict) else None,
+    )
+    if bool(token_usage.get("usage_available", False)):
+        return [
+            ui_state_service.translate("ai.note_token_usage_summary", language).format(
+                input_tokens=format(int(token_usage["input_tokens"]), ","),
+                output_tokens=format(int(token_usage["output_tokens"]), ","),
+                total_tokens=format(int(token_usage["total_tokens"]), ","),
+            )
+        ]
+    if (
+        isinstance(report_payload, dict)
+        and "token_usage" in report_payload
+    ) or (
+        isinstance(metadata, dict)
+        and "token_usage" in metadata
+    ):
+        return [
+            ui_state_service.translate("ai.note_token_usage_unavailable", language)
+        ]
+    return []
 
 
 def normalized_manifest_operations(

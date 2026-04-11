@@ -13,7 +13,7 @@
          chunk records, translation reports, and current operation state.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-07
-@version 0.2.0
+@version 0.3.0
 """
 
 # IMPORTS
@@ -24,6 +24,7 @@ from audiomancer import config
 from audiomancer.services import ai_translation_service
 from audiomancer.services import deterministic_chunking_service
 from audiomancer.services import home_presenter_service
+from audiomancer.services import token_usage_service
 from audiomancer.services import ui_state_service
 
 
@@ -177,8 +178,11 @@ def build_ai_translation_notes(
         )
     ]
     if report is not None:
+        notes.extend(_build_token_usage_notes(report, operation_state, language))
         warnings = [str(item) for item in list(report.get("warnings", [])) if str(item).strip()]
         notes.extend(warnings)
+    elif stage_status in {"running", "failed"}:
+        notes.extend(_build_token_usage_notes(report, operation_state, language))
     if not has_ai_profiles:
         notes.append(ui_state_service.translate("ai_translation.note_no_profile", language))
         return notes
@@ -205,6 +209,39 @@ def build_ai_translation_notes(
     else:
         notes.append(ui_state_service.translate("ai_translation.note_ready", language))
     return notes
+
+
+def _build_token_usage_notes(
+    report: dict[str, object] | None,
+    operation_state: dict[str, object] | None,
+    language: str,
+) -> list[str]:
+    metadata = {}
+    if isinstance(operation_state, dict):
+        metadata = operation_state.get("metadata", {})
+    token_usage = token_usage_service.restore_token_usage(
+        None if not isinstance(report, dict) else report.get("token_usage"),
+        metadata.get("token_usage") if isinstance(metadata, dict) else None,
+    )
+    if bool(token_usage.get("usage_available", False)):
+        return [
+            ui_state_service.translate("ai.note_token_usage_summary", language).format(
+                input_tokens=format(int(token_usage["input_tokens"]), ","),
+                output_tokens=format(int(token_usage["output_tokens"]), ","),
+                total_tokens=format(int(token_usage["total_tokens"]), ","),
+            )
+        ]
+    if (
+        isinstance(report, dict)
+        and "token_usage" in report
+    ) or (
+        isinstance(metadata, dict)
+        and "token_usage" in metadata
+    ):
+        return [
+            ui_state_service.translate("ai.note_token_usage_unavailable", language)
+        ]
+    return []
 
 
 # HELPER FUNCTIONS

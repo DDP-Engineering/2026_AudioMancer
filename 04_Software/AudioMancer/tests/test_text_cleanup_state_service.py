@@ -13,7 +13,7 @@
          notes, and reset payloads from manifest and artifact data.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-07
-@version 0.2.0
+@version 0.3.0
 """
 
 # IMPORTS
@@ -190,6 +190,12 @@ def test_build_text_cleanup_state_surfaces_ai_cleanup_review_warning(tmp_path) -
             "detected_chapter_count": 1,
             "cleanup_mode": "ai_assisted",
             "ai_profile_id": "profile_1",
+            "token_usage": {
+                "input_tokens": 300,
+                "output_tokens": 75,
+                "total_tokens": 375,
+                "usage_available": True,
+            },
         }, indent=2) + "\n",
         encoding="utf-8",
     )
@@ -207,7 +213,16 @@ def test_build_text_cleanup_state_surfaces_ai_cleanup_review_warning(tmp_path) -
             "completed_at": "2026-04-07T12:01:00+00:00",
             "updated_at": "2026-04-07T12:01:00+00:00",
             "warning_count": 1,
-            "metadata": {"warnings": [], "ai_profile_id": "profile_1"},
+            "metadata": {
+                "warnings": [],
+                "ai_profile_id": "profile_1",
+                "token_usage": {
+                    "input_tokens": 300,
+                    "output_tokens": 75,
+                    "total_tokens": 375,
+                    "usage_available": True,
+                },
+            },
             "resume_checkpoint": None,
         }, indent=2) + "\n",
         encoding="utf-8",
@@ -230,6 +245,10 @@ def test_build_text_cleanup_state_surfaces_ai_cleanup_review_warning(tmp_path) -
 
     assert any(
         "completed with validation warnings" in note
+        for note in cleanup_state["notes"]
+    )
+    assert any(
+        "Input tokens: 300 | Output tokens: 75 | Total: 375" in note
         for note in cleanup_state["notes"]
     )
 

@@ -15,7 +15,7 @@
          window-based operation state plus AI transaction logging.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-11
-@version 0.2.0
+@version 0.3.0
 """
 
 # IMPORTS
@@ -29,6 +29,7 @@ from audiomancer import config
 from audiomancer.services import deterministic_chunking_service
 from audiomancer.services import llm_provider_service
 from audiomancer.services import prompt_template_service
+from audiomancer.services import token_usage_service
 from audiomancer.services.logging_service import get_component_logger, trace_function
 from audiomancer.services.operation_runtime_service import (
     OperationCancelledError,
@@ -60,6 +61,7 @@ ChunkingReportPayload = dict[str, object]
 
 # @brief Persisted AI chunking operation-state payload type.
 OperationStatePayload = dict[str, object]
+TokenUsagePayload = dict[str, object]
 
 
 # PUBLIC API
@@ -88,7 +90,7 @@ def chunk_text(
     @exception  OperationCancelledError Raised when the operator cancels the run.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-11
-        @version    0.2.0
+        @version    0.3.0
     """
     resolved_project_root = Path(project_root)
     source_document = manifest.get("source_document")
@@ -157,6 +159,7 @@ def chunk_text(
         profile_id,
         semantic_strategy,
     )
+    token_usage = _restore_token_usage(existing_state)
     if start_window_index == 0:
         output_path.write_text("[]\n", encoding="utf-8")
 
@@ -185,12 +188,14 @@ def chunk_text(
         semantic_strategy=semantic_strategy,
         input_fingerprint=input_fingerprint,
         log_relative_path=log_relative_path,
+        token_usage=token_usage,
     )
     _emit_progress(
         progress_callback,
         progress_current=start_window_index,
         progress_total=total_windows,
         message="Resuming AI-assisted chunking..." if start_window_index > 0 else "AI-assisted chunking in progress...",
+        token_usage=token_usage,
     )
 
     system_prompt = prompt_template_service.render_prompt(
@@ -211,7 +216,7 @@ def chunk_text(
             },
         )
         try:
-            response_payload = llm_provider_service.chat_json(
+            response_result = llm_provider_service.chat_json(
                 ai_profile_payload,
                 system_prompt,
                 user_prompt,
@@ -230,6 +235,11 @@ def chunk_text(
             raise OperationCancelledError(
                 "AI-assisted chunking cancelled while waiting for the model response."
             ) from error
+        response_payload = dict(response_result.get("payload", {}))
+        token_usage = token_usage_service.merge_token_usage(
+            token_usage,
+            response_result.get("usage"),
+        )
         committed_break_ids = _merge_committed_break_ids(
             committed_break_ids,
             _normalize_break_after_ids(response_payload, window_records),
@@ -258,12 +268,14 @@ def chunk_text(
             semantic_strategy=semantic_strategy,
             input_fingerprint=input_fingerprint,
             log_relative_path=log_relative_path,
+            token_usage=token_usage,
         )
         _emit_progress(
             progress_callback,
             progress_current=window_index + 1,
             progress_total=total_windows,
             message="AI-assisted chunking in progress...",
+            token_usage=token_usage,
         )
 
     chunks = _build_chunks_from_break_ids(
@@ -285,6 +297,7 @@ def chunk_text(
         "ai_profile_id": profile_id,
         "semantic_strategy": semantic_strategy,
         "log_relative_path": log_relative_path,
+        "token_usage": token_usage,
     }
     report_path.write_text(
         json.dumps(report_payload, indent=2, ensure_ascii=False) + "\n",
@@ -308,6 +321,7 @@ def chunk_text(
         input_fingerprint=input_fingerprint,
         log_relative_path=log_relative_path,
         resume_checkpoint=None,
+        token_usage=token_usage,
     )
     state_path.write_text(
         json.dumps(completed_state, indent=2, ensure_ascii=False) + "\n",
@@ -318,6 +332,7 @@ def chunk_text(
         progress_current=total_windows,
         progress_total=total_windows,
         message="AI-assisted chunking completed.",
+        token_usage=token_usage,
     )
     return report_payload
 
@@ -342,13 +357,20 @@ def load_operation_state(project_root: str | Path) -> OperationStatePayload | No
 # LOCAL HELPERS
 
 
-def _emit_progress(progress_callback, progress_current: int, progress_total: int, message: str) -> None:
+def _emit_progress(
+    progress_callback,
+    progress_current: int,
+    progress_total: int,
+    message: str,
+    token_usage: TokenUsagePayload | None = None,
+) -> None:
     if callable(progress_callback):
         progress_callback(
             progress_current,
             progress_total,
             progress_percent(progress_current, progress_total),
             message,
+            token_usage,
         )
 
 
@@ -413,6 +435,13 @@ def _restore_resume_state(
     return min(start_window_index, total_windows), committed_break_ids, (
         None if log_relative_path in (None, "") else str(log_relative_path)
     )
+
+
+def _restore_token_usage(existing_state: dict[str, object]) -> TokenUsagePayload:
+    metadata = existing_state.get("metadata", {})
+    if not isinstance(metadata, dict):
+        return token_usage_service.empty_token_usage()
+    return token_usage_service.restore_token_usage(metadata.get("token_usage"))
 
 
 def _build_units_block(paragraph_records: list[dict[str, object]]) -> str:
@@ -518,6 +547,7 @@ def _write_running_state(
     semantic_strategy: str,
     input_fingerprint: str,
     log_relative_path: str,
+    token_usage: TokenUsagePayload,
 ) -> None:
     chunks = _build_chunks_from_break_ids(
         paragraph_records,
@@ -541,6 +571,7 @@ def _write_running_state(
         semantic_strategy=semantic_strategy,
         input_fingerprint=input_fingerprint,
         log_relative_path=log_relative_path,
+        token_usage=token_usage,
         resume_checkpoint={
             "input_fingerprint": input_fingerprint,
             "profile_id": profile_id,
@@ -575,6 +606,7 @@ def _build_operation_state(
     input_fingerprint: str,
     log_relative_path: str,
     resume_checkpoint: dict[str, object] | None,
+    token_usage: TokenUsagePayload,
 ) -> OperationStatePayload:
     artifact_paths = [log_relative_path]
     if report_path is not None and report_path.is_file():
@@ -606,6 +638,7 @@ def _build_operation_state(
             "input_fingerprint": input_fingerprint,
             "log_relative_path": log_relative_path,
             "committed_break_ids": list(committed_break_ids),
+            "token_usage": token_usage_service.coerce_token_usage(token_usage),
         },
         "resume_checkpoint": None if resume_checkpoint is None else dict(resume_checkpoint),
     }

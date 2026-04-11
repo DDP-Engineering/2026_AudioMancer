@@ -16,7 +16,7 @@
          UI-driven cancellation responsive during provider waits.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-11
-@version 0.4.0
+@version 0.5.0
 """
 
 # IMPORTS
@@ -32,6 +32,7 @@ from urllib import error, parse, request
 from audiomancer import config
 from audiomancer.services.logging_service import get_component_logger, trace_function
 from audiomancer.services.operation_runtime_service import OperationCancelledError
+from audiomancer.services import token_usage_service
 
 # CONSTANTS
 
@@ -59,13 +60,13 @@ def chat_json(
     @param[in]  log_path Optional operation-local AI transaction log file.
     @param[in]  log_context Optional per-request log metadata.
     @param[in]  cancel_requested Optional zero-argument cancellation callback.
-    @return     Parsed JSON object returned by the model.
+    @return     Parsed JSON payload plus normalized token-usage data.
     @exception  RuntimeError Raised on provider or transport failures.
     @exception  ValueError Raised on invalid or non-object JSON output.
     @exception  OperationCancelledError Raised when cooperative cancellation is requested.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-11
-    @version    0.4.0
+    @version    0.5.0
     """
     request_payload = {
         "model": str(profile_payload.get("model_name", "")).strip(),
@@ -112,11 +113,23 @@ def chat_json(
             raw_content = _extract_message_content(raw_payload)
             try:
                 parsed_payload = _parse_json_content(raw_content)
+                normalized_usage = token_usage_service.normalize_provider_usage(
+                    raw_payload
+                )
             except ValueError as parse_error:
-                parsed_payload, repair_body, repaired_content = _repair_json_response_with_model(
+                (
+                    parsed_payload,
+                    repair_body,
+                    repaired_content,
+                    repair_usage,
+                ) = _repair_json_response_with_model(
                     profile_payload,
                     raw_content,
                     cancel_requested=cancel_requested,
+                )
+                normalized_usage = token_usage_service.merge_token_usage(
+                    token_usage_service.normalize_provider_usage(raw_payload),
+                    repair_usage,
                 )
                 _append_ai_log(
                     log_path,
@@ -129,10 +142,15 @@ def chat_json(
                         "repair_error_text": str(parse_error),
                         "repair_response_body": repair_body,
                         "repair_message_content": repaired_content,
+                        "usage": normalized_usage,
+                        "repair_usage": repair_usage,
                         **dict(log_context or {}),
                     },
                 )
-                return parsed_payload
+                return {
+                    "payload": parsed_payload,
+                    "usage": normalized_usage,
+                }
             _append_ai_log(
                 log_path,
                 {
@@ -141,10 +159,14 @@ def chat_json(
                     "attempt_index": attempt_index,
                     "raw_response_body": raw_body,
                     "raw_message_content": raw_content,
+                    "usage": normalized_usage,
                     **dict(log_context or {}),
                 },
             )
-            return parsed_payload
+            return {
+                "payload": parsed_payload,
+                "usage": normalized_usage,
+            }
         except Exception as error_object:
             last_error = error_object
             _append_ai_log(
@@ -463,7 +485,7 @@ def _repair_json_response_with_model(
     profile_payload: dict[str, object],
     malformed_content: str,
     cancel_requested=None,
-) -> tuple[dict[str, object], str, str]:
+) -> tuple[dict[str, object], str, str, dict[str, object]]:
     repair_request_payload = {
         "model": str(profile_payload.get("model_name", "")).strip(),
         "messages": [
@@ -501,7 +523,12 @@ def _repair_json_response_with_model(
         cancel_requested=cancel_requested,
     )
     repaired_content = _extract_message_content(repair_payload)
-    return _parse_json_content(repaired_content), repair_body, repaired_content
+    return (
+        _parse_json_content(repaired_content),
+        repair_body,
+        repaired_content,
+        token_usage_service.normalize_provider_usage(repair_payload),
+    )
 
 
 def _is_likely_string_terminator(content: str, quote_index: int) -> bool:
