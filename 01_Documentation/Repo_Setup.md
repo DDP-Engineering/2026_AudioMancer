@@ -12,6 +12,16 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
 This document describes the initial local setup for working on
 `2026_AudioMancer`.
 
+Current repository structure:
+
+- `0_Planning/`
+- `01_Documentation/`
+- `02_Tools/`
+- `04_Software/`
+- `05_SoftwareDocu/`
+- `07_Delivery/`
+- `09_Others/`
+
 Current application subtree:
 
 - `04_Software/AudioMancer/`
@@ -273,7 +283,9 @@ uv run python -m py_compile src/audiomancer/app.py
 ## Notes
 
 - The project currently uses `uv` as the environment and dependency workflow.
-- The initial application scaffold is under `04_Software/AudioMancer/`.
-- Packaging placeholders are under `02_Tools/AudioMancer/`.
-- `PyInstaller` is declared as a dependency for future packaging work, but the
-  release build flow is still a placeholder.
+- The runnable desktop application lives under `04_Software/AudioMancer/`.
+- Windows packaging scripts and spec files live directly under `02_Tools/`.
+- `07_Delivery/` is used for packaged release artifacts.
+- Windows release packaging is implemented with `PyInstaller`.
+- Linux packaging has a reserved helper script under `02_Tools/`, but it is not
+  fully implemented yet.
