@@ -12,12 +12,13 @@
 @details Verifies JSON normalization and retry behavior for AI-assisted
          cleanup provider requests.
 @author Eng. Dan Dumitru Pasare
-@date 2026-04-06
-@version 0.2.0
+@date 2026-04-11
+@version 0.3.0
 """
 
 # IMPORTS
 
+import io
 import time
 from urllib import error
 
@@ -171,6 +172,65 @@ def test_chat_json_can_cancel_while_waiting_for_model_response(monkeypatch) -> N
         assert "waiting for the model response" in str(error)
     else:  # pragma: no cover - defensive assertion path.
         raise AssertionError("Expected AI request cancellation while waiting for the model response.")
+
+
+def test_chat_json_retries_with_max_completion_tokens_when_required(
+    monkeypatch,
+) -> None:
+    """
+    @brief      Verify provider requests retry with max_completion_tokens after one compatibility failure.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-11
+    @version    0.1.0
+    """
+    request_bodies: list[str] = []
+
+    def _fake_urlopen(http_request, **_kwargs):
+        body_text = http_request.data.decode("utf-8")
+        request_bodies.append(body_text)
+        if len(request_bodies) == 1:
+            raise error.HTTPError(
+                http_request.full_url,
+                400,
+                "Bad Request",
+                hdrs=None,
+                fp=io.BytesIO(
+                    (
+                        b'{"error":{"message":"Unsupported parameter: '
+                        b'\'max_tokens\' is not supported with this model. '
+                        b'Use \'max_completion_tokens\' instead.",'
+                        b'"param":"max_tokens","code":"unsupported_parameter"}}'
+                    )
+                ),
+            )
+        return _FakeResponse(
+            '{"choices":[{"message":{"content":"{\\"results\\":[{\\"unit_id\\":\\"unit-0001\\",\\"label\\":\\"story\\"}]}"}}]}'
+        )
+
+    monkeypatch.setattr(llm_provider_service.request, "urlopen", _fake_urlopen)
+
+    payload = llm_provider_service.chat_json(
+        {
+            "id": "profile_1",
+            "backend_kind": "openai_compatible",
+            "base_url": "https://api.openai.com/v1",
+            "model_name": "gpt-5-mini",
+            "request_timeout_seconds": 30,
+            "temperature": 0.2,
+            "max_output_tokens": 256,
+        },
+        "system",
+        "user",
+    )
+
+    assert len(request_bodies) == 2
+    assert '"max_tokens": 256' in request_bodies[0]
+    assert '"max_completion_tokens": 256' in request_bodies[1]
+    assert '"max_tokens": 256' not in request_bodies[1]
+    assert payload["results"][0]["unit_id"] == "unit-0001"
 
 
 # END OF FILE

@@ -14,8 +14,8 @@
          appends detailed transaction records to one operation-local log file
          while keeping UI-driven cancellation responsive during provider waits.
 @author Eng. Dan Dumitru Pasare
-@date 2026-04-06
-@version 0.2.0
+@date 2026-04-11
+@version 0.3.0
 """
 
 # IMPORTS
@@ -63,8 +63,8 @@ def chat_json(
     @exception  ValueError Raised on invalid or non-object JSON output.
     @exception  OperationCancelledError Raised when cooperative cancellation is requested.
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.2.0
+    @date       2026-04-11
+    @version    0.3.0
     """
     request_payload = {
         "model": str(profile_payload.get("model_name", "")).strip(),
@@ -182,6 +182,17 @@ def _request_chat_completion(
     profile_payload: dict[str, object],
     request_payload: dict[str, object],
 ) -> tuple[dict[str, object], str]:
+    """
+    @brief      Execute one provider chat-completion HTTP request.
+    @param[in]  profile_payload Normalized AI profile payload.
+    @param[in]  request_payload Serialized provider request payload.
+    @return     Parsed JSON response payload plus raw response body text.
+    @exception  RuntimeError Raised when the provider returns an HTTP or transport failure.
+    @exception  ValueError Raised when the provider returns an invalid JSON payload.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-11
+    @version    0.2.0
+    """
     endpoint = _build_chat_endpoint(str(profile_payload.get("base_url", "")))
     api_key = str(profile_payload.get("api_key", "")).strip()
     headers = {
@@ -208,6 +219,12 @@ def _request_chat_completion(
             raw_body = response.read().decode("utf-8")
     except error.HTTPError as http_error:
         error_body = http_error.read().decode("utf-8", errors="replace")
+        if _supports_max_completion_tokens_retry(http_error.code, error_body):
+            compatibility_payload = _build_max_completion_tokens_payload(
+                request_payload
+            )
+            if compatibility_payload != request_payload:
+                return _request_chat_completion(profile_payload, compatibility_payload)
         if http_error.code in {408, 409, 429} or http_error.code >= 500:
             raise RuntimeError(
                 f"Transient AI provider failure: HTTP {http_error.code}: {error_body}"
@@ -226,6 +243,15 @@ def _request_chat_completion(
 
 
 def _build_chat_endpoint(base_url: str) -> str:
+    """
+    @brief      Resolve one chat-completions endpoint from the configured base URL.
+    @param[in]  base_url Operator-configured provider base URL.
+    @return     Fully qualified chat-completions endpoint.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-11
+    @version    0.1.0
+    """
     normalized_base = base_url.rstrip("/")
     parsed_url = parse.urlparse(normalized_base)
     base_path = parsed_url.path.rstrip("/")
@@ -245,6 +271,47 @@ def _build_chat_endpoint(base_url: str) -> str:
             "",
         )
     )
+
+
+def _supports_max_completion_tokens_retry(status_code: int, error_body: str) -> bool:
+    """
+    @brief      Decide whether one provider failure should retry with max_completion_tokens.
+    @param[in]  status_code HTTP status code returned by the provider.
+    @param[in]  error_body Provider error response body.
+    @return     True when the provider explicitly rejected the max_tokens field.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-11
+    @version    0.1.0
+    """
+    if status_code != 400:
+        return False
+    normalized_body = (error_body or "").lower()
+    return (
+        '"param":"max_tokens"' in normalized_body
+        or '"param": "max_tokens"' in normalized_body
+    ) and "max_completion_tokens" in normalized_body
+
+
+def _build_max_completion_tokens_payload(
+    request_payload: dict[str, object],
+) -> dict[str, object]:
+    """
+    @brief      Convert one request payload to use max_completion_tokens.
+    @param[in]  request_payload Original request payload.
+    @return     Compatibility payload for providers that reject max_tokens.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-11
+    @version    0.1.0
+    """
+    compatibility_payload = dict(request_payload)
+    if "max_tokens" not in compatibility_payload:
+        return compatibility_payload
+    compatibility_payload["max_completion_tokens"] = compatibility_payload.pop(
+        "max_tokens"
+    )
+    return compatibility_payload
 
 
 def _extract_message_content(payload: dict[str, object]) -> str:

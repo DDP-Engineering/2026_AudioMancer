@@ -26,7 +26,8 @@ transaction log.
 - resume interrupted AI cleanup without the destructive rerun confirmation
 - load prompts from the application-root `prompts/` folder
 - call OpenAI-compatible `/v1/chat/completions` endpoints with the configured
-  model, timeout, temperature, and max-token settings
+  model, timeout, temperature, and max-token settings, while retrying with
+  `max_completion_tokens` when one remote API explicitly rejects `max_tokens`
 - keep cancel requests responsive while one provider call is still waiting for
   the model response
 - retry transient provider failures conservatively
@@ -74,9 +75,10 @@ High-level flow:
    paragraph-like units, windows them to fit the selected profile budget, and
    resumes from `resume_checkpoint` when possible.
 6. `llm_provider_service` sends one chat-completion request per window,
-   appends request/response/failure records to the operation-local AI log, and
-   keeps polling for cancellation while the provider request runs in a small
-   helper thread.
+   retries one compatibility-adjusted request when a provider rejects
+   `max_tokens`, appends request/response/failure records to the
+   operation-local AI log, and keeps polling for cancellation while the
+   provider request runs in a small helper thread.
 7. The AI cleanup service keeps units labeled `story` or `unknown`, rebuilds
    the cleaned text, writes the shared cleanup artifacts, and stores
    `mode="ai_assisted"` in the cleanup operation state.
@@ -203,7 +205,8 @@ Minimum validation after a change:
 ## 10. Limitations And Future Work
 
 - the provider flow currently assumes an OpenAI-compatible
-  `/v1/chat/completions` interface for requests
+  `/v1/chat/completions` interface for requests, even though it now tolerates
+  providers that require `max_completion_tokens` instead of `max_tokens`
 - AI cleanup is synchronous from the shell perspective and blocks the main
   window through the modal progress dialog
 - transaction logs are newline-delimited JSON records inside a `.log` file, not

@@ -79,6 +79,7 @@ This folder contains the current Python application implementation for
 - the `Characters` page now also supports `Add Character` and `Delete Character`, guarded unsaved-change prompts, and one synthetic manual-evidence note for manually added profiles.
 - long-running extraction and cleanup now run through one reusable modal progress dialog with a cancel button that blocks the main window while the operation is active.
 - AI-assisted cleanup keeps the progress popup responsive while waiting for provider responses, so the cancel button is honored during long model calls.
+- OpenAI-compatible provider requests now retry automatically with `max_completion_tokens` when one remote API rejects `max_tokens`, while preserving the original payload shape for local providers that still expect `max_tokens`.
 - project names are stored exactly as entered but are rejected when invalid for Windows or Linux folder creation.
 - the `Settings` dialog now loads and saves `language`, `interface text size`, and `play completion beep` through the shared settings service.
 - saving `Settings` now applies the selected UI language and global text size to the running shell.

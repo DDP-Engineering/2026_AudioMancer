@@ -16,6 +16,22 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+## [0.13.1] - 2026-04-11
+
+### Added
+
+- added focused provider-service regression coverage for OpenAI-compatible compatibility fallback when one API rejects `max_tokens` and requires `max_completion_tokens`
+
+### Changed
+
+- updated OpenAI-compatible provider requests so local backends still receive the original `max_tokens` chat-completions payload while remote APIs can retry once with `max_completion_tokens` after an explicit compatibility rejection
+- updated the application README and AI cleanup component documentation to describe the new mixed local-plus-OpenAI compatibility behavior
+- package version updated to `0.13.1`
+
+### Fixed
+
+- fixed OpenAI API compatibility for newer models that reject `max_tokens` in `/v1/chat/completions` requests, while preserving the existing local-provider behavior
+
 ## [0.13.0] - 2026-04-08
 
 ### Added
