@@ -1,0 +1,130 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+# -----------------------------------------------------------------------------
+# Copyright (c) 2026 DDP Engineering
+# This software is licensed under the GNU Affero General Public License v3.0
+# (AGPL-3.0) with additional Non-Commercial restriction.
+# See the LICENSE.txt and LICENSE_NC.txt files for full license details.
+# -----------------------------------------------------------------------------
+"""
+@file conftest.py
+@brief Global test fixtures for the AudioMancer test suite.
+@details Provides shared configurations, mock profiles, and environment
+         setup to reduce boilerplate across test files.
+@author Eng. Dan Dumitru Pasare
+@date 2026-04-11
+@version 1.0.0
+"""
+
+import pytest
+from audiomancer import config
+from audiomancer.services import project_workspace_service
+
+@pytest.fixture
+def mock_prompt_environment(tmp_path, monkeypatch):
+    """
+    @brief      Set up a fake prompts directory filled with minimal system/user templates.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @return     Path to the temporary prompt root.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-11
+    @version    0.1.0
+    """
+    prompt_root = tmp_path / "prompts"
+    prompt_root.mkdir(exist_ok=True)
+    
+    # Generic stubs for tests verifying AI call generation
+    (prompt_root / "text_cleanup_system.txt").write_text("System prompt.", encoding="utf-8")
+    (prompt_root / "text_cleanup_user.txt").write_text("{units_block}", encoding="utf-8")
+    (prompt_root / "text_chunking_system.txt").write_text("Chunk system prompt.", encoding="utf-8")
+    (prompt_root / "text_chunking_user.txt").write_text("{units_block}", encoding="utf-8")
+    
+    monkeypatch.setattr(config, "APP_PROMPTS_PATH", prompt_root)
+    return prompt_root
+
+
+@pytest.fixture
+def default_settings_payload():
+    """
+    @brief      Return a valid baseline application settings dictionary.
+    @return     Dictionary containing global profile identifiers and UI preferences.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-11
+    @version    0.1.0
+    """
+    return {
+        "language": "en",
+        "ui_text_scale": "normal",
+        "play_completion_beep": False,
+        "llm_profiles": [{
+            "id": "profile_1",
+            "label": "Stored Profile",
+            "backend_kind": "lmstudio",
+            "base_url": "http://127.0.0.1:1234/v1",
+            "api_key": "",
+            "model_name": "qwen3-8b",
+            "context_window": 8192,
+            "max_output_tokens": 1024,
+            "request_timeout_seconds": 90,
+            "temperature": 0.2,
+            "supports_structured_output": False,
+            "enabled": True,
+        }],
+        "default_ai_cleanup_profile_id": "profile_1",
+        "default_ai_chunking_profile_id": "profile_1",
+        "default_ai_chunking_strategy": "paragraph",
+        "default_character_extraction_profile_id": "profile_1",
+    }
+
+
+@pytest.fixture
+def mock_clean_project(tmp_path):
+    """
+    @brief      Generate a mocked, unmodified clean project root and manifest.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     Tuple of (project_root_path, manifest_dict).
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-11
+    @version    0.1.0
+    """
+    project_root, manifest = project_workspace_service.create_project("MockProject", tmp_path)
+    return project_root, manifest
+
+
+@pytest.fixture
+def mock_extracted_project(mock_clean_project):
+    """
+    @brief      Generate a mocked project that has finished text extraction.
+    @details    Creates 'story.txt' in the extraction folder and updates the manifest.
+    @param[in]  mock_clean_project Fixture yielding root and manifest.
+    @return     Tuple of (project_root_path, manifest_dict).
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-11
+    @version    0.1.0
+    """
+    project_root, manifest = mock_clean_project
+    
+    extracted_path = project_root / config.EXTRACTION_FOLDER_NAME / config.EXTRACTED_TEXT_FILE_NAME
+    extracted_path.parent.mkdir(parents=True, exist_ok=True)
+    
+    # Put a dummy payload, tests can overwrite if they need to
+    extracted_path.write_text("Dummy Source Text\n", encoding="utf-8")
+    
+    manifest["source_document"] = {
+        "original_name": "story.txt",
+        "stored_relative_path": "story.txt",
+        "file_type": "txt",
+        "imported_at": "2026-04-06T12:00:00+00:00",
+        "size_bytes": 10,
+    }
+    manifest["extracted_text_relative_path"] = f"{config.EXTRACTION_FOLDER_NAME}/{config.EXTRACTED_TEXT_FILE_NAME}"
+    project_workspace_service.save_manifest(manifest, project_root)
+    
+    return project_root, manifest
+
+# END OF FILE

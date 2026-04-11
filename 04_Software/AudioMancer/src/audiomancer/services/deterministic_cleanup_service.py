@@ -14,7 +14,7 @@
          structure, and persists cleanup artifacts with resumable state.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-06
-@version 0.2.1
+@version 0.2.2
 """
 
 # IMPORTS
@@ -516,7 +516,7 @@ def _build_page_paragraphs(
     current_lines = list(carried_lines)
     removed_page_number_count = 0
     removed_separator_count = 0
-    merge_with_previous_line = False
+    merge_with_previous_line = bool(carried_lines)
     normalized_lines = [
         re.sub(r"\s+", " ", raw_line).strip()
         for raw_line in page.split("\n")
