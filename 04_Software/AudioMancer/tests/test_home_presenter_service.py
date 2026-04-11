@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -19,7 +18,6 @@
 # IMPORTS
 
 from audiomancer.services import home_presenter_service
-
 
 # PUBLIC API
 

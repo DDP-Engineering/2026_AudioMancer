@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -71,9 +70,7 @@ def test_ai_settings_page_loads_profiles_and_builds_merged_settings(qtbot) -> No
 
     page._label_edit.setText("Profile A Updated")
     page._base_url_edit.setText("http://127.0.0.1:1234/v1")
-    page._default_strategy_combo.setCurrentIndex(
-        page._default_strategy_combo.findData("meaning")
-    )
+    page._default_strategy_combo.setCurrentIndex(page._default_strategy_combo.findData("meaning"))
 
     rebuilt = page.build_settings({"language": "en"})
 
@@ -121,35 +118,41 @@ def test_ai_settings_page_applies_probe_result_and_updates_status(qtbot) -> None
     page = AiSettingsPage()
     qtbot.addWidget(page)
 
-    page.load_settings({
-        "language": "en",
-        "llm_profiles": [{
-            "id": "profile_a",
-            "label": "Profile A",
-            "backend_kind": "lmstudio",
-            "base_url": "http://127.0.0.1:1234/v1",
-            "api_key": "",
-            "model_name": "missing-model",
-            "context_window": 8192,
-            "max_output_tokens": 1024,
-            "request_timeout_seconds": 90,
-            "temperature": 0.2,
-            "supports_structured_output": True,
-            "enabled": True,
-        }],
-    })
+    page.load_settings(
+        {
+            "language": "en",
+            "llm_profiles": [
+                {
+                    "id": "profile_a",
+                    "label": "Profile A",
+                    "backend_kind": "lmstudio",
+                    "base_url": "http://127.0.0.1:1234/v1",
+                    "api_key": "",
+                    "model_name": "missing-model",
+                    "context_window": 8192,
+                    "max_output_tokens": 1024,
+                    "request_timeout_seconds": 90,
+                    "temperature": 0.2,
+                    "supports_structured_output": True,
+                    "enabled": True,
+                }
+            ],
+        }
+    )
 
-    page.apply_probe_result({
-        "success": True,
-        "message": "Connection successful. Discovered 2 models.",
-        "discovered_models": [
-            {"id": "qwen3-8b", "label": "qwen3-8b"},
-            {"id": "llama-3.1-8b", "label": "llama-3.1-8b"},
-        ],
-        "discovered_model_count": 2,
-        "discovered_context_window": None,
-        "selected_model_valid": False,
-    })
+    page.apply_probe_result(
+        {
+            "success": True,
+            "message": "Connection successful. Discovered 2 models.",
+            "discovered_models": [
+                {"id": "qwen3-8b", "label": "qwen3-8b"},
+                {"id": "llama-3.1-8b", "label": "llama-3.1-8b"},
+            ],
+            "discovered_model_count": 2,
+            "discovered_context_window": None,
+            "selected_model_valid": False,
+        }
+    )
 
     assert page._model_combo.count() == 2
     assert page._model_combo.currentText() == "qwen3-8b"
@@ -168,22 +171,26 @@ def test_ai_settings_page_marks_manual_overrides(qtbot) -> None:
     page = AiSettingsPage()
     qtbot.addWidget(page)
 
-    page.load_settings({
-        "llm_profiles": [{
-            "id": "profile_a",
-            "label": "Profile A",
-            "backend_kind": "lmstudio",
-            "base_url": "http://127.0.0.1:1234/v1",
-            "api_key": "",
-            "model_name": "qwen3-8b",
-            "context_window": 8192,
-            "max_output_tokens": 1024,
-            "request_timeout_seconds": 90,
-            "temperature": 0.2,
-            "supports_structured_output": False,
-            "enabled": True,
-        }],
-    })
+    page.load_settings(
+        {
+            "llm_profiles": [
+                {
+                    "id": "profile_a",
+                    "label": "Profile A",
+                    "backend_kind": "lmstudio",
+                    "base_url": "http://127.0.0.1:1234/v1",
+                    "api_key": "",
+                    "model_name": "qwen3-8b",
+                    "context_window": 8192,
+                    "max_output_tokens": 1024,
+                    "request_timeout_seconds": 90,
+                    "temperature": 0.2,
+                    "supports_structured_output": False,
+                    "enabled": True,
+                }
+            ],
+        }
+    )
 
     page._model_combo.setCurrentText("custom-model")
     page._context_window_spin.setValue(4096)

@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -24,7 +23,6 @@ import json
 from audiomancer import config
 from audiomancer.services import settings_service
 
-
 # PUBLIC API
 
 
@@ -38,9 +36,7 @@ def test_committed_settings_scaffold_matches_valid_settings_schema() -> None:
     @version    0.1.0
     """
     committed_settings = json.loads(config.APP_SETTINGS_PATH.read_text(encoding="utf-8"))
-    validated_settings = settings_service.validate_settings(
-        copy.deepcopy(committed_settings)
-    )
+    validated_settings = settings_service.validate_settings(copy.deepcopy(committed_settings))
 
     assert validated_settings == committed_settings
     for field_name in settings_service.build_default_settings():
@@ -104,7 +100,10 @@ def test_load_settings_self_heals_missing_and_invalid_values(tmp_path, monkeypat
     assert loaded_settings["default_ai_chunking_profile_id"] == defaults["default_ai_chunking_profile_id"]
     assert loaded_settings["default_ai_translation_profile_id"] == defaults["default_ai_translation_profile_id"]
     assert loaded_settings["default_ai_chunking_strategy"] == defaults["default_ai_chunking_strategy"]
-    assert loaded_settings["default_character_extraction_profile_id"] == defaults["default_character_extraction_profile_id"]
+    assert (
+        loaded_settings["default_character_extraction_profile_id"]
+        == defaults["default_character_extraction_profile_id"]
+    )
     assert loaded_settings["play_completion_beep"] == defaults["play_completion_beep"]
     assert loaded_settings["llm_profiles"] == defaults["llm_profiles"]
     assert json.loads(settings_path.read_text(encoding="utf-8")) == loaded_settings
@@ -149,7 +148,9 @@ def test_validate_settings_heals_invalid_llm_profiles_but_keeps_non_empty_list()
     assert validated_settings["llm_profiles"][0]["backend_kind"] == config.LLM_BACKEND_OPTIONS[0]
     assert validated_settings["llm_profiles"][0]["context_window"] == config.DEFAULT_LLM_CONTEXT_WINDOW
     assert validated_settings["llm_profiles"][0]["max_output_tokens"] == config.DEFAULT_LLM_MAX_OUTPUT_TOKENS
-    assert validated_settings["llm_profiles"][0]["request_timeout_seconds"] == config.DEFAULT_LLM_REQUEST_TIMEOUT_SECONDS
+    assert (
+        validated_settings["llm_profiles"][0]["request_timeout_seconds"] == config.DEFAULT_LLM_REQUEST_TIMEOUT_SECONDS
+    )
     assert validated_settings["llm_profiles"][0]["temperature"] == config.DEFAULT_LLM_TEMPERATURE
     assert validated_settings["default_ai_cleanup_profile_id"] is None
     assert validated_settings["default_ai_chunking_profile_id"] is None
@@ -165,26 +166,28 @@ def test_validate_settings_keeps_valid_enabled_default_profile_ids() -> None:
     @version    0.1.0
     """
     candidate_settings = settings_service.build_default_settings()
-    candidate_settings["llm_profiles"] = [{
-        "id": "profile_1",
-        "label": "Profile 1",
-        "backend_kind": config.LLM_BACKEND_OPTIONS[0],
-        "base_url": "http://127.0.0.1:1234/v1",
-        "api_key": "",
-        "model_name": "qwen3-8b",
-        "context_window": config.DEFAULT_LLM_CONTEXT_WINDOW,
-        "max_output_tokens": config.DEFAULT_LLM_MAX_OUTPUT_TOKENS,
-        "request_timeout_seconds": config.DEFAULT_LLM_REQUEST_TIMEOUT_SECONDS,
-        "temperature": config.DEFAULT_LLM_TEMPERATURE,
-        "supports_structured_output": False,
-        "enabled": True,
-        "discovered_model_name": "",
-        "discovered_context_window": None,
-        "discovery_succeeded": False,
-        "discovery_message": "",
-        "user_overrode_model_name": False,
-        "user_overrode_context_window": False,
-    }]
+    candidate_settings["llm_profiles"] = [
+        {
+            "id": "profile_1",
+            "label": "Profile 1",
+            "backend_kind": config.LLM_BACKEND_OPTIONS[0],
+            "base_url": "http://127.0.0.1:1234/v1",
+            "api_key": "",
+            "model_name": "qwen3-8b",
+            "context_window": config.DEFAULT_LLM_CONTEXT_WINDOW,
+            "max_output_tokens": config.DEFAULT_LLM_MAX_OUTPUT_TOKENS,
+            "request_timeout_seconds": config.DEFAULT_LLM_REQUEST_TIMEOUT_SECONDS,
+            "temperature": config.DEFAULT_LLM_TEMPERATURE,
+            "supports_structured_output": False,
+            "enabled": True,
+            "discovered_model_name": "",
+            "discovered_context_window": None,
+            "discovery_succeeded": False,
+            "discovery_message": "",
+            "user_overrode_model_name": False,
+            "user_overrode_context_window": False,
+        }
+    ]
     candidate_settings["default_ai_cleanup_profile_id"] = "profile_1"
     candidate_settings["default_ai_chunking_profile_id"] = "profile_1"
     candidate_settings["default_ai_translation_profile_id"] = "profile_1"

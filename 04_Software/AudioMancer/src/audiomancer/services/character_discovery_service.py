@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -19,18 +18,20 @@
 
 # IMPORTS
 
+from datetime import UTC, datetime
 import hashlib
 import json
-import re
-from datetime import UTC, datetime
 from pathlib import Path
+import re
 
 from audiomancer import config
-from audiomancer.services import deterministic_chunking_service
-from audiomancer.services import llm_provider_service
-from audiomancer.services import prompt_template_service
-from audiomancer.services import token_usage_service
-from audiomancer.services import text_cleanup_state_service
+from audiomancer.services import (
+    deterministic_chunking_service,
+    llm_provider_service,
+    prompt_template_service,
+    text_cleanup_state_service,
+    token_usage_service,
+)
 from audiomancer.services.logging_service import get_component_logger, trace_function
 from audiomancer.services.operation_runtime_service import (
     OperationCancelledError,
@@ -251,20 +252,10 @@ def start_or_continue_discovery(
     token_usage = _restore_token_usage(existing_state)
     log_path = _resolve_log_path(resolved_project_root, started_at, log_relative_path)
     chunk_map = {
-        str(chunk.get("chunk_id", "")): dict(chunk)
-        for chunk in source_chunks
-        if str(chunk.get("chunk_id", "")).strip()
+        str(chunk.get("chunk_id", "")): dict(chunk) for chunk in source_chunks if str(chunk.get("chunk_id", "")).strip()
     }
-    initial_progress_current = (
-        len(windows) + len(synthesized_profiles)
-        if merged_candidates
-        else start_window_index
-    )
-    initial_progress_total = (
-        len(windows) + len(merged_candidates)
-        if merged_candidates
-        else len(windows)
-    )
+    initial_progress_current = len(windows) + len(synthesized_profiles) if merged_candidates else start_window_index
+    initial_progress_total = len(windows) + len(merged_candidates) if merged_candidates else len(windows)
     _write_operation_state(
         state_path=state_path,
         project_root=resolved_project_root,
@@ -304,11 +295,7 @@ def start_or_continue_discovery(
         (
             "Character profile synthesis in progress..."
             if merged_candidates
-            else (
-                "Resuming character discovery..."
-                if start_window_index > 0
-                else "Character discovery in progress..."
-            )
+            else ("Resuming character discovery..." if start_window_index > 0 else "Character discovery in progress...")
         ),
         token_usage=token_usage,
     )
@@ -466,9 +453,7 @@ def start_or_continue_discovery(
             token_usage,
             response_result.get("usage"),
         )
-        synthesized_profiles.append(
-            _build_profile_from_synthesis(response_payload, candidate)
-        )
+        synthesized_profiles.append(_build_profile_from_synthesis(response_payload, candidate))
         _write_operation_state(
             state_path=state_path,
             project_root=resolved_project_root,
@@ -583,9 +568,7 @@ def add_character_profile(
     existing_profiles = load_character_profiles(resolved_project_root)
     normalized_name = validate_manual_character_name(existing_profiles, canonical_name)
     updated_profiles = list(existing_profiles)
-    updated_profiles.append(
-        _build_manual_character_profile(existing_profiles, normalized_name)
-    )
+    updated_profiles.append(_build_manual_character_profile(existing_profiles, normalized_name))
     updated_profiles = sorted(updated_profiles, key=_profile_sort_key)
     _write_character_profiles(resolved_project_root, updated_profiles)
     return updated_profiles
@@ -806,9 +789,7 @@ def _next_manual_character_id(
     @version    0.1.0
     """
     base_slug = _slugify_character_id(canonical_name, len(existing_profiles) + 1)
-    existing_ids = {
-        str(profile.get("character_id", "")).strip() for profile in existing_profiles
-    }
+    existing_ids = {str(profile.get("character_id", "")).strip() for profile in existing_profiles}
     if base_slug not in existing_ids:
         return base_slug
     suffix = 2
@@ -872,9 +853,7 @@ def _persist_input_snapshots(
     )
     if cleaned_text is None:
         cleaned_text = "\n\n".join(
-            str(chunk.get("text", "")).strip()
-            for chunk in source_chunks
-            if str(chunk.get("text", "")).strip()
+            str(chunk.get("text", "")).strip() for chunk in source_chunks if str(chunk.get("text", "")).strip()
         )
     clean_text_input_path.write_text(
         cleaned_text.strip() + "\n",
@@ -934,7 +913,7 @@ def _build_chunk_windows(
     step = max(1, window_size - overlap)
     windows: list[list[dict[str, object]]] = []
     for start_index in range(0, len(source_chunks), step):
-        window = source_chunks[start_index:start_index + window_size]
+        window = source_chunks[start_index : start_index + window_size]
         if not window:
             continue
         windows.append(window)
@@ -947,14 +926,12 @@ def _build_units_block(window_records: list[dict[str, object]]) -> str:
     blocks: list[str] = []
     for chunk in window_records:
         blocks.append(
-            (
-                f"CHUNK_ID: {chunk.get('chunk_id', '')}\n"
-                f"SEQUENCE_INDEX: {chunk.get('sequence_index', 0)}\n"
-                f"CHAPTER_LABEL: {chunk.get('chapter_label', '') or ''}\n"
-                "TEXT_BEGIN\n"
-                f"{str(chunk.get('text', ''))}\n"
-                "TEXT_END"
-            )
+            f"CHUNK_ID: {chunk.get('chunk_id', '')}\n"
+            f"SEQUENCE_INDEX: {chunk.get('sequence_index', 0)}\n"
+            f"CHAPTER_LABEL: {chunk.get('chapter_label', '') or ''}\n"
+            "TEXT_BEGIN\n"
+            f"{str(chunk.get('text', ''))}\n"
+            "TEXT_END"
         )
     return "\n\n".join(blocks).strip()
 
@@ -1019,12 +996,7 @@ def _resolve_log_path(
         if not resolved_log_path.exists():
             resolved_log_path.write_text("", encoding="utf-8")
         return resolved_log_path
-    timestamp_token = (
-        started_at.replace("-", "")
-        .replace(":", "")
-        .replace("+", "_")
-        .replace(".", "")
-    )
+    timestamp_token = started_at.replace("-", "").replace(":", "").replace("+", "_").replace(".", "")
     resolved_log_path = build_operation_output_path(
         project_root,
         "character_discovery",
@@ -1064,9 +1036,7 @@ def _write_operation_state(
         "folder_relative_path": config.CHARACTER_DISCOVERY_FOLDER_NAME,
         "status": status,
         "input_paths": [
-            relative_to_project(project_root, input_path)
-            for input_path in input_paths
-            if input_path.is_file()
+            relative_to_project(project_root, input_path) for input_path in input_paths if input_path.is_file()
         ],
         "output_paths": (
             [relative_to_project(project_root, output_path)]
@@ -1094,11 +1064,7 @@ def _write_operation_state(
             "log_relative_path": relative_to_project(project_root, log_path),
             "token_usage": token_usage_service.coerce_token_usage(token_usage),
         },
-        "resume_checkpoint": (
-            None
-            if resume_checkpoint is None
-            else dict(resume_checkpoint)
-        ),
+        "resume_checkpoint": (None if resume_checkpoint is None else dict(resume_checkpoint)),
     }
     state_path.write_text(
         json.dumps(state_payload, indent=2, ensure_ascii=False) + "\n",
@@ -1116,9 +1082,7 @@ def _normalize_window_candidates(
     for entry in payload:
         if not isinstance(entry, dict):
             continue
-        canonical_name = str(
-            entry.get("canonical_name") or entry.get("name") or ""
-        ).strip()
+        canonical_name = str(entry.get("canonical_name") or entry.get("name") or "").strip()
         if not canonical_name:
             continue
         evidence = _normalize_evidence(entry.get("evidence", []), chunk_map)
@@ -1133,22 +1097,14 @@ def _normalize_window_candidates(
                 "temperament": str(entry.get("temperament", "")).strip(),
                 "social_status": str(entry.get("social_status", "")).strip(),
                 "speaking_style": str(entry.get("speaking_style", "")).strip(),
-                "accent_or_dialect_hints": str(
-                    entry.get("accent_or_dialect_hints", "")
-                ).strip(),
+                "accent_or_dialect_hints": str(entry.get("accent_or_dialect_hints", "")).strip(),
                 "voice_notes": str(entry.get("voice_notes", "")).strip(),
-                "relationship_hints": _normalize_string_list(
-                    entry.get("relationship_hints", [])
-                ),
+                "relationship_hints": _normalize_string_list(entry.get("relationship_hints", [])),
                 "confidence": str(entry.get("confidence", "")).strip(),
                 "evidence": evidence,
                 "has_dialogue_evidence": any(
-                    _text_contains_dialogue_markers(
-                        str(chunk_map[item["chunk_id"]].get("text", ""))
-                    )
-                    or _text_contains_dialogue_markers(
-                        str(item.get("source_excerpt", ""))
-                    )
+                    _text_contains_dialogue_markers(str(chunk_map[item["chunk_id"]].get("text", "")))
+                    or _text_contains_dialogue_markers(str(item.get("source_excerpt", "")))
                     or _reason_mentions_dialogue(str(item.get("reason", "")))
                     for item in evidence
                     if item.get("chunk_id") in chunk_map
@@ -1191,13 +1147,9 @@ def _normalize_evidence(
                 "chunk_id": chunk_id,
                 "sequence_index": int(source_chunk.get("sequence_index", 0)),
                 "source_excerpt": (
-                    str(entry.get("source_excerpt", "")).strip()
-                    or _excerpt_text(str(source_chunk.get("text", "")))
+                    str(entry.get("source_excerpt", "")).strip() or _excerpt_text(str(source_chunk.get("text", "")))
                 ),
-                "reason": (
-                    str(entry.get("reason", "")).strip()
-                    or "Mentioned in source chunk."
-                ),
+                "reason": (str(entry.get("reason", "")).strip() or "Mentioned in source chunk."),
             }
         )
     return _dedupe_evidence(evidence_items)
@@ -1209,17 +1161,10 @@ def _merge_character_candidates(
     merged: list[dict[str, object]] = []
     for candidate in candidates:
         alias_keys = {_normalize_identity(str(candidate.get("canonical_name", "")))}
-        alias_keys.update(
-            _normalize_identity(alias)
-            for alias in list(candidate.get("aliases", []))
-        )
+        alias_keys.update(_normalize_identity(alias) for alias in list(candidate.get("aliases", [])))
         alias_keys.discard("")
         target = next(
-            (
-                item
-                for item in merged
-                if alias_keys.intersection(set(item.get("_alias_keys", [])))
-            ),
+            (item for item in merged if alias_keys.intersection(set(item.get("_alias_keys", [])))),
             None,
         )
         if target is None:
@@ -1227,20 +1172,16 @@ def _merge_character_candidates(
             target["_alias_keys"] = sorted(alias_keys)
             merged.append(target)
             continue
-        target["aliases"] = _normalize_string_list(
-            list(target.get("aliases", [])) + list(candidate.get("aliases", []))
-        )
+        target["aliases"] = _normalize_string_list(list(target.get("aliases", [])) + list(candidate.get("aliases", [])))
         target["relationship_hints"] = _normalize_string_list(
-            list(target.get("relationship_hints", []))
-            + list(candidate.get("relationship_hints", []))
+            list(target.get("relationship_hints", [])) + list(candidate.get("relationship_hints", []))
         )
         target["evidence"] = _dedupe_evidence(
-            _restore_evidence(target.get("evidence", []))
-            + _restore_evidence(candidate.get("evidence", []))
+            _restore_evidence(target.get("evidence", [])) + _restore_evidence(candidate.get("evidence", []))
         )
-        target["has_dialogue_evidence"] = bool(
-            target.get("has_dialogue_evidence")
-        ) or bool(candidate.get("has_dialogue_evidence"))
+        target["has_dialogue_evidence"] = bool(target.get("has_dialogue_evidence")) or bool(
+            candidate.get("has_dialogue_evidence")
+        )
         for field_name in (
             "gender_hint",
             "age_band",
@@ -1257,9 +1198,7 @@ def _merge_character_candidates(
             candidate_value = str(candidate.get(field_name, "")).strip()
             if candidate_value and len(candidate_value) > len(existing_value):
                 target[field_name] = candidate_value
-        target["_alias_keys"] = sorted(
-            set(target.get("_alias_keys", [])) | alias_keys
-        )
+        target["_alias_keys"] = sorted(set(target.get("_alias_keys", [])) | alias_keys)
     filtered: list[dict[str, object]] = []
     for index, entry in enumerate(sorted(merged, key=_candidate_sort_key), start=1):
         entry["character_id"] = _slugify_character_id(
@@ -1316,27 +1255,17 @@ def _build_profile_from_synthesis(
                 candidate.get("canonical_name", ""),
             )
         ).strip(),
-        "aliases": _normalize_string_list(
-            response_payload.get("aliases", candidate.get("aliases", []))
-        ),
-        "gender_hint": str(
-            response_payload.get("gender_hint", candidate.get("gender_hint", ""))
-        ).strip(),
-        "age_band": str(
-            response_payload.get("age_band", candidate.get("age_band", ""))
-        ).strip(),
+        "aliases": _normalize_string_list(response_payload.get("aliases", candidate.get("aliases", []))),
+        "gender_hint": str(response_payload.get("gender_hint", candidate.get("gender_hint", ""))).strip(),
+        "age_band": str(response_payload.get("age_band", candidate.get("age_band", ""))).strip(),
         "role_summary": str(
             response_payload.get(
                 "role_summary",
                 candidate.get("role_summary", ""),
             )
         ).strip(),
-        "description": str(
-            response_payload.get("description", candidate.get("description", ""))
-        ).strip(),
-        "temperament": str(
-            response_payload.get("temperament", candidate.get("temperament", ""))
-        ).strip(),
+        "description": str(response_payload.get("description", candidate.get("description", ""))).strip(),
+        "temperament": str(response_payload.get("temperament", candidate.get("temperament", ""))).strip(),
         "social_status": str(
             response_payload.get(
                 "social_status",
@@ -1355,21 +1284,16 @@ def _build_profile_from_synthesis(
                 candidate.get("accent_or_dialect_hints", ""),
             )
         ).strip(),
-        "voice_notes": str(
-            response_payload.get("voice_notes", candidate.get("voice_notes", ""))
-        ).strip(),
+        "voice_notes": str(response_payload.get("voice_notes", candidate.get("voice_notes", ""))).strip(),
         "relationship_hints": _normalize_string_list(
             response_payload.get(
                 "relationship_hints",
                 candidate.get("relationship_hints", []),
             )
         ),
-        "confidence": str(
-            response_payload.get("confidence", candidate.get("confidence", ""))
-        ).strip(),
-        "evidence": _restore_evidence(
-            response_payload.get("evidence", candidate.get("evidence", []))
-        ) or _restore_evidence(candidate.get("evidence", [])),
+        "confidence": str(response_payload.get("confidence", candidate.get("confidence", ""))).strip(),
+        "evidence": _restore_evidence(response_payload.get("evidence", candidate.get("evidence", [])))
+        or _restore_evidence(candidate.get("evidence", [])),
         "updated_at": _utc_now_iso(),
     }
 

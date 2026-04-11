@@ -23,6 +23,7 @@ dev = [
     "pytest>=8.0,<9.0",
     "pytest-qt>=4.4,<5.0",
     "PyInstaller>=6.0,<7.0",
+    "ruff>=0.15.10",
 ]
 
 [project.scripts]
@@ -37,3 +38,31 @@ where = ["src"]
 [tool.pytest.ini_options]
 pythonpath = ["src"]
 testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes (unused imports, undefined names)
+    "I",   # isort (import ordering)
+    "UP",  # pyupgrade (modernise syntax for py312)
+    "B",   # flake8-bugbear (common bugs and design issues)
+    "C4",  # flake8-comprehensions (unnecessary comprehensions)
+    "SIM", # flake8-simplify
+]
+ignore = [
+    "SIM108", # ternary expressions — kept explicit for readability
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["audiomancer"]
+force-sort-within-sections = true
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"

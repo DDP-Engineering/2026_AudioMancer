@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -19,18 +18,16 @@
 
 # IMPORTS
 
+from datetime import UTC, datetime
 import hashlib
 import json
-import re
-from datetime import UTC, datetime
 from pathlib import Path
+import re
 
 from langdetect import LangDetectException, detect
 
 from audiomancer import config
-from audiomancer.services import llm_provider_service
-from audiomancer.services import prompt_template_service
-from audiomancer.services import token_usage_service
+from audiomancer.services import llm_provider_service, prompt_template_service, token_usage_service
 from audiomancer.services.logging_service import get_component_logger, trace_function
 from audiomancer.services.operation_runtime_service import (
     build_operation_artifact_path,
@@ -57,13 +54,9 @@ _SEPARATOR_PATTERN = re.compile(r"^[*#=_~.\-]{3,}$|^(?:[*#=_~.\-]\s+){2,}[*#=_~.
 # @brief Sentence-terminal matcher used to decide whether wrapped lines should join.
 _PARAGRAPH_TERMINAL_PATTERN = re.compile(r'[.!?\u2026](?:["\')\]\}]+)?$')
 # @brief Dialogue formatter rule that inserts line breaks before continued spoken text.
-_DIALOGUE_BREAK_AFTER_PUNCTUATION_PATTERN = re.compile(
-    r'([:;.!?\u2026]["Â»â€\']?)\s+-\s+(?=[A-ZÄ‚Ã‚ÃŽÈ˜Èš])'
-)
+_DIALOGUE_BREAK_AFTER_PUNCTUATION_PATTERN = re.compile(r'([:;.!?\u2026]["Â»â€\']?)\s+-\s+(?=[A-ZÄ‚Ã‚ÃŽÈ˜Èš])')
 # @brief Dialogue formatter rule that inserts line breaks after attributions and pauses.
-_DIALOGUE_BREAK_AFTER_ATTRIBUTION_PATTERN = re.compile(
-    r'([,:])\s+-\s+(?=[A-ZÄ‚Ã‚ÃŽÈ˜Èš])'
-)
+_DIALOGUE_BREAK_AFTER_ATTRIBUTION_PATTERN = re.compile(r"([,:])\s+-\s+(?=[A-ZÄ‚Ã‚ÃŽÈ˜Èš])")
 # @brief Labels that preserve one cleanup unit in the final cleaned output.
 _KEEP_LABELS = {"story", "unknown"}
 # @brief Labels that remove one cleanup unit from the final cleaned output.
@@ -134,9 +127,7 @@ def clean_text(
     if not input_text.strip():
         raise ValueError("Extracted text does not contain any content to clean.")
 
-    original_name = str(
-        source_document.get("original_name") or Path(extracted_relative_path).name
-    )
+    original_name = str(source_document.get("original_name") or Path(extracted_relative_path).name)
     input_snapshot_path = build_operation_input_snapshot_path(
         resolved_project_root,
         "cleanup",
@@ -160,9 +151,7 @@ def clean_text(
         config.OPERATION_STATE_FILE_NAME,
     )
 
-    prompt_template_service.validate_required_prompts(
-        ["text_cleanup_system", "text_cleanup_user"]
-    )
+    prompt_template_service.validate_required_prompts(["text_cleanup_system", "text_cleanup_user"])
     units = _build_cleanup_units(input_text)
     if not units:
         raise ValueError("Extracted text does not contain any cleanup units.")
@@ -215,9 +204,7 @@ def clean_text(
     system_prompt = prompt_template_service.render_prompt("text_cleanup_system", {})
     for window_index in range(start_window_index, total_windows):
         raise_if_cancelled(cancel_requested)
-        window_units = units[
-            windows[window_index]["start_index"]: windows[window_index]["end_index"] + 1
-        ]
+        window_units = units[windows[window_index]["start_index"] : windows[window_index]["end_index"] + 1]
         user_prompt = prompt_template_service.render_prompt(
             "text_cleanup_user",
             {"units_block": _build_units_block(window_units)},
@@ -271,15 +258,9 @@ def clean_text(
             token_usage=token_usage,
         )
 
-    kept_units = [
-        unit
-        for unit in units
-        if classifications.get(unit["unit_id"], "unknown") in _KEEP_LABELS
-    ]
+    kept_units = [unit for unit in units if classifications.get(unit["unit_id"], "unknown") in _KEEP_LABELS]
     cleaned_paragraphs = [
-        _normalize_unit_paragraph_text(str(unit["text"]))
-        for unit in kept_units
-        if str(unit["text"]).strip()
+        _normalize_unit_paragraph_text(str(unit["text"])) for unit in kept_units if str(unit["text"]).strip()
     ]
     cleaned_paragraphs = [paragraph for paragraph in cleaned_paragraphs if paragraph.strip()]
     cleaned_paragraphs = _merge_adjacent_continuation_paragraphs(cleaned_paragraphs)
@@ -364,9 +345,7 @@ def load_operation_state(project_root: str | Path) -> OperationStatePayload | No
     @date       2026-04-06
     @version    0.1.0
     """
-    return _load_operation_state(
-        build_operation_output_path(project_root, "cleanup", config.OPERATION_STATE_FILE_NAME)
-    )
+    return _load_operation_state(build_operation_output_path(project_root, "cleanup", config.OPERATION_STATE_FILE_NAME))
 
 
 # LOCAL HELPERS
@@ -437,10 +416,7 @@ def _build_windows(
             next_tokens = int(next_unit["estimated_tokens"])
             if next_tokens > usable_input_budget:
                 raise ValueError("One AI cleanup unit exceeds the configured usable input budget.")
-            if (
-                current_unit_count >= config.DEFAULT_AI_CLEANUP_MAX_WINDOW_UNITS
-                and end_index >= start_index
-            ):
+            if current_unit_count >= config.DEFAULT_AI_CLEANUP_MAX_WINDOW_UNITS and end_index >= start_index:
                 break
             if current_budget + next_tokens > usable_input_budget and end_index >= start_index:
                 break
@@ -473,11 +449,7 @@ def _restore_resume_state(
         return completed_window_count, {}, log_relative_path if isinstance(log_relative_path, str) else None
     return (
         completed_window_count,
-        {
-            str(unit_id): str(label)
-            for unit_id, label in stored_classifications.items()
-            if str(unit_id).strip()
-        },
+        {str(unit_id): str(label) for unit_id, label in stored_classifications.items() if str(unit_id).strip()},
         log_relative_path if isinstance(log_relative_path, str) else None,
     )
 
@@ -500,10 +472,7 @@ def _restore_token_usage(existing_state: dict[str, object]) -> TokenUsagePayload
 
 
 def _build_units_block(units: list[dict[str, object]]) -> str:
-    return "\n\n".join(
-        f"{unit['unit_id']}:\n{unit['text']}"
-        for unit in units
-    )
+    return "\n\n".join(f"{unit['unit_id']}:\n{unit['text']}" for unit in units)
 
 
 def _compose_paragraph_text(lines: list[tuple[str, bool]]) -> str:
@@ -530,12 +499,9 @@ def _merge_adjacent_continuation_paragraphs(paragraphs: list[str]) -> list[str]:
         normalized_paragraph = paragraph.strip()
         if not normalized_paragraph:
             continue
-        if (
-            merged_paragraphs
-            and _should_continue_after_paragraph(
-                merged_paragraphs[-1],
-                normalized_paragraph,
-            )
+        if merged_paragraphs and _should_continue_after_paragraph(
+            merged_paragraphs[-1],
+            normalized_paragraph,
         ):
             merged_paragraphs[-1] = _format_dialogue_lines(
                 merged_paragraphs[-1].rstrip() + " " + normalized_paragraph.lstrip()
@@ -550,14 +516,10 @@ def _should_continue_after_paragraph(
     next_paragraph: str,
 ) -> bool:
     current_lines = [
-        line.strip()
-        for line in current_paragraph.replace("\r\n", "\n").replace("\r", "\n").split("\n")
-        if line.strip()
+        line.strip() for line in current_paragraph.replace("\r\n", "\n").replace("\r", "\n").split("\n") if line.strip()
     ]
     next_lines = [
-        line.strip()
-        for line in next_paragraph.replace("\r\n", "\n").replace("\r", "\n").split("\n")
-        if line.strip()
+        line.strip() for line in next_paragraph.replace("\r\n", "\n").replace("\r", "\n").split("\n") if line.strip()
     ]
     if not current_lines or not next_lines:
         return False
@@ -613,10 +575,7 @@ def _apply_response_labels(
     results = response_payload.get("results", [])
     if not isinstance(results, list):
         raise ValueError("AI cleanup response does not contain a valid results list.")
-    window_unit_map = {
-        str(unit["unit_id"]): str(unit["text"])
-        for unit in window_units
-    }
+    window_unit_map = {str(unit["unit_id"]): str(unit["text"]) for unit in window_units}
     window_labels: dict[str, str] = {}
     for item in results:
         if not isinstance(item, dict):
@@ -718,11 +677,7 @@ def _build_operation_state(
         "folder_relative_path": config.CLEANUP_FOLDER_NAME,
         "status": status,
         "input_paths": [relative_to_project(project_root, input_snapshot_path)],
-        "output_paths": (
-            [relative_to_project(project_root, output_path)]
-            if output_path.is_file()
-            else []
-        ),
+        "output_paths": ([relative_to_project(project_root, output_path)] if output_path.is_file() else []),
         "artifact_paths": artifact_paths,
         "progress_current": progress_current,
         "progress_total": progress_total,
@@ -747,7 +702,9 @@ def _build_operation_state(
             "profile_id": profile_id,
             "input_fingerprint": input_fingerprint,
             "classifications": None if classifications is None else dict(classifications),
-        } if status != "completed" else None,
+        }
+        if status != "completed"
+        else None,
     }
 
 
@@ -758,11 +715,7 @@ def _load_operation_state(state_path: Path) -> OperationStatePayload | None:
 
 
 def _build_ai_log_path(project_root: Path, started_at: str) -> Path:
-    started_fragment = (
-        started_at.replace(":", "")
-        .replace("+00:00", "")
-        .replace("T", "_")
-    )
+    started_fragment = started_at.replace(":", "").replace("+00:00", "").replace("T", "_")
     return build_operation_artifact_path(
         project_root,
         "cleanup",
@@ -771,9 +724,7 @@ def _build_ai_log_path(project_root: Path, started_at: str) -> Path:
 
 
 def _usable_input_budget(profile_payload: dict[str, object]) -> int:
-    context_window = int(
-        profile_payload.get("context_window", config.DEFAULT_LLM_CONTEXT_WINDOW)
-    )
+    context_window = int(profile_payload.get("context_window", config.DEFAULT_LLM_CONTEXT_WINDOW))
     max_output_tokens = int(
         profile_payload.get(
             "max_output_tokens",
@@ -804,9 +755,7 @@ def _build_cleanup_warnings(
             "No explicit chapter or scene headings were detected; chunking will rely on sequential paragraph order."
         )
     warnings.extend(
-        str(item.get("message", "")).strip()
-        for item in warning_details
-        if str(item.get("message", "")).strip()
+        str(item.get("message", "")).strip() for item in warning_details if str(item.get("message", "")).strip()
     )
     return warnings
 
@@ -987,9 +936,7 @@ def _append_suspicious_window_warnings(
         else:
             classification_tail.append("kept_story_like")
     flip_count = sum(
-        1
-        for current, following in zip(classification_tail, classification_tail[1:])
-        if current != following
+        1 for current, following in zip(classification_tail, classification_tail[1:]) if current != following
     )
     if len(classification_tail) >= 6 and flip_count >= len(classification_tail) - 2:
         _append_warning_detail(

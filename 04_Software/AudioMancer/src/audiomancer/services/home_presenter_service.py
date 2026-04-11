@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -20,7 +19,6 @@
 
 from audiomancer import config
 from audiomancer.services import ui_state_service
-
 
 # PUBLIC API
 
@@ -56,25 +54,23 @@ def build_stage_statuses(
             for token in stage_tokens
         ]
 
-    finished_index = stage_reached_index(
-        str(manifest.get("current_stage", config.DEFAULT_WORKFLOW_STAGE))
-    )
+    finished_index = stage_reached_index(str(manifest.get("current_stage", config.DEFAULT_WORKFLOW_STAGE)))
     statuses: list[dict[str, str]] = []
     for index, token in enumerate(stage_tokens):
-        statuses.append({
-            "label": ui_state_service.translate(
-                f"home.stage_label.{token}",
-                language,
-            ),
-            "status": "finished" if finished_index >= index else "not_started",
-            "note": ui_state_service.translate(
-                f"home.stage_note.active.{token}",
-                language,
-            ),
-        })
-    extraction_status = str(
-        manifest_operation(manifest, "extraction").get("status", "not_started")
-    )
+        statuses.append(
+            {
+                "label": ui_state_service.translate(
+                    f"home.stage_label.{token}",
+                    language,
+                ),
+                "status": "finished" if finished_index >= index else "not_started",
+                "note": ui_state_service.translate(
+                    f"home.stage_note.active.{token}",
+                    language,
+                ),
+            }
+        )
+    extraction_status = str(manifest_operation(manifest, "extraction").get("status", "not_started"))
     if (
         source_document_name(manifest) is not None
         and extraction_status in {"running", "failed", "completed"}
@@ -82,9 +78,7 @@ def build_stage_statuses(
     ):
         statuses[0]["status"] = "finished"
         statuses[1]["status"] = "in_progress"
-    cleanup_status = str(
-        manifest_operation(manifest, "cleanup").get("status", "not_started")
-    )
+    cleanup_status = str(manifest_operation(manifest, "cleanup").get("status", "not_started"))
     if cleanup_status in {"running", "failed"} and len(statuses) > 1:
         statuses[0]["status"] = "finished"
         statuses[1]["status"] = "in_progress"
@@ -157,9 +151,7 @@ def visible_workflow_stage_tokens() -> tuple[str, ...]:
     @version    0.1.0
     """
     return tuple(
-        stage_token
-        for stage_token in config.PROJECT_WORKFLOW_STAGES
-        if stage_token != config.DEFAULT_WORKFLOW_STAGE
+        stage_token for stage_token in config.PROJECT_WORKFLOW_STAGES if stage_token != config.DEFAULT_WORKFLOW_STAGE
     )
 
 

@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -20,10 +19,8 @@
 
 from PySide6.QtWidgets import QApplication
 
-from audiomancer.services import settings_service
-from audiomancer.services import ui_state_service
+from audiomancer.services import settings_service, ui_state_service
 from audiomancer.ui.controllers import misc_ui_controller
-
 
 # PUBLIC API
 
@@ -97,33 +94,17 @@ def apply_language(window, language: str) -> None:
     @version    0.1.0
     """
     window.setWindowTitle(ui_state_service.translate("window_title.main", language))
-    window._action_new_project.setText(
-        ui_state_service.translate("toolbar.new_project", language)
-    )
-    window._action_open_project.setText(
-        ui_state_service.translate("toolbar.open_project", language)
-    )
-    window._action_settings.setText(
-        ui_state_service.translate("toolbar.settings", language)
-    )
-    window._action_ai_settings.setText(
-        ui_state_service.translate("toolbar.ai_settings", language)
-    )
-    window._action_help.setText(
-        ui_state_service.translate("toolbar.help", language)
-    )
-    window._action_about.setText(
-        ui_state_service.translate("toolbar.about", language)
-    )
+    window._action_new_project.setText(ui_state_service.translate("toolbar.new_project", language))
+    window._action_open_project.setText(ui_state_service.translate("toolbar.open_project", language))
+    window._action_settings.setText(ui_state_service.translate("toolbar.settings", language))
+    window._action_ai_settings.setText(ui_state_service.translate("toolbar.ai_settings", language))
+    window._action_help.setText(ui_state_service.translate("toolbar.help", language))
+    window._action_about.setText(ui_state_service.translate("toolbar.about", language))
     window._sidebar.apply_language(language)
     if window._status_bar is not None:
         window._status_bar.apply_language(language)
-    window._settings_dialog.setWindowTitle(
-        ui_state_service.translate("dialog.settings_title", language)
-    )
-    window._ai_settings_dialog.setWindowTitle(
-        ui_state_service.translate("dialog.ai_settings_title", language)
-    )
+    window._settings_dialog.setWindowTitle(ui_state_service.translate("dialog.settings_title", language))
+    window._ai_settings_dialog.setWindowTitle(ui_state_service.translate("dialog.ai_settings_title", language))
     if window._operation_progress_dialog is not None:
         window._operation_progress_dialog.apply_language(language)
     for widget in (
@@ -133,5 +114,6 @@ def apply_language(window, language: str) -> None:
     ):
         if hasattr(widget, "apply_language"):
             widget.apply_language(language)
+
 
 # END OF FILE

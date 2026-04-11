@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -21,7 +20,6 @@
 from PySide6.QtWidgets import QLabel, QVBoxLayout, QWidget
 
 from audiomancer.services import ui_state_service
-
 
 # PUBLIC API
 
@@ -80,12 +78,8 @@ class PlaceholderPage(QWidget):
         @version    0.1.0
         """
         key_base = self._title.lower().replace(" ", "_")
-        self._title_label.setText(
-            f"<h2>{ui_state_service.translate(f'placeholder.{key_base}.title', language)}</h2>"
-        )
-        self._note_label.setText(
-            ui_state_service.translate(f"placeholder.{key_base}.note", language)
-        )
+        self._title_label.setText(f"<h2>{ui_state_service.translate(f'placeholder.{key_base}.title', language)}</h2>")
+        self._note_label.setText(ui_state_service.translate(f"placeholder.{key_base}.note", language))
 
 
 # END OF FILE

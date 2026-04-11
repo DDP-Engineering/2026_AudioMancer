@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -20,12 +19,8 @@
 
 from PySide6.QtWidgets import QMessageBox
 
-from audiomancer.services import ai_backend_service
-from audiomancer.services import settings_service
-from audiomancer.services import ui_state_service
-from audiomancer.ui.controllers import misc_ui_controller
-from audiomancer.ui.controllers import settings_ui_controller
-
+from audiomancer.services import ai_backend_service, settings_service, ui_state_service
+from audiomancer.ui.controllers import misc_ui_controller, settings_ui_controller
 
 # PUBLIC API
 
@@ -81,9 +76,7 @@ def connect_ai_profile_from_dialog(window) -> None:
     @date       2026-04-06
     @version    0.1.0
     """
-    current_language = ui_state_service.current_language_from_settings(
-        window._settings_payload
-    )
+    current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     current_profile = window._ai_settings_page.build_current_profile_payload()
     if current_profile is None:
         return
@@ -117,5 +110,6 @@ def connect_ai_profile_from_dialog(window) -> None:
             f"{probe_result.get('message', '')}"
         ),
     )
+
 
 # END OF FILE

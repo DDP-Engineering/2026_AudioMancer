@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -21,9 +20,7 @@
 import json
 
 from audiomancer import config
-from audiomancer.services import project_workspace_service
-from audiomancer.services import text_cleanup_state_service
-
+from audiomancer.services import project_workspace_service, text_cleanup_state_service
 
 # PUBLIC API
 
@@ -101,37 +98,43 @@ def test_build_text_cleanup_state_loads_previews_and_notes(tmp_path) -> None:
         encoding="utf-8",
     )
     (cleanup_root / config.CLEANUP_REPORT_FILE_NAME).write_text(
-        json.dumps({
-            "warnings": [],
-            "paragraph_count": 3,
-            "removed_line_count": 2,
-            "detected_chapter_count": 1,
-        }, indent=2) + "\n",
+        json.dumps(
+            {
+                "warnings": [],
+                "paragraph_count": 3,
+                "removed_line_count": 2,
+                "detected_chapter_count": 1,
+            },
+            indent=2,
+        )
+        + "\n",
         encoding="utf-8",
     )
     (cleanup_root / config.OPERATION_STATE_FILE_NAME).write_text(
-        json.dumps({
-            "folder_relative_path": config.CLEANUP_FOLDER_NAME,
-            "status": "completed",
-            "input_paths": [],
-            "output_paths": [f"{config.CLEANUP_FOLDER_NAME}/{config.CLEANED_TEXT_FILE_NAME}"],
-            "artifact_paths": [f"{config.CLEANUP_FOLDER_NAME}/{config.CLEANUP_REPORT_FILE_NAME}"],
-            "progress_current": 1,
-            "progress_total": 1,
-            "mode": "deterministic",
-            "started_at": "2026-04-06T12:00:00+00:00",
-            "completed_at": "2026-04-06T12:01:00+00:00",
-            "updated_at": "2026-04-06T12:01:00+00:00",
-            "warning_count": 0,
-            "metadata": {"warnings": []},
-            "resume_checkpoint": None,
-        }, indent=2) + "\n",
+        json.dumps(
+            {
+                "folder_relative_path": config.CLEANUP_FOLDER_NAME,
+                "status": "completed",
+                "input_paths": [],
+                "output_paths": [f"{config.CLEANUP_FOLDER_NAME}/{config.CLEANED_TEXT_FILE_NAME}"],
+                "artifact_paths": [f"{config.CLEANUP_FOLDER_NAME}/{config.CLEANUP_REPORT_FILE_NAME}"],
+                "progress_current": 1,
+                "progress_total": 1,
+                "mode": "deterministic",
+                "started_at": "2026-04-06T12:00:00+00:00",
+                "completed_at": "2026-04-06T12:01:00+00:00",
+                "updated_at": "2026-04-06T12:01:00+00:00",
+                "warning_count": 0,
+                "metadata": {"warnings": []},
+                "resume_checkpoint": None,
+            },
+            indent=2,
+        )
+        + "\n",
         encoding="utf-8",
     )
     manifest["source_document"] = {"original_name": "story.txt"}
-    manifest["extracted_text_relative_path"] = (
-        f"{config.EXTRACTION_FOLDER_NAME}/{config.EXTRACTED_TEXT_FILE_NAME}"
-    )
+    manifest["extracted_text_relative_path"] = f"{config.EXTRACTION_FOLDER_NAME}/{config.EXTRACTED_TEXT_FILE_NAME}"
     manifest["operations"]["cleanup"]["status"] = "completed"
     manifest["operations"]["cleanup"]["output_paths"] = [
         f"{config.CLEANUP_FOLDER_NAME}/{config.CLEANED_TEXT_FILE_NAME}"
@@ -175,46 +178,21 @@ def test_build_text_cleanup_state_surfaces_ai_cleanup_review_warning(tmp_path) -
         encoding="utf-8",
     )
     (cleanup_root / config.CLEANUP_REPORT_FILE_NAME).write_text(
-        json.dumps({
-            "warnings": [
-                "AI cleanup corrected one invalid page-number label in window 1 and preserved the text for review."
-            ],
-            "warning_details": [
-                {
-                    "kind": "invalid_page_number_label_corrected",
-                    "message": "AI cleanup corrected one invalid page-number label in window 1 and preserved the text for review.",
-                }
-            ],
-            "paragraph_count": 3,
-            "removed_line_count": 2,
-            "detected_chapter_count": 1,
-            "cleanup_mode": "ai_assisted",
-            "ai_profile_id": "profile_1",
-            "token_usage": {
-                "input_tokens": 300,
-                "output_tokens": 75,
-                "total_tokens": 375,
-                "usage_available": True,
-            },
-        }, indent=2) + "\n",
-        encoding="utf-8",
-    )
-    (cleanup_root / config.OPERATION_STATE_FILE_NAME).write_text(
-        json.dumps({
-            "folder_relative_path": config.CLEANUP_FOLDER_NAME,
-            "status": "completed",
-            "input_paths": [],
-            "output_paths": [f"{config.CLEANUP_FOLDER_NAME}/{config.CLEANED_TEXT_FILE_NAME}"],
-            "artifact_paths": [f"{config.CLEANUP_FOLDER_NAME}/{config.CLEANUP_REPORT_FILE_NAME}"],
-            "progress_current": 1,
-            "progress_total": 1,
-            "mode": "ai_assisted",
-            "started_at": "2026-04-07T12:00:00+00:00",
-            "completed_at": "2026-04-07T12:01:00+00:00",
-            "updated_at": "2026-04-07T12:01:00+00:00",
-            "warning_count": 1,
-            "metadata": {
-                "warnings": [],
+        json.dumps(
+            {
+                "warnings": [
+                    "AI cleanup corrected one invalid page-number label in window 1 and preserved the text for review."
+                ],
+                "warning_details": [
+                    {
+                        "kind": "invalid_page_number_label_corrected",
+                        "message": "AI cleanup corrected one invalid page-number label in window 1 and preserved the text for review.",
+                    }
+                ],
+                "paragraph_count": 3,
+                "removed_line_count": 2,
+                "detected_chapter_count": 1,
+                "cleanup_mode": "ai_assisted",
                 "ai_profile_id": "profile_1",
                 "token_usage": {
                     "input_tokens": 300,
@@ -223,14 +201,45 @@ def test_build_text_cleanup_state_surfaces_ai_cleanup_review_warning(tmp_path) -
                     "usage_available": True,
                 },
             },
-            "resume_checkpoint": None,
-        }, indent=2) + "\n",
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    (cleanup_root / config.OPERATION_STATE_FILE_NAME).write_text(
+        json.dumps(
+            {
+                "folder_relative_path": config.CLEANUP_FOLDER_NAME,
+                "status": "completed",
+                "input_paths": [],
+                "output_paths": [f"{config.CLEANUP_FOLDER_NAME}/{config.CLEANED_TEXT_FILE_NAME}"],
+                "artifact_paths": [f"{config.CLEANUP_FOLDER_NAME}/{config.CLEANUP_REPORT_FILE_NAME}"],
+                "progress_current": 1,
+                "progress_total": 1,
+                "mode": "ai_assisted",
+                "started_at": "2026-04-07T12:00:00+00:00",
+                "completed_at": "2026-04-07T12:01:00+00:00",
+                "updated_at": "2026-04-07T12:01:00+00:00",
+                "warning_count": 1,
+                "metadata": {
+                    "warnings": [],
+                    "ai_profile_id": "profile_1",
+                    "token_usage": {
+                        "input_tokens": 300,
+                        "output_tokens": 75,
+                        "total_tokens": 375,
+                        "usage_available": True,
+                    },
+                },
+                "resume_checkpoint": None,
+            },
+            indent=2,
+        )
+        + "\n",
         encoding="utf-8",
     )
     manifest["source_document"] = {"original_name": "story.txt"}
-    manifest["extracted_text_relative_path"] = (
-        f"{config.EXTRACTION_FOLDER_NAME}/{config.EXTRACTED_TEXT_FILE_NAME}"
-    )
+    manifest["extracted_text_relative_path"] = f"{config.EXTRACTION_FOLDER_NAME}/{config.EXTRACTED_TEXT_FILE_NAME}"
     manifest["operations"]["cleanup"]["status"] = "completed"
     manifest["operations"]["cleanup"]["mode"] = "ai_assisted"
     manifest["operations"]["cleanup"]["output_paths"] = [
@@ -243,14 +252,8 @@ def test_build_text_cleanup_state_surfaces_ai_cleanup_review_warning(tmp_path) -
         "en",
     )
 
-    assert any(
-        "completed with validation warnings" in note
-        for note in cleanup_state["notes"]
-    )
-    assert any(
-        "Input tokens: 300 | Output tokens: 75 | Total: 375" in note
-        for note in cleanup_state["notes"]
-    )
+    assert any("completed with validation warnings" in note for note in cleanup_state["notes"])
+    assert any("Input tokens: 300 | Output tokens: 75 | Total: 375" in note for note in cleanup_state["notes"])
 
 
 def test_build_manifest_after_character_discovery_reset_returns_translation_ready() -> None:

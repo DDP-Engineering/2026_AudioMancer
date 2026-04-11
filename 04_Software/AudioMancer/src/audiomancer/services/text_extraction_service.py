@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -19,15 +18,15 @@
 
 # IMPORTS
 
-import json
 from datetime import UTC, datetime
 from html.parser import HTMLParser
+import json
 from pathlib import Path
 
-import ebooklib
-import fitz
 from docx import Document
+import ebooklib
 from ebooklib import epub
+import fitz
 from odf import teletype
 from odf.opendocument import load as load_odf_document
 from striprtf.striprtf import rtf_to_text
@@ -38,7 +37,6 @@ from audiomancer.services.operation_runtime_service import (
     build_operation_input_snapshot_path,
     progress_percent,
     raise_if_cancelled,
-    relative_to_project,
     reset_operation_data,
 )
 
@@ -487,13 +485,9 @@ def _process_units(
             for unit_index in range(start_index, total_units):
                 raise_if_cancelled(cancel_requested)
                 page_index = int(progress_units[unit_index])
-                unit_text = _normalize_text(
-                    document.load_page(page_index).get_text("text")
-                ).strip()
+                unit_text = _normalize_text(document.load_page(page_index).get_text("text")).strip()
                 if not unit_text:
-                    warnings.append(
-                        f"PDF page {page_index + 1} did not contain extractable text."
-                    )
+                    warnings.append(f"PDF page {page_index + 1} did not contain extractable text.")
                 if unit_text:
                     prefix = ""
                     if output_path.exists() and output_path.stat().st_size > 0:
@@ -733,9 +727,7 @@ def _text_units_from_rtf(source_path: Path) -> list[str]:
             "Legacy .doc extraction is not supported in this phase."
         )
     if not source_bytes.lstrip().startswith(b"{\\rtf"):
-        raise ValueError(
-            "The selected .rtf file does not contain a valid RTF header."
-        )
+        raise ValueError("The selected .rtf file does not contain a valid RTF header.")
     for encoding_name in ("utf-8-sig", "utf-8", "cp1250", "cp1252", "latin-1"):
         try:
             plain_text = rtf_to_text(source_path.read_text(encoding=encoding_name))
@@ -804,11 +796,7 @@ def _paragraph_units_from_text(text: str) -> list[str]:
     @version    0.1.0
     """
     normalized = _normalize_text(text)
-    return [
-        paragraph.strip()
-        for paragraph in normalized.split("\n\n")
-        if paragraph.strip()
-    ]
+    return [paragraph.strip() for paragraph in normalized.split("\n\n") if paragraph.strip()]
 
 
 def _supports_incremental_resume(file_type: str) -> bool:

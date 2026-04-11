@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -20,16 +19,18 @@
 
 # IMPORTS
 
+from datetime import UTC, datetime
 import hashlib
 import json
-from datetime import UTC, datetime
 from pathlib import Path
 
 from audiomancer import config
-from audiomancer.services import deterministic_chunking_service
-from audiomancer.services import llm_provider_service
-from audiomancer.services import prompt_template_service
-from audiomancer.services import token_usage_service
+from audiomancer.services import (
+    deterministic_chunking_service,
+    llm_provider_service,
+    prompt_template_service,
+    token_usage_service,
+)
 from audiomancer.services.logging_service import get_component_logger, trace_function
 from audiomancer.services.operation_runtime_service import (
     OperationCancelledError,
@@ -141,9 +142,7 @@ def chunk_text(
         config.OPERATION_STATE_FILE_NAME,
     )
 
-    prompt_template_service.validate_required_prompts(
-        ["text_chunking_system", "text_chunking_user"]
-    )
+    prompt_template_service.validate_required_prompts(["text_chunking_system", "text_chunking_user"])
     input_fingerprint = _compute_input_fingerprint(input_text)
     windows = _build_windows(paragraph_records, semantic_strategy)
     total_windows = len(windows)
@@ -205,9 +204,7 @@ def chunk_text(
     for window_index in range(start_window_index, total_windows):
         raise_if_cancelled(cancel_requested)
         window_payload = windows[window_index]
-        window_records = paragraph_records[
-            int(window_payload["start_index"]): int(window_payload["end_index"]) + 1
-        ]
+        window_records = paragraph_records[int(window_payload["start_index"]) : int(window_payload["end_index"]) + 1]
         user_prompt = prompt_template_service.render_prompt(
             "text_chunking_user",
             {
@@ -390,10 +387,12 @@ def _build_windows(
     start_index = 0
     while start_index < len(paragraph_records):
         end_index = min(len(paragraph_records) - 1, start_index + window_size - 1)
-        windows.append({
-            "start_index": start_index,
-            "end_index": end_index,
-        })
+        windows.append(
+            {
+                "start_index": start_index,
+                "end_index": end_index,
+            }
+        )
         start_index = end_index + 1
     return windows
 
@@ -427,13 +426,13 @@ def _restore_resume_state(
         return 0, [], None
     start_window_index = int(resume_checkpoint.get("completed_window_count", 0))
     committed_break_ids = [
-        str(item)
-        for item in list(resume_checkpoint.get("committed_break_ids", []))
-        if str(item).strip()
+        str(item) for item in list(resume_checkpoint.get("committed_break_ids", [])) if str(item).strip()
     ]
     log_relative_path = resume_checkpoint.get("log_relative_path")
-    return min(start_window_index, total_windows), committed_break_ids, (
-        None if log_relative_path in (None, "") else str(log_relative_path)
+    return (
+        min(start_window_index, total_windows),
+        committed_break_ids,
+        (None if log_relative_path in (None, "") else str(log_relative_path)),
     )
 
 
@@ -473,15 +472,8 @@ def _merge_committed_break_ids(
     new_ids: list[str],
     paragraph_records: list[dict[str, object]],
 ) -> list[str]:
-    order = {
-        str(record["unit_id"]): index
-        for index, record in enumerate(paragraph_records)
-    }
-    merged = {
-        item
-        for item in existing_ids + new_ids
-        if item in order
-    }
+    order = {str(record["unit_id"]): index for index, record in enumerate(paragraph_records)}
+    merged = {item for item in existing_ids + new_ids if item in order}
     return sorted(merged, key=lambda item: order[item])
 
 
@@ -498,27 +490,27 @@ def _build_chunks_from_break_ids(
     current_chapter: str | None = None
     chunk_index = 1
     for record_index, paragraph_record in enumerate(paragraph_records):
-        chapter_label = deterministic_chunking_service._detect_chapter_label(
-            str(paragraph_record["text"])
-        )
+        chapter_label = deterministic_chunking_service._detect_chapter_label(str(paragraph_record["text"]))
         if chapter_label is not None:
             current_chapter = chapter_label
         is_boundary = str(paragraph_record["unit_id"]) in boundary_ids
         is_last_record = record_index == len(paragraph_records) - 1
         if not is_boundary and not is_last_record:
             continue
-        selected_records = paragraph_records[start_index: record_index + 1]
-        chunks.append({
-            "chunk_id": f"chunk-{chunk_index:04d}",
-            "sequence_index": chunk_index,
-            "chapter_label": current_chapter,
-            "text": "\n\n".join(str(item["text"]) for item in selected_records).strip(),
-            "source_start_line": int(selected_records[0]["line_start"]),
-            "source_end_line": int(selected_records[-1]["line_end"]),
-            "chunking_mode": "ai_assisted",
-            "semantic_strategy": semantic_strategy,
-            "scene_note": None,
-        })
+        selected_records = paragraph_records[start_index : record_index + 1]
+        chunks.append(
+            {
+                "chunk_id": f"chunk-{chunk_index:04d}",
+                "sequence_index": chunk_index,
+                "chapter_label": current_chapter,
+                "text": "\n\n".join(str(item["text"]) for item in selected_records).strip(),
+                "source_start_line": int(selected_records[0]["line_start"]),
+                "source_end_line": int(selected_records[-1]["line_end"]),
+                "chunking_mode": "ai_assisted",
+                "semantic_strategy": semantic_strategy,
+                "scene_note": None,
+            }
+        )
         chunk_index += 1
         start_index = record_index + 1
     return chunks
@@ -615,11 +607,7 @@ def _build_operation_state(
         "folder_relative_path": config.CHUNKING_FOLDER_NAME,
         "status": status,
         "input_paths": [relative_to_project(project_root, input_snapshot_path)],
-        "output_paths": (
-            [relative_to_project(project_root, output_path)]
-            if output_path.is_file()
-            else []
-        ),
+        "output_paths": ([relative_to_project(project_root, output_path)] if output_path.is_file() else []),
         "artifact_paths": artifact_paths,
         "progress_current": progress_current,
         "progress_total": progress_total,
@@ -649,12 +637,7 @@ def _chapter_count_from_chunks(chunks: list[ChunkPayload]) -> int:
 
 
 def _build_ai_log_path(project_root: Path, started_at: str) -> Path:
-    timestamp_token = (
-        started_at.replace("-", "")
-        .replace(":", "")
-        .replace("+", "_")
-        .replace(".", "")
-    )
+    timestamp_token = started_at.replace("-", "").replace(":", "").replace("+", "_").replace(".", "")
     return build_operation_output_path(
         project_root,
         "chunking",

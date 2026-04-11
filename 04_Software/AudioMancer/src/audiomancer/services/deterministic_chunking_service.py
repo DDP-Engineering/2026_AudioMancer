@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -19,15 +18,14 @@
 
 # IMPORTS
 
-import json
-import re
 from datetime import UTC, datetime
+import json
 from pathlib import Path
+import re
 
 from audiomancer import config
 from audiomancer.services.logging_service import get_component_logger, trace_function
 from audiomancer.services.operation_runtime_service import (
-    OperationCancelledError,
     build_operation_artifact_path,
     build_operation_input_snapshot_path,
     build_operation_output_path,
@@ -97,9 +95,7 @@ def chunk_text(
     if not paragraph_records:
         raise ValueError("Cleaned text does not contain any chunkable paragraphs.")
 
-    original_name = str(
-        source_document.get("original_name") or Path(cleaned_relative_path).name
-    )
+    original_name = str(source_document.get("original_name") or Path(cleaned_relative_path).name)
     input_snapshot_path = build_operation_input_snapshot_path(
         resolved_project_root,
         "chunking",
@@ -299,19 +295,17 @@ def _emit_progress(progress_callback, progress_current: int, progress_total: int
 
 def _build_paragraph_records(cleaned_text: str) -> list[dict[str, object]]:
     normalized = cleaned_text.replace("\r\n", "\n").replace("\r", "\n")
-    paragraph_texts = [
-        paragraph.strip()
-        for paragraph in normalized.split("\n\n")
-        if paragraph.strip()
-    ]
+    paragraph_texts = [paragraph.strip() for paragraph in normalized.split("\n\n") if paragraph.strip()]
     records: list[dict[str, object]] = []
     line_number = 1
     for paragraph_text in paragraph_texts:
-        records.append({
-            "text": paragraph_text,
-            "line_start": line_number,
-            "line_end": line_number,
-        })
+        records.append(
+            {
+                "text": paragraph_text,
+                "line_start": line_number,
+                "line_end": line_number,
+            }
+        )
         line_number += 2
     return records
 
@@ -405,11 +399,7 @@ def _build_operation_state(
         "folder_relative_path": config.CHUNKING_FOLDER_NAME,
         "status": status,
         "input_paths": [relative_to_project(project_root, input_snapshot_path)],
-        "output_paths": (
-            [relative_to_project(project_root, output_path)]
-            if output_path.is_file()
-            else []
-        ),
+        "output_paths": ([relative_to_project(project_root, output_path)] if output_path.is_file() else []),
         "artifact_paths": artifact_paths,
         "progress_current": progress_current,
         "progress_total": progress_total,

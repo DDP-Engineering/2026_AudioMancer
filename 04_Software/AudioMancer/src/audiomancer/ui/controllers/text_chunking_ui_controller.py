@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -24,13 +23,15 @@ from typing import TYPE_CHECKING
 from PySide6.QtWidgets import QMessageBox
 
 from audiomancer import config
-from audiomancer.services import ai_chunking_service
-from audiomancer.services import deterministic_chunking_service
-from audiomancer.services import home_presenter_service
-from audiomancer.services import operation_runtime_service
-from audiomancer.services import project_workspace_service
-from audiomancer.services import text_cleanup_state_service
-from audiomancer.services import ui_state_service
+from audiomancer.services import (
+    ai_chunking_service,
+    deterministic_chunking_service,
+    home_presenter_service,
+    operation_runtime_service,
+    project_workspace_service,
+    text_cleanup_state_service,
+    ui_state_service,
+)
 from audiomancer.ui.controllers import misc_ui_controller
 
 if TYPE_CHECKING:
@@ -50,9 +51,7 @@ def handle_deterministic_chunking_requested(window: "MainWindow") -> None:
     @date       2026-04-07
     @version    0.1.1
     """
-    current_language = ui_state_service.current_language_from_settings(
-        window._settings_payload
-    )
+    current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._active_operation_kind is not None:
         return
     if window._current_project_root is None or window._current_manifest is None:
@@ -107,9 +106,7 @@ def handle_ai_chunking_requested(window: "MainWindow", profile_id: str, strategy
     @date       2026-04-07
     @version    0.1.0
     """
-    current_language = ui_state_service.current_language_from_settings(
-        window._settings_payload
-    )
+    current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._active_operation_kind is not None:
         return
     if window._current_project_root is None or window._current_manifest is None:
@@ -160,17 +157,12 @@ def handle_ai_chunking_requested(window: "MainWindow", profile_id: str, strategy
         return
 
     selected_strategy = (
-        resume_strategy
-        if chunking_status in {"running", "failed"} and chunking_mode == "ai_assisted"
-        else strategy
+        resume_strategy if chunking_status in {"running", "failed"} and chunking_mode == "ai_assisted" else strategy
     )
     if selected_strategy not in config.AI_CHUNKING_STRATEGY_OPTIONS:
         selected_strategy = config.DEFAULT_AI_CHUNKING_STRATEGY
 
-    if not (
-        chunking_status in {"running", "failed"}
-        and chunking_mode == "ai_assisted"
-    ):
+    if not (chunking_status in {"running", "failed"} and chunking_mode == "ai_assisted"):
         if chunking_status == "completed":
             if not confirm_ai_chunking_rerun(window, current_language):
                 return
@@ -540,18 +532,15 @@ def _reset_chunking_and_downstream(window: "MainWindow") -> None:
         "chunking",
     )
     project_workspace_service.save_manifest(reset_manifest, window._current_project_root)
-    window._current_manifest = project_workspace_service.load_manifest(
-        window._current_project_root
-    )
+    window._current_manifest = project_workspace_service.load_manifest(window._current_project_root)
 
 
 def _load_chunking_operation_state(window: "MainWindow") -> dict[str, object] | None:
     if window._current_project_root is None:
         return None
-    return (
-        ai_chunking_service.load_operation_state(window._current_project_root)
-        or deterministic_chunking_service.load_operation_state(window._current_project_root)
-    )
+    return ai_chunking_service.load_operation_state(
+        window._current_project_root
+    ) or deterministic_chunking_service.load_operation_state(window._current_project_root)
 
 
 def _resolve_ai_profile(

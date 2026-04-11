@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -18,34 +17,11 @@
 
 # IMPORTS
 
-import json
-from PySide6.QtWidgets import (
-    QApplication,
-    QDialog,
-    QGroupBox,
-    QLabel,
-    QListWidget,
-    QMessageBox,
-    QPlainTextEdit,
-    QPushButton,
-    QStackedWidget,
-    QStatusBar,
-    QToolBar,
-)
-
-import audiomancer.ui.main_window as main_window_module
-from audiomancer import config
-from audiomancer.services import deterministic_chunking_service
-from audiomancer.services import project_workspace_service
-from audiomancer.ui.controllers import ai_translation_ui_controller
 from audiomancer.ui.controllers import ai_settings_ui_controller
-from audiomancer.ui.controllers import home_ui_controller
-from audiomancer.ui.controllers import settings_ui_controller
-from audiomancer.ui.controllers import text_chunking_ui_controller
-from audiomancer.ui.controllers import text_cleanup_ui_controller
 from audiomancer.ui.main_window import MainWindow
 
 # PUBLIC API
+
 
 def test_main_window_connect_ai_profile_shows_success_popup(monkeypatch, qtbot, default_settings_payload) -> None:
     """
@@ -130,8 +106,4 @@ def test_main_window_connect_ai_profile_shows_failure_popup(monkeypatch, qtbot, 
     window._ai_settings_page._connect_button.click()
 
     assert popup_calls
-    assert popup_calls[0][2] == (
-        "Connection failed.\nConnection failed: request timed out."
-    )
-
-
+    assert popup_calls[0][2] == ("Connection failed.\nConnection failed: request timed out.")

@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -92,9 +91,7 @@ class SettingsPage(QWidget):
             "Play completion beep",
             self,
         )
-        self._completion_beep_checkbox.setChecked(
-            config.DEFAULT_PLAY_COMPLETION_BEEP
-        )
+        self._completion_beep_checkbox.setChecked(config.DEFAULT_PLAY_COMPLETION_BEEP)
         layout.addWidget(self._completion_beep_checkbox)
 
         layout.addStretch(1)
@@ -120,12 +117,8 @@ class SettingsPage(QWidget):
         @date       2026-04-05
         @version    0.1.0
         """
-        self._language_combo.setCurrentText(
-            str(settings_payload.get("language", config.DEFAULT_LANGUAGE))
-        )
-        ui_text_scale = str(
-            settings_payload.get("ui_text_scale", config.DEFAULT_UI_TEXT_SCALE)
-        )
+        self._language_combo.setCurrentText(str(settings_payload.get("language", config.DEFAULT_LANGUAGE)))
+        ui_text_scale = str(settings_payload.get("ui_text_scale", config.DEFAULT_UI_TEXT_SCALE))
         index = self._ui_text_scale_combo.findData(ui_text_scale)
         self._ui_text_scale_combo.setCurrentIndex(0 if index < 0 else index)
         self._completion_beep_checkbox.setChecked(
@@ -152,12 +145,8 @@ class SettingsPage(QWidget):
         """
         merged_settings = dict(existing_settings_payload)
         merged_settings["language"] = self._language_combo.currentText()
-        merged_settings["ui_text_scale"] = str(
-            self._ui_text_scale_combo.currentData()
-        )
-        merged_settings["play_completion_beep"] = (
-            self._completion_beep_checkbox.isChecked()
-        )
+        merged_settings["ui_text_scale"] = str(self._ui_text_scale_combo.currentData())
+        merged_settings["play_completion_beep"] = self._completion_beep_checkbox.isChecked()
         return merged_settings
 
     def apply_language(self, language: str) -> None:
@@ -170,21 +159,11 @@ class SettingsPage(QWidget):
         @date       2026-04-05
         @version    0.1.0
         """
-        self._language_label.setText(
-            ui_state_service.translate("settings.language", language)
-        )
-        self._text_size_label.setText(
-            ui_state_service.translate("settings.text_size", language)
-        )
-        self._completion_beep_checkbox.setText(
-            ui_state_service.translate("settings.play_beep", language)
-        )
-        self._cancel_button.setText(
-            ui_state_service.translate("settings.cancel", language)
-        )
-        self._save_button.setText(
-            ui_state_service.translate("settings.save", language)
-        )
+        self._language_label.setText(ui_state_service.translate("settings.language", language))
+        self._text_size_label.setText(ui_state_service.translate("settings.text_size", language))
+        self._completion_beep_checkbox.setText(ui_state_service.translate("settings.play_beep", language))
+        self._cancel_button.setText(ui_state_service.translate("settings.cancel", language))
+        self._save_button.setText(ui_state_service.translate("settings.save", language))
         self._ui_text_scale_combo.setItemText(
             self._ui_text_scale_combo.findData("very_small"),
             ui_state_service.translate("settings.scale.very_small", language),

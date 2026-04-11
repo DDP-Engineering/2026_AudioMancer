@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -21,16 +20,15 @@
 import json
 from pathlib import Path
 
-import fitz
-import pytest
 from docx import Document
 from ebooklib import epub
+import fitz
 from odf.opendocument import OpenDocumentText
 from odf.text import P
+import pytest
 
 from audiomancer import config
-from audiomancer.services import project_workspace_service
-from audiomancer.services import text_extraction_service
+from audiomancer.services import project_workspace_service, text_extraction_service
 
 
 def test_extract_text_writes_self_contained_artifacts_for_txt_source(tmp_path) -> None:
@@ -61,9 +59,7 @@ def test_extract_text_writes_self_contained_artifacts_for_txt_source(tmp_path) -
     assert report_payload["source_type"] == "txt"
     assert report_payload["word_count"] == 4
 
-    state_payload = json.loads(
-        (extraction_root / config.OPERATION_STATE_FILE_NAME).read_text(encoding="utf-8")
-    )
+    state_payload = json.loads((extraction_root / config.OPERATION_STATE_FILE_NAME).read_text(encoding="utf-8"))
     assert state_payload["status"] == "completed"
     assert state_payload["output_paths"] == [f"00_extraction/{config.EXTRACTED_TEXT_FILE_NAME}"]
     assert state_payload["artifact_paths"] == [f"00_extraction/{config.EXTRACTION_REPORT_FILE_NAME}"]
@@ -114,9 +110,7 @@ def test_extract_text_supports_document_formats(
 
     report_payload = text_extraction_service.extract_text(project_root, manifest)
 
-    output_text = (
-        project_root / "00_extraction" / config.EXTRACTED_TEXT_FILE_NAME
-    ).read_text(encoding="utf-8")
+    output_text = (project_root / "00_extraction" / config.EXTRACTED_TEXT_FILE_NAME).read_text(encoding="utf-8")
     assert file_type == report_payload["source_type"]
     assert report_payload["character_count"] > 0
     assert "Story" in output_text
@@ -144,9 +138,7 @@ def test_extract_text_reports_pdf_warnings_and_total_pages(tmp_path) -> None:
 
     assert report_payload["page_count"] == 2
     assert report_payload["warnings"] == ["PDF page 1 did not contain extractable text."]
-    output_text = (
-        project_root / "00_extraction" / config.EXTRACTED_TEXT_FILE_NAME
-    ).read_text(encoding="utf-8")
+    output_text = (project_root / "00_extraction" / config.EXTRACTED_TEXT_FILE_NAME).read_text(encoding="utf-8")
     assert output_text == "Story page two\n"
     state_payload = json.loads(
         (project_root / "00_extraction" / config.OPERATION_STATE_FILE_NAME).read_text(encoding="utf-8")

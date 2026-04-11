@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -18,8 +17,8 @@
 
 # IMPORTS
 
-import re
 from pathlib import Path
+import re
 
 from audiomancer import config
 from audiomancer.services.logging_service import get_component_logger, trace_function
@@ -83,13 +82,9 @@ def render_prompt(
     missing_variables = sorted(placeholders - provided_variables)
     extra_variables = sorted(provided_variables - placeholders)
     if missing_variables:
-        raise ValueError(
-            f"Prompt '{prompt_name}' is missing values for placeholders: {', '.join(missing_variables)}"
-        )
+        raise ValueError(f"Prompt '{prompt_name}' is missing values for placeholders: {', '.join(missing_variables)}")
     if extra_variables:
-        raise ValueError(
-            f"Prompt '{prompt_name}' received unexpected placeholders: {', '.join(extra_variables)}"
-        )
+        raise ValueError(f"Prompt '{prompt_name}' received unexpected placeholders: {', '.join(extra_variables)}")
 
     rendered = template
     for placeholder_name in sorted(placeholders):
@@ -100,9 +95,7 @@ def render_prompt(
 
     unresolved = sorted(set(_PLACEHOLDER_PATTERN.findall(rendered)))
     if unresolved:
-        raise ValueError(
-            f"Prompt '{prompt_name}' still contains unresolved placeholders: {', '.join(unresolved)}"
-        )
+        raise ValueError(f"Prompt '{prompt_name}' still contains unresolved placeholders: {', '.join(unresolved)}")
     if not rendered.strip():
         raise ValueError(f"Rendered prompt is empty: {prompt_name}")
     return rendered

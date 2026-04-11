@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -36,8 +35,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from audiomancer.services import character_discovery_service
-from audiomancer.services import ui_state_service
+from audiomancer.services import character_discovery_service, ui_state_service
 
 CHARACTER_PAGE_MODE_VIEW = "view"
 CHARACTER_PAGE_MODE_EDIT = "edit"
@@ -74,9 +72,7 @@ class CharactersPage(QWidget):
         super().__init__(parent)
         self._project_active = False
         self._busy = False
-        self._stage_status = (
-            character_discovery_service.CHARACTER_DISCOVERY_STAGE_NOT_STARTED
-        )
+        self._stage_status = character_discovery_service.CHARACTER_DISCOVERY_STAGE_NOT_STARTED
         self._profiles: list[dict[str, object]] = []
         self._source_chunk_map: dict[str, str] = {}
         self._current_character_id: str | None = None
@@ -127,9 +123,7 @@ class CharactersPage(QWidget):
         list_layout.setContentsMargins(6, 12, 6, 6)
 
         self._character_list = QListWidget(self)
-        self._character_list.currentRowChanged.connect(
-            self._handle_character_selection_changed
-        )
+        self._character_list.currentRowChanged.connect(self._handle_character_selection_changed)
         list_layout.addWidget(self._character_list, 1)
 
         button_column = QVBoxLayout()
@@ -155,9 +149,7 @@ class CharactersPage(QWidget):
         editor_group_layout.setContentsMargins(6, 12, 6, 6)
         self._editor_scroll_area = QScrollArea(self._editor_group)
         self._editor_scroll_area.setWidgetResizable(True)
-        self._editor_scroll_area.setHorizontalScrollBarPolicy(
-            Qt.ScrollBarPolicy.ScrollBarAlwaysOff
-        )
+        self._editor_scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self._editor_scroll_area.setFrameShape(QScrollArea.Shape.NoFrame)
         self._editor_form_widget = QWidget(self._editor_scroll_area)
         editor_layout = QFormLayout(self._editor_form_widget)
@@ -275,9 +267,7 @@ class CharactersPage(QWidget):
             profiles=[],
             notes=["Run text chunking before Character Discovery."],
             selected_profile_id=None,
-            stage_status=(
-                character_discovery_service.CHARACTER_DISCOVERY_STAGE_NOT_STARTED
-            ),
+            stage_status=(character_discovery_service.CHARACTER_DISCOVERY_STAGE_NOT_STARTED),
             character_count=0,
             source_chunk_map={},
             can_start=False,
@@ -324,11 +314,7 @@ class CharactersPage(QWidget):
             for label, profile_id in entries:
                 self._profile_combo.addItem(label, profile_id)
             selected_index = next(
-                (
-                    index
-                    for index, (_label, profile_id) in enumerate(entries)
-                    if profile_id == selected_profile_id
-                ),
+                (index for index, (_label, profile_id) in enumerate(entries) if profile_id == selected_profile_id),
                 0,
             )
             self._profile_combo.setCurrentIndex(selected_index)
@@ -403,14 +389,9 @@ class CharactersPage(QWidget):
         if preferred_character_id is None and self._profiles:
             preferred_character_id = str(self._profiles[0].get("character_id", ""))
         if preferred_character_id is not None and not any(
-            str(profile.get("character_id", "")) == preferred_character_id
-            for profile in self._profiles
+            str(profile.get("character_id", "")) == preferred_character_id for profile in self._profiles
         ):
-            preferred_character_id = (
-                None
-                if not self._profiles
-                else str(self._profiles[0].get("character_id", ""))
-            )
+            preferred_character_id = None if not self._profiles else str(self._profiles[0].get("character_id", ""))
         self._refresh_character_list(preferred_character_id)
         self.apply_selected_character(preferred_character_id)
         self._apply_control_state()
@@ -533,8 +514,7 @@ class CharactersPage(QWidget):
         self._profiles = [
             profile
             for profile in self._profiles
-            if str(profile.get("character_id", ""))
-            != str(draft_profile.get("character_id", ""))
+            if str(profile.get("character_id", "")) != str(draft_profile.get("character_id", ""))
         ]
         self._profiles.append(deepcopy(draft_profile))
         draft_character_id = str(draft_profile.get("character_id", ""))
@@ -562,15 +542,8 @@ class CharactersPage(QWidget):
             self._clear_editor()
             self._apply_control_state()
             return
-        if not any(
-            str(profile.get("character_id", "")) == character_id
-            for profile in self._profiles
-        ):
-            character_id = (
-                None
-                if not self._profiles
-                else str(self._profiles[0].get("character_id", ""))
-            )
+        if not any(str(profile.get("character_id", "")) == character_id for profile in self._profiles):
+            character_id = None if not self._profiles else str(self._profiles[0].get("character_id", ""))
             if character_id is None:
                 self.apply_selected_character(None)
                 return
@@ -596,9 +569,7 @@ class CharactersPage(QWidget):
         @date       2026-04-08
         @version    0.1.0
         """
-        self._select_list_row(
-            _row_for_character_id(self._profiles, self._current_character_id)
-        )
+        self._select_list_row(_row_for_character_id(self._profiles, self._current_character_id))
 
     def discard_changes(self) -> None:
         """
@@ -612,15 +583,9 @@ class CharactersPage(QWidget):
         current_character_id = self._current_character_id
         if self._mode == CHARACTER_PAGE_MODE_ADD and current_character_id is not None:
             self._profiles = [
-                profile
-                for profile in self._profiles
-                if str(profile.get("character_id", "")) != current_character_id
+                profile for profile in self._profiles if str(profile.get("character_id", "")) != current_character_id
             ]
-            fallback_character_id = (
-                None
-                if not self._profiles
-                else str(self._profiles[0].get("character_id", ""))
-            )
+            fallback_character_id = None if not self._profiles else str(self._profiles[0].get("character_id", ""))
             self._refresh_character_list(fallback_character_id)
             self._mode = CHARACTER_PAGE_MODE_VIEW
             self._dirty = False
@@ -644,78 +609,30 @@ class CharactersPage(QWidget):
         @date       2026-04-08
         @version    0.2.0
         """
-        self._title_label.setText(
-            f"<h2>{ui_state_service.translate('characters.title', language)}</h2>"
-        )
-        self._profile_label.setText(
-            ui_state_service.translate("characters.ai_profile", language)
-        )
-        self._start_button.setText(
-            ui_state_service.translate("characters.start", language)
-        )
-        self._reset_button.setText(
-            ui_state_service.translate("characters.reset", language)
-        )
-        self._add_character_button.setText(
-            ui_state_service.translate("characters.add_character", language)
-        )
-        self._edit_character_button.setText(
-            ui_state_service.translate("characters.edit_character", language)
-        )
-        self._save_character_button.setText(
-            ui_state_service.translate("characters.save_character", language)
-        )
-        self._delete_character_button.setText(
-            ui_state_service.translate("characters.delete_character", language)
-        )
-        self._list_group.setTitle(
-            ui_state_service.translate("characters.list_group", language)
-        )
-        self._editor_group.setTitle(
-            ui_state_service.translate("characters.profile_group", language)
-        )
-        self._evidence_group.setTitle(
-            ui_state_service.translate("characters.evidence_group", language)
-        )
-        self._canonical_name_label.setText(
-            ui_state_service.translate("characters.canonical_name", language)
-        )
-        self._aliases_label.setText(
-            ui_state_service.translate("characters.aliases", language)
-        )
-        self._gender_hint_label.setText(
-            ui_state_service.translate("characters.gender_hint", language)
-        )
-        self._age_band_label.setText(
-            ui_state_service.translate("characters.age_band", language)
-        )
-        self._role_summary_label.setText(
-            ui_state_service.translate("characters.role_summary", language)
-        )
-        self._description_label.setText(
-            ui_state_service.translate("characters.description", language)
-        )
-        self._temperament_label.setText(
-            ui_state_service.translate("characters.temperament", language)
-        )
-        self._social_status_label.setText(
-            ui_state_service.translate("characters.social_status", language)
-        )
-        self._speaking_style_label.setText(
-            ui_state_service.translate("characters.speaking_style", language)
-        )
-        self._accent_label.setText(
-            ui_state_service.translate("characters.accent", language)
-        )
-        self._voice_notes_label.setText(
-            ui_state_service.translate("characters.voice_notes", language)
-        )
-        self._relationships_label.setText(
-            ui_state_service.translate("characters.relationship_hints", language)
-        )
-        self._confidence_label.setText(
-            ui_state_service.translate("characters.confidence", language)
-        )
+        self._title_label.setText(f"<h2>{ui_state_service.translate('characters.title', language)}</h2>")
+        self._profile_label.setText(ui_state_service.translate("characters.ai_profile", language))
+        self._start_button.setText(ui_state_service.translate("characters.start", language))
+        self._reset_button.setText(ui_state_service.translate("characters.reset", language))
+        self._add_character_button.setText(ui_state_service.translate("characters.add_character", language))
+        self._edit_character_button.setText(ui_state_service.translate("characters.edit_character", language))
+        self._save_character_button.setText(ui_state_service.translate("characters.save_character", language))
+        self._delete_character_button.setText(ui_state_service.translate("characters.delete_character", language))
+        self._list_group.setTitle(ui_state_service.translate("characters.list_group", language))
+        self._editor_group.setTitle(ui_state_service.translate("characters.profile_group", language))
+        self._evidence_group.setTitle(ui_state_service.translate("characters.evidence_group", language))
+        self._canonical_name_label.setText(ui_state_service.translate("characters.canonical_name", language))
+        self._aliases_label.setText(ui_state_service.translate("characters.aliases", language))
+        self._gender_hint_label.setText(ui_state_service.translate("characters.gender_hint", language))
+        self._age_band_label.setText(ui_state_service.translate("characters.age_band", language))
+        self._role_summary_label.setText(ui_state_service.translate("characters.role_summary", language))
+        self._description_label.setText(ui_state_service.translate("characters.description", language))
+        self._temperament_label.setText(ui_state_service.translate("characters.temperament", language))
+        self._social_status_label.setText(ui_state_service.translate("characters.social_status", language))
+        self._speaking_style_label.setText(ui_state_service.translate("characters.speaking_style", language))
+        self._accent_label.setText(ui_state_service.translate("characters.accent", language))
+        self._voice_notes_label.setText(ui_state_service.translate("characters.voice_notes", language))
+        self._relationships_label.setText(ui_state_service.translate("characters.relationship_hints", language))
+        self._confidence_label.setText(ui_state_service.translate("characters.confidence", language))
         if self._profile_combo.count() == 1 and self._profile_combo.currentData() is None:
             self._profile_combo.setItemText(
                 0,
@@ -732,10 +649,7 @@ class CharactersPage(QWidget):
         @version    0.2.0
         """
         ai_selector_enabled = (
-            self._project_active
-            and not self._busy
-            and self._can_start
-            and self._mode == CHARACTER_PAGE_MODE_VIEW
+            self._project_active and not self._busy and self._can_start and self._mode == CHARACTER_PAGE_MODE_VIEW
         )
         has_selected_character = self._active_profile() is not None
         editor_enabled = (
@@ -747,19 +661,11 @@ class CharactersPage(QWidget):
         self._profile_label.setEnabled(self._project_active)
         self._profile_combo.setEnabled(ai_selector_enabled)
         self._start_button.setEnabled(
-            self._project_active
-            and not self._busy
-            and self._can_start
-            and self.current_profile_id() is not None
+            self._project_active and not self._busy and self._can_start and self.current_profile_id() is not None
         )
-        self._reset_button.setEnabled(
-            self._project_active and not self._busy and self._can_reset
-        )
+        self._reset_button.setEnabled(self._project_active and not self._busy and self._can_reset)
         self._add_character_button.setEnabled(
-            self._project_active
-            and not self._busy
-            and self._can_add
-            and self._mode == CHARACTER_PAGE_MODE_VIEW
+            self._project_active and not self._busy and self._can_add and self._mode == CHARACTER_PAGE_MODE_VIEW
         )
         self._edit_character_button.setEnabled(
             self._project_active
@@ -851,9 +757,7 @@ class CharactersPage(QWidget):
         if self._selection_guard or self._loading_profile:
             return
         requested_character_id = (
-            None
-            if row < 0 or row >= len(self._profiles)
-            else str(self._profiles[row].get("character_id", ""))
+            None if row < 0 or row >= len(self._profiles) else str(self._profiles[row].get("character_id", ""))
         )
         if requested_character_id == self._current_character_id:
             return
@@ -908,15 +812,11 @@ class CharactersPage(QWidget):
         self._speaking_style_edit.setPlainText(str(profile.get("speaking_style", "")))
         self._accent_edit.setText(str(profile.get("accent_or_dialect_hints", "")))
         self._voice_notes_edit.setPlainText(str(profile.get("voice_notes", "")))
-        self._relationships_edit.setPlainText(
-            "\n".join(list(profile.get("relationship_hints", [])))
-        )
+        self._relationships_edit.setPlainText("\n".join(list(profile.get("relationship_hints", []))))
         self._confidence_edit.setText(str(profile.get("confidence", "")))
         self._evidence_list.clear()
         for evidence in list(profile.get("evidence", [])):
-            self._evidence_list.addItem(
-                f"{evidence.get('chunk_id', '')} | {evidence.get('reason', '')}"
-            )
+            self._evidence_list.addItem(f"{evidence.get('chunk_id', '')} | {evidence.get('reason', '')}")
         if self._evidence_list.count() > 0:
             self._evidence_list.setCurrentRow(0)
         else:
@@ -1006,16 +906,13 @@ class CharactersPage(QWidget):
                 self._draft_profile
                 if (
                     self._draft_profile is not None
-                    and str(profile.get("character_id", ""))
-                    == str(self._draft_profile.get("character_id", ""))
+                    and str(profile.get("character_id", "")) == str(self._draft_profile.get("character_id", ""))
                 )
                 else profile
             )
             self._character_list.addItem(_format_profile_item(display_profile))
         if preferred_character_id is not None:
-            self._character_list.setCurrentRow(
-                _row_for_character_id(self._profiles, preferred_character_id)
-            )
+            self._character_list.setCurrentRow(_row_for_character_id(self._profiles, preferred_character_id))
         self._selection_guard = False
 
     def _build_profile_from_editor(self) -> dict[str, object]:
@@ -1031,11 +928,7 @@ class CharactersPage(QWidget):
         return {
             "character_id": str(base_profile.get("character_id", "")),
             "canonical_name": self._canonical_name_edit.text().strip(),
-            "aliases": [
-                item.strip()
-                for item in self._aliases_edit.text().split(",")
-                if item.strip()
-            ],
+            "aliases": [item.strip() for item in self._aliases_edit.text().split(",") if item.strip()],
             "gender_hint": self._gender_hint_edit.text().strip(),
             "age_band": self._age_band_edit.text().strip(),
             "role_summary": self._role_summary_edit.toPlainText().strip(),
@@ -1046,14 +939,10 @@ class CharactersPage(QWidget):
             "accent_or_dialect_hints": self._accent_edit.text().strip(),
             "voice_notes": self._voice_notes_edit.toPlainText().strip(),
             "relationship_hints": [
-                item.strip()
-                for item in self._relationships_edit.toPlainText().splitlines()
-                if item.strip()
+                item.strip() for item in self._relationships_edit.toPlainText().splitlines() if item.strip()
             ],
             "confidence": self._confidence_edit.text().strip(),
-            "evidence": [
-                dict(item) for item in list(base_profile.get("evidence", []))
-            ],
+            "evidence": [dict(item) for item in list(base_profile.get("evidence", []))],
             "updated_at": base_profile.get("updated_at"),
         }
 
@@ -1089,8 +978,7 @@ class CharactersPage(QWidget):
         if (
             self._mode in {CHARACTER_PAGE_MODE_ADD, CHARACTER_PAGE_MODE_EDIT}
             and self._draft_profile is not None
-            and str(self._draft_profile.get("character_id", ""))
-            == str(self._current_character_id or "")
+            and str(self._draft_profile.get("character_id", "")) == str(self._current_character_id or "")
         ):
             return self._draft_profile
         return self._current_profile()
@@ -1113,11 +1001,7 @@ def _row_for_character_id(
     if character_id is None:
         return -1
     return next(
-        (
-            index
-            for index, profile in enumerate(profiles)
-            if str(profile.get("character_id", "")) == character_id
-        ),
+        (index for index, profile in enumerate(profiles) if str(profile.get("character_id", "")) == character_id),
         -1,
     )
 
@@ -1204,9 +1088,7 @@ def _profiles_equal(
         "confidence",
         "evidence",
     )
-    return {
-        key: left_profile.get(key) for key in comparable_keys
-    } == {
+    return {key: left_profile.get(key) for key in comparable_keys} == {
         key: right_profile.get(key) for key in comparable_keys
     }
 

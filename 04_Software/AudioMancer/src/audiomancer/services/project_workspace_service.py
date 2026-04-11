@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -18,10 +17,10 @@
 
 # IMPORTS
 
-import json
-import shutil
 from datetime import UTC, datetime
+import json
 from pathlib import Path
+import shutil
 from uuid import uuid4
 
 from audiomancer import config
@@ -56,28 +55,18 @@ def validate_project_name(name: str) -> None:
     if not name or not name.strip():
         raise ValueError("Project name cannot be empty.")
     if name in config.LINUX_RESERVED_DIRECTORY_NAMES:
-        raise ValueError(
-            "Project name cannot be '.' or '..'."
-        )
+        raise ValueError("Project name cannot be '.' or '..'.")
     if any(character in config.INVALID_PROJECT_NAME_CHARACTERS for character in name):
-        raise ValueError(
-            "Project name contains unsupported folder characters."
-        )
+        raise ValueError("Project name contains unsupported folder characters.")
     if any(ord(character) < 32 for character in name):
-        raise ValueError(
-            "Project name contains unsupported control characters."
-        )
+        raise ValueError("Project name contains unsupported control characters.")
     if name.endswith((" ", ".")):
-        raise ValueError(
-            "Project name cannot end with a space or dot."
-        )
+        raise ValueError("Project name cannot end with a space or dot.")
 
     normalized_upper = name.strip().upper()
     reserved_base = normalized_upper.split(".", maxsplit=1)[0]
     if reserved_base in config.WINDOWS_RESERVED_DIRECTORY_NAMES:
-        raise ValueError(
-            "Project name uses a reserved Windows device name."
-        )
+        raise ValueError("Project name uses a reserved Windows device name.")
 
 
 @trace_function(_PROJECT_WORKSPACE_LOGGER)
@@ -160,9 +149,7 @@ def resolve_project_root(selected_path: str | Path) -> Path:
         if (candidate / config.PROJECT_MANIFEST_FILE_NAME).is_file():
             return candidate
 
-    raise FileNotFoundError(
-        f"No {config.PROJECT_MANIFEST_FILE_NAME} was found in the selected folder hierarchy."
-    )
+    raise FileNotFoundError(f"No {config.PROJECT_MANIFEST_FILE_NAME} was found in the selected folder hierarchy.")
 
 
 @trace_function(_PROJECT_WORKSPACE_LOGGER)
@@ -180,9 +167,7 @@ def validate_project(project_root: str | Path) -> ProjectOpenResult:
     resolved_root = Path(project_root)
     manifest_path = resolved_root / config.PROJECT_MANIFEST_FILE_NAME
     if not manifest_path.is_file():
-        raise FileNotFoundError(
-            f"Project manifest file was not found: {manifest_path}"
-        )
+        raise FileNotFoundError(f"Project manifest file was not found: {manifest_path}")
 
     payload = json.loads(manifest_path.read_text(encoding="utf-8"))
     _validate_manifest_identity_fields(payload)
@@ -193,10 +178,7 @@ def validate_project(project_root: str | Path) -> ProjectOpenResult:
             "project_root": resolved_root,
             "corrupted_step": first_missing_directory,
             "reset_stage": _repair_stage_for_folder(first_missing_directory, payload),
-            "message": (
-                "Project structure is incomplete. "
-                f"The step folder '{first_missing_directory}' is missing."
-            ),
+            "message": (f"Project structure is incomplete. The step folder '{first_missing_directory}' is missing."),
             "metadata_only": False,
         }
     if _is_invalid_current_stage(payload):
@@ -267,9 +249,7 @@ def repair_project(
     _validate_manifest_identity_fields(payload)
 
     if not bool(repair_request.get("metadata_only", False)):
-        for folder_name in _folders_to_reset_from(
-            str(repair_request["corrupted_step"])
-        ):
+        for folder_name in _folders_to_reset_from(str(repair_request["corrupted_step"])):
             folder_path = project_root / folder_name
             if folder_path.exists():
                 shutil.rmtree(folder_path)
@@ -362,9 +342,7 @@ def validate_project_manifest(payload: object) -> ProjectManifestPayload:
         "extraction_report_relative_path": _optional_string(payload.get("extraction_report_relative_path")),
         "extraction_warning_count": _non_negative_int(payload.get("extraction_warning_count", 0)),
         "operations": _normalize_operations(payload.get("operations")),
-        "narrator_profile_name": _optional_string(
-            payload.get("narrator_profile_name")
-        ),
+        "narrator_profile_name": _optional_string(payload.get("narrator_profile_name")),
         "narrator_language": _optional_string(payload.get("narrator_language")),
         "notes": str(payload.get("notes", "")),
     }
@@ -434,9 +412,7 @@ def _validate_manifest_payload(payload: object) -> None:
     assert isinstance(payload, dict)
     current_stage = payload.get("current_stage")
     if not isinstance(current_stage, str) or not current_stage.strip():
-        raise ValueError(
-            "Project manifest field 'current_stage' is missing or invalid."
-        )
+        raise ValueError("Project manifest field 'current_stage' is missing or invalid.")
 
     if str(payload["current_stage"]) not in config.PROJECT_WORKFLOW_STAGES:
         raise ValueError("Project manifest field 'current_stage' is unsupported.")
@@ -457,9 +433,7 @@ def _validate_manifest_identity_fields(payload: object) -> None:
     for field_name in ("project_id", "display_name", "created_at", "updated_at"):
         value = payload.get(field_name)
         if not isinstance(value, str) or not value.strip():
-            raise ValueError(
-                f"Project manifest field '{field_name}' is missing or invalid."
-            )
+            raise ValueError(f"Project manifest field '{field_name}' is missing or invalid.")
 
 
 def _first_missing_required_directory(project_root: Path) -> str | None:
@@ -565,24 +539,18 @@ def _build_repaired_manifest(
         "created_at": str(payload["created_at"]),
         "updated_at": str(payload["updated_at"]),
         "current_stage": (
-            reset_stage
-            if reset_stage in config.PROJECT_WORKFLOW_STAGES
-            else config.DEFAULT_WORKFLOW_STAGE
+            reset_stage if reset_stage in config.PROJECT_WORKFLOW_STAGES else config.DEFAULT_WORKFLOW_STAGE
         ),
         "source_document": _normalize_source_document(payload.get("source_document")),
         "extracted_text_relative_path": _optional_string(payload.get("extracted_text_relative_path")),
         "extraction_report_relative_path": _optional_string(payload.get("extraction_report_relative_path")),
         "extraction_warning_count": _non_negative_int(payload.get("extraction_warning_count", 0)),
         "operations": _normalize_operations(payload.get("operations")),
-        "narrator_profile_name": _optional_string(
-            payload.get("narrator_profile_name")
-        ),
+        "narrator_profile_name": _optional_string(payload.get("narrator_profile_name")),
         "narrator_language": _optional_string(payload.get("narrator_language")),
         "notes": str(payload.get("notes", "")),
     }
-    if _stage_rank(str(repaired_manifest["current_stage"])) < _stage_rank(
-        "narrator_definition_ready"
-    ):
+    if _stage_rank(str(repaired_manifest["current_stage"])) < _stage_rank("narrator_definition_ready"):
         repaired_manifest["narrator_profile_name"] = None
         repaired_manifest["narrator_language"] = None
     repaired_manifest["operations"] = _reset_operations_for_stage(
@@ -678,9 +646,7 @@ def _normalize_source_document(value: object) -> dict[str, object] | None:
     if not isinstance(original_name, str) or not original_name.strip():
         raise ValueError("Project manifest field 'source_document.original_name' is invalid.")
     if not isinstance(stored_relative_path, str) or not stored_relative_path.strip():
-        raise ValueError(
-            "Project manifest field 'source_document.stored_relative_path' is invalid."
-        )
+        raise ValueError("Project manifest field 'source_document.stored_relative_path' is invalid.")
     if not isinstance(file_type, str) or file_type not in config.SUPPORTED_SOURCE_SUFFIXES.values():
         raise ValueError("Project manifest field 'source_document.file_type' is invalid.")
     if not isinstance(imported_at, str) or not imported_at.strip():

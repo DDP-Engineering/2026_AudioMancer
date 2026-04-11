@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -19,6 +18,7 @@
 # IMPORTS
 
 import json
+
 import pytest
 
 from audiomancer import config
@@ -41,29 +41,34 @@ _MOCK_PROFILE = {
 
 # TESTS
 
-def test_ai_cleanup_writes_cleanup_artifacts_and_log(mock_extracted_project, mock_prompt_environment, monkeypatch) -> None:
+
+def test_ai_cleanup_writes_cleanup_artifacts_and_log(
+    mock_extracted_project, mock_prompt_environment, monkeypatch
+) -> None:
     """Verify AI-assisted cleanup writes output, report, state, and AI log artifacts."""
     project_root, manifest = mock_extracted_project
-    
+
     extracted_path = project_root / config.EXTRACTION_FOLDER_NAME / config.EXTRACTED_TEXT_FILE_NAME
     extracted_path.write_text(
         "CHAPTER I\n\nStory paragraph one.\n\n***\n\nStory paragraph two.\n",
         encoding="utf-8",
     )
 
-    responses = iter([
-        {
-            "payload": {
-                "results": [
-                    {"unit_id": "unit-0001", "label": "story"},
-                    {"unit_id": "unit-0002", "label": "story"},
-                    {"unit_id": "unit-0003", "label": "separator"},
-                    {"unit_id": "unit-0004", "label": "story"},
-                ]
-            },
-            "usage": {"input_tokens": 20, "output_tokens": 5, "total_tokens": 25, "usage_available": True},
-        }
-    ])
+    responses = iter(
+        [
+            {
+                "payload": {
+                    "results": [
+                        {"unit_id": "unit-0001", "label": "story"},
+                        {"unit_id": "unit-0002", "label": "story"},
+                        {"unit_id": "unit-0003", "label": "separator"},
+                        {"unit_id": "unit-0004", "label": "story"},
+                    ]
+                },
+                "usage": {"input_tokens": 20, "output_tokens": 5, "total_tokens": 25, "usage_available": True},
+            }
+        ]
+    )
     monkeypatch.setattr(
         ai_cleanup_service.llm_provider_service,
         "chat_json",
@@ -81,7 +86,7 @@ def test_ai_cleanup_writes_cleanup_artifacts_and_log(mock_extracted_project, moc
     assert report_payload["ai_profile_id"] == "profile_1"
     assert "Story paragraph one." in (cleanup_root / config.CLEANED_TEXT_FILE_NAME).read_text(encoding="utf-8")
     assert any(path.name.startswith(config.AI_TRANSACTION_LOG_FILE_PREFIX) for path in cleanup_root.glob("*.log"))
-    
+
     state_payload = json.loads((cleanup_root / config.OPERATION_STATE_FILE_NAME).read_text(encoding="utf-8"))
     assert state_payload["mode"] == "ai_assisted"
     assert state_payload["status"] == "completed"
@@ -118,9 +123,9 @@ def test_ai_cleanup_writes_cleanup_artifacts_and_log(mock_extracted_project, moc
             {"input_tokens": 12, "output_tokens": 3, "total_tokens": 15, "usage_available": True},
             "Drenthe will shoot this industrial if you swear that Heroes of the Periphery",
             "industrial if\n\nyou swear",
-        )
+        ),
     ],
-    ids=["soft_breaks", "proper_name_continuation", "page_split_continuation"]
+    ids=["soft_breaks", "proper_name_continuation", "page_split_continuation"],
 )
 def test_ai_cleanup_text_transformations(
     source_text: str,
@@ -130,7 +135,7 @@ def test_ai_cleanup_text_transformations(
     expected_out: str,
     mock_extracted_project,
     mock_prompt_environment,
-    monkeypatch
+    monkeypatch,
 ) -> None:
     """Verify various AI cleanup text join/heal permutations via parametrization."""
     project_root, manifest = mock_extracted_project
@@ -148,18 +153,22 @@ def test_ai_cleanup_text_transformations(
 
     ai_cleanup_service.clean_text(project_root, manifest, _MOCK_PROFILE)
 
-    cleaned_text = (project_root / config.CLEANUP_FOLDER_NAME / config.CLEANED_TEXT_FILE_NAME).read_text(encoding="utf-8")
+    cleaned_text = (project_root / config.CLEANUP_FOLDER_NAME / config.CLEANED_TEXT_FILE_NAME).read_text(
+        encoding="utf-8"
+    )
     assert expected_in in cleaned_text
     assert expected_out not in cleaned_text
 
 
-def test_ai_cleanup_corrects_invalid_tail_labels_and_persists_warnings(mock_extracted_project, mock_prompt_environment, monkeypatch) -> None:
+def test_ai_cleanup_corrects_invalid_tail_labels_and_persists_warnings(
+    mock_extracted_project, mock_prompt_environment, monkeypatch
+) -> None:
     """Verify AI-assisted cleanup corrects page-number drift near one late window tail and persists warnings."""
     project_root, manifest = mock_extracted_project
     extracted_path = project_root / config.EXTRACTION_FOLDER_NAME / config.EXTRACTED_TEXT_FILE_NAME
     extracted_path.write_text(
         "Story before.\n\n* * *\n\nHi, I'm Dario Cerulli of Axiom Ordnance, and I'm here to tell you about the Warhound.\n\n"
-        "22\n\n\"You know what it wasn't for?\" Drenthe asked.\n\n23\n\nHolorecorders were cheap, and they were everywhere.\n",
+        '22\n\n"You know what it wasn\'t for?" Drenthe asked.\n\n23\n\nHolorecorders were cheap, and they were everywhere.\n',
         encoding="utf-8",
     )
 
@@ -183,20 +192,32 @@ def test_ai_cleanup_corrects_invalid_tail_labels_and_persists_warnings(mock_extr
 
     report_payload = ai_cleanup_service.clean_text(project_root, manifest, _MOCK_PROFILE)
 
-    cleaned_text = (project_root / config.CLEANUP_FOLDER_NAME / config.CLEANED_TEXT_FILE_NAME).read_text(encoding="utf-8")
+    cleaned_text = (project_root / config.CLEANUP_FOLDER_NAME / config.CLEANED_TEXT_FILE_NAME).read_text(
+        encoding="utf-8"
+    )
     assert "Hi, I'm Dario Cerulli" in cleaned_text
     assert '"You know what it wasn\'t for?" Drenthe asked.' in cleaned_text
     assert "Holorecorders were cheap" in cleaned_text
     assert "\n\n22\n\n" not in cleaned_text
     assert "\n\n23\n\n" not in cleaned_text
-    
-    assert any(warning_detail["kind"] == "invalid_page_number_label_corrected" for warning_detail in report_payload["warning_details"])
-    state_payload = json.loads((project_root / config.CLEANUP_FOLDER_NAME / config.OPERATION_STATE_FILE_NAME).read_text(encoding="utf-8"))
+
+    assert any(
+        warning_detail["kind"] == "invalid_page_number_label_corrected"
+        for warning_detail in report_payload["warning_details"]
+    )
+    state_payload = json.loads(
+        (project_root / config.CLEANUP_FOLDER_NAME / config.OPERATION_STATE_FILE_NAME).read_text(encoding="utf-8")
+    )
     assert state_payload["warning_count"] >= 1
-    assert any(detail["kind"] == "invalid_page_number_label_corrected" for detail in state_payload["metadata"]["warning_details"])
+    assert any(
+        detail["kind"] == "invalid_page_number_label_corrected"
+        for detail in state_payload["metadata"]["warning_details"]
+    )
 
 
-def test_ai_cleanup_splits_long_input_into_multiple_windows(mock_extracted_project, mock_prompt_environment, monkeypatch) -> None:
+def test_ai_cleanup_splits_long_input_into_multiple_windows(
+    mock_extracted_project, mock_prompt_environment, monkeypatch
+) -> None:
     """Verify AI-assisted cleanup splits long extracted input into multiple request windows."""
     project_root, manifest = mock_extracted_project
     extracted_path = project_root / config.EXTRACTION_FOLDER_NAME / config.EXTRACTED_TEXT_FILE_NAME
@@ -233,5 +254,6 @@ def test_ai_cleanup_splits_long_input_into_multiple_windows(mock_extracted_proje
     assert report_payload["token_usage"]["total_tokens"] == 120
     assert call_contexts[0]["window_index"] == 1
     assert call_contexts[1]["window_index"] == 2
+
 
 # END OF FILE

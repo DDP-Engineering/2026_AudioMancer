@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -21,8 +20,7 @@ import json
 from PySide6.QtWidgets import QMessageBox
 
 from audiomancer import config
-from audiomancer.services import character_discovery_service
-from audiomancer.services import project_workspace_service
+from audiomancer.services import character_discovery_service, project_workspace_service
 from audiomancer.ui.controllers import characters_ui_controller
 from audiomancer.ui.main_window import MainWindow
 
@@ -168,23 +166,27 @@ def _create_project(tmp_path, name: str):
     discovery_root.mkdir(parents=True, exist_ok=True)
     (chunk_root / config.CHUNK_ARTIFACT_FILE_NAME).write_text(
         json.dumps(
-            [ {
-                "chunk_id": "chunk-0001",
-                "sequence_index": 1,
-                "chapter_label": None,
-                "text": '"Hello there," said Alice.',
-                "source_start_line": 1,
-                "source_end_line": 1,
-                "chunking_mode": "deterministic",
-                "semantic_strategy": None,
-                "scene_note": None,
-            }],
+            [
+                {
+                    "chunk_id": "chunk-0001",
+                    "sequence_index": 1,
+                    "chapter_label": None,
+                    "text": '"Hello there," said Alice.',
+                    "source_start_line": 1,
+                    "source_end_line": 1,
+                    "chunking_mode": "deterministic",
+                    "semantic_strategy": None,
+                    "scene_note": None,
+                }
+            ],
             indent=2,
-        ) + "\n",
+        )
+        + "\n",
         encoding="utf-8",
     )
     (discovery_root / "input_story.json").write_text(
-        json.dumps([{"chunk_id": "chunk-0001", "sequence_index": 1, "text": '"Hello there," said Alice.'}], indent=2) + "\n",
+        json.dumps([{"chunk_id": "chunk-0001", "sequence_index": 1, "text": '"Hello there," said Alice.'}], indent=2)
+        + "\n",
         encoding="utf-8",
     )
     (discovery_root / config.CHARACTER_PROFILE_FILE_NAME).write_text(
@@ -207,7 +209,8 @@ def _create_project(tmp_path, name: str):
                 "generated_at": "2026-04-08T12:01:00+00:00",
             },
             indent=2,
-        ) + "\n",
+        )
+        + "\n",
         encoding="utf-8",
     )
     (discovery_root / config.OPERATION_STATE_FILE_NAME).write_text(
@@ -217,7 +220,9 @@ def _create_project(tmp_path, name: str):
                 "status": "completed",
                 "input_paths": [],
                 "output_paths": [f"{config.CHARACTER_DISCOVERY_FOLDER_NAME}/{config.CHARACTER_PROFILE_FILE_NAME}"],
-                "artifact_paths": [f"{config.CHARACTER_DISCOVERY_FOLDER_NAME}/{config.CHARACTER_DISCOVERY_REPORT_FILE_NAME}"],
+                "artifact_paths": [
+                    f"{config.CHARACTER_DISCOVERY_FOLDER_NAME}/{config.CHARACTER_DISCOVERY_REPORT_FILE_NAME}"
+                ],
                 "progress_current": 1,
                 "progress_total": 1,
                 "mode": "ai_assisted",
@@ -229,7 +234,8 @@ def _create_project(tmp_path, name: str):
                 "resume_checkpoint": None,
             },
             indent=2,
-        ) + "\n",
+        )
+        + "\n",
         encoding="utf-8",
     )
     return project_root, manifest

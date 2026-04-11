@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -18,9 +17,9 @@
 
 # IMPORTS
 
-import shutil
 from datetime import UTC, datetime
 from pathlib import Path
+import shutil
 
 from audiomancer import config
 from audiomancer.services.logging_service import get_component_logger, trace_function
@@ -70,9 +69,7 @@ def import_source(
 
     return {
         "original_name": resolved_source.name,
-        "stored_relative_path": destination_path.relative_to(
-            resolved_project_root
-        ).as_posix(),
+        "stored_relative_path": destination_path.relative_to(resolved_project_root).as_posix(),
         "file_type": file_type,
         "imported_at": _utc_now_iso(),
         "size_bytes": destination_path.stat().st_size,

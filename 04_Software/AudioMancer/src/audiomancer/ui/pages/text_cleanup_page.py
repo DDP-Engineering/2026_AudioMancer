@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -32,7 +31,6 @@ from PySide6.QtWidgets import (
 )
 
 from audiomancer.services import ui_state_service
-
 
 # PUBLIC API
 
@@ -210,11 +208,7 @@ class TextCleanupPage(QWidget):
             for label, profile_id in entries:
                 self._ai_profile_combo.addItem(label, profile_id)
             selected_index = next(
-                (
-                    index
-                    for index, (_label, profile_id) in enumerate(entries)
-                    if profile_id == selected_profile_id
-                ),
+                (index for index, (_label, profile_id) in enumerate(entries) if profile_id == selected_profile_id),
                 0,
             )
             self._ai_profile_combo.setCurrentIndex(selected_index)
@@ -260,12 +254,8 @@ class TextCleanupPage(QWidget):
         @date       2026-04-06
         @version    0.3.1
         """
-        self._extract_button.setEnabled(
-            self._project_active and self._can_extract and not self._busy
-        )
-        self._clean_button.setEnabled(
-            self._project_active and self._can_clean and not self._busy
-        )
+        self._extract_button.setEnabled(self._project_active and self._can_extract and not self._busy)
+        self._clean_button.setEnabled(self._project_active and self._can_clean and not self._busy)
         ai_selector_enabled = self._project_active and self._has_ai_profiles and not self._busy
         self._ai_profile_label.setEnabled(ai_selector_enabled)
         self._ai_profile_combo.setEnabled(ai_selector_enabled)
@@ -287,30 +277,14 @@ class TextCleanupPage(QWidget):
         @date       2026-04-06
         @version    0.3.1
         """
-        self._title_label.setText(
-            f"<h2>{ui_state_service.translate('text_cleanup.title', language)}</h2>"
-        )
-        self._extract_button.setText(
-            ui_state_service.translate("text_cleanup.extract", language)
-        )
-        self._clean_button.setText(
-            ui_state_service.translate("text_cleanup.clean", language)
-        )
-        self._ai_profile_label.setText(
-            ui_state_service.translate("text_cleanup.ai_profile", language)
-        )
-        self._ai_clean_button.setText(
-            ui_state_service.translate("text_cleanup.ai_clean", language)
-        )
-        self._extracted_group.setTitle(
-            ui_state_service.translate("text_cleanup.extracted_group", language)
-        )
-        self._cleaned_group.setTitle(
-            ui_state_service.translate("text_cleanup.cleaned_group", language)
-        )
-        self._notes_group.setTitle(
-            ui_state_service.translate("text_cleanup.notes_group", language)
-        )
+        self._title_label.setText(f"<h2>{ui_state_service.translate('text_cleanup.title', language)}</h2>")
+        self._extract_button.setText(ui_state_service.translate("text_cleanup.extract", language))
+        self._clean_button.setText(ui_state_service.translate("text_cleanup.clean", language))
+        self._ai_profile_label.setText(ui_state_service.translate("text_cleanup.ai_profile", language))
+        self._ai_clean_button.setText(ui_state_service.translate("text_cleanup.ai_clean", language))
+        self._extracted_group.setTitle(ui_state_service.translate("text_cleanup.extracted_group", language))
+        self._cleaned_group.setTitle(ui_state_service.translate("text_cleanup.cleaned_group", language))
+        self._notes_group.setTitle(ui_state_service.translate("text_cleanup.notes_group", language))
         if not self._has_ai_profiles:
             self._ai_profile_combo.setItemText(
                 0,

@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -133,8 +132,8 @@ def test_main_creates_application_and_shows_window(monkeypatch) -> None:
         @date       2026-04-05
         @version    0.1.0
         """
-        created['application'] = _FakeApplication(argv)
-        return created['application']
+        created["application"] = _FakeApplication(argv)
+        return created["application"]
 
     def _create_window(*args, **kwargs):
         """
@@ -147,9 +146,9 @@ def test_main_creates_application_and_shows_window(monkeypatch) -> None:
         @date       2026-04-05
         @version    0.1.0
         """
-        created['window_settings_payload'] = kwargs.get('settings_payload')
-        created['window'] = _FakeMainWindow()
-        return created['window']
+        created["window_settings_payload"] = kwargs.get("settings_payload")
+        created["window"] = _FakeMainWindow()
+        return created["window"]
 
     def _initialize_logging():
         """
@@ -160,7 +159,7 @@ def test_main_creates_application_and_shows_window(monkeypatch) -> None:
         @date       2026-04-05
         @version    0.1.0
         """
-        created['initialize_logging_called'] = True
+        created["initialize_logging_called"] = True
         return "fake-log-path"
 
     def _shutdown_logging():
@@ -172,7 +171,7 @@ def test_main_creates_application_and_shows_window(monkeypatch) -> None:
         @date       2026-04-05
         @version    0.1.0
         """
-        created['shutdown_logging_called'] = True
+        created["shutdown_logging_called"] = True
 
     def _get_component_logger(component_name, level_name=None):
         """
@@ -185,7 +184,7 @@ def test_main_creates_application_and_shows_window(monkeypatch) -> None:
         @date       2026-04-05
         @version    0.1.0
         """
-        created['logger_request'] = (component_name, level_name)
+        created["logger_request"] = (component_name, level_name)
 
         class _FakeLogger:
             """
@@ -194,6 +193,7 @@ def test_main_creates_application_and_shows_window(monkeypatch) -> None:
             @date       2026-04-05
             @version    0.1.0
             """
+
             def info(self, message, extra=None):
                 """
                 @brief      Record one info log event.
@@ -205,7 +205,7 @@ def test_main_creates_application_and_shows_window(monkeypatch) -> None:
                 @date       2026-04-05
                 @version    0.1.0
                 """
-                created.setdefault('info_messages', []).append((message, extra))
+                created.setdefault("info_messages", []).append((message, extra))
 
             def exception(self, message, extra=None):
                 """
@@ -218,7 +218,7 @@ def test_main_creates_application_and_shows_window(monkeypatch) -> None:
                 @date       2026-04-05
                 @version    0.1.0
                 """
-                created.setdefault('exception_messages', []).append((message, extra))
+                created.setdefault("exception_messages", []).append((message, extra))
 
         return _FakeLogger()
 
@@ -231,28 +231,28 @@ def test_main_creates_application_and_shows_window(monkeypatch) -> None:
         @date       2026-04-05
         @version    0.1.0
         """
-        created['load_settings_called'] = True
-        created['loaded_settings_payload'] = {"language": "en"}
-        return created['loaded_settings_payload']
+        created["load_settings_called"] = True
+        created["loaded_settings_payload"] = {"language": "en"}
+        return created["loaded_settings_payload"]
 
-    monkeypatch.setattr(app_module, 'initialize_logging', _initialize_logging)
-    monkeypatch.setattr(app_module, 'shutdown_logging', _shutdown_logging)
-    monkeypatch.setattr(app_module, 'get_component_logger', _get_component_logger)
-    monkeypatch.setattr(app_module, 'load_settings', _load_settings)
-    monkeypatch.setattr(app_module, 'QApplication', _create_application)
-    monkeypatch.setattr(app_module, 'MainWindow', _create_window)
+    monkeypatch.setattr(app_module, "initialize_logging", _initialize_logging)
+    monkeypatch.setattr(app_module, "shutdown_logging", _shutdown_logging)
+    monkeypatch.setattr(app_module, "get_component_logger", _get_component_logger)
+    monkeypatch.setattr(app_module, "load_settings", _load_settings)
+    monkeypatch.setattr(app_module, "QApplication", _create_application)
+    monkeypatch.setattr(app_module, "MainWindow", _create_window)
 
     exit_code = app_module.main()
 
     assert exit_code == 123
-    assert created['initialize_logging_called'] is True
-    assert created['load_settings_called'] is True
-    assert created['shutdown_logging_called'] is True
-    assert created['logger_request'] == ('app', None)
-    assert created['window_settings_payload'] == {"language": "en"}
-    assert created['application'].application_name == app_module.APPLICATION_NAME
-    assert created['application'].exec_called is True
-    assert created['window'].show_called is True
+    assert created["initialize_logging_called"] is True
+    assert created["load_settings_called"] is True
+    assert created["shutdown_logging_called"] is True
+    assert created["logger_request"] == ("app", None)
+    assert created["window_settings_payload"] == {"language": "en"}
+    assert created["application"].application_name == app_module.APPLICATION_NAME
+    assert created["application"].exec_called is True
+    assert created["window"].show_called is True
 
 
 def test_main_logs_exception_and_shuts_down(monkeypatch) -> None:
@@ -276,7 +276,7 @@ def test_main_logs_exception_and_shuts_down(monkeypatch) -> None:
         @date       2026-04-05
         @version    0.1.0
         """
-        created['initialize_logging_called'] = True
+        created["initialize_logging_called"] = True
         return "fake-log-path"
 
     def _shutdown_logging():
@@ -288,7 +288,7 @@ def test_main_logs_exception_and_shuts_down(monkeypatch) -> None:
         @date       2026-04-05
         @version    0.1.0
         """
-        created['shutdown_logging_called'] = True
+        created["shutdown_logging_called"] = True
 
     def _get_component_logger(component_name, level_name=None):
         """
@@ -301,7 +301,7 @@ def test_main_logs_exception_and_shuts_down(monkeypatch) -> None:
         @date       2026-04-05
         @version    0.1.0
         """
-        created['logger_request'] = (component_name, level_name)
+        created["logger_request"] = (component_name, level_name)
 
         class _FakeLogger:
             """
@@ -310,6 +310,7 @@ def test_main_logs_exception_and_shuts_down(monkeypatch) -> None:
             @date       2026-04-05
             @version    0.1.0
             """
+
             def info(self, message, extra=None):
                 """
                 @brief      Record one info log event.
@@ -321,7 +322,7 @@ def test_main_logs_exception_and_shuts_down(monkeypatch) -> None:
                 @date       2026-04-05
                 @version    0.1.0
                 """
-                created.setdefault('info_messages', []).append((message, extra))
+                created.setdefault("info_messages", []).append((message, extra))
 
             def exception(self, message, extra=None):
                 """
@@ -334,7 +335,7 @@ def test_main_logs_exception_and_shuts_down(monkeypatch) -> None:
                 @date       2026-04-05
                 @version    0.1.0
                 """
-                created.setdefault('exception_messages', []).append((message, extra))
+                created.setdefault("exception_messages", []).append((message, extra))
 
         return _FakeLogger()
 
@@ -347,9 +348,9 @@ def test_main_logs_exception_and_shuts_down(monkeypatch) -> None:
         @date       2026-04-05
         @version    0.1.0
         """
-        created['load_settings_called'] = True
-        created['loaded_settings_payload'] = {"language": "en"}
-        return created['loaded_settings_payload']
+        created["load_settings_called"] = True
+        created["loaded_settings_payload"] = {"language": "en"}
+        return created["loaded_settings_payload"]
 
     def _create_application(argv):
         """
@@ -363,20 +364,20 @@ def test_main_logs_exception_and_shuts_down(monkeypatch) -> None:
         """
         raise RuntimeError("bootstrap failure")
 
-    monkeypatch.setattr(app_module, 'initialize_logging', _initialize_logging)
-    monkeypatch.setattr(app_module, 'shutdown_logging', _shutdown_logging)
-    monkeypatch.setattr(app_module, 'get_component_logger', _get_component_logger)
-    monkeypatch.setattr(app_module, 'load_settings', _load_settings)
-    monkeypatch.setattr(app_module, 'QApplication', _create_application)
+    monkeypatch.setattr(app_module, "initialize_logging", _initialize_logging)
+    monkeypatch.setattr(app_module, "shutdown_logging", _shutdown_logging)
+    monkeypatch.setattr(app_module, "get_component_logger", _get_component_logger)
+    monkeypatch.setattr(app_module, "load_settings", _load_settings)
+    monkeypatch.setattr(app_module, "QApplication", _create_application)
 
     with pytest.raises(RuntimeError, match="bootstrap failure"):
         app_module.main()
 
-    assert created['initialize_logging_called'] is True
-    assert created['load_settings_called'] is True
-    assert created['shutdown_logging_called'] is True
-    assert created['logger_request'] == ('app', None)
-    assert created['exception_messages'][0][1]['event'] == 'fatal-bootstrap-error'
+    assert created["initialize_logging_called"] is True
+    assert created["load_settings_called"] is True
+    assert created["shutdown_logging_called"] is True
+    assert created["logger_request"] == ("app", None)
+    assert created["exception_messages"][0][1]["event"] == "fatal-bootstrap-error"
 
 
 # END OF FILE

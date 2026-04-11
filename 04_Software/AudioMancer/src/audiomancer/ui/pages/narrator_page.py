@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -96,12 +95,14 @@ class NarratorPage(QWidget):
         profiles_layout = QVBoxLayout(profiles_group)
 
         self._profile_list = QListWidget(self)
-        self._profile_list.addItems((
-            "Default | Studio Neutral Narrator",
-            "Default | Warm Storyteller",
-            "Custom | German Stage Voice",
-            "Custom | Intimate Reflective Narrator",
-        ))
+        self._profile_list.addItems(
+            (
+                "Default | Studio Neutral Narrator",
+                "Default | Warm Storyteller",
+                "Custom | German Stage Voice",
+                "Custom | Intimate Reflective Narrator",
+            )
+        )
         profiles_layout.addWidget(self._profile_list)
 
         profile_button_row = QHBoxLayout()
@@ -180,45 +181,19 @@ class NarratorPage(QWidget):
         @date       2026-04-05
         @version    0.1.0
         """
-        self._title_label.setText(
-            f"<h2>{ui_state_service.translate('narrator.title', language)}</h2>"
-        )
-        self._language_label.setText(
-            ui_state_service.translate("narrator.language", language)
-        )
-        self._summary_label.setText(
-            ui_state_service.translate("narrator.summary", language)
-        )
-        self._profiles_group.setTitle(
-            ui_state_service.translate("narrator.profiles_group", language)
-        )
-        self._new_profile_button.setText(
-            ui_state_service.translate("narrator.new_profile", language)
-        )
-        self._setup_group.setTitle(
-            ui_state_service.translate("narrator.setup_group", language)
-        )
-        self._profile_name_label.setText(
-            ui_state_service.translate("narrator.profile_name", language)
-        )
-        self._designer_group.setTitle(
-            ui_state_service.translate("narrator.designer_group", language)
-        )
-        self._preview_group.setTitle(
-            ui_state_service.translate("narrator.preview_group", language)
-        )
-        self._create_profile_button.setText(
-            ui_state_service.translate("narrator.create_profile", language)
-        )
-        self._save_profile_button.setText(
-            ui_state_service.translate("narrator.save_profile", language)
-        )
-        self._delete_profile_button.setText(
-            ui_state_service.translate("narrator.delete_profile", language)
-        )
-        self._preview_toggle_button.setText(
-            ui_state_service.translate("narrator.preview", language)
-        )
+        self._title_label.setText(f"<h2>{ui_state_service.translate('narrator.title', language)}</h2>")
+        self._language_label.setText(ui_state_service.translate("narrator.language", language))
+        self._summary_label.setText(ui_state_service.translate("narrator.summary", language))
+        self._profiles_group.setTitle(ui_state_service.translate("narrator.profiles_group", language))
+        self._new_profile_button.setText(ui_state_service.translate("narrator.new_profile", language))
+        self._setup_group.setTitle(ui_state_service.translate("narrator.setup_group", language))
+        self._profile_name_label.setText(ui_state_service.translate("narrator.profile_name", language))
+        self._designer_group.setTitle(ui_state_service.translate("narrator.designer_group", language))
+        self._preview_group.setTitle(ui_state_service.translate("narrator.preview_group", language))
+        self._create_profile_button.setText(ui_state_service.translate("narrator.create_profile", language))
+        self._save_profile_button.setText(ui_state_service.translate("narrator.save_profile", language))
+        self._delete_profile_button.setText(ui_state_service.translate("narrator.delete_profile", language))
+        self._preview_toggle_button.setText(ui_state_service.translate("narrator.preview", language))
 
 
 # END OF FILE

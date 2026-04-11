@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -19,8 +18,6 @@
 # IMPORTS
 
 from PySide6.QtCore import Signal
-from audiomancer import config
-from audiomancer.services import ui_state_service
 from PySide6.QtWidgets import (
     QComboBox,
     QGroupBox,
@@ -34,6 +31,8 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from audiomancer import config
+from audiomancer.services import ui_state_service
 
 # PUBLIC API
 
@@ -111,9 +110,7 @@ class TextChunkingPage(QWidget):
         cleaned_layout = QVBoxLayout(cleaned_group)
         self._cleaned_text_edit = QPlainTextEdit(self)
         self._cleaned_text_edit.setReadOnly(True)
-        self._cleaned_text_edit.setPlainText(
-            "Cleaned text will appear here and serve as the chunking reference."
-        )
+        self._cleaned_text_edit.setPlainText("Cleaned text will appear here and serve as the chunking reference.")
         cleaned_layout.addWidget(self._cleaned_text_edit)
         left_layout.addWidget(cleaned_group, 5)
 
@@ -129,9 +126,7 @@ class TextChunkingPage(QWidget):
         chunk_preview_layout = QVBoxLayout(chunk_preview_group)
         self._chunk_text_edit = QPlainTextEdit(self)
         self._chunk_text_edit.setReadOnly(True)
-        self._chunk_text_edit.setPlainText(
-            "The full text of the selected chunk will appear here."
-        )
+        self._chunk_text_edit.setPlainText("The full text of the selected chunk will appear here.")
         chunk_preview_layout.addWidget(self._chunk_text_edit)
         top_splitter.addWidget(chunk_preview_group)
 
@@ -250,11 +245,7 @@ class TextChunkingPage(QWidget):
             for label, profile_id in entries:
                 self._profile_combo.addItem(label, profile_id)
             selected_index = next(
-                (
-                    index
-                    for index, (_label, profile_id) in enumerate(entries)
-                    if profile_id == selected_profile_id
-                ),
+                (index for index, (_label, profile_id) in enumerate(entries) if profile_id == selected_profile_id),
                 0,
             )
             self._profile_combo.setCurrentIndex(selected_index)
@@ -317,11 +308,7 @@ class TextChunkingPage(QWidget):
         self._profile_combo.setEnabled(ai_selector_enabled)
         self._strategy_label.setEnabled(self._project_active and (self._can_chunk or self._can_ai_chunk))
         self._strategy_combo.setEnabled(self._project_active and (self._can_chunk or self._can_ai_chunk))
-        self._ai_chunk_button.setEnabled(
-            enabled
-            and self._can_ai_chunk
-            and self.current_ai_profile_id() is not None
-        )
+        self._ai_chunk_button.setEnabled(enabled and self._can_ai_chunk and self.current_ai_profile_id() is not None)
 
     def _show_selected_chunk(self, row: int) -> None:
         """
@@ -361,33 +348,15 @@ class TextChunkingPage(QWidget):
         @date       2026-04-05
         @version    0.1.0
         """
-        self._title_label.setText(
-            f"<h2>{ui_state_service.translate('text_chunking.title', language)}</h2>"
-        )
-        self._profile_label.setText(
-            ui_state_service.translate("text_chunking.ai_profile", language)
-        )
-        self._strategy_label.setText(
-            ui_state_service.translate("text_chunking.ai_strategy", language)
-        )
-        self._chunk_button.setText(
-            ui_state_service.translate("text_chunking.chunk", language)
-        )
-        self._ai_chunk_button.setText(
-            ui_state_service.translate("text_chunking.ai_chunk", language)
-        )
-        self._cleaned_group.setTitle(
-            ui_state_service.translate("text_chunking.cleaned_group", language)
-        )
-        self._chunk_list_group.setTitle(
-            ui_state_service.translate("text_chunking.chunk_list_group", language)
-        )
-        self._chunk_preview_group.setTitle(
-            ui_state_service.translate("text_chunking.selected_group", language)
-        )
-        self._notes_group.setTitle(
-            ui_state_service.translate("text_chunking.notes_group", language)
-        )
+        self._title_label.setText(f"<h2>{ui_state_service.translate('text_chunking.title', language)}</h2>")
+        self._profile_label.setText(ui_state_service.translate("text_chunking.ai_profile", language))
+        self._strategy_label.setText(ui_state_service.translate("text_chunking.ai_strategy", language))
+        self._chunk_button.setText(ui_state_service.translate("text_chunking.chunk", language))
+        self._ai_chunk_button.setText(ui_state_service.translate("text_chunking.ai_chunk", language))
+        self._cleaned_group.setTitle(ui_state_service.translate("text_chunking.cleaned_group", language))
+        self._chunk_list_group.setTitle(ui_state_service.translate("text_chunking.chunk_list_group", language))
+        self._chunk_preview_group.setTitle(ui_state_service.translate("text_chunking.selected_group", language))
+        self._notes_group.setTitle(ui_state_service.translate("text_chunking.notes_group", language))
         if not self._has_ai_profiles:
             self._profile_combo.setItemText(
                 0,

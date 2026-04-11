@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -24,14 +23,16 @@ from typing import TYPE_CHECKING
 from PySide6.QtWidgets import QMessageBox
 
 from audiomancer import config
-from audiomancer.services import ai_cleanup_service
-from audiomancer.services import deterministic_cleanup_service
-from audiomancer.services import home_presenter_service
-from audiomancer.services import operation_runtime_service
-from audiomancer.services import project_workspace_service
-from audiomancer.services import text_cleanup_state_service
-from audiomancer.services import text_extraction_service
-from audiomancer.services import ui_state_service
+from audiomancer.services import (
+    ai_cleanup_service,
+    deterministic_cleanup_service,
+    home_presenter_service,
+    operation_runtime_service,
+    project_workspace_service,
+    text_cleanup_state_service,
+    text_extraction_service,
+    ui_state_service,
+)
 from audiomancer.ui.controllers import misc_ui_controller
 
 if TYPE_CHECKING:
@@ -51,9 +52,7 @@ def handle_extract_text_requested(window: "MainWindow") -> None:
     @date       2026-04-06
     @version    0.1.2
     """
-    current_language = ui_state_service.current_language_from_settings(
-        window._settings_payload
-    )
+    current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._active_operation_kind is not None:
         return
     if window._current_project_root is None or window._current_manifest is None:
@@ -79,13 +78,9 @@ def handle_extract_text_requested(window: "MainWindow") -> None:
         if not confirm_extraction_rerun(window, current_language):
             return
         text_extraction_service.reset_extraction_and_downstream(window._current_project_root)
-        reset_manifest = text_cleanup_state_service.build_manifest_after_extraction_reset(
-            window._current_manifest
-        )
+        reset_manifest = text_cleanup_state_service.build_manifest_after_extraction_reset(window._current_manifest)
         project_workspace_service.save_manifest(reset_manifest, window._current_project_root)
-        window._current_manifest = project_workspace_service.load_manifest(
-            window._current_project_root
-        )
+        window._current_manifest = project_workspace_service.load_manifest(window._current_project_root)
 
     start_operation(
         window,
@@ -108,9 +103,7 @@ def handle_deterministic_cleanup_requested(window: "MainWindow") -> None:
     @date       2026-04-06
     @version    0.1.2
     """
-    current_language = ui_state_service.current_language_from_settings(
-        window._settings_payload
-    )
+    current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._active_operation_kind is not None:
         return
     if window._current_project_root is None or window._current_manifest is None:
@@ -149,9 +142,7 @@ def handle_deterministic_cleanup_requested(window: "MainWindow") -> None:
             "cleanup",
         )
         project_workspace_service.save_manifest(reset_manifest, window._current_project_root)
-        window._current_manifest = project_workspace_service.load_manifest(
-            window._current_project_root
-        )
+        window._current_manifest = project_workspace_service.load_manifest(window._current_project_root)
 
     start_operation(
         window,
@@ -175,9 +166,7 @@ def handle_ai_cleanup_requested(window: "MainWindow", profile_id: str) -> None:
     @date       2026-04-11
     @version    0.2.0
     """
-    current_language = ui_state_service.current_language_from_settings(
-        window._settings_payload
-    )
+    current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._active_operation_kind is not None:
         return
     if window._current_project_root is None or window._current_manifest is None:
@@ -236,9 +225,7 @@ def handle_ai_cleanup_requested(window: "MainWindow", profile_id: str) -> None:
                 "cleanup",
             )
             project_workspace_service.save_manifest(reset_manifest, window._current_project_root)
-            window._current_manifest = project_workspace_service.load_manifest(
-                window._current_project_root
-            )
+            window._current_manifest = project_workspace_service.load_manifest(window._current_project_root)
 
     start_operation(
         window,
@@ -474,15 +461,11 @@ def handle_extraction_success(window: "MainWindow", result_payload: object) -> N
     assert window._current_project_root is not None
     assert window._current_manifest is not None
     updated_manifest = dict(window._current_manifest)
-    updated_manifest["extracted_text_relative_path"] = str(
-        result_payload["extracted_text_relative_path"]
-    )
+    updated_manifest["extracted_text_relative_path"] = str(result_payload["extracted_text_relative_path"])
     updated_manifest["extraction_report_relative_path"] = (
         f"{config.EXTRACTION_FOLDER_NAME}/{config.EXTRACTION_REPORT_FILE_NAME}"
     )
-    updated_manifest["extraction_warning_count"] = len(
-        list(result_payload.get("warnings", []))
-    )
+    updated_manifest["extraction_warning_count"] = len(list(result_payload.get("warnings", [])))
     operations = text_cleanup_state_service.normalized_manifest_operations(updated_manifest)
     operations["extraction"] = project_workspace_service.project_manifest_operation_summary(
         "extraction",
@@ -740,5 +723,6 @@ def _resume_ai_profile_id(
             if profile_id not in (None, ""):
                 return str(profile_id)
     return None
+
 
 # END OF FILE

@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -20,8 +19,7 @@
 import json
 
 from audiomancer import config
-from audiomancer.services import character_discovery_state_service
-from audiomancer.services import project_workspace_service
+from audiomancer.services import character_discovery_state_service, project_workspace_service
 
 
 def test_profile_state_prefers_default_character_profile() -> None:
@@ -89,19 +87,22 @@ def test_build_character_state_requires_ai_profile_to_start(tmp_path) -> None:
     chunk_root.mkdir(parents=True, exist_ok=True)
     (chunk_root / config.CHUNK_ARTIFACT_FILE_NAME).write_text(
         json.dumps(
-            [{
-                "chunk_id": "chunk-0001",
-                "sequence_index": 1,
-                "chapter_label": None,
-                "text": '"Hello there," said Alice.',
-                "source_start_line": 1,
-                "source_end_line": 1,
-                "chunking_mode": "deterministic",
-                "semantic_strategy": None,
-                "scene_note": None,
-            }],
+            [
+                {
+                    "chunk_id": "chunk-0001",
+                    "sequence_index": 1,
+                    "chapter_label": None,
+                    "text": '"Hello there," said Alice.',
+                    "source_start_line": 1,
+                    "source_end_line": 1,
+                    "chunking_mode": "deterministic",
+                    "semantic_strategy": None,
+                    "scene_note": None,
+                }
+            ],
             indent=2,
-        ) + "\n",
+        )
+        + "\n",
         encoding="utf-8",
     )
 
@@ -158,31 +159,36 @@ def _create_project(tmp_path, name: str):
     )
     (discovery_root / config.CHARACTER_PROFILE_FILE_NAME).write_text(
         json.dumps(
-            [{
-                "character_id": "alice",
-                "canonical_name": "Alice",
-                "aliases": ["Al"],
-                "gender_hint": "",
-                "age_band": "",
-                "role_summary": "Lead speaker",
-                "description": "Confident.",
-                "temperament": "",
-                "social_status": "",
-                "speaking_style": "",
-                "accent_or_dialect_hints": "",
-                "voice_notes": "",
-                "relationship_hints": [],
-                "confidence": "high",
-                "evidence": [{
-                    "chunk_id": "chunk-0001",
-                    "sequence_index": 1,
-                    "source_excerpt": '"Hello there," said Alice.',
-                    "reason": "Alice speaks.",
-                }],
-                "updated_at": "2026-04-08T12:01:00+00:00",
-            }],
+            [
+                {
+                    "character_id": "alice",
+                    "canonical_name": "Alice",
+                    "aliases": ["Al"],
+                    "gender_hint": "",
+                    "age_band": "",
+                    "role_summary": "Lead speaker",
+                    "description": "Confident.",
+                    "temperament": "",
+                    "social_status": "",
+                    "speaking_style": "",
+                    "accent_or_dialect_hints": "",
+                    "voice_notes": "",
+                    "relationship_hints": [],
+                    "confidence": "high",
+                    "evidence": [
+                        {
+                            "chunk_id": "chunk-0001",
+                            "sequence_index": 1,
+                            "source_excerpt": '"Hello there," said Alice.',
+                            "reason": "Alice speaks.",
+                        }
+                    ],
+                    "updated_at": "2026-04-08T12:01:00+00:00",
+                }
+            ],
             indent=2,
-        ) + "\n",
+        )
+        + "\n",
         encoding="utf-8",
     )
     (discovery_root / config.CHARACTER_DISCOVERY_REPORT_FILE_NAME).write_text(
@@ -207,7 +213,8 @@ def _create_project(tmp_path, name: str):
                 },
             },
             indent=2,
-        ) + "\n",
+        )
+        + "\n",
         encoding="utf-8",
     )
     (discovery_root / config.OPERATION_STATE_FILE_NAME).write_text(
@@ -217,7 +224,9 @@ def _create_project(tmp_path, name: str):
                 "status": "completed",
                 "input_paths": [],
                 "output_paths": [f"{config.CHARACTER_DISCOVERY_FOLDER_NAME}/{config.CHARACTER_PROFILE_FILE_NAME}"],
-                "artifact_paths": [f"{config.CHARACTER_DISCOVERY_FOLDER_NAME}/{config.CHARACTER_DISCOVERY_REPORT_FILE_NAME}"],
+                "artifact_paths": [
+                    f"{config.CHARACTER_DISCOVERY_FOLDER_NAME}/{config.CHARACTER_DISCOVERY_REPORT_FILE_NAME}"
+                ],
                 "progress_current": 1,
                 "progress_total": 1,
                 "mode": "ai_assisted",
@@ -238,7 +247,8 @@ def _create_project(tmp_path, name: str):
                 "resume_checkpoint": None,
             },
             indent=2,
-        ) + "\n",
+        )
+        + "\n",
         encoding="utf-8",
     )
     return project_root, manifest

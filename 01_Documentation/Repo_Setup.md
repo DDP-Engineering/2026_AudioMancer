@@ -199,6 +199,7 @@ This installs the currently declared dependencies, including:
 - `pytest`
 - `pytest-qt`
 - `PyInstaller`
+- `ruff`
 
 ## 5. Run The Application
 
@@ -266,23 +267,30 @@ uv run pytest
 
 ```powershell
 uv run python -m py_compile src/audiomancer/app.py
+uv run ruff check src/audiomancer/app.py tests/test_app_entrypoint.py --fix
+uv run ruff format src/audiomancer/app.py tests/test_app_entrypoint.py
 ```
 
 ### Windows CMD
 
 ```cmd
 uv run python -m py_compile src\audiomancer\app.py
+uv run ruff check src\audiomancer\app.py tests\test_app_entrypoint.py --fix
+uv run ruff format src\audiomancer\app.py tests\test_app_entrypoint.py
 ```
 
 ### Linux Bash
 
 ```bash
 uv run python -m py_compile src/audiomancer/app.py
+uv run ruff check src/audiomancer/app.py tests/test_app_entrypoint.py --fix
+uv run ruff format src/audiomancer/app.py tests/test_app_entrypoint.py
 ```
 
 ## Notes
 
 - The project currently uses `uv` as the environment and dependency workflow.
+- `ruff` is installed through the same `uv sync --extra dev` path as the other developer tools.
 - The runnable desktop application lives under `04_Software/AudioMancer/`.
 - Windows packaging scripts and spec files live directly under `02_Tools/`.
 - `07_Delivery/` is used for packaged release artifacts.

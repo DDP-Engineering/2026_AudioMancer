@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -50,16 +49,18 @@ def test_text_chunking_ui_controller_start_operation_clears_dialog(
     }
     project_workspace_service.save_manifest(manifest, project_root)
 
-    window = MainWindow(settings_payload={
-        "language": "en",
-        "ui_text_scale": "normal",
-        "play_completion_beep": False,
-        "llm_profiles": [],
-        "default_ai_cleanup_profile_id": None,
-        "default_ai_chunking_profile_id": None,
-        "default_ai_chunking_strategy": "paragraph",
-        "default_character_extraction_profile_id": None,
-    })
+    window = MainWindow(
+        settings_payload={
+            "language": "en",
+            "ui_text_scale": "normal",
+            "play_completion_beep": False,
+            "llm_profiles": [],
+            "default_ai_cleanup_profile_id": None,
+            "default_ai_chunking_profile_id": None,
+            "default_ai_chunking_strategy": "paragraph",
+            "default_character_extraction_profile_id": None,
+        }
+    )
     qtbot.addWidget(window)
     window._activate_project(project_root, project_workspace_service.load_manifest(project_root))
 
@@ -121,16 +122,18 @@ def test_text_chunking_ui_controller_chunk_request_uses_controller_start(
     (cleanup_root / "output_clean_text.txt").write_text("Paragraph one.\n", encoding="utf-8")
     project_workspace_service.save_manifest(manifest, project_root)
 
-    window = MainWindow(settings_payload={
-        "language": "en",
-        "ui_text_scale": "normal",
-        "play_completion_beep": False,
-        "llm_profiles": [],
-        "default_ai_cleanup_profile_id": None,
-        "default_ai_chunking_profile_id": None,
-        "default_ai_chunking_strategy": "paragraph",
-        "default_character_extraction_profile_id": None,
-    })
+    window = MainWindow(
+        settings_payload={
+            "language": "en",
+            "ui_text_scale": "normal",
+            "play_completion_beep": False,
+            "llm_profiles": [],
+            "default_ai_cleanup_profile_id": None,
+            "default_ai_chunking_profile_id": None,
+            "default_ai_chunking_strategy": "paragraph",
+            "default_character_extraction_profile_id": None,
+        }
+    )
     qtbot.addWidget(window)
     window._activate_project(project_root, project_workspace_service.load_manifest(project_root))
 
@@ -184,16 +187,18 @@ def test_text_chunking_ui_controller_completed_rerun_requires_confirmation(
     (cleanup_root / "output_clean_text.txt").write_text("Paragraph one.\n", encoding="utf-8")
     project_workspace_service.save_manifest(manifest, project_root)
 
-    window = MainWindow(settings_payload={
-        "language": "en",
-        "ui_text_scale": "normal",
-        "play_completion_beep": False,
-        "llm_profiles": [],
-        "default_ai_cleanup_profile_id": None,
-        "default_ai_chunking_profile_id": None,
-        "default_ai_chunking_strategy": "paragraph",
-        "default_character_extraction_profile_id": None,
-    })
+    window = MainWindow(
+        settings_payload={
+            "language": "en",
+            "ui_text_scale": "normal",
+            "play_completion_beep": False,
+            "llm_profiles": [],
+            "default_ai_cleanup_profile_id": None,
+            "default_ai_chunking_profile_id": None,
+            "default_ai_chunking_strategy": "paragraph",
+            "default_character_extraction_profile_id": None,
+        }
+    )
     qtbot.addWidget(window)
     window._activate_project(project_root, project_workspace_service.load_manifest(project_root))
 
@@ -246,29 +251,33 @@ def test_text_chunking_ui_controller_ai_chunk_request_uses_selected_profile_and_
     (cleanup_root / "output_clean_text.txt").write_text("Paragraph one.\n", encoding="utf-8")
     project_workspace_service.save_manifest(manifest, project_root)
 
-    window = MainWindow(settings_payload={
-        "language": "en",
-        "ui_text_scale": "normal",
-        "play_completion_beep": False,
-        "llm_profiles": [{
-            "id": "profile_1",
-            "label": "Chunking Profile",
-            "backend_kind": "lmstudio",
-            "base_url": "http://127.0.0.1:1234",
-            "api_key": "",
-            "model_name": "qwen3-8b",
-            "context_window": 4096,
-            "max_output_tokens": 512,
-            "request_timeout_seconds": 30,
-            "temperature": 0.2,
-            "supports_structured_output": False,
-            "enabled": True,
-        }],
-        "default_ai_cleanup_profile_id": None,
-        "default_ai_chunking_profile_id": "profile_1",
-        "default_ai_chunking_strategy": "scene",
-        "default_character_extraction_profile_id": None,
-    })
+    window = MainWindow(
+        settings_payload={
+            "language": "en",
+            "ui_text_scale": "normal",
+            "play_completion_beep": False,
+            "llm_profiles": [
+                {
+                    "id": "profile_1",
+                    "label": "Chunking Profile",
+                    "backend_kind": "lmstudio",
+                    "base_url": "http://127.0.0.1:1234",
+                    "api_key": "",
+                    "model_name": "qwen3-8b",
+                    "context_window": 4096,
+                    "max_output_tokens": 512,
+                    "request_timeout_seconds": 30,
+                    "temperature": 0.2,
+                    "supports_structured_output": False,
+                    "enabled": True,
+                }
+            ],
+            "default_ai_cleanup_profile_id": None,
+            "default_ai_chunking_profile_id": "profile_1",
+            "default_ai_chunking_strategy": "scene",
+            "default_character_extraction_profile_id": None,
+        }
+    )
     qtbot.addWidget(window)
     window._activate_project(project_root, project_workspace_service.load_manifest(project_root))
 
@@ -336,29 +345,33 @@ def test_text_chunking_ui_controller_ai_chunk_resume_skips_confirmation(
     (cleanup_root / "output_clean_text.txt").write_text("Paragraph one.\n", encoding="utf-8")
     project_workspace_service.save_manifest(manifest, project_root)
 
-    window = MainWindow(settings_payload={
-        "language": "en",
-        "ui_text_scale": "normal",
-        "play_completion_beep": False,
-        "llm_profiles": [{
-            "id": "profile_1",
-            "label": "Chunking Profile",
-            "backend_kind": "lmstudio",
-            "base_url": "http://127.0.0.1:1234",
-            "api_key": "",
-            "model_name": "qwen3-8b",
-            "context_window": 4096,
-            "max_output_tokens": 512,
-            "request_timeout_seconds": 30,
-            "temperature": 0.2,
-            "supports_structured_output": False,
-            "enabled": True,
-        }],
-        "default_ai_cleanup_profile_id": None,
-        "default_ai_chunking_profile_id": "profile_1",
-        "default_ai_chunking_strategy": "scene",
-        "default_character_extraction_profile_id": None,
-    })
+    window = MainWindow(
+        settings_payload={
+            "language": "en",
+            "ui_text_scale": "normal",
+            "play_completion_beep": False,
+            "llm_profiles": [
+                {
+                    "id": "profile_1",
+                    "label": "Chunking Profile",
+                    "backend_kind": "lmstudio",
+                    "base_url": "http://127.0.0.1:1234",
+                    "api_key": "",
+                    "model_name": "qwen3-8b",
+                    "context_window": 4096,
+                    "max_output_tokens": 512,
+                    "request_timeout_seconds": 30,
+                    "temperature": 0.2,
+                    "supports_structured_output": False,
+                    "enabled": True,
+                }
+            ],
+            "default_ai_cleanup_profile_id": None,
+            "default_ai_chunking_profile_id": "profile_1",
+            "default_ai_chunking_strategy": "scene",
+            "default_character_extraction_profile_id": None,
+        }
+    )
     qtbot.addWidget(window)
     window._activate_project(project_root, project_workspace_service.load_manifest(project_root))
 

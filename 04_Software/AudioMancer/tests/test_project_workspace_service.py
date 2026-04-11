@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -25,7 +24,6 @@ import pytest
 
 from audiomancer import config
 from audiomancer.services import project_workspace_service
-
 
 # PUBLIC API
 
@@ -56,9 +54,7 @@ def test_create_project_creates_required_structure_and_manifest(tmp_path) -> Non
     assert manifest["operations"]["cleanup"]["folder_relative_path"] == "10_cleanup"
     assert "metadata" not in manifest["operations"]["extraction"]
     assert "output_paths" not in manifest["operations"]["cleanup"]
-    assert (
-        project_root / config.PROJECT_MANIFEST_FILE_NAME
-    ).is_file()
+    assert (project_root / config.PROJECT_MANIFEST_FILE_NAME).is_file()
     for folder_name in config.PROJECT_REQUIRED_SUBDIRECTORIES:
         assert (project_root / folder_name).is_dir()
 
@@ -135,9 +131,7 @@ def test_open_project_resolves_root_from_child_folder(tmp_path) -> None:
         tmp_path,
     )
 
-    open_result = project_workspace_service.open_project(
-        created_root / "20_chunking"
-    )
+    open_result = project_workspace_service.open_project(created_root / "20_chunking")
 
     assert open_result["status"] == "ok"
     assert open_result["project_root"] == created_root
@@ -372,7 +366,9 @@ def test_save_manifest_projects_detailed_operation_state_to_compact_summary(tmp_
         "updated_at": "2026-04-11T10:10:00+00:00",
         "warning_count": 2,
         "metadata": {
-            "translated_chunks": [{"chunk_id": "chunk-0001", "translated_text": "..."},],
+            "translated_chunks": [
+                {"chunk_id": "chunk-0001", "translated_text": "..."},
+            ],
             "warnings": ["warning"],
         },
         "resume_checkpoint": {"next_untranslated_chunk_id": None},
@@ -380,9 +376,7 @@ def test_save_manifest_projects_detailed_operation_state_to_compact_summary(tmp_
 
     project_workspace_service.save_manifest(manifest, project_root)
 
-    saved_payload = json.loads(
-        (project_root / config.PROJECT_MANIFEST_FILE_NAME).read_text(encoding="utf-8")
-    )
+    saved_payload = json.loads((project_root / config.PROJECT_MANIFEST_FILE_NAME).read_text(encoding="utf-8"))
     translation_operation = saved_payload["operations"]["translation"]
     assert translation_operation["status"] == "completed"
     assert translation_operation["progress_current"] == 8

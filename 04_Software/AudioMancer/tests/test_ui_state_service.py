@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -34,10 +33,7 @@ def test_translate_returns_expected_english_and_romanian_strings() -> None:
     """
     assert ui_state_service.translate("toolbar.settings", "en") == "Settings"
     assert ui_state_service.translate("toolbar.settings", "ro") == "Setari"
-    assert (
-        ui_state_service.translate("sidebar.text_chunking", "ro")
-        == "Segmentare Text"
-    )
+    assert ui_state_service.translate("sidebar.text_chunking", "ro") == "Segmentare Text"
 
 
 def test_apply_text_scale_updates_application_font(qtbot) -> None:

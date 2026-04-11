@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -23,9 +22,7 @@ import json
 import pytest
 
 from audiomancer import config
-from audiomancer.services import deterministic_cleanup_service
-from audiomancer.services import operation_runtime_service
-from audiomancer.services import project_workspace_service
+from audiomancer.services import deterministic_cleanup_service, operation_runtime_service, project_workspace_service
 
 
 def test_cleanup_writes_runtime_artifacts_and_preserves_structure(tmp_path) -> None:
@@ -114,11 +111,7 @@ def test_cleanup_persists_resumable_state_after_cancellation(tmp_path) -> None:
         )
 
     state_payload = json.loads(
-        (
-            project_root
-            / config.CLEANUP_FOLDER_NAME
-            / config.OPERATION_STATE_FILE_NAME
-        ).read_text(encoding="utf-8")
+        (project_root / config.CLEANUP_FOLDER_NAME / config.OPERATION_STATE_FILE_NAME).read_text(encoding="utf-8")
     )
     assert state_payload["status"] == "running"
     assert state_payload["progress_current"] < state_payload["progress_total"]
@@ -148,8 +141,8 @@ def test_cleanup_removes_separator_marks_and_heals_false_phrase_breaks(tmp_path)
     manifest["extracted_text_relative_path"] = "00_extraction/output_raw_text.txt"
     (project_root / config.EXTRACTION_FOLDER_NAME / "output_raw_text.txt").write_text(
         (
-            "\"Drenthe will shoot this industrial if\n\n"
-            "you swear that Heroes of the Periphery will then be the next project,\"\n\n"
+            '"Drenthe will shoot this industrial if\n\n'
+            'you swear that Heroes of the Periphery will then be the next project,"\n\n'
             "* * *\n\n"
             "The transport liner was less than eight hours out from Korhal."
         ),
@@ -158,14 +151,11 @@ def test_cleanup_removes_separator_marks_and_heals_false_phrase_breaks(tmp_path)
 
     report_payload = deterministic_cleanup_service.clean_text(project_root, manifest)
 
-    output_text = (
-        project_root / config.CLEANUP_FOLDER_NAME / config.CLEANED_TEXT_FILE_NAME
-    ).read_text(encoding="utf-8")
-    assert "* * *" not in output_text
-    assert (
-        "\"Drenthe will shoot this industrial if you swear that Heroes of the Periphery"
-        in output_text
+    output_text = (project_root / config.CLEANUP_FOLDER_NAME / config.CLEANED_TEXT_FILE_NAME).read_text(
+        encoding="utf-8"
     )
+    assert "* * *" not in output_text
+    assert '"Drenthe will shoot this industrial if you swear that Heroes of the Periphery' in output_text
     assert report_payload["removed_separator_line_count"] == 1
 
 
@@ -200,9 +190,9 @@ def test_cleanup_displays_dialogue_markers_on_new_lines(tmp_path) -> None:
 
     deterministic_cleanup_service.clean_text(project_root, manifest)
 
-    output_text = (
-        project_root / config.CLEANUP_FOLDER_NAME / config.CLEANED_TEXT_FILE_NAME
-    ).read_text(encoding="utf-8")
+    output_text = (project_root / config.CLEANUP_FOLDER_NAME / config.CLEANED_TEXT_FILE_NAME).read_text(
+        encoding="utf-8"
+    )
     assert "mantie:\n- Mai iute." in output_text
     assert "lumină.\n- Unde s-au dus oamenii" in output_text
 
@@ -229,18 +219,15 @@ def test_cleanup_preserves_original_newline_after_dialogue_line(tmp_path) -> Non
     }
     manifest["extracted_text_relative_path"] = "00_extraction/output_raw_text.txt"
     (project_root / config.EXTRACTION_FOLDER_NAME / "output_raw_text.txt").write_text(
-        (
-            "- E primul schimb al gărzii de zi, îi răspunse fata. Grăbește-te!\n"
-            "Postează santinele, gîndi Paul."
-        ),
+        ("- E primul schimb al gărzii de zi, îi răspunse fata. Grăbește-te!\nPostează santinele, gîndi Paul."),
         encoding="utf-8",
     )
 
     deterministic_cleanup_service.clean_text(project_root, manifest)
 
-    output_text = (
-        project_root / config.CLEANUP_FOLDER_NAME / config.CLEANED_TEXT_FILE_NAME
-    ).read_text(encoding="utf-8")
+    output_text = (project_root / config.CLEANUP_FOLDER_NAME / config.CLEANED_TEXT_FILE_NAME).read_text(
+        encoding="utf-8"
+    )
     assert "Grăbește-te!\nPostează santinele" in output_text
 
 

@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -21,12 +20,13 @@
 from pathlib import Path
 
 from audiomancer import config
-from audiomancer.services import ai_translation_service
-from audiomancer.services import deterministic_chunking_service
-from audiomancer.services import home_presenter_service
-from audiomancer.services import token_usage_service
-from audiomancer.services import ui_state_service
-
+from audiomancer.services import (
+    ai_translation_service,
+    deterministic_chunking_service,
+    home_presenter_service,
+    token_usage_service,
+    ui_state_service,
+)
 
 # PUBLIC API
 
@@ -62,9 +62,7 @@ def build_ai_translation_profile_state(
         enabled_ids.append(profile_id)
     default_profile_id = None
     if isinstance(settings_payload, dict):
-        candidate_default_profile_id = settings_payload.get(
-            "default_ai_translation_profile_id"
-        )
+        candidate_default_profile_id = settings_payload.get("default_ai_translation_profile_id")
         if candidate_default_profile_id in enabled_ids:
             default_profile_id = str(candidate_default_profile_id)
     resolved_selected_id = (
@@ -188,7 +186,11 @@ def build_ai_translation_notes(
         return notes
     if stage_status == "running":
         progress_current = 0 if operation_state is None else int(operation_state.get("progress_current", 0))
-        progress_total = len(source_chunks) if operation_state is None else int(operation_state.get("progress_total", len(source_chunks)))
+        progress_total = (
+            len(source_chunks)
+            if operation_state is None
+            else int(operation_state.get("progress_total", len(source_chunks)))
+        )
         notes.append(
             ui_state_service.translate("ai_translation.note_in_progress", language).format(
                 progress_current=progress_current,
@@ -197,14 +199,21 @@ def build_ai_translation_notes(
         )
     elif stage_status == "failed":
         progress_current = 0 if operation_state is None else int(operation_state.get("progress_current", 0))
-        progress_total = len(source_chunks) if operation_state is None else int(operation_state.get("progress_total", len(source_chunks)))
+        progress_total = (
+            len(source_chunks)
+            if operation_state is None
+            else int(operation_state.get("progress_total", len(source_chunks)))
+        )
         notes.append(
             ui_state_service.translate("ai_translation.note_resume", language).format(
                 progress_current=progress_current,
                 progress_total=progress_total,
             )
         )
-    elif report is not None and str(report.get("translation_stage_status", "")) == ai_translation_service.TRANSLATION_STAGE_COMPLETED:
+    elif (
+        report is not None
+        and str(report.get("translation_stage_status", "")) == ai_translation_service.TRANSLATION_STAGE_COMPLETED
+    ):
         notes.append(ui_state_service.translate("ai_translation.note_completed_locked", language))
     else:
         notes.append(ui_state_service.translate("ai_translation.note_ready", language))
@@ -231,16 +240,10 @@ def _build_token_usage_notes(
                 total_tokens=format(int(token_usage["total_tokens"]), ","),
             )
         ]
-    if (
-        isinstance(report, dict)
-        and "token_usage" in report
-    ) or (
-        isinstance(metadata, dict)
-        and "token_usage" in metadata
+    if (isinstance(report, dict) and "token_usage" in report) or (
+        isinstance(metadata, dict) and "token_usage" in metadata
     ):
-        return [
-            ui_state_service.translate("ai.note_token_usage_unavailable", language)
-        ]
+        return [ui_state_service.translate("ai.note_token_usage_unavailable", language)]
     return []
 
 

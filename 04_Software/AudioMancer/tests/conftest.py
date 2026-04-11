@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -17,8 +16,10 @@
 """
 
 import pytest
+
 from audiomancer import config
 from audiomancer.services import project_workspace_service
+
 
 @pytest.fixture
 def mock_prompt_environment(tmp_path, monkeypatch):
@@ -34,13 +35,13 @@ def mock_prompt_environment(tmp_path, monkeypatch):
     """
     prompt_root = tmp_path / "prompts"
     prompt_root.mkdir(exist_ok=True)
-    
+
     # Generic stubs for tests verifying AI call generation
     (prompt_root / "text_cleanup_system.txt").write_text("System prompt.", encoding="utf-8")
     (prompt_root / "text_cleanup_user.txt").write_text("{units_block}", encoding="utf-8")
     (prompt_root / "text_chunking_system.txt").write_text("Chunk system prompt.", encoding="utf-8")
     (prompt_root / "text_chunking_user.txt").write_text("{units_block}", encoding="utf-8")
-    
+
     monkeypatch.setattr(config, "APP_PROMPTS_PATH", prompt_root)
     return prompt_root
 
@@ -59,20 +60,22 @@ def default_settings_payload():
         "language": "en",
         "ui_text_scale": "normal",
         "play_completion_beep": False,
-        "llm_profiles": [{
-            "id": "profile_1",
-            "label": "Stored Profile",
-            "backend_kind": "lmstudio",
-            "base_url": "http://127.0.0.1:1234/v1",
-            "api_key": "",
-            "model_name": "qwen3-8b",
-            "context_window": 8192,
-            "max_output_tokens": 1024,
-            "request_timeout_seconds": 90,
-            "temperature": 0.2,
-            "supports_structured_output": False,
-            "enabled": True,
-        }],
+        "llm_profiles": [
+            {
+                "id": "profile_1",
+                "label": "Stored Profile",
+                "backend_kind": "lmstudio",
+                "base_url": "http://127.0.0.1:1234/v1",
+                "api_key": "",
+                "model_name": "qwen3-8b",
+                "context_window": 8192,
+                "max_output_tokens": 1024,
+                "request_timeout_seconds": 90,
+                "temperature": 0.2,
+                "supports_structured_output": False,
+                "enabled": True,
+            }
+        ],
         "default_ai_cleanup_profile_id": "profile_1",
         "default_ai_chunking_profile_id": "profile_1",
         "default_ai_chunking_strategy": "paragraph",
@@ -108,13 +111,13 @@ def mock_extracted_project(mock_clean_project):
     @version    0.1.0
     """
     project_root, manifest = mock_clean_project
-    
+
     extracted_path = project_root / config.EXTRACTION_FOLDER_NAME / config.EXTRACTED_TEXT_FILE_NAME
     extracted_path.parent.mkdir(parents=True, exist_ok=True)
-    
+
     # Put a dummy payload, tests can overwrite if they need to
     extracted_path.write_text("Dummy Source Text\n", encoding="utf-8")
-    
+
     manifest["source_document"] = {
         "original_name": "story.txt",
         "stored_relative_path": "story.txt",
@@ -124,7 +127,8 @@ def mock_extracted_project(mock_clean_project):
     }
     manifest["extracted_text_relative_path"] = f"{config.EXTRACTION_FOLDER_NAME}/{config.EXTRACTED_TEXT_FILE_NAME}"
     project_workspace_service.save_manifest(manifest, project_root)
-    
+
     return project_root, manifest
+
 
 # END OF FILE

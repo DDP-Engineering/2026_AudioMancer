@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -18,14 +17,12 @@
 
 # IMPORTS
 
-import json
 from PySide6.QtWidgets import (
     QApplication,
     QDialog,
     QGroupBox,
     QLabel,
     QListWidget,
-    QMessageBox,
     QPlainTextEdit,
     QPushButton,
     QStackedWidget,
@@ -33,19 +30,12 @@ from PySide6.QtWidgets import (
     QToolBar,
 )
 
-import audiomancer.ui.main_window as main_window_module
-from audiomancer import config
-from audiomancer.services import deterministic_chunking_service
-from audiomancer.services import project_workspace_service
-from audiomancer.ui.controllers import ai_translation_ui_controller
-from audiomancer.ui.controllers import ai_settings_ui_controller
-from audiomancer.ui.controllers import home_ui_controller
 from audiomancer.ui.controllers import settings_ui_controller
-from audiomancer.ui.controllers import text_chunking_ui_controller
-from audiomancer.ui.controllers import text_cleanup_ui_controller
+import audiomancer.ui.main_window as main_window_module
 from audiomancer.ui.main_window import MainWindow
 
 # PUBLIC API
+
 
 def test_main_window_can_be_created(qtbot, default_settings_payload) -> None:
     """
@@ -57,83 +47,40 @@ def test_main_window_can_be_created(qtbot, default_settings_payload) -> None:
     @date       2026-04-06
     @version    0.4.0
     """
-    window = MainWindow(settings_payload={
-        "language": "en",
-        "ui_text_scale": "normal",
-        "play_completion_beep": False,
-        "llm_profiles": [],
-        "default_ai_cleanup_profile_id": None,
-        "default_ai_chunking_profile_id": None,
-        "default_ai_chunking_strategy": "paragraph",
-        "default_character_extraction_profile_id": None,
-    })
+    window = MainWindow(
+        settings_payload={
+            "language": "en",
+            "ui_text_scale": "normal",
+            "play_completion_beep": False,
+            "llm_profiles": [],
+            "default_ai_cleanup_profile_id": None,
+            "default_ai_chunking_profile_id": None,
+            "default_ai_chunking_strategy": "paragraph",
+            "default_character_extraction_profile_id": None,
+        }
+    )
     qtbot.addWidget(window)
 
-    assert (
-        window.windowTitle()
-        == "AudioMancer | Transform written words into real audio experience!"
-    )
+    assert window.windowTitle() == "AudioMancer | Transform written words into real audio experience!"
     assert window.centralWidget() is not None
     assert len(window.findChildren(QToolBar)) == 1
     assert len(window.findChildren(QListWidget)) >= 2
     assert window.findChild(QStackedWidget) is not None
     assert len(window.findChildren(QDialog)) == 2
-    assert any(
-        group_box.title() == "Project Summary"
-        for group_box in window.findChildren(QGroupBox)
-    )
-    assert any(
-        group_box.title() == "Workflow Progress"
-        for group_box in window.findChildren(QGroupBox)
-    )
-    assert any(
-        group_box.title() == "Narrator Profiles"
-        for group_box in window.findChildren(QGroupBox)
-    )
-    assert any(
-        group_box.title() == "Voice Designer Prompt"
-        for group_box in window.findChildren(QGroupBox)
-    )
-    assert any(
-        button.text() == "Deterministic Cleanup"
-        for button in window.findChildren(QPushButton)
-    )
-    assert any(
-        button.text() == "Deterministic Chunking"
-        for button in window.findChildren(QPushButton)
-    )
-    assert any(
-        button.text() == "Start Translation"
-        for button in window.findChildren(QPushButton)
-    )
-    assert any(
-        button.text() == "Start Discovery"
-        for button in window.findChildren(QPushButton)
-    )
-    assert any(
-        button.text() == "Preview"
-        for button in window.findChildren(QPushButton)
-    )
-    assert any(
-        button.text() == "Delete Profile"
-        for button in window.findChildren(QPushButton)
-    )
-    assert any(
-        button.text() == "Save AI Settings"
-        for button in window.findChildren(QPushButton)
-    )
-    assert any(
-        button.text() == "Connect"
-        for button in window.findChildren(QPushButton)
-    )
-    assert any(
-        button.text() == "Save Settings"
-        for button in window.findChildren(QPushButton)
-    )
-    assert any(
-        label.text() == "Interface Text Size"
-        for label in window.findChildren(QLabel)
-    )
+    assert any(group_box.title() == "Project Summary" for group_box in window.findChildren(QGroupBox))
+    assert any(group_box.title() == "Workflow Progress" for group_box in window.findChildren(QGroupBox))
+    assert any(group_box.title() == "Narrator Profiles" for group_box in window.findChildren(QGroupBox))
+    assert any(group_box.title() == "Voice Designer Prompt" for group_box in window.findChildren(QGroupBox))
+    assert any(button.text() == "Deterministic Cleanup" for button in window.findChildren(QPushButton))
+    assert any(button.text() == "Deterministic Chunking" for button in window.findChildren(QPushButton))
+    assert any(button.text() == "Start Translation" for button in window.findChildren(QPushButton))
+    assert any(button.text() == "Start Discovery" for button in window.findChildren(QPushButton))
+    assert any(button.text() == "Preview" for button in window.findChildren(QPushButton))
+    assert any(button.text() == "Delete Profile" for button in window.findChildren(QPushButton))
+    assert any(button.text() == "Save AI Settings" for button in window.findChildren(QPushButton))
+    assert any(button.text() == "Connect" for button in window.findChildren(QPushButton))
+    assert any(button.text() == "Save Settings" for button in window.findChildren(QPushButton))
+    assert any(label.text() == "Interface Text Size" for label in window.findChildren(QLabel))
     assert window._sidebar.item(1).flags() == main_window_module.Qt.ItemFlag.NoItemFlags
     assert window._operation_progress_dialog is None
     assert window._status_bar is None
@@ -149,16 +96,18 @@ def test_main_window_show_message_does_not_create_status_bar(qtbot, default_sett
     @date       2026-04-07
     @version    0.1.0
     """
-    window = MainWindow(settings_payload={
-        "language": "en",
-        "ui_text_scale": "normal",
-        "play_completion_beep": False,
-        "llm_profiles": [],
-        "default_ai_cleanup_profile_id": None,
-        "default_ai_chunking_profile_id": None,
-        "default_ai_chunking_strategy": "paragraph",
-        "default_character_extraction_profile_id": None,
-    })
+    window = MainWindow(
+        settings_payload={
+            "language": "en",
+            "ui_text_scale": "normal",
+            "play_completion_beep": False,
+            "llm_profiles": [],
+            "default_ai_cleanup_profile_id": None,
+            "default_ai_chunking_profile_id": None,
+            "default_ai_chunking_strategy": "paragraph",
+            "default_character_extraction_profile_id": None,
+        }
+    )
     qtbot.addWidget(window)
 
     window.show_message("Transient shell message")
@@ -177,30 +126,28 @@ def test_about_dialog_includes_license_text(qtbot, default_settings_payload) -> 
     @date       2026-04-06
     @version    0.1.0
     """
-    window = MainWindow(settings_payload={
-        "language": "en",
-        "ui_text_scale": "normal",
-        "play_completion_beep": False,
-        "llm_profiles": [],
-        "default_ai_cleanup_profile_id": None,
-        "default_ai_chunking_profile_id": None,
-        "default_ai_chunking_strategy": "paragraph",
-        "default_character_extraction_profile_id": None,
-    })
+    window = MainWindow(
+        settings_payload={
+            "language": "en",
+            "ui_text_scale": "normal",
+            "play_completion_beep": False,
+            "llm_profiles": [],
+            "default_ai_cleanup_profile_id": None,
+            "default_ai_chunking_profile_id": None,
+            "default_ai_chunking_strategy": "paragraph",
+            "default_character_extraction_profile_id": None,
+        }
+    )
     qtbot.addWidget(window)
 
     dialog = window._build_about_dialog()
     text_box = dialog.findChild(QPlainTextEdit, "aboutLicenseTextBox")
 
-    assert (
-        dialog.windowTitle()
-        == "About"
-    )
+    assert dialog.windowTitle() == "About"
     assert dialog.width() == 510
     assert text_box is not None
     assert any(
-        label.text() == "Transform written words into real audio experience!"
-        for label in dialog.findChildren(QLabel)
+        label.text() == "Transform written words into real audio experience!" for label in dialog.findChildren(QLabel)
     )
     assert "GNU AFFERO GENERAL PUBLIC LICENSE" in text_box.toPlainText()
     assert "Additional Non-Commercial Restriction" in text_box.toPlainText()
@@ -216,16 +163,18 @@ def test_about_dialog_loads_translated_license_text_for_romanian(qtbot, default_
     @date       2026-04-06
     @version    0.1.0
     """
-    window = MainWindow(settings_payload={
-        "language": "ro",
-        "ui_text_scale": "normal",
-        "play_completion_beep": False,
-        "llm_profiles": [],
-        "default_ai_cleanup_profile_id": None,
-        "default_ai_chunking_profile_id": None,
-        "default_ai_chunking_strategy": "paragraph",
-        "default_character_extraction_profile_id": None,
-    })
+    window = MainWindow(
+        settings_payload={
+            "language": "ro",
+            "ui_text_scale": "normal",
+            "play_completion_beep": False,
+            "llm_profiles": [],
+            "default_ai_cleanup_profile_id": None,
+            "default_ai_chunking_profile_id": None,
+            "default_ai_chunking_strategy": "paragraph",
+            "default_character_extraction_profile_id": None,
+        }
+    )
     qtbot.addWidget(window)
 
     dialog = window._build_about_dialog()
@@ -295,15 +244,10 @@ def test_main_window_saves_settings_dialog_payload(monkeypatch, qtbot, default_s
     assert persisted_payload["ui_text_scale"] == "large"
     assert persisted_payload["play_completion_beep"] is True
     assert window._settings_dialog.isVisible() is False
-    assert window.windowTitle() == (
-        "AudioMancer | Transforma cuvintele scrise intr-o experienta audio reala!"
-    )
+    assert window.windowTitle() == ("AudioMancer | Transforma cuvintele scrise intr-o experienta audio reala!")
     assert window._action_settings.text() == "Setari"
     assert window._sidebar.item(0).text() == "Acasa / Proiect"
-    assert (
-        window._settings_page._save_button.text()
-        == "Salveaza Setarile"
-    )
+    assert window._settings_page._save_button.text() == "Salveaza Setarile"
     assert QApplication.instance().font().pointSizeF() > starting_font_size
 
 
@@ -369,5 +313,3 @@ def test_settings_dialog_reopens_with_translated_labels(monkeypatch, qtbot, defa
     assert window._settings_dialog.windowTitle() == "Setari"
     assert window._settings_page._language_label.text() == "Limba"
     assert window._settings_page._text_size_label.text() == "Dimensiune Text Interfata"
-
-

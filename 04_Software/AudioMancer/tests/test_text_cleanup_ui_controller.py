@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -21,7 +20,6 @@
 from audiomancer.services import project_workspace_service
 from audiomancer.ui.controllers import text_cleanup_ui_controller
 from audiomancer.ui.main_window import MainWindow
-
 
 # PUBLIC API
 
@@ -188,14 +186,16 @@ def test_text_cleanup_ui_controller_ai_cleanup_request_uses_selected_profile(
         }
     ]
     settings_payload["default_ai_cleanup_profile_id"] = "profile_1"
-    
+
     window = MainWindow(settings_payload=settings_payload)
     qtbot.addWidget(window)
     window._activate_project(project_root, project_workspace_service.load_manifest(project_root))
 
     start_calls = []
     monkeypatch.setattr(text_cleanup_ui_controller, "confirm_ai_cleanup_start", lambda *_args: True)
-    monkeypatch.setattr(text_cleanup_ui_controller, "start_operation", lambda _window, **kwargs: start_calls.append(kwargs))
+    monkeypatch.setattr(
+        text_cleanup_ui_controller, "start_operation", lambda _window, **kwargs: start_calls.append(kwargs)
+    )
     monkeypatch.setattr(
         text_cleanup_ui_controller.ai_cleanup_service,
         "clean_text",
@@ -252,26 +252,28 @@ def test_text_cleanup_ui_controller_ai_cleanup_resume_skips_confirmations(
     project_workspace_service.save_manifest(manifest, project_root)
 
     settings_payload = dict(default_settings_payload)
-    settings_payload["llm_profiles"] = [{
-        "id": "profile_1",
-        "label": "Cleanup Profile",
-        "backend_kind": "lmstudio",
-        "base_url": "http://127.0.0.1:1234",
-        "api_key": "",
-        "model_name": "qwen3-8b",
-        "context_window": 4096,
-        "max_output_tokens": 512,
-        "request_timeout_seconds": 30,
-        "temperature": 0.2,
-        "supports_structured_output": False,
-        "enabled": True,
-        "discovered_model_name": "",
-        "discovered_context_window": None,
-        "discovery_succeeded": False,
-        "discovery_message": "",
-        "user_overrode_model_name": False,
-        "user_overrode_context_window": False,
-    }]
+    settings_payload["llm_profiles"] = [
+        {
+            "id": "profile_1",
+            "label": "Cleanup Profile",
+            "backend_kind": "lmstudio",
+            "base_url": "http://127.0.0.1:1234",
+            "api_key": "",
+            "model_name": "qwen3-8b",
+            "context_window": 4096,
+            "max_output_tokens": 512,
+            "request_timeout_seconds": 30,
+            "temperature": 0.2,
+            "supports_structured_output": False,
+            "enabled": True,
+            "discovered_model_name": "",
+            "discovered_context_window": None,
+            "discovery_succeeded": False,
+            "discovery_message": "",
+            "user_overrode_model_name": False,
+            "user_overrode_context_window": False,
+        }
+    ]
     settings_payload["default_ai_cleanup_profile_id"] = "profile_1"
 
     window = MainWindow(settings_payload=settings_payload)
@@ -279,10 +281,16 @@ def test_text_cleanup_ui_controller_ai_cleanup_resume_skips_confirmations(
     window._activate_project(project_root, project_workspace_service.load_manifest(project_root))
 
     confirm_calls: list[str] = []
-    monkeypatch.setattr(text_cleanup_ui_controller, "confirm_ai_cleanup_start", lambda *_args: confirm_calls.append("start") or True)
-    monkeypatch.setattr(text_cleanup_ui_controller, "confirm_ai_cleanup_rerun", lambda *_args: confirm_calls.append("rerun") or True)
+    monkeypatch.setattr(
+        text_cleanup_ui_controller, "confirm_ai_cleanup_start", lambda *_args: confirm_calls.append("start") or True
+    )
+    monkeypatch.setattr(
+        text_cleanup_ui_controller, "confirm_ai_cleanup_rerun", lambda *_args: confirm_calls.append("rerun") or True
+    )
     start_calls = []
-    monkeypatch.setattr(text_cleanup_ui_controller, "start_operation", lambda _window, **kwargs: start_calls.append(kwargs))
+    monkeypatch.setattr(
+        text_cleanup_ui_controller, "start_operation", lambda _window, **kwargs: start_calls.append(kwargs)
+    )
     monkeypatch.setattr(
         text_cleanup_ui_controller.ai_cleanup_service,
         "load_operation_state",

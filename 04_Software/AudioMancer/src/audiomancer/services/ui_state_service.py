@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -768,10 +767,7 @@ def apply_text_scale(
     if application is None:
         return
 
-    scale_key = (
-        ui_text_scale if ui_text_scale in _UI_SCALE_FACTORS
-        else config.DEFAULT_UI_TEXT_SCALE
-    )
+    scale_key = ui_text_scale if ui_text_scale in _UI_SCALE_FACTORS else config.DEFAULT_UI_TEXT_SCALE
     if ui_text_scale not in _UI_SCALE_FACTORS:
         _UI_STATE_LOGGER.warning(
             "Replaced invalid UI text scale with the default value.",
@@ -794,7 +790,6 @@ def apply_text_scale(
         if isinstance(widget, QWidget):
             widget.setFont(QFont(scaled_font))
             widget.update()
-
 
     _UI_STATE_LOGGER.info(
         f"Applied UI text scale '{scale_key}'.",

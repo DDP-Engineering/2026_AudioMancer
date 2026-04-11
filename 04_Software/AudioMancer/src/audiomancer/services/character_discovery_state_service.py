@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -19,11 +18,13 @@
 
 from pathlib import Path
 
-from audiomancer.services import character_discovery_service
-from audiomancer.services import deterministic_chunking_service
-from audiomancer.services import home_presenter_service
-from audiomancer.services import token_usage_service
-from audiomancer.services import ui_state_service
+from audiomancer.services import (
+    character_discovery_service,
+    deterministic_chunking_service,
+    home_presenter_service,
+    token_usage_service,
+    ui_state_service,
+)
 
 
 def build_character_discovery_profile_state(
@@ -60,9 +61,7 @@ def build_character_discovery_profile_state(
         selected_profile_id
         if selected_profile_id in enabled_ids
         else (
-            str(default_profile_id)
-            if default_profile_id in enabled_ids
-            else (enabled_ids[0] if enabled_ids else None)
+            str(default_profile_id) if default_profile_id in enabled_ids else (enabled_ids[0] if enabled_ids else None)
         )
     )
     return {"entries": entries, "selected_profile_id": resolved_selected_id}
@@ -194,14 +193,8 @@ def build_character_discovery_notes(
             )
         )
         notes.extend(_build_token_usage_notes(report, operation_state, language))
-        notes.extend(
-            str(item)
-            for item in list(report.get("warnings", []))
-            if str(item).strip()
-        )
-        notes.append(
-            ui_state_service.translate("characters.note_rerun_replaces_manual", language)
-        )
+        notes.extend(str(item) for item in list(report.get("warnings", [])) if str(item).strip())
+        notes.append(ui_state_service.translate("characters.note_rerun_replaces_manual", language))
     elif operation_state is not None:
         notes.extend(_build_token_usage_notes(report, operation_state, language))
     if not has_ai_profiles:
@@ -209,9 +202,7 @@ def build_character_discovery_notes(
         return notes
     stage_status = _character_discovery_stage_status(report, operation_state)
     if stage_status == "running":
-        progress_current = (
-            0 if operation_state is None else int(operation_state.get("progress_current", 0))
-        )
+        progress_current = 0 if operation_state is None else int(operation_state.get("progress_current", 0))
         progress_total = (
             len(source_chunks)
             if operation_state is None
@@ -224,9 +215,7 @@ def build_character_discovery_notes(
             )
         )
     elif stage_status == "failed":
-        progress_current = (
-            0 if operation_state is None else int(operation_state.get("progress_current", 0))
-        )
+        progress_current = 0 if operation_state is None else int(operation_state.get("progress_current", 0))
         progress_total = (
             len(source_chunks)
             if operation_state is None
@@ -265,16 +254,10 @@ def _build_token_usage_notes(
                 total_tokens=format(int(token_usage["total_tokens"]), ","),
             )
         ]
-    if (
-        isinstance(report, dict)
-        and "token_usage" in report
-    ) or (
-        isinstance(metadata, dict)
-        and "token_usage" in metadata
+    if (isinstance(report, dict) and "token_usage" in report) or (
+        isinstance(metadata, dict) and "token_usage" in metadata
     ):
-        return [
-            ui_state_service.translate("ai.note_token_usage_unavailable", language)
-        ]
+        return [ui_state_service.translate("ai.note_token_usage_unavailable", language)]
     return []
 
 

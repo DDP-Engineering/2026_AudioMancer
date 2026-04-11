@@ -1,4 +1,4 @@
-﻿<!--
+<!--
 Copyright (c) 2026 DDP Engineering
 This software is licensed under the GNU Affero General Public License v3.0
 (AGPL-3.0) with additional Non-Commercial restriction.
@@ -67,6 +67,18 @@ Examples:
 - `uv run python -m py_compile <changed_file.py>`
 - `uv run pytest tests/<targeted_test>.py`
 
+**Code quality — run after every set of Python changes inside `04_Software/AudioMancer/`:**
+
+```powershell
+uv run ruff check <changed_python_files> --fix
+uv run ruff format <changed_python_files>
+```
+
+Ruff is already configured in `pyproject.toml` (`line-length = 120`, `target-version = "py312"`).
+Remaining `E501` warnings on long inline string literals in tests are accepted and may be ignored.
+Prefer changed-file `ruff` runs during normal feature work to avoid unrelated formatting churn.
+Run full-tree `ruff` passes only for one intentional repository-wide cleanup or baseline normalization change.
+
 When behavior changes:
 
 - add or update targeted tests
@@ -91,6 +103,8 @@ Do not consider work complete until all applicable items below are satisfied:
 - relevant documentation is updated in the same change
 - relevant tests are added or updated for behavior changes
 - `python -m py_compile <changed_file.py>` has been run for each changed Python file
+- `uv run ruff check <changed_python_files> --fix` has been run and output reviewed
+- `uv run ruff format <changed_python_files>` has been run
 - the final summary states what changed, what was validated, and what remains unverified
 
 

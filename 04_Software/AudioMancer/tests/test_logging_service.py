@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -18,17 +17,16 @@
 
 # IMPORTS
 
+from datetime import datetime, timedelta
 import json
 import logging
 import os
-from datetime import datetime, timedelta
 from pathlib import Path
 
 import pytest
 
 from audiomancer import config
 from audiomancer.services import logging_service
-
 
 # HELPER FUNCTIONS
 
@@ -43,11 +41,7 @@ def _read_log_lines(log_file_path: Path) -> list[str]:
     @date       2026-04-04
     @version    0.1.0
     """
-    return [
-        line.strip()
-        for line in log_file_path.read_text(encoding="utf-8").splitlines()
-        if line.strip()
-    ]
+    return [line.strip() for line in log_file_path.read_text(encoding="utf-8").splitlines() if line.strip()]
 
 
 # PUBLIC API

@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -20,7 +19,6 @@
 # IMPORTS
 
 from typing import Any
-
 
 TokenUsagePayload = dict[str, object]
 
@@ -112,9 +110,7 @@ def merge_token_usage(
     """
     normalized_base = coerce_token_usage(base_usage)
     normalized_increment = coerce_token_usage(increment_usage)
-    if not bool(normalized_base["usage_available"]) and not bool(
-        normalized_increment["usage_available"]
-    ):
+    if not bool(normalized_base["usage_available"]) and not bool(normalized_increment["usage_available"]):
         return empty_token_usage()
     return {
         "input_tokens": _sum_usage_field(

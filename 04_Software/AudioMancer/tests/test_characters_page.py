@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -54,9 +53,7 @@ def test_characters_page_add_mode_creates_draft_row_and_manual_evidence(qtbot) -
     assert page._character_list.count() == 2
     assert page._character_list.currentItem().text() == "Manual Bob"
     assert page._save_character_button.isEnabled() is True
-    assert page._evidence_preview.toPlainText() == (
-        character_discovery_service.MANUAL_CHARACTER_EVIDENCE_NOTE
-    )
+    assert page._evidence_preview.toPlainText() == (character_discovery_service.MANUAL_CHARACTER_EVIDENCE_NOTE)
 
 
 def test_characters_page_selection_change_emits_requested_character_id(qtbot) -> None:

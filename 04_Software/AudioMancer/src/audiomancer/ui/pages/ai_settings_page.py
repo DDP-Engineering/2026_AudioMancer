@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -107,9 +106,7 @@ class AiSettingsPage(QWidget):
         profile_column_layout.setContentsMargins(0, 0, 0, 0)
 
         self._profile_list = QListWidget(self)
-        self._profile_list.currentRowChanged.connect(
-            self._load_selected_profile_into_editor
-        )
+        self._profile_list.currentRowChanged.connect(self._load_selected_profile_into_editor)
         profile_column_layout.addWidget(self._profile_list, 1)
 
         profile_button_row = QHBoxLayout()
@@ -151,11 +148,13 @@ class AiSettingsPage(QWidget):
 
         self._model_combo = QComboBox(self)
         self._model_combo.setEditable(True)
-        self._model_combo.addItems((
-            "qwen3-8b",
-            "qwen2.5-7b-instruct",
-            "llama-3.1-8b-instruct",
-        ))
+        self._model_combo.addItems(
+            (
+                "qwen3-8b",
+                "qwen2.5-7b-instruct",
+                "llama-3.1-8b-instruct",
+            )
+        )
 
         self._context_window_spin = QSpinBox(self)
         self._context_window_spin.setRange(1, 1_000_000)
@@ -171,9 +170,7 @@ class AiSettingsPage(QWidget):
         self._temperature_spin.setDecimals(2)
         self._temperature_spin.setSingleStep(0.05)
 
-        self._supports_structured_checkbox = QCheckBox(
-            "Structured output supported"
-        )
+        self._supports_structured_checkbox = QCheckBox("Structured output supported")
 
         self._profile_name_label = QLabel("Profile Name", self)
         self._backend_kind_label = QLabel("Backend Kind", self)
@@ -214,18 +211,10 @@ class AiSettingsPage(QWidget):
             self,
         )
 
-        form_layout.addRow(
-            self._default_cleanup_label, self._default_cleanup_combo
-        )
-        form_layout.addRow(
-            self._default_chunking_label, self._default_chunking_combo
-        )
-        form_layout.addRow(
-            self._default_translation_label, self._default_translation_combo
-        )
-        form_layout.addRow(
-            self._default_strategy_label, self._default_strategy_combo
-        )
+        form_layout.addRow(self._default_cleanup_label, self._default_cleanup_combo)
+        form_layout.addRow(self._default_chunking_label, self._default_chunking_combo)
+        form_layout.addRow(self._default_translation_label, self._default_translation_combo)
+        form_layout.addRow(self._default_strategy_label, self._default_strategy_combo)
         form_layout.addRow(
             self._default_character_label,
             self._default_character_combo,
@@ -244,21 +233,19 @@ class AiSettingsPage(QWidget):
         button_row.addStretch(1)
         layout.addLayout(button_row)
 
-        self._model_combo.currentTextChanged.connect(
-            self._on_model_name_edited
-        )
-        self._context_window_spin.valueChanged.connect(
-            self._on_context_window_edited
-        )
+        self._model_combo.currentTextChanged.connect(self._on_model_name_edited)
+        self._context_window_spin.valueChanged.connect(self._on_context_window_edited)
 
-        self.load_settings({
-            "llm_profiles": [],
-            "default_ai_cleanup_profile_id": None,
-            "default_ai_chunking_profile_id": None,
-            "default_ai_translation_profile_id": None,
-            "default_ai_chunking_strategy": config.DEFAULT_AI_CHUNKING_STRATEGY,
-            "default_character_extraction_profile_id": None,
-        })
+        self.load_settings(
+            {
+                "llm_profiles": [],
+                "default_ai_cleanup_profile_id": None,
+                "default_ai_chunking_profile_id": None,
+                "default_ai_translation_profile_id": None,
+                "default_ai_chunking_strategy": config.DEFAULT_AI_CHUNKING_STRATEGY,
+                "default_character_extraction_profile_id": None,
+            }
+        )
 
     def load_settings(self, settings_payload: dict[str, object]) -> None:
         """
@@ -309,9 +296,7 @@ class AiSettingsPage(QWidget):
             settings_payload.get("default_character_extraction_profile_id"),
         )
         self._profile_list.setCurrentRow(0)
-        self.apply_language(
-            str(settings_payload.get("language", config.DEFAULT_LANGUAGE))
-        )
+        self.apply_language(str(settings_payload.get("language", config.DEFAULT_LANGUAGE)))
 
     def build_settings(
         self,
@@ -328,24 +313,17 @@ class AiSettingsPage(QWidget):
         """
         self._sync_editor_to_current_profile()
         merged_settings = copy.deepcopy(existing_settings_payload)
-        merged_settings["llm_profiles"] = [
-            copy.deepcopy(profile) for profile in self._profiles
-        ]
-        merged_settings["default_ai_cleanup_profile_id"] = (
-            self._optional_combo_value(self._default_cleanup_combo)
-        )
-        merged_settings["default_ai_chunking_profile_id"] = (
-            self._optional_combo_value(self._default_chunking_combo)
-        )
-        merged_settings["default_ai_translation_profile_id"] = (
-            self._optional_combo_value(self._default_translation_combo)
+        merged_settings["llm_profiles"] = [copy.deepcopy(profile) for profile in self._profiles]
+        merged_settings["default_ai_cleanup_profile_id"] = self._optional_combo_value(self._default_cleanup_combo)
+        merged_settings["default_ai_chunking_profile_id"] = self._optional_combo_value(self._default_chunking_combo)
+        merged_settings["default_ai_translation_profile_id"] = self._optional_combo_value(
+            self._default_translation_combo
         )
         merged_settings["default_ai_chunking_strategy"] = (
-            self._optional_combo_value(self._default_strategy_combo)
-            or config.DEFAULT_AI_CHUNKING_STRATEGY
+            self._optional_combo_value(self._default_strategy_combo) or config.DEFAULT_AI_CHUNKING_STRATEGY
         )
-        merged_settings["default_character_extraction_profile_id"] = (
-            self._optional_combo_value(self._default_character_combo)
+        merged_settings["default_character_extraction_profile_id"] = self._optional_combo_value(
+            self._default_character_combo
         )
         return merged_settings
 
@@ -378,15 +356,9 @@ class AiSettingsPage(QWidget):
         if current_profile is None:
             return
 
-        current_profile["discovery_succeeded"] = bool(
-            probe_result.get("success", False)
-        )
-        current_profile["discovery_message"] = str(
-            probe_result.get("message", "")
-        )
-        current_profile["discovered_context_window"] = (
-            probe_result.get("discovered_context_window")
-        )
+        current_profile["discovery_succeeded"] = bool(probe_result.get("success", False))
+        current_profile["discovery_message"] = str(probe_result.get("message", ""))
+        current_profile["discovered_context_window"] = probe_result.get("discovered_context_window")
 
         model_options = [
             (str(model.get("id", "")), str(model.get("label", "")))
@@ -397,9 +369,8 @@ class AiSettingsPage(QWidget):
 
         if model_options:
             selected_model_name = str(current_profile.get("model_name", "")).strip()
-            if (
-                not bool(current_profile.get("user_overrode_model_name", False))
-                and not bool(probe_result.get("selected_model_valid", False))
+            if not bool(current_profile.get("user_overrode_model_name", False)) and not bool(
+                probe_result.get("selected_model_valid", False)
             ):
                 selected_model_name = model_options[0][0]
                 current_profile["model_name"] = selected_model_name
@@ -410,13 +381,10 @@ class AiSettingsPage(QWidget):
         else:
             current_profile["discovered_model_name"] = ""
 
-        if (
-            probe_result.get("discovered_context_window") is not None
-            and not bool(current_profile.get("user_overrode_context_window", False))
+        if probe_result.get("discovered_context_window") is not None and not bool(
+            current_profile.get("user_overrode_context_window", False)
         ):
-            current_profile["context_window"] = int(
-                probe_result["discovered_context_window"]
-            )
+            current_profile["context_window"] = int(probe_result["discovered_context_window"])
 
         self._load_profile_into_editor(current_profile)
 
@@ -473,11 +441,13 @@ class AiSettingsPage(QWidget):
             for model_id, label in discovered_options:
                 self._model_combo.addItem(label, model_id)
         else:
-            self._model_combo.addItems((
-                "qwen3-8b",
-                "qwen2.5-7b-instruct",
-                "llama-3.1-8b-instruct",
-            ))
+            self._model_combo.addItems(
+                (
+                    "qwen3-8b",
+                    "qwen2.5-7b-instruct",
+                    "llama-3.1-8b-instruct",
+                )
+            )
         self._model_combo.setCurrentText(selected_model_name)
         self._model_combo.blockSignals(False)
         self._suspend_override_tracking = False
@@ -576,9 +546,7 @@ class AiSettingsPage(QWidget):
         self._max_output_spin.setValue(int(profile["max_output_tokens"]))
         self._timeout_spin.setValue(int(profile["request_timeout_seconds"]))
         self._temperature_spin.setValue(float(profile["temperature"]))
-        self._supports_structured_checkbox.setChecked(
-            bool(profile["supports_structured_output"])
-        )
+        self._supports_structured_checkbox.setChecked(bool(profile["supports_structured_output"]))
         self._loading_profile = False
 
     def _sync_editor_to_current_profile(self) -> None:
@@ -603,9 +571,7 @@ class AiSettingsPage(QWidget):
         current_profile["max_output_tokens"] = self._max_output_spin.value()
         current_profile["request_timeout_seconds"] = self._timeout_spin.value()
         current_profile["temperature"] = self._temperature_spin.value()
-        current_profile["supports_structured_output"] = (
-            self._supports_structured_checkbox.isChecked()
-        )
+        current_profile["supports_structured_output"] = self._supports_structured_checkbox.isChecked()
         self._reload_profile_list()
         self._reload_default_profile_combos()
 
@@ -707,9 +673,7 @@ class AiSettingsPage(QWidget):
         @version    0.1.0
         """
         self._sync_editor_to_current_profile()
-        self._profiles.append(
-            self._create_default_profile(f"AI Profile {len(self._profiles) + 1}")
-        )
+        self._profiles.append(self._create_default_profile(f"AI Profile {len(self._profiles) + 1}"))
         self._reload_profile_list()
         self._reload_default_profile_combos()
         self._profile_list.setCurrentRow(len(self._profiles) - 1)
@@ -751,72 +715,30 @@ class AiSettingsPage(QWidget):
         @version    0.4.1
         """
         self._current_language = language
-        self._title_label.setText(
-            f"<h2>{ui_state_service.translate('ai_settings.title', language)}</h2>"
-        )
-        self._profile_name_label.setText(
-            ui_state_service.translate("ai_settings.profile_name", language)
-        )
-        self._enabled_checkbox.setText(
-            ui_state_service.translate("ai_settings.profile_enabled", language)
-        )
-        self._backend_kind_label.setText(
-            ui_state_service.translate("ai_settings.backend_kind", language)
-        )
-        self._base_url_label.setText(
-            ui_state_service.translate("ai_settings.base_url", language)
-        )
-        self._api_key_label.setText(
-            ui_state_service.translate("ai_settings.api_key", language)
-        )
-        self._model_name_label.setText(
-            ui_state_service.translate("ai_settings.model_name", language)
-        )
-        self._context_window_label.setText(
-            ui_state_service.translate("ai_settings.context_window", language)
-        )
-        self._max_output_label.setText(
-            ui_state_service.translate("ai_settings.max_output_tokens", language)
-        )
-        self._timeout_label.setText(
-            ui_state_service.translate("ai_settings.timeout", language)
-        )
-        self._temperature_label.setText(
-            ui_state_service.translate("ai_settings.temperature", language)
-        )
+        self._title_label.setText(f"<h2>{ui_state_service.translate('ai_settings.title', language)}</h2>")
+        self._profile_name_label.setText(ui_state_service.translate("ai_settings.profile_name", language))
+        self._enabled_checkbox.setText(ui_state_service.translate("ai_settings.profile_enabled", language))
+        self._backend_kind_label.setText(ui_state_service.translate("ai_settings.backend_kind", language))
+        self._base_url_label.setText(ui_state_service.translate("ai_settings.base_url", language))
+        self._api_key_label.setText(ui_state_service.translate("ai_settings.api_key", language))
+        self._model_name_label.setText(ui_state_service.translate("ai_settings.model_name", language))
+        self._context_window_label.setText(ui_state_service.translate("ai_settings.context_window", language))
+        self._max_output_label.setText(ui_state_service.translate("ai_settings.max_output_tokens", language))
+        self._timeout_label.setText(ui_state_service.translate("ai_settings.timeout", language))
+        self._temperature_label.setText(ui_state_service.translate("ai_settings.temperature", language))
         self._supports_structured_checkbox.setText(
             ui_state_service.translate("ai_settings.structured_output", language)
         )
-        self._default_cleanup_label.setText(
-            ui_state_service.translate("ai_settings.default_cleanup", language)
-        )
-        self._default_chunking_label.setText(
-            ui_state_service.translate("ai_settings.default_chunking", language)
-        )
-        self._default_translation_label.setText(
-            ui_state_service.translate("ai_settings.default_translation", language)
-        )
-        self._default_strategy_label.setText(
-            ui_state_service.translate("ai_settings.default_strategy", language)
-        )
-        self._default_character_label.setText(
-            ui_state_service.translate("ai_settings.default_character", language)
-        )
-        self._add_profile_button.setText(
-            ui_state_service.translate("ai_settings.add_profile", language)
-        )
-        self._remove_profile_button.setText(
-            ui_state_service.translate("ai_settings.remove_profile", language)
-        )
-        self._connect_button.setText(
-            ui_state_service.translate("ai_settings.connect", language)
-        )
-        self._cancel_button.setText(
-            ui_state_service.translate("ai_settings.cancel", language)
-        )
-        self._save_button.setText(
-            ui_state_service.translate("ai_settings.save", language)
-        )
+        self._default_cleanup_label.setText(ui_state_service.translate("ai_settings.default_cleanup", language))
+        self._default_chunking_label.setText(ui_state_service.translate("ai_settings.default_chunking", language))
+        self._default_translation_label.setText(ui_state_service.translate("ai_settings.default_translation", language))
+        self._default_strategy_label.setText(ui_state_service.translate("ai_settings.default_strategy", language))
+        self._default_character_label.setText(ui_state_service.translate("ai_settings.default_character", language))
+        self._add_profile_button.setText(ui_state_service.translate("ai_settings.add_profile", language))
+        self._remove_profile_button.setText(ui_state_service.translate("ai_settings.remove_profile", language))
+        self._connect_button.setText(ui_state_service.translate("ai_settings.connect", language))
+        self._cancel_button.setText(ui_state_service.translate("ai_settings.cancel", language))
+        self._save_button.setText(ui_state_service.translate("ai_settings.save", language))
         for combo in (
             self._default_cleanup_combo,
             self._default_chunking_combo,
@@ -828,5 +750,6 @@ class AiSettingsPage(QWidget):
                     0,
                     ui_state_service.translate("ai_settings.none", language),
                 )
+
 
 # END OF FILE

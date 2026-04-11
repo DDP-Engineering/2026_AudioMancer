@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -19,11 +18,9 @@
 # IMPORTS
 
 from PySide6.QtCore import Qt, Signal
-from PySide6.QtWidgets import QDialog, QLabel, QPushButton, QProgressBar, QVBoxLayout
+from PySide6.QtWidgets import QDialog, QLabel, QProgressBar, QPushButton, QVBoxLayout
 
-from audiomancer.services import ui_state_service
-from audiomancer.services import token_usage_service
-
+from audiomancer.services import token_usage_service, ui_state_service
 
 _TOKEN_USAGE_UNSET = object()
 
@@ -180,9 +177,7 @@ class OperationProgressDialog(QDialog):
                     operation_name=self._operation_name
                 )
             )
-        self._cancel_button.setText(
-            ui_state_service.translate("dialog.operation_progress_cancel", language)
-        )
+        self._cancel_button.setText(ui_state_service.translate("dialog.operation_progress_cancel", language))
         self._refresh_token_usage_label()
 
     def _emit_cancel_requested(self) -> None:

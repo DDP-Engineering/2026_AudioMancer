@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -21,12 +20,13 @@
 from pathlib import Path
 
 from audiomancer import config
-from audiomancer.services import deterministic_chunking_service
-from audiomancer.services import home_presenter_service
-from audiomancer.services import text_cleanup_state_service
-from audiomancer.services import token_usage_service
-from audiomancer.services import ui_state_service
-
+from audiomancer.services import (
+    deterministic_chunking_service,
+    home_presenter_service,
+    text_cleanup_state_service,
+    token_usage_service,
+    ui_state_service,
+)
 
 # PUBLIC API
 
@@ -116,9 +116,7 @@ def build_ai_chunking_profile_state(
         enabled_ids.append(profile_id)
     preferred_profile_id = settings_payload.get("default_ai_chunking_profile_id")
     selected_profile_id = (
-        str(preferred_profile_id)
-        if preferred_profile_id in enabled_ids
-        else (enabled_ids[0] if enabled_ids else None)
+        str(preferred_profile_id) if preferred_profile_id in enabled_ids else (enabled_ids[0] if enabled_ids else None)
     )
     return {
         "entries": entries,
@@ -162,16 +160,12 @@ def build_text_chunking_notes(
         else str(chunking_operation_state.get("status", "not_started"))
     )
     chunking_mode = (
-        ""
-        if not isinstance(chunking_operation_state, dict)
-        else str(chunking_operation_state.get("mode") or "")
+        "" if not isinstance(chunking_operation_state, dict) else str(chunking_operation_state.get("mode") or "")
     )
     if chunking_report_payload is not None:
         chunking_mode = str(chunking_report_payload.get("chunking_mode") or chunking_mode)
         summary_key = (
-            "text_chunking.note_ai_summary"
-            if chunking_mode == "ai_assisted"
-            else "text_chunking.note_summary"
+            "text_chunking.note_ai_summary" if chunking_mode == "ai_assisted" else "text_chunking.note_summary"
         )
         notes.append(
             ui_state_service.translate(
@@ -216,9 +210,7 @@ def build_text_chunking_notes(
             else int(chunking_operation_state.get("progress_total", 0))
         )
         in_progress_key = (
-            "text_chunking.note_ai_in_progress"
-            if chunking_mode == "ai_assisted"
-            else "text_chunking.note_in_progress"
+            "text_chunking.note_ai_in_progress" if chunking_mode == "ai_assisted" else "text_chunking.note_in_progress"
         )
         notes.append(
             ui_state_service.translate(in_progress_key, language).format(
@@ -252,11 +244,7 @@ def build_text_chunking_notes(
             if not isinstance(chunking_operation_state, dict)
             else int(chunking_operation_state.get("progress_total", 0))
         )
-        resume_key = (
-            "text_chunking.note_ai_resume"
-            if chunking_mode == "ai_assisted"
-            else "text_chunking.note_resume"
-        )
+        resume_key = "text_chunking.note_ai_resume" if chunking_mode == "ai_assisted" else "text_chunking.note_resume"
         notes.append(
             ui_state_service.translate(resume_key, language).format(
                 progress_current=progress_current,
@@ -320,16 +308,10 @@ def _build_token_usage_notes(
                 total_tokens=format(int(token_usage["total_tokens"]), ","),
             )
         ]
-    if (
-        isinstance(report_payload, dict)
-        and "token_usage" in report_payload
-    ) or (
-        isinstance(metadata, dict)
-        and "token_usage" in metadata
+    if (isinstance(report_payload, dict) and "token_usage" in report_payload) or (
+        isinstance(metadata, dict) and "token_usage" in metadata
     ):
-        return [
-            ui_state_service.translate("ai.note_token_usage_unavailable", language)
-        ]
+        return [ui_state_service.translate("ai.note_token_usage_unavailable", language)]
     return []
 
 

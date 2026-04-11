@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -21,18 +20,17 @@
 
 # IMPORTS
 
+from datetime import UTC, datetime
 import json
+from pathlib import Path
 import threading
 import time
-from datetime import UTC, datetime
-from pathlib import Path
-from typing import Any
 from urllib import error, parse, request
 
 from audiomancer import config
+from audiomancer.services import token_usage_service
 from audiomancer.services.logging_service import get_component_logger, trace_function
 from audiomancer.services.operation_runtime_service import OperationCancelledError
-from audiomancer.services import token_usage_service
 
 # CONSTANTS
 
@@ -74,9 +72,7 @@ def chat_json(
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_prompt},
         ],
-        "temperature": float(
-            profile_payload.get("temperature", config.DEFAULT_LLM_TEMPERATURE)
-        ),
+        "temperature": float(profile_payload.get("temperature", config.DEFAULT_LLM_TEMPERATURE)),
         "max_tokens": int(
             profile_payload.get(
                 "max_output_tokens",
@@ -113,9 +109,7 @@ def chat_json(
             raw_content = _extract_message_content(raw_payload)
             try:
                 parsed_payload = _parse_json_content(raw_content)
-                normalized_usage = token_usage_service.normalize_provider_usage(
-                    raw_payload
-                )
+                normalized_usage = token_usage_service.normalize_provider_usage(raw_payload)
             except ValueError as parse_error:
                 (
                     parsed_payload,
@@ -214,9 +208,7 @@ def _request_chat_completion_with_cancellation(
     request_thread.start()
     while request_thread.is_alive():
         if callable(cancel_requested) and bool(cancel_requested()):
-            raise OperationCancelledError(
-                "AI-assisted cleanup cancelled while waiting for the model response."
-            )
+            raise OperationCancelledError("AI-assisted cleanup cancelled while waiting for the model response.")
         request_thread.join(timeout=0.05)
         time.sleep(0.01)
     if "error" in error_holder:
@@ -269,22 +261,14 @@ def _request_chat_completion(
     except error.HTTPError as http_error:
         error_body = http_error.read().decode("utf-8", errors="replace")
         if _supports_max_completion_tokens_retry(http_error.code, error_body):
-            compatibility_payload = _build_max_completion_tokens_payload(
-                request_payload
-            )
+            compatibility_payload = _build_max_completion_tokens_payload(request_payload)
             if compatibility_payload != request_payload:
                 return _request_chat_completion(profile_payload, compatibility_payload)
         if http_error.code in {408, 409, 429} or http_error.code >= 500:
-            raise RuntimeError(
-                f"Transient AI provider failure: HTTP {http_error.code}: {error_body}"
-            ) from http_error
-        raise RuntimeError(
-            f"AI provider request failed with HTTP {http_error.code}: {error_body}"
-        ) from http_error
+            raise RuntimeError(f"Transient AI provider failure: HTTP {http_error.code}: {error_body}") from http_error
+        raise RuntimeError(f"AI provider request failed with HTTP {http_error.code}: {error_body}") from http_error
     except error.URLError as url_error:
-        raise RuntimeError(
-            f"AI provider request failed: {getattr(url_error, 'reason', url_error)}"
-        ) from url_error
+        raise RuntimeError(f"AI provider request failed: {getattr(url_error, 'reason', url_error)}") from url_error
     payload = json.loads(raw_body)
     if not isinstance(payload, dict):
         raise ValueError("AI provider returned a non-object JSON payload.")
@@ -337,8 +321,7 @@ def _supports_max_completion_tokens_retry(status_code: int, error_body: str) -> 
         return False
     normalized_body = (error_body or "").lower()
     return (
-        '"param":"max_tokens"' in normalized_body
-        or '"param": "max_tokens"' in normalized_body
+        '"param":"max_tokens"' in normalized_body or '"param": "max_tokens"' in normalized_body
     ) and "max_completion_tokens" in normalized_body
 
 
@@ -357,9 +340,7 @@ def _build_max_completion_tokens_payload(
     compatibility_payload = dict(request_payload)
     if "max_tokens" not in compatibility_payload:
         return compatibility_payload
-    compatibility_payload["max_completion_tokens"] = compatibility_payload.pop(
-        "max_tokens"
-    )
+    compatibility_payload["max_completion_tokens"] = compatibility_payload.pop("max_tokens")
     return compatibility_payload
 
 
@@ -415,7 +396,7 @@ def _trim_json_like_payload(content: str) -> str:
     start_indexes = [index for index in (content.find("{"), content.find("[")) if index >= 0]
     if not start_indexes:
         raise ValueError("AI provider did not return JSON content.")
-    trimmed = content[min(start_indexes):]
+    trimmed = content[min(start_indexes) :]
     try:
         decoder = json.JSONDecoder()
         parsed_payload, _end_index = decoder.raw_decode(trimmed)
@@ -472,12 +453,8 @@ def _is_valid_json_escape_sequence(content: str, escape_index: int) -> bool:
         return True
     if escape_character != "u":
         return False
-    return (
-        escape_index + 4 < len(content)
-        and all(
-            character in "0123456789abcdefABCDEF"
-            for character in content[escape_index + 1 : escape_index + 5]
-        )
+    return escape_index + 4 < len(content) and all(
+        character in "0123456789abcdefABCDEF" for character in content[escape_index + 1 : escape_index + 5]
     )
 
 
@@ -545,7 +522,10 @@ def _is_likely_string_terminator(content: str, quote_index: int) -> bool:
     next_value_index = _next_non_whitespace_index(content, next_index + 1)
     if next_value_index is None:
         return True
-    return content[next_value_index] in {'"', "{", "[", "]", "}", "-", "t", "f", "n"} or content[next_value_index].isdigit()
+    return (
+        content[next_value_index] in {'"', "{", "[", "]", "}", "-", "t", "f", "n"}
+        or content[next_value_index].isdigit()
+    )
 
 
 def _next_non_whitespace_index(content: str, start_index: int) -> int | None:

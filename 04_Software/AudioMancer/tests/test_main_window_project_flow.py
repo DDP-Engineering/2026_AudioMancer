@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -19,33 +18,26 @@
 # IMPORTS
 
 import json
+
 from PySide6.QtWidgets import (
-    QApplication,
-    QDialog,
-    QGroupBox,
     QLabel,
-    QListWidget,
     QMessageBox,
-    QPlainTextEdit,
     QPushButton,
-    QStackedWidget,
-    QStatusBar,
-    QToolBar,
 )
 
-import audiomancer.ui.main_window as main_window_module
 from audiomancer import config
-from audiomancer.services import deterministic_chunking_service
-from audiomancer.services import project_workspace_service
-from audiomancer.ui.controllers import ai_translation_ui_controller
-from audiomancer.ui.controllers import ai_settings_ui_controller
-from audiomancer.ui.controllers import home_ui_controller
-from audiomancer.ui.controllers import settings_ui_controller
-from audiomancer.ui.controllers import text_chunking_ui_controller
-from audiomancer.ui.controllers import text_cleanup_ui_controller
+from audiomancer.services import deterministic_chunking_service, project_workspace_service
+from audiomancer.ui.controllers import (
+    ai_translation_ui_controller,
+    home_ui_controller,
+    text_chunking_ui_controller,
+    text_cleanup_ui_controller,
+)
+import audiomancer.ui.main_window as main_window_module
 from audiomancer.ui.main_window import MainWindow
 
 # PUBLIC API
+
 
 def test_main_window_creates_project_and_updates_shell(monkeypatch, qtbot, tmp_path, default_settings_payload) -> None:
     """
@@ -160,7 +152,9 @@ def test_main_window_imports_source_and_locks_selection(monkeypatch, qtbot, tmp_
     assert window._home_page._import_button.isEnabled() is False
 
 
-def test_main_window_extracts_text_and_updates_cleanup_page(monkeypatch, qtbot, tmp_path, default_settings_payload) -> None:
+def test_main_window_extracts_text_and_updates_cleanup_page(
+    monkeypatch, qtbot, tmp_path, default_settings_payload
+) -> None:
     """
     @brief      Verify extraction updates the manifest, preview, and completed extraction state.
     @param[in]  monkeypatch Pytest monkeypatch fixture.
@@ -287,11 +281,8 @@ def test_main_window_extracts_text_and_updates_cleanup_page(monkeypatch, qtbot, 
 
 
 def test_main_window_restarts_completed_extraction_only_after_confirmation(
-    monkeypatch,
-    qtbot,
-    tmp_path,
-
-    default_settings_payload) -> None:
+    monkeypatch, qtbot, tmp_path, default_settings_payload
+) -> None:
     """
     @brief      Verify completed extraction reruns only after operator confirmation.
     @param[in]  monkeypatch Pytest monkeypatch fixture.
@@ -357,11 +348,8 @@ def test_main_window_restarts_completed_extraction_only_after_confirmation(
 
 
 def test_main_window_continues_unfinished_extraction_without_confirmation(
-    monkeypatch,
-    qtbot,
-    tmp_path,
-
-    default_settings_payload) -> None:
+    monkeypatch, qtbot, tmp_path, default_settings_payload
+) -> None:
     """
     @brief      Verify unfinished extraction reruns continue directly without destructive confirmation.
     @param[in]  monkeypatch Pytest monkeypatch fixture.
@@ -418,22 +406,26 @@ def test_main_window_continues_unfinished_extraction_without_confirmation(
             encoding="utf-8",
         )
         (extraction_root / config.OPERATION_STATE_FILE_NAME).write_text(
-            json.dumps({
-                "folder_relative_path": "00_extraction",
-                "status": "completed",
-                "input_paths": [],
-                "output_paths": [f"00_extraction/{config.EXTRACTED_TEXT_FILE_NAME}"],
-                "artifact_paths": [f"00_extraction/{config.EXTRACTION_REPORT_FILE_NAME}"],
-                "progress_current": 1,
-                "progress_total": 1,
-                "mode": "deterministic",
-                "started_at": "2026-04-06T12:00:00+00:00",
-                "completed_at": "2026-04-06T12:01:00+00:00",
-                "updated_at": "2026-04-06T12:01:00+00:00",
-                "warning_count": 0,
-                "metadata": {"warnings": []},
-                "resume_checkpoint": None,
-            }, indent=2) + "\n",
+            json.dumps(
+                {
+                    "folder_relative_path": "00_extraction",
+                    "status": "completed",
+                    "input_paths": [],
+                    "output_paths": [f"00_extraction/{config.EXTRACTED_TEXT_FILE_NAME}"],
+                    "artifact_paths": [f"00_extraction/{config.EXTRACTION_REPORT_FILE_NAME}"],
+                    "progress_current": 1,
+                    "progress_total": 1,
+                    "mode": "deterministic",
+                    "started_at": "2026-04-06T12:00:00+00:00",
+                    "completed_at": "2026-04-06T12:01:00+00:00",
+                    "updated_at": "2026-04-06T12:01:00+00:00",
+                    "warning_count": 0,
+                    "metadata": {"warnings": []},
+                    "resume_checkpoint": None,
+                },
+                indent=2,
+            )
+            + "\n",
             encoding="utf-8",
         )
         return {
@@ -486,22 +478,22 @@ def test_main_window_exposes_modal_progress_dialog_and_cancel_signal(qtbot, defa
     @date       2026-04-06
     @version    0.1.0
     """
-    window = MainWindow(settings_payload={
-        "language": "en",
-        "ui_text_scale": "normal",
-        "play_completion_beep": False,
-        "llm_profiles": [],
-        "default_ai_cleanup_profile_id": None,
-        "default_ai_chunking_profile_id": None,
-        "default_ai_chunking_strategy": "paragraph",
-        "default_character_extraction_profile_id": None,
-    })
+    window = MainWindow(
+        settings_payload={
+            "language": "en",
+            "ui_text_scale": "normal",
+            "play_completion_beep": False,
+            "llm_profiles": [],
+            "default_ai_cleanup_profile_id": None,
+            "default_ai_chunking_profile_id": None,
+            "default_ai_chunking_strategy": "paragraph",
+            "default_character_extraction_profile_id": None,
+        }
+    )
     qtbot.addWidget(window)
     window._operation_progress_dialog = main_window_module.OperationProgressDialog(window)
     cancel_calls = []
-    window._operation_progress_dialog.cancel_requested.connect(
-        lambda: cancel_calls.append(True)
-    )
+    window._operation_progress_dialog.cancel_requested.connect(lambda: cancel_calls.append(True))
     window._operation_progress_dialog.start("Extract Text", "Text extraction in progress...")
 
     assert window._operation_progress_dialog.windowModality() == main_window_module.Qt.WindowModality.ApplicationModal
@@ -526,16 +518,18 @@ def test_main_window_progress_dialog_shows_token_usage(qtbot, default_settings_p
     @date       2026-04-11
     @version    0.1.0
     """
-    window = MainWindow(settings_payload={
-        "language": "en",
-        "ui_text_scale": "normal",
-        "play_completion_beep": False,
-        "llm_profiles": [],
-        "default_ai_cleanup_profile_id": None,
-        "default_ai_chunking_profile_id": None,
-        "default_ai_chunking_strategy": "paragraph",
-        "default_character_extraction_profile_id": None,
-    })
+    window = MainWindow(
+        settings_payload={
+            "language": "en",
+            "ui_text_scale": "normal",
+            "play_completion_beep": False,
+            "llm_profiles": [],
+            "default_ai_cleanup_profile_id": None,
+            "default_ai_chunking_profile_id": None,
+            "default_ai_chunking_strategy": "paragraph",
+            "default_character_extraction_profile_id": None,
+        }
+    )
     qtbot.addWidget(window)
     window._operation_progress_dialog = main_window_module.OperationProgressDialog(window)
     window._operation_progress_dialog.start("Translate", "AI translation in progress...")
@@ -550,18 +544,13 @@ def test_main_window_progress_dialog_shows_token_usage(qtbot, default_settings_p
         },
     )
 
-    label_texts = [
-        widget.text()
-        for widget in window._operation_progress_dialog.findChildren(QLabel)
-    ]
+    label_texts = [widget.text() for widget in window._operation_progress_dialog.findChildren(QLabel)]
     assert any("Input tokens: 123 | Output tokens: 45 | Total: 168" in text for text in label_texts)
 
 
 def test_main_window_closes_progress_dialog_after_synchronous_completion(
-    qtbot,
-    tmp_path,
-
-    default_settings_payload) -> None:
+    qtbot, tmp_path, default_settings_payload
+) -> None:
     """
     @brief      Verify one synchronous modal operation closes the progress dialog after completion.
     @param[in]  qtbot Qt test helper fixture.
@@ -584,16 +573,18 @@ def test_main_window_closes_progress_dialog_after_synchronous_completion(
     }
     project_workspace_service.save_manifest(manifest, project_root)
 
-    window = MainWindow(settings_payload={
-        "language": "en",
-        "ui_text_scale": "normal",
-        "play_completion_beep": False,
-        "llm_profiles": [],
-        "default_ai_cleanup_profile_id": None,
-        "default_ai_chunking_profile_id": None,
-        "default_ai_chunking_strategy": "paragraph",
-        "default_character_extraction_profile_id": None,
-    })
+    window = MainWindow(
+        settings_payload={
+            "language": "en",
+            "ui_text_scale": "normal",
+            "play_completion_beep": False,
+            "llm_profiles": [],
+            "default_ai_cleanup_profile_id": None,
+            "default_ai_chunking_profile_id": None,
+            "default_ai_chunking_strategy": "paragraph",
+            "default_character_extraction_profile_id": None,
+        }
+    )
     qtbot.addWidget(window)
     window._activate_project(project_root, project_workspace_service.load_manifest(project_root))
 
@@ -621,11 +612,8 @@ def test_main_window_closes_progress_dialog_after_synchronous_completion(
 
 
 def test_main_window_runs_deterministic_cleanup_and_updates_preview(
-    monkeypatch,
-    qtbot,
-    tmp_path,
-
-    default_settings_payload) -> None:
+    monkeypatch, qtbot, tmp_path, default_settings_payload
+) -> None:
     """
     @brief      Verify deterministic cleanup updates the manifest-facing UI state and cleaned preview.
     @param[in]  monkeypatch Pytest monkeypatch fixture.
@@ -661,37 +649,45 @@ def test_main_window_runs_deterministic_cleanup_and_updates_preview(
         (cleanup_root / "input_story.pdf").write_text("Chapter I\n\nParagraph one.", encoding="utf-8")
         (cleanup_root / config.CLEANED_TEXT_FILE_NAME).write_text("Chapter I\n\nParagraph one.\n", encoding="utf-8")
         (cleanup_root / config.CLEANUP_REPORT_FILE_NAME).write_text(
-            json.dumps({
-                "input_relative_path": f"{config.CLEANUP_FOLDER_NAME}/input_story.pdf",
-                "cleaned_text_relative_path": f"{config.CLEANUP_FOLDER_NAME}/{config.CLEANED_TEXT_FILE_NAME}",
-                "cleaned_at": "2026-04-06T12:02:00+00:00",
-                "detected_language": "en",
-                "warnings": [],
-                "paragraph_count": 2,
-                "removed_line_count": 0,
-                "removed_header_footer_line_count": 0,
-                "removed_page_number_line_count": 0,
-                "detected_chapter_count": 1,
-            }, indent=2) + "\n",
+            json.dumps(
+                {
+                    "input_relative_path": f"{config.CLEANUP_FOLDER_NAME}/input_story.pdf",
+                    "cleaned_text_relative_path": f"{config.CLEANUP_FOLDER_NAME}/{config.CLEANED_TEXT_FILE_NAME}",
+                    "cleaned_at": "2026-04-06T12:02:00+00:00",
+                    "detected_language": "en",
+                    "warnings": [],
+                    "paragraph_count": 2,
+                    "removed_line_count": 0,
+                    "removed_header_footer_line_count": 0,
+                    "removed_page_number_line_count": 0,
+                    "detected_chapter_count": 1,
+                },
+                indent=2,
+            )
+            + "\n",
             encoding="utf-8",
         )
         (cleanup_root / "state_operation.json").write_text(
-            json.dumps({
-                "folder_relative_path": config.CLEANUP_FOLDER_NAME,
-                "status": "completed",
-                "input_paths": [f"{config.CLEANUP_FOLDER_NAME}/input_story.pdf"],
-                "output_paths": [f"{config.CLEANUP_FOLDER_NAME}/{config.CLEANED_TEXT_FILE_NAME}"],
-                "artifact_paths": [f"{config.CLEANUP_FOLDER_NAME}/{config.CLEANUP_REPORT_FILE_NAME}"],
-                "progress_current": 1,
-                "progress_total": 1,
-                "mode": "deterministic",
-                "started_at": "2026-04-06T12:00:00+00:00",
-                "completed_at": "2026-04-06T12:02:00+00:00",
-                "updated_at": "2026-04-06T12:02:00+00:00",
-                "warning_count": 0,
-                "metadata": {"warnings": []},
-                "resume_checkpoint": None,
-            }, indent=2) + "\n",
+            json.dumps(
+                {
+                    "folder_relative_path": config.CLEANUP_FOLDER_NAME,
+                    "status": "completed",
+                    "input_paths": [f"{config.CLEANUP_FOLDER_NAME}/input_story.pdf"],
+                    "output_paths": [f"{config.CLEANUP_FOLDER_NAME}/{config.CLEANED_TEXT_FILE_NAME}"],
+                    "artifact_paths": [f"{config.CLEANUP_FOLDER_NAME}/{config.CLEANUP_REPORT_FILE_NAME}"],
+                    "progress_current": 1,
+                    "progress_total": 1,
+                    "mode": "deterministic",
+                    "started_at": "2026-04-06T12:00:00+00:00",
+                    "completed_at": "2026-04-06T12:02:00+00:00",
+                    "updated_at": "2026-04-06T12:02:00+00:00",
+                    "warning_count": 0,
+                    "metadata": {"warnings": []},
+                    "resume_checkpoint": None,
+                },
+                indent=2,
+            )
+            + "\n",
             encoding="utf-8",
         )
         assert cancel_requested() is False
@@ -724,11 +720,8 @@ def test_main_window_runs_deterministic_cleanup_and_updates_preview(
 
 
 def test_main_window_runs_deterministic_chunking_and_updates_preview(
-    monkeypatch,
-    qtbot,
-    tmp_path,
-
-    default_settings_payload) -> None:
+    monkeypatch, qtbot, tmp_path, default_settings_payload
+) -> None:
     """
     @brief      Verify deterministic chunking updates the manifest-facing UI state and chunk preview.
     @param[in]  monkeypatch Pytest monkeypatch fixture.
@@ -751,7 +744,9 @@ def test_main_window_runs_deterministic_chunking_and_updates_preview(
         "size_bytes": source_path.stat().st_size,
     }
     manifest["operations"]["cleanup"]["status"] = "completed"
-    manifest["operations"]["cleanup"]["output_paths"] = [f"{config.CLEANUP_FOLDER_NAME}/{config.CLEANED_TEXT_FILE_NAME}"]
+    manifest["operations"]["cleanup"]["output_paths"] = [
+        f"{config.CLEANUP_FOLDER_NAME}/{config.CLEANED_TEXT_FILE_NAME}"
+    ]
     project_workspace_service.save_manifest(manifest, project_root)
     cleanup_root = project_root / config.CLEANUP_FOLDER_NAME
     cleanup_root.mkdir(exist_ok=True)
@@ -763,61 +758,73 @@ def test_main_window_runs_deterministic_chunking_and_updates_preview(
         chunk_root.mkdir(exist_ok=True)
         (chunk_root / "input_story.pdf").write_text("Chapter I\n\nParagraph one.\n", encoding="utf-8")
         (chunk_root / config.CHUNK_ARTIFACT_FILE_NAME).write_text(
-            json.dumps([
-                {
-                    "chunk_id": "chunk-0001",
-                    "sequence_index": 1,
-                    "chapter_label": "Chapter I",
-                    "text": "Chapter I",
-                    "source_start_line": 1,
-                    "source_end_line": 1,
-                    "chunking_mode": "deterministic",
-                    "semantic_strategy": None,
-                    "scene_note": None,
-                },
-                {
-                    "chunk_id": "chunk-0002",
-                    "sequence_index": 2,
-                    "chapter_label": "Chapter I",
-                    "text": "Paragraph one.",
-                    "source_start_line": 3,
-                    "source_end_line": 3,
-                    "chunking_mode": "deterministic",
-                    "semantic_strategy": None,
-                    "scene_note": None,
-                },
-            ], indent=2) + "\n",
+            json.dumps(
+                [
+                    {
+                        "chunk_id": "chunk-0001",
+                        "sequence_index": 1,
+                        "chapter_label": "Chapter I",
+                        "text": "Chapter I",
+                        "source_start_line": 1,
+                        "source_end_line": 1,
+                        "chunking_mode": "deterministic",
+                        "semantic_strategy": None,
+                        "scene_note": None,
+                    },
+                    {
+                        "chunk_id": "chunk-0002",
+                        "sequence_index": 2,
+                        "chapter_label": "Chapter I",
+                        "text": "Paragraph one.",
+                        "source_start_line": 3,
+                        "source_end_line": 3,
+                        "chunking_mode": "deterministic",
+                        "semantic_strategy": None,
+                        "scene_note": None,
+                    },
+                ],
+                indent=2,
+            )
+            + "\n",
             encoding="utf-8",
         )
         (chunk_root / config.CHUNKING_REPORT_FILE_NAME).write_text(
-            json.dumps({
-                "input_relative_path": "20_chunking/input_story.pdf",
-                "chunk_artifact_relative_path": f"20_chunking/{config.CHUNK_ARTIFACT_FILE_NAME}",
-                "chunked_at": "2026-04-07T12:02:00+00:00",
-                "warnings": [],
-                "chunk_count": 2,
-                "detected_chapter_count": 1,
-                "chunking_mode": "deterministic",
-            }, indent=2) + "\n",
+            json.dumps(
+                {
+                    "input_relative_path": "20_chunking/input_story.pdf",
+                    "chunk_artifact_relative_path": f"20_chunking/{config.CHUNK_ARTIFACT_FILE_NAME}",
+                    "chunked_at": "2026-04-07T12:02:00+00:00",
+                    "warnings": [],
+                    "chunk_count": 2,
+                    "detected_chapter_count": 1,
+                    "chunking_mode": "deterministic",
+                },
+                indent=2,
+            )
+            + "\n",
             encoding="utf-8",
         )
         (chunk_root / config.OPERATION_STATE_FILE_NAME).write_text(
-            json.dumps({
-                "folder_relative_path": "20_chunking",
-                "status": "completed",
-                "input_paths": ["20_chunking/input_story.pdf"],
-                "output_paths": [f"20_chunking/{config.CHUNK_ARTIFACT_FILE_NAME}"],
-                "artifact_paths": [f"20_chunking/{config.CHUNKING_REPORT_FILE_NAME}"],
-                "progress_current": 2,
-                "progress_total": 2,
-                "mode": "deterministic",
-                "started_at": "2026-04-07T12:00:00+00:00",
-                "completed_at": "2026-04-07T12:02:00+00:00",
-                "updated_at": "2026-04-07T12:02:00+00:00",
-                "warning_count": 0,
-                "metadata": {"warnings": [], "chunk_count": 2, "detected_chapter_count": 1},
-                "resume_checkpoint": None,
-            }, indent=2) + "\n",
+            json.dumps(
+                {
+                    "folder_relative_path": "20_chunking",
+                    "status": "completed",
+                    "input_paths": ["20_chunking/input_story.pdf"],
+                    "output_paths": [f"20_chunking/{config.CHUNK_ARTIFACT_FILE_NAME}"],
+                    "artifact_paths": [f"20_chunking/{config.CHUNKING_REPORT_FILE_NAME}"],
+                    "progress_current": 2,
+                    "progress_total": 2,
+                    "mode": "deterministic",
+                    "started_at": "2026-04-07T12:00:00+00:00",
+                    "completed_at": "2026-04-07T12:02:00+00:00",
+                    "updated_at": "2026-04-07T12:02:00+00:00",
+                    "warning_count": 0,
+                    "metadata": {"warnings": [], "chunk_count": 2, "detected_chapter_count": 1},
+                    "resume_checkpoint": None,
+                },
+                indent=2,
+            )
+            + "\n",
             encoding="utf-8",
         )
         assert cancel_requested() is False
@@ -851,11 +858,8 @@ def test_main_window_runs_deterministic_chunking_and_updates_preview(
 
 
 def test_main_window_runs_ai_chunking_and_updates_preview(
-    monkeypatch,
-    qtbot,
-    tmp_path,
-
-    default_settings_payload) -> None:
+    monkeypatch, qtbot, tmp_path, default_settings_payload
+) -> None:
     """
     @brief      Verify the main window wires AI-assisted chunking and refreshes the chunk preview after success.
     @param[in]  monkeypatch Pytest monkeypatch fixture.
@@ -931,11 +935,8 @@ def test_main_window_runs_ai_chunking_and_updates_preview(
 
 
 def test_main_window_runs_ai_translation_and_updates_preview(
-    monkeypatch,
-    qtbot,
-    tmp_path,
-
-    default_settings_payload) -> None:
+    monkeypatch, qtbot, tmp_path, default_settings_payload
+) -> None:
     """
     @brief      Verify the main window wires AI translation and refreshes the translated preview after success.
     @param[in]  monkeypatch Pytest monkeypatch fixture.
@@ -959,26 +960,28 @@ def test_main_window_runs_ai_translation_and_updates_preview(
         "size_bytes": 4,
     }
     manifest["operations"]["chunking"]["status"] = "completed"
-    manifest["operations"]["chunking"]["output_paths"] = [
-        f"20_chunking/{config.CHUNK_ARTIFACT_FILE_NAME}"
-    ]
+    manifest["operations"]["chunking"]["output_paths"] = [f"20_chunking/{config.CHUNK_ARTIFACT_FILE_NAME}"]
     project_workspace_service.save_manifest(manifest, project_root)
     chunk_root = project_root / "20_chunking"
     chunk_root.mkdir(parents=True, exist_ok=True)
     (chunk_root / config.CHUNK_ARTIFACT_FILE_NAME).write_text(
-        json.dumps([
-            {
-                "chunk_id": "chunk-0001",
-                "sequence_index": 1,
-                "chapter_label": None,
-                "text": "Original one",
-                "source_start_line": 1,
-                "source_end_line": 1,
-                "chunking_mode": "deterministic",
-                "semantic_strategy": None,
-                "scene_note": None,
-            }
-        ], indent=2) + "\n",
+        json.dumps(
+            [
+                {
+                    "chunk_id": "chunk-0001",
+                    "sequence_index": 1,
+                    "chapter_label": None,
+                    "text": "Original one",
+                    "source_start_line": 1,
+                    "source_end_line": 1,
+                    "chunking_mode": "deterministic",
+                    "semantic_strategy": None,
+                    "scene_note": None,
+                }
+            ],
+            indent=2,
+        )
+        + "\n",
         encoding="utf-8",
     )
 
@@ -1005,60 +1008,74 @@ def test_main_window_runs_ai_translation_and_updates_preview(
             (project_root / config.TRANSLATION_FOLDER_NAME).mkdir(parents=True, exist_ok=True),
             (project_root / config.TRANSLATION_FOLDER_NAME / "input_story.json").write_text("[]\n", encoding="utf-8"),
             (project_root / config.TRANSLATION_FOLDER_NAME / config.TRANSLATED_CHUNKS_FILE_NAME).write_text(
-                json.dumps([{
-                    "chunk_id": "chunk-0001",
-                    "sequence_index": 1,
-                    "source_text": "Original one",
-                    "translated_text": "Tradus unu",
-                    "approved": False,
-                    "approved_at": None,
-                    "translated_at": "2026-04-07T12:01:00+00:00",
-                    "translation_profile_id": "profile_1",
-                    "target_language": target_language,
-                    "status": "translated",
-                }], indent=2) + "\n",
+                json.dumps(
+                    [
+                        {
+                            "chunk_id": "chunk-0001",
+                            "sequence_index": 1,
+                            "source_text": "Original one",
+                            "translated_text": "Tradus unu",
+                            "approved": False,
+                            "approved_at": None,
+                            "translated_at": "2026-04-07T12:01:00+00:00",
+                            "translation_profile_id": "profile_1",
+                            "target_language": target_language,
+                            "status": "translated",
+                        }
+                    ],
+                    indent=2,
+                )
+                + "\n",
                 encoding="utf-8",
             ),
             (project_root / config.TRANSLATION_FOLDER_NAME / config.TRANSLATION_REPORT_FILE_NAME).write_text(
-                json.dumps({
-                    "target_language": target_language,
-                    "translation_profile_id_last_used": "profile_1",
-                    "translation_stage_status": "completed",
-                    "translated_chunk_count": 1,
-                    "approved_chunk_count": 0,
-                    "total_chunk_count": 1,
-                    "updated_at": "2026-04-07T12:02:00+00:00",
-                    "warnings": [],
-                }, indent=2) + "\n",
-                encoding="utf-8",
-            ),
-            (project_root / config.TRANSLATION_FOLDER_NAME / config.OPERATION_STATE_FILE_NAME).write_text(
-                json.dumps({
-                    "folder_relative_path": config.TRANSLATION_FOLDER_NAME,
-                    "status": "completed",
-                    "input_paths": [f"{config.TRANSLATION_FOLDER_NAME}/input_story.json"],
-                    "output_paths": [f"{config.TRANSLATION_FOLDER_NAME}/{config.TRANSLATED_CHUNKS_FILE_NAME}"],
-                    "artifact_paths": [f"{config.TRANSLATION_FOLDER_NAME}/{config.TRANSLATION_REPORT_FILE_NAME}"],
-                    "progress_current": 1,
-                    "progress_total": 1,
-                    "mode": "ai_assisted",
-                    "started_at": "2026-04-07T12:00:00+00:00",
-                    "completed_at": "2026-04-07T12:02:00+00:00",
-                    "updated_at": "2026-04-07T12:02:00+00:00",
-                    "warning_count": 0,
-                    "metadata": {
+                json.dumps(
+                    {
                         "target_language": target_language,
-                        "translation_profile_id": "profile_1",
+                        "translation_profile_id_last_used": "profile_1",
+                        "translation_stage_status": "completed",
                         "translated_chunk_count": 1,
                         "approved_chunk_count": 0,
                         "total_chunk_count": 1,
+                        "updated_at": "2026-04-07T12:02:00+00:00",
                         "warnings": [],
-                        "translated_chunks": [],
-                        "source_chunk_count": 1,
-                        "log_relative_path": None,
                     },
-                    "resume_checkpoint": None,
-                }, indent=2) + "\n",
+                    indent=2,
+                )
+                + "\n",
+                encoding="utf-8",
+            ),
+            (project_root / config.TRANSLATION_FOLDER_NAME / config.OPERATION_STATE_FILE_NAME).write_text(
+                json.dumps(
+                    {
+                        "folder_relative_path": config.TRANSLATION_FOLDER_NAME,
+                        "status": "completed",
+                        "input_paths": [f"{config.TRANSLATION_FOLDER_NAME}/input_story.json"],
+                        "output_paths": [f"{config.TRANSLATION_FOLDER_NAME}/{config.TRANSLATED_CHUNKS_FILE_NAME}"],
+                        "artifact_paths": [f"{config.TRANSLATION_FOLDER_NAME}/{config.TRANSLATION_REPORT_FILE_NAME}"],
+                        "progress_current": 1,
+                        "progress_total": 1,
+                        "mode": "ai_assisted",
+                        "started_at": "2026-04-07T12:00:00+00:00",
+                        "completed_at": "2026-04-07T12:02:00+00:00",
+                        "updated_at": "2026-04-07T12:02:00+00:00",
+                        "warning_count": 0,
+                        "metadata": {
+                            "target_language": target_language,
+                            "translation_profile_id": "profile_1",
+                            "translated_chunk_count": 1,
+                            "approved_chunk_count": 0,
+                            "total_chunk_count": 1,
+                            "warnings": [],
+                            "translated_chunks": [],
+                            "source_chunk_count": 1,
+                            "log_relative_path": None,
+                        },
+                        "resume_checkpoint": None,
+                    },
+                    indent=2,
+                )
+                + "\n",
                 encoding="utf-8",
             ),
             {
@@ -1084,10 +1101,8 @@ def test_main_window_runs_ai_translation_and_updates_preview(
 
 
 def test_main_window_loads_character_discovery_state_into_characters_page(
-    qtbot,
-    tmp_path,
-
-    default_settings_payload) -> None:
+    qtbot, tmp_path, default_settings_payload
+) -> None:
     """
     @brief      Verify the main window refreshes the Characters page from persisted discovery artifacts.
     @param[in]  qtbot Qt test helper fixture.
@@ -1111,26 +1126,26 @@ def test_main_window_loads_character_discovery_state_into_characters_page(
     }
     manifest["current_stage"] = "character_discovery_ready"
     manifest["operations"]["chunking"]["status"] = "completed"
-    manifest["operations"]["chunking"]["output_paths"] = [
-        f"20_chunking/{config.CHUNK_ARTIFACT_FILE_NAME}"
-    ]
+    manifest["operations"]["chunking"]["output_paths"] = [f"20_chunking/{config.CHUNK_ARTIFACT_FILE_NAME}"]
     manifest["operations"]["character_discovery"]["status"] = "completed"
     project_workspace_service.save_manifest(manifest, project_root)
     chunk_root = project_root / "20_chunking"
     discovery_root = project_root / "40_character_discovery"
     chunk_root.mkdir(parents=True, exist_ok=True)
     discovery_root.mkdir(parents=True, exist_ok=True)
-    chunk_payload = [{
-        "chunk_id": "chunk-0001",
-        "sequence_index": 1,
-        "chapter_label": None,
-        "text": '"Hello there," said Alice.',
-        "source_start_line": 1,
-        "source_end_line": 1,
-        "chunking_mode": "deterministic",
-        "semantic_strategy": None,
-        "scene_note": None,
-    }]
+    chunk_payload = [
+        {
+            "chunk_id": "chunk-0001",
+            "sequence_index": 1,
+            "chapter_label": None,
+            "text": '"Hello there," said Alice.',
+            "source_start_line": 1,
+            "source_end_line": 1,
+            "chunking_mode": "deterministic",
+            "semantic_strategy": None,
+            "scene_note": None,
+        }
+    ]
     (chunk_root / config.CHUNK_ARTIFACT_FILE_NAME).write_text(
         json.dumps(chunk_payload, indent=2) + "\n",
         encoding="utf-8",
@@ -1140,64 +1155,80 @@ def test_main_window_loads_character_discovery_state_into_characters_page(
         encoding="utf-8",
     )
     (discovery_root / config.CHARACTER_PROFILE_FILE_NAME).write_text(
-        json.dumps([{
-            "character_id": "alice",
-            "canonical_name": "Alice",
-            "aliases": ["Al"],
-            "gender_hint": "",
-            "age_band": "",
-            "role_summary": "Lead speaker",
-            "description": "Confident.",
-            "temperament": "",
-            "social_status": "",
-            "speaking_style": "",
-            "accent_or_dialect_hints": "",
-            "voice_notes": "",
-            "relationship_hints": [],
-            "confidence": "high",
-            "evidence": [{
-                "chunk_id": "chunk-0001",
-                "sequence_index": 1,
-                "source_excerpt": '"Hello there," said Alice.',
-                "reason": "Alice speaks.",
-            }],
-            "updated_at": "2026-04-08T12:01:00+00:00",
-        }], indent=2) + "\n",
+        json.dumps(
+            [
+                {
+                    "character_id": "alice",
+                    "canonical_name": "Alice",
+                    "aliases": ["Al"],
+                    "gender_hint": "",
+                    "age_band": "",
+                    "role_summary": "Lead speaker",
+                    "description": "Confident.",
+                    "temperament": "",
+                    "social_status": "",
+                    "speaking_style": "",
+                    "accent_or_dialect_hints": "",
+                    "voice_notes": "",
+                    "relationship_hints": [],
+                    "confidence": "high",
+                    "evidence": [
+                        {
+                            "chunk_id": "chunk-0001",
+                            "sequence_index": 1,
+                            "source_excerpt": '"Hello there," said Alice.',
+                            "reason": "Alice speaks.",
+                        }
+                    ],
+                    "updated_at": "2026-04-08T12:01:00+00:00",
+                }
+            ],
+            indent=2,
+        )
+        + "\n",
         encoding="utf-8",
     )
     (discovery_root / config.CHARACTER_DISCOVERY_REPORT_FILE_NAME).write_text(
-        json.dumps({
-            "input_chunk_count": 1,
-            "analyzed_window_count": 1,
-            "merged_candidate_count": 1,
-            "character_count": 1,
-            "character_discovery_mode": "ai_assisted",
-            "character_profile_id_last_used": "profile_1",
-            "window_size": config.DEFAULT_CHARACTER_DISCOVERY_WINDOW_SIZE,
-            "window_overlap": config.DEFAULT_CHARACTER_DISCOVERY_WINDOW_OVERLAP,
-            "warning_count": 0,
-            "warnings": [],
-            "generated_at": "2026-04-08T12:01:00+00:00",
-        }, indent=2) + "\n",
+        json.dumps(
+            {
+                "input_chunk_count": 1,
+                "analyzed_window_count": 1,
+                "merged_candidate_count": 1,
+                "character_count": 1,
+                "character_discovery_mode": "ai_assisted",
+                "character_profile_id_last_used": "profile_1",
+                "window_size": config.DEFAULT_CHARACTER_DISCOVERY_WINDOW_SIZE,
+                "window_overlap": config.DEFAULT_CHARACTER_DISCOVERY_WINDOW_OVERLAP,
+                "warning_count": 0,
+                "warnings": [],
+                "generated_at": "2026-04-08T12:01:00+00:00",
+            },
+            indent=2,
+        )
+        + "\n",
         encoding="utf-8",
     )
     (discovery_root / config.OPERATION_STATE_FILE_NAME).write_text(
-        json.dumps({
-            "folder_relative_path": "40_character_discovery",
-            "status": "completed",
-            "input_paths": [],
-            "output_paths": [f"40_character_discovery/{config.CHARACTER_PROFILE_FILE_NAME}"],
-            "artifact_paths": [f"40_character_discovery/{config.CHARACTER_DISCOVERY_REPORT_FILE_NAME}"],
-            "progress_current": 1,
-            "progress_total": 1,
-            "mode": "ai_assisted",
-            "started_at": "2026-04-08T12:00:00+00:00",
-            "completed_at": "2026-04-08T12:01:00+00:00",
-            "updated_at": "2026-04-08T12:01:00+00:00",
-            "warning_count": 0,
-            "metadata": {"ai_profile_id": "profile_1"},
-            "resume_checkpoint": None,
-        }, indent=2) + "\n",
+        json.dumps(
+            {
+                "folder_relative_path": "40_character_discovery",
+                "status": "completed",
+                "input_paths": [],
+                "output_paths": [f"40_character_discovery/{config.CHARACTER_PROFILE_FILE_NAME}"],
+                "artifact_paths": [f"40_character_discovery/{config.CHARACTER_DISCOVERY_REPORT_FILE_NAME}"],
+                "progress_current": 1,
+                "progress_total": 1,
+                "mode": "ai_assisted",
+                "started_at": "2026-04-08T12:00:00+00:00",
+                "completed_at": "2026-04-08T12:01:00+00:00",
+                "updated_at": "2026-04-08T12:01:00+00:00",
+                "warning_count": 0,
+                "metadata": {"ai_profile_id": "profile_1"},
+                "resume_checkpoint": None,
+            },
+            indent=2,
+        )
+        + "\n",
         encoding="utf-8",
     )
 
@@ -1211,7 +1242,9 @@ def test_main_window_loads_character_discovery_state_into_characters_page(
     assert window._characters_page._evidence_preview.toPlainText() == '"Hello there," said Alice.'
 
 
-def test_main_window_prevents_reimport_when_source_is_locked(monkeypatch, qtbot, tmp_path, default_settings_payload) -> None:
+def test_main_window_prevents_reimport_when_source_is_locked(
+    monkeypatch, qtbot, tmp_path, default_settings_payload
+) -> None:
     """
     @brief      Verify importing again shows an error when the source is already locked.
     @param[in]  monkeypatch Pytest monkeypatch fixture.
@@ -1255,11 +1288,8 @@ def test_main_window_prevents_reimport_when_source_is_locked(monkeypatch, qtbot,
 
 
 def test_main_window_offers_repair_and_opens_repaired_project(
-    monkeypatch,
-    qtbot,
-    tmp_path,
-
-    default_settings_payload) -> None:
+    monkeypatch, qtbot, tmp_path, default_settings_payload
+) -> None:
     """
     @brief      Verify open-project offers repair for recoverable corruption.
     @param[in]  monkeypatch Pytest monkeypatch fixture.

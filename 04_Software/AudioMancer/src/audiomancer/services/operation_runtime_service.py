@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -20,8 +19,8 @@
 # IMPORTS
 
 import math
-import shutil
 from pathlib import Path
+import shutil
 
 from audiomancer import config
 
@@ -209,11 +208,7 @@ def reset_operation_data(
         folder_path = Path(project_root) / operation_folder_name(selected_kind)
         folder_path.mkdir(parents=True, exist_ok=True)
         for child in list(folder_path.iterdir()):
-            if (
-                keep_input_snapshots
-                and child.is_file()
-                and child.name.startswith(config.OPERATION_INPUT_FILE_PREFIX)
-            ):
+            if keep_input_snapshots and child.is_file() and child.name.startswith(config.OPERATION_INPUT_FILE_PREFIX):
                 continue
             if child.is_dir():
                 shutil.rmtree(child)

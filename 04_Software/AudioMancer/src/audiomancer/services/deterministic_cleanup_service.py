@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -19,18 +18,17 @@
 
 # IMPORTS
 
-import json
-import re
 from collections import Counter
 from datetime import UTC, datetime
+import json
 from pathlib import Path
+import re
 
 from langdetect import LangDetectException, detect
 
 from audiomancer import config
 from audiomancer.services.logging_service import get_component_logger, trace_function
 from audiomancer.services.operation_runtime_service import (
-    OperationCancelledError,
     build_operation_artifact_path,
     build_operation_input_snapshot_path,
     build_operation_output_path,
@@ -63,13 +61,9 @@ _PARAGRAPH_TERMINAL_PATTERN = re.compile(r'[.!?\u2026](?:["\')\]\}]+)?$')
 # @brief Decorative-separator matcher used to remove non-story break lines.
 _SEPARATOR_LINE_PATTERN = re.compile(r"^[*#=_~.\-]{3,}$|^(?:[*#=_~.\-]\s+){2,}[*#=_~.\-]?$")
 # @brief Dialogue formatter rule that inserts line breaks before continued spoken text.
-_DIALOGUE_BREAK_AFTER_PUNCTUATION_PATTERN = re.compile(
-    r'([:;.!?\u2026]["»”\']?)\s+-\s+(?=[A-ZĂÂÎȘȚ])'
-)
+_DIALOGUE_BREAK_AFTER_PUNCTUATION_PATTERN = re.compile(r'([:;.!?\u2026]["»”\']?)\s+-\s+(?=[A-ZĂÂÎȘȚ])')
 # @brief Dialogue formatter rule that inserts line breaks after attributions and pauses.
-_DIALOGUE_BREAK_AFTER_ATTRIBUTION_PATTERN = re.compile(
-    r'([,:])\s+-\s+(?=[A-ZĂÂÎȘȚ])'
-)
+_DIALOGUE_BREAK_AFTER_ATTRIBUTION_PATTERN = re.compile(r"([,:])\s+-\s+(?=[A-ZĂÂÎȘȚ])")
 
 
 # PUBLIC API
@@ -109,9 +103,7 @@ def clean_text(
     if not extracted_path.is_file():
         raise FileNotFoundError(f"Extracted text is missing: {extracted_path}")
 
-    original_name = str(
-        source_document.get("original_name") or Path(extracted_relative_path).name
-    )
+    original_name = str(source_document.get("original_name") or Path(extracted_relative_path).name)
     input_snapshot_path = build_operation_input_snapshot_path(
         resolved_project_root,
         "cleanup",
@@ -148,18 +140,10 @@ def clean_text(
     started_at = str(existing_state.get("started_at") or _utc_now_iso())
     resume_checkpoint = dict(existing_state.get("resume_checkpoint") or {})
     start_page_index = int(resume_checkpoint.get("next_page_index", 0))
-    cleaned_pages = list(
-        existing_state.get("metadata", {}).get("cleaned_pages") or []
-    )
-    removed_header_footer_count = int(
-        existing_state.get("metadata", {}).get("removed_header_footer_line_count", 0)
-    )
-    removed_page_number_count = int(
-        existing_state.get("metadata", {}).get("removed_page_number_line_count", 0)
-    )
-    removed_separator_count = int(
-        existing_state.get("metadata", {}).get("removed_separator_line_count", 0)
-    )
+    cleaned_pages = list(existing_state.get("metadata", {}).get("cleaned_pages") or [])
+    removed_header_footer_count = int(existing_state.get("metadata", {}).get("removed_header_footer_line_count", 0))
+    removed_page_number_count = int(existing_state.get("metadata", {}).get("removed_page_number_line_count", 0))
+    removed_separator_count = int(existing_state.get("metadata", {}).get("removed_separator_line_count", 0))
 
     if len(cleaned_pages) != progress_total or start_page_index <= 0:
         cleaned_pages, removed_header_footer_count = _remove_repeated_headers_and_footers(pages)
@@ -172,11 +156,7 @@ def clean_text(
     current_lines: CleanupLineParts = []
     if start_page_index > 0 and output_path.is_file():
         restored_output = output_path.read_text(encoding="utf-8").strip()
-        paragraph_texts = [
-            paragraph.strip()
-            for paragraph in restored_output.split("\n\n")
-            if paragraph.strip()
-        ]
+        paragraph_texts = [paragraph.strip() for paragraph in restored_output.split("\n\n") if paragraph.strip()]
 
     warnings: list[str] = []
     _write_running_state(
@@ -252,11 +232,7 @@ def clean_text(
         "detected_language": detected_language,
         "warnings": warnings,
         "paragraph_count": len(paragraph_texts),
-        "removed_line_count": (
-            removed_header_footer_count
-            + removed_page_number_count
-            + removed_separator_count
-        ),
+        "removed_line_count": (removed_header_footer_count + removed_page_number_count + removed_separator_count),
         "removed_header_footer_line_count": removed_header_footer_count,
         "removed_page_number_line_count": removed_page_number_count,
         "removed_separator_line_count": removed_separator_count,
@@ -310,9 +286,7 @@ def load_operation_state(project_root: str | Path) -> OperationStatePayload | No
     @date       2026-04-06
     @version    0.1.1
     """
-    return _load_operation_state(
-        build_operation_output_path(project_root, "cleanup", config.OPERATION_STATE_FILE_NAME)
-    )
+    return _load_operation_state(build_operation_output_path(project_root, "cleanup", config.OPERATION_STATE_FILE_NAME))
 
 
 @trace_function(_CLEANUP_LOGGER)
@@ -430,11 +404,7 @@ def _build_operation_state(
         "folder_relative_path": config.CLEANUP_FOLDER_NAME,
         "status": status,
         "input_paths": [relative_to_project(project_root, input_snapshot_path)],
-        "output_paths": (
-            [relative_to_project(project_root, output_path)]
-            if output_path.is_file()
-            else []
-        ),
+        "output_paths": ([relative_to_project(project_root, output_path)] if output_path.is_file() else []),
         "artifact_paths": artifact_paths,
         "progress_current": progress_current,
         "progress_total": progress_total,
@@ -517,10 +487,7 @@ def _build_page_paragraphs(
     removed_page_number_count = 0
     removed_separator_count = 0
     merge_with_previous_line = bool(carried_lines)
-    normalized_lines = [
-        re.sub(r"\s+", " ", raw_line).strip()
-        for raw_line in page.split("\n")
-    ]
+    normalized_lines = [re.sub(r"\s+", " ", raw_line).strip() for raw_line in page.split("\n")]
     for line_index, normalized_line in enumerate(normalized_lines):
         if not normalized_line:
             if current_lines:

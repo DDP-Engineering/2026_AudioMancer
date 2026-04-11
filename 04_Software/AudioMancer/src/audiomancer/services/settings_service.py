@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -21,7 +20,6 @@
 
 import copy
 import json
-from pathlib import Path
 from typing import Any
 
 from .. import config
@@ -313,9 +311,7 @@ def validate_settings(settings_payload: dict[str, Any]) -> dict[str, Any]:
     else:
         validated_profiles = []
         for index, candidate_profile in enumerate(candidate_profiles):
-            validated_profiles.append(
-                _validate_llm_profile(candidate_profile, _LLM_PROFILE_DEFAULTS, index)
-            )
+            validated_profiles.append(_validate_llm_profile(candidate_profile, _LLM_PROFILE_DEFAULTS, index))
         normalized_settings["llm_profiles"] = validated_profiles
 
     enabled_profile_ids = {
@@ -330,13 +326,8 @@ def validate_settings(settings_payload: dict[str, Any]) -> dict[str, Any]:
         "default_ai_translation_profile_id",
         "default_character_extraction_profile_id",
     ):
-        normalized_profile_id = _optional_profile_id(
-            normalized_settings.get(field_name)
-        )
-        if (
-            normalized_profile_id is not None
-            and normalized_profile_id not in enabled_profile_ids
-        ):
+        normalized_profile_id = _optional_profile_id(normalized_settings.get(field_name))
+        if normalized_profile_id is not None and normalized_profile_id not in enabled_profile_ids:
             _log_settings_repair(
                 f"Repaired invalid '{field_name}' using the default value.",
                 field_name,

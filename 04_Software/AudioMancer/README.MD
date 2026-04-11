@@ -107,6 +107,9 @@ Example workflow:
 uv sync --extra dev
 ```
 
+This installs the application runtime plus the current developer tools, including
+`pytest`, `pytest-qt`, `PyInstaller`, and `ruff`.
+
 ## Run The Application
 
 From this folder:
@@ -146,12 +149,19 @@ From this folder:
 uv run pytest
 ```
 
+For routine Python hygiene, prefer `ruff` on the files you actually changed:
+
+```powershell
+uv run ruff check src/audiomancer/app.py tests/test_app_entrypoint.py --fix
+uv run ruff format src/audiomancer/app.py tests/test_app_entrypoint.py
+```
+
 Focused validation used for the current project-workspace implementation:
 
 ```powershell
 uv run pytest tests/test_project_workspace_service.py
 uv run pytest tests/test_import_service.py
-uv run pytest tests/test_main_window.py
+uv run pytest tests/test_main_window_project_flow.py
 ```
 
 Focused validation used for the current extraction implementation:
@@ -159,7 +169,7 @@ Focused validation used for the current extraction implementation:
 ```powershell
 uv run pytest tests/test_text_extraction_service.py
 uv run pytest tests/test_text_cleanup_page.py
-uv run pytest tests/test_main_window.py
+uv run pytest tests/test_main_window_project_flow.py
 uv run pytest tests/test_project_workspace_service.py
 ```
 
@@ -169,7 +179,7 @@ Focused validation used for the current cleanup and operation-progress implement
 uv run pytest tests/test_operation_runtime_service.py
 uv run pytest tests/test_deterministic_cleanup_service.py
 uv run pytest tests/test_text_cleanup_page.py
-uv run pytest tests/test_main_window.py
+uv run pytest tests/test_main_window_project_flow.py
 ```
 
 Focused validation used for the current AI-assisted cleanup implementation:
@@ -188,13 +198,15 @@ Focused validation used for the current deterministic chunking implementation:
 uv run pytest tests/test_deterministic_chunking_service.py
 uv run pytest tests/test_text_chunking_page.py
 uv run pytest tests/test_text_chunking_ui_controller.py
-uv run pytest tests/test_main_window.py
+uv run pytest tests/test_main_window_project_flow.py
 ```
 
 Focused validation used for the current page-oriented UI controller split:
 
 ```powershell
-uv run pytest tests/test_main_window.py
+uv run pytest tests/test_main_window_lifecycle.py
+uv run pytest tests/test_main_window_ai_profiles.py
+uv run pytest tests/test_main_window_project_flow.py
 uv run pytest tests/test_home_presenter_service.py
 uv run pytest tests/test_text_cleanup_state_service.py
 uv run pytest tests/test_home_ui_controller.py

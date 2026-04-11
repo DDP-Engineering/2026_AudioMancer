@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -41,20 +40,20 @@ def test_settings_page_loads_and_builds_merged_settings(qtbot) -> None:
         "llm_profiles": [{"id": "kept"}],
     }
 
-    page.load_settings({
-        "language": "ro",
-        "ui_text_scale": "large",
-        "play_completion_beep": True,
-    })
+    page.load_settings(
+        {
+            "language": "ro",
+            "ui_text_scale": "large",
+            "play_completion_beep": True,
+        }
+    )
 
     assert page._language_combo.currentText() == "ro"
     assert page._ui_text_scale_combo.currentData() == "large"
     assert page._completion_beep_checkbox.isChecked() is True
 
     page._language_combo.setCurrentText("en")
-    page._ui_text_scale_combo.setCurrentIndex(
-        page._ui_text_scale_combo.findData("small")
-    )
+    page._ui_text_scale_combo.setCurrentIndex(page._ui_text_scale_combo.findData("small"))
     page._completion_beep_checkbox.setChecked(False)
 
     rebuilt = page.build_settings(existing_settings)

@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -21,14 +20,13 @@
 from PySide6.QtCore import Signal
 from PySide6.QtGui import QColor, QFont
 from PySide6.QtWidgets import (
-    QSizePolicy,
     QGridLayout,
     QGroupBox,
-    QHBoxLayout,
     QLabel,
     QListWidget,
     QListWidgetItem,
     QPushButton,
+    QSizePolicy,
     QVBoxLayout,
     QWidget,
 )
@@ -190,9 +188,7 @@ class HomeProjectPage(QWidget):
                 )
             )
         else:
-            self._source_lock_label.setText(
-                ui_state_service.translate("home.no_source", self._current_language)
-            )
+            self._source_lock_label.setText(ui_state_service.translate("home.no_source", self._current_language))
         self._refresh_import_button()
 
     def set_stage_statuses(self, stages: list[dict[str, str]]) -> None:
@@ -211,11 +207,8 @@ class HomeProjectPage(QWidget):
             status = stage.get("status", "not_started")
             note = stage.get("note", "")
             label = stage.get("label", "Unknown Stage")
-            item = QListWidgetItem(
-                f"{label} | {_status_title(status, self._current_language)}"
-            )
-            item.setForeground(_STATUS_COLORS.get(
-                status, _STATUS_COLORS["not_started"]))
+            item = QListWidgetItem(f"{label} | {_status_title(status, self._current_language)}")
+            item.setForeground(_STATUS_COLORS.get(status, _STATUS_COLORS["not_started"]))
             if note:
                 item.setToolTip(note)
             self._stage_list.addItem(item)
@@ -229,9 +222,7 @@ class HomeProjectPage(QWidget):
         @date       2026-04-05
         @version    0.1.0
         """
-        self._import_button.setEnabled(
-            self._project_active and not self._source_locked
-        )
+        self._import_button.setEnabled(self._project_active and not self._source_locked)
 
     def apply_language(self, language: str) -> None:
         """
@@ -244,27 +235,15 @@ class HomeProjectPage(QWidget):
         @version    0.2.0
         """
         self._current_language = language
-        self._title_label.setText(
-            f"<h2>{ui_state_service.translate('home.title', language)}</h2>"
-        )
-        self._summary_group.setTitle(
-            ui_state_service.translate("home.summary_group", language)
-        )
-        self._stage_group.setTitle(
-            ui_state_service.translate("home.workflow_group", language)
-        )
-        self._import_button.setText(
-            ui_state_service.translate("home.select_source", language)
-        )
+        self._title_label.setText(f"<h2>{ui_state_service.translate('home.title', language)}</h2>")
+        self._summary_group.setTitle(ui_state_service.translate("home.summary_group", language))
+        self._stage_group.setTitle(ui_state_service.translate("home.workflow_group", language))
+        self._import_button.setText(ui_state_service.translate("home.select_source", language))
         self._refresh_summary_labels()
         if self._source_locked:
-            self._source_lock_label.setText(
-                _build_locked_source_text(language, self._current_locked_source_name)
-            )
+            self._source_lock_label.setText(_build_locked_source_text(language, self._current_locked_source_name))
         else:
-            self._source_lock_label.setText(
-                ui_state_service.translate("home.no_source", language)
-            )
+            self._source_lock_label.setText(ui_state_service.translate("home.no_source", language))
         self.set_stage_statuses(self._stage_entries)
 
     def _refresh_summary_labels(self) -> None:

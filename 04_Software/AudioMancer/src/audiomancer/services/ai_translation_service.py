@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -18,17 +17,19 @@
 
 # IMPORTS
 
-import json
-import re
 from datetime import UTC, datetime
+import json
 from pathlib import Path
+import re
 
 from audiomancer import config
-from audiomancer.services import deterministic_chunking_service
-from audiomancer.services import llm_provider_service
-from audiomancer.services import prompt_template_service
-from audiomancer.services import project_workspace_service
-from audiomancer.services import token_usage_service
+from audiomancer.services import (
+    deterministic_chunking_service,
+    llm_provider_service,
+    project_workspace_service,
+    prompt_template_service,
+    token_usage_service,
+)
 from audiomancer.services.logging_service import get_component_logger, trace_function
 from audiomancer.services.operation_runtime_service import (
     build_operation_artifact_path,
@@ -38,7 +39,6 @@ from audiomancer.services.operation_runtime_service import (
     raise_if_cancelled,
     relative_to_project,
 )
-
 
 # CONSTANTS
 
@@ -183,7 +183,8 @@ def ensure_translation_records(
         profile_id,
         warnings=(
             ["Source chunk set changed since translation started. Translation records were synchronized."]
-            if synchronized else []
+            if synchronized
+            else []
         ),
         token_usage=_restore_persisted_token_usage(existing_report, existing_operation_state),
     )
@@ -233,9 +234,7 @@ def start_or_continue_translation(
         target_language,
         profile_id,
     )
-    prompt_template_service.validate_required_prompts(
-        ["text_translation_system", "text_translation_user"]
-    )
+    prompt_template_service.validate_required_prompts(["text_translation_system", "text_translation_user"])
     started_at = str((load_operation_state(project_root) or {}).get("started_at") or _utc_now_iso())
     log_path = _resolve_log_path(project_root, started_at)
     token_usage = _restore_persisted_token_usage(report, load_operation_state(project_root))
@@ -280,9 +279,7 @@ def start_or_continue_translation(
             cancel_requested=cancel_requested,
         )
         if not translated_text.strip():
-            raise ValueError(
-                f"AI translation returned an empty translated_text for {chunk.get('chunk_id', '')}."
-            )
+            raise ValueError(f"AI translation returned an empty translated_text for {chunk.get('chunk_id', '')}.")
         chunk["translated_text"] = translated_text
         chunk["approved"] = False
         chunk["approved_at"] = None
@@ -307,7 +304,9 @@ def start_or_continue_translation(
             log_path,
             token_usage,
         )
-        _persist_translation_state(project_root, source_chunks, translated_chunks, report, operation_state=load_operation_state(project_root))
+        _persist_translation_state(
+            project_root, source_chunks, translated_chunks, report, operation_state=load_operation_state(project_root)
+        )
         _emit_progress(
             progress_callback,
             _translated_count(translated_chunks),
@@ -380,9 +379,7 @@ def retranslate_chunk(
     selected = next((item for item in translated_chunks if str(item.get("chunk_id", "")) == str(chunk_id)), None)
     if selected is None:
         raise ValueError(f"Unknown translation chunk id: {chunk_id}")
-    prompt_template_service.validate_required_prompts(
-        ["text_translation_system", "text_translation_user"]
-    )
+    prompt_template_service.validate_required_prompts(["text_translation_system", "text_translation_user"])
     started_at = str((load_operation_state(project_root) or {}).get("started_at") or _utc_now_iso())
     log_path = _resolve_log_path(project_root, started_at)
     token_usage = _restore_persisted_token_usage(report, load_operation_state(project_root))
@@ -423,9 +420,7 @@ def retranslate_chunk(
         cancel_requested=cancel_requested,
     )
     if not translated_text.strip():
-        raise ValueError(
-            f"AI translation returned an empty translated_text for {selected.get('chunk_id', '')}."
-        )
+        raise ValueError(f"AI translation returned an empty translated_text for {selected.get('chunk_id', '')}.")
     selected["translated_text"] = translated_text
     selected["approved"] = False
     selected["approved_at"] = None
@@ -500,7 +495,11 @@ def update_translated_text(
             selected["approved"] = False
             selected["approved_at"] = None
         selected["translated_at"] = selected.get("translated_at") or _utc_now_iso()
-        selected["status"] = TRANSLATED_CHUNK_STATUS_APPROVED if bool(selected.get("approved", False)) else TRANSLATED_CHUNK_STATUS_TRANSLATED
+        selected["status"] = (
+            TRANSLATED_CHUNK_STATUS_APPROVED
+            if bool(selected.get("approved", False))
+            else TRANSLATED_CHUNK_STATUS_TRANSLATED
+        )
     else:
         selected["approved"] = False
         selected["approved_at"] = None
@@ -516,7 +515,9 @@ def update_translated_text(
             load_operation_state(project_root),
         ),
     )
-    _persist_translation_state(project_root, source_chunks, translated_chunks, report, operation_state=load_operation_state(project_root))
+    _persist_translation_state(
+        project_root, source_chunks, translated_chunks, report, operation_state=load_operation_state(project_root)
+    )
     return report
 
 
@@ -559,7 +560,9 @@ def approve_chunk(
             load_operation_state(project_root),
         ),
     )
-    _persist_translation_state(project_root, source_chunks, translated_chunks, report, operation_state=load_operation_state(project_root))
+    _persist_translation_state(
+        project_root, source_chunks, translated_chunks, report, operation_state=load_operation_state(project_root)
+    )
     return report
 
 
@@ -599,7 +602,9 @@ def approve_all(
             load_operation_state(project_root),
         ),
     )
-    _persist_translation_state(project_root, source_chunks, translated_chunks, report, operation_state=load_operation_state(project_root))
+    _persist_translation_state(
+        project_root, source_chunks, translated_chunks, report, operation_state=load_operation_state(project_root)
+    )
     return report
 
 
@@ -624,7 +629,9 @@ def reset_translation(project_root: str | Path) -> None:
 # HELPER FUNCTIONS
 
 
-def _build_default_translated_chunk(source_chunk: dict[str, object], target_language: str, profile_id: str | None) -> dict[str, object]:
+def _build_default_translated_chunk(
+    source_chunk: dict[str, object], target_language: str, profile_id: str | None
+) -> dict[str, object]:
     """
     @brief      Build the default untranslated record for one source chunk.
     @param[in]  source_chunk Source chunk payload.
@@ -669,7 +676,9 @@ def _normalize_translated_chunk(payload: dict[str, object], target_language: str
         "approved": bool(payload.get("approved", False)),
         "translated_at": None if payload.get("translated_at") in (None, "") else str(payload.get("translated_at")),
         "approved_at": None if payload.get("approved_at") in (None, "") else str(payload.get("approved_at")),
-        "translation_profile_id": None if payload.get("translation_profile_id") in (None, "") else str(payload.get("translation_profile_id")),
+        "translation_profile_id": None
+        if payload.get("translation_profile_id") in (None, "")
+        else str(payload.get("translation_profile_id")),
         "target_language": str(payload.get("target_language", target_language) or target_language),
         "status": str(payload.get("status", TRANSLATED_CHUNK_STATUS_NOT_STARTED)),
     }
@@ -955,12 +964,7 @@ def _resolve_log_path(project_root: Path, started_at: str) -> Path:
             if not resolved_path.exists():
                 resolved_path.write_text("", encoding="utf-8")
             return resolved_path
-    timestamp_token = (
-        started_at.replace("-", "")
-        .replace(":", "")
-        .replace("+", "_")
-        .replace(".", "")
-    )
+    timestamp_token = started_at.replace("-", "").replace(":", "").replace("+", "_").replace(".", "")
     log_path = build_operation_output_path(
         project_root,
         "translation",

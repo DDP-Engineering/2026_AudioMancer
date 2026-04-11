@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -34,6 +33,7 @@ def test_probe_profile_normalizes_openai_compatible_models(monkeypatch) -> None:
     @date       2026-04-05
     @version    0.1.0
     """
+
     def _fake_read_json(url, headers, timeout_seconds):
         """
         @brief      Return a fake OpenAI-compatible model-list payload.
@@ -52,13 +52,15 @@ def test_probe_profile_normalizes_openai_compatible_models(monkeypatch) -> None:
 
     monkeypatch.setattr(ai_backend_service, "_read_json", _fake_read_json)
 
-    result = ai_backend_service.probe_profile({
-        "backend_kind": "lmstudio",
-        "base_url": "http://127.0.0.1:1234/v1",
-        "api_key": "",
-        "model_name": "qwen3-8b",
-        "request_timeout_seconds": 30,
-    })
+    result = ai_backend_service.probe_profile(
+        {
+            "backend_kind": "lmstudio",
+            "base_url": "http://127.0.0.1:1234/v1",
+            "api_key": "",
+            "model_name": "qwen3-8b",
+            "request_timeout_seconds": 30,
+        }
+    )
 
     assert result["success"] is True
     assert result["discovered_model_count"] == 2
@@ -79,6 +81,7 @@ def test_probe_profile_normalizes_ollama_models(monkeypatch) -> None:
     @date       2026-04-05
     @version    0.1.0
     """
+
     def _fake_read_json(url, headers, timeout_seconds):
         """
         @brief      Return a fake Ollama tags payload.
@@ -96,13 +99,15 @@ def test_probe_profile_normalizes_ollama_models(monkeypatch) -> None:
 
     monkeypatch.setattr(ai_backend_service, "_read_json", _fake_read_json)
 
-    result = ai_backend_service.probe_profile({
-        "backend_kind": "ollama",
-        "base_url": "http://localhost:11434/v1",
-        "api_key": "",
-        "model_name": "missing",
-        "request_timeout_seconds": 20,
-    })
+    result = ai_backend_service.probe_profile(
+        {
+            "backend_kind": "ollama",
+            "base_url": "http://localhost:11434/v1",
+            "api_key": "",
+            "model_name": "missing",
+            "request_timeout_seconds": 20,
+        }
+    )
 
     assert result["success"] is True
     assert result["discovered_model_count"] == 2
@@ -119,6 +124,7 @@ def test_probe_profile_maps_backend_failures(monkeypatch) -> None:
     @date       2026-04-05
     @version    0.1.0
     """
+
     def _fake_probe(*args, **kwargs):
         """
         @brief      Raise one fake backend connectivity failure.
@@ -138,13 +144,15 @@ def test_probe_profile_maps_backend_failures(monkeypatch) -> None:
         _fake_probe,
     )
 
-    result = ai_backend_service.probe_profile({
-        "backend_kind": "openai_compatible",
-        "base_url": "http://127.0.0.1:8000/v1",
-        "api_key": "secret",
-        "model_name": "qwen3-8b",
-        "request_timeout_seconds": 15,
-    })
+    result = ai_backend_service.probe_profile(
+        {
+            "backend_kind": "openai_compatible",
+            "base_url": "http://127.0.0.1:8000/v1",
+            "api_key": "secret",
+            "model_name": "qwen3-8b",
+            "request_timeout_seconds": 15,
+        }
+    )
 
     assert result["success"] is False
     assert result["discovered_model_count"] == 0

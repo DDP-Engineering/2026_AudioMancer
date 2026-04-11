@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 @file test_ai_translation_ui_controller.py
 @brief AI Translation UI controller tests for AudioMancer.
@@ -70,9 +69,7 @@ def test_ai_translation_ui_controller_reset_clears_translation_state(monkeypatch
 
     assert window._current_manifest is not None
     assert window._current_manifest["operations"]["translation"]["status"] == "not_started"
-    translated_payload = json.loads(
-        (translation_root / config.TRANSLATED_CHUNKS_FILE_NAME).read_text(encoding="utf-8")
-    )
+    translated_payload = json.loads((translation_root / config.TRANSLATED_CHUNKS_FILE_NAME).read_text(encoding="utf-8"))
     assert translated_payload[0]["translated_text"] == ""
 
 
@@ -91,19 +88,23 @@ def _create_project(tmp_path, name: str):
     chunk_root = project_root / "20_chunking"
     chunk_root.mkdir(parents=True, exist_ok=True)
     (chunk_root / config.CHUNK_ARTIFACT_FILE_NAME).write_text(
-        json.dumps([
-            {
-                "chunk_id": "chunk-0001",
-                "sequence_index": 1,
-                "chapter_label": None,
-                "text": "Original one",
-                "source_start_line": 1,
-                "source_end_line": 1,
-                "chunking_mode": "deterministic",
-                "semantic_strategy": None,
-                "scene_note": None,
-            }
-        ], indent=2) + "\n",
+        json.dumps(
+            [
+                {
+                    "chunk_id": "chunk-0001",
+                    "sequence_index": 1,
+                    "chapter_label": None,
+                    "text": "Original one",
+                    "source_start_line": 1,
+                    "source_end_line": 1,
+                    "chunking_mode": "deterministic",
+                    "semantic_strategy": None,
+                    "scene_note": None,
+                }
+            ],
+            indent=2,
+        )
+        + "\n",
         encoding="utf-8",
     )
     return project_root, manifest
@@ -114,20 +115,22 @@ def _build_window(qtbot, project_root):
         "language": "en",
         "ui_text_scale": "normal",
         "play_completion_beep": False,
-        "llm_profiles": [{
-            "id": "profile-1",
-            "label": "Translation Profile",
-            "backend_kind": "lmstudio",
-            "base_url": "http://127.0.0.1:1234",
-            "api_key": "",
-            "model_name": "qwen3-8b",
-            "context_window": 4096,
-            "max_output_tokens": 512,
-            "request_timeout_seconds": 30,
-            "temperature": 0.2,
-            "supports_structured_output": False,
-            "enabled": True,
-        }],
+        "llm_profiles": [
+            {
+                "id": "profile-1",
+                "label": "Translation Profile",
+                "backend_kind": "lmstudio",
+                "base_url": "http://127.0.0.1:1234",
+                "api_key": "",
+                "model_name": "qwen3-8b",
+                "context_window": 4096,
+                "max_output_tokens": 512,
+                "request_timeout_seconds": 30,
+                "temperature": 0.2,
+                "supports_structured_output": False,
+                "enabled": True,
+            }
+        ],
     }
     window = MainWindow(settings_payload=settings_payload)
     qtbot.addWidget(window)

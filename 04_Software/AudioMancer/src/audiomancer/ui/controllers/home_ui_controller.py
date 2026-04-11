@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -24,10 +23,7 @@ from typing import TYPE_CHECKING
 from PySide6.QtWidgets import QFileDialog, QInputDialog, QMessageBox
 
 from audiomancer import config
-from audiomancer.services import home_presenter_service
-from audiomancer.services import import_service
-from audiomancer.services import project_workspace_service
-from audiomancer.services import ui_state_service
+from audiomancer.services import home_presenter_service, import_service, project_workspace_service, ui_state_service
 from audiomancer.ui.controllers import misc_ui_controller
 
 if TYPE_CHECKING:
@@ -47,18 +43,14 @@ def handle_new_project_requested(window: "MainWindow") -> None:
     @date       2026-04-06
     @version    0.1.1
     """
-    current_language = ui_state_service.current_language_from_settings(
-        window._settings_payload
-    )
+    current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     selected_parent = QFileDialog.getExistingDirectory(
         window,
         ui_state_service.translate(
             "dialog.select_project_parent_title",
             current_language,
         ),
-        str(window._current_project_root.parent)
-        if window._current_project_root is not None
-        else str(config.APP_ROOT),
+        str(window._current_project_root.parent) if window._current_project_root is not None else str(config.APP_ROOT),
     )
     if not selected_parent:
         return
@@ -110,9 +102,7 @@ def handle_open_project_requested(window: "MainWindow") -> None:
     @date       2026-04-06
     @version    0.1.1
     """
-    current_language = ui_state_service.current_language_from_settings(
-        window._settings_payload
-    )
+    current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     selected_folder = QFileDialog.getExistingDirectory(
         window,
         ui_state_service.translate("dialog.open_project_title", current_language),
@@ -163,9 +153,7 @@ def handle_import_source_requested(window: "MainWindow") -> None:
     @date       2026-04-06
     @version    0.1.1
     """
-    current_language = ui_state_service.current_language_from_settings(
-        window._settings_payload
-    )
+    current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._current_project_root is None or window._current_manifest is None:
         QMessageBox.warning(
             window,
@@ -278,5 +266,6 @@ def activate_project(
     """
     window.set_project_active(True)
     window.show_project_state(project_root, manifest)
+
 
 # END OF FILE

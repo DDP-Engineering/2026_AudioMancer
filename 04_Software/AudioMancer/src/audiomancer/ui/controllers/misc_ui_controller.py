@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -124,12 +123,8 @@ def build_about_dialog(window: "MainWindow") -> QDialog:
     @version    0.1.0
     """
     dialog = QDialog(window)
-    current_language = ui_state_service.current_language_from_settings(
-        window._settings_payload
-    )
-    dialog.setWindowTitle(
-        ui_state_service.translate("dialog.about_title", current_language)
-    )
+    current_language = ui_state_service.current_language_from_settings(window._settings_payload)
+    dialog.setWindowTitle(ui_state_service.translate("dialog.about_title", current_language))
     dialog.resize(510, 620)
 
     layout = QVBoxLayout(dialog)
@@ -294,13 +289,7 @@ def load_about_license_text(language: str) -> str:
     @version    0.1.0
     """
     main_license_path, addendum_path = resolve_license_paths(language)
-    return (
-        read_text_file(main_license_path)
-        + "\n\n"
-        + "=" * 78
-        + "\n\n"
-        + read_text_file(addendum_path)
-    )
+    return read_text_file(main_license_path) + "\n\n" + "=" * 78 + "\n\n" + read_text_file(addendum_path)
 
 
 def resolve_license_paths(language: str) -> tuple[Path, Path]:
@@ -351,5 +340,6 @@ def build_window_title(context: str | None = None) -> str:
     if context:
         return f"{title} | {context}"
     return title
+
 
 # END OF FILE

@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -33,9 +32,7 @@ from PySide6.QtWidgets import (
 )
 
 from audiomancer import config
-from audiomancer.services import ai_translation_service
-from audiomancer.services import ui_state_service
-
+from audiomancer.services import ai_translation_service, ui_state_service
 
 # CONSTANTS
 
@@ -163,7 +160,17 @@ class AiTranslationPage(QWidget):
         self._notes_group.setMaximumHeight(112)
         layout.addWidget(self._notes_group, 0)
         self.set_project_active(False)
-        self.set_translation_state([], [], ["Run text chunking before AI Translation."], config.DEFAULT_TRANSLATION_TARGET_LANGUAGE, None, ai_translation_service.TRANSLATION_STAGE_NOT_STARTED, 0, 0, 0)
+        self.set_translation_state(
+            [],
+            [],
+            ["Run text chunking before AI Translation."],
+            config.DEFAULT_TRANSLATION_TARGET_LANGUAGE,
+            None,
+            ai_translation_service.TRANSLATION_STAGE_NOT_STARTED,
+            0,
+            0,
+            0,
+        )
 
     def set_project_active(self, is_active: bool) -> None:
         """
@@ -194,7 +201,9 @@ class AiTranslationPage(QWidget):
         if entries:
             for label, profile_id in entries:
                 self._profile_combo.addItem(label, profile_id)
-            selected_index = next((index for index, _entry in enumerate(entries) if entries[index][1] == selected_profile_id), 0)
+            selected_index = next(
+                (index for index, _entry in enumerate(entries) if entries[index][1] == selected_profile_id), 0
+            )
             self._profile_combo.setCurrentIndex(selected_index)
         else:
             self._profile_combo.addItem("(none)", None)
@@ -325,9 +334,13 @@ class AiTranslationPage(QWidget):
         }
         has_translated_chunks = any(str(chunk.get("translated_text", "")).strip() for chunk in self._display_chunks)
         selected_chunk = self._current_display_chunk()
-        has_selected_translation = selected_chunk is not None and bool(str(selected_chunk.get("translated_text", "")).strip())
+        has_selected_translation = selected_chunk is not None and bool(
+            str(selected_chunk.get("translated_text", "")).strip()
+        )
         selected_profile_id = self.current_profile_id()
-        self._language_combo.setEnabled(self._project_active and not self._busy and not has_started_translation and not has_translated_chunks)
+        self._language_combo.setEnabled(
+            self._project_active and not self._busy and not has_started_translation and not has_translated_chunks
+        )
         self._profile_combo.setEnabled(self._project_active and not self._busy)
         self._start_button.setEnabled(
             self._project_active
@@ -336,17 +349,19 @@ class AiTranslationPage(QWidget):
             and self._stage_status != ai_translation_service.TRANSLATION_STAGE_COMPLETED
             and selected_profile_id is not None
         )
-        self._reset_button.setEnabled(self._project_active and not self._busy and (has_started_translation or has_translated_chunks))
+        self._reset_button.setEnabled(
+            self._project_active and not self._busy and (has_started_translation or has_translated_chunks)
+        )
         self._approve_all_button.setEnabled(
             self._project_active
             and not self._busy
-            and any(str(chunk.get("translated_text", "")).strip() and not bool(chunk.get("approved", False)) for chunk in self._display_chunks)
+            and any(
+                str(chunk.get("translated_text", "")).strip() and not bool(chunk.get("approved", False))
+                for chunk in self._display_chunks
+            )
         )
         self._retranslate_button.setEnabled(
-            self._project_active
-            and not self._busy
-            and selected_chunk is not None
-            and selected_profile_id is not None
+            self._project_active and not self._busy and selected_chunk is not None and selected_profile_id is not None
         )
         self._approve_selected_button.setEnabled(
             self._project_active
@@ -447,7 +462,11 @@ class AiTranslationPage(QWidget):
                 if translated_text != previous_text:
                     selected_chunk["approved"] = False
                     selected_chunk["approved_at"] = None
-                selected_chunk["status"] = ai_translation_service.TRANSLATED_CHUNK_STATUS_APPROVED if bool(selected_chunk.get("approved", False)) else ai_translation_service.TRANSLATED_CHUNK_STATUS_TRANSLATED
+                selected_chunk["status"] = (
+                    ai_translation_service.TRANSLATED_CHUNK_STATUS_APPROVED
+                    if bool(selected_chunk.get("approved", False))
+                    else ai_translation_service.TRANSLATED_CHUNK_STATUS_TRANSLATED
+                )
             else:
                 selected_chunk["approved"] = False
                 selected_chunk["approved_at"] = None
@@ -468,7 +487,9 @@ class AiTranslationPage(QWidget):
         """
         if self._current_chunk_id is None:
             return None
-        return next((chunk for chunk in self._display_chunks if str(chunk.get("chunk_id", "")) == self._current_chunk_id), None)
+        return next(
+            (chunk for chunk in self._display_chunks if str(chunk.get("chunk_id", "")) == self._current_chunk_id), None
+        )
 
     def apply_language(self, language: str) -> None:
         """
@@ -497,7 +518,9 @@ class AiTranslationPage(QWidget):
 # HELPER FUNCTIONS
 
 
-def _build_display_chunks(source_chunks: list[dict[str, object]], translated_chunks: list[dict[str, object]]) -> list[dict[str, object]]:
+def _build_display_chunks(
+    source_chunks: list[dict[str, object]], translated_chunks: list[dict[str, object]]
+) -> list[dict[str, object]]:
     """
     @brief      Merge source chunks with persisted translated records for display.
     @param[in]  source_chunks Source chunk payloads from chunking.
@@ -514,18 +537,20 @@ def _build_display_chunks(source_chunks: list[dict[str, object]], translated_chu
         chunk_id = str(source_chunk.get("chunk_id", ""))
         translated_chunk = translated_by_id.get(chunk_id)
         if translated_chunk is None:
-            display_chunks.append({
-                "chunk_id": chunk_id,
-                "sequence_index": int(source_chunk.get("sequence_index", 0)),
-                "source_text": str(source_chunk.get("text", "")),
-                "translated_text": "",
-                "approved": False,
-                "approved_at": None,
-                "translated_at": None,
-                "translation_profile_id": None,
-                "target_language": config.DEFAULT_TRANSLATION_TARGET_LANGUAGE,
-                "status": ai_translation_service.TRANSLATED_CHUNK_STATUS_NOT_STARTED,
-            })
+            display_chunks.append(
+                {
+                    "chunk_id": chunk_id,
+                    "sequence_index": int(source_chunk.get("sequence_index", 0)),
+                    "source_text": str(source_chunk.get("text", "")),
+                    "translated_text": "",
+                    "approved": False,
+                    "approved_at": None,
+                    "translated_at": None,
+                    "translation_profile_id": None,
+                    "target_language": config.DEFAULT_TRANSLATION_TARGET_LANGUAGE,
+                    "status": ai_translation_service.TRANSLATED_CHUNK_STATUS_NOT_STARTED,
+                }
+            )
             continue
         translated_chunk["sequence_index"] = int(source_chunk.get("sequence_index", 0))
         translated_chunk["source_text"] = str(source_chunk.get("text", ""))

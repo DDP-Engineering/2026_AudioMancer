@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -18,13 +17,6 @@
 # IMPORTS
 
 from .logging_service import get_component_logger, initialize_logging, shutdown_logging, trace_function
-from .settings_service import (
-    build_default_settings,
-    ensure_settings_file,
-    load_settings,
-    save_settings,
-    validate_settings,
-)
 from .project_workspace_service import (
     create_project,
     load_manifest,
@@ -33,6 +25,13 @@ from .project_workspace_service import (
     save_manifest,
     validate_project,
     validate_project_name,
+)
+from .settings_service import (
+    build_default_settings,
+    ensure_settings_file,
+    load_settings,
+    save_settings,
+    validate_settings,
 )
 
 # PUBLIC API

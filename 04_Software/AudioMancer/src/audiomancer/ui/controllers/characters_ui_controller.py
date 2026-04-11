@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -21,11 +20,13 @@ from typing import TYPE_CHECKING
 
 from PySide6.QtWidgets import QInputDialog, QMessageBox
 
-from audiomancer.services import character_discovery_service
-from audiomancer.services import deterministic_chunking_service
-from audiomancer.services import project_workspace_service
-from audiomancer.services import text_cleanup_state_service
-from audiomancer.services import ui_state_service
+from audiomancer.services import (
+    character_discovery_service,
+    deterministic_chunking_service,
+    project_workspace_service,
+    text_cleanup_state_service,
+    ui_state_service,
+)
 from audiomancer.ui.controllers import misc_ui_controller
 
 if TYPE_CHECKING:
@@ -43,9 +44,7 @@ def handle_start_discovery_requested(window: "MainWindow", profile_id: str) -> N
     @date       2026-04-08
     @version    0.2.0
     """
-    current_language = ui_state_service.current_language_from_settings(
-        window._settings_payload
-    )
+    current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if not _resolve_unsaved_changes(window):
         return
     if window._active_operation_kind is not None:
@@ -86,12 +85,14 @@ def handle_start_discovery_requested(window: "MainWindow", profile_id: str) -> N
         window,
         operation_name=ui_state_service.translate("characters.start", current_language),
         initial_message=ui_state_service.translate("progress.character_discovery", current_language),
-        worker_callable=lambda project_root, manifest, progress_callback=None, cancel_requested=None: character_discovery_service.start_or_continue_discovery(
-            project_root,
-            manifest,
-            profile_payload,
-            progress_callback=progress_callback,
-            cancel_requested=cancel_requested,
+        worker_callable=lambda project_root, manifest, progress_callback=None, cancel_requested=None: (
+            character_discovery_service.start_or_continue_discovery(
+                project_root,
+                manifest,
+                profile_payload,
+                progress_callback=progress_callback,
+                cancel_requested=cancel_requested,
+            )
         ),
     )
 
@@ -106,9 +107,7 @@ def handle_reset_discovery_requested(window: "MainWindow") -> None:
     @date       2026-04-08
     @version    0.2.0
     """
-    current_language = ui_state_service.current_language_from_settings(
-        window._settings_payload
-    )
+    current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if not _resolve_unsaved_changes(window):
         return
     if window._current_project_root is None or window._current_manifest is None:
@@ -139,16 +138,12 @@ def handle_add_character_requested(window: "MainWindow") -> None:
     @date       2026-04-08
     @version    0.2.0
     """
-    current_language = ui_state_service.current_language_from_settings(
-        window._settings_payload
-    )
+    current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._current_project_root is None:
         return
     if not _resolve_unsaved_changes(window):
         return
-    existing_profiles = character_discovery_service.load_character_profiles(
-        window._current_project_root
-    )
+    existing_profiles = character_discovery_service.load_character_profiles(window._current_project_root)
     character_name, accepted = QInputDialog.getText(
         window,
         ui_state_service.translate("dialog.character_add_title", current_language),
@@ -164,9 +159,7 @@ def handle_add_character_requested(window: "MainWindow") -> None:
     except ValueError as error:
         _show_name_validation_error(window, current_language, str(error))
         return
-    window._characters_page.begin_add_mode(
-        _build_manual_draft_profile(existing_profiles, normalized_name)
-    )
+    window._characters_page.begin_add_mode(_build_manual_draft_profile(existing_profiles, normalized_name))
 
 
 def handle_edit_character_requested(window: "MainWindow", character_id: str) -> None:
@@ -200,14 +193,10 @@ def handle_save_character_requested(
     @date       2026-04-08
     @version    0.2.0
     """
-    current_language = ui_state_service.current_language_from_settings(
-        window._settings_payload
-    )
+    current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._current_project_root is None:
         return False
-    existing_profiles = character_discovery_service.load_character_profiles(
-        window._current_project_root
-    )
+    existing_profiles = character_discovery_service.load_character_profiles(window._current_project_root)
     try:
         normalized_name = character_discovery_service.validate_manual_character_name(
             existing_profiles,
@@ -219,9 +208,7 @@ def handle_save_character_requested(
         return False
     saved_character_id: str
     if window._characters_page.is_add_mode():
-        existing_ids = {
-            str(profile.get("character_id", "")).strip() for profile in existing_profiles
-        }
+        existing_ids = {str(profile.get("character_id", "")).strip() for profile in existing_profiles}
         created_profiles = character_discovery_service.add_character_profile(
             window._current_project_root,
             normalized_name,
@@ -280,18 +267,14 @@ def handle_delete_character_requested(window: "MainWindow", character_id: str) -
     @date       2026-04-08
     @version    0.2.0
     """
-    current_language = ui_state_service.current_language_from_settings(
-        window._settings_payload
-    )
+    current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._current_project_root is None:
         return
     if not character_id:
         return
     if not _confirm_delete_character(window, current_language):
         return
-    existing_profiles = character_discovery_service.load_character_profiles(
-        window._current_project_root
-    )
+    existing_profiles = character_discovery_service.load_character_profiles(window._current_project_root)
     target_index = next(
         (
             index
@@ -309,9 +292,7 @@ def handle_delete_character_requested(window: "MainWindow", character_id: str) -
         window._current_project_root,
         project_workspace_service.load_manifest(window._current_project_root),
     )
-    remaining_profiles = character_discovery_service.load_character_profiles(
-        window._current_project_root
-    )
+    remaining_profiles = character_discovery_service.load_character_profiles(window._current_project_root)
     if remaining_profiles:
         fallback_index = min(target_index, len(remaining_profiles) - 1)
         window._characters_page.apply_selected_character(
@@ -408,11 +389,13 @@ def _start_operation(
         result_payload = worker_callable(
             window._current_project_root,
             dict(window._current_manifest),
-            progress_callback=lambda current, total, percent, message, token_usage=None: misc_ui_controller.update_progress_dialog(
-                window,
-                percent,
-                message,
-                token_usage,
+            progress_callback=lambda current, total, percent, message, token_usage=None: (
+                misc_ui_controller.update_progress_dialog(
+                    window,
+                    percent,
+                    message,
+                    token_usage,
+                )
             ),
             cancel_requested=lambda: _is_cancel_requested(window),
         )
@@ -474,17 +457,13 @@ def _sync_manifest_after_discovery(
     _ = report
     assert window._current_project_root is not None
     assert window._current_manifest is not None
-    operation_state = character_discovery_service.load_operation_state(
-        window._current_project_root
-    )
+    operation_state = character_discovery_service.load_operation_state(window._current_project_root)
     updated_manifest = dict(window._current_manifest)
     operations = text_cleanup_state_service.normalized_manifest_operations(updated_manifest)
     if operation_state is not None:
-        operations["character_discovery"] = (
-            project_workspace_service.project_manifest_operation_summary(
-                "character_discovery",
-                operation_state,
-            )
+        operations["character_discovery"] = project_workspace_service.project_manifest_operation_summary(
+            "character_discovery",
+            operation_state,
         )
     updated_manifest["operations"] = operations
     updated_manifest["current_stage"] = "character_discovery_ready"
@@ -509,15 +488,11 @@ def _sync_manifest_after_manual_change(window: "MainWindow") -> None:
         return
     updated_manifest = dict(window._current_manifest)
     operations = text_cleanup_state_service.normalized_manifest_operations(updated_manifest)
-    operation_state = character_discovery_service.load_operation_state(
-        window._current_project_root
-    )
+    operation_state = character_discovery_service.load_operation_state(window._current_project_root)
     if operation_state is not None:
-        operations["character_discovery"] = (
-            project_workspace_service.project_manifest_operation_summary(
-                "character_discovery",
-                operation_state,
-            )
+        operations["character_discovery"] = project_workspace_service.project_manifest_operation_summary(
+            "character_discovery",
+            operation_state,
         )
     updated_manifest["operations"] = operations
     updated_manifest["current_stage"] = "character_discovery_ready"
@@ -538,15 +513,11 @@ def _sync_manifest_from_disk(window: "MainWindow") -> None:
         return
     updated_manifest = dict(window._current_manifest)
     operations = text_cleanup_state_service.normalized_manifest_operations(updated_manifest)
-    operation_state = character_discovery_service.load_operation_state(
-        window._current_project_root
-    )
+    operation_state = character_discovery_service.load_operation_state(window._current_project_root)
     if operation_state is not None:
-        operations["character_discovery"] = (
-            project_workspace_service.project_manifest_operation_summary(
-                "character_discovery",
-                operation_state,
-            )
+        operations["character_discovery"] = project_workspace_service.project_manifest_operation_summary(
+            "character_discovery",
+            operation_state,
         )
     updated_manifest["operations"] = operations
     updated_manifest["current_stage"] = "translation_ready"
@@ -570,9 +541,7 @@ def _resolve_unsaved_changes(window: "MainWindow") -> bool:
     page = window._characters_page
     if not page.is_dirty():
         return True
-    current_language = ui_state_service.current_language_from_settings(
-        window._settings_payload
-    )
+    current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     decision = _prompt_unsaved_changes(window, current_language)
     if decision == "cancel":
         page.restore_current_selection()
@@ -612,12 +581,8 @@ def _prompt_unsaved_changes(window: "MainWindow", language: str) -> str:
     """
     message_box = QMessageBox(window)
     message_box.setIcon(QMessageBox.Icon.Question)
-    message_box.setWindowTitle(
-        ui_state_service.translate("dialog.character_unsaved_title", language)
-    )
-    message_box.setText(
-        ui_state_service.translate("dialog.character_unsaved_message", language)
-    )
+    message_box.setWindowTitle(ui_state_service.translate("dialog.character_unsaved_title", language))
+    message_box.setText(ui_state_service.translate("dialog.character_unsaved_message", language))
     save_button = message_box.addButton(
         ui_state_service.translate("characters.prompt_save", language),
         QMessageBox.ButtonRole.AcceptRole,
@@ -702,9 +667,7 @@ def _build_manual_draft_profile(
     @date       2026-04-08
     @version    0.1.0
     """
-    existing_ids = {
-        str(profile.get("character_id", "")).strip() for profile in existing_profiles
-    }
+    existing_ids = {str(profile.get("character_id", "")).strip() for profile in existing_profiles}
     base_slug = _draft_slug(canonical_name)
     draft_id = f"draft_{base_slug}" if base_slug else "draft_character"
     suffix = 2
@@ -748,10 +711,7 @@ def _draft_slug(canonical_name: str) -> str:
     @date       2026-04-08
     @version    0.1.0
     """
-    return "".join(
-        character if character.isalnum() else "_"
-        for character in canonical_name.casefold()
-    ).strip("_")
+    return "".join(character if character.isalnum() else "_" for character in canonical_name.casefold()).strip("_")
 
 
 def _optional_character_id(value: object) -> str | None:
@@ -783,9 +743,7 @@ def _has_previous_character_discovery_state(window: "MainWindow") -> bool:
         return False
     return bool(
         character_discovery_service.load_operation_state(window._current_project_root)
-        or character_discovery_service.load_character_discovery_report(
-            window._current_project_root
-        )
+        or character_discovery_service.load_character_discovery_report(window._current_project_root)
         or character_discovery_service.load_character_profiles(window._current_project_root)
     )
 
@@ -831,9 +789,7 @@ def _effective_profile_id(window: "MainWindow", selected_profile_id: str) -> str
     """
     if window._current_project_root is None:
         return selected_profile_id
-    operation_state = character_discovery_service.load_operation_state(
-        window._current_project_root
-    )
+    operation_state = character_discovery_service.load_operation_state(window._current_project_root)
     if isinstance(operation_state, dict):
         metadata = operation_state.get("metadata", {})
         if isinstance(metadata, dict):

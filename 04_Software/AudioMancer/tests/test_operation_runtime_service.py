@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -19,8 +18,7 @@
 # IMPORTS
 
 from audiomancer import config
-from audiomancer.services import operation_runtime_service
-from audiomancer.services import project_workspace_service
+from audiomancer.services import operation_runtime_service, project_workspace_service
 
 
 def test_progress_percent_clamps_to_zero_and_hundred() -> None:

@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -23,9 +22,7 @@ import json
 import pytest
 
 from audiomancer import config
-from audiomancer.services import ai_chunking_service
-from audiomancer.services import operation_runtime_service
-from audiomancer.services import project_workspace_service
+from audiomancer.services import ai_chunking_service, operation_runtime_service, project_workspace_service
 
 
 def test_ai_chunking_writes_chunking_artifacts_and_log(tmp_path, monkeypatch) -> None:
@@ -91,7 +88,11 @@ def test_ai_chunking_writes_chunking_artifacts_and_log(tmp_path, monkeypatch) ->
         "meaning",
     )
 
-    chunking_root = project_root / config.CHUNK_FOLDER_NAME if hasattr(config, "CHUNK_FOLDER_NAME") else project_root / "20_chunking"
+    chunking_root = (
+        project_root / config.CHUNK_FOLDER_NAME
+        if hasattr(config, "CHUNK_FOLDER_NAME")
+        else project_root / "20_chunking"
+    )
     assert (chunking_root / f"{config.OPERATION_INPUT_FILE_PREFIX}story.txt").is_file()
     assert (chunking_root / config.CHUNK_ARTIFACT_FILE_NAME).is_file()
     assert (chunking_root / config.CHUNKING_REPORT_FILE_NAME).is_file()
@@ -209,10 +210,12 @@ def test_ai_chunking_resumes_from_saved_window_checkpoint(tmp_path, monkeypatch)
         f"{config.CLEANUP_FOLDER_NAME}/{config.CLEANED_TEXT_FILE_NAME}"
     ]
 
-    responses = iter([
-        {"break_after_unit_ids": ["paragraph-0002"]},
-        operation_runtime_service.OperationCancelledError("stop"),
-    ])
+    responses = iter(
+        [
+            {"break_after_unit_ids": ["paragraph-0002"]},
+            operation_runtime_service.OperationCancelledError("stop"),
+        ]
+    )
 
     def _chat_json(*_args, **_kwargs):
         response = next(responses)
@@ -249,7 +252,9 @@ def test_ai_chunking_resumes_from_saved_window_checkpoint(tmp_path, monkeypatch)
             "paragraph",
         )
 
-    state_payload = json.loads((project_root / "20_chunking" / config.OPERATION_STATE_FILE_NAME).read_text(encoding="utf-8"))
+    state_payload = json.loads(
+        (project_root / "20_chunking" / config.OPERATION_STATE_FILE_NAME).read_text(encoding="utf-8")
+    )
     assert state_payload["status"] == "running"
     assert state_payload["progress_current"] == 1
 
@@ -287,6 +292,8 @@ def test_ai_chunking_resumes_from_saved_window_checkpoint(tmp_path, monkeypatch)
 
     assert report_payload["chunk_count"] == 3
     assert report_payload["token_usage"]["total_tokens"] == 85
-    completed_state = json.loads((project_root / "20_chunking" / config.OPERATION_STATE_FILE_NAME).read_text(encoding="utf-8"))
+    completed_state = json.loads(
+        (project_root / "20_chunking" / config.OPERATION_STATE_FILE_NAME).read_text(encoding="utf-8")
+    )
     assert completed_state["status"] == "completed"
     assert completed_state["progress_current"] == 2

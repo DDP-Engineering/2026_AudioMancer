@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -167,13 +166,8 @@ def probe_profile(profile_payload: dict[str, object]) -> ProviderProbeResultPayl
         )
 
     discovered_model_ids = {model["id"] for model in discovered_models}
-    selected_model_valid = (
-        bool(selected_model_name)
-        and selected_model_name in discovered_model_ids
-    )
-    message = (
-        f"Connection successful. Discovered {len(discovered_models)} models."
-    )
+    selected_model_valid = bool(selected_model_name) and selected_model_name in discovered_model_ids
+    message = f"Connection successful. Discovered {len(discovered_models)} models."
     return _build_probe_result(
         success=True,
         message=message,
@@ -246,11 +240,7 @@ def _probe_ollama_models(
     for model_entry in model_entries:
         if not isinstance(model_entry, dict):
             continue
-        model_id = str(
-            model_entry.get("name")
-            or model_entry.get("model")
-            or ""
-        ).strip()
+        model_id = str(model_entry.get("name") or model_entry.get("model") or "").strip()
         if not model_id:
             continue
         discovered_models.append({"id": model_id, "label": model_id})

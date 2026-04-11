@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -21,7 +20,6 @@
 import pytest
 
 from audiomancer.services import import_service
-
 
 # PUBLIC API
 
@@ -99,7 +97,7 @@ def test_import_source_copies_file_and_records_metadata(tmp_path) -> None:
     payload = import_service.import_source(project_root, source_path)
 
     assert payload["stored_relative_path"] == "story.md"
-    assert payload["size_bytes"] == len("# Chapter 1".encode("utf-8"))
+    assert payload["size_bytes"] == len(b"# Chapter 1")
     assert payload["imported_at"]
     assert (project_root / "story.md").read_text(encoding="utf-8") == "# Chapter 1"
 

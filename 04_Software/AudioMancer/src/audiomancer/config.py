@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -186,8 +185,7 @@ SUPPORTED_LANGUAGES = ("en", "ro")
 DEFAULT_UI_TEXT_SCALE = "normal"
 
 # @brief Supported operator-selectable UI text-scale presets.
-UI_TEXT_SCALE_OPTIONS = ("very_small", "small",
-                         "normal", "large", "very_large")
+UI_TEXT_SCALE_OPTIONS = ("very_small", "small", "normal", "large", "very_large")
 
 # @brief Default flag controlling whether the app plays a completion beep.
 DEFAULT_PLAY_COMPLETION_BEEP = False

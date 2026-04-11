@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -23,12 +22,14 @@ from typing import TYPE_CHECKING
 from PySide6.QtWidgets import QMessageBox
 
 from audiomancer import config
-from audiomancer.services import ai_translation_service
-from audiomancer.services import deterministic_chunking_service
-from audiomancer.services import operation_runtime_service
-from audiomancer.services import project_workspace_service
-from audiomancer.services import text_cleanup_state_service
-from audiomancer.services import ui_state_service
+from audiomancer.services import (
+    ai_translation_service,
+    deterministic_chunking_service,
+    operation_runtime_service,
+    project_workspace_service,
+    text_cleanup_state_service,
+    ui_state_service,
+)
 from audiomancer.ui.controllers import misc_ui_controller
 
 if TYPE_CHECKING:
@@ -83,13 +84,15 @@ def handle_start_translation_requested(
         window,
         operation_name=ui_state_service.translate("ai_translation.start", current_language),
         initial_message=ui_state_service.translate("progress.ai_translation", current_language),
-        worker_callable=lambda project_root, manifest, progress_callback=None, cancel_requested=None: ai_translation_service.start_or_continue_translation(
-            project_root,
-            manifest,
-            profile_payload,
-            target_language,
-            progress_callback=progress_callback,
-            cancel_requested=cancel_requested,
+        worker_callable=lambda project_root, manifest, progress_callback=None, cancel_requested=None: (
+            ai_translation_service.start_or_continue_translation(
+                project_root,
+                manifest,
+                profile_payload,
+                target_language,
+                progress_callback=progress_callback,
+                cancel_requested=cancel_requested,
+            )
         ),
     )
 
@@ -129,14 +132,16 @@ def handle_retranslate_selected_requested(
         window,
         operation_name=ui_state_service.translate("ai_translation.retranslate", current_language),
         initial_message=ui_state_service.translate("progress.ai_translation_retranslate", current_language),
-        worker_callable=lambda project_root, manifest, progress_callback=None, cancel_requested=None: ai_translation_service.retranslate_chunk(
-            project_root,
-            manifest,
-            profile_payload,
-            target_language,
-            chunk_id,
-            progress_callback=progress_callback,
-            cancel_requested=cancel_requested,
+        worker_callable=lambda project_root, manifest, progress_callback=None, cancel_requested=None: (
+            ai_translation_service.retranslate_chunk(
+                project_root,
+                manifest,
+                profile_payload,
+                target_language,
+                chunk_id,
+                progress_callback=progress_callback,
+                cancel_requested=cancel_requested,
+            )
         ),
     )
 
@@ -278,11 +283,13 @@ def _start_operation(window: "MainWindow", operation_name: str, initial_message:
         result_payload = worker_callable(
             window._current_project_root,
             dict(window._current_manifest),
-            progress_callback=lambda current, total, percent, message, token_usage=None: misc_ui_controller.update_progress_dialog(
-                window,
-                percent,
-                message,
-                token_usage,
+            progress_callback=lambda current, total, percent, message, token_usage=None: (
+                misc_ui_controller.update_progress_dialog(
+                    window,
+                    percent,
+                    message,
+                    token_usage,
+                )
             ),
             cancel_requested=lambda: _is_cancel_requested(window),
         )
@@ -292,7 +299,9 @@ def _start_operation(window: "MainWindow", operation_name: str, initial_message:
         _sync_manifest_from_disk(window)
         misc_ui_controller.show_message(
             window,
-            ui_state_service.translate("status.operation_cancelled", ui_state_service.current_language_from_settings(window._settings_payload)),
+            ui_state_service.translate(
+                "status.operation_cancelled", ui_state_service.current_language_from_settings(window._settings_payload)
+            ),
         )
     except Exception as error:
         misc_ui_controller.update_progress_dialog(window, 100, str(error))
@@ -300,7 +309,9 @@ def _start_operation(window: "MainWindow", operation_name: str, initial_message:
         _sync_manifest_from_disk(window)
         QMessageBox.warning(
             window,
-            ui_state_service.translate("dialog.project_error_title", ui_state_service.current_language_from_settings(window._settings_payload)),
+            ui_state_service.translate(
+                "dialog.project_error_title", ui_state_service.current_language_from_settings(window._settings_payload)
+            ),
             str(error),
         )
     else:
@@ -308,7 +319,9 @@ def _start_operation(window: "MainWindow", operation_name: str, initial_message:
         _sync_manifest_after_translation(window, result_payload)
         misc_ui_controller.show_message(
             window,
-            ui_state_service.translate("status.text_translated", ui_state_service.current_language_from_settings(window._settings_payload)),
+            ui_state_service.translate(
+                "status.text_translated", ui_state_service.current_language_from_settings(window._settings_payload)
+            ),
         )
     finally:
         window._ai_translation_page.set_busy(False)

@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -37,17 +36,19 @@ def test_text_chunking_page_renders_chunks_and_selected_preview(qtbot) -> None:
     page.set_ai_profiles([("Profile One", "profile-1")], "profile-1")
     page.set_processing_state(
         cleaned_text="clean text",
-        chunks=[{
-            "chunk_id": "chunk-0001",
-            "sequence_index": 1,
-            "chapter_label": None,
-            "text": "Paragraph text",
-            "source_start_line": 1,
-            "source_end_line": 1,
-            "chunking_mode": "deterministic",
-            "semantic_strategy": None,
-            "scene_note": None,
-        }],
+        chunks=[
+            {
+                "chunk_id": "chunk-0001",
+                "sequence_index": 1,
+                "chapter_label": None,
+                "text": "Paragraph text",
+                "source_start_line": 1,
+                "source_end_line": 1,
+                "chunking_mode": "deterministic",
+                "semantic_strategy": None,
+                "scene_note": None,
+            }
+        ],
         notes=["Chunk artifact contains 1 chunks."],
         can_chunk=True,
     )

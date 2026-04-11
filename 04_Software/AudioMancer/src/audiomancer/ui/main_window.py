@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -34,21 +33,25 @@ from PySide6.QtWidgets import (
 )
 
 from audiomancer import config
-from audiomancer.services import ai_translation_state_service
-from audiomancer.services import character_discovery_state_service
-from audiomancer.services import home_presenter_service
-from audiomancer.services import settings_service
-from audiomancer.services import text_chunking_state_service
-from audiomancer.services import text_cleanup_state_service
-from audiomancer.services import ui_state_service
-from audiomancer.ui.controllers import ai_translation_ui_controller
-from audiomancer.ui.controllers import ai_settings_ui_controller
-from audiomancer.ui.controllers import characters_ui_controller
-from audiomancer.ui.controllers import home_ui_controller
-from audiomancer.ui.controllers import misc_ui_controller
-from audiomancer.ui.controllers import settings_ui_controller
-from audiomancer.ui.controllers import text_chunking_ui_controller
-from audiomancer.ui.controllers import text_cleanup_ui_controller
+from audiomancer.services import (
+    ai_translation_state_service,
+    character_discovery_state_service,
+    home_presenter_service,
+    settings_service,
+    text_chunking_state_service,
+    text_cleanup_state_service,
+    ui_state_service,
+)
+from audiomancer.ui.controllers import (
+    ai_settings_ui_controller,
+    ai_translation_ui_controller,
+    characters_ui_controller,
+    home_ui_controller,
+    misc_ui_controller,
+    settings_ui_controller,
+    text_chunking_ui_controller,
+    text_cleanup_ui_controller,
+)
 from audiomancer.ui.navigation_sidebar import NavigationSidebar
 from audiomancer.ui.operation_progress_dialog import OperationProgressDialog
 from audiomancer.ui.pages.ai_settings_page import AiSettingsPage
@@ -60,7 +63,6 @@ from audiomancer.ui.pages.placeholder_page import PlaceholderPage
 from audiomancer.ui.pages.settings_page import SettingsPage
 from audiomancer.ui.pages.text_chunking_page import TextChunkingPage
 from audiomancer.ui.pages.text_cleanup_page import TextCleanupPage
-
 
 # CONSTANTS
 
@@ -127,9 +129,7 @@ class MainWindow(QMainWindow):
         self._active_operation_name: str | None = None
         self._operation_cancel_requested = False
         self._settings_payload = (
-            dict(settings_payload)
-            if isinstance(settings_payload, dict)
-            else settings_service.load_settings()
+            dict(settings_payload) if isinstance(settings_payload, dict) else settings_service.load_settings()
         )
 
         self._toolbar = self._build_toolbar()
@@ -207,15 +207,9 @@ class MainWindow(QMainWindow):
         """
         self._current_project_root = project_root
         self._current_manifest = manifest
-        current_language = ui_state_service.current_language_from_settings(
-            self._settings_payload
-        )
-        display_name = (
-            None if manifest is None else str(manifest.get("display_name") or "")
-        )
-        stage_name = (
-            None if manifest is None else str(manifest.get("current_stage") or "")
-        )
+        current_language = ui_state_service.current_language_from_settings(self._settings_payload)
+        display_name = None if manifest is None else str(manifest.get("display_name") or "")
+        stage_name = None if manifest is None else str(manifest.get("current_stage") or "")
         source_name = home_presenter_service.source_document_name(manifest)
         self._home_page.set_project_state(
             display_name,
@@ -232,9 +226,7 @@ class MainWindow(QMainWindow):
         )
         self._text_cleanup_page.set_project_active(project_root is not None)
         self._text_cleanup_page.set_ai_profiles(
-            **text_cleanup_state_service.build_ai_cleanup_profile_state(
-                self._settings_payload
-            )
+            **text_cleanup_state_service.build_ai_cleanup_profile_state(self._settings_payload)
         )
         self._text_cleanup_page.set_processing_state(
             **text_cleanup_state_service.build_text_cleanup_state(
@@ -245,9 +237,7 @@ class MainWindow(QMainWindow):
         )
         self._text_chunking_page.set_project_active(project_root is not None)
         self._text_chunking_page.set_ai_profiles(
-            **text_chunking_state_service.build_ai_chunking_profile_state(
-                self._settings_payload
-            )
+            **text_chunking_state_service.build_ai_chunking_profile_state(self._settings_payload)
         )
         self._text_chunking_page.set_processing_state(
             **text_chunking_state_service.build_text_chunking_state(
@@ -364,12 +354,8 @@ class MainWindow(QMainWindow):
         self._action_open_project.triggered.connect(
             lambda _checked=False: home_ui_controller.handle_open_project_requested(self)
         )
-        self._action_help.triggered.connect(
-            lambda _checked=False: misc_ui_controller.show_help_placeholder(self)
-        )
-        self._action_about.triggered.connect(
-            lambda _checked=False: misc_ui_controller.show_about_dialog(self)
-        )
+        self._action_help.triggered.connect(lambda _checked=False: misc_ui_controller.show_help_placeholder(self))
+        self._action_about.triggered.connect(lambda _checked=False: misc_ui_controller.show_about_dialog(self))
         return toolbar
 
     def _build_pages(self) -> None:
@@ -381,9 +367,7 @@ class MainWindow(QMainWindow):
         @date       2026-04-07
         @version    0.12.0
         """
-        current_language = ui_state_service.current_language_from_settings(
-            self._settings_payload
-        )
+        current_language = ui_state_service.current_language_from_settings(self._settings_payload)
         home_page = HomeProjectPage(self)
         self._home_page = home_page
         home_page.set_project_state(
@@ -393,12 +377,8 @@ class MainWindow(QMainWindow):
         )
         home_page.set_source_summary(None)
         home_page.set_source_locked(False, None)
-        home_page.set_stage_statuses(
-            home_presenter_service.build_stage_statuses(None, current_language)
-        )
-        home_page.import_requested.connect(
-            lambda: home_ui_controller.handle_import_source_requested(self)
-        )
+        home_page.set_stage_statuses(home_presenter_service.build_stage_statuses(None, current_language))
+        home_page.import_requested.connect(lambda: home_ui_controller.handle_import_source_requested(self))
 
         self._text_cleanup_page = TextCleanupPage(self)
         self._text_cleanup_page.extract_requested.connect(
@@ -415,9 +395,7 @@ class MainWindow(QMainWindow):
         )
         self._text_chunking_page = TextChunkingPage(self)
         self._text_chunking_page.chunk_requested.connect(
-            lambda: text_chunking_ui_controller.handle_deterministic_chunking_requested(
-                self
-            )
+            lambda: text_chunking_ui_controller.handle_deterministic_chunking_requested(self)
         )
         self._text_chunking_page.ai_chunk_requested.connect(
             lambda profile_id, strategy: text_chunking_ui_controller.handle_ai_chunking_requested(
@@ -447,11 +425,13 @@ class MainWindow(QMainWindow):
             )
         )
         self._ai_translation_page.retranslate_selected_requested.connect(
-            lambda profile_id, target_language, chunk_id: ai_translation_ui_controller.handle_retranslate_selected_requested(
-                self,
-                profile_id,
-                target_language,
-                chunk_id,
+            lambda profile_id, target_language, chunk_id: (
+                ai_translation_ui_controller.handle_retranslate_selected_requested(
+                    self,
+                    profile_id,
+                    target_language,
+                    chunk_id,
+                )
             )
         )
         self._ai_translation_page.translated_text_changed.connect(
@@ -538,14 +518,10 @@ class MainWindow(QMainWindow):
         @date       2026-04-06
         @version    0.5.0
         """
-        current_language = ui_state_service.current_language_from_settings(
-            self._settings_payload
-        )
+        current_language = ui_state_service.current_language_from_settings(self._settings_payload)
 
         self._settings_dialog = QDialog(self)
-        self._settings_dialog.setWindowTitle(
-            ui_state_service.translate("dialog.settings_title", current_language)
-        )
+        self._settings_dialog.setWindowTitle(ui_state_service.translate("dialog.settings_title", current_language))
         self._settings_dialog.resize(680, 560)
         settings_layout = QVBoxLayout(self._settings_dialog)
         self._settings_page = SettingsPage(self._settings_dialog)
@@ -566,9 +542,7 @@ class MainWindow(QMainWindow):
         self._ai_settings_page._connect_button.clicked.connect(
             lambda _checked=False: ai_settings_ui_controller.connect_ai_profile_from_dialog(self)
         )
-        self._ai_settings_page._cancel_button.clicked.connect(
-            self._ai_settings_dialog.close
-        )
+        self._ai_settings_page._cancel_button.clicked.connect(self._ai_settings_dialog.close)
         self._ai_settings_page._save_button.clicked.connect(
             lambda _checked=False: ai_settings_ui_controller.save_ai_settings_from_dialog(self)
         )

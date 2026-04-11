@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -19,15 +18,16 @@
 
 # IMPORTS
 
-import json
-import logging
-import sys
-import time
+from collections.abc import Callable
 from datetime import datetime, timedelta
 from functools import wraps
 from inspect import signature
+import json
+import logging
 from pathlib import Path
-from typing import Any, Callable, TypeVar
+import sys
+import time
+from typing import Any, TypeVar
 
 from .. import config
 
@@ -36,10 +36,7 @@ from .. import config
 # @brief Supported textual log-level names accepted by the logging service.
 _VALID_LEVEL_NAMES = set(config.LOG_LEVEL_OPTIONS)
 # @brief Default human-readable log-line format used by the text formatter.
-_TEXT_FORMAT = (
-    "%(asctime)s | %(levelname)-8s | %(name)s | %(func_name)s | "
-    "%(event)s | %(message)s"
-)
+_TEXT_FORMAT = "%(asctime)s | %(levelname)-8s | %(name)s | %(func_name)s | %(event)s | %(message)s"
 # @brief Maximum serialized argument/result length recorded by trace logging.
 _TRACE_VALUE_MAX_LENGTH = 240
 
@@ -143,10 +140,7 @@ def _collect_parameters(
     """
     try:
         bound_arguments = signature(function).bind_partial(*args, **kwargs)
-        return {
-            name: _safe_value(value)
-            for name, value in bound_arguments.arguments.items()
-        }
+        return {name: _safe_value(value) for name, value in bound_arguments.arguments.items()}
     except Exception:
         return {
             "args": _safe_value(args),
@@ -247,11 +241,11 @@ class _JsonFormatter(logging.Formatter):
             "message": record.getMessage(),
         }
         if hasattr(record, "params"):
-            payload["params"] = getattr(record, "params")
+            payload["params"] = record.params
         if hasattr(record, "result"):
-            payload["result"] = getattr(record, "result")
+            payload["result"] = record.result
         if hasattr(record, "duration_ms"):
-            payload["duration_ms"] = getattr(record, "duration_ms")
+            payload["duration_ms"] = record.duration_ms
         return json.dumps(payload, ensure_ascii=True)
 
 

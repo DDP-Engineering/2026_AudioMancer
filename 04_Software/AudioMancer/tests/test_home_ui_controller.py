@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -20,7 +19,6 @@
 
 from audiomancer.ui.controllers import home_ui_controller
 from audiomancer.ui.main_window import MainWindow
-
 
 # PUBLIC API
 
@@ -52,16 +50,18 @@ def test_home_ui_controller_creates_and_activates_project(
         lambda *args, **kwargs: ("ControllerProject", True),
     )
 
-    window = MainWindow(settings_payload={
-        "language": "en",
-        "ui_text_scale": "normal",
-        "play_completion_beep": False,
-        "llm_profiles": [],
-        "default_ai_cleanup_profile_id": None,
-        "default_ai_chunking_profile_id": None,
-        "default_ai_chunking_strategy": "paragraph",
-        "default_character_extraction_profile_id": None,
-    })
+    window = MainWindow(
+        settings_payload={
+            "language": "en",
+            "ui_text_scale": "normal",
+            "play_completion_beep": False,
+            "llm_profiles": [],
+            "default_ai_cleanup_profile_id": None,
+            "default_ai_chunking_profile_id": None,
+            "default_ai_chunking_strategy": "paragraph",
+            "default_character_extraction_profile_id": None,
+        }
+    )
     qtbot.addWidget(window)
 
     home_ui_controller.handle_new_project_requested(window)

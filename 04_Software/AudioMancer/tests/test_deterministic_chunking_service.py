@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -23,9 +22,7 @@ import json
 import pytest
 
 from audiomancer import config
-from audiomancer.services import deterministic_chunking_service
-from audiomancer.services import operation_runtime_service
-from audiomancer.services import project_workspace_service
+from audiomancer.services import deterministic_chunking_service, operation_runtime_service, project_workspace_service
 
 
 def test_chunking_writes_runtime_artifacts_and_detects_chapters(tmp_path) -> None:
@@ -200,38 +197,46 @@ def test_chunking_resumes_after_interruption(tmp_path) -> None:
     chunk_root = project_root / "20_chunking"
     chunk_root.mkdir(exist_ok=True)
     (chunk_root / config.CHUNK_ARTIFACT_FILE_NAME).write_text(
-        json.dumps([
-            {
-                "chunk_id": "chunk-0001",
-                "sequence_index": 1,
-                "chapter_label": None,
-                "text": "Paragraph one.",
-                "source_start_line": 1,
-                "source_end_line": 1,
-                "chunking_mode": "deterministic",
-                "semantic_strategy": None,
-                "scene_note": None,
-            }
-        ], indent=2) + "\n",
+        json.dumps(
+            [
+                {
+                    "chunk_id": "chunk-0001",
+                    "sequence_index": 1,
+                    "chapter_label": None,
+                    "text": "Paragraph one.",
+                    "source_start_line": 1,
+                    "source_end_line": 1,
+                    "chunking_mode": "deterministic",
+                    "semantic_strategy": None,
+                    "scene_note": None,
+                }
+            ],
+            indent=2,
+        )
+        + "\n",
         encoding="utf-8",
     )
     (chunk_root / config.OPERATION_STATE_FILE_NAME).write_text(
-        json.dumps({
-            "folder_relative_path": "20_chunking",
-            "status": "running",
-            "input_paths": [f"20_chunking/input_story.txt"],
-            "output_paths": [f"20_chunking/{config.CHUNK_ARTIFACT_FILE_NAME}"],
-            "artifact_paths": [],
-            "progress_current": 1,
-            "progress_total": 2,
-            "mode": "deterministic",
-            "started_at": "2026-04-07T12:00:00+00:00",
-            "completed_at": None,
-            "updated_at": "2026-04-07T12:01:00+00:00",
-            "warning_count": 0,
-            "metadata": {"warnings": [], "chunk_count": 1, "detected_chapter_count": 0},
-            "resume_checkpoint": {"next_chunk_index": 1},
-        }, indent=2) + "\n",
+        json.dumps(
+            {
+                "folder_relative_path": "20_chunking",
+                "status": "running",
+                "input_paths": ["20_chunking/input_story.txt"],
+                "output_paths": [f"20_chunking/{config.CHUNK_ARTIFACT_FILE_NAME}"],
+                "artifact_paths": [],
+                "progress_current": 1,
+                "progress_total": 2,
+                "mode": "deterministic",
+                "started_at": "2026-04-07T12:00:00+00:00",
+                "completed_at": None,
+                "updated_at": "2026-04-07T12:01:00+00:00",
+                "warning_count": 0,
+                "metadata": {"warnings": [], "chunk_count": 1, "detected_chapter_count": 0},
+                "resume_checkpoint": {"next_chunk_index": 1},
+            },
+            indent=2,
+        )
+        + "\n",
         encoding="utf-8",
     )
 

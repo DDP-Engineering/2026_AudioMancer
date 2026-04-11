@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -22,7 +21,6 @@ from PySide6.QtCore import Signal
 from PySide6.QtWidgets import QLabel, QProgressBar, QPushButton, QStatusBar
 
 from audiomancer.services import ui_state_service
-
 
 # PUBLIC API
 
@@ -76,9 +74,7 @@ class AudiomancerStatusBar(QStatusBar):
         @date       2026-04-05
         @version    0.2.0
         """
-        stage_text = stage_name or ui_state_service.translate(
-            "status.idle", self._current_language
-        )
+        stage_text = stage_name or ui_state_service.translate("status.idle", self._current_language)
         self._stage_label.setText(
             f"{ui_state_service.translate('status.stage_prefix', self._current_language)}: {stage_text}"
         )
@@ -94,16 +90,12 @@ class AudiomancerStatusBar(QStatusBar):
         @version    0.2.0
         """
         self._current_language = language
-        self._stop_button.setText(
-            ui_state_service.translate("status.stop_ai", language)
-        )
+        self._stop_button.setText(ui_state_service.translate("status.stop_ai", language))
         stage_text = self._stage_label.text().split(":", maxsplit=1)
         current_stage = stage_text[1].strip() if len(stage_text) == 2 else ""
         if current_stage in ("idle", "inactiva"):
             current_stage = ui_state_service.translate("status.idle", language)
-        self._stage_label.setText(
-            f"{ui_state_service.translate('status.stage_prefix', language)}: {current_stage}"
-        )
+        self._stage_label.setText(f"{ui_state_service.translate('status.stage_prefix', language)}: {current_stage}")
 
 
 # END OF FILE

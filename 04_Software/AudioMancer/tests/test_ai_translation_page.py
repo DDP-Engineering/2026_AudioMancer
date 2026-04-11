@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 @file test_ai_translation_page.py
 @brief Focused Qt tests for the AudioMancer AI translation page.
@@ -21,18 +20,20 @@ def test_ai_translation_page_locks_language_when_translation_exists(qtbot) -> No
     page.set_ai_profiles([("Profile One", "profile-1")], "profile-1")
     page.set_translation_state(
         source_chunks=[{"chunk_id": "chunk-0001", "sequence_index": 1, "text": "Original"}],
-        translated_chunks=[{
-            "chunk_id": "chunk-0001",
-            "sequence_index": 1,
-            "source_text": "Original",
-            "translated_text": "Translated",
-            "approved": False,
-            "approved_at": None,
-            "translated_at": "2026-04-07T12:00:00+00:00",
-            "translation_profile_id": "profile-1",
-            "target_language": "ro",
-            "status": ai_translation_service.TRANSLATED_CHUNK_STATUS_TRANSLATED,
-        }],
+        translated_chunks=[
+            {
+                "chunk_id": "chunk-0001",
+                "sequence_index": 1,
+                "source_text": "Original",
+                "translated_text": "Translated",
+                "approved": False,
+                "approved_at": None,
+                "translated_at": "2026-04-07T12:00:00+00:00",
+                "translation_profile_id": "profile-1",
+                "target_language": "ro",
+                "status": ai_translation_service.TRANSLATED_CHUNK_STATUS_TRANSLATED,
+            }
+        ],
         notes=["Translated chunks: 1/1."],
         target_language="ro",
         selected_profile_id="profile-1",
@@ -54,18 +55,20 @@ def test_ai_translation_page_renders_selected_chunk_and_review_actions(qtbot) ->
     page.set_ai_profiles([("Profile One", "profile-1")], "profile-1")
     page.set_translation_state(
         source_chunks=[{"chunk_id": "chunk-0001", "sequence_index": 1, "text": "Original text"}],
-        translated_chunks=[{
-            "chunk_id": "chunk-0001",
-            "sequence_index": 1,
-            "source_text": "Original text",
-            "translated_text": "Translated text",
-            "approved": False,
-            "approved_at": None,
-            "translated_at": "2026-04-07T12:00:00+00:00",
-            "translation_profile_id": "profile-1",
-            "target_language": "ro",
-            "status": ai_translation_service.TRANSLATED_CHUNK_STATUS_TRANSLATED,
-        }],
+        translated_chunks=[
+            {
+                "chunk_id": "chunk-0001",
+                "sequence_index": 1,
+                "source_text": "Original text",
+                "translated_text": "Translated text",
+                "approved": False,
+                "approved_at": None,
+                "translated_at": "2026-04-07T12:00:00+00:00",
+                "translation_profile_id": "profile-1",
+                "target_language": "ro",
+                "status": ai_translation_service.TRANSLATED_CHUNK_STATUS_TRANSLATED,
+            }
+        ],
         notes=["Translated chunks: 1/1."],
         target_language="ro",
         selected_profile_id="profile-1",
@@ -92,18 +95,20 @@ def test_ai_translation_page_edit_marks_selected_chunk_unapproved(qtbot) -> None
     page.set_ai_profiles([("Profile One", "profile-1")], "profile-1")
     page.set_translation_state(
         source_chunks=[{"chunk_id": "chunk-0001", "sequence_index": 1, "text": "Original text"}],
-        translated_chunks=[{
-            "chunk_id": "chunk-0001",
-            "sequence_index": 1,
-            "source_text": "Original text",
-            "translated_text": "Translated text",
-            "approved": True,
-            "approved_at": "2026-04-07T12:01:00+00:00",
-            "translated_at": "2026-04-07T12:00:00+00:00",
-            "translation_profile_id": "profile-1",
-            "target_language": "ro",
-            "status": ai_translation_service.TRANSLATED_CHUNK_STATUS_APPROVED,
-        }],
+        translated_chunks=[
+            {
+                "chunk_id": "chunk-0001",
+                "sequence_index": 1,
+                "source_text": "Original text",
+                "translated_text": "Translated text",
+                "approved": True,
+                "approved_at": "2026-04-07T12:01:00+00:00",
+                "translated_at": "2026-04-07T12:00:00+00:00",
+                "translation_profile_id": "profile-1",
+                "target_language": "ro",
+                "status": ai_translation_service.TRANSLATED_CHUNK_STATUS_APPROVED,
+            }
+        ],
         notes=["Translated chunks: 1/1."],
         target_language="ro",
         selected_profile_id="profile-1",

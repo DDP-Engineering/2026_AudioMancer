@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -21,14 +20,15 @@
 from pathlib import Path
 
 from audiomancer import config
-from audiomancer.services import deterministic_cleanup_service
-from audiomancer.services import home_presenter_service
-from audiomancer.services import operation_runtime_service
-from audiomancer.services import project_workspace_service
-from audiomancer.services import text_extraction_service
-from audiomancer.services import token_usage_service
-from audiomancer.services import ui_state_service
-
+from audiomancer.services import (
+    deterministic_cleanup_service,
+    home_presenter_service,
+    operation_runtime_service,
+    project_workspace_service,
+    text_extraction_service,
+    token_usage_service,
+    ui_state_service,
+)
 
 # PUBLIC API
 
@@ -53,9 +53,7 @@ def build_text_cleanup_state(
         return {
             "extracted_text": None,
             "cleaned_text": None,
-            "notes": [
-                ui_state_service.translate("text_cleanup.note_no_project", language)
-            ],
+            "notes": [ui_state_service.translate("text_cleanup.note_no_project", language)],
             "can_extract": False,
             "can_clean": False,
             "can_ai_clean": False,
@@ -63,26 +61,16 @@ def build_text_cleanup_state(
 
     extracted_text = read_optional_project_text(
         project_root,
-        home_presenter_service.optional_manifest_string(
-            manifest.get("extracted_text_relative_path")
-        ),
+        home_presenter_service.optional_manifest_string(manifest.get("extracted_text_relative_path")),
     )
-    extraction_report_payload = text_extraction_service.load_extraction_report(
-        project_root
-    )
-    extraction_operation_state = text_extraction_service.load_operation_state(
-        project_root
-    )
+    extraction_report_payload = text_extraction_service.load_extraction_report(project_root)
+    extraction_operation_state = text_extraction_service.load_operation_state(project_root)
     cleaned_text = read_optional_project_text(
         project_root,
         f"{config.CLEANUP_FOLDER_NAME}/{config.CLEANED_TEXT_FILE_NAME}",
     )
-    cleanup_report_payload = deterministic_cleanup_service.load_cleanup_report(
-        project_root
-    )
-    cleanup_operation_state = deterministic_cleanup_service.load_operation_state(
-        project_root
-    )
+    cleanup_report_payload = deterministic_cleanup_service.load_cleanup_report(project_root)
+    cleanup_operation_state = deterministic_cleanup_service.load_operation_state(project_root)
     return {
         "extracted_text": extracted_text,
         "cleaned_text": cleaned_text,
@@ -132,9 +120,7 @@ def build_ai_cleanup_profile_state(
         enabled_ids.append(profile_id)
     preferred_profile_id = settings_payload.get("default_ai_cleanup_profile_id")
     selected_profile_id = (
-        str(preferred_profile_id)
-        if preferred_profile_id in enabled_ids
-        else (enabled_ids[0] if enabled_ids else None)
+        str(preferred_profile_id) if preferred_profile_id in enabled_ids else (enabled_ids[0] if enabled_ids else None)
     )
     return {
         "entries": entries,
@@ -190,9 +176,7 @@ def build_text_cleanup_notes(
         warnings = list(extraction_report_payload.get("warnings", []))
         notes.extend(str(item) for item in warnings)
         if extraction_status == "completed":
-            notes.append(
-                ui_state_service.translate("text_cleanup.note_rerun_warning", language)
-            )
+            notes.append(ui_state_service.translate("text_cleanup.note_rerun_warning", language))
     elif extraction_status in {"running", "failed"}:
         progress_current = (
             0
@@ -251,11 +235,7 @@ def build_text_cleanup_notes(
                     language,
                 )
             )
-        cleanup_warnings = [
-            str(item)
-            for item in list(cleanup_report_payload.get("warnings", []))
-            if str(item).strip()
-        ]
+        cleanup_warnings = [str(item) for item in list(cleanup_report_payload.get("warnings", [])) if str(item).strip()]
         if cleanup_mode == "ai_assisted" and cleanup_warnings:
             notes.append(
                 ui_state_service.translate(
@@ -285,14 +265,10 @@ def build_text_cleanup_notes(
             else int(cleanup_operation_state.get("progress_total", 0))
         )
         running_mode = (
-            None
-            if not isinstance(cleanup_operation_state, dict)
-            else str(cleanup_operation_state.get("mode") or "")
+            None if not isinstance(cleanup_operation_state, dict) else str(cleanup_operation_state.get("mode") or "")
         )
         ready_key = (
-            "text_cleanup.note_ai_cleanup_ready"
-            if running_mode == "ai_assisted"
-            else "text_cleanup.note_cleanup_ready"
+            "text_cleanup.note_ai_cleanup_ready" if running_mode == "ai_assisted" else "text_cleanup.note_cleanup_ready"
         )
         resume_key = (
             "text_cleanup.note_ai_cleanup_resume"
@@ -340,16 +316,10 @@ def _build_token_usage_notes(
                 total_tokens=format(int(token_usage["total_tokens"]), ","),
             )
         ]
-    if (
-        isinstance(report_payload, dict)
-        and "token_usage" in report_payload
-    ) or (
-        isinstance(metadata, dict)
-        and "token_usage" in metadata
+    if (isinstance(report_payload, dict) and "token_usage" in report_payload) or (
+        isinstance(metadata, dict) and "token_usage" in metadata
     ):
-        return [
-            ui_state_service.translate("ai.note_token_usage_unavailable", language)
-        ]
+        return [ui_state_service.translate("ai.note_token_usage_unavailable", language)]
     return []
 
 

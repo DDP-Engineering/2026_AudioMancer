@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -131,20 +130,11 @@ def test_chat_json_can_cancel_while_waiting_for_model_response(monkeypatch) -> N
     @date       2026-04-06
     @version    0.1.0
     """
+
     def _slow_request(_profile_payload, _request_payload):
         time.sleep(0.3)
         return (
-            {
-                "choices": [
-                    {
-                        "message": {
-                            "content": (
-                                '{"results":[{"unit_id":"unit-0001","label":"story"}]}'
-                            )
-                        }
-                    }
-                ]
-            },
+            {"choices": [{"message": {"content": ('{"results":[{"unit_id":"unit-0001","label":"story"}]}')}}]},
             '{"choices":[{"message":{"content":"{\\"results\\":[{\\"unit_id\\":\\"unit-0001\\",\\"label\\":\\"story\\"}]}"}}]}',
         )
 
@@ -200,12 +190,10 @@ def test_chat_json_retries_with_max_completion_tokens_when_required(
                 "Bad Request",
                 hdrs=None,
                 fp=io.BytesIO(
-                    (
-                        b'{"error":{"message":"Unsupported parameter: '
-                        b'\'max_tokens\' is not supported with this model. '
-                        b'Use \'max_completion_tokens\' instead.",'
-                        b'"param":"max_tokens","code":"unsupported_parameter"}}'
-                    )
+                    b'{"error":{"message":"Unsupported parameter: '
+                    b"'max_tokens' is not supported with this model. "
+                    b"Use 'max_completion_tokens' instead.\","
+                    b'"param":"max_tokens","code":"unsupported_parameter"}}'
                 ),
             )
         return _FakeResponse(
@@ -251,9 +239,7 @@ def test_chat_json_repairs_invalid_backslash_escapes_in_model_output(
     monkeypatch.setattr(
         llm_provider_service.request,
         "urlopen",
-        lambda *_args, **_kwargs: _FakeResponse(
-            json.dumps({"choices": [{"message": {"content": malformed_content}}]})
-        ),
+        lambda *_args, **_kwargs: _FakeResponse(json.dumps({"choices": [{"message": {"content": malformed_content}}]})),
     )
 
     result = llm_provider_service.chat_json(
@@ -291,30 +277,10 @@ def test_chat_json_repairs_non_json_output_with_followup_request(
         request_bodies.append(http_request.data.decode("utf-8"))
         if len(request_bodies) == 1:
             return _FakeResponse(
-                json.dumps(
-                    {
-                        "choices": [
-                            {
-                                "message": {
-                                    "content": "Translated text: Hello from the model."
-                                }
-                            }
-                        ]
-                    }
-                )
+                json.dumps({"choices": [{"message": {"content": "Translated text: Hello from the model."}}]})
             )
         return _FakeResponse(
-            json.dumps(
-                {
-                    "choices": [
-                        {
-                            "message": {
-                                "content": '{"translated_text":"Hello from the model."}'
-                            }
-                        }
-                    ]
-                }
-            )
+            json.dumps({"choices": [{"message": {"content": '{"translated_text":"Hello from the model."}'}}]})
         )
 
     monkeypatch.setattr(llm_provider_service.request, "urlopen", _fake_urlopen)
@@ -354,9 +320,7 @@ def test_chat_json_normalizes_provider_usage(monkeypatch) -> None:
         lambda *_args, **_kwargs: _FakeResponse(
             json.dumps(
                 {
-                    "choices": [
-                        {"message": {"content": '{"results":[{"unit_id":"unit-0001"}]}'}}
-                    ],
+                    "choices": [{"message": {"content": '{"results":[{"unit_id":"unit-0001"}]}'}}],
                     "usage": {
                         "prompt_tokens": 123,
                         "completion_tokens": 45,
@@ -408,12 +372,8 @@ def test_chat_json_logs_raw_message_content_on_parse_failure(
     def _fake_urlopen(*_args, **_kwargs):
         response_counter["count"] += 1
         if response_counter["count"] == 1:
-            return _FakeResponse(
-                json.dumps({"choices": [{"message": {"content": "not valid json"}}]})
-            )
-        return _FakeResponse(
-            json.dumps({"choices": [{"message": {"content": "still not valid json"}}]})
-        )
+            return _FakeResponse(json.dumps({"choices": [{"message": {"content": "not valid json"}}]}))
+        return _FakeResponse(json.dumps({"choices": [{"message": {"content": "still not valid json"}}]}))
 
     monkeypatch.setattr(llm_provider_service.request, "urlopen", _fake_urlopen)
 
