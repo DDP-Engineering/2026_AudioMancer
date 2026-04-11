@@ -46,5 +46,11 @@ dist/
 07_Delivery/.build_*/
 07_Delivery/releases/
 
+# One-off test folders under 09_Others
+09_Others/Test*/
+
 # Runtime logs
 04_Software/AudioMancer/Logs/
+04_Software/AudioMancer_Voice_Runtime/models/
+04_Software/AudioMancer_Voice_Runtime/runtime_output/
+04_Software/AudioMancer_Voice_Runtime/runtime_cache/

@@ -18,8 +18,8 @@ Repository scaffold for the AudioMancer project.
 - `07_Delivery/`
 - `09_Others/`
 
-## Application Location
+## Software Locations
 
-The initial Python desktop application scaffold lives under:
+The software subtrees currently live under:
 
 - `04_Software/AudioMancer/`

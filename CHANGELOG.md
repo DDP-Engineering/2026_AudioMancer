@@ -14,6 +14,20 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 
+- added repository ignore rules for one-off `09_Others/Test*/` folders so transient analysis outputs stay out of version control
+- package version updated to `0.15.1`
+
+### Fixed
+
+## [0.15.1] - 2026-04-11
+
+### Added
+
+### Changed
+
+- added scoped ignore rules for `09_Others/Test*/` folders
+- package version updated to `0.15.1`
+
 ### Fixed
 
 ## [0.15.0] - 2026-04-11
