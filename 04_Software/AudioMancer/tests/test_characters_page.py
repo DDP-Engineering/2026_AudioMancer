@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -14,6 +15,8 @@
 @date 2026-04-08
 @version 0.2.0
 """
+
+# IMPORTS
 
 from audiomancer.services import character_discovery_service
 from audiomancer.ui.pages.characters_page import CharactersPage

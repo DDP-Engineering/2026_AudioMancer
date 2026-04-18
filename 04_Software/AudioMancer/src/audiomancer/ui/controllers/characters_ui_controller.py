@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -15,6 +16,8 @@
 @date 2026-04-11
 @version 0.5.0
 """
+
+# IMPORTS
 
 from typing import TYPE_CHECKING
 
@@ -838,3 +841,6 @@ def _is_cancel_requested(window: "MainWindow") -> bool:
     @version    0.1.0
     """
     return bool(window._operation_cancel_requested)
+
+
+# END OF FILE

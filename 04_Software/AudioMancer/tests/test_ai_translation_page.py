@@ -1,4 +1,11 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+# -----------------------------------------------------------------------------
+# Copyright (c) 2026 DDP Engineering
+# This software is licensed under the GNU Affero General Public License v3.0
+# (AGPL-3.0) with additional Non-Commercial restriction.
+# See the LICENSE.txt and LICENSE_NC.txt files for full license details.
+# -----------------------------------------------------------------------------
 """
 @file test_ai_translation_page.py
 @brief Focused Qt tests for the AudioMancer AI translation page.
@@ -8,6 +15,8 @@
 @date 2026-04-07
 @version 0.1.0
 """
+
+# IMPORTS
 
 from audiomancer.services import ai_translation_service
 from audiomancer.ui.pages.ai_translation_page import AiTranslationPage
@@ -122,3 +131,6 @@ def test_ai_translation_page_edit_marks_selected_chunk_unapproved(qtbot) -> None
 
     assert emitted == [("chunk-0001", "Edited translation")]
     assert page._approve_selected_button.isEnabled() is True
+
+
+# END OF FILE

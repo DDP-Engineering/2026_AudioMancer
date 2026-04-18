@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -157,3 +158,6 @@ def test_probe_profile_maps_backend_failures(monkeypatch) -> None:
     assert result["success"] is False
     assert result["discovered_model_count"] == 0
     assert "connection refused" in str(result["message"])
+
+
+# END OF FILE

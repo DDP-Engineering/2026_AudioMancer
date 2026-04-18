@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -297,3 +298,6 @@ def test_ai_chunking_resumes_from_saved_window_checkpoint(tmp_path, monkeypatch)
     )
     assert completed_state["status"] == "completed"
     assert completed_state["progress_current"] == 2
+
+
+# END OF FILE

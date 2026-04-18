@@ -1,4 +1,11 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+# -----------------------------------------------------------------------------
+# Copyright (c) 2026 DDP Engineering
+# This software is licensed under the GNU Affero General Public License v3.0
+# (AGPL-3.0) with additional Non-Commercial restriction.
+# See the LICENSE.txt and LICENSE_NC.txt files for full license details.
+# -----------------------------------------------------------------------------
 """
 @file test_ai_translation_ui_controller.py
 @brief AI Translation UI controller tests for AudioMancer.
@@ -8,6 +15,8 @@
 @date 2026-04-07
 @version 0.1.0
 """
+
+# IMPORTS
 
 import json
 
@@ -136,3 +145,6 @@ def _build_window(qtbot, project_root):
     qtbot.addWidget(window)
     window._activate_project(project_root, project_workspace_service.load_manifest(project_root))
     return window
+
+
+# END OF FILE

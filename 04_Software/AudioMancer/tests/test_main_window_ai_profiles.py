@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -107,3 +108,6 @@ def test_main_window_connect_ai_profile_shows_failure_popup(monkeypatch, qtbot, 
 
     assert popup_calls
     assert popup_calls[0][2] == ("Connection failed.\nConnection failed: request timed out.")
+
+
+# END OF FILE

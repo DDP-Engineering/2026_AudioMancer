@@ -1,4 +1,11 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+# -----------------------------------------------------------------------------
+# Copyright (c) 2026 DDP Engineering
+# This software is licensed under the GNU Affero General Public License v3.0
+# (AGPL-3.0) with additional Non-Commercial restriction.
+# See the LICENSE.txt and LICENSE_NC.txt files for full license details.
+# -----------------------------------------------------------------------------
 """
 @file test_ai_translation_service.py
 @brief Focused translation-service tests for AudioMancer.
@@ -8,6 +15,8 @@
 @date 2026-04-07
 @version 0.2.0
 """
+
+# IMPORTS
 
 import json
 
@@ -244,3 +253,6 @@ def _profile_payload() -> dict[str, object]:
         "supports_structured_output": False,
         "enabled": True,
     }
+
+
+# END OF FILE
