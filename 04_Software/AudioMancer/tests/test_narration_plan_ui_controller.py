@@ -12,7 +12,7 @@
          page-entry warnings for the Narration Plan workflow.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-20
-@version 1.2.0
+@version 1.2.1
 """
 
 # IMPORTS
@@ -75,7 +75,7 @@ def test_narration_plan_ui_controller_page_activation_warns_when_narrator_sample
     monkeypatch, qtbot, tmp_path
 ) -> None:
     """
-    @brief      Verify entering the page warns once when the selected narrator sample is missing.
+    @brief      Verify entering the page warns once when the selected Narator Voice sample is missing.
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @param[in]  qtbot Qt test helper fixture.
     @param[in]  tmp_path Pytest temporary directory fixture.
@@ -83,7 +83,7 @@ def test_narration_plan_ui_controller_page_activation_warns_when_narrator_sample
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-20
-    @version    1.1.0
+    @version    1.1.1
     """
     project_root = _create_project_with_character_and_selected_narrator(
         tmp_path,
@@ -295,7 +295,7 @@ def _create_project_with_character_and_selected_narrator(
                 "source_model_id": "qwen-custom",
                 "language": "en",
             },
-            "Narrator sample ready.",
+            "Narator voice sample ready.",
             b"RIFF-narrator",
         )
     narrator_definition_service.select_narrator_profile(project_root, narrator_profile["profile_id"], "en")

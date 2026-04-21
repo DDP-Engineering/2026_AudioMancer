@@ -174,7 +174,7 @@ Same-narrator copied sample metadata uses:
 
 ## 7. Workflow Integration
 
-This workflow sits immediately after `Narrator Definition` in the current
+This workflow sits immediately after `Narator Voice` in the current
 stage order.
 
 Upstream integrations:
@@ -267,7 +267,7 @@ uv run ruff format <changed_python_files>
 ## 10. Limitations And Future Work
 
 - long-form generation is still out of scope
-- narrator prompt editing remains on the Narrator page only
+- narrator prompt editing remains on the Narator Voice page only
 - older projects without `voice_definition_prompt` still rely on the legacy
   fallback builder until Character Discovery is rerun or the character is
   edited and saved

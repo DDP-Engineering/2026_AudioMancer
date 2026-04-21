@@ -10,6 +10,24 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.17.1] - 2026-04-21
+
+### Added
+
+- added Windows and Ubuntu release packaging scripts that assemble self-contained zip archives under `07_Delivery/` with operating-system and version naming
+- added release documentation for the packaging scripts and delivery-folder artifact contract
+
+### Changed
+
+- renamed the former narrator page surface to `Narator Voice`, including page id, page class, UI controller, translation keys, user-facing labels, tests, README references, and software documentation
+- updated Narration Plan narrator-target labels and missing-sample guidance to point operators to the `Narator Voice` page
+- changed packaging scripts to read the release version from `04_Software/AudioMancer/pyproject.toml` and to skip application test execution during package assembly
+- package version updated to `0.17.1`
+
+### Fixed
+
+- fixed stale Narrator page references in application docs, component docs, focused UI tests, and narration-plan warnings after the page rename
+
 ## [0.17.0] - 2026-04-21
 
 ### Added

@@ -8,11 +8,11 @@
 """
 @file test_narration_plan_page.py
 @brief Narration Plan page tests for AudioMancer.
-@details Verifies preview-only narrator behavior, explicit edit mode, and
+@details Verifies preview-only Narator Voice behavior, explicit edit mode, and
          bottom status rendering for the Narration Plan page.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-20
-@version 1.3.0
+@version 1.3.1
 """
 
 # IMPORTS
@@ -22,13 +22,13 @@ from audiomancer.ui.pages.narration_plan_page import NarrationPlanPage
 
 def test_narration_plan_page_narrator_target_is_preview_only(qtbot) -> None:
     """
-    @brief      Verify the narrator row disables prompt maintenance and keeps preview enabled when a sample exists.
+    @brief      Verify the Narator Voice row is preview-only when a sample exists.
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-20
-    @version    1.1.0
+    @version    1.1.1
     """
     page = NarrationPlanPage()
     qtbot.addWidget(page)
@@ -39,7 +39,7 @@ def test_narration_plan_page_narrator_target_is_preview_only(qtbot) -> None:
             {
                 "target_id": "narrator",
                 "target_kind": "narrator",
-                "display_name": "Narrator",
+                "display_name": "Narator Voice",
                 "sample_status_label": "Sample present",
                 "has_sample": True,
             }
@@ -51,10 +51,10 @@ def test_narration_plan_page_narrator_target_is_preview_only(qtbot) -> None:
         original_language="English",
         translated_language="Not translated",
         assignment_mode_label="Narrator + character voices",
-        target_name="Narrator",
-        target_kind_label="Narrator",
+        target_name="Narator Voice",
+        target_kind_label="Narator Voice",
         prompt_text="",
-        preview_text="Narrator preview text.",
+        preview_text="Narator Voice preview text.",
         is_editable=False,
         can_reset_prompt=False,
         can_edit_prompt=False,

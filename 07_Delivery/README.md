@@ -8,14 +8,29 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
 
 Release packaging, delivery bundles, and distribution artifacts.
 
-Current Windows delivery artifacts are produced by:
+Delivery artifacts are produced by:
 
 - `../02_Tools/package_windows_release.ps1`
+- `../02_Tools/package_linux_release.sh`
 
-The expected archive naming pattern is:
+The expected archive naming patterns are:
 
 - `AudioMancer_Windows_x64_v<version>.zip`
+- `AudioMancer_Ubuntu_x64_v<version>.zip`
 
-The delivery zip contains the portable Windows application bundle together with
-`settings.json` and the four license files required by the app root.
+Each delivery zip contains a portable application folder with:
 
+- the platform-specific `AudioMancer` executable
+- a platform start helper, either `Start-AudioMancer.cmd` or
+  `start-audiomancer.sh`
+- `README_RELEASE.txt`
+- `settings.json`
+- the four license files required by the app root
+
+Build Windows archives on Windows and Ubuntu archives on Ubuntu. PyInstaller
+does not create equivalent desktop bundles by cross-compiling from another
+operating system.
+
+Packaging scripts do not run application tests. Treat them as release assembly
+tools and run the application validation suite before creating release
+artifacts.

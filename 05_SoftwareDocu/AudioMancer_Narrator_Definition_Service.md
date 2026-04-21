@@ -9,10 +9,11 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
 
 ## 1. Purpose
 
-Implements the current Narrator workflow in `AudioMancer`.
+Implements the narrator-definition persistence and state contract for the
+current `Narator Voice` workflow in `AudioMancer`.
 It owns the project-local narrator profile catalog, explicit selected narrator
 state, per-profile sample artifacts, and the runtime-aware state shaping used
-by the Narrator page.
+by the Narator Voice page.
 
 ## 2. Responsibilities
 
@@ -31,7 +32,7 @@ by the Narrator page.
   runtime code
 - persist per-profile WAV and JSON sample artifacts
 - persist the project-root selected narrator audio copy under `audio_samples/`
-- derive narrator-page enablement for `Generate Sample`, `Select`, and
+- derive Narator Voice page enablement for `Generate Sample`, `Select`, and
   `Preview` from the cached VoiceWeaver runtime state and stored sample
   metadata
 - clear sample and selection state immediately when one profile enters edit
@@ -53,12 +54,12 @@ The workflow is split across:
   TTS plan persistence,
   and sample artifact helpers
 - `04_Software/AudioMancer/src/audiomancer/services/narrator_definition_state_service.py`
-  for Narrator page state shaping, project-language display, and runtime-derived
-  flags
-- `04_Software/AudioMancer/src/audiomancer/ui/controllers/narrator_ui_controller.py`
+  for Narator Voice page state shaping, project-language display, and
+  runtime-derived flags
+- `04_Software/AudioMancer/src/audiomancer/ui/controllers/narator_voice_ui_controller.py`
   for Qt actions, destructive edit/sample confirmations, manifest summary sync,
   VoiceWeaver sample generation, and preview playback
-- `04_Software/AudioMancer/src/audiomancer/ui/pages/narrator_page.py`
+- `04_Software/AudioMancer/src/audiomancer/ui/pages/narator_voice_page.py`
   for the project-aware editor, read-only language display, profile list, and
   bottom status panel
 
@@ -115,7 +116,7 @@ Inputs:
 - active project root and manifest
 - cached runtime discovery fields from `settings.json`
 - active project TTS plan from `project.json.voice_assignment_mode`
-- narrator page actions:
+- Narator Voice page actions:
   create, edit, save, delete, generate sample, preview, and explicit select
 - narrator editor fields:
   display name, prompt text, and preview text
@@ -219,7 +220,7 @@ Downstream integrations:
 Current runtime-aware rules:
 
 - all stored narrator profiles remain visible in the page list
-- switching the inspected profile in the page list rebuilds the Narrator page
+- switching the inspected profile in the page list rebuilds the Narator Voice page
   state, so operator actions always reflect the currently highlighted profile
 - `Generate Sample` is enabled only when the current runtime exposes the fixed
   minimum Qwen3 capability set and the profile resolves to either
@@ -273,8 +274,8 @@ Focused automated coverage includes:
 
 - `04_Software/AudioMancer/tests/test_narrator_definition_service.py`
 - `04_Software/AudioMancer/tests/test_narrator_definition_state_service.py`
-- `04_Software/AudioMancer/tests/test_narrator_page.py`
-- `04_Software/AudioMancer/tests/test_narrator_ui_controller.py`
+- `04_Software/AudioMancer/tests/test_narator_voice_page.py`
+- `04_Software/AudioMancer/tests/test_narator_voice_ui_controller.py`
 - narrator integration checks in
   `04_Software/AudioMancer/tests/test_main_window_project_flow.py`
 

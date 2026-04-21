@@ -47,7 +47,6 @@ $repoRoot = Split-Path -Parent $scriptRoot
 $appRoot = Join-Path $repoRoot '04_Software\AudioMancer'
 $deliveryRoot = Join-Path $repoRoot '07_Delivery'
 $specPath = Join-Path $scriptRoot 'audiomancer_windows.spec'
-$pythonLauncherPath = Join-Path $scriptRoot 'audiomancer_windows_entry.py'
 $pyprojectPath = Join-Path $appRoot 'pyproject.toml'
 
 if (-not (Test-Path $pyprojectPath)) {
@@ -78,6 +77,9 @@ $requiredRootFiles = @(
 )
 
 Invoke-Step -Name 'Prepare packaging workspace' -Action {
+    if (-not (Test-Path $deliveryRoot)) {
+        New-Item -ItemType Directory -Path $deliveryRoot | Out-Null
+    }
     if (Test-Path $stagingPath) {
         Remove-Item -LiteralPath $stagingPath -Recurse -Force
     }
@@ -90,14 +92,6 @@ Push-Location $appRoot
 try {
     Invoke-Step -Name 'Sync uv environment' -Action {
         & uv sync --extra dev
-    }
-
-    Invoke-Step -Name 'Run packaging validation' -Action {
-        & uv run --no-sync python -m py_compile src/audiomancer/app.py
-        & uv run --no-sync pytest `
-            tests/test_package_import.py `
-            tests/test_app_entrypoint.py `
-            tests/test_main_window.py
     }
 
     Invoke-Step -Name 'Build Windows bundle with PyInstaller' -Action {
@@ -131,6 +125,31 @@ Invoke-Step -Name 'Assemble delivery staging folder' -Action {
         }
         Copy-Item -LiteralPath $sourcePath -Destination (Join-Path $stagingPath $fileName) -Force
     }
+
+    $startScriptPath = Join-Path $stagingPath 'Start-AudioMancer.cmd'
+    @(
+        '@echo off'
+        'setlocal'
+        'cd /d "%~dp0"'
+        '"%~dp0AudioMancer.exe" %*'
+    ) | Set-Content -LiteralPath $startScriptPath -Encoding ASCII
+
+    $releaseNotesPath = Join-Path $stagingPath 'README_RELEASE.txt'
+    @(
+        "AudioMancer Windows x64 v$appVersion"
+        ''
+        'This folder is a portable AudioMancer release.'
+        ''
+        'Start:'
+        '- Double-click AudioMancer.exe, or'
+        '- Double-click Start-AudioMancer.cmd.'
+        ''
+        'Install:'
+        '- Extract the full zip folder before starting the app.'
+        '- Keep the files together; the executable depends on bundled runtime files.'
+        ''
+        'Configuration and licenses are included next to the executable.'
+    ) | Set-Content -LiteralPath $releaseNotesPath -Encoding ASCII
 }
 
 Invoke-Step -Name 'Create versioned delivery archive' -Action {

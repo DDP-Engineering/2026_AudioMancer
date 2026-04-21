@@ -74,7 +74,7 @@ def test_main_window_creates_project_and_updates_shell(monkeypatch, qtbot, tmp_p
     assert window._home_page._name_label.text() == "Project: Book5_CAL_CAL"
     assert window._sidebar.item(1).flags() != main_window_module.Qt.ItemFlag.NoItemFlags
     assert any(
-        "Narrator Definition" in window._home_page._stage_list.item(index).text()
+        "Narator Voice" in window._home_page._stage_list.item(index).text()
         for index in range(window._home_page._stage_list.count())
     )
     assert any(
@@ -1246,11 +1246,11 @@ def test_main_window_loads_character_discovery_state_into_characters_page(
     assert window._characters_page._evidence_preview.toPlainText() == '"Hello there," said Alice.'
 
 
-def test_main_window_loads_narrator_definition_state_into_narrator_page(
+def test_main_window_loads_narrator_definition_state_into_narator_voice_page(
     qtbot, tmp_path, default_settings_payload
 ) -> None:
     """
-    @brief      Verify the main window refreshes the Narrator page from persisted narrator-definition artifacts.
+    @brief      Verify the main window refreshes the Narator Voice page from persisted narrator-definition artifacts.
     @param[in]  qtbot Qt test helper fixture.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @param[in]  default_settings_payload Fixture supplying default test settings.
@@ -1348,12 +1348,12 @@ def test_main_window_loads_narrator_definition_state_into_narrator_page(
     qtbot.addWidget(window)
     window._activate_project(project_root, project_workspace_service.load_manifest(project_root))
 
-    assert window._narrator_page._profile_list.count() == 5
-    assert window._narrator_page.current_profile_id() == "custom_1"
-    assert window._narrator_page._profile_name_edit.text() == "My Warm Narrator"
-    assert window._narrator_page._designer_prompt.toPlainText() == "Warm narrator prompt."
-    assert window._narrator_page._edit_profile_button.isEnabled() is True
-    assert window._narrator_page._delete_profile_button.isEnabled() is True
+    assert window._narator_voice_page._profile_list.count() == 5
+    assert window._narator_voice_page.current_profile_id() == "custom_1"
+    assert window._narator_voice_page._profile_name_edit.text() == "My Warm Narrator"
+    assert window._narator_voice_page._designer_prompt.toPlainText() == "Warm narrator prompt."
+    assert window._narator_voice_page._edit_profile_button.isEnabled() is True
+    assert window._narator_voice_page._delete_profile_button.isEnabled() is True
 
 
 def test_main_window_prevents_reimport_when_source_is_locked(

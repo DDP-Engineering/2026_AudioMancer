@@ -14,7 +14,7 @@
          plan voice targets, and cached VoiceWeaver runtime discovery data.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-20
-@version 1.1.0
+@version 1.1.1
 """
 
 # IMPORTS
@@ -51,7 +51,7 @@ def build_narration_plan_state(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-20
-    @version    1.1.0
+    @version    1.1.1
     """
     if project_root is None or manifest is None:
         return {
@@ -60,8 +60,8 @@ def build_narration_plan_state(
             "current_target_id": None,
             "selected_voice_language": narrator_definition_service.DEFAULT_NARRATOR_LANGUAGE,
             "language_entries": [],
-            "original_language": ui_state_service.translate("narrator.language_unknown", language),
-            "translated_language": ui_state_service.translate("narrator.language_not_translated", language),
+            "original_language": ui_state_service.translate("narator_voice.language_unknown", language),
+            "translated_language": ui_state_service.translate("narator_voice.language_not_translated", language),
             "assignment_mode_label": _assignment_mode_label(config.DEFAULT_TTS_VOICE_ASSIGNMENT_MODE, language),
             "target_name": "",
             "target_kind_label": "",
@@ -408,7 +408,7 @@ def _resolve_current_target(
     @return     Derived helper result.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.1.0
+    @version    0.2.0
     """
     normalized_inspected_target_id = str(inspected_target_id or "").strip()
     if normalized_inspected_target_id:
@@ -439,7 +439,7 @@ def _voice_language_state(
     )
     original_language_label = narrator_definition_service.narrator_language_label(original_language_code)
     language_entries = [(original_language_label, original_language_code)]
-    translated_language_label = ui_state_service.translate("narrator.language_not_translated", language)
+    translated_language_label = ui_state_service.translate("narator_voice.language_not_translated", language)
     translation_ready = False
     if isinstance(translation_report, dict):
         translated_language_code = str(translation_report.get("target_language", "")).strip()

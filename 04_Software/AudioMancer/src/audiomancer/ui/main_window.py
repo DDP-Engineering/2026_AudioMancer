@@ -14,7 +14,7 @@
          so the window remains a thin coordinator.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-20
-@version 1.23.0
+@version 1.24.0
 """
 
 # IMPORTS
@@ -52,8 +52,8 @@ from audiomancer.ui.controllers import (
     characters_ui_controller,
     home_ui_controller,
     misc_ui_controller,
+    narator_voice_ui_controller,
     narration_plan_ui_controller,
-    narrator_ui_controller,
     settings_ui_controller,
     text_chunking_ui_controller,
     text_cleanup_ui_controller,
@@ -65,8 +65,8 @@ from audiomancer.ui.pages.ai_settings_page import AiSettingsPage
 from audiomancer.ui.pages.ai_translation_page import AiTranslationPage
 from audiomancer.ui.pages.characters_page import CharactersPage
 from audiomancer.ui.pages.home_page import HomeProjectPage
+from audiomancer.ui.pages.narator_voice_page import NaratorVoicePage
 from audiomancer.ui.pages.narration_plan_page import NarrationPlanPage
-from audiomancer.ui.pages.narrator_page import NarratorPage
 from audiomancer.ui.pages.placeholder_page import PlaceholderPage
 from audiomancer.ui.pages.settings_page import SettingsPage
 from audiomancer.ui.pages.text_chunking_page import TextChunkingPage
@@ -105,7 +105,7 @@ class MainWindow(QMainWindow):
         ("text_chunking", "Text Chunking"),
         ("ai_translation", "AI Translation"),
         ("characters", "Characters"),
-        ("narrator", "Narrator"),
+        ("narator_voice", "Narator Voice"),
         ("narration_plan", "Narration Plan"),
         ("generation", "Generation"),
         ("export", "Export"),
@@ -137,18 +137,18 @@ class MainWindow(QMainWindow):
         self._active_operation_kind: str | None = None
         self._active_operation_name: str | None = None
         self._operation_cancel_requested = False
-        self._narrator_preview_generation = 0
-        self._narrator_inspected_profile_id: str | None = None
+        self._narator_voice_preview_generation = 0
+        self._narator_voice_inspected_profile_id: str | None = None
         self._narration_plan_inspected_target_id: str | None = None
         self._narration_plan_missing_narrator_popup_shown = False
         self._settings_payload = (
             dict(settings_payload) if isinstance(settings_payload, dict) else settings_service.load_settings()
         )
-        self._narrator_audio_output = QAudioOutput(self)
-        self._narrator_audio_player = QMediaPlayer(self)
-        self._narrator_audio_player.setAudioOutput(self._narrator_audio_output)
-        self._narrator_audio_player.playbackStateChanged.connect(
-            lambda _state: narrator_ui_controller.handle_preview_playback_state_changed(self)
+        self._narator_voice_audio_output = QAudioOutput(self)
+        self._narator_voice_audio_player = QMediaPlayer(self)
+        self._narator_voice_audio_player.setAudioOutput(self._narator_voice_audio_output)
+        self._narator_voice_audio_player.playbackStateChanged.connect(
+            lambda _state: narator_voice_ui_controller.handle_preview_playback_state_changed(self)
         )
         self._narration_plan_audio_output = QAudioOutput(self)
         self._narration_plan_audio_player = QMediaPlayer(self)
@@ -303,14 +303,14 @@ class MainWindow(QMainWindow):
             )
         )
         self._characters_page.set_character_state(**character_state)
-        self._narrator_page.set_project_active(project_root is not None)
-        self._narrator_page.set_narrator_state(
+        self._narator_voice_page.set_project_active(project_root is not None)
+        self._narator_voice_page.set_narator_voice_state(
             **narrator_definition_state_service.build_narrator_definition_state(
                 project_root,
                 manifest,
                 current_language,
                 self._settings_payload,
-                self._narrator_inspected_profile_id,
+                self._narator_voice_inspected_profile_id,
             )
         )
         self._narration_plan_page.set_project_active(project_root is not None)
@@ -547,51 +547,51 @@ class MainWindow(QMainWindow):
                 profile_payload,
             )
         )
-        self._narrator_page = NarratorPage(self)
-        self._narrator_page.create_profile_requested.connect(
-            lambda profile_payload: narrator_ui_controller.handle_create_profile_requested(
+        self._narator_voice_page = NaratorVoicePage(self)
+        self._narator_voice_page.create_profile_requested.connect(
+            lambda profile_payload: narator_voice_ui_controller.handle_create_profile_requested(
                 self,
                 profile_payload,
             )
         )
-        self._narrator_page.edit_profile_requested.connect(
-            lambda profile_id: narrator_ui_controller.handle_edit_profile_requested(
+        self._narator_voice_page.edit_profile_requested.connect(
+            lambda profile_id: narator_voice_ui_controller.handle_edit_profile_requested(
                 self,
                 profile_id,
             )
         )
-        self._narrator_page.save_profile_requested.connect(
-            lambda profile_payload: narrator_ui_controller.handle_save_profile_requested(
+        self._narator_voice_page.save_profile_requested.connect(
+            lambda profile_payload: narator_voice_ui_controller.handle_save_profile_requested(
                 self,
                 profile_payload,
             )
         )
-        self._narrator_page.delete_profile_requested.connect(
-            lambda profile_id: narrator_ui_controller.handle_delete_profile_requested(
+        self._narator_voice_page.delete_profile_requested.connect(
+            lambda profile_id: narator_voice_ui_controller.handle_delete_profile_requested(
                 self,
                 profile_id,
             )
         )
-        self._narrator_page.selection_change_requested.connect(
-            lambda profile_id: narrator_ui_controller.handle_selection_change_requested(
+        self._narator_voice_page.selection_change_requested.connect(
+            lambda profile_id: narator_voice_ui_controller.handle_selection_change_requested(
                 self,
                 profile_id,
             )
         )
-        self._narrator_page.generate_sample_requested.connect(
-            lambda profile_id: narrator_ui_controller.handle_generate_sample_requested(
+        self._narator_voice_page.generate_sample_requested.connect(
+            lambda profile_id: narator_voice_ui_controller.handle_generate_sample_requested(
                 self,
                 profile_id,
             )
         )
-        self._narrator_page.select_profile_requested.connect(
-            lambda profile_id: narrator_ui_controller.handle_select_profile_requested(
+        self._narator_voice_page.select_profile_requested.connect(
+            lambda profile_id: narator_voice_ui_controller.handle_select_profile_requested(
                 self,
                 profile_id,
             )
         )
-        self._narrator_page.preview_toggle_requested.connect(
-            lambda: narrator_ui_controller.handle_preview_toggle_requested(self)
+        self._narator_voice_page.preview_toggle_requested.connect(
+            lambda: narator_voice_ui_controller.handle_preview_toggle_requested(self)
         )
         self._narration_plan_page = NarrationPlanPage(self)
         self._narration_plan_page.selection_change_requested.connect(
@@ -640,7 +640,7 @@ class MainWindow(QMainWindow):
             "text_chunking": self._text_chunking_page,
             "ai_translation": self._ai_translation_page,
             "characters": self._characters_page,
-            "narrator": self._narrator_page,
+            "narator_voice": self._narator_voice_page,
             "narration_plan": self._narration_plan_page,
             "generation": PlaceholderPage(
                 "Generation",
@@ -778,7 +778,7 @@ class MainWindow(QMainWindow):
         @date       2026-04-06
         @version    0.1.0
         """
-        self._narrator_audio_player.stop()
+        self._narator_voice_audio_player.stop()
         self._narration_plan_audio_player.stop()
         super().closeEvent(event)
 

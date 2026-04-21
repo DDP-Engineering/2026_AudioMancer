@@ -12,7 +12,7 @@
          pages are created without workflow functionality.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-16
-@version 1.4.0
+@version 1.4.1
 """
 
 # IMPORTS
@@ -47,7 +47,7 @@ def test_main_window_can_be_created(qtbot, default_settings_payload) -> None:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.4.0
+    @version    0.4.1
     """
     window = MainWindow(
         settings_payload={
@@ -71,7 +71,7 @@ def test_main_window_can_be_created(qtbot, default_settings_payload) -> None:
     assert len(window.findChildren(QDialog)) == 3
     assert any(group_box.title() == "Project Summary" for group_box in window.findChildren(QGroupBox))
     assert any(group_box.title() == "Workflow Progress" for group_box in window.findChildren(QGroupBox))
-    assert any(group_box.title() == "Narrator Profiles" for group_box in window.findChildren(QGroupBox))
+    assert any(group_box.title() == "Narator Voice Profiles" for group_box in window.findChildren(QGroupBox))
     assert any(group_box.title() == "Voice Designer Prompt" for group_box in window.findChildren(QGroupBox))
     assert any(button.text() == "Deterministic Cleanup" for button in window.findChildren(QPushButton))
     assert any(button.text() == "Deterministic Chunking" for button in window.findChildren(QPushButton))
@@ -128,7 +128,7 @@ def test_about_dialog_includes_license_text(qtbot, default_settings_payload) -> 
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.2.0
+    @version    0.2.1
     """
     window = MainWindow(
         settings_payload={
@@ -153,7 +153,7 @@ def test_about_dialog_includes_license_text(qtbot, default_settings_payload) -> 
     assert any(
         label.text() == "Transform written words into real audio experience!" for label in dialog.findChildren(QLabel)
     )
-    assert any(label.text() == "Version: 0.16.1" for label in dialog.findChildren(QLabel))
+    assert any(label.text() == "Version: 0.17.1" for label in dialog.findChildren(QLabel))
     assert "GNU AFFERO GENERAL PUBLIC LICENSE" in text_box.toPlainText()
     assert "Additional Non-Commercial Restriction" in text_box.toPlainText()
 
@@ -166,7 +166,7 @@ def test_about_dialog_loads_translated_license_text_for_romanian(qtbot, default_
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.2.0
+    @version    0.2.1
     """
     window = MainWindow(
         settings_payload={
@@ -187,7 +187,7 @@ def test_about_dialog_loads_translated_license_text_for_romanian(qtbot, default_
 
     assert dialog.windowTitle() == "Despre"
     assert text_box is not None
-    assert any(label.text() == "Versiune: 0.16.1" for label in dialog.findChildren(QLabel))
+    assert any(label.text() == "Versiune: 0.17.1" for label in dialog.findChildren(QLabel))
     assert "LICENTA PUBLICA GENERALA AFFERO GNU" in text_box.toPlainText()
     assert "RESTRICTIE SUPLIMENTARA DE UTILIZARE NECOMERCIALA" in text_box.toPlainText()
 

@@ -6,9 +6,9 @@
 # See the LICENSE.txt and LICENSE_NC.txt files for full license details.
 # -----------------------------------------------------------------------------
 """
-@file test_narrator_page.py
-@brief Narrator Definition page tests for AudioMancer.
-@details Verifies the simplified narrator page layout, edit-mode behavior,
+@file test_narator_voice_page.py
+@brief Narator Voice page tests for AudioMancer.
+@details Verifies the simplified Narator Voice page layout, edit-mode behavior,
          sample-dependent button enablement, and bottom status rendering.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-18
@@ -19,10 +19,10 @@
 
 from PySide6.QtWidgets import QLineEdit
 
-from audiomancer.ui.pages.narrator_page import NarratorPage
+from audiomancer.ui.pages.narator_voice_page import NaratorVoicePage
 
 
-def test_narrator_page_uses_single_line_profile_name_and_no_summary_label(qtbot) -> None:
+def test_narator_voice_page_uses_single_line_profile_name_and_no_summary_label(qtbot) -> None:
     """
     @brief      Verify the profile-name editor is single-line and the old subtitle label is gone.
     @param[in]  qtbot Qt test helper fixture.
@@ -32,14 +32,14 @@ def test_narrator_page_uses_single_line_profile_name_and_no_summary_label(qtbot)
     @date       2026-04-17
     @version    1.1.0
     """
-    page = NarratorPage()
+    page = NaratorVoicePage()
     qtbot.addWidget(page)
 
     assert isinstance(page._profile_name_edit, QLineEdit)
     assert hasattr(page, "_summary_label") is False
 
 
-def test_narrator_page_edit_mode_disables_list_and_enables_save_after_changes(qtbot) -> None:
+def test_narator_voice_page_edit_mode_disables_list_and_enables_save_after_changes(qtbot) -> None:
     """
     @brief      Verify edit mode disables the profile list and enables Save after a profile change.
     @param[in]  qtbot Qt test helper fixture.
@@ -49,10 +49,10 @@ def test_narrator_page_edit_mode_disables_list_and_enables_save_after_changes(qt
     @date       2026-04-17
     @version    1.1.0
     """
-    page = NarratorPage()
+    page = NaratorVoicePage()
     qtbot.addWidget(page)
     page.set_project_active(True)
-    page.set_narrator_state(
+    page.set_narator_voice_state(
         profiles=[
             {
                 "profile_id": "custom_1",
@@ -93,7 +93,7 @@ def test_narrator_page_edit_mode_disables_list_and_enables_save_after_changes(qt
     assert page._save_profile_button.isEnabled() is True
 
 
-def test_narrator_page_preview_toggle_updates_label_and_select_enablement(qtbot) -> None:
+def test_narator_voice_page_preview_toggle_updates_label_and_select_enablement(qtbot) -> None:
     """
     @brief      Verify preview playback changes the button label and sample availability gates Select.
     @param[in]  qtbot Qt test helper fixture.
@@ -103,11 +103,11 @@ def test_narrator_page_preview_toggle_updates_label_and_select_enablement(qtbot)
     @date       2026-04-17
     @version    1.1.0
     """
-    page = NarratorPage()
+    page = NaratorVoicePage()
     qtbot.addWidget(page)
     page.set_project_active(True)
     page.apply_language("en")
-    page.set_narrator_state(
+    page.set_narator_voice_state(
         profiles=[
             {
                 "profile_id": "preset_1",
@@ -143,9 +143,9 @@ def test_narrator_page_preview_toggle_updates_label_and_select_enablement(qtbot)
     assert page._preview_toggle_button.text() == "Stop Preview"
 
 
-def test_narrator_page_status_panel_and_language_labels_render_state(qtbot) -> None:
+def test_narator_voice_page_status_panel_and_language_labels_render_state(qtbot) -> None:
     """
-    @brief      Verify narrator status lines and read-only language labels are rendered on the page.
+    @brief      Verify Narator Voice status lines and read-only language labels are rendered on the page.
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
@@ -153,10 +153,10 @@ def test_narrator_page_status_panel_and_language_labels_render_state(qtbot) -> N
     @date       2026-04-17
     @version    1.1.0
     """
-    page = NarratorPage()
+    page = NaratorVoicePage()
     qtbot.addWidget(page)
     page.set_project_active(True)
-    page.set_narrator_state(
+    page.set_narator_voice_state(
         profiles=[],
         notes=["Ready."],
         current_profile_id=None,

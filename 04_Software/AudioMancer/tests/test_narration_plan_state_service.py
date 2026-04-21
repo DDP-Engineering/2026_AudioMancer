@@ -12,7 +12,7 @@
          selection rules, same-narrator shaping, and missing-sample warnings.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-20
-@version 1.1.0
+@version 1.1.1
 """
 
 # IMPORTS
@@ -111,13 +111,13 @@ def test_state_same_narrator_mode_disables_character_edit_and_generate(tmp_path)
 
 def test_state_missing_narrator_sample_surfaces_warning(tmp_path) -> None:
     """
-    @brief      Verify entering narration plan without a selected narrator sample surfaces the missing-sample warning.
+    @brief      Verify missing Narator Voice samples surface a warning.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-20
-    @version    1.1.0
+    @version    1.1.1
     """
     project_root, manifest = _create_project_with_narrator_and_character(
         tmp_path,
@@ -136,7 +136,7 @@ def test_state_missing_narrator_sample_surfaces_warning(tmp_path) -> None:
     )
 
     assert state["missing_narrator_sample"] is True
-    assert any("narrator sample" in note.lower() for note in state["notes"])
+    assert any("narator voice sample" in note.lower() for note in state["notes"])
 
 
 def _create_project_with_narrator_and_character(
@@ -168,7 +168,7 @@ def _create_project_with_narrator_and_character(
                 "source_model_id": "qwen-custom",
                 "language": "en",
             },
-            "Narrator sample ready.",
+            "Narator voice sample ready.",
             b"RIFF-narrator",
         )
     narrator_definition_service.select_narrator_profile(project_root, narrator_profile["profile_id"], "en")

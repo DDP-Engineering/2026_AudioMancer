@@ -67,7 +67,7 @@ High-level flow:
    - the project-local planning note
 6. `Save TTS Settings` writes global runtime fields through the shared settings
    service and writes the project-local TTS plan when a project is open.
-7. The Narrator workflow later reuses the same service to load models, poll
+7. The Narator Voice workflow later reuses the same service to load models, poll
    `/v1/status` until the load reaches a terminal state, submit generation,
    poll again, and download `/v1/voice`.
 
@@ -169,7 +169,7 @@ Runtime helper coverage in `voiceweaver_runtime_service.py` currently includes:
 ## 7. Workflow Integration
 
 This component sits between the global settings layer and the project-local
-narrator workflow.
+Narator Voice workflow.
 
 Upstream:
 
@@ -181,7 +181,7 @@ Downstream:
 - narrator state shaping in
   `src/audiomancer/services/narrator_definition_state_service.py`
 - narrator sample generation in
-  `src/audiomancer/ui/controllers/narrator_ui_controller.py`
+  `src/audiomancer/ui/controllers/narator_voice_ui_controller.py`
 - future narration and generation work that will need concrete model ids
 
 Current UI behavior:
@@ -242,7 +242,7 @@ Focused automated coverage includes:
 - `tests/test_tts_settings_page.py`
 - `tests/test_settings_service.py`
 - `tests/test_main_window_lifecycle.py`
-- `tests/test_narrator_ui_controller.py`
+- `tests/test_narator_voice_ui_controller.py`
 
 Minimum validation after changes:
 

@@ -13,7 +13,7 @@
          window shell in AudioMancer.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-05
-@version 0.1.0
+@version 0.2.0
 """
 
 # IMPORTS
@@ -22,7 +22,7 @@ from .ai_settings_page import AiSettingsPage
 from .ai_translation_page import AiTranslationPage
 from .characters_page import CharactersPage
 from .home_page import HomeProjectPage
-from .narrator_page import NarratorPage
+from .narator_voice_page import NaratorVoicePage
 from .placeholder_page import PlaceholderPage
 from .settings_page import SettingsPage
 from .text_chunking_page import TextChunkingPage
@@ -35,7 +35,7 @@ __all__ = [
     "AiSettingsPage",
     "CharactersPage",
     "HomeProjectPage",
-    "NarratorPage",
+    "NaratorVoicePage",
     "PlaceholderPage",
     "SettingsPage",
     "TextChunkingPage",

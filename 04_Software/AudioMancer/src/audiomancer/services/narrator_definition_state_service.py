@@ -8,13 +8,13 @@
 # -----------------------------------------------------------------------------
 """
 @file narrator_definition_state_service.py
-@brief Narrator-definition page state helpers for AudioMancer.
-@details Builds project-local narrator page state from manifest summary fields,
+@brief Narator Voice page state helpers for AudioMancer.
+@details Builds project-local Narator Voice page state from manifest summary fields,
          persisted narrator artifacts, per-profile sample state, and the cached
          VoiceWeaver runtime discovery data.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-20
-@version 3.4.0
+@version 3.5.0
 """
 
 # IMPORTS
@@ -40,27 +40,27 @@ def build_narrator_definition_state(
     inspected_profile_id: str | None = None,
 ) -> dict[str, object]:
     """
-    @brief      Build the full Narrator page state from project-local artifacts.
+    @brief      Build the full Narator Voice page state from project-local artifacts.
     @param[in]  project_root Active project root or `None`.
     @param[in]  manifest Active project manifest or `None`.
     @param[in]  language Runtime UI language code.
     @param[in]  settings_payload Optional persisted application settings payload.
     @param[in]  inspected_profile_id Optional currently inspected narrator-profile identifier.
-    @return     Page-state payload consumed by the Narrator page.
+    @return     Page-state payload consumed by the Narator Voice page.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-18
-    @version    1.5.0
+    @version    1.6.0
     """
     if project_root is None or manifest is None:
         return {
             "profiles": [],
-            "notes": [ui_state_service.translate("narrator.note_no_project", language)],
+            "notes": [ui_state_service.translate("narator_voice.note_no_project", language)],
             "current_profile_id": None,
             "selected_profile_id": None,
             "effective_language": narrator_definition_service.DEFAULT_NARRATOR_LANGUAGE,
-            "original_language": ui_state_service.translate("narrator.language_unknown", language),
-            "translated_language": ui_state_service.translate("narrator.language_not_translated", language),
+            "original_language": ui_state_service.translate("narator_voice.language_unknown", language),
+            "translated_language": ui_state_service.translate("narator_voice.language_not_translated", language),
             "profile_name": "",
             "prompt_text": "",
             "preview_text": narrator_definition_service.DEFAULT_PREVIEW_TEXT,
@@ -71,7 +71,7 @@ def build_narrator_definition_state(
             "can_generate": False,
             "can_select": False,
             "preview_available": False,
-            "status_lines": [ui_state_service.translate("narrator.note_no_project", language)],
+            "status_lines": [ui_state_service.translate("narator_voice.note_no_project", language)],
         }
 
     discovered_models = (
@@ -149,7 +149,7 @@ def build_narrator_definition_notes(
     capability_matrix: dict[str, object],
 ) -> list[str]:
     """
-    @brief      Build operator-facing notes for the Narrator page.
+    @brief      Build operator-facing notes for the Narator Voice page.
     @param[in]  manifest Active project manifest payload.
     @param[in]  current_profile Currently inspected narrator-profile payload or `None`.
     @param[in]  selected_profile_id Explicitly selected narrator-profile identifier.
@@ -157,53 +157,53 @@ def build_narrator_definition_notes(
     @param[in]  runtime_probe_succeeded True when the VoiceWeaver probe cache is valid.
     @param[in]  profiles Narrator profile list enriched with state flags.
     @param[in]  capability_matrix Current normalized runtime capability matrix.
-    @return     Ordered narrator page notes.
+    @return     Ordered Narator Voice page notes.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-17
-    @version    1.2.1
+    @version    1.3.0
     """
     if home_presenter_service.source_document_name(manifest) is None:
-        return [ui_state_service.translate("narrator.note_no_source", language)]
+        return [ui_state_service.translate("narator_voice.note_no_source", language)]
 
     notes: list[str] = []
     if not runtime_probe_succeeded:
-        notes.append(ui_state_service.translate("narrator.note_runtime_not_connected", language))
+        notes.append(ui_state_service.translate("narator_voice.note_runtime_not_connected", language))
     elif not bool(capability_matrix.get("minimum_qwen_ready", False)):
         notes.append(
-            ui_state_service.translate("narrator.note_qwen_capabilities_missing", language).format(
+            ui_state_service.translate("narator_voice.note_qwen_capabilities_missing", language).format(
                 missing_capabilities=", ".join(capability_matrix.get("missing_qwen_capabilities", [])),
             )
         )
     else:
-        notes.append(ui_state_service.translate("narrator.note_qwen_capabilities_ready", language))
+        notes.append(ui_state_service.translate("narator_voice.note_qwen_capabilities_ready", language))
 
     current_stage = str(manifest.get("current_stage", ""))
     if current_stage not in {"character_discovery_ready", "narrator_definition_ready", "narration_plan_ready"}:
-        notes.append(ui_state_service.translate("narrator.note_upstream_not_ready", language))
+        notes.append(ui_state_service.translate("narator_voice.note_upstream_not_ready", language))
 
     selected_profile = _profile_by_id(profiles, selected_profile_id)
     if selected_profile is None:
-        notes.append(ui_state_service.translate("narrator.note_no_selected_profile", language))
+        notes.append(ui_state_service.translate("narator_voice.note_no_selected_profile", language))
     else:
         notes.append(
-            ui_state_service.translate("narrator.note_selected_profile", language).format(
+            ui_state_service.translate("narator_voice.note_selected_profile", language).format(
                 profile_name=narrator_definition_service.display_profile_name(selected_profile),
                 profile_kind=ui_state_service.translate(
-                    "narrator.profile_kind_preset"
+                    "narator_voice.profile_kind_preset"
                     if str(selected_profile.get("profile_kind", ""))
                     == narrator_definition_service.NARRATOR_PROFILE_KIND_PRESET
-                    else "narrator.profile_kind_custom",
+                    else "narator_voice.profile_kind_custom",
                     language,
                 ),
             )
         )
         if not bool(selected_profile.get("has_sample", False)):
-            notes.append(ui_state_service.translate("narrator.note_selected_profile_missing_sample", language))
+            notes.append(ui_state_service.translate("narator_voice.note_selected_profile_missing_sample", language))
 
     if current_profile is not None:
         if not bool(current_profile.get("has_sample", False)):
-            notes.append(ui_state_service.translate("narrator.note_generate_sample_required", language))
+            notes.append(ui_state_service.translate("narator_voice.note_generate_sample_required", language))
         availability_note = str(current_profile.get("availability_note", "")).strip()
         if availability_note:
             notes.append(availability_note)
@@ -217,7 +217,7 @@ def build_status_lines(
     language: str,
 ) -> list[str]:
     """
-    @brief      Build the bottom status-window lines for the Narrator page.
+    @brief      Build the bottom status-window lines for the Narator Voice page.
     @param[in]  profiles Current enriched narrator profile entries.
     @param[in]  notes Operator-facing page notes.
     @param[in]  capability_matrix Current runtime capability matrix.
@@ -226,21 +226,23 @@ def build_status_lines(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-17
-    @version    1.1.0
+    @version    1.2.0
     """
     sample_count = sum(1 for profile in profiles if bool(profile.get("has_sample", False)))
     selected_count = sum(1 for profile in profiles if bool(profile.get("is_selected", False)))
     qwen_status = (
-        ui_state_service.translate("narrator.status_qwen_ready", language)
+        ui_state_service.translate("narator_voice.status_qwen_ready", language)
         if bool(capability_matrix.get("minimum_qwen_ready", False))
-        else ui_state_service.translate("narrator.status_qwen_missing", language).format(
+        else ui_state_service.translate("narator_voice.status_qwen_missing", language).format(
             missing_capabilities=", ".join(capability_matrix.get("missing_qwen_capabilities", [])),
         )
     )
     lines = [
-        ui_state_service.translate("narrator.status_profile_count", language).format(profile_count=len(profiles)),
-        ui_state_service.translate("narrator.status_sample_count", language).format(sample_count=sample_count),
-        ui_state_service.translate("narrator.status_selected_count", language).format(selected_count=selected_count),
+        ui_state_service.translate("narator_voice.status_profile_count", language).format(profile_count=len(profiles)),
+        ui_state_service.translate("narator_voice.status_sample_count", language).format(sample_count=sample_count),
+        ui_state_service.translate("narator_voice.status_selected_count", language).format(
+            selected_count=selected_count,
+        ),
         qwen_status,
     ]
     lines.extend(note for note in notes if note.strip())
@@ -279,7 +281,7 @@ def _build_profile_entry(
     @return     Derived helper result.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.1.0
+    @version    0.2.0
     """
     generation_request = narrator_definition_service.profile_generation_request(
         profile,
@@ -294,19 +296,19 @@ def _build_profile_entry(
     is_selected = str(profile.get("profile_id", "")).strip() == str(selected_profile_id or "").strip()
     availability_note = ""
     if has_sample and not runtime_available:
-        availability_note = ui_state_service.translate("narrator.note_profile_runtime_missing", language)
+        availability_note = ui_state_service.translate("narator_voice.note_profile_runtime_missing", language)
     elif not bool(generation_request.get("can_generate", False)):
         availability_note = str(generation_request.get("unavailable_reason", "")).strip()
 
     return {
         **dict(profile),
         "profile_kind_label": ui_state_service.translate(
-            "narrator.profile_kind_preset"
+            "narator_voice.profile_kind_preset"
             if str(profile.get("profile_kind", "")) == narrator_definition_service.NARRATOR_PROFILE_KIND_PRESET
-            else "narrator.profile_kind_custom",
+            else "narator_voice.profile_kind_custom",
             language,
         ),
-        "selected_label": ui_state_service.translate("narrator.list_selected", language),
+        "selected_label": ui_state_service.translate("narator_voice.list_selected", language),
         "is_selected": is_selected,
         "has_sample": has_sample,
         "runtime_available": runtime_available,
@@ -369,12 +371,12 @@ def _original_language_label(project_root: Path, manifest: dict[str, object], la
     @return     Resolved original-language label.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.2.0
+    @version    0.3.0
     """
     original_language = _resolved_original_language_code(project_root, manifest)
     if original_language:
         return narrator_definition_service.narrator_language_label(original_language)
-    return ui_state_service.translate("narrator.language_unknown", language)
+    return ui_state_service.translate("narator_voice.language_unknown", language)
 
 
 def _translated_language_label(project_root: Path, language: str) -> str:
@@ -385,15 +387,15 @@ def _translated_language_label(project_root: Path, language: str) -> str:
     @return     Helper result.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.1.0
+    @version    0.2.0
     """
     translation_report = ai_translation_service.load_translation_report(project_root)
     if not isinstance(translation_report, dict):
-        return ui_state_service.translate("narrator.language_not_translated", language)
+        return ui_state_service.translate("narator_voice.language_not_translated", language)
     target_language = str(translation_report.get("target_language", "")).strip()
     if target_language in dict(config.TRANSLATION_LANGUAGE_OPTIONS):
         return narrator_definition_service.narrator_language_label(target_language)
-    return ui_state_service.translate("narrator.language_not_translated", language)
+    return ui_state_service.translate("narator_voice.language_not_translated", language)
 
 
 def _effective_narration_language(project_root: Path, manifest: dict[str, object]) -> str:

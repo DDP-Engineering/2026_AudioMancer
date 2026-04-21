@@ -14,7 +14,7 @@
          for the Narration Plan workflow.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-20
-@version 1.2.0
+@version 1.2.1
 """
 
 # IMPORTS
@@ -168,7 +168,7 @@ def sync_voice_plan(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-20
-    @version    1.1.0
+    @version    1.1.1
     """
     existing_targets_by_id = {
         str(target.get("target_id", "")).strip(): dict(target) for target in load_voice_plan(project_root)
@@ -183,7 +183,7 @@ def sync_voice_plan(
                     "target_id": TARGET_ID_NARRATOR,
                     "target_kind": TARGET_KIND_NARRATOR,
                     "source_profile_id": str(narrator_profile.get("profile_id", "")).strip() or None,
-                    "display_name": "Narrator",
+                    "display_name": "Narator Voice",
                     "character_id": None,
                     "prompt_text": None,
                     "default_prompt_text": None,

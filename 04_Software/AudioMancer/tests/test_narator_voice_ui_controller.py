@@ -6,13 +6,13 @@
 # See the LICENSE.txt and LICENSE_NC.txt files for full license details.
 # -----------------------------------------------------------------------------
 """
-@file test_narrator_ui_controller.py
-@brief Narrator Definition UI controller tests for AudioMancer.
+@file test_narator_voice_ui_controller.py
+@brief Narator Voice UI controller tests for AudioMancer.
 @details Verifies narrator profile creation, edit-mode sample invalidation,
          explicit narrator selection, and Qwen3-backed sample generation.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-18
-@version 3.1.0
+@version 3.1.1
 """
 
 # IMPORTS
@@ -22,11 +22,11 @@ import json
 from PySide6.QtWidgets import QMessageBox
 
 from audiomancer.services import narrator_definition_service, project_workspace_service
-from audiomancer.ui.controllers import narrator_ui_controller
+from audiomancer.ui.controllers import narator_voice_ui_controller
 from audiomancer.ui.main_window import MainWindow
 
 
-def test_narrator_ui_controller_create_profile_does_not_change_selected_narrator(monkeypatch, qtbot, tmp_path) -> None:
+def test_narator_voice_create_profile_does_not_change_selected_narrator(monkeypatch, qtbot, tmp_path) -> None:
     """
     @brief      Verify creating a profile adds it to the project without selecting a narrator by default.
     @param[in]  monkeypatch Pytest monkeypatch fixture.
@@ -41,17 +41,20 @@ def test_narrator_ui_controller_create_profile_does_not_change_selected_narrator
     project_root, _manifest = _create_project(tmp_path, "NarratorControllerCreate")
     window = _build_window(qtbot, project_root)
     monkeypatch.setattr(
-        narrator_ui_controller.QInputDialog,
+        narator_voice_ui_controller.QInputDialog,
         "getText",
         lambda *_args, **_kwargs: ("My Narrator", True),
     )
     monkeypatch.setattr(
-        narrator_ui_controller.misc_ui_controller,
+        narator_voice_ui_controller.misc_ui_controller,
         "show_message",
         lambda *args, **kwargs: None,
     )
 
-    narrator_ui_controller.handle_create_profile_requested(window, window._narrator_page.current_editor_payload())
+    narator_voice_ui_controller.handle_create_profile_requested(
+        window,
+        window._narator_voice_page.current_editor_payload(),
+    )
 
     assert any(
         profile["display_name"] == "My Narrator" for profile in narrator_definition_service.load_profiles(project_root)
@@ -60,7 +63,7 @@ def test_narrator_ui_controller_create_profile_does_not_change_selected_narrator
     assert narrator_definition_service.load_selected_profile_state(project_root)["selected_profile_id"] is None
 
 
-def test_narrator_ui_controller_edit_selected_profile_clears_sample_and_selection(monkeypatch, qtbot, tmp_path) -> None:
+def test_narator_voice_edit_selected_profile_clears_sample_and_selection(monkeypatch, qtbot, tmp_path) -> None:
     """
     @brief      Verify editing a selected profile clears its sample and manifest selection summary.
     @param[in]  monkeypatch Pytest monkeypatch fixture.
@@ -96,20 +99,20 @@ def test_narrator_ui_controller_edit_selected_profile_clears_sample_and_selectio
     project_workspace_service.save_manifest(project_manifest, project_root)
     window._activate_project(project_root, project_workspace_service.load_manifest(project_root))
     monkeypatch.setattr(
-        narrator_ui_controller.QMessageBox,
+        narator_voice_ui_controller.QMessageBox,
         "question",
         lambda *_args, **_kwargs: QMessageBox.StandardButton.Yes,
     )
 
-    narrator_ui_controller.handle_edit_profile_requested(window, profile["profile_id"])
+    narator_voice_ui_controller.handle_edit_profile_requested(window, profile["profile_id"])
 
     assert narrator_definition_service.has_profile_sample(project_root, profile["profile_id"]) is False
     assert narrator_definition_service.load_selected_profile_state(project_root)["selected_profile_id"] is None
     assert project_workspace_service.load_manifest(project_root)["narrator_profile_name"] is None
-    assert window._narrator_page.is_edit_mode() is True
+    assert window._narator_voice_page.is_edit_mode() is True
 
 
-def test_narrator_ui_controller_select_profile_requires_sample_and_updates_manifest(
+def test_narator_voice_ui_controller_select_profile_requires_sample_and_updates_manifest(
     monkeypatch, qtbot, tmp_path
 ) -> None:
     """
@@ -155,12 +158,12 @@ def test_narrator_ui_controller_select_profile_requires_sample_and_updates_manif
         },
     )
     monkeypatch.setattr(
-        narrator_ui_controller.misc_ui_controller,
+        narator_voice_ui_controller.misc_ui_controller,
         "show_message",
         lambda *args, **kwargs: None,
     )
 
-    narrator_ui_controller.handle_select_profile_requested(window, created_profile["profile_id"])
+    narator_voice_ui_controller.handle_select_profile_requested(window, created_profile["profile_id"])
     selected_audio_path, selected_metadata_path = narrator_definition_service.selected_narrator_sample_paths(
         project_root
     )
@@ -174,7 +177,7 @@ def test_narrator_ui_controller_select_profile_requires_sample_and_updates_manif
     assert "selected_profile_id" in selected_metadata_path.read_text(encoding="utf-8")
 
 
-def test_narrator_ui_controller_selection_change_refreshes_delete_state(qtbot, tmp_path) -> None:
+def test_narator_voice_ui_controller_selection_change_refreshes_delete_state(qtbot, tmp_path) -> None:
     """
     @brief      Verify switching the inspected narrator profile refreshes delete enablement for the new profile.
     @param[in]  qtbot Qt test helper fixture.
@@ -221,16 +224,16 @@ def test_narrator_ui_controller_selection_change_refreshes_delete_state(qtbot, t
     narrator_definition_service.select_narrator_profile(project_root, "default_narrator_profile", "English")
     window = _build_window(qtbot, project_root)
 
-    assert window._narrator_page.current_profile_id() == "default_narrator_profile"
-    assert window._narrator_page._delete_profile_button.isEnabled() is True
+    assert window._narator_voice_page.current_profile_id() == "default_narrator_profile"
+    assert window._narator_voice_page._delete_profile_button.isEnabled() is True
 
-    narrator_ui_controller.handle_selection_change_requested(window, custom_profile["profile_id"])
+    narator_voice_ui_controller.handle_selection_change_requested(window, custom_profile["profile_id"])
 
-    assert window._narrator_page.current_profile_id() == custom_profile["profile_id"]
-    assert window._narrator_page._delete_profile_button.isEnabled() is True
+    assert window._narator_voice_page.current_profile_id() == custom_profile["profile_id"]
+    assert window._narator_voice_page._delete_profile_button.isEnabled() is True
 
 
-def test_narrator_ui_controller_generate_sample_reprobes_runtime_and_stores_audio(monkeypatch, qtbot, tmp_path) -> None:
+def test_narator_voice_generate_sample_reprobes_runtime_and_stores_audio(monkeypatch, qtbot, tmp_path) -> None:
     """
     @brief      Verify Generate Sample confirms, reprobes runtime, and stores the returned audio artifacts.
     @param[in]  monkeypatch Pytest monkeypatch fixture.
@@ -240,7 +243,7 @@ def test_narrator_ui_controller_generate_sample_reprobes_runtime_and_stores_audi
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-17
-    @version    1.0.0
+    @version    1.0.1
     """
     project_root, _manifest = _create_project(tmp_path, "NarratorControllerGenerate")
     window = _build_window(
@@ -254,47 +257,47 @@ def test_narrator_ui_controller_generate_sample_reprobes_runtime_and_stores_audi
     persisted_settings = dict(window._settings_payload)
     observed_timeouts: dict[str, object] = {"wait_for_terminal_operation": []}
     monkeypatch.setattr(
-        narrator_ui_controller.QMessageBox,
+        narator_voice_ui_controller.QMessageBox,
         "question",
         lambda *_args, **_kwargs: QMessageBox.StandardButton.Yes,
     )
     monkeypatch.setattr(
-        narrator_ui_controller.misc_ui_controller,
+        narator_voice_ui_controller.misc_ui_controller,
         "create_progress_dialog",
         lambda *args, **kwargs: None,
     )
     monkeypatch.setattr(
-        narrator_ui_controller.misc_ui_controller,
+        narator_voice_ui_controller.misc_ui_controller,
         "update_progress_dialog",
         lambda *args, **kwargs: None,
     )
     monkeypatch.setattr(
-        narrator_ui_controller.misc_ui_controller,
+        narator_voice_ui_controller.misc_ui_controller,
         "finish_progress_dialog",
         lambda *args, **kwargs: None,
     )
     monkeypatch.setattr(
-        narrator_ui_controller.misc_ui_controller,
+        narator_voice_ui_controller.misc_ui_controller,
         "clear_progress_dialog",
         lambda *args, **kwargs: None,
     )
     monkeypatch.setattr(
-        narrator_ui_controller.misc_ui_controller,
+        narator_voice_ui_controller.misc_ui_controller,
         "show_message",
         lambda *args, **kwargs: None,
     )
     monkeypatch.setattr(
-        narrator_ui_controller.settings_service,
+        narator_voice_ui_controller.settings_service,
         "save_settings",
         lambda payload: persisted_settings.update(dict(payload)),
     )
     monkeypatch.setattr(
-        narrator_ui_controller.settings_service,
+        narator_voice_ui_controller.settings_service,
         "load_settings",
         lambda: dict(persisted_settings),
     )
     monkeypatch.setattr(
-        narrator_ui_controller.voiceweaver_runtime_service,
+        narator_voice_ui_controller.voiceweaver_runtime_service,
         "probe_runtime",
         lambda *_args, **_kwargs: {
             "success": True,
@@ -302,13 +305,13 @@ def test_narrator_ui_controller_generate_sample_reprobes_runtime_and_stores_audi
             "discovered_models": _minimum_qwen_models(),
             "active_model_id": None,
             "device_diagnostics": {},
-            "capability_matrix": narrator_ui_controller.voiceweaver_runtime_service.build_capability_matrix(
+            "capability_matrix": narator_voice_ui_controller.voiceweaver_runtime_service.build_capability_matrix(
                 _minimum_qwen_models()
             ),
         },
     )
     monkeypatch.setattr(
-        narrator_ui_controller.voiceweaver_runtime_service,
+        narator_voice_ui_controller.voiceweaver_runtime_service,
         "read_status",
         lambda *_args, **kwargs: (
             observed_timeouts.__setitem__("read_status", int(kwargs["timeout_seconds"])),
@@ -316,7 +319,7 @@ def test_narrator_ui_controller_generate_sample_reprobes_runtime_and_stores_audi
         )[1],
     )
     monkeypatch.setattr(
-        narrator_ui_controller.voiceweaver_runtime_service,
+        narator_voice_ui_controller.voiceweaver_runtime_service,
         "load_model",
         lambda *_args, **kwargs: (
             observed_timeouts.__setitem__("load_model", int(kwargs["timeout_seconds"])),
@@ -324,7 +327,7 @@ def test_narrator_ui_controller_generate_sample_reprobes_runtime_and_stores_audi
         )[1],
     )
     monkeypatch.setattr(
-        narrator_ui_controller.voiceweaver_runtime_service,
+        narator_voice_ui_controller.voiceweaver_runtime_service,
         "generate_custom_voice",
         lambda *_args, **kwargs: (
             observed_timeouts.__setitem__("generate_custom_voice", int(kwargs["timeout_seconds"])),
@@ -332,7 +335,7 @@ def test_narrator_ui_controller_generate_sample_reprobes_runtime_and_stores_audi
         )[1],
     )
     monkeypatch.setattr(
-        narrator_ui_controller.voiceweaver_runtime_service,
+        narator_voice_ui_controller.voiceweaver_runtime_service,
         "wait_for_terminal_operation",
         lambda *_args, **kwargs: (
             observed_timeouts["wait_for_terminal_operation"].append(int(kwargs["timeout_seconds"])),
@@ -347,14 +350,14 @@ def test_narrator_ui_controller_generate_sample_reprobes_runtime_and_stores_audi
                 else {
                     "active_model": {"model_id": "qwen-custom"},
                     "operation": {"status": "completed", "progress_percent": 100, "stage": "completed"},
-                    "result": {"available": True, "summary": "Narrator sample ready."},
+                    "result": {"available": True, "summary": "Narator voice sample ready."},
                     "device_diagnostics": {},
                 }
             ),
         )[1],
     )
     monkeypatch.setattr(
-        narrator_ui_controller.voiceweaver_runtime_service,
+        narator_voice_ui_controller.voiceweaver_runtime_service,
         "download_generated_voice",
         lambda *_args, **kwargs: (
             observed_timeouts.__setitem__("download_generated_voice", int(kwargs["timeout_seconds"])),
@@ -362,7 +365,7 @@ def test_narrator_ui_controller_generate_sample_reprobes_runtime_and_stores_audi
         )[1],
     )
 
-    narrator_ui_controller.handle_generate_sample_requested(
+    narator_voice_ui_controller.handle_generate_sample_requested(
         window,
         narrator_definition_service.DEFAULT_NARRATOR_PROFILE_ID,
     )
@@ -372,7 +375,7 @@ def test_narrator_ui_controller_generate_sample_reprobes_runtime_and_stores_audi
     )
 
     assert profile_audio_path.read_bytes() == b"RIFF-generated"
-    assert "Narrator sample ready." in profile_metadata_path.read_text(encoding="utf-8")
+    assert "Narator voice sample ready." in profile_metadata_path.read_text(encoding="utf-8")
     assert observed_timeouts == {
         "read_status": 60,
         "load_model": 60,
@@ -382,7 +385,7 @@ def test_narrator_ui_controller_generate_sample_reprobes_runtime_and_stores_audi
     }
 
 
-def test_narrator_ui_controller_preview_state_change_clears_preview_flag(qtbot, tmp_path) -> None:
+def test_narator_voice_ui_controller_preview_state_change_clears_preview_flag(qtbot, tmp_path) -> None:
     """
     @brief      Verify preview-state refresh accepts the Qt playback enum without crashing and clears the preview flag.
     @param[in]  qtbot Qt test helper fixture.
@@ -391,21 +394,21 @@ def test_narrator_ui_controller_preview_state_change_clears_preview_flag(qtbot, 
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-18
-    @version    1.0.0
+    @version    1.0.1
     """
     project_root, _manifest = _create_project(tmp_path, "NarratorControllerPreviewState")
     window = _build_window(qtbot, project_root)
-    window._narrator_page.set_preview_active(True)
-    window._narrator_audio_player.stop()
+    window._narator_voice_page.set_preview_active(True)
+    window._narator_voice_audio_player.stop()
 
-    narrator_ui_controller.handle_preview_playback_state_changed(window)
+    narator_voice_ui_controller.handle_preview_playback_state_changed(window)
 
-    assert window._narrator_page._preview_active is False  # noqa: SLF001
+    assert window._narator_voice_page._preview_active is False  # noqa: SLF001
 
 
-def test_narrator_progress_messages_hide_model_id(monkeypatch, qtbot, tmp_path) -> None:
+def test_narator_voice_progress_messages_hide_model_id(monkeypatch, qtbot, tmp_path) -> None:
     """
-    @brief      Verify narrator generation progress text does not disclose the concrete runtime model id.
+    @brief      Verify Narator Voice generation progress text does not disclose the concrete runtime model id.
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @param[in]  qtbot Qt test helper fixture.
     @param[in]  tmp_path Pytest temporary directory fixture.
@@ -419,12 +422,12 @@ def test_narrator_progress_messages_hide_model_id(monkeypatch, qtbot, tmp_path) 
     window = _build_window(qtbot, project_root)
     observed_updates: list[tuple[int, str]] = []
     monkeypatch.setattr(
-        narrator_ui_controller.misc_ui_controller,
+        narator_voice_ui_controller.misc_ui_controller,
         "update_progress_dialog",
         lambda _window, percent, message, token_usage=None: observed_updates.append((percent, message)),
     )
 
-    narrator_ui_controller._update_load_progress(
+    narator_voice_ui_controller._update_load_progress(
         window,
         {
             "operation": {
@@ -433,7 +436,7 @@ def test_narrator_progress_messages_hide_model_id(monkeypatch, qtbot, tmp_path) 
             }
         },
     )
-    narrator_ui_controller._update_generation_progress(
+    narator_voice_ui_controller._update_generation_progress(
         window,
         {
             "operation": {
@@ -444,7 +447,7 @@ def test_narrator_progress_messages_hide_model_id(monkeypatch, qtbot, tmp_path) 
     )
 
     assert observed_updates[0][1] == "Loading voice generation model..."
-    assert observed_updates[1][1] == "Generating narrator sample..."
+    assert observed_updates[1][1] == "Generating narator voice sample..."
     assert all("qwen" not in message.casefold() for _percent, message in observed_updates)
 
 

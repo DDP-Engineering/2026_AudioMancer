@@ -7,14 +7,14 @@
 # See the LICENSE.txt and LICENSE_NC.txt files for full license details.
 # -----------------------------------------------------------------------------
 """
-@file narrator_page.py
-@brief Narrator Definition workflow page for AudioMancer.
+@file narator_voice_page.py
+@brief Narator Voice workflow page for AudioMancer.
 @details Provides project-local narrator profile inspection, profile editing,
          sample generation, explicit narrator selection, and local sample
          preview controls for the fixed Qwen3-backed narrator workflow.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-17
-@version 3.1.0
+@version 3.2.0
 """
 
 # IMPORTS
@@ -39,13 +39,13 @@ from PySide6.QtWidgets import (
 from audiomancer.services import ui_state_service
 
 
-class NarratorPage(QWidget):
+class NaratorVoicePage(QWidget):
     """
-    @brief      Display the Narrator Definition workflow page.
+    @brief      Display the Narator Voice workflow page.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-17
-    @version    1.0.0
+    @version    1.1.0
     """
 
     create_profile_requested = Signal(dict)
@@ -59,13 +59,13 @@ class NarratorPage(QWidget):
 
     def __init__(self, parent=None) -> None:
         """
-        @brief      Initialize the Narrator Definition workflow page.
+        @brief      Initialize the Narator Voice workflow page.
         @param[in]  parent Optional parent widget.
         @return     None.
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-17
-        @version    1.0.0
+        @version    1.1.0
         """
         super().__init__(parent)
         self._project_active = False
@@ -89,7 +89,7 @@ class NarratorPage(QWidget):
         layout = QVBoxLayout(self)
         header_layout = QVBoxLayout()
         title_row = QHBoxLayout()
-        self._title_label = QLabel("<h2>Narrator</h2>")
+        self._title_label = QLabel("<h2>Narator Voice</h2>")
         title_row.addWidget(self._title_label)
         title_row.addStretch(1)
         header_layout.addLayout(title_row)
@@ -111,7 +111,7 @@ class NarratorPage(QWidget):
 
         self._main_splitter = QSplitter(self)
 
-        self._profiles_group = QGroupBox("Narrator Profiles", self)
+        self._profiles_group = QGroupBox("Narator Voice Profiles", self)
         profiles_layout = QVBoxLayout(self._profiles_group)
         self._profile_list = QListWidget(self)
         self._profile_list.currentRowChanged.connect(self._handle_profile_selection_changed)
@@ -178,7 +178,7 @@ class NarratorPage(QWidget):
         self._main_splitter.setSizes([360, 860])
         layout.addWidget(self._main_splitter, 1)
 
-        self._status_group = QGroupBox("Narrator Status", self)
+        self._status_group = QGroupBox("Narator Voice Status", self)
         status_layout = QVBoxLayout(self._status_group)
         self._status_edit = QPlainTextEdit(self)
         self._status_edit.setReadOnly(True)
@@ -228,7 +228,7 @@ class NarratorPage(QWidget):
         self._preview_active = is_active
         self._apply_control_state()
 
-    def set_narrator_state(
+    def set_narator_voice_state(
         self,
         profiles: list[dict[str, object]],
         notes: list[str],
@@ -266,7 +266,7 @@ class NarratorPage(QWidget):
         @param[in]  can_edit True when edit mode may start.
         @param[in]  can_delete True when delete may run.
         @param[in]  can_generate True when sample generation may start.
-        @param[in]  can_select True when the current profile may become the selected narrator.
+        @param[in]  can_select True when the current profile may become the selected narator_voice.
         @param[in]  preview_available True when one stored preview sample may play.
         @param[in]  status_lines Bottom status-window lines.
         @return     None.
@@ -400,30 +400,30 @@ class NarratorPage(QWidget):
 
     def apply_language(self, language: str) -> None:
         """
-        @brief      Apply one UI language to the narrator page labels.
+        @brief      Apply one UI language to the Narator Voice page labels.
         @param[in]  language Target UI language code.
         @return     None.
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-17
-        @version    1.0.0
+        @version    1.1.0
         """
         self._ui_language = language
-        self._title_label.setText(f"<h2>{ui_state_service.translate('narrator.title', language)}</h2>")
-        self._profiles_group.setTitle(ui_state_service.translate("narrator.profiles_group", language))
-        self._setup_group.setTitle(ui_state_service.translate("narrator.setup_group", language))
-        self._profile_name_label.setText(ui_state_service.translate("narrator.profile_name", language))
-        self._designer_group.setTitle(ui_state_service.translate("narrator.designer_group", language))
-        self._preview_group.setTitle(ui_state_service.translate("narrator.preview_group", language))
-        self._original_language_group.setTitle(self._language_indicator_title("narrator.original_language"))
-        self._translated_language_group.setTitle(self._language_indicator_title("narrator.translated_language"))
-        self._status_group.setTitle(ui_state_service.translate("narrator.status_group", language))
-        self._select_profile_button.setText(ui_state_service.translate("narrator.select_profile", language))
-        self._create_profile_button.setText(ui_state_service.translate("narrator.create_profile", language))
-        self._edit_profile_button.setText(ui_state_service.translate("narrator.edit_profile", language))
-        self._save_profile_button.setText(ui_state_service.translate("narrator.save_profile", language))
-        self._delete_profile_button.setText(ui_state_service.translate("narrator.delete_profile", language))
-        self._generate_sample_button.setText(ui_state_service.translate("narrator.generate_sample", language))
+        self._title_label.setText(f"<h2>{ui_state_service.translate('narator_voice.title', language)}</h2>")
+        self._profiles_group.setTitle(ui_state_service.translate("narator_voice.profiles_group", language))
+        self._setup_group.setTitle(ui_state_service.translate("narator_voice.setup_group", language))
+        self._profile_name_label.setText(ui_state_service.translate("narator_voice.profile_name", language))
+        self._designer_group.setTitle(ui_state_service.translate("narator_voice.designer_group", language))
+        self._preview_group.setTitle(ui_state_service.translate("narator_voice.preview_group", language))
+        self._original_language_group.setTitle(self._language_indicator_title("narator_voice.original_language"))
+        self._translated_language_group.setTitle(self._language_indicator_title("narator_voice.translated_language"))
+        self._status_group.setTitle(ui_state_service.translate("narator_voice.status_group", language))
+        self._select_profile_button.setText(ui_state_service.translate("narator_voice.select_profile", language))
+        self._create_profile_button.setText(ui_state_service.translate("narator_voice.create_profile", language))
+        self._edit_profile_button.setText(ui_state_service.translate("narator_voice.edit_profile", language))
+        self._save_profile_button.setText(ui_state_service.translate("narator_voice.save_profile", language))
+        self._delete_profile_button.setText(ui_state_service.translate("narator_voice.delete_profile", language))
+        self._generate_sample_button.setText(ui_state_service.translate("narator_voice.generate_sample", language))
         self._preview_toggle_button.setText(ui_state_service.translate(self._preview_label_key(), language))
         self._set_language_labels(self._current_original_language_text(), self._current_translated_language_text())
 
@@ -486,7 +486,7 @@ class NarratorPage(QWidget):
         @date       2026-04-21
         @version    0.1.0
         """
-        return "narrator.stop_preview" if self._preview_active else "narrator.preview"
+        return "narator_voice.stop_preview" if self._preview_active else "narator_voice.preview"
 
     def _refresh_profile_list(self, selected_profile_id: str | None) -> None:
         """
