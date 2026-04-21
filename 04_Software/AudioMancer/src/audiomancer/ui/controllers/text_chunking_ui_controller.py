@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-  # noqa: UP009
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -163,11 +163,12 @@ def handle_ai_chunking_requested(window: "MainWindow", profile_id: str, strategy
     if selected_strategy not in config.AI_CHUNKING_STRATEGY_OPTIONS:
         selected_strategy = config.DEFAULT_AI_CHUNKING_STRATEGY
 
-    if not (chunking_status in {"running", "failed"} and chunking_mode == "ai_assisted"):
-        if chunking_status == "completed":
-            if not confirm_ai_chunking_rerun(window, current_language):
-                return
-            _reset_chunking_and_downstream(window)
+    if (
+        chunking_status not in {"running", "failed"} or chunking_mode != "ai_assisted"
+    ) and chunking_status == "completed":
+        if not confirm_ai_chunking_rerun(window, current_language):
+            return
+        _reset_chunking_and_downstream(window)
 
     start_operation(
         window,
@@ -520,6 +521,14 @@ def confirm_ai_chunking_rerun(window: "MainWindow", language: str) -> bool:
 
 
 def _reset_chunking_and_downstream(window: "MainWindow") -> None:
+    """
+    @brief      Execute the reset chunking and downstream helper.
+    @param[in]  window Value for `window`.
+    @return     None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-21
+    @version    0.1.0
+    """
     assert window._current_project_root is not None
     assert window._current_manifest is not None
     operation_runtime_service.reset_operation_data(
@@ -537,6 +546,14 @@ def _reset_chunking_and_downstream(window: "MainWindow") -> None:
 
 
 def _load_chunking_operation_state(window: "MainWindow") -> dict[str, object] | None:
+    """
+    @brief      Load the chunking operation state.
+    @param[in]  window Value for `window`.
+    @return     Derived helper result.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-21
+    @version    0.1.0
+    """
     if window._current_project_root is None:
         return None
     return ai_chunking_service.load_operation_state(
@@ -548,6 +565,15 @@ def _resolve_ai_profile(
     settings_payload: dict[str, object] | None,
     profile_id: str | None,
 ) -> dict[str, object] | None:
+    """
+    @brief      Resolve the ai profile.
+    @param[in]  settings_payload Payload for `settings_payload`.
+    @param[in]  profile_id Profile identifier.
+    @return     Derived helper result.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-21
+    @version    0.1.0
+    """
     if not isinstance(settings_payload, dict) or not profile_id:
         return None
     raw_profiles = settings_payload.get("llm_profiles", [])
@@ -567,6 +593,15 @@ def _resume_ai_profile_id(
     window: "MainWindow",
     chunking_operation: dict[str, object],
 ) -> str | None:
+    """
+    @brief      Execute the resume ai profile id helper.
+    @param[in]  window Value for `window`.
+    @param[in]  chunking_operation Value for `chunking_operation`.
+    @return     Helper result.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-21
+    @version    0.1.0
+    """
     metadata = chunking_operation.get("metadata")
     if isinstance(metadata, dict):
         profile_id = metadata.get("ai_profile_id")
@@ -586,6 +621,15 @@ def _resume_ai_strategy(
     window: "MainWindow",
     chunking_operation: dict[str, object],
 ) -> str:
+    """
+    @brief      Execute the resume ai strategy helper.
+    @param[in]  window Value for `window`.
+    @param[in]  chunking_operation Value for `chunking_operation`.
+    @return     Helper result.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-21
+    @version    0.1.0
+    """
     metadata = chunking_operation.get("metadata")
     if isinstance(metadata, dict):
         semantic_strategy = str(metadata.get("semantic_strategy", "")).strip()

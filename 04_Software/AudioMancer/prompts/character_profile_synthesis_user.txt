@@ -13,6 +13,13 @@ Return exactly one JSON object with this shape:
   "speaking_style": "",
   "accent_or_dialect_hints": "",
   "voice_notes": "",
+  "voice_persona_summary": "",
+  "voice_timbre_and_range": "",
+  "voice_pacing_and_rhythm": "",
+  "voice_emotional_baseline": "",
+  "voice_articulation_and_pronunciation": "",
+  "voice_delivery_constraints": "",
+  "voice_definition_prompt": "",
   "relationship_hints": [],
   "confidence": "",
   "evidence": [
@@ -28,5 +35,9 @@ Do not invent unsupported details.
 Preserve the provided evidence chunk ids.
 If the payload does not support spoken dialogue, return empty strings and empty lists for the profile fields.
 Escape any inner quotes and embedded newlines correctly inside JSON string values.
+The voice-definition fields must be written for later Qwen3-TTS voice design, not as plot summary.
+Keep them concise, positive, and non-contradictory.
+Do not imitate celebrities, actors, or copyrighted character voices.
+`voice_definition_prompt` must be one short English paragraph that cleanly describes the target voice identity and delivery.
 
 {character_payload}

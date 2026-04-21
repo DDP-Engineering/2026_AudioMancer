@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-  # noqa: UP009
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -11,8 +12,8 @@
 @details Creates, validates, saves, and opens file-based project workspaces
          using one minimal `project.json` manifest contract.
 @author Eng. Dan Dumitru Pasare
-@date 2026-04-11
-@version    1.0.0
+@date 2026-04-20
+@version    1.3.0
 """
 
 # IMPORTS
@@ -294,8 +295,8 @@ def build_project_manifest(
     @return     New normalized manifest payload.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-11
-    @version    0.3.0
+    @date       2026-04-18
+    @version    0.5.0
     """
     resolved_timestamp = timestamp_iso or _utc_now_iso()
     return {
@@ -309,8 +310,10 @@ def build_project_manifest(
         "extraction_report_relative_path": None,
         "extraction_warning_count": 0,
         "operations": _build_default_operation_states(),
+        "original_language": None,
         "narrator_profile_name": None,
         "narrator_language": None,
+        "voice_assignment_mode": config.DEFAULT_TTS_VOICE_ASSIGNMENT_MODE,
         "notes": "",
     }
 
@@ -323,14 +326,17 @@ def validate_project_manifest(payload: object) -> ProjectManifestPayload:
     @return     Normalized manifest dictionary.
     @exception  ValueError Raised when the payload is invalid.
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-11
-    @version    0.3.0
+    @date       2026-04-18
+    @version    0.5.0
     """
     _validate_manifest_payload(payload)
     assert isinstance(payload, dict)
     current_stage = str(payload.get("current_stage", config.DEFAULT_WORKFLOW_STAGE))
     if current_stage not in config.PROJECT_WORKFLOW_STAGES:
         current_stage = config.DEFAULT_WORKFLOW_STAGE
+    voice_assignment_mode = str(payload.get("voice_assignment_mode", config.DEFAULT_TTS_VOICE_ASSIGNMENT_MODE)).strip()
+    if voice_assignment_mode not in config.TTS_VOICE_ASSIGNMENT_MODE_OPTIONS:
+        voice_assignment_mode = config.DEFAULT_TTS_VOICE_ASSIGNMENT_MODE
     return {
         "project_id": str(payload["project_id"]),
         "display_name": str(payload["display_name"]),
@@ -342,8 +348,10 @@ def validate_project_manifest(payload: object) -> ProjectManifestPayload:
         "extraction_report_relative_path": _optional_string(payload.get("extraction_report_relative_path")),
         "extraction_warning_count": _non_negative_int(payload.get("extraction_warning_count", 0)),
         "operations": _normalize_operations(payload.get("operations")),
+        "original_language": _optional_string(payload.get("original_language")),
         "narrator_profile_name": _optional_string(payload.get("narrator_profile_name")),
         "narrator_language": _optional_string(payload.get("narrator_language")),
+        "voice_assignment_mode": voice_assignment_mode,
         "notes": str(payload.get("notes", "")),
     }
 
@@ -510,11 +518,11 @@ def _folders_to_reset_from(corrupted_step: str) -> tuple[str, ...]:
     @return     Tuple of affected folder names in reset order.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.1.0
+    @date       2026-04-17
+    @version    0.2.0
     """
     if corrupted_step not in _STEP_FOLDERS_IN_ORDER:
-        return tuple()
+        return ()
     start_index = _STEP_FOLDERS_IN_ORDER.index(corrupted_step)
     return _STEP_FOLDERS_IN_ORDER[start_index:]
 
@@ -530,8 +538,8 @@ def _build_repaired_manifest(
     @return     Repaired manifest payload.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.1.0
+    @date       2026-04-18
+    @version    0.2.0
     """
     repaired_manifest = {
         "project_id": str(payload["project_id"]),
@@ -546,8 +554,15 @@ def _build_repaired_manifest(
         "extraction_report_relative_path": _optional_string(payload.get("extraction_report_relative_path")),
         "extraction_warning_count": _non_negative_int(payload.get("extraction_warning_count", 0)),
         "operations": _normalize_operations(payload.get("operations")),
+        "original_language": _optional_string(payload.get("original_language")),
         "narrator_profile_name": _optional_string(payload.get("narrator_profile_name")),
         "narrator_language": _optional_string(payload.get("narrator_language")),
+        "voice_assignment_mode": (
+            str(payload.get("voice_assignment_mode", config.DEFAULT_TTS_VOICE_ASSIGNMENT_MODE)).strip()
+            if str(payload.get("voice_assignment_mode", config.DEFAULT_TTS_VOICE_ASSIGNMENT_MODE)).strip()
+            in config.TTS_VOICE_ASSIGNMENT_MODE_OPTIONS
+            else config.DEFAULT_TTS_VOICE_ASSIGNMENT_MODE
+        ),
         "notes": str(payload.get("notes", "")),
     }
     if _stage_rank(str(repaired_manifest["current_stage"])) < _stage_rank("narrator_definition_ready"):
@@ -766,7 +781,7 @@ def _allowed_operations_for_stage(current_stage: str) -> set[str]:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-08
-    @version    0.1.0
+    @version    0.2.0
     """
     if current_stage == "source_selected":
         return {"extraction"}
@@ -776,7 +791,7 @@ def _allowed_operations_for_stage(current_stage: str) -> set[str]:
         return {"extraction", "cleanup", "chunking"}
     if current_stage == "translation_ready":
         return {"extraction", "cleanup", "chunking", "translation"}
-    if current_stage in {"character_discovery_ready", "narrator_definition_ready"}:
+    if current_stage in {"character_discovery_ready", "narrator_definition_ready", "narration_plan_ready"}:
         return {
             "extraction",
             "cleanup",

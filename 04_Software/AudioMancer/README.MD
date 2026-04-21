@@ -20,18 +20,23 @@ This folder contains the current Python application implementation for
 - `src/audiomancer/services/logging_service.py` provides per-run app logging and optional trace helpers.
 - `src/audiomancer/services/settings_service.py` provides load, validate, self-heal, and save behavior for `settings.json`.
 - `src/audiomancer/services/ai_backend_service.py` provides backend probe and model-discovery helpers for AI provider profiles.
-- `src/audiomancer/services/project_workspace_service.py` provides new/open project creation, validation, and manifest persistence.
+- `src/audiomancer/services/project_workspace_service.py` provides new/open project creation, validation, and manifest persistence, including the optional `project.json.original_language` field used by the Narrator page and the project-local `voice_assignment_mode` field used by `TTS Settings`.
 - `src/audiomancer/services/import_service.py` provides source-file validation, copy-into-project behavior, and source metadata creation.
 - `src/audiomancer/services/text_extraction_service.py` provides deterministic raw-text extraction, self-contained extraction artifacts, resumable extraction state, and cancelable progress updates.
 - `src/audiomancer/services/deterministic_cleanup_service.py` provides deterministic cleanup, cleanup artifacts, and resumable cleanup state.
 - `src/audiomancer/services/deterministic_chunking_service.py` provides deterministic chunking, chunk artifacts, and resumable chunking state.
 - `src/audiomancer/services/ai_cleanup_service.py` provides AI-assisted cleanup, resumable AI cleanup state, and operation-local AI transaction logging.
 - `src/audiomancer/services/ai_translation_service.py` provides AI-assisted translation, translated chunk review records, and resumable translation state.
-- `src/audiomancer/services/character_discovery_service.py` provides AI-assisted character discovery, resumable character-profile synthesis, and persisted discovery artifacts under `40_character_discovery`.
+- `src/audiomancer/services/character_discovery_service.py` provides AI-assisted character discovery, resumable character-profile synthesis, persisted Qwen-oriented voice-definition brief fields plus one final `voice_definition_prompt`, and persisted discovery artifacts under `40_character_discovery`.
+- `src/audiomancer/services/narrator_definition_service.py` provides project-local narrator profile persistence, explicit selected-narrator state, `project.json`-backed TTS plan helpers, per-profile sample artifact storage, and selected narrator audio-copy helpers under `50_narrator_definition` plus the project-root `audio_samples` folder.
+- `src/audiomancer/services/narration_plan_service.py` provides project-local narration-plan target persistence, character-owned voice-prompt handoff from `Characters` with legacy fallback derivation, selected voice-language persistence, per-character sample storage, and same-narrator sample-copy helpers under `60_narration_plan`.
+- `src/audiomancer/services/voiceweaver_runtime_service.py` provides VoiceWeaver runtime probing, full current REST endpoint wrappers, capability-matrix derivation, model-load or unload helpers, generation status polling, and generated-audio download helpers for TTS Settings and narrator sample generation.
 - `src/audiomancer/services/token_usage_service.py` provides shared normalization and cumulative merge helpers for provider-reported token usage.
 - `src/audiomancer/services/text_chunking_state_service.py` provides Text Chunking page state shaping plus persisted chunk preview loading.
 - `src/audiomancer/services/ai_translation_state_service.py` provides AI Translation page state shaping plus persisted translated chunk and review loading.
 - `src/audiomancer/services/character_discovery_state_service.py` provides Characters page state shaping plus persisted discovery profile and evidence loading.
+- `src/audiomancer/services/narrator_definition_state_service.py` provides Narrator page state shaping plus persisted narrator profile and selection loading.
+- `src/audiomancer/services/narration_plan_state_service.py` provides Narration Plan page state shaping plus selected voice-language, narrator-plus-character target ordering, translation-language gating, and sample-status loading.
 - `src/audiomancer/services/llm_provider_service.py` provides OpenAI-compatible chat-completion requests, transient retry handling, conservative malformed-JSON repair, responsive cooperative cancellation during model waits, JSON normalization, normalized token-usage extraction, and optional AI transaction logging.
 - `src/audiomancer/services/prompt_template_service.py` provides strict prompt loading and placeholder rendering from the app-root `prompts/` folder.
 - `src/audiomancer/services/operation_runtime_service.py` provides shared runtime helpers for long-running operation folders, resets, and progress conversion.
@@ -41,10 +46,13 @@ This folder contains the current Python application implementation for
 - `src/audiomancer/ui/controllers/` provides page/window-oriented Qt controllers for Home, Text Cleanup, Settings, AI Settings, and shared shell UI helpers.
 - `src/audiomancer/ui/controllers/` now also includes a dedicated Text Chunking page controller for deterministic chunking actions and rerun/reset handling.
 - `src/audiomancer/ui/controllers/characters_ui_controller.py` provides the Character Discovery page controller for start, resume, reset, guarded manual add/edit/save/delete actions, and explicit unsaved-change handling.
+- `src/audiomancer/ui/controllers/narrator_ui_controller.py` provides the Narrator page controller for inspected-vs-selected profile handling, destructive edit confirmation, Qwen3-backed VoiceWeaver sample generation with one configurable preview timeout, load-then-poll runtime sequencing before generation, explicit narrator selection, and local WAV preview playback.
+- `src/audiomancer/ui/controllers/narration_plan_ui_controller.py` provides the Narration Plan page controller for target inspection, destructive character prompt edits, Qwen3-backed character sample generation, explicit voice-language persistence, and local narrator-or-character preview playback.
+- `src/audiomancer/ui/controllers/tts_settings_ui_controller.py` provides the TTS Settings dialog controller for VoiceWeaver connection tests plus persistence for runtime cache fields, preview/generation timeouts, and the simplified project-local `voice_assignment_mode`.
 - `src/audiomancer/ui/operation_progress_dialog.py` provides the reusable modal progress popup created on demand for synchronous blocking operations.
 - `prompts/` stores AI prompt templates loaded by AI-assisted cleanup, translation, character discovery, and future AI workflows.
 - the main toolbar now supports `New Project` and `Open Project`.
-- new projects create `00_extraction`, `10_cleanup`, `20_chunking`, `30_translation`, `40_character_discovery`, `50_narrator_definition`, `temp`, and one root `project.json`.
+- new projects create `00_extraction`, `10_cleanup`, `20_chunking`, `30_translation`, `40_character_discovery`, `50_narrator_definition`, `60_narration_plan`, `temp`, and one root `project.json`.
 - opening a project now works from the project root or one selected child workflow folder.
 - opening a recoverably corrupted project now offers a repair confirmation and can recreate/reset the corrupted step plus all downstream step folders while updating the manifest stage.
 - `project.json` now keeps only compact workflow summaries under `operations`, while detailed per-step runtime state remains authoritative in each workflow folder `state_operation.json` and related artifact files.
@@ -57,12 +65,13 @@ This folder contains the current Python application implementation for
 - the `Text Chunking` page now runs deterministic chunking into `20_chunking`, renders the current chunk list plus selected chunk preview, and resumes interrupted deterministic chunking runs.
 - the `Text Chunking` page now also supports AI-assisted chunking using the selected enabled AI profile plus the selected semantic strategy.
 - the `AI Translation` page now translates canonical chunks into one selected target language, preserves per-chunk review state in `30_translation`, and supports chunk editing plus approval.
-- the `Characters` page now discovers speaking characters from canonical chunking output, persists editable character profiles in `40_character_discovery`, supports resumable AI runs, and shows source-evidence previews for each discovered character.
+- the `Characters` page now discovers speaking characters from canonical chunking output, persists editable character profiles in `40_character_discovery`, generates and stores one structured Qwen-oriented voice-definition brief plus one final `voice_definition_prompt` per character, supports explicit `Regenerate Voice Definition`, supports resumable AI runs, and shows source-evidence previews for each discovered character.
 - extraction artifacts currently use `input_<original_name>`, `output_raw_text.txt`, `extraction_report.json`, and `state_operation.json`.
 - cleanup artifacts currently use `input_<original_name>`, `output_clean_text.txt`, `artifact_cleanup_report.json`, and `state_operation.json`, with the cleanup output/report names defined centrally in `src/audiomancer/config.py`.
 - chunking artifacts currently use `input_<original_name>`, `output_chunks.json`, `chunking_report.json`, and `state_operation.json`, with both deterministic and AI-assisted chunking updating the same canonical chunk output.
 - translation artifacts currently use `input_<original_name>.json`, `output_translated_chunks.json`, `artifact_translation_report.json`, and `state_operation.json`, while leaving the canonical chunking output unchanged.
 - character-discovery artifacts currently use `input_<original_name>.json`, `input_<original_name>.txt`, `output_character_profiles.json`, `artifact_character_discovery_report.json`, and `state_operation.json`.
+- narration-plan artifacts currently use `voice_plan.json`, `selected_voice_language.json`, and one per-target WAV plus JSON pair under `60_narration_plan/audio_samples/`.
 - AI-assisted cleanup writes one project-local transaction log per run in `10_cleanup` using `log_ai_transactions_<timestamp>.log`.
 - pressing `Extract Text` after a completed extraction now asks for confirmation before clearing extraction data and all downstream workflow folders.
 - pressing `Deterministic Cleanup` after a completed cleanup now asks for confirmation before clearing cleanup data plus chunking and all following workflow folders.
@@ -92,7 +101,17 @@ This folder contains the current Python application implementation for
 - the current shell supports runtime English/Romanian UI switching through one centralized UI-state service.
 - the `AI Settings` dialog now loads and saves AI profiles plus the default cleanup, chunking, translation, and character-extraction selections through the shared settings service.
 - the `AI Settings` dialog now supports backend connection probing, discovered model refresh, and popup feedback with discovered-model counts.
-- the static `Narrator` page now includes a presentational Qwen3-style profile manager with profile listing, custom-profile actions, voice-source selection, language selectors, voice-designer prompt fields, and a reserved preview panel.
+- the `TTS Settings` dialog now persists one global VoiceWeaver runtime connection cache in `settings.json`, one narrator preview timeout, one long-form audio generation timeout, and one simplified project-local `voice_assignment_mode` field in `project.json`, with new projects defaulting to separate narrator plus character voices.
+- the `TTS Settings` dialog now shows equally wide runtime connection and discovered-model columns, keeps the discovered-model list height close to the runtime controls height, and exposes `Voice Assignment Mode` plus the two TTS timeout settings below the runtime area.
+- the VoiceWeaver runtime capability matrix now classifies fixed Qwen3 `base`, `voice_designer`, and `custom_voice` readiness from the current REST generation modes (`clone`, `definition`, `custom_voice`) while still tolerating older alias values in cached data.
+- the `Narrator` page now seeds each project with built-in editable Qwen3 preset profiles for `vivian`, `serena`, and `anna`, restores those presets automatically when they are missing from one project, syncs any additional Qwen3 CustomVoice presets reported by the current runtime into the project profile catalog as runtime presets instead of protected built-ins, migrates legacy `qwen3_tts_customvoice_seed` prompt-seed entries into editable custom narrator profiles, keeps no narrator selected by default, stores narrator language values internally as VoiceWeaver language codes, and stores `preview_text` plus `is_selected` in `50_narrator_definition/profiles.json`.
+- the `Narrator` page now supports explicit `Create Profile`, `Edit Profile`, `Save Profile`, `Delete Profile`, `Generate Sample`, `Preview`, and `Select` actions for project-local narrator definitions, with no `Add Model Profiles` workflow.
+- editing a narrator profile now shows a destructive confirmation, clears the stored sample immediately, clears selection when the edited profile was selected, and requires a new sample before the profile can be selected again.
+- narrator profile selection in the left list now refreshes button enablement for the newly inspected profile, so Delete, Generate Sample, Select, and Preview follow the currently highlighted profile instead of the previously inspected one.
+- narrator sample generation now re-tests fixed Qwen3 capability readiness from the current runtime probe, waits for model-load completion before submitting generation, sends VoiceWeaver language codes instead of UI labels, uses the saved narrator preview timeout from `TTS Settings`, stores one per-profile WAV plus metadata under `50_narrator_definition/audio_samples`, and refreshes the selected narrator copy under the project-root `audio_samples` folder only when the generated profile is already selected.
+- the Narrator page now shows read-only original and translated book languages plus a bottom status window summarizing profile counts, sample counts, selected-count state, and current Qwen3 readiness notes.
+- the `Narration Plan` page now lists the selected narrator plus all discovered characters, persists one selected voice language under `60_narration_plan`, uses the character-owned `voice_definition_prompt` from `Characters` as the default character voice-designer prompt with one legacy fallback builder for older projects, includes one separate two-line preview-text editor like the Narrator page, uses that preview text for character sample generation, stores it alongside each generated sample for later voice-cloning work, supports reset or edit or save or generate or preview for character targets, and shows a bottom status window with total targets plus targets with samples.
+- the `Narration Plan` page now disables character prompt editing and sample generation when `voice_assignment_mode` is `same_narrator`, automatically copies the selected narrator sample into each character sample slot, and warns on page entry when the selected narrator still lacks a generated sample.
 - `LICENSE.txt`, `LICENSE_NC.txt`, `LICENSE_ro.txt`, and `LICENSE_NC_ro.txt` are stored in the app root so the About dialog can display English or Romanian license text and the delivered app keeps the license set at the app-root level.
 - the About dialog now includes the main license text and the non-commercial addendum in a scrollable read-only text area, localized to the current UI language when a companion translation file exists.
 - `tests/` contains focused automated tests for the scaffold.
@@ -140,6 +159,7 @@ uv run python -m audiomancer
 - Updated settings can be saved back through the shared settings service from both `Settings` and `AI Settings`.
 - Saved language and text-size changes are applied immediately to the running UI shell.
 - Saved AI provider settings now include persisted connection-discovery state for each configured profile.
+- Saved TTS runtime settings now include persisted VoiceWeaver discovery state, active-model identity, normalized device diagnostics, narrator preview timeout, and long-form audio generation timeout.
 
 ## Run Tests
 
@@ -190,6 +210,29 @@ uv run pytest tests/test_llm_provider_service.py
 uv run pytest tests/test_ai_cleanup_service.py
 uv run pytest tests/test_text_cleanup_page.py
 uv run pytest tests/test_text_cleanup_ui_controller.py
+```
+
+Focused validation used for the current narrator and TTS settings refactor:
+
+```powershell
+uv run pytest tests/test_narrator_definition_service.py
+uv run pytest tests/test_narrator_definition_state_service.py
+uv run pytest tests/test_narrator_page.py
+uv run pytest tests/test_narrator_ui_controller.py
+uv run pytest tests/test_tts_settings_page.py
+uv run pytest tests/test_voiceweaver_runtime_service.py
+uv run pytest tests/test_main_window_project_flow.py -k narrator
+```
+
+Focused validation used for the current narration-plan implementation:
+
+```powershell
+uv run pytest tests/test_narration_plan_service.py
+uv run pytest tests/test_narration_plan_state_service.py
+uv run pytest tests/test_narration_plan_page.py
+uv run pytest tests/test_narration_plan_ui_controller.py
+uv run pytest tests/test_project_workspace_service.py
+uv run pytest tests/test_main_window_project_flow.py -k "narration or Narration"
 ```
 
 Focused validation used for the current deterministic chunking implementation:

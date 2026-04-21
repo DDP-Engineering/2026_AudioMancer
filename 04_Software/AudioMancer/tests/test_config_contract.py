@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -12,8 +11,8 @@
 @details Verifies that the adapted configuration constants and persisted
          settings scaffold exist with the expected baseline contract.
 @author Eng. Dan Dumitru Pasare
-@date 2026-04-07
-@version 0.8.2
+@date 2026-04-20
+@version 0.8.3
 """
 
 # IMPORTS
@@ -34,7 +33,7 @@ def test_config_exposes_expected_identity_and_window_defaults() -> None:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.2.0
+    @version    0.2.1
     """
     assert config.APP_NAME == "AudioMancer"
     assert config.PACKAGE_NAME == "audiomancer"
@@ -44,7 +43,9 @@ def test_config_exposes_expected_identity_and_window_defaults() -> None:
     assert config.DEFAULT_MAIN_WINDOW_MIN_HEIGHT == 620
     assert config.PROJECT_MANIFEST_FILE_NAME == "project.json"
     assert "50_narrator_definition" in config.PROJECT_REQUIRED_SUBDIRECTORIES
+    assert "60_narration_plan" in config.PROJECT_REQUIRED_SUBDIRECTORIES
     assert config.DEFAULT_WORKFLOW_STAGE == "project_created"
+    assert "narration_plan_ready" in config.PROJECT_WORKFLOW_STAGES
     assert config.SUPPORTED_SOURCE_SUFFIXES[".epub"] == "epub"
     assert config.SUPPORTED_SOURCE_SUFFIXES[".docx"] == "docx"
     assert config.EXTRACTION_FOLDER_NAME == "00_extraction"

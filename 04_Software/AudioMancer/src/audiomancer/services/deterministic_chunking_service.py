@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-  # noqa: UP009
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -285,6 +285,17 @@ def load_chunks(project_root: str | Path) -> list[ChunkPayload]:
 
 
 def _emit_progress(progress_callback, progress_current: int, progress_total: int, message: str) -> None:
+    """
+    @brief      Emit the progress.
+    @param[in]  progress_callback Optional progress callback.
+    @param[in]  progress_current Value for `progress_current`.
+    @param[in]  progress_total Value for `progress_total`.
+    @param[in]  message Operator-facing message text.
+    @return     None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-21
+    @version    0.1.0
+    """
     if callable(progress_callback):
         progress_callback(
             progress_current,
@@ -295,6 +306,14 @@ def _emit_progress(progress_callback, progress_current: int, progress_total: int
 
 
 def _build_paragraph_records(cleaned_text: str) -> list[dict[str, object]]:
+    """
+    @brief      Build the paragraph records.
+    @param[in]  cleaned_text Text value for `cleaned_text`.
+    @return     Derived helper result.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-21
+    @version    0.1.0
+    """
     normalized = cleaned_text.replace("\r\n", "\n").replace("\r", "\n")
     paragraph_texts = [paragraph.strip() for paragraph in normalized.split("\n\n") if paragraph.strip()]
     records: list[dict[str, object]] = []
@@ -316,6 +335,16 @@ def _build_chunk_payload(
     paragraph_record: dict[str, object],
     chapter_label: str | None,
 ) -> ChunkPayload:
+    """
+    @brief      Build the chunk payload.
+    @param[in]  sequence_index Value for `sequence_index`.
+    @param[in]  paragraph_record Value for `paragraph_record`.
+    @param[in]  chapter_label Value for `chapter_label`.
+    @return     Derived helper result.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-21
+    @version    0.1.0
+    """
     return {
         "chunk_id": f"chunk-{sequence_index:04d}",
         "sequence_index": sequence_index,
@@ -330,6 +359,15 @@ def _build_chunk_payload(
 
 
 def _write_chunk_payload(output_path: Path, chunks: list[ChunkPayload]) -> None:
+    """
+    @brief      Write the chunk payload.
+    @param[in]  output_path Output file path.
+    @param[in]  chunks Value for `chunks`.
+    @return     None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-21
+    @version    0.1.0
+    """
     output_path.write_text(
         json.dumps(chunks, indent=2, ensure_ascii=False) + "\n",
         encoding="utf-8",
@@ -337,6 +375,14 @@ def _write_chunk_payload(output_path: Path, chunks: list[ChunkPayload]) -> None:
 
 
 def _load_partial_chunks(output_path: Path) -> list[ChunkPayload]:
+    """
+    @brief      Load the partial chunks.
+    @param[in]  output_path Output file path.
+    @return     Derived helper result.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-21
+    @version    0.1.0
+    """
     if not output_path.is_file():
         return []
     payload = json.loads(output_path.read_text(encoding="utf-8"))
@@ -355,6 +401,21 @@ def _write_running_state(
     progress_total: int,
     chunks: list[ChunkPayload],
 ) -> None:
+    """
+    @brief      Write the running state.
+    @param[in]  state_path Operation-state file path.
+    @param[in]  project_root Active project root folder.
+    @param[in]  input_snapshot_path Input snapshot file path.
+    @param[in]  output_path Output file path.
+    @param[in]  started_at Value for `started_at`.
+    @param[in]  progress_current Value for `progress_current`.
+    @param[in]  progress_total Value for `progress_total`.
+    @param[in]  chunks Value for `chunks`.
+    @return     None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-21
+    @version    0.1.0
+    """
     running_state = _build_operation_state(
         project_root,
         input_snapshot_path=input_snapshot_path,
@@ -393,6 +454,27 @@ def _build_operation_state(
     chunks: list[ChunkPayload] | None,
     resume_checkpoint: dict[str, object] | None,
 ) -> OperationStatePayload:
+    """
+    @brief      Build the operation state.
+    @param[in]  project_root Active project root folder.
+    @param[in]  input_snapshot_path Input snapshot file path.
+    @param[in]  output_path Output file path.
+    @param[in]  report_path Report file path.
+    @param[in]  status Value for `status`.
+    @param[in]  progress_current Value for `progress_current`.
+    @param[in]  progress_total Value for `progress_total`.
+    @param[in]  started_at Value for `started_at`.
+    @param[in]  completed_at Value for `completed_at`.
+    @param[in]  warnings Value for `warnings`.
+    @param[in]  chunk_count Value for `chunk_count`.
+    @param[in]  chapter_count Value for `chapter_count`.
+    @param[in]  chunks Value for `chunks`.
+    @param[in]  resume_checkpoint Value for `resume_checkpoint`.
+    @return     Derived helper result.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-21
+    @version    0.1.0
+    """
     artifact_paths: list[str] = []
     if report_path is not None and report_path.is_file():
         artifact_paths.append(relative_to_project(project_root, report_path))
@@ -420,6 +502,14 @@ def _build_operation_state(
 
 
 def _build_chunking_warnings(chapter_count: int) -> list[str]:
+    """
+    @brief      Build the chunking warnings.
+    @param[in]  chapter_count Value for `chapter_count`.
+    @return     Derived helper result.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-21
+    @version    0.1.0
+    """
     warnings: list[str] = []
     if chapter_count == 0:
         warnings.append(
@@ -429,6 +519,14 @@ def _build_chunking_warnings(chapter_count: int) -> list[str]:
 
 
 def _chapter_count_from_chunks(chunks: list[ChunkPayload]) -> int:
+    """
+    @brief      Execute the chapter count from chunks helper.
+    @param[in]  chunks Value for `chunks`.
+    @return     Helper result.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-21
+    @version    0.1.0
+    """
     chapter_labels: list[str] = []
     for chunk in chunks:
         chapter_label = chunk.get("chapter_label")
@@ -441,6 +539,14 @@ def _chapter_count_from_chunks(chunks: list[ChunkPayload]) -> int:
 
 
 def _current_chapter_from_chunks(chunks: list[ChunkPayload]) -> str | None:
+    """
+    @brief      Return the current chapter from chunks.
+    @param[in]  chunks Value for `chunks`.
+    @return     Resolved helper result.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-21
+    @version    0.1.0
+    """
     for chunk in reversed(chunks):
         chapter_label = chunk.get("chapter_label")
         if chapter_label not in (None, ""):
@@ -449,6 +555,14 @@ def _current_chapter_from_chunks(chunks: list[ChunkPayload]) -> str | None:
 
 
 def _detect_chapter_label(paragraph_text: str) -> str | None:
+    """
+    @brief      Detect the chapter label.
+    @param[in]  paragraph_text Text value for `paragraph_text`.
+    @return     Derived helper result.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-21
+    @version    0.1.0
+    """
     normalized = paragraph_text.strip()
     if len(normalized) > 100:
         return None
@@ -459,12 +573,27 @@ def _detect_chapter_label(paragraph_text: str) -> str | None:
 
 
 def _load_operation_state(state_path: Path) -> OperationStatePayload | None:
+    """
+    @brief      Load the operation state.
+    @param[in]  state_path Operation-state file path.
+    @return     Derived helper result.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-21
+    @version    0.1.0
+    """
     if not state_path.is_file():
         return None
     return dict(json.loads(state_path.read_text(encoding="utf-8")))
 
 
 def _utc_now_iso() -> str:
+    """
+    @brief      Execute the utc now iso helper.
+    @return     Helper result.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-21
+    @version    0.1.0
+    """
     return datetime.now(UTC).replace(microsecond=0).isoformat()
 
 

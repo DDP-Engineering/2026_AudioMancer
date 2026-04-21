@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-  # noqa: UP009
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -359,6 +359,18 @@ def _emit_progress(
     message: str,
     token_usage: TokenUsagePayload | None = None,
 ) -> None:
+    """
+    @brief      Emit the progress.
+    @param[in]  progress_callback Optional progress callback.
+    @param[in]  progress_current Value for `progress_current`.
+    @param[in]  progress_total Value for `progress_total`.
+    @param[in]  message Operator-facing message text.
+    @param[in]  token_usage Value for `token_usage`.
+    @return     None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-21
+    @version    0.1.0
+    """
     if callable(progress_callback):
         progress_callback(
             progress_current,
@@ -370,6 +382,14 @@ def _emit_progress(
 
 
 def _build_cleanup_units(text: str) -> list[dict[str, object]]:
+    """
+    @brief      Build the cleanup units.
+    @param[in]  text Value for `text`.
+    @return     Derived helper result.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-21
+    @version    0.1.0
+    """
     normalized = text.replace("\r\n", "\n").replace("\r", "\n")
     units: list[dict[str, object]] = []
     next_index = 1
@@ -387,6 +407,14 @@ def _build_cleanup_units(text: str) -> list[dict[str, object]]:
 
 
 def _normalize_unit_paragraph_text(unit_text: str) -> str:
+    """
+    @brief      Normalize the unit paragraph text.
+    @param[in]  unit_text Text value for `unit_text`.
+    @return     Derived helper result.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-21
+    @version    0.1.0
+    """
     normalized_lines = [
         re.sub(r"\s+", " ", raw_line).strip()
         for raw_line in unit_text.replace("\r\n", "\n").replace("\r", "\n").split("\n")
@@ -406,6 +434,15 @@ def _build_windows(
     units: list[dict[str, object]],
     usable_input_budget: int,
 ) -> list[dict[str, int]]:
+    """
+    @brief      Build the windows.
+    @param[in]  units Value for `units`.
+    @param[in]  usable_input_budget Value for `usable_input_budget`.
+    @return     Derived helper result.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-21
+    @version    0.1.0
+    """
     windows: list[dict[str, int]] = []
     start_index = 0
     while start_index < len(units):
@@ -435,6 +472,17 @@ def _restore_resume_state(
     input_fingerprint: str,
     profile_id: str,
 ) -> tuple[int, dict[str, str], str | None]:
+    """
+    @brief      Restore the resume state.
+    @param[in]  existing_state Value for `existing_state`.
+    @param[in]  total_windows Total number of windows.
+    @param[in]  input_fingerprint Value for `input_fingerprint`.
+    @param[in]  profile_id Profile identifier.
+    @return     Derived helper result.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-21
+    @version    0.1.0
+    """
     resume_checkpoint = dict(existing_state.get("resume_checkpoint") or {})
     log_relative_path = existing_state.get("metadata", {}).get("ai_log_relative_path")
     if (
@@ -456,6 +504,14 @@ def _restore_resume_state(
 
 
 def _restore_warning_details(existing_state: dict[str, object]) -> list[dict[str, object]]:
+    """
+    @brief      Restore the warning details.
+    @param[in]  existing_state Value for `existing_state`.
+    @return     Derived helper result.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-21
+    @version    0.1.0
+    """
     metadata = existing_state.get("metadata", {})
     if not isinstance(metadata, dict):
         return []
@@ -466,6 +522,14 @@ def _restore_warning_details(existing_state: dict[str, object]) -> list[dict[str
 
 
 def _restore_token_usage(existing_state: dict[str, object]) -> TokenUsagePayload:
+    """
+    @brief      Restore the token usage.
+    @param[in]  existing_state Value for `existing_state`.
+    @return     Derived helper result.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-21
+    @version    0.1.0
+    """
     metadata = existing_state.get("metadata", {})
     if not isinstance(metadata, dict):
         return token_usage_service.empty_token_usage()
@@ -473,10 +537,26 @@ def _restore_token_usage(existing_state: dict[str, object]) -> TokenUsagePayload
 
 
 def _build_units_block(units: list[dict[str, object]]) -> str:
+    """
+    @brief      Build the units block.
+    @param[in]  units Value for `units`.
+    @return     Derived helper result.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-21
+    @version    0.1.0
+    """
     return "\n\n".join(f"{unit['unit_id']}:\n{unit['text']}" for unit in units)
 
 
 def _compose_paragraph_text(lines: list[tuple[str, bool]]) -> str:
+    """
+    @brief      Compose the paragraph text.
+    @param[in]  lines Value for `lines`.
+    @return     Derived helper result.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-21
+    @version    0.1.0
+    """
     if not lines:
         return ""
     first_line, _joined_with_previous = lines[0]
@@ -488,6 +568,14 @@ def _compose_paragraph_text(lines: list[tuple[str, bool]]) -> str:
 
 
 def _format_dialogue_lines(paragraph_text: str) -> str:
+    """
+    @brief      Format the dialogue lines.
+    @param[in]  paragraph_text Text value for `paragraph_text`.
+    @return     Derived helper result.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-21
+    @version    0.1.0
+    """
     normalized = paragraph_text.strip()
     normalized = _DIALOGUE_BREAK_AFTER_PUNCTUATION_PATTERN.sub(r"\1\n- ", normalized)
     normalized = _DIALOGUE_BREAK_AFTER_ATTRIBUTION_PATTERN.sub(r"\1\n- ", normalized)
@@ -495,6 +583,14 @@ def _format_dialogue_lines(paragraph_text: str) -> str:
 
 
 def _merge_adjacent_continuation_paragraphs(paragraphs: list[str]) -> list[str]:
+    """
+    @brief      Merge the adjacent continuation paragraphs.
+    @param[in]  paragraphs Value for `paragraphs`.
+    @return     Derived helper result.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-21
+    @version    0.1.0
+    """
     merged_paragraphs: list[str] = []
     for paragraph in paragraphs:
         normalized_paragraph = paragraph.strip()
@@ -516,6 +612,15 @@ def _should_continue_after_paragraph(
     current_paragraph: str,
     next_paragraph: str,
 ) -> bool:
+    """
+    @brief      Determine whether continue after paragraph.
+    @param[in]  current_paragraph Value for `current_paragraph`.
+    @param[in]  next_paragraph Value for `next_paragraph`.
+    @return     True when the helper condition is satisfied.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-21
+    @version    0.1.0
+    """
     current_lines = [
         line.strip() for line in current_paragraph.replace("\r\n", "\n").replace("\r", "\n").split("\n") if line.strip()
     ]
@@ -528,6 +633,15 @@ def _should_continue_after_paragraph(
 
 
 def _should_continue_paragraph(current_last_line: str, next_line: str | None) -> bool:
+    """
+    @brief      Determine whether continue paragraph.
+    @param[in]  current_last_line Value for `current_last_line`.
+    @param[in]  next_line Value for `next_line`.
+    @return     True when the helper condition is satisfied.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-21
+    @version    0.1.0
+    """
     if next_line is None:
         return False
     if _detect_chapter_label(next_line) is not None:
@@ -539,14 +653,19 @@ def _should_continue_paragraph(current_last_line: str, next_line: str | None) ->
         return False
     if current_text.endswith(":"):
         return False
-    if current_text.endswith("-"):
-        return True
-    if _PARAGRAPH_TERMINAL_PATTERN.search(current_text):
-        return False
-    return True
+    return current_text.endswith("-") or not _PARAGRAPH_TERMINAL_PATTERN.search(current_text)
 
 
 def _next_content_line(lines: list[str], start_index: int) -> str | None:
+    """
+    @brief      Resolve the next content line.
+    @param[in]  lines Value for `lines`.
+    @param[in]  start_index Value for `start_index`.
+    @return     Resolved helper result.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-21
+    @version    0.1.0
+    """
     for normalized_line in lines[start_index:]:
         if normalized_line:
             return normalized_line
@@ -623,6 +742,26 @@ def _write_running_state(
     warning_details: list[dict[str, object]],
     token_usage: TokenUsagePayload,
 ) -> None:
+    """
+    @brief      Write the running state.
+    @param[in]  state_path Operation-state file path.
+    @param[in]  project_root Active project root folder.
+    @param[in]  input_snapshot_path Input snapshot file path.
+    @param[in]  output_path Output file path.
+    @param[in]  started_at Value for `started_at`.
+    @param[in]  progress_current Value for `progress_current`.
+    @param[in]  progress_total Value for `progress_total`.
+    @param[in]  profile_id Profile identifier.
+    @param[in]  log_relative_path Path for `log_relative_path`.
+    @param[in]  input_fingerprint Value for `input_fingerprint`.
+    @param[in]  classifications Value for `classifications`.
+    @param[in]  warning_details Value for `warning_details`.
+    @param[in]  token_usage Value for `token_usage`.
+    @return     None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-21
+    @version    0.1.0
+    """
     running_state = _build_operation_state(
         project_root,
         input_snapshot_path,
@@ -671,6 +810,32 @@ def _build_operation_state(
     chapter_count: int | None,
     token_usage: TokenUsagePayload,
 ) -> OperationStatePayload:
+    """
+    @brief      Build the operation state.
+    @param[in]  project_root Active project root folder.
+    @param[in]  input_snapshot_path Input snapshot file path.
+    @param[in]  output_path Output file path.
+    @param[in]  report_path Report file path.
+    @param[in]  status Value for `status`.
+    @param[in]  progress_current Value for `progress_current`.
+    @param[in]  progress_total Value for `progress_total`.
+    @param[in]  started_at Value for `started_at`.
+    @param[in]  completed_at Value for `completed_at`.
+    @param[in]  warnings Value for `warnings`.
+    @param[in]  profile_id Profile identifier.
+    @param[in]  log_relative_path Path for `log_relative_path`.
+    @param[in]  input_fingerprint Value for `input_fingerprint`.
+    @param[in]  classifications Value for `classifications`.
+    @param[in]  warning_details Value for `warning_details`.
+    @param[in]  detected_language Value for `detected_language`.
+    @param[in]  paragraph_count Value for `paragraph_count`.
+    @param[in]  chapter_count Value for `chapter_count`.
+    @param[in]  token_usage Value for `token_usage`.
+    @return     Derived helper result.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-21
+    @version    0.1.0
+    """
     artifact_paths: list[str] = [log_relative_path]
     if report_path is not None and report_path.is_file():
         artifact_paths.append(relative_to_project(project_root, report_path))
@@ -710,12 +875,29 @@ def _build_operation_state(
 
 
 def _load_operation_state(state_path: Path) -> OperationStatePayload | None:
+    """
+    @brief      Load the operation state.
+    @param[in]  state_path Operation-state file path.
+    @return     Derived helper result.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-21
+    @version    0.1.0
+    """
     if not state_path.is_file():
         return None
     return dict(json.loads(state_path.read_text(encoding="utf-8")))
 
 
 def _build_ai_log_path(project_root: Path, started_at: str) -> Path:
+    """
+    @brief      Build the ai log path.
+    @param[in]  project_root Active project root folder.
+    @param[in]  started_at Value for `started_at`.
+    @return     Derived helper result.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-21
+    @version    0.1.0
+    """
     started_fragment = started_at.replace(":", "").replace("+00:00", "").replace("T", "_")
     return build_operation_artifact_path(
         project_root,
@@ -725,6 +907,14 @@ def _build_ai_log_path(project_root: Path, started_at: str) -> Path:
 
 
 def _usable_input_budget(profile_payload: dict[str, object]) -> int:
+    """
+    @brief      Execute the usable input budget helper.
+    @param[in]  profile_payload Profile payload.
+    @return     Helper result.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-21
+    @version    0.1.0
+    """
     context_window = int(profile_payload.get("context_window", config.DEFAULT_LLM_CONTEXT_WINDOW))
     max_output_tokens = int(
         profile_payload.get(
@@ -736,10 +926,26 @@ def _usable_input_budget(profile_payload: dict[str, object]) -> int:
 
 
 def _estimate_text_tokens(text: str) -> int:
+    """
+    @brief      Execute the estimate text tokens helper.
+    @param[in]  text Value for `text`.
+    @return     Helper result.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-21
+    @version    0.1.0
+    """
     return max(1, len(text) // 4)
 
 
 def _compute_input_fingerprint(text: str) -> str:
+    """
+    @brief      Execute the compute input fingerprint helper.
+    @param[in]  text Value for `text`.
+    @return     Helper result.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-21
+    @version    0.1.0
+    """
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 
@@ -748,6 +954,16 @@ def _build_cleanup_warnings(
     chapter_count: int,
     warning_details: list[dict[str, object]],
 ) -> list[str]:
+    """
+    @brief      Build the cleanup warnings.
+    @param[in]  detected_language Value for `detected_language`.
+    @param[in]  chapter_count Value for `chapter_count`.
+    @param[in]  warning_details Value for `warning_details`.
+    @return     Derived helper result.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-21
+    @version    0.1.0
+    """
     warnings: list[str] = []
     if detected_language is None:
         warnings.append("Language detection did not produce a stable value.")
@@ -762,6 +978,14 @@ def _build_cleanup_warnings(
 
 
 def _count_detected_chapters(paragraph_texts: list[str]) -> int:
+    """
+    @brief      Count the detected chapters.
+    @param[in]  paragraph_texts Value for `paragraph_texts`.
+    @return     Derived helper result.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-21
+    @version    0.1.0
+    """
     chapter_count = 0
     current_chapter: str | None = None
     for paragraph_text in paragraph_texts:
@@ -773,6 +997,14 @@ def _count_detected_chapters(paragraph_texts: list[str]) -> int:
 
 
 def _detect_chapter_label(paragraph_text: str) -> str | None:
+    """
+    @brief      Detect the chapter label.
+    @param[in]  paragraph_text Text value for `paragraph_text`.
+    @return     Derived helper result.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-21
+    @version    0.1.0
+    """
     normalized = paragraph_text.strip()
     if len(normalized) > 100:
         return None
@@ -783,6 +1015,14 @@ def _detect_chapter_label(paragraph_text: str) -> str | None:
 
 
 def _detect_language(text: str) -> str | None:
+    """
+    @brief      Detect the language.
+    @param[in]  text Value for `text`.
+    @return     Derived helper result.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-21
+    @version    0.1.0
+    """
     sample = text.strip()
     if len(sample) < 20:
         return None
@@ -793,6 +1033,14 @@ def _detect_language(text: str) -> str | None:
 
 
 def _split_cleanup_block(block: str) -> list[str]:
+    """
+    @brief      Execute the split cleanup block helper.
+    @param[in]  block Value for `block`.
+    @return     Helper result.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-21
+    @version    0.1.0
+    """
     normalized_lines = [
         re.sub(r"\s+", " ", raw_line).strip()
         for raw_line in block.replace("\r\n", "\n").replace("\r", "\n").split("\n")
@@ -820,6 +1068,17 @@ def _normalize_window_labels(
     warning_details: list[dict[str, object]],
     window_index: int,
 ) -> dict[str, str]:
+    """
+    @brief      Normalize the window labels.
+    @param[in]  window_units Value for `window_units`.
+    @param[in]  window_labels Value for `window_labels`.
+    @param[in]  warning_details Value for `warning_details`.
+    @param[in]  window_index Current window index.
+    @return     Derived helper result.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-21
+    @version    0.1.0
+    """
     normalized_labels: dict[str, str] = {}
     removal_count = 0
     for unit in window_units:
@@ -853,6 +1112,18 @@ def _normalize_label_for_unit(
     window_index: int,
     unit_id: str,
 ) -> str:
+    """
+    @brief      Normalize the label for unit.
+    @param[in]  unit_text Text value for `unit_text`.
+    @param[in]  label Value for `label`.
+    @param[in]  warning_details Value for `warning_details`.
+    @param[in]  window_index Current window index.
+    @param[in]  unit_id Identifier for `unit_id`.
+    @return     Derived helper result.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-21
+    @version    0.1.0
+    """
     normalized_text = unit_text.strip()
     if _looks_like_page_number(normalized_text):
         if label != "page_number":
@@ -910,6 +1181,18 @@ def _append_suspicious_window_warnings(
     warning_details: list[dict[str, object]],
     window_index: int,
 ) -> None:
+    """
+    @brief      Append the suspicious window warnings.
+    @param[in]  window_units Value for `window_units`.
+    @param[in]  labels Value for `labels`.
+    @param[in]  removal_count Value for `removal_count`.
+    @param[in]  warning_details Value for `warning_details`.
+    @param[in]  window_index Current window index.
+    @return     None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-21
+    @version    0.1.0
+    """
     total_units = max(len(window_units), 1)
     removal_ratio = removal_count / total_units
     if removal_ratio >= _MAX_REMOVAL_RATIO_WARNING:
@@ -937,7 +1220,13 @@ def _append_suspicious_window_warnings(
         else:
             classification_tail.append("kept_story_like")
     flip_count = sum(
-        1 for current, following in zip(classification_tail, classification_tail[1:]) if current != following
+        1
+        for current, following in zip(
+            classification_tail,
+            classification_tail[1:],
+            strict=False,
+        )
+        if current != following
     )
     if len(classification_tail) >= 6 and flip_count >= len(classification_tail) - 2:
         _append_warning_detail(
@@ -954,6 +1243,16 @@ def _build_final_output_warning_details(
     classifications: dict[str, str],
     units: list[dict[str, object]],
 ) -> list[dict[str, object]]:
+    """
+    @brief      Build the final output warning details.
+    @param[in]  cleaned_paragraphs Value for `cleaned_paragraphs`.
+    @param[in]  classifications Value for `classifications`.
+    @param[in]  units Value for `units`.
+    @return     Derived helper result.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-21
+    @version    0.1.0
+    """
     warning_details: list[dict[str, object]] = []
     surviving_page_number_count = sum(
         1 for paragraph in cleaned_paragraphs if _looks_like_page_number(paragraph.strip())
@@ -995,6 +1294,17 @@ def _append_warning_detail(
     message: str,
     **metadata: object,
 ) -> None:
+    """
+    @brief      Append the warning detail.
+    @param[in]  warning_details Value for `warning_details`.
+    @param[in]  kind Value for `kind`.
+    @param[in]  message Operator-facing message text.
+    @param[in]  metadata Value for `metadata`.
+    @return     None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-21
+    @version    0.1.0
+    """
     for existing in warning_details:
         if (
             str(existing.get("kind", "")) == kind
@@ -1006,15 +1316,38 @@ def _append_warning_detail(
 
 
 def _looks_like_page_number(text: str) -> bool:
+    """
+    @brief      Determine whether page number.
+    @param[in]  text Value for `text`.
+    @return     True when the helper condition is satisfied.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-21
+    @version    0.1.0
+    """
     return bool(_PAGE_NUMBER_PATTERN.fullmatch(text.strip()))
 
 
 def _looks_like_separator_line(text: str) -> bool:
+    """
+    @brief      Determine whether separator line.
+    @param[in]  text Value for `text`.
+    @return     True when the helper condition is satisfied.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-21
+    @version    0.1.0
+    """
     normalized = text.strip()
     return bool(normalized) and bool(_SEPARATOR_PATTERN.fullmatch(normalized))
 
 
 def _utc_now_iso() -> str:
+    """
+    @brief      Execute the utc now iso helper.
+    @return     Helper result.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-21
+    @version    0.1.0
+    """
     return datetime.now(UTC).replace(microsecond=0).isoformat()
 
 

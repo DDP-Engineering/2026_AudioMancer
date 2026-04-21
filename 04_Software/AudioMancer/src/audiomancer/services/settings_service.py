@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-  # noqa: UP009
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -12,8 +13,8 @@
          self-heals missing or invalid values, and saves the normalized
          settings file to the application root.
 @author Eng. Dan Dumitru Pasare
-@date 2026-04-04
-@version 0.1.7
+@date 2026-04-18
+@version 0.4.0
 """
 
 # IMPORTS
@@ -51,6 +52,20 @@ _LLM_PROFILE_DEFAULTS = {
     "user_overrode_context_window": False,
 }
 
+# @brief Default persisted VoiceWeaver runtime discovery cache payload.
+_TTS_RUNTIME_MODEL_DEFAULTS = {
+    "model_id": "",
+    "backend_name": "",
+    "status": "unhealthy",
+    "supported_generation_modes": [],
+    "supported_languages": [],
+    "supported_presets": [],
+    "speaker_count": 0,
+    "default_model_parameters": None,
+    "device_mode": "",
+    "issues": None,
+}
+
 
 def _optional_profile_id(value: object) -> str | None:
     """
@@ -60,6 +75,21 @@ def _optional_profile_id(value: object) -> str | None:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-05
+    @version    0.1.0
+    """
+    if value in (None, ""):
+        return None
+    return str(value)
+
+
+def _optional_string(value: object) -> str | None:
+    """
+    @brief      Normalize one optional persisted string field.
+    @param[in]  value Candidate persisted string value.
+    @return     Normalized string or None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-16
     @version    0.1.0
     """
     if value in (None, ""):
@@ -218,6 +248,126 @@ def _validate_llm_profile(
     return normalized_profile
 
 
+def _normalize_string_list(value: object) -> list[str]:
+    """
+    @brief      Normalize one list-like payload into a list of non-empty strings.
+    @param[in]  value Candidate list payload.
+    @return     Normalized string list.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-16
+    @version    0.1.0
+    """
+    if not isinstance(value, list):
+        return []
+    return [str(item).strip() for item in value if str(item).strip()]
+
+
+def _normalize_tts_generation_modes(value: object) -> list[str]:
+    """
+    @brief      Normalize cached VoiceWeaver generation modes and fold legacy aliases into the current REST contract.
+    @param[in]  value Candidate generation-mode list payload.
+    @return     Normalized generation-mode list.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-18
+    @version    1.0.0
+    """
+    mode_aliases = {
+        "base": "clone",
+        "voice_designer": "definition",
+    }
+    normalized_modes: list[str] = []
+    for mode in _normalize_string_list(value):
+        normalized_mode = mode_aliases.get(mode, mode)
+        if normalized_mode not in normalized_modes:
+            normalized_modes.append(normalized_mode)
+    return normalized_modes
+
+
+def _normalize_tts_runtime_model(candidate_model: object) -> dict[str, object] | None:
+    """
+    @brief      Normalize one cached VoiceWeaver discovered-model payload.
+    @param[in]  candidate_model Candidate discovered-model payload.
+    @return     Normalized model payload or None when invalid.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-18
+    @version    0.2.0
+    """
+    if not isinstance(candidate_model, dict):
+        return None
+    model_id = str(candidate_model.get("model_id", "")).strip()
+    if not model_id:
+        return None
+    try:
+        speaker_count = int(candidate_model.get("speaker_count", 0))
+    except (TypeError, ValueError):
+        speaker_count = 0
+    issues = candidate_model.get("issues")
+    return {
+        "model_id": model_id,
+        "backend_name": str(candidate_model.get("backend_name", "")).strip(),
+        "status": str(candidate_model.get("status", _TTS_RUNTIME_MODEL_DEFAULTS["status"])).strip()
+        or _TTS_RUNTIME_MODEL_DEFAULTS["status"],
+        "supported_generation_modes": _normalize_tts_generation_modes(
+            candidate_model.get("supported_generation_modes")
+        ),
+        "supported_languages": _normalize_string_list(candidate_model.get("supported_languages")),
+        "supported_presets": _normalize_string_list(candidate_model.get("supported_presets")),
+        "speaker_count": max(speaker_count, 0),
+        "default_model_parameters": (
+            dict(candidate_model.get("default_model_parameters"))
+            if isinstance(candidate_model.get("default_model_parameters"), dict)
+            else None
+        ),
+        "device_mode": str(candidate_model.get("device_mode", "")).strip(),
+        "issues": issues if isinstance(issues, (list, type(None))) else None,
+    }
+
+
+def _normalize_tts_runtime_models(candidate_models: object) -> list[dict[str, object]]:
+    """
+    @brief      Normalize one cached VoiceWeaver discovered-model list.
+    @param[in]  candidate_models Candidate discovered-model list payload.
+    @return     Normalized discovered-model list.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-16
+    @version    0.1.0
+    """
+    if not isinstance(candidate_models, list):
+        return []
+    normalized_models: list[dict[str, object]] = []
+    for candidate_model in candidate_models:
+        normalized_model = _normalize_tts_runtime_model(candidate_model)
+        if normalized_model is not None:
+            normalized_models.append(normalized_model)
+    return normalized_models
+
+
+def _normalize_tts_device_diagnostics(candidate_payload: object) -> dict[str, object]:
+    """
+    @brief      Normalize one cached VoiceWeaver device-diagnostics payload.
+    @param[in]  candidate_payload Candidate device-diagnostics payload.
+    @return     Normalized diagnostics payload.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-16
+    @version    0.1.0
+    """
+    if not isinstance(candidate_payload, dict):
+        return {}
+    normalized_payload: dict[str, object] = {}
+    for key, value in candidate_payload.items():
+        normalized_key = str(key).strip()
+        if not normalized_key:
+            continue
+        if value is None or isinstance(value, (bool, int, float, str)):
+            normalized_payload[normalized_key] = value
+    return normalized_payload
+
+
 # PUBLIC API
 
 
@@ -228,8 +378,8 @@ def build_default_settings() -> dict[str, Any]:
     @return     Default settings payload.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-04
-    @version    0.1.5
+    @date       2026-04-18
+    @version    0.4.0
     """
     return {
         "language": config.DEFAULT_LANGUAGE,
@@ -241,6 +391,15 @@ def build_default_settings() -> dict[str, Any]:
         "default_character_extraction_profile_id": None,
         "play_completion_beep": True,
         "ui_text_scale": config.DEFAULT_UI_TEXT_SCALE,
+        "tts_runtime_base_url": config.DEFAULT_TTS_RUNTIME_BASE_URL,
+        "tts_runtime_api_key": config.DEFAULT_TTS_RUNTIME_API_KEY,
+        "tts_runtime_probe_succeeded": False,
+        "tts_runtime_probe_message": "",
+        "tts_runtime_discovered_models": [],
+        "tts_runtime_active_model_id": None,
+        "tts_runtime_device_diagnostics": {},
+        "tts_audio_preview_timeout_seconds": config.DEFAULT_TTS_AUDIO_PREVIEW_TIMEOUT_SECONDS,
+        "tts_audio_generation_timeout_seconds": config.DEFAULT_TTS_AUDIO_GENERATION_TIMEOUT_SECONDS,
     }
 
 
@@ -252,8 +411,8 @@ def validate_settings(settings_payload: dict[str, Any]) -> dict[str, Any]:
     @return     Validated and normalized settings payload.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-04
-    @version    0.1.6
+    @date       2026-04-18
+    @version    0.3.0
     """
     defaults = build_default_settings()
     normalized_settings = dict(settings_payload) if isinstance(settings_payload, dict) else {}
@@ -300,6 +459,60 @@ def validate_settings(settings_payload: dict[str, Any]) -> dict[str, Any]:
                 field_name,
             )
             normalized_settings[field_name] = defaults[field_name]
+
+    for field_name in (
+        "tts_runtime_base_url",
+        "tts_runtime_api_key",
+        "tts_runtime_probe_message",
+    ):
+        if not isinstance(normalized_settings[field_name], str):
+            _log_settings_repair(
+                f"Repaired invalid '{field_name}' using the default value.",
+                field_name,
+            )
+            normalized_settings[field_name] = defaults[field_name]
+
+    if not isinstance(normalized_settings["tts_runtime_probe_succeeded"], bool):
+        _log_settings_repair(
+            "Repaired invalid 'tts_runtime_probe_succeeded' using the default value.",
+            "tts_runtime_probe_succeeded",
+        )
+        normalized_settings["tts_runtime_probe_succeeded"] = defaults["tts_runtime_probe_succeeded"]
+
+    for field_name in (
+        "tts_audio_preview_timeout_seconds",
+        "tts_audio_generation_timeout_seconds",
+    ):
+        if not isinstance(normalized_settings[field_name], int) or normalized_settings[field_name] <= 0:
+            _log_settings_repair(
+                f"Repaired invalid '{field_name}' using the default value.",
+                field_name,
+            )
+            normalized_settings[field_name] = defaults[field_name]
+
+    normalized_settings["tts_runtime_discovered_models"] = _normalize_tts_runtime_models(
+        normalized_settings.get("tts_runtime_discovered_models")
+    )
+    normalized_settings["tts_runtime_active_model_id"] = _optional_string(
+        normalized_settings.get("tts_runtime_active_model_id")
+    )
+    discovered_model_ids = {
+        str(model.get("model_id", "")).strip()
+        for model in normalized_settings["tts_runtime_discovered_models"]
+        if isinstance(model, dict)
+    }
+    if (
+        normalized_settings["tts_runtime_active_model_id"] is not None
+        and normalized_settings["tts_runtime_active_model_id"] not in discovered_model_ids
+    ):
+        _log_settings_repair(
+            "Repaired invalid 'tts_runtime_active_model_id' using the default value.",
+            "tts_runtime_active_model_id",
+        )
+        normalized_settings["tts_runtime_active_model_id"] = defaults["tts_runtime_active_model_id"]
+    normalized_settings["tts_runtime_device_diagnostics"] = _normalize_tts_device_diagnostics(
+        normalized_settings.get("tts_runtime_device_diagnostics")
+    )
 
     candidate_profiles = normalized_settings.get("llm_profiles")
     if not isinstance(candidate_profiles, list):

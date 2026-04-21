@@ -1,0 +1,729 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-  # noqa: UP009
+# -----------------------------------------------------------------------------
+# Copyright (c) 2026 DDP Engineering
+# This software is licensed under the GNU Affero General Public License v3.0
+# (AGPL-3.0) with additional Non-Commercial restriction.
+# See the LICENSE.txt and LICENSE_NC.txt files for full license details.
+# -----------------------------------------------------------------------------
+"""
+@file narration_plan_ui_controller.py
+@brief Narration Plan page UI controller for AudioMancer.
+@details Handles narration-plan target inspection, prompt maintenance, Qwen3-
+         backed character sample generation, narrator or character preview
+         playback, and page-entry narrator-sample warnings.
+@author Eng. Dan Dumitru Pasare
+@date 2026-04-20
+@version 1.3.0
+"""
+
+# IMPORTS
+
+from typing import TYPE_CHECKING
+
+from PySide6.QtCore import QUrl
+from PySide6.QtMultimedia import QMediaPlayer
+from PySide6.QtWidgets import QMessageBox
+
+from audiomancer import config
+from audiomancer.services import (
+    narration_plan_service,
+    narrator_definition_service,
+    project_workspace_service,
+    settings_service,
+    ui_state_service,
+    voiceweaver_runtime_service,
+)
+from audiomancer.ui.controllers import misc_ui_controller
+
+if TYPE_CHECKING:
+    from audiomancer.ui.main_window import MainWindow
+
+
+def handle_page_activated(window: "MainWindow") -> None:
+    """
+    @brief      Handle page-entry side effects for the Narration Plan workflow.
+    @param[in]  window Main application window.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-20
+    @version    1.1.0
+    """
+    if window._current_project_root is None or window._current_manifest is None:
+        return
+    _sync_manifest_stage(window)
+    if window._narration_plan_missing_narrator_popup_shown:
+        return
+    if not window._narration_plan_page._targets:  # noqa: SLF001
+        return
+    narrator_selected = any(
+        str(target.get("target_kind", "")).strip() == narration_plan_service.TARGET_KIND_NARRATOR
+        for target in window._narration_plan_page._targets  # noqa: SLF001
+    )
+    if narrator_selected and not narration_plan_service.selected_narrator_sample_exists(window._current_project_root):
+        current_language = ui_state_service.current_language_from_settings(window._settings_payload)
+        QMessageBox.warning(
+            window,
+            ui_state_service.translate("dialog.narration_plan_missing_narrator_sample_title", current_language),
+            ui_state_service.translate("dialog.narration_plan_missing_narrator_sample_message", current_language),
+        )
+        window._narration_plan_missing_narrator_popup_shown = True
+
+
+def handle_selection_change_requested(window: "MainWindow", target_id: object) -> None:
+    """
+    @brief      Switch the inspected narration-plan target without changing persisted prompt or sample state.
+    @param[in]  window Main application window.
+    @param[in]  target_id Requested narration-plan target identifier.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-20
+    @version    1.0.0
+    """
+    normalized_target_id = None if target_id in (None, "") else str(target_id)
+    window._narration_plan_inspected_target_id = normalized_target_id
+    window.show_project_state(window._current_project_root, window._current_manifest)
+
+
+def handle_voice_language_change_requested(window: "MainWindow", voice_language: object) -> None:
+    """
+    @brief      Persist one narration-plan voice language selection and refresh the page state.
+    @param[in]  window Main application window.
+    @param[in]  voice_language Requested narration-plan voice language code.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-20
+    @version    1.0.0
+    """
+    if window._current_project_root is None or window._current_manifest is None:
+        return
+    narration_plan_service.save_selected_voice_language(window._current_project_root, voice_language)
+    window.show_project_state(window._current_project_root, window._current_manifest)
+    _sync_manifest_stage(window)
+
+
+def handle_reset_prompt_requested(window: "MainWindow", target_id: str) -> None:
+    """
+    @brief      Reset one editable character prompt to the derived default prompt and refresh the page state.
+    @param[in]  window Main application window.
+    @param[in]  target_id Requested narration-plan target identifier.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-20
+    @version    1.0.0
+    """
+    current_language = ui_state_service.current_language_from_settings(window._settings_payload)
+    if window._current_project_root is None or window._current_manifest is None:
+        return
+    target_payload = narration_plan_service.voice_target_by_id(window._current_project_root, target_id)
+    if target_payload is None:
+        return
+    _stop_preview_playback(window)
+    narration_plan_service.reset_target_prompt(
+        window._current_project_root,
+        target_id,
+        str(target_payload.get("default_prompt_text", "")).strip(),
+    )
+    window._narration_plan_inspected_target_id = target_id
+    window.show_project_state(window._current_project_root, window._current_manifest)
+    _sync_manifest_stage(window)
+    misc_ui_controller.show_message(
+        window,
+        ui_state_service.translate("status.narration_plan_prompt_reset", current_language),
+    )
+
+
+def handle_edit_prompt_requested(window: "MainWindow", target_id: str) -> None:
+    """
+    @brief      Confirm narration-plan prompt edit mode and clear the old target sample before editing.
+    @param[in]  window Main application window.
+    @param[in]  target_id Selected narration-plan target identifier.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-20
+    @version    1.1.0
+    """
+    current_language = ui_state_service.current_language_from_settings(window._settings_payload)
+    if window._current_project_root is None:
+        return
+    if not _confirm_prompt_edit(window, current_language):
+        return
+    _stop_preview_playback(window)
+    try:
+        narration_plan_service.begin_target_prompt_edit(window._current_project_root, target_id)
+    except ValueError:
+        return
+    window._narration_plan_inspected_target_id = target_id
+    window.show_project_state(window._current_project_root, window._current_manifest)
+    window._narration_plan_page.begin_edit_mode()
+    _sync_manifest_stage(window)
+
+
+def handle_save_prompt_requested(window: "MainWindow", target_payload: dict[str, object]) -> None:
+    """
+    @brief      Validate and persist one editable narration-plan target prompt change.
+    @param[in]  window Main application window.
+    @param[in]  target_payload Updated narration-plan target payload from the page.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-20
+    @version    1.2.0
+    """
+    current_language = ui_state_service.current_language_from_settings(window._settings_payload)
+    if window._current_project_root is None or window._current_manifest is None:
+        return
+    try:
+        updated_target = narration_plan_service.save_target_prompt(
+            window._current_project_root,
+            str(target_payload.get("target_id", "")),
+            str(target_payload.get("prompt_text", "")),
+            str(target_payload.get("preview_text", "")),
+        )
+    except ValueError as error:
+        if str(error) == "empty_prompt":
+            QMessageBox.warning(
+                window,
+                ui_state_service.translate("dialog.project_error_title", current_language),
+                ui_state_service.translate("narration_plan.error_missing_prompt", current_language),
+            )
+        elif str(error) == "empty_preview_text":
+            QMessageBox.warning(
+                window,
+                ui_state_service.translate("dialog.project_error_title", current_language),
+                ui_state_service.translate("narration_plan.error_missing_preview_text", current_language),
+            )
+        return
+    window._narration_plan_inspected_target_id = str(updated_target.get("target_id", "")).strip()
+    window.show_project_state(window._current_project_root, window._current_manifest)
+    _sync_manifest_stage(window)
+    misc_ui_controller.show_message(
+        window,
+        ui_state_service.translate("status.narration_plan_prompt_saved", current_language),
+    )
+
+
+def handle_generate_sample_requested(window: "MainWindow", target_id: str) -> None:
+    """
+    @brief      Generate one narration-plan character sample through VoiceWeaver and persist the returned WAV plus metadata.
+    @param[in]  window Main application window.
+    @param[in]  target_id Requested narration-plan target identifier.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-20
+    @version    1.1.0
+    """
+    current_language = ui_state_service.current_language_from_settings(window._settings_payload)
+    if window._active_operation_kind is not None:
+        return
+    if window._current_project_root is None or window._current_manifest is None:
+        QMessageBox.warning(
+            window,
+            ui_state_service.translate("dialog.project_error_title", current_language),
+            ui_state_service.translate("project.error_no_active_project", current_language),
+        )
+        return
+    target_payload = narration_plan_service.voice_target_by_id(window._current_project_root, target_id)
+    if target_payload is None:
+        return
+    if not _confirm_generate_sample(window, current_language, target_id):
+        return
+    editor_payload = window._narration_plan_page.current_editor_payload()
+    voice_language = window._narration_plan_page.current_voice_language()
+    preview_text = str(editor_payload.get("preview_text", "")).strip()
+    if str(editor_payload.get("target_id", "")).strip() != str(target_id).strip():
+        preview_text = narration_plan_service.effective_target_preview_text(target_payload, voice_language)
+    if not preview_text:
+        QMessageBox.warning(
+            window,
+            ui_state_service.translate("dialog.project_error_title", current_language),
+            ui_state_service.translate("narration_plan.error_missing_preview_text", current_language),
+        )
+        return
+    probe_result = _probe_runtime_and_persist_cache(window)
+    if not bool(probe_result.get("success", False)):
+        QMessageBox.warning(
+            window,
+            ui_state_service.translate("dialog.project_error_title", current_language),
+            str(probe_result.get("message", "")),
+        )
+        window.show_project_state(
+            window._current_project_root, project_workspace_service.load_manifest(window._current_project_root)
+        )
+        return
+    capability_matrix = dict(probe_result.get("capability_matrix", {}))
+    if not bool(capability_matrix.get("minimum_qwen_ready", False)):
+        QMessageBox.warning(
+            window,
+            ui_state_service.translate("dialog.project_error_title", current_language),
+            ui_state_service.translate("narration_plan.error_qwen_capabilities_missing", current_language).format(
+                missing_capabilities=", ".join(capability_matrix.get("missing_qwen_capabilities", [])),
+            ),
+        )
+        window.show_project_state(
+            window._current_project_root, project_workspace_service.load_manifest(window._current_project_root)
+        )
+        return
+    discovered_models = list(probe_result.get("discovered_models", []))
+    generation_request = narration_plan_service.voice_target_generation_request(
+        target_payload,
+        discovered_models,
+        voice_language,
+    )
+    if not bool(generation_request.get("can_generate", False)):
+        QMessageBox.warning(
+            window,
+            ui_state_service.translate("dialog.project_error_title", current_language),
+            str(generation_request.get("unavailable_reason", "")),
+        )
+        return
+    _stop_preview_playback(window)
+    narration_plan_service.delete_target_sample(window._current_project_root, target_id)
+    base_url = str(window._settings_payload.get("tts_runtime_base_url", "")).strip()
+    runtime_api_key = str(window._settings_payload.get("tts_runtime_api_key", ""))
+    preview_timeout_seconds = _preview_timeout_seconds(window)
+
+    window._active_operation_kind = "narration_plan_generate_sample"
+    window._active_operation_name = ui_state_service.translate("narration_plan.generate_sample", current_language)
+    window._operation_cancel_requested = False
+    window._narration_plan_page.set_busy(True)
+    misc_ui_controller.create_progress_dialog(
+        window,
+        window._active_operation_name,
+        ui_state_service.translate("progress.narration_plan_sample_prepare", current_language),
+        lambda: None,
+        cancellable=False,
+    )
+    try:
+        _generate_and_store_sample(
+            window,
+            target_payload,
+            voice_language,
+            preview_text,
+            generation_request,
+            base_url,
+            runtime_api_key,
+            preview_timeout_seconds,
+        )
+    except Exception as error:  # noqa: BLE001
+        misc_ui_controller.update_progress_dialog(window, 100, str(error))
+        misc_ui_controller.fail_progress_dialog(window, str(error))
+        QMessageBox.warning(
+            window,
+            ui_state_service.translate("dialog.project_error_title", current_language),
+            str(error),
+        )
+    else:
+        misc_ui_controller.finish_progress_dialog(window)
+        window._narration_plan_inspected_target_id = target_id
+        window.show_project_state(
+            window._current_project_root, project_workspace_service.load_manifest(window._current_project_root)
+        )
+        _sync_manifest_stage(window)
+        misc_ui_controller.show_message(
+            window,
+            ui_state_service.translate("status.narration_plan_sample_generated", current_language),
+        )
+    finally:
+        misc_ui_controller.clear_progress_dialog(window)
+        window._narration_plan_page.set_busy(False)
+        window._active_operation_kind = None
+        window._active_operation_name = None
+        window._operation_cancel_requested = False
+
+
+def handle_preview_toggle_requested(window: "MainWindow") -> None:
+    """
+    @brief      Start or stop local playback of the stored narration-plan sample for the inspected target.
+    @param[in]  window Main application window.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-20
+    @version    1.0.0
+    """
+    current_language = ui_state_service.current_language_from_settings(window._settings_payload)
+    if window._narration_plan_page._preview_active:  # noqa: SLF001
+        _stop_preview_playback(window)
+        return
+    if window._current_project_root is None:
+        return
+    current_target_id = window._narration_plan_page.current_target_id()
+    if current_target_id is None:
+        return
+    target_payload = narration_plan_service.voice_target_by_id(window._current_project_root, current_target_id)
+    audio_path = None
+    if (
+        isinstance(target_payload, dict)
+        and str(target_payload.get("target_kind", "")).strip() == narration_plan_service.TARGET_KIND_CHARACTER
+    ):
+        audio_path, _metadata_path = narration_plan_service.target_sample_paths(
+            window._current_project_root, current_target_id
+        )
+    else:
+        audio_path, _metadata_path = narrator_definition_service.selected_narrator_sample_paths(
+            window._current_project_root
+        )
+    if audio_path is None or not audio_path.is_file():
+        QMessageBox.warning(
+            window,
+            ui_state_service.translate("dialog.project_error_title", current_language),
+            ui_state_service.translate("narration_plan.error_missing_sample", current_language),
+        )
+        return
+    window._narration_plan_audio_player.setSource(QUrl.fromLocalFile(str(audio_path)))
+    window._narration_plan_page.set_preview_active(True)
+    window._narration_plan_audio_player.play()
+
+
+def handle_preview_playback_state_changed(window: "MainWindow") -> None:
+    """
+    @brief      Refresh the narration-plan preview button state after local playback changes.
+    @param[in]  window Main application window.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-20
+    @version    1.0.0
+    """
+    if window._narration_plan_audio_player.playbackState() == QMediaPlayer.PlaybackState.StoppedState:
+        window._narration_plan_page.set_preview_active(False)
+
+
+def _generate_and_store_sample(
+    window: "MainWindow",
+    target_payload: dict[str, object],
+    voice_language: str,
+    preview_text: str,
+    generation_request: dict[str, object],
+    base_url: str,
+    runtime_api_key: str,
+    preview_timeout_seconds: int,
+) -> None:
+    """
+    @brief      Execute the generate and store sample helper.
+    @param[in]  window Value for `window`.
+    @param[in]  target_payload Payload for `target_payload`.
+    @param[in]  voice_language Value for `voice_language`.
+    @param[in]  preview_text Text value for `preview_text`.
+    @param[in]  generation_request Value for `generation_request`.
+    @param[in]  base_url Value for `base_url`.
+    @param[in]  runtime_api_key Value for `runtime_api_key`.
+    @param[in]  preview_timeout_seconds Value for `preview_timeout_seconds`.
+    @return     None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-21
+    @version    0.1.0
+    """
+    current_language = ui_state_service.current_language_from_settings(window._settings_payload)
+    model_id = str(generation_request.get("model_id", "")).strip()
+    initial_status = voiceweaver_runtime_service.read_status(
+        base_url,
+        runtime_api_key,
+        timeout_seconds=preview_timeout_seconds,
+    )
+    _persist_runtime_status(window, initial_status)
+    active_model_id = _active_model_id_from_status(initial_status)
+    misc_ui_controller.update_progress_dialog(
+        window,
+        10,
+        ui_state_service.translate("progress.narration_plan_sample_prepare", current_language),
+    )
+    if active_model_id != model_id:
+        misc_ui_controller.update_progress_dialog(
+            window,
+            25,
+            ui_state_service.translate("progress.narration_plan_sample_load_model", current_language),
+        )
+        voiceweaver_runtime_service.load_model(
+            base_url,
+            runtime_api_key,
+            model_id,
+            timeout_seconds=preview_timeout_seconds,
+        )
+        load_status = voiceweaver_runtime_service.wait_for_terminal_operation(
+            base_url,
+            runtime_api_key,
+            progress_callback=lambda status_payload: _update_load_progress(window, status_payload),
+            timeout_seconds=preview_timeout_seconds,
+        )
+        _persist_runtime_status(window, load_status)
+        load_operation = load_status.get("operation", {})
+        if not isinstance(load_operation, dict) or str(load_operation.get("status", "")).strip().lower() != "completed":
+            raise RuntimeError(voiceweaver_runtime_service.operation_failed_message(load_status))
+        active_model_id = _active_model_id_from_status(load_status)
+        if active_model_id != model_id:
+            raise RuntimeError(f"VoiceWeaver did not activate the requested model '{model_id}'.")
+
+    misc_ui_controller.update_progress_dialog(
+        window,
+        35,
+        ui_state_service.translate("progress.narration_plan_sample_generate", current_language),
+    )
+    voiceweaver_runtime_service.generate_voice_design(
+        base_url,
+        runtime_api_key,
+        str(generation_request.get("language", voice_language)),
+        preview_text,
+        str(target_payload.get("prompt_text", "")),
+        model_parameters=dict(generation_request.get("model_parameters", {}))
+        if isinstance(generation_request.get("model_parameters"), dict)
+        else None,
+        timeout_seconds=preview_timeout_seconds,
+    )
+    final_status = voiceweaver_runtime_service.wait_for_terminal_operation(
+        base_url,
+        runtime_api_key,
+        progress_callback=lambda status_payload: _update_generation_progress(window, status_payload),
+        timeout_seconds=preview_timeout_seconds,
+    )
+    _persist_runtime_status(window, final_status)
+    final_operation = final_status.get("operation", {})
+    if not isinstance(final_operation, dict) or str(final_operation.get("status", "")).strip() != "completed":
+        raise RuntimeError(voiceweaver_runtime_service.operation_failed_message(final_status))
+    final_result = final_status.get("result", {})
+    if not isinstance(final_result, dict) or not bool(final_result.get("available", False)):
+        raise RuntimeError(
+            ui_state_service.translate("narration_plan.error_generation_missing_audio", current_language)
+        )
+
+    misc_ui_controller.update_progress_dialog(
+        window,
+        95,
+        ui_state_service.translate("progress.narration_plan_sample_download", current_language),
+    )
+    audio_bytes = voiceweaver_runtime_service.download_generated_voice(
+        base_url,
+        runtime_api_key,
+        timeout_seconds=preview_timeout_seconds,
+    )
+    narration_plan_service.store_target_sample(
+        window._current_project_root,
+        target_payload,
+        voice_language,
+        preview_text,
+        generation_request,
+        str(final_result.get("summary", "")),
+        audio_bytes,
+    )
+
+
+def _update_generation_progress(window: "MainWindow", status_payload: dict[str, object]) -> None:
+    """
+    @brief      Update the generation progress.
+    @param[in]  window Value for `window`.
+    @param[in]  status_payload Payload for `status_payload`.
+    @return     None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-21
+    @version    0.1.0
+    """
+    current_language = ui_state_service.current_language_from_settings(window._settings_payload)
+    operation_payload = status_payload.get("operation", {})
+    if not isinstance(operation_payload, dict):
+        return
+    percent = int(operation_payload.get("progress_percent", 0))
+    stage_text = ui_state_service.translate("progress.narration_plan_sample_generate", current_language)
+    mapped_percent = 35 + int(max(0, min(percent, 100)) * 0.55)
+    misc_ui_controller.update_progress_dialog(window, mapped_percent, stage_text)
+
+
+def _update_load_progress(window: "MainWindow", status_payload: dict[str, object]) -> None:
+    """
+    @brief      Update the load progress.
+    @param[in]  window Value for `window`.
+    @param[in]  status_payload Payload for `status_payload`.
+    @return     None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-21
+    @version    0.1.0
+    """
+    operation_payload = status_payload.get("operation", {})
+    if not isinstance(operation_payload, dict):
+        return
+    percent = int(operation_payload.get("progress_percent", 0))
+    current_language = ui_state_service.current_language_from_settings(window._settings_payload)
+    stage_text = ui_state_service.translate("progress.narration_plan_sample_load_model", current_language)
+    mapped_percent = 25 + int(max(0, min(percent, 100)) * 0.10)
+    misc_ui_controller.update_progress_dialog(window, mapped_percent, stage_text)
+
+
+def _probe_runtime_and_persist_cache(window: "MainWindow") -> dict[str, object]:
+    """
+    @brief      Execute the probe runtime and persist cache helper.
+    @param[in]  window Value for `window`.
+    @return     Helper result.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-21
+    @version    0.1.0
+    """
+    probe_result = voiceweaver_runtime_service.probe_runtime(
+        str(window._settings_payload.get("tts_runtime_base_url", "")).strip(),
+        str(window._settings_payload.get("tts_runtime_api_key", "")),
+    )
+    updated_settings = dict(window._settings_payload)
+    updated_settings["tts_runtime_probe_succeeded"] = bool(probe_result.get("success", False))
+    updated_settings["tts_runtime_probe_message"] = str(probe_result.get("message", ""))
+    updated_settings["tts_runtime_discovered_models"] = list(probe_result.get("discovered_models", []))
+    updated_settings["tts_runtime_active_model_id"] = probe_result.get("active_model_id")
+    updated_settings["tts_runtime_device_diagnostics"] = dict(probe_result.get("device_diagnostics", {}))
+    settings_service.save_settings(updated_settings)
+    window._settings_payload = settings_service.load_settings()
+    return probe_result
+
+
+def _preview_timeout_seconds(window: "MainWindow") -> int:
+    """
+    @brief      Resolve the preview timeout seconds.
+    @param[in]  window Value for `window`.
+    @return     Helper result.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-21
+    @version    0.1.0
+    """
+    timeout_value = window._settings_payload.get(
+        "tts_audio_preview_timeout_seconds",
+        config.DEFAULT_TTS_AUDIO_PREVIEW_TIMEOUT_SECONDS,
+    )
+    if isinstance(timeout_value, int) and timeout_value > 0:
+        return timeout_value
+    return config.DEFAULT_TTS_AUDIO_PREVIEW_TIMEOUT_SECONDS
+
+
+def _persist_runtime_status(window: "MainWindow", status_payload: dict[str, object]) -> None:
+    """
+    @brief      Persist the runtime status.
+    @param[in]  window Value for `window`.
+    @param[in]  status_payload Payload for `status_payload`.
+    @return     None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-21
+    @version    0.1.0
+    """
+    updated_settings = dict(window._settings_payload)
+    updated_settings["tts_runtime_active_model_id"] = _active_model_id_from_status(status_payload)
+    updated_settings["tts_runtime_device_diagnostics"] = dict(status_payload.get("device_diagnostics", {}))
+    settings_service.save_settings(updated_settings)
+    window._settings_payload = settings_service.load_settings()
+
+
+def _active_model_id_from_status(status_payload: dict[str, object]) -> str | None:
+    """
+    @brief      Execute the active model id from status helper.
+    @param[in]  status_payload Payload for `status_payload`.
+    @return     Helper result.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-21
+    @version    0.1.0
+    """
+    return voiceweaver_runtime_service._resolve_active_model_id(status_payload.get("active_model"))  # noqa: SLF001
+
+
+def _sync_manifest_stage(window: "MainWindow") -> None:
+    """
+    @brief      Synchronize the manifest stage.
+    @param[in]  window Value for `window`.
+    @return     None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-21
+    @version    0.1.0
+    """
+    if window._current_project_root is None or window._current_manifest is None:
+        return
+    current_stage = str(window._current_manifest.get("current_stage", "")).strip()
+    if current_stage not in config.PROJECT_WORKFLOW_STAGES:
+        return
+    current_stage_rank = config.PROJECT_WORKFLOW_STAGES.index(current_stage)
+    narrator_stage_rank = config.PROJECT_WORKFLOW_STAGES.index("narrator_definition_ready")
+    desired_stage = (
+        "narration_plan_ready"
+        if narration_plan_service.narration_plan_is_ready(
+            window._current_project_root,
+            list(window._narration_plan_page._targets),  # noqa: SLF001
+        )
+        else "narrator_definition_ready"
+    )
+    if current_stage_rank < narrator_stage_rank and desired_stage == "narrator_definition_ready":
+        return
+    if current_stage == desired_stage:
+        return
+    updated_manifest = dict(window._current_manifest)
+    updated_manifest["current_stage"] = desired_stage
+    project_workspace_service.save_manifest(updated_manifest, window._current_project_root)
+    window.show_project_state(
+        window._current_project_root,
+        project_workspace_service.load_manifest(window._current_project_root),
+    )
+
+
+def _stop_preview_playback(window: "MainWindow") -> None:
+    """
+    @brief      Execute the stop preview playback helper.
+    @param[in]  window Value for `window`.
+    @return     None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-21
+    @version    0.1.0
+    """
+    window._narration_plan_audio_player.stop()
+    window._narration_plan_audio_player.setSource(QUrl())
+    window._narration_plan_page.set_preview_active(False)
+
+
+def _confirm_prompt_edit(window: "MainWindow", language: str) -> bool:
+    """
+    @brief      Confirm the prompt edit.
+    @param[in]  window Value for `window`.
+    @param[in]  language Language code.
+    @return     None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-21
+    @version    0.1.0
+    """
+    return (
+        QMessageBox.question(
+            window,
+            ui_state_service.translate("dialog.narration_plan_edit_title", language),
+            ui_state_service.translate("dialog.narration_plan_edit_message", language),
+        )
+        == QMessageBox.StandardButton.Yes
+    )
+
+
+def _confirm_generate_sample(window: "MainWindow", language: str, target_id: str) -> bool:
+    """
+    @brief      Confirm the generate sample.
+    @param[in]  window Value for `window`.
+    @param[in]  language Language code.
+    @param[in]  target_id Target identifier.
+    @return     None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-21
+    @version    0.1.0
+    """
+    has_existing_sample = window._current_project_root is not None and narration_plan_service.has_target_sample(
+        window._current_project_root,
+        target_id,
+    )
+    message_key = (
+        "dialog.narration_plan_generate_sample_message_replace"
+        if has_existing_sample
+        else "dialog.narration_plan_generate_sample_message"
+    )
+    return (
+        QMessageBox.question(
+            window,
+            ui_state_service.translate("dialog.narration_plan_generate_sample_title", language),
+            ui_state_service.translate(message_key, language),
+        )
+        == QMessageBox.StandardButton.Yes
+    )
+
+
+# END OF FILE

@@ -11,8 +11,8 @@
 @details Validates that the DDP_Audiomancer-style toolbar, sidebar, and stacked
          pages are created without workflow functionality.
 @author Eng. Dan Dumitru Pasare
-@date 2026-04-06
-@version 1.3.0
+@date 2026-04-20
+@version 1.5.1
 """
 
 # IMPORTS
@@ -49,7 +49,7 @@ def test_main_window_creates_project_and_updates_shell(monkeypatch, qtbot, tmp_p
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.1.0
+    @version    0.2.1
     """
 
     monkeypatch.setattr(
@@ -75,6 +75,10 @@ def test_main_window_creates_project_and_updates_shell(monkeypatch, qtbot, tmp_p
     assert window._sidebar.item(1).flags() != main_window_module.Qt.ItemFlag.NoItemFlags
     assert any(
         "Narrator Definition" in window._home_page._stage_list.item(index).text()
+        for index in range(window._home_page._stage_list.count())
+    )
+    assert any(
+        "Narration Plan" in window._home_page._stage_list.item(index).text()
         for index in range(window._home_page._stage_list.count())
     )
 
@@ -1240,6 +1244,116 @@ def test_main_window_loads_character_discovery_state_into_characters_page(
     assert window._characters_page._start_button.isEnabled() is False
     assert window._characters_page._reset_button.isEnabled() is True
     assert window._characters_page._evidence_preview.toPlainText() == '"Hello there," said Alice.'
+
+
+def test_main_window_loads_narrator_definition_state_into_narrator_page(
+    qtbot, tmp_path, default_settings_payload
+) -> None:
+    """
+    @brief      Verify the main window refreshes the Narrator page from persisted narrator-definition artifacts.
+    @param[in]  qtbot Qt test helper fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @param[in]  default_settings_payload Fixture supplying default test settings.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-11
+    @version    0.1.0
+    """
+    project_root, manifest = project_workspace_service.create_project(
+        "NarratorWindowProject",
+        tmp_path,
+    )
+    manifest["source_document"] = {
+        "original_name": "story.txt",
+        "stored_relative_path": "story.txt",
+        "file_type": "txt",
+        "imported_at": "2026-04-11T12:00:00+00:00",
+        "size_bytes": 4,
+    }
+    manifest["current_stage"] = "narrator_definition_ready"
+    manifest["narrator_profile_name"] = "My Warm Narrator"
+    manifest["narrator_language"] = "English"
+    project_workspace_service.save_manifest(manifest, project_root)
+    narrator_root = project_root / config.NARRATOR_DEFINITION_FOLDER_NAME
+    narrator_root.mkdir(parents=True, exist_ok=True)
+    (narrator_root / config.NARRATOR_PROFILE_FILE_NAME).write_text(
+        json.dumps(
+            [
+                {
+                    "profile_id": "preset_1",
+                    "speaker_id": "vivian",
+                    "display_name": "CustomVoice | Neutral Story Guide",
+                    "language": "en",
+                    "prompt_text": "Preset prompt.",
+                    "profile_kind": "preset",
+                    "provider_family": "qwen3_tts_customvoice_seed",
+                    "editable": False,
+                    "updated_at": None,
+                },
+                {
+                    "profile_id": "custom_1",
+                    "display_name": "My Warm Narrator",
+                    "language": "en",
+                    "prompt_text": "Warm narrator prompt.",
+                    "profile_kind": "custom",
+                    "provider_family": "project_custom",
+                    "editable": True,
+                    "updated_at": "2026-04-11T12:01:00+00:00",
+                },
+            ],
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    (narrator_root / config.NARRATOR_SELECTION_FILE_NAME).write_text(
+        json.dumps(
+            {
+                "selected_profile_id": "custom_1",
+                "selected_language": "en",
+            },
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    settings_payload = dict(default_settings_payload)
+    settings_payload["tts_runtime_probe_succeeded"] = True
+    settings_payload["tts_runtime_discovered_models"] = [
+        {
+            "model_id": "custom_model",
+            "status": "healthy",
+            "supported_generation_modes": ["custom_voice"],
+            "supported_presets": ["vivian"],
+            "speaker_count": 1,
+        },
+        {
+            "model_id": "definition_model",
+            "status": "healthy",
+            "supported_generation_modes": ["definition"],
+            "supported_presets": [],
+            "speaker_count": 0,
+        },
+        {
+            "model_id": "clone_model",
+            "status": "healthy",
+            "supported_generation_modes": ["clone"],
+            "supported_presets": [],
+            "speaker_count": 0,
+        },
+    ]
+    window = MainWindow(settings_payload=settings_payload)
+    qtbot.addWidget(window)
+    window._activate_project(project_root, project_workspace_service.load_manifest(project_root))
+
+    assert window._narrator_page._profile_list.count() == 5
+    assert window._narrator_page.current_profile_id() == "custom_1"
+    assert window._narrator_page._profile_name_edit.text() == "My Warm Narrator"
+    assert window._narrator_page._designer_prompt.toPlainText() == "Warm narrator prompt."
+    assert window._narrator_page._edit_profile_button.isEnabled() is True
+    assert window._narrator_page._delete_profile_button.isEnabled() is True
 
 
 def test_main_window_prevents_reimport_when_source_is_locked(

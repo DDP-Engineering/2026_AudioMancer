@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-  # noqa: UP009
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -11,8 +12,8 @@
 @details Handles Settings dialog presentation, persistence, and application of
          runtime language and UI-scale changes to the shell.
 @author Eng. Dan Dumitru Pasare
-@date 2026-04-06
-@version 0.2.0
+@date 2026-04-16
+@version 0.3.0
 """
 
 # IMPORTS
@@ -90,14 +91,15 @@ def apply_language(window, language: str) -> None:
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.1.0
+    @date       2026-04-16
+    @version    0.2.0
     """
     window.setWindowTitle(ui_state_service.translate("window_title.main", language))
     window._action_new_project.setText(ui_state_service.translate("toolbar.new_project", language))
     window._action_open_project.setText(ui_state_service.translate("toolbar.open_project", language))
     window._action_settings.setText(ui_state_service.translate("toolbar.settings", language))
     window._action_ai_settings.setText(ui_state_service.translate("toolbar.ai_settings", language))
+    window._action_tts_settings.setText(ui_state_service.translate("toolbar.tts_settings", language))
     window._action_help.setText(ui_state_service.translate("toolbar.help", language))
     window._action_about.setText(ui_state_service.translate("toolbar.about", language))
     window._sidebar.apply_language(language)
@@ -105,11 +107,13 @@ def apply_language(window, language: str) -> None:
         window._status_bar.apply_language(language)
     window._settings_dialog.setWindowTitle(ui_state_service.translate("dialog.settings_title", language))
     window._ai_settings_dialog.setWindowTitle(ui_state_service.translate("dialog.ai_settings_title", language))
+    window._tts_settings_dialog.setWindowTitle(ui_state_service.translate("dialog.tts_settings_title", language))
     if window._operation_progress_dialog is not None:
         window._operation_progress_dialog.apply_language(language)
     for widget in (
         window._settings_page,
         window._ai_settings_page,
+        window._tts_settings_page,
         *window._page_registry.values(),
     ):
         if hasattr(widget, "apply_language"):

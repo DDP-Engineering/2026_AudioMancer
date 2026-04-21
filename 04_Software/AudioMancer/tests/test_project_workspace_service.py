@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -12,8 +11,8 @@
 @details Verifies project creation, manifest persistence, folder-name
          validation, project-root resolution, and open validation behavior.
 @author Eng. Dan Dumitru Pasare
-@date 2026-04-11
-@version 0.6.0
+@date 2026-04-20
+@version 0.7.1
 """
 
 # IMPORTS
@@ -53,6 +52,7 @@ def test_create_project_creates_required_structure_and_manifest(tmp_path) -> Non
     assert manifest["extraction_warning_count"] == 0
     assert manifest["operations"]["extraction"]["status"] == "not_started"
     assert manifest["operations"]["cleanup"]["folder_relative_path"] == "10_cleanup"
+    assert manifest["voice_assignment_mode"] == config.DEFAULT_TTS_VOICE_ASSIGNMENT_MODE
     assert "metadata" not in manifest["operations"]["extraction"]
     assert "output_paths" not in manifest["operations"]["cleanup"]
     assert (project_root / config.PROJECT_MANIFEST_FILE_NAME).is_file()
@@ -214,7 +214,7 @@ def test_repair_project_recreates_missing_downstream_folders_and_resets_stage(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.1.0
+    @version    0.1.1
     """
     project_root, manifest = project_workspace_service.create_project(
         "Book5_CAL_CAL",
@@ -242,6 +242,7 @@ def test_repair_project_recreates_missing_downstream_folders_and_resets_stage(
         "30_translation",
         "40_character_discovery",
         "50_narrator_definition",
+        "60_narration_plan",
     ):
         assert (project_root / folder_name).is_dir()
         assert list((project_root / folder_name).iterdir()) == []
@@ -309,6 +310,24 @@ def test_validate_project_manifest_accepts_structured_source_document() -> None:
 
     assert validated["source_document"] == manifest["source_document"]
     assert validated["current_stage"] == "source_selected"
+    assert validated["voice_assignment_mode"] == config.DEFAULT_TTS_VOICE_ASSIGNMENT_MODE
+
+
+def test_validate_project_manifest_normalizes_voice_assignment_mode() -> None:
+    """
+    @brief      Verify manifest validation normalizes unsupported voice-assignment values to the default.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-18
+    @version    1.0.0
+    """
+    manifest = project_workspace_service.build_project_manifest("Book5_CAL_CAL")
+    manifest["voice_assignment_mode"] = "unsupported_mode"
+
+    validated = project_workspace_service.validate_project_manifest(manifest)
+
+    assert validated["voice_assignment_mode"] == config.DEFAULT_TTS_VOICE_ASSIGNMENT_MODE
 
 
 def test_validate_project_manifest_normalizes_operations_map() -> None:
@@ -444,6 +463,32 @@ def test_repair_manifest_preserves_character_discovery_for_narrator_stage() -> N
     repaired_manifest = project_workspace_service._build_repaired_manifest(
         manifest,
         "narrator_definition_ready",
+    )
+
+    assert repaired_manifest["operations"]["translation"]["status"] == "completed"
+    assert repaired_manifest["operations"]["character_discovery"]["status"] == "completed"
+
+
+def test_repair_manifest_preserves_character_discovery_for_narration_plan_stage() -> None:
+    """
+    @brief      Verify repaired narration-plan-stage manifests keep character discovery data intact.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-20
+    @version    1.0.0
+    """
+    manifest = project_workspace_service.build_project_manifest("Book5_CAL_CAL")
+    manifest["current_stage"] = "narration_plan_ready"
+    manifest["operations"]["extraction"]["status"] = "completed"
+    manifest["operations"]["cleanup"]["status"] = "completed"
+    manifest["operations"]["chunking"]["status"] = "completed"
+    manifest["operations"]["translation"]["status"] = "completed"
+    manifest["operations"]["character_discovery"]["status"] = "completed"
+
+    repaired_manifest = project_workspace_service._build_repaired_manifest(
+        manifest,
+        "narration_plan_ready",
     )
 
     assert repaired_manifest["operations"]["translation"]["status"] == "completed"

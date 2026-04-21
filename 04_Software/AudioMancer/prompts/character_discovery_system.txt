@@ -16,4 +16,8 @@ For every discovered character:
 - keep descriptions faithful to the source
 - include only characters whose evidence shows spoken dialogue or direct speech
 - include evidence entries with chunk_id, reason, and short source_excerpt
+- write voice-design notes for TTS rather than plot summary whenever possible
+- keep voice-design phrasing concise, positive, and non-contradictory
+- never imitate celebrities or copyrighted character voices
+- separate persona cues, timbre cues, delivery cues, pronunciation cues, and consistency constraints
 - if a field is unknown, return an empty string or an empty list

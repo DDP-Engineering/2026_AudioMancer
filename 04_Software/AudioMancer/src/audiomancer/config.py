@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-  # noqa: UP009
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -11,8 +12,8 @@
 @details Centralizes application names, paths, defaults, artifact names, and
          file support used by the current AudioMancer implementation scaffold.
 @author Eng. Dan Dumitru Pasare
-@date 2026-04-07
-@version 1.7.0
+@date 2026-04-20
+@version 1.14.0
 """
 
 # IMPORTS
@@ -58,6 +59,12 @@ CHARACTER_DISCOVERY_FOLDER_NAME = "40_character_discovery"
 # @brief Stable project folder name for narrator-definition artifacts.
 NARRATOR_DEFINITION_FOLDER_NAME = "50_narrator_definition"
 
+# @brief Stable project folder name for narration-plan artifacts.
+NARRATION_PLAN_FOLDER_NAME = "60_narration_plan"
+
+# @brief Stable project folder name for the selected narrator and future character audio samples.
+PROJECT_AUDIO_SAMPLES_FOLDER_NAME = "audio_samples"
+
 # @brief Standard workflow directories created for each project workspace.
 PROJECT_REQUIRED_SUBDIRECTORIES = (
     EXTRACTION_FOLDER_NAME,
@@ -66,6 +73,8 @@ PROJECT_REQUIRED_SUBDIRECTORIES = (
     TRANSLATION_FOLDER_NAME,
     CHARACTER_DISCOVERY_FOLDER_NAME,
     NARRATOR_DEFINITION_FOLDER_NAME,
+    NARRATION_PLAN_FOLDER_NAME,
+    PROJECT_AUDIO_SAMPLES_FOLDER_NAME,
     "temp",
 )
 
@@ -78,6 +87,7 @@ PROJECT_WORKFLOW_STAGES = (
     "translation_ready",
     "character_discovery_ready",
     "narrator_definition_ready",
+    "narration_plan_ready",
 )
 
 # @brief Characters rejected for exact project folder names across Windows and Linux.
@@ -170,6 +180,30 @@ CHARACTER_PROFILE_FILE_NAME = f"{OPERATION_OUTPUT_FILE_PREFIX}character_profiles
 # @brief File name used for persisted character-discovery metadata.
 CHARACTER_DISCOVERY_REPORT_FILE_NAME = f"{OPERATION_ARTIFACT_FILE_PREFIX}character_discovery_report.json"
 
+# @brief File name used for persisted narrator-definition profile records.
+NARRATOR_PROFILE_FILE_NAME = "profiles.json"
+
+# @brief File name used for persisted narrator-definition selection state.
+NARRATOR_SELECTION_FILE_NAME = "selected_profile.json"
+
+# @brief Folder name used for per-profile narrator sample files under `50_narrator_definition`.
+NARRATOR_PROFILE_AUDIO_SAMPLES_FOLDER_NAME = "audio_samples"
+
+# @brief File name used for persisted narration-plan voice target records.
+NARRATION_PLAN_VOICE_PLAN_FILE_NAME = "voice_plan.json"
+
+# @brief File name used for persisted narration-plan selected voice language.
+NARRATION_PLAN_SELECTED_LANGUAGE_FILE_NAME = "selected_voice_language.json"
+
+# @brief Folder name used for per-target narration-plan sample files under `60_narration_plan`.
+NARRATION_PLAN_AUDIO_SAMPLES_FOLDER_NAME = "audio_samples"
+
+# @brief File name used for the selected narrator sample under the project-root audio folder.
+SELECTED_NARRATOR_AUDIO_FILE_NAME = "narrator.wav"
+
+# @brief File name used for the selected narrator sample metadata under the project-root audio folder.
+SELECTED_NARRATOR_METADATA_FILE_NAME = "narrator.json"
+
 
 # Workflow And UI Defaults
 # @brief Default initial workflow stage for a newly created project.
@@ -224,6 +258,29 @@ DEFAULT_AI_CONNECT_TIMEOUT_SECONDS = 3
 
 # @brief Default temperature for AI cleanup and chunking requests.
 DEFAULT_LLM_TEMPERATURE = 0.2
+
+
+# TTS Runtime Defaults
+# @brief Default base URL used for the local VoiceWeaver runtime.
+DEFAULT_TTS_RUNTIME_BASE_URL = "http://127.0.0.1:8059"
+
+# @brief Default bearer token used when the runtime requires authentication.
+DEFAULT_TTS_RUNTIME_API_KEY = ""
+
+# @brief Default connection timeout in seconds for VoiceWeaver probe requests.
+DEFAULT_TTS_CONNECT_TIMEOUT_SECONDS = 5
+
+# @brief Default timeout in seconds for narrator preview-sample generation requests.
+DEFAULT_TTS_AUDIO_PREVIEW_TIMEOUT_SECONDS = 60
+
+# @brief Default timeout in seconds for long-form audio generation requests.
+DEFAULT_TTS_AUDIO_GENERATION_TIMEOUT_SECONDS = 300
+
+# @brief Default per-project narrator voice-assignment mode.
+DEFAULT_TTS_VOICE_ASSIGNMENT_MODE = "narrator_and_characters"
+
+# @brief Supported narrator voice-assignment modes for one project.
+TTS_VOICE_ASSIGNMENT_MODE_OPTIONS = ("same_narrator", "narrator_and_characters")
 
 # AI Workflow Defaults
 # @brief Default maximum cleanup-unit count sent in one AI cleanup request window.
@@ -308,6 +365,7 @@ AVAILABLE_LOG_COMPONENTS = (
     "project_workspace",
     "text_extraction",
     "ui_state",
+    "voiceweaver_runtime",
 )
 
 # @brief Default flag controlling project-local AI exchange logging.

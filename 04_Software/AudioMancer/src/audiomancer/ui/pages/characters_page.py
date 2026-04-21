@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-  # noqa: UP009
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -14,7 +14,7 @@
          manually added speaking characters.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-08
-@version 0.2.0
+@version 0.4.0
 """
 
 # IMPORTS
@@ -51,7 +51,7 @@ class CharactersPage(QWidget):
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-08
-    @version    0.2.0
+    @version    0.4.0
     """
 
     start_discovery_requested = Signal(str)
@@ -61,16 +61,17 @@ class CharactersPage(QWidget):
     save_character_requested = Signal(dict)
     delete_character_requested = Signal(str)
     selection_change_requested = Signal(object)
+    regenerate_voice_definition_requested = Signal(dict)
 
     def __init__(self, parent=None) -> None:
         """
-        @brief      Initialize the Character Discovery workflow page.
-        @param[in]  parent Optional parent widget.
-        @return     None.
-        @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-08
-        @version    0.2.0
+            @brief      Initialize the Character Discovery workflow page.
+            @param[in]  parent Optional parent widget.
+            @return     None.
+            @exception  None
+            @author     Eng. Dan Dumitru Pasare
+            @date       2026-04-08
+        @version    0.4.0
         """
         super().__init__(parent)
         self._project_active = False
@@ -90,6 +91,7 @@ class CharactersPage(QWidget):
         self._can_add = False
         self._can_edit = False
         self._can_delete = False
+        self._ui_language = "en"
 
         layout = QVBoxLayout(self)
         header_row = QHBoxLayout()
@@ -240,6 +242,61 @@ class CharactersPage(QWidget):
         editor_layout.addRow(self._voice_notes_label, self._voice_notes_edit)
         editor_layout.addRow(self._relationships_label, self._relationships_edit)
         editor_layout.addRow(self._confidence_label, self._confidence_edit)
+        self._voice_definition_group = QGroupBox("Voice Definition", self._editor_form_widget)
+        voice_definition_layout = QVBoxLayout(self._voice_definition_group)
+        voice_definition_form = QFormLayout()
+        self._voice_persona_summary_edit = QPlainTextEdit(self)
+        self._voice_timbre_and_range_edit = QPlainTextEdit(self)
+        self._voice_pacing_and_rhythm_edit = QPlainTextEdit(self)
+        self._voice_emotional_baseline_edit = QPlainTextEdit(self)
+        self._voice_articulation_and_pronunciation_edit = QPlainTextEdit(self)
+        self._voice_delivery_constraints_edit = QPlainTextEdit(self)
+        self._voice_definition_prompt_edit = QPlainTextEdit(self)
+        self._voice_definition_widgets = [
+            self._voice_persona_summary_edit,
+            self._voice_timbre_and_range_edit,
+            self._voice_pacing_and_rhythm_edit,
+            self._voice_emotional_baseline_edit,
+            self._voice_articulation_and_pronunciation_edit,
+            self._voice_delivery_constraints_edit,
+            self._voice_definition_prompt_edit,
+        ]
+        self._editor_widgets.extend(self._voice_definition_widgets)
+        for widget in self._voice_definition_widgets[:-1]:
+            widget.setMinimumHeight(58)
+            widget.setMaximumHeight(82)
+            widget.textChanged.connect(self._handle_editor_changed)
+        self._voice_definition_prompt_edit.setMinimumHeight(96)
+        self._voice_definition_prompt_edit.setMaximumHeight(130)
+        self._voice_definition_prompt_edit.textChanged.connect(self._handle_editor_changed)
+        self._voice_persona_summary_label = QLabel("Voice Persona Summary", self)
+        self._voice_timbre_and_range_label = QLabel("Timbre / Range", self)
+        self._voice_pacing_and_rhythm_label = QLabel("Pacing / Rhythm", self)
+        self._voice_emotional_baseline_label = QLabel("Emotional Baseline", self)
+        self._voice_articulation_and_pronunciation_label = QLabel("Articulation / Pronunciation", self)
+        self._voice_delivery_constraints_label = QLabel("Delivery Constraints", self)
+        self._voice_definition_prompt_label = QLabel("Voice Definition Prompt", self)
+        voice_definition_form.addRow(self._voice_persona_summary_label, self._voice_persona_summary_edit)
+        voice_definition_form.addRow(self._voice_timbre_and_range_label, self._voice_timbre_and_range_edit)
+        voice_definition_form.addRow(self._voice_pacing_and_rhythm_label, self._voice_pacing_and_rhythm_edit)
+        voice_definition_form.addRow(self._voice_emotional_baseline_label, self._voice_emotional_baseline_edit)
+        voice_definition_form.addRow(
+            self._voice_articulation_and_pronunciation_label,
+            self._voice_articulation_and_pronunciation_edit,
+        )
+        voice_definition_form.addRow(self._voice_delivery_constraints_label, self._voice_delivery_constraints_edit)
+        voice_definition_form.addRow(self._voice_definition_prompt_label, self._voice_definition_prompt_edit)
+        voice_definition_layout.addLayout(voice_definition_form)
+        voice_definition_button_row = QHBoxLayout()
+        self._regenerate_voice_definition_button = QPushButton("Regenerate Voice Definition", self)
+        self._regenerate_voice_definition_button.clicked.connect(self._emit_regenerate_voice_definition)
+        voice_definition_button_row.addWidget(self._regenerate_voice_definition_button)
+        voice_definition_button_row.addStretch(1)
+        voice_definition_layout.addLayout(voice_definition_button_row)
+        self._voice_definition_status_label = QLabel("", self)
+        self._voice_definition_status_label.setWordWrap(True)
+        voice_definition_layout.addWidget(self._voice_definition_status_label)
+        editor_layout.addRow(self._voice_definition_group)
         self._editor_scroll_area.setWidget(self._editor_form_widget)
         editor_group_layout.addWidget(self._editor_scroll_area)
         self._left_splitter.addWidget(self._editor_group)
@@ -345,33 +402,33 @@ class CharactersPage(QWidget):
         dirty: bool,
     ) -> None:
         """
-        @brief      Apply one complete character-discovery page state payload.
-        @param[in]  profiles Persisted character profile payload list.
-        @param[in]  notes Operator-facing summary and status notes.
-        @param[in]  selected_profile_id Resolved AI profile identifier.
-        @param[in]  stage_status Current discovery stage token.
-        @param[in]  character_count Unused summary count from the state service.
-        @param[in]  source_chunk_map Chunk text keyed by `chunk_id`.
-        @param[in]  can_start True when discovery may start or continue.
-        @param[in]  can_reset True when reset may run.
-        @param[in]  can_add True when manual add may start.
-        @param[in]  can_edit True when edit mode may start.
-        @param[in]  can_save Unused explicit save flag from the state service.
-        @param[in]  can_delete True when delete may run.
-        @param[in]  edit_mode Unused edit-mode flag from the state service.
-        @param[in]  dirty Unused dirty flag from the state service.
-        @return     None.
-        @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-08
-        @version    0.2.0
+            @brief      Apply one complete character-discovery page state payload.
+            @param[in]  profiles Persisted character profile payload list.
+            @param[in]  notes Operator-facing summary and status notes.
+            @param[in]  selected_profile_id Resolved AI profile identifier.
+            @param[in]  stage_status Current discovery stage token.
+            @param[in]  character_count Unused summary count from the state service.
+            @param[in]  source_chunk_map Chunk text keyed by `chunk_id`.
+            @param[in]  can_start True when discovery may start or continue.
+            @param[in]  can_reset True when reset may run.
+            @param[in]  can_add True when manual add may start.
+            @param[in]  can_edit True when edit mode may start.
+            @param[in]  can_save Unused explicit save flag from the state service.
+            @param[in]  can_delete True when delete may run.
+            @param[in]  edit_mode Unused edit-mode flag from the state service.
+            @param[in]  dirty Unused dirty flag from the state service.
+            @return     None.
+            @exception  None
+            @author     Eng. Dan Dumitru Pasare
+            @date       2026-04-08
+        @version    0.3.0
         """
         del character_count
         del can_save
         del edit_mode
         del dirty
         current_character_id = self._current_character_id
-        self._profiles = sorted(list(profiles), key=_profile_sort_key)
+        self._profiles = sorted([_normalize_page_profile(profile) for profile in profiles], key=_profile_sort_key)
         self._source_chunk_map = dict(source_chunk_map)
         self._stage_status = stage_status
         self._can_start = can_start
@@ -483,12 +540,12 @@ class CharactersPage(QWidget):
 
     def begin_edit_mode(self) -> None:
         """
-        @brief      Enter guarded edit mode for the selected persisted profile.
-        @return     None.
-        @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-08
-        @version    0.2.0
+            @brief      Enter guarded edit mode for the selected persisted profile.
+            @return     None.
+            @exception  None
+            @author     Eng. Dan Dumitru Pasare
+            @date       2026-04-08
+        @version    0.3.0
         """
         profile = self._current_profile()
         if profile is None:
@@ -502,13 +559,13 @@ class CharactersPage(QWidget):
 
     def begin_add_mode(self, draft_profile: dict[str, object]) -> None:
         """
-        @brief      Enter add mode with one temporary manual-character draft.
-        @param[in]  draft_profile New manual profile draft payload.
-        @return     None.
-        @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-08
-        @version    0.2.0
+            @brief      Enter add mode with one temporary manual-character draft.
+            @param[in]  draft_profile New manual profile draft payload.
+            @return     None.
+            @exception  None
+            @author     Eng. Dan Dumitru Pasare
+            @date       2026-04-08
+        @version    0.3.0
         """
         self._mode = CHARACTER_PAGE_MODE_ADD
         self._dirty = True
@@ -527,13 +584,13 @@ class CharactersPage(QWidget):
 
     def apply_selected_character(self, character_id: str | None) -> None:
         """
-        @brief      Switch the active character selection and refresh the editor.
-        @param[in]  character_id Target character identifier or `None`.
-        @return     None.
-        @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-08
-        @version    0.2.0
+            @brief      Switch the active character selection and refresh the editor.
+            @param[in]  character_id Target character identifier or `None`.
+            @return     None.
+            @exception  None
+            @author     Eng. Dan Dumitru Pasare
+            @date       2026-04-08
+        @version    0.3.0
         """
         if character_id is None:
             self._current_character_id = None
@@ -581,7 +638,7 @@ class CharactersPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-08
-        @version    0.2.0
+        @version    0.3.0
         """
         current_character_id = self._current_character_id
         if self._mode == CHARACTER_PAGE_MODE_ADD and current_character_id is not None:
@@ -610,9 +667,10 @@ class CharactersPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-08
-        @version    0.2.0
+        @version    0.3.0
         """
         self._title_label.setText(f"<h2>{ui_state_service.translate('characters.title', language)}</h2>")
+        self._ui_language = language
         self._profile_label.setText(ui_state_service.translate("characters.ai_profile", language))
         self._start_button.setText(ui_state_service.translate("characters.start", language))
         self._reset_button.setText(ui_state_service.translate("characters.reset", language))
@@ -636,6 +694,32 @@ class CharactersPage(QWidget):
         self._voice_notes_label.setText(ui_state_service.translate("characters.voice_notes", language))
         self._relationships_label.setText(ui_state_service.translate("characters.relationship_hints", language))
         self._confidence_label.setText(ui_state_service.translate("characters.confidence", language))
+        self._voice_definition_group.setTitle(ui_state_service.translate("characters.voice_definition_group", language))
+        self._voice_persona_summary_label.setText(
+            ui_state_service.translate("characters.voice_persona_summary", language)
+        )
+        self._voice_timbre_and_range_label.setText(
+            ui_state_service.translate("characters.voice_timbre_and_range", language)
+        )
+        self._voice_pacing_and_rhythm_label.setText(
+            ui_state_service.translate("characters.voice_pacing_and_rhythm", language)
+        )
+        self._voice_emotional_baseline_label.setText(
+            ui_state_service.translate("characters.voice_emotional_baseline", language)
+        )
+        self._voice_articulation_and_pronunciation_label.setText(
+            ui_state_service.translate("characters.voice_articulation_and_pronunciation", language)
+        )
+        self._voice_delivery_constraints_label.setText(
+            ui_state_service.translate("characters.voice_delivery_constraints", language)
+        )
+        self._voice_definition_prompt_label.setText(
+            ui_state_service.translate("characters.voice_definition_prompt", language)
+        )
+        self._regenerate_voice_definition_button.setText(
+            ui_state_service.translate("characters.regenerate_voice_definition", language)
+        )
+        self._refresh_voice_definition_status_label()
         if self._profile_combo.count() == 1 and self._profile_combo.currentData() is None:
             self._profile_combo.setItemText(
                 0,
@@ -649,7 +733,7 @@ class CharactersPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-08
-        @version    0.2.0
+        @version    0.4.0
         """
         ai_selector_enabled = (
             self._project_active and not self._busy and self._can_start and self._mode == CHARACTER_PAGE_MODE_VIEW
@@ -680,8 +764,10 @@ class CharactersPage(QWidget):
         self._save_character_button.setEnabled(
             self._project_active
             and not self._busy
-            and self._mode in {CHARACTER_PAGE_MODE_ADD, CHARACTER_PAGE_MODE_EDIT}
-            and self._dirty
+            and (
+                (self._mode == CHARACTER_PAGE_MODE_ADD and self._dirty)
+                or (self._mode == CHARACTER_PAGE_MODE_EDIT and has_selected_character)
+            )
         )
         self._delete_character_button.setEnabled(
             self._project_active
@@ -690,12 +776,42 @@ class CharactersPage(QWidget):
             and has_selected_character
             and self._mode == CHARACTER_PAGE_MODE_VIEW
         )
+        self._regenerate_voice_definition_button.setEnabled(editor_enabled and has_selected_character)
         self._character_list.setEnabled(self._project_active and not self._busy)
         self._evidence_list.setEnabled(self._project_active and has_selected_character)
         for widget in self._editor_widgets:
             widget.setEnabled(editor_enabled)
             if hasattr(widget, "setReadOnly"):
                 widget.setReadOnly(not editor_enabled)
+
+    def _refresh_voice_definition_status_label(self, profile: dict[str, object] | None = None) -> None:
+        """
+        @brief      Refresh the voice-definition status note for the currently displayed profile.
+        @param[in]  profile Optional profile payload to inspect instead of the active profile.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-20
+        @version    1.0.0
+        """
+        active_profile = _normalize_page_profile(profile or self._active_profile() or {})
+        if not active_profile.get("character_id"):
+            self._voice_definition_status_label.clear()
+            return
+        if bool(active_profile.get("voice_definition_stale", False)):
+            self._voice_definition_status_label.setText(
+                ui_state_service.translate(
+                    "characters.voice_definition_note_stale",
+                    self._ui_language,
+                )
+            )
+            return
+        self._voice_definition_status_label.setText(
+            ui_state_service.translate(
+                "characters.voice_definition_note_current",
+                self._ui_language,
+            )
+        )
 
     def _emit_start_discovery(self) -> None:
         """
@@ -729,8 +845,11 @@ class CharactersPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-08
-        @version    0.1.0
+        @version    0.2.0
         """
+        if self._mode == CHARACTER_PAGE_MODE_EDIT and not self._dirty:
+            self.discard_changes()
+            return
         draft_payload = self.current_draft_payload()
         if draft_payload is not None:
             self.save_character_requested.emit(draft_payload)
@@ -746,6 +865,19 @@ class CharactersPage(QWidget):
         """
         if self._current_character_id is not None:
             self.delete_character_requested.emit(self._current_character_id)
+
+    def _emit_regenerate_voice_definition(self) -> None:
+        """
+        @brief      Emit one regenerate request for the active editable draft.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-20
+        @version    1.0.0
+        """
+        if self._mode not in {CHARACTER_PAGE_MODE_ADD, CHARACTER_PAGE_MODE_EDIT}:
+            return
+        self.regenerate_voice_definition_requested.emit(self._build_profile_from_editor())
 
     def _handle_character_selection_changed(self, row: int) -> None:
         """
@@ -791,6 +923,7 @@ class CharactersPage(QWidget):
         current_item = None if current_row < 0 else self._character_list.item(current_row)
         if current_item is not None and self._draft_profile is not None:
             current_item.setText(_format_profile_item(self._draft_profile))
+        self._refresh_voice_definition_status_label(self._draft_profile)
         self._apply_control_state()
 
     def _load_profile_into_editor(self, profile: dict[str, object]) -> None:
@@ -801,7 +934,7 @@ class CharactersPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-08
-        @version    0.2.0
+        @version    0.3.0
         """
         self._loading_profile = True
         self._canonical_name_edit.setText(str(profile.get("canonical_name", "")))
@@ -815,8 +948,18 @@ class CharactersPage(QWidget):
         self._speaking_style_edit.setPlainText(str(profile.get("speaking_style", "")))
         self._accent_edit.setText(str(profile.get("accent_or_dialect_hints", "")))
         self._voice_notes_edit.setPlainText(str(profile.get("voice_notes", "")))
+        self._voice_persona_summary_edit.setPlainText(str(profile.get("voice_persona_summary", "")))
+        self._voice_timbre_and_range_edit.setPlainText(str(profile.get("voice_timbre_and_range", "")))
+        self._voice_pacing_and_rhythm_edit.setPlainText(str(profile.get("voice_pacing_and_rhythm", "")))
+        self._voice_emotional_baseline_edit.setPlainText(str(profile.get("voice_emotional_baseline", "")))
+        self._voice_articulation_and_pronunciation_edit.setPlainText(
+            str(profile.get("voice_articulation_and_pronunciation", ""))
+        )
+        self._voice_delivery_constraints_edit.setPlainText(str(profile.get("voice_delivery_constraints", "")))
+        self._voice_definition_prompt_edit.setPlainText(str(profile.get("voice_definition_prompt", "")))
         self._relationships_edit.setPlainText("\n".join(list(profile.get("relationship_hints", []))))
         self._confidence_edit.setText(str(profile.get("confidence", "")))
+        self._refresh_voice_definition_status_label(profile)
         self._evidence_list.clear()
         for evidence in list(profile.get("evidence", [])):
             self._evidence_list.addItem(f"{evidence.get('chunk_id', '')} | {evidence.get('reason', '')}")
@@ -833,7 +976,7 @@ class CharactersPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-08
-        @version    0.1.0
+        @version    0.2.0
         """
         self._loading_profile = True
         self._canonical_name_edit.clear()
@@ -847,8 +990,16 @@ class CharactersPage(QWidget):
         self._speaking_style_edit.clear()
         self._accent_edit.clear()
         self._voice_notes_edit.clear()
+        self._voice_persona_summary_edit.clear()
+        self._voice_timbre_and_range_edit.clear()
+        self._voice_pacing_and_rhythm_edit.clear()
+        self._voice_emotional_baseline_edit.clear()
+        self._voice_articulation_and_pronunciation_edit.clear()
+        self._voice_delivery_constraints_edit.clear()
+        self._voice_definition_prompt_edit.clear()
         self._relationships_edit.clear()
         self._confidence_edit.clear()
+        self._voice_definition_status_label.clear()
         self._evidence_list.clear()
         self._evidence_preview.clear()
         self._loading_profile = False
@@ -925,10 +1076,10 @@ class CharactersPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-08
-        @version    0.2.0
+        @version    0.4.0
         """
         base_profile = self._active_profile() or {}
-        return {
+        draft_profile = {
             "character_id": str(base_profile.get("character_id", "")),
             "canonical_name": self._canonical_name_edit.text().strip(),
             "aliases": [item.strip() for item in self._aliases_edit.text().split(",") if item.strip()],
@@ -941,6 +1092,15 @@ class CharactersPage(QWidget):
             "speaking_style": self._speaking_style_edit.toPlainText().strip(),
             "accent_or_dialect_hints": self._accent_edit.text().strip(),
             "voice_notes": self._voice_notes_edit.toPlainText().strip(),
+            "voice_persona_summary": self._voice_persona_summary_edit.toPlainText().strip(),
+            "voice_timbre_and_range": self._voice_timbre_and_range_edit.toPlainText().strip(),
+            "voice_pacing_and_rhythm": self._voice_pacing_and_rhythm_edit.toPlainText().strip(),
+            "voice_emotional_baseline": self._voice_emotional_baseline_edit.toPlainText().strip(),
+            "voice_articulation_and_pronunciation": self._voice_articulation_and_pronunciation_edit.toPlainText().strip(),
+            "voice_delivery_constraints": self._voice_delivery_constraints_edit.toPlainText().strip(),
+            "voice_definition_prompt": self._voice_definition_prompt_edit.toPlainText().strip(),
+            "voice_definition_source_signature": str(base_profile.get("voice_definition_source_signature", "")).strip(),
+            "voice_definition_stale": bool(base_profile.get("voice_definition_stale", False)),
             "relationship_hints": [
                 item.strip() for item in self._relationships_edit.toPlainText().splitlines() if item.strip()
             ],
@@ -948,6 +1108,35 @@ class CharactersPage(QWidget):
             "evidence": [dict(item) for item in list(base_profile.get("evidence", []))],
             "updated_at": base_profile.get("updated_at"),
         }
+        draft_profile["voice_definition_stale"] = _voice_definition_stale_for_draft(base_profile, draft_profile)
+        return draft_profile
+
+    def apply_regenerated_voice_definition(self, profile_payload: dict[str, object]) -> None:
+        """
+        @brief      Apply regenerated voice-definition fields to the active draft without leaving edit mode.
+        @param[in]  profile_payload Updated draft payload with regenerated voice-definition fields.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-20
+        @version    1.0.0
+        """
+        if self._mode not in {CHARACTER_PAGE_MODE_ADD, CHARACTER_PAGE_MODE_EDIT}:
+            return
+        self._draft_profile = _normalize_page_profile(profile_payload)
+        self._load_profile_into_editor(self._draft_profile)
+        if self._mode == CHARACTER_PAGE_MODE_ADD:
+            self._dirty = True
+        else:
+            self._dirty = not _profiles_equal(
+                self._draft_profile,
+                self._original_profile,
+            )
+        current_row = _row_for_character_id(self._profiles, self._current_character_id)
+        current_item = None if current_row < 0 else self._character_list.item(current_row)
+        if current_item is not None:
+            current_item.setText(_format_profile_item(self._draft_profile))
+        self._apply_control_state()
 
     def _current_profile(self) -> dict[str, object] | None:
         """
@@ -1071,7 +1260,7 @@ def _profiles_equal(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-08
-    @version    0.1.0
+    @version    0.2.0
     """
     if left_profile is None or right_profile is None:
         return left_profile is right_profile
@@ -1087,6 +1276,13 @@ def _profiles_equal(
         "speaking_style",
         "accent_or_dialect_hints",
         "voice_notes",
+        "voice_persona_summary",
+        "voice_timbre_and_range",
+        "voice_pacing_and_rhythm",
+        "voice_emotional_baseline",
+        "voice_articulation_and_pronunciation",
+        "voice_delivery_constraints",
+        "voice_definition_prompt",
         "relationship_hints",
         "confidence",
         "evidence",
@@ -1094,6 +1290,83 @@ def _profiles_equal(
     return {key: left_profile.get(key) for key in comparable_keys} == {
         key: right_profile.get(key) for key in comparable_keys
     }
+
+
+def _normalize_page_profile(profile: dict[str, object]) -> dict[str, object]:
+    """
+    @brief      Apply UI-safe defaults to one character profile payload.
+    @param[in]  profile Raw or partial character profile payload.
+    @return     Normalized page profile payload.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-20
+    @version    1.0.0
+    """
+    normalized_profile = dict(profile)
+    normalized_profile.setdefault("aliases", [])
+    normalized_profile.setdefault("relationship_hints", [])
+    normalized_profile.setdefault("voice_persona_summary", "")
+    normalized_profile.setdefault("voice_timbre_and_range", "")
+    normalized_profile.setdefault("voice_pacing_and_rhythm", "")
+    normalized_profile.setdefault("voice_emotional_baseline", "")
+    normalized_profile.setdefault("voice_articulation_and_pronunciation", "")
+    normalized_profile.setdefault("voice_delivery_constraints", "")
+    normalized_profile.setdefault("voice_definition_prompt", "")
+    normalized_profile.setdefault("voice_definition_source_signature", "")
+    normalized_profile.setdefault("voice_definition_stale", False)
+    return normalized_profile
+
+
+def _voice_definition_stale_for_draft(
+    base_profile: dict[str, object],
+    draft_profile: dict[str, object],
+) -> bool:
+    """
+    @brief      Determine whether the draft voice definition is stale against the edited character facts.
+    @param[in]  base_profile Persisted or regenerated profile used as the draft base.
+    @param[in]  draft_profile Current draft profile from the editor widgets.
+    @return     `True` when the raw character facts changed without updating the voice-definition block.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-20
+    @version    1.0.0
+    """
+    stored_signature = str(base_profile.get("voice_definition_source_signature", "")).strip()
+    if not stored_signature:
+        return False
+    if not _voice_definition_block_equal(base_profile, draft_profile):
+        return False
+    current_signature = character_discovery_service.voice_definition_source_signature(draft_profile)
+    return stored_signature != current_signature
+
+
+def _voice_definition_block_equal(
+    left_profile: dict[str, object],
+    right_profile: dict[str, object],
+) -> bool:
+    """
+    @brief      Compare the editable voice-definition block between two profile payloads.
+    @param[in]  left_profile First profile payload.
+    @param[in]  right_profile Second profile payload.
+    @return     `True` when all voice-definition brief fields and the final prompt match.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-20
+    @version    1.0.0
+    """
+    comparable_fields = (
+        "voice_persona_summary",
+        "voice_timbre_and_range",
+        "voice_pacing_and_rhythm",
+        "voice_emotional_baseline",
+        "voice_articulation_and_pronunciation",
+        "voice_delivery_constraints",
+        "voice_definition_prompt",
+    )
+    return all(
+        str(left_profile.get(field_name, "")).strip() == str(right_profile.get(field_name, "")).strip()
+        for field_name in comparable_fields
+    )
 
 
 # END OF FILE

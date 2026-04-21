@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-  # noqa: UP009
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -226,6 +226,16 @@ def _build_token_usage_notes(
     operation_state: dict[str, object] | None,
     language: str,
 ) -> list[str]:
+    """
+    @brief      Build the token usage notes.
+    @param[in]  report Value for `report`.
+    @param[in]  operation_state Value for `operation_state`.
+    @param[in]  language Language code.
+    @return     Derived helper result.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-21
+    @version    0.1.0
+    """
     metadata = {}
     if isinstance(operation_state, dict):
         metadata = operation_state.get("metadata", {})

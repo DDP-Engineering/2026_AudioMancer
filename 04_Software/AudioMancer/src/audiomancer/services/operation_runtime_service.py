@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-  # noqa: UP009
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -13,8 +13,8 @@
          downstream reset behavior, and progress helpers shared by extraction,
          cleanup, and future long-running workflow operations.
 @author Eng. Dan Dumitru Pasare
-@date 2026-04-06
-@version 0.1.4
+@date 2026-04-20
+@version 0.1.5
 """
 
 # IMPORTS
@@ -35,6 +35,7 @@ _OPERATION_FOLDER_NAMES = {
     "translation": config.TRANSLATION_FOLDER_NAME,
     "character_discovery": config.CHARACTER_DISCOVERY_FOLDER_NAME,
     "narrator_definition": config.NARRATOR_DEFINITION_FOLDER_NAME,
+    "narration_plan": config.NARRATION_PLAN_FOLDER_NAME,
 }
 # @brief Stable execution order used for downstream reset calculations.
 _OPERATION_ORDER = tuple(_OPERATION_FOLDER_NAMES.keys())
@@ -84,7 +85,7 @@ def downstream_operation_kinds(
     @version    0.1.0
     """
     if operation_kind not in _OPERATION_ORDER:
-        return tuple()
+        return ()
     start_index = _OPERATION_ORDER.index(operation_kind)
     if not include_current:
         start_index += 1

@@ -11,8 +11,8 @@
 @details Validates that the DDP_Audiomancer-style toolbar, sidebar, and stacked
          pages are created without workflow functionality.
 @author Eng. Dan Dumitru Pasare
-@date 2026-04-06
-@version 1.3.0
+@date 2026-04-16
+@version 1.4.0
 """
 
 # IMPORTS
@@ -30,7 +30,9 @@ from PySide6.QtWidgets import (
     QToolBar,
 )
 
-from audiomancer.ui.controllers import settings_ui_controller
+from audiomancer import config
+from audiomancer.services import project_workspace_service
+from audiomancer.ui.controllers import settings_ui_controller, tts_settings_ui_controller
 import audiomancer.ui.main_window as main_window_module
 from audiomancer.ui.main_window import MainWindow
 
@@ -66,7 +68,7 @@ def test_main_window_can_be_created(qtbot, default_settings_payload) -> None:
     assert len(window.findChildren(QToolBar)) == 1
     assert len(window.findChildren(QListWidget)) >= 2
     assert window.findChild(QStackedWidget) is not None
-    assert len(window.findChildren(QDialog)) == 2
+    assert len(window.findChildren(QDialog)) == 3
     assert any(group_box.title() == "Project Summary" for group_box in window.findChildren(QGroupBox))
     assert any(group_box.title() == "Workflow Progress" for group_box in window.findChildren(QGroupBox))
     assert any(group_box.title() == "Narrator Profiles" for group_box in window.findChildren(QGroupBox))
@@ -78,7 +80,9 @@ def test_main_window_can_be_created(qtbot, default_settings_payload) -> None:
     assert any(button.text() == "Preview" for button in window.findChildren(QPushButton))
     assert any(button.text() == "Delete Profile" for button in window.findChildren(QPushButton))
     assert any(button.text() == "Save AI Settings" for button in window.findChildren(QPushButton))
+    assert any(button.text() == "Save TTS Settings" for button in window.findChildren(QPushButton))
     assert any(button.text() == "Connect" for button in window.findChildren(QPushButton))
+    assert any(button.text() == "Test Connection" for button in window.findChildren(QPushButton))
     assert any(button.text() == "Save Settings" for button in window.findChildren(QPushButton))
     assert any(label.text() == "Interface Text Size" for label in window.findChildren(QLabel))
     assert window._sidebar.item(1).flags() == main_window_module.Qt.ItemFlag.NoItemFlags
@@ -124,7 +128,7 @@ def test_about_dialog_includes_license_text(qtbot, default_settings_payload) -> 
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.1.0
+    @version    0.2.0
     """
     window = MainWindow(
         settings_payload={
@@ -149,6 +153,7 @@ def test_about_dialog_includes_license_text(qtbot, default_settings_payload) -> 
     assert any(
         label.text() == "Transform written words into real audio experience!" for label in dialog.findChildren(QLabel)
     )
+    assert any(label.text() == "Version: 0.16.1" for label in dialog.findChildren(QLabel))
     assert "GNU AFFERO GENERAL PUBLIC LICENSE" in text_box.toPlainText()
     assert "Additional Non-Commercial Restriction" in text_box.toPlainText()
 
@@ -161,7 +166,7 @@ def test_about_dialog_loads_translated_license_text_for_romanian(qtbot, default_
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.1.0
+    @version    0.2.0
     """
     window = MainWindow(
         settings_payload={
@@ -182,6 +187,7 @@ def test_about_dialog_loads_translated_license_text_for_romanian(qtbot, default_
 
     assert dialog.windowTitle() == "Despre"
     assert text_box is not None
+    assert any(label.text() == "Versiune: 0.16.1" for label in dialog.findChildren(QLabel))
     assert "LICENTA PUBLICA GENERALA AFFERO GNU" in text_box.toPlainText()
     assert "RESTRICTIE SUPLIMENTARA DE UTILIZARE NECOMERCIALA" in text_box.toPlainText()
 
@@ -246,6 +252,7 @@ def test_main_window_saves_settings_dialog_payload(monkeypatch, qtbot, default_s
     assert window._settings_dialog.isVisible() is False
     assert window.windowTitle() == ("AudioMancer | Transforma cuvintele scrise intr-o experienta audio reala!")
     assert window._action_settings.text() == "Setari"
+    assert window._action_tts_settings.text() == "Setari TTS"
     assert window._sidebar.item(0).text() == "Acasa / Proiect"
     assert window._settings_page._save_button.text() == "Salveaza Setarile"
     assert QApplication.instance().font().pointSizeF() > starting_font_size
@@ -284,6 +291,80 @@ def test_main_window_reloads_dialogs_and_discards_unsaved_changes(monkeypatch, q
     window.show_ai_settings_dialog()
     assert window._ai_settings_page._label_edit.text() == "Stored Profile"
 
+    window.show_tts_settings_dialog()
+    window._tts_settings_page._base_url_edit.setText("http://changed-runtime")
+    window._tts_settings_page._cancel_button.click()
+    window.show_tts_settings_dialog()
+    assert window._tts_settings_page._base_url_edit.text() == default_settings_payload["tts_runtime_base_url"]
+
+
+def test_main_window_saves_tts_settings_dialog_payload(monkeypatch, qtbot, tmp_path, default_settings_payload) -> None:
+    """
+    @brief      Verify saving TTS Settings persists runtime settings and the project-local TTS plan.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  qtbot Qt test helper fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-16
+    @version    0.1.0
+    """
+    project_root, manifest = project_workspace_service.create_project("TtsSaveProject", tmp_path)
+    persisted_payload = dict(default_settings_payload)
+    saved_payloads = []
+    saved_tts_plans = []
+
+    def _fake_load_settings():
+        return dict(persisted_payload)
+
+    def _fake_save_settings(payload):
+        saved_payloads.append(dict(payload))
+        persisted_payload.update(payload)
+
+    monkeypatch.setattr(tts_settings_ui_controller.settings_service, "load_settings", _fake_load_settings)
+    monkeypatch.setattr(tts_settings_ui_controller.settings_service, "save_settings", _fake_save_settings)
+    monkeypatch.setattr(
+        tts_settings_ui_controller.narrator_definition_service,
+        "save_tts_plan",
+        lambda project_root_path, plan_payload, discovered_models=None: (
+            saved_tts_plans.append((project_root_path, dict(plan_payload), list(discovered_models or []))),
+            dict(plan_payload),
+        )[-1],
+    )
+
+    window = MainWindow(settings_payload=dict(persisted_payload))
+    qtbot.addWidget(window)
+    window._activate_project(project_root, manifest)
+
+    window.show_tts_settings_dialog()
+    window._tts_settings_page._base_url_edit.setText("http://127.0.0.1:9000")
+    window._tts_settings_page.apply_probe_result(
+        {
+            "success": True,
+            "message": "Connection successful. Discovered 1 models.",
+            "discovered_models": [
+                {
+                    "model_id": "custom_model",
+                    "status": "healthy",
+                    "supported_generation_modes": ["custom_voice"],
+                    "supported_presets": ["vivian"],
+                    "speaker_count": 1,
+                }
+            ],
+            "active_model_id": None,
+            "device_diagnostics": {},
+        }
+    )
+    window._tts_settings_page._save_button.click()
+
+    assert saved_payloads
+    assert persisted_payload["tts_runtime_base_url"] == "http://127.0.0.1:9000"
+    assert persisted_payload["tts_runtime_probe_succeeded"] is True
+    assert saved_tts_plans
+    assert saved_tts_plans[0][0] == project_root
+    assert saved_tts_plans[0][1]["voice_assignment_mode"] == config.DEFAULT_TTS_VOICE_ASSIGNMENT_MODE
+
 
 def test_settings_dialog_reopens_with_translated_labels(monkeypatch, qtbot, default_settings_payload) -> None:
     """
@@ -313,3 +394,6 @@ def test_settings_dialog_reopens_with_translated_labels(monkeypatch, qtbot, defa
     assert window._settings_dialog.windowTitle() == "Setari"
     assert window._settings_page._language_label.text() == "Limba"
     assert window._settings_page._text_size_label.text() == "Dimensiune Text Interfata"
+
+
+# END OF FILE

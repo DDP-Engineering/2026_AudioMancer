@@ -11,9 +11,11 @@
 @details Provides shared configurations, mock profiles, and environment
          setup to reduce boilerplate across test files.
 @author Eng. Dan Dumitru Pasare
-@date 2026-04-11
-@version 1.0.0
+@date 2026-04-16
+@version 1.1.0
 """
+
+# IMPORTS
 
 import pytest
 
@@ -53,8 +55,8 @@ def default_settings_payload():
     @return     Dictionary containing global profile identifiers and UI preferences.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-11
-    @version    0.1.0
+    @date       2026-04-16
+    @version    0.2.0
     """
     return {
         "language": "en",
@@ -78,8 +80,18 @@ def default_settings_payload():
         ],
         "default_ai_cleanup_profile_id": "profile_1",
         "default_ai_chunking_profile_id": "profile_1",
+        "default_ai_translation_profile_id": "profile_1",
         "default_ai_chunking_strategy": "paragraph",
         "default_character_extraction_profile_id": "profile_1",
+        "tts_runtime_base_url": "http://127.0.0.1:8059",
+        "tts_runtime_api_key": "",
+        "tts_runtime_probe_succeeded": False,
+        "tts_runtime_probe_message": "",
+        "tts_runtime_discovered_models": [],
+        "tts_runtime_active_model_id": None,
+        "tts_runtime_device_diagnostics": {},
+        "tts_audio_preview_timeout_seconds": 60,
+        "tts_audio_generation_timeout_seconds": 300,
     }
 
 

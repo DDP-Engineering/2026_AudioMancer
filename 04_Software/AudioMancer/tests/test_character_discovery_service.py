@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -14,7 +13,7 @@
          discovery workflow.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-08
-@version 0.2.0
+@version 0.3.0
 """
 
 # IMPORTS
@@ -65,6 +64,9 @@ def test_start_discovery_persists_outputs_and_report(monkeypatch, tmp_path) -> N
                     "aliases": ["Al"],
                     "role_summary": "Lead speaker",
                     "description": "Confident young woman.",
+                    "voice_persona_summary": "Young adult woman with composed presence.",
+                    "voice_timbre_and_range": "Warm mezzo voice with gentle authority.",
+                    "voice_definition_prompt": "Create a consistent spoken voice for Alice. Warm mezzo voice with gentle authority.",
                     "relationship_hints": ["Knows Bob."],
                     "confidence": "high",
                 },
@@ -91,6 +93,8 @@ def test_start_discovery_persists_outputs_and_report(monkeypatch, tmp_path) -> N
     profiles = character_discovery_service.load_character_profiles(project_root)
     assert len(profiles) == 1
     assert profiles[0]["canonical_name"] == "Alice"
+    assert profiles[0]["voice_persona_summary"] == "Young adult woman with composed presence."
+    assert "gentle authority" in profiles[0]["voice_definition_prompt"]
     assert profiles[0]["evidence"][0]["chunk_id"] == "chunk-0001"
     assert character_discovery_service.load_input_chunks(project_root)[0]["chunk_id"] == "chunk-0001"
     assert (project_root / config.CHARACTER_DISCOVERY_FOLDER_NAME / "input_story.json").is_file()
@@ -297,6 +301,70 @@ def test_manual_add_update_delete_and_reset(tmp_path) -> None:
 
     assert list(discovery_root.iterdir()) == []
     assert list(narrator_root.iterdir()) == []
+
+
+def test_regenerate_character_voice_definition_builds_voice_brief_and_prompt() -> None:
+    """
+    @brief      Verify local regeneration produces structured voice-definition fields and one final prompt.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-21
+    @version    1.0.0
+    """
+    regenerated_profile = character_discovery_service.regenerate_character_voice_definition(
+        {
+            "character_id": "elizabeth",
+            "canonical_name": "Elizabeth",
+            "gender_hint": "female",
+            "age_band": "adult",
+            "role_summary": "noblewoman",
+            "description": "careful and observant",
+            "temperament": "calm",
+            "social_status": "upper class",
+            "speaking_style": "measured and precise",
+            "accent_or_dialect_hints": "light southern English influence",
+            "voice_notes": "warm tone with restrained authority",
+        }
+    )
+
+    assert "restrained authority" in regenerated_profile["voice_timbre_and_range"]
+    assert "measured and precise" in regenerated_profile["voice_pacing_and_rhythm"]
+    assert regenerated_profile["voice_definition_prompt"].startswith("Create a consistent spoken voice for Elizabeth.")
+    assert regenerated_profile["voice_definition_source_signature"]
+    assert regenerated_profile["voice_definition_stale"] is False
+
+
+def test_update_character_profile_marks_voice_definition_stale_when_facts_change(tmp_path) -> None:
+    """
+    @brief      Verify changing raw character facts without refreshing the voice-definition block marks the profile stale.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-21
+    @version    1.0.0
+    """
+    project_root, _manifest = _create_character_project(tmp_path, "CharacterDiscoveryVoiceStale")
+    discovery_root = project_root / config.CHARACTER_DISCOVERY_FOLDER_NAME
+    persisted_profile = character_discovery_service.regenerate_character_voice_definition(_saved_profile_payload())
+    (discovery_root / config.CHARACTER_PROFILE_FILE_NAME).write_text(
+        json.dumps([persisted_profile], indent=2) + "\n",
+        encoding="utf-8",
+    )
+
+    updated_profiles = character_discovery_service.update_character_profile(
+        project_root,
+        {
+            **dict(persisted_profile),
+            "description": "Updated literary facts without regenerating the voice definition.",
+        },
+    )
+
+    updated_profile = updated_profiles[0]
+    assert updated_profile["description"] == "Updated literary facts without regenerating the voice definition."
+    assert updated_profile["voice_definition_stale"] is True
+    assert character_discovery_service.load_character_profiles(project_root)[0]["voice_definition_stale"] is True
 
 
 def test_validate_manual_character_name_rejects_duplicates_and_invalid_names() -> None:

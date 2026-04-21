@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-  # noqa: UP009
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -194,6 +194,14 @@ class OperationProgressDialog(QDialog):
         self.cancel_requested.emit()
 
     def _set_token_usage(self, token_usage: object) -> None:
+        """
+        @brief      Set the token usage.
+        @param[in]  token_usage Value for `token_usage`.
+        @return     None.
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-21
+        @version    0.1.0
+        """
         if token_usage is None:
             self._token_usage = token_usage_service.empty_token_usage()
             self._token_usage_visible = False
@@ -203,6 +211,13 @@ class OperationProgressDialog(QDialog):
         self._refresh_token_usage_label()
 
     def _refresh_token_usage_label(self) -> None:
+        """
+        @brief      Execute the refresh token usage label helper.
+        @return     None.
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-21
+        @version    0.1.0
+        """
         if not self._token_usage_visible:
             self._token_usage_label.clear()
             self._token_usage_label.setVisible(False)

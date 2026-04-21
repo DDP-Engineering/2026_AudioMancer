@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-  # noqa: UP009
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -126,6 +126,15 @@ def validate_required_prompts(
 
 
 def _resolve_prompt_path(prompt_name: str, prompt_root: str | Path | None) -> Path:
+    """
+    @brief      Resolve the prompt path.
+    @param[in]  prompt_name Value for `prompt_name`.
+    @param[in]  prompt_root Value for `prompt_root`.
+    @return     Derived helper result.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-21
+    @version    0.1.0
+    """
     prompt_directory = config.APP_PROMPTS_PATH if prompt_root is None else Path(prompt_root)
     return prompt_directory / f"{prompt_name}.txt"
 

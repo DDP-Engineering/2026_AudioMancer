@@ -30,6 +30,8 @@ and validate the current `project.json` contract used by the application shell.
 - repair the corrupted step and all downstream step folders after operator confirmation
 - persist compact extraction, cleanup, chunking, translation, and
   character-discovery summaries in the root manifest
+- persist project-local narrator workflow settings such as
+  `voice_assignment_mode` in the root manifest
 - keep detailed per-step state, reports, outputs, checkpoints, and AI logs in
   the corresponding workflow folders
 - feed the main window with loaded project root and manifest state
@@ -128,8 +130,10 @@ Current root manifest contract in `project.json`:
 - `extraction_report_relative_path`
 - `extraction_warning_count`
 - `operations`
+- `original_language`
 - `narrator_profile_name`
 - `narrator_language`
+- `voice_assignment_mode`
 - `notes`
 
 `source_document` payload contract:

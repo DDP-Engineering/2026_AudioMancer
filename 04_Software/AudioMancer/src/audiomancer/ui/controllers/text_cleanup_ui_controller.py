@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-  # noqa: UP009
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -692,6 +692,15 @@ def _resolve_ai_profile(
     settings_payload: dict[str, object],
     profile_id: str | None,
 ) -> dict[str, object] | None:
+    """
+    @brief      Resolve the ai profile.
+    @param[in]  settings_payload Payload for `settings_payload`.
+    @param[in]  profile_id Profile identifier.
+    @return     Derived helper result.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-21
+    @version    0.1.0
+    """
     if not isinstance(settings_payload, dict) or not profile_id:
         return None
     raw_profiles = settings_payload.get("llm_profiles", [])
@@ -711,6 +720,15 @@ def _resume_ai_profile_id(
     window: "MainWindow",
     cleanup_operation: dict[str, object],
 ) -> str | None:
+    """
+    @brief      Execute the resume ai profile id helper.
+    @param[in]  window Value for `window`.
+    @param[in]  cleanup_operation Value for `cleanup_operation`.
+    @return     Helper result.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-21
+    @version    0.1.0
+    """
     metadata = cleanup_operation.get("metadata")
     if isinstance(metadata, dict):
         profile_id = metadata.get("ai_profile_id")

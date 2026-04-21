@@ -10,16 +10,29 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.17.0] - 2026-04-21
+
 ### Added
 
 - added focused shared test fixtures and split the oversized main-window coverage into lifecycle, AI-profile, and project-flow modules
+- added the complete `Narration Plan` workflow with narrator-plus-character target listing, explicit voice-language selection, deterministic character voice-prompt derivation, per-character sample persistence, same-narrator sample copy mode, and focused service/page/controller coverage
+- added `60_narration_plan` project storage, the `narration_plan_ready` workflow stage, the narration-plan implementation plan in `0_Planning/`, and dedicated software documentation for the new page contract
+- added structured Qwen-oriented character voice-definition fields, one persisted final `voice_definition_prompt`, and explicit `Regenerate Voice Definition` support on the `Characters` page so character voice design is authored upstream and handed off cleanly to `Narration Plan`
 
 ### Changed
 
 - refactored AI cleanup and text-cleanup controller tests to remove repeated setup while preserving the covered scenarios
-- package version updated to `0.16.1`
+- updated workflow repair/reset handling, home-stage rendering, narrator-stage compatibility, and runtime UI translations so the new narration-plan step behaves as a first-class workflow page
+- updated the application README and software-component documentation to describe narration-plan persistence, language-selection rules, and `same_narrator` behavior
+- updated the Narration Plan page so each character now has a dedicated two-line preview-text editor, and the saved preview text is used during sample generation and stored in sample metadata for later voice-cloning workflows
+- updated Character Discovery prompt templates and persisted character profiles so they now request, store, and preserve voice-design-ready Qwen brief fields and so Narration Plan prefers the character-owned `voice_definition_prompt` with legacy fallback only for older projects
+- changed the new-project default `voice_assignment_mode` to `narrator_and_characters`, so separate narrator and character voices are now the default TTS plan
+- package version reserved in changelog as `0.17.0`
 
 ### Fixed
+
+- fixed narration-plan same-narrator sample synchronization so copied character samples always recreate the required `60_narration_plan/audio_samples` output folder before writing artifacts
+- fixed Windows file-lock failures when Narration Plan or Narrator samples were previewed and then immediately edited or regenerated, by stopping playback and clearing the media source before deleting the old WAV
 
 ## [0.16.1] - 2026-04-11
 

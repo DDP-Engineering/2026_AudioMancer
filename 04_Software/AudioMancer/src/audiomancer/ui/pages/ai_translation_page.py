@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-  # noqa: UP009
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -241,7 +241,7 @@ class AiTranslationPage(QWidget):
         @date       2026-04-07
         @version    0.1.0
         """
-        self._source_chunks = sorted(list(source_chunks), key=lambda item: int(item.get("sequence_index", 0)))
+        self._source_chunks = sorted(source_chunks, key=lambda item: int(item.get("sequence_index", 0)))
         self._display_chunks = _build_display_chunks(self._source_chunks, translated_chunks)
         self._stage_status = stage_status
         language_index = self._language_combo.findData(target_language)

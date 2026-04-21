@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-  # noqa: UP009
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -362,6 +362,18 @@ def _emit_progress(
     message: str,
     token_usage: TokenUsagePayload | None = None,
 ) -> None:
+    """
+    @brief      Emit the progress.
+    @param[in]  progress_callback Optional progress callback.
+    @param[in]  progress_current Value for `progress_current`.
+    @param[in]  progress_total Value for `progress_total`.
+    @param[in]  message Operator-facing message text.
+    @param[in]  token_usage Value for `token_usage`.
+    @return     None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-21
+    @version    0.1.0
+    """
     if callable(progress_callback):
         progress_callback(
             progress_current,
@@ -373,6 +385,14 @@ def _emit_progress(
 
 
 def _compute_input_fingerprint(input_text: str) -> str:
+    """
+    @brief      Execute the compute input fingerprint helper.
+    @param[in]  input_text Text value for `input_text`.
+    @return     Helper result.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-21
+    @version    0.1.0
+    """
     return hashlib.sha256(input_text.encode("utf-8")).hexdigest()
 
 
@@ -380,6 +400,15 @@ def _build_windows(
     paragraph_records: list[dict[str, object]],
     semantic_strategy: str,
 ) -> list[dict[str, int]]:
+    """
+    @brief      Build the windows.
+    @param[in]  paragraph_records Value for `paragraph_records`.
+    @param[in]  semantic_strategy Value for `semantic_strategy`.
+    @return     Derived helper result.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-21
+    @version    0.1.0
+    """
     window_size = _WINDOW_SIZE_BY_STRATEGY.get(
         semantic_strategy,
         _WINDOW_SIZE_BY_STRATEGY[config.DEFAULT_AI_CHUNKING_STRATEGY],
@@ -399,6 +428,14 @@ def _build_windows(
 
 
 def _build_paragraph_records(cleaned_text: str) -> list[dict[str, object]]:
+    """
+    @brief      Build the paragraph records.
+    @param[in]  cleaned_text Text value for `cleaned_text`.
+    @return     Derived helper result.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-21
+    @version    0.1.0
+    """
     records = deterministic_chunking_service._build_paragraph_records(cleaned_text)
     for index, record in enumerate(records, start=1):
         record["unit_id"] = f"paragraph-{index:04d}"
@@ -412,6 +449,18 @@ def _restore_resume_state(
     profile_id: str,
     semantic_strategy: str,
 ) -> tuple[int, list[str], str | None]:
+    """
+    @brief      Restore the resume state.
+    @param[in]  existing_state Value for `existing_state`.
+    @param[in]  total_windows Total number of windows.
+    @param[in]  input_fingerprint Value for `input_fingerprint`.
+    @param[in]  profile_id Profile identifier.
+    @param[in]  semantic_strategy Value for `semantic_strategy`.
+    @return     Derived helper result.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-21
+    @version    0.1.0
+    """
     if str(existing_state.get("status", "")) not in {"running", "failed"}:
         return 0, [], None
     if str(existing_state.get("mode", "")) != "ai_assisted":
@@ -438,6 +487,14 @@ def _restore_resume_state(
 
 
 def _restore_token_usage(existing_state: dict[str, object]) -> TokenUsagePayload:
+    """
+    @brief      Restore the token usage.
+    @param[in]  existing_state Value for `existing_state`.
+    @return     Derived helper result.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-21
+    @version    0.1.0
+    """
     metadata = existing_state.get("metadata", {})
     if not isinstance(metadata, dict):
         return token_usage_service.empty_token_usage()
@@ -445,6 +502,14 @@ def _restore_token_usage(existing_state: dict[str, object]) -> TokenUsagePayload
 
 
 def _build_units_block(paragraph_records: list[dict[str, object]]) -> str:
+    """
+    @brief      Build the units block.
+    @param[in]  paragraph_records Value for `paragraph_records`.
+    @return     Derived helper result.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-21
+    @version    0.1.0
+    """
     blocks: list[str] = []
     for record in paragraph_records:
         blocks.append(f"{record['unit_id']}\n{record['text']}")
@@ -455,6 +520,15 @@ def _normalize_break_after_ids(
     response_payload: dict[str, object],
     window_records: list[dict[str, object]],
 ) -> list[str]:
+    """
+    @brief      Normalize the break after ids.
+    @param[in]  response_payload Payload for `response_payload`.
+    @param[in]  window_records Value for `window_records`.
+    @return     Derived helper result.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-21
+    @version    0.1.0
+    """
     valid_ids = {str(record["unit_id"]) for record in window_records}
     raw_ids = response_payload.get("break_after_unit_ids", [])
     if not isinstance(raw_ids, list):
@@ -473,6 +547,16 @@ def _merge_committed_break_ids(
     new_ids: list[str],
     paragraph_records: list[dict[str, object]],
 ) -> list[str]:
+    """
+    @brief      Merge the committed break ids.
+    @param[in]  existing_ids Value for `existing_ids`.
+    @param[in]  new_ids Value for `new_ids`.
+    @param[in]  paragraph_records Value for `paragraph_records`.
+    @return     Derived helper result.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-21
+    @version    0.1.0
+    """
     order = {str(record["unit_id"]): index for index, record in enumerate(paragraph_records)}
     merged = {item for item in existing_ids + new_ids if item in order}
     return sorted(merged, key=lambda item: order[item])
@@ -483,6 +567,16 @@ def _build_chunks_from_break_ids(
     committed_break_ids: list[str],
     semantic_strategy: str,
 ) -> list[ChunkPayload]:
+    """
+    @brief      Build the chunks from break ids.
+    @param[in]  paragraph_records Value for `paragraph_records`.
+    @param[in]  committed_break_ids Value for `committed_break_ids`.
+    @param[in]  semantic_strategy Value for `semantic_strategy`.
+    @return     Derived helper result.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-21
+    @version    0.1.0
+    """
     if not paragraph_records:
         return []
     boundary_ids = set(committed_break_ids)
@@ -518,6 +612,15 @@ def _build_chunks_from_break_ids(
 
 
 def _write_chunk_payload(output_path: Path, chunks: list[ChunkPayload]) -> None:
+    """
+    @brief      Write the chunk payload.
+    @param[in]  output_path Output file path.
+    @param[in]  chunks Value for `chunks`.
+    @return     None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-21
+    @version    0.1.0
+    """
     output_path.write_text(
         json.dumps(chunks, indent=2, ensure_ascii=False) + "\n",
         encoding="utf-8",
@@ -542,6 +645,29 @@ def _write_running_state(
     log_relative_path: str,
     token_usage: TokenUsagePayload,
 ) -> None:
+    """
+    @brief      Write the running state.
+    @param[in]  state_path Operation-state file path.
+    @param[in]  project_root Active project root folder.
+    @param[in]  input_snapshot_path Input snapshot file path.
+    @param[in]  output_path Output file path.
+    @param[in]  report_path Report file path.
+    @param[in]  started_at Value for `started_at`.
+    @param[in]  progress_current Value for `progress_current`.
+    @param[in]  progress_total Value for `progress_total`.
+    @param[in]  warnings Value for `warnings`.
+    @param[in]  paragraph_records Value for `paragraph_records`.
+    @param[in]  committed_break_ids Value for `committed_break_ids`.
+    @param[in]  profile_id Profile identifier.
+    @param[in]  semantic_strategy Value for `semantic_strategy`.
+    @param[in]  input_fingerprint Value for `input_fingerprint`.
+    @param[in]  log_relative_path Path for `log_relative_path`.
+    @param[in]  token_usage Value for `token_usage`.
+    @return     None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-21
+    @version    0.1.0
+    """
     chunks = _build_chunks_from_break_ids(
         paragraph_records,
         committed_break_ids,
@@ -601,6 +727,31 @@ def _build_operation_state(
     resume_checkpoint: dict[str, object] | None,
     token_usage: TokenUsagePayload,
 ) -> OperationStatePayload:
+    """
+    @brief      Build the operation state.
+    @param[in]  project_root Active project root folder.
+    @param[in]  input_snapshot_path Input snapshot file path.
+    @param[in]  output_path Output file path.
+    @param[in]  report_path Report file path.
+    @param[in]  status Value for `status`.
+    @param[in]  progress_current Value for `progress_current`.
+    @param[in]  progress_total Value for `progress_total`.
+    @param[in]  started_at Value for `started_at`.
+    @param[in]  completed_at Value for `completed_at`.
+    @param[in]  warnings Value for `warnings`.
+    @param[in]  chunks Value for `chunks`.
+    @param[in]  committed_break_ids Value for `committed_break_ids`.
+    @param[in]  profile_id Profile identifier.
+    @param[in]  semantic_strategy Value for `semantic_strategy`.
+    @param[in]  input_fingerprint Value for `input_fingerprint`.
+    @param[in]  log_relative_path Path for `log_relative_path`.
+    @param[in]  resume_checkpoint Value for `resume_checkpoint`.
+    @param[in]  token_usage Value for `token_usage`.
+    @return     Derived helper result.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-21
+    @version    0.1.0
+    """
     artifact_paths = [log_relative_path]
     if report_path is not None and report_path.is_file():
         artifact_paths.insert(0, relative_to_project(project_root, report_path))
@@ -634,10 +785,27 @@ def _build_operation_state(
 
 
 def _chapter_count_from_chunks(chunks: list[ChunkPayload]) -> int:
+    """
+    @brief      Execute the chapter count from chunks helper.
+    @param[in]  chunks Value for `chunks`.
+    @return     Helper result.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-21
+    @version    0.1.0
+    """
     return deterministic_chunking_service._chapter_count_from_chunks(chunks)
 
 
 def _build_ai_log_path(project_root: Path, started_at: str) -> Path:
+    """
+    @brief      Build the ai log path.
+    @param[in]  project_root Active project root folder.
+    @param[in]  started_at Value for `started_at`.
+    @return     Derived helper result.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-21
+    @version    0.1.0
+    """
     timestamp_token = started_at.replace("-", "").replace(":", "").replace("+", "_").replace(".", "")
     return build_operation_output_path(
         project_root,
@@ -647,6 +815,13 @@ def _build_ai_log_path(project_root: Path, started_at: str) -> Path:
 
 
 def _utc_now_iso() -> str:
+    """
+    @brief      Execute the utc now iso helper.
+    @return     Helper result.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-21
+    @version    0.1.0
+    """
     return datetime.now(UTC).replace(microsecond=0).isoformat()
 
 

@@ -11,8 +11,8 @@
 @details Verifies default settings generation, automatic file creation,
          persisted settings self-healing, and validated save behavior.
 @author Eng. Dan Dumitru Pasare
-@date 2026-04-04
-@version 0.1.4
+@date 2026-04-16
+@version 0.2.0
 """
 
 # IMPORTS
@@ -38,9 +38,13 @@ def test_committed_settings_scaffold_matches_valid_settings_schema() -> None:
     committed_settings = json.loads(config.APP_SETTINGS_PATH.read_text(encoding="utf-8"))
     validated_settings = settings_service.validate_settings(copy.deepcopy(committed_settings))
 
-    assert validated_settings == committed_settings
-    for field_name in settings_service.build_default_settings():
-        assert field_name in committed_settings
+    for field_name, field_value in committed_settings.items():
+        assert validated_settings[field_name] == field_value
+    assert validated_settings["tts_audio_preview_timeout_seconds"] == config.DEFAULT_TTS_AUDIO_PREVIEW_TIMEOUT_SECONDS
+    assert (
+        validated_settings["tts_audio_generation_timeout_seconds"]
+        == config.DEFAULT_TTS_AUDIO_GENERATION_TIMEOUT_SECONDS
+    )
 
 
 def test_load_settings_creates_default_file_when_missing(tmp_path, monkeypatch) -> None:
@@ -254,6 +258,61 @@ def test_validate_settings_keeps_valid_persisted_payload_unchanged() -> None:
     candidate_settings = settings_service.build_default_settings()
 
     assert settings_service.validate_settings(copy.deepcopy(candidate_settings)) == candidate_settings
+
+
+def test_validate_settings_normalizes_tts_runtime_discovery_cache() -> None:
+    """
+    @brief      Verify invalid cached VoiceWeaver discovery fields are repaired safely.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-16
+    @version    0.1.0
+    """
+    candidate_settings = settings_service.build_default_settings()
+    candidate_settings["tts_runtime_probe_succeeded"] = "yes"
+    candidate_settings["tts_runtime_discovered_models"] = [
+        {
+            "model_id": "custom_model",
+            "status": "healthy",
+            "supported_generation_modes": ["custom_voice"],
+            "supported_presets": ["vivian"],
+            "speaker_count": "bad",
+        },
+        "invalid",
+    ]
+    candidate_settings["tts_runtime_active_model_id"] = "missing_model"
+    candidate_settings["tts_runtime_device_diagnostics"] = {"status_message": "CUDA active.", "bad": []}
+
+    validated_settings = settings_service.validate_settings(candidate_settings)
+
+    assert validated_settings["tts_runtime_probe_succeeded"] is False
+    assert len(validated_settings["tts_runtime_discovered_models"]) == 1
+    assert validated_settings["tts_runtime_discovered_models"][0]["speaker_count"] == 0
+    assert validated_settings["tts_runtime_active_model_id"] is None
+    assert validated_settings["tts_runtime_device_diagnostics"] == {"status_message": "CUDA active."}
+
+
+def test_validate_settings_repairs_tts_audio_timeouts() -> None:
+    """
+    @brief      Verify invalid TTS audio timeout settings are repaired to their defaults.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-18
+    @version    1.0.0
+    """
+    candidate_settings = settings_service.build_default_settings()
+    candidate_settings["tts_audio_preview_timeout_seconds"] = 0
+    candidate_settings["tts_audio_generation_timeout_seconds"] = "bad"
+
+    validated_settings = settings_service.validate_settings(candidate_settings)
+
+    assert validated_settings["tts_audio_preview_timeout_seconds"] == config.DEFAULT_TTS_AUDIO_PREVIEW_TIMEOUT_SECONDS
+    assert (
+        validated_settings["tts_audio_generation_timeout_seconds"]
+        == config.DEFAULT_TTS_AUDIO_GENERATION_TIMEOUT_SECONDS
+    )
 
 
 # END OF FILE

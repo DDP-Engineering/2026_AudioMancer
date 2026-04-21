@@ -13,8 +13,10 @@ Provides the Character Discovery workflow used by the `Characters` page in
 `AudioMancer`.
 
 It analyzes canonical chunking output with an AI profile, produces one
-persisted set of speaking-character profiles, exposes resumable operation
-state, and keeps the page state and UI controller aligned with the project
+persisted set of speaking-character profiles, synthesizes one structured
+Qwen-oriented voice-definition brief plus one final
+`voice_definition_prompt` per character, exposes resumable operation state,
+and keeps the page state and UI controller aligned with the project
 manifest.
 
 ## 2. Responsibilities
@@ -24,12 +26,15 @@ manifest.
 - split chunk input into overlapping AI analysis windows
 - call the configured AI profile for window extraction and profile synthesis
 - normalize, merge, filter, and persist discovered speaking characters
+- derive and persist one structured voice-definition brief plus one final
+  voice-definition prompt for each character profile
 - persist `state_operation.json`, one discovery report, one profile output,
   and one per-run AI transaction log
 - expose Character Discovery page state, notes, and default AI-profile
   selection
 - handle page-level start, resume, reset, guarded manual add or edit or save
-  or delete behavior, and unsaved-change prompts
+  or delete behavior, explicit `Regenerate Voice Definition`, and
+  unsaved-change prompts
 
 It does not own chunk creation, translation, narrator-definition editing, or
 AI profile persistence.
@@ -89,7 +94,10 @@ High-level runtime flow:
    `Save Character`, while selection changes and destructive actions are
    guarded by one `Save / Discard / Cancel` prompt when the current draft is
    dirty.
-10. Reset clears `40_character_discovery` plus downstream
+10. The page also exposes editable voice-definition fields plus one final
+    `voice_definition_prompt`; `Regenerate Voice Definition` rebuilds both
+    from the current literary character facts without leaving edit mode.
+11. Reset clears `40_character_discovery` plus downstream
    `50_narrator_definition`, resets manifest state through
    `build_manifest_after_operation_reset(...)`, and returns the project to
    `translation_ready`.
@@ -143,10 +151,34 @@ Persisted character profile fields:
 - `speaking_style`
 - `accent_or_dialect_hints`
 - `voice_notes`
+- `voice_persona_summary`
+- `voice_timbre_and_range`
+- `voice_pacing_and_rhythm`
+- `voice_emotional_baseline`
+- `voice_articulation_and_pronunciation`
+- `voice_delivery_constraints`
+- `voice_definition_prompt`
+- `voice_definition_source_signature`
 - `relationship_hints`
 - `confidence`
 - `evidence`
 - `updated_at`
+
+Runtime-only page shaping also uses:
+
+- `voice_definition_stale`
+
+Voice-definition rules:
+
+- the six `voice_*` brief fields form the editable Qwen-oriented voice brief
+- `voice_definition_prompt` is the final handoff prompt later consumed by
+  `Narration Plan`
+- `voice_definition_source_signature` fingerprints the raw literary fields
+  used to derive the voice brief
+- when literary fields change without updating the voice-definition block, the
+  loaded profile is marked `voice_definition_stale = true`
+- manual edits to the voice brief or final prompt are preserved until the
+  operator explicitly regenerates them
 
 Evidence items currently store:
 
@@ -244,6 +276,7 @@ Page integration points:
 - `CharactersPage.save_character_requested(dict)`
 - `CharactersPage.delete_character_requested(str)`
 - `CharactersPage.selection_change_requested(str | None)`
+- `CharactersPage.regenerate_voice_definition_requested(dict)`
 
 Required conditions:
 
@@ -271,6 +304,8 @@ Covered behaviors:
 - manual add or save or delete persistence
 - duplicate and invalid manual-name validation
 - explicit edit-mode enablement and save-button activation
+- deterministic voice-definition brief and prompt regeneration
+- stale voice-definition detection when literary facts change
 - guarded selection changes with unsaved drafts
 - reset behavior and stage rollback
 - profile-selector default resolution
@@ -292,5 +327,7 @@ Minimum validation after a change:
   cross-window entity-linking strategy
 - warnings are persisted structurally, but the current implementation does not
   yet generate many discovery-specific warning classes
-- narrator-definition workflow is only reset-aware; it is not yet a full
-  downstream consumer of the discovered character profiles
+- the AI prompts now request voice-design-ready fields, but quality still
+  depends on how much direct textual evidence exists for each character
+- the final voice-definition prompt is generated locally and deterministically;
+  there is no second AI refinement pass dedicated only to voice design

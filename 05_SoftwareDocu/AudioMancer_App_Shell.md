@@ -49,9 +49,10 @@ The initial shell consists of:
   service
 - functional AI Settings connect flow with backend probing, discovered model
   refresh, and popup result feedback
-- a static narrator-profile manager aligned to Qwen3 `VoiceDesign` and
-  `CustomVoice` concepts, including profile listing, language selection,
-  prompt-based voice definition, and a reserved preview area
+- a project-aware narrator-definition page with seeded editable Qwen3 preset
+  profiles, destructive edit confirmations, explicit create/edit/save/delete
+  actions, runtime-backed sample generation, read-only project-language
+  display, and local WAV preview playback
 - an About dialog with scrollable AGPL license text and the non-commercial
   addendum, localized to the current UI language when localized companion
   files are available

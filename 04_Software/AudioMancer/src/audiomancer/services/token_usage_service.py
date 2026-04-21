@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-  # noqa: UP009
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -155,6 +155,16 @@ def _sum_usage_field(
     increment_usage: TokenUsagePayload,
     field_name: str,
 ) -> int | None:
+    """
+    @brief      Execute the sum usage field helper.
+    @param[in]  base_usage Value for `base_usage`.
+    @param[in]  increment_usage Value for `increment_usage`.
+    @param[in]  field_name Value for `field_name`.
+    @return     Helper result.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-21
+    @version    0.1.0
+    """
     total = 0
     has_value = False
     for payload in (base_usage, increment_usage):
@@ -169,6 +179,14 @@ def _sum_usage_field(
 
 
 def _optional_non_negative_int(value: Any) -> int | None:
+    """
+    @brief      Resolve the optional non negative int.
+    @param[in]  value Candidate value.
+    @return     Helper result.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-21
+    @version    0.1.0
+    """
     if isinstance(value, bool):
         return None
     if isinstance(value, int):

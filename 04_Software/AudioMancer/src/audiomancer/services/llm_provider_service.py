@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-  # noqa: UP009
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -189,10 +189,27 @@ def _request_chat_completion_with_cancellation(
     request_payload: dict[str, object],
     cancel_requested=None,
 ) -> tuple[dict[str, object], str]:
+    """
+    @brief      Execute the request chat completion with cancellation helper.
+    @param[in]  profile_payload Profile payload.
+    @param[in]  request_payload Payload for `request_payload`.
+    @param[in]  cancel_requested Optional cancellation callback.
+    @return     Helper result.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-21
+    @version    0.1.0
+    """
     result_holder: dict[str, object] = {}
     error_holder: dict[str, Exception] = {}
 
     def _request_worker() -> None:
+        """
+        @brief      Execute the request worker helper.
+        @return     None.
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-21
+        @version    0.1.0
+        """
         try:
             result_holder["payload"] = _request_chat_completion(
                 profile_payload,
@@ -346,6 +363,14 @@ def _build_max_completion_tokens_payload(
 
 
 def _extract_message_content(payload: dict[str, object]) -> str:
+    """
+    @brief      Execute the extract message content helper.
+    @param[in]  payload Optional payload processed by the helper.
+    @return     Helper result.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-21
+    @version    0.1.0
+    """
     choices = payload.get("choices", [])
     if not isinstance(choices, list) or not choices:
         raise ValueError("AI provider response does not contain any choices.")
@@ -366,6 +391,14 @@ def _extract_message_content(payload: dict[str, object]) -> str:
 
 
 def _parse_json_content(content: str) -> dict[str, object]:
+    """
+    @brief      Execute the parse json content helper.
+    @param[in]  content Value for `content`.
+    @return     Helper result.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-21
+    @version    0.1.0
+    """
     normalized = content.strip()
     if normalized.startswith("```"):
         normalized = _strip_code_fence(normalized)
@@ -385,6 +418,14 @@ def _parse_json_content(content: str) -> dict[str, object]:
 
 
 def _strip_code_fence(content: str) -> str:
+    """
+    @brief      Execute the strip code fence helper.
+    @param[in]  content Value for `content`.
+    @return     Helper result.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-21
+    @version    0.1.0
+    """
     stripped_lines = content.splitlines()
     if stripped_lines and stripped_lines[0].startswith("```"):
         stripped_lines = stripped_lines[1:]
@@ -394,6 +435,14 @@ def _strip_code_fence(content: str) -> str:
 
 
 def _trim_json_like_payload(content: str) -> str:
+    """
+    @brief      Execute the trim json like payload helper.
+    @param[in]  content Value for `content`.
+    @return     Helper result.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-21
+    @version    0.1.0
+    """
     start_indexes = [index for index in (content.find("{"), content.find("[")) if index >= 0]
     if not start_indexes:
         raise ValueError("AI provider did not return JSON content.")
@@ -410,6 +459,14 @@ def _trim_json_like_payload(content: str) -> str:
 
 
 def _repair_json_like_content(content: str) -> str:
+    """
+    @brief      Execute the repair json like content helper.
+    @param[in]  content Value for `content`.
+    @return     Helper result.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-21
+    @version    0.1.0
+    """
     repaired: list[str] = []
     in_string = False
     escape_active = False
@@ -447,6 +504,15 @@ def _repair_json_like_content(content: str) -> str:
 
 
 def _is_valid_json_escape_sequence(content: str, escape_index: int) -> bool:
+    """
+    @brief      Determine whether valid json escape sequence.
+    @param[in]  content Value for `content`.
+    @param[in]  escape_index Value for `escape_index`.
+    @return     True when the helper condition is satisfied.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-21
+    @version    0.1.0
+    """
     if escape_index >= len(content):
         return False
     escape_character = content[escape_index]
@@ -464,6 +530,16 @@ def _repair_json_response_with_model(
     malformed_content: str,
     cancel_requested=None,
 ) -> tuple[dict[str, object], str, str, dict[str, object]]:
+    """
+    @brief      Execute the repair json response with model helper.
+    @param[in]  profile_payload Profile payload.
+    @param[in]  malformed_content Value for `malformed_content`.
+    @param[in]  cancel_requested Optional cancellation callback.
+    @return     Helper result.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-21
+    @version    0.1.0
+    """
     repair_request_payload = {
         "model": str(profile_payload.get("model_name", "")).strip(),
         "messages": [
@@ -510,6 +586,15 @@ def _repair_json_response_with_model(
 
 
 def _is_likely_string_terminator(content: str, quote_index: int) -> bool:
+    """
+    @brief      Determine whether likely string terminator.
+    @param[in]  content Value for `content`.
+    @param[in]  quote_index Value for `quote_index`.
+    @return     True when the helper condition is satisfied.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-21
+    @version    0.1.0
+    """
     next_index = _next_non_whitespace_index(content, quote_index + 1)
     if next_index is None:
         return True
@@ -530,6 +615,15 @@ def _is_likely_string_terminator(content: str, quote_index: int) -> bool:
 
 
 def _next_non_whitespace_index(content: str, start_index: int) -> int | None:
+    """
+    @brief      Resolve the next non whitespace index.
+    @param[in]  content Value for `content`.
+    @param[in]  start_index Value for `start_index`.
+    @return     Resolved helper result.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-21
+    @version    0.1.0
+    """
     for index in range(start_index, len(content)):
         if not content[index].isspace():
             return index
@@ -537,6 +631,14 @@ def _next_non_whitespace_index(content: str, start_index: int) -> int | None:
 
 
 def _is_retryable_error(error_object: Exception) -> bool:
+    """
+    @brief      Determine whether retryable error.
+    @param[in]  error_object Value for `error_object`.
+    @return     True when the helper condition is satisfied.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-21
+    @version    0.1.0
+    """
     message = str(error_object).lower()
     return (
         "transient ai provider failure" in message
@@ -547,6 +649,15 @@ def _is_retryable_error(error_object: Exception) -> bool:
 
 
 def _append_ai_log(log_path: str | Path | None, payload: dict[str, object]) -> None:
+    """
+    @brief      Append the ai log.
+    @param[in]  log_path Operation log file path.
+    @param[in]  payload Optional payload processed by the helper.
+    @return     None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-21
+    @version    0.1.0
+    """
     if log_path is None:
         return
     resolved_log_path = Path(log_path)

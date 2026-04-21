@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -13,7 +12,7 @@
          start and reset behavior for the Characters page controller.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-08
-@version 0.2.0
+@version 0.3.0
 """
 
 # IMPORTS
@@ -146,6 +145,29 @@ def test_character_ui_controller_selection_change_cancel_restores_current_row(mo
     assert window._characters_page._character_list.currentRow() == 0
 
 
+def test_character_ui_controller_regenerates_voice_definition_for_active_draft(monkeypatch, qtbot, tmp_path) -> None:
+    project_root, _manifest = _create_project(tmp_path, "CharacterControllerVoiceDefinition")
+    window = _build_window(qtbot, project_root)
+    message_calls = []
+    monkeypatch.setattr(
+        characters_ui_controller.misc_ui_controller,
+        "show_message",
+        lambda *_args: message_calls.append(_args),
+    )
+    window._characters_page.begin_edit_mode()
+    window._characters_page._description_edit.setPlainText("Updated literary description")
+
+    characters_ui_controller.handle_regenerate_voice_definition_requested(
+        window,
+        window._characters_page.current_draft_payload(),
+    )
+
+    regenerated_payload = window._characters_page.current_draft_payload()
+    assert regenerated_payload["voice_definition_stale"] is False
+    assert "Updated literary description" in regenerated_payload["voice_persona_summary"]
+    assert message_calls
+
+
 def _create_project(tmp_path, name: str):
     project_root, manifest = project_workspace_service.create_project(name, tmp_path)
     manifest["source_document"] = {
@@ -274,59 +296,63 @@ def _build_window(qtbot, project_root):
 
 
 def _saved_profile_payload() -> dict[str, object]:
-    return {
-        "character_id": "alice",
-        "canonical_name": "Alice",
-        "aliases": ["Al"],
-        "gender_hint": "",
-        "age_band": "",
-        "role_summary": "Lead speaker",
-        "description": "Original description",
-        "temperament": "",
-        "social_status": "",
-        "speaking_style": "",
-        "accent_or_dialect_hints": "",
-        "voice_notes": "",
-        "relationship_hints": ["Knows Bob."],
-        "confidence": "high",
-        "evidence": [
-            {
-                "chunk_id": "chunk-0001",
-                "sequence_index": 1,
-                "source_excerpt": '"Hello there," said Alice.',
-                "reason": "Alice speaks.",
-            }
-        ],
-        "updated_at": "2026-04-08T12:01:00+00:00",
-    }
+    return character_discovery_service.regenerate_character_voice_definition(
+        {
+            "character_id": "alice",
+            "canonical_name": "Alice",
+            "aliases": ["Al"],
+            "gender_hint": "",
+            "age_band": "",
+            "role_summary": "Lead speaker",
+            "description": "Original description",
+            "temperament": "",
+            "social_status": "",
+            "speaking_style": "",
+            "accent_or_dialect_hints": "",
+            "voice_notes": "",
+            "relationship_hints": ["Knows Bob."],
+            "confidence": "high",
+            "evidence": [
+                {
+                    "chunk_id": "chunk-0001",
+                    "sequence_index": 1,
+                    "source_excerpt": '"Hello there," said Alice.',
+                    "reason": "Alice speaks.",
+                }
+            ],
+            "updated_at": "2026-04-08T12:01:00+00:00",
+        }
+    )
 
 
 def _manual_draft_payload(name: str) -> dict[str, object]:
-    return {
-        "character_id": "draft_bob",
-        "canonical_name": name,
-        "aliases": [],
-        "gender_hint": "",
-        "age_band": "",
-        "role_summary": "",
-        "description": "",
-        "temperament": "",
-        "social_status": "",
-        "speaking_style": "",
-        "accent_or_dialect_hints": "",
-        "voice_notes": "",
-        "relationship_hints": [],
-        "confidence": "",
-        "evidence": [
-            {
-                "chunk_id": character_discovery_service.MANUAL_CHARACTER_EVIDENCE_CHUNK_ID,
-                "sequence_index": 0,
-                "source_excerpt": character_discovery_service.MANUAL_CHARACTER_EVIDENCE_NOTE,
-                "reason": character_discovery_service.MANUAL_CHARACTER_EVIDENCE_NOTE,
-            }
-        ],
-        "updated_at": None,
-    }
+    return character_discovery_service.regenerate_character_voice_definition(
+        {
+            "character_id": "draft_bob",
+            "canonical_name": name,
+            "aliases": [],
+            "gender_hint": "",
+            "age_band": "",
+            "role_summary": "",
+            "description": "",
+            "temperament": "",
+            "social_status": "",
+            "speaking_style": "",
+            "accent_or_dialect_hints": "",
+            "voice_notes": "",
+            "relationship_hints": [],
+            "confidence": "",
+            "evidence": [
+                {
+                    "chunk_id": character_discovery_service.MANUAL_CHARACTER_EVIDENCE_CHUNK_ID,
+                    "sequence_index": 0,
+                    "source_excerpt": character_discovery_service.MANUAL_CHARACTER_EVIDENCE_NOTE,
+                    "reason": character_discovery_service.MANUAL_CHARACTER_EVIDENCE_NOTE,
+                }
+            ],
+            "updated_at": None,
+        }
+    )
 
 
 # END OF FILE

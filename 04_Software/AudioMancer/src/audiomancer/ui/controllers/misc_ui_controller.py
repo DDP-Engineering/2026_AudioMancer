@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-  # noqa: UP009
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -12,12 +13,13 @@
          dialogs, the common modal progress popup, and title-bar helpers.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-06
-@version 0.5.0
+@version 0.6.0
 """
 
 # IMPORTS
 
 from pathlib import Path
+import tomllib
 from typing import TYPE_CHECKING
 
 from PySide6.QtCore import Qt
@@ -55,6 +57,8 @@ LICENSE_TRANSLATED_PATHS = {
         config.APP_ROOT / "LICENSE_NC_ro.txt",
     ),
 }
+# @brief Project metadata file used to resolve the current application version.
+PYPROJECT_PATH = config.APP_ROOT / "pyproject.toml"
 
 
 # PUBLIC API
@@ -120,10 +124,11 @@ def build_about_dialog(window: "MainWindow") -> QDialog:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.1.0
+    @version    0.2.0
     """
     dialog = QDialog(window)
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
+    application_version = current_application_version()
     dialog.setWindowTitle(ui_state_service.translate("dialog.about_title", current_language))
     dialog.resize(510, 620)
 
@@ -142,6 +147,11 @@ def build_about_dialog(window: "MainWindow") -> QDialog:
     subtitle.setAlignment(Qt.AlignmentFlag.AlignHCenter)
     subtitle.setWordWrap(True)
     layout.addWidget(subtitle)
+    version_label = QLabel(
+        ui_state_service.translate("about.version", current_language).format(version=application_version)
+    )
+    version_label.setAlignment(Qt.AlignmentFlag.AlignHCenter)
+    layout.addWidget(version_label)
     layout.addSpacing(12)
 
     details = QLabel(ui_state_service.translate("about.details", current_language))
@@ -168,11 +178,31 @@ def build_about_dialog(window: "MainWindow") -> QDialog:
     return dialog
 
 
+def current_application_version() -> str:
+    """
+    @brief      Resolve the current application version from project metadata.
+    @return     Current application version string.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-21
+    @version    0.1.0
+    """
+    if not PYPROJECT_PATH.is_file():
+        return "unknown"
+    payload = tomllib.loads(PYPROJECT_PATH.read_text(encoding="utf-8"))
+    project_payload = payload.get("project", {})
+    if not isinstance(project_payload, dict):
+        return "unknown"
+    version = str(project_payload.get("version", "") or "").strip()
+    return version or "unknown"
+
+
 def create_progress_dialog(
     window: "MainWindow",
     operation_name: str,
     initial_message: str,
     cancel_callback,
+    cancellable: bool = True,
 ) -> None:
     """
     @brief      Create and show the shared modal progress dialog for one running operation.
@@ -180,6 +210,7 @@ def create_progress_dialog(
     @param[in]  operation_name Operator-facing operation name.
     @param[in]  initial_message First progress status message.
     @param[in]  cancel_callback Callback invoked when the cancel button is pressed.
+    @param[in]  cancellable True when the cancel button should be available.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
@@ -191,7 +222,7 @@ def create_progress_dialog(
     window._operation_progress_dialog.start(
         operation_name,
         initial_message,
-        cancellable=True,
+        cancellable=cancellable,
     )
     process_pending_ui_events()
 

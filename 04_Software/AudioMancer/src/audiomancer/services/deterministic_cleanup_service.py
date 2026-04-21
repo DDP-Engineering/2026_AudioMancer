@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-  # noqa: UP009
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -319,6 +319,16 @@ def _write_partial_output(
     paragraphs: list[str],
     current_lines: CleanupLineParts,
 ) -> None:
+    """
+    @brief      Write the partial output.
+    @param[in]  output_path Output file path.
+    @param[in]  paragraphs Value for `paragraphs`.
+    @param[in]  current_lines Value for `current_lines`.
+    @return     None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-21
+    @version    0.1.0
+    """
     payload_parts = list(paragraphs)
     if current_lines:
         payload_parts.append(_compose_paragraph_text(current_lines))
@@ -329,6 +339,17 @@ def _write_partial_output(
 
 
 def _emit_progress(progress_callback, progress_current: int, progress_total: int, message: str) -> None:
+    """
+    @brief      Emit the progress.
+    @param[in]  progress_callback Optional progress callback.
+    @param[in]  progress_current Value for `progress_current`.
+    @param[in]  progress_total Value for `progress_total`.
+    @param[in]  message Operator-facing message text.
+    @return     None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-21
+    @version    0.1.0
+    """
     if callable(progress_callback):
         progress_callback(
             progress_current,
@@ -352,6 +373,25 @@ def _write_running_state(
     removed_page_number_count: int,
     removed_separator_count: int,
 ) -> None:
+    """
+    @brief      Write the running state.
+    @param[in]  state_path Operation-state file path.
+    @param[in]  project_root Active project root folder.
+    @param[in]  input_snapshot_path Input snapshot file path.
+    @param[in]  output_path Output file path.
+    @param[in]  started_at Value for `started_at`.
+    @param[in]  progress_current Value for `progress_current`.
+    @param[in]  progress_total Value for `progress_total`.
+    @param[in]  warnings Value for `warnings`.
+    @param[in]  cleaned_pages Value for `cleaned_pages`.
+    @param[in]  removed_header_footer_count Value for `removed_header_footer_count`.
+    @param[in]  removed_page_number_count Value for `removed_page_number_count`.
+    @param[in]  removed_separator_count Value for `removed_separator_count`.
+    @return     None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-21
+    @version    0.1.0
+    """
     running_state = _build_operation_state(
         project_root,
         input_snapshot_path=input_snapshot_path,
@@ -398,6 +438,31 @@ def _build_operation_state(
     paragraph_count: int | None,
     chapter_count: int | None,
 ) -> OperationStatePayload:
+    """
+    @brief      Build the operation state.
+    @param[in]  project_root Active project root folder.
+    @param[in]  input_snapshot_path Input snapshot file path.
+    @param[in]  output_path Output file path.
+    @param[in]  report_path Report file path.
+    @param[in]  status Value for `status`.
+    @param[in]  progress_current Value for `progress_current`.
+    @param[in]  progress_total Value for `progress_total`.
+    @param[in]  started_at Value for `started_at`.
+    @param[in]  completed_at Value for `completed_at`.
+    @param[in]  warnings Value for `warnings`.
+    @param[in]  cleaned_pages Value for `cleaned_pages`.
+    @param[in]  removed_header_footer_count Value for `removed_header_footer_count`.
+    @param[in]  removed_page_number_count Value for `removed_page_number_count`.
+    @param[in]  removed_separator_count Value for `removed_separator_count`.
+    @param[in]  resume_checkpoint Value for `resume_checkpoint`.
+    @param[in]  detected_language Value for `detected_language`.
+    @param[in]  paragraph_count Value for `paragraph_count`.
+    @param[in]  chapter_count Value for `chapter_count`.
+    @return     Derived helper result.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-21
+    @version    0.1.0
+    """
     artifact_paths: list[str] = []
     if report_path is not None and report_path.is_file():
         artifact_paths.append(relative_to_project(project_root, report_path))
@@ -429,18 +494,42 @@ def _build_operation_state(
 
 
 def _load_operation_state(state_path: Path) -> OperationStatePayload | None:
+    """
+    @brief      Load the operation state.
+    @param[in]  state_path Operation-state file path.
+    @return     Derived helper result.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-21
+    @version    0.1.0
+    """
     if not state_path.is_file():
         return None
     return dict(json.loads(state_path.read_text(encoding="utf-8")))
 
 
 def _split_pages(extracted_text: str) -> list[str]:
+    """
+    @brief      Execute the split pages helper.
+    @param[in]  extracted_text Text value for `extracted_text`.
+    @return     Helper result.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-21
+    @version    0.1.0
+    """
     normalized = extracted_text.replace("\r\n", "\n").replace("\r", "\n")
     segments = [segment for segment in _PAGE_SPLIT_PATTERN.split(normalized) if segment.strip()]
     return segments or [normalized]
 
 
 def _remove_repeated_headers_and_footers(pages: list[str]) -> tuple[list[str], int]:
+    """
+    @brief      Execute the remove repeated headers and footers helper.
+    @param[in]  pages Value for `pages`.
+    @return     Helper result.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-21
+    @version    0.1.0
+    """
     top_counts: Counter[str] = Counter()
     bottom_counts: Counter[str] = Counter()
     page_entries: list[tuple[list[str], list[int]]] = []
@@ -483,6 +572,16 @@ def _build_page_paragraphs(
     next_page: str | None,
     carried_lines: CleanupLineParts,
 ) -> tuple[list[str], CleanupLineParts, int, int]:
+    """
+    @brief      Build the page paragraphs.
+    @param[in]  page Value for `page`.
+    @param[in]  next_page Value for `next_page`.
+    @param[in]  carried_lines Value for `carried_lines`.
+    @return     Derived helper result.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-21
+    @version    0.1.0
+    """
     paragraph_texts: list[str] = []
     current_lines = list(carried_lines)
     removed_page_number_count = 0
@@ -516,6 +615,15 @@ def _build_page_paragraphs(
 
 
 def _build_cleanup_warnings(detected_language: str | None, chapter_count: int) -> list[str]:
+    """
+    @brief      Build the cleanup warnings.
+    @param[in]  detected_language Value for `detected_language`.
+    @param[in]  chapter_count Value for `chapter_count`.
+    @return     Derived helper result.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-21
+    @version    0.1.0
+    """
     warnings: list[str] = []
     if detected_language is None:
         warnings.append("Language detection did not produce a stable value.")
@@ -527,6 +635,14 @@ def _build_cleanup_warnings(detected_language: str | None, chapter_count: int) -
 
 
 def _count_detected_chapters(paragraph_texts: list[str]) -> int:
+    """
+    @brief      Count the detected chapters.
+    @param[in]  paragraph_texts Value for `paragraph_texts`.
+    @return     Derived helper result.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-21
+    @version    0.1.0
+    """
     chapter_count = 0
     current_chapter: str | None = None
     for paragraph_text in paragraph_texts:
@@ -538,6 +654,14 @@ def _count_detected_chapters(paragraph_texts: list[str]) -> int:
 
 
 def _detect_language(text: str) -> str | None:
+    """
+    @brief      Detect the language.
+    @param[in]  text Value for `text`.
+    @return     Derived helper result.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-21
+    @version    0.1.0
+    """
     sample = text.strip()
     if len(sample) < 20:
         return None
@@ -548,6 +672,14 @@ def _detect_language(text: str) -> str | None:
 
 
 def _detect_chapter_label(paragraph_text: str) -> str | None:
+    """
+    @brief      Detect the chapter label.
+    @param[in]  paragraph_text Text value for `paragraph_text`.
+    @return     Derived helper result.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-21
+    @version    0.1.0
+    """
     normalized = paragraph_text.strip()
     if len(normalized) > 100:
         return None
@@ -558,6 +690,14 @@ def _detect_chapter_label(paragraph_text: str) -> str | None:
 
 
 def _is_header_footer_candidate(line: str) -> bool:
+    """
+    @brief      Determine whether header footer candidate.
+    @param[in]  line Value for `line`.
+    @return     True when the helper condition is satisfied.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-21
+    @version    0.1.0
+    """
     return (
         len(line) >= 4
         and any(character.isalpha() for character in line)
@@ -567,15 +707,39 @@ def _is_header_footer_candidate(line: str) -> bool:
 
 
 def _looks_like_page_number(line: str) -> bool:
+    """
+    @brief      Determine whether page number.
+    @param[in]  line Value for `line`.
+    @return     True when the helper condition is satisfied.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-21
+    @version    0.1.0
+    """
     return bool(_PAGE_NUMBER_PATTERN.fullmatch(line.strip()))
 
 
 def _looks_like_separator_line(line: str) -> bool:
+    """
+    @brief      Determine whether separator line.
+    @param[in]  line Value for `line`.
+    @return     True when the helper condition is satisfied.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-21
+    @version    0.1.0
+    """
     normalized = line.strip()
     return bool(normalized) and bool(_SEPARATOR_LINE_PATTERN.fullmatch(normalized))
 
 
 def _format_dialogue_lines(paragraph_text: str) -> str:
+    """
+    @brief      Format the dialogue lines.
+    @param[in]  paragraph_text Text value for `paragraph_text`.
+    @return     Derived helper result.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-21
+    @version    0.1.0
+    """
     normalized = paragraph_text.strip()
     normalized = _DIALOGUE_BREAK_AFTER_PUNCTUATION_PATTERN.sub(r"\1\n- ", normalized)
     normalized = _DIALOGUE_BREAK_AFTER_ATTRIBUTION_PATTERN.sub(r"\1\n- ", normalized)
@@ -583,6 +747,14 @@ def _format_dialogue_lines(paragraph_text: str) -> str:
 
 
 def _compose_paragraph_text(lines: CleanupLineParts) -> str:
+    """
+    @brief      Compose the paragraph text.
+    @param[in]  lines Value for `lines`.
+    @return     Derived helper result.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-21
+    @version    0.1.0
+    """
     if not lines:
         return ""
     first_line, _joined_with_previous = lines[0]
@@ -594,6 +766,15 @@ def _compose_paragraph_text(lines: CleanupLineParts) -> str:
 
 
 def _should_continue_paragraph(current_last_line: str, next_line: str | None) -> bool:
+    """
+    @brief      Determine whether continue paragraph.
+    @param[in]  current_last_line Value for `current_last_line`.
+    @param[in]  next_line Value for `next_line`.
+    @return     True when the helper condition is satisfied.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-21
+    @version    0.1.0
+    """
     if next_line is None:
         return False
     if _detect_chapter_label(next_line) is not None:
@@ -607,6 +788,15 @@ def _should_continue_paragraph_across_page_break(
     current_lines: CleanupLineParts,
     next_page: str | None,
 ) -> bool:
+    """
+    @brief      Determine whether continue paragraph across page break.
+    @param[in]  current_lines Value for `current_lines`.
+    @param[in]  next_page Value for `next_page`.
+    @return     True when the helper condition is satisfied.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-21
+    @version    0.1.0
+    """
     if not current_lines or next_page is None:
         return False
     next_content_line = _first_content_line(next_page)
@@ -614,6 +804,15 @@ def _should_continue_paragraph_across_page_break(
 
 
 def _next_content_line(lines: list[str], start_index: int) -> str | None:
+    """
+    @brief      Resolve the next content line.
+    @param[in]  lines Value for `lines`.
+    @param[in]  start_index Value for `start_index`.
+    @return     Resolved helper result.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-21
+    @version    0.1.0
+    """
     for normalized_line in lines[start_index:]:
         if not normalized_line:
             continue
@@ -624,6 +823,14 @@ def _next_content_line(lines: list[str], start_index: int) -> str | None:
 
 
 def _first_content_line(page: str | None) -> str | None:
+    """
+    @brief      Return the first content line.
+    @param[in]  page Value for `page`.
+    @return     Resolved helper result.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-21
+    @version    0.1.0
+    """
     if page is None:
         return None
     for raw_line in page.split("\n"):
@@ -639,6 +846,13 @@ def _first_content_line(page: str | None) -> str | None:
 
 
 def _utc_now_iso() -> str:
+    """
+    @brief      Execute the utc now iso helper.
+    @return     Helper result.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-21
+    @version    0.1.0
+    """
     return datetime.now(UTC).replace(microsecond=0).isoformat()
 
 

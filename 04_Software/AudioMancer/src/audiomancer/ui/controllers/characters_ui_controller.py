@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-  # noqa: UP009
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -14,7 +14,7 @@
          for the Characters page.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-11
-@version 0.5.0
+@version 0.7.0
 """
 
 # IMPORTS
@@ -194,7 +194,7 @@ def handle_save_character_requested(
     @exception  ValueError Propagated from manual-name validation helpers.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-08
-    @version    0.2.0
+    @version    0.3.0
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._current_project_root is None:
@@ -257,6 +257,31 @@ def handle_save_character_requested(
         ui_state_service.translate(status_key, current_language),
     )
     return True
+
+
+def handle_regenerate_voice_definition_requested(
+    window: "MainWindow",
+    profile_payload: dict[str, object],
+) -> None:
+    """
+    @brief      Rebuild the active character voice-definition brief and prompt from the current draft facts.
+    @param[in]  window Main application window.
+    @param[in]  profile_payload Current draft character payload from the page.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-20
+    @version    1.0.0
+    """
+    regenerated_profile = character_discovery_service.regenerate_character_voice_definition(profile_payload)
+    window._characters_page.apply_regenerated_voice_definition(regenerated_profile)
+    misc_ui_controller.show_message(
+        window,
+        ui_state_service.translate(
+            "status.character_voice_definition_regenerated",
+            ui_state_service.current_language_from_settings(window._settings_payload),
+        ),
+    )
 
 
 def handle_delete_character_requested(window: "MainWindow", character_id: str) -> None:
@@ -374,7 +399,7 @@ def _start_operation(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-08
-    @version    0.1.0
+    @version    0.2.0
     """
     assert window._current_project_root is not None
     assert window._current_manifest is not None
@@ -594,7 +619,7 @@ def _prompt_unsaved_changes(window: "MainWindow", language: str) -> str:
         ui_state_service.translate("characters.prompt_discard", language),
         QMessageBox.ButtonRole.DestructiveRole,
     )
-    cancel_button = message_box.addButton(
+    message_box.addButton(
         ui_state_service.translate("characters.prompt_cancel", language),
         QMessageBox.ButtonRole.RejectRole,
     )
@@ -677,31 +702,33 @@ def _build_manual_draft_profile(
     while draft_id in existing_ids:
         draft_id = f"draft_{base_slug}_{suffix}"
         suffix += 1
-    return {
-        "character_id": draft_id,
-        "canonical_name": canonical_name,
-        "aliases": [],
-        "gender_hint": "",
-        "age_band": "",
-        "role_summary": "",
-        "description": "",
-        "temperament": "",
-        "social_status": "",
-        "speaking_style": "",
-        "accent_or_dialect_hints": "",
-        "voice_notes": "",
-        "relationship_hints": [],
-        "confidence": "",
-        "evidence": [
-            {
-                "chunk_id": character_discovery_service.MANUAL_CHARACTER_EVIDENCE_CHUNK_ID,
-                "sequence_index": 0,
-                "source_excerpt": character_discovery_service.MANUAL_CHARACTER_EVIDENCE_NOTE,
-                "reason": character_discovery_service.MANUAL_CHARACTER_EVIDENCE_NOTE,
-            }
-        ],
-        "updated_at": None,
-    }
+    return character_discovery_service.regenerate_character_voice_definition(
+        {
+            "character_id": draft_id,
+            "canonical_name": canonical_name,
+            "aliases": [],
+            "gender_hint": "",
+            "age_band": "",
+            "role_summary": "",
+            "description": "",
+            "temperament": "",
+            "social_status": "",
+            "speaking_style": "",
+            "accent_or_dialect_hints": "",
+            "voice_notes": "",
+            "relationship_hints": [],
+            "confidence": "",
+            "evidence": [
+                {
+                    "chunk_id": character_discovery_service.MANUAL_CHARACTER_EVIDENCE_CHUNK_ID,
+                    "sequence_index": 0,
+                    "source_excerpt": character_discovery_service.MANUAL_CHARACTER_EVIDENCE_NOTE,
+                    "reason": character_discovery_service.MANUAL_CHARACTER_EVIDENCE_NOTE,
+                }
+            ],
+            "updated_at": None,
+        }
+    )
 
 
 def _draft_slug(canonical_name: str) -> str:

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-  # noqa: UP009
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -12,8 +13,8 @@
          behavior to dedicated UI controllers and page-specific state services
          so the window remains a thin coordinator.
 @author Eng. Dan Dumitru Pasare
-@date 2026-04-07
-@version 1.16.0
+@date 2026-04-20
+@version 1.23.0
 """
 
 # IMPORTS
@@ -22,6 +23,7 @@ from pathlib import Path
 
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QCloseEvent
+from PySide6.QtMultimedia import QAudioOutput, QMediaPlayer
 from PySide6.QtWidgets import (
     QDialog,
     QHBoxLayout,
@@ -37,6 +39,8 @@ from audiomancer.services import (
     ai_translation_state_service,
     character_discovery_state_service,
     home_presenter_service,
+    narration_plan_state_service,
+    narrator_definition_state_service,
     settings_service,
     text_chunking_state_service,
     text_cleanup_state_service,
@@ -48,9 +52,12 @@ from audiomancer.ui.controllers import (
     characters_ui_controller,
     home_ui_controller,
     misc_ui_controller,
+    narration_plan_ui_controller,
+    narrator_ui_controller,
     settings_ui_controller,
     text_chunking_ui_controller,
     text_cleanup_ui_controller,
+    tts_settings_ui_controller,
 )
 from audiomancer.ui.navigation_sidebar import NavigationSidebar
 from audiomancer.ui.operation_progress_dialog import OperationProgressDialog
@@ -58,11 +65,13 @@ from audiomancer.ui.pages.ai_settings_page import AiSettingsPage
 from audiomancer.ui.pages.ai_translation_page import AiTranslationPage
 from audiomancer.ui.pages.characters_page import CharactersPage
 from audiomancer.ui.pages.home_page import HomeProjectPage
+from audiomancer.ui.pages.narration_plan_page import NarrationPlanPage
 from audiomancer.ui.pages.narrator_page import NarratorPage
 from audiomancer.ui.pages.placeholder_page import PlaceholderPage
 from audiomancer.ui.pages.settings_page import SettingsPage
 from audiomancer.ui.pages.text_chunking_page import TextChunkingPage
 from audiomancer.ui.pages.text_cleanup_page import TextCleanupPage
+from audiomancer.ui.pages.tts_settings_page import TtsSettingsPage
 
 # CONSTANTS
 
@@ -115,7 +124,7 @@ class MainWindow(QMainWindow):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-06
-        @version    0.13.0
+        @version    0.14.0
         """
         super().__init__(parent)
         self.setWindowTitle(misc_ui_controller.build_window_title())
@@ -128,8 +137,24 @@ class MainWindow(QMainWindow):
         self._active_operation_kind: str | None = None
         self._active_operation_name: str | None = None
         self._operation_cancel_requested = False
+        self._narrator_preview_generation = 0
+        self._narrator_inspected_profile_id: str | None = None
+        self._narration_plan_inspected_target_id: str | None = None
+        self._narration_plan_missing_narrator_popup_shown = False
         self._settings_payload = (
             dict(settings_payload) if isinstance(settings_payload, dict) else settings_service.load_settings()
+        )
+        self._narrator_audio_output = QAudioOutput(self)
+        self._narrator_audio_player = QMediaPlayer(self)
+        self._narrator_audio_player.setAudioOutput(self._narrator_audio_output)
+        self._narrator_audio_player.playbackStateChanged.connect(
+            lambda _state: narrator_ui_controller.handle_preview_playback_state_changed(self)
+        )
+        self._narration_plan_audio_output = QAudioOutput(self)
+        self._narration_plan_audio_player = QMediaPlayer(self)
+        self._narration_plan_audio_player.setAudioOutput(self._narration_plan_audio_output)
+        self._narration_plan_audio_player.playbackStateChanged.connect(
+            lambda _state: narration_plan_ui_controller.handle_preview_playback_state_changed(self)
         )
 
         self._toolbar = self._build_toolbar()
@@ -161,14 +186,17 @@ class MainWindow(QMainWindow):
         @return     None.
         @exception  None
         @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-06
-        @version    0.1.1
+        @date       2026-04-20
+        @version    0.2.0
         """
         page = self._page_registry.get(page_id)
         if page is None:
             return
         self._stack.setCurrentWidget(page)
         self._sidebar.set_current_page(page_id)
+        if page_id == "narration_plan":
+            self._narration_plan_missing_narrator_popup_shown = False
+            narration_plan_ui_controller.handle_page_activated(self)
 
     def set_project_active(self, is_active: bool) -> None:
         """
@@ -202,8 +230,8 @@ class MainWindow(QMainWindow):
         @return     None.
         @exception  None
         @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-06
-        @version    0.6.0
+        @date       2026-04-16
+        @version    0.7.0
         """
         self._current_project_root = project_root
         self._current_manifest = manifest
@@ -275,6 +303,26 @@ class MainWindow(QMainWindow):
             )
         )
         self._characters_page.set_character_state(**character_state)
+        self._narrator_page.set_project_active(project_root is not None)
+        self._narrator_page.set_narrator_state(
+            **narrator_definition_state_service.build_narrator_definition_state(
+                project_root,
+                manifest,
+                current_language,
+                self._settings_payload,
+                self._narrator_inspected_profile_id,
+            )
+        )
+        self._narration_plan_page.set_project_active(project_root is not None)
+        self._narration_plan_page.set_narration_plan_state(
+            **narration_plan_state_service.build_narration_plan_state(
+                project_root,
+                manifest,
+                current_language,
+                self._settings_payload,
+                self._narration_plan_inspected_target_id,
+            )
+        )
 
     def show_settings_dialog(self) -> None:
         """
@@ -297,6 +345,17 @@ class MainWindow(QMainWindow):
         @version    0.3.0
         """
         ai_settings_ui_controller.show_ai_settings_dialog(self)
+
+    def show_tts_settings_dialog(self) -> None:
+        """
+        @brief      Show the static TTS settings dialog.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-16
+        @version    0.1.0
+        """
+        tts_settings_ui_controller.show_tts_settings_dialog(self)
 
     def show_about_dialog(self) -> None:
         """
@@ -330,8 +389,8 @@ class MainWindow(QMainWindow):
         @return     Configured Qt toolbar.
         @exception  None
         @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-06
-        @version    0.3.0
+        @date       2026-04-16
+        @version    0.4.0
         """
         toolbar = QToolBar("Main Toolbar", self)
         self._action_new_project = toolbar.addAction("New Project")
@@ -339,6 +398,7 @@ class MainWindow(QMainWindow):
         toolbar.addSeparator()
         self._action_settings = toolbar.addAction("Settings")
         self._action_ai_settings = toolbar.addAction("AI Settings")
+        self._action_tts_settings = toolbar.addAction("TTS Settings")
         toolbar.addSeparator()
         self._action_help = toolbar.addAction("Help")
         self._action_about = toolbar.addAction("About")
@@ -347,6 +407,9 @@ class MainWindow(QMainWindow):
         )
         self._action_ai_settings.triggered.connect(
             lambda _checked=False: ai_settings_ui_controller.show_ai_settings_dialog(self)
+        )
+        self._action_tts_settings.triggered.connect(
+            lambda _checked=False: tts_settings_ui_controller.show_tts_settings_dialog(self)
         )
         self._action_new_project.triggered.connect(
             lambda _checked=False: home_ui_controller.handle_new_project_requested(self)
@@ -365,7 +428,7 @@ class MainWindow(QMainWindow):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-07
-        @version    0.12.0
+        @version    0.13.0
         """
         current_language = ui_state_service.current_language_from_settings(self._settings_payload)
         home_page = HomeProjectPage(self)
@@ -478,6 +541,98 @@ class MainWindow(QMainWindow):
                 character_id,
             )
         )
+        self._characters_page.regenerate_voice_definition_requested.connect(
+            lambda profile_payload: characters_ui_controller.handle_regenerate_voice_definition_requested(
+                self,
+                profile_payload,
+            )
+        )
+        self._narrator_page = NarratorPage(self)
+        self._narrator_page.create_profile_requested.connect(
+            lambda profile_payload: narrator_ui_controller.handle_create_profile_requested(
+                self,
+                profile_payload,
+            )
+        )
+        self._narrator_page.edit_profile_requested.connect(
+            lambda profile_id: narrator_ui_controller.handle_edit_profile_requested(
+                self,
+                profile_id,
+            )
+        )
+        self._narrator_page.save_profile_requested.connect(
+            lambda profile_payload: narrator_ui_controller.handle_save_profile_requested(
+                self,
+                profile_payload,
+            )
+        )
+        self._narrator_page.delete_profile_requested.connect(
+            lambda profile_id: narrator_ui_controller.handle_delete_profile_requested(
+                self,
+                profile_id,
+            )
+        )
+        self._narrator_page.selection_change_requested.connect(
+            lambda profile_id: narrator_ui_controller.handle_selection_change_requested(
+                self,
+                profile_id,
+            )
+        )
+        self._narrator_page.generate_sample_requested.connect(
+            lambda profile_id: narrator_ui_controller.handle_generate_sample_requested(
+                self,
+                profile_id,
+            )
+        )
+        self._narrator_page.select_profile_requested.connect(
+            lambda profile_id: narrator_ui_controller.handle_select_profile_requested(
+                self,
+                profile_id,
+            )
+        )
+        self._narrator_page.preview_toggle_requested.connect(
+            lambda: narrator_ui_controller.handle_preview_toggle_requested(self)
+        )
+        self._narration_plan_page = NarrationPlanPage(self)
+        self._narration_plan_page.selection_change_requested.connect(
+            lambda target_id: narration_plan_ui_controller.handle_selection_change_requested(
+                self,
+                target_id,
+            )
+        )
+        self._narration_plan_page.voice_language_change_requested.connect(
+            lambda voice_language: narration_plan_ui_controller.handle_voice_language_change_requested(
+                self,
+                voice_language,
+            )
+        )
+        self._narration_plan_page.reset_prompt_requested.connect(
+            lambda target_id: narration_plan_ui_controller.handle_reset_prompt_requested(
+                self,
+                target_id,
+            )
+        )
+        self._narration_plan_page.edit_prompt_requested.connect(
+            lambda target_id: narration_plan_ui_controller.handle_edit_prompt_requested(
+                self,
+                target_id,
+            )
+        )
+        self._narration_plan_page.save_prompt_requested.connect(
+            lambda target_payload: narration_plan_ui_controller.handle_save_prompt_requested(
+                self,
+                target_payload,
+            )
+        )
+        self._narration_plan_page.generate_sample_requested.connect(
+            lambda target_id: narration_plan_ui_controller.handle_generate_sample_requested(
+                self,
+                target_id,
+            )
+        )
+        self._narration_plan_page.preview_toggle_requested.connect(
+            lambda: narration_plan_ui_controller.handle_preview_toggle_requested(self)
+        )
 
         pages = {
             "home": home_page,
@@ -485,12 +640,8 @@ class MainWindow(QMainWindow):
             "text_chunking": self._text_chunking_page,
             "ai_translation": self._ai_translation_page,
             "characters": self._characters_page,
-            "narrator": NarratorPage(self),
-            "narration_plan": PlaceholderPage(
-                "Narration Plan",
-                "Narration planning is not implemented yet.",
-                self,
-            ),
+            "narrator": self._narrator_page,
+            "narration_plan": self._narration_plan_page,
             "generation": PlaceholderPage(
                 "Generation",
                 "Generation is not implemented yet.",
@@ -515,8 +666,8 @@ class MainWindow(QMainWindow):
         @return     None.
         @exception  None
         @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-06
-        @version    0.5.0
+        @date       2026-04-16
+        @version    0.6.0
         """
         current_language = ui_state_service.current_language_from_settings(self._settings_payload)
 
@@ -548,6 +699,23 @@ class MainWindow(QMainWindow):
         )
         self._ai_settings_page.load_settings(self._settings_payload)
         ai_layout.addWidget(self._ai_settings_page)
+
+        self._tts_settings_dialog = QDialog(self)
+        self._tts_settings_dialog.setWindowTitle(
+            ui_state_service.translate("dialog.tts_settings_title", current_language)
+        )
+        self._tts_settings_dialog.resize(1040, 460)
+        tts_layout = QVBoxLayout(self._tts_settings_dialog)
+        self._tts_settings_page = TtsSettingsPage(self._tts_settings_dialog)
+        self._tts_settings_page._test_connection_button.clicked.connect(
+            lambda _checked=False: tts_settings_ui_controller.test_runtime_connection_from_dialog(self)
+        )
+        self._tts_settings_page._cancel_button.clicked.connect(self._tts_settings_dialog.close)
+        self._tts_settings_page._save_button.clicked.connect(
+            lambda _checked=False: tts_settings_ui_controller.save_tts_settings_from_dialog(self)
+        )
+        self._tts_settings_page.load_state(self._settings_payload, None, False)
+        tts_layout.addWidget(self._tts_settings_page)
 
     def _apply_current_ui_settings(self) -> None:
         """
@@ -610,6 +778,8 @@ class MainWindow(QMainWindow):
         @date       2026-04-06
         @version    0.1.0
         """
+        self._narrator_audio_player.stop()
+        self._narration_plan_audio_player.stop()
         super().closeEvent(event)
 
 
