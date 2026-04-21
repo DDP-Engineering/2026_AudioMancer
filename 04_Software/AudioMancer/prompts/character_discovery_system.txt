@@ -7,6 +7,8 @@ Escape any quote characters and embedded newlines inside JSON string values.
 
 Focus only on characters who speak dialogue in the book and matter for later voice planning.
 Exclude characters mentioned only by narration, description, exposition, or crowd references.
+Include recurring role-based speakers even when no personal name is known, such as `his agent`, `the pilot`, or `a guard`, when quoted dialogue is directly attributed to that role.
+For role-based speakers, use the role phrase as the canonical name until a better personal name is supported by the source.
 Use chunk ids exactly as provided.
 Never invent chunk ids or evidence.
 

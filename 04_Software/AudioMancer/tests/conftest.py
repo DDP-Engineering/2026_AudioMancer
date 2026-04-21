@@ -11,8 +11,8 @@
 @details Provides shared configurations, mock profiles, and environment
          setup to reduce boilerplate across test files.
 @author Eng. Dan Dumitru Pasare
-@date 2026-04-16
-@version 1.1.0
+@date 2026-04-21
+@version 1.2.0
 """
 
 # IMPORTS
@@ -43,6 +43,11 @@ def mock_prompt_environment(tmp_path, monkeypatch):
     (prompt_root / "text_cleanup_user.txt").write_text("{units_block}", encoding="utf-8")
     (prompt_root / "text_chunking_system.txt").write_text("Chunk system prompt.", encoding="utf-8")
     (prompt_root / "text_chunking_user.txt").write_text("{units_block}", encoding="utf-8")
+    (prompt_root / "speech_blocks_system.txt").write_text("Speech blocks system prompt.", encoding="utf-8")
+    (prompt_root / "speech_blocks_user.txt").write_text(
+        "{source_language}\n{chunk_id}\n{chunk_text}\n{speaker_catalog_json}",
+        encoding="utf-8",
+    )
 
     monkeypatch.setattr(config, "APP_PROMPTS_PATH", prompt_root)
     return prompt_root
@@ -55,8 +60,8 @@ def default_settings_payload():
     @return     Dictionary containing global profile identifiers and UI preferences.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-16
-    @version    0.2.0
+    @date       2026-04-21
+    @version    0.3.0
     """
     return {
         "language": "en",
@@ -81,6 +86,7 @@ def default_settings_payload():
         "default_ai_cleanup_profile_id": "profile_1",
         "default_ai_chunking_profile_id": "profile_1",
         "default_ai_translation_profile_id": "profile_1",
+        "default_speech_blocks_profile_id": "profile_1",
         "default_ai_chunking_strategy": "paragraph",
         "default_character_extraction_profile_id": "profile_1",
         "tts_runtime_base_url": "http://127.0.0.1:8059",

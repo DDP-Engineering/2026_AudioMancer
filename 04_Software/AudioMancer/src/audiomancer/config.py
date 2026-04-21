@@ -12,8 +12,8 @@
 @details Centralizes application names, paths, defaults, artifact names, and
          file support used by the current AudioMancer implementation scaffold.
 @author Eng. Dan Dumitru Pasare
-@date 2026-04-20
-@version 1.16.0
+@date 2026-04-21
+@version 1.17.0
 """
 
 # IMPORTS
@@ -221,6 +221,15 @@ SELECTED_NARRATOR_AUDIO_FILE_NAME = "narrator.wav"
 
 # @brief File name used for the selected narrator sample metadata under the project-root audio folder.
 SELECTED_NARRATOR_METADATA_FILE_NAME = "narrator.json"
+
+# @brief File name used for the Speech Blocks source-chunk input snapshot.
+SPEECH_BLOCKS_SOURCE_CHUNKS_FILE_NAME = "source_chunks.json"
+
+# @brief File name used for persisted Speech Blocks output.
+SPEECH_BLOCKS_OUTPUT_FILE_NAME = f"{OPERATION_OUTPUT_FILE_PREFIX}speech_blocks.json"
+
+# @brief File name used for persisted Speech Blocks report metadata.
+SPEECH_BLOCKS_REPORT_FILE_NAME = f"{OPERATION_ARTIFACT_FILE_PREFIX}speech_blocks_report.json"
 
 
 # Workflow And UI Defaults

@@ -12,8 +12,8 @@
 @details Builds the extracted/cleaned preview state, operator notes, and
          manifest reset payloads used by the Text Cleanup page workflows.
 @author Eng. Dan Dumitru Pasare
-@date 2026-04-20
-@version 0.6.1
+@date 2026-04-21
+@version 0.7.0
 """
 
 # IMPORTS
@@ -343,8 +343,8 @@ def normalized_manifest_operations(
     @return     Normalized operations mapping.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-11
-    @version    0.2.0
+    @date       2026-04-21
+    @version    0.3.0
     """
     operations = manifest.get("operations")
     if not isinstance(operations, dict):
@@ -356,6 +356,11 @@ def normalized_manifest_operations(
         ("chunking", config.CHUNKING_FOLDER_NAME),
         ("translation", config.TRANSLATION_FOLDER_NAME),
         ("character_discovery", config.CHARACTER_DISCOVERY_FOLDER_NAME),
+        ("narrator_definition", config.NARRATOR_DEFINITION_FOLDER_NAME),
+        ("character_voices", config.CHARACTER_VOICES_FOLDER_NAME),
+        ("speech_blocks", config.SPEECH_BLOCKS_FOLDER_NAME),
+        ("audio_blocks", config.AUDIO_BLOCKS_FOLDER_NAME),
+        ("audio_assembly", config.AUDIO_ASSEMBLY_FOLDER_NAME),
     ):
         candidate = operations.get(operation_kind)
         normalized[operation_kind] = project_workspace_service.project_manifest_operation_summary(
@@ -392,8 +397,8 @@ def build_manifest_after_operation_reset(
     @return     Reset manifest payload ready for persistence.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.1.2
+    @date       2026-04-21
+    @version    0.2.0
     """
     updated_manifest = dict(manifest)
     operations = normalized_manifest_operations(updated_manifest)
@@ -413,7 +418,13 @@ def build_manifest_after_operation_reset(
         ):
             if selected_kind in default_operations:
                 operations[selected_kind] = default_operations[selected_kind]
-    if updated_manifest["current_stage"] not in {"narrator_definition_ready", "character_voices_ready"}:
+    if updated_manifest["current_stage"] not in {
+        "narrator_definition_ready",
+        "character_voices_ready",
+        "speech_blocks_ready",
+        "audio_blocks_ready",
+        "audio_assembly_ready",
+    }:
         updated_manifest["narrator_profile_name"] = None
         updated_manifest["narrator_language"] = None
     updated_manifest["operations"] = operations
@@ -449,7 +460,7 @@ def _stage_after_operation_reset(operation_kind: str) -> str:
     @return     Helper result.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.1.0
+    @version    0.2.0
     """
     if operation_kind == "cleanup":
         return "text_cleanup_ready"
@@ -459,6 +470,16 @@ def _stage_after_operation_reset(operation_kind: str) -> str:
         return "translation_ready"
     if operation_kind == "character_discovery":
         return "translation_ready"
+    if operation_kind == "narrator_definition":
+        return "character_discovery_ready"
+    if operation_kind == "character_voices":
+        return "narrator_definition_ready"
+    if operation_kind == "speech_blocks":
+        return "character_voices_ready"
+    if operation_kind == "audio_blocks":
+        return "speech_blocks_ready"
+    if operation_kind == "audio_assembly":
+        return "audio_blocks_ready"
     return "source_selected"
 
 

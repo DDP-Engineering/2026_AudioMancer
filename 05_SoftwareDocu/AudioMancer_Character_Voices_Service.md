@@ -10,8 +10,9 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
 ## 1. Purpose
 
 Implements the current `Character Voices` workflow in `AudioMancer`.
-It prepares the narrator-plus-character voice target set that later placeholder
-stages will consume for speech-block, audio-block, and final assembly work.
+It prepares the narrator-plus-character voice target set and the selected
+voice language that the downstream `Speech Blocks` workflow consumes before the
+later `Audio Blocks` and `Audio Assembly` stages.
 
 ## 2. Responsibilities
 
@@ -184,7 +185,8 @@ Upstream integrations:
 
 Downstream integrations:
 
-- placeholder `Speech Blocks` page and future `70_speech_blocks` workflow data
+- `70_speech_blocks`, which reads the selected Character Voices language and
+  is invalidated when that language changes
 - placeholder `Audio Blocks` page and future `80_audio_blocks` workflow data
 - placeholder `Audio Assembly` page and future `90_audio_assembly` workflow
   data
@@ -193,6 +195,9 @@ Current rules:
 
 - translated language becomes selectable only when all translated chunks are
   approved
+- changing the selected voice language clears `70_speech_blocks`,
+  `80_audio_blocks`, and `90_audio_assembly`, then returns the project stage
+  to `character_voices_ready`
 - narrator is visible on the page but remains preview-only
 - character editing and generation are enabled only in
   `narrator_and_characters` mode
@@ -271,5 +276,5 @@ uv run ruff format <changed_python_files>
   edited and saved
 - per-character preview text still starts from a deterministic language-based
   sample text instead of automatically using real dialogue excerpts
-- `Speech Blocks`, `Audio Blocks`, and `Audio Assembly` are placeholder pages
-  only and do not yet consume `60_character_voices`
+- `Audio Blocks` and `Audio Assembly` are still placeholder stages and do not
+  yet consume the generated Speech Blocks output

@@ -13,8 +13,8 @@
          self-heals missing or invalid values, and saves the normalized
          settings file to the application root.
 @author Eng. Dan Dumitru Pasare
-@date 2026-04-18
-@version 0.4.0
+@date 2026-04-21
+@version 0.5.0
 """
 
 # IMPORTS
@@ -378,8 +378,8 @@ def build_default_settings() -> dict[str, Any]:
     @return     Default settings payload.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-18
-    @version    0.4.0
+    @date       2026-04-21
+    @version    0.5.0
     """
     return {
         "language": config.DEFAULT_LANGUAGE,
@@ -387,6 +387,7 @@ def build_default_settings() -> dict[str, Any]:
         "default_ai_cleanup_profile_id": None,
         "default_ai_chunking_profile_id": None,
         "default_ai_translation_profile_id": None,
+        "default_speech_blocks_profile_id": None,
         "default_ai_chunking_strategy": "scene",
         "default_character_extraction_profile_id": None,
         "play_completion_beep": True,
@@ -411,8 +412,8 @@ def validate_settings(settings_payload: dict[str, Any]) -> dict[str, Any]:
     @return     Validated and normalized settings payload.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-18
-    @version    0.3.0
+    @date       2026-04-21
+    @version    0.4.0
     """
     defaults = build_default_settings()
     normalized_settings = dict(settings_payload) if isinstance(settings_payload, dict) else {}
@@ -537,6 +538,7 @@ def validate_settings(settings_payload: dict[str, Any]) -> dict[str, Any]:
         "default_ai_cleanup_profile_id",
         "default_ai_chunking_profile_id",
         "default_ai_translation_profile_id",
+        "default_speech_blocks_profile_id",
         "default_character_extraction_profile_id",
     ):
         normalized_profile_id = _optional_profile_id(normalized_settings.get(field_name))

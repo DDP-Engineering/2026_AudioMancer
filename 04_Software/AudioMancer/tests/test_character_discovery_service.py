@@ -66,7 +66,9 @@ def test_start_discovery_persists_outputs_and_report(monkeypatch, tmp_path) -> N
                     "description": "Confident young woman.",
                     "voice_persona_summary": "Young adult woman with composed presence.",
                     "voice_timbre_and_range": "Warm mezzo voice with gentle authority.",
-                    "voice_definition_prompt": "Create a consistent spoken voice for Alice. Warm mezzo voice with gentle authority.",
+                    "voice_definition_prompt": (
+                        "Create a consistent spoken voice for Alice. Warm mezzo voice with gentle authority."
+                    ),
                     "relationship_hints": ["Knows Bob."],
                     "confidence": "high",
                 },
@@ -335,9 +337,43 @@ def test_regenerate_character_voice_definition_builds_voice_brief_and_prompt() -
     assert regenerated_profile["voice_definition_stale"] is False
 
 
+def test_merge_character_candidates_keeps_role_speaker_candidate() -> None:
+    """
+    @brief      Verify merged candidates preserve deterministic role speakers as dialogue characters.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-21
+    @version    0.1.0
+    """
+    merged_candidates = character_discovery_service._merge_character_candidates(  # noqa: SLF001
+        [
+            {
+                "canonical_name": "His Agent",
+                "aliases": ["agent"],
+                "role_summary": "Role-identified speaking character referred to as his agent",
+                "evidence": [
+                    {
+                        "chunk_id": "chunk-0001",
+                        "sequence_index": 1,
+                        "source_excerpt": '"Sure, absolutely," his agent said.',
+                        "reason": "Direct speech is attributed to his agent.",
+                    }
+                ],
+                "has_dialogue_evidence": True,
+            }
+        ]
+    )
+
+    assert len(merged_candidates) == 1
+    assert merged_candidates[0]["character_id"] == "his_agent"
+    assert merged_candidates[0]["canonical_name"] == "His Agent"
+
+
 def test_update_character_profile_marks_voice_definition_stale_when_facts_change(tmp_path) -> None:
     """
-    @brief      Verify changing raw character facts without refreshing the voice-definition block marks the profile stale.
+    @brief      Verify changing raw character facts without refreshing the voice-definition block marks the profile
+                stale.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None

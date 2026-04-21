@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env python3
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-  # noqa: UP009
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
@@ -13,8 +13,8 @@
          backed character sample generation, narrator or character preview
          playback, and page-entry narrator-sample warnings.
 @author Eng. Dan Dumitru Pasare
-@date 2026-04-20
-@version 1.3.0
+@date 2026-04-21
+@version 1.4.0
 """
 
 # IMPORTS
@@ -29,8 +29,10 @@ from audiomancer import config
 from audiomancer.services import (
     character_voices_service,
     narrator_definition_service,
+    operation_runtime_service,
     project_workspace_service,
     settings_service,
+    text_cleanup_state_service,
     ui_state_service,
     voiceweaver_runtime_service,
 )
@@ -95,13 +97,27 @@ def handle_voice_language_change_requested(window: "MainWindow", voice_language:
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-20
-    @version    1.0.0
+    @date       2026-04-21
+    @version    1.2.0
     """
     if window._current_project_root is None or window._current_manifest is None:
         return
-    character_voices_service.save_selected_voice_language(window._current_project_root, voice_language)
-    window.show_project_state(window._current_project_root, window._current_manifest)
+    previous_voice_language = character_voices_service.load_selected_voice_language(window._current_project_root)
+    persisted_voice_language = character_voices_service.save_selected_voice_language(
+        window._current_project_root,
+        voice_language,
+    )
+    if previous_voice_language != persisted_voice_language:
+        _reset_speech_blocks_and_downstream(window)
+        window.show_project_state(
+            window._current_project_root,
+            project_workspace_service.load_manifest(window._current_project_root),
+        )
+        return
+    window.show_project_state(
+        window._current_project_root,
+        project_workspace_service.load_manifest(window._current_project_root),
+    )
     _sync_manifest_stage(window)
 
 
@@ -662,6 +678,40 @@ def _sync_manifest_stage(window: "MainWindow") -> None:
     )
 
 
+def _reset_speech_blocks_and_downstream(window: "MainWindow") -> None:
+    """
+    @brief      Reset Speech Blocks and downstream workflow data after a Character Voices language change.
+    @param[in]  window Main application window.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-21
+    @version    0.1.0
+    """
+    if window._current_project_root is None or window._current_manifest is None:
+        return
+    operation_runtime_service.reset_operation_data(
+        window._current_project_root,
+        "speech_blocks",
+        include_current=True,
+        keep_input_snapshots=False,
+    )
+    updated_manifest = dict(window._current_manifest)
+    operations = text_cleanup_state_service.normalized_manifest_operations(updated_manifest)
+    default_operations = text_cleanup_state_service.normalized_manifest_operations({})
+    for operation_kind in ("speech_blocks", "audio_blocks", "audio_assembly"):
+        operations[operation_kind] = default_operations[operation_kind]
+    updated_manifest["operations"] = operations
+    if str(
+        updated_manifest.get("current_stage", "")
+    ).strip() in config.PROJECT_WORKFLOW_STAGES and config.PROJECT_WORKFLOW_STAGES.index(
+        str(updated_manifest.get("current_stage", "")).strip()
+    ) > config.PROJECT_WORKFLOW_STAGES.index("character_voices_ready"):
+        updated_manifest["current_stage"] = "character_voices_ready"
+    project_workspace_service.save_manifest(updated_manifest, window._current_project_root)
+    window._current_manifest = project_workspace_service.load_manifest(window._current_project_root)
+
+
 def _stop_preview_playback(window: "MainWindow") -> None:
     """
     @brief      Execute the stop preview playback helper.
@@ -727,4 +777,3 @@ def _confirm_generate_sample(window: "MainWindow", language: str, target_id: str
 
 
 # END OF FILE
-

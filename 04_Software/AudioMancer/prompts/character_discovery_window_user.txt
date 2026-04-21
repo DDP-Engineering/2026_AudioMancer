@@ -37,6 +37,7 @@ Return exactly one JSON object with this shape:
 
 Only include speaking characters supported by these chunks.
 Do not include characters mentioned only by narration.
+Do include recurring unnamed or role-based speakers when direct speech is attributed to them, for example `his agent said`.
 For each returned character, provide at least one evidence item tied to spoken dialogue or direct speech.
 Use each chunk id exactly as provided.
 Keep each source_excerpt short and escape any inner quotes correctly for JSON.

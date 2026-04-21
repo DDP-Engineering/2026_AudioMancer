@@ -12,7 +12,7 @@
          validation, project-root resolution, and open validation behavior.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-20
-@version 0.8.0
+@version 0.9.0
 """
 
 # IMPORTS
@@ -284,6 +284,43 @@ def test_repair_project_recreates_missing_support_folder_without_resetting_stage
     assert repaired_result["status"] == "ok"
     assert repaired_result["manifest"]["current_stage"] == "character_voices_ready"
     assert (project_root / config.PROJECT_AUDIO_SAMPLES_FOLDER_NAME).is_dir()
+
+
+def test_repair_project_recreates_missing_speech_blocks_folder_without_resetting_character_voices_stage(
+    tmp_path,
+) -> None:
+    """
+    @brief      Verify repair recreates one missing Speech Blocks folder without resetting the trusted Character Voices stage.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-21
+    @version    0.1.0
+    """
+    project_root, manifest = project_workspace_service.create_project(
+        "Book5_CAL_CAL",
+        tmp_path,
+    )
+    manifest["source_document"] = {
+        "original_name": "story.txt",
+        "stored_relative_path": "story.txt",
+        "file_type": "txt",
+        "imported_at": "2026-04-21T12:00:00+00:00",
+        "size_bytes": 128,
+    }
+    manifest["current_stage"] = "character_voices_ready"
+    project_workspace_service.save_manifest(manifest, project_root)
+    shutil.rmtree(project_root / config.SPEECH_BLOCKS_FOLDER_NAME)
+
+    open_result = project_workspace_service.open_project(project_root)
+    repaired_result = project_workspace_service.repair_project(open_result)
+
+    assert open_result["status"] == "repair_required"
+    assert open_result["corrupted_step"] == config.SPEECH_BLOCKS_FOLDER_NAME
+    assert repaired_result["status"] == "ok"
+    assert repaired_result["manifest"]["current_stage"] == "character_voices_ready"
+    assert (project_root / config.SPEECH_BLOCKS_FOLDER_NAME).is_dir()
 
 
 def test_repair_project_fixes_invalid_current_stage_metadata_only(tmp_path) -> None:

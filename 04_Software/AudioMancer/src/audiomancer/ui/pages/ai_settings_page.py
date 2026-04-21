@@ -13,8 +13,8 @@
          helpers so the main window can coordinate persistence through the
          settings service.
 @author Eng. Dan Dumitru Pasare
-@date 2026-04-06
-@version 0.7.0
+@date 2026-04-21
+@version 0.8.0
 """
 
 # IMPORTS
@@ -75,8 +75,8 @@ class AiSettingsPage(QWidget):
     @brief      Display and edit AI settings for AudioMancer.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-05
-    @version    0.5.0
+    @date       2026-04-21
+    @version    0.6.0
     """
 
     def __init__(self, parent=None) -> None:
@@ -86,8 +86,8 @@ class AiSettingsPage(QWidget):
         @return     None.
         @exception  None
         @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-05
-        @version    0.5.1
+        @date       2026-04-21
+        @version    0.6.0
         """
         super().__init__(parent)
         self._profiles: list[dict[str, object]] = []
@@ -197,6 +197,7 @@ class AiSettingsPage(QWidget):
         self._default_cleanup_combo = QComboBox(self)
         self._default_chunking_combo = QComboBox(self)
         self._default_translation_combo = QComboBox(self)
+        self._default_speech_blocks_combo = QComboBox(self)
         self._default_strategy_combo = QComboBox(self)
         for strategy in config.AI_CHUNKING_STRATEGY_OPTIONS:
             self._default_strategy_combo.addItem(strategy.title(), strategy)
@@ -206,6 +207,7 @@ class AiSettingsPage(QWidget):
         self._default_cleanup_label = QLabel("Default Cleanup Profile", self)
         self._default_chunking_label = QLabel("Default Chunking Profile", self)
         self._default_translation_label = QLabel("Default Translation Profile", self)
+        self._default_speech_blocks_label = QLabel("Default Speech Blocks Profile", self)
         self._default_strategy_label = QLabel("Default AI Chunking Strategy", self)
         self._default_character_label = QLabel(
             "Default Character Extraction Profile",
@@ -215,6 +217,7 @@ class AiSettingsPage(QWidget):
         form_layout.addRow(self._default_cleanup_label, self._default_cleanup_combo)
         form_layout.addRow(self._default_chunking_label, self._default_chunking_combo)
         form_layout.addRow(self._default_translation_label, self._default_translation_combo)
+        form_layout.addRow(self._default_speech_blocks_label, self._default_speech_blocks_combo)
         form_layout.addRow(self._default_strategy_label, self._default_strategy_combo)
         form_layout.addRow(
             self._default_character_label,
@@ -243,6 +246,7 @@ class AiSettingsPage(QWidget):
                 "default_ai_cleanup_profile_id": None,
                 "default_ai_chunking_profile_id": None,
                 "default_ai_translation_profile_id": None,
+                "default_speech_blocks_profile_id": None,
                 "default_ai_chunking_strategy": config.DEFAULT_AI_CHUNKING_STRATEGY,
                 "default_character_extraction_profile_id": None,
             }
@@ -255,8 +259,8 @@ class AiSettingsPage(QWidget):
         @return     None.
         @exception  None
         @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-05
-        @version    0.2.1
+        @date       2026-04-21
+        @version    0.3.0
         """
         source_profiles = settings_payload.get("llm_profiles", [])
         if not isinstance(source_profiles, list):
@@ -289,6 +293,10 @@ class AiSettingsPage(QWidget):
             settings_payload.get("default_ai_translation_profile_id"),
         )
         self._set_optional_combo(
+            self._default_speech_blocks_combo,
+            settings_payload.get("default_speech_blocks_profile_id"),
+        )
+        self._set_optional_combo(
             self._default_strategy_combo,
             settings_payload.get("default_ai_chunking_strategy"),
         )
@@ -309,8 +317,8 @@ class AiSettingsPage(QWidget):
         @return     Merged settings payload containing AI settings changes.
         @exception  None
         @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-05
-        @version    0.2.1
+        @date       2026-04-21
+        @version    0.3.0
         """
         self._sync_editor_to_current_profile()
         merged_settings = copy.deepcopy(existing_settings_payload)
@@ -319,6 +327,9 @@ class AiSettingsPage(QWidget):
         merged_settings["default_ai_chunking_profile_id"] = self._optional_combo_value(self._default_chunking_combo)
         merged_settings["default_ai_translation_profile_id"] = self._optional_combo_value(
             self._default_translation_combo
+        )
+        merged_settings["default_speech_blocks_profile_id"] = self._optional_combo_value(
+            self._default_speech_blocks_combo
         )
         merged_settings["default_ai_chunking_strategy"] = (
             self._optional_combo_value(self._default_strategy_combo) or config.DEFAULT_AI_CHUNKING_STRATEGY
@@ -482,18 +493,20 @@ class AiSettingsPage(QWidget):
         @return     None.
         @exception  None
         @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-05
-        @version    0.1.1
+        @date       2026-04-21
+        @version    0.2.0
         """
         current_cleanup = self._optional_combo_value(self._default_cleanup_combo)
         current_chunking = self._optional_combo_value(self._default_chunking_combo)
         current_translation = self._optional_combo_value(self._default_translation_combo)
+        current_speech_blocks = self._optional_combo_value(self._default_speech_blocks_combo)
         current_character = self._optional_combo_value(self._default_character_combo)
 
         for combo in (
             self._default_cleanup_combo,
             self._default_chunking_combo,
             self._default_translation_combo,
+            self._default_speech_blocks_combo,
             self._default_character_combo,
         ):
             combo.blockSignals(True)
@@ -507,6 +520,7 @@ class AiSettingsPage(QWidget):
         self._set_optional_combo(self._default_cleanup_combo, current_cleanup)
         self._set_optional_combo(self._default_chunking_combo, current_chunking)
         self._set_optional_combo(self._default_translation_combo, current_translation)
+        self._set_optional_combo(self._default_speech_blocks_combo, current_speech_blocks)
         self._set_optional_combo(self._default_character_combo, current_character)
 
     def _load_selected_profile_into_editor(self, row: int) -> None:
@@ -685,8 +699,8 @@ class AiSettingsPage(QWidget):
         @return     None.
         @exception  None
         @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-05
-        @version    0.1.1
+        @date       2026-04-21
+        @version    0.2.0
         """
         row = self._profile_list.currentRow()
         if row < 0 or len(self._profiles) <= 1:
@@ -697,6 +711,7 @@ class AiSettingsPage(QWidget):
             self._default_cleanup_combo,
             self._default_chunking_combo,
             self._default_translation_combo,
+            self._default_speech_blocks_combo,
             self._default_character_combo,
         ):
             if self._optional_combo_value(combo) == removed_profile_id:
@@ -712,8 +727,8 @@ class AiSettingsPage(QWidget):
         @return     None.
         @exception  None
         @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-05
-        @version    0.4.1
+        @date       2026-04-21
+        @version    0.5.0
         """
         self._current_language = language
         self._title_label.setText(f"<h2>{ui_state_service.translate('ai_settings.title', language)}</h2>")
@@ -733,6 +748,9 @@ class AiSettingsPage(QWidget):
         self._default_cleanup_label.setText(ui_state_service.translate("ai_settings.default_cleanup", language))
         self._default_chunking_label.setText(ui_state_service.translate("ai_settings.default_chunking", language))
         self._default_translation_label.setText(ui_state_service.translate("ai_settings.default_translation", language))
+        self._default_speech_blocks_label.setText(
+            ui_state_service.translate("ai_settings.default_speech_blocks", language)
+        )
         self._default_strategy_label.setText(ui_state_service.translate("ai_settings.default_strategy", language))
         self._default_character_label.setText(ui_state_service.translate("ai_settings.default_character", language))
         self._add_profile_button.setText(ui_state_service.translate("ai_settings.add_profile", language))
@@ -744,6 +762,7 @@ class AiSettingsPage(QWidget):
             self._default_cleanup_combo,
             self._default_chunking_combo,
             self._default_translation_combo,
+            self._default_speech_blocks_combo,
             self._default_character_combo,
         ):
             if combo.count() > 0:

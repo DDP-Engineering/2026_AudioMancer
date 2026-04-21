@@ -14,7 +14,7 @@
          workflow artifacts, and maintains resumable AI operation state.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-11
-@version 0.5.0
+@version 0.5.1
 """
 
 # IMPORTS
@@ -1775,7 +1775,10 @@ def _derived_voice_definition_fields(profile_payload: dict[str, object]) -> dict
             voice_notes,
             _phrase_join([age_band, gender_hint], suffix="timbre") if age_band or gender_hint else "",
         ],
-        fallback="Use a natural, human voice with a stable timbre and comfortable range that stays believable over many lines.",
+        fallback=(
+            "Use a natural, human voice with a stable timbre and comfortable range that stays believable over "
+            "many lines."
+        ),
     )
     pacing_and_rhythm = _compose_sentence(
         [
@@ -1790,7 +1793,9 @@ def _derived_voice_definition_fields(profile_payload: dict[str, object]) -> dict
             description,
             "Let the emotional baseline stay consistent unless the text clearly demands a stronger shift.",
         ],
-        fallback="Maintain a coherent emotional baseline that matches the character and changes naturally with the text.",
+        fallback=(
+            "Maintain a coherent emotional baseline that matches the character and changes naturally with the text."
+        ),
     )
     articulation_and_pronunciation = _compose_sentence(
         [

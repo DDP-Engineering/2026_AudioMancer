@@ -145,6 +145,7 @@
   "default_ai_cleanup_profile_id": "llm_profile_967538a1c13e",
   "default_ai_chunking_profile_id": "llm_profile_037a54ff5e64",
   "default_ai_translation_profile_id": "llm_profile_037a54ff5e64",
+  "default_speech_blocks_profile_id": "llm_profile_037a54ff5e64",
   "default_ai_chunking_strategy": "scene",
   "default_character_extraction_profile_id": "llm_profile_037a54ff5e64",
   "play_completion_beep": true,
@@ -287,6 +288,6 @@
     "device_mode": "cuda",
     "status_message": "CUDA active: NVIDIA GeForce RTX 5060 Ti."
   },
-  "tts_audio_preview_timeout_seconds": 120,
+  "tts_audio_preview_timeout_seconds": 60,
   "tts_audio_generation_timeout_seconds": 300
 }

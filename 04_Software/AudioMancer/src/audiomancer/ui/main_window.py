@@ -13,8 +13,8 @@
          behavior to dedicated UI controllers and page-specific state services
          so the window remains a thin coordinator.
 @author Eng. Dan Dumitru Pasare
-@date 2026-04-20
-@version 1.25.0
+@date 2026-04-21
+@version 1.26.0
 """
 
 # IMPORTS
@@ -38,10 +38,11 @@ from audiomancer import config
 from audiomancer.services import (
     ai_translation_state_service,
     character_discovery_state_service,
-    home_presenter_service,
     character_voices_state_service,
+    home_presenter_service,
     narrator_definition_state_service,
     settings_service,
+    speech_blocks_state_service,
     text_chunking_state_service,
     text_cleanup_state_service,
     ui_state_service,
@@ -49,12 +50,13 @@ from audiomancer.services import (
 from audiomancer.ui.controllers import (
     ai_settings_ui_controller,
     ai_translation_ui_controller,
+    character_voices_ui_controller,
     characters_ui_controller,
     home_ui_controller,
     misc_ui_controller,
     narator_voice_ui_controller,
-    character_voices_ui_controller,
     settings_ui_controller,
+    speech_blocks_ui_controller,
     text_chunking_ui_controller,
     text_cleanup_ui_controller,
     tts_settings_ui_controller,
@@ -63,12 +65,13 @@ from audiomancer.ui.navigation_sidebar import NavigationSidebar
 from audiomancer.ui.operation_progress_dialog import OperationProgressDialog
 from audiomancer.ui.pages.ai_settings_page import AiSettingsPage
 from audiomancer.ui.pages.ai_translation_page import AiTranslationPage
+from audiomancer.ui.pages.character_voices_page import CharacterVoicesPage
 from audiomancer.ui.pages.characters_page import CharactersPage
 from audiomancer.ui.pages.home_page import HomeProjectPage
 from audiomancer.ui.pages.narator_voice_page import NaratorVoicePage
-from audiomancer.ui.pages.character_voices_page import CharacterVoicesPage
 from audiomancer.ui.pages.placeholder_page import PlaceholderPage
 from audiomancer.ui.pages.settings_page import SettingsPage
+from audiomancer.ui.pages.speech_blocks_page import SpeechBlocksPage
 from audiomancer.ui.pages.text_chunking_page import TextChunkingPage
 from audiomancer.ui.pages.text_cleanup_page import TextCleanupPage
 from audiomancer.ui.pages.tts_settings_page import TtsSettingsPage
@@ -324,6 +327,20 @@ class MainWindow(QMainWindow):
                 self._character_voices_inspected_target_id,
             )
         )
+        self._speech_blocks_page.set_project_active(project_root is not None)
+        speech_blocks_state = speech_blocks_state_service.build_speech_blocks_state(
+            project_root,
+            manifest,
+            current_language,
+            self._settings_payload,
+        )
+        self._speech_blocks_page.set_ai_profiles(
+            **speech_blocks_state_service.build_speech_blocks_profile_state(
+                self._settings_payload,
+                speech_blocks_state.get("selected_profile_id"),
+            )
+        )
+        self._speech_blocks_page.set_speech_blocks_state(**speech_blocks_state)
 
     def show_settings_dialog(self) -> None:
         """
@@ -634,6 +651,13 @@ class MainWindow(QMainWindow):
         self._character_voices_page.preview_toggle_requested.connect(
             lambda: character_voices_ui_controller.handle_preview_toggle_requested(self)
         )
+        self._speech_blocks_page = SpeechBlocksPage(self)
+        self._speech_blocks_page.generate_requested.connect(
+            lambda profile_id: speech_blocks_ui_controller.handle_generate_requested(
+                self,
+                profile_id,
+            )
+        )
 
         pages = {
             "home": home_page,
@@ -643,14 +667,7 @@ class MainWindow(QMainWindow):
             "characters": self._characters_page,
             "narator_voice": self._narator_voice_page,
             "character_voices": self._character_voices_page,
-            "speech_blocks": PlaceholderPage(
-                "Speech Blocks",
-                (
-                    "This future step will split workflow chunks into speaker-attributed TTS blocks "
-                    "based on speaking changes and TTS token limits."
-                ),
-                self,
-            ),
+            "speech_blocks": self._speech_blocks_page,
             "audio_blocks": PlaceholderPage(
                 "Audio Blocks",
                 (

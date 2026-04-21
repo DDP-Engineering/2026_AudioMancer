@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env python3
+#!/usr/bin/env python3
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -12,13 +12,16 @@
          page-entry warnings for the Character Voices workflow.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-20
-@version 1.2.1
+@version 1.3.1
 """
 
 # IMPORTS
 
+import json
+
 from PySide6.QtWidgets import QMessageBox
 
+from audiomancer import config
 from audiomancer.services import (
     character_discovery_service,
     character_voices_service,
@@ -267,6 +270,101 @@ def test_character_voices_progress_messages_hide_model_id(monkeypatch, qtbot, tm
     assert all("qwen" not in message.casefold() for _percent, message in observed_updates)
 
 
+def test_character_voices_voice_language_change_resets_speech_blocks_and_downstream(qtbot, tmp_path) -> None:
+    """
+    @brief      Verify changing the Character Voices language clears Speech Blocks and downstream workflow state.
+    @param[in]  qtbot Qt test helper fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-21
+    @version    0.1.0
+    """
+    project_root = _create_project_with_character_and_selected_narrator(tmp_path, "CharacterVoicesLanguageReset")
+    manifest = project_workspace_service.load_manifest(project_root)
+    manifest["current_stage"] = "audio_assembly_ready"
+    manifest["operations"]["speech_blocks"]["status"] = "completed"
+    manifest["operations"]["audio_blocks"]["status"] = "completed"
+    manifest["operations"]["audio_assembly"]["status"] = "completed"
+    project_workspace_service.save_manifest(manifest, project_root)
+    character_voices_service.save_selected_voice_language(project_root, "en")
+    (project_root / config.CHUNKING_FOLDER_NAME / config.CHUNK_ARTIFACT_FILE_NAME).write_text(
+        json.dumps(
+            [
+                {
+                    "chunk_id": "chunk-0001",
+                    "sequence_index": 1,
+                    "chapter_label": None,
+                    "text": 'Narration. "Hello there."',
+                    "source_start_line": 1,
+                    "source_end_line": 1,
+                    "chunking_mode": "deterministic",
+                    "semantic_strategy": None,
+                    "scene_note": None,
+                }
+            ],
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    (project_root / config.TRANSLATION_FOLDER_NAME / config.TRANSLATION_REPORT_FILE_NAME).write_text(
+        json.dumps(
+            {
+                "target_language": "ro",
+                "translated_chunk_count": 1,
+                "approved_chunk_count": 1,
+                "total_chunk_count": 1,
+            },
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    (project_root / config.TRANSLATION_FOLDER_NAME / config.TRANSLATED_CHUNKS_FILE_NAME).write_text(
+        json.dumps(
+            [
+                {
+                    "chunk_id": "chunk-0001",
+                    "sequence_index": 1,
+                    "source_text": 'Narration. "Hello there."',
+                    "translated_text": 'Naratiune. "Salut."',
+                    "approved": True,
+                    "translated_at": "2026-04-21T12:10:00+00:00",
+                    "approved_at": "2026-04-21T12:11:00+00:00",
+                    "translation_profile_id": "profile-1",
+                    "target_language": "ro",
+                    "status": "approved",
+                }
+            ],
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    for folder_name in (
+        config.SPEECH_BLOCKS_FOLDER_NAME,
+        config.AUDIO_BLOCKS_FOLDER_NAME,
+        config.AUDIO_ASSEMBLY_FOLDER_NAME,
+    ):
+        (project_root / folder_name / "artifact.txt").write_text("stale", encoding="utf-8")
+    window = _build_window(qtbot, project_root)
+    window._character_voices_page.voice_language_change_requested.disconnect()
+
+    character_voices_ui_controller.handle_voice_language_change_requested(window, "ro")
+
+    assert window._current_manifest is not None
+    assert window._current_manifest["current_stage"] == "character_voices_ready"
+    assert window._current_manifest["operations"]["speech_blocks"]["status"] == "not_started"
+    assert window._current_manifest["operations"]["audio_blocks"]["status"] == "not_started"
+    assert window._current_manifest["operations"]["audio_assembly"]["status"] == "not_started"
+    assert character_voices_service.load_selected_voice_language(project_root) == "ro"
+    assert not (project_root / config.SPEECH_BLOCKS_FOLDER_NAME / "artifact.txt").exists()
+    assert not (project_root / config.AUDIO_BLOCKS_FOLDER_NAME / "artifact.txt").exists()
+    assert not (project_root / config.AUDIO_ASSEMBLY_FOLDER_NAME / "artifact.txt").exists()
+
+
 def _create_project_with_character_and_selected_narrator(
     tmp_path,
     name: str,
@@ -341,6 +439,7 @@ def _default_settings_payload() -> dict[str, object]:
         "default_ai_cleanup_profile_id": None,
         "default_ai_chunking_profile_id": None,
         "default_ai_translation_profile_id": None,
+        "default_speech_blocks_profile_id": None,
         "default_ai_chunking_strategy": "paragraph",
         "default_character_extraction_profile_id": None,
         "tts_runtime_base_url": "http://127.0.0.1:8059",
@@ -356,4 +455,3 @@ def _default_settings_payload() -> dict[str, object]:
 
 
 # END OF FILE
-

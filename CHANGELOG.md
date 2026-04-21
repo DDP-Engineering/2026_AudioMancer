@@ -10,6 +10,24 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.18.0] - 2026-04-21
+
+### Added
+
+- added the implemented `Speech Blocks` workflow with persisted `70_speech_blocks` output, AI prompt templates, page/controller/state/service coverage, and software documentation
+- added AI prompt guidance for recurring unnamed or role-based speakers so character discovery can include speakers such as agents, guards, or captains without language-specific deterministic scans
+
+### Changed
+
+- changed Speech Blocks generation to pre-split source chunks into quote and narration source units before AI speaker attribution, preserving text boundaries before model classification
+- changed Speech Blocks speaker matching to accept unique suffix aliases such as `Drenthe` for `Ottmar Drenthe`
+- package version updated to `0.18.0`
+
+### Fixed
+
+- fixed Speech Blocks boundary handling so dialogue attribution text such as `"Sure, absolutely," his agent said.` is split into separate dialogue and narrator blocks
+- fixed missing narrator follow-up text after quoted dialogue, including cases like `"Different how?" Drenthe snapped.`
+
 ## [0.17.2] - 2026-04-21
 
 ### Added

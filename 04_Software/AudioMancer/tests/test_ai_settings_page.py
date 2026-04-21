@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -12,8 +11,8 @@
 @details Verifies AI settings-page loading, profile editing, profile mutation,
          and merged settings payload generation.
 @author Eng. Dan Dumitru Pasare
-@date 2026-04-06
-@version 0.3.0
+@date 2026-04-21
+@version 0.4.0
 """
 
 # IMPORTS
@@ -55,6 +54,7 @@ def test_ai_settings_page_loads_profiles_and_builds_merged_settings(qtbot) -> No
         "default_ai_cleanup_profile_id": "profile_a",
         "default_ai_chunking_profile_id": "profile_a",
         "default_ai_translation_profile_id": "profile_a",
+        "default_speech_blocks_profile_id": "profile_a",
         "default_ai_chunking_strategy": "scene",
         "default_character_extraction_profile_id": "profile_a",
         "ui_text_scale": "normal",
@@ -67,6 +67,7 @@ def test_ai_settings_page_loads_profiles_and_builds_merged_settings(qtbot) -> No
     assert page._backend_combo.currentText() == "ollama"
     assert page._default_cleanup_combo.currentData() == "profile_a"
     assert page._default_translation_combo.currentData() == "profile_a"
+    assert page._default_speech_blocks_combo.currentData() == "profile_a"
     assert page._default_strategy_combo.currentData() == "scene"
 
     page._label_edit.setText("Profile A Updated")
@@ -80,6 +81,7 @@ def test_ai_settings_page_loads_profiles_and_builds_merged_settings(qtbot) -> No
     assert rebuilt["default_ai_chunking_strategy"] == "meaning"
     assert rebuilt["default_ai_cleanup_profile_id"] == "profile_a"
     assert rebuilt["default_ai_translation_profile_id"] == "profile_a"
+    assert rebuilt["default_speech_blocks_profile_id"] == "profile_a"
 
 
 def test_ai_settings_page_adds_and_removes_profiles(qtbot) -> None:
