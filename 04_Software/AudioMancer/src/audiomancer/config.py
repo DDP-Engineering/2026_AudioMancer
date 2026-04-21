@@ -13,7 +13,7 @@
          file support used by the current AudioMancer implementation scaffold.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-20
-@version 1.14.0
+@version 1.16.0
 """
 
 # IMPORTS
@@ -59,11 +59,23 @@ CHARACTER_DISCOVERY_FOLDER_NAME = "40_character_discovery"
 # @brief Stable project folder name for narrator-definition artifacts.
 NARRATOR_DEFINITION_FOLDER_NAME = "50_narrator_definition"
 
-# @brief Stable project folder name for narration-plan artifacts.
-NARRATION_PLAN_FOLDER_NAME = "60_narration_plan"
+# @brief Stable project folder name for character-voices artifacts.
+CHARACTER_VOICES_FOLDER_NAME = "60_character_voices"
+
+# @brief Stable project folder name for speech-block artifacts.
+SPEECH_BLOCKS_FOLDER_NAME = "70_speech_blocks"
+
+# @brief Stable project folder name for audio-block artifacts.
+AUDIO_BLOCKS_FOLDER_NAME = "80_audio_blocks"
+
+# @brief Stable project folder name for audio-assembly artifacts.
+AUDIO_ASSEMBLY_FOLDER_NAME = "90_audio_assembly"
 
 # @brief Stable project folder name for the selected narrator and future character audio samples.
 PROJECT_AUDIO_SAMPLES_FOLDER_NAME = "audio_samples"
+
+# @brief Stable project folder name for project-local temporary artifacts.
+PROJECT_TEMP_FOLDER_NAME = "temp"
 
 # @brief Standard workflow directories created for each project workspace.
 PROJECT_REQUIRED_SUBDIRECTORIES = (
@@ -73,9 +85,12 @@ PROJECT_REQUIRED_SUBDIRECTORIES = (
     TRANSLATION_FOLDER_NAME,
     CHARACTER_DISCOVERY_FOLDER_NAME,
     NARRATOR_DEFINITION_FOLDER_NAME,
-    NARRATION_PLAN_FOLDER_NAME,
+    CHARACTER_VOICES_FOLDER_NAME,
+    SPEECH_BLOCKS_FOLDER_NAME,
+    AUDIO_BLOCKS_FOLDER_NAME,
+    AUDIO_ASSEMBLY_FOLDER_NAME,
     PROJECT_AUDIO_SAMPLES_FOLDER_NAME,
-    "temp",
+    PROJECT_TEMP_FOLDER_NAME,
 )
 
 # @brief Stable ordered workflow stage identifiers used by the current project shell.
@@ -87,7 +102,10 @@ PROJECT_WORKFLOW_STAGES = (
     "translation_ready",
     "character_discovery_ready",
     "narrator_definition_ready",
-    "narration_plan_ready",
+    "character_voices_ready",
+    "speech_blocks_ready",
+    "audio_blocks_ready",
+    "audio_assembly_ready",
 )
 
 # @brief Characters rejected for exact project folder names across Windows and Linux.
@@ -189,14 +207,14 @@ NARRATOR_SELECTION_FILE_NAME = "selected_profile.json"
 # @brief Folder name used for per-profile narrator sample files under `50_narrator_definition`.
 NARRATOR_PROFILE_AUDIO_SAMPLES_FOLDER_NAME = "audio_samples"
 
-# @brief File name used for persisted narration-plan voice target records.
-NARRATION_PLAN_VOICE_PLAN_FILE_NAME = "voice_plan.json"
+# @brief File name used for persisted character-voices target records.
+CHARACTER_VOICES_TARGETS_FILE_NAME = "voice_targets.json"
 
-# @brief File name used for persisted narration-plan selected voice language.
-NARRATION_PLAN_SELECTED_LANGUAGE_FILE_NAME = "selected_voice_language.json"
+# @brief File name used for persisted character-voices selected voice language.
+CHARACTER_VOICES_SELECTED_LANGUAGE_FILE_NAME = "selected_voice_language.json"
 
-# @brief Folder name used for per-target narration-plan sample files under `60_narration_plan`.
-NARRATION_PLAN_AUDIO_SAMPLES_FOLDER_NAME = "audio_samples"
+# @brief Folder name used for per-target character-voices sample files under `60_character_voices`.
+CHARACTER_VOICES_AUDIO_SAMPLES_FOLDER_NAME = "audio_samples"
 
 # @brief File name used for the selected narrator sample under the project-root audio folder.
 SELECTED_NARRATOR_AUDIO_FILE_NAME = "narrator.wav"

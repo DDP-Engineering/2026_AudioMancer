@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 # -*- coding: utf-8 -*-  # noqa: UP009
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
@@ -7,14 +7,14 @@
 # See the LICENSE.txt and LICENSE_NC.txt files for full license details.
 # -----------------------------------------------------------------------------
 """
-@file narration_plan_state_service.py
-@brief Narration Plan page state helpers for AudioMancer.
-@details Builds Narration Plan page state from persisted narrator selection,
-         character-discovery artifacts, translation approval state, narration-
-         plan voice targets, and cached VoiceWeaver runtime discovery data.
+@file character_voices_state_service.py
+@brief Character Voices page state helpers for AudioMancer.
+@details Builds Character Voices page state from persisted narrator selection,
+         character-discovery artifacts, translation approval state, character-
+         voices targets, and cached VoiceWeaver runtime discovery data.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-20
-@version 1.1.1
+@version 1.2.0
 """
 
 # IMPORTS
@@ -26,14 +26,14 @@ from audiomancer.services import (
     ai_translation_service,
     character_discovery_service,
     home_presenter_service,
-    narration_plan_service,
+    character_voices_service,
     narrator_definition_service,
     ui_state_service,
     voiceweaver_runtime_service,
 )
 
 
-def build_narration_plan_state(
+def build_character_voices_state(
     project_root: Path | None,
     manifest: dict[str, object] | None,
     language: str,
@@ -41,13 +41,13 @@ def build_narration_plan_state(
     inspected_target_id: str | None = None,
 ) -> dict[str, object]:
     """
-    @brief      Build the full Narration Plan page state from project-local artifacts.
+    @brief      Build the full Character Voices page state from project-local artifacts.
     @param[in]  project_root Active project root or `None`.
     @param[in]  manifest Active project manifest or `None`.
     @param[in]  language Runtime UI language code.
     @param[in]  settings_payload Optional persisted application settings payload.
-    @param[in]  inspected_target_id Optional currently inspected narration-plan target identifier.
-    @return     Page-state payload consumed by the Narration Plan page.
+    @param[in]  inspected_target_id Optional currently inspected character-voices target identifier.
+    @return     Page-state payload consumed by the Character Voices page.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-20
@@ -56,7 +56,7 @@ def build_narration_plan_state(
     if project_root is None or manifest is None:
         return {
             "targets": [],
-            "notes": [ui_state_service.translate("narration_plan.note_no_project", language)],
+            "notes": [ui_state_service.translate("character_voices.note_no_project", language)],
             "current_target_id": None,
             "selected_voice_language": narrator_definition_service.DEFAULT_NARRATOR_LANGUAGE,
             "language_entries": [],
@@ -72,7 +72,7 @@ def build_narration_plan_state(
             "can_edit_prompt": False,
             "can_generate_sample": False,
             "preview_available": False,
-            "status_lines": [ui_state_service.translate("narration_plan.note_no_project", language)],
+            "status_lines": [ui_state_service.translate("character_voices.note_no_project", language)],
             "missing_narrator_sample": False,
         }
 
@@ -91,11 +91,11 @@ def build_narration_plan_state(
         "voice_assignment_mode"
     ]
 
-    voice_targets = narration_plan_service.sync_voice_plan(project_root, character_profiles, selected_narrator_profile)
+    voice_targets = character_voices_service.sync_voice_plan(project_root, character_profiles, selected_narrator_profile)
     language_entries, selected_voice_language, original_language, translated_language, translation_ready = (
         _voice_language_state(project_root, manifest, language)
     )
-    saved_language = narration_plan_service.load_selected_voice_language(project_root, selected_voice_language)
+    saved_language = character_voices_service.load_selected_voice_language(project_root, selected_voice_language)
     selectable_language_codes = [language_code for _label, language_code in language_entries]
     selected_voice_language = (
         saved_language
@@ -106,14 +106,14 @@ def build_narration_plan_state(
             else narrator_definition_service.DEFAULT_NARRATOR_LANGUAGE
         )
     )
-    narration_plan_service.save_selected_voice_language(project_root, selected_voice_language)
+    character_voices_service.save_selected_voice_language(project_root, selected_voice_language)
     if assignment_mode == "same_narrator":
         character_targets = [
             target
             for target in voice_targets
-            if str(target.get("target_kind", "")).strip() == narration_plan_service.TARGET_KIND_CHARACTER
+            if str(target.get("target_kind", "")).strip() == character_voices_service.TARGET_KIND_CHARACTER
         ]
-        narration_plan_service.sync_same_narrator_samples(project_root, character_targets, selected_voice_language)
+        character_voices_service.sync_same_narrator_samples(project_root, character_targets, selected_voice_language)
     target_entries = [
         _build_target_entry(
             project_root,
@@ -128,9 +128,9 @@ def build_narration_plan_state(
     current_target = _resolve_current_target(target_entries, inspected_target_id)
     missing_narrator_sample = (
         selected_narrator_profile is not None
-        and not narration_plan_service.selected_narrator_sample_exists(project_root)
+        and not character_voices_service.selected_narrator_sample_exists(project_root)
     )
-    notes = build_narration_plan_notes(
+    notes = build_character_voices_notes(
         manifest,
         target_entries,
         assignment_mode,
@@ -156,9 +156,9 @@ def build_narration_plan_state(
             ""
             if current_target is None
             else ui_state_service.translate(
-                "narration_plan.target_kind_narrator"
-                if str(current_target.get("target_kind", "")) == narration_plan_service.TARGET_KIND_NARRATOR
-                else "narration_plan.target_kind_character",
+                "character_voices.target_kind_narrator"
+                if str(current_target.get("target_kind", "")) == character_voices_service.TARGET_KIND_NARRATOR
+                else "character_voices.target_kind_character",
                 language,
             )
         ),
@@ -169,7 +169,7 @@ def build_narration_plan_state(
             else str(
                 current_target.get(
                     "preview_text",
-                    narration_plan_service.preview_text_for_language(selected_voice_language),
+                    character_voices_service.preview_text_for_language(selected_voice_language),
                 )
                 or ""
             )
@@ -190,7 +190,7 @@ def build_narration_plan_state(
     }
 
 
-def build_narration_plan_notes(
+def build_character_voices_notes(
     manifest: dict[str, object],
     target_entries: list[dict[str, object]],
     assignment_mode: str,
@@ -203,50 +203,50 @@ def build_narration_plan_notes(
     language: str,
 ) -> list[str]:
     """
-    @brief      Build operator-facing notes for the Narration Plan page.
+    @brief      Build operator-facing notes for the Character Voices page.
     @param[in]  manifest Active project manifest payload.
-    @param[in]  target_entries Current narration-plan target list.
+    @param[in]  target_entries Current character-voices target list.
     @param[in]  assignment_mode Current project voice-assignment mode.
-    @param[in]  current_target Currently inspected narration-plan target.
+    @param[in]  current_target Currently inspected character-voices target.
     @param[in]  runtime_probe_succeeded True when the VoiceWeaver probe cache is valid.
     @param[in]  capability_matrix Current normalized runtime capability matrix.
     @param[in]  translation_ready True when translation exists and every chunk is approved.
     @param[in]  missing_narrator_sample True when the selected narrator sample is missing.
     @param[in]  narrator_selected True when one narrator profile is selected.
     @param[in]  language Runtime UI language code.
-    @return     Ordered Narration Plan notes.
+    @return     Ordered Character Voices notes.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-20
     @version    1.0.0
     """
     if home_presenter_service.source_document_name(manifest) is None:
-        return [ui_state_service.translate("narration_plan.note_no_source", language)]
+        return [ui_state_service.translate("character_voices.note_no_source", language)]
     notes: list[str] = []
     if not narrator_selected:
-        notes.append(ui_state_service.translate("narration_plan.note_no_selected_narrator", language))
+        notes.append(ui_state_service.translate("character_voices.note_no_selected_narrator", language))
     elif missing_narrator_sample:
-        notes.append(ui_state_service.translate("narration_plan.note_missing_narrator_sample", language))
+        notes.append(ui_state_service.translate("character_voices.note_missing_narrator_sample", language))
     if not any(
-        str(target.get("target_kind", "")).strip() == narration_plan_service.TARGET_KIND_CHARACTER
+        str(target.get("target_kind", "")).strip() == character_voices_service.TARGET_KIND_CHARACTER
         for target in target_entries
     ):
-        notes.append(ui_state_service.translate("narration_plan.note_no_characters", language))
+        notes.append(ui_state_service.translate("character_voices.note_no_characters", language))
     if assignment_mode == "same_narrator":
-        notes.append(ui_state_service.translate("narration_plan.note_same_narrator_mode", language))
+        notes.append(ui_state_service.translate("character_voices.note_same_narrator_mode", language))
     if not runtime_probe_succeeded:
-        notes.append(ui_state_service.translate("narration_plan.note_runtime_not_connected", language))
+        notes.append(ui_state_service.translate("character_voices.note_runtime_not_connected", language))
     elif assignment_mode == "narrator_and_characters":
         if not bool(capability_matrix.get("minimum_qwen_ready", False)):
             notes.append(
-                ui_state_service.translate("narration_plan.note_qwen_capabilities_missing", language).format(
+                ui_state_service.translate("character_voices.note_qwen_capabilities_missing", language).format(
                     missing_capabilities=", ".join(capability_matrix.get("missing_qwen_capabilities", [])),
                 )
             )
         else:
-            notes.append(ui_state_service.translate("narration_plan.note_qwen_capabilities_ready", language))
+            notes.append(ui_state_service.translate("character_voices.note_qwen_capabilities_ready", language))
     if not translation_ready and _translation_exists(manifest):
-        notes.append(ui_state_service.translate("narration_plan.note_translation_not_fully_approved", language))
+        notes.append(ui_state_service.translate("character_voices.note_translation_not_fully_approved", language))
     if current_target is not None:
         availability_note = str(current_target.get("availability_note", "")).strip()
         if availability_note:
@@ -262,11 +262,11 @@ def build_status_lines(
     language: str,
 ) -> list[str]:
     """
-    @brief      Build the bottom status-window lines for the Narration Plan page.
+    @brief      Build the bottom status-window lines for the Character Voices page.
     @param[in]  project_root Active project root folder.
-    @param[in]  target_entries Current narration-plan target entries.
+    @param[in]  target_entries Current character-voices target entries.
     @param[in]  assignment_mode Current project voice-assignment mode.
-    @param[in]  selected_voice_language Current selected narration-plan voice language.
+    @param[in]  selected_voice_language Current selected character-voices voice language.
     @param[in]  language Runtime UI language code.
     @return     Ordered status-window lines.
     @exception  None
@@ -277,21 +277,21 @@ def build_status_lines(
     target_count = len(target_entries)
     sample_count = sum(1 for target in target_entries if bool(target.get("has_sample", False)))
     lines = [
-        ui_state_service.translate("narration_plan.status_total_targets", language).format(target_count=target_count),
-        ui_state_service.translate("narration_plan.status_targets_with_samples", language).format(
+        ui_state_service.translate("character_voices.status_total_targets", language).format(target_count=target_count),
+        ui_state_service.translate("character_voices.status_targets_with_samples", language).format(
             sample_count=sample_count
         ),
-        ui_state_service.translate("narration_plan.status_assignment_mode", language).format(
+        ui_state_service.translate("character_voices.status_assignment_mode", language).format(
             assignment_mode=_assignment_mode_label(assignment_mode, language)
         ),
-        ui_state_service.translate("narration_plan.status_voice_language", language).format(
+        ui_state_service.translate("character_voices.status_voice_language", language).format(
             language_label=narrator_definition_service.narrator_language_label(selected_voice_language)
         ),
-        ui_state_service.translate("narration_plan.status_generation_ready", language).format(
+        ui_state_service.translate("character_voices.status_generation_ready", language).format(
             readiness=(
-                ui_state_service.translate("narration_plan.readiness_ready", language)
-                if narration_plan_service.narration_plan_is_ready(project_root, target_entries)
-                else ui_state_service.translate("narration_plan.readiness_not_ready", language)
+                ui_state_service.translate("character_voices.readiness_ready", language)
+                if character_voices_service.character_voices_is_ready(project_root, target_entries)
+                else ui_state_service.translate("character_voices.readiness_not_ready", language)
             )
         ),
     ]
@@ -317,24 +317,24 @@ def _build_target_entry(
     @return     Derived helper result.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.1.0
+    @version    0.2.0
     """
     target_kind = str(target_payload.get("target_kind", "")).strip()
     target_id = str(target_payload.get("target_id", "")).strip()
-    if target_kind == narration_plan_service.TARGET_KIND_NARRATOR:
-        sample_metadata = narration_plan_service.selected_narrator_sample_metadata(project_root)
-        has_sample = narration_plan_service.selected_narrator_sample_exists(project_root)
-        runtime_available = narration_plan_service.sample_runtime_available(sample_metadata, discovered_models)
+    if target_kind == character_voices_service.TARGET_KIND_NARRATOR:
+        sample_metadata = character_voices_service.selected_narrator_sample_metadata(project_root)
+        has_sample = character_voices_service.selected_narrator_sample_exists(project_root)
+        runtime_available = character_voices_service.sample_runtime_available(sample_metadata, discovered_models)
         availability_note = ""
         if not has_sample:
-            availability_note = ui_state_service.translate("narration_plan.note_missing_narrator_sample", language)
+            availability_note = ui_state_service.translate("character_voices.note_missing_narrator_sample", language)
         elif not runtime_available:
-            availability_note = ui_state_service.translate("narration_plan.note_profile_runtime_missing", language)
+            availability_note = ui_state_service.translate("character_voices.note_profile_runtime_missing", language)
         return {
             **dict(target_payload),
-            "target_kind_label": ui_state_service.translate("narration_plan.target_kind_narrator", language),
+            "target_kind_label": ui_state_service.translate("character_voices.target_kind_narrator", language),
             "sample_status_label": ui_state_service.translate(
-                "narration_plan.sample_present" if has_sample else "narration_plan.sample_missing",
+                "character_voices.sample_present" if has_sample else "character_voices.sample_missing",
                 language,
             ),
             "voice_language": narrator_definition_service.narrator_language_code(
@@ -358,30 +358,30 @@ def _build_target_entry(
             "sample_metadata": sample_metadata,
         }
 
-    sample_metadata = narration_plan_service.load_target_sample_metadata(project_root, target_id)
-    has_sample = narration_plan_service.has_target_sample(project_root, target_id)
-    runtime_available = narration_plan_service.sample_runtime_available(sample_metadata, discovered_models)
-    generation_request = narration_plan_service.voice_target_generation_request(
+    sample_metadata = character_voices_service.load_target_sample_metadata(project_root, target_id)
+    has_sample = character_voices_service.has_target_sample(project_root, target_id)
+    runtime_available = character_voices_service.sample_runtime_available(sample_metadata, discovered_models)
+    generation_request = character_voices_service.voice_target_generation_request(
         target_payload,
         discovered_models,
         selected_voice_language,
     )
     availability_note = ""
     if has_sample and not runtime_available:
-        availability_note = ui_state_service.translate("narration_plan.note_profile_runtime_missing", language)
+        availability_note = ui_state_service.translate("character_voices.note_profile_runtime_missing", language)
     elif assignment_mode == "same_narrator":
-        availability_note = ui_state_service.translate("narration_plan.note_same_narrator_mode", language)
+        availability_note = ui_state_service.translate("character_voices.note_same_narrator_mode", language)
     elif not bool(generation_request.get("can_generate", False)):
         availability_note = str(generation_request.get("unavailable_reason", "")).strip()
     return {
         **dict(target_payload),
-        "target_kind_label": ui_state_service.translate("narration_plan.target_kind_character", language),
+        "target_kind_label": ui_state_service.translate("character_voices.target_kind_character", language),
         "sample_status_label": ui_state_service.translate(
-            "narration_plan.sample_present" if has_sample else "narration_plan.sample_missing",
+            "character_voices.sample_present" if has_sample else "character_voices.sample_missing",
             language,
         ),
         "voice_language": selected_voice_language,
-        "preview_text": narration_plan_service.effective_target_preview_text(target_payload, selected_voice_language),
+        "preview_text": character_voices_service.effective_target_preview_text(target_payload, selected_voice_language),
         "has_sample": has_sample,
         "runtime_available": runtime_available,
         "availability_note": availability_note,
@@ -473,7 +473,10 @@ def _translation_exists(manifest: dict[str, object]) -> bool:
         "translation_ready",
         "character_discovery_ready",
         "narrator_definition_ready",
-        "narration_plan_ready",
+        "character_voices_ready",
+        "speech_blocks_ready",
+        "audio_blocks_ready",
+        "audio_assembly_ready",
     }
 
 
@@ -488,11 +491,12 @@ def _assignment_mode_label(assignment_mode: str, language: str) -> str:
     @version    0.1.0
     """
     return ui_state_service.translate(
-        "narration_plan.assignment_same_narrator"
+        "character_voices.assignment_same_narrator"
         if assignment_mode == "same_narrator"
-        else "narration_plan.assignment_narrator_and_characters",
+        else "character_voices.assignment_narrator_and_characters",
         language,
     )
 
 
 # END OF FILE
+

@@ -43,7 +43,7 @@ It does not:
 - own the global VoiceWeaver connection fields in `settings.json`
 - perform the HTTP calls to VoiceWeaver directly
 - own the per-character prompt and sample workflow now handled by
-  `Narration Plan`
+  `Character Voices`
 
 ## 3. Implementation Overview
 
@@ -212,10 +212,10 @@ Upstream integrations:
 
 Downstream integrations:
 
-- `Narration Plan`, which consumes the explicit selected narrator state plus
+- `Character Voices`, which consumes the explicit selected narrator state plus
   `audio_samples/narrator.wav` and `audio_samples/narrator.json`
 - future narration generation that will consume the same selected narrator
-  contract together with `60_narration_plan`
+  contract together with `60_character_voices`
 
 Current runtime-aware rules:
 

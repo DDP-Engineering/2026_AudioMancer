@@ -12,7 +12,7 @@
          settings scaffold exist with the expected baseline contract.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-20
-@version 0.8.3
+@version 0.8.4
 """
 
 # IMPORTS
@@ -33,7 +33,7 @@ def test_config_exposes_expected_identity_and_window_defaults() -> None:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.2.1
+    @version    0.2.2
     """
     assert config.APP_NAME == "AudioMancer"
     assert config.PACKAGE_NAME == "audiomancer"
@@ -43,9 +43,16 @@ def test_config_exposes_expected_identity_and_window_defaults() -> None:
     assert config.DEFAULT_MAIN_WINDOW_MIN_HEIGHT == 620
     assert config.PROJECT_MANIFEST_FILE_NAME == "project.json"
     assert "50_narrator_definition" in config.PROJECT_REQUIRED_SUBDIRECTORIES
-    assert "60_narration_plan" in config.PROJECT_REQUIRED_SUBDIRECTORIES
+    assert "60_character_voices" in config.PROJECT_REQUIRED_SUBDIRECTORIES
+    assert "70_speech_blocks" in config.PROJECT_REQUIRED_SUBDIRECTORIES
+    assert "80_audio_blocks" in config.PROJECT_REQUIRED_SUBDIRECTORIES
+    assert "90_audio_assembly" in config.PROJECT_REQUIRED_SUBDIRECTORIES
     assert config.DEFAULT_WORKFLOW_STAGE == "project_created"
-    assert "narration_plan_ready" in config.PROJECT_WORKFLOW_STAGES
+    assert "character_voices_ready" in config.PROJECT_WORKFLOW_STAGES
+    assert "speech_blocks_ready" in config.PROJECT_WORKFLOW_STAGES
+    assert "audio_blocks_ready" in config.PROJECT_WORKFLOW_STAGES
+    assert "audio_assembly_ready" in config.PROJECT_WORKFLOW_STAGES
+    assert config.CHARACTER_VOICES_TARGETS_FILE_NAME == "voice_targets.json"
     assert config.SUPPORTED_SOURCE_SUFFIXES[".epub"] == "epub"
     assert config.SUPPORTED_SOURCE_SUFFIXES[".docx"] == "docx"
     assert config.EXTRACTION_FOLDER_NAME == "00_extraction"

@@ -172,7 +172,7 @@ Voice-definition rules:
 
 - the six `voice_*` brief fields form the editable Qwen-oriented voice brief
 - `voice_definition_prompt` is the final handoff prompt later consumed by
-  `Narration Plan`
+  `Character Voices`
 - `voice_definition_source_signature` fingerprints the raw literary fields
   used to derive the voice brief
 - when literary fields change without updating the voice-definition block, the

@@ -14,7 +14,7 @@
          cleanup, and future long-running workflow operations.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-20
-@version 0.1.5
+@version 0.1.6
 """
 
 # IMPORTS
@@ -35,7 +35,10 @@ _OPERATION_FOLDER_NAMES = {
     "translation": config.TRANSLATION_FOLDER_NAME,
     "character_discovery": config.CHARACTER_DISCOVERY_FOLDER_NAME,
     "narrator_definition": config.NARRATOR_DEFINITION_FOLDER_NAME,
-    "narration_plan": config.NARRATION_PLAN_FOLDER_NAME,
+    "character_voices": config.CHARACTER_VOICES_FOLDER_NAME,
+    "speech_blocks": config.SPEECH_BLOCKS_FOLDER_NAME,
+    "audio_blocks": config.AUDIO_BLOCKS_FOLDER_NAME,
+    "audio_assembly": config.AUDIO_ASSEMBLY_FOLDER_NAME,
 }
 # @brief Stable execution order used for downstream reset calculations.
 _OPERATION_ORDER = tuple(_OPERATION_FOLDER_NAMES.keys())

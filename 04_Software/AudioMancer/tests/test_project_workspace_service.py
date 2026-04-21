@@ -12,7 +12,7 @@
          validation, project-root resolution, and open validation behavior.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-20
-@version 0.7.1
+@version 0.8.0
 """
 
 # IMPORTS
@@ -214,7 +214,7 @@ def test_repair_project_recreates_missing_downstream_folders_and_resets_stage(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.1.1
+    @version    0.2.0
     """
     project_root, manifest = project_workspace_service.create_project(
         "Book5_CAL_CAL",
@@ -235,17 +235,55 @@ def test_repair_project_recreates_missing_downstream_folders_and_resets_stage(
 
     assert repaired_result["status"] == "ok"
     assert repaired_result["project_root"] == project_root
-    assert repaired_result["manifest"]["current_stage"] == "project_created"
+    assert repaired_result["manifest"]["current_stage"] == "text_chunking_ready"
     assert repaired_result["manifest"]["narrator_profile_name"] is None
     assert repaired_result["manifest"]["narrator_language"] is None
     for folder_name in (
         "30_translation",
         "40_character_discovery",
         "50_narrator_definition",
-        "60_narration_plan",
+        "60_character_voices",
+        "70_speech_blocks",
+        "80_audio_blocks",
+        "90_audio_assembly",
     ):
         assert (project_root / folder_name).is_dir()
         assert list((project_root / folder_name).iterdir()) == []
+
+
+def test_repair_project_recreates_missing_support_folder_without_resetting_stage(tmp_path) -> None:
+    """
+    @brief      Verify repair recreates one missing support folder without resetting the workflow stage.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-21
+    @version    0.1.0
+    """
+    project_root, manifest = project_workspace_service.create_project(
+        "Book5_CAL_CAL",
+        tmp_path,
+    )
+    manifest["source_document"] = {
+        "original_name": "story.txt",
+        "stored_relative_path": "story.txt",
+        "file_type": "txt",
+        "imported_at": "2026-04-21T12:00:00+00:00",
+        "size_bytes": 128,
+    }
+    manifest["current_stage"] = "character_voices_ready"
+    project_workspace_service.save_manifest(manifest, project_root)
+    shutil.rmtree(project_root / config.PROJECT_AUDIO_SAMPLES_FOLDER_NAME)
+
+    open_result = project_workspace_service.open_project(project_root)
+    repaired_result = project_workspace_service.repair_project(open_result)
+
+    assert open_result["status"] == "repair_required"
+    assert open_result["corrupted_step"] == config.PROJECT_AUDIO_SAMPLES_FOLDER_NAME
+    assert repaired_result["status"] == "ok"
+    assert repaired_result["manifest"]["current_stage"] == "character_voices_ready"
+    assert (project_root / config.PROJECT_AUDIO_SAMPLES_FOLDER_NAME).is_dir()
 
 
 def test_repair_project_fixes_invalid_current_stage_metadata_only(tmp_path) -> None:
@@ -469,9 +507,9 @@ def test_repair_manifest_preserves_character_discovery_for_narrator_stage() -> N
     assert repaired_manifest["operations"]["character_discovery"]["status"] == "completed"
 
 
-def test_repair_manifest_preserves_character_discovery_for_narration_plan_stage() -> None:
+def test_repair_manifest_preserves_character_discovery_for_character_voices_stage() -> None:
     """
-    @brief      Verify repaired narration-plan-stage manifests keep character discovery data intact.
+    @brief      Verify repaired character-voices-stage manifests keep character discovery data intact.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
@@ -479,7 +517,7 @@ def test_repair_manifest_preserves_character_discovery_for_narration_plan_stage(
     @version    1.0.0
     """
     manifest = project_workspace_service.build_project_manifest("Book5_CAL_CAL")
-    manifest["current_stage"] = "narration_plan_ready"
+    manifest["current_stage"] = "character_voices_ready"
     manifest["operations"]["extraction"]["status"] = "completed"
     manifest["operations"]["cleanup"]["status"] = "completed"
     manifest["operations"]["chunking"]["status"] = "completed"
@@ -488,7 +526,7 @@ def test_repair_manifest_preserves_character_discovery_for_narration_plan_stage(
 
     repaired_manifest = project_workspace_service._build_repaired_manifest(
         manifest,
-        "narration_plan_ready",
+        "character_voices_ready",
     )
 
     assert repaired_manifest["operations"]["translation"]["status"] == "completed"

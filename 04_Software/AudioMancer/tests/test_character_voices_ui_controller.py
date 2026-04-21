@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -6,10 +6,10 @@
 # See the LICENSE.txt and LICENSE_NC.txt files for full license details.
 # -----------------------------------------------------------------------------
 """
-@file test_narration_plan_ui_controller.py
-@brief Narration Plan UI controller tests for AudioMancer.
+@file test_character_voices_ui_controller.py
+@brief Character Voices UI controller tests for AudioMancer.
 @details Verifies destructive prompt-edit handling and missing narrator-sample
-         page-entry warnings for the Narration Plan workflow.
+         page-entry warnings for the Character Voices workflow.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-20
 @version 1.2.1
@@ -21,15 +21,15 @@ from PySide6.QtWidgets import QMessageBox
 
 from audiomancer.services import (
     character_discovery_service,
-    narration_plan_service,
+    character_voices_service,
     narrator_definition_service,
     project_workspace_service,
 )
-from audiomancer.ui.controllers import narration_plan_ui_controller
+from audiomancer.ui.controllers import character_voices_ui_controller
 from audiomancer.ui.main_window import MainWindow
 
 
-def test_narration_plan_ui_controller_edit_prompt_clears_sample_and_enters_edit_mode(
+def test_character_voices_ui_controller_edit_prompt_clears_sample_and_enters_edit_mode(
     monkeypatch, qtbot, tmp_path
 ) -> None:
     """
@@ -43,10 +43,10 @@ def test_narration_plan_ui_controller_edit_prompt_clears_sample_and_enters_edit_
     @date       2026-04-20
     @version    1.1.0
     """
-    project_root = _create_project_with_character_and_selected_narrator(tmp_path, "NarrationPlanControllerEdit")
-    target_payload = narration_plan_service.voice_target_by_id(project_root, "character_alice")
+    project_root = _create_project_with_character_and_selected_narrator(tmp_path, "CharacterVoicesControllerEdit")
+    target_payload = character_voices_service.voice_target_by_id(project_root, "character_alice")
     assert target_payload is not None
-    narration_plan_service.store_target_sample(
+    character_voices_service.store_target_sample(
         project_root,
         target_payload,
         "en",
@@ -60,18 +60,18 @@ def test_narration_plan_ui_controller_edit_prompt_clears_sample_and_enters_edit_
     )
     window = _build_window(qtbot, project_root)
     monkeypatch.setattr(
-        narration_plan_ui_controller.QMessageBox,
+        character_voices_ui_controller.QMessageBox,
         "question",
         lambda *_args, **_kwargs: QMessageBox.StandardButton.Yes,
     )
 
-    narration_plan_ui_controller.handle_edit_prompt_requested(window, "character_alice")
+    character_voices_ui_controller.handle_edit_prompt_requested(window, "character_alice")
 
-    assert narration_plan_service.has_target_sample(project_root, "character_alice") is False
-    assert window._narration_plan_page.is_edit_mode() is True
+    assert character_voices_service.has_target_sample(project_root, "character_alice") is False
+    assert window._character_voices_page.is_edit_mode() is True
 
 
-def test_narration_plan_ui_controller_page_activation_warns_when_narrator_sample_is_missing(
+def test_character_voices_ui_controller_page_activation_warns_when_narrator_sample_is_missing(
     monkeypatch, qtbot, tmp_path
 ) -> None:
     """
@@ -87,25 +87,25 @@ def test_narration_plan_ui_controller_page_activation_warns_when_narrator_sample
     """
     project_root = _create_project_with_character_and_selected_narrator(
         tmp_path,
-        "NarrationPlanControllerWarning",
+        "CharacterVoicesControllerWarning",
         store_narrator_sample=False,
     )
     window = _build_window(qtbot, project_root)
     warning_calls: list[tuple[object, ...]] = []
     monkeypatch.setattr(
-        narration_plan_ui_controller.QMessageBox,
+        character_voices_ui_controller.QMessageBox,
         "warning",
         lambda *args, **kwargs: warning_calls.append(args),
     )
 
-    narration_plan_ui_controller.handle_page_activated(window)
-    narration_plan_ui_controller.handle_page_activated(window)
+    character_voices_ui_controller.handle_page_activated(window)
+    character_voices_ui_controller.handle_page_activated(window)
 
     assert len(warning_calls) == 1
-    assert window._narration_plan_missing_narrator_popup_shown is True
+    assert window._character_voices_missing_narrator_popup_shown is True
 
 
-def test_narration_plan_ui_controller_save_prompt_persists_preview_text(monkeypatch, qtbot, tmp_path) -> None:
+def test_character_voices_ui_controller_save_prompt_persists_preview_text(monkeypatch, qtbot, tmp_path) -> None:
     """
     @brief      Verify Save Voice Prompt persists the edited preview text together with the voice prompt.
     @param[in]  monkeypatch Pytest monkeypatch fixture.
@@ -117,15 +117,15 @@ def test_narration_plan_ui_controller_save_prompt_persists_preview_text(monkeypa
     @date       2026-04-20
     @version    1.1.0
     """
-    project_root = _create_project_with_character_and_selected_narrator(tmp_path, "NarrationPlanControllerSave")
+    project_root = _create_project_with_character_and_selected_narrator(tmp_path, "CharacterVoicesControllerSave")
     window = _build_window(qtbot, project_root)
     monkeypatch.setattr(
-        narration_plan_ui_controller.misc_ui_controller,
+        character_voices_ui_controller.misc_ui_controller,
         "show_message",
         lambda *args, **kwargs: None,
     )
 
-    narration_plan_ui_controller.handle_save_prompt_requested(
+    character_voices_ui_controller.handle_save_prompt_requested(
         window,
         {
             "target_id": "character_alice",
@@ -134,12 +134,12 @@ def test_narration_plan_ui_controller_save_prompt_persists_preview_text(monkeypa
         },
     )
 
-    target_payload = narration_plan_service.voice_target_by_id(project_root, "character_alice")
+    target_payload = character_voices_service.voice_target_by_id(project_root, "character_alice")
     assert target_payload is not None
     assert target_payload["preview_text"] == "Preview line one.\nPreview line two."
 
 
-def test_narration_plan_ui_controller_generate_stops_preview_before_deleting_sample(
+def test_character_voices_ui_controller_generate_stops_preview_before_deleting_sample(
     monkeypatch, qtbot, tmp_path
 ) -> None:
     """
@@ -153,12 +153,12 @@ def test_narration_plan_ui_controller_generate_stops_preview_before_deleting_sam
     @date       2026-04-20
     @version    1.0.0
     """
-    project_root = _create_project_with_character_and_selected_narrator(tmp_path, "NarrationPlanControllerGenerate")
+    project_root = _create_project_with_character_and_selected_narrator(tmp_path, "CharacterVoicesControllerGenerate")
     window = _build_window(qtbot, project_root)
     call_order: list[str] = []
-    monkeypatch.setattr(narration_plan_ui_controller, "_confirm_generate_sample", lambda *_args, **_kwargs: True)
+    monkeypatch.setattr(character_voices_ui_controller, "_confirm_generate_sample", lambda *_args, **_kwargs: True)
     monkeypatch.setattr(
-        narration_plan_ui_controller,
+        character_voices_ui_controller,
         "_probe_runtime_and_persist_cache",
         lambda *_args, **_kwargs: {
             "success": True,
@@ -167,7 +167,7 @@ def test_narration_plan_ui_controller_generate_stops_preview_before_deleting_sam
         },
     )
     monkeypatch.setattr(
-        narration_plan_service,
+        character_voices_service,
         "voice_target_generation_request",
         lambda *_args, **_kwargs: {
             "can_generate": True,
@@ -179,49 +179,49 @@ def test_narration_plan_ui_controller_generate_stops_preview_before_deleting_sam
         },
     )
     monkeypatch.setattr(
-        narration_plan_ui_controller,
+        character_voices_ui_controller,
         "_stop_preview_playback",
         lambda *_args, **_kwargs: call_order.append("stop"),
     )
     monkeypatch.setattr(
-        narration_plan_service,
+        character_voices_service,
         "delete_target_sample",
         lambda *_args, **_kwargs: call_order.append("delete"),
     )
     monkeypatch.setattr(
-        narration_plan_ui_controller.misc_ui_controller,
+        character_voices_ui_controller.misc_ui_controller,
         "create_progress_dialog",
         lambda *args, **kwargs: None,
     )
     monkeypatch.setattr(
-        narration_plan_ui_controller.misc_ui_controller,
+        character_voices_ui_controller.misc_ui_controller,
         "finish_progress_dialog",
         lambda *args, **kwargs: None,
     )
     monkeypatch.setattr(
-        narration_plan_ui_controller.misc_ui_controller,
+        character_voices_ui_controller.misc_ui_controller,
         "clear_progress_dialog",
         lambda *args, **kwargs: None,
     )
     monkeypatch.setattr(
-        narration_plan_ui_controller.misc_ui_controller,
+        character_voices_ui_controller.misc_ui_controller,
         "show_message",
         lambda *args, **kwargs: None,
     )
     monkeypatch.setattr(
-        narration_plan_ui_controller,
+        character_voices_ui_controller,
         "_generate_and_store_sample",
         lambda *args, **kwargs: None,
     )
 
-    narration_plan_ui_controller.handle_generate_sample_requested(window, "character_alice")
+    character_voices_ui_controller.handle_generate_sample_requested(window, "character_alice")
 
     assert call_order[:2] == ["stop", "delete"]
 
 
-def test_narration_plan_progress_messages_hide_model_id(monkeypatch, qtbot, tmp_path) -> None:
+def test_character_voices_progress_messages_hide_model_id(monkeypatch, qtbot, tmp_path) -> None:
     """
-    @brief      Verify narration-plan generation progress text does not disclose the concrete runtime model id.
+    @brief      Verify Character Voices generation progress text does not disclose the concrete runtime model id.
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @param[in]  qtbot Qt test helper fixture.
     @param[in]  tmp_path Pytest temporary directory fixture.
@@ -233,17 +233,17 @@ def test_narration_plan_progress_messages_hide_model_id(monkeypatch, qtbot, tmp_
     """
     project_root = _create_project_with_character_and_selected_narrator(
         tmp_path,
-        "NarrationPlanControllerProgressPrivacy",
+        "CharacterVoicesControllerProgressPrivacy",
     )
     window = _build_window(qtbot, project_root)
     observed_updates: list[tuple[int, str]] = []
     monkeypatch.setattr(
-        narration_plan_ui_controller.misc_ui_controller,
+        character_voices_ui_controller.misc_ui_controller,
         "update_progress_dialog",
         lambda _window, percent, message, token_usage=None: observed_updates.append((percent, message)),
     )
 
-    narration_plan_ui_controller._update_load_progress(
+    character_voices_ui_controller._update_load_progress(
         window,
         {
             "operation": {
@@ -252,7 +252,7 @@ def test_narration_plan_progress_messages_hide_model_id(monkeypatch, qtbot, tmp_
             }
         },
     )
-    narration_plan_ui_controller._update_generation_progress(
+    character_voices_ui_controller._update_generation_progress(
         window,
         {
             "operation": {
@@ -317,7 +317,7 @@ def _create_project_with_character_and_selected_narrator(
     )
     selected_narrator = narrator_definition_service.profile_by_id(project_root, narrator_profile["profile_id"])
     assert selected_narrator is not None
-    narration_plan_service.sync_voice_plan(
+    character_voices_service.sync_voice_plan(
         project_root,
         character_discovery_service.load_character_profiles(project_root),
         selected_narrator,
@@ -356,3 +356,4 @@ def _default_settings_payload() -> dict[str, object]:
 
 
 # END OF FILE
+

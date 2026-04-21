@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 # -*- coding: utf-8 -*-  # noqa: UP009
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
@@ -7,14 +7,14 @@
 # See the LICENSE.txt and LICENSE_NC.txt files for full license details.
 # -----------------------------------------------------------------------------
 """
-@file narration_plan_page.py
-@brief Narration Plan workflow page for AudioMancer.
+@file character_voices_page.py
+@brief Character Voices workflow page for AudioMancer.
 @details Provides project-local character voice prompt inspection, explicit
          voice-language selection, per-character sample generation, and local
-         sample preview controls for the Narration Plan workflow.
+         sample preview controls for the Character Voices workflow.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-20
-@version 1.3.0
+@version 1.3.1
 """
 
 # IMPORTS
@@ -38,9 +38,9 @@ from PySide6.QtWidgets import (
 from audiomancer.services import ui_state_service
 
 
-class NarrationPlanPage(QWidget):
+class CharacterVoicesPage(QWidget):
     """
-    @brief      Display the Narration Plan workflow page.
+    @brief      Display the Character Voices workflow page.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-20
@@ -57,7 +57,7 @@ class NarrationPlanPage(QWidget):
 
     def __init__(self, parent=None) -> None:
         """
-        @brief      Initialize the Narration Plan workflow page.
+        @brief      Initialize the Character Voices workflow page.
         @param[in]  parent Optional parent widget.
         @return     None.
         @exception  None
@@ -86,7 +86,7 @@ class NarrationPlanPage(QWidget):
         layout = QVBoxLayout(self)
         header_layout = QVBoxLayout()
         title_row = QHBoxLayout()
-        self._title_label = QLabel("<h2>Narration Plan</h2>")
+        self._title_label = QLabel("<h2>Character Voices</h2>")
         title_row.addWidget(self._title_label)
         title_row.addStretch(1)
         header_layout.addLayout(title_row)
@@ -171,7 +171,7 @@ class NarrationPlanPage(QWidget):
         self._main_splitter.setSizes([360, 860])
         layout.addWidget(self._main_splitter, 1)
 
-        self._status_group = QGroupBox("Narration Plan Status", self)
+        self._status_group = QGroupBox("Character Voices Status", self)
         status_layout = QVBoxLayout(self._status_group)
         self._status_edit = QPlainTextEdit(self)
         self._status_edit.setReadOnly(True)
@@ -221,7 +221,7 @@ class NarrationPlanPage(QWidget):
         self._preview_active = is_active
         self._apply_control_state()
 
-    def set_narration_plan_state(
+    def set_character_voices_state(
         self,
         targets: list[dict[str, object]],
         notes: list[str],
@@ -244,11 +244,11 @@ class NarrationPlanPage(QWidget):
         missing_narrator_sample: bool,
     ) -> None:
         """
-            @brief      Apply one complete Narration Plan page state payload.
-            @param[in]  targets Narration-plan target payload list.
+            @brief      Apply one complete Character Voices page state payload.
+            @param[in]  targets Character-voices target payload list.
             @param[in]  notes Operator-facing page notes.
             @param[in]  current_target_id Currently inspected target identifier.
-            @param[in]  selected_voice_language Current selected narration-plan voice language code.
+            @param[in]  selected_voice_language Current selected character-voices voice language code.
             @param[in]  language_entries Selectable voice-language entries as `(label, value)`.
             @param[in]  original_language Source-book original language label.
             @param[in]  translated_language Translation target label or fallback text.
@@ -293,7 +293,7 @@ class NarrationPlanPage(QWidget):
 
     def begin_edit_mode(self) -> None:
         """
-            @brief      Enter explicit prompt edit mode for the currently inspected narration target.
+            @brief      Enter explicit prompt edit mode for the currently inspected voice target.
             @return     None.
             @exception  None
             @author     Eng. Dan Dumitru Pasare
@@ -309,8 +309,8 @@ class NarrationPlanPage(QWidget):
 
     def apply_selected_target(self, target_id: str | None) -> None:
         """
-        @brief      Apply one selected narration-plan target to the current editor view.
-        @param[in]  target_id Selected narration-plan target identifier.
+        @brief      Apply one selected character-voices target to the current editor view.
+        @param[in]  target_id Selected character-voices target identifier.
         @return     None.
         @exception  None
         @author     Eng. Dan Dumitru Pasare
@@ -338,8 +338,8 @@ class NarrationPlanPage(QWidget):
 
     def current_target_id(self) -> str | None:
         """
-            @brief      Read the currently selected narration-plan target identifier.
-            @return     The selected narration-plan target identifier or `None`.
+            @brief      Read the currently selected character-voices target identifier.
+            @return     The selected character-voices target identifier or `None`.
             @exception  None
             @author     Eng. Dan Dumitru Pasare
             @date       2026-04-20
@@ -349,8 +349,8 @@ class NarrationPlanPage(QWidget):
 
     def current_voice_language(self) -> str:
         """
-        @brief      Read the currently selected narration-plan voice language code.
-        @return     The selected narration-plan voice language code.
+        @brief      Read the currently selected character-voices voice language code.
+        @return     The selected character-voices voice language code.
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-20
@@ -361,8 +361,8 @@ class NarrationPlanPage(QWidget):
 
     def current_editor_payload(self) -> dict[str, object]:
         """
-        @brief      Build one narration-plan target payload from the current editor values.
-        @return     Narration-plan target payload derived from the editor widgets.
+        @brief      Build one character-voices target payload from the current editor values.
+        @return     Character-voices target payload derived from the editor widgets.
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-20
@@ -394,7 +394,7 @@ class NarrationPlanPage(QWidget):
 
     def is_dirty(self) -> bool:
         """
-        @brief      Indicate whether the editable narration-plan prompt has unsaved changes.
+        @brief      Indicate whether the editable character-voices prompt has unsaved changes.
         @return     `True` when the active editor state differs from the saved target payload.
         @exception  None
         @author     Eng. Dan Dumitru Pasare
@@ -405,7 +405,7 @@ class NarrationPlanPage(QWidget):
 
     def apply_language(self, language: str) -> None:
         """
-        @brief      Apply one UI language to the Narration Plan page labels.
+        @brief      Apply one UI language to the Character Voices page labels.
         @param[in]  language Target UI language code.
         @return     None.
         @exception  None
@@ -414,19 +414,19 @@ class NarrationPlanPage(QWidget):
         @version    1.0.0
         """
         self._ui_language = language
-        self._title_label.setText(f"<h2>{ui_state_service.translate('narration_plan.title', language)}</h2>")
-        self._targets_group.setTitle(ui_state_service.translate("narration_plan.list_group", language))
-        self._prompt_group.setTitle(ui_state_service.translate("narration_plan.prompt_group", language))
-        self._preview_group.setTitle(ui_state_service.translate("narration_plan.preview_group", language))
-        self._original_language_group.setTitle(self._language_indicator_title("narration_plan.original_language"))
-        self._translated_language_group.setTitle(self._language_indicator_title("narration_plan.translated_language"))
-        self._assignment_mode_group.setTitle(ui_state_service.translate("narration_plan.assignment_mode", language))
-        self._voice_language_group.setTitle(ui_state_service.translate("narration_plan.voice_language", language))
-        self._status_group.setTitle(ui_state_service.translate("narration_plan.status_group", language))
-        self._reset_prompt_button.setText(ui_state_service.translate("narration_plan.reset_prompt", language))
-        self._edit_prompt_button.setText(ui_state_service.translate("narration_plan.edit_prompt", language))
-        self._save_prompt_button.setText(ui_state_service.translate("narration_plan.save_prompt", language))
-        self._generate_sample_button.setText(ui_state_service.translate("narration_plan.generate_sample", language))
+        self._title_label.setText(f"<h2>{ui_state_service.translate('character_voices.title', language)}</h2>")
+        self._targets_group.setTitle(ui_state_service.translate("character_voices.list_group", language))
+        self._prompt_group.setTitle(ui_state_service.translate("character_voices.prompt_group", language))
+        self._preview_group.setTitle(ui_state_service.translate("character_voices.preview_group", language))
+        self._original_language_group.setTitle(self._language_indicator_title("character_voices.original_language"))
+        self._translated_language_group.setTitle(self._language_indicator_title("character_voices.translated_language"))
+        self._assignment_mode_group.setTitle(ui_state_service.translate("character_voices.assignment_mode", language))
+        self._voice_language_group.setTitle(ui_state_service.translate("character_voices.voice_language", language))
+        self._status_group.setTitle(ui_state_service.translate("character_voices.status_group", language))
+        self._reset_prompt_button.setText(ui_state_service.translate("character_voices.reset_prompt", language))
+        self._edit_prompt_button.setText(ui_state_service.translate("character_voices.edit_prompt", language))
+        self._save_prompt_button.setText(ui_state_service.translate("character_voices.save_prompt", language))
+        self._generate_sample_button.setText(ui_state_service.translate("character_voices.generate_sample", language))
         self._preview_toggle_button.setText(ui_state_service.translate(self._preview_label_key(), language))
         self._set_language_labels(self._current_original_language_text(), self._current_translated_language_text())
 
@@ -487,7 +487,7 @@ class NarrationPlanPage(QWidget):
         @date       2026-04-21
         @version    0.1.0
         """
-        return "narration_plan.stop_preview" if self._preview_active else "narration_plan.preview"
+        return "character_voices.stop_preview" if self._preview_active else "character_voices.preview"
 
     def _refresh_target_list(self, current_target_id: str | None) -> None:
         """
@@ -706,3 +706,4 @@ def _format_target_list_item(target_payload: dict[str, object]) -> str:
 
 
 # END OF FILE
+

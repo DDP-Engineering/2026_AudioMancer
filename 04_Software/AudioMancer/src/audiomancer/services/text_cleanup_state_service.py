@@ -48,7 +48,7 @@ def build_text_cleanup_state(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.1.2
+    @version    0.1.3
     """
     if project_root is None or manifest is None:
         return {
@@ -413,7 +413,7 @@ def build_manifest_after_operation_reset(
         ):
             if selected_kind in default_operations:
                 operations[selected_kind] = default_operations[selected_kind]
-    if updated_manifest["current_stage"] not in {"narrator_definition_ready", "narration_plan_ready"}:
+    if updated_manifest["current_stage"] not in {"narrator_definition_ready", "character_voices_ready"}:
         updated_manifest["narrator_profile_name"] = None
         updated_manifest["narrator_language"] = None
     updated_manifest["operations"] = operations

@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -6,8 +6,8 @@
 # See the LICENSE.txt and LICENSE_NC.txt files for full license details.
 # -----------------------------------------------------------------------------
 """
-@file test_narration_plan_state_service.py
-@brief Focused tests for the AudioMancer narration-plan page state helpers.
+@file test_character_voices_state_service.py
+@brief Focused tests for the AudioMancer Character Voices page state helpers.
 @details Verifies narrator-first target ordering, translation-language
          selection rules, same-narrator shaping, and missing-sample warnings.
 @author Eng. Dan Dumitru Pasare
@@ -22,7 +22,7 @@ import json
 from audiomancer import config
 from audiomancer.services import (
     character_discovery_service,
-    narration_plan_state_service,
+    character_voices_state_service,
     narrator_definition_service,
     project_workspace_service,
 )
@@ -30,7 +30,7 @@ from audiomancer.services import (
 
 def test_state_contains_narrator_first_and_approved_translated_language(tmp_path) -> None:
     """
-    @brief      Verify the narration-plan state starts with narrator and exposes translated language only when approved.
+    @brief      Verify the Character Voices state starts with narrator and exposes translated language only when approved.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
@@ -38,7 +38,7 @@ def test_state_contains_narrator_first_and_approved_translated_language(tmp_path
     @date       2026-04-20
     @version    1.1.0
     """
-    project_root, manifest = _create_project_with_narrator_and_character(tmp_path, "NarrationPlanState")
+    project_root, manifest = _create_project_with_narrator_and_character(tmp_path, "CharacterVoicesState")
     manifest["original_language"] = "de"
     project_workspace_service.save_manifest(manifest, project_root)
     translation_report_path = project_root / config.TRANSLATION_FOLDER_NAME / config.TRANSLATION_REPORT_FILE_NAME
@@ -55,7 +55,7 @@ def test_state_contains_narrator_first_and_approved_translated_language(tmp_path
         encoding="utf-8",
     )
 
-    state = narration_plan_state_service.build_narration_plan_state(
+    state = character_voices_state_service.build_character_voices_state(
         project_root,
         project_workspace_service.load_manifest(project_root),
         "en",
@@ -87,11 +87,11 @@ def test_state_same_narrator_mode_disables_character_edit_and_generate(tmp_path)
     """
     project_root, manifest = _create_project_with_narrator_and_character(
         tmp_path,
-        "NarrationPlanSameNarrator",
+        "CharacterVoicesSameNarrator",
         voice_assignment_mode="same_narrator",
     )
 
-    state = narration_plan_state_service.build_narration_plan_state(
+    state = character_voices_state_service.build_character_voices_state(
         project_root,
         manifest,
         "en",
@@ -121,11 +121,11 @@ def test_state_missing_narrator_sample_surfaces_warning(tmp_path) -> None:
     """
     project_root, manifest = _create_project_with_narrator_and_character(
         tmp_path,
-        "NarrationPlanMissingNarratorSample",
+        "CharacterVoicesMissingNarratorSample",
         store_narrator_sample=False,
     )
 
-    state = narration_plan_state_service.build_narration_plan_state(
+    state = character_voices_state_service.build_character_voices_state(
         project_root,
         manifest,
         "en",
@@ -218,3 +218,4 @@ def _minimum_qwen_models() -> list[dict[str, object]]:
 
 
 # END OF FILE
+

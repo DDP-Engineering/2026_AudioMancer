@@ -13,7 +13,7 @@
          using one minimal `project.json` manifest contract.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-20
-@version    1.3.0
+@version    1.4.0
 """
 
 # IMPORTS
@@ -36,7 +36,18 @@ ProjectManifestPayload = dict[str, object]
 # @brief Normalized project-open result payload returned by open helpers.
 ProjectOpenResult = dict[str, object]
 # @brief Ordered workflow folder list used for validation and repair checks.
-_STEP_FOLDERS_IN_ORDER = tuple(config.PROJECT_REQUIRED_SUBDIRECTORIES[:-1])
+_STEP_FOLDERS_IN_ORDER = (
+    config.EXTRACTION_FOLDER_NAME,
+    config.CLEANUP_FOLDER_NAME,
+    config.CHUNKING_FOLDER_NAME,
+    config.TRANSLATION_FOLDER_NAME,
+    config.CHARACTER_DISCOVERY_FOLDER_NAME,
+    config.NARRATOR_DEFINITION_FOLDER_NAME,
+    config.CHARACTER_VOICES_FOLDER_NAME,
+    config.SPEECH_BLOCKS_FOLDER_NAME,
+    config.AUDIO_BLOCKS_FOLDER_NAME,
+    config.AUDIO_ASSEMBLY_FOLDER_NAME,
+)
 
 
 # PUBLIC API
@@ -296,7 +307,7 @@ def build_project_manifest(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-18
-    @version    0.5.0
+    @version    0.6.0
     """
     resolved_timestamp = timestamp_iso or _utc_now_iso()
     return {
@@ -434,7 +445,7 @@ def _validate_manifest_identity_fields(payload: object) -> None:
     @exception  ValueError Raised when the payload is invalid.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-        @version    0.2.0
+    @version    0.2.0
     """
     if not isinstance(payload, dict):
         raise ValueError("Project manifest payload must be a JSON object.")
@@ -451,8 +462,8 @@ def _first_missing_required_directory(project_root: Path) -> str | None:
     @return     Missing folder name or `None`.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-        @version    0.2.0
+    @date       2026-04-21
+    @version    0.3.0
     """
     for folder_name in config.PROJECT_REQUIRED_SUBDIRECTORIES:
         if not (project_root / folder_name).is_dir():
@@ -468,11 +479,33 @@ def _repair_stage_for_folder(folder_name: str, payload: dict[str, object]) -> st
     @return     Conservatively trusted stage token that remains valid after repair.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-        @version    0.2.0
+    @date       2026-04-21
+    @version    0.3.0
     """
-    _ = folder_name
-    return _derive_trustworthy_stage(payload)
+    current_stage = str(payload.get("current_stage", config.DEFAULT_WORKFLOW_STAGE)).strip()
+    if (
+        folder_name == config.PROJECT_AUDIO_SAMPLES_FOLDER_NAME
+        or folder_name == config.PROJECT_TEMP_FOLDER_NAME
+    ):
+        return current_stage if current_stage in config.PROJECT_WORKFLOW_STAGES else _derive_trustworthy_stage(payload)
+    stage_before_folder = {
+        config.EXTRACTION_FOLDER_NAME: "project_created",
+        config.CLEANUP_FOLDER_NAME: "source_selected",
+        config.CHUNKING_FOLDER_NAME: "text_cleanup_ready",
+        config.TRANSLATION_FOLDER_NAME: "text_chunking_ready",
+        config.CHARACTER_DISCOVERY_FOLDER_NAME: "translation_ready",
+        config.NARRATOR_DEFINITION_FOLDER_NAME: "character_discovery_ready",
+        config.CHARACTER_VOICES_FOLDER_NAME: "narrator_definition_ready",
+        config.SPEECH_BLOCKS_FOLDER_NAME: "character_voices_ready",
+        config.AUDIO_BLOCKS_FOLDER_NAME: "speech_blocks_ready",
+        config.AUDIO_ASSEMBLY_FOLDER_NAME: "audio_blocks_ready",
+    }.get(folder_name)
+    if stage_before_folder is None:
+        return _derive_trustworthy_stage(payload)
+
+    if current_stage not in config.PROJECT_WORKFLOW_STAGES:
+        current_stage = _derive_trustworthy_stage(payload)
+    return min(current_stage, stage_before_folder, key=_stage_rank)
 
 
 def _is_invalid_current_stage(payload: dict[str, object]) -> bool:
@@ -518,9 +551,14 @@ def _folders_to_reset_from(corrupted_step: str) -> tuple[str, ...]:
     @return     Tuple of affected folder names in reset order.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-17
-    @version    0.2.0
+    @date       2026-04-21
+    @version    0.3.0
     """
+    if (
+        corrupted_step == config.PROJECT_AUDIO_SAMPLES_FOLDER_NAME
+        or corrupted_step == config.PROJECT_TEMP_FOLDER_NAME
+    ):
+        return (corrupted_step,)
     if corrupted_step not in _STEP_FOLDERS_IN_ORDER:
         return ()
     start_index = _STEP_FOLDERS_IN_ORDER.index(corrupted_step)
@@ -695,6 +733,11 @@ def _build_default_operation_states() -> dict[str, dict[str, object]]:
             "chunking",
             "translation",
             "character_discovery",
+            "narrator_definition",
+            "character_voices",
+            "speech_blocks",
+            "audio_blocks",
+            "audio_assembly",
         )
     }
 
@@ -707,7 +750,7 @@ def _default_operation_state(operation_kind: str) -> dict[str, object]:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-11
-    @version    0.2.0
+    @version    0.3.0
     """
     return {
         "folder_relative_path": f"{_folder_name_for_operation(operation_kind)}",
@@ -791,13 +834,68 @@ def _allowed_operations_for_stage(current_stage: str) -> set[str]:
         return {"extraction", "cleanup", "chunking"}
     if current_stage == "translation_ready":
         return {"extraction", "cleanup", "chunking", "translation"}
-    if current_stage in {"character_discovery_ready", "narrator_definition_ready", "narration_plan_ready"}:
+    if current_stage == "character_discovery_ready":
         return {
             "extraction",
             "cleanup",
             "chunking",
             "translation",
             "character_discovery",
+        }
+    if current_stage == "narrator_definition_ready":
+        return {
+            "extraction",
+            "cleanup",
+            "chunking",
+            "translation",
+            "character_discovery",
+            "narrator_definition",
+        }
+    if current_stage == "character_voices_ready":
+        return {
+            "extraction",
+            "cleanup",
+            "chunking",
+            "translation",
+            "character_discovery",
+            "narrator_definition",
+            "character_voices",
+        }
+    if current_stage == "speech_blocks_ready":
+        return {
+            "extraction",
+            "cleanup",
+            "chunking",
+            "translation",
+            "character_discovery",
+            "narrator_definition",
+            "character_voices",
+            "speech_blocks",
+        }
+    if current_stage == "audio_blocks_ready":
+        return {
+            "extraction",
+            "cleanup",
+            "chunking",
+            "translation",
+            "character_discovery",
+            "narrator_definition",
+            "character_voices",
+            "speech_blocks",
+            "audio_blocks",
+        }
+    if current_stage == "audio_assembly_ready":
+        return {
+            "extraction",
+            "cleanup",
+            "chunking",
+            "translation",
+            "character_discovery",
+            "narrator_definition",
+            "character_voices",
+            "speech_blocks",
+            "audio_blocks",
+            "audio_assembly",
         }
     return set()
 
@@ -810,7 +908,7 @@ def _folder_name_for_operation(operation_kind: str) -> str:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.1.0
+    @version    0.3.0
     """
     return {
         "extraction": config.EXTRACTION_FOLDER_NAME,
@@ -818,6 +916,11 @@ def _folder_name_for_operation(operation_kind: str) -> str:
         "chunking": config.CHUNKING_FOLDER_NAME,
         "translation": config.TRANSLATION_FOLDER_NAME,
         "character_discovery": config.CHARACTER_DISCOVERY_FOLDER_NAME,
+        "narrator_definition": config.NARRATOR_DEFINITION_FOLDER_NAME,
+        "character_voices": config.CHARACTER_VOICES_FOLDER_NAME,
+        "speech_blocks": config.SPEECH_BLOCKS_FOLDER_NAME,
+        "audio_blocks": config.AUDIO_BLOCKS_FOLDER_NAME,
+        "audio_assembly": config.AUDIO_ASSEMBLY_FOLDER_NAME,
     }.get(operation_kind, operation_kind)
 
 

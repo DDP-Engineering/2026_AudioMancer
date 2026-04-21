@@ -5,19 +5,18 @@ This software is licensed under the GNU Affero General Public License v3.0
 See the LICENSE.txt and LICENSE_NC.txt files for full license details.
 -->
 
-# AudioMancer Narration Plan Service
+# AudioMancer Character Voices Service
 
 ## 1. Purpose
 
-Implements the current `Narration Plan` workflow in `AudioMancer`.
-It prepares one generation-ready voice contract for the selected narrator plus
-all discovered characters by combining prompt state, sample state, language
-selection, and voice-assignment rules.
+Implements the current `Character Voices` workflow in `AudioMancer`.
+It prepares the narrator-plus-character voice target set that later placeholder
+stages will consume for speech-block, audio-block, and final assembly work.
 
 ## 2. Responsibilities
 
-- persist the narration-plan target list under `60_narration_plan`
-- persist one selected narration voice language
+- persist the Character Voices target list under `60_character_voices`
+- persist one selected voice language for character sample generation
 - prefer the character-owned `voice_definition_prompt` from `Characters` as
   the default voice-designer prompt for each character, with one legacy
   fallback builder for older projects
@@ -26,57 +25,54 @@ selection, and voice-assignment rules.
 - mirror the selected narrator into the page as one preview-only target
 - auto-copy narrator samples into all character sample slots when
   `voice_assignment_mode == "same_narrator"`
-- build page state for target list ordering, enablement, notes, and status
-  lines
-- show one page-entry warning when the selected narrator sample is missing
+- build page state for target ordering, enablement, notes, and status lines
+- keep the manifest stage aligned with Character Voices readiness
 
 It does not:
 
 - own the selected narrator profile itself
-- own global VoiceWeaver connection settings
-- perform future long-form book generation
+- own global VoiceWeaver runtime settings
+- implement `Speech Blocks`, `Audio Blocks`, or `Audio Assembly`
 
 ## 3. Implementation Overview
 
 The workflow is split across:
 
-- `04_Software/AudioMancer/src/audiomancer/services/narration_plan_service.py`
-  for project-local narration-plan files, target synchronization, prompt
-  persistence, sample persistence, and same-narrator copy behavior
-- `04_Software/AudioMancer/src/audiomancer/services/narration_plan_state_service.py`
+- `04_Software/AudioMancer/src/audiomancer/services/character_voices_service.py`
+  for project-local target files, synchronization, prompt persistence, sample
+  persistence, and same-narrator copy behavior
+- `04_Software/AudioMancer/src/audiomancer/services/character_voices_state_service.py`
   for page-state shaping from narrator selection, character discovery,
   translation readiness, and runtime capability cache
-- `04_Software/AudioMancer/src/audiomancer/ui/pages/narration_plan_page.py`
-  for the target list, explicit voice-language selector, prompt editor,
-  two-line preview-text editor, and bottom status area
-- `04_Software/AudioMancer/src/audiomancer/ui/controllers/narration_plan_ui_controller.py`
+- `04_Software/AudioMancer/src/audiomancer/ui/pages/character_voices_page.py`
+  for the target list, voice-language selector, prompt editor, preview-text
+  editor, and bottom status area
+- `04_Software/AudioMancer/src/audiomancer/ui/controllers/character_voices_ui_controller.py`
   for destructive edit confirmation, selected voice-language persistence,
   VoiceWeaver generation, preview playback, and stage synchronization
 
 High-level flow:
 
-1. Project load ensures `60_narration_plan/voice_plan.json`,
-   `60_narration_plan/selected_voice_language.json`, and
-   `60_narration_plan/audio_samples/` exist.
-2. The state service loads:
-   the selected narrator, discovered character profiles, translation report,
-   cached VoiceWeaver models, and persisted narration-plan data.
-3. The target list is synchronized so narrator is first when selected and each
-   discovered character owns one stable `character_<character_id>` target row.
-4. Character default prompts first use the stored
-   `character.voice_definition_prompt`; if that field is missing, the service
-   falls back to the older deterministic builder from the raw character facts.
-   Any previously saved edited prompt is preserved. Each character target also
-   keeps one editable preview text used as the generation input sample text.
-5. In `same_narrator` mode, narrator-derived character samples are repaired or
-   refreshed during state build.
-6. `Edit Voice Prompt` shows a destructive confirmation, deletes the stored
-   character sample, and enters explicit edit mode.
-7. `Generate Sample` re-probes runtime readiness, requires the fixed Qwen3
-   minimum capability set, waits for model-load completion when necessary, and
-   stores one WAV plus metadata for the selected character target.
-8. `Preview` plays either the selected narrator sample or the selected
-   character sample locally through a dedicated page-specific player.
+1. Project load ensures `60_character_voices/voice_targets.json`,
+   `60_character_voices/selected_voice_language.json`, and
+   `60_character_voices/audio_samples/` exist.
+2. The state service loads the selected narrator, discovered character
+   profiles, translation report, cached VoiceWeaver models, and persisted
+   Character Voices data.
+3. Target synchronization keeps narrator first when selected and gives each
+   discovered character one stable `character_<character_id>` target row.
+4. Character default prompts first use `character.voice_definition_prompt`;
+   older projects fall back to the deterministic builder from stored character
+   facts.
+5. In `same_narrator` mode, narrator-derived character samples are copied into
+   each character slot during state build.
+6. `Edit Voice Prompt` deletes the stored character sample and enters explicit
+   edit mode after confirmation.
+7. `Generate Sample` verifies the fixed Qwen3 capability set, waits for model
+   load completion when needed, and stores one WAV plus metadata for the
+   selected character target.
+8. When every character target plus the selected narrator sample exists, the
+   controller keeps `project.json.current_stage = "character_voices_ready"`.
 
 ## 4. Dependencies
 
@@ -105,23 +101,23 @@ Inputs:
 - discovered character profiles from `40_character_discovery`
 - translation approval report from `30_translation`
 - cached VoiceWeaver discovery fields from `settings.json`
-- narration-plan page actions:
+- Character Voices page actions:
   reset prompt, edit prompt, save prompt, generate sample, preview, stop
   preview, and voice-language selection
 
 Outputs:
 
-- `60_narration_plan/voice_plan.json`
-- `60_narration_plan/selected_voice_language.json`
-- `60_narration_plan/audio_samples/<target_id>.wav`
-- `60_narration_plan/audio_samples/<target_id>.json`
+- `60_character_voices/voice_targets.json`
+- `60_character_voices/selected_voice_language.json`
+- `60_character_voices/audio_samples/<target_id>.wav`
+- `60_character_voices/audio_samples/<target_id>.json`
 - updated manifest stage:
-  `current_stage = "narration_plan_ready"` when narrator plus all character
+  `current_stage = "character_voices_ready"` when narrator plus all character
   samples exist
 
 ## 6. Data Contracts
 
-Narration-plan target payloads use:
+Character Voices target payloads use:
 
 - `target_id`
 - `target_kind`
@@ -174,8 +170,8 @@ Same-narrator copied sample metadata uses:
 
 ## 7. Workflow Integration
 
-This workflow sits immediately after `Narator Voice` in the current
-stage order.
+This workflow sits immediately after `Narator Voice` in the current stage
+order.
 
 Upstream integrations:
 
@@ -188,8 +184,10 @@ Upstream integrations:
 
 Downstream integrations:
 
-- future Generation workflow that will consume the persisted narrator and
-  character sample contract directly
+- placeholder `Speech Blocks` page and future `70_speech_blocks` workflow data
+- placeholder `Audio Blocks` page and future `80_audio_blocks` workflow data
+- placeholder `Audio Assembly` page and future `90_audio_assembly` workflow
+  data
 
 Current rules:
 
@@ -209,13 +207,13 @@ Current rules:
 Representative service calls:
 
 ```python
-voice_targets = narration_plan_service.sync_voice_plan(
+voice_targets = character_voices_service.sync_voice_plan(
     project_root,
     character_profiles,
     selected_narrator_profile,
 )
 
-state = narration_plan_state_service.build_narration_plan_state(
+state = character_voices_state_service.build_character_voices_state(
     project_root,
     manifest,
     "en",
@@ -223,7 +221,7 @@ state = narration_plan_state_service.build_narration_plan_state(
     inspected_target_id="character_elizabeth",
 )
 
-request = narration_plan_service.voice_target_generation_request(
+request = character_voices_service.voice_target_generation_request(
     selected_target,
     discovered_models,
     "en",
@@ -233,7 +231,7 @@ request = narration_plan_service.voice_target_generation_request(
 Operator path:
 
 - open one project with a selected narrator
-- enter `Narration Plan`
+- enter `Character Voices`
 - choose the voice language
 - inspect each character
 - optionally reset or edit the derived voice prompt
@@ -244,10 +242,10 @@ Operator path:
 
 Focused automated coverage exists in:
 
-- `04_Software/AudioMancer/tests/test_narration_plan_service.py`
-- `04_Software/AudioMancer/tests/test_narration_plan_state_service.py`
-- `04_Software/AudioMancer/tests/test_narration_plan_page.py`
-- `04_Software/AudioMancer/tests/test_narration_plan_ui_controller.py`
+- `04_Software/AudioMancer/tests/test_character_voices_service.py`
+- `04_Software/AudioMancer/tests/test_character_voices_state_service.py`
+- `04_Software/AudioMancer/tests/test_character_voices_page.py`
+- `04_Software/AudioMancer/tests/test_character_voices_ui_controller.py`
 - updated workflow/config integration coverage in
   `test_config_contract.py`, `test_project_workspace_service.py`, and
   `test_main_window_project_flow.py`
@@ -256,23 +254,22 @@ Minimum validation after a change:
 
 ```powershell
 uv run python -m py_compile <changed_python_files>
-uv run pytest tests/test_narration_plan_service.py
-uv run pytest tests/test_narration_plan_state_service.py
-uv run pytest tests/test_narration_plan_page.py
-uv run pytest tests/test_narration_plan_ui_controller.py
+uv run pytest tests/test_character_voices_service.py
+uv run pytest tests/test_character_voices_state_service.py
+uv run pytest tests/test_character_voices_page.py
+uv run pytest tests/test_character_voices_ui_controller.py
 uv run ruff check <changed_python_files> --fix
 uv run ruff format <changed_python_files>
 ```
 
 ## 10. Limitations And Future Work
 
-- long-form generation is still out of scope
-- narrator prompt editing remains on the Narator Voice page only
+- long-form audio creation is still out of scope here
+- narrator prompt editing remains on the `Narator Voice` page only
 - older projects without `voice_definition_prompt` still rely on the legacy
   fallback builder until Character Discovery is rerun or the character is
   edited and saved
-- per-character preview text now starts from one deterministic language-based
-  sample text and can be edited per character, but it is still not populated
-  automatically from real book dialogue excerpts
-- future Generation should consume `60_narration_plan` directly instead of
-  rebuilding voice readiness heuristically
+- per-character preview text still starts from a deterministic language-based
+  sample text instead of automatically using real dialogue excerpts
+- `Speech Blocks`, `Audio Blocks`, and `Audio Assembly` are placeholder pages
+  only and do not yet consume `60_character_voices`

@@ -161,7 +161,7 @@ def build_narrator_definition_notes(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-17
-    @version    1.3.0
+    @version    1.3.1
     """
     if home_presenter_service.source_document_name(manifest) is None:
         return [ui_state_service.translate("narator_voice.note_no_source", language)]
@@ -179,7 +179,7 @@ def build_narrator_definition_notes(
         notes.append(ui_state_service.translate("narator_voice.note_qwen_capabilities_ready", language))
 
     current_stage = str(manifest.get("current_stage", ""))
-    if current_stage not in {"character_discovery_ready", "narrator_definition_ready", "narration_plan_ready"}:
+    if current_stage not in {"character_discovery_ready", "narrator_definition_ready", "character_voices_ready"}:
         notes.append(ui_state_service.translate("narator_voice.note_upstream_not_ready", language))
 
     selected_profile = _profile_by_id(profiles, selected_profile_id)

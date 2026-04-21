@@ -10,6 +10,24 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.17.2] - 2026-04-21
+
+### Added
+
+- added explicit `Speech Blocks`, `Audio Blocks`, and `Audio Assembly` placeholder pages plus workflow folders `70_speech_blocks`, `80_audio_blocks`, and `90_audio_assembly`
+- added repair coverage for missing support folders and downstream-stage preservation when older projects are opened after the workflow expansion
+
+### Changed
+
+- renamed the former `Narration Plan` implementation surface to `Character Voices`, including module filenames, tests, README references, software documentation, runtime translations, persisted folder names, and the stored target file name `voice_targets.json`
+- changed project repair so missing downstream workflow folders now preserve the highest valid upstream stage instead of resetting older projects all the way back to `project_created`
+- package version updated to `0.17.2`
+
+### Fixed
+
+- fixed stale Character Voices UI strings that still described the page as a narration plan after the rename
+- fixed translation-stage gating for Character Voices so approved translated languages remain available through the new placeholder stages
+
 ## [0.17.1] - 2026-04-21
 
 ### Added

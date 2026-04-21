@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 # -*- coding: utf-8 -*-  # noqa: UP009
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
@@ -7,14 +7,14 @@
 # See the LICENSE.txt and LICENSE_NC.txt files for full license details.
 # -----------------------------------------------------------------------------
 """
-@file narration_plan_service.py
-@brief Project-local narration-plan persistence helpers for AudioMancer.
-@details Persists narration-plan voice targets, selected voice language,
+@file character_voices_service.py
+@brief Project-local character-voices persistence helpers for AudioMancer.
+@details Persists character-voices voice targets, selected voice language,
          per-target sample artifacts, and deterministic character voice prompts
-         for the Narration Plan workflow.
+         for the Character Voices workflow.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-20
-@version 1.2.1
+@version 1.3.0
 """
 
 # IMPORTS
@@ -52,22 +52,22 @@ DEFAULT_PREVIEW_TEXT_BY_LANGUAGE = {
 # PUBLIC API
 
 
-def ensure_narration_plan_files(project_root: str | Path) -> None:
+def ensure_character_voices_files(project_root: str | Path) -> None:
     """
-    @brief      Ensure narration-plan files and sample folders exist for one project.
+    @brief      Ensure character-voices files and sample folders exist for one project.
     @param[in]  project_root Active project root folder.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-20
-    @version    1.0.0
+    @version    1.0.1
     """
-    narration_root = Path(project_root) / config.NARRATION_PLAN_FOLDER_NAME
-    narration_root.mkdir(parents=True, exist_ok=True)
+    character_voices_root = Path(project_root) / config.CHARACTER_VOICES_FOLDER_NAME
+    character_voices_root.mkdir(parents=True, exist_ok=True)
     _audio_samples_root(project_root).mkdir(parents=True, exist_ok=True)
-    voice_plan_path = _voice_plan_path(project_root)
-    if not voice_plan_path.is_file():
-        _write_json(voice_plan_path, [])
+    targets_path = _targets_path(project_root)
+    if not targets_path.is_file():
+        _write_json(targets_path, [])
     language_path = _selected_language_path(project_root)
     if not language_path.is_file():
         _write_json(
@@ -81,16 +81,16 @@ def load_selected_voice_language(
     fallback: str = narrator_definition_service.DEFAULT_NARRATOR_LANGUAGE,
 ) -> str:
     """
-    @brief      Load the persisted narration-plan selected voice language.
+    @brief      Load the persisted character-voices selected voice language.
     @param[in]  project_root Active project root folder.
     @param[in]  fallback Fallback language code used when the file is missing.
-    @return     Canonical narration-plan voice language code.
+    @return     Canonical character-voices voice language code.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-20
     @version    1.0.0
     """
-    ensure_narration_plan_files(project_root)
+    ensure_character_voices_files(project_root)
     payload = json.loads(_selected_language_path(project_root).read_text(encoding="utf-8"))
     if not isinstance(payload, dict):
         return narrator_definition_service.narrator_language_code(fallback)
@@ -102,7 +102,7 @@ def load_selected_voice_language(
 
 def save_selected_voice_language(project_root: str | Path, selected_voice_language: object) -> str:
     """
-    @brief      Persist one narration-plan voice language selection.
+    @brief      Persist one character-voices voice language selection.
     @param[in]  project_root Active project root folder.
     @param[in]  selected_voice_language Candidate selected voice language value.
     @return     Persisted canonical voice language code.
@@ -111,7 +111,7 @@ def save_selected_voice_language(project_root: str | Path, selected_voice_langua
     @date       2026-04-20
     @version    1.0.0
     """
-    ensure_narration_plan_files(project_root)
+    ensure_character_voices_files(project_root)
     normalized_language = narrator_definition_service.narrator_language_code(selected_voice_language)
     _write_json(
         _selected_language_path(project_root),
@@ -122,7 +122,7 @@ def save_selected_voice_language(project_root: str | Path, selected_voice_langua
 
 def load_voice_plan(project_root: str | Path) -> list[dict[str, object]]:
     """
-    @brief      Load the persisted narration-plan voice target list.
+    @brief      Load the persisted character-voices target list.
     @param[in]  project_root Active project root folder.
     @return     Normalized ordered voice target payload list.
     @exception  None
@@ -130,16 +130,16 @@ def load_voice_plan(project_root: str | Path) -> list[dict[str, object]]:
     @date       2026-04-20
     @version    1.0.0
     """
-    ensure_narration_plan_files(project_root)
-    payload = json.loads(_voice_plan_path(project_root).read_text(encoding="utf-8"))
+    ensure_character_voices_files(project_root)
+    payload = json.loads(_targets_path(project_root).read_text(encoding="utf-8"))
     if not isinstance(payload, list):
         return []
     return [_normalize_voice_target(item) for item in payload if isinstance(item, dict)]
 
 
-def save_voice_plan(project_root: str | Path, voice_targets: list[dict[str, object]]) -> list[dict[str, object]]:
+def save_voice_targets(project_root: str | Path, voice_targets: list[dict[str, object]]) -> list[dict[str, object]]:
     """
-    @brief      Persist one narration-plan voice target payload list.
+    @brief      Persist one character-voices target payload list.
     @param[in]  project_root Active project root folder.
     @param[in]  voice_targets Candidate voice target payload list.
     @return     Persisted normalized voice target list.
@@ -148,9 +148,9 @@ def save_voice_plan(project_root: str | Path, voice_targets: list[dict[str, obje
     @date       2026-04-20
     @version    1.0.0
     """
-    ensure_narration_plan_files(project_root)
+    ensure_character_voices_files(project_root)
     normalized_targets = [_normalize_voice_target(item) for item in voice_targets if isinstance(item, dict)]
-    _write_json(_voice_plan_path(project_root), normalized_targets)
+    _write_json(_targets_path(project_root), normalized_targets)
     return normalized_targets
 
 
@@ -160,11 +160,11 @@ def sync_voice_plan(
     narrator_profile: dict[str, object] | None,
 ) -> list[dict[str, object]]:
     """
-    @brief      Synchronize persisted narration-plan targets against the current narrator and character state.
+    @brief      Synchronize persisted character-voices targets against the current narrator and character state.
     @param[in]  project_root Active project root folder.
     @param[in]  character_profiles Persisted character profile payload list.
     @param[in]  narrator_profile Explicitly selected narrator profile payload or `None`.
-    @return     Persisted normalized narration-plan target list.
+    @return     Persisted normalized character-voices target list.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-20
@@ -222,12 +222,12 @@ def sync_voice_plan(
                 }
             )
         )
-    return save_voice_plan(project_root, synchronized_targets)
+    return save_voice_targets(project_root, synchronized_targets)
 
 
 def voice_target_by_id(project_root: str | Path, target_id: str | None) -> dict[str, object] | None:
     """
-    @brief      Resolve one persisted narration-plan target by identifier.
+    @brief      Resolve one persisted character-voices target by identifier.
     @param[in]  project_root Active project root folder.
     @param[in]  target_id Target voice identifier.
     @return     Matching voice target payload or `None`.
@@ -271,7 +271,7 @@ def save_target_prompt(
     preview_text: str | None = None,
 ) -> dict[str, object]:
     """
-    @brief      Persist one edited narration-plan target prompt and clear any stale target sample.
+    @brief      Persist one edited character-voices target prompt and clear any stale target sample.
     @param[in]  project_root Active project root folder.
     @param[in]  target_id Target voice identifier.
     @param[in]  prompt_text Edited voice-designer prompt text.
@@ -317,10 +317,10 @@ def voice_target_generation_request(
     voice_language: object,
 ) -> dict[str, object]:
     """
-    @brief      Resolve the current runtime generation request for one narration-plan target.
-    @param[in]  target_payload Narration-plan target payload.
+    @brief      Resolve the current runtime generation request for one character-voices target.
+    @param[in]  target_payload Character-voices target payload.
     @param[in]  discovered_models Current normalized discovered runtime models.
-    @param[in]  voice_language Selected narration-plan voice language.
+    @param[in]  voice_language Selected character-voices voice language.
     @return     Generation-request payload with availability flags and model ids.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
@@ -334,7 +334,7 @@ def voice_target_generation_request(
         return _build_generation_request(
             False,
             False,
-            "The selected narration target cannot generate a new sample on this page.",
+            "The selected voice target cannot generate a new sample on this page.",
             normalized_language,
             prompt_text,
         )
@@ -375,9 +375,9 @@ def voice_target_generation_request(
 
 def character_target_id(character_id: str) -> str:
     """
-    @brief      Build the stable narration-plan target identifier for one character.
+    @brief      Build the stable character-voices target identifier for one character.
     @param[in]  character_id Persisted character identifier.
-    @return     Stable narration-plan character target identifier.
+    @return     Stable character-voices character target identifier.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-20
@@ -426,7 +426,7 @@ def build_character_default_prompt(character_profile: dict[str, object]) -> str:
 
 def preview_text_for_language(voice_language: object) -> str:
     """
-    @brief      Resolve one deterministic sample preview text for the selected narration-plan language.
+    @brief      Resolve one deterministic sample preview text for the selected character-voices language.
     @param[in]  voice_language Candidate selected voice language.
     @return     Stable localized preview text.
     @exception  None
@@ -443,9 +443,9 @@ def preview_text_for_language(voice_language: object) -> str:
 
 def effective_target_preview_text(target_payload: dict[str, object], voice_language: object) -> str:
     """
-    @brief      Resolve the preview text used by one narration-plan target for UI display or generation.
-    @param[in]  target_payload Narration-plan target payload.
-    @param[in]  voice_language Selected narration-plan voice language.
+    @brief      Resolve the preview text used by one character-voices target for UI display or generation.
+    @param[in]  target_payload Character-voices target payload.
+    @param[in]  voice_language Selected character-voices voice language.
     @return     Stored preview text or the deterministic language fallback.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
@@ -458,7 +458,7 @@ def effective_target_preview_text(target_payload: dict[str, object], voice_langu
 
 def target_sample_paths(project_root: str | Path, target_id: str) -> tuple[Path, Path]:
     """
-    @brief      Resolve the audio and metadata sample paths for one narration-plan target.
+    @brief      Resolve the audio and metadata sample paths for one character-voices target.
     @param[in]  project_root Active project root folder.
     @param[in]  target_id Target voice identifier.
     @return     Tuple of WAV path and JSON metadata path.
@@ -477,7 +477,7 @@ def target_sample_paths(project_root: str | Path, target_id: str) -> tuple[Path,
 
 def load_target_sample_metadata(project_root: str | Path, target_id: str) -> dict[str, object] | None:
     """
-    @brief      Load the persisted sample metadata for one narration-plan target.
+    @brief      Load the persisted sample metadata for one character-voices target.
     @param[in]  project_root Active project root folder.
     @param[in]  target_id Target voice identifier.
     @return     Metadata payload or `None` when unavailable.
@@ -495,7 +495,7 @@ def load_target_sample_metadata(project_root: str | Path, target_id: str) -> dic
 
 def has_target_sample(project_root: str | Path, target_id: str) -> bool:
     """
-    @brief      Return whether one narration-plan target currently has a persisted sample pair.
+    @brief      Return whether one character-voices target currently has a persisted sample pair.
     @param[in]  project_root Active project root folder.
     @param[in]  target_id Target voice identifier.
     @return     `True` when the sample WAV and metadata both exist.
@@ -510,7 +510,7 @@ def has_target_sample(project_root: str | Path, target_id: str) -> bool:
 
 def delete_target_sample(project_root: str | Path, target_id: str) -> None:
     """
-    @brief      Delete the persisted sample artifacts for one narration-plan target.
+    @brief      Delete the persisted sample artifacts for one character-voices target.
     @param[in]  project_root Active project root folder.
     @param[in]  target_id Target voice identifier.
     @return     None.
@@ -536,10 +536,10 @@ def store_target_sample(
     audio_bytes: bytes,
 ) -> dict[str, object]:
     """
-    @brief      Persist one generated narration-plan sample WAV and metadata payload.
+    @brief      Persist one generated character-voices sample WAV and metadata payload.
     @param[in]  project_root Active project root folder.
-    @param[in]  target_payload Narration-plan target payload.
-    @param[in]  voice_language Selected narration-plan voice language code.
+    @param[in]  target_payload Character-voices target payload.
+    @param[in]  voice_language Selected character-voices voice language code.
     @param[in]  preview_text Preview text synthesized for the sample.
     @param[in]  generation_request Resolved runtime generation-request payload.
     @param[in]  runtime_result_summary Operator-facing runtime summary text.
@@ -550,7 +550,7 @@ def store_target_sample(
     @date       2026-04-20
     @version    1.0.0
     """
-    ensure_narration_plan_files(project_root)
+    ensure_character_voices_files(project_root)
     target_id = str(target_payload.get("target_id", "")).strip()
     delete_target_sample(project_root, target_id)
     audio_path, metadata_path = target_sample_paths(project_root, target_id)
@@ -579,17 +579,17 @@ def sync_same_narrator_samples(
     voice_language: object,
 ) -> None:
     """
-    @brief      Synchronize narrator-derived copied samples for every narration-plan character target.
+    @brief      Synchronize narrator-derived copied samples for every character-voices character target.
     @param[in]  project_root Active project root folder.
-    @param[in]  character_targets Current narration-plan character targets.
-    @param[in]  voice_language Current selected narration-plan voice language.
+    @param[in]  character_targets Current character-voices character targets.
+    @param[in]  voice_language Current selected character-voices voice language.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-20
     @version    1.0.1
     """
-    ensure_narration_plan_files(project_root)
+    ensure_character_voices_files(project_root)
     narrator_audio_path, narrator_metadata_path = narrator_definition_service.selected_narrator_sample_paths(
         project_root
     )
@@ -643,7 +643,7 @@ def sample_runtime_available(
     discovered_models: list[dict[str, object]],
 ) -> bool:
     """
-    @brief      Return whether one persisted narration-plan sample still references a healthy discovered runtime model.
+    @brief      Return whether one persisted character-voices sample still references a healthy discovered runtime model.
     @param[in]  sample_metadata Persisted sample metadata payload.
     @param[in]  discovered_models Current normalized discovered runtime models.
     @return     `True` when the sample still references a healthy available model.
@@ -655,14 +655,14 @@ def sample_runtime_available(
     return narrator_definition_service.sample_runtime_available(sample_metadata, discovered_models)
 
 
-def narration_plan_is_ready(
+def character_voices_is_ready(
     project_root: str | Path,
     voice_targets: list[dict[str, object]],
 ) -> bool:
     """
-    @brief      Return whether the current narration-plan state is ready for the future Generation workflow.
+    @brief      Return whether the current character-voices state is ready for the future Speech Blocks workflow.
     @param[in]  project_root Active project root folder.
-    @param[in]  voice_targets Current narration-plan target list.
+    @param[in]  voice_targets Current character-voices target list.
     @return     `True` when the selected narrator sample and every character sample exist.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
@@ -698,7 +698,7 @@ def selected_narrator_sample_exists(project_root: str | Path) -> bool:
 
 def selected_narrator_sample_metadata(project_root: str | Path) -> dict[str, object] | None:
     """
-    @brief      Load the selected narrator sample metadata reused by the Narration Plan page.
+    @brief      Load the selected narrator sample metadata reused by the Character Voices page.
     @param[in]  project_root Active project root folder.
     @return     Selected narrator metadata payload or `None`.
     @exception  None
@@ -766,7 +766,7 @@ def _update_target_prompt(
         normalized_targets.append(updated_target)
     if updated_target is None:
         raise ValueError("missing_target")
-    save_voice_plan(project_root, normalized_targets)
+    save_voice_targets(project_root, normalized_targets)
     delete_target_sample(project_root, target_id)
     return updated_target
 
@@ -820,16 +820,16 @@ def _normalize_voice_target(target_payload: dict[str, object]) -> dict[str, obje
     }
 
 
-def _voice_plan_path(project_root: str | Path) -> Path:
+def _targets_path(project_root: str | Path) -> Path:
     """
-    @brief      Execute the voice plan path helper.
+    @brief      Execute the voice targets path helper.
     @param[in]  project_root Active project root folder.
     @return     Helper result.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
     @version    0.1.0
     """
-    return Path(project_root) / config.NARRATION_PLAN_FOLDER_NAME / config.NARRATION_PLAN_VOICE_PLAN_FILE_NAME
+    return Path(project_root) / config.CHARACTER_VOICES_FOLDER_NAME / config.CHARACTER_VOICES_TARGETS_FILE_NAME
 
 
 def _selected_language_path(project_root: str | Path) -> Path:
@@ -841,7 +841,7 @@ def _selected_language_path(project_root: str | Path) -> Path:
     @date       2026-04-21
     @version    0.1.0
     """
-    return Path(project_root) / config.NARRATION_PLAN_FOLDER_NAME / config.NARRATION_PLAN_SELECTED_LANGUAGE_FILE_NAME
+    return Path(project_root) / config.CHARACTER_VOICES_FOLDER_NAME / config.CHARACTER_VOICES_SELECTED_LANGUAGE_FILE_NAME
 
 
 def _audio_samples_root(project_root: str | Path) -> Path:
@@ -853,7 +853,7 @@ def _audio_samples_root(project_root: str | Path) -> Path:
     @date       2026-04-21
     @version    0.1.0
     """
-    return Path(project_root) / config.NARRATION_PLAN_FOLDER_NAME / config.NARRATION_PLAN_AUDIO_SAMPLES_FOLDER_NAME
+    return Path(project_root) / config.CHARACTER_VOICES_FOLDER_NAME / config.CHARACTER_VOICES_AUDIO_SAMPLES_FOLDER_NAME
 
 
 def _build_generation_request(
@@ -959,3 +959,4 @@ def _utc_now_iso() -> str:
 
 
 # END OF FILE
+

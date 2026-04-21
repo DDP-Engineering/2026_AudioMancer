@@ -14,7 +14,7 @@
          so the window remains a thin coordinator.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-20
-@version 1.24.0
+@version 1.25.0
 """
 
 # IMPORTS
@@ -39,7 +39,7 @@ from audiomancer.services import (
     ai_translation_state_service,
     character_discovery_state_service,
     home_presenter_service,
-    narration_plan_state_service,
+    character_voices_state_service,
     narrator_definition_state_service,
     settings_service,
     text_chunking_state_service,
@@ -53,7 +53,7 @@ from audiomancer.ui.controllers import (
     home_ui_controller,
     misc_ui_controller,
     narator_voice_ui_controller,
-    narration_plan_ui_controller,
+    character_voices_ui_controller,
     settings_ui_controller,
     text_chunking_ui_controller,
     text_cleanup_ui_controller,
@@ -66,7 +66,7 @@ from audiomancer.ui.pages.ai_translation_page import AiTranslationPage
 from audiomancer.ui.pages.characters_page import CharactersPage
 from audiomancer.ui.pages.home_page import HomeProjectPage
 from audiomancer.ui.pages.narator_voice_page import NaratorVoicePage
-from audiomancer.ui.pages.narration_plan_page import NarrationPlanPage
+from audiomancer.ui.pages.character_voices_page import CharacterVoicesPage
 from audiomancer.ui.pages.placeholder_page import PlaceholderPage
 from audiomancer.ui.pages.settings_page import SettingsPage
 from audiomancer.ui.pages.text_chunking_page import TextChunkingPage
@@ -106,9 +106,10 @@ class MainWindow(QMainWindow):
         ("ai_translation", "AI Translation"),
         ("characters", "Characters"),
         ("narator_voice", "Narator Voice"),
-        ("narration_plan", "Narration Plan"),
-        ("generation", "Generation"),
-        ("export", "Export"),
+        ("character_voices", "Character Voices"),
+        ("speech_blocks", "Speech Blocks"),
+        ("audio_blocks", "Audio Blocks"),
+        ("audio_assembly", "Audio Assembly"),
     )
 
     def __init__(
@@ -139,8 +140,8 @@ class MainWindow(QMainWindow):
         self._operation_cancel_requested = False
         self._narator_voice_preview_generation = 0
         self._narator_voice_inspected_profile_id: str | None = None
-        self._narration_plan_inspected_target_id: str | None = None
-        self._narration_plan_missing_narrator_popup_shown = False
+        self._character_voices_inspected_target_id: str | None = None
+        self._character_voices_missing_narrator_popup_shown = False
         self._settings_payload = (
             dict(settings_payload) if isinstance(settings_payload, dict) else settings_service.load_settings()
         )
@@ -150,11 +151,11 @@ class MainWindow(QMainWindow):
         self._narator_voice_audio_player.playbackStateChanged.connect(
             lambda _state: narator_voice_ui_controller.handle_preview_playback_state_changed(self)
         )
-        self._narration_plan_audio_output = QAudioOutput(self)
-        self._narration_plan_audio_player = QMediaPlayer(self)
-        self._narration_plan_audio_player.setAudioOutput(self._narration_plan_audio_output)
-        self._narration_plan_audio_player.playbackStateChanged.connect(
-            lambda _state: narration_plan_ui_controller.handle_preview_playback_state_changed(self)
+        self._character_voices_audio_output = QAudioOutput(self)
+        self._character_voices_audio_player = QMediaPlayer(self)
+        self._character_voices_audio_player.setAudioOutput(self._character_voices_audio_output)
+        self._character_voices_audio_player.playbackStateChanged.connect(
+            lambda _state: character_voices_ui_controller.handle_preview_playback_state_changed(self)
         )
 
         self._toolbar = self._build_toolbar()
@@ -194,9 +195,9 @@ class MainWindow(QMainWindow):
             return
         self._stack.setCurrentWidget(page)
         self._sidebar.set_current_page(page_id)
-        if page_id == "narration_plan":
-            self._narration_plan_missing_narrator_popup_shown = False
-            narration_plan_ui_controller.handle_page_activated(self)
+        if page_id == "character_voices":
+            self._character_voices_missing_narrator_popup_shown = False
+            character_voices_ui_controller.handle_page_activated(self)
 
     def set_project_active(self, is_active: bool) -> None:
         """
@@ -313,14 +314,14 @@ class MainWindow(QMainWindow):
                 self._narator_voice_inspected_profile_id,
             )
         )
-        self._narration_plan_page.set_project_active(project_root is not None)
-        self._narration_plan_page.set_narration_plan_state(
-            **narration_plan_state_service.build_narration_plan_state(
+        self._character_voices_page.set_project_active(project_root is not None)
+        self._character_voices_page.set_character_voices_state(
+            **character_voices_state_service.build_character_voices_state(
                 project_root,
                 manifest,
                 current_language,
                 self._settings_payload,
-                self._narration_plan_inspected_target_id,
+                self._character_voices_inspected_target_id,
             )
         )
 
@@ -593,45 +594,45 @@ class MainWindow(QMainWindow):
         self._narator_voice_page.preview_toggle_requested.connect(
             lambda: narator_voice_ui_controller.handle_preview_toggle_requested(self)
         )
-        self._narration_plan_page = NarrationPlanPage(self)
-        self._narration_plan_page.selection_change_requested.connect(
-            lambda target_id: narration_plan_ui_controller.handle_selection_change_requested(
+        self._character_voices_page = CharacterVoicesPage(self)
+        self._character_voices_page.selection_change_requested.connect(
+            lambda target_id: character_voices_ui_controller.handle_selection_change_requested(
                 self,
                 target_id,
             )
         )
-        self._narration_plan_page.voice_language_change_requested.connect(
-            lambda voice_language: narration_plan_ui_controller.handle_voice_language_change_requested(
+        self._character_voices_page.voice_language_change_requested.connect(
+            lambda voice_language: character_voices_ui_controller.handle_voice_language_change_requested(
                 self,
                 voice_language,
             )
         )
-        self._narration_plan_page.reset_prompt_requested.connect(
-            lambda target_id: narration_plan_ui_controller.handle_reset_prompt_requested(
+        self._character_voices_page.reset_prompt_requested.connect(
+            lambda target_id: character_voices_ui_controller.handle_reset_prompt_requested(
                 self,
                 target_id,
             )
         )
-        self._narration_plan_page.edit_prompt_requested.connect(
-            lambda target_id: narration_plan_ui_controller.handle_edit_prompt_requested(
+        self._character_voices_page.edit_prompt_requested.connect(
+            lambda target_id: character_voices_ui_controller.handle_edit_prompt_requested(
                 self,
                 target_id,
             )
         )
-        self._narration_plan_page.save_prompt_requested.connect(
-            lambda target_payload: narration_plan_ui_controller.handle_save_prompt_requested(
+        self._character_voices_page.save_prompt_requested.connect(
+            lambda target_payload: character_voices_ui_controller.handle_save_prompt_requested(
                 self,
                 target_payload,
             )
         )
-        self._narration_plan_page.generate_sample_requested.connect(
-            lambda target_id: narration_plan_ui_controller.handle_generate_sample_requested(
+        self._character_voices_page.generate_sample_requested.connect(
+            lambda target_id: character_voices_ui_controller.handle_generate_sample_requested(
                 self,
                 target_id,
             )
         )
-        self._narration_plan_page.preview_toggle_requested.connect(
-            lambda: narration_plan_ui_controller.handle_preview_toggle_requested(self)
+        self._character_voices_page.preview_toggle_requested.connect(
+            lambda: character_voices_ui_controller.handle_preview_toggle_requested(self)
         )
 
         pages = {
@@ -641,15 +642,29 @@ class MainWindow(QMainWindow):
             "ai_translation": self._ai_translation_page,
             "characters": self._characters_page,
             "narator_voice": self._narator_voice_page,
-            "narration_plan": self._narration_plan_page,
-            "generation": PlaceholderPage(
-                "Generation",
-                "Generation is not implemented yet.",
+            "character_voices": self._character_voices_page,
+            "speech_blocks": PlaceholderPage(
+                "Speech Blocks",
+                (
+                    "This future step will split workflow chunks into speaker-attributed TTS blocks "
+                    "based on speaking changes and TTS token limits."
+                ),
                 self,
             ),
-            "export": PlaceholderPage(
-                "Export",
-                "Export is not implemented yet.",
+            "audio_blocks": PlaceholderPage(
+                "Audio Blocks",
+                (
+                    "This future step will generate and approve audio for each speaker-attributed block "
+                    "while preserving original text and editable text."
+                ),
+                self,
+            ),
+            "audio_assembly": PlaceholderPage(
+                "Audio Assembly",
+                (
+                    "This future step will assemble approved audio blocks into final audio files and "
+                    "package metadata such as subtitles and speaker data."
+                ),
                 self,
             ),
         }
@@ -779,7 +794,7 @@ class MainWindow(QMainWindow):
         @version    0.1.0
         """
         self._narator_voice_audio_player.stop()
-        self._narration_plan_audio_player.stop()
+        self._character_voices_audio_player.stop()
         super().closeEvent(event)
 
 

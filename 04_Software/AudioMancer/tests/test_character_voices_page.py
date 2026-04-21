@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -6,10 +6,10 @@
 # See the LICENSE.txt and LICENSE_NC.txt files for full license details.
 # -----------------------------------------------------------------------------
 """
-@file test_narration_plan_page.py
-@brief Narration Plan page tests for AudioMancer.
+@file test_character_voices_page.py
+@brief Character Voices page tests for AudioMancer.
 @details Verifies preview-only Narator Voice behavior, explicit edit mode, and
-         bottom status rendering for the Narration Plan page.
+         bottom status rendering for the Character Voices page.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-20
 @version 1.3.1
@@ -17,10 +17,10 @@
 
 # IMPORTS
 
-from audiomancer.ui.pages.narration_plan_page import NarrationPlanPage
+from audiomancer.ui.pages.character_voices_page import CharacterVoicesPage
 
 
-def test_narration_plan_page_narrator_target_is_preview_only(qtbot) -> None:
+def test_character_voices_page_narrator_target_is_preview_only(qtbot) -> None:
     """
     @brief      Verify the Narator Voice row is preview-only when a sample exists.
     @param[in]  qtbot Qt test helper fixture.
@@ -30,11 +30,11 @@ def test_narration_plan_page_narrator_target_is_preview_only(qtbot) -> None:
     @date       2026-04-20
     @version    1.1.1
     """
-    page = NarrationPlanPage()
+    page = CharacterVoicesPage()
     qtbot.addWidget(page)
     page.apply_language("en")
     page.set_project_active(True)
-    page.set_narration_plan_state(
+    page.set_character_voices_state(
         targets=[
             {
                 "target_id": "narrator",
@@ -72,7 +72,7 @@ def test_narration_plan_page_narrator_target_is_preview_only(qtbot) -> None:
     assert hasattr(page, "_target_kind_edit") is False
 
 
-def test_narration_plan_page_edit_mode_disables_list_and_enables_save_after_changes(qtbot) -> None:
+def test_character_voices_page_edit_mode_disables_list_and_enables_save_after_changes(qtbot) -> None:
     """
     @brief      Verify edit mode disables the target list and enables Save after prompt changes.
     @param[in]  qtbot Qt test helper fixture.
@@ -82,10 +82,10 @@ def test_narration_plan_page_edit_mode_disables_list_and_enables_save_after_chan
     @date       2026-04-20
     @version    1.1.0
     """
-    page = NarrationPlanPage()
+    page = CharacterVoicesPage()
     qtbot.addWidget(page)
     page.set_project_active(True)
-    page.set_narration_plan_state(
+    page.set_character_voices_state(
         targets=[
             {
                 "target_id": "character_alice",
@@ -125,9 +125,9 @@ def test_narration_plan_page_edit_mode_disables_list_and_enables_save_after_chan
     assert page._save_prompt_button.isEnabled() is True
 
 
-def test_narration_plan_page_editor_payload_includes_preview_text(qtbot) -> None:
+def test_character_voices_page_editor_payload_includes_preview_text(qtbot) -> None:
     """
-    @brief      Verify the narration-plan editor payload includes the editable preview text.
+    @brief      Verify the Character Voices editor payload includes the editable preview text.
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
@@ -135,10 +135,10 @@ def test_narration_plan_page_editor_payload_includes_preview_text(qtbot) -> None
     @date       2026-04-20
     @version    1.1.0
     """
-    page = NarrationPlanPage()
+    page = CharacterVoicesPage()
     qtbot.addWidget(page)
     page.set_project_active(True)
-    page.set_narration_plan_state(
+    page.set_character_voices_state(
         targets=[
             {
                 "target_id": "character_alice",
@@ -171,7 +171,7 @@ def test_narration_plan_page_editor_payload_includes_preview_text(qtbot) -> None
     assert page.current_editor_payload()["preview_text"] == "Line one.\nLine two."
 
 
-def test_narration_plan_page_header_indicators_render_languages_and_assignment_mode(qtbot) -> None:
+def test_character_voices_page_header_indicators_render_languages_and_assignment_mode(qtbot) -> None:
     """
     @brief      Verify the boxed header indicators render original language, translated language, and assignment mode.
     @param[in]  qtbot Qt test helper fixture.
@@ -181,11 +181,11 @@ def test_narration_plan_page_header_indicators_render_languages_and_assignment_m
     @date       2026-04-21
     @version    0.1.0
     """
-    page = NarrationPlanPage()
+    page = CharacterVoicesPage()
     qtbot.addWidget(page)
     page.apply_language("en")
     page.set_project_active(True)
-    page.set_narration_plan_state(
+    page.set_character_voices_state(
         targets=[],
         notes=["Ready."],
         current_target_id=None,
@@ -217,3 +217,4 @@ def test_narration_plan_page_header_indicators_render_languages_and_assignment_m
 
 
 # END OF FILE
+

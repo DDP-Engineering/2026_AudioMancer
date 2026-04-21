@@ -49,7 +49,7 @@ def test_main_window_creates_project_and_updates_shell(monkeypatch, qtbot, tmp_p
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.2.1
+    @version    0.2.2
     """
 
     monkeypatch.setattr(
@@ -78,7 +78,7 @@ def test_main_window_creates_project_and_updates_shell(monkeypatch, qtbot, tmp_p
         for index in range(window._home_page._stage_list.count())
     )
     assert any(
-        "Narration Plan" in window._home_page._stage_list.item(index).text()
+        "Character Voices" in window._home_page._stage_list.item(index).text()
         for index in range(window._home_page._stage_list.count())
     )
 
