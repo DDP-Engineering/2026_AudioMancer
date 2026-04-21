@@ -148,5 +148,145 @@
   "default_ai_chunking_strategy": "scene",
   "default_character_extraction_profile_id": "llm_profile_037a54ff5e64",
   "play_completion_beep": true,
-  "ui_text_scale": "normal"
+  "ui_text_scale": "normal",
+  "tts_runtime_base_url": "http://192.168.1.28:8059",
+  "tts_runtime_api_key": "voiceweaver-dev-key",
+  "tts_runtime_probe_succeeded": true,
+  "tts_runtime_probe_message": "Connection successful. Discovered 3 models.",
+  "tts_runtime_discovered_models": [
+    {
+      "model_id": "Qwen3-TTS-12Hz-1.7B-Base",
+      "backend_name": "qwen",
+      "status": "healthy",
+      "supported_generation_modes": [
+        "clone"
+      ],
+      "supported_languages": [
+        "de",
+        "en",
+        "es",
+        "fr",
+        "it",
+        "ja",
+        "ko",
+        "pt",
+        "ru",
+        "zh"
+      ],
+      "supported_presets": [],
+      "speaker_count": 0,
+      "default_model_parameters": {
+        "do_sample": false,
+        "top_k": 50,
+        "top_p": 1.0,
+        "temperature": 1.0,
+        "repetition_penalty": 1.0,
+        "subtalker_dosample": true,
+        "subtalker_top_k": 50,
+        "subtalker_top_p": 1.0,
+        "subtalker_temperature": 0.9,
+        "max_new_tokens": 2048
+      },
+      "device_mode": "cuda",
+      "issues": null
+    },
+    {
+      "model_id": "Qwen3-TTS-12Hz-1.7B-CustomVoice",
+      "backend_name": "qwen",
+      "status": "healthy",
+      "supported_generation_modes": [
+        "custom_voice"
+      ],
+      "supported_languages": [
+        "de",
+        "en",
+        "es",
+        "fr",
+        "it",
+        "ja",
+        "ko",
+        "pt",
+        "ru",
+        "zh",
+        "zh",
+        "zh"
+      ],
+      "supported_presets": [
+        "aiden",
+        "dylan",
+        "eric",
+        "ono_anna",
+        "ryan",
+        "serena",
+        "sohee",
+        "uncle_fu",
+        "vivian"
+      ],
+      "speaker_count": 9,
+      "default_model_parameters": {
+        "do_sample": false,
+        "top_k": 50,
+        "top_p": 1.0,
+        "temperature": 1.0,
+        "repetition_penalty": 1.0,
+        "subtalker_dosample": true,
+        "subtalker_top_k": 50,
+        "subtalker_top_p": 1.0,
+        "subtalker_temperature": 0.9,
+        "max_new_tokens": 2048
+      },
+      "device_mode": "cuda",
+      "issues": null
+    },
+    {
+      "model_id": "Qwen3-TTS-12Hz-1.7B-VoiceDesign",
+      "backend_name": "qwen",
+      "status": "healthy",
+      "supported_generation_modes": [
+        "definition"
+      ],
+      "supported_languages": [
+        "de",
+        "en",
+        "es",
+        "fr",
+        "it",
+        "ja",
+        "ko",
+        "pt",
+        "ru",
+        "zh"
+      ],
+      "supported_presets": [],
+      "speaker_count": 0,
+      "default_model_parameters": {
+        "do_sample": false,
+        "top_k": 50,
+        "top_p": 1.0,
+        "temperature": 1.0,
+        "repetition_penalty": 1.0,
+        "subtalker_dosample": true,
+        "subtalker_top_k": 50,
+        "subtalker_top_p": 1.0,
+        "subtalker_temperature": 0.9,
+        "max_new_tokens": 2048
+      },
+      "device_mode": "cuda",
+      "issues": null
+    }
+  ],
+  "tts_runtime_active_model_id": "Qwen3-TTS-12Hz-1.7B-VoiceDesign",
+  "tts_runtime_device_diagnostics": {
+    "package_flavor": "cuda",
+    "torch_installed": true,
+    "torch_version": "2.11.0+cu128",
+    "torch_cuda_build": "12.8",
+    "torch_cuda_available": true,
+    "torch_cuda_device_count": 1,
+    "torch_cuda_device_name": "NVIDIA GeForce RTX 5060 Ti",
+    "device_mode": "cuda",
+    "status_message": "CUDA active: NVIDIA GeForce RTX 5060 Ti."
+  },
+  "tts_audio_preview_timeout_seconds": 120,
+  "tts_audio_generation_timeout_seconds": 300
 }
