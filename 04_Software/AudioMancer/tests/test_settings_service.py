@@ -11,8 +11,8 @@
 @details Verifies default settings generation, automatic file creation,
          persisted settings self-healing, and validated save behavior.
 @author Eng. Dan Dumitru Pasare
-@date 2026-04-21
-@version 0.3.0
+@date 2026-04-22
+@version 0.4.0
 """
 
 # IMPORTS
@@ -317,6 +317,46 @@ def test_validate_settings_repairs_tts_audio_timeouts() -> None:
         validated_settings["tts_audio_generation_timeout_seconds"]
         == config.DEFAULT_TTS_AUDIO_GENERATION_TIMEOUT_SECONDS
     )
+
+
+def test_validate_settings_repairs_invalid_urls() -> None:
+    """
+    @brief      Verify invalid persisted HTTP base URLs are repaired to their defaults.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-22
+    @version    0.1.0
+    """
+    candidate_settings = settings_service.build_default_settings()
+    candidate_settings["tts_runtime_base_url"] = "localhost:8059"
+    candidate_settings["llm_profiles"] = [
+        {
+            "id": "profile_1",
+            "label": "Broken URL",
+            "backend_kind": "lmstudio",
+            "base_url": "127.0.0.1:1234/v1",
+            "api_key": "",
+            "model_name": "qwen3-8b",
+            "context_window": config.DEFAULT_LLM_CONTEXT_WINDOW,
+            "max_output_tokens": config.DEFAULT_LLM_MAX_OUTPUT_TOKENS,
+            "request_timeout_seconds": config.DEFAULT_LLM_REQUEST_TIMEOUT_SECONDS,
+            "temperature": config.DEFAULT_LLM_TEMPERATURE,
+            "supports_structured_output": False,
+            "enabled": True,
+            "discovered_model_name": "",
+            "discovered_context_window": None,
+            "discovery_succeeded": False,
+            "discovery_message": "",
+            "user_overrode_model_name": False,
+            "user_overrode_context_window": False,
+        }
+    ]
+
+    validated_settings = settings_service.validate_settings(candidate_settings)
+
+    assert validated_settings["tts_runtime_base_url"] == config.DEFAULT_TTS_RUNTIME_BASE_URL
+    assert validated_settings["llm_profiles"][0]["base_url"] == ""
 
 
 # END OF FILE

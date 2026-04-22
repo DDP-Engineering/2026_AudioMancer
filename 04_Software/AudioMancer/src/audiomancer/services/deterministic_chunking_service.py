@@ -27,12 +27,12 @@ import re
 from audiomancer import config
 from audiomancer.services.logging_service import get_component_logger, trace_function
 from audiomancer.services.operation_runtime_service import (
-    build_operation_artifact_path,
     build_operation_input_snapshot_path,
     build_operation_output_path,
     progress_percent,
     raise_if_cancelled,
     relative_to_project,
+    resolve_operation_path,
 )
 
 # CONSTANTS
@@ -109,7 +109,7 @@ def chunk_text(
         "chunking",
         config.CHUNK_ARTIFACT_FILE_NAME,
     )
-    report_path = build_operation_artifact_path(
+    report_path = build_operation_output_path(
         resolved_project_root,
         "chunking",
         config.CHUNKING_REPORT_FILE_NAME,
@@ -236,9 +236,7 @@ def load_operation_state(project_root: str | Path) -> OperationStatePayload | No
     @date       2026-04-07
     @version    0.1.0
     """
-    return _load_operation_state(
-        build_operation_output_path(project_root, "chunking", config.OPERATION_STATE_FILE_NAME)
-    )
+    return _load_operation_state(resolve_operation_path(project_root, "chunking", config.OPERATION_STATE_FILE_NAME))
 
 
 @trace_function(_CHUNKING_LOGGER)
@@ -252,7 +250,7 @@ def load_chunking_report(project_root: str | Path) -> ChunkingReportPayload | No
     @date       2026-04-07
     @version    0.1.0
     """
-    report_path = build_operation_artifact_path(
+    report_path = resolve_operation_path(
         project_root,
         "chunking",
         config.CHUNKING_REPORT_FILE_NAME,
@@ -273,7 +271,7 @@ def load_chunks(project_root: str | Path) -> list[ChunkPayload]:
     @date       2026-04-07
     @version    0.1.0
     """
-    output_path = build_operation_output_path(
+    output_path = resolve_operation_path(
         project_root,
         "chunking",
         config.CHUNK_ARTIFACT_FILE_NAME,

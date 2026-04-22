@@ -10,6 +10,26 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.18.1] - 2026-04-22
+
+### Added
+
+- added shared cleanup-text analysis helpers so deterministic and AI cleanup paths reuse one analysis implementation
+- added shared VoiceWeaver runtime UI support helpers reused by the `Character Voices` and `Narator Voice` controllers
+
+### Changed
+
+- refactored operation runtime path resolution so read-only operation lookups no longer create workflow folders as a side effect
+- improved AI backend and VoiceWeaver URL normalization and validation, including support for already-complete chat-completions endpoints
+- changed AI transaction logging to append new entries instead of rewriting the full transaction-log payload on every write
+- package version updated to `0.18.1`
+
+### Fixed
+
+- fixed OpenAI-compatible retry handling so permanent provider failures are no longer retried as transient request errors
+- fixed AI Translation workflow progression so `character_discovery_ready` is reached only after all translated chunks are approved
+- fixed duplicated cleanup-analysis and VoiceWeaver controller helper logic drifting independently by centralizing the shared behavior
+
 ## [0.18.0] - 2026-04-21
 
 ### Added

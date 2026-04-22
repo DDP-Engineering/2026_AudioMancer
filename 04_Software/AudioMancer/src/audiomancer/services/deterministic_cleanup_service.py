@@ -25,17 +25,16 @@ import json
 from pathlib import Path
 import re
 
-from langdetect import LangDetectException, detect
-
 from audiomancer import config
+from audiomancer.services import cleanup_text_analysis_service
 from audiomancer.services.logging_service import get_component_logger, trace_function
 from audiomancer.services.operation_runtime_service import (
-    build_operation_artifact_path,
     build_operation_input_snapshot_path,
     build_operation_output_path,
     progress_percent,
     raise_if_cancelled,
     relative_to_project,
+    resolve_operation_path,
 )
 
 # CONSTANTS
@@ -120,7 +119,7 @@ def clean_text(
         "cleanup",
         config.CLEANED_TEXT_FILE_NAME,
     )
-    report_path = build_operation_artifact_path(
+    report_path = build_operation_output_path(
         resolved_project_root,
         "cleanup",
         config.CLEANUP_REPORT_FILE_NAME,
@@ -287,7 +286,7 @@ def load_operation_state(project_root: str | Path) -> OperationStatePayload | No
     @date       2026-04-06
     @version    0.1.1
     """
-    return _load_operation_state(build_operation_output_path(project_root, "cleanup", config.OPERATION_STATE_FILE_NAME))
+    return _load_operation_state(resolve_operation_path(project_root, "cleanup", config.OPERATION_STATE_FILE_NAME))
 
 
 @trace_function(_CLEANUP_LOGGER)
@@ -301,7 +300,7 @@ def load_cleanup_report(project_root: str | Path) -> CleanupReportPayload | None
     @date       2026-04-06
     @version    0.1.0
     """
-    report_path = build_operation_artifact_path(
+    report_path = build_operation_output_path(
         project_root,
         "cleanup",
         config.CLEANUP_REPORT_FILE_NAME,
@@ -643,14 +642,7 @@ def _count_detected_chapters(paragraph_texts: list[str]) -> int:
     @date       2026-04-21
     @version    0.1.0
     """
-    chapter_count = 0
-    current_chapter: str | None = None
-    for paragraph_text in paragraph_texts:
-        chapter_label = _detect_chapter_label(paragraph_text)
-        if chapter_label is not None and chapter_label != current_chapter:
-            current_chapter = chapter_label
-            chapter_count += 1
-    return chapter_count
+    return cleanup_text_analysis_service.count_detected_chapters(paragraph_texts)
 
 
 def _detect_language(text: str) -> str | None:
@@ -662,13 +654,7 @@ def _detect_language(text: str) -> str | None:
     @date       2026-04-21
     @version    0.1.0
     """
-    sample = text.strip()
-    if len(sample) < 20:
-        return None
-    try:
-        return detect(sample[:5000])
-    except LangDetectException:
-        return None
+    return cleanup_text_analysis_service.detect_language(text)
 
 
 def _detect_chapter_label(paragraph_text: str) -> str | None:
@@ -680,13 +666,7 @@ def _detect_chapter_label(paragraph_text: str) -> str | None:
     @date       2026-04-21
     @version    0.1.0
     """
-    normalized = paragraph_text.strip()
-    if len(normalized) > 100:
-        return None
-    for pattern in _CHAPTER_PATTERNS:
-        if pattern.fullmatch(normalized):
-            return normalized
-    return None
+    return cleanup_text_analysis_service.detect_chapter_label(paragraph_text)
 
 
 def _is_header_footer_candidate(line: str) -> bool:
@@ -740,10 +720,7 @@ def _format_dialogue_lines(paragraph_text: str) -> str:
     @date       2026-04-21
     @version    0.1.0
     """
-    normalized = paragraph_text.strip()
-    normalized = _DIALOGUE_BREAK_AFTER_PUNCTUATION_PATTERN.sub(r"\1\n- ", normalized)
-    normalized = _DIALOGUE_BREAK_AFTER_ATTRIBUTION_PATTERN.sub(r"\1\n- ", normalized)
-    return normalized
+    return cleanup_text_analysis_service.format_dialogue_lines(paragraph_text)
 
 
 def _compose_paragraph_text(lines: CleanupLineParts) -> str:

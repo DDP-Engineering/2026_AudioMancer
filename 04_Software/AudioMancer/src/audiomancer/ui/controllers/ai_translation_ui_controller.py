@@ -12,8 +12,8 @@
 @details Handles translation start/continue, reset, approvals, chunk edits,
          selected-chunk retranslation, and modal progress lifecycle.
 @author Eng. Dan Dumitru Pasare
-@date 2026-04-11
-@version 0.4.0
+@date 2026-04-22
+@version 0.5.0
 """
 
 # IMPORTS
@@ -113,8 +113,8 @@ def handle_retranslate_selected_requested(
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-07
-    @version    0.1.0
+    @date       2026-04-22
+    @version    0.2.0
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._active_operation_kind is not None:
@@ -154,8 +154,8 @@ def handle_reset_translation_requested(window: "MainWindow") -> None:
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-07
-    @version    0.1.0
+    @date       2026-04-22
+    @version    0.2.0
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._current_project_root is None or window._current_manifest is None:
@@ -186,6 +186,23 @@ def handle_reset_translation_requested(window: "MainWindow") -> None:
     )
 
 
+def _translation_manifest_stage(report: dict[str, object]) -> str:
+    """
+    @brief      Resolve the manifest stage implied by the current translation report.
+    @param[in]  report Latest translation report payload.
+    @return     Workflow stage that remains valid after the translation update.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-22
+    @version    0.1.0
+    """
+    total_chunk_count = int(report.get("total_chunk_count", 0) or 0)
+    approved_chunk_count = int(report.get("approved_chunk_count", 0) or 0)
+    if total_chunk_count > 0 and approved_chunk_count == total_chunk_count:
+        return "character_discovery_ready"
+    return "translation_ready"
+
+
 def handle_approve_all_requested(window: "MainWindow") -> None:
     """
     @brief      Approve every translated chunk that is still pending review.
@@ -193,8 +210,8 @@ def handle_approve_all_requested(window: "MainWindow") -> None:
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-07
-    @version    0.1.0
+    @date       2026-04-22
+    @version    0.2.0
     """
     if window._current_project_root is None or window._current_manifest is None:
         return
@@ -355,7 +372,7 @@ def _sync_manifest_after_translation(window: "MainWindow", report: dict[str, obj
         operation_state,
     )
     updated_manifest["operations"] = operations
-    updated_manifest["current_stage"] = "translation_ready"
+    updated_manifest["current_stage"] = _translation_manifest_stage(report)
     project_workspace_service.save_manifest(updated_manifest, window._current_project_root)
     window.show_project_state(
         window._current_project_root,

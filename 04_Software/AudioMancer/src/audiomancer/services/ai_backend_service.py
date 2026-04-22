@@ -13,8 +13,8 @@
          internal contract, and returns operator-facing connect feedback for
          the AI Settings page.
 @author Eng. Dan Dumitru Pasare
-@date 2026-04-06
-@version 0.2.0
+@date 2026-04-22
+@version 0.3.0
 """
 
 # IMPORTS
@@ -46,11 +46,17 @@ def _ensure_trailing_endpoint(base_url: str, endpoint: str) -> str:
     @return     Fully joined URL string.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-05
-    @version    0.1.0
+    @date       2026-04-22
+    @version    0.2.0
     """
-    normalized_base = (base_url or "").rstrip("/")
-    return f"{normalized_base}{endpoint}"
+    parsed_url = parse.urlparse(str(base_url or "").strip())
+    normalized_path = parsed_url.path.rstrip("/")
+    endpoint_path = endpoint.rstrip("/")
+    if normalized_path.endswith(endpoint_path):
+        resolved_path = normalized_path
+    else:
+        resolved_path = f"{normalized_path}{endpoint_path}" if normalized_path else endpoint_path
+    return parse.urlunparse(parsed_url._replace(path=resolved_path))
 
 
 def _resolve_ollama_tags_url(base_url: str) -> str:
@@ -96,8 +102,8 @@ def probe_profile(profile_payload: dict[str, object]) -> ProviderProbeResultPayl
     @return     Normalized probe result payload with discovered models and feedback.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-05
-    @version    0.1.1
+    @date       2026-04-22
+    @version    0.2.0
     """
     backend_kind = str(profile_payload.get("backend_kind", "")).strip()
     base_url = str(profile_payload.get("base_url", "")).strip()
@@ -116,6 +122,15 @@ def probe_profile(profile_payload: dict[str, object]) -> ProviderProbeResultPayl
         return _build_probe_result(
             success=False,
             message="Base URL is empty.",
+            discovered_models=[],
+            discovered_context_window=None,
+            selected_model_valid=False,
+        )
+    parsed_url = parse.urlparse(base_url)
+    if parsed_url.scheme not in {"http", "https"} or not parsed_url.netloc:
+        return _build_probe_result(
+            success=False,
+            message="Base URL is invalid.",
             discovered_models=[],
             discovered_context_window=None,
             selected_model_valid=False,

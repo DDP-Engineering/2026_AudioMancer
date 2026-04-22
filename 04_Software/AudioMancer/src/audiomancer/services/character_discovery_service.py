@@ -13,8 +13,8 @@
          overlapping chunk windows, persists the `40_character_discovery`
          workflow artifacts, and maintains resumable AI operation state.
 @author Eng. Dan Dumitru Pasare
-@date 2026-04-11
-@version 0.5.1
+@date 2026-04-22
+@version 0.5.2
 """
 
 # IMPORTS
@@ -36,13 +36,13 @@ from audiomancer.services import (
 from audiomancer.services.logging_service import get_component_logger, trace_function
 from audiomancer.services.operation_runtime_service import (
     OperationCancelledError,
-    build_operation_artifact_path,
     build_operation_input_snapshot_path,
     build_operation_output_path,
     progress_percent,
     raise_if_cancelled,
     relative_to_project,
     reset_operation_data,
+    resolve_operation_path,
 )
 
 # CONSTANTS
@@ -94,10 +94,10 @@ def load_operation_state(project_root: str | Path) -> OperationStatePayload | No
     @return     Persisted operation-state payload or `None`.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-11
-    @version    0.2.0
+    @date       2026-04-22
+    @version    0.3.0
     """
-    state_path = build_operation_output_path(
+    state_path = resolve_operation_path(
         project_root,
         "character_discovery",
         config.OPERATION_STATE_FILE_NAME,
@@ -115,10 +115,10 @@ def load_character_profiles(project_root: str | Path) -> list[CharacterProfilePa
     @return     Ordered character profile payload list.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-08
-    @version    0.3.0
+    @date       2026-04-22
+    @version    0.4.0
     """
-    output_path = build_operation_output_path(
+    output_path = resolve_operation_path(
         project_root,
         "character_discovery",
         config.CHARACTER_PROFILE_FILE_NAME,
@@ -222,10 +222,10 @@ def load_character_discovery_report(
     @return     Persisted report payload or `None`.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-08
-    @version    0.1.0
+    @date       2026-04-22
+    @version    0.2.0
     """
-    report_path = build_operation_artifact_path(
+    report_path = resolve_operation_path(
         project_root,
         "character_discovery",
         config.CHARACTER_DISCOVERY_REPORT_FILE_NAME,
@@ -308,7 +308,7 @@ def start_or_continue_discovery(
         "character_discovery",
         config.CHARACTER_PROFILE_FILE_NAME,
     )
-    report_path = build_operation_artifact_path(
+    report_path = build_operation_output_path(
         resolved_project_root,
         "character_discovery",
         config.CHARACTER_DISCOVERY_REPORT_FILE_NAME,

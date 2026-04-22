@@ -28,6 +28,8 @@ It separates:
   `/v1/models/download/cancel`, and `DELETE /v1/models/{model_id}`
 - normalize discovered runtime models into one capability matrix, including
   normalized generation-mode aliases and `default_model_parameters`
+- normalize VoiceWeaver endpoint URLs so operator-entered base URLs work
+  whether they end at the host root or already include `/v1`
 - persist runtime connection fields and the most recent discovery cache in
   `settings.json`
 - expose one static `TTS Settings` dialog beside `AI Settings`
@@ -48,6 +50,7 @@ It does not:
 The component is implemented in:
 
 - `src/audiomancer/services/voiceweaver_runtime_service.py`
+- `src/audiomancer/ui/controllers/tts_runtime_ui_support.py`
 - `src/audiomancer/ui/pages/tts_settings_page.py`
 - `src/audiomancer/ui/controllers/tts_settings_ui_controller.py`
 - dialog wiring in `src/audiomancer/ui/main_window.py`
@@ -195,7 +198,8 @@ Current UI behavior:
   and `Audio Generation Timeout`
 - narrator sample generation uses the saved runtime base URL, API key,
   discovered models, fixed Qwen3 capability classification, VoiceWeaver
-  language codes, and the saved preview timeout from this component
+  language codes, the shared controller-side runtime cache helpers, and the
+  saved preview timeout from this component
 
 ## 8. Usage
 

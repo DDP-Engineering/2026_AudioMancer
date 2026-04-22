@@ -32,7 +32,7 @@ from PySide6.QtWidgets import (
 
 from audiomancer import config
 from audiomancer.services import project_workspace_service
-from audiomancer.ui.controllers import settings_ui_controller, tts_settings_ui_controller
+from audiomancer.ui.controllers import misc_ui_controller, settings_ui_controller, tts_settings_ui_controller
 import audiomancer.ui.main_window as main_window_module
 from audiomancer.ui.main_window import MainWindow
 
@@ -153,7 +153,10 @@ def test_about_dialog_includes_license_text(qtbot, default_settings_payload) -> 
     assert any(
         label.text() == "Transform written words into real audio experience!" for label in dialog.findChildren(QLabel)
     )
-    assert any(label.text() == "Version: 0.17.2" for label in dialog.findChildren(QLabel))
+    assert any(
+        label.text() == f"Version: {misc_ui_controller.current_application_version()}"
+        for label in dialog.findChildren(QLabel)
+    )
     assert "GNU AFFERO GENERAL PUBLIC LICENSE" in text_box.toPlainText()
     assert "Additional Non-Commercial Restriction" in text_box.toPlainText()
 
@@ -187,7 +190,10 @@ def test_about_dialog_loads_translated_license_text_for_romanian(qtbot, default_
 
     assert dialog.windowTitle() == "Despre"
     assert text_box is not None
-    assert any(label.text() == "Versiune: 0.17.2" for label in dialog.findChildren(QLabel))
+    assert any(
+        label.text() == f"Versiune: {misc_ui_controller.current_application_version()}"
+        for label in dialog.findChildren(QLabel)
+    )
     assert "LICENTA PUBLICA GENERALA AFFERO GNU" in text_box.toPlainText()
     assert "RESTRICTIE SUPLIMENTARA DE UTILIZARE NECOMERCIALA" in text_box.toPlainText()
 

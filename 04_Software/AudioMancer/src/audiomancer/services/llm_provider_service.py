@@ -15,8 +15,8 @@
          transaction records to one operation-local log file while keeping
          UI-driven cancellation responsive during provider waits.
 @author Eng. Dan Dumitru Pasare
-@date 2026-04-11
-@version 0.5.0
+@date 2026-04-22
+@version 0.6.0
 """
 
 # IMPORTS
@@ -300,13 +300,15 @@ def _build_chat_endpoint(base_url: str) -> str:
     @return     Fully qualified chat-completions endpoint.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-11
-    @version    0.1.0
+    @date       2026-04-22
+    @version    0.2.0
     """
     normalized_base = base_url.rstrip("/")
     parsed_url = parse.urlparse(normalized_base)
     base_path = parsed_url.path.rstrip("/")
-    if base_path.endswith("/v1"):
+    if base_path.endswith("/chat/completions"):
+        full_path = base_path
+    elif base_path.endswith("/v1"):
         full_path = f"{base_path}/chat/completions"
     elif base_path:
         full_path = f"{base_path}/v1/chat/completions"
@@ -636,15 +638,15 @@ def _is_retryable_error(error_object: Exception) -> bool:
     @param[in]  error_object Value for `error_object`.
     @return     True when the helper condition is satisfied.
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
+    @date       2026-04-22
+    @version    0.2.0
     """
     message = str(error_object).lower()
     return (
         "transient ai provider failure" in message
         or "timed out" in message
         or "temporarily" in message
-        or "request failed" in message
+        or "temporary failure" in message
     )
 
 
@@ -655,8 +657,8 @@ def _append_ai_log(log_path: str | Path | None, payload: dict[str, object]) -> N
     @param[in]  payload Optional payload processed by the helper.
     @return     None.
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
+    @date       2026-04-22
+    @version    0.2.0
     """
     if log_path is None:
         return
@@ -666,13 +668,8 @@ def _append_ai_log(log_path: str | Path | None, payload: dict[str, object]) -> N
         "timestamp": datetime.now(UTC).replace(microsecond=0).isoformat(),
         **payload,
     }
-    existing_text = ""
-    if resolved_log_path.exists():
-        existing_text = resolved_log_path.read_text(encoding="utf-8")
-    resolved_log_path.write_text(
-        existing_text + json.dumps(log_payload, ensure_ascii=False) + "\n",
-        encoding="utf-8",
-    )
+    with resolved_log_path.open("a", encoding="utf-8") as log_handle:
+        log_handle.write(json.dumps(log_payload, ensure_ascii=False) + "\n")
 
 
 # END OF FILE

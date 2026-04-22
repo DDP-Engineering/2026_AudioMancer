@@ -11,8 +11,8 @@
 @details Verifies probe normalization, failure mapping, and capability-matrix
          derivation for the TTS Settings and Narrator runtime-awareness flow.
 @author Eng. Dan Dumitru Pasare
-@date 2026-04-18
-@version 0.2.0
+@date 2026-04-22
+@version 0.3.0
 """
 
 # IMPORTS
@@ -307,6 +307,21 @@ def test_voiceweaver_runtime_service_endpoint_wrappers_cover_extended_rest_surfa
         ("http://runtime", "key", "DELETE /v1/models/Qwen%203%2FTTS", 16),
         ("http://runtime", "key", "POST /v1/models/download/cancel", 17),
     ]
+
+
+def test_endpoint_url_avoids_duplicate_v1_suffix() -> None:
+    """
+    @brief      Verify VoiceWeaver endpoint normalization avoids duplicate `/v1` path segments.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-22
+    @version    0.1.0
+    """
+    assert (
+        voiceweaver_runtime_service._endpoint_url("http://127.0.0.1:8059/v1", "/v1/status")  # noqa: SLF001
+        == "http://127.0.0.1:8059/v1/status"
+    )
 
 
 # END OF FILE

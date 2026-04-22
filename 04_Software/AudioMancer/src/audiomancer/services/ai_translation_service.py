@@ -33,12 +33,12 @@ from audiomancer.services import (
 )
 from audiomancer.services.logging_service import get_component_logger, trace_function
 from audiomancer.services.operation_runtime_service import (
-    build_operation_artifact_path,
     build_operation_input_snapshot_path,
     build_operation_output_path,
     progress_percent,
     raise_if_cancelled,
     relative_to_project,
+    resolve_operation_path,
 )
 
 # CONSTANTS
@@ -78,7 +78,7 @@ def load_operation_state(project_root: str | Path) -> dict[str, object] | None:
     @date       2026-04-07
     @version    0.1.1
     """
-    state_path = build_operation_output_path(
+    state_path = resolve_operation_path(
         project_root,
         "translation",
         config.OPERATION_STATE_FILE_NAME,
@@ -99,7 +99,7 @@ def load_translation_report(project_root: str | Path) -> dict[str, object] | Non
     @date       2026-04-07
     @version    0.2.0
     """
-    report_path = build_operation_artifact_path(
+    report_path = resolve_operation_path(
         project_root,
         "translation",
         config.TRANSLATION_REPORT_FILE_NAME,
@@ -120,7 +120,7 @@ def load_translated_chunks(project_root: str | Path) -> list[dict[str, object]]:
     @date       2026-04-07
     @version    0.1.0
     """
-    translated_path = build_operation_output_path(
+    translated_path = resolve_operation_path(
         project_root,
         "translation",
         config.TRANSLATED_CHUNKS_FILE_NAME,
@@ -774,7 +774,7 @@ def _persist_translation_state(
         json.dumps(translated_chunks, indent=2, ensure_ascii=False) + "\n",
         encoding="utf-8",
     )
-    report_path = build_operation_artifact_path(
+    report_path = build_operation_output_path(
         project_root,
         "translation",
         config.TRANSLATION_REPORT_FILE_NAME,
@@ -892,7 +892,7 @@ def _build_operation_state(
         "translation",
         config.TRANSLATED_CHUNKS_FILE_NAME,
     )
-    report_path = build_operation_artifact_path(
+    report_path = build_operation_output_path(
         project_root,
         "translation",
         config.TRANSLATION_REPORT_FILE_NAME,

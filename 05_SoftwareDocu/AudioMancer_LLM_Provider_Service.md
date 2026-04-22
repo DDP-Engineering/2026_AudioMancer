@@ -21,6 +21,8 @@ normalization, and operation-local AI transaction logging in one shared layer.
 The service owns:
 
 - request construction for `POST /v1/chat/completions`
+- endpoint normalization for base URLs that already include `/v1` or the full
+  `/chat/completions` path
 - compatibility retry when one backend rejects `max_tokens` and requests
   `max_completion_tokens`
 - response extraction from OpenAI-compatible `choices[].message.content`
@@ -28,6 +30,8 @@ The service owns:
 - cooperative cancellation while waiting for provider responses
 - normalized token-usage extraction from the response `usage` object
 - append-only AI transaction logging for request, response, and failure events
+- transient-only retry classification so permanent HTTP failures surface
+  immediately
 
 The service does not own:
 
@@ -47,9 +51,9 @@ Main flow:
 1. `chat_json(...)` builds one OpenAI-compatible chat-completions payload.
 2. `_request_chat_completion_with_cancellation(...)` runs the blocking HTTP
    request in one worker thread so the caller can cancel cooperatively.
-3. `_request_chat_completion(...)` posts JSON to the resolved endpoint and
-   retries once with `max_completion_tokens` when a backend explicitly rejects
-   `max_tokens`.
+3. `_request_chat_completion(...)` posts JSON to the resolved endpoint,
+   preserves already-complete `/chat/completions` URLs, and retries once with
+   `max_completion_tokens` when a backend explicitly rejects `max_tokens`.
 4. `_extract_message_content(...)` reads assistant text from the first choice.
 5. `_parse_json_content(...)` strips fences, trims surrounding text, and
    attempts one conservative local repair pass for malformed JSON content.
@@ -179,6 +183,7 @@ Current tests cover:
 
 - fenced JSON normalization
 - transient retry behavior
+- no retry on permanent HTTP failures
 - cooperative cancellation during provider waits
 - `max_completion_tokens` compatibility retry
 - invalid backslash escape repair

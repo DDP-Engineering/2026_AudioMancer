@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -12,8 +11,8 @@
 @details Verifies percent conversion and downstream reset behavior shared by
          extraction, cleanup, and future workflow operations.
 @author Eng. Dan Dumitru Pasare
-@date 2026-04-07
-@version 0.1.2
+@date 2026-04-22
+@version 0.2.0
 """
 
 # IMPORTS
@@ -66,6 +65,31 @@ def test_reset_operation_data_clears_selected_and_downstream_folders(tmp_path) -
     assert list((project_root / config.CLEANUP_FOLDER_NAME).iterdir()) == []
     assert list((project_root / "20_chunking").iterdir()) == []
     assert list((project_root / "30_translation").iterdir()) == []
+
+
+def test_resolve_operation_path_does_not_create_missing_step_folder(tmp_path) -> None:
+    """
+    @brief      Verify read-only path resolution does not create workflow folders as a side effect.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-22
+    @version    0.1.0
+    """
+    project_root, _manifest = project_workspace_service.create_project("ResolveRuntime", tmp_path)
+    translation_root = project_root / config.TRANSLATION_FOLDER_NAME
+    operation_runtime_service.reset_operation_data(project_root, "translation", include_current=True)
+    translation_root.rmdir()
+
+    resolved_path = operation_runtime_service.resolve_operation_path(
+        project_root,
+        "translation",
+        config.OPERATION_STATE_FILE_NAME,
+    )
+
+    assert resolved_path == translation_root / config.OPERATION_STATE_FILE_NAME
+    assert translation_root.exists() is False
 
 
 # END OF FILE

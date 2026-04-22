@@ -25,18 +25,21 @@ import json
 from pathlib import Path
 import re
 
-from langdetect import LangDetectException, detect
-
 from audiomancer import config
-from audiomancer.services import llm_provider_service, prompt_template_service, token_usage_service
+from audiomancer.services import (
+    cleanup_text_analysis_service,
+    llm_provider_service,
+    prompt_template_service,
+    token_usage_service,
+)
 from audiomancer.services.logging_service import get_component_logger, trace_function
 from audiomancer.services.operation_runtime_service import (
-    build_operation_artifact_path,
     build_operation_input_snapshot_path,
     build_operation_output_path,
     progress_percent,
     raise_if_cancelled,
     relative_to_project,
+    resolve_operation_path,
 )
 
 # CONSTANTS
@@ -141,7 +144,7 @@ def clean_text(
         "cleanup",
         config.CLEANED_TEXT_FILE_NAME,
     )
-    report_path = build_operation_artifact_path(
+    report_path = build_operation_output_path(
         resolved_project_root,
         "cleanup",
         config.CLEANUP_REPORT_FILE_NAME,
@@ -346,7 +349,7 @@ def load_operation_state(project_root: str | Path) -> OperationStatePayload | No
     @date       2026-04-06
     @version    0.1.0
     """
-    return _load_operation_state(build_operation_output_path(project_root, "cleanup", config.OPERATION_STATE_FILE_NAME))
+    return _load_operation_state(resolve_operation_path(project_root, "cleanup", config.OPERATION_STATE_FILE_NAME))
 
 
 # LOCAL HELPERS
@@ -576,10 +579,7 @@ def _format_dialogue_lines(paragraph_text: str) -> str:
     @date       2026-04-21
     @version    0.1.0
     """
-    normalized = paragraph_text.strip()
-    normalized = _DIALOGUE_BREAK_AFTER_PUNCTUATION_PATTERN.sub(r"\1\n- ", normalized)
-    normalized = _DIALOGUE_BREAK_AFTER_ATTRIBUTION_PATTERN.sub(r"\1\n- ", normalized)
-    return normalized
+    return cleanup_text_analysis_service.format_dialogue_lines(paragraph_text)
 
 
 def _merge_adjacent_continuation_paragraphs(paragraphs: list[str]) -> list[str]:
@@ -710,7 +710,10 @@ def _apply_response_labels(
             _append_warning_detail(
                 warning_details,
                 kind="invalid_result_unit",
-                message=f"AI cleanup returned an unknown unit id '{unit_id}' in window {window_index}; the result item was ignored.",
+                message=(
+                    f"AI cleanup returned an unknown unit id '{unit_id}' in window {window_index}; "
+                    "the result item was ignored."
+                ),
                 window_index=window_index,
                 unit_id=unit_id,
             )
@@ -899,7 +902,7 @@ def _build_ai_log_path(project_root: Path, started_at: str) -> Path:
     @version    0.1.0
     """
     started_fragment = started_at.replace(":", "").replace("+00:00", "").replace("T", "_")
-    return build_operation_artifact_path(
+    return build_operation_output_path(
         project_root,
         "cleanup",
         f"{config.AI_TRANSACTION_LOG_FILE_PREFIX}{started_fragment}.log",
@@ -986,14 +989,7 @@ def _count_detected_chapters(paragraph_texts: list[str]) -> int:
     @date       2026-04-21
     @version    0.1.0
     """
-    chapter_count = 0
-    current_chapter: str | None = None
-    for paragraph_text in paragraph_texts:
-        chapter_label = _detect_chapter_label(paragraph_text)
-        if chapter_label is not None and chapter_label != current_chapter:
-            current_chapter = chapter_label
-            chapter_count += 1
-    return chapter_count
+    return cleanup_text_analysis_service.count_detected_chapters(paragraph_texts)
 
 
 def _detect_chapter_label(paragraph_text: str) -> str | None:
@@ -1005,13 +1001,7 @@ def _detect_chapter_label(paragraph_text: str) -> str | None:
     @date       2026-04-21
     @version    0.1.0
     """
-    normalized = paragraph_text.strip()
-    if len(normalized) > 100:
-        return None
-    for pattern in _CHAPTER_PATTERNS:
-        if pattern.fullmatch(normalized):
-            return normalized
-    return None
+    return cleanup_text_analysis_service.detect_chapter_label(paragraph_text)
 
 
 def _detect_language(text: str) -> str | None:
@@ -1023,13 +1013,7 @@ def _detect_language(text: str) -> str | None:
     @date       2026-04-21
     @version    0.1.0
     """
-    sample = text.strip()
-    if len(sample) < 20:
-        return None
-    try:
-        return detect(sample[:5000])
-    except LangDetectException:
-        return None
+    return cleanup_text_analysis_service.detect_language(text)
 
 
 def _split_cleanup_block(block: str) -> list[str]:
@@ -1130,7 +1114,10 @@ def _normalize_label_for_unit(
             _append_warning_detail(
                 warning_details,
                 kind="page_number_label_corrected",
-                message=f"AI cleanup corrected one page-number classification in window {window_index} to preserve cleanup quality.",
+                message=(
+                    f"AI cleanup corrected one page-number classification in window {window_index} "
+                    "to preserve cleanup quality."
+                ),
                 window_index=window_index,
                 unit_id=unit_id,
                 original_label=label,
@@ -1142,7 +1129,10 @@ def _normalize_label_for_unit(
             _append_warning_detail(
                 warning_details,
                 kind="separator_label_corrected",
-                message=f"AI cleanup corrected one separator classification in window {window_index} to preserve cleanup quality.",
+                message=(
+                    f"AI cleanup corrected one separator classification in window {window_index} "
+                    "to preserve cleanup quality."
+                ),
                 window_index=window_index,
                 unit_id=unit_id,
                 original_label=label,
@@ -1153,7 +1143,10 @@ def _normalize_label_for_unit(
         _append_warning_detail(
             warning_details,
             kind="invalid_page_number_label_corrected",
-            message=f"AI cleanup corrected one invalid page-number label in window {window_index} and preserved the text for review.",
+            message=(
+                f"AI cleanup corrected one invalid page-number label in window {window_index} "
+                "and preserved the text for review."
+            ),
             window_index=window_index,
             unit_id=unit_id,
             original_label=label,
@@ -1164,7 +1157,10 @@ def _normalize_label_for_unit(
         _append_warning_detail(
             warning_details,
             kind="invalid_separator_label_corrected",
-            message=f"AI cleanup corrected one invalid separator label in window {window_index} and preserved the text for review.",
+            message=(
+                f"AI cleanup corrected one invalid separator label in window {window_index} "
+                "and preserved the text for review."
+            ),
             window_index=window_index,
             unit_id=unit_id,
             original_label=label,
@@ -1232,7 +1228,10 @@ def _append_suspicious_window_warnings(
         _append_warning_detail(
             warning_details,
             kind="suspicious_label_drift_detected",
-            message=f"AI cleanup detected one suspicious late-window label pattern in window {window_index}; the affected text was preserved conservatively where needed.",
+            message=(
+                f"AI cleanup detected one suspicious late-window label pattern in window {window_index}; "
+                "the affected text was preserved conservatively where needed."
+            ),
             window_index=window_index,
             classification_tail=classification_tail,
         )
@@ -1262,7 +1261,8 @@ def _build_final_output_warning_details(
             {
                 "kind": "numeric_artifacts_remained",
                 "message": (
-                    f"AI cleanup left {surviving_page_number_count} page-number-like paragraph(s) in the cleaned output; review the result before chunking."
+                    f"AI cleanup left {surviving_page_number_count} page-number-like paragraph(s) "
+                    "in the cleaned output; review the result before chunking."
                 ),
                 "surviving_page_number_count": surviving_page_number_count,
             }
@@ -1279,7 +1279,8 @@ def _build_final_output_warning_details(
             {
                 "kind": "story_like_units_removed",
                 "message": (
-                    f"AI cleanup removed {story_like_removed_count} non-trivial unit(s); review the cleaned text if important content appears to be missing."
+                    f"AI cleanup removed {story_like_removed_count} non-trivial unit(s); "
+                    "review the cleaned text if important content appears to be missing."
                 ),
                 "story_like_removed_count": story_like_removed_count,
             }

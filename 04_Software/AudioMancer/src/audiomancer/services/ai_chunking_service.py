@@ -35,12 +35,12 @@ from audiomancer.services import (
 from audiomancer.services.logging_service import get_component_logger, trace_function
 from audiomancer.services.operation_runtime_service import (
     OperationCancelledError,
-    build_operation_artifact_path,
     build_operation_input_snapshot_path,
     build_operation_output_path,
     progress_percent,
     raise_if_cancelled,
     relative_to_project,
+    resolve_operation_path,
 )
 
 # CONSTANTS
@@ -132,7 +132,7 @@ def chunk_text(
         "chunking",
         config.CHUNK_ARTIFACT_FILE_NAME,
     )
-    report_path = build_operation_artifact_path(
+    report_path = build_operation_output_path(
         resolved_project_root,
         "chunking",
         config.CHUNKING_REPORT_FILE_NAME,
@@ -346,7 +346,7 @@ def load_operation_state(project_root: str | Path) -> OperationStatePayload | No
     @date       2026-04-07
     @version    0.1.0
     """
-    state_path = build_operation_output_path(project_root, "chunking", config.OPERATION_STATE_FILE_NAME)
+    state_path = resolve_operation_path(project_root, "chunking", config.OPERATION_STATE_FILE_NAME)
     if not state_path.is_file():
         return None
     return dict(json.loads(state_path.read_text(encoding="utf-8")))

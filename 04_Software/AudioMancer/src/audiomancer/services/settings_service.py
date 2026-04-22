@@ -13,8 +13,8 @@
          self-heals missing or invalid values, and saves the normalized
          settings file to the application root.
 @author Eng. Dan Dumitru Pasare
-@date 2026-04-21
-@version 0.5.0
+@date 2026-04-22
+@version 0.6.0
 """
 
 # IMPORTS
@@ -22,6 +22,7 @@
 import copy
 import json
 from typing import Any
+from urllib import parse
 
 from .. import config
 from .logging_service import get_component_logger, trace_function
@@ -97,6 +98,20 @@ def _optional_string(value: object) -> str | None:
     return str(value)
 
 
+def _is_valid_http_url(value: str) -> bool:
+    """
+    @brief      Determine whether one string is a valid absolute HTTP or HTTPS URL.
+    @param[in]  value Candidate URL string.
+    @return     True when the string exposes an HTTP(S) scheme and network location.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-22
+    @version    0.1.0
+    """
+    parsed_value = parse.urlparse(str(value).strip())
+    return parsed_value.scheme in {"http", "https"} and bool(parsed_value.netloc)
+
+
 # HELPER FUNCTIONS
 
 
@@ -108,8 +123,8 @@ def _log_settings_repair(message: str, field_name: str) -> None:
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-04
-    @version    0.1.0
+    @date       2026-04-22
+    @version    0.2.0
     """
     _SETTINGS_LOGGER.warning(
         message,
@@ -201,6 +216,13 @@ def _validate_llm_profile(
             extra={"func_name": "_validate_llm_profile", "event": "settings-repair"},
         )
         normalized_profile["backend_kind"] = default_profile["backend_kind"]
+
+    if normalized_profile["base_url"] and not _is_valid_http_url(normalized_profile["base_url"]):
+        _SETTINGS_LOGGER.warning(
+            f"Repaired llm_profiles[{profile_index}].base_url using the default value.",
+            extra={"func_name": "_validate_llm_profile", "event": "settings-repair"},
+        )
+        normalized_profile["base_url"] = default_profile["base_url"]
 
     for field_name in integer_fields:
         if not isinstance(normalized_profile.get(field_name), int) or normalized_profile[field_name] <= 0:
@@ -412,8 +434,8 @@ def validate_settings(settings_payload: dict[str, Any]) -> dict[str, Any]:
     @return     Validated and normalized settings payload.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.4.0
+    @date       2026-04-22
+    @version    0.5.0
     """
     defaults = build_default_settings()
     normalized_settings = dict(settings_payload) if isinstance(settings_payload, dict) else {}
@@ -472,6 +494,15 @@ def validate_settings(settings_payload: dict[str, Any]) -> dict[str, Any]:
                 field_name,
             )
             normalized_settings[field_name] = defaults[field_name]
+
+    if normalized_settings["tts_runtime_base_url"] and not _is_valid_http_url(
+        normalized_settings["tts_runtime_base_url"]
+    ):
+        _log_settings_repair(
+            "Repaired invalid 'tts_runtime_base_url' using the default value.",
+            "tts_runtime_base_url",
+        )
+        normalized_settings["tts_runtime_base_url"] = defaults["tts_runtime_base_url"]
 
     if not isinstance(normalized_settings["tts_runtime_probe_succeeded"], bool):
         _log_settings_repair(

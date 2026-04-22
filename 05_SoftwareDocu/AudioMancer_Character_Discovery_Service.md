@@ -241,6 +241,8 @@ Downstream:
 
 - `CharactersPage` displays the discovered profiles and evidence
 - narrator-definition work depends on the discovery output still being present
+- projects with partially reviewed translation output remain at
+  `translation_ready` until the translation chunk set is fully approved
 - reset logic returns the project to `translation_ready`
 
 Current in-repo usage:

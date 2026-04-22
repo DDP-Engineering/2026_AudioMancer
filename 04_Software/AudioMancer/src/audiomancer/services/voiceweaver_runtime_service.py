@@ -13,8 +13,8 @@
          models and current status data, and derives one capability matrix used
          by the TTS Settings dialog and Narrator workflow.
 @author Eng. Dan Dumitru Pasare
-@date 2026-04-18
-@version 0.4.0
+@date 2026-04-22
+@version 0.5.0
 """
 
 # IMPORTS
@@ -61,11 +61,19 @@ def _endpoint_url(base_url: str, endpoint: str) -> str:
     @return     Fully qualified endpoint URL.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-16
-    @version    0.1.0
+    @date       2026-04-22
+    @version    0.2.0
     """
-    normalized_base = str(base_url or "").rstrip("/")
-    return f"{normalized_base}{endpoint}"
+    parsed_url = parse.urlparse(str(base_url or "").strip())
+    normalized_path = parsed_url.path.rstrip("/")
+    endpoint_path = endpoint.rstrip("/")
+    if normalized_path.endswith(endpoint_path):
+        resolved_path = normalized_path
+    elif normalized_path.endswith("/v1") and endpoint_path.startswith("/v1/"):
+        resolved_path = f"{normalized_path}{endpoint_path[3:]}"
+    else:
+        resolved_path = f"{normalized_path}{endpoint_path}" if normalized_path else endpoint_path
+    return parse.urlunparse(parsed_url._replace(path=resolved_path))
 
 
 def _read_json(url: str, headers: dict[str, str], timeout_seconds: int) -> dict[str, Any]:

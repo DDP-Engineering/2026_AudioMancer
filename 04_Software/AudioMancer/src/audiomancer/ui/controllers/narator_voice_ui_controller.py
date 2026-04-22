@@ -25,18 +25,18 @@ from PySide6.QtCore import QUrl
 from PySide6.QtMultimedia import QMediaPlayer
 from PySide6.QtWidgets import QInputDialog, QMessageBox
 
-from audiomancer import config
 from audiomancer.services import (
     narrator_definition_service,
     project_workspace_service,
-    settings_service,
     ui_state_service,
     voiceweaver_runtime_service,
 )
-from audiomancer.ui.controllers import misc_ui_controller
+from audiomancer.ui.controllers import misc_ui_controller, tts_runtime_ui_support
 
 if TYPE_CHECKING:
     from audiomancer.ui.main_window import MainWindow
+
+settings_service = tts_runtime_ui_support.settings_service
 
 
 def handle_selection_change_requested(window: "MainWindow", target_profile_id: object) -> None:
@@ -635,22 +635,10 @@ def _probe_runtime_and_persist_cache(window: "MainWindow") -> dict[str, object]:
     @param[in]  window Value for `window`.
     @return     Helper result.
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
+    @date       2026-04-22
+    @version    0.2.0
     """
-    probe_result = voiceweaver_runtime_service.probe_runtime(
-        str(window._settings_payload.get("tts_runtime_base_url", "")).strip(),
-        str(window._settings_payload.get("tts_runtime_api_key", "")),
-    )
-    updated_settings = dict(window._settings_payload)
-    updated_settings["tts_runtime_probe_succeeded"] = bool(probe_result.get("success", False))
-    updated_settings["tts_runtime_probe_message"] = str(probe_result.get("message", ""))
-    updated_settings["tts_runtime_discovered_models"] = list(probe_result.get("discovered_models", []))
-    updated_settings["tts_runtime_active_model_id"] = probe_result.get("active_model_id")
-    updated_settings["tts_runtime_device_diagnostics"] = dict(probe_result.get("device_diagnostics", {}))
-    settings_service.save_settings(updated_settings)
-    window._settings_payload = settings_service.load_settings()
-    return probe_result
+    return tts_runtime_ui_support.probe_runtime_and_persist_cache(window)
 
 
 def _preview_timeout_seconds(window: "MainWindow") -> int:
@@ -659,16 +647,10 @@ def _preview_timeout_seconds(window: "MainWindow") -> int:
     @param[in]  window Value for `window`.
     @return     Helper result.
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
+    @date       2026-04-22
+    @version    0.2.0
     """
-    timeout_value = window._settings_payload.get(
-        "tts_audio_preview_timeout_seconds",
-        config.DEFAULT_TTS_AUDIO_PREVIEW_TIMEOUT_SECONDS,
-    )
-    if isinstance(timeout_value, int) and timeout_value > 0:
-        return timeout_value
-    return config.DEFAULT_TTS_AUDIO_PREVIEW_TIMEOUT_SECONDS
+    return tts_runtime_ui_support.preview_timeout_seconds(window)
 
 
 def _persist_runtime_status(window: "MainWindow", status_payload: dict[str, object]) -> None:
@@ -678,14 +660,10 @@ def _persist_runtime_status(window: "MainWindow", status_payload: dict[str, obje
     @param[in]  status_payload Payload for `status_payload`.
     @return     None.
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
+    @date       2026-04-22
+    @version    0.2.0
     """
-    updated_settings = dict(window._settings_payload)
-    updated_settings["tts_runtime_active_model_id"] = _active_model_id_from_status(status_payload)
-    updated_settings["tts_runtime_device_diagnostics"] = dict(status_payload.get("device_diagnostics", {}))
-    settings_service.save_settings(updated_settings)
-    window._settings_payload = settings_service.load_settings()
+    tts_runtime_ui_support.persist_runtime_status(window, status_payload)
 
 
 def _active_model_id_from_status(status_payload: dict[str, object]) -> str | None:
@@ -694,10 +672,10 @@ def _active_model_id_from_status(status_payload: dict[str, object]) -> str | Non
     @param[in]  status_payload Payload for `status_payload`.
     @return     Helper result.
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
+    @date       2026-04-22
+    @version    0.2.0
     """
-    return voiceweaver_runtime_service._resolve_active_model_id(status_payload.get("active_model"))  # noqa: SLF001
+    return tts_runtime_ui_support.active_model_id_from_status(status_payload)
 
 
 def _sync_manifest_summary(

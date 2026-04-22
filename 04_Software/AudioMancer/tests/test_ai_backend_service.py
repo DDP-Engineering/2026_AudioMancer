@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -12,8 +11,8 @@
 @details Verifies backend probe success/failure normalization for the current
          AI Settings connectivity flow.
 @author Eng. Dan Dumitru Pasare
-@date 2026-04-06
-@version 0.2.0
+@date 2026-04-22
+@version 0.3.0
 """
 
 # IMPORTS
@@ -158,6 +157,29 @@ def test_probe_profile_maps_backend_failures(monkeypatch) -> None:
     assert result["success"] is False
     assert result["discovered_model_count"] == 0
     assert "connection refused" in str(result["message"])
+
+
+def test_probe_profile_rejects_invalid_base_url() -> None:
+    """
+    @brief      Verify invalid backend base URLs are rejected before network access.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-22
+    @version    0.1.0
+    """
+    result = ai_backend_service.probe_profile(
+        {
+            "backend_kind": "openai_compatible",
+            "base_url": "127.0.0.1:8000/v1",
+            "api_key": "secret",
+            "model_name": "qwen3-8b",
+            "request_timeout_seconds": 15,
+        }
+    )
+
+    assert result["success"] is False
+    assert result["message"] == "Base URL is invalid."
 
 
 # END OF FILE

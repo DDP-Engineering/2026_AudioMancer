@@ -13,8 +13,8 @@
          downstream reset behavior, and progress helpers shared by extraction,
          cleanup, and future long-running workflow operations.
 @author Eng. Dan Dumitru Pasare
-@date 2026-04-20
-@version 0.1.6
+@date 2026-04-22
+@version 0.2.0
 """
 
 # IMPORTS
@@ -116,44 +116,44 @@ def build_operation_input_snapshot_path(
     return operation_root / f"{config.OPERATION_INPUT_FILE_PREFIX}{Path(original_name).name}"
 
 
-def build_operation_output_path(
+def resolve_operation_path(
     project_root: str | Path,
     operation_kind: str,
     file_name: str,
 ) -> Path:
     """
-    @brief      Build one operation-local file path.
+    @brief      Resolve one operation-local file path without mutating the project tree.
     @param[in]  project_root Active project root.
     @param[in]  operation_kind Stable workflow operation token.
     @param[in]  file_name Operation-local file name.
     @return     Absolute operation-local file path.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
+    @date       2026-04-22
     @version    0.1.0
     """
-    operation_root = Path(project_root) / operation_folder_name(operation_kind)
-    operation_root.mkdir(parents=True, exist_ok=True)
-    return operation_root / file_name
+    return Path(project_root) / operation_folder_name(operation_kind) / file_name
 
 
-def build_operation_artifact_path(
+def build_operation_output_path(
     project_root: str | Path,
     operation_kind: str,
     file_name: str,
 ) -> Path:
     """
-    @brief      Build one operation-local artifact file path.
+    @brief      Build one operation-local file path and ensure the step folder exists.
     @param[in]  project_root Active project root.
     @param[in]  operation_kind Stable workflow operation token.
-    @param[in]  file_name Operation artifact file name.
-    @return     Absolute operation-local artifact file path.
+    @param[in]  file_name Operation-local file name.
+    @return     Absolute operation-local file path.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.1.0
+    @date       2026-04-22
+    @version    0.2.0
     """
-    return build_operation_output_path(project_root, operation_kind, file_name)
+    operation_root = Path(project_root) / operation_folder_name(operation_kind)
+    operation_root.mkdir(parents=True, exist_ok=True)
+    return resolve_operation_path(project_root, operation_kind, file_name)
 
 
 def relative_to_project(project_root: str | Path, artifact_path: str | Path) -> str:

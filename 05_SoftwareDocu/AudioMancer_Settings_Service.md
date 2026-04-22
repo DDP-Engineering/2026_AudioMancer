@@ -57,6 +57,8 @@ Validation currently covers:
 
 - primitive fields such as language and booleans
 - path-like string fields
+- HTTP and HTTPS URL validation for LLM profile `base_url` values and the
+  VoiceWeaver `tts_runtime_base_url`
 - list fields such as recent projects and provider/profile lists
 - nested `llm_profiles` entries for required keys and supported backend values
   when profiles exist
@@ -109,6 +111,8 @@ Current deterministic behavior:
 - no default selected LLM profile id fields are persisted in the settings
   contract
 - unknown extra keys are preserved
+- invalid non-empty AI or TTS runtime base URLs heal back to their defaults
+  instead of remaining in one broken-but-persisted state
 - normalized payloads are written back when healing is required
 
 ## 7. Workflow Integration

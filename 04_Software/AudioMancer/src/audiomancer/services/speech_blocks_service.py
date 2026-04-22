@@ -39,12 +39,12 @@ from audiomancer.services import (
 from audiomancer.services.logging_service import get_component_logger, trace_function
 from audiomancer.services.operation_runtime_service import (
     OperationCancelledError,
-    build_operation_artifact_path,
     build_operation_input_snapshot_path,
     build_operation_output_path,
     progress_percent,
     raise_if_cancelled,
     relative_to_project,
+    resolve_operation_path,
 )
 
 # CONSTANTS
@@ -82,7 +82,7 @@ def load_operation_state(project_root: str | Path) -> OperationStatePayload | No
     @date       2026-04-21
     @version    0.1.0
     """
-    state_path = build_operation_output_path(project_root, "speech_blocks", config.OPERATION_STATE_FILE_NAME)
+    state_path = resolve_operation_path(project_root, "speech_blocks", config.OPERATION_STATE_FILE_NAME)
     if not state_path.is_file():
         return None
     return dict(json.loads(state_path.read_text(encoding="utf-8")))
@@ -99,7 +99,7 @@ def load_speech_blocks_report(project_root: str | Path) -> SpeechBlocksReportPay
     @date       2026-04-21
     @version    0.1.0
     """
-    report_path = build_operation_artifact_path(project_root, "speech_blocks", config.SPEECH_BLOCKS_REPORT_FILE_NAME)
+    report_path = resolve_operation_path(project_root, "speech_blocks", config.SPEECH_BLOCKS_REPORT_FILE_NAME)
     if not report_path.is_file():
         return None
     return dict(json.loads(report_path.read_text(encoding="utf-8")))
@@ -136,7 +136,7 @@ def load_speech_blocks(project_root: str | Path) -> list[SpeechBlockPayload]:
     @date       2026-04-21
     @version    0.1.0
     """
-    output_path = build_operation_output_path(project_root, "speech_blocks", config.SPEECH_BLOCKS_OUTPUT_FILE_NAME)
+    output_path = resolve_operation_path(project_root, "speech_blocks", config.SPEECH_BLOCKS_OUTPUT_FILE_NAME)
     if not output_path.is_file():
         return []
     payload = json.loads(output_path.read_text(encoding="utf-8"))
@@ -1092,7 +1092,7 @@ def _build_operation_state(
     """
     input_path = _source_chunks_snapshot_path(project_root)
     output_path = build_operation_output_path(project_root, "speech_blocks", config.SPEECH_BLOCKS_OUTPUT_FILE_NAME)
-    report_path = build_operation_artifact_path(project_root, "speech_blocks", config.SPEECH_BLOCKS_REPORT_FILE_NAME)
+    report_path = build_operation_output_path(project_root, "speech_blocks", config.SPEECH_BLOCKS_REPORT_FILE_NAME)
     processed_chunk_count = len({str(block.get("chunk_id", "")).strip() for block in speech_blocks})
     return {
         "folder_relative_path": config.SPEECH_BLOCKS_FOLDER_NAME,
@@ -1163,7 +1163,7 @@ def _persist_state(
         json.dumps(speech_blocks, indent=2, ensure_ascii=False) + "\n",
         encoding="utf-8",
     )
-    build_operation_artifact_path(project_root, "speech_blocks", config.SPEECH_BLOCKS_REPORT_FILE_NAME).write_text(
+    build_operation_output_path(project_root, "speech_blocks", config.SPEECH_BLOCKS_REPORT_FILE_NAME).write_text(
         json.dumps(report, indent=2, ensure_ascii=False) + "\n",
         encoding="utf-8",
     )

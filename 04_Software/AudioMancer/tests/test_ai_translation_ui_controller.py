@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -12,8 +11,8 @@
 @details Verifies the translation controller dispatches workflow actions and
          persists reset behavior through the main window shell.
 @author Eng. Dan Dumitru Pasare
-@date 2026-04-07
-@version 0.1.0
+@date 2026-04-22
+@version 0.2.0
 """
 
 # IMPORTS
@@ -80,6 +79,59 @@ def test_ai_translation_ui_controller_reset_clears_translation_state(monkeypatch
     assert window._current_manifest["operations"]["translation"]["status"] == "not_started"
     translated_payload = json.loads((translation_root / config.TRANSLATED_CHUNKS_FILE_NAME).read_text(encoding="utf-8"))
     assert translated_payload[0]["translated_text"] == ""
+
+
+def test_sync_manifest_after_translation_advances_only_after_full_approval(qtbot, tmp_path) -> None:
+    """
+    @brief      Verify translation manifest stage advances to character discovery only after every chunk is approved.
+    @param[in]  qtbot Qt test helper fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-22
+    @version    0.1.0
+    """
+    project_root, _manifest = _create_project(tmp_path, "TranslationApprovalControllerProject")
+    translation_root = project_root / config.TRANSLATION_FOLDER_NAME
+    translation_root.mkdir(parents=True, exist_ok=True)
+    (translation_root / config.OPERATION_STATE_FILE_NAME).write_text(
+        json.dumps(
+            {
+                "folder_relative_path": config.TRANSLATION_FOLDER_NAME,
+                "status": "completed",
+                "output_paths": [f"{config.TRANSLATION_FOLDER_NAME}/{config.TRANSLATED_CHUNKS_FILE_NAME}"],
+                "artifact_paths": [f"{config.TRANSLATION_FOLDER_NAME}/{config.TRANSLATION_REPORT_FILE_NAME}"],
+            },
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    window = _build_window(qtbot, project_root)
+
+    ai_translation_ui_controller._sync_manifest_after_translation(
+        window,
+        {
+            "translation_stage_status": "completed",
+            "translated_chunk_count": 1,
+            "approved_chunk_count": 0,
+            "total_chunk_count": 1,
+        },
+    )
+    assert window._current_manifest is not None
+    assert window._current_manifest["current_stage"] == "translation_ready"
+
+    ai_translation_ui_controller._sync_manifest_after_translation(
+        window,
+        {
+            "translation_stage_status": "completed",
+            "translated_chunk_count": 1,
+            "approved_chunk_count": 1,
+            "total_chunk_count": 1,
+        },
+    )
+    assert window._current_manifest["current_stage"] == "character_discovery_ready"
 
 
 def _create_project(tmp_path, name: str):

@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -12,8 +11,8 @@
 @details Verifies JSON normalization and retry behavior for AI-assisted
          cleanup provider requests.
 @author Eng. Dan Dumitru Pasare
-@date 2026-04-11
-@version 0.5.0
+@date 2026-04-22
+@version 0.6.0
 """
 
 # IMPORTS
@@ -399,6 +398,67 @@ def test_chat_json_logs_raw_message_content_on_parse_failure(
         assert "raw_message_content" in log_text
     else:  # pragma: no cover - defensive assertion path.
         raise AssertionError("Expected JSON parse failure to be raised.")
+
+
+def test_chat_json_does_not_retry_permanent_http_failure(monkeypatch) -> None:
+    """
+    @brief      Verify permanent provider HTTP failures are surfaced without retry loops.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-22
+    @version    0.1.0
+    """
+    call_counter = {"count": 0}
+
+    def _fake_urlopen(http_request, **_kwargs):
+        call_counter["count"] += 1
+        raise error.HTTPError(
+            http_request.full_url,
+            401,
+            "Unauthorized",
+            hdrs=None,
+            fp=io.BytesIO(b'{"error":{"message":"invalid api key"}}'),
+        )
+
+    monkeypatch.setattr(llm_provider_service.request, "urlopen", _fake_urlopen)
+
+    try:
+        llm_provider_service.chat_json(
+            {
+                "id": "profile_1",
+                "backend_kind": "openai_compatible",
+                "base_url": "https://api.openai.com/v1",
+                "model_name": "gpt-5.4-mini",
+                "request_timeout_seconds": 30,
+                "temperature": 0.1,
+                "max_output_tokens": 256,
+            },
+            "system",
+            "user",
+        )
+    except RuntimeError as error_object:
+        assert "HTTP 401" in str(error_object)
+    else:  # pragma: no cover - defensive assertion path.
+        raise AssertionError("Expected permanent HTTP failure to be raised.")
+
+    assert call_counter["count"] == 1
+
+
+def test_build_chat_endpoint_keeps_complete_chat_completions_endpoint() -> None:
+    """
+    @brief      Verify complete chat-completions endpoints are not duplicated during normalization.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-22
+    @version    0.1.0
+    """
+    assert (
+        llm_provider_service._build_chat_endpoint("https://api.example.com/v1/chat/completions")  # noqa: SLF001
+        == "https://api.example.com/v1/chat/completions"
+    )
 
 
 # END OF FILE
