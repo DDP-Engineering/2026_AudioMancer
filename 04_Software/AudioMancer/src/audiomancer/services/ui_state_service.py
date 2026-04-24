@@ -13,7 +13,7 @@
          application through one centralized string catalog and scale mapping.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 0.22.5
+@version 0.22.6
 """
 
 # IMPORTS
@@ -332,6 +332,11 @@ _UI_STRINGS = {
         "characters.relationship_hints": "Relationship Hints",
         "characters.confidence": "Confidence",
         "characters.evidence_note": "Selected source evidence excerpt will appear here.",
+        "characters.find": "Find",
+        "characters.find_next": "Find Next",
+        "characters.find_title": "Find Text",
+        "characters.find_prompt": "Text to find:",
+        "characters.find_not_found": "No match found for '{search_text}'.",
         "characters.note_no_project": "Create or open a project to begin character discovery.",
         "characters.note_no_source": "Import a source file and complete chunking before character discovery.",
         "characters.note_missing_chunking": "Run deterministic or AI-assisted chunking before character discovery.",
@@ -1010,6 +1015,11 @@ _UI_STRINGS = {
         "characters.relationship_hints": "Indicii Relatii",
         "characters.confidence": "Incredere",
         "characters.evidence_note": "Fragmentul de dovada selectat din sursa va aparea aici.",
+        "characters.find": "Cauta",
+        "characters.find_next": "Cauta Urmatorul",
+        "characters.find_title": "Cauta Text",
+        "characters.find_prompt": "Text de cautat:",
+        "characters.find_not_found": "Nu s-a gasit niciun rezultat pentru '{search_text}'.",
         "characters.note_no_project": "Creeaza sau deschide un proiect pentru a incepe descoperirea personajelor.",
         "characters.note_no_source": "Importa un fisier sursa si finalizeaza segmentarea inainte de descoperirea personajelor.",
         "characters.note_missing_chunking": "Ruleaza segmentarea determinista sau asistata de AI inainte de descoperirea personajelor.",

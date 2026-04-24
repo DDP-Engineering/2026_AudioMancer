@@ -239,7 +239,8 @@ Upstream:
 
 Downstream:
 
-- `CharactersPage` displays the discovered profiles and evidence
+- `CharactersPage` displays the discovered profiles and evidence, including
+  right-click Find and Find Next actions on the selected evidence preview
 - narrator-definition work depends on the discovery output still being present
 - projects with partially reviewed translation output remain at
   `translation_ready` until the translation chunk set is fully approved
@@ -311,7 +312,7 @@ Covered behaviors:
 - guarded selection changes with unsaved drafts
 - reset behavior and stage rollback
 - profile-selector default resolution
-- page button enablement and evidence preview
+- page button enablement, evidence preview, and evidence-preview search
 - first-run popup and resume behavior in the controller
 - main-window page refresh from persisted discovery artifacts
 

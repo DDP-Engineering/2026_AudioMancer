@@ -10,6 +10,12 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.19.1] - 2026-04-24
+
+### Added
+
+- added right-click `Find` and `Find Next` search actions to the `Characters` page evidence preview
+
 ## [0.19.0] - 2026-04-24
 
 ### Added

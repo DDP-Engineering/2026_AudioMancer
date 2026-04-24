@@ -12,10 +12,13 @@
          signaling, and evidence preview behavior for discovered characters.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-08
-@version 0.4.0
+@version 0.5.0
 """
 
 # IMPORTS
+
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QTextCursor
 
 from audiomancer.services import character_discovery_service
 from audiomancer.ui.pages.characters_page import CharactersPage
@@ -106,6 +109,22 @@ def test_characters_page_regenerate_voice_definition_emits_current_draft(qtbot) 
     assert len(requested_payloads) == 1
     assert requested_payloads[0]["description"] == "Updated literary description"
     assert "voice_definition_prompt" in requested_payloads[0]
+
+
+def test_characters_page_evidence_preview_supports_find_next_wraparound(qtbot) -> None:
+    page = _build_page(qtbot)
+    page._evidence_preview.setPlainText("Alice speaks.\nBob answers.\nAlice replies.")
+
+    assert page._evidence_preview.contextMenuPolicy() == Qt.ContextMenuPolicy.CustomContextMenu
+
+    cursor = page._evidence_preview.textCursor()
+    cursor.movePosition(QTextCursor.MoveOperation.End)
+    page._evidence_preview.setTextCursor(cursor)
+
+    page._evidence_find_text_by_editor_id[id(page._evidence_preview)] = "Alice"
+    page._find_next_evidence_text(page._evidence_preview)
+
+    assert page._evidence_preview.textCursor().selectedText() == "Alice"
 
 
 def _build_page(qtbot, profiles=None) -> CharactersPage:
