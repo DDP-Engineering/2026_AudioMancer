@@ -46,8 +46,8 @@ dist/
 07_Delivery/.build_*/
 07_Delivery/releases/
 
-# One-off test folders under 09_Others
-09_Others/Test*/
+# Local scratch and reference material
+09_Others/
 
 # Runtime logs
 04_Software/AudioMancer/Logs/
