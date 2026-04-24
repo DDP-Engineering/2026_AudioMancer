@@ -13,7 +13,7 @@
          file support used by the current AudioMancer implementation scaffold.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 1.21.0
+@version 1.23.0
 """
 
 # IMPORTS
@@ -259,16 +259,16 @@ UI_TEXT_SCALE_OPTIONS = ("very_small", "small", "normal", "large", "very_large")
 DEFAULT_PLAY_COMPLETION_BEEP = False
 
 # @brief Default initial main-window width.
-DEFAULT_MAIN_WINDOW_WIDTH = 1100
+DEFAULT_MAIN_WINDOW_WIDTH = 1040
 
 # @brief Default initial main-window height.
-DEFAULT_MAIN_WINDOW_HEIGHT = 700
+DEFAULT_MAIN_WINDOW_HEIGHT = 660
 
 # @brief Default minimum main-window width.
-DEFAULT_MAIN_WINDOW_MIN_WIDTH = 960
+DEFAULT_MAIN_WINDOW_MIN_WIDTH = 900
 
 # @brief Default minimum main-window height.
-DEFAULT_MAIN_WINDOW_MIN_HEIGHT = 620
+DEFAULT_MAIN_WINDOW_MIN_HEIGHT = 560
 
 
 # AI Provider Profiles
@@ -325,6 +325,22 @@ DEFAULT_AI_CHUNKING_STRATEGY = "paragraph"
 
 # @brief Supported semantic AI chunking strategies.
 AI_CHUNKING_STRATEGY_OPTIONS = ("paragraph", "meaning", "scene")
+
+# @brief Default paragraph count per AI chunk-boundary request for paragraph strategy.
+DEFAULT_AI_CHUNKING_PARAGRAPH_WINDOW_SIZE = 18
+
+# @brief Default paragraph count per AI chunk-boundary request for meaning strategy.
+DEFAULT_AI_CHUNKING_MEANING_WINDOW_SIZE = 14
+
+# @brief Default paragraph count per AI chunk-boundary request for scene strategy.
+DEFAULT_AI_CHUNKING_SCENE_WINDOW_SIZE = 10
+
+# @brief Strategy-specific paragraph windows used by AI chunking requests.
+AI_CHUNKING_WINDOW_SIZE_BY_STRATEGY = {
+    "paragraph": DEFAULT_AI_CHUNKING_PARAGRAPH_WINDOW_SIZE,
+    "meaning": DEFAULT_AI_CHUNKING_MEANING_WINDOW_SIZE,
+    "scene": DEFAULT_AI_CHUNKING_SCENE_WINDOW_SIZE,
+}
 
 # @brief Default target language for AI translation.
 DEFAULT_TRANSLATION_TARGET_LANGUAGE = "en"

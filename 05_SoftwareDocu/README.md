@@ -25,4 +25,5 @@ Implementation-focused software documentation and component notes.
 - `AudioMancer_Speech_Blocks_Service.md` documents the Speech Blocks source-resolution rules, per-chunk AI generation flow, persisted artifacts, resumable state contract, and page/controller integration under `70_speech_blocks`.
 - `AudioMancer_Audio_Blocks_Service.md` documents the Audio Blocks reusable clone-prompt workflow, persisted `80_audio_blocks` contract, approval rules, resumable state, and upstream invalidation behavior.
 - `AudioMancer_TTS_Settings_And_VoiceWeaver_Runtime.md` documents the simplified TTS Settings dialog, VoiceWeaver runtime integration, fixed Qwen3 readiness classification, generation helpers, and project-local `voice_assignment_mode` contract.
+- `AudioMancer_Operation_Runner_Controller.md` documents the shared threaded modal-operation runner used by long-running UI workflows.
 - The app shell document also covers the shared runtime logging bootstrap.

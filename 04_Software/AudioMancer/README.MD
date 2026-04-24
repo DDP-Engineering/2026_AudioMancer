@@ -49,6 +49,7 @@ This folder contains the current Python application implementation for
 - `src/audiomancer/services/text_cleanup_state_service.py` provides Text Cleanup page state shaping plus extraction/cleanup manifest reset helpers.
 - `src/audiomancer/ui/` provides the copied toolbar, sidebar, page, and status-bar shell used by the first desktop window.
 - `src/audiomancer/ui/controllers/` provides page/window-oriented Qt controllers for Home, Text Cleanup, Settings, AI Settings, and shared shell UI helpers.
+- `src/audiomancer/ui/controllers/operation_runner_controller.py` provides the shared `QThread`/`QObject` runner used by modal long-running workflows so service calls execute off the Qt UI thread while progress, cancellation, busy state, and final UI refreshes remain on the UI thread.
 - `src/audiomancer/ui/controllers/` now also includes a dedicated Text Chunking page controller for deterministic chunking actions and rerun/reset handling.
 - `src/audiomancer/ui/controllers/characters_ui_controller.py` provides the Character Discovery page controller for start, resume, reset, guarded manual add/edit/save/delete actions, and explicit unsaved-change handling.
 - `src/audiomancer/ui/controllers/narator_voice_ui_controller.py` provides the Narator Voice page controller for inspected-vs-selected profile handling, destructive edit confirmation, Qwen3-backed VoiceWeaver sample generation with one configurable preview timeout, load-then-poll runtime sequencing before generation, explicit narrator selection, and local WAV preview playback.
@@ -57,7 +58,7 @@ This folder contains the current Python application implementation for
 - `src/audiomancer/ui/controllers/speech_blocks_ui_controller.py` provides the Speech Blocks page controller for prerequisite validation, confirmation popups, explicit resets, approve-all, selected-block edits/resets, selected-chunk re-splitting, modal progress handling, cancellation, downstream Audio Blocks reconciliation, and manifest synchronization.
 - `src/audiomancer/ui/controllers/audio_blocks_ui_controller.py` provides the Audio Blocks page controller for VoiceWeaver runtime probing, generation confirmations, modal progress handling, per-block approvals, rerun or reset behavior, manifest synchronization, and upstream invalidation resets.
 - `src/audiomancer/ui/controllers/tts_settings_ui_controller.py` provides the TTS Settings dialog controller for VoiceWeaver connection tests plus persistence for runtime cache fields, preview/generation timeouts, and the simplified project-local `voice_assignment_mode`.
-- `src/audiomancer/ui/operation_progress_dialog.py` provides the reusable modal progress popup created on demand for synchronous blocking operations.
+- `src/audiomancer/ui/operation_progress_dialog.py` provides the reusable modal progress popup created on demand for threaded long-running operations.
 - `prompts/` stores AI prompt templates loaded by AI-assisted cleanup, translation, character discovery, Speech Blocks generation, and future AI workflows.
 - the main toolbar now supports `New Project` and `Open Project`.
 - new projects create `00_extraction`, `10_cleanup`, `20_chunking`, `30_translation`, `40_character_discovery`, `50_narrator_definition`, `60_character_voices`, `70_speech_blocks`, `80_audio_blocks`, `90_audio_assembly`, and one root `project.json`.
@@ -99,8 +100,8 @@ This folder contains the current Python application implementation for
 - discovered character profiles are now read-only by default, require explicit `Edit Character` before changes, and are saved only when `Save Character` is pressed.
 - the `Characters` page now also supports `Add Character` and `Delete Character`, guarded unsaved-change prompts, and one synthetic manual-evidence note for manually added profiles.
 - changing the selected language on the `Character Voices` page now clears `70_speech_blocks`, `80_audio_blocks`, and `90_audio_assembly` and returns the workflow to `character_voices_ready`.
-- long-running extraction and cleanup now run through one reusable modal progress dialog with a cancel button that blocks the main window while the operation is active.
-- AI-assisted cleanup keeps the progress popup responsive while waiting for provider responses, so the cancel button is honored during long model calls.
+- long-running modal workflows now run through one reusable threaded operation runner and modal progress dialog, keeping the Qt UI thread available for repainting, progress updates, and cancel clicks while the worker service call runs on a `QThread`.
+- AI-assisted cleanup and the other migrated long workflows keep the progress popup responsive while waiting for provider or VoiceWeaver responses, so the cancel button is recorded immediately and honored at cooperative cancellation checkpoints.
 - OpenAI-compatible provider requests now retry automatically with `max_completion_tokens` when one remote API rejects `max_tokens`, while preserving the original payload shape for local providers that still expect `max_tokens`.
 - OpenAI-compatible provider requests now also retain raw assistant message content in the AI transaction log, append new transaction records without rewriting the existing log, avoid retrying permanent HTTP failures, and can issue one follow-up JSON-repair request when a model returns malformed JSON text.
 - AI-assisted cleanup, AI-assisted chunking, AI translation, and character discovery now accumulate provider-reported input, output, and total tokens when the backend exposes a standard `usage` object.

@@ -243,7 +243,7 @@ def test_narator_voice_generate_sample_reprobes_runtime_and_stores_audio(monkeyp
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-17
-    @version    1.0.1
+    @version    1.1.0
     """
     project_root, _manifest = _create_project(tmp_path, "NarratorControllerGenerate")
     window = _build_window(
@@ -365,6 +365,40 @@ def test_narator_voice_generate_sample_reprobes_runtime_and_stores_audio(monkeyp
         )[1],
     )
 
+    def _start_threaded_operation(
+        window,
+        operation_kind,
+        operation_name,
+        initial_message,
+        worker_callable,
+        set_busy,
+        success_handler,
+        failure_handler,
+        cancel_handler,
+        cancellable=True,
+    ):
+        _ = operation_kind
+        _ = operation_name
+        _ = initial_message
+        _ = set_busy
+        _ = failure_handler
+        _ = cancel_handler
+        _ = cancellable
+        success_handler(
+            worker_callable(
+                window._current_project_root,
+                dict(window._current_manifest),
+                progress_callback=lambda *_args, **_kwargs: None,
+                cancel_requested=lambda: False,
+            )
+        )
+
+    monkeypatch.setattr(
+        narator_voice_ui_controller.operation_runner_controller,
+        "start_threaded_operation",
+        _start_threaded_operation,
+    )
+
     narator_voice_ui_controller.handle_generate_sample_requested(
         window,
         narrator_definition_service.DEFAULT_NARRATOR_PROFILE_ID,
@@ -416,34 +450,31 @@ def test_narator_voice_progress_messages_hide_model_id(monkeypatch, qtbot, tmp_p
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    1.0.0
+    @version    1.1.0
     """
-    project_root, _manifest = _create_project(tmp_path, "NarratorControllerProgressPrivacy")
-    window = _build_window(qtbot, project_root)
+    _project_root, _manifest = _create_project(tmp_path, "NarratorControllerProgressPrivacy")
+    _ = qtbot
     observed_updates: list[tuple[int, str]] = []
-    monkeypatch.setattr(
-        narator_voice_ui_controller.misc_ui_controller,
-        "update_progress_dialog",
-        lambda _window, percent, message, token_usage=None: observed_updates.append((percent, message)),
-    )
 
     narator_voice_ui_controller._update_load_progress(
-        window,
+        lambda _current, _total, percent, message: observed_updates.append((percent, message)),
         {
             "operation": {
                 "progress_percent": 40,
                 "stage": "Loaded Qwen3-TTS-VoiceDesigner model qwen-designer.",
             }
         },
+        "Loading voice generation model...",
     )
     narator_voice_ui_controller._update_generation_progress(
-        window,
+        lambda _current, _total, percent, message: observed_updates.append((percent, message)),
         {
             "operation": {
                 "progress_percent": 50,
                 "stage": "Generating with qwen-designer.",
             }
         },
+        "Generating narator voice sample...",
     )
 
     assert observed_updates[0][1] == "Loading voice generation model..."

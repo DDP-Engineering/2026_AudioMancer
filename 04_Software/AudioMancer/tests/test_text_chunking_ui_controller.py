@@ -14,7 +14,7 @@
          correctly.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-24
-@version 0.3.0
+@version 0.3.1
 """
 
 # IMPORTS
@@ -28,18 +28,20 @@ from audiomancer.ui.main_window import MainWindow
 
 
 def test_text_chunking_ui_controller_start_operation_clears_dialog(
+    monkeypatch,
     qtbot,
     tmp_path,
 ) -> None:
     """
     @brief      Verify direct controller-driven chunking operations close the modal progress dialog on success.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
     @param[in]  qtbot Qt test helper fixture.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-07
-    @version    0.1.0
+    @version    0.2.0
     """
     project_root, manifest = project_workspace_service.create_project(
         "ControllerChunkingProject",
@@ -70,6 +72,41 @@ def test_text_chunking_ui_controller_start_operation_clears_dialog(
     window._activate_project(project_root, project_workspace_service.load_manifest(project_root))
 
     success_payloads = []
+    runner_calls = []
+
+    def _start_threaded_operation(
+        window,
+        operation_kind,
+        operation_name,
+        initial_message,
+        worker_callable,
+        set_busy,
+        success_handler,
+        failure_handler,
+        cancel_handler,
+        cancellable=True,
+    ):
+        _ = operation_name
+        _ = initial_message
+        _ = failure_handler
+        _ = cancel_handler
+        _ = cancellable
+        runner_calls.append(operation_kind)
+        set_busy(True)
+        result_payload = worker_callable(
+            window._current_project_root,
+            dict(window._current_manifest),
+            progress_callback=lambda *_args, **_kwargs: None,
+            cancel_requested=lambda: False,
+        )
+        success_handler(result_payload)
+        set_busy(False)
+
+    monkeypatch.setattr(
+        text_chunking_ui_controller.operation_runner_controller,
+        "start_threaded_operation",
+        _start_threaded_operation,
+    )
 
     def _worker_callable(_project_root, _manifest, progress_callback=None, cancel_requested=None):
         progress_callback(1, 1, 100, "Completed.")
@@ -87,6 +124,7 @@ def test_text_chunking_ui_controller_start_operation_clears_dialog(
     )
 
     assert success_payloads == [{"status": "ok"}]
+    assert runner_calls == ["chunking"]
     assert window._operation_progress_dialog is None
     assert window._active_operation_kind is None
 

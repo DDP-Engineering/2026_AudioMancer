@@ -13,7 +13,7 @@
          dialogs, the common modal progress popup, and title-bar helpers.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-06
-@version 0.6.0
+@version 0.7.0
 """
 
 # IMPORTS
@@ -30,7 +30,6 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QPlainTextEdit,
-    QToolTip,
     QVBoxLayout,
 )
 
@@ -70,18 +69,19 @@ def show_message(
     timeout_ms: int = 5000,
 ) -> None:
     """
-    @brief      Show a transient shell message without creating a status bar.
+    @brief      Accept one transient shell message without rendering bottom shell UI.
     @param[in]  window Active main window shell.
     @param[in]  message Operator-facing message text.
-    @param[in]  timeout_ms Status-bar timeout in milliseconds.
+    @param[in]  timeout_ms Legacy timeout in milliseconds.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.2.0
+    @version    0.4.0
     """
-    global_center = window.mapToGlobal(window.rect().center())
-    QToolTip.showText(global_center, message, window, window.rect(), timeout_ms)
+    _ = window
+    _ = message
+    _ = timeout_ms
 
 
 def show_help_placeholder(window: "MainWindow") -> None:
@@ -92,7 +92,7 @@ def show_help_placeholder(window: "MainWindow") -> None:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.1.1
+    @version    0.1.2
     """
     show_message(
         window,
@@ -224,7 +224,6 @@ def create_progress_dialog(
         initial_message,
         cancellable=cancellable,
     )
-    process_pending_ui_events()
 
 
 def update_progress_dialog(
@@ -242,7 +241,7 @@ def update_progress_dialog(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.2.0
+    @version    0.2.1
     """
     if window._operation_progress_dialog is not None:
         window._operation_progress_dialog.update_progress(
@@ -250,7 +249,6 @@ def update_progress_dialog(
             message,
             token_usage,
         )
-    process_pending_ui_events()
 
 
 def process_pending_ui_events() -> None:

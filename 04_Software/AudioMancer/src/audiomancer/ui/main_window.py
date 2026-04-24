@@ -14,7 +14,7 @@
          so the window remains a thin coordinator.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 1.27.3
+@version 1.27.6
 """
 
 # IMPORTS
@@ -132,7 +132,7 @@ class MainWindow(QMainWindow):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-06
-        @version    0.15.0
+        @version    0.15.3
         """
         super().__init__(parent)
         self.setWindowTitle(misc_ui_controller.build_window_title())
@@ -145,6 +145,10 @@ class MainWindow(QMainWindow):
         self._active_operation_kind: str | None = None
         self._active_operation_name: str | None = None
         self._operation_cancel_requested = False
+        self._active_operation_thread = None
+        self._active_operation_worker = None
+        self._active_operation_ui_bridge = None
+        self._operation_cancel_event = None
         self._narator_voice_preview_generation = 0
         self._narator_voice_inspected_profile_id: str | None = None
         self._character_voices_inspected_target_id: str | None = None
@@ -181,7 +185,6 @@ class MainWindow(QMainWindow):
         self.addToolBar(Qt.ToolBarArea.TopToolBarArea, self._toolbar)
         self._sidebar = NavigationSidebar(self)
         self._stack = QStackedWidget(self)
-        self._status_bar = None
 
         self._build_pages()
         self._build_dialogs()
@@ -412,14 +415,14 @@ class MainWindow(QMainWindow):
 
     def show_message(self, message: str, timeout_ms: int = 5000) -> None:
         """
-        @brief      Show a transient status-bar message.
+        @brief      Accept one transient shell message without rendering a status bar.
         @param[in]  message Operator-facing message text.
-        @param[in]  timeout_ms Status-bar timeout in milliseconds.
+        @param[in]  timeout_ms Legacy timeout in milliseconds.
         @return     None.
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-06
-        @version    0.4.0
+        @version    0.5.0
         """
         misc_ui_controller.show_message(self, message, timeout_ms)
 

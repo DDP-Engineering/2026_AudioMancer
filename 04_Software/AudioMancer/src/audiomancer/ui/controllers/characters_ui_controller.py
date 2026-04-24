@@ -14,7 +14,7 @@
          for the Characters page.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-11
-@version 0.7.0
+@version 0.7.1
 """
 
 # IMPORTS
@@ -30,7 +30,7 @@ from audiomancer.services import (
     text_cleanup_state_service,
     ui_state_service,
 )
-from audiomancer.ui.controllers import misc_ui_controller
+from audiomancer.ui.controllers import misc_ui_controller, operation_runner_controller
 
 if TYPE_CHECKING:
     from audiomancer.ui.main_window import MainWindow
@@ -390,7 +390,7 @@ def _start_operation(
     worker_callable,
 ) -> None:
     """
-    @brief      Execute one modal character-discovery operation lifecycle.
+    @brief      Start one modal character-discovery operation on a worker thread.
     @param[in]  window Main application window.
     @param[in]  operation_name Operator-facing operation title.
     @param[in]  initial_message Initial progress-dialog message.
@@ -399,73 +399,85 @@ def _start_operation(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-08
-    @version    0.2.0
+    @version    0.3.0
     """
-    assert window._current_project_root is not None
-    assert window._current_manifest is not None
-    window._characters_page.set_busy(True)
-    window._active_operation_kind = "character_discovery"
-    window._active_operation_name = operation_name
-    window._operation_cancel_requested = False
-    misc_ui_controller.create_progress_dialog(
+    operation_runner_controller.start_threaded_operation(
         window,
+        "character_discovery",
         operation_name,
         initial_message,
-        lambda: _cancel_active_operation(window),
+        worker_callable,
+        set_busy=lambda is_busy: window._characters_page.set_busy(is_busy),
+        success_handler=lambda result_payload: _handle_discovery_success(window, result_payload),
+        failure_handler=lambda error: _handle_discovery_failure(window, error),
+        cancel_handler=lambda message: _handle_discovery_cancelled(window, message),
     )
-    try:
-        result_payload = worker_callable(
-            window._current_project_root,
-            dict(window._current_manifest),
-            progress_callback=lambda current, total, percent, message, token_usage=None: (
-                misc_ui_controller.update_progress_dialog(
-                    window,
-                    percent,
-                    message,
-                    token_usage,
-                )
-            ),
-            cancel_requested=lambda: _is_cancel_requested(window),
-        )
-    except character_discovery_service.OperationCancelledError as error:
-        misc_ui_controller.update_progress_dialog(window, 100, str(error))
-        misc_ui_controller.fail_progress_dialog(window, str(error))
-        _sync_manifest_from_disk(window)
-        misc_ui_controller.show_message(
-            window,
-            ui_state_service.translate(
-                "status.operation_cancelled",
-                ui_state_service.current_language_from_settings(window._settings_payload),
-            ),
-        )
-    except Exception as error:
-        misc_ui_controller.update_progress_dialog(window, 100, str(error))
-        misc_ui_controller.fail_progress_dialog(window, str(error))
-        _sync_manifest_from_disk(window)
-        QMessageBox.warning(
-            window,
-            ui_state_service.translate(
-                "dialog.project_error_title",
-                ui_state_service.current_language_from_settings(window._settings_payload),
-            ),
-            str(error),
-        )
-    else:
-        misc_ui_controller.finish_progress_dialog(window)
-        _sync_manifest_after_discovery(window, result_payload)
-        misc_ui_controller.show_message(
-            window,
-            ui_state_service.translate(
-                "status.characters_discovered",
-                ui_state_service.current_language_from_settings(window._settings_payload),
-            ),
-        )
-    finally:
-        window._characters_page.set_busy(False)
-        misc_ui_controller.clear_progress_dialog(window)
-        window._active_operation_kind = None
-        window._active_operation_name = None
-        window._operation_cancel_requested = False
+
+
+def _handle_discovery_success(window: "MainWindow", result_payload: object) -> None:
+    """
+    @brief      Refresh character-discovery UI state after a successful worker run.
+    @param[in]  window Main application window.
+    @param[in]  result_payload Worker result payload.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-24
+    @version    0.1.0
+    """
+    assert isinstance(result_payload, dict)
+    _sync_manifest_after_discovery(window, result_payload)
+    misc_ui_controller.show_message(
+        window,
+        ui_state_service.translate(
+            "status.characters_discovered",
+            ui_state_service.current_language_from_settings(window._settings_payload),
+        ),
+    )
+
+
+def _handle_discovery_failure(window: "MainWindow", error: Exception) -> None:
+    """
+    @brief      Refresh character-discovery UI state after a failed worker run.
+    @param[in]  window Main application window.
+    @param[in]  error Raised operation exception.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-24
+    @version    0.1.0
+    """
+    _sync_manifest_from_disk(window)
+    QMessageBox.warning(
+        window,
+        ui_state_service.translate(
+            "dialog.project_error_title",
+            ui_state_service.current_language_from_settings(window._settings_payload),
+        ),
+        str(error),
+    )
+
+
+def _handle_discovery_cancelled(window: "MainWindow", message: str) -> None:
+    """
+    @brief      Refresh character-discovery UI state after a cancelled worker run.
+    @param[in]  window Main application window.
+    @param[in]  message Cancellation message.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-24
+    @version    0.1.0
+    """
+    _ = message
+    _sync_manifest_from_disk(window)
+    misc_ui_controller.show_message(
+        window,
+        ui_state_service.translate(
+            "status.operation_cancelled",
+            ui_state_service.current_language_from_settings(window._settings_payload),
+        ),
+    )
 
 
 def _sync_manifest_after_discovery(

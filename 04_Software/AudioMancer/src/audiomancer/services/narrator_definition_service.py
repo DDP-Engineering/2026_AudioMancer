@@ -14,7 +14,7 @@
          metadata records whether that sample is selected.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-20
-@version 3.9.0
+@version 3.9.1
 """
 
 # IMPORTS
@@ -224,7 +224,7 @@ def load_selected_profile_state(project_root: str | Path) -> dict[str, object]:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-18
-    @version    1.4.0
+    @version    1.4.1
     """
     ensure_narrator_definition_files(project_root)
     profiles = load_profiles(project_root)
@@ -837,6 +837,7 @@ def copy_selected_narrator_sample(project_root: str | Path, profile_id: str) -> 
     _delete_legacy_selected_narrator_sample_files(project_root)
     selected_metadata = {
         **dict(profile_metadata),
+        "selected_profile_id": normalized_profile_id,
         "is_selected": True,
         "role": "narrator",
         "selected_at": _utc_now_iso(),

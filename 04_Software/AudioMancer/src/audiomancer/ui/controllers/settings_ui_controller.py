@@ -13,7 +13,7 @@
          runtime language and UI-scale changes to the shell.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-16
-@version 0.3.0
+@version 0.3.1
 """
 
 # IMPORTS
@@ -92,7 +92,7 @@ def apply_language(window, language: str) -> None:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-16
-    @version    0.2.0
+    @version    0.2.1
     """
     window.setWindowTitle(ui_state_service.translate("window_title.main", language))
     window._action_new_project.setText(ui_state_service.translate("toolbar.new_project", language))
@@ -103,8 +103,6 @@ def apply_language(window, language: str) -> None:
     window._action_help.setText(ui_state_service.translate("toolbar.help", language))
     window._action_about.setText(ui_state_service.translate("toolbar.about", language))
     window._sidebar.apply_language(language)
-    if window._status_bar is not None:
-        window._status_bar.apply_language(language)
     window._settings_dialog.setWindowTitle(ui_state_service.translate("dialog.settings_title", language))
     window._ai_settings_dialog.setWindowTitle(ui_state_service.translate("dialog.ai_settings_title", language))
     window._tts_settings_dialog.setWindowTitle(ui_state_service.translate("dialog.tts_settings_title", language))

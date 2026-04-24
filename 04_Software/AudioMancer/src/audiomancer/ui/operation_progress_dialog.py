@@ -13,7 +13,7 @@
          one cancel action while blocking access to the main shell.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-06
-@version 0.5.0
+@version 0.5.1
 """
 
 # IMPORTS
@@ -32,20 +32,20 @@ class OperationProgressDialog(QDialog):
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.5.0
+    @version    0.5.1
     """
 
     cancel_requested = Signal()
 
     def __init__(self, parent=None) -> None:
         """
-        @brief      Initialize the operation-progress dialog widgets.
-        @param[in]  parent Optional parent widget.
-        @return     None.
-        @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-06
-        @version    0.5.0
+            @brief      Initialize the operation-progress dialog widgets.
+            @param[in]  parent Optional parent widget.
+            @return     None.
+            @exception  None
+            @author     Eng. Dan Dumitru Pasare
+            @date       2026-04-06
+        @version    0.5.1
         """
         super().__init__(parent)
         self._current_language = "en"
@@ -102,7 +102,7 @@ class OperationProgressDialog(QDialog):
         self.show()
         self.raise_()
         self.activateWindow()
-        self.repaint()
+        self.update()
 
     def update_progress(
         self,
@@ -111,20 +111,20 @@ class OperationProgressDialog(QDialog):
         token_usage: object = _TOKEN_USAGE_UNSET,
     ) -> None:
         """
-        @brief      Refresh the dialog progress widgets.
-        @param[in]  percent Integer progress value in the 0-100 range.
-        @param[in]  message Operator-facing progress status message.
-        @return     None.
-        @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-06
-        @version    0.5.0
+            @brief      Refresh the dialog progress widgets.
+            @param[in]  percent Integer progress value in the 0-100 range.
+            @param[in]  message Operator-facing progress status message.
+            @return     None.
+            @exception  None
+            @author     Eng. Dan Dumitru Pasare
+            @date       2026-04-06
+        @version    0.5.1
         """
         self._progress_bar.setValue(max(0, min(percent, 100)))
         self._status_label.setText(message)
         if token_usage is not _TOKEN_USAGE_UNSET:
             self._set_token_usage(token_usage)
-        self.repaint()
+        self.update()
 
     def finish(self) -> None:
         """

@@ -13,7 +13,7 @@
          selected-chunk retranslation, and modal progress lifecycle.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-22
-@version 0.5.0
+@version 0.5.1
 """
 
 # IMPORTS
@@ -26,12 +26,11 @@ from audiomancer import config
 from audiomancer.services import (
     ai_translation_service,
     deterministic_chunking_service,
-    operation_runtime_service,
     project_workspace_service,
     text_cleanup_state_service,
     ui_state_service,
 )
-from audiomancer.ui.controllers import misc_ui_controller
+from audiomancer.ui.controllers import misc_ui_controller, operation_runner_controller
 
 if TYPE_CHECKING:
     from audiomancer.ui.main_window import MainWindow
@@ -274,7 +273,7 @@ def handle_translated_text_changed(window: "MainWindow", chunk_id: str, translat
 
 def _start_operation(window: "MainWindow", operation_name: str, initial_message: str, worker_callable) -> None:
     """
-    @brief      Run one translation operation with modal progress handling.
+    @brief      Start one translation operation on a worker thread.
     @param[in]  window Active main window instance.
     @param[in]  operation_name Operator-facing operation label.
     @param[in]  initial_message Initial progress-dialog message text.
@@ -283,70 +282,85 @@ def _start_operation(window: "MainWindow", operation_name: str, initial_message:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-07
-    @version    0.1.0
+    @version    0.2.0
     """
-    assert window._current_project_root is not None
-    assert window._current_manifest is not None
-    window._ai_translation_page.set_busy(True)
-    window._active_operation_kind = "translation"
-    window._active_operation_name = operation_name
-    window._operation_cancel_requested = False
-    misc_ui_controller.create_progress_dialog(
+    operation_runner_controller.start_threaded_operation(
         window,
+        "translation",
         operation_name,
         initial_message,
-        lambda: _cancel_active_operation(window),
+        worker_callable,
+        set_busy=lambda is_busy: window._ai_translation_page.set_busy(is_busy),
+        success_handler=lambda result_payload: _handle_translation_success(window, result_payload),
+        failure_handler=lambda error: _handle_translation_failure(window, error),
+        cancel_handler=lambda message: _handle_translation_cancelled(window, message),
     )
-    try:
-        result_payload = worker_callable(
-            window._current_project_root,
-            dict(window._current_manifest),
-            progress_callback=lambda current, total, percent, message, token_usage=None: (
-                misc_ui_controller.update_progress_dialog(
-                    window,
-                    percent,
-                    message,
-                    token_usage,
-                )
-            ),
-            cancel_requested=lambda: _is_cancel_requested(window),
-        )
-    except operation_runtime_service.OperationCancelledError as error:
-        misc_ui_controller.update_progress_dialog(window, 100, str(error))
-        misc_ui_controller.fail_progress_dialog(window, str(error))
-        _sync_manifest_from_disk(window)
-        misc_ui_controller.show_message(
-            window,
-            ui_state_service.translate(
-                "status.operation_cancelled", ui_state_service.current_language_from_settings(window._settings_payload)
-            ),
-        )
-    except Exception as error:
-        misc_ui_controller.update_progress_dialog(window, 100, str(error))
-        misc_ui_controller.fail_progress_dialog(window, str(error))
-        _sync_manifest_from_disk(window)
-        QMessageBox.warning(
-            window,
-            ui_state_service.translate(
-                "dialog.project_error_title", ui_state_service.current_language_from_settings(window._settings_payload)
-            ),
-            str(error),
-        )
-    else:
-        misc_ui_controller.finish_progress_dialog(window)
-        _sync_manifest_after_translation(window, result_payload)
-        misc_ui_controller.show_message(
-            window,
-            ui_state_service.translate(
-                "status.text_translated", ui_state_service.current_language_from_settings(window._settings_payload)
-            ),
-        )
-    finally:
-        window._ai_translation_page.set_busy(False)
-        misc_ui_controller.clear_progress_dialog(window)
-        window._active_operation_kind = None
-        window._active_operation_name = None
-        window._operation_cancel_requested = False
+
+
+def _handle_translation_success(window: "MainWindow", result_payload: object) -> None:
+    """
+    @brief      Refresh translation UI state after a successful worker run.
+    @param[in]  window Active main window instance.
+    @param[in]  result_payload Worker result payload.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-24
+    @version    0.1.0
+    """
+    assert isinstance(result_payload, dict)
+    _sync_manifest_after_translation(window, result_payload)
+    misc_ui_controller.show_message(
+        window,
+        ui_state_service.translate(
+            "status.text_translated",
+            ui_state_service.current_language_from_settings(window._settings_payload),
+        ),
+    )
+
+
+def _handle_translation_failure(window: "MainWindow", error: Exception) -> None:
+    """
+    @brief      Refresh translation UI state after a failed worker run.
+    @param[in]  window Active main window instance.
+    @param[in]  error Raised operation exception.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-24
+    @version    0.1.0
+    """
+    _sync_manifest_from_disk(window)
+    QMessageBox.warning(
+        window,
+        ui_state_service.translate(
+            "dialog.project_error_title",
+            ui_state_service.current_language_from_settings(window._settings_payload),
+        ),
+        str(error),
+    )
+
+
+def _handle_translation_cancelled(window: "MainWindow", message: str) -> None:
+    """
+    @brief      Refresh translation UI state after a cancelled worker run.
+    @param[in]  window Active main window instance.
+    @param[in]  message Cancellation message.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-24
+    @version    0.1.0
+    """
+    _ = message
+    _sync_manifest_from_disk(window)
+    misc_ui_controller.show_message(
+        window,
+        ui_state_service.translate(
+            "status.operation_cancelled",
+            ui_state_service.current_language_from_settings(window._settings_payload),
+        ),
+    )
 
 
 def _sync_manifest_after_translation(window: "MainWindow", report: dict[str, object]) -> None:
@@ -508,9 +522,8 @@ def _is_cancel_requested(window: "MainWindow") -> bool:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-07
-    @version    0.1.0
+    @version    0.1.1
     """
-    misc_ui_controller.process_pending_ui_events()
     return window._operation_cancel_requested
 
 

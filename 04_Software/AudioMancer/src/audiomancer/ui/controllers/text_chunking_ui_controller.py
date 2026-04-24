@@ -15,7 +15,7 @@
          Chunking page.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-24
-@version 0.5.0
+@version 0.5.1
 """
 
 # IMPORTS
@@ -35,7 +35,7 @@ from audiomancer.services import (
     text_cleanup_state_service,
     ui_state_service,
 )
-from audiomancer.ui.controllers import misc_ui_controller
+from audiomancer.ui.controllers import misc_ui_controller, operation_runner_controller
 
 if TYPE_CHECKING:
     from audiomancer.ui.main_window import MainWindow
@@ -243,7 +243,7 @@ def start_operation(
     failure_handler,
 ) -> None:
     """
-    @brief      Run one cancelable long-running chunking operation synchronously with a modal progress dialog.
+    @brief      Start one cancelable long-running chunking operation on a worker thread.
     @param[in]  window Active main window shell.
     @param[in]  operation_kind Operation-kind token.
     @param[in]  operation_name Operator-facing operation name.
@@ -255,44 +255,19 @@ def start_operation(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-11
-    @version    0.2.0
+    @version    0.3.0
     """
-    assert window._current_project_root is not None
-    assert window._current_manifest is not None
-    window._text_chunking_page.set_busy(True)
-    window._active_operation_kind = operation_kind
-    window._active_operation_name = operation_name
-    window._operation_cancel_requested = False
-    misc_ui_controller.create_progress_dialog(
+    operation_runner_controller.start_threaded_operation(
         window,
+        operation_kind,
         operation_name,
         initial_message,
-        lambda: cancel_active_operation(window),
+        worker_callable,
+        set_busy=lambda is_busy: window._text_chunking_page.set_busy(is_busy),
+        success_handler=success_handler,
+        failure_handler=failure_handler,
+        cancel_handler=lambda message: handle_operation_cancelled(window, message),
     )
-    try:
-        result_payload = worker_callable(
-            window._current_project_root,
-            dict(window._current_manifest),
-            progress_callback=lambda progress_current, progress_total, percent, message, token_usage=None: (
-                handle_operation_progress(
-                    window,
-                    progress_current,
-                    progress_total,
-                    percent,
-                    message,
-                    token_usage,
-                )
-            ),
-            cancel_requested=lambda: is_cancel_requested(window),
-        )
-    except operation_runtime_service.OperationCancelledError as error:
-        handle_operation_cancelled(window, str(error))
-    except Exception as error:
-        handle_operation_failure(window, failure_handler, error)
-    else:
-        handle_operation_success(window, success_handler, result_payload)
-    finally:
-        clear_active_operation(window)
 
 
 def handle_operation_progress(
@@ -343,9 +318,8 @@ def is_cancel_requested(window: "MainWindow") -> bool:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-07
-    @version    0.1.0
+    @version    0.1.1
     """
-    misc_ui_controller.process_pending_ui_events()
     return window._operation_cancel_requested
 
 
@@ -397,10 +371,8 @@ def handle_operation_cancelled(window: "MainWindow", message: str) -> None:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-07
-    @version    0.1.0
+    @version    0.1.1
     """
-    misc_ui_controller.update_progress_dialog(window, 100, message)
-    misc_ui_controller.fail_progress_dialog(window, message)
     sync_manifest_after_unsuccessful_operation(window)
     if window._current_project_root is not None:
         window.show_project_state(

@@ -10,6 +10,30 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.20.0] - 2026-04-25
+
+### Added
+
+- added a shared threaded modal-operation runner for long-running UI workflows, with `QThread`/`QObject` worker execution, Qt-signal progress delivery, and cooperative `threading.Event` cancellation
+- added focused runner tests for success, failure, cancellation, active-operation guarding, and cleanup of thread/worker state
+- added software documentation for the shared operation runner controller
+
+### Changed
+
+- changed modal long-running workflows to run service calls off the Qt UI thread while keeping progress dialogs, busy states, warnings, status messages, manifest refreshes, and page updates on the UI thread
+- migrated text extraction, deterministic and AI cleanup, deterministic and AI chunking, AI translation and retranslation, Character Discovery, Speech Blocks, Audio Blocks, narrator sample generation, and character-voice sample generation to the shared threaded runner
+- changed narrator and character voice sample generation so worker code uses explicit payloads and worker-safe runtime helpers instead of touching `MainWindow` or Qt widgets
+- changed transient shell messages so they no longer create stale central tooltip popups or bottom status-bar UI
+- changed AI chunking paragraph-window sizes to be shared `config.py` parameters instead of service-local hardcoded values
+- changed the main shell to remove the bottom status bar and use a smaller default/minimum window size
+- package version updated to `0.20.0`
+
+### Fixed
+
+- fixed the app appearing stuck or intermittently responsive during Character Discovery and other modal long operations by moving those operations out of the UI thread
+- fixed modal operation progress/result callbacks so worker-thread signals are delivered through a UI-thread bridge before updating Qt widgets
+- fixed selected narrator sample metadata so selected samples include `selected_profile_id`
+
 ## [0.19.1] - 2026-04-24
 
 ### Added

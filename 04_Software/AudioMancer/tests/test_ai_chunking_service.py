@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -13,7 +12,7 @@
          persists resumable state, and rebuilds chunk spans from AI boundaries.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-07
-@version 0.1.0
+@version 0.2.0
 """
 
 # IMPORTS
@@ -24,6 +23,36 @@ import pytest
 
 from audiomancer import config
 from audiomancer.services import ai_chunking_service, operation_runtime_service, project_workspace_service
+
+
+def test_ai_chunking_windows_use_configured_strategy_sizes(monkeypatch) -> None:
+    """
+    @brief      Verify AI chunking window sizes are read from shared configuration.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-25
+    @version    0.1.0
+    """
+    paragraph_records = [{"unit_id": f"paragraph-{index:04d}"} for index in range(1, 6)]
+    monkeypatch.setattr(
+        config,
+        "AI_CHUNKING_WINDOW_SIZE_BY_STRATEGY",
+        {
+            "paragraph": 3,
+            "meaning": 2,
+            "scene": 4,
+        },
+    )
+
+    windows = ai_chunking_service._build_windows(paragraph_records, "meaning")
+
+    assert windows == [
+        {"start_index": 0, "end_index": 1},
+        {"start_index": 2, "end_index": 3},
+        {"start_index": 4, "end_index": 4},
+    ]
 
 
 def test_ai_chunking_writes_chunking_artifacts_and_log(tmp_path, monkeypatch) -> None:

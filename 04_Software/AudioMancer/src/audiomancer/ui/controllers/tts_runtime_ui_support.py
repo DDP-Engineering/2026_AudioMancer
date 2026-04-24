@@ -14,7 +14,7 @@
          character voice controllers.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-22
-@version 0.1.0
+@version 0.2.0
 """
 
 # IMPORTS
@@ -36,20 +36,36 @@ def probe_runtime_and_persist_cache(window: "MainWindow") -> dict[str, object]:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-22
+    @version    0.2.0
+    """
+    probe_result = probe_runtime_and_persist_cache_from_settings(window._settings_payload)
+    window._settings_payload = settings_service.load_settings()
+    return probe_result
+
+
+def probe_runtime_and_persist_cache_from_settings(settings_payload: dict[str, object]) -> dict[str, object]:
+    """
+    @brief      Probe the runtime and persist the normalized discovery cache without touching Qt objects.
+    @param[in]  settings_payload Persisted settings snapshot.
+    @return     Normalized runtime probe result.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-24
     @version    0.1.0
     """
     probe_result = voiceweaver_runtime_service.probe_runtime(
-        str(window._settings_payload.get("tts_runtime_base_url", "")).strip(),
-        str(window._settings_payload.get("tts_runtime_api_key", "")),
+        str(settings_payload.get("tts_runtime_base_url", "")).strip(),
+        str(settings_payload.get("tts_runtime_api_key", "")),
     )
-    updated_settings = dict(window._settings_payload)
+    updated_settings = dict(settings_service.load_settings())
+    if not updated_settings:
+        updated_settings = dict(settings_payload)
     updated_settings["tts_runtime_probe_succeeded"] = bool(probe_result.get("success", False))
     updated_settings["tts_runtime_probe_message"] = str(probe_result.get("message", ""))
     updated_settings["tts_runtime_discovered_models"] = list(probe_result.get("discovered_models", []))
     updated_settings["tts_runtime_active_model_id"] = probe_result.get("active_model_id")
     updated_settings["tts_runtime_device_diagnostics"] = dict(probe_result.get("device_diagnostics", {}))
     settings_service.save_settings(updated_settings)
-    window._settings_payload = settings_service.load_settings()
     return probe_result
 
 
@@ -61,9 +77,22 @@ def preview_timeout_seconds(window: "MainWindow") -> int:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-22
+    @version    0.2.0
+    """
+    return preview_timeout_seconds_from_settings(window._settings_payload)
+
+
+def preview_timeout_seconds_from_settings(settings_payload: dict[str, object]) -> int:
+    """
+    @brief      Resolve the preview timeout setting from a settings snapshot.
+    @param[in]  settings_payload Persisted settings snapshot.
+    @return     Positive timeout value in seconds.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-24
     @version    0.1.0
     """
-    timeout_value = window._settings_payload.get(
+    timeout_value = settings_payload.get(
         "tts_audio_preview_timeout_seconds",
         config.DEFAULT_TTS_AUDIO_PREVIEW_TIMEOUT_SECONDS,
     )
@@ -81,13 +110,32 @@ def persist_runtime_status(window: "MainWindow", status_payload: dict[str, objec
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-22
+    @version    0.2.0
+    """
+    persist_runtime_status_from_settings(window._settings_payload, status_payload)
+    window._settings_payload = settings_service.load_settings()
+
+
+def persist_runtime_status_from_settings(
+    settings_payload: dict[str, object],
+    status_payload: dict[str, object],
+) -> None:
+    """
+    @brief      Persist active-model and device diagnostics from a runtime status without touching Qt objects.
+    @param[in]  settings_payload Persisted settings snapshot.
+    @param[in]  status_payload Runtime status payload.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-24
     @version    0.1.0
     """
-    updated_settings = dict(window._settings_payload)
+    updated_settings = dict(settings_service.load_settings())
+    if not updated_settings:
+        updated_settings = dict(settings_payload)
     updated_settings["tts_runtime_active_model_id"] = active_model_id_from_status(status_payload)
     updated_settings["tts_runtime_device_diagnostics"] = dict(status_payload.get("device_diagnostics", {}))
     settings_service.save_settings(updated_settings)
-    window._settings_payload = settings_service.load_settings()
 
 
 def active_model_id_from_status(status_payload: dict[str, object]) -> str | None:

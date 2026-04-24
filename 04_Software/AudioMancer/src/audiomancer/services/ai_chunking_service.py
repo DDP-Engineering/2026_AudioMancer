@@ -15,7 +15,7 @@
          window-based operation state plus AI transaction logging.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-11
-@version 0.3.0
+@version 0.3.1
 """
 
 # IMPORTS
@@ -47,13 +47,6 @@ from audiomancer.services.operation_runtime_service import (
 
 # @brief Component logger used by the AI-assisted chunking workflow.
 _AI_CHUNKING_LOGGER = get_component_logger("ai_chunking")
-
-# @brief Strategy-specific paragraph window sizes used for AI chunk-boundary requests.
-_WINDOW_SIZE_BY_STRATEGY = {
-    "paragraph": 18,
-    "meaning": 14,
-    "scene": 10,
-}
 
 # @brief Canonical chunk-record payload type persisted for downstream workflow steps.
 ChunkPayload = dict[str, object]
@@ -407,11 +400,11 @@ def _build_windows(
     @return     Derived helper result.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.1.0
+    @version    0.2.0
     """
-    window_size = _WINDOW_SIZE_BY_STRATEGY.get(
+    window_size = config.AI_CHUNKING_WINDOW_SIZE_BY_STRATEGY.get(
         semantic_strategy,
-        _WINDOW_SIZE_BY_STRATEGY[config.DEFAULT_AI_CHUNKING_STRATEGY],
+        config.AI_CHUNKING_WINDOW_SIZE_BY_STRATEGY[config.DEFAULT_AI_CHUNKING_STRATEGY],
     )
     windows: list[dict[str, int]] = []
     start_index = 0

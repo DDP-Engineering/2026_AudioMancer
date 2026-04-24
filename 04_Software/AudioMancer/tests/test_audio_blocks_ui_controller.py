@@ -41,7 +41,7 @@ def test_audio_blocks_ui_controller_requires_confirmation_before_starting(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-23
-    @version    0.1.0
+    @version    0.2.0
     """
     project_root = _create_project(tmp_path, "AudioBlocksControllerConfirm")
     window = _build_window(qtbot, project_root, default_settings_payload)
@@ -80,7 +80,7 @@ def test_audio_blocks_ui_controller_completed_rerun_resets_downstream_before_dis
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-23
-    @version    0.1.0
+    @version    0.2.0
     """
     project_root = _create_project(tmp_path, "AudioBlocksControllerRerun")
     manifest = project_workspace_service.load_manifest(project_root)
@@ -176,20 +176,46 @@ def test_audio_blocks_ui_controller_preserves_selected_block_after_regeneration_
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-24
-    @version    0.1.0
+    @version    0.2.0
     """
     project_root = _create_project(tmp_path, "AudioBlocksControllerPreserveRegenerate")
     _seed_audio_blocks_run(project_root, approved=False)
     window = _build_window(qtbot, project_root, default_settings_payload)
     window._audio_blocks_page.select_block_id("0001-000002")
-    monkeypatch.setattr(audio_blocks_ui_controller.misc_ui_controller, "create_progress_dialog", lambda *args: None)
-    monkeypatch.setattr(audio_blocks_ui_controller.misc_ui_controller, "finish_progress_dialog", lambda *args: None)
-    monkeypatch.setattr(audio_blocks_ui_controller.misc_ui_controller, "clear_progress_dialog", lambda *args: None)
     monkeypatch.setattr(audio_blocks_ui_controller.misc_ui_controller, "show_message", lambda *args, **kwargs: None)
     monkeypatch.setattr(
         audio_blocks_ui_controller,
         "_sync_manifest_after_audio_blocks_update",
         lambda active_window: active_window._audio_blocks_page.select_block_id("0001-000001"),
+    )
+
+    def _start_threaded_operation(
+        window,
+        operation_kind,
+        operation_name,
+        initial_message,
+        worker_callable,
+        set_busy,
+        success_handler,
+        failure_handler,
+        cancel_handler,
+        cancellable=True,
+    ):
+        _ = window
+        _ = operation_kind
+        _ = operation_name
+        _ = initial_message
+        _ = worker_callable
+        _ = set_busy
+        _ = failure_handler
+        _ = cancel_handler
+        _ = cancellable
+        success_handler(None)
+
+    monkeypatch.setattr(
+        audio_blocks_ui_controller.operation_runner_controller,
+        "start_threaded_operation",
+        _start_threaded_operation,
     )
 
     audio_blocks_ui_controller._start_operation(  # noqa: SLF001

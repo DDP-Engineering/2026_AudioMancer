@@ -12,7 +12,7 @@
          pages are created without workflow functionality.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-16
-@version 1.4.1
+@version 1.5.0
 """
 
 # IMPORTS
@@ -47,7 +47,7 @@ def test_main_window_can_be_created(qtbot, default_settings_payload) -> None:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.4.1
+    @version    0.4.2
     """
     window = MainWindow(
         settings_payload={
@@ -87,18 +87,17 @@ def test_main_window_can_be_created(qtbot, default_settings_payload) -> None:
     assert any(label.text() == "Interface Text Size" for label in window.findChildren(QLabel))
     assert window._sidebar.item(1).flags() == main_window_module.Qt.ItemFlag.NoItemFlags
     assert window._operation_progress_dialog is None
-    assert window._status_bar is None
 
 
 def test_main_window_show_message_does_not_create_status_bar(qtbot, default_settings_payload) -> None:
     """
-    @brief      Verify transient shell messages do not recreate a bottom status bar.
+    @brief      Verify transient shell messages do not create bottom status UI.
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-07
-    @version    0.1.0
+    @version    0.3.0
     """
     window = MainWindow(
         settings_payload={
@@ -116,7 +115,6 @@ def test_main_window_show_message_does_not_create_status_bar(qtbot, default_sett
 
     window.show_message("Transient shell message")
 
-    assert window._status_bar is None
     assert not window.findChildren(QStatusBar)
 
 

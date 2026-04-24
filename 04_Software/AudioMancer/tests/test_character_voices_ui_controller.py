@@ -154,7 +154,7 @@ def test_character_voices_ui_controller_generate_stops_preview_before_deleting_s
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-20
-    @version    1.0.0
+    @version    1.1.0
     """
     project_root = _create_project_with_character_and_selected_narrator(tmp_path, "CharacterVoicesControllerGenerate")
     window = _build_window(qtbot, project_root)
@@ -187,11 +187,6 @@ def test_character_voices_ui_controller_generate_stops_preview_before_deleting_s
         lambda *_args, **_kwargs: call_order.append("stop"),
     )
     monkeypatch.setattr(
-        character_voices_service,
-        "delete_target_sample",
-        lambda *_args, **_kwargs: call_order.append("delete"),
-    )
-    monkeypatch.setattr(
         character_voices_ui_controller.misc_ui_controller,
         "create_progress_dialog",
         lambda *args, **kwargs: None,
@@ -214,7 +209,41 @@ def test_character_voices_ui_controller_generate_stops_preview_before_deleting_s
     monkeypatch.setattr(
         character_voices_ui_controller,
         "_generate_and_store_sample",
-        lambda *args, **kwargs: None,
+        lambda *args, **kwargs: call_order.append("delete"),
+    )
+
+    def _start_threaded_operation(
+        window,
+        operation_kind,
+        operation_name,
+        initial_message,
+        worker_callable,
+        set_busy,
+        success_handler,
+        failure_handler,
+        cancel_handler,
+        cancellable=True,
+    ):
+        _ = operation_kind
+        _ = operation_name
+        _ = initial_message
+        _ = set_busy
+        _ = failure_handler
+        _ = cancel_handler
+        _ = cancellable
+        success_handler(
+            worker_callable(
+                window._current_project_root,
+                dict(window._current_manifest),
+                progress_callback=lambda *_args, **_kwargs: None,
+                cancel_requested=lambda: False,
+            )
+        )
+
+    monkeypatch.setattr(
+        character_voices_ui_controller.operation_runner_controller,
+        "start_threaded_operation",
+        _start_threaded_operation,
     )
 
     character_voices_ui_controller.handle_generate_sample_requested(window, "character_alice")
@@ -232,37 +261,34 @@ def test_character_voices_progress_messages_hide_model_id(monkeypatch, qtbot, tm
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    1.0.0
+    @version    1.1.0
     """
-    project_root = _create_project_with_character_and_selected_narrator(
+    _project_root = _create_project_with_character_and_selected_narrator(
         tmp_path,
         "CharacterVoicesControllerProgressPrivacy",
     )
-    window = _build_window(qtbot, project_root)
+    _ = qtbot
     observed_updates: list[tuple[int, str]] = []
-    monkeypatch.setattr(
-        character_voices_ui_controller.misc_ui_controller,
-        "update_progress_dialog",
-        lambda _window, percent, message, token_usage=None: observed_updates.append((percent, message)),
-    )
 
     character_voices_ui_controller._update_load_progress(
-        window,
+        lambda _current, _total, percent, message: observed_updates.append((percent, message)),
         {
             "operation": {
                 "progress_percent": 40,
                 "stage": "Loaded Qwen3-TTS-VoiceDesigner model qwen-designer.",
             }
         },
+        "Loading voice generation model...",
     )
     character_voices_ui_controller._update_generation_progress(
-        window,
+        lambda _current, _total, percent, message: observed_updates.append((percent, message)),
         {
             "operation": {
                 "progress_percent": 50,
                 "stage": "Generating with qwen-designer.",
             }
         },
+        "Generating character sample...",
     )
 
     assert observed_updates[0][1] == "Loading voice generation model..."

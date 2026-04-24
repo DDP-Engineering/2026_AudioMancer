@@ -14,7 +14,7 @@
          playback, and page-entry narrator-sample warnings.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 1.5.0
+@version 1.6.0
 """
 
 # IMPORTS
@@ -35,7 +35,12 @@ from audiomancer.services import (
     ui_state_service,
     voiceweaver_runtime_service,
 )
-from audiomancer.ui.controllers import audio_blocks_ui_controller, misc_ui_controller, tts_runtime_ui_support
+from audiomancer.ui.controllers import (
+    audio_blocks_ui_controller,
+    misc_ui_controller,
+    operation_runner_controller,
+    tts_runtime_ui_support,
+)
 
 if TYPE_CHECKING:
     from audiomancer.ui.main_window import MainWindow
@@ -173,7 +178,7 @@ def handle_edit_prompt_requested(window: "MainWindow", target_id: str) -> None:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-20
-    @version    1.2.0
+    @version    1.3.0
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._current_project_root is None:
@@ -278,97 +283,129 @@ def handle_generate_sample_requested(window: "MainWindow", target_id: str) -> No
             ui_state_service.translate("character_voices.error_missing_preview_text", current_language),
         )
         return
-    probe_result = _probe_runtime_and_persist_cache(window)
-    if not bool(probe_result.get("success", False)):
-        QMessageBox.warning(
-            window,
-            ui_state_service.translate("dialog.project_error_title", current_language),
-            str(probe_result.get("message", "")),
-        )
-        window.show_project_state(
-            window._current_project_root, project_workspace_service.load_manifest(window._current_project_root)
-        )
-        return
-    capability_matrix = dict(probe_result.get("capability_matrix", {}))
-    if not bool(capability_matrix.get("minimum_qwen_ready", False)):
-        QMessageBox.warning(
-            window,
-            ui_state_service.translate("dialog.project_error_title", current_language),
-            ui_state_service.translate("character_voices.error_qwen_capabilities_missing", current_language).format(
-                missing_capabilities=", ".join(capability_matrix.get("missing_qwen_capabilities", [])),
-            ),
-        )
-        window.show_project_state(
-            window._current_project_root, project_workspace_service.load_manifest(window._current_project_root)
-        )
-        return
-    discovered_models = list(probe_result.get("discovered_models", []))
-    generation_request = character_voices_service.voice_target_generation_request(
-        target_payload,
-        discovered_models,
-        voice_language,
-    )
-    if not bool(generation_request.get("can_generate", False)):
-        QMessageBox.warning(
-            window,
-            ui_state_service.translate("dialog.project_error_title", current_language),
-            str(generation_request.get("unavailable_reason", "")),
-        )
-        return
     _stop_preview_playback(window)
-    character_voices_service.delete_target_sample(window._current_project_root, target_id)
-    base_url = str(window._settings_payload.get("tts_runtime_base_url", "")).strip()
-    runtime_api_key = str(window._settings_payload.get("tts_runtime_api_key", ""))
-    preview_timeout_seconds = _preview_timeout_seconds(window)
-
-    window._active_operation_kind = "character_voices_generate_sample"
-    window._active_operation_name = ui_state_service.translate("character_voices.generate_sample", current_language)
-    window._operation_cancel_requested = False
-    window._character_voices_page.set_busy(True)
-    misc_ui_controller.create_progress_dialog(
+    settings_payload = dict(window._settings_payload)
+    progress_messages = {
+        "prepare": ui_state_service.translate("progress.character_voices_sample_prepare", current_language),
+        "load_model": ui_state_service.translate("progress.character_voices_sample_load_model", current_language),
+        "generate": ui_state_service.translate("progress.character_voices_sample_generate", current_language),
+        "download": ui_state_service.translate("progress.character_voices_sample_download", current_language),
+        "qwen_capabilities_missing": ui_state_service.translate(
+            "character_voices.error_qwen_capabilities_missing",
+            current_language,
+        ),
+        "generation_missing_audio": ui_state_service.translate(
+            "character_voices.error_generation_missing_audio",
+            current_language,
+        ),
+    }
+    operation_runner_controller.start_threaded_operation(
         window,
-        window._active_operation_name,
-        ui_state_service.translate("progress.character_voices_sample_prepare", current_language),
-        lambda: None,
+        "character_voices_generate_sample",
+        ui_state_service.translate("character_voices.generate_sample", current_language),
+        progress_messages["prepare"],
+        worker_callable=lambda project_root, manifest, progress_callback=None, cancel_requested=None: (
+            _generate_and_store_sample(
+                project_root,
+                settings_payload,
+                progress_messages,
+                target_payload,
+                voice_language,
+                preview_text,
+                progress_callback,
+                cancel_requested,
+            )
+        ),
+        set_busy=lambda is_busy: window._character_voices_page.set_busy(is_busy),
+        success_handler=lambda result_payload: _handle_generate_sample_success(
+            window,
+            result_payload,
+            target_id,
+            current_language,
+        ),
+        failure_handler=lambda error: _handle_generate_sample_failure(window, error, current_language),
+        cancel_handler=lambda message: _handle_generate_sample_cancelled(window, message, current_language),
         cancellable=False,
     )
-    try:
-        _generate_and_store_sample(
-            window,
-            target_payload,
-            voice_language,
-            preview_text,
-            generation_request,
-            base_url,
-            runtime_api_key,
-            preview_timeout_seconds,
-        )
-    except Exception as error:  # noqa: BLE001
-        misc_ui_controller.update_progress_dialog(window, 100, str(error))
-        misc_ui_controller.fail_progress_dialog(window, str(error))
-        QMessageBox.warning(
-            window,
-            ui_state_service.translate("dialog.project_error_title", current_language),
-            str(error),
-        )
-    else:
-        misc_ui_controller.finish_progress_dialog(window)
-        window._character_voices_inspected_target_id = target_id
+
+
+def _handle_generate_sample_success(
+    window: "MainWindow",
+    result_payload: object,
+    target_id: str,
+    current_language: str,
+) -> None:
+    """
+    @brief      Refresh Character Voices UI state after successful sample generation.
+    @param[in]  window Main application window.
+    @param[in]  result_payload Worker result payload.
+    @param[in]  target_id Generated character-voices target identifier.
+    @param[in]  current_language Current UI language code.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-24
+    @version    0.1.0
+    """
+    _ = result_payload
+    window._settings_payload = settings_service.load_settings()
+    window._character_voices_inspected_target_id = target_id
+    if window._current_project_root is not None:
         window.show_project_state(
-            window._current_project_root, project_workspace_service.load_manifest(window._current_project_root)
+            window._current_project_root,
+            project_workspace_service.load_manifest(window._current_project_root),
         )
-        _sync_manifest_stage(window)
-        audio_blocks_ui_controller.invalidate_audio_blocks_after_upstream_change(window)
-        misc_ui_controller.show_message(
-            window,
-            ui_state_service.translate("status.character_voices_sample_generated", current_language),
+    _sync_manifest_stage(window)
+    audio_blocks_ui_controller.invalidate_audio_blocks_after_upstream_change(window)
+    misc_ui_controller.show_message(
+        window,
+        ui_state_service.translate("status.character_voices_sample_generated", current_language),
+    )
+
+
+def _handle_generate_sample_failure(window: "MainWindow", error: Exception, current_language: str) -> None:
+    """
+    @brief      Refresh Character Voices UI state after failed sample generation.
+    @param[in]  window Main application window.
+    @param[in]  error Raised operation exception.
+    @param[in]  current_language Current UI language code.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-24
+    @version    0.1.0
+    """
+    window._settings_payload = settings_service.load_settings()
+    if window._current_project_root is not None:
+        window.show_project_state(
+            window._current_project_root,
+            project_workspace_service.load_manifest(window._current_project_root),
         )
-    finally:
-        misc_ui_controller.clear_progress_dialog(window)
-        window._character_voices_page.set_busy(False)
-        window._active_operation_kind = None
-        window._active_operation_name = None
-        window._operation_cancel_requested = False
+    QMessageBox.warning(
+        window,
+        ui_state_service.translate("dialog.project_error_title", current_language),
+        str(error),
+    )
+
+
+def _handle_generate_sample_cancelled(window: "MainWindow", message: str, current_language: str) -> None:
+    """
+    @brief      Refresh Character Voices UI state after cancelled sample generation.
+    @param[in]  window Main application window.
+    @param[in]  message Cancellation message.
+    @param[in]  current_language Current UI language code.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-24
+    @version    0.1.0
+    """
+    _ = message
+    window._settings_payload = settings_service.load_settings()
+    misc_ui_controller.show_message(
+        window,
+        ui_state_service.translate("status.operation_cancelled", current_language),
+    )
 
 
 def handle_preview_toggle_requested(window: "MainWindow") -> None:
@@ -430,49 +467,79 @@ def handle_preview_playback_state_changed(window: "MainWindow") -> None:
 
 
 def _generate_and_store_sample(
-    window: "MainWindow",
+    project_root,
+    settings_payload: dict[str, object],
+    progress_messages: dict[str, str],
     target_payload: dict[str, object],
     voice_language: str,
     preview_text: str,
-    generation_request: dict[str, object],
-    base_url: str,
-    runtime_api_key: str,
-    preview_timeout_seconds: int,
+    progress_callback,
+    cancel_requested,
 ) -> None:
     """
     @brief      Execute the generate and store sample helper.
-    @param[in]  window Value for `window`.
+    @param[in]  project_root Active project root.
+    @param[in]  settings_payload Persisted settings snapshot.
+    @param[in]  progress_messages Worker-safe progress and error messages.
     @param[in]  target_payload Payload for `target_payload`.
     @param[in]  voice_language Value for `voice_language`.
     @param[in]  preview_text Text value for `preview_text`.
-    @param[in]  generation_request Value for `generation_request`.
-    @param[in]  base_url Value for `base_url`.
-    @param[in]  runtime_api_key Value for `runtime_api_key`.
-    @param[in]  preview_timeout_seconds Value for `preview_timeout_seconds`.
+    @param[in]  progress_callback Optional threaded-runner progress callback.
+    @param[in]  cancel_requested Optional cooperative cancellation callback.
     @return     None.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.1.0
+    @version    0.2.0
     """
-    current_language = ui_state_service.current_language_from_settings(window._settings_payload)
+    _ = cancel_requested
+    _emit_sample_progress(
+        progress_callback,
+        2,
+        progress_messages["prepare"],
+    )
+    probe_result = tts_runtime_ui_support.probe_runtime_and_persist_cache_from_settings(settings_payload)
+    if not bool(probe_result.get("success", False)):
+        raise RuntimeError(str(probe_result.get("message", "")))
+    capability_matrix = dict(probe_result.get("capability_matrix", {}))
+    if not bool(capability_matrix.get("minimum_qwen_ready", False)):
+        raise RuntimeError(
+            progress_messages["qwen_capabilities_missing"].format(
+                missing_capabilities=", ".join(capability_matrix.get("missing_qwen_capabilities", [])),
+            )
+        )
+    discovered_models = list(probe_result.get("discovered_models", []))
+    generation_request = character_voices_service.voice_target_generation_request(
+        target_payload,
+        discovered_models,
+        voice_language,
+    )
+    if not bool(generation_request.get("can_generate", False)):
+        raise RuntimeError(str(generation_request.get("unavailable_reason", "")))
+    character_voices_service.delete_target_sample(
+        project_root,
+        str(target_payload.get("target_id", "")).strip(),
+    )
+    base_url = str(settings_payload.get("tts_runtime_base_url", "")).strip()
+    runtime_api_key = str(settings_payload.get("tts_runtime_api_key", ""))
+    preview_timeout_seconds = tts_runtime_ui_support.preview_timeout_seconds_from_settings(settings_payload)
     model_id = str(generation_request.get("model_id", "")).strip()
     initial_status = voiceweaver_runtime_service.read_status(
         base_url,
         runtime_api_key,
         timeout_seconds=preview_timeout_seconds,
     )
-    _persist_runtime_status(window, initial_status)
+    tts_runtime_ui_support.persist_runtime_status_from_settings(settings_payload, initial_status)
     active_model_id = _active_model_id_from_status(initial_status)
-    misc_ui_controller.update_progress_dialog(
-        window,
+    _emit_sample_progress(
+        progress_callback,
         10,
-        ui_state_service.translate("progress.character_voices_sample_prepare", current_language),
+        progress_messages["prepare"],
     )
     if active_model_id != model_id:
-        misc_ui_controller.update_progress_dialog(
-            window,
+        _emit_sample_progress(
+            progress_callback,
             25,
-            ui_state_service.translate("progress.character_voices_sample_load_model", current_language),
+            progress_messages["load_model"],
         )
         voiceweaver_runtime_service.load_model(
             base_url,
@@ -483,10 +550,14 @@ def _generate_and_store_sample(
         load_status = voiceweaver_runtime_service.wait_for_terminal_operation(
             base_url,
             runtime_api_key,
-            progress_callback=lambda status_payload: _update_load_progress(window, status_payload),
+            progress_callback=lambda status_payload: _update_load_progress(
+                progress_callback,
+                status_payload,
+                progress_messages["load_model"],
+            ),
             timeout_seconds=preview_timeout_seconds,
         )
-        _persist_runtime_status(window, load_status)
+        tts_runtime_ui_support.persist_runtime_status_from_settings(settings_payload, load_status)
         load_operation = load_status.get("operation", {})
         if not isinstance(load_operation, dict) or str(load_operation.get("status", "")).strip().lower() != "completed":
             raise RuntimeError(voiceweaver_runtime_service.operation_failed_message(load_status))
@@ -494,10 +565,10 @@ def _generate_and_store_sample(
         if active_model_id != model_id:
             raise RuntimeError(f"VoiceWeaver did not activate the requested model '{model_id}'.")
 
-    misc_ui_controller.update_progress_dialog(
-        window,
+    _emit_sample_progress(
+        progress_callback,
         35,
-        ui_state_service.translate("progress.character_voices_sample_generate", current_language),
+        progress_messages["generate"],
     )
     voiceweaver_runtime_service.generate_voice_design(
         base_url,
@@ -513,23 +584,25 @@ def _generate_and_store_sample(
     final_status = voiceweaver_runtime_service.wait_for_terminal_operation(
         base_url,
         runtime_api_key,
-        progress_callback=lambda status_payload: _update_generation_progress(window, status_payload),
+        progress_callback=lambda status_payload: _update_generation_progress(
+            progress_callback,
+            status_payload,
+            progress_messages["generate"],
+        ),
         timeout_seconds=preview_timeout_seconds,
     )
-    _persist_runtime_status(window, final_status)
+    tts_runtime_ui_support.persist_runtime_status_from_settings(settings_payload, final_status)
     final_operation = final_status.get("operation", {})
     if not isinstance(final_operation, dict) or str(final_operation.get("status", "")).strip() != "completed":
         raise RuntimeError(voiceweaver_runtime_service.operation_failed_message(final_status))
     final_result = final_status.get("result", {})
     if not isinstance(final_result, dict) or not bool(final_result.get("available", False)):
-        raise RuntimeError(
-            ui_state_service.translate("character_voices.error_generation_missing_audio", current_language)
-        )
+        raise RuntimeError(progress_messages["generation_missing_audio"])
 
-    misc_ui_controller.update_progress_dialog(
-        window,
+    _emit_sample_progress(
+        progress_callback,
         95,
-        ui_state_service.translate("progress.character_voices_sample_download", current_language),
+        progress_messages["download"],
     )
     audio_bytes = voiceweaver_runtime_service.download_generated_voice(
         base_url,
@@ -537,7 +610,7 @@ def _generate_and_store_sample(
         timeout_seconds=preview_timeout_seconds,
     )
     character_voices_service.store_target_sample(
-        window._current_project_root,
+        project_root,
         target_payload,
         voice_language,
         preview_text,
@@ -547,44 +620,66 @@ def _generate_and_store_sample(
     )
 
 
-def _update_generation_progress(window: "MainWindow", status_payload: dict[str, object]) -> None:
+def _update_generation_progress(
+    progress_callback,
+    status_payload: dict[str, object],
+    stage_text: str,
+) -> None:
     """
     @brief      Update the generation progress.
-    @param[in]  window Value for `window`.
+    @param[in]  progress_callback Optional threaded-runner progress callback.
     @param[in]  status_payload Payload for `status_payload`.
+    @param[in]  stage_text Progress stage text.
     @return     None.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.1.0
+    @version    0.2.0
     """
-    current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     operation_payload = status_payload.get("operation", {})
     if not isinstance(operation_payload, dict):
         return
     percent = int(operation_payload.get("progress_percent", 0))
-    stage_text = ui_state_service.translate("progress.character_voices_sample_generate", current_language)
     mapped_percent = 35 + int(max(0, min(percent, 100)) * 0.55)
-    misc_ui_controller.update_progress_dialog(window, mapped_percent, stage_text)
+    _emit_sample_progress(progress_callback, mapped_percent, stage_text)
 
 
-def _update_load_progress(window: "MainWindow", status_payload: dict[str, object]) -> None:
+def _update_load_progress(
+    progress_callback,
+    status_payload: dict[str, object],
+    stage_text: str,
+) -> None:
     """
     @brief      Update the load progress.
-    @param[in]  window Value for `window`.
+    @param[in]  progress_callback Optional threaded-runner progress callback.
     @param[in]  status_payload Payload for `status_payload`.
+    @param[in]  stage_text Progress stage text.
     @return     None.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.1.0
+    @version    0.2.0
     """
     operation_payload = status_payload.get("operation", {})
     if not isinstance(operation_payload, dict):
         return
     percent = int(operation_payload.get("progress_percent", 0))
-    current_language = ui_state_service.current_language_from_settings(window._settings_payload)
-    stage_text = ui_state_service.translate("progress.character_voices_sample_load_model", current_language)
     mapped_percent = 25 + int(max(0, min(percent, 100)) * 0.10)
-    misc_ui_controller.update_progress_dialog(window, mapped_percent, stage_text)
+    _emit_sample_progress(progress_callback, mapped_percent, stage_text)
+
+
+def _emit_sample_progress(progress_callback, percent: int, message: str) -> None:
+    """
+    @brief      Emit one sample-generation progress update when a runner callback is available.
+    @param[in]  progress_callback Optional threaded-runner progress callback.
+    @param[in]  percent Current progress percent.
+    @param[in]  message Current operator-facing status text.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-24
+    @version    0.1.0
+    """
+    if progress_callback is not None:
+        progress_callback(0, 100, percent, message)
 
 
 def _probe_runtime_and_persist_cache(window: "MainWindow") -> dict[str, object]:

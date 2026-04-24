@@ -12,7 +12,7 @@
          settings scaffold exist with the expected baseline contract.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-20
-@version 0.8.4
+@version 0.8.5
 """
 
 # IMPORTS
@@ -33,14 +33,14 @@ def test_config_exposes_expected_identity_and_window_defaults() -> None:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.2.2
+    @version    0.2.3
     """
     assert config.APP_NAME == "AudioMancer"
     assert config.PACKAGE_NAME == "audiomancer"
-    assert config.DEFAULT_MAIN_WINDOW_WIDTH == 1100
-    assert config.DEFAULT_MAIN_WINDOW_HEIGHT == 700
-    assert config.DEFAULT_MAIN_WINDOW_MIN_WIDTH == 960
-    assert config.DEFAULT_MAIN_WINDOW_MIN_HEIGHT == 620
+    assert config.DEFAULT_MAIN_WINDOW_WIDTH == 1040
+    assert config.DEFAULT_MAIN_WINDOW_HEIGHT == 660
+    assert config.DEFAULT_MAIN_WINDOW_MIN_WIDTH == 900
+    assert config.DEFAULT_MAIN_WINDOW_MIN_HEIGHT == 560
     assert config.PROJECT_MANIFEST_FILE_NAME == "project.json"
     assert "50_narrator_definition" in config.PROJECT_REQUIRED_SUBDIRECTORIES
     assert "60_character_voices" in config.PROJECT_REQUIRED_SUBDIRECTORIES

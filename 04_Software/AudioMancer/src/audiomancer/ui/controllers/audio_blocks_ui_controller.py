@@ -14,7 +14,7 @@
          targeted downstream invalidation when upstream voice inputs change.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-23
-@version 0.2.0
+@version 0.2.1
 """
 
 # IMPORTS
@@ -29,12 +29,11 @@ from PySide6.QtWidgets import QMessageBox
 from audiomancer import config
 from audiomancer.services import (
     audio_blocks_service,
-    operation_runtime_service,
     project_workspace_service,
     text_cleanup_state_service,
     ui_state_service,
 )
-from audiomancer.ui.controllers import misc_ui_controller, tts_runtime_ui_support
+from audiomancer.ui.controllers import misc_ui_controller, operation_runner_controller, tts_runtime_ui_support
 
 if TYPE_CHECKING:
     from audiomancer.ui.main_window import MainWindow
@@ -383,7 +382,7 @@ def _start_operation(
     preserved_block_id: str | None = None,
 ) -> None:
     """
-    @brief      Run one Audio Blocks operation with modal progress handling.
+    @brief      Start one Audio Blocks operation on a worker thread.
     @param[in]  window Active main window instance.
     @param[in]  operation_name Operator-facing operation label.
     @param[in]  initial_message Initial progress-dialog message text.
@@ -394,62 +393,102 @@ def _start_operation(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-23
-    @version    0.2.0
+    @version    0.3.0
     """
-    assert window._current_project_root is not None
-    assert window._current_manifest is not None
     _stop_audio_blocks_playback(window)
-    window._audio_blocks_page.set_busy(True)
-    window._active_operation_kind = "audio_blocks"
-    window._active_operation_name = operation_name
-    window._operation_cancel_requested = False
-    misc_ui_controller.create_progress_dialog(
+    operation_runner_controller.start_threaded_operation(
         window,
+        "audio_blocks",
         operation_name,
         initial_message,
-        lambda: _cancel_active_operation(window),
+        worker_callable,
+        set_busy=lambda is_busy: window._audio_blocks_page.set_busy(is_busy),
+        success_handler=lambda result_payload: _handle_audio_blocks_success(
+            window,
+            result_payload,
+            success_message_key,
+            preserved_block_id,
+        ),
+        failure_handler=lambda error: _handle_audio_blocks_failure(window, error, preserved_block_id),
+        cancel_handler=lambda message: _handle_audio_blocks_cancelled(window, message, preserved_block_id),
     )
-    try:
-        worker_callable(
-            window._current_project_root,
-            dict(window._current_manifest),
-            progress_callback=lambda current, total, percent, message, token_usage=None: (
-                misc_ui_controller.update_progress_dialog(window, percent, message, token_usage)
-            ),
-            cancel_requested=lambda: _is_cancel_requested(window),
-        )
-    except operation_runtime_service.OperationCancelledError as error:
-        misc_ui_controller.fail_progress_dialog(window, str(error))
-        _sync_manifest_from_disk(window)
-        _restore_audio_blocks_selection(window, preserved_block_id)
-        misc_ui_controller.show_message(
-            window,
-            ui_state_service.translate("status.operation_cancelled", current_language_from_window(window)),
-        )
-    except Exception as error:  # noqa: BLE001
-        misc_ui_controller.update_progress_dialog(window, 100, str(error))
-        misc_ui_controller.fail_progress_dialog(window, str(error))
-        _sync_manifest_from_disk(window)
-        _restore_audio_blocks_selection(window, preserved_block_id)
-        QMessageBox.warning(
-            window,
-            ui_state_service.translate("dialog.project_error_title", current_language_from_window(window)),
-            str(error),
-        )
-    else:
-        misc_ui_controller.finish_progress_dialog(window)
-        _sync_manifest_after_audio_blocks_update(window)
-        _restore_audio_blocks_selection(window, preserved_block_id)
-        misc_ui_controller.show_message(
-            window,
-            ui_state_service.translate(success_message_key, current_language_from_window(window)),
-        )
-    finally:
-        window._audio_blocks_page.set_busy(False)
-        misc_ui_controller.clear_progress_dialog(window)
-        window._active_operation_kind = None
-        window._active_operation_name = None
-        window._operation_cancel_requested = False
+
+
+def _handle_audio_blocks_success(
+    window: "MainWindow",
+    result_payload: object,
+    success_message_key: str,
+    preserved_block_id: str | None,
+) -> None:
+    """
+    @brief      Refresh Audio Blocks UI state after a successful worker run.
+    @param[in]  window Active main window instance.
+    @param[in]  result_payload Worker result payload.
+    @param[in]  success_message_key UI string key emitted after success.
+    @param[in]  preserved_block_id Optional speech-block id to reselect.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-24
+    @version    0.1.0
+    """
+    _ = result_payload
+    _sync_manifest_after_audio_blocks_update(window)
+    _restore_audio_blocks_selection(window, preserved_block_id)
+    misc_ui_controller.show_message(
+        window,
+        ui_state_service.translate(success_message_key, current_language_from_window(window)),
+    )
+
+
+def _handle_audio_blocks_failure(
+    window: "MainWindow",
+    error: Exception,
+    preserved_block_id: str | None,
+) -> None:
+    """
+    @brief      Refresh Audio Blocks UI state after a failed worker run.
+    @param[in]  window Active main window instance.
+    @param[in]  error Raised operation exception.
+    @param[in]  preserved_block_id Optional speech-block id to reselect.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-24
+    @version    0.1.0
+    """
+    _sync_manifest_from_disk(window)
+    _restore_audio_blocks_selection(window, preserved_block_id)
+    QMessageBox.warning(
+        window,
+        ui_state_service.translate("dialog.project_error_title", current_language_from_window(window)),
+        str(error),
+    )
+
+
+def _handle_audio_blocks_cancelled(
+    window: "MainWindow",
+    message: str,
+    preserved_block_id: str | None,
+) -> None:
+    """
+    @brief      Refresh Audio Blocks UI state after a cancelled worker run.
+    @param[in]  window Active main window instance.
+    @param[in]  message Cancellation message.
+    @param[in]  preserved_block_id Optional speech-block id to reselect.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-24
+    @version    0.1.0
+    """
+    _ = message
+    _sync_manifest_from_disk(window)
+    _restore_audio_blocks_selection(window, preserved_block_id)
+    misc_ui_controller.show_message(
+        window,
+        ui_state_service.translate("status.operation_cancelled", current_language_from_window(window)),
+    )
 
 
 def _sync_manifest_after_audio_blocks_update(window: "MainWindow") -> None:
@@ -607,9 +646,8 @@ def _is_cancel_requested(window: "MainWindow") -> bool:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-23
-    @version    0.1.0
+    @version    0.1.1
     """
-    misc_ui_controller.process_pending_ui_events()
     return bool(window._operation_cancel_requested)
 
 
