@@ -12,7 +12,7 @@
          page-entry warnings for the Character Voices workflow.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-20
-@version 1.3.1
+@version 1.3.2
 """
 
 # IMPORTS
@@ -279,7 +279,7 @@ def test_character_voices_voice_language_change_resets_speech_blocks_and_downstr
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.1.0
+    @version    0.2.0
     """
     project_root = _create_project_with_character_and_selected_narrator(tmp_path, "CharacterVoicesLanguageReset")
     manifest = project_workspace_service.load_manifest(project_root)
@@ -350,9 +350,13 @@ def test_character_voices_voice_language_change_resets_speech_blocks_and_downstr
     ):
         (project_root / folder_name / "artifact.txt").write_text("stale", encoding="utf-8")
     window = _build_window(qtbot, project_root)
+    original_question = character_voices_ui_controller.QMessageBox.question
+    character_voices_ui_controller.QMessageBox.question = lambda *_args, **_kwargs: QMessageBox.StandardButton.Yes
     window._character_voices_page.voice_language_change_requested.disconnect()
-
-    character_voices_ui_controller.handle_voice_language_change_requested(window, "ro")
+    try:
+        character_voices_ui_controller.handle_voice_language_change_requested(window, "ro")
+    finally:
+        character_voices_ui_controller.QMessageBox.question = original_question
 
     assert window._current_manifest is not None
     assert window._current_manifest["current_stage"] == "character_voices_ready"

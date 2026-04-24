@@ -13,7 +13,7 @@
          generation resolution.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-20
-@version 3.3.0
+@version 3.6.0
 """
 
 # IMPORTS
@@ -82,16 +82,16 @@ def test_narrator_service_begin_profile_edit_clears_sample_and_selection(tmp_pat
     assert updated_profile["is_selected"] is False
 
 
-def test_narrator_service_stores_profile_sample_and_copies_selected_narrator_sample(tmp_path) -> None:
+def test_narrator_service_stores_single_profile_sample_and_marks_selected_metadata(tmp_path) -> None:
     """
-    @brief      Verify generated narrator sample artifacts persist per profile
-                and copy to the selected narrator folder.
+    @brief      Verify generated narrator sample artifacts persist once per profile
+                and selected state is recorded in that profile JSON.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-17
-    @version    1.1.0
+    @version    1.3.0
     """
     project_root, _manifest = project_workspace_service.create_project("NarratorSampleProject", tmp_path)
     profile = narrator_definition_service.load_profiles(project_root)[0]
@@ -110,8 +110,15 @@ def test_narrator_service_stores_profile_sample_and_copies_selected_narrator_sam
         b"RIFF-test-wav",
     )
     narrator_definition_service.select_narrator_profile(project_root, profile["profile_id"], "en")
+    profile_samples_root = (
+        project_root / config.NARRATOR_DEFINITION_FOLDER_NAME / config.NARRATOR_PROFILE_AUDIO_SAMPLES_FOLDER_NAME
+    )
+    legacy_selected_audio_path = profile_samples_root / config.SELECTED_NARRATOR_AUDIO_FILE_NAME
+    legacy_selected_metadata_path = profile_samples_root / config.SELECTED_NARRATOR_METADATA_FILE_NAME
+    legacy_selected_audio_path.write_bytes(b"legacy-selected")
+    legacy_selected_metadata_path.write_text("{}\n", encoding="utf-8")
 
-    copied_metadata = narrator_definition_service.copy_selected_narrator_sample(project_root, profile["profile_id"])
+    selected_metadata = narrator_definition_service.copy_selected_narrator_sample(project_root, profile["profile_id"])
     profile_audio_path, profile_metadata_path = narrator_definition_service.profile_sample_paths(
         project_root,
         profile["profile_id"],
@@ -124,10 +131,87 @@ def test_narrator_service_stores_profile_sample_and_copies_selected_narrator_sam
     assert json.loads(profile_metadata_path.read_text(encoding="utf-8"))["preview_text"] == (
         "Preview text for the narrator."
     )
-    assert copied_metadata is not None
-    assert copied_metadata["selected_profile_id"] == profile["profile_id"]
+    assert selected_metadata is not None
+    assert selected_metadata["profile_id"] == profile["profile_id"]
+    assert selected_metadata["is_selected"] is True
+    assert selected_metadata["role"] == "narrator"
+    assert selected_audio_path == profile_audio_path
+    assert selected_metadata_path == profile_metadata_path
     assert selected_audio_path.read_bytes() == b"RIFF-test-wav"
-    assert json.loads(selected_metadata_path.read_text(encoding="utf-8"))["profile_id"] == profile["profile_id"]
+    assert json.loads(selected_metadata_path.read_text(encoding="utf-8"))["is_selected"] is True
+    assert selected_audio_path.parent == (
+        project_root / config.NARRATOR_DEFINITION_FOLDER_NAME / config.NARRATOR_PROFILE_AUDIO_SAMPLES_FOLDER_NAME
+    )
+    assert legacy_selected_audio_path.exists() is False
+    assert legacy_selected_metadata_path.exists() is False
+
+
+def test_narrator_service_store_profile_sample_clears_previous_audio_samples_folder(tmp_path) -> None:
+    """
+    @brief      Verify storing one new narrator sample clears older files from the narrator audio_samples folder first.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-24
+    @version    0.1.0
+    """
+    project_root, _manifest = project_workspace_service.create_project("NarratorSingleSampleProject", tmp_path)
+    profiles = narrator_definition_service.load_profiles(project_root)
+    first_profile = profiles[0]
+    second_profile = profiles[1]
+    narrator_definition_service.store_profile_sample(
+        project_root,
+        first_profile,
+        "First preview text.",
+        {
+            "generation_mode": "custom_voice",
+            "model_id": "qwen-custom",
+            "source_model_id": "qwen-custom",
+            "speaker_id": "vivian",
+            "language": "en",
+        },
+        "First generated sample.",
+        b"RIFF-first",
+    )
+    profile_samples_root = (
+        project_root / config.NARRATOR_DEFINITION_FOLDER_NAME / config.NARRATOR_PROFILE_AUDIO_SAMPLES_FOLDER_NAME
+    )
+    legacy_extra_path = profile_samples_root / "legacy_sample.wav"
+    legacy_extra_path.write_bytes(b"legacy")
+
+    narrator_definition_service.store_profile_sample(
+        project_root,
+        second_profile,
+        "Second preview text.",
+        {
+            "generation_mode": "custom_voice",
+            "model_id": "qwen-custom",
+            "source_model_id": "qwen-custom",
+            "speaker_id": "serena",
+            "language": "en",
+        },
+        "Second generated sample.",
+        b"RIFF-second",
+    )
+
+    second_audio_path, second_metadata_path = narrator_definition_service.profile_sample_paths(
+        project_root,
+        second_profile["profile_id"],
+    )
+    first_audio_path, first_metadata_path = narrator_definition_service.profile_sample_paths(
+        project_root,
+        first_profile["profile_id"],
+    )
+    assert second_audio_path.read_bytes() == b"RIFF-second"
+    assert json.loads(second_metadata_path.read_text(encoding="utf-8"))["preview_text"] == "Second preview text."
+    assert first_audio_path.exists() is False
+    assert first_metadata_path.exists() is False
+    assert legacy_extra_path.exists() is False
+    assert sorted(path.name for path in profile_samples_root.iterdir()) == [
+        f"{second_profile['profile_id']}.json",
+        f"{second_profile['profile_id']}.wav",
+    ]
 
 
 def test_narrator_service_simplifies_tts_plan_to_voice_assignment_mode_only(tmp_path) -> None:

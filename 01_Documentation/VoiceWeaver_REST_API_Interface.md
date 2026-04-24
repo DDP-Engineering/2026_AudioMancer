@@ -87,6 +87,9 @@ endpoints, are protected only when effective auth is enabled.
 For `POST /v1/voice/clone`, the multipart form fields `sample_text`,
 `language`, and `text` are required and must be non-empty strings.
 
+For `POST /v1/voice/clone-prompt`, the multipart form fields `sample_text`
+and `language` are required and must be non-empty strings.
+
 ## 4. Endpoint Summary
 
 ```text
@@ -104,7 +107,9 @@ GET  /v1/models/download/status
 POST /v1/models/download/cancel
 GET  /v1/status
 POST /v1/voice/design
+POST /v1/voice/clone-prompt
 POST /v1/voice/clone
+POST /v1/voice/clone-from-prompt
 POST /v1/voice/custom
 POST /v1/voice/preset
 GET  /v1/voice
@@ -133,6 +138,12 @@ Rules:
 - concurrent mutating requests return `busy`
 - `GET /v1/status` is the single polling endpoint
 - `GET /v1/voice` downloads the latest completed generation audio
+- reusable `voice_clone_prompt` artifacts are returned to the client and are
+  never assigned runtime-owned profile ids
+- clone-prompt creation stores its terminal artifact in
+  `/v1/status.operation.result`
+- `/v1/status.result` remains the latest generated audio metadata only, even
+  after clone-prompt creation
 - loading, unloading, startup, and new generation delete any previous
   generated `voice.wav`
 - model unload performs Python garbage collection and clears CUDA cache when
@@ -253,7 +264,21 @@ Used in `/v1/models`, `/v1/status.active_model`, and discovery audit payloads.
     "top_k": 50,
     "top_p": 1.0,
     "temperature": 0.9,
-    "repetition_penalty": 1.05
+    "repetition_penalty": 1.05,
+    "max_new_tokens": 512
+  },
+  "generation_parameter_ranges": {
+    "max_new_tokens": {
+      "default": 512,
+      "minimum": 128,
+      "recommended_maximum": 2048,
+      "hard_maximum": 8192,
+      "unit": "codec_tokens",
+      "approx_audio_seconds_per_token": 0.08333333333333333,
+      "approx_default_audio_seconds": 42.666666666666664,
+      "approx_recommended_audio_seconds": 170.66666666666666,
+      "notes": "Higher values allow longer output but increase generation time, GPU memory use, and the chance of truncated or degenerate output near the model limit."
+    }
   },
   "device_mode": "cpu",
   "issues": null
@@ -263,6 +288,8 @@ Used in `/v1/models`, `/v1/status.active_model`, and discovery audit payloads.
 Notes:
 
 - `supported_presets` is also used today to report Qwen CustomVoice speakers.
+- `generation_parameter_ranges` reports client-facing override guidance for
+  generated-output budgets such as Qwen `max_new_tokens`.
 - `status` is `healthy` or `unhealthy` for discovered models.
 - unhealthy models may have empty capabilities and an `issues` array.
 
@@ -343,6 +370,7 @@ Operation kinds:
 idle
 load_model
 unload_model
+create_voice_clone_prompt
 generate_voice_design
 generate_voice_clone
 generate_custom_voice
@@ -393,7 +421,7 @@ Response:
 ```json
 {
   "service": "VoiceWeaver",
-  "runtime_version": "1.0.0",
+  "runtime_version": "1.1.0",
   "models": [
     {
       "model_id": "Qwen3-TTS-12Hz-0.6B-Base",
@@ -404,7 +432,21 @@ Response:
       "supported_presets": [],
       "default_model_parameters": {
         "temperature": 0.9,
-        "top_k": 50
+        "top_k": 50,
+        "max_new_tokens": 512
+      },
+      "generation_parameter_ranges": {
+        "max_new_tokens": {
+          "default": 512,
+          "minimum": 128,
+          "recommended_maximum": 2048,
+          "hard_maximum": 8192,
+          "unit": "codec_tokens",
+          "approx_audio_seconds_per_token": 0.08333333333333333,
+          "approx_default_audio_seconds": 42.666666666666664,
+          "approx_recommended_audio_seconds": 170.66666666666666,
+          "notes": "Higher values allow longer output but increase generation time, GPU memory use, and the chance of truncated or degenerate output near the model limit."
+        }
       },
       "device_mode": "cpu",
       "issues": null
@@ -573,12 +615,12 @@ Response when idle and no model is loaded:
 ```json
 {
   "service": "VoiceWeaver",
-  "runtime_version": "1.0.0",
+  "runtime_version": "1.1.0",
   "active_model": null,
   "capabilities": {
     "service": "VoiceWeaver",
     "runtime_name": "VoiceWeaver",
-    "runtime_version": "1.0.0",
+    "runtime_version": "1.1.0",
     "api_version": "v1",
     "active_model": null,
     "status": "idle",
@@ -588,6 +630,7 @@ Response when idle and no model is loaded:
     "supported_generation_modes": [],
     "supported_presets": null,
     "default_model_parameters": null,
+    "generation_parameter_ranges": null,
     "accepts_reference_audio": false,
     "readiness_issues": null
   },
@@ -635,7 +678,7 @@ Response after completed generation:
 ```json
 {
   "service": "VoiceWeaver",
-  "runtime_version": "1.0.0",
+  "runtime_version": "1.1.0",
   "active_model": {
     "model_id": "Qwen3-TTS-12Hz-1.7B-CustomVoice",
     "backend_name": "qwen",
@@ -645,7 +688,21 @@ Response after completed generation:
     "supported_presets": ["vivian", "serena"],
     "default_model_parameters": {
       "temperature": 0.9,
-      "top_k": 50
+      "top_k": 50,
+      "max_new_tokens": 8192
+    },
+    "generation_parameter_ranges": {
+      "max_new_tokens": {
+        "default": 8192,
+        "minimum": 128,
+        "recommended_maximum": 8192,
+        "hard_maximum": 8192,
+        "unit": "codec_tokens",
+        "approx_audio_seconds_per_token": 0.08333333333333333,
+        "approx_default_audio_seconds": 682.6666666666666,
+        "approx_recommended_audio_seconds": 682.6666666666666,
+        "notes": "Higher values allow longer output but increase generation time, GPU memory use, and the chance of truncated or degenerate output near the model limit."
+      }
     },
     "device_mode": "cpu",
     "issues": null
@@ -653,7 +710,7 @@ Response after completed generation:
   "capabilities": {
     "service": "VoiceWeaver",
     "runtime_name": "VoiceWeaver",
-    "runtime_version": "1.0.0",
+    "runtime_version": "1.1.0",
     "api_version": "v1",
     "active_model": "Qwen3-TTS-12Hz-1.7B-CustomVoice",
     "status": "ready",
@@ -664,7 +721,21 @@ Response after completed generation:
     "supported_presets": ["vivian", "serena"],
     "default_model_parameters": {
       "temperature": 0.9,
-      "top_k": 50
+      "top_k": 50,
+      "max_new_tokens": 8192
+    },
+    "generation_parameter_ranges": {
+      "max_new_tokens": {
+        "default": 8192,
+        "minimum": 128,
+        "recommended_maximum": 8192,
+        "hard_maximum": 8192,
+        "unit": "codec_tokens",
+        "approx_audio_seconds_per_token": 0.08333333333333333,
+        "approx_default_audio_seconds": 682.6666666666666,
+        "approx_recommended_audio_seconds": 682.6666666666666,
+        "notes": "Higher values allow longer output but increase generation time, GPU memory use, and the chance of truncated or degenerate output near the model limit."
+      }
     },
     "accepts_reference_audio": false,
     "readiness_issues": null
@@ -839,7 +910,84 @@ curl -X POST http://127.0.0.1:8059/v1/voice/design \
   -d '{"text":"Hello","language":"en","voice_description":"Warm narrator"}'
 ```
 
-### 8.8 POST /v1/voice/clone
+### 8.8 POST /v1/voice/clone-prompt
+
+Creates one reusable voice clone prompt.
+
+Use when the loaded model supports:
+
+```json
+["clone"]
+```
+
+Qwen model family:
+
+```text
+Qwen3-TTS-*-Base
+```
+
+Content type:
+
+```text
+multipart/form-data
+```
+
+Form fields:
+
+```text
+voice_sample: file, required
+sample_text: string, required
+language: string, required
+model_parameters_json: JSON object string, optional
+```
+
+Behavior notes:
+
+- VoiceWeaver calls the official Qwen `create_voice_clone_prompt(...)` API
+- the reusable `voice_clone_prompt` artifact is returned to the client
+- VoiceWeaver does not create a server-owned profile id, prompt id, or delete
+  API for reusable prompts
+- `operation.result.voice_clone_prompt` is JSON-serializable and can be stored
+  externally by the client
+- `/v1/status.result` is not replaced by clone-prompt creation because it
+  remains reserved for the latest generated audio metadata
+
+Result shape inside `CurrentOperationResponse.result`:
+
+```json
+{
+  "created_at": "2026-04-23T10:00:00.000000+00:00",
+  "model_id": "Qwen3-TTS-12Hz-0.6B-Base",
+  "backend_name": "qwen",
+  "summary": "Qwen3-TTS-12Hz-0.6B-Base | clone_prompt | en",
+  "voice_clone_prompt": {
+    "format": "qwen_voice_clone_prompt_v1",
+    "backend_name": "qwen",
+    "model_id": "Qwen3-TTS-12Hz-0.6B-Base",
+    "tokenizer_type": "qwen3_tts_tokenizer_12hz",
+    "tts_model_type": "base",
+    "prompt": {
+      "ref_text": "This is the transcript of the reference sample.",
+      "ref_code": {
+        "encoding": "base64",
+        "dtype": "int64",
+        "shape": [128],
+        "data": "..."
+      },
+      "ref_spk_embedding": {
+        "encoding": "base64",
+        "dtype": "float32",
+        "shape": [256],
+        "data": "..."
+      },
+      "x_vector_only_mode": false,
+      "icl_mode": true
+    }
+  }
+}
+```
+
+### 8.9 POST /v1/voice/clone
 
 Runs voice-clone generation.
 
@@ -934,7 +1082,64 @@ Implementation note:
 - the temp file is deleted after Qwen completes or fails
 - clients do not need to manage this temp file
 
-### 8.9 POST /v1/voice/custom
+### 8.10 POST /v1/voice/clone-from-prompt
+
+Runs reusable voice-clone generation from a previously returned prompt.
+
+Request body:
+
+```json
+{
+  "voice_clone_prompt": {
+    "format": "qwen_voice_clone_prompt_v1",
+    "backend_name": "qwen",
+    "model_id": "Qwen3-TTS-12Hz-0.6B-Base",
+    "tokenizer_type": "qwen3_tts_tokenizer_12hz",
+    "tts_model_type": "base",
+    "prompt": {
+      "ref_text": "This is the transcript of the reference sample.",
+      "ref_code": {
+        "encoding": "base64",
+        "dtype": "int64",
+        "shape": [128],
+        "data": "..."
+      },
+      "ref_spk_embedding": {
+        "encoding": "base64",
+        "dtype": "float32",
+        "shape": [256],
+        "data": "..."
+      },
+      "x_vector_only_mode": false,
+      "icl_mode": true
+    }
+  },
+  "language": "en",
+  "text": "This line reuses the stored voice clone prompt.",
+  "model_parameters": {
+    "temperature": 0.8
+  }
+}
+```
+
+Request notes:
+
+- `voice_clone_prompt` may be sent either as the JSON object above or as a
+  JSON string containing the same object
+- VoiceWeaver decodes the prompt artifact and calls the official Qwen
+  `generate_voice_clone(..., voice_clone_prompt=...)` API
+- the reusable prompt artifact retains the original reference transcript so
+  VoiceWeaver can rebuild the Qwen reference token ids during replay
+- the original reference sample audio is not required in this request
+
+Validation rules:
+
+- malformed prompt payload returns `invalid_voice_clone_prompt`
+- model/backend/tokenizer/type mismatches return
+  `incompatible_voice_clone_prompt`
+- unsupported loaded models still return `unsupported_generation_mode`
+
+### 8.11 POST /v1/voice/custom
 
 Runs custom-voice generation.
 
@@ -1021,7 +1226,7 @@ response.raise_for_status()
 print(response.json())
 ```
 
-### 8.10 POST /v1/voice/preset
+### 8.12 POST /v1/voice/preset
 
 Runs generic preset-voice generation.
 
@@ -1055,7 +1260,7 @@ Current implementation note:
 - the shipped browser UI does not expose a dedicated preset-generation form
 - the registered Qwen adapter does not currently report `preset` capability
 
-### 8.11 GET /v1/voice
+### 8.13 GET /v1/voice
 
 Downloads the generated WAV file.
 
@@ -1108,7 +1313,7 @@ with open("voice.wav", "wb") as output_file:
     output_file.write(response.content)
 ```
 
-### 8.12 GET /v1/server
+### 8.14 GET /v1/server
 
 Returns runtime identity and API configuration details.
 
@@ -1123,7 +1328,7 @@ Response:
 ```json
 {
   "service": "VoiceWeaver",
-  "runtime_version": "1.0.0",
+  "runtime_version": "1.1.0",
   "api_version": "v1",
   "host": "127.0.0.1",
   "port": 8059,
@@ -1136,7 +1341,7 @@ Response:
 }
 ```
 
-### 8.13 GET /v1/model-catalog
+### 8.15 GET /v1/model-catalog
 
 Returns the static catalog of supported downloadable models.
 
@@ -1169,7 +1374,7 @@ Response:
 }
 ```
 
-### 8.14 POST /v1/models/download
+### 8.16 POST /v1/models/download
 
 Starts a background model download workflow.
 
@@ -1204,7 +1409,7 @@ Current implementation note:
 - the shipped implementation currently runs a simulated background download
   flow while the real Hugging Face transfer integration is still pending
 
-### 8.15 GET /v1/models/download/status
+### 8.17 GET /v1/models/download/status
 
 Returns the current or most recent download status snapshot.
 
@@ -1218,7 +1423,7 @@ Compatibility note:
 
 - `GET /v1/models/download` remains available and returns the same payload
 
-### 8.16 POST /v1/models/download/cancel
+### 8.18 POST /v1/models/download/cancel
 
 Cancels the active background model download command.
 
@@ -1239,7 +1444,7 @@ Compatibility note:
 - the legacy `DELETE /v1/models/download` alias remains available for existing
   clients
 
-### 8.17 DELETE /v1/models/{model_id}
+### 8.19 DELETE /v1/models/{model_id}
 
 Deletes one installed local model directory and refreshes runtime discovery.
 
@@ -1261,7 +1466,7 @@ Failure cases:
 - `model_in_use` when the target model is currently loaded
 - `invalid_request` when the model identifier is not path-safe
 
-### 8.18 POST /v1/models/rescan
+### 8.20 POST /v1/models/rescan
 
 Forces the runtime to rescan the local `models/` directory immediately.
 
@@ -1396,13 +1601,19 @@ An AI agent building a client should follow these rules:
 - Only call a voice endpoint if its mode is present in
   `capabilities.supported_generation_modes`.
 - Use `/v1/voice/design` for `definition`.
+- Use `/v1/voice/clone-prompt` to initialize reusable clone prompts at
+  session start when you want client-owned prompt reuse.
 - Use `/v1/voice/clone` for `clone`.
+- Use `/v1/voice/clone-from-prompt` to generate later clone outputs from a
+  stored reusable prompt artifact.
 - Use `/v1/voice/custom` for `custom_voice`.
 - Use `/v1/voice/preset` only for `preset`.
 - Poll `GET /v1/status` until `operation.status` is `completed` or `failed`.
 - If status is `failed`, surface `operation.error.message` to the user.
 - Download `GET /v1/voice` only when `result.available` is `true`.
 - Do not invent job ids, artifact ids, queues, or separate result endpoints.
+- Do not treat `voice_clone_prompt` as a server-owned profile or assume the
+  runtime persists it between restarts.
 - Do not call removed endpoints such as `/v1/results/latest`,
   `/v1/operations/current`, `/v1/models/active`, or `/v1/models/capabilities`.
 - Expect generation operations to take time and make the UI non-blocking.

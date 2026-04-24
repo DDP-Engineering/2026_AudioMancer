@@ -10,11 +10,11 @@
 @file narrator_definition_service.py
 @brief Project-local narrator-definition persistence helpers for AudioMancer.
 @details Persists narrator profiles, explicit selection state, project-local
-         TTS plan data, per-profile sample artifacts, and the project-level
-         selected narrator sample copy for the active workspace.
+         TTS plan data, and one per-profile sample artifact set whose JSON
+         metadata records whether that sample is selected.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-20
-@version 3.5.0
+@version 3.9.0
 """
 
 # IMPORTS
@@ -23,6 +23,7 @@ from copy import deepcopy
 from datetime import UTC, datetime
 import json
 from pathlib import Path
+import shutil
 from uuid import uuid4
 
 from audiomancer import config
@@ -223,7 +224,7 @@ def load_selected_profile_state(project_root: str | Path) -> dict[str, object]:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-18
-    @version    1.3.0
+    @version    1.4.0
     """
     ensure_narrator_definition_files(project_root)
     profiles = load_profiles(project_root)
@@ -243,7 +244,7 @@ def ensure_narrator_definition_files(project_root: str | Path) -> None:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-18
-    @version    1.3.0
+    @version    1.4.0
     """
     narrator_root = Path(project_root) / config.NARRATOR_DEFINITION_FOLDER_NAME
     narrator_root.mkdir(parents=True, exist_ok=True)
@@ -273,7 +274,7 @@ def select_narrator_profile(
     @exception  ValueError Raised when the target profile is missing.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-17
-    @version    1.2.0
+    @version    1.3.0
     """
     normalized_profile_id = str(profile_id or "").strip()
     profiles = load_profiles(project_root)
@@ -298,6 +299,8 @@ def select_narrator_profile(
         ),
     }
     _write_json(_selection_path(project_root), normalized_state)
+    _delete_legacy_selected_narrator_sample_files(project_root)
+    _set_profile_sample_selection_flags(project_root, normalized_profile_id)
     return normalized_state
 
 
@@ -309,7 +312,7 @@ def clear_narrator_selection(project_root: str | Path) -> dict[str, object]:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-17
-    @version    1.0.0
+    @version    1.1.0
     """
     profiles = [
         {
@@ -321,6 +324,7 @@ def clear_narrator_selection(project_root: str | Path) -> dict[str, object]:
     _write_json(_profiles_path(project_root), profiles)
     normalized_state = {"selected_profile_id": None, "selected_language": None}
     _write_json(_selection_path(project_root), normalized_state)
+    _set_profile_sample_selection_flags(project_root, None)
     return normalized_state
 
 
@@ -724,14 +728,17 @@ def store_profile_sample(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-17
-    @version    1.2.0
+    @version    1.4.0
     """
     ensure_narrator_definition_files(project_root)
     profile_id = str(profile.get("profile_id", "")).strip()
-    delete_profile_sample(project_root, profile_id)
+    clear_all_profile_samples(project_root)
     audio_path, metadata_path = profile_sample_paths(project_root, profile_id)
+    selected_state = load_selected_profile_state(project_root)
+    selected_profile_id = str(selected_state.get("selected_profile_id", "") or "").strip()
     metadata_payload = {
         "profile_id": profile_id,
+        "is_selected": bool(selected_profile_id and selected_profile_id == profile_id),
         "display_name": display_profile_name(profile),
         "profile_kind": str(profile.get("profile_kind", "")).strip(),
         "profile_origin": str(profile.get("profile_origin", "")).strip(),
@@ -753,16 +760,40 @@ def store_profile_sample(
     return metadata_payload
 
 
+def clear_all_profile_samples(project_root: str | Path) -> None:
+    """
+    @brief      Delete every persisted narrator profile sample artifact from the narrator sample folder.
+    @param[in]  project_root Active project root folder.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-24
+    @version    0.1.0
+    """
+    sample_root = _profile_audio_samples_root(project_root)
+    if not sample_root.is_dir():
+        return
+    for child_path in sample_root.iterdir():
+        if child_path.is_dir():
+            shutil.rmtree(child_path)
+            continue
+        child_path.unlink()
+
+
 def selected_narrator_sample_paths(project_root: str | Path) -> tuple[Path, Path]:
     """
-    @brief      Resolve the project-level selected narrator sample audio and metadata paths.
+    @brief      Resolve the selected narrator profile sample audio and metadata paths.
     @param[in]  project_root Active project root folder.
     @return     Tuple of WAV path and metadata JSON path.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-17
-    @version    1.0.0
+    @version    1.3.0
     """
+    selected_state = load_selected_profile_state(project_root)
+    selected_profile_id = str(selected_state.get("selected_profile_id", "") or "").strip()
+    if selected_profile_id:
+        return profile_sample_paths(project_root, selected_profile_id)
     sample_root = _selected_audio_samples_root(project_root)
     return (
         sample_root / config.SELECTED_NARRATOR_AUDIO_FILE_NAME,
@@ -772,47 +803,46 @@ def selected_narrator_sample_paths(project_root: str | Path) -> tuple[Path, Path
 
 def clear_selected_narrator_sample(project_root: str | Path) -> None:
     """
-    @brief      Delete the project-level selected narrator sample artifacts.
+    @brief      Clear selected-sample markers without deleting profile-owned sample audio.
     @param[in]  project_root Active project root folder.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-17
-    @version    1.0.0
+    @version    1.4.0
     """
-    audio_path, metadata_path = selected_narrator_sample_paths(project_root)
-    if audio_path.exists():
-        audio_path.unlink()
-    if metadata_path.exists():
-        metadata_path.unlink()
+    _delete_legacy_selected_narrator_sample_files(project_root)
+    _set_profile_sample_selection_flags(project_root, None)
 
 
 def copy_selected_narrator_sample(project_root: str | Path, profile_id: str) -> dict[str, object] | None:
     """
-    @brief      Copy one per-profile sample into the project-level selected narrator sample folder.
+    @brief      Mark one per-profile sample as the selected narrator sample.
     @param[in]  project_root Active project root folder.
     @param[in]  profile_id Selected narrator-profile identifier.
-    @return     Copied selected narrator metadata payload or None when unavailable.
+    @return     Selected narrator metadata payload or None when unavailable.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-17
-    @version    1.0.0
+    @version    1.4.0
     """
     ensure_narrator_definition_files(project_root)
-    profile_audio_path, _profile_metadata_path = profile_sample_paths(project_root, profile_id)
+    normalized_profile_id = str(profile_id).strip()
+    profile_audio_path, profile_metadata_path = profile_sample_paths(project_root, normalized_profile_id)
     profile_metadata = load_profile_sample_metadata(project_root, profile_id)
     if not profile_audio_path.is_file() or profile_metadata is None:
         clear_selected_narrator_sample(project_root)
         return None
-    selected_audio_path, selected_metadata_path = selected_narrator_sample_paths(project_root)
-    selected_audio_path.write_bytes(profile_audio_path.read_bytes())
+    select_narrator_profile(project_root, normalized_profile_id, str(profile_metadata.get("language", "")).strip())
+    _delete_legacy_selected_narrator_sample_files(project_root)
     selected_metadata = {
         **dict(profile_metadata),
+        "is_selected": True,
         "role": "narrator",
-        "selected_profile_id": str(profile_id).strip(),
-        "copied_at": _utc_now_iso(),
+        "selected_at": _utc_now_iso(),
     }
-    _write_json(selected_metadata_path, selected_metadata)
+    _set_profile_sample_selection_flags(project_root, normalized_profile_id)
+    _write_json(profile_metadata_path, selected_metadata)
     return selected_metadata
 
 
@@ -1023,14 +1053,14 @@ def _profile_audio_samples_root(project_root: str | Path) -> Path:
 
 def _selected_audio_samples_root(project_root: str | Path) -> Path:
     """
-    @brief      Execute the selected audio samples root helper.
+    @brief      Resolve the selected narrator sample root as the shared narrator audio-sample folder.
     @param[in]  project_root Active project root folder.
     @return     Helper result.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.1.0
+    @version    0.3.0
     """
-    return Path(project_root) / config.PROJECT_AUDIO_SAMPLES_FOLDER_NAME
+    return _profile_audio_samples_root(project_root)
 
 
 def _normalize_profile(profile: dict[str, object]) -> dict[str, object]:
@@ -1131,6 +1161,58 @@ def _is_protected_builtin_profile(
         str(seed_profile.get("profile_id", "")).strip() == profile_id
         for seed_profile in _BUILTIN_QWEN_PRESET_DEFINITIONS
     )
+
+
+def _set_profile_sample_selection_flags(project_root: str | Path, selected_profile_id: str | None) -> None:
+    """
+    @brief      Update narrator sample JSON selection markers in-place.
+    @param[in]  project_root Active project root folder.
+    @param[in]  selected_profile_id Selected profile identifier, or None to clear all sample selections.
+    @return     None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-24
+    @version    0.1.0
+    """
+    sample_root = _profile_audio_samples_root(project_root)
+    if not sample_root.is_dir():
+        return
+    normalized_selected_profile_id = str(selected_profile_id or "").strip()
+    for metadata_path in sample_root.glob("*.json"):
+        if metadata_path.name == config.SELECTED_NARRATOR_METADATA_FILE_NAME:
+            continue
+        payload = json.loads(metadata_path.read_text(encoding="utf-8"))
+        if not isinstance(payload, dict):
+            continue
+        profile_id = str(payload.get("profile_id", metadata_path.stem) or "").strip()
+        is_selected = bool(normalized_selected_profile_id and profile_id == normalized_selected_profile_id)
+        updated_payload = {
+            **dict(payload),
+            "is_selected": is_selected,
+        }
+        if not is_selected:
+            updated_payload.pop("role", None)
+            updated_payload.pop("selected_at", None)
+            updated_payload.pop("selected_profile_id", None)
+            updated_payload.pop("copied_at", None)
+        _write_json(metadata_path, updated_payload)
+
+
+def _delete_legacy_selected_narrator_sample_files(project_root: str | Path) -> None:
+    """
+    @brief      Delete legacy duplicate selected narrator sample files when present.
+    @param[in]  project_root Active project root folder.
+    @return     None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-24
+    @version    0.1.0
+    """
+    sample_root = _selected_audio_samples_root(project_root)
+    legacy_audio_path = sample_root / config.SELECTED_NARRATOR_AUDIO_FILE_NAME
+    legacy_metadata_path = sample_root / config.SELECTED_NARRATOR_METADATA_FILE_NAME
+    if legacy_audio_path.exists():
+        legacy_audio_path.unlink()
+    if legacy_metadata_path.exists():
+        legacy_metadata_path.unlink()
 
 
 def _normalize_selected_state(

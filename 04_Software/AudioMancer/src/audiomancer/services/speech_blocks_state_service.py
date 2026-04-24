@@ -14,7 +14,7 @@
          current operation state, and enabled AI profile settings.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 0.1.0
+@version 0.2.0
 """
 
 # IMPORTS
@@ -97,6 +97,13 @@ def build_speech_blocks_state(
             "selected_source_language": "",
             "processed_chunk_count": 0,
             "total_chunk_count": 0,
+            "approved_block_count": 0,
+            "total_block_count": 0,
+            "speaker_catalog": [],
+            "content_kind_options": _content_kind_options(language),
+            "can_reset": False,
+            "can_approve_all": False,
+            "can_resplit_selected": False,
         }
 
     report = speech_blocks_service.load_speech_blocks_report(project_root)
@@ -130,6 +137,13 @@ def build_speech_blocks_state(
         "selected_source_language": selected_source_language,
         "processed_chunk_count": 0 if report is None else int(report.get("processed_chunk_count", 0)),
         "total_chunk_count": len(source_chunks),
+        "approved_block_count": 0 if report is None else int(report.get("approved_block_count", 0)),
+        "total_block_count": len(speech_blocks),
+        "speaker_catalog": speech_blocks_service.speaker_catalog_entries(project_root),
+        "content_kind_options": _content_kind_options(language),
+        "can_reset": bool(speech_blocks),
+        "can_approve_all": any(not bool(block.get("approved", False)) for block in speech_blocks),
+        "can_resplit_selected": bool(source_chunks),
     }
 
 
@@ -163,6 +177,7 @@ def build_speech_blocks_notes(
     stage_status = _speech_blocks_stage_status(report, operation_state)
     processed_chunk_count = 0 if report is None else int(report.get("processed_chunk_count", 0))
     speech_block_count = 0 if report is None else int(report.get("speech_block_count", 0))
+    approved_block_count = 0 if report is None else int(report.get("approved_block_count", 0))
     notes = [
         ui_state_service.translate("speech_blocks.note_summary", language).format(
             block_count=speech_block_count,
@@ -170,6 +185,13 @@ def build_speech_blocks_notes(
             total_chunk_count=len(source_chunks),
         )
     ]
+    if speech_block_count > 0:
+        notes.append(
+            ui_state_service.translate("speech_blocks.note_approval_summary", language).format(
+                approved_block_count=approved_block_count,
+                total_block_count=speech_block_count,
+            )
+        )
     notes.extend(_build_token_usage_notes(report, operation_state, language))
     warning_count = 0 if report is None else int(report.get("warning_count", 0))
     if warning_count > 0:
@@ -212,7 +234,9 @@ def build_speech_blocks_notes(
         report is not None
         and str(report.get("speech_blocks_stage_status", "")) == speech_blocks_service.SPEECH_BLOCKS_STAGE_COMPLETED
     ):
-        notes.append(ui_state_service.translate("speech_blocks.note_rerun_warning", language))
+        notes.append(ui_state_service.translate("speech_blocks.note_ready_for_audio", language))
+    elif speech_block_count > 0:
+        notes.append(ui_state_service.translate("speech_blocks.note_waiting_for_approval", language))
     else:
         notes.append(ui_state_service.translate("speech_blocks.note_ready", language))
     return notes
@@ -325,6 +349,36 @@ def _persisted_source_language(report: dict[str, object] | None, operation_state
             if source_language:
                 return source_language
     return ""
+
+
+def _content_kind_options(language: str) -> list[tuple[str, str]]:
+    """
+    @brief      Build localized Speech Blocks content-kind selector options.
+    @param[in]  language Runtime UI language code.
+    @return     Ordered content-kind value/label pairs.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-24
+    @version    0.1.0
+    """
+    return [
+        (
+            speech_blocks_service.CONTENT_KIND_NARRATION,
+            ui_state_service.translate("speech_blocks.content_narration", language),
+        ),
+        (
+            speech_blocks_service.CONTENT_KIND_DIALOGUE,
+            ui_state_service.translate("speech_blocks.content_dialogue", language),
+        ),
+        (
+            speech_blocks_service.CONTENT_KIND_BACKGROUND_NOISE,
+            ui_state_service.translate("speech_blocks.content_background_noise", language),
+        ),
+        (
+            speech_blocks_service.CONTENT_KIND_PAUSE,
+            ui_state_service.translate("speech_blocks.content_pause", language),
+        ),
+    ]
 
 
 # END OF FILE

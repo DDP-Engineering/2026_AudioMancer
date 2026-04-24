@@ -8,16 +8,17 @@
 """
 @file test_speech_blocks_ui_controller.py
 @brief Speech Blocks UI controller tests for AudioMancer.
-@details Verifies confirmation gating and destructive rerun reset behavior for
+@details Verifies confirmation gating and explicit destructive reset behavior for
          the Speech Blocks workflow.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 0.1.0
+@version 0.3.0
 """
 
 # IMPORTS
 
 import json
+from types import SimpleNamespace
 
 from PySide6.QtWidgets import QMessageBox
 
@@ -67,11 +68,53 @@ def test_speech_blocks_ui_controller_requires_confirmation_before_starting(monke
     assert start_calls == []
 
 
-def test_speech_blocks_ui_controller_completed_rerun_resets_downstream_before_dispatch(
+def test_speech_blocks_ui_controller_edit_start_does_not_refresh_page(monkeypatch, tmp_path) -> None:
+    """
+    @brief      Verify starting a block edit clears warnings without reloading the Speech Blocks page.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-24
+    @version    0.1.0
+    """
+    project_root = tmp_path / "SpeechBlocksEditStart"
+    project_root.mkdir()
+    update_calls = []
+    window = SimpleNamespace(
+        _current_project_root=project_root,
+        _current_manifest={"current_stage": "character_voices_ready"},
+        show_project_state=lambda *_args, **_kwargs: (_ for _ in ()).throw(AssertionError("unexpected refresh")),
+    )
+    monkeypatch.setattr(
+        speech_blocks_ui_controller.speech_blocks_service,
+        "load_speech_blocks",
+        lambda _project_root: [
+            {
+                "speech_block_id": "0001-000001",
+                "speaker_id": "alice",
+                "content_kind": "dialogue",
+                "text": "Hello.",
+            }
+        ],
+    )
+    monkeypatch.setattr(
+        speech_blocks_ui_controller.speech_blocks_service,
+        "update_speech_block",
+        lambda *args: update_calls.append(args),
+    )
+
+    speech_blocks_ui_controller.handle_edit_started(window, "0001-000001")
+
+    assert update_calls == [(project_root, "0001-000001", "alice", "dialogue", "Hello.")]
+
+
+def test_speech_blocks_ui_controller_explicit_reset_clears_speech_blocks_and_downstream(
     monkeypatch, qtbot, tmp_path
 ) -> None:
     """
-    @brief      Verify completed Speech Blocks reruns reset Speech Blocks and downstream folders before dispatch.
+    @brief      Verify explicit Speech Blocks reset clears Speech Blocks and downstream folders.
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @param[in]  qtbot Qt test helper fixture.
     @param[in]  tmp_path Pytest temporary directory fixture.
@@ -79,7 +122,7 @@ def test_speech_blocks_ui_controller_completed_rerun_resets_downstream_before_di
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.1.0
+    @version    0.2.0
     """
     project_root = _create_project(tmp_path, "SpeechBlocksControllerRerun")
     manifest = project_workspace_service.load_manifest(project_root)
@@ -96,29 +139,14 @@ def test_speech_blocks_ui_controller_completed_rerun_resets_downstream_before_di
         (project_root / folder_name / "artifact.txt").write_text("stale", encoding="utf-8")
     window = _build_window(qtbot, project_root)
     monkeypatch.setattr(
-        speech_blocks_ui_controller.speech_blocks_service,
-        "resolve_source_chunks",
-        lambda *_args, **_kwargs: {
-            "selected_source_language": "en",
-            "source_kind": "original",
-            "source_chunks": [{"chunk_id": "chunk-0001", "sequence_index": 1, "text": "Narration."}],
-        },
-    )
-    monkeypatch.setattr(
         speech_blocks_ui_controller.QMessageBox,
         "question",
         lambda *_args, **_kwargs: QMessageBox.StandardButton.Yes,
     )
-    start_calls = []
-    monkeypatch.setattr(
-        speech_blocks_ui_controller,
-        "_start_operation",
-        lambda _window, **kwargs: start_calls.append(kwargs),
-    )
+    monkeypatch.setattr(speech_blocks_ui_controller.misc_ui_controller, "show_message", lambda *args, **kwargs: None)
 
-    speech_blocks_ui_controller.handle_generate_requested(window, "profile-1")
+    speech_blocks_ui_controller.handle_reset_generation_requested(window)
 
-    assert len(start_calls) == 1
     assert window._current_manifest is not None
     assert window._current_manifest["current_stage"] == "character_voices_ready"
     assert window._current_manifest["operations"]["speech_blocks"]["status"] == "not_started"

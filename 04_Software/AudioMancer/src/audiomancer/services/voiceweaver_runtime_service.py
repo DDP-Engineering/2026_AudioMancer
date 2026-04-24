@@ -13,8 +13,8 @@
          models and current status data, and derives one capability matrix used
          by the TTS Settings dialog and Narrator workflow.
 @author Eng. Dan Dumitru Pasare
-@date 2026-04-22
-@version 0.5.0
+@date 2026-04-23
+@version 0.9.0
 """
 
 # IMPORTS
@@ -26,6 +26,7 @@ from urllib import error, parse, request
 
 from audiomancer import config
 from audiomancer.services.logging_service import get_component_logger, trace_function
+from audiomancer.services.operation_runtime_service import raise_if_cancelled
 
 # CONSTANTS
 
@@ -129,6 +130,72 @@ def _send_json_request(
     return json.loads(response_body)
 
 
+def _send_multipart_request(
+    method: str,
+    url: str,
+    headers: dict[str, str],
+    timeout_seconds: int,
+    form_fields: dict[str, object],
+    file_field_name: str,
+    file_name: str,
+    file_bytes: bytes,
+    file_content_type: str = "audio/wav",
+) -> Any:
+    """
+    @brief      Execute one multipart/form-data request and decode the optional JSON response payload.
+    @param[in]  method HTTP method token.
+    @param[in]  url Fully qualified target URL.
+    @param[in]  headers HTTP header mapping.
+    @param[in]  timeout_seconds Request timeout in seconds.
+    @param[in]  form_fields Flat form-field mapping encoded as strings.
+    @param[in]  file_field_name Multipart field name used for the binary file part.
+    @param[in]  file_name Uploaded file name.
+    @param[in]  file_bytes Raw uploaded file bytes.
+    @param[in]  file_content_type Uploaded file content type.
+    @return     Decoded JSON payload or `None` when the response body is empty.
+    @exception  ValueError Raised when the response cannot be decoded as JSON.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-23
+    @version    0.1.0
+    """
+    boundary = f"----AudioMancerVoiceWeaverBoundary{int(time.time() * 1000)}"
+    request_headers = dict(headers)
+    request_headers["Content-Type"] = f"multipart/form-data; boundary={boundary}"
+    body_parts: list[bytes] = []
+    for field_name, field_value in form_fields.items():
+        if field_value in (None, ""):
+            continue
+        body_parts.extend(
+            (
+                f"--{boundary}\r\n".encode(),
+                f'Content-Disposition: form-data; name="{field_name}"\r\n\r\n'.encode(),
+                str(field_value).encode("utf-8"),
+                b"\r\n",
+            )
+        )
+    body_parts.extend(
+        (
+            f"--{boundary}\r\n".encode(),
+            (f'Content-Disposition: form-data; name="{file_field_name}"; filename="{file_name}"\r\n').encode(),
+            f"Content-Type: {file_content_type}\r\n\r\n".encode(),
+            file_bytes,
+            b"\r\n",
+            f"--{boundary}--\r\n".encode(),
+        )
+    )
+    http_request = request.Request(
+        url=url,
+        headers=request_headers,
+        data=b"".join(body_parts),
+        method=method,
+    )
+    with request.urlopen(http_request, timeout=timeout_seconds) as response:
+        response_body = response.read().decode("utf-8")
+    if not response_body.strip():
+        return None
+    return json.loads(response_body)
+
+
 def _read_bytes(url: str, headers: dict[str, str], timeout_seconds: int) -> bytes:
     """
     @brief      Execute one binary GET request and return the response bytes.
@@ -205,6 +272,90 @@ def _normalize_model_parameters(value: object) -> dict[str, object] | None:
     return normalized_payload
 
 
+def _normalize_generation_parameter_ranges(value: object) -> dict[str, dict[str, object]]:
+    """
+    @brief      Normalize VoiceWeaver generation-parameter ranges by parameter name.
+    @param[in]  value Candidate range payload from model or status data.
+    @return     Mapping of parameter names to scalar range metadata.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-24
+    @version    0.1.0
+    """
+    if not isinstance(value, (dict, list)):
+        return {}
+    raw_items = value.items() if isinstance(value, dict) else enumerate(value)
+    normalized_ranges: dict[str, dict[str, object]] = {}
+    for fallback_name, range_payload in raw_items:
+        if not isinstance(range_payload, dict):
+            continue
+        parameter_name = str(range_payload.get("name", fallback_name)).strip()
+        if not parameter_name:
+            continue
+        normalized_payload: dict[str, object] = {}
+        for key, parameter_value in range_payload.items():
+            normalized_key = str(key).strip()
+            if not normalized_key or normalized_key == "name":
+                continue
+            if parameter_value is None or isinstance(parameter_value, (bool, int, float, str)):
+                normalized_payload[normalized_key] = parameter_value
+        if normalized_payload:
+            normalized_ranges[parameter_name] = normalized_payload
+    return normalized_ranges
+
+
+def _normalize_active_model_payload(value: object) -> object:
+    """
+    @brief      Normalize active-model status data while preserving runtime-reported effective parameters.
+    @param[in]  value Candidate `/v1/status.active_model` payload.
+    @return     Normalized active-model identifier string, object, or `None`.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-24
+    @version    0.1.0
+    """
+    if value in (None, ""):
+        return None
+    if isinstance(value, str):
+        return value.strip() or None
+    if not isinstance(value, dict):
+        return value
+    normalized_payload = dict(value)
+    for field_name in ("effective_model_parameters", "effective_parameters", "model_parameters"):
+        normalized_parameters = _normalize_model_parameters(normalized_payload.get(field_name))
+        if normalized_parameters is not None:
+            normalized_payload[field_name] = normalized_parameters
+    default_parameters = _normalize_model_parameters(normalized_payload.get("default_model_parameters"))
+    if default_parameters is not None:
+        normalized_payload["default_model_parameters"] = default_parameters
+    parameter_ranges = _normalize_generation_parameter_ranges(normalized_payload.get("generation_parameter_ranges"))
+    if parameter_ranges:
+        normalized_payload["generation_parameter_ranges"] = parameter_ranges
+    return normalized_payload
+
+
+def _normalize_status_payload(payload: dict[str, object]) -> dict[str, object]:
+    """
+    @brief      Normalize expanded `/v1/status` data needed by AudioMancer.
+    @param[in]  payload Raw VoiceWeaver status payload.
+    @return     Status payload with normalized active/effective model parameter fields.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-24
+    @version    0.1.0
+    """
+    normalized_payload = dict(payload)
+    normalized_payload["active_model"] = _normalize_active_model_payload(payload.get("active_model"))
+    for field_name in ("effective_model_parameters", "effective_parameters", "model_parameters"):
+        normalized_parameters = _normalize_model_parameters(normalized_payload.get(field_name))
+        if normalized_parameters is not None:
+            normalized_payload[field_name] = normalized_parameters
+    parameter_ranges = _normalize_generation_parameter_ranges(normalized_payload.get("generation_parameter_ranges"))
+    if parameter_ranges:
+        normalized_payload["generation_parameter_ranges"] = parameter_ranges
+    return normalized_payload
+
+
 def _normalize_device_diagnostics(candidate_payload: object) -> dict[str, object]:
     """
     @brief      Normalize one runtime device-diagnostics payload.
@@ -254,6 +405,9 @@ def _normalize_model(candidate_model: object) -> VoiceWeaverModelPayload | None:
         "supported_presets": supported_presets,
         "speaker_count": len(supported_presets),
         "default_model_parameters": _normalize_model_parameters(candidate_model.get("default_model_parameters")),
+        "generation_parameter_ranges": _normalize_generation_parameter_ranges(
+            candidate_model.get("generation_parameter_ranges")
+        ),
         "device_mode": str(candidate_model.get("device_mode", "")).strip(),
         "issues": issues if isinstance(issues, (list, type(None))) else None,
     }
@@ -423,7 +577,7 @@ def read_status(
     @date       2026-04-16
     @version    1.0.0
     """
-    return _request_json_endpoint(base_url, runtime_api_key, "/v1/status", timeout_seconds)
+    return _normalize_status_payload(_request_json_endpoint(base_url, runtime_api_key, "/v1/status", timeout_seconds))
 
 
 def read_server_info(
@@ -722,12 +876,172 @@ def generate_voice_design(
     return response_payload
 
 
+def generate_voice_clone(
+    base_url: str,
+    runtime_api_key: str,
+    sample_audio_bytes: bytes,
+    sample_text: str,
+    language: str,
+    text: str,
+    model_parameters: dict[str, object] | None = None,
+    timeout_seconds: int = config.DEFAULT_TTS_CONNECT_TIMEOUT_SECONDS,
+) -> dict[str, object]:
+    """
+    @brief      Start one direct Qwen3 voice-clone request from a WAV sample.
+    @param[in]  base_url Operator-configured runtime base URL.
+    @param[in]  runtime_api_key Optional operator-configured bearer token.
+    @param[in]  sample_audio_bytes WAV reference audio bytes uploaded for cloning.
+    @param[in]  sample_text Transcript matching the reference audio sample.
+    @param[in]  language Synthesis language code associated with the sample.
+    @param[in]  text Speech-block text to synthesize in the cloned voice.
+    @param[in]  model_parameters Optional VoiceWeaver model-parameter overrides.
+    @param[in]  timeout_seconds Request timeout in seconds.
+    @return     Runtime operation payload returned by `/v1/voice/clone`.
+    @exception  RuntimeError Raised when the runtime request fails.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-23
+    @version    0.2.0
+    """
+    headers = _build_request_headers(runtime_api_key)
+    form_fields: dict[str, object] = {
+        "sample_text": str(sample_text).strip(),
+        "language": str(language).strip(),
+        "text": str(text).strip(),
+    }
+    normalized_model_parameters = _normalize_model_parameters(model_parameters)
+    if normalized_model_parameters:
+        form_fields["model_parameters_json"] = json.dumps(normalized_model_parameters)
+    try:
+        response_payload = _send_multipart_request(
+            "POST",
+            _endpoint_url(base_url, "/v1/voice/clone"),
+            headers,
+            timeout_seconds,
+            form_fields,
+            "voice_sample",
+            "reference.wav",
+            sample_audio_bytes,
+        )
+    except error.HTTPError as exception:
+        raise RuntimeError(_runtime_error_message(exception)) from exception
+    except error.URLError as exception:
+        raise RuntimeError(f"Connection failed: {getattr(exception, 'reason', exception)}.") from exception
+    except TimeoutError as exception:
+        raise RuntimeError("Connection failed: request timed out.") from exception
+    except ValueError as exception:
+        raise RuntimeError(str(exception)) from exception
+    if not isinstance(response_payload, dict):
+        raise RuntimeError("VoiceWeaver returned an invalid voice-clone response payload.")
+    return response_payload
+
+
+def create_voice_clone_prompt(
+    base_url: str,
+    runtime_api_key: str,
+    sample_audio_bytes: bytes,
+    sample_text: str,
+    language: str,
+    model_parameters: dict[str, object] | None = None,
+    timeout_seconds: int = config.DEFAULT_TTS_CONNECT_TIMEOUT_SECONDS,
+) -> dict[str, object]:
+    """
+    @brief      Start one reusable Qwen3 voice clone-prompt creation request from a WAV sample.
+    @param[in]  base_url Operator-configured runtime base URL.
+    @param[in]  runtime_api_key Optional operator-configured bearer token.
+    @param[in]  sample_audio_bytes WAV reference audio bytes uploaded for clone-prompt creation.
+    @param[in]  sample_text Transcript matching the reference audio sample.
+    @param[in]  language Synthesis language code associated with the sample.
+    @param[in]  model_parameters Optional VoiceWeaver model-parameter overrides.
+    @param[in]  timeout_seconds Request timeout in seconds.
+    @return     Runtime operation payload returned by `/v1/voice/clone-prompt`.
+    @exception  RuntimeError Raised when the runtime request fails.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-23
+    @version    0.1.0
+    """
+    headers = _build_request_headers(runtime_api_key)
+    form_fields: dict[str, object] = {
+        "sample_text": str(sample_text).strip(),
+        "language": str(language).strip(),
+    }
+    normalized_model_parameters = _normalize_model_parameters(model_parameters)
+    if normalized_model_parameters:
+        form_fields["model_parameters_json"] = json.dumps(normalized_model_parameters)
+    try:
+        response_payload = _send_multipart_request(
+            "POST",
+            _endpoint_url(base_url, "/v1/voice/clone-prompt"),
+            headers,
+            timeout_seconds,
+            form_fields,
+            "voice_sample",
+            "reference.wav",
+            sample_audio_bytes,
+        )
+    except error.HTTPError as exception:
+        raise RuntimeError(_runtime_error_message(exception)) from exception
+    except error.URLError as exception:
+        raise RuntimeError(f"Connection failed: {getattr(exception, 'reason', exception)}.") from exception
+    except TimeoutError as exception:
+        raise RuntimeError("Connection failed: request timed out.") from exception
+    except ValueError as exception:
+        raise RuntimeError(str(exception)) from exception
+    if not isinstance(response_payload, dict):
+        raise RuntimeError("VoiceWeaver returned an invalid clone-prompt response payload.")
+    return response_payload
+
+
+def generate_voice_clone_from_prompt(
+    base_url: str,
+    runtime_api_key: str,
+    voice_clone_prompt: dict[str, object] | str,
+    language: str,
+    text: str,
+    model_parameters: dict[str, object] | None = None,
+    timeout_seconds: int = config.DEFAULT_TTS_CONNECT_TIMEOUT_SECONDS,
+) -> dict[str, object]:
+    """
+    @brief      Start one reusable Qwen3 voice-clone generation request from one stored clone prompt.
+    @param[in]  base_url Operator-configured runtime base URL.
+    @param[in]  runtime_api_key Optional operator-configured bearer token.
+    @param[in]  voice_clone_prompt Client-owned VoiceWeaver clone-prompt payload or serialized JSON string.
+    @param[in]  language Synthesis language code associated with the target text.
+    @param[in]  text Speech-block text to synthesize in the cloned voice.
+    @param[in]  model_parameters Optional VoiceWeaver model-parameter overrides.
+    @param[in]  timeout_seconds Request timeout in seconds.
+    @return     Runtime operation payload returned by `/v1/voice/clone-from-prompt`.
+    @exception  RuntimeError Raised when the runtime request fails.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-23
+    @version    0.1.0
+    """
+    payload: dict[str, object] = {
+        "voice_clone_prompt": voice_clone_prompt,
+        "language": str(language).strip(),
+        "text": str(text).strip(),
+    }
+    normalized_model_parameters = _normalize_model_parameters(model_parameters)
+    if normalized_model_parameters:
+        payload["model_parameters"] = normalized_model_parameters
+    response_payload = _post_json_endpoint(
+        base_url,
+        runtime_api_key,
+        "/v1/voice/clone-from-prompt",
+        payload,
+        timeout_seconds,
+    )
+    if not isinstance(response_payload, dict):
+        raise RuntimeError("VoiceWeaver returned an invalid prompt-clone response payload.")
+    return response_payload
+
+
 def wait_for_terminal_operation(
     base_url: str,
     runtime_api_key: str = "",
     poll_interval_seconds: float = 0.5,
     timeout_seconds: int = config.DEFAULT_LLM_REQUEST_TIMEOUT_SECONDS,
     progress_callback=None,
+    cancel_requested=None,
 ) -> dict[str, object]:
     """
     @brief      Poll `/v1/status` until the current runtime operation completes or fails.
@@ -736,18 +1050,22 @@ def wait_for_terminal_operation(
     @param[in]  poll_interval_seconds Delay between status polls.
     @param[in]  timeout_seconds Maximum total polling duration.
     @param[in]  progress_callback Optional callback receiving each status payload.
+    @param[in]  cancel_requested Optional zero-argument cancellation callback.
     @return     Final runtime status payload.
     @exception  RuntimeError Raised when the poll times out.
+    @exception  OperationCancelledError Raised when cancellation is requested.
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-16
-    @version    1.1.0
+    @date       2026-04-24
+    @version    1.2.0
     """
     deadline = time.monotonic() + timeout_seconds
     last_status_payload: dict[str, object] | None = None
     while time.monotonic() <= deadline:
+        raise_if_cancelled(cancel_requested)
         last_status_payload = read_status(
             base_url, runtime_api_key, timeout_seconds=config.DEFAULT_TTS_CONNECT_TIMEOUT_SECONDS
         )
+        raise_if_cancelled(cancel_requested)
         if callable(progress_callback):
             progress_callback(last_status_payload)
         operation_payload = last_status_payload.get("operation", {})
@@ -762,8 +1080,26 @@ def wait_for_terminal_operation(
         )
         if operation_status in {"completed", "failed", "idle"}:
             return last_status_payload
-        time.sleep(max(poll_interval_seconds, 0.05))
+        _sleep_with_cancel(max(poll_interval_seconds, 0.05), cancel_requested)
     raise RuntimeError("Timed out while waiting for VoiceWeaver to finish the current operation.")
+
+
+def _sleep_with_cancel(delay_seconds: float, cancel_requested) -> None:
+    """
+    @brief      Sleep in short slices so UI cancellation can interrupt polling quickly.
+    @param[in]  delay_seconds Total requested sleep duration.
+    @param[in]  cancel_requested Optional zero-argument cancellation callback.
+    @return     None.
+    @exception  OperationCancelledError Raised when cancellation is requested.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-24
+    @version    0.1.0
+    """
+    deadline = time.monotonic() + max(float(delay_seconds), 0.0)
+    while time.monotonic() < deadline:
+        raise_if_cancelled(cancel_requested)
+        time.sleep(min(0.05, max(deadline - time.monotonic(), 0.0)))
+    raise_if_cancelled(cancel_requested)
 
 
 def download_generated_voice(

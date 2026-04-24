@@ -77,7 +77,7 @@ def test_build_speech_blocks_state_loads_persisted_blocks_and_summary(tmp_path) 
         json.dumps(
             [
                 {
-                    "speech_block_id": "speech-block-0001",
+                    "speech_block_id": "0001-000001",
                     "sequence_index": 1,
                     "chunk_id": "chunk-0001",
                     "chunk_sequence_index": 1,
@@ -158,7 +158,7 @@ def test_build_speech_blocks_state_loads_persisted_blocks_and_summary(tmp_path) 
     assert state["stage_status"] == "completed"
     assert state["processed_chunk_count"] == 1
     assert state["total_chunk_count"] == 2
-    assert state["speech_blocks"][0]["speech_block_id"] == "speech-block-0001"
+    assert state["speech_blocks"][0]["speech_block_id"] == "0001-000001"
     assert any("Generated 1 speech blocks from 1/2 chunks." in note for note in state["notes"])
     assert any("Input tokens: 30 | Output tokens: 10 | Total: 40" in note for note in state["notes"])
 

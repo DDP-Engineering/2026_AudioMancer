@@ -14,7 +14,7 @@
          settings file to the application root.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-22
-@version 0.6.0
+@version 0.7.0
 """
 
 # IMPORTS
@@ -115,21 +115,31 @@ def _is_valid_http_url(value: str) -> bool:
 # HELPER FUNCTIONS
 
 
-def _log_settings_repair(message: str, field_name: str) -> None:
+def _log_settings_repair(
+    message: str,
+    field_name: str,
+    *,
+    func_name: str = "validate_settings",
+    repair_tracker: list[bool] | None = None,
+) -> None:
     """
     @brief      Emit a warning for one settings repair action.
     @param[in]  message Human-readable repair description.
     @param[in]  field_name Settings field or logical field path being repaired.
+    @param[in]  func_name Logical function name emitted in the log entry.
+    @param[in]  repair_tracker Optional mutable repair tracker toggled when one repair occurs.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-22
-    @version    0.2.0
+    @version    0.3.0
     """
+    if repair_tracker is not None:
+        repair_tracker.append(True)
     _SETTINGS_LOGGER.warning(
         message,
         extra={
-            "func_name": "validate_settings",
+            "func_name": func_name,
             "event": "settings-repair",
             "result": field_name,
         },
@@ -158,31 +168,37 @@ def _validate_llm_profile(
     candidate_profile: Any,
     default_profile: dict[str, Any],
     profile_index: int,
+    repair_tracker: list[bool] | None = None,
 ) -> dict[str, Any]:
     """
     @brief      Validate and self-heal one LLM profile payload.
     @param[in]  candidate_profile Candidate persisted profile payload.
     @param[in]  default_profile Default profile payload used for fallback.
     @param[in]  profile_index Profile index used for logging context.
+    @param[in]  repair_tracker Optional mutable repair tracker toggled when one repair occurs.
     @return     Validated LLM profile payload.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-04
-    @version    0.1.0
+    @version    0.2.0
     """
     if not isinstance(candidate_profile, dict):
-        _SETTINGS_LOGGER.warning(
+        _log_settings_repair(
             f"Replaced invalid llm_profiles[{profile_index}] with a normalized default profile shape.",
-            extra={"func_name": "_validate_llm_profile", "event": "settings-repair"},
+            f"llm_profiles[{profile_index}]",
+            func_name="_validate_llm_profile",
+            repair_tracker=repair_tracker,
         )
         return copy.deepcopy(default_profile)
 
     normalized_profile = dict(candidate_profile)
 
-    string_fields = (
+    required_string_fields = (
         "id",
         "label",
         "backend_kind",
+    )
+    optional_string_fields = (
         "base_url",
         "api_key",
         "model_name",
@@ -202,40 +218,62 @@ def _validate_llm_profile(
         "user_overrode_context_window",
     )
 
-    for field_name in string_fields:
+    for field_name in required_string_fields:
         if not isinstance(normalized_profile.get(field_name), str) or not normalized_profile[field_name].strip():
-            _SETTINGS_LOGGER.warning(
+            _log_settings_repair(
                 f"Repaired llm_profiles[{profile_index}].{field_name} using the default value.",
-                extra={"func_name": "_validate_llm_profile", "event": "settings-repair"},
+                f"llm_profiles[{profile_index}].{field_name}",
+                func_name="_validate_llm_profile",
+                repair_tracker=repair_tracker,
+            )
+            normalized_profile[field_name] = default_profile[field_name]
+        else:
+            normalized_profile[field_name] = normalized_profile[field_name].strip()
+
+    for field_name in optional_string_fields:
+        if not isinstance(normalized_profile.get(field_name), str):
+            _log_settings_repair(
+                f"Repaired llm_profiles[{profile_index}].{field_name} using the default value.",
+                f"llm_profiles[{profile_index}].{field_name}",
+                func_name="_validate_llm_profile",
+                repair_tracker=repair_tracker,
             )
             normalized_profile[field_name] = default_profile[field_name]
 
     if normalized_profile["backend_kind"] not in config.LLM_BACKEND_OPTIONS:
-        _SETTINGS_LOGGER.warning(
+        _log_settings_repair(
             f"Repaired llm_profiles[{profile_index}].backend_kind using the default value.",
-            extra={"func_name": "_validate_llm_profile", "event": "settings-repair"},
+            f"llm_profiles[{profile_index}].backend_kind",
+            func_name="_validate_llm_profile",
+            repair_tracker=repair_tracker,
         )
         normalized_profile["backend_kind"] = default_profile["backend_kind"]
 
     if normalized_profile["base_url"] and not _is_valid_http_url(normalized_profile["base_url"]):
-        _SETTINGS_LOGGER.warning(
+        _log_settings_repair(
             f"Repaired llm_profiles[{profile_index}].base_url using the default value.",
-            extra={"func_name": "_validate_llm_profile", "event": "settings-repair"},
+            f"llm_profiles[{profile_index}].base_url",
+            func_name="_validate_llm_profile",
+            repair_tracker=repair_tracker,
         )
         normalized_profile["base_url"] = default_profile["base_url"]
 
     for field_name in integer_fields:
         if not isinstance(normalized_profile.get(field_name), int) or normalized_profile[field_name] <= 0:
-            _SETTINGS_LOGGER.warning(
+            _log_settings_repair(
                 f"Repaired llm_profiles[{profile_index}].{field_name} using the default value.",
-                extra={"func_name": "_validate_llm_profile", "event": "settings-repair"},
+                f"llm_profiles[{profile_index}].{field_name}",
+                func_name="_validate_llm_profile",
+                repair_tracker=repair_tracker,
             )
             normalized_profile[field_name] = default_profile[field_name]
 
     if not isinstance(normalized_profile.get("temperature"), (int, float)):
-        _SETTINGS_LOGGER.warning(
+        _log_settings_repair(
             f"Repaired llm_profiles[{profile_index}].temperature using the default value.",
-            extra={"func_name": "_validate_llm_profile", "event": "settings-repair"},
+            f"llm_profiles[{profile_index}].temperature",
+            func_name="_validate_llm_profile",
+            repair_tracker=repair_tracker,
         )
         normalized_profile["temperature"] = default_profile["temperature"]
     else:
@@ -243,9 +281,11 @@ def _validate_llm_profile(
 
     for field_name in boolean_fields:
         if not isinstance(normalized_profile.get(field_name), bool):
-            _SETTINGS_LOGGER.warning(
+            _log_settings_repair(
                 f"Repaired llm_profiles[{profile_index}].{field_name} using the default value.",
-                extra={"func_name": "_validate_llm_profile", "event": "settings-repair"},
+                f"llm_profiles[{profile_index}].{field_name}",
+                func_name="_validate_llm_profile",
+                repair_tracker=repair_tracker,
             )
             normalized_profile[field_name] = default_profile[field_name]
 
@@ -253,21 +293,198 @@ def _validate_llm_profile(
     if discovered_context_window is not None and (
         not isinstance(discovered_context_window, int) or discovered_context_window <= 0
     ):
-        _SETTINGS_LOGGER.warning(
+        _log_settings_repair(
             f"Repaired llm_profiles[{profile_index}].discovered_context_window using the default value.",
-            extra={"func_name": "_validate_llm_profile", "event": "settings-repair"},
+            f"llm_profiles[{profile_index}].discovered_context_window",
+            func_name="_validate_llm_profile",
+            repair_tracker=repair_tracker,
         )
         normalized_profile["discovered_context_window"] = default_profile["discovered_context_window"]
 
     for field_name, field_value in default_profile.items():
         if field_name not in normalized_profile:
-            _SETTINGS_LOGGER.warning(
+            _log_settings_repair(
                 f"Added missing llm_profiles[{profile_index}].{field_name} using the default value.",
-                extra={"func_name": "_validate_llm_profile", "event": "settings-repair"},
+                f"llm_profiles[{profile_index}].{field_name}",
+                func_name="_validate_llm_profile",
+                repair_tracker=repair_tracker,
             )
             normalized_profile[field_name] = copy.deepcopy(field_value)
 
     return normalized_profile
+
+
+def _validate_settings_internal(settings_payload: object) -> tuple[dict[str, Any], bool]:
+    """
+    @brief      Validate one settings payload and report whether any repair occurred.
+    @param[in]  settings_payload Candidate settings payload.
+    @return     Tuple containing the normalized settings payload and a repair flag.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-23
+    @version    0.1.0
+    """
+    repairs_made: list[bool] = []
+    defaults = build_default_settings()
+    normalized_settings = dict(settings_payload) if isinstance(settings_payload, dict) else {}
+
+    if not isinstance(settings_payload, dict):
+        _log_settings_repair(
+            "Replaced invalid settings root payload with a normalized dict payload.",
+            "<root>",
+            repair_tracker=repairs_made,
+        )
+
+    for field_name, default_value in defaults.items():
+        if field_name not in normalized_settings:
+            normalized_settings[field_name] = copy.deepcopy(default_value)
+            _log_settings_repair(
+                f"Added missing settings field '{field_name}' using the default value.",
+                field_name,
+                repair_tracker=repairs_made,
+            )
+
+    if normalized_settings["language"] not in config.SUPPORTED_LANGUAGES:
+        _log_settings_repair(
+            "Repaired invalid 'language' using the default value.",
+            "language",
+            repair_tracker=repairs_made,
+        )
+        normalized_settings["language"] = defaults["language"]
+
+    if normalized_settings["ui_text_scale"] not in config.UI_TEXT_SCALE_OPTIONS:
+        _log_settings_repair(
+            "Repaired invalid 'ui_text_scale' using the default value.",
+            "ui_text_scale",
+            repair_tracker=repairs_made,
+        )
+        normalized_settings["ui_text_scale"] = defaults["ui_text_scale"]
+
+    if normalized_settings["default_ai_chunking_strategy"] not in config.AI_CHUNKING_STRATEGY_OPTIONS:
+        _log_settings_repair(
+            "Repaired invalid 'default_ai_chunking_strategy' using the default value.",
+            "default_ai_chunking_strategy",
+            repair_tracker=repairs_made,
+        )
+        normalized_settings["default_ai_chunking_strategy"] = defaults["default_ai_chunking_strategy"]
+
+    for field_name in ("play_completion_beep",):
+        if not isinstance(normalized_settings[field_name], bool):
+            _log_settings_repair(
+                f"Repaired invalid '{field_name}' using the default value.",
+                field_name,
+                repair_tracker=repairs_made,
+            )
+            normalized_settings[field_name] = defaults[field_name]
+
+    for field_name in (
+        "tts_runtime_base_url",
+        "tts_runtime_api_key",
+        "tts_runtime_probe_message",
+    ):
+        if not isinstance(normalized_settings[field_name], str):
+            _log_settings_repair(
+                f"Repaired invalid '{field_name}' using the default value.",
+                field_name,
+                repair_tracker=repairs_made,
+            )
+            normalized_settings[field_name] = defaults[field_name]
+
+    if normalized_settings["tts_runtime_base_url"] and not _is_valid_http_url(
+        normalized_settings["tts_runtime_base_url"]
+    ):
+        _log_settings_repair(
+            "Repaired invalid 'tts_runtime_base_url' using the default value.",
+            "tts_runtime_base_url",
+            repair_tracker=repairs_made,
+        )
+        normalized_settings["tts_runtime_base_url"] = defaults["tts_runtime_base_url"]
+
+    if not isinstance(normalized_settings["tts_runtime_probe_succeeded"], bool):
+        _log_settings_repair(
+            "Repaired invalid 'tts_runtime_probe_succeeded' using the default value.",
+            "tts_runtime_probe_succeeded",
+            repair_tracker=repairs_made,
+        )
+        normalized_settings["tts_runtime_probe_succeeded"] = defaults["tts_runtime_probe_succeeded"]
+
+    for field_name in (
+        "tts_audio_preview_timeout_seconds",
+        "tts_audio_generation_timeout_seconds",
+    ):
+        if not isinstance(normalized_settings[field_name], int) or normalized_settings[field_name] <= 0:
+            _log_settings_repair(
+                f"Repaired invalid '{field_name}' using the default value.",
+                field_name,
+                repair_tracker=repairs_made,
+            )
+            normalized_settings[field_name] = defaults[field_name]
+
+    normalized_settings["tts_runtime_discovered_models"] = _normalize_tts_runtime_models(
+        normalized_settings.get("tts_runtime_discovered_models")
+    )
+    normalized_settings["tts_runtime_active_model_id"] = _optional_string(
+        normalized_settings.get("tts_runtime_active_model_id")
+    )
+    discovered_model_ids = {
+        str(model.get("model_id", "")).strip()
+        for model in normalized_settings["tts_runtime_discovered_models"]
+        if isinstance(model, dict)
+    }
+    if (
+        normalized_settings["tts_runtime_active_model_id"] is not None
+        and normalized_settings["tts_runtime_active_model_id"] not in discovered_model_ids
+    ):
+        _log_settings_repair(
+            "Repaired invalid 'tts_runtime_active_model_id' using the default value.",
+            "tts_runtime_active_model_id",
+            repair_tracker=repairs_made,
+        )
+        normalized_settings["tts_runtime_active_model_id"] = defaults["tts_runtime_active_model_id"]
+    normalized_settings["tts_runtime_device_diagnostics"] = _normalize_tts_device_diagnostics(
+        normalized_settings.get("tts_runtime_device_diagnostics")
+    )
+
+    candidate_profiles = normalized_settings.get("llm_profiles")
+    if not isinstance(candidate_profiles, list):
+        _log_settings_repair(
+            "Repaired invalid 'llm_profiles' using the default value.",
+            "llm_profiles",
+            repair_tracker=repairs_made,
+        )
+        normalized_settings["llm_profiles"] = copy.deepcopy(defaults["llm_profiles"])
+    else:
+        validated_profiles = []
+        for index, candidate_profile in enumerate(candidate_profiles):
+            validated_profiles.append(
+                _validate_llm_profile(candidate_profile, _LLM_PROFILE_DEFAULTS, index, repair_tracker=repairs_made)
+            )
+        normalized_settings["llm_profiles"] = validated_profiles
+
+    enabled_profile_ids = {
+        str(profile["id"])
+        for profile in normalized_settings["llm_profiles"]
+        if bool(profile.get("enabled", True)) and str(profile.get("id", "")).strip()
+    }
+
+    for field_name in (
+        "default_ai_cleanup_profile_id",
+        "default_ai_chunking_profile_id",
+        "default_ai_translation_profile_id",
+        "default_speech_blocks_profile_id",
+        "default_character_extraction_profile_id",
+    ):
+        normalized_profile_id = _optional_profile_id(normalized_settings.get(field_name))
+        if normalized_profile_id is not None and normalized_profile_id not in enabled_profile_ids:
+            _log_settings_repair(
+                f"Repaired invalid '{field_name}' using the default value.",
+                field_name,
+                repair_tracker=repairs_made,
+            )
+            normalized_profile_id = defaults[field_name]
+        normalized_settings[field_name] = normalized_profile_id
+
+    return normalized_settings, bool(repairs_made)
 
 
 def _normalize_string_list(value: object) -> list[str]:
@@ -435,153 +652,9 @@ def validate_settings(settings_payload: dict[str, Any]) -> dict[str, Any]:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-22
-    @version    0.5.0
+    @version    0.6.0
     """
-    defaults = build_default_settings()
-    normalized_settings = dict(settings_payload) if isinstance(settings_payload, dict) else {}
-
-    if normalized_settings is not settings_payload:
-        _log_settings_repair(
-            "Replaced invalid settings root payload with a normalized dict payload.",
-            "<root>",
-        )
-
-    for field_name, default_value in defaults.items():
-        if field_name not in normalized_settings:
-            normalized_settings[field_name] = copy.deepcopy(default_value)
-            _log_settings_repair(
-                f"Added missing settings field '{field_name}' using the default value.",
-                field_name,
-            )
-
-    if normalized_settings["language"] not in config.SUPPORTED_LANGUAGES:
-        _log_settings_repair(
-            "Repaired invalid 'language' using the default value.",
-            "language",
-        )
-        normalized_settings["language"] = defaults["language"]
-
-    if normalized_settings["ui_text_scale"] not in config.UI_TEXT_SCALE_OPTIONS:
-        _log_settings_repair(
-            "Repaired invalid 'ui_text_scale' using the default value.",
-            "ui_text_scale",
-        )
-        normalized_settings["ui_text_scale"] = defaults["ui_text_scale"]
-
-    if normalized_settings["default_ai_chunking_strategy"] not in config.AI_CHUNKING_STRATEGY_OPTIONS:
-        _log_settings_repair(
-            "Repaired invalid 'default_ai_chunking_strategy' using the default value.",
-            "default_ai_chunking_strategy",
-        )
-        normalized_settings["default_ai_chunking_strategy"] = defaults["default_ai_chunking_strategy"]
-
-    for field_name in ("play_completion_beep",):
-        if not isinstance(normalized_settings[field_name], bool):
-            _log_settings_repair(
-                f"Repaired invalid '{field_name}' using the default value.",
-                field_name,
-            )
-            normalized_settings[field_name] = defaults[field_name]
-
-    for field_name in (
-        "tts_runtime_base_url",
-        "tts_runtime_api_key",
-        "tts_runtime_probe_message",
-    ):
-        if not isinstance(normalized_settings[field_name], str):
-            _log_settings_repair(
-                f"Repaired invalid '{field_name}' using the default value.",
-                field_name,
-            )
-            normalized_settings[field_name] = defaults[field_name]
-
-    if normalized_settings["tts_runtime_base_url"] and not _is_valid_http_url(
-        normalized_settings["tts_runtime_base_url"]
-    ):
-        _log_settings_repair(
-            "Repaired invalid 'tts_runtime_base_url' using the default value.",
-            "tts_runtime_base_url",
-        )
-        normalized_settings["tts_runtime_base_url"] = defaults["tts_runtime_base_url"]
-
-    if not isinstance(normalized_settings["tts_runtime_probe_succeeded"], bool):
-        _log_settings_repair(
-            "Repaired invalid 'tts_runtime_probe_succeeded' using the default value.",
-            "tts_runtime_probe_succeeded",
-        )
-        normalized_settings["tts_runtime_probe_succeeded"] = defaults["tts_runtime_probe_succeeded"]
-
-    for field_name in (
-        "tts_audio_preview_timeout_seconds",
-        "tts_audio_generation_timeout_seconds",
-    ):
-        if not isinstance(normalized_settings[field_name], int) or normalized_settings[field_name] <= 0:
-            _log_settings_repair(
-                f"Repaired invalid '{field_name}' using the default value.",
-                field_name,
-            )
-            normalized_settings[field_name] = defaults[field_name]
-
-    normalized_settings["tts_runtime_discovered_models"] = _normalize_tts_runtime_models(
-        normalized_settings.get("tts_runtime_discovered_models")
-    )
-    normalized_settings["tts_runtime_active_model_id"] = _optional_string(
-        normalized_settings.get("tts_runtime_active_model_id")
-    )
-    discovered_model_ids = {
-        str(model.get("model_id", "")).strip()
-        for model in normalized_settings["tts_runtime_discovered_models"]
-        if isinstance(model, dict)
-    }
-    if (
-        normalized_settings["tts_runtime_active_model_id"] is not None
-        and normalized_settings["tts_runtime_active_model_id"] not in discovered_model_ids
-    ):
-        _log_settings_repair(
-            "Repaired invalid 'tts_runtime_active_model_id' using the default value.",
-            "tts_runtime_active_model_id",
-        )
-        normalized_settings["tts_runtime_active_model_id"] = defaults["tts_runtime_active_model_id"]
-    normalized_settings["tts_runtime_device_diagnostics"] = _normalize_tts_device_diagnostics(
-        normalized_settings.get("tts_runtime_device_diagnostics")
-    )
-
-    candidate_profiles = normalized_settings.get("llm_profiles")
-    if not isinstance(candidate_profiles, list):
-        _log_settings_repair(
-            "Repaired invalid 'llm_profiles' using the default value.",
-            "llm_profiles",
-        )
-        normalized_settings["llm_profiles"] = copy.deepcopy(defaults["llm_profiles"])
-    else:
-        validated_profiles = []
-        for index, candidate_profile in enumerate(candidate_profiles):
-            validated_profiles.append(_validate_llm_profile(candidate_profile, _LLM_PROFILE_DEFAULTS, index))
-        normalized_settings["llm_profiles"] = validated_profiles
-
-    enabled_profile_ids = {
-        str(profile["id"])
-        for profile in normalized_settings["llm_profiles"]
-        if bool(profile.get("enabled", True)) and str(profile.get("id", "")).strip()
-    }
-
-    for field_name in (
-        "default_ai_cleanup_profile_id",
-        "default_ai_chunking_profile_id",
-        "default_ai_translation_profile_id",
-        "default_speech_blocks_profile_id",
-        "default_character_extraction_profile_id",
-    ):
-        normalized_profile_id = _optional_profile_id(normalized_settings.get(field_name))
-        if normalized_profile_id is not None and normalized_profile_id not in enabled_profile_ids:
-            _log_settings_repair(
-                f"Repaired invalid '{field_name}' using the default value.",
-                field_name,
-            )
-            normalized_profile_id = defaults[field_name]
-        normalized_settings[field_name] = normalized_profile_id
-
-    return normalized_settings
+    return _validate_settings_internal(settings_payload)[0]
 
 
 @trace_function(_SETTINGS_LOGGER)
@@ -633,7 +706,7 @@ def load_settings() -> dict[str, Any]:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-04
-    @version    0.1.2
+    @version    0.2.0
     """
     settings_path = config.APP_SETTINGS_PATH
     if not settings_path.exists():
@@ -655,8 +728,8 @@ def load_settings() -> dict[str, Any]:
         )
         return default_settings
 
-    validated_settings = validate_settings(persisted_payload)
-    if validated_settings != persisted_payload:
+    validated_settings, repairs_made = _validate_settings_internal(persisted_payload)
+    if repairs_made:
         _write_settings_file(validated_settings)
         _SETTINGS_LOGGER.info(
             f"Detected and repaired persisted settings at {settings_path}.",

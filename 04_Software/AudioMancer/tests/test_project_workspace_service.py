@@ -12,7 +12,7 @@
          validation, project-root resolution, and open validation behavior.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-20
-@version 0.9.0
+@version 1.1.0
 """
 
 # IMPORTS
@@ -36,7 +36,7 @@ def test_create_project_creates_required_structure_and_manifest(tmp_path) -> Non
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.1.0
+    @version    0.2.0
     """
     project_root, manifest = project_workspace_service.create_project(
         "Book5_CAL_CAL",
@@ -251,15 +251,15 @@ def test_repair_project_recreates_missing_downstream_folders_and_resets_stage(
         assert list((project_root / folder_name).iterdir()) == []
 
 
-def test_repair_project_recreates_missing_support_folder_without_resetting_stage(tmp_path) -> None:
+def test_open_project_accepts_current_required_folder_contract(tmp_path) -> None:
     """
-    @brief      Verify repair recreates one missing support folder without resetting the workflow stage.
+    @brief      Verify project validation accepts the current required workflow-folder contract.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
+    @date       2026-04-24
+    @version    0.3.0
     """
     project_root, manifest = project_workspace_service.create_project(
         "Book5_CAL_CAL",
@@ -274,23 +274,19 @@ def test_repair_project_recreates_missing_support_folder_without_resetting_stage
     }
     manifest["current_stage"] = "character_voices_ready"
     project_workspace_service.save_manifest(manifest, project_root)
-    shutil.rmtree(project_root / config.PROJECT_AUDIO_SAMPLES_FOLDER_NAME)
 
     open_result = project_workspace_service.open_project(project_root)
-    repaired_result = project_workspace_service.repair_project(open_result)
 
-    assert open_result["status"] == "repair_required"
-    assert open_result["corrupted_step"] == config.PROJECT_AUDIO_SAMPLES_FOLDER_NAME
-    assert repaired_result["status"] == "ok"
-    assert repaired_result["manifest"]["current_stage"] == "character_voices_ready"
-    assert (project_root / config.PROJECT_AUDIO_SAMPLES_FOLDER_NAME).is_dir()
+    assert open_result["status"] == "ok"
+    assert open_result["manifest"]["current_stage"] == "character_voices_ready"
 
 
 def test_repair_project_recreates_missing_speech_blocks_folder_without_resetting_character_voices_stage(
     tmp_path,
 ) -> None:
     """
-    @brief      Verify repair recreates one missing Speech Blocks folder without resetting the trusted Character Voices stage.
+    @brief      Verify repair recreates one missing Speech Blocks folder
+                without resetting the trusted Character Voices stage.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None

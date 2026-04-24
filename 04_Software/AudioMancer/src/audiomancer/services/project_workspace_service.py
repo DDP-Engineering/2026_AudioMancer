@@ -13,7 +13,7 @@
          using one minimal `project.json` manifest contract.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-20
-@version    1.4.0
+@version    1.5.0
 """
 
 # IMPORTS
@@ -94,7 +94,7 @@ def create_project(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-        @version    0.3.0
+        @version    0.4.0
     """
     validate_project_name(name)
     resolved_parent = Path(parent_path)
@@ -480,14 +480,9 @@ def _repair_stage_for_folder(folder_name: str, payload: dict[str, object]) -> st
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.3.0
+    @version    0.4.0
     """
     current_stage = str(payload.get("current_stage", config.DEFAULT_WORKFLOW_STAGE)).strip()
-    if (
-        folder_name == config.PROJECT_AUDIO_SAMPLES_FOLDER_NAME
-        or folder_name == config.PROJECT_TEMP_FOLDER_NAME
-    ):
-        return current_stage if current_stage in config.PROJECT_WORKFLOW_STAGES else _derive_trustworthy_stage(payload)
     stage_before_folder = {
         config.EXTRACTION_FOLDER_NAME: "project_created",
         config.CLEANUP_FOLDER_NAME: "source_selected",
@@ -552,13 +547,8 @@ def _folders_to_reset_from(corrupted_step: str) -> tuple[str, ...]:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.3.0
+    @version    0.4.0
     """
-    if (
-        corrupted_step == config.PROJECT_AUDIO_SAMPLES_FOLDER_NAME
-        or corrupted_step == config.PROJECT_TEMP_FOLDER_NAME
-    ):
-        return (corrupted_step,)
     if corrupted_step not in _STEP_FOLDERS_IN_ORDER:
         return ()
     start_index = _STEP_FOLDERS_IN_ORDER.index(corrupted_step)

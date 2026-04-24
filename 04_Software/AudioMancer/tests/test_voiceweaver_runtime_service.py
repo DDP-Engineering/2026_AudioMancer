@@ -12,7 +12,7 @@
          derivation for the TTS Settings and Narrator runtime-awareness flow.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-22
-@version 0.3.0
+@version 0.4.0
 """
 
 # IMPORTS
@@ -20,7 +20,7 @@
 from urllib import error
 
 from audiomancer import config
-from audiomancer.services import voiceweaver_runtime_service
+from audiomancer.services import operation_runtime_service, voiceweaver_runtime_service
 
 
 def test_probe_runtime_normalizes_models_and_capabilities(monkeypatch) -> None:
@@ -242,6 +242,102 @@ def test_voiceweaver_runtime_service_generation_payloads_use_current_contract(mo
     ]
 
 
+def test_voiceweaver_runtime_service_clone_prompt_wrappers_use_documented_contract(monkeypatch) -> None:
+    """
+    @brief      Verify reusable clone-prompt helpers target the documented VoiceWeaver REST payloads.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-23
+    @version    0.1.0
+    """
+    observed_multipart_calls: list[tuple[str, str, dict[str, object], str, str, bytes, int]] = []
+    observed_json_calls: list[tuple[str, str, dict[str, object], int]] = []
+
+    def _fake_send_multipart_request(
+        method,
+        url,
+        headers,
+        timeout_seconds,
+        form_fields,
+        file_field_name,
+        file_name,
+        file_bytes,
+        file_content_type="audio/wav",
+    ):
+        observed_multipart_calls.append(
+            (
+                str(method),
+                str(url),
+                dict(form_fields),
+                str(file_field_name),
+                str(file_name),
+                bytes(file_bytes),
+                int(timeout_seconds),
+            )
+        )
+        assert headers["Accept"] == "application/json"
+        assert file_content_type == "audio/wav"
+        return {"status": "running"}
+
+    def _fake_post_json_endpoint(base_url, runtime_api_key, endpoint, payload, timeout_seconds):
+        _ = runtime_api_key
+        observed_json_calls.append((str(base_url), str(endpoint), dict(payload or {}), int(timeout_seconds)))
+        return {"status": "running"}
+
+    monkeypatch.setattr(voiceweaver_runtime_service, "_send_multipart_request", _fake_send_multipart_request)
+    monkeypatch.setattr(voiceweaver_runtime_service, "_post_json_endpoint", _fake_post_json_endpoint)
+
+    voiceweaver_runtime_service.create_voice_clone_prompt(
+        "http://127.0.0.1:8059",
+        "",
+        b"sample-bytes",
+        "Reference transcript.",
+        "en",
+        {"temperature": 0.8},
+        timeout_seconds=33,
+    )
+    voiceweaver_runtime_service.generate_voice_clone_from_prompt(
+        "http://127.0.0.1:8059",
+        "",
+        {"format": "qwen_voice_clone_prompt_v1", "prompt": {"ref_code": {"data": "..."}}},
+        "ro",
+        "Salut.",
+        {"top_k": 22},
+        timeout_seconds=44,
+    )
+
+    assert observed_multipart_calls == [
+        (
+            "POST",
+            "http://127.0.0.1:8059/v1/voice/clone-prompt",
+            {
+                "sample_text": "Reference transcript.",
+                "language": "en",
+                "model_parameters_json": '{"temperature": 0.8}',
+            },
+            "voice_sample",
+            "reference.wav",
+            b"sample-bytes",
+            33,
+        )
+    ]
+    assert observed_json_calls == [
+        (
+            "http://127.0.0.1:8059",
+            "/v1/voice/clone-from-prompt",
+            {
+                "voice_clone_prompt": {"format": "qwen_voice_clone_prompt_v1", "prompt": {"ref_code": {"data": "..."}}},
+                "language": "ro",
+                "text": "Salut.",
+                "model_parameters": {"top_k": 22},
+            },
+            44,
+        )
+    ]
+
+
 def test_voiceweaver_runtime_service_endpoint_wrappers_cover_extended_rest_surface(monkeypatch) -> None:
     """
     @brief      Verify VoiceWeaver endpoint wrappers target the updated REST paths for server, catalog, unload,
@@ -322,6 +418,37 @@ def test_endpoint_url_avoids_duplicate_v1_suffix() -> None:
         voiceweaver_runtime_service._endpoint_url("http://127.0.0.1:8059/v1", "/v1/status")  # noqa: SLF001
         == "http://127.0.0.1:8059/v1/status"
     )
+
+
+def test_wait_for_terminal_operation_stops_before_status_read_when_cancelled(monkeypatch) -> None:
+    """
+    @brief      Verify VoiceWeaver polling raises immediately when cancellation is already requested.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-24
+    @version    0.1.0
+    """
+    status_reads = {"count": 0}
+
+    def _fake_read_status(*_args, **_kwargs):
+        status_reads["count"] = int(status_reads["count"]) + 1
+        return {"operation": {"status": "running"}}
+
+    monkeypatch.setattr(voiceweaver_runtime_service, "read_status", _fake_read_status)
+
+    try:
+        voiceweaver_runtime_service.wait_for_terminal_operation(
+            "http://127.0.0.1:8059",
+            cancel_requested=lambda: True,
+        )
+    except operation_runtime_service.OperationCancelledError:
+        pass
+    else:
+        raise AssertionError("Expected runtime polling to raise OperationCancelledError.")
+
+    assert status_reads["count"] == 0
 
 
 # END OF FILE

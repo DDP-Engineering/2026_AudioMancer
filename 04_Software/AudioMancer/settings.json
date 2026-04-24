@@ -140,6 +140,26 @@
       "discovery_message": "Connection successful. Discovered 120 models.",
       "user_overrode_model_name": true,
       "user_overrode_context_window": true
+    },
+    {
+      "id": "llm_profile_fb88f056a8c8",
+      "label": "GPT-5.4",
+      "backend_kind": "openai_compatible",
+      "base_url": "https://api.openai.com/v1",
+      "api_key": "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",
+      "model_name": "gpt-5.4",
+      "context_window": 256000,
+      "max_output_tokens": 128000,
+      "request_timeout_seconds": 600,
+      "temperature": 0.7,
+      "supports_structured_output": true,
+      "enabled": true,
+      "discovered_model_name": "gpt-4-0613",
+      "discovered_context_window": null,
+      "discovery_succeeded": true,
+      "discovery_message": "Connection successful. Discovered 122 models.",
+      "user_overrode_model_name": true,
+      "user_overrode_context_window": true
     }
   ],
   "default_ai_cleanup_profile_id": "llm_profile_967538a1c13e",
@@ -177,16 +197,16 @@
       "supported_presets": [],
       "speaker_count": 0,
       "default_model_parameters": {
-        "do_sample": false,
+        "do_sample": true,
         "top_k": 50,
         "top_p": 1.0,
-        "temperature": 1.0,
-        "repetition_penalty": 1.0,
+        "temperature": 0.9,
+        "repetition_penalty": 1.05,
         "subtalker_dosample": true,
         "subtalker_top_k": 50,
         "subtalker_top_p": 1.0,
         "subtalker_temperature": 0.9,
-        "max_new_tokens": 2048
+        "max_new_tokens": 512
       },
       "device_mode": "cuda",
       "issues": null
@@ -225,16 +245,16 @@
       ],
       "speaker_count": 9,
       "default_model_parameters": {
-        "do_sample": false,
+        "do_sample": true,
         "top_k": 50,
         "top_p": 1.0,
-        "temperature": 1.0,
-        "repetition_penalty": 1.0,
+        "temperature": 0.9,
+        "repetition_penalty": 1.05,
         "subtalker_dosample": true,
         "subtalker_top_k": 50,
         "subtalker_top_p": 1.0,
         "subtalker_temperature": 0.9,
-        "max_new_tokens": 2048
+        "max_new_tokens": 8192
       },
       "device_mode": "cuda",
       "issues": null
@@ -261,22 +281,22 @@
       "supported_presets": [],
       "speaker_count": 0,
       "default_model_parameters": {
-        "do_sample": false,
+        "do_sample": true,
         "top_k": 50,
         "top_p": 1.0,
-        "temperature": 1.0,
-        "repetition_penalty": 1.0,
+        "temperature": 0.9,
+        "repetition_penalty": 1.05,
         "subtalker_dosample": true,
         "subtalker_top_k": 50,
         "subtalker_top_p": 1.0,
         "subtalker_temperature": 0.9,
-        "max_new_tokens": 2048
+        "max_new_tokens": 8192
       },
       "device_mode": "cuda",
       "issues": null
     }
   ],
-  "tts_runtime_active_model_id": "Qwen3-TTS-12Hz-1.7B-VoiceDesign",
+  "tts_runtime_active_model_id": "Qwen3-TTS-12Hz-1.7B-Base",
   "tts_runtime_device_diagnostics": {
     "package_flavor": "cuda",
     "torch_installed": true,
@@ -288,6 +308,6 @@
     "device_mode": "cuda",
     "status_message": "CUDA active: NVIDIA GeForce RTX 5060 Ti."
   },
-  "tts_audio_preview_timeout_seconds": 60,
-  "tts_audio_generation_timeout_seconds": 300
+  "tts_audio_preview_timeout_seconds": 120,
+  "tts_audio_generation_timeout_seconds": 600
 }

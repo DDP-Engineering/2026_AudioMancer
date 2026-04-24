@@ -15,7 +15,7 @@
          based operation state plus AI transaction logging.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 0.2.0
+@version 0.3.1
 """
 
 # IMPORTS
@@ -44,6 +44,7 @@ from audiomancer.services.operation_runtime_service import (
     progress_percent,
     raise_if_cancelled,
     relative_to_project,
+    reset_operation_data,
     resolve_operation_path,
 )
 
@@ -59,6 +60,15 @@ SPEAKER_KIND_NARRATOR = "narrator"
 SPEAKER_KIND_CHARACTER = "character"
 CONTENT_KIND_NARRATION = "narration"
 CONTENT_KIND_DIALOGUE = "dialogue"
+CONTENT_KIND_BACKGROUND_NOISE = "background_noise"
+CONTENT_KIND_PAUSE = "pause"
+
+SPEECH_BLOCK_CONTENT_KINDS = (
+    CONTENT_KIND_NARRATION,
+    CONTENT_KIND_DIALOGUE,
+    CONTENT_KIND_BACKGROUND_NOISE,
+    CONTENT_KIND_PAUSE,
+)
 
 _NARRATOR_SPEAKER_ID = "narrator"
 _NARRATOR_DISPLAY_NAME = "Narrator"
@@ -80,7 +90,7 @@ def load_operation_state(project_root: str | Path) -> OperationStatePayload | No
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.1.0
+    @version    0.2.0
     """
     state_path = resolve_operation_path(project_root, "speech_blocks", config.OPERATION_STATE_FILE_NAME)
     if not state_path.is_file():
@@ -326,20 +336,7 @@ def start_or_continue_generation(
     for chunk_index in range(start_chunk_index, len(source_chunks)):
         raise_if_cancelled(cancel_requested)
         source_chunk = dict(source_chunks[chunk_index])
-        user_prompt = prompt_template_service.render_prompt(
-            "speech_blocks_user",
-            {
-                "source_language": narrator_definition_service.narrator_language_label(source_language),
-                "chunk_id": str(source_chunk.get("chunk_id", "")),
-                "chunk_text": str(source_chunk.get("text", "")),
-                "source_units_json": json.dumps(
-                    _split_source_text_units(str(source_chunk.get("text", ""))),
-                    indent=2,
-                    ensure_ascii=False,
-                ),
-                "speaker_catalog_json": json.dumps(list(speaker_catalog.values()), indent=2, ensure_ascii=False),
-            },
-        )
+        user_prompt = _chunk_user_prompt(source_chunk, source_language, speaker_catalog)
         try:
             response_result = llm_provider_service.chat_json(
                 ai_profile_payload,
@@ -431,7 +428,7 @@ def start_or_continue_generation(
             resolved_project_root,
             source_chunks,
             all_blocks,
-            status="completed",
+            status="review_pending",
             started_at=started_at,
             completed_at=completed_at,
             source_language=source_language,
@@ -451,6 +448,274 @@ def start_or_continue_generation(
         "Speech Blocks generation completed.",
         token_usage,
     )
+    return report
+
+
+@trace_function(_SPEECH_BLOCKS_LOGGER)
+def speaker_catalog_entries(project_root: str | Path) -> list[dict[str, object]]:
+    """
+    @brief      Return the editable Speech Blocks speaker catalog.
+    @param[in]  project_root Active project root folder.
+    @return     Ordered speaker catalog entries.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-24
+    @version    0.1.0
+    """
+    return list(_speaker_catalog(character_discovery_service.load_character_profiles(Path(project_root))).values())
+
+
+@trace_function(_SPEECH_BLOCKS_LOGGER)
+def reset_speech_blocks(project_root: str | Path) -> None:
+    """
+    @brief      Clear Speech Blocks plus downstream runtime data.
+    @param[in]  project_root Active project root folder.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-24
+    @version    0.1.0
+    """
+    reset_operation_data(project_root, "speech_blocks", include_current=True, keep_input_snapshots=False)
+
+
+@trace_function(_SPEECH_BLOCKS_LOGGER)
+def approve_all_speech_blocks(project_root: str | Path) -> SpeechBlocksReportPayload:
+    """
+    @brief      Approve every generated Speech Block.
+    @param[in]  project_root Active project root folder.
+    @return     Updated Speech Blocks report payload.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-24
+    @version    0.1.0
+    """
+    resolved_project_root = Path(project_root)
+    speech_blocks = load_speech_blocks(resolved_project_root)
+    approved_at = _utc_now_iso()
+    for block in speech_blocks:
+        block["approved"] = True
+        block["approved_at"] = approved_at
+    return _persist_report_update(resolved_project_root, speech_blocks)
+
+
+@trace_function(_SPEECH_BLOCKS_LOGGER)
+def approve_speech_block(project_root: str | Path, speech_block_id: str) -> SpeechBlocksReportPayload:
+    """
+    @brief      Approve one generated Speech Block.
+    @param[in]  project_root Active project root folder.
+    @param[in]  speech_block_id Target Speech Block identifier.
+    @return     Updated Speech Blocks report payload.
+    @exception  ValueError Raised when the block is unknown.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-24
+    @version    0.1.0
+    """
+    resolved_project_root = Path(project_root)
+    speech_blocks = load_speech_blocks(resolved_project_root)
+    selected_block = _speech_block_by_id(speech_blocks, speech_block_id)
+    if selected_block is None:
+        raise ValueError("The selected Speech Block was not found.")
+    selected_block["approved"] = True
+    selected_block["approved_at"] = _utc_now_iso()
+    return _persist_report_update(resolved_project_root, speech_blocks)
+
+
+@trace_function(_SPEECH_BLOCKS_LOGGER)
+def update_speech_block(
+    project_root: str | Path,
+    speech_block_id: str,
+    speaker_id: str,
+    content_kind: str,
+    text: str,
+) -> SpeechBlocksReportPayload:
+    """
+    @brief      Save one manually edited Speech Block and clear its warning indicator.
+    @param[in]  project_root Active project root folder.
+    @param[in]  speech_block_id Target Speech Block identifier.
+    @param[in]  speaker_id Selected speaker identifier.
+    @param[in]  content_kind Selected content-kind token.
+    @param[in]  text Edited block text.
+    @return     Updated Speech Blocks report payload.
+    @exception  ValueError Raised when the block or speaker is unknown.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-24
+    @version    0.1.0
+    """
+    resolved_project_root = Path(project_root)
+    speech_blocks = load_speech_blocks(resolved_project_root)
+    selected_block = _speech_block_by_id(speech_blocks, speech_block_id)
+    if selected_block is None:
+        raise ValueError("The selected Speech Block was not found.")
+    speaker_entry = _speaker_catalog(character_discovery_service.load_character_profiles(resolved_project_root)).get(
+        str(speaker_id).strip()
+    )
+    if speaker_entry is None:
+        raise ValueError("The selected speaker was not found.")
+    selected_block["speaker_kind"] = str(speaker_entry.get("speaker_kind", SPEAKER_KIND_NARRATOR))
+    selected_block["speaker_id"] = str(speaker_entry.get("speaker_id", _NARRATOR_SPEAKER_ID))
+    selected_block["speaker_display_name"] = str(speaker_entry.get("display_name", _NARRATOR_DISPLAY_NAME))
+    selected_block["content_kind"] = _normalize_content_kind(content_kind)
+    selected_block["text"] = str(text)
+    selected_block["warning_flags"] = []
+    selected_block["approved"] = False
+    selected_block["approved_at"] = None
+    return _persist_report_update(resolved_project_root, speech_blocks)
+
+
+@trace_function(_SPEECH_BLOCKS_LOGGER)
+def reset_speech_block_to_ai_baseline(
+    project_root: str | Path,
+    speech_block_id: str,
+) -> SpeechBlocksReportPayload:
+    """
+    @brief      Restore one Speech Block's editable fields from the AI baseline.
+    @param[in]  project_root Active project root folder.
+    @param[in]  speech_block_id Target Speech Block identifier.
+    @return     Updated Speech Blocks report payload.
+    @exception  ValueError Raised when the block is unknown.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-24
+    @version    0.1.0
+    """
+    resolved_project_root = Path(project_root)
+    speech_blocks = load_speech_blocks(resolved_project_root)
+    selected_block = _speech_block_by_id(speech_blocks, speech_block_id)
+    if selected_block is None:
+        raise ValueError("The selected Speech Block was not found.")
+    selected_block["speaker_kind"] = str(selected_block.get("ai_speaker_kind", SPEAKER_KIND_NARRATOR))
+    selected_block["speaker_id"] = str(selected_block.get("ai_speaker_id", _NARRATOR_SPEAKER_ID))
+    selected_block["speaker_display_name"] = str(selected_block.get("ai_speaker_display_name", _NARRATOR_DISPLAY_NAME))
+    selected_block["content_kind"] = _normalize_content_kind(
+        selected_block.get("ai_content_kind", CONTENT_KIND_NARRATION)
+    )
+    selected_block["text"] = str(selected_block.get("ai_text", ""))
+    selected_block["approved"] = False
+    selected_block["approved_at"] = None
+    return _persist_report_update(resolved_project_root, speech_blocks)
+
+
+@trace_function(_SPEECH_BLOCKS_LOGGER)
+def regenerate_chunk_speech_blocks(
+    project_root: str | Path,
+    manifest: dict[str, object],
+    chunk_id: str,
+    ai_profile_payload: dict[str, object],
+    progress_callback=None,
+    cancel_requested=None,
+) -> SpeechBlocksReportPayload:
+    """
+    @brief      Re-run Speech Blocks splitting for one selected source chunk.
+    @param[in]  project_root Active project root folder.
+    @param[in]  manifest Active project manifest payload.
+    @param[in]  chunk_id Source chunk identifier to regenerate.
+    @param[in]  ai_profile_payload Selected validated AI profile payload.
+    @param[in]  progress_callback Optional progress callback for the modal popup.
+    @param[in]  cancel_requested Optional zero-argument cancellation callback.
+    @return     Updated Speech Blocks report payload.
+    @exception  ValueError Raised when prerequisites or target chunk are invalid.
+    @exception  OperationCancelledError Raised when the operator cancels the run.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-24
+    @version    0.1.0
+    """
+    resolved_project_root = Path(project_root)
+    profile_id = str(ai_profile_payload.get("id", "")).strip()
+    model_name = str(ai_profile_payload.get("model_name", "")).strip()
+    base_url = str(ai_profile_payload.get("base_url", "")).strip()
+    if not profile_id or not model_name or not base_url:
+        raise ValueError("Speech Blocks generation requires a valid enabled AI profile.")
+    source_resolution = resolve_source_chunks(resolved_project_root, manifest)
+    source_chunks = list(source_resolution["source_chunks"])
+    source_language = str(source_resolution["selected_source_language"])
+    source_kind = str(source_resolution["source_kind"])
+    selected_chunk = next(
+        (chunk for chunk in source_chunks if str(chunk.get("chunk_id", "")).strip() == chunk_id),
+        None,
+    )
+    if selected_chunk is None:
+        raise ValueError("The selected chunk was not found.")
+    prompt_template_service.validate_required_prompts(["speech_blocks_system", "speech_blocks_user"])
+    existing_report = load_speech_blocks_report(resolved_project_root)
+    existing_state = load_operation_state(resolved_project_root) or {}
+    token_usage = token_usage_service.restore_token_usage(
+        None if existing_report is None else existing_report.get("token_usage"),
+        _metadata_token_usage(existing_state),
+    )
+    started_at = _resolve_started_at(existing_state)
+    log_path = _resolve_log_path(resolved_project_root, started_at)
+    speaker_catalog = _speaker_catalog(character_discovery_service.load_character_profiles(resolved_project_root))
+    system_prompt = prompt_template_service.render_prompt("speech_blocks_system", {})
+    raise_if_cancelled(cancel_requested)
+    user_prompt = _chunk_user_prompt(selected_chunk, source_language, speaker_catalog)
+    try:
+        response_result = llm_provider_service.chat_json(
+            ai_profile_payload,
+            system_prompt,
+            user_prompt,
+            log_path=log_path,
+            log_context={
+                "operation_kind": "speech_blocks",
+                "stage_label": "speech_blocks_chunk_resplit",
+                "profile_id": profile_id,
+                "chunk_id": str(selected_chunk.get("chunk_id", "")),
+            },
+            cancel_requested=cancel_requested,
+        )
+    except OperationCancelledError as error:
+        raise OperationCancelledError(
+            "Speech Blocks re-splitting cancelled while waiting for the model response."
+        ) from error
+    token_usage = token_usage_service.merge_token_usage(token_usage, response_result.get("usage"))
+    existing_blocks = [
+        block
+        for block in load_speech_blocks(resolved_project_root)
+        if str(block.get("chunk_id", "")).strip() != chunk_id
+    ]
+    new_blocks, _chunk_warnings = _normalize_chunk_blocks(
+        dict(selected_chunk),
+        dict(response_result.get("payload", {})),
+        speaker_catalog,
+        0,
+        source_language,
+    )
+    all_blocks = _renumber_speech_blocks(source_chunks, [*existing_blocks, *new_blocks])
+    input_fingerprint = _build_source_fingerprint(source_chunks, source_language, source_kind)
+    completed_at = _utc_now_iso()
+    report = _rebuild_report(
+        all_blocks,
+        source_language,
+        source_kind,
+        profile_id,
+        len(source_chunks),
+        len({str(block.get("chunk_id", "")).strip() for block in all_blocks}),
+        [],
+        token_usage,
+        updated_at=completed_at,
+    )
+    _persist_state(
+        resolved_project_root,
+        source_chunks,
+        all_blocks,
+        report,
+        _build_operation_state(
+            resolved_project_root,
+            source_chunks,
+            all_blocks,
+            status="review_pending",
+            started_at=started_at,
+            completed_at=completed_at,
+            source_language=source_language,
+            source_kind=source_kind,
+            profile_id=profile_id,
+            warning_records=[],
+            input_fingerprint=input_fingerprint,
+            log_path=log_path,
+            token_usage=token_usage,
+            next_chunk_index=None,
+        ),
+    )
+    _emit_progress(progress_callback, 1, 1, "Selected chunk Speech Blocks re-split completed.", token_usage)
     return report
 
 
@@ -486,6 +751,38 @@ def _speaker_catalog(character_profiles: list[dict[str, object]]) -> dict[str, d
     return catalog
 
 
+def _chunk_user_prompt(
+    source_chunk: dict[str, object],
+    source_language: str,
+    speaker_catalog: dict[str, dict[str, object]],
+) -> str:
+    """
+    @brief      Render the chunk-specific Speech Blocks user prompt.
+    @param[in]  source_chunk Source chunk payload.
+    @param[in]  source_language Active source language code.
+    @param[in]  speaker_catalog Allowed speaker catalog.
+    @return     Rendered prompt text.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-24
+    @version    0.1.0
+    """
+    return prompt_template_service.render_prompt(
+        "speech_blocks_user",
+        {
+            "source_language": narrator_definition_service.narrator_language_label(source_language),
+            "chunk_id": str(source_chunk.get("chunk_id", "")),
+            "chunk_text": str(source_chunk.get("text", "")),
+            "source_units_json": json.dumps(
+                _split_source_text_units(str(source_chunk.get("text", ""))),
+                indent=2,
+                ensure_ascii=False,
+            ),
+            "speaker_catalog_json": json.dumps(list(speaker_catalog.values()), indent=2, ensure_ascii=False),
+        },
+    )
+
+
 def _normalize_chunk_blocks(
     source_chunk: dict[str, object],
     response_payload: dict[str, object],
@@ -504,7 +801,7 @@ def _normalize_chunk_blocks(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.2.0
+    @version    0.3.0
     """
     chunk_id = str(source_chunk.get("chunk_id", "")).strip()
     candidate_blocks = response_payload.get("speech_blocks", response_payload.get("blocks", []))
@@ -545,19 +842,18 @@ def _normalize_chunk_blocks(
             )
         sequence_index = existing_block_count + len(normalized_blocks) + 1
         normalized_blocks.append(
-            {
-                "speech_block_id": f"speech-block-{sequence_index:04d}",
-                "sequence_index": sequence_index,
-                "chunk_id": chunk_id,
-                "chunk_sequence_index": chunk_sequence_index,
-                "source_language": source_language,
-                "speaker_kind": str(ai_block.get("speaker_kind", SPEAKER_KIND_NARRATOR)),
-                "speaker_id": str(ai_block.get("speaker_id", _NARRATOR_SPEAKER_ID)),
-                "speaker_display_name": str(ai_block.get("speaker_display_name", _NARRATOR_DISPLAY_NAME)),
-                "content_kind": content_kind,
-                "text": text,
-                "warning_flags": warning_flags,
-            }
+            _build_speech_block_payload(
+                sequence_index,
+                chunk_id,
+                chunk_sequence_index,
+                source_language,
+                str(ai_block.get("speaker_kind", SPEAKER_KIND_NARRATOR)),
+                str(ai_block.get("speaker_id", _NARRATOR_SPEAKER_ID)),
+                str(ai_block.get("speaker_display_name", _NARRATOR_DISPLAY_NAME)),
+                content_kind,
+                text,
+                warning_flags,
+            )
         )
 
     if normalized_blocks:
@@ -565,22 +861,79 @@ def _normalize_chunk_blocks(
 
     return (
         [
-            {
-                "speech_block_id": f"speech-block-{existing_block_count + 1:04d}",
-                "sequence_index": existing_block_count + 1,
-                "chunk_id": chunk_id,
-                "chunk_sequence_index": 1,
-                "source_language": source_language,
-                "speaker_kind": SPEAKER_KIND_NARRATOR,
-                "speaker_id": _NARRATOR_SPEAKER_ID,
-                "speaker_display_name": _NARRATOR_DISPLAY_NAME,
-                "content_kind": CONTENT_KIND_NARRATION,
-                "text": str(source_chunk.get("text", "")),
-                "warning_flags": ["ambiguous_speaker"],
-            }
+            _build_speech_block_payload(
+                existing_block_count + 1,
+                chunk_id,
+                1,
+                source_language,
+                SPEAKER_KIND_NARRATOR,
+                _NARRATOR_SPEAKER_ID,
+                _NARRATOR_DISPLAY_NAME,
+                CONTENT_KIND_NARRATION,
+                str(source_chunk.get("text", "")),
+                ["ambiguous_speaker"],
+            )
         ],
         [{"chunk_id": chunk_id, "reason": "The model response could not be validated and fell back to narrator."}],
     )
+
+
+def _build_speech_block_payload(
+    sequence_index: int,
+    chunk_id: str,
+    chunk_sequence_index: int,
+    source_language: str,
+    speaker_kind: str,
+    speaker_id: str,
+    speaker_display_name: str,
+    content_kind: str,
+    text: str,
+    warning_flags: list[str],
+) -> SpeechBlockPayload:
+    """
+    @brief      Build one persisted Speech Blocks payload with AI baseline fields.
+    @param[in]  sequence_index Global block sequence index.
+    @param[in]  chunk_id Source chunk identifier.
+    @param[in]  chunk_sequence_index Chunk-local block index.
+    @param[in]  source_language Active source language code.
+    @param[in]  speaker_kind Current speaker kind token.
+    @param[in]  speaker_id Current speaker identifier.
+    @param[in]  speaker_display_name Current speaker display label.
+    @param[in]  content_kind Current content-kind token.
+    @param[in]  text Current block text.
+    @param[in]  warning_flags Current warning flags.
+    @return     Persisted Speech Blocks payload.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-24
+    @version    0.1.0
+    """
+    normalized_content_kind = _normalize_content_kind(content_kind)
+    normalized_warning_flags = _normalize_warning_flags(warning_flags)
+    normalized_speaker_kind = str(speaker_kind).strip() or SPEAKER_KIND_NARRATOR
+    normalized_speaker_id = str(speaker_id).strip() or _NARRATOR_SPEAKER_ID
+    normalized_speaker_display_name = str(speaker_display_name).strip() or _NARRATOR_DISPLAY_NAME
+    normalized_text = str(text)
+    return {
+        "speech_block_id": _speech_block_id(chunk_id, sequence_index),
+        "sequence_index": int(sequence_index),
+        "chunk_id": str(chunk_id).strip(),
+        "chunk_sequence_index": int(chunk_sequence_index),
+        "source_language": str(source_language).strip(),
+        "speaker_kind": normalized_speaker_kind,
+        "speaker_id": normalized_speaker_id,
+        "speaker_display_name": normalized_speaker_display_name,
+        "content_kind": normalized_content_kind,
+        "text": normalized_text,
+        "ai_speaker_kind": normalized_speaker_kind,
+        "ai_speaker_id": normalized_speaker_id,
+        "ai_speaker_display_name": normalized_speaker_display_name,
+        "ai_content_kind": normalized_content_kind,
+        "ai_text": normalized_text,
+        "warning_flags": normalized_warning_flags,
+        "approved": False,
+        "approved_at": None,
+    }
 
 
 def _normalize_ai_block(
@@ -597,9 +950,7 @@ def _normalize_ai_block(
     @date       2026-04-21
     @version    0.1.0
     """
-    content_kind = str(candidate_block.get("content_kind", CONTENT_KIND_NARRATION)).strip().casefold()
-    if content_kind not in {CONTENT_KIND_NARRATION, CONTENT_KIND_DIALOGUE}:
-        content_kind = CONTENT_KIND_NARRATION
+    content_kind = _normalize_content_kind(candidate_block.get("content_kind", CONTENT_KIND_NARRATION))
     text = _normalize_block_text(str(candidate_block.get("text", "")), content_kind)
     requested_speaker_id = str(candidate_block.get("speaker_id", "")).strip()
     speaker_entry, ambiguous_speaker = _resolve_speaker_entry(requested_speaker_id, speaker_catalog)
@@ -636,7 +987,7 @@ def _normalize_source_unit_blocks(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.1.0
+    @version    0.2.0
     """
     ai_lookup = _build_ai_block_lookup(ai_blocks)
     normalized_blocks: list[SpeechBlockPayload] = []
@@ -663,19 +1014,18 @@ def _normalize_source_unit_blocks(
                 _append_warning_flag(warning_flags, "ambiguous_speaker")
         sequence_index = existing_block_count + len(normalized_blocks) + 1
         normalized_blocks.append(
-            {
-                "speech_block_id": f"speech-block-{sequence_index:04d}",
-                "sequence_index": sequence_index,
-                "chunk_id": chunk_id,
-                "chunk_sequence_index": chunk_sequence_index,
-                "source_language": source_language,
-                "speaker_kind": str(speaker_entry.get("speaker_kind", SPEAKER_KIND_NARRATOR)),
-                "speaker_id": str(speaker_entry.get("speaker_id", _NARRATOR_SPEAKER_ID)),
-                "speaker_display_name": str(speaker_entry.get("display_name", _NARRATOR_DISPLAY_NAME)),
-                "content_kind": content_kind,
-                "text": text,
-                "warning_flags": warning_flags,
-            }
+            _build_speech_block_payload(
+                sequence_index,
+                chunk_id,
+                chunk_sequence_index,
+                source_language,
+                str(speaker_entry.get("speaker_kind", SPEAKER_KIND_NARRATOR)),
+                str(speaker_entry.get("speaker_id", _NARRATOR_SPEAKER_ID)),
+                str(speaker_entry.get("display_name", _NARRATOR_DISPLAY_NAME)),
+                content_kind,
+                text,
+                warning_flags,
+            )
         )
         if "ambiguous_speaker" in warning_flags:
             warning_entries.append(
@@ -954,6 +1304,38 @@ def _normalize_block_text(text: str, content_kind: str) -> str:
     return text
 
 
+def _normalize_content_kind(value: object) -> str:
+    """
+    @brief      Normalize one Speech Blocks content-kind token.
+    @param[in]  value Candidate content-kind value.
+    @return     Supported content-kind token.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-24
+    @version    0.1.0
+    """
+    normalized = str(value).strip().casefold().replace(" ", "_").replace("-", "_")
+    if normalized in SPEECH_BLOCK_CONTENT_KINDS:
+        return normalized
+    return CONTENT_KIND_NARRATION
+
+
+def _speech_block_id(chunk_id: str, sequence_index: int) -> str:
+    """
+    @brief      Build the persisted `CCCC-BBBBBB` Speech Block identifier.
+    @param[in]  chunk_id Source chunk identifier.
+    @param[in]  sequence_index Global Speech Block sequence index.
+    @return     Stable Speech Block identifier.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-24
+    @version    0.1.0
+    """
+    digits = "".join(character for character in str(chunk_id) if character.isdigit())
+    chunk_number = int(digits[-4:] or "0")
+    return f"{chunk_number:04d}-{max(int(sequence_index), 0):06d}"
+
+
 def _normalize_warning_flags(value: object) -> list[str]:
     """
     @brief      Normalize one warning-flag list payload.
@@ -982,21 +1364,43 @@ def _normalize_persisted_speech_block(payload: dict[str, object]) -> SpeechBlock
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.1.0
+    @version    0.2.0
     """
+    sequence_index = int(payload.get("sequence_index", 0))
+    chunk_id = str(payload.get("chunk_id", "")).strip()
+    speaker_kind = str(payload.get("speaker_kind", SPEAKER_KIND_NARRATOR)).strip() or SPEAKER_KIND_NARRATOR
+    speaker_id = str(payload.get("speaker_id", _NARRATOR_SPEAKER_ID)).strip() or _NARRATOR_SPEAKER_ID
+    speaker_display_name = str(payload.get("speaker_display_name", _NARRATOR_DISPLAY_NAME)).strip()
+    if not speaker_display_name:
+        speaker_display_name = _NARRATOR_DISPLAY_NAME
+    content_kind = _normalize_content_kind(payload.get("content_kind", CONTENT_KIND_NARRATION))
+    text = str(payload.get("text", ""))
+    ai_speaker_kind = str(payload.get("ai_speaker_kind", speaker_kind)).strip() or speaker_kind
+    ai_speaker_id = str(payload.get("ai_speaker_id", speaker_id)).strip() or speaker_id
+    ai_speaker_display_name = str(payload.get("ai_speaker_display_name", speaker_display_name)).strip()
+    if not ai_speaker_display_name:
+        ai_speaker_display_name = speaker_display_name
+    ai_content_kind = _normalize_content_kind(payload.get("ai_content_kind", content_kind))
+    ai_text = str(payload.get("ai_text", text))
     return {
-        "speech_block_id": str(payload.get("speech_block_id", "")).strip(),
-        "sequence_index": int(payload.get("sequence_index", 0)),
-        "chunk_id": str(payload.get("chunk_id", "")).strip(),
+        "speech_block_id": _speech_block_id(chunk_id, sequence_index),
+        "sequence_index": sequence_index,
+        "chunk_id": chunk_id,
         "chunk_sequence_index": int(payload.get("chunk_sequence_index", 0)),
         "source_language": str(payload.get("source_language", "")).strip(),
-        "speaker_kind": str(payload.get("speaker_kind", SPEAKER_KIND_NARRATOR)).strip() or SPEAKER_KIND_NARRATOR,
-        "speaker_id": str(payload.get("speaker_id", _NARRATOR_SPEAKER_ID)).strip() or _NARRATOR_SPEAKER_ID,
-        "speaker_display_name": str(payload.get("speaker_display_name", _NARRATOR_DISPLAY_NAME)).strip()
-        or _NARRATOR_DISPLAY_NAME,
-        "content_kind": str(payload.get("content_kind", CONTENT_KIND_NARRATION)).strip() or CONTENT_KIND_NARRATION,
-        "text": str(payload.get("text", "")),
+        "speaker_kind": speaker_kind,
+        "speaker_id": speaker_id,
+        "speaker_display_name": speaker_display_name,
+        "content_kind": content_kind,
+        "text": text,
+        "ai_speaker_kind": ai_speaker_kind,
+        "ai_speaker_id": ai_speaker_id,
+        "ai_speaker_display_name": ai_speaker_display_name,
+        "ai_content_kind": ai_content_kind,
+        "ai_text": ai_text,
         "warning_flags": _normalize_warning_flags(payload.get("warning_flags")),
+        "approved": bool(payload.get("approved", False)),
+        "approved_at": None if payload.get("approved_at") in (None, "") else str(payload.get("approved_at")),
     }
 
 
@@ -1026,17 +1430,22 @@ def _rebuild_report(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.1.0
+    @version    0.2.0
     """
-    stage_status = (
-        SPEECH_BLOCKS_STAGE_COMPLETED
-        if total_chunk_count > 0 and processed_chunk_count >= total_chunk_count
-        else (
-            SPEECH_BLOCKS_STAGE_IN_PROGRESS
-            if processed_chunk_count > 0 or speech_blocks
-            else SPEECH_BLOCKS_STAGE_NOT_STARTED
+    _ = warning_records
+    approved_block_count = _approved_block_count(speech_blocks)
+    total_block_count = len(speech_blocks)
+    warning_entries = _warning_records_from_blocks(speech_blocks)
+    if total_chunk_count > 0 and processed_chunk_count >= total_chunk_count and total_block_count > 0:
+        stage_status = (
+            SPEECH_BLOCKS_STAGE_COMPLETED
+            if approved_block_count >= total_block_count
+            else SPEECH_BLOCKS_STAGE_IN_PROGRESS
         )
-    )
+    elif processed_chunk_count > 0 or speech_blocks:
+        stage_status = SPEECH_BLOCKS_STAGE_IN_PROGRESS
+    else:
+        stage_status = SPEECH_BLOCKS_STAGE_NOT_STARTED
     return {
         "source_language": source_language,
         "source_kind": source_kind,
@@ -1044,12 +1453,52 @@ def _rebuild_report(
         "speech_blocks_stage_status": stage_status,
         "processed_chunk_count": processed_chunk_count,
         "total_chunk_count": total_chunk_count,
-        "speech_block_count": len(speech_blocks),
-        "warning_count": len(warning_records),
-        "warnings": list(warning_records),
+        "speech_block_count": total_block_count,
+        "approved_block_count": approved_block_count,
+        "total_block_count": total_block_count,
+        "warning_count": len(warning_entries),
+        "warnings": warning_entries,
         "updated_at": updated_at or _utc_now_iso(),
         "token_usage": token_usage_service.coerce_token_usage(token_usage),
     }
+
+
+def _approved_block_count(speech_blocks: list[SpeechBlockPayload]) -> int:
+    """
+    @brief      Count approved Speech Blocks.
+    @param[in]  speech_blocks Current Speech Blocks payload list.
+    @return     Number of approved Speech Blocks.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-24
+    @version    0.1.0
+    """
+    return sum(1 for block in speech_blocks if bool(block.get("approved", False)))
+
+
+def _warning_records_from_blocks(speech_blocks: list[SpeechBlockPayload]) -> list[dict[str, object]]:
+    """
+    @brief      Build report warning entries from current block warning flags.
+    @param[in]  speech_blocks Current Speech Blocks payload list.
+    @return     Ordered report warning entries.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-24
+    @version    0.1.0
+    """
+    records: list[dict[str, object]] = []
+    for block in speech_blocks:
+        warning_flags = _normalize_warning_flags(block.get("warning_flags"))
+        if not warning_flags:
+            continue
+        records.append(
+            {
+                "chunk_id": str(block.get("chunk_id", "")).strip(),
+                "speech_block_id": str(block.get("speech_block_id", "")).strip(),
+                "reason": ", ".join(warning_flags),
+            }
+        )
+    return records
 
 
 def _build_operation_state(
@@ -1088,12 +1537,14 @@ def _build_operation_state(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.1.0
+    @version    0.2.0
     """
+    _ = warning_records
     input_path = _source_chunks_snapshot_path(project_root)
     output_path = build_operation_output_path(project_root, "speech_blocks", config.SPEECH_BLOCKS_OUTPUT_FILE_NAME)
     report_path = build_operation_output_path(project_root, "speech_blocks", config.SPEECH_BLOCKS_REPORT_FILE_NAME)
     processed_chunk_count = len({str(block.get("chunk_id", "")).strip() for block in speech_blocks})
+    warning_entries = _warning_records_from_blocks(speech_blocks)
     return {
         "folder_relative_path": config.SPEECH_BLOCKS_FOLDER_NAME,
         "status": status,
@@ -1109,7 +1560,7 @@ def _build_operation_state(
         "started_at": started_at,
         "completed_at": completed_at,
         "updated_at": _utc_now_iso(),
-        "warning_count": len(warning_records),
+        "warning_count": len(warning_entries),
         "metadata": {
             "source_language": source_language,
             "source_kind": source_kind,
@@ -1117,7 +1568,9 @@ def _build_operation_state(
             "processed_chunk_count": processed_chunk_count,
             "total_chunk_count": len(source_chunks),
             "speech_block_count": len(speech_blocks),
-            "warnings": list(warning_records),
+            "approved_block_count": _approved_block_count(speech_blocks),
+            "total_block_count": len(speech_blocks),
+            "warnings": warning_entries,
             "source_snapshot_fingerprint": input_fingerprint,
             "log_relative_path": relative_to_project(project_root, log_path),
             "token_usage": token_usage_service.coerce_token_usage(token_usage),
@@ -1170,6 +1623,136 @@ def _persist_state(
     build_operation_output_path(project_root, "speech_blocks", config.OPERATION_STATE_FILE_NAME).write_text(
         json.dumps(operation_state, indent=2, ensure_ascii=False) + "\n",
         encoding="utf-8",
+    )
+
+
+def _persist_report_update(
+    project_root: Path,
+    speech_blocks: list[SpeechBlockPayload],
+) -> SpeechBlocksReportPayload:
+    """
+    @brief      Persist a review-only Speech Blocks update.
+    @param[in]  project_root Active project root folder.
+    @param[in]  speech_blocks Updated Speech Blocks payload list.
+    @return     Updated report payload.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-24
+    @version    0.1.0
+    """
+    source_chunks = load_input_source_chunks(project_root)
+    report = load_speech_blocks_report(project_root) or {}
+    operation_state = load_operation_state(project_root) or {}
+    metadata = operation_state.get("metadata", {}) if isinstance(operation_state, dict) else {}
+    if not isinstance(metadata, dict):
+        metadata = {}
+    source_language = str(report.get("source_language", metadata.get("source_language", ""))).strip()
+    source_kind = str(report.get("source_kind", metadata.get("source_kind", ""))).strip()
+    profile_id = str(report.get("ai_profile_id", metadata.get("ai_profile_id", ""))).strip()
+    token_usage = token_usage_service.restore_token_usage(report.get("token_usage"), metadata.get("token_usage"))
+    input_fingerprint = str(metadata.get("source_snapshot_fingerprint", "")).strip()
+    if not input_fingerprint and source_chunks and source_language and source_kind:
+        input_fingerprint = _build_source_fingerprint(source_chunks, source_language, source_kind)
+    started_at = str(operation_state.get("started_at", "")).strip() or _utc_now_iso()
+    completed_at = str(operation_state.get("completed_at", "")).strip() or _utc_now_iso()
+    log_path = _resolve_log_path(project_root, started_at)
+    renumbered_blocks = _renumber_speech_blocks(source_chunks, speech_blocks)
+    updated_report = _rebuild_report(
+        renumbered_blocks,
+        source_language,
+        source_kind,
+        profile_id,
+        len(source_chunks),
+        len({str(block.get("chunk_id", "")).strip() for block in renumbered_blocks}),
+        [],
+        token_usage,
+    )
+    status = (
+        "completed"
+        if str(updated_report.get("speech_blocks_stage_status", "")).strip() == SPEECH_BLOCKS_STAGE_COMPLETED
+        else "review_pending"
+    )
+    _persist_state(
+        project_root,
+        source_chunks,
+        renumbered_blocks,
+        updated_report,
+        _build_operation_state(
+            project_root,
+            source_chunks,
+            renumbered_blocks,
+            status=status,
+            started_at=started_at,
+            completed_at=completed_at,
+            source_language=source_language,
+            source_kind=source_kind,
+            profile_id=profile_id,
+            warning_records=[],
+            input_fingerprint=input_fingerprint,
+            log_path=log_path,
+            token_usage=token_usage,
+            next_chunk_index=None,
+        ),
+    )
+    return updated_report
+
+
+def _renumber_speech_blocks(
+    source_chunks: list[dict[str, object]],
+    speech_blocks: list[SpeechBlockPayload],
+) -> list[SpeechBlockPayload]:
+    """
+    @brief      Recompute global and chunk-local Speech Block order fields.
+    @param[in]  source_chunks Source chunks in workflow order.
+    @param[in]  speech_blocks Current Speech Blocks payload list.
+    @return     Renumbered Speech Blocks payload list.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-24
+    @version    0.1.0
+    """
+    chunk_order = {
+        str(chunk.get("chunk_id", "")).strip(): int(chunk.get("sequence_index", 0)) for chunk in source_chunks
+    }
+    local_counts: dict[str, int] = {}
+    renumbered_blocks: list[SpeechBlockPayload] = []
+    ordered_blocks = sorted(
+        speech_blocks,
+        key=lambda block: (
+            chunk_order.get(str(block.get("chunk_id", "")).strip(), 10**9),
+            int(block.get("chunk_sequence_index", 0)),
+            int(block.get("sequence_index", 0)),
+        ),
+    )
+    for sequence_index, block in enumerate(ordered_blocks, start=1):
+        chunk_id = str(block.get("chunk_id", "")).strip()
+        local_counts[chunk_id] = local_counts.get(chunk_id, 0) + 1
+        renumbered_block = dict(block)
+        renumbered_block["sequence_index"] = sequence_index
+        renumbered_block["chunk_sequence_index"] = local_counts[chunk_id]
+        renumbered_block["speech_block_id"] = _speech_block_id(chunk_id, sequence_index)
+        renumbered_blocks.append(renumbered_block)
+    return renumbered_blocks
+
+
+def _speech_block_by_id(
+    speech_blocks: list[SpeechBlockPayload],
+    speech_block_id: str,
+) -> SpeechBlockPayload | None:
+    """
+    @brief      Find one Speech Block by identifier.
+    @param[in]  speech_blocks Current Speech Blocks payload list.
+    @param[in]  speech_block_id Target Speech Block identifier.
+    @return     Matching block or `None`.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-24
+    @version    0.1.0
+    """
+    normalized_id = str(speech_block_id).strip()
+    return next(
+        (block for block in speech_blocks if str(block.get("speech_block_id", "")).strip() == normalized_id),
+        None,
     )
 
 

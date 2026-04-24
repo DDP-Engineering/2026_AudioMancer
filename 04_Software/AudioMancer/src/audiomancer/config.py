@@ -13,7 +13,7 @@
          file support used by the current AudioMancer implementation scaffold.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 1.17.0
+@version 1.21.0
 """
 
 # IMPORTS
@@ -71,12 +71,6 @@ AUDIO_BLOCKS_FOLDER_NAME = "80_audio_blocks"
 # @brief Stable project folder name for audio-assembly artifacts.
 AUDIO_ASSEMBLY_FOLDER_NAME = "90_audio_assembly"
 
-# @brief Stable project folder name for the selected narrator and future character audio samples.
-PROJECT_AUDIO_SAMPLES_FOLDER_NAME = "audio_samples"
-
-# @brief Stable project folder name for project-local temporary artifacts.
-PROJECT_TEMP_FOLDER_NAME = "temp"
-
 # @brief Standard workflow directories created for each project workspace.
 PROJECT_REQUIRED_SUBDIRECTORIES = (
     EXTRACTION_FOLDER_NAME,
@@ -89,8 +83,6 @@ PROJECT_REQUIRED_SUBDIRECTORIES = (
     SPEECH_BLOCKS_FOLDER_NAME,
     AUDIO_BLOCKS_FOLDER_NAME,
     AUDIO_ASSEMBLY_FOLDER_NAME,
-    PROJECT_AUDIO_SAMPLES_FOLDER_NAME,
-    PROJECT_TEMP_FOLDER_NAME,
 )
 
 # @brief Stable ordered workflow stage identifiers used by the current project shell.
@@ -216,10 +208,10 @@ CHARACTER_VOICES_SELECTED_LANGUAGE_FILE_NAME = "selected_voice_language.json"
 # @brief Folder name used for per-target character-voices sample files under `60_character_voices`.
 CHARACTER_VOICES_AUDIO_SAMPLES_FOLDER_NAME = "audio_samples"
 
-# @brief File name used for the selected narrator sample under the project-root audio folder.
+# @brief File name used for the selected narrator sample under `50_narrator_definition/audio_samples/`.
 SELECTED_NARRATOR_AUDIO_FILE_NAME = "narrator.wav"
 
-# @brief File name used for the selected narrator sample metadata under the project-root audio folder.
+# @brief File name used for the selected narrator sample metadata under `50_narrator_definition/audio_samples/`.
 SELECTED_NARRATOR_METADATA_FILE_NAME = "narrator.json"
 
 # @brief File name used for the Speech Blocks source-chunk input snapshot.
@@ -230,6 +222,21 @@ SPEECH_BLOCKS_OUTPUT_FILE_NAME = f"{OPERATION_OUTPUT_FILE_PREFIX}speech_blocks.j
 
 # @brief File name used for persisted Speech Blocks report metadata.
 SPEECH_BLOCKS_REPORT_FILE_NAME = f"{OPERATION_ARTIFACT_FILE_PREFIX}speech_blocks_report.json"
+
+# @brief File name used for the Audio Blocks speech-block input snapshot.
+AUDIO_BLOCKS_INPUT_SPEECH_BLOCKS_FILE_NAME = "input_speech_blocks.json"
+
+# @brief File name used for persisted Audio Blocks output.
+AUDIO_BLOCKS_OUTPUT_FILE_NAME = f"{OPERATION_OUTPUT_FILE_PREFIX}audio_blocks.json"
+
+# @brief File name used for persisted Audio Blocks report metadata.
+AUDIO_BLOCKS_REPORT_FILE_NAME = f"{OPERATION_ARTIFACT_FILE_PREFIX}audio_blocks_report.json"
+
+# @brief File name used for persisted Audio Blocks voice-clone profile metadata.
+AUDIO_BLOCKS_VOICE_CLONE_PROFILES_FILE_NAME = "voice_clone_profiles.json"
+
+# @brief Folder name used for generated per-speech-block audio artifacts under `80_audio_blocks`.
+AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME = "generated_audio"
 
 
 # Workflow And UI Defaults

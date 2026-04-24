@@ -14,7 +14,7 @@
          playback, and page-entry narrator-sample warnings.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 1.4.0
+@version 1.5.0
 """
 
 # IMPORTS
@@ -35,7 +35,7 @@ from audiomancer.services import (
     ui_state_service,
     voiceweaver_runtime_service,
 )
-from audiomancer.ui.controllers import misc_ui_controller, tts_runtime_ui_support
+from audiomancer.ui.controllers import audio_blocks_ui_controller, misc_ui_controller, tts_runtime_ui_support
 
 if TYPE_CHECKING:
     from audiomancer.ui.main_window import MainWindow
@@ -99,11 +99,18 @@ def handle_voice_language_change_requested(window: "MainWindow", voice_language:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    1.2.0
+    @version    1.3.1
     """
     if window._current_project_root is None or window._current_manifest is None:
         return
+    current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     previous_voice_language = character_voices_service.load_selected_voice_language(window._current_project_root)
+    requested_voice_language = narrator_definition_service.narrator_language_code(voice_language)
+    if (
+        previous_voice_language != requested_voice_language
+        and not audio_blocks_ui_controller.confirm_audio_blocks_invalidation(window, current_language)
+    ):
+        return
     persisted_voice_language = character_voices_service.save_selected_voice_language(
         window._current_project_root,
         voice_language,
@@ -131,13 +138,15 @@ def handle_reset_prompt_requested(window: "MainWindow", target_id: str) -> None:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-20
-    @version    1.0.0
+    @version    1.1.0
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._current_project_root is None or window._current_manifest is None:
         return
     target_payload = character_voices_service.voice_target_by_id(window._current_project_root, target_id)
     if target_payload is None:
+        return
+    if not audio_blocks_ui_controller.confirm_audio_blocks_invalidation(window, current_language):
         return
     _stop_preview_playback(window)
     character_voices_service.reset_target_prompt(
@@ -148,6 +157,7 @@ def handle_reset_prompt_requested(window: "MainWindow", target_id: str) -> None:
     window._character_voices_inspected_target_id = target_id
     window.show_project_state(window._current_project_root, window._current_manifest)
     _sync_manifest_stage(window)
+    audio_blocks_ui_controller.invalidate_audio_blocks_after_upstream_change(window)
     misc_ui_controller.show_message(
         window,
         ui_state_service.translate("status.character_voices_prompt_reset", current_language),
@@ -163,10 +173,12 @@ def handle_edit_prompt_requested(window: "MainWindow", target_id: str) -> None:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-20
-    @version    1.1.0
+    @version    1.2.0
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._current_project_root is None:
+        return
+    if not audio_blocks_ui_controller.confirm_audio_blocks_invalidation(window, current_language):
         return
     if not _confirm_prompt_edit(window, current_language):
         return
@@ -179,6 +191,7 @@ def handle_edit_prompt_requested(window: "MainWindow", target_id: str) -> None:
     window.show_project_state(window._current_project_root, window._current_manifest)
     window._character_voices_page.begin_edit_mode()
     _sync_manifest_stage(window)
+    audio_blocks_ui_controller.invalidate_audio_blocks_after_upstream_change(window)
 
 
 def handle_save_prompt_requested(window: "MainWindow", target_payload: dict[str, object]) -> None:
@@ -234,7 +247,7 @@ def handle_generate_sample_requested(window: "MainWindow", target_id: str) -> No
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-20
-    @version    1.1.0
+    @version    1.2.0
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._active_operation_kind is not None:
@@ -250,6 +263,8 @@ def handle_generate_sample_requested(window: "MainWindow", target_id: str) -> No
     if target_payload is None:
         return
     if not _confirm_generate_sample(window, current_language, target_id):
+        return
+    if not audio_blocks_ui_controller.confirm_audio_blocks_invalidation(window, current_language):
         return
     editor_payload = window._character_voices_page.current_editor_payload()
     voice_language = window._character_voices_page.current_voice_language()
@@ -343,6 +358,7 @@ def handle_generate_sample_requested(window: "MainWindow", target_id: str) -> No
             window._current_project_root, project_workspace_service.load_manifest(window._current_project_root)
         )
         _sync_manifest_stage(window)
+        audio_blocks_ui_controller.invalidate_audio_blocks_after_upstream_change(window)
         misc_ui_controller.show_message(
             window,
             ui_state_service.translate("status.character_voices_sample_generated", current_language),

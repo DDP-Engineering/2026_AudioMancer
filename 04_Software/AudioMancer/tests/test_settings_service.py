@@ -12,13 +12,14 @@
          persisted settings self-healing, and validated save behavior.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-22
-@version 0.4.0
+@version 0.5.0
 """
 
 # IMPORTS
 
 import copy
 import json
+import logging
 
 from audiomancer import config
 from audiomancer.services import settings_service
@@ -40,11 +41,6 @@ def test_committed_settings_scaffold_matches_valid_settings_schema() -> None:
 
     for field_name, field_value in committed_settings.items():
         assert validated_settings[field_name] == field_value
-    assert validated_settings["tts_audio_preview_timeout_seconds"] == config.DEFAULT_TTS_AUDIO_PREVIEW_TIMEOUT_SECONDS
-    assert (
-        validated_settings["tts_audio_generation_timeout_seconds"]
-        == config.DEFAULT_TTS_AUDIO_GENERATION_TIMEOUT_SECONDS
-    )
 
 
 def test_load_settings_creates_default_file_when_missing(tmp_path, monkeypatch) -> None:
@@ -264,6 +260,63 @@ def test_validate_settings_keeps_valid_persisted_payload_unchanged() -> None:
     assert settings_service.validate_settings(copy.deepcopy(candidate_settings)) == candidate_settings
 
 
+def test_validate_settings_keeps_empty_api_key_for_lmstudio_profile() -> None:
+    """
+    @brief      Verify empty API keys remain valid for LM Studio-backed profiles.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-23
+    @version    0.1.0
+    """
+    candidate_settings = settings_service.build_default_settings()
+    candidate_settings["llm_profiles"] = [
+        {
+            "id": "profile_1",
+            "label": "Local LM Studio",
+            "backend_kind": "lmstudio",
+            "base_url": "http://127.0.0.1:1234/v1",
+            "api_key": "",
+            "model_name": "openai/gpt-oss-20b",
+            "context_window": config.DEFAULT_LLM_CONTEXT_WINDOW,
+            "max_output_tokens": config.DEFAULT_LLM_MAX_OUTPUT_TOKENS,
+            "request_timeout_seconds": config.DEFAULT_LLM_REQUEST_TIMEOUT_SECONDS,
+            "temperature": config.DEFAULT_LLM_TEMPERATURE,
+            "supports_structured_output": True,
+            "enabled": True,
+            "discovered_model_name": "openai/gpt-oss-20b",
+            "discovered_context_window": None,
+            "discovery_succeeded": True,
+            "discovery_message": "Connection successful.",
+            "user_overrode_model_name": True,
+            "user_overrode_context_window": True,
+        }
+    ]
+
+    validated_settings = settings_service.validate_settings(candidate_settings)
+
+    assert validated_settings == candidate_settings
+
+
+def test_validate_settings_does_not_log_fake_root_repair_for_valid_dict_payload(caplog) -> None:
+    """
+    @brief      Verify valid dictionary payloads do not emit the false root-repair warning.
+    @param[in]  caplog Pytest log-capture fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-23
+    @version    0.1.0
+    """
+    candidate_settings = settings_service.build_default_settings()
+
+    with caplog.at_level(logging.WARNING, logger="settings"):
+        validated_settings = settings_service.validate_settings(candidate_settings)
+
+    assert validated_settings == candidate_settings
+    assert "Replaced invalid settings root payload with a normalized dict payload." not in caplog.text
+
+
 def test_validate_settings_normalizes_tts_runtime_discovery_cache() -> None:
     """
     @brief      Verify invalid cached VoiceWeaver discovery fields are repaired safely.
@@ -295,6 +348,56 @@ def test_validate_settings_normalizes_tts_runtime_discovery_cache() -> None:
     assert validated_settings["tts_runtime_discovered_models"][0]["speaker_count"] == 0
     assert validated_settings["tts_runtime_active_model_id"] is None
     assert validated_settings["tts_runtime_device_diagnostics"] == {"status_message": "CUDA active."}
+
+
+def test_load_settings_logs_repair_summary_only_when_repairs_occur(tmp_path, monkeypatch, caplog) -> None:
+    """
+    @brief      Verify load_settings reports either repairs or clean load, never both.
+    @param[in]  tmp_path Temporary path fixture.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  caplog Pytest log-capture fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-23
+    @version    0.1.0
+    """
+    settings_path = tmp_path / "settings.json"
+    monkeypatch.setattr(config, "APP_SETTINGS_PATH", settings_path)
+    monkeypatch.setattr(config, "APP_ROOT", tmp_path)
+
+    persisted_settings = settings_service.build_default_settings()
+    persisted_settings["llm_profiles"] = [
+        {
+            "id": "profile_1",
+            "label": "Local LM Studio",
+            "backend_kind": "lmstudio",
+            "base_url": "http://127.0.0.1:1234/v1",
+            "api_key": "",
+            "model_name": "openai/gpt-oss-20b",
+            "context_window": config.DEFAULT_LLM_CONTEXT_WINDOW,
+            "max_output_tokens": config.DEFAULT_LLM_MAX_OUTPUT_TOKENS,
+            "request_timeout_seconds": config.DEFAULT_LLM_REQUEST_TIMEOUT_SECONDS,
+            "temperature": config.DEFAULT_LLM_TEMPERATURE,
+            "supports_structured_output": True,
+            "enabled": True,
+            "discovered_model_name": "openai/gpt-oss-20b",
+            "discovered_context_window": None,
+            "discovery_succeeded": True,
+            "discovery_message": "Connection successful.",
+            "user_overrode_model_name": True,
+            "user_overrode_context_window": True,
+        }
+    ]
+    settings_path.write_text(json.dumps(persisted_settings, indent=2), encoding="utf-8")
+
+    with caplog.at_level(logging.INFO, logger="settings"):
+        loaded_settings = settings_service.load_settings()
+
+    assert loaded_settings == persisted_settings
+    assert "Detected and repaired persisted settings" not in caplog.text
+    assert "Loaded settings from" in caplog.text
+    assert "without requiring repairs" in caplog.text
 
 
 def test_validate_settings_repairs_tts_audio_timeouts() -> None:

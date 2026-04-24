@@ -30,8 +30,10 @@ by the Narator Voice page.
   `50_narrator_definition`
 - persist the explicitly selected narrator profile and narrator language
   runtime code
-- persist per-profile WAV and JSON sample artifacts
-- persist the project-root selected narrator audio copy under `audio_samples/`
+- persist the currently generated narrator WAV and JSON sample artifacts while
+  clearing older files from `50_narrator_definition/audio_samples/`
+- record selected-sample state in the per-profile sample JSON instead of
+  writing a duplicate selected narrator WAV
 - derive Narator Voice page enablement for `Generate Sample`, `Select`, and
   `Preview` from the cached VoiceWeaver runtime state and stored sample
   metadata
@@ -66,8 +68,8 @@ The workflow is split across:
 High-level flow:
 
 1. Project load ensures `profiles.json`, `selected_profile.json`,
-   `50_narrator_definition/audio_samples/`, the project root `audio_samples/`,
-   and the required narrator-related `project.json` fields exist.
+   `50_narrator_definition/audio_samples/`, and the required narrator-related
+   `project.json` fields exist.
 2. The state service loads all stored profiles, the explicit selected narrator
    state, the project TTS plan, and the cached runtime discovery models.
 3. Each profile is enriched with `is_selected`, `has_sample`,
@@ -84,13 +86,13 @@ High-level flow:
    unlocks the page editor.
 5. `Generate Sample` re-probes runtime readiness, requires the fixed minimum
    Qwen3 capability set (`base`, `voice_designer`, `custom_voice`), waits for
-   model-load completion before submitting generation, stores `<profile_id>.wav`
-   and `<profile_id>.json`, uses the saved TTS preview timeout, and refreshes
-   `audio_samples/narrator.wav` plus `audio_samples/narrator.json` only when
-   the regenerated profile is already selected.
+   model-load completion before submitting generation, stores
+   `<profile_id>.wav` and `<profile_id>.json`, clears older files from
+   `50_narrator_definition/audio_samples/`, uses the saved TTS preview
+   timeout, and marks the generated sample JSON as selected when the
+   regenerated profile is already selected.
 6. `Select` persists `selected_profile.json`, updates the compact manifest
-   summary, and copies the chosen profile sample into the project-root narrator
-   sample folder.
+   summary, and marks the chosen profile sample JSON as selected.
 7. `Preview` plays the stored per-profile WAV locally through Qt media
    playback.
 
@@ -127,8 +129,6 @@ Outputs:
 - `50_narrator_definition/selected_profile.json`
 - `50_narrator_definition/audio_samples/<profile_id>.wav`
 - `50_narrator_definition/audio_samples/<profile_id>.json`
-- `audio_samples/narrator.wav`
-- `audio_samples/narrator.json`
 - updated manifest summary fields:
   `narrator_profile_name`
   `narrator_language`
@@ -179,6 +179,7 @@ Selected narrator state uses:
 Per-profile sample metadata uses:
 
 - `profile_id`
+- `is_selected`
 - `display_name`
 - `profile_kind`
 - `profile_origin`
@@ -191,12 +192,11 @@ Per-profile sample metadata uses:
 - `generated_at`
 - `runtime_result_summary`
 
-Project-root selected narrator metadata mirrors the per-profile metadata and
+Selected narrator metadata mirrors the per-profile metadata and
 adds:
 
 - `role = "narrator"`
-- `selected_profile_id`
-- `copied_at`
+- `selected_at`
 
 ## 7. Workflow Integration
 
@@ -213,7 +213,8 @@ Upstream integrations:
 Downstream integrations:
 
 - `Character Voices`, which consumes the explicit selected narrator state plus
-  `audio_samples/narrator.wav` and `audio_samples/narrator.json`
+  the selected profile's WAV and JSON under
+  `50_narrator_definition/audio_samples/`
 - future narration generation that will consume the same selected narrator
   contract together with `60_character_voices`
 
@@ -292,5 +293,5 @@ Minimum validation after changes:
 - preview playback is local only and does not stream directly from VoiceWeaver
 - runtime availability depends on the last saved discovery cache, not an
   automatic background probe at page load
-- only narrator samples are copied to the project-root `audio_samples/` folder
-  today; character sample routing is still future work
+- selected narrator samples are referenced from profile-owned artifacts instead
+  of a duplicated selected-audio copy
