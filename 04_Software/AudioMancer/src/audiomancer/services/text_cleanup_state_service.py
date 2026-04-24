@@ -10,10 +10,11 @@
 @file text_cleanup_state_service.py
 @brief Text-cleanup page state helpers for AudioMancer.
 @details Builds the extracted/cleaned preview state, operator notes, and
-         manifest reset payloads used by the Text Cleanup page workflows.
+         manifest reset payloads used by the Text Cleanup page workflows,
+         including manual cleaned-text edits.
 @author Eng. Dan Dumitru Pasare
-@date 2026-04-21
-@version 0.7.0
+@date 2026-04-24
+@version 0.8.0
 """
 
 # IMPORTS
@@ -127,6 +128,56 @@ def build_ai_cleanup_profile_state(
         "entries": entries,
         "selected_profile_id": selected_profile_id,
     }
+
+
+def save_cleaned_text_edit(project_root: Path, manifest: dict[str, object], cleaned_text: str) -> dict[str, object]:
+    """
+    @brief      Persist one manual cleaned-text edit and reset downstream workflow state.
+    @param[in]  project_root Active project root folder.
+    @param[in]  manifest Current project manifest payload.
+    @param[in]  cleaned_text Edited cleaned text content.
+    @return     Updated manifest payload.
+    @exception  ValueError Raised when the cleaned text artifact does not exist yet.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-24
+    @version    0.1.0
+    """
+    cleaned_text_path = project_root / config.CLEANUP_FOLDER_NAME / config.CLEANED_TEXT_FILE_NAME
+    if not cleaned_text_path.is_file():
+        raise ValueError("No cleaned text is available to edit.")
+    cleaned_text_path.write_text(cleaned_text, encoding="utf-8")
+    operation_runtime_service.reset_operation_data(
+        project_root,
+        "cleanup",
+        include_current=False,
+        keep_input_snapshots=False,
+    )
+    updated_manifest = build_manifest_after_cleanup_edit(manifest)
+    project_workspace_service.save_manifest(updated_manifest, project_root)
+    return updated_manifest
+
+
+def build_manifest_after_cleanup_edit(manifest: dict[str, object]) -> dict[str, object]:
+    """
+    @brief      Build one manifest payload after a manual cleaned-text edit.
+    @param[in]  manifest Current manifest payload before the edit.
+    @return     Manifest with cleanup preserved and downstream operations reset.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-24
+    @version    0.1.0
+    """
+    updated_manifest = dict(manifest)
+    operations = normalized_manifest_operations(updated_manifest)
+    default_operations = normalized_manifest_operations({})
+    for selected_kind in operation_runtime_service.downstream_operation_kinds("cleanup", include_current=False):
+        if selected_kind in default_operations:
+            operations[selected_kind] = default_operations[selected_kind]
+    updated_manifest["operations"] = operations
+    updated_manifest["current_stage"] = "text_cleanup_ready"
+    updated_manifest["narrator_profile_name"] = None
+    updated_manifest["narrator_language"] = None
+    return updated_manifest
 
 
 def build_text_cleanup_notes(

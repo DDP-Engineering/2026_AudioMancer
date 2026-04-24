@@ -9,10 +9,10 @@
 """
 @file __init__.py
 @brief Package definition for the AudioMancer application scaffold.
-@details Exposes the package version for the initial desktop application shell.
+@details Exposes the package version for the desktop application shell.
 @author Eng. Dan Dumitru Pasare
-@date 2026-04-04
-@version 0.2.2
+@date 2026-04-24
+@version 0.3.0
 """
 
 # IMPORTS
@@ -21,7 +21,7 @@ from .app import main
 
 # CONSTANTS
 
-__version__ = "0.17.2"
+__version__ = "0.19.0"
 
 # PUBLIC API
 

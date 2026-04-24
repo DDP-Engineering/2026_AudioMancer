@@ -31,6 +31,10 @@ artifacts inside `10_cleanup`.
 - persist cleanup output as `10_cleanup/output_clean_text.txt`
 - persist cleanup metadata as `10_cleanup/artifact_cleanup_report.json`
 - persist resumable operation state as `10_cleanup/state_operation.json`
+- allow the operator to manually edit and save the persisted cleaned text from
+  the `Text Cleanup` page after cleanup output exists
+- provide right-click `Find` search in both extracted-text and cleaned-text
+  preview windows
 - support cooperative cancellation and resume for interrupted cleanup runs
 
 It does not own text extraction, AI cleanup, chunk generation, translation, or
@@ -70,6 +74,10 @@ High-level flow:
    after each processed page.
 7. On success, `MainWindow` stores the completed cleanup operation state in
    `project.json` and advances the workflow stage to `text_chunking_ready`.
+8. After cleanup output exists, the operator can press `Edit` under the cleaned
+   text preview, change the text, and press `Save`; the page writes
+   `10_cleanup/output_clean_text.txt`, resets downstream workflow data, and
+   preserves the extracted-text preview scroll position.
 
 ## 4. Dependencies
 
@@ -101,6 +109,8 @@ Outputs:
 - updated `project.json` operation entry `operations.cleanup`
 - updated `project.json` stage value `text_chunking_ready` after successful
   cleanup
+- updated `project.json` stage value `text_cleanup_ready` after a manual
+  cleaned-text edit
 - cleaned-text preview and cleanup notes on the `Text Cleanup` page
 
 ## 6. Data Contracts
@@ -151,6 +161,9 @@ Current deterministic cleanup invariants:
   text strongly indicates a false paragraph break
 - interrupted cleanup leaves resumable state instead of deleting partial
   output
+- manual cleaned-text edits preserve the cleanup operation artifacts but reset
+  chunking, translation, character discovery, voice, Speech Blocks, Audio
+  Blocks, and Audio Assembly state
 
 ## 7. Workflow Integration
 
@@ -166,6 +179,8 @@ Downstream:
   `10_cleanup/output_clean_text.txt`
 - confirmed cleanup reruns reset `20_chunking`, `30_translation`, and
   `40_character_discovery`
+- manual cleaned-text edits reset all downstream workflow folders from
+  `20_chunking` onward because the chunking source changed
 - the modal progress dialog is shared with extraction and future long-running
   operations
 
@@ -185,6 +200,10 @@ UI usage:
 - import one source and run `Extract Text`
 - go to `Text Cleanup`
 - press `Deterministic Cleanup`
+- press `Edit` below the cleaned text preview when manual correction is needed
+- press `Save` to persist the edited cleaned text and reset downstream state
+- right-click either text preview and choose `Find` to search within that
+  preview
 - if cleanup is already completed, confirm the rerun reset before continuing
 
 ## 9. Validation And Tests
@@ -204,6 +223,7 @@ Covered behaviors:
 - structure-preserving cleanup across page breaks
 - resumable cancellation state
 - page button enablement and cleanup preview updates
+- manual cleaned-text edit and save enablement
 - main-window cleanup trigger, modal progress dialog exposure, and cleanup UI
   refresh after success
 

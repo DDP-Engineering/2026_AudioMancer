@@ -10,11 +10,12 @@
 @file text_chunking_ui_controller.py
 @brief Text Chunking page UI controller for AudioMancer.
 @details Handles deterministic and AI-assisted chunking workflows, including
-         progress dialog lifecycle, resumable reruns, destructive confirmation,
-         and manifest synchronization for the Text Chunking page.
+         selected-chunk edits, progress dialog lifecycle, resumable reruns,
+         destructive confirmation, and manifest synchronization for the Text
+         Chunking page.
 @author Eng. Dan Dumitru Pasare
-@date 2026-04-11
-@version 0.4.0
+@date 2026-04-24
+@version 0.5.0
 """
 
 # IMPORTS
@@ -30,6 +31,7 @@ from audiomancer.services import (
     home_presenter_service,
     operation_runtime_service,
     project_workspace_service,
+    text_chunking_state_service,
     text_cleanup_state_service,
     ui_state_service,
 )
@@ -187,6 +189,47 @@ def handle_ai_chunking_requested(window: "MainWindow", profile_id: str, strategy
         ),
         success_handler=lambda result_payload: handle_chunking_success(window, result_payload),
         failure_handler=lambda error: handle_chunking_failure(window, error),
+    )
+
+
+def handle_save_chunk_requested(window: "MainWindow", chunk_id: str, chunk_text: str) -> None:
+    """
+    @brief      Persist manual selected-chunk edits and refresh downstream workflow state.
+    @param[in]  window Active main window shell.
+    @param[in]  chunk_id Stable chunk identifier to update.
+    @param[in]  chunk_text Edited selected chunk text.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-24
+    @version    0.1.0
+    """
+    current_language = ui_state_service.current_language_from_settings(window._settings_payload)
+    if window._current_project_root is None or window._current_manifest is None:
+        return
+    preview_scroll_state = window._text_chunking_page.preview_scroll_state()
+    try:
+        updated_manifest = text_chunking_state_service.save_chunk_text_edit(
+            window._current_project_root,
+            window._current_manifest,
+            chunk_id,
+            chunk_text,
+        )
+    except ValueError as error:
+        QMessageBox.warning(
+            window,
+            ui_state_service.translate("dialog.project_error_title", current_language),
+            str(error),
+        )
+        return
+    window.show_project_state(
+        window._current_project_root,
+        updated_manifest,
+    )
+    window._text_chunking_page.restore_preview_scroll_state(preview_scroll_state)
+    misc_ui_controller.show_message(
+        window,
+        ui_state_service.translate("status.chunk_saved", current_language),
     )
 
 

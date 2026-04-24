@@ -10,11 +10,12 @@
 @file text_cleanup_ui_controller.py
 @brief Text Cleanup page UI controller for AudioMancer.
 @details Handles extraction, deterministic cleanup, and AI-assisted cleanup
-         workflows, including progress dialog lifecycle, cancellation, rerun
-         confirmations, and manifest synchronization for the Text Cleanup page.
+         workflows, including manual cleaned-text saves, progress dialog
+         lifecycle, cancellation, rerun confirmations, and manifest
+         synchronization for the Text Cleanup page.
 @author Eng. Dan Dumitru Pasare
-@date 2026-04-11
-@version 0.5.0
+@date 2026-04-24
+@version 0.6.1
 """
 
 # IMPORTS
@@ -244,6 +245,45 @@ def handle_ai_cleanup_requested(window: "MainWindow", profile_id: str) -> None:
         ),
         success_handler=lambda result_payload: handle_cleanup_success(window, result_payload),
         failure_handler=lambda error: handle_cleanup_failure(window, error),
+    )
+
+
+def handle_save_cleaned_text_requested(window: "MainWindow", cleaned_text: str) -> None:
+    """
+    @brief      Persist manual cleaned-text edits and refresh downstream workflow state.
+    @param[in]  window Active main window shell.
+    @param[in]  cleaned_text Edited cleaned text content.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-24
+    @version    0.2.0
+    """
+    current_language = ui_state_service.current_language_from_settings(window._settings_payload)
+    if window._current_project_root is None or window._current_manifest is None:
+        return
+    preview_scroll_state = window._text_cleanup_page.preview_scroll_state()
+    try:
+        updated_manifest = text_cleanup_state_service.save_cleaned_text_edit(
+            window._current_project_root,
+            window._current_manifest,
+            cleaned_text,
+        )
+    except ValueError as error:
+        QMessageBox.warning(
+            window,
+            ui_state_service.translate("dialog.project_error_title", current_language),
+            str(error),
+        )
+        return
+    window.show_project_state(
+        window._current_project_root,
+        updated_manifest,
+    )
+    window._text_cleanup_page.restore_preview_scroll_state(preview_scroll_state)
+    misc_ui_controller.show_message(
+        window,
+        ui_state_service.translate("status.cleaned_text_saved", current_language),
     )
 
 

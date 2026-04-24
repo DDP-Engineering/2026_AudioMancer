@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-  # noqa: UP009
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -10,14 +10,16 @@
 @file test_text_cleanup_ui_controller.py
 @brief Text Cleanup UI controller tests for AudioMancer.
 @details Verifies the Text Cleanup page UI controller still drives modal
-         progress lifecycle and extraction dispatch correctly.
+         progress lifecycle, extraction dispatch, and manual cleaned-text
+         save dispatch and preview scroll preservation correctly.
 @author Eng. Dan Dumitru Pasare
-@date 2026-04-06
-@version 0.3.1
+@date 2026-04-24
+@version 0.5.0
 """
 
 # IMPORTS
 
+from audiomancer import config
 from audiomancer.services import project_workspace_service
 from audiomancer.ui.controllers import text_cleanup_ui_controller
 from audiomancer.ui.main_window import MainWindow
@@ -302,6 +304,75 @@ def test_text_cleanup_ui_controller_ai_cleanup_resume_skips_confirmations(
 
     assert confirm_calls == []
     assert len(start_calls) == 1
+
+
+def test_text_cleanup_ui_controller_save_cleaned_text_updates_project_state(
+    monkeypatch,
+    qtbot,
+    tmp_path,
+    default_settings_payload,
+) -> None:
+    """
+    @brief      Verify manual cleaned-text save persists the edit and refreshes project state.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  qtbot Qt test helper fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @param[in]  default_settings_payload Fixture supplying default test settings.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-24
+    @version    0.1.0
+    """
+    project_root, manifest = project_workspace_service.create_project(
+        "ControllerCleanupEditProject",
+        tmp_path,
+    )
+    cleanup_root = project_root / config.CLEANUP_FOLDER_NAME
+    cleanup_root.mkdir(exist_ok=True)
+    (cleanup_root / config.CLEANED_TEXT_FILE_NAME).write_text("Clean text\n", encoding="utf-8")
+    extraction_root = project_root / config.EXTRACTION_FOLDER_NAME
+    extraction_root.mkdir(exist_ok=True)
+    (extraction_root / config.EXTRACTED_TEXT_FILE_NAME).write_text("Raw text\n", encoding="utf-8")
+    manifest["source_document"] = {
+        "original_name": "story.txt",
+        "stored_relative_path": f"{config.EXTRACTION_FOLDER_NAME}/story.txt",
+        "file_type": "txt",
+        "imported_at": "2026-04-24T00:00:00+00:00",
+        "size_bytes": 10,
+    }
+    manifest["extracted_text_relative_path"] = f"{config.EXTRACTION_FOLDER_NAME}/{config.EXTRACTED_TEXT_FILE_NAME}"
+    manifest["current_stage"] = "text_chunking_ready"
+    manifest["operations"]["cleanup"]["status"] = "completed"
+    project_workspace_service.save_manifest(manifest, project_root)
+
+    window = MainWindow(settings_payload=dict(default_settings_payload))
+    qtbot.addWidget(window)
+    window._activate_project(project_root, project_workspace_service.load_manifest(project_root))
+    status_messages: list[str] = []
+    monkeypatch.setattr(
+        text_cleanup_ui_controller.misc_ui_controller,
+        "show_message",
+        lambda _window, message: status_messages.append(message),
+    )
+    restored_scroll_states: list[dict[str, tuple[int, int]]] = []
+    monkeypatch.setattr(
+        window._text_cleanup_page,
+        "preview_scroll_state",
+        lambda: {"extracted": (42, 3), "cleaned": (7, 1)},
+    )
+    monkeypatch.setattr(
+        window._text_cleanup_page,
+        "restore_preview_scroll_state",
+        restored_scroll_states.append,
+    )
+
+    text_cleanup_ui_controller.handle_save_cleaned_text_requested(window, "Edited clean text\n")
+
+    assert (cleanup_root / config.CLEANED_TEXT_FILE_NAME).read_text(encoding="utf-8") == "Edited clean text\n"
+    assert window._current_manifest["current_stage"] == "text_cleanup_ready"
+    assert restored_scroll_states == [{"extracted": (42, 3), "cleaned": (7, 1)}]
+    assert status_messages == ["Cleaned text saved."]
 
 
 # END OF FILE

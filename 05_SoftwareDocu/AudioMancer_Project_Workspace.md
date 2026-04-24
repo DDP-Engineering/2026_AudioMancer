@@ -20,7 +20,7 @@ and validate the current `project.json` contract used by the application shell.
 
 - validate exact project names against the current Windows and Linux folder
   safety rules
-- create the numbered project workflow folders plus `temp`
+- create the numbered project workflow folders
 - create and save the minimal `project.json` manifest
 - resolve the project root from a selected root folder or child workflow folder
 - validate and copy one supported source file into the active project root
@@ -80,7 +80,12 @@ High-level flow:
    `project.json`.
 8. After deterministic cleanup completes, `MainWindow` advances the project to
    `text_chunking_ready` while keeping cleanup detail files in `10_cleanup`.
-9. `MainWindow` stores the active project root and manifest, updates the home
+9. After a selected chunk is manually edited and saved from `Text Chunking`,
+   `MainWindow` keeps `20_chunking/output_chunks.json`, resets downstream
+   workflow folders from translation onward, and returns the project to
+   `translation_ready` without changing the cleaned-text reference or chunk
+   list scroll positions.
+10. `MainWindow` stores the active project root and manifest, updates the home
    summary, updates workflow progress, and enables the workflow pages.
 
 ## 4. Dependencies
@@ -107,7 +112,8 @@ Outputs:
 - one new project root folder under the selected parent
 - required workflow subfolders:
   `00_extraction`, `10_cleanup`, `20_chunking`, `30_translation`,
-  `40_character_discovery`, `50_narrator_definition`, and `temp`
+  `40_character_discovery`, `50_narrator_definition`, `60_character_voices`,
+  `70_speech_blocks`, `80_audio_blocks`, and `90_audio_assembly`
 - one root-level `project.json`
 - one copied source file stored directly in the project root
 - one loaded validated manifest dictionary for the UI shell
@@ -177,7 +183,10 @@ Required folder contract:
 - `30_translation`
 - `40_character_discovery`
 - `50_narrator_definition`
-- `temp`
+- `60_character_voices`
+- `70_speech_blocks`
+- `80_audio_blocks`
+- `90_audio_assembly`
 
 Current validation invariants:
 

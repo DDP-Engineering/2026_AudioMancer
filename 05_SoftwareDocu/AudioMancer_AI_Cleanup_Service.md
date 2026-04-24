@@ -39,6 +39,10 @@ transaction log.
   `10_cleanup/state_operation.json`
 - append project-local AI transaction records to
   `10_cleanup/log_ai_transactions_<timestamp>.log`
+- allow the operator to manually edit and save the shared cleaned-text output
+  from the `Text Cleanup` page after AI cleanup completes
+- provide right-click `Find` search in both extracted-text and cleaned-text
+  preview windows
 
 It does not own AI profile editing, model discovery, text extraction,
 chunking, translation, or character discovery.
@@ -85,6 +89,9 @@ High-level flow:
    the cleaned text, writes the shared cleanup artifacts, and stores
    `mode="ai_assisted"` in the cleanup operation state.
 8. On success, the shell advances the workflow stage to `text_chunking_ready`.
+9. Manual edits to the cleaned text save back to
+   `10_cleanup/output_clean_text.txt` and reset downstream workflow state from
+   chunking onward while preserving the extracted-text preview scroll position.
 
 ## 4. Dependencies
 
@@ -118,6 +125,8 @@ Outputs:
 - `10_cleanup/log_ai_transactions_<timestamp>.log`
 - updated `project.json` cleanup operation entry with `mode="ai_assisted"`
 - updated `project.json` stage `text_chunking_ready` after successful cleanup
+- updated `project.json` stage `text_cleanup_ready` after a manual
+  cleaned-text edit
 
 ## 6. Data Contracts
 
@@ -166,6 +175,7 @@ Downstream:
 - future chunking consumes the same `10_cleanup/output_clean_text.txt`
 - confirmed AI cleanup reruns reset chunking, translation, and
   character-discovery data
+- manual cleaned-text edits reset chunking and all later workflow artifacts
 
 ## 8. Usage
 
@@ -176,6 +186,9 @@ Operator flow:
 - select the desired AI profile
 - press `AI-Assisted Cleanup`
 - confirm the AI-length warning
+- use `Edit` and `Save` under the cleaned text preview for manual corrections
+- right-click either text preview and choose `Find` to search within that
+  preview
 - confirm the destructive rerun warning when cleanup was already completed
 
 Service call pattern:
@@ -198,6 +211,7 @@ Automated tests:
 - `04_Software/AudioMancer/tests/test_llm_provider_service.py`
 - `04_Software/AudioMancer/tests/test_prompt_template_service.py`
 - `04_Software/AudioMancer/tests/test_text_cleanup_page.py`
+- `04_Software/AudioMancer/tests/test_text_cleanup_state_service.py`
 - `04_Software/AudioMancer/tests/test_text_cleanup_ui_controller.py`
 
 Minimum validation after a change:

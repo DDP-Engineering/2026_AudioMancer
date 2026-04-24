@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-  # noqa: UP009
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -10,14 +10,18 @@
 @file test_text_chunking_ui_controller.py
 @brief Text Chunking UI controller tests for AudioMancer.
 @details Verifies the Text Chunking page UI controller drives modal progress
-         lifecycle and deterministic chunking dispatch correctly.
+         lifecycle, deterministic chunking dispatch, and manual chunk saves
+         correctly.
 @author Eng. Dan Dumitru Pasare
-@date 2026-04-07
-@version 0.2.0
+@date 2026-04-24
+@version 0.3.0
 """
 
 # IMPORTS
 
+import json
+
+from audiomancer import config
 from audiomancer.services import project_workspace_service
 from audiomancer.ui.controllers import text_chunking_ui_controller
 from audiomancer.ui.main_window import MainWindow
@@ -222,7 +226,7 @@ def test_text_chunking_ui_controller_ai_chunk_request_uses_selected_profile_and_
     tmp_path,
 ) -> None:
     """
-    @brief      Verify AI-assisted chunking dispatches through the controller helper with one selected profile and strategy.
+    @brief      Verify AI-assisted chunking dispatches through the controller helper with one selected profile.
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @param[in]  qtbot Qt test helper fixture.
     @param[in]  tmp_path Pytest temporary directory fixture.
@@ -403,6 +407,101 @@ def test_text_chunking_ui_controller_ai_chunk_resume_skips_confirmation(
 
     assert confirm_calls == []
     assert len(start_calls) == 1
+
+
+def test_text_chunking_ui_controller_save_chunk_updates_project_state(
+    monkeypatch,
+    qtbot,
+    tmp_path,
+) -> None:
+    """
+    @brief      Verify manual selected-chunk save persists the edit and refreshes project state.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  qtbot Qt test helper fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-24
+    @version    0.1.0
+    """
+    project_root, manifest = project_workspace_service.create_project(
+        "ControllerChunkEditProject",
+        tmp_path,
+    )
+    chunking_root = project_root / config.CHUNKING_FOLDER_NAME
+    chunking_root.mkdir(exist_ok=True)
+    chunk_artifact_path = chunking_root / config.CHUNK_ARTIFACT_FILE_NAME
+    chunk_artifact_path.write_text(
+        json.dumps(
+            [
+                {
+                    "chunk_id": "chunk-0001",
+                    "sequence_index": 1,
+                    "text": "Original chunk",
+                }
+            ],
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    manifest["current_stage"] = "character_discovery_ready"
+    manifest["operations"]["chunking"]["status"] = "completed"
+    project_workspace_service.save_manifest(manifest, project_root)
+    window = MainWindow(
+        settings_payload={
+            "language": "en",
+            "ui_text_scale": "normal",
+            "play_completion_beep": False,
+            "llm_profiles": [],
+            "default_ai_cleanup_profile_id": None,
+            "default_ai_chunking_profile_id": None,
+            "default_ai_chunking_strategy": "paragraph",
+            "default_character_extraction_profile_id": None,
+        }
+    )
+    qtbot.addWidget(window)
+    window._activate_project(project_root, project_workspace_service.load_manifest(project_root))
+    status_messages: list[str] = []
+    monkeypatch.setattr(
+        text_chunking_ui_controller.misc_ui_controller,
+        "show_message",
+        lambda _window, message: status_messages.append(message),
+    )
+    restored_scroll_states: list[dict[str, int]] = []
+    monkeypatch.setattr(
+        window._text_chunking_page,
+        "preview_scroll_state",
+        lambda: {
+            "cleaned_vertical": 12,
+            "cleaned_horizontal": 1,
+            "chunk_list_vertical": 7,
+            "chunk_list_horizontal": 0,
+            "chunk_list_row": 0,
+        },
+    )
+    monkeypatch.setattr(
+        window._text_chunking_page,
+        "restore_preview_scroll_state",
+        restored_scroll_states.append,
+    )
+
+    text_chunking_ui_controller.handle_save_chunk_requested(window, "chunk-0001", "Edited chunk")
+
+    chunks = json.loads(chunk_artifact_path.read_text(encoding="utf-8"))
+    assert chunks[0]["text"] == "Edited chunk"
+    assert window._current_manifest["current_stage"] == "translation_ready"
+    assert restored_scroll_states == [
+        {
+            "cleaned_vertical": 12,
+            "cleaned_horizontal": 1,
+            "chunk_list_vertical": 7,
+            "chunk_list_horizontal": 0,
+            "chunk_list_row": 0,
+        }
+    ]
+    assert status_messages == ["Chunk saved."]
 
 
 # END OF FILE

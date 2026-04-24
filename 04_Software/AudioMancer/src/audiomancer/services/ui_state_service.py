@@ -13,7 +13,7 @@
          application through one centralized string catalog and scale mapping.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 0.22.0
+@version 0.22.5
 """
 
 # IMPORTS
@@ -91,13 +91,26 @@ _UI_STRINGS = {
         "status.source_imported": "Source file imported.",
         "status.text_extracted": "Text extracted.",
         "status.text_cleaned": "Text cleaned.",
+        "status.cleaned_text_saved": "Cleaned text saved.",
         "status.text_ai_cleaned": "AI-assisted cleanup completed.",
         "status.text_chunked": "Text chunked.",
         "status.text_ai_chunked": "Text chunked with AI.",
+        "status.chunk_saved": "Chunk saved.",
         "status.text_translated": "Text translated.",
         "status.translation_reset": "Translation reset.",
         "status.characters_discovered": "Character discovery completed.",
         "status.speech_blocks_generated": "Speech Blocks generated.",
+        "status.speech_blocks_reset": "Speech Blocks reset.",
+        "status.speech_blocks_approved_all": "All Speech Blocks approved.",
+        "status.speech_block_saved": "Speech Block saved.",
+        "status.speech_block_approved": "Speech Block approved.",
+        "status.speech_block_reset": "Speech Block reset.",
+        "status.speech_blocks_resplit": "Selected chunk re-split completed.",
+        "status.audio_blocks_generated": "Audio Blocks generated.",
+        "status.audio_blocks_reset": "Audio Blocks reset.",
+        "status.audio_blocks_approved_all": "All generated audio blocks approved.",
+        "status.audio_block_approved": "Audio block approved.",
+        "status.audio_block_regenerated": "Audio block regenerated.",
         "status.character_discovery_reset": "Character discovery reset.",
         "status.character_added": "Character added.",
         "status.character_saved": "Character changes saved.",
@@ -191,6 +204,13 @@ _UI_STRINGS = {
         "text_cleanup.clean": "Deterministic Cleanup",
         "text_cleanup.ai_profile": "AI Profile",
         "text_cleanup.ai_clean": "AI-Assisted Cleanup",
+        "text_cleanup.edit_cleaned": "Edit",
+        "text_cleanup.save_cleaned": "Save",
+        "text_cleanup.find": "Find",
+        "text_cleanup.find_next": "Find Next",
+        "text_cleanup.find_title": "Find Text",
+        "text_cleanup.find_prompt": "Text to find:",
+        "text_cleanup.find_not_found": "No match found for '{search_text}'.",
         "text_cleanup.extracted_group": "Extracted Text Preview",
         "text_cleanup.cleaned_group": "Cleaned Text Preview",
         "text_cleanup.notes_group": "Cleanup Notes",
@@ -221,6 +241,13 @@ _UI_STRINGS = {
         "text_chunking.cleaned_group": "Cleaned Text Reference",
         "text_chunking.chunk_list_group": "Chunk List",
         "text_chunking.selected_group": "Selected Chunk",
+        "text_chunking.edit_chunk": "Edit",
+        "text_chunking.save_chunk": "Save",
+        "text_chunking.find": "Find",
+        "text_chunking.find_next": "Find Next",
+        "text_chunking.find_title": "Find Text",
+        "text_chunking.find_prompt": "Text to find:",
+        "text_chunking.find_not_found": "No match found for '{search_text}'.",
         "text_chunking.notes_group": "Chunking Notes",
         "text_chunking.cleaned_note": "Cleaned text will appear here and serve as the chunking reference.",
         "text_chunking.selected_note": "The full text of the selected chunk will appear here.",
@@ -434,6 +461,8 @@ _UI_STRINGS = {
         "speech_blocks.title": "Speech Blocks",
         "speech_blocks.ai_profile": "AI Profile",
         "speech_blocks.generate": "Generate Speech Blocks",
+        "speech_blocks.reset_generation": "Reset Speech Blocks",
+        "speech_blocks.approve_all": "Approve All Speech Blocks",
         "speech_blocks.chunk_list_group": "Chunk List",
         "speech_blocks.selected_group": "Selected Chunk",
         "speech_blocks.blocks_group": "Speech Blocks",
@@ -446,6 +475,9 @@ _UI_STRINGS = {
         "speech_blocks.note_in_progress": "Speech Blocks generation is in progress at {progress_current}/{progress_total}.",
         "speech_blocks.note_resume": "A previous Speech Blocks run was not finalized. Press Generate Speech Blocks to continue from progress {progress_current}/{progress_total}.",
         "speech_blocks.note_summary": "Generated {block_count} speech blocks from {processed_chunk_count}/{total_chunk_count} chunks.",
+        "speech_blocks.note_approval_summary": "Approved speech blocks: {approved_block_count}/{total_block_count}.",
+        "speech_blocks.note_waiting_for_approval": "Review and approve every Speech Block before continuing to Audio Blocks.",
+        "speech_blocks.note_ready_for_audio": "Every Speech Block is approved. The workflow is ready for Audio Blocks.",
         "speech_blocks.note_warning_summary": "Speech Blocks recorded {warning_count} warning entries that should be reviewed.",
         "speech_blocks.note_warning_entry": "{chunk_id}: {reason}",
         "speech_blocks.note_rerun_warning": "Running Speech Blocks again will replace the current speech-block data and reset Audio Blocks plus Audio Assembly.",
@@ -456,6 +488,72 @@ _UI_STRINGS = {
         "speech_blocks.detail_none": "(none)",
         "speech_blocks.content_narration": "Narration",
         "speech_blocks.content_dialogue": "Dialogue",
+        "speech_blocks.content_background_noise": "Background Noise",
+        "speech_blocks.content_pause": "Pause",
+        "speech_blocks.resplit_selected": "Re-Split Selected Chunk",
+        "speech_blocks.reset_block": "Reset",
+        "speech_blocks.edit_block": "Edit",
+        "speech_blocks.save_block": "Save",
+        "speech_blocks.approve_block": "Approve",
+        "speech_blocks.warning_indicator": "Warning: {warning_flags}",
+        "audio_blocks.title": "Audio Blocks",
+        "audio_blocks.start_generation": "Start Audio Generation",
+        "audio_blocks.play_audiobook": "Play Audiobook",
+        "audio_blocks.stop_audiobook": "Stop Audiobook",
+        "audio_blocks.reset_generation": "Reset Audio Generation",
+        "audio_blocks.approve_all": "Approve All Generation",
+        "audio_blocks.source_group": "Source Text",
+        "audio_blocks.blocks_group": "Speech Blocks",
+        "audio_blocks.selected_group": "Selected Block",
+        "audio_blocks.status_group": "Audio Blocks Status",
+        "audio_blocks.regenerate_selected": "Re-Generate Audio",
+        "audio_blocks.play_selected": "Play",
+        "audio_blocks.stop_playback": "Stop",
+        "audio_blocks.approve_selected": "Approve",
+        "audio_blocks.error_missing_audio": "The selected Audio Block has no generated audio file to play.",
+        "audio_blocks.note_no_project": "Create or open a project before generating Audio Blocks.",
+        "audio_blocks.note_no_source": "Import one source document before generating Audio Blocks.",
+        "audio_blocks.note_missing_speech_blocks": "Generate Speech Blocks before starting Audio Blocks.",
+        "audio_blocks.note_summary": (
+            "Generated audio for {generated_count}/{total_count} speech blocks and approved "
+            "{approved_count}/{total_count}."
+        ),
+        "audio_blocks.note_in_progress": "Audio generation is in progress at {progress_current}/{progress_total}.",
+        "audio_blocks.note_prepare_prompts": (
+            "Preparing reusable voice prompts. Available: {prompt_count}, reused: {reused_prompt_count}, "
+            "created now: {regenerated_prompt_count}."
+        ),
+        "audio_blocks.note_generating_blocks": "Generating audio blocks from the prepared reusable voice prompts.",
+        "audio_blocks.note_resume": (
+            "A previous Audio Blocks run was not finalized. Press Start Audio Generation to continue from "
+            "{progress_current}/{progress_total}."
+        ),
+        "audio_blocks.note_ready": "Audio Blocks generation is ready for the current Speech Blocks and voice samples.",
+        "audio_blocks.note_waiting_for_approval": (
+            "Every speech block has generated audio, but approval is still required before Audio Assembly."
+        ),
+        "audio_blocks.note_ready_for_assembly": (
+            "Every generated speech block is approved. The workflow is ready for Audio Assembly."
+        ),
+        "audio_blocks.note_invalidated": "The previous Audio Blocks data is stale: {invalidation_reason}",
+        "audio_blocks.status_generated": "Generated audio: {generated_count}/{total_count}",
+        "audio_blocks.status_approved": "Approved audio: {approved_count}/{total_count}",
+        "audio_blocks.status_voice_language": "Voice language: {language_label}",
+        "audio_blocks.status_prompts": (
+            "Reusable prompts: {prompt_count} | reused: {reused_prompt_count} | created now: {regenerated_prompt_count}"
+        ),
+        "audio_blocks.progress_label": "Generated blocks: {progress_current}/{progress_total}",
+        "audio_blocks.detail_speaker": "Speaker: {speaker_label}",
+        "audio_blocks.detail_approval_status": "Status: {status_label}",
+        "audio_blocks.approval_status_approved": "Approved",
+        "audio_blocks.approval_status_pending": "Pending",
+        "audio_blocks.marker_generated": "audio",
+        "audio_blocks.marker_missing": "none",
+        "audio_blocks.marker_approved": "approved",
+        "audio_blocks.marker_pending": "pending",
+        "audio_blocks.marker_current": "current",
+        "audio_blocks.duration_seconds": "{duration_seconds:.1f}s",
+        "audio_blocks.duration_unknown": "--.-s",
         "character_voices.status_total_targets": "Total targets: {target_count}",
         "character_voices.status_targets_with_samples": "Targets with samples: {sample_count}",
         "character_voices.status_assignment_mode": "Voice assignment: {assignment_mode}",
@@ -568,6 +666,26 @@ _UI_STRINGS = {
         "project.confirm_ai_chunking_rerun": "Continuing will delete the current chunking data, clear translation and all following operation folders, and reset workflow progress after cleanup before starting new AI-assisted chunking. Continue?",
         "project.confirm_speech_blocks": "Speech Blocks generation can take time because it sends one AI request per chunk and consumes AI tokens. Continue?",
         "project.confirm_speech_blocks_rerun": "Continuing will delete the current Speech Blocks data, clear Audio Blocks and Audio Assembly, and reset workflow progress after Character Voices before starting a new Speech Blocks run. Continue?",
+        "project.confirm_speech_blocks_resplit": (
+            "Continuing will erase the Speech Blocks for the selected chunk and send a new AI request. "
+            "AI operations can take a long time and may consume paid tokens. Continue?"
+        ),
+        "project.confirm_audio_blocks": (
+            "Audio generation can take a long time because it prepares reusable voice prompts and then "
+            "generates each speech block one by one. The run can be interrupted and resumed later. Continue?"
+        ),
+        "project.confirm_audio_blocks_rerun": (
+            "Continuing will delete the current generated audio blocks, reusable voice-prompt metadata, and Audio "
+            "Assembly data before starting a new run. Continue?"
+        ),
+        "project.confirm_audio_blocks_reset": (
+            "Continuing will delete all generated audio blocks, reusable voice prompts, and downstream Audio Assembly "
+            "data. Continue?"
+        ),
+        "project.confirm_audio_blocks_invalidation": (
+            "This change affects the current Audio Blocks inputs. Continuing will reset generated audio blocks, "
+            "their approvals, and downstream Audio Assembly data. Continue?"
+        ),
         "project.confirm_translation_reset": "Continuing will delete the current translation data and reset the language lock for this step. Continue?",
         "project.confirm_ai_cleanup": "AI-assisted cleanup can take longer because it sends multiple requests through the selected AI provider. Continue?",
         "project.confirm_ai_cleanup_rerun": "Continuing will delete the current cleanup data, clear chunking and all following operation folders, and reset workflow progress after extraction before starting a new AI-assisted cleanup. Continue?",
@@ -581,9 +699,17 @@ _UI_STRINGS = {
         "progress.ai_translation_retranslate": "Selected chunk re-translation in progress...",
         "progress.character_discovery": "Character discovery in progress...",
         "progress.speech_blocks": "Speech Blocks generation in progress...",
+        "progress.speech_blocks_resplit": ("Selected chunk Speech Blocks re-splitting in progress..."),
+        "progress.audio_blocks": "Audio Blocks generation in progress...",
+        "progress.audio_block_regeneration": "Selected audio block regeneration in progress...",
         "dialog.confirm_translation_reset_title": "Confirm Translation Reset",
         "dialog.confirm_speech_blocks_title": "Start Speech Blocks Generation",
         "dialog.confirm_speech_blocks_rerun_title": "Confirm Speech Blocks Rerun",
+        "dialog.confirm_speech_blocks_resplit_title": "Confirm Selected Chunk Re-Split",
+        "dialog.confirm_audio_blocks_title": "Start Audio Generation",
+        "dialog.confirm_audio_blocks_rerun_title": "Confirm Audio Generation Rerun",
+        "dialog.confirm_audio_blocks_reset_title": "Confirm Audio Generation Reset",
+        "dialog.confirm_audio_blocks_invalidation_title": "Confirm Audio Blocks Reset",
         "dialog.character_discovery_info_title": "Character Discovery Information",
         "dialog.character_add_title": "Add Character",
         "dialog.character_add_prompt": "Enter the canonical name for the new character.",
@@ -643,13 +769,26 @@ _UI_STRINGS = {
         "status.source_imported": "Fisierul sursa a fost importat.",
         "status.text_extracted": "Textul a fost extras.",
         "status.text_cleaned": "Textul a fost curatat.",
+        "status.cleaned_text_saved": "Textul curatat a fost salvat.",
         "status.text_ai_cleaned": "Curatarea asistata de AI a fost finalizata.",
         "status.text_chunked": "Textul a fost segmentat.",
         "status.text_ai_chunked": "Textul a fost segmentat cu AI.",
+        "status.chunk_saved": "Segmentul a fost salvat.",
         "status.text_translated": "Textul a fost tradus.",
         "status.translation_reset": "Traducerea a fost resetata.",
         "status.characters_discovered": "Descoperirea personajelor a fost finalizata.",
         "status.speech_blocks_generated": "Blocurile de vorbire au fost generate.",
+        "status.speech_blocks_reset": "Blocurile de vorbire au fost resetate.",
+        "status.speech_blocks_approved_all": "Toate blocurile de vorbire au fost aprobate.",
+        "status.speech_block_saved": "Blocul de vorbire a fost salvat.",
+        "status.speech_block_approved": "Blocul de vorbire a fost aprobat.",
+        "status.speech_block_reset": "Blocul de vorbire a fost resetat.",
+        "status.speech_blocks_resplit": "Resegmentarea segmentului selectat a fost finalizata.",
+        "status.audio_blocks_generated": "Blocurile audio au fost generate.",
+        "status.audio_blocks_reset": "Blocurile audio au fost resetate.",
+        "status.audio_blocks_approved_all": "Toate blocurile audio generate au fost aprobate.",
+        "status.audio_block_approved": "Blocul audio a fost aprobat.",
+        "status.audio_block_regenerated": "Blocul audio a fost regenerat.",
         "status.character_discovery_reset": "Descoperirea personajelor a fost resetata.",
         "status.character_added": "Personajul a fost adaugat.",
         "status.character_saved": "Modificarile personajului au fost salvate.",
@@ -743,6 +882,13 @@ _UI_STRINGS = {
         "text_cleanup.clean": "Curatare Determinista",
         "text_cleanup.ai_profile": "Profil AI",
         "text_cleanup.ai_clean": "Curatare Asistata de AI",
+        "text_cleanup.edit_cleaned": "Editeaza",
+        "text_cleanup.save_cleaned": "Salveaza",
+        "text_cleanup.find": "Cauta",
+        "text_cleanup.find_next": "Cauta Urmatorul",
+        "text_cleanup.find_title": "Cauta Text",
+        "text_cleanup.find_prompt": "Text de cautat:",
+        "text_cleanup.find_not_found": "Nu s-a gasit niciun rezultat pentru '{search_text}'.",
         "text_cleanup.extracted_group": "Previzualizare Text Extras",
         "text_cleanup.cleaned_group": "Previzualizare Text Curatat",
         "text_cleanup.notes_group": "Note Curatare",
@@ -773,6 +919,13 @@ _UI_STRINGS = {
         "text_chunking.cleaned_group": "Referinta Text Curatat",
         "text_chunking.chunk_list_group": "Lista Segmentelor",
         "text_chunking.selected_group": "Segment Selectat",
+        "text_chunking.edit_chunk": "Editeaza",
+        "text_chunking.save_chunk": "Salveaza",
+        "text_chunking.find": "Cauta",
+        "text_chunking.find_next": "Cauta Urmatorul",
+        "text_chunking.find_title": "Cauta Text",
+        "text_chunking.find_prompt": "Text de cautat:",
+        "text_chunking.find_not_found": "Nu s-a gasit niciun rezultat pentru '{search_text}'.",
         "text_chunking.notes_group": "Note Segmentare",
         "text_chunking.cleaned_note": "Textul curatat va aparea aici si va servi drept referinta pentru segmentare.",
         "text_chunking.selected_note": "Textul complet al segmentului selectat va aparea aici.",
@@ -987,6 +1140,8 @@ _UI_STRINGS = {
         "speech_blocks.title": "Blocuri Vorbire",
         "speech_blocks.ai_profile": "Profil AI",
         "speech_blocks.generate": "Genereaza Blocuri Vorbire",
+        "speech_blocks.reset_generation": "Reseteaza Blocurile de Vorbire",
+        "speech_blocks.approve_all": "Aproba Toate Blocurile de Vorbire",
         "speech_blocks.chunk_list_group": "Lista Segmentelor",
         "speech_blocks.selected_group": "Segment Selectat",
         "speech_blocks.blocks_group": "Blocuri Vorbire",
@@ -999,6 +1154,9 @@ _UI_STRINGS = {
         "speech_blocks.note_in_progress": "Generarea blocurilor de vorbire este in curs la {progress_current}/{progress_total}.",
         "speech_blocks.note_resume": "O rulare anterioara pentru blocurile de vorbire nu a fost finalizata. Apasa Genereaza Blocuri Vorbire pentru a continua de la progresul {progress_current}/{progress_total}.",
         "speech_blocks.note_summary": "Au fost generate {block_count} blocuri de vorbire din {processed_chunk_count}/{total_chunk_count} segmente.",
+        "speech_blocks.note_approval_summary": "Blocuri de vorbire aprobate: {approved_block_count}/{total_block_count}.",
+        "speech_blocks.note_waiting_for_approval": "Revizuieste si aproba fiecare bloc de vorbire inainte de Blocurile Audio.",
+        "speech_blocks.note_ready_for_audio": "Fiecare bloc de vorbire este aprobat. Fluxul este pregatit pentru Blocurile Audio.",
         "speech_blocks.note_warning_summary": "Blocurile de vorbire au inregistrat {warning_count} avertismente care trebuie revizuite.",
         "speech_blocks.note_warning_entry": "{chunk_id}: {reason}",
         "speech_blocks.note_rerun_warning": "Rularea din nou a blocurilor de vorbire va inlocui datele curente si va reseta Blocurile Audio plus Asamblarea Audio.",
@@ -1009,6 +1167,79 @@ _UI_STRINGS = {
         "speech_blocks.detail_none": "(niciunul)",
         "speech_blocks.content_narration": "Naratiune",
         "speech_blocks.content_dialogue": "Dialog",
+        "speech_blocks.content_background_noise": "Zgomot de Fundal",
+        "speech_blocks.content_pause": "Pauza",
+        "speech_blocks.resplit_selected": "Resegmenteaza Segmentul Selectat",
+        "speech_blocks.reset_block": "Reseteaza",
+        "speech_blocks.edit_block": "Editeaza",
+        "speech_blocks.save_block": "Salveaza",
+        "speech_blocks.approve_block": "Aproba",
+        "speech_blocks.warning_indicator": "Avertisment: {warning_flags}",
+        "audio_blocks.title": "Blocuri Audio",
+        "audio_blocks.start_generation": "Porneste Generarea Audio",
+        "audio_blocks.play_audiobook": "Reda Audiobook",
+        "audio_blocks.stop_audiobook": "Opreste Audiobook",
+        "audio_blocks.reset_generation": "Reseteaza Generarea Audio",
+        "audio_blocks.approve_all": "Aproba Toata Generarea",
+        "audio_blocks.source_group": "Text Sursa",
+        "audio_blocks.blocks_group": "Blocuri Vorbire",
+        "audio_blocks.selected_group": "Bloc Selectat",
+        "audio_blocks.status_group": "Stare Blocuri Audio",
+        "audio_blocks.regenerate_selected": "Regenereaza Audio",
+        "audio_blocks.play_selected": "Reda",
+        "audio_blocks.stop_playback": "Opreste",
+        "audio_blocks.approve_selected": "Aproba",
+        "audio_blocks.error_missing_audio": "Blocul Audio selectat nu are un fisier audio generat pentru redare.",
+        "audio_blocks.note_no_project": "Creeaza sau deschide un proiect inainte de a genera Blocuri Audio.",
+        "audio_blocks.note_no_source": "Importa un document sursa inainte de a genera Blocuri Audio.",
+        "audio_blocks.note_missing_speech_blocks": "Genereaza Blocurile de Vorbire inainte de a porni Blocurile Audio.",
+        "audio_blocks.note_summary": (
+            "Audio generat pentru {generated_count}/{total_count} blocuri de vorbire si aprobat "
+            "{approved_count}/{total_count}."
+        ),
+        "audio_blocks.note_in_progress": ("Generarea audio este in curs la {progress_current}/{progress_total}."),
+        "audio_blocks.note_prepare_prompts": (
+            "Se pregatesc prompturile vocale reutilizabile. Disponibile: {prompt_count}, refolosite: "
+            "{reused_prompt_count}, create acum: {regenerated_prompt_count}."
+        ),
+        "audio_blocks.note_generating_blocks": (
+            "Se genereaza blocurile audio din prompturile vocale reutilizabile pregatite."
+        ),
+        "audio_blocks.note_resume": (
+            "O rulare anterioara pentru Blocurile Audio nu a fost finalizata. Apasa Porneste Generarea Audio "
+            "pentru a continua de la {progress_current}/{progress_total}."
+        ),
+        "audio_blocks.note_ready": (
+            "Generarea Blocurilor Audio este pregatita pentru Blocurile de Vorbire curente si sample-urile vocale."
+        ),
+        "audio_blocks.note_waiting_for_approval": (
+            "Fiecare bloc de vorbire are audio generat, dar aprobarea este inca necesara inainte de Asamblarea Audio."
+        ),
+        "audio_blocks.note_ready_for_assembly": (
+            "Fiecare bloc de vorbire generat este aprobat. Fluxul este pregatit pentru Asamblarea Audio."
+        ),
+        "audio_blocks.note_invalidated": (
+            "Datele anterioare pentru Blocurile Audio sunt invechite: {invalidation_reason}"
+        ),
+        "audio_blocks.status_generated": "Audio generat: {generated_count}/{total_count}",
+        "audio_blocks.status_approved": "Audio aprobat: {approved_count}/{total_count}",
+        "audio_blocks.status_voice_language": "Limba vocii: {language_label}",
+        "audio_blocks.status_prompts": (
+            "Prompturi reutilizabile: {prompt_count} | refolosite: {reused_prompt_count} | create acum: "
+            "{regenerated_prompt_count}"
+        ),
+        "audio_blocks.progress_label": "Blocuri generate: {progress_current}/{progress_total}",
+        "audio_blocks.detail_speaker": "Vorbitor: {speaker_label}",
+        "audio_blocks.detail_approval_status": "Stare: {status_label}",
+        "audio_blocks.approval_status_approved": "Aprobat",
+        "audio_blocks.approval_status_pending": "In asteptare",
+        "audio_blocks.marker_generated": "audio",
+        "audio_blocks.marker_missing": "lipsa",
+        "audio_blocks.marker_approved": "aprobat",
+        "audio_blocks.marker_pending": "in_asteptare",
+        "audio_blocks.marker_current": "curent",
+        "audio_blocks.duration_seconds": "{duration_seconds:.1f}s",
+        "audio_blocks.duration_unknown": "--.-s",
         "character_voices.status_total_targets": "Total tinte: {target_count}",
         "character_voices.status_targets_with_samples": "Tinte cu sample-uri: {sample_count}",
         "character_voices.status_assignment_mode": "Alocare voci: {assignment_mode}",
@@ -1121,6 +1352,26 @@ _UI_STRINGS = {
         "project.confirm_ai_chunking_rerun": "Continuarea va sterge datele curente de segmentare, va goli traducerea si toate folderele operatiilor urmatoare si va reseta progresul fluxului dupa curatare inainte de a porni o noua segmentare asistata de AI. Continui?",
         "project.confirm_speech_blocks": "Generarea blocurilor de vorbire poate dura deoarece trimite cate o cerere AI pentru fiecare segment si consuma tokeni AI. Continui?",
         "project.confirm_speech_blocks_rerun": "Continuarea va sterge datele curente pentru blocurile de vorbire, va goli Blocurile Audio si Asamblarea Audio si va reseta progresul fluxului dupa Vocile Personajelor inainte de a porni o noua rulare. Continui?",
+        "project.confirm_speech_blocks_resplit": (
+            "Continuarea va sterge blocurile de vorbire pentru segmentul selectat si va trimite o noua cerere AI. "
+            "Operatiile AI pot dura mult si pot consuma tokeni platiti. Continui?"
+        ),
+        "project.confirm_audio_blocks": (
+            "Generarea audio poate dura mult deoarece pregateste prompturi vocale reutilizabile si apoi "
+            "genereaza fiecare bloc de vorbire pe rand. Rularea poate fi intrerupta si reluata mai tarziu. Continui?"
+        ),
+        "project.confirm_audio_blocks_rerun": (
+            "Continuarea va sterge blocurile audio generate curent, metadatele prompturilor vocale reutilizabile si datele "
+            "Asamblarii Audio inainte de a porni o noua rulare. Continui?"
+        ),
+        "project.confirm_audio_blocks_reset": (
+            "Continuarea va sterge toate blocurile audio generate, prompturile vocale reutilizabile si datele din aval pentru "
+            "Asamblarea Audio. Continui?"
+        ),
+        "project.confirm_audio_blocks_invalidation": (
+            "Aceasta schimbare afecteaza intrarile curente pentru Blocurile Audio. Continuarea va reseta blocurile "
+            "audio generate, aprobarile lor si datele din aval pentru Asamblarea Audio. Continui?"
+        ),
         "project.confirm_translation_reset": "Continuarea va sterge datele curente de traducere si va reseta blocarea limbii pentru acest pas. Continui?",
         "project.confirm_ai_cleanup": "Curatarea asistata de AI poate dura mai mult deoarece trimite mai multe cereri catre furnizorul AI selectat. Continui?",
         "project.confirm_ai_cleanup_rerun": "Continuarea va sterge datele curente de curatare, va goli segmentarea si toate folderele operatiilor urmatoare si va reseta progresul fluxului dupa extragere inainte de a porni o noua curatare asistata de AI. Continui?",
@@ -1134,9 +1385,19 @@ _UI_STRINGS = {
         "progress.ai_translation_retranslate": "Retraducerea segmentului selectat este in curs...",
         "progress.character_discovery": "Descoperirea personajelor este in curs...",
         "progress.speech_blocks": "Generarea blocurilor de vorbire este in curs...",
+        "progress.speech_blocks_resplit": (
+            "Resegmentarea blocurilor de vorbire pentru segmentul selectat este in curs..."
+        ),
+        "progress.audio_blocks": "Generarea blocurilor audio este in curs...",
+        "progress.audio_block_regeneration": "Regenerarea blocului audio selectat este in curs...",
         "dialog.confirm_translation_reset_title": "Confirma Resetarea Traducerii",
         "dialog.confirm_speech_blocks_title": "Porneste Generarea Blocurilor de Vorbire",
         "dialog.confirm_speech_blocks_rerun_title": "Confirma Rerularea Blocurilor de Vorbire",
+        "dialog.confirm_speech_blocks_resplit_title": "Confirma Resegmentarea Segmentului Selectat",
+        "dialog.confirm_audio_blocks_title": "Porneste Generarea Audio",
+        "dialog.confirm_audio_blocks_rerun_title": "Confirma Rerularea Generarii Audio",
+        "dialog.confirm_audio_blocks_reset_title": "Confirma Resetarea Generarii Audio",
+        "dialog.confirm_audio_blocks_invalidation_title": "Confirma Resetarea Blocurilor Audio",
         "dialog.character_discovery_info_title": "Informatii Descoperire Personaje",
         "dialog.character_add_title": "Adauga Personaj",
         "dialog.character_add_prompt": "Introdu numele canonic pentru noul personaj.",

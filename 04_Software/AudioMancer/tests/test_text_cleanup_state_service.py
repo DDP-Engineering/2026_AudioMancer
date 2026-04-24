@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-  # noqa: UP009
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -10,10 +10,11 @@
 @file test_text_cleanup_state_service.py
 @brief Text Cleanup state-service tests for AudioMancer.
 @details Verifies that the Text Cleanup page state service derives previews,
-         notes, and reset payloads from manifest and artifact data.
+         notes, manual edit persistence, and reset payloads from manifest and
+         artifact data.
 @author Eng. Dan Dumitru Pasare
-@date 2026-04-07
-@version 0.3.0
+@date 2026-04-24
+@version 0.4.0
 """
 
 # IMPORTS
@@ -187,7 +188,10 @@ def test_build_text_cleanup_state_surfaces_ai_cleanup_review_warning(tmp_path) -
                 "warning_details": [
                     {
                         "kind": "invalid_page_number_label_corrected",
-                        "message": "AI cleanup corrected one invalid page-number label in window 1 and preserved the text for review.",
+                        "message": (
+                            "AI cleanup corrected one invalid page-number label in window 1 "
+                            "and preserved the text for review."
+                        ),
                     }
                 ],
                 "paragraph_count": 3,
@@ -255,6 +259,47 @@ def test_build_text_cleanup_state_surfaces_ai_cleanup_review_warning(tmp_path) -
 
     assert any("completed with validation warnings" in note for note in cleanup_state["notes"])
     assert any("Input tokens: 300 | Output tokens: 75 | Total: 375" in note for note in cleanup_state["notes"])
+
+
+def test_save_cleaned_text_edit_persists_text_and_resets_downstream(tmp_path) -> None:
+    """
+    @brief      Verify manual cleaned-text edits persist and reset downstream workflow state only.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-24
+    @version    0.1.0
+    """
+    project_root, manifest = project_workspace_service.create_project(
+        "CleanupEditProject",
+        tmp_path,
+    )
+    cleanup_root = project_root / config.CLEANUP_FOLDER_NAME
+    cleanup_root.mkdir(exist_ok=True)
+    (cleanup_root / config.CLEANED_TEXT_FILE_NAME).write_text("Original clean text\n", encoding="utf-8")
+    chunking_root = project_root / config.CHUNKING_FOLDER_NAME
+    chunking_root.mkdir(exist_ok=True)
+    (chunking_root / "artifact.txt").write_text("stale", encoding="utf-8")
+    manifest["current_stage"] = "text_chunking_ready"
+    manifest["operations"]["cleanup"]["status"] = "completed"
+    manifest["operations"]["cleanup"]["output_paths"] = [
+        f"{config.CLEANUP_FOLDER_NAME}/{config.CLEANED_TEXT_FILE_NAME}"
+    ]
+    manifest["operations"]["chunking"]["status"] = "completed"
+    project_workspace_service.save_manifest(manifest, project_root)
+
+    updated_manifest = text_cleanup_state_service.save_cleaned_text_edit(
+        project_root,
+        manifest,
+        "Edited clean text\n",
+    )
+
+    assert (cleanup_root / config.CLEANED_TEXT_FILE_NAME).read_text(encoding="utf-8") == "Edited clean text\n"
+    assert updated_manifest["current_stage"] == "text_cleanup_ready"
+    assert updated_manifest["operations"]["cleanup"]["status"] == "completed"
+    assert updated_manifest["operations"]["chunking"]["status"] == "not_started"
+    assert not (chunking_root / "artifact.txt").exists()
 
 
 def test_build_manifest_after_character_discovery_reset_returns_translation_ready() -> None:

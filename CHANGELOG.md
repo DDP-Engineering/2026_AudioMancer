@@ -10,6 +10,24 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.19.0] - 2026-04-24
+
+### Added
+
+- added manual editing and saving for Text Cleanup cleaned-text output, with downstream workflow reset after saved edits
+- added right-click `Find` and `Find Next` search actions to Text Cleanup extracted/cleaned previews and Text Chunking cleaned/chunk previews
+- added manual editing and saving for the selected Text Chunking chunk, with persisted `20_chunking/output_chunks.json` updates
+
+### Changed
+
+- changed Text Cleanup and Text Chunking save refreshes to preserve relevant preview/list scroll positions after project-state reloads
+- package version updated to `0.19.0`
+
+### Fixed
+
+- fixed Text Cleanup search not-found handling so translated messages are formatted after lookup instead of passing unsupported keyword arguments to the translation helper
+- fixed Text Chunking selected-chunk edits so downstream workflow data is reset from translation onward while preserving the chunking artifact
+
 ## [0.18.1] - 2026-04-22
 
 ### Added

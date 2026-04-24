@@ -10,20 +10,24 @@
 @file text_chunking_state_service.py
 @brief Text-chunking page state helpers for AudioMancer.
 @details Builds the cleaned-text preview, persisted chunk state, AI profile
-         selectors, and operator notes used by the Text Chunking page.
+         selectors, selected-chunk edits, and operator notes used by the Text
+         Chunking page.
 @author Eng. Dan Dumitru Pasare
-@date 2026-04-07
-@version 0.4.0
+@date 2026-04-24
+@version 0.5.0
 """
 
 # IMPORTS
 
+import json
 from pathlib import Path
 
 from audiomancer import config
 from audiomancer.services import (
     deterministic_chunking_service,
     home_presenter_service,
+    operation_runtime_service,
+    project_workspace_service,
     text_cleanup_state_service,
     token_usage_service,
     ui_state_service,
@@ -123,6 +127,70 @@ def build_ai_chunking_profile_state(
         "entries": entries,
         "selected_profile_id": selected_profile_id,
     }
+
+
+def save_chunk_text_edit(
+    project_root: Path,
+    manifest: dict[str, object],
+    chunk_id: str,
+    chunk_text: str,
+) -> dict[str, object]:
+    """
+    @brief      Persist one selected chunk text edit and reset downstream workflow state.
+    @param[in]  project_root Active project root folder.
+    @param[in]  manifest Current project manifest payload.
+    @param[in]  chunk_id Stable chunk identifier to update.
+    @param[in]  chunk_text Edited selected chunk text.
+    @return     Updated manifest payload.
+    @exception  ValueError Raised when the chunk artifact or selected chunk is unavailable.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-24
+    @version    0.1.0
+    """
+    chunk_artifact_path = project_root / config.CHUNKING_FOLDER_NAME / config.CHUNK_ARTIFACT_FILE_NAME
+    if not chunk_artifact_path.is_file():
+        raise ValueError("No chunk artifact is available to edit.")
+    chunks = deterministic_chunking_service.load_chunks(project_root)
+    selected_index = next(
+        (index for index, chunk in enumerate(chunks) if str(chunk.get("chunk_id", "")) == chunk_id),
+        -1,
+    )
+    if selected_index < 0:
+        raise ValueError("The selected chunk is no longer available.")
+    chunks[selected_index]["text"] = chunk_text
+    chunk_artifact_path.write_text(json.dumps(chunks, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    operation_runtime_service.reset_operation_data(
+        project_root,
+        "chunking",
+        include_current=False,
+        keep_input_snapshots=False,
+    )
+    updated_manifest = build_manifest_after_chunk_edit(manifest)
+    project_workspace_service.save_manifest(updated_manifest, project_root)
+    return updated_manifest
+
+
+def build_manifest_after_chunk_edit(manifest: dict[str, object]) -> dict[str, object]:
+    """
+    @brief      Build one manifest payload after a manual selected-chunk edit.
+    @param[in]  manifest Current manifest payload before the edit.
+    @return     Manifest with chunking preserved and downstream operations reset.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-24
+    @version    0.1.0
+    """
+    updated_manifest = dict(manifest)
+    operations = text_cleanup_state_service.normalized_manifest_operations(updated_manifest)
+    default_operations = text_cleanup_state_service.normalized_manifest_operations({})
+    for selected_kind in operation_runtime_service.downstream_operation_kinds("chunking", include_current=False):
+        if selected_kind in default_operations:
+            operations[selected_kind] = default_operations[selected_kind]
+    updated_manifest["operations"] = operations
+    updated_manifest["current_stage"] = "translation_ready"
+    updated_manifest["narrator_profile_name"] = None
+    updated_manifest["narrator_language"] = None
+    return updated_manifest
 
 
 def build_text_chunking_notes(
