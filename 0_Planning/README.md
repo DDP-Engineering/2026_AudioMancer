@@ -12,9 +12,6 @@ Planning notes, architecture drafts, and project decisions.
 
 - `Overview.md` summarizes the intended product workflow and the current
   implementation direction.
-- `Audio Assembly Plan.md` tracks the downstream audio-assembly design work.
-- `Flatten Runtime Project Artifact Layout.md` records the flat project
-  artifact layout decision.
 - `OpenAI TTS Provider Integration.md` tracks the planned online TTS provider
   integration.
 
