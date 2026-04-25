@@ -13,7 +13,7 @@
          application through one centralized string catalog and scale mapping.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 0.24.0
+@version 0.25.0
 """
 
 # ruff: noqa: E501
@@ -85,7 +85,9 @@ _UI_STRINGS = {
         "about.version": "Version: {version}",
         "about.license": "License",
         "about.details": "Eng. Dipl. Dan Dumitru Pasare\npasaredan1979@gmail.com",
-        "help.placeholder": "Use New Project or Open Project to activate one project workspace, then continue through the workflow pages.",
+        "dialog.help_error_title": "Help",
+        "help.missing_file": "The offline help file was not found. Reinstall AudioMancer or open the UserGuide folder from the documentation package.",
+        "help.open_failed": "AudioMancer could not open the help file:\n{path}",
         "status.stop_ai": "Stop AI",
         "status.stage_prefix": "Stage",
         "status.idle": "idle",
@@ -850,7 +852,9 @@ _UI_STRINGS = {
         "about.version": "Versiune: {version}",
         "about.license": "Licenta",
         "about.details": "Ing. Dipl. Dan Dumitru Pasare\npasaredan1979@gmail.com",
-        "help.placeholder": "Foloseste Proiect Nou sau Deschide Proiect pentru a activa un spatiu de lucru, apoi continua prin paginile fluxului.",
+        "dialog.help_error_title": "Ajutor",
+        "help.missing_file": "Fisierul de ajutor offline nu a fost gasit. Reinstaleaza AudioMancer sau deschide dosarul UserGuide din pachetul de documentatie.",
+        "help.open_failed": "AudioMancer nu a putut deschide fisierul de ajutor:\n{path}",
         "status.stop_ai": "Opreste AI",
         "status.stage_prefix": "Etapa",
         "status.idle": "inactiva",

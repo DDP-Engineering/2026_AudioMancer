@@ -175,8 +175,8 @@ order.
 
 Upstream integrations:
 
-- selected narrator state and narrator sample artifacts from `narator.json`
-  and `narator.wav`
+- selected narrator state from `narator.json` and narrator sample artifacts
+  from `narator.wav` plus `narator_sample.json`
 - project-local `voice_assignment_mode` from `project.json`
 - character discovery artifacts from `characters_profile.json`, including the
   structured voice brief and final `voice_definition_prompt`

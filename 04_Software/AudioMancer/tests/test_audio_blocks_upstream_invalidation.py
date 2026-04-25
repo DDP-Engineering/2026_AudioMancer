@@ -13,7 +13,7 @@
          progress only after confirmation.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-23
-@version 0.1.0
+@version 0.1.1
 """
 
 # IMPORTS
@@ -41,7 +41,7 @@ def test_selected_narrator_change_invalidates_persisted_audio_blocks_after_confi
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-23
-    @version    0.1.0
+    @version    0.1.1
     """
     project_root = _create_project(tmp_path, "AudioBlocksNarratorInvalidation")
     custom_profile = narrator_definition_service.create_custom_profile(
@@ -83,7 +83,7 @@ def test_selected_narrator_change_invalidates_persisted_audio_blocks_after_confi
     updated_manifest = project_workspace_service.load_manifest(project_root)
     assert updated_manifest["current_stage"] == "narrator_definition_ready"
     assert updated_manifest["operations"]["audio_blocks"]["status"] == "not_started"
-    assert not (project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / "artifact.txt").exists()
+    assert not (project_root / config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME / "artifact.txt").exists()
 
 
 def _create_project(tmp_path, name: str):
@@ -141,7 +141,9 @@ def _seed_audio_blocks_artifacts(project_root) -> None:
     """
     audio_root = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH
     audio_root.mkdir(parents=True, exist_ok=True)
-    (audio_root / "artifact.txt").write_text("stale", encoding="utf-8")
+    generated_audio_root = project_root / config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME
+    generated_audio_root.mkdir(parents=True, exist_ok=True)
+    (generated_audio_root / "artifact.txt").write_text("stale", encoding="utf-8")
     (audio_root / config.AUDIO_BLOCKS_REPORT_FILE_NAME).write_text(
         json.dumps(
             {
@@ -159,7 +161,7 @@ def _seed_audio_blocks_artifacts(project_root) -> None:
         + "\n",
         encoding="utf-8",
     )
-    (audio_root / config.OPERATION_STATE_FILE_NAME).write_text(
+    (audio_root / config.AUDIO_BLOCKS_STATE_FILE_NAME).write_text(
         json.dumps(
             {
                 "folder_relative_path": config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH,

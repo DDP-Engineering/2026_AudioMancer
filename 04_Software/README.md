@@ -13,4 +13,6 @@ Implementation sources and runnable software artifacts.
 - `AudioMancer/` contains the Python 3.12/PySide6 desktop application,
   project-local runtime services, Qt pages/controllers, prompt templates,
   focused tests, packaging metadata, and the current end-to-end workflow from
-  source import through WAV Audio Assembly.
+  source import through WAV Audio Assembly. The application Help action opens
+  the offline user guide maintained under `../05_SoftwareDocu/UserGuide/` and
+  bundled into release archives as `help/en/`.

@@ -10,10 +10,15 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+- No unreleased application changes.
+
+## [0.27.0] - 2026-04-25
+
 ### Added
 
 - added the English offline end-user guide under `05_SoftwareDocu/UserGuide/`,
-  including HTML, a printable PDF copy, and real UI screenshots
+  including visible version plus creator information, expanded page-by-page
+  operator instructions, HTML, and real UI screenshots
 - bundled the user guide into Windows and Ubuntu release archives under
   `help/en/`
 
@@ -21,6 +26,13 @@ All notable changes to this project will be documented in this file.
 
 - changed the toolbar Help action from a placeholder message to opening the
   packaged offline HTML user guide
+- package version updated to `0.27.0`
+
+### Fixed
+
+- fixed selected narrator sample metadata so `narator.json` remains only the
+  selected-profile state while `narator_sample.json` carries preview metadata
+  for Audio Blocks and Character Voices, with fallback for existing projects
 
 ## [0.26.0] - 2026-04-25
 

@@ -1,0 +1,252 @@
+/*
+Copyright (c) 2026 DDP Engineering
+This software is licensed under the GNU Affero General Public License v3.0
+(AGPL-3.0) with additional Non-Commercial restriction.
+See the LICENSE.txt and LICENSE_NC.txt files for full license details.
+*/
+
+:root {
+    color-scheme: light;
+    --page-bg: #f4f5f7;
+    --panel-bg: #ffffff;
+    --text: #1f2933;
+    --muted: #5d6975;
+    --line: #d5dce4;
+    --accent: #1269b0;
+    --accent-soft: #e8f2fb;
+    --warning: #7a3b00;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    background: var(--page-bg);
+    color: var(--text);
+    font-family: "Segoe UI", Arial, sans-serif;
+    font-size: 18px;
+    line-height: 1.6;
+}
+
+.layout {
+    display: grid;
+    grid-template-columns: 290px minmax(0, 1fr);
+    min-height: 100vh;
+}
+
+.toc {
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow: auto;
+    padding: 24px 18px;
+    background: #111827;
+    color: #ffffff;
+}
+
+.toc h1 {
+    margin: 0 0 6px;
+    font-size: 26px;
+    line-height: 1.15;
+}
+
+.toc p {
+    margin: 0 0 22px;
+    color: #cbd5e1;
+    font-size: 14px;
+}
+
+.toc a {
+    display: block;
+    padding: 8px 10px;
+    border-radius: 6px;
+    color: #e5edf6;
+    text-decoration: none;
+    font-size: 15px;
+}
+
+.toc a:hover,
+.toc a:focus {
+    background: #243447;
+    outline: none;
+}
+
+main {
+    max-width: 1180px;
+    padding: 34px 44px 80px;
+}
+
+section {
+    margin: 0 0 44px;
+    padding: 28px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--panel-bg);
+}
+
+h2 {
+    margin: 0 0 18px;
+    color: #101820;
+    font-size: 30px;
+    line-height: 1.2;
+}
+
+h3 {
+    margin: 28px 0 12px;
+    color: #17202a;
+    font-size: 22px;
+}
+
+p {
+    margin: 0 0 16px;
+}
+
+ul,
+ol {
+    margin: 0 0 18px 28px;
+    padding: 0;
+}
+
+li {
+    margin: 0 0 8px;
+}
+
+code {
+    padding: 2px 5px;
+    border-radius: 4px;
+    background: #eef2f6;
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 0.95em;
+}
+
+.note,
+.warning {
+    margin: 18px 0;
+    padding: 14px 16px;
+    border-radius: 8px;
+}
+
+.version-box {
+    margin: 0 0 20px;
+    padding: 14px 16px;
+    border: 1px solid #cfd8e3;
+    border-radius: 8px;
+    background: #fbfcfe;
+}
+
+.version-box p {
+    margin: 0 0 4px;
+}
+
+.version-box p:last-child {
+    margin-bottom: 0;
+}
+
+.source-note {
+    color: var(--muted);
+    font-size: 15px;
+}
+
+.note {
+    border: 1px solid #b8d8f2;
+    background: var(--accent-soft);
+}
+
+.warning {
+    border: 1px solid #f0c36d;
+    background: #fff5dd;
+    color: var(--warning);
+}
+
+figure {
+    margin: 20px 0 28px;
+}
+
+figure img {
+    display: block;
+    max-width: 100%;
+    height: auto;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: #ffffff;
+}
+
+figcaption {
+    margin-top: 8px;
+    color: var(--muted);
+    font-size: 15px;
+}
+
+.two-column {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px;
+}
+
+.step-card {
+    padding: 16px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: #fbfcfe;
+}
+
+.step-card h3 {
+    margin-top: 0;
+}
+
+@media (max-width: 900px) {
+    .layout {
+        display: block;
+    }
+
+    .toc {
+        position: static;
+        height: auto;
+    }
+
+    main {
+        padding: 22px 14px 48px;
+    }
+
+    section {
+        padding: 20px;
+    }
+
+    .two-column {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media print {
+    body {
+        background: #ffffff;
+        font-size: 12pt;
+    }
+
+    .layout {
+        display: block;
+    }
+
+    .toc {
+        position: static;
+        height: auto;
+        color: #000000;
+        background: #ffffff;
+    }
+
+    .toc a {
+        color: #000000;
+    }
+
+    main {
+        max-width: none;
+        padding: 0;
+    }
+
+    section {
+        break-inside: avoid;
+        border: 1px solid #cccccc;
+    }
+}

@@ -82,7 +82,8 @@ High-level flow:
    cached discovered-model list from `TTS Settings`.
 2. `audio_blocks_service.start_or_continue_generation(...)` loads current
    `Speech Blocks`, filters the generation set to approved blocks, resolves
-   narrator sample metadata from the selected narrator profile when
+   narrator sample metadata from `narator_sample.json`, falls back to the
+   selected narrator profile sample metadata for older projects where
    `narator.json` contains only selection state, loads character samples only
    when narrator-plus-character assignment is active, and reads the selected
    Character Voices language.
@@ -150,9 +151,9 @@ Inputs:
 
 - active project root and manifest
 - selected voice language from `project.json`
-- selected narrator sample audio in root-level `narator.wav`; `narator.json`
-  may contain either full selected-sample metadata or only the selected profile
-  state, in which case the service reads the profile `sample_metadata`
+- selected narrator sample audio in root-level `narator.wav`; selected sample
+  metadata in `narator_sample.json`; older projects with only selected profile
+  state in `narator.json` fall back to the profile `sample_metadata`
 - character sample audio files and metadata from `characters_voice.json` when
   the project uses narrator-plus-character assignment
 - ordered speech blocks in `speech_blocks.json`
@@ -271,8 +272,8 @@ This workflow sits immediately after `Speech Blocks`.
 
 Upstream integrations:
 
-- selected narrator sample state from root-level `narator.wav` and
-  `narator.json`
+- selected narrator sample state from root-level `narator.wav`,
+  `narator_sample.json`, and selected profile state in `narator.json`
 - per-character sample state from `characters_voice.json` when
   `voice_assignment_mode == "narrator_and_characters"`
 - selected Character Voices language from `project.json`

@@ -48,6 +48,7 @@ $appRoot = Join-Path $repoRoot '04_Software\AudioMancer'
 $deliveryRoot = Join-Path $repoRoot '07_Delivery'
 $specPath = Join-Path $scriptRoot 'audiomancer_windows.spec'
 $pyprojectPath = Join-Path $appRoot 'pyproject.toml'
+$userGuidePath = Join-Path $repoRoot '05_SoftwareDocu\UserGuide'
 
 if (-not (Test-Path $pyprojectPath)) {
     throw "Could not locate pyproject.toml at $pyprojectPath"
@@ -126,6 +127,14 @@ Invoke-Step -Name 'Assemble delivery staging folder' -Action {
         Copy-Item -LiteralPath $sourcePath -Destination (Join-Path $stagingPath $fileName) -Force
     }
 
+    if (-not (Test-Path $userGuidePath)) {
+        throw "Required user guide folder is missing: $userGuidePath"
+    }
+    $helpRootPath = Join-Path $stagingPath 'help'
+    $helpEnglishPath = Join-Path $helpRootPath 'en'
+    New-Item -ItemType Directory -Path $helpRootPath -Force | Out-Null
+    Copy-Item -LiteralPath $userGuidePath -Destination $helpEnglishPath -Recurse -Force
+
     $startScriptPath = Join-Path $stagingPath 'Start-AudioMancer.cmd'
     @(
         '@echo off'
@@ -149,6 +158,7 @@ Invoke-Step -Name 'Assemble delivery staging folder' -Action {
         '- Keep the files together; the executable depends on bundled runtime files.'
         ''
         'Configuration and licenses are included next to the executable.'
+        'Offline help is included in help\en\index.html.'
     ) | Set-Content -LiteralPath $releaseNotesPath -Encoding ASCII
 }
 

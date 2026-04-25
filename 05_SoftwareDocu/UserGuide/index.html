@@ -1,0 +1,479 @@
+﻿<!doctype html>
+<!--
+Copyright (c) 2026 DDP Engineering
+This software is licensed under the GNU Affero General Public License v3.0
+(AGPL-3.0) with additional Non-Commercial restriction.
+See the LICENSE.txt and LICENSE_NC.txt files for full license details.
+-->
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>AudioMancer User Guide v0.27.0</title>
+    <link rel="stylesheet" href="assets/styles/help.css">
+</head>
+<body>
+    <div class="layout">
+        <nav class="toc" aria-label="Table of contents">
+            <h1>AudioMancer Help</h1>
+            <p>Version 0.27.0<br>Offline user guide for Windows and Ubuntu.</p>
+            <a href="#welcome">Welcome</a>
+            <a href="#install">Install And Start</a>
+            <a href="#settings">Settings</a>
+            <a href="#ai-settings">AI Settings</a>
+            <a href="#tts-settings">TTS Settings</a>
+            <a href="#project">Create Or Open A Project</a>
+            <a href="#cleanup">Text Cleanup</a>
+            <a href="#chunking">Text Chunking</a>
+            <a href="#translation">AI Translation</a>
+            <a href="#characters">Characters</a>
+            <a href="#narrator">Narator Voice</a>
+            <a href="#character-voices">Character Voices</a>
+            <a href="#speech-blocks">Speech Blocks</a>
+            <a href="#audio-blocks">Audio Blocks</a>
+            <a href="#assembly">Audio Assembly</a>
+            <a href="#export">Export And Results</a>
+            <a href="#troubleshooting">Troubleshooting</a>
+            <a href="#glossary">Glossary</a>
+        </nav>
+
+        <main>
+            <section id="welcome">
+                <h2>Welcome</h2>
+                <div class="version-box">
+                    <p><strong>Help version:</strong> 0.27.0</p>
+                    <p><strong>Application version:</strong> 0.27.0</p>
+                    <p><strong>Creator:</strong> Eng. Dipl. Dan Dumitru Pasare</p>
+                    <p><strong>Contact:</strong> pasaredan1979@gmail.com</p>
+                </div>
+                <p>
+                    AudioMancer helps turn a written book or story into audiobook files. It guides you through the
+                    work one page at a time: import the text, clean it, split it into chunks, prepare voices, generate
+                    audio, and assemble the final audiobook.
+                </p>
+                <p>
+                    This guide is written for book readers and home users. You do not need to understand programming.
+                    Work through the left sidebar from top to bottom. When a page has a <strong>Generate</strong>,
+                    <strong>Start</strong>, <strong>Approve</strong>, or <strong>Save</strong> button, use it only
+                    after you have reviewed the visible text or audio.
+                </p>
+                <div class="note">
+                    AudioMancer stores each book as one project folder. Keep the project folder together and avoid
+                    moving generated files while the application is open.
+                </div>
+                <figure>
+                    <img src="assets/screenshots/home-project.png" alt="AudioMancer Home Project page">
+                    <figcaption>The Home / Project page shows the current project, workflow progress, and export tools.</figcaption>
+                </figure>
+            </section>
+
+            <section id="install">
+                <h2>Install And Start</h2>
+                <div class="two-column">
+                    <div class="step-card">
+                        <h3>Windows</h3>
+                        <ol>
+                            <li>Download the AudioMancer Windows zip file.</li>
+                            <li>Right-click the zip file and choose <strong>Extract All</strong>.</li>
+                            <li>Open the extracted folder.</li>
+                            <li>Double-click <code>AudioMancer.exe</code> or <code>Start-AudioMancer.cmd</code>.</li>
+                        </ol>
+                    </div>
+                    <div class="step-card">
+                        <h3>Ubuntu</h3>
+                        <ol>
+                            <li>Download the AudioMancer Ubuntu zip file.</li>
+                            <li>Extract the full zip folder.</li>
+                            <li>Open a terminal in the extracted folder.</li>
+                            <li>Run <code>./AudioMancer</code> or <code>./start-audiomancer.sh</code>.</li>
+                        </ol>
+                    </div>
+                </div>
+                <div class="warning">
+                    Do not run AudioMancer from inside the zip file. Extract the full folder first and keep all files
+                    together. The application expects its settings, licenses, help files, and runtime files to stay
+                    beside the executable.
+                </div>
+            </section>
+
+            <section id="settings">
+                <h2>Settings</h2>
+                <p>
+                    Open <strong>Settings</strong> from the top toolbar before starting a long project. This dialog
+                    controls the application language, the size of interface text, and simple user preferences.
+                </p>
+                <ol>
+                    <li>Choose the interface language you prefer.</li>
+                    <li>Choose a text size that is comfortable for long review sessions.</li>
+                    <li>Save the settings, then reopen dialogs if you want to confirm the new text size.</li>
+                </ol>
+                <p>
+                    Recommended value for most users: keep the normal text size unless you are using a high-resolution
+                    screen or reading from a distance. If the interface feels crowded, try one step smaller; if you
+                    need easier reading, try one step larger.
+                </p>
+                <figure>
+                    <img src="assets/screenshots/settings-dialog.png" alt="Settings dialog">
+                    <figcaption>The Settings dialog controls the basic application experience.</figcaption>
+                </figure>
+            </section>
+
+            <section id="ai-settings">
+                <h2>AI Settings</h2>
+                <p>
+                    AI Settings stores profiles for AI-assisted cleanup, chunking, translation, character discovery,
+                    and Speech Blocks. A profile tells AudioMancer which AI server, model, and request settings to use.
+                </p>
+                <h3>Create A ChatGPT/OpenAI-Compatible Profile</h3>
+                <ol>
+                    <li>Open <strong>AI Settings</strong>.</li>
+                    <li>Create a new profile and give it a clear name, such as <code>OpenAI GPT-5.4 Mini</code>.</li>
+                    <li>Use an OpenAI-compatible chat endpoint. For OpenAI API accounts, use the endpoint format expected by the dialog.</li>
+                    <li>Enter the model name exactly as the provider documents it.</li>
+                    <li>Enter your API key only in the local settings field. Do not paste keys into project text or prompts.</li>
+                    <li>Use <strong>Connect</strong> or the available test action to verify the profile.</li>
+                    <li>Select the profile as the default for cleanup, chunking, translation, character extraction, and Speech Blocks.</li>
+                    <li>Click <strong>Save AI Settings</strong>.</li>
+                </ol>
+                <h3>Recommended AI Models</h3>
+                <p>
+                    Model availability changes. As of 2026-04-25, OpenAI's official model documentation lists
+                    <code>gpt-5.4</code> as the high-capability choice for complex reasoning and professional
+                    workflows, and smaller variants such as <code>gpt-5.4-mini</code> or <code>gpt-5-mini</code> as
+                    lower-cost choices for well-defined tasks. For AudioMancer, start with a mini model for normal
+                    cleanup, chunking, and translation. Use the strongest available model when character discovery,
+                    scene-aware chunking, or difficult translation quality matters more than cost.
+                </p>
+                <h3>Recommended Request Settings</h3>
+                <ul>
+                    <li><strong>Temperature:</strong> low to medium. Use about <code>0.2</code> for cleanup and translation, and about <code>0.3</code> to <code>0.5</code> for character discovery.</li>
+                    <li><strong>Timeout:</strong> use a generous timeout for long books. If operations often fail, increase the timeout before lowering quality.</li>
+                    <li><strong>Default cleanup profile:</strong> choose your reliable, lower-cost model.</li>
+                    <li><strong>Default chunking profile:</strong> choose the model that best follows structure instructions.</li>
+                    <li><strong>Default translation profile:</strong> choose the best multilingual model you can afford for the target language.</li>
+                    <li><strong>Default Speech Blocks profile:</strong> choose a model that follows JSON and speaker instructions reliably.</li>
+                </ul>
+                <div class="note">
+                    If you are unsure, create one reliable profile first and use it everywhere. Add specialized
+                    profiles later only after you understand where quality or cost needs improvement.
+                </div>
+                <figure>
+                    <img src="assets/screenshots/ai-settings-dialog.png" alt="AI Settings dialog">
+                    <figcaption>AI Settings stores model profiles and default choices for AI-assisted pages.</figcaption>
+                </figure>
+            </section>
+
+            <section id="tts-settings">
+                <h2>TTS Settings</h2>
+                <p>
+                    TTS Settings controls the local voice generation runtime. AudioMancer uses this runtime for
+                    narrator samples, character samples, and final Audio Blocks.
+                </p>
+                <ol>
+                    <li>Start your VoiceWeaver-compatible runtime before generating samples.</li>
+                    <li>Open <strong>TTS Settings</strong>.</li>
+                    <li>Set the runtime base URL and API key if your runtime requires one.</li>
+                    <li>Use the connection test to confirm AudioMancer can reach the runtime.</li>
+                    <li>Choose the voice assignment mode that matches how you want narration and dialogue handled.</li>
+                    <li>Save the settings.</li>
+                </ol>
+                <p>
+                    Recommended value for most home users: keep the default timeouts first. Increase them only when
+                    large samples or long speech blocks fail because the runtime needs more time.
+                </p>
+                <figure>
+                    <img src="assets/screenshots/tts-settings-dialog.png" alt="TTS Settings dialog">
+                    <figcaption>TTS Settings controls the local text-to-speech runtime and generation timeouts.</figcaption>
+                </figure>
+            </section>
+
+            <section id="project">
+                <h2>Create Or Open A Project</h2>
+                <ol>
+                    <li>Click <strong>New Project</strong> to make a new work folder.</li>
+                    <li>Choose a simple project name, such as the book title.</li>
+                    <li>Click <strong>Select Source File</strong> on the Home page.</li>
+                    <li>Select the book or story file. Supported formats include TXT, PDF, RTF, DOCX, ODT, MD, and EPUB.</li>
+                </ol>
+                <p>
+                    Use <strong>Open Project</strong> to return to an existing AudioMancer project folder. The Home
+                    page shows which workflow stages are finished and which are still waiting.
+                </p>
+            </section>
+
+            <section id="cleanup">
+                <h2>Text Cleanup</h2>
+                <p>
+                    Text Cleanup extracts readable text from your source file and prepares it for audiobook work.
+                    This step matters because every later page depends on the cleaned text.
+                </p>
+                <h3>Deterministic Cleanup</h3>
+                <p>
+                    Deterministic cleanup uses fixed local rules. It does not ask an AI model to rewrite your book.
+                    It is best for predictable cleanup such as normalizing line endings, reducing extra blank lines,
+                    and keeping the extracted text stable. Run this first for most books.
+                </p>
+                <h3>AI-Assisted Cleanup</h3>
+                <p>
+                    AI-assisted cleanup sends text chunks to the selected AI profile. Use it when the extracted text
+                    has broken paragraphs, bad OCR-style formatting, or page artifacts that simple rules cannot fix.
+                    Review the result carefully because AI cleanup can sometimes change wording.
+                </p>
+                <figure>
+                    <img src="assets/screenshots/text-cleanup.png" alt="Text Cleanup page">
+                    <figcaption>Text Cleanup shows extracted text and cleanup controls.</figcaption>
+                </figure>
+            </section>
+
+            <section id="chunking">
+                <h2>Text Chunking</h2>
+                <p>
+                    Text Chunking splits the cleaned book into smaller chunks. Chunks make long books easier to
+                    review, translate, and generate as audio.
+                </p>
+                <h3>Deterministic Chunking</h3>
+                <p>
+                    Deterministic chunking splits text by local rules such as paragraph boundaries and size limits.
+                    It is fast, repeatable, and does not use AI. Use it when the source text is clean and you only need
+                    practical chunks for generation.
+                </p>
+                <h3>AI-Assisted Chunking</h3>
+                <p>
+                    AI-assisted chunking asks the selected AI profile to choose better chunk boundaries. This is useful
+                    for scenes, dialogue-heavy text, or chapters where a simple size split would cut in the middle of
+                    a thought. It costs more time and AI tokens but can improve review and audio flow.
+                </p>
+                <ul>
+                    <li><strong>Scene strategy:</strong> good for fiction and chapter-like story flow.</li>
+                    <li><strong>Meaning strategy:</strong> good when the text should stay grouped by topic.</li>
+                    <li><strong>Review:</strong> always inspect the chunk list before continuing.</li>
+                </ul>
+                <figure>
+                    <img src="assets/screenshots/text-chunking.png" alt="Text Chunking page">
+                    <figcaption>The chunk list is the foundation for later Speech Blocks and final audio files.</figcaption>
+                </figure>
+            </section>
+
+            <section id="translation">
+                <h2>AI Translation</h2>
+                <p>
+                    AI Translation is optional. Use it when you want the audiobook in another language. Choose the
+                    target language, start translation, review each translated chunk, and approve the chunks you want
+                    to use.
+                </p>
+                <p>
+                    Translation uses the selected AI Translation profile. The app stores translated chunks separately,
+                    so the original cleaned/chunked text remains available. Approving a translation means you accept it
+                    for the following voice workflow.
+                </p>
+                <div class="note">
+                    Romanian is available as a target language in AudioMancer. For Qwen3 TTS, Romanian speech uses an
+                    unspecified TTS language setting so the runtime can infer pronunciation from the text.
+                </div>
+                <figure>
+                    <img src="assets/screenshots/ai-translation.png" alt="AI Translation page">
+                    <figcaption>Translated chunks must be reviewed and approved before downstream pages use them.</figcaption>
+                </figure>
+            </section>
+
+            <section id="characters">
+                <h2>Characters</h2>
+                <p>
+                    The Characters page identifies people or speaking roles in the book. The result helps
+                    AudioMancer prepare voice prompts for dialogue.
+                </p>
+                <p>
+                    Character discovery uses AI because names, aliases, and personality traits are difficult to detect
+                    with simple rules. Review the result and correct obvious mistakes before generating voices. Good
+                    character descriptions usually produce better voice prompts later.
+                </p>
+                <ul>
+                    <li>Run character discovery after chunking or translation.</li>
+                    <li>Review names, aliases, and descriptions.</li>
+                    <li>Edit, add, or delete character entries when the AI result needs correction.</li>
+                    <li>Approve the set only when the main speaking roles are correct.</li>
+                </ul>
+                <figure>
+                    <img src="assets/screenshots/characters.png" alt="Characters page">
+                    <figcaption>Character profiles help the later Character Voices page create better voice samples.</figcaption>
+                </figure>
+            </section>
+
+            <section id="narrator">
+                <h2>Narator Voice</h2>
+                <p>
+                    The Narator Voice page prepares the main storytelling voice. You can use a preset narrator or
+                    create a custom profile with a voice designer prompt.
+                </p>
+                <ol>
+                    <li>Select or create a narrator profile.</li>
+                    <li>Edit the voice designer prompt if needed. Describe age, tone, clarity, pacing, emotion, and story style.</li>
+                    <li>Keep the preview text short and representative of the book.</li>
+                    <li>Generate a sample, then listen with <strong>Preview</strong>.</li>
+                    <li>Select the narrator you want for the project.</li>
+                </ol>
+                <p>
+                    Samples are preserved per profile. If you create several narrator profiles, you can switch between
+                    them and preview existing samples without regenerating every time.
+                </p>
+                <figure>
+                    <img src="assets/screenshots/narator-voice.png" alt="Narator Voice page">
+                    <figcaption>Narrator samples are stored per profile so you can switch and preview them later.</figcaption>
+                </figure>
+            </section>
+
+            <section id="character-voices">
+                <h2>Character Voices</h2>
+                <p>
+                    Character Voices prepares voice samples for characters discovered earlier. You can generate a
+                    different voice per character or copy the narrator voice when a separate character voice is not
+                    needed.
+                </p>
+                <p>
+                    For each character, review the voice prompt, generate a sample, listen to it, and approve the
+                    target. Character voice samples are used later when dialogue Speech Blocks are converted into
+                    audio.
+                </p>
+                <figure>
+                    <img src="assets/screenshots/character-voices.png" alt="Character Voices page">
+                    <figcaption>Generate and preview character samples before moving to Speech Blocks.</figcaption>
+                </figure>
+            </section>
+
+            <section id="speech-blocks">
+                <h2>Speech Blocks</h2>
+                <p>
+                    Speech Blocks split each text chunk into audiobook instructions. A block can be narration,
+                    dialogue, pause, indication, or background noise metadata.
+                </p>
+                <ul>
+                    <li>Generate Speech Blocks after narrator and character voices are ready.</li>
+                    <li>Review the selected chunk and the generated block list.</li>
+                    <li>Use <strong>Edit</strong> and <strong>Save</strong> to correct speaker, block type, or text.</li>
+                    <li>Use <strong>Insert Speech Block</strong> to add missing narration, dialogue, pause, or indication.</li>
+                    <li>Use <strong>Delete Speech Block</strong> when a block is wrong or duplicated.</li>
+                    <li>Approve blocks after they are correct.</li>
+                </ul>
+                <p>
+                    Narration and dialogue blocks become generated speech. Pause, indication, and background-noise
+                    blocks are metadata. They are still important because they control timing or preserve future
+                    creative instructions.
+                </p>
+                <div class="note">
+                    Pause blocks are not spoken by the voice model. They are stored as metadata and become silence
+                    during Audio Assembly. If no pause duration is found, AudioMancer uses 1000 ms.
+                </div>
+                <figure>
+                    <img src="assets/screenshots/speech-blocks.png" alt="Speech Blocks page">
+                    <figcaption>Speech Blocks are where you fix what should be spoken, paused, or marked as an indication.</figcaption>
+                </figure>
+            </section>
+
+            <section id="audio-blocks">
+                <h2>Audio Blocks</h2>
+                <p>
+                    Audio Blocks generates the actual WAV audio for approved narration and dialogue Speech Blocks.
+                    Pause, indication, and background-noise blocks are metadata-only and do not call the voice model.
+                </p>
+                <ol>
+                    <li>Click <strong>Generate Audio Blocks</strong>.</li>
+                    <li>Wait for the operation to finish, or cancel and resume later.</li>
+                    <li>Preview generated audio.</li>
+                    <li>Approve the audio blocks that are correct.</li>
+                    <li>Regenerate selected audio if the result needs another try.</li>
+                </ol>
+                <p>
+                    Generated audio is stored in the project folder. If you change earlier Speech Blocks or voices,
+                    AudioMancer resets or invalidates affected audio so stale files are not reused by mistake.
+                </p>
+                <figure>
+                    <img src="assets/screenshots/audio-blocks.png" alt="Audio Blocks page">
+                    <figcaption>Audio Blocks is the review stage before the final audiobook is assembled.</figcaption>
+                </figure>
+            </section>
+
+            <section id="assembly">
+                <h2>Audio Assembly</h2>
+                <p>
+                    Audio Assembly combines approved Audio Blocks into final WAV audiobook files under the project
+                    folder's <code>audiobook</code> subfolder.
+                </p>
+                <ul>
+                    <li><strong>Per text chunk:</strong> one output file per original chunk.</li>
+                    <li><strong>Time limit:</strong> split output into parts, such as files no longer than 30 minutes when possible.</li>
+                    <li><strong>Whole audiobook:</strong> one large WAV file for the full book.</li>
+                </ul>
+                <p>
+                    Use silence-gap controls to add short pauses between generated speech blocks or between output
+                    files. Pause Speech Blocks become exact silence in the final files. Long assembly operations can
+                    be interrupted and continued later when the saved state is still valid.
+                </p>
+                <figure>
+                    <img src="assets/screenshots/audio-assembly.png" alt="Audio Assembly page">
+                    <figcaption>Audio Assembly creates the final audiobook deliverables.</figcaption>
+                </figure>
+            </section>
+
+            <section id="export">
+                <h2>Export And Results</h2>
+                <p>
+                    The Home page can export intermediate text results and create a project ZIP snapshot. Final
+                    audiobook WAV files are saved inside the project folder under <code>audiobook</code>.
+                </p>
+                <ul>
+                    <li>Use text exports when you want cleaned text, chunks, translations, characters, or Speech Blocks.</li>
+                    <li>Use <strong>Export Project ZIP</strong> to archive the whole project folder.</li>
+                    <li>Use your normal file manager to copy the final WAV files from <code>audiobook</code>.</li>
+                </ul>
+            </section>
+
+            <section id="troubleshooting">
+                <h2>Troubleshooting</h2>
+                <h3>Buttons are disabled</h3>
+                <p>
+                    Most pages depend on earlier pages. Follow the sidebar from top to bottom and approve required
+                    results before continuing.
+                </p>
+                <h3>No audio is generated</h3>
+                <p>
+                    Check TTS Settings and make sure the VoiceWeaver runtime is running and connected. Also confirm
+                    the relevant Speech Blocks are approved.
+                </p>
+                <h3>The app says data is stale</h3>
+                <p>
+                    When you change earlier workflow data, later generated audio may no longer match. Reset or
+                    regenerate the affected downstream pages.
+                </p>
+                <h3>A long operation was cancelled</h3>
+                <p>
+                    Many AI and audio operations can continue later. Reopen the project and use the same page's
+                    generate button to resume when supported.
+                </p>
+                <h3>Ubuntu display errors</h3>
+                <p>
+                    On a minimal Ubuntu desktop, install the standard Qt desktop libraries if AudioMancer reports
+                    missing system display dependencies.
+                </p>
+            </section>
+
+            <section id="glossary">
+                <h2>Glossary</h2>
+                <ul>
+                    <li><strong>Project:</strong> one folder that stores the source book, generated files, settings, and final audio.</li>
+                    <li><strong>Chunk:</strong> a section of the book used for review and generation.</li>
+                    <li><strong>Narrator:</strong> the main storytelling voice.</li>
+                    <li><strong>Character:</strong> a speaking role found in the book.</li>
+                    <li><strong>Speech Block:</strong> one instruction for narration, dialogue, pause, or metadata.</li>
+                    <li><strong>Audio Block:</strong> generated audio or metadata for one approved Speech Block.</li>
+                    <li><strong>Audio Assembly:</strong> the final step that combines blocks into audiobook WAV files.</li>
+                </ul>
+                <p class="source-note">
+                    AI model recommendations were checked against official OpenAI model documentation on 2026-04-25.
+                    Because hosted model names and prices change, verify the provider documentation before a release.
+                </p>
+            </section>
+        </main>
+    </div>
+</body>
+</html>
+

@@ -126,8 +126,8 @@ Outputs:
 - `audio_profiles.json`
 - `narator.json`
 - `audio_narator_<profile>.wav`
-- `narator.wav` and `narator.json` selected-sample copies for the explicit
-  narrator selection
+- `narator.wav` and `narator_sample.json` selected-sample copies for the
+  explicit narrator selection
 - per-profile `sample_audio_path` and `sample_metadata` entries stored inside
   `audio_profiles.json`
 - updated manifest summary fields:
@@ -216,7 +216,7 @@ Upstream integrations:
 Downstream integrations:
 
 - `Character Voices`, which consumes the explicit selected narrator state plus
-  the root-level selected `narator.wav` and `narator.json`
+  the root-level selected `narator.wav` and `narator_sample.json`
 - future narration generation that will consume the same selected narrator
   contract together with `characters_voice.json`
 

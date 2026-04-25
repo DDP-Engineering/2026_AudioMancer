@@ -44,6 +44,20 @@ copy_required_root_files() {
     done
 }
 
+copy_user_guide() {
+    local target_dir="$1"
+    local source_path="${REPO_ROOT}/05_SoftwareDocu/UserGuide"
+    local help_root="${target_dir}/help"
+
+    if [[ ! -d "${source_path}" ]]; then
+        echo "Required user guide folder is missing: ${source_path}" >&2
+        exit 1
+    fi
+
+    mkdir -p "${help_root}"
+    cp -a "${source_path}" "${help_root}/en"
+}
+
 create_zip_archive() {
     local source_dir="$1"
     local archive_path="$2"
@@ -120,6 +134,7 @@ fi
 invoke_step "Assemble delivery staging folder" mkdir -p "${STAGING_PATH}"
 cp -a "${DIST_BUNDLE_PATH}/." "${STAGING_PATH}/"
 copy_required_root_files "${STAGING_PATH}"
+copy_user_guide "${STAGING_PATH}"
 
 cat >"${STAGING_PATH}/start-audiomancer.sh" <<'SH'
 #!/usr/bin/env bash
@@ -145,6 +160,7 @@ Install:
   the app reports missing system display dependencies.
 
 Configuration and licenses are included next to the executable.
+Offline help is included in help/en/index.html.
 EOF
 
 invoke_step "Create versioned delivery archive" create_zip_archive "${STAGING_PATH}" "${ARCHIVE_PATH}"

@@ -35,5 +35,7 @@ Blocks, WAV Audio Assembly deliverables, Home-page TXT/Markdown exports for
 completed text artifacts, and external full-project ZIP snapshots.
 
 Focused implementation documentation is maintained in `05_SoftwareDocu/`.
+The end-user help bundle is maintained in `05_SoftwareDocu/UserGuide/` and is
+packaged as offline HTML.
 Validation commands and targeted test groups are listed in
 `04_Software/AudioMancer/README.MD`.

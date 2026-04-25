@@ -13,7 +13,7 @@
          settings scaffold exist with the expected baseline contract.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-20
-@version 0.8.7
+@version 0.8.8
 """
 
 # IMPORTS
@@ -34,7 +34,7 @@ def test_config_exposes_expected_identity_and_window_defaults() -> None:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.2.4
+    @version    0.2.5
     """
     assert config.APP_NAME == "AudioMancer"
     assert config.PACKAGE_NAME == "audiomancer"
@@ -65,6 +65,7 @@ def test_config_exposes_expected_identity_and_window_defaults() -> None:
     assert config.NARRATOR_PROFILE_FILE_NAME == "audio_profiles.json"
     assert config.NARRATOR_SELECTION_FILE_NAME == "narator.json"
     assert config.SELECTED_NARRATOR_AUDIO_FILE_NAME == "narator.wav"
+    assert config.SELECTED_NARRATOR_METADATA_FILE_NAME == "narator_sample.json"
     assert config.SPEECH_BLOCKS_OUTPUT_FILE_NAME == "speech_blocks.json"
     assert config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME == "audio_blocks"
     assert config.DEFAULT_TTS_PREVIEW_TEXT_CHARACTER_LIMIT == 512

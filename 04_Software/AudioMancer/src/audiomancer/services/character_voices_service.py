@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-  # noqa: UP009
+# ruff: noqa: E501
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -281,7 +282,7 @@ def save_target_prompt(
     @exception  ValueError Raised when the prompt is empty or the target is not editable.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-20
-    @version    1.1.0
+    @version    1.2.0
     """
     return _update_target_prompt(
         project_root,
@@ -604,13 +605,10 @@ def sync_same_narrator_samples(
     ensure_character_voices_files(project_root)
     if not load_voice_plan(project_root):
         save_voice_targets(project_root, character_targets)
-    narrator_audio_path, narrator_metadata_path = narrator_definition_service.selected_narrator_sample_paths(
+    narrator_audio_path, _narrator_metadata_path = narrator_definition_service.selected_narrator_sample_paths(
         project_root
     )
-    narrator_metadata = (
-        json.loads(narrator_metadata_path.read_text(encoding="utf-8")) if narrator_metadata_path.is_file() else None
-    )
-    narrator_metadata = dict(narrator_metadata) if isinstance(narrator_metadata, dict) else None
+    narrator_metadata = narrator_definition_service.load_selected_narrator_sample_metadata(project_root)
     if not narrator_audio_path.is_file() or narrator_metadata is None:
         for target_payload in character_targets:
             target_id = str(target_payload.get("target_id", "")).strip()
@@ -670,7 +668,7 @@ def sample_runtime_available(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-20
-    @version    1.0.0
+    @version    1.1.0
     """
     return narrator_definition_service.sample_runtime_available(sample_metadata, discovered_models)
 
@@ -689,10 +687,13 @@ def character_voices_is_ready(
     @date       2026-04-20
     @version    1.0.0
     """
-    narrator_audio_path, narrator_metadata_path = narrator_definition_service.selected_narrator_sample_paths(
+    narrator_audio_path, _narrator_metadata_path = narrator_definition_service.selected_narrator_sample_paths(
         project_root
     )
-    if not narrator_audio_path.is_file() or not narrator_metadata_path.is_file():
+    if (
+        not narrator_audio_path.is_file()
+        or narrator_definition_service.load_selected_narrator_sample_metadata(project_root) is None
+    ):
         return False
     character_targets = [
         target for target in voice_targets if str(target.get("target_kind", "")).strip() == TARGET_KIND_CHARACTER
@@ -710,10 +711,13 @@ def selected_narrator_sample_exists(project_root: str | Path) -> bool:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-20
-    @version    1.0.0
+    @version    1.1.0
     """
-    audio_path, metadata_path = narrator_definition_service.selected_narrator_sample_paths(project_root)
-    return audio_path.is_file() and metadata_path.is_file()
+    audio_path, _metadata_path = narrator_definition_service.selected_narrator_sample_paths(project_root)
+    return (
+        audio_path.is_file()
+        and narrator_definition_service.load_selected_narrator_sample_metadata(project_root) is not None
+    )
 
 
 def selected_narrator_sample_metadata(project_root: str | Path) -> dict[str, object] | None:
@@ -724,13 +728,9 @@ def selected_narrator_sample_metadata(project_root: str | Path) -> dict[str, obj
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-20
-    @version    1.0.0
+    @version    1.1.0
     """
-    _audio_path, metadata_path = narrator_definition_service.selected_narrator_sample_paths(project_root)
-    if not metadata_path.is_file():
-        return None
-    payload = json.loads(metadata_path.read_text(encoding="utf-8"))
-    return dict(payload) if isinstance(payload, dict) else None
+    return narrator_definition_service.load_selected_narrator_sample_metadata(project_root)
 
 
 # LOCAL HELPERS

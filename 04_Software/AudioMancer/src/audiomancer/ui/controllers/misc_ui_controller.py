@@ -13,22 +13,25 @@
          dialogs, the common modal progress popup, and title-bar helpers.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-06
-@version 0.7.0
+@version 0.8.0
 """
 
 # IMPORTS
 
 from pathlib import Path
+import sys
 import tomllib
 from typing import TYPE_CHECKING
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QUrl
+from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import (
     QApplication,
     QDialog,
     QDialogButtonBox,
     QHBoxLayout,
     QLabel,
+    QMessageBox,
     QPlainTextEdit,
     QVBoxLayout,
 )
@@ -84,23 +87,46 @@ def show_message(
     _ = timeout_ms
 
 
-def show_help_placeholder(window: "MainWindow") -> None:
+def show_help(window: "MainWindow") -> None:
     """
-    @brief      Show the translated shell help placeholder message.
+    @brief      Open the packaged offline user guide in the system browser.
     @param[in]  window Active main window shell.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.1.2
+    @date       2026-04-25
+    @version    0.2.0
     """
-    show_message(
-        window,
-        ui_state_service.translate(
-            "help.placeholder",
-            ui_state_service.current_language_from_settings(window._settings_payload),
-        ),
-    )
+    current_language = ui_state_service.current_language_from_settings(window._settings_payload)
+    help_index_path = resolve_help_index_path()
+    if help_index_path is None:
+        QMessageBox.warning(
+            window,
+            ui_state_service.translate("dialog.help_error_title", current_language),
+            ui_state_service.translate("help.missing_file", current_language),
+        )
+        return
+    if not QDesktopServices.openUrl(QUrl.fromLocalFile(str(help_index_path))):
+        QMessageBox.warning(
+            window,
+            ui_state_service.translate("dialog.help_error_title", current_language),
+            ui_state_service.translate("help.open_failed", current_language).format(path=str(help_index_path)),
+        )
+
+
+def resolve_help_index_path() -> Path | None:
+    """
+    @brief      Resolve the offline English user-guide entry point.
+    @return     Existing help index path or `None` when unavailable.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-25
+    @version    0.1.0
+    """
+    for candidate_path in _candidate_help_index_paths():
+        if candidate_path.is_file():
+            return candidate_path
+    return None
 
 
 def show_about_dialog(window: "MainWindow") -> None:
@@ -369,6 +395,27 @@ def build_window_title(context: str | None = None) -> str:
     if context:
         return f"{title} | {context}"
     return title
+
+
+# LOCAL HELPERS
+
+
+def _candidate_help_index_paths() -> list[Path]:
+    """
+    @brief      Build ordered candidate locations for the offline user guide.
+    @return     Candidate help index paths in runtime precedence order.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-25
+    @version    0.1.0
+    """
+    executable_folder = Path(sys.executable).resolve().parent
+    return [
+        executable_folder / config.APP_HELP_INDEX_RELATIVE_PATH,
+        Path.cwd().resolve() / config.APP_HELP_INDEX_RELATIVE_PATH,
+        config.APP_ROOT / config.APP_HELP_INDEX_RELATIVE_PATH,
+        config.APP_HELP_SOURCE_INDEX_PATH,
+    ]
 
 
 # END OF FILE

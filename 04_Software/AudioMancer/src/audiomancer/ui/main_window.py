@@ -14,7 +14,7 @@
          so the window remains a thin coordinator.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 1.31.0
+@version 1.32.0
 """
 
 # IMPORTS
@@ -455,7 +455,7 @@ class MainWindow(QMainWindow):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-16
-        @version    0.4.0
+        @version    0.4.1
         """
         toolbar = QToolBar("Main Toolbar", self)
         self._action_new_project = toolbar.addAction("New Project")
@@ -482,7 +482,7 @@ class MainWindow(QMainWindow):
         self._action_open_project.triggered.connect(
             lambda _checked=False: home_ui_controller.handle_open_project_requested(self)
         )
-        self._action_help.triggered.connect(lambda _checked=False: misc_ui_controller.show_help_placeholder(self))
+        self._action_help.triggered.connect(lambda _checked=False: misc_ui_controller.show_help(self))
         self._action_about.triggered.connect(lambda _checked=False: misc_ui_controller.show_about_dialog(self))
         return toolbar
 

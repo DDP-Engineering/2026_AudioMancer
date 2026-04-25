@@ -14,7 +14,7 @@
          operations.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-22
-@version 0.3.1
+@version 0.3.2
 """
 
 # IMPORTS
@@ -71,6 +71,7 @@ _OPERATION_ARTIFACT_FILE_NAMES = {
         config.NARRATOR_PROFILE_FILE_NAME,
         config.NARRATOR_SELECTION_FILE_NAME,
         config.SELECTED_NARRATOR_AUDIO_FILE_NAME,
+        config.SELECTED_NARRATOR_METADATA_FILE_NAME,
     ),
     "character_voices": (config.CHARACTER_VOICES_TARGETS_FILE_NAME,),
     "speech_blocks": (

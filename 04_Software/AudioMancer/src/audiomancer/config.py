@@ -13,7 +13,7 @@
          file support used by the current AudioMancer implementation scaffold.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 1.27.0
+@version 1.28.1
 """
 
 # IMPORTS
@@ -39,6 +39,12 @@ APP_PROMPTS_PATH = APP_ROOT / "prompts"
 
 # @brief Absolute path to the packaged application icon file.
 APP_ICON_PATH = Path(__file__).resolve().parent / "assets" / "icons" / "audiomancer.ico"
+
+# @brief Relative path to the packaged English user-guide HTML entry point.
+APP_HELP_INDEX_RELATIVE_PATH = Path("help") / "en" / "index.html"
+
+# @brief Source-tree English user-guide HTML entry point used during development.
+APP_HELP_SOURCE_INDEX_PATH = APP_ROOT.parents[1] / "05_SoftwareDocu" / "UserGuide" / "index.html"
 
 # Project Workspace And Artifact Naming
 # @brief Stable manifest file name stored at the project root.
@@ -171,7 +177,7 @@ CHARACTER_VOICES_TARGETS_FILE_NAME = "characters_voice.json"
 SELECTED_NARRATOR_AUDIO_FILE_NAME = "narator.wav"
 
 # @brief File name used for the selected narrator sample metadata at the project root.
-SELECTED_NARRATOR_METADATA_FILE_NAME = "narator.json"
+SELECTED_NARRATOR_METADATA_FILE_NAME = "narator_sample.json"
 
 # @brief File name used for persisted Speech Blocks output.
 SPEECH_BLOCKS_OUTPUT_FILE_NAME = "speech_blocks.json"

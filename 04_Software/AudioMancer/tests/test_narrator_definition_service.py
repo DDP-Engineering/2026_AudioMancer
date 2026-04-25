@@ -14,7 +14,7 @@
          generation resolution.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-20
-@version 3.7.0
+@version 3.8.0
 """
 
 # IMPORTS
@@ -92,7 +92,7 @@ def test_narrator_service_stores_single_profile_sample_and_marks_selected_metada
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-17
-    @version    1.3.0
+    @version    1.4.0
     """
     project_root, _manifest = project_workspace_service.create_project("NarratorSampleProject", tmp_path)
     profile = narrator_definition_service.load_profiles(project_root)[0]
@@ -130,9 +130,20 @@ def test_narrator_service_stores_single_profile_sample_and_marks_selected_metada
     assert selected_metadata["role"] == "narrator"
     assert selected_audio_path == project_root / config.SELECTED_NARRATOR_AUDIO_FILE_NAME
     assert selected_metadata_path == project_root / config.SELECTED_NARRATOR_METADATA_FILE_NAME
+    assert selected_metadata_path != project_root / config.NARRATOR_SELECTION_FILE_NAME
     assert profile_metadata_path == project_root / config.NARRATOR_PROFILE_FILE_NAME
     assert selected_audio_path.read_bytes() == b"RIFF-test-wav"
     assert json.loads(selected_metadata_path.read_text(encoding="utf-8"))["is_selected"] is True
+    assert (
+        json.loads((project_root / config.NARRATOR_SELECTION_FILE_NAME).read_text(encoding="utf-8"))[
+            "selected_profile_id"
+        ]
+        == profile["profile_id"]
+    )
+    selected_metadata_path.unlink()
+    fallback_metadata = narrator_definition_service.load_selected_narrator_sample_metadata(project_root)
+    assert fallback_metadata is not None
+    assert fallback_metadata["preview_text"] == "Preview text for the narrator."
     assert not list(project_root.glob("audio_narator_*.json"))
 
 

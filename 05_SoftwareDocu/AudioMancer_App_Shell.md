@@ -67,6 +67,9 @@ The initial shell consists of:
 - an About dialog with scrollable AGPL license text and the non-commercial
   addendum, localized to the current UI language when localized companion
   files are available
+- a Help toolbar action that opens the packaged offline English user guide
+  from `help/en/index.html`, falling back to the source-tree UserGuide during
+  development
 - app-root `LICENSE.txt`, `LICENSE_NC.txt`, `LICENSE_ro.txt`, and
   `LICENSE_NC_ro.txt` files used for the About dialog and intended delivery
   layout

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-  # noqa: UP009
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -12,10 +13,12 @@
          pages are created without workflow functionality.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-16
-@version 1.5.0
+@version 1.6.0
 """
 
 # IMPORTS
+
+from pathlib import Path
 
 from PySide6.QtWidgets import (
     QApplication,
@@ -116,6 +119,56 @@ def test_main_window_show_message_does_not_create_status_bar(qtbot, default_sett
     window.show_message("Transient shell message")
 
     assert not window.findChildren(QStatusBar)
+
+
+def test_help_index_resolves_user_guide_source() -> None:
+    """
+    @brief      Verify the source-tree offline help guide can be resolved.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-25
+    @version    0.1.0
+    """
+    resolved_path = misc_ui_controller.resolve_help_index_path()
+
+    assert resolved_path == config.APP_HELP_SOURCE_INDEX_PATH
+    assert resolved_path.is_file()
+
+
+def test_help_action_opens_resolved_user_guide(qtbot, monkeypatch, default_settings_payload) -> None:
+    """
+    @brief      Verify the Help toolbar action opens the offline user guide URL.
+    @param[in]  qtbot Qt test helper fixture.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  default_settings_payload Default test settings payload fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-25
+    @version    0.1.0
+    """
+    opened_paths: list[str] = []
+    window = MainWindow(settings_payload=default_settings_payload)
+    qtbot.addWidget(window)
+
+    def _fake_open_url(url):
+        """
+        @brief      Record one requested help URL.
+        @param[in]  url Qt URL requested by the Help action.
+        @return     True to emulate successful system-browser opening.
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-25
+        @version    0.1.0
+        """
+        opened_paths.append(url.toLocalFile())
+        return True
+
+    monkeypatch.setattr(misc_ui_controller.QDesktopServices, "openUrl", _fake_open_url)
+
+    window._action_help.trigger()
+
+    assert [Path(path) for path in opened_paths] == [config.APP_HELP_SOURCE_INDEX_PATH]
 
 
 def test_about_dialog_includes_license_text(qtbot, default_settings_payload) -> None:
@@ -320,9 +373,24 @@ def test_main_window_saves_tts_settings_dialog_payload(monkeypatch, qtbot, tmp_p
     saved_tts_plans = []
 
     def _fake_load_settings():
+        """
+        @brief      Return the mutable test settings payload.
+        @return     Copied persisted settings payload.
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-25
+        @version    0.1.0
+        """
         return dict(persisted_payload)
 
     def _fake_save_settings(payload):
+        """
+        @brief      Capture and persist one test settings payload.
+        @param[in]  payload Settings payload being saved.
+        @return     None.
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-25
+        @version    0.1.0
+        """
         saved_payloads.append(dict(payload))
         persisted_payload.update(payload)
 

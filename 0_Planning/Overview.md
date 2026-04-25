@@ -17,6 +17,10 @@ narration data, and support the operator through the full pipeline required to
 generate audiobooks with personalized character voices or real voice-based
 narration in a clear, efficient, and maintainable workflow.
 
+The application should also provide offline end-user help for non-technical
+book readers. The current help bundle is maintained under
+`05_SoftwareDocu/UserGuide/` and is delivered as local HTML.
+
 ## 2. Final Product Vision
 
 The final application should be a complete audiobook-preparation workstation,

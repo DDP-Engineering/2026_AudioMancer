@@ -14,7 +14,7 @@
          normalization.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-23
-@version 1.4.0
+@version 1.5.0
 """
 
 # IMPORTS
@@ -162,7 +162,7 @@ def test_audio_blocks_service_same_narrator_mode_uses_narrator_prompt_for_charac
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.1.0
+    @version    0.2.0
     """
     project_root, manifest = _create_audio_blocks_project(tmp_path, "AudioBlocksServiceSameNarrator")
     narrator_definition_service.save_tts_plan(
@@ -170,6 +170,7 @@ def test_audio_blocks_service_same_narrator_mode_uses_narrator_prompt_for_charac
         {"voice_assignment_mode": "same_narrator"},
         _runtime_settings()["discovered_models"],
     )
+    narrator_definition_service.selected_narrator_sample_paths(project_root)[1].unlink()
     character_voices_service.delete_target_sample(project_root, "character_alice")
     manifest = project_workspace_service.load_manifest(project_root)
     wait_payloads = [

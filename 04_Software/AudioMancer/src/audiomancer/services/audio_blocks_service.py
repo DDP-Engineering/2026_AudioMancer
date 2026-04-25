@@ -878,7 +878,7 @@ def _resolve_generation_context(
     @exception  ValueError Raised when prerequisites or runtime settings are invalid.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-23
-    @version    0.3.0
+    @version    0.4.0
     """
     speech_blocks = speech_blocks_service.sort_speech_blocks(speech_blocks_service.load_speech_blocks(project_root))
     if not speech_blocks:
@@ -910,14 +910,14 @@ def _resolve_generation_context(
         project_root,
         narrator_definition_service.DEFAULT_NARRATOR_LANGUAGE,
     )
-    narrator_audio_path, narrator_metadata_path = narrator_definition_service.selected_narrator_sample_paths(
+    narrator_audio_path, _narrator_metadata_path = narrator_definition_service.selected_narrator_sample_paths(
         project_root
     )
     narrator_metadata: dict[str, object] = {}
     if speech_audio_blocks:
-        if not narrator_audio_path.is_file() or not narrator_metadata_path.is_file():
+        if not narrator_audio_path.is_file():
             raise ValueError("Generate the selected narrator sample before starting Audio Blocks.")
-        narrator_metadata = json.loads(narrator_metadata_path.read_text(encoding="utf-8"))
+        narrator_metadata = narrator_definition_service.load_selected_narrator_sample_metadata(project_root)
         if not isinstance(narrator_metadata, dict):
             raise ValueError("The selected narrator sample metadata is missing or invalid.")
         narrator_metadata = _resolve_selected_narrator_sample_metadata(project_root, narrator_metadata)

@@ -14,7 +14,7 @@
          metadata records whether that sample is selected.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-20
-@version 3.9.2
+@version 3.10.0
 """
 
 # IMPORTS
@@ -793,12 +793,44 @@ def selected_narrator_sample_paths(project_root: str | Path) -> tuple[Path, Path
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-17
-    @version    1.3.0
+    @version    1.4.0
     """
     return (
         Path(project_root) / config.SELECTED_NARRATOR_AUDIO_FILE_NAME,
         Path(project_root) / config.SELECTED_NARRATOR_METADATA_FILE_NAME,
     )
+
+
+def load_selected_narrator_sample_metadata(project_root: str | Path) -> dict[str, object] | None:
+    """
+    @brief      Load selected narrator sample metadata with profile-owned fallback.
+    @param[in]  project_root Active project root folder.
+    @return     Selected narrator sample metadata payload or None when unavailable.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-25
+    @version    0.1.0
+    """
+    ensure_narrator_definition_files(project_root)
+    _audio_path, metadata_path = selected_narrator_sample_paths(project_root)
+    if metadata_path.is_file():
+        payload = json.loads(metadata_path.read_text(encoding="utf-8"))
+        if isinstance(payload, dict) and str(payload.get("preview_text", "")).strip():
+            return dict(payload)
+
+    selected_state = load_selected_profile_state(project_root)
+    selected_profile_id = str(selected_state.get("selected_profile_id", "") or "").strip()
+    if not selected_profile_id:
+        return None
+    profile_metadata = load_profile_sample_metadata(project_root, selected_profile_id)
+    if not isinstance(profile_metadata, dict):
+        return None
+    return {
+        **dict(profile_metadata),
+        "selected_profile_id": selected_profile_id,
+        "is_selected": True,
+        "role": "narrator",
+    }
 
 
 def clear_selected_narrator_sample(project_root: str | Path) -> None:
@@ -809,14 +841,14 @@ def clear_selected_narrator_sample(project_root: str | Path) -> None:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-17
-    @version    1.5.0
+    @version    1.6.0
     """
     audio_path, metadata_path = selected_narrator_sample_paths(project_root)
     if audio_path.exists():
         audio_path.unlink()
     if metadata_path.exists():
         metadata_path.unlink()
-    _set_profile_sample_selection_flags(project_root, None)
+    clear_narrator_selection(project_root)
 
 
 def copy_selected_narrator_sample(project_root: str | Path, profile_id: str) -> dict[str, object] | None:
