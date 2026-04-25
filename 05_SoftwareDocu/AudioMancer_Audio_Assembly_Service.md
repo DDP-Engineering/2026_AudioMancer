@@ -20,6 +20,8 @@ deliverables under the project-root `audiobook/` folder.
 - validate that all Audio Blocks are approved and reference compatible WAV files
 - compose output files for per-chunk, time-limited, or whole-book delivery
 - add configurable silence gaps between blocks and between chunks or output files
+- convert metadata-only pause Audio Blocks into silence inside the composed WAV
+  output
 - write output files through temporary paths before publishing final WAV files
 - persist resumable composition state in `audio_assembly_state.json`
 - persist generated-output metadata in `audio_assembly_report.json`
@@ -58,8 +60,9 @@ High-level flow:
 3. Pressing `Generate Audio` shows a long-operation confirmation and starts the
    shared threaded operation runner with operation kind `audio_assembly`.
 4. `audio_assembly_service.start_or_continue_composition(...)` loads approved
-   Audio Blocks, validates that generated WAV files exist, checks that WAV
-   parameters are compatible, and builds an input/settings fingerprint.
+   Audio Blocks, validates that generated WAV files exist for playable blocks,
+   checks that WAV parameters are compatible, preserves metadata-only pause
+   blocks as silence, and builds an input/settings fingerprint.
 5. If existing operation state belongs to different inputs or settings, the
    service rejects continuation and requires an explicit reset.
 6. The service builds an output plan according to the selected mode and skips
@@ -96,7 +99,8 @@ Inputs:
 
 - active project root and manifest
 - `project.json.audio_assembly_settings`
-- approved generated Audio Blocks from `audio_blocks.json`
+- approved generated Audio Blocks from `audio_blocks.json`, including
+  metadata-only pause blocks
 - generated source WAV paths under `audio_blocks/`
 
 Outputs:
@@ -139,7 +143,12 @@ Persisted output records include:
 Current invariants:
 
 - Audio Assembly uses approved, generated Audio Blocks only
-- metadata-only Audio Blocks are excluded from composed audio
+- metadata-only pause Audio Blocks are included as silence using
+  `pause_duration_ms`, or `1000 ms` when no valid duration exists
+- metadata-only indication and background-noise Audio Blocks are skipped by the
+  current composer
+- approved Audio Blocks are assembled in canonical book order: source chunk
+  order, then chunk-local `sequence_index`
 - all source WAV files in a run must share compatible channel count, sample
   width, frame rate, compression type, and compression name
 - persisted resume requires the current input/settings fingerprint to match the

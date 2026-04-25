@@ -11,8 +11,8 @@
 @brief Package definition for the AudioMancer application scaffold.
 @details Exposes the package version for the desktop application shell.
 @author Eng. Dan Dumitru Pasare
-@date 2026-04-24
-@version 0.3.0
+@date 2026-04-25
+@version 0.4.0
 """
 
 # IMPORTS
@@ -21,7 +21,7 @@ from .app import main
 
 # CONSTANTS
 
-__version__ = "0.19.0"
+__version__ = "0.24.0"
 
 # PUBLIC API
 

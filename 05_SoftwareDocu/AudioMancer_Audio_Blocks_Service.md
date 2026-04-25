@@ -25,8 +25,8 @@ generate one reviewable WAV per approved speech block under the root-level
 - build one reusable client-owned `voice_clone_prompt` payload per referenced
   narrator or character sample through `POST /v1/voice/clone-prompt`
 - generate one final WAV plus metadata pair per approved speech block in stable
-  sequence order, splitting long Audio Blocks internally when the loaded clone model's
-  runtime `max_new_tokens` budget requires it
+  book order, splitting long Audio Blocks internally when the loaded clone
+  model's runtime `max_new_tokens` budget requires it
 - persist resumable operation state, report data, reusable prompt metadata, and
   generated artifacts after each meaningful step
 - support responsive cancellation and restart-safe continuation from the saved
@@ -36,6 +36,8 @@ generate one reviewable WAV per approved speech block under the root-level
 - allow incremental generation when only some Speech Blocks are approved; the
   remaining unapproved Speech Blocks stay pending until they are approved and
   generation is run again
+- represent `pause`, `background_noise`, and `indication` Speech Blocks as
+  metadata-only Audio Blocks that do not call VoiceWeaver
 - build page state, notes, progress, and selected-block details for the
   `Audio Blocks` page
 - coordinate confirmation popups, modal progress, destructive rerun or reset,
@@ -97,12 +99,13 @@ High-level flow:
 6. Voice targets are processed first. Existing persisted reusable prompt
    payloads are reused only when target id, sample fingerprint, sample text,
    selected language, and clone-model id still match.
-7. Each approved speech block is then synthesized in `sequence_index` order
-   through the documented `POST /v1/voice/clone-from-prompt` endpoint using the
-   persisted client-owned `voice_clone_prompt` payload and
-   `model_parameters={"max_new_tokens": resolved_budget}`. Long blocks are split
-   by paragraph/sentence, then clause punctuation, then word groups, and the
-   completed part WAVs are stitched with Python `wave`.
+7. Each approved speech block is then synthesized in canonical book order:
+   source chunk order first, then that chunk's local `sequence_index`. The
+   service calls the documented `POST /v1/voice/clone-from-prompt` endpoint
+   using the persisted client-owned `voice_clone_prompt` payload and
+   `model_parameters={"max_new_tokens": resolved_budget}`. Long blocks are
+   split by paragraph/sentence, then clause punctuation, then word groups, and
+   the completed part WAVs are stitched with Python `wave`.
 8. After each generated block, and after each completed split part, the service rewrites
    `audio_blocks.json`, `audio_blocks_report.json`, `voice_clone_profiles.json`,
    and `audio_blocks_state.json`.
@@ -161,10 +164,10 @@ Outputs:
 - `audio_blocks_report.json`
 - `audio_blocks_state.json`
 - `voice_clone_profiles.json`
-- `audio_blocks/<order_no_6digits>_<character_normalized_name>.wav`
-- `audio_blocks/<order_no_6digits>_<character_normalized_name>.json`
+- `audio_blocks/<chunk_no_4digits>_<chunk_local_no_6digits>_<character_normalized_name>.wav`
+- `audio_blocks/<chunk_no_4digits>_<chunk_local_no_6digits>_<character_normalized_name>.json`
 - optional split part WAVs under
-  `audio_blocks/parts/<order_no_6digits>_<character_normalized_name>_partNNN.wav`
+  `audio_blocks/parts/<chunk_no_4digits>_<chunk_local_no_6digits>_<character_normalized_name>_partNNN.wav`
 - updated compact manifest summary for `operations["audio_blocks"]`
 - updated manifest stage `audio_blocks_ready` after full generation plus approval
 
@@ -178,6 +181,9 @@ Persisted audio-block payloads include at minimum:
 - `speaker_id`
 - `speaker_display_name`
 - `normalized_speaker_name`
+- `content_kind`
+- `metadata_only`
+- `pause_duration_ms` for pause blocks when an explicit duration was parsed
 - `speech_block_approved`
 - `text`
 - `voice_target_id`
@@ -213,13 +219,23 @@ Persisted reusable clone-prompt payloads include:
 Current invariants:
 
 - speech-block filenames are stable and deterministic:
-  `<order_no_6digits>_<character_normalized_name>`
+  `<chunk_no_4digits>_<chunk_local_no_6digits>_<character_normalized_name>`
+- `sequence_index` mirrors the Speech Blocks chunk-local index; it is not
+  globally unique
+- Audio Blocks lookup and merge operations match records by `speech_block_id`
+- generated output ordering is source chunk order, then chunk-local
+  `sequence_index`
 - `normalized_speaker_name` is ASCII-safe and derived through
   `normalize_speaker_name(...)`
 - one referenced voice target produces one reusable client-owned clone-prompt
   payload per input fingerprint
 - unapproved Speech Blocks remain present in `audio_blocks.json`, but they are
   skipped by generation until `speech_block_approved` becomes true
+- metadata-only `pause`, `background_noise`, and `indication` blocks are marked
+  generated and approved automatically when their source Speech Block is
+  approved
+- pause blocks retain a millisecond duration for Audio Assembly silence
+  insertion; the downstream default is `1000 ms`
 - all approvals are explicit; generation never auto-approves audio
 - `approve_all_audio_blocks(...)` updates only already generated blocks
 - `audio_blocks_stage_status` becomes `completed` only when generated and

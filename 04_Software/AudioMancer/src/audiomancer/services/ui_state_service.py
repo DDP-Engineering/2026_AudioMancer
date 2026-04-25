@@ -111,6 +111,8 @@ _UI_STRINGS = {
         "status.speech_block_saved": "Speech Block saved.",
         "status.speech_block_approved": "Speech Block approved.",
         "status.speech_block_reset": "Speech Block reset.",
+        "status.speech_block_inserted": "Speech Block inserted.",
+        "status.speech_block_deleted": "Speech Block deleted.",
         "status.speech_blocks_resplit": "Selected chunk re-split completed.",
         "status.audio_blocks_generated": "Audio Blocks generated.",
         "status.audio_blocks_reset": "Audio Blocks reset.",
@@ -501,6 +503,9 @@ _UI_STRINGS = {
         "speech_blocks.content_dialogue": "Dialogue",
         "speech_blocks.content_background_noise": "Background Noise",
         "speech_blocks.content_pause": "Pause",
+        "speech_blocks.content_indication": "Indication",
+        "speech_blocks.insert_block": "Insert Speech Block",
+        "speech_blocks.delete_block": "Delete Speech Block",
         "speech_blocks.resplit_selected": "Re-Split Selected Chunk",
         "speech_blocks.reset_block": "Reset",
         "speech_blocks.edit_block": "Edit",
@@ -726,6 +731,10 @@ _UI_STRINGS = {
             "Continuing will erase the Speech Blocks for the selected chunk and send a new AI request. "
             "AI operations can take a long time and may consume paid tokens. Continue?"
         ),
+        "project.confirm_delete_speech_block": (
+            "Continuing will delete the selected Speech Block, renumber the chunk, and reset Audio Blocks plus "
+            "Audio Assembly. Continue?"
+        ),
         "project.confirm_audio_blocks": (
             "Audio generation can take a long time because it prepares reusable voice prompts and then "
             "generates each speech block one by one. The run can be interrupted and resumed later. Continue?"
@@ -763,6 +772,7 @@ _UI_STRINGS = {
         "dialog.confirm_speech_blocks_title": "Start Speech Blocks Generation",
         "dialog.confirm_speech_blocks_rerun_title": "Confirm Speech Blocks Rerun",
         "dialog.confirm_speech_blocks_resplit_title": "Confirm Selected Chunk Re-Split",
+        "dialog.confirm_delete_speech_block_title": "Delete Speech Block",
         "dialog.confirm_audio_blocks_title": "Start Audio Generation",
         "dialog.confirm_audio_blocks_rerun_title": "Confirm Audio Generation Rerun",
         "dialog.confirm_audio_blocks_reset_title": "Confirm Audio Generation Reset",
@@ -855,6 +865,8 @@ _UI_STRINGS = {
         "status.speech_block_saved": "Blocul de vorbire a fost salvat.",
         "status.speech_block_approved": "Blocul de vorbire a fost aprobat.",
         "status.speech_block_reset": "Blocul de vorbire a fost resetat.",
+        "status.speech_block_inserted": "Blocul de vorbire a fost inserat.",
+        "status.speech_block_deleted": "Blocul de vorbire a fost sters.",
         "status.speech_blocks_resplit": "Resegmentarea segmentului selectat a fost finalizata.",
         "status.audio_blocks_generated": "Blocurile audio au fost generate.",
         "status.audio_blocks_reset": "Blocurile audio au fost resetate.",
@@ -1246,6 +1258,9 @@ _UI_STRINGS = {
         "speech_blocks.content_dialogue": "Dialog",
         "speech_blocks.content_background_noise": "Zgomot de Fundal",
         "speech_blocks.content_pause": "Pauza",
+        "speech_blocks.content_indication": "Indicatie",
+        "speech_blocks.insert_block": "Insereaza Bloc Vorbire",
+        "speech_blocks.delete_block": "Sterge Bloc Vorbire",
         "speech_blocks.resplit_selected": "Resegmenteaza Segmentul Selectat",
         "speech_blocks.reset_block": "Reseteaza",
         "speech_blocks.edit_block": "Editeaza",
@@ -1478,6 +1493,10 @@ _UI_STRINGS = {
             "Continuarea va sterge blocurile de vorbire pentru segmentul selectat si va trimite o noua cerere AI. "
             "Operatiile AI pot dura mult si pot consuma tokeni platiti. Continui?"
         ),
+        "project.confirm_delete_speech_block": (
+            "Continuarea va sterge blocul de vorbire selectat, va renumerota segmentul si va reseta Blocurile Audio "
+            "plus Asamblarea Audio. Continui?"
+        ),
         "project.confirm_audio_blocks": (
             "Generarea audio poate dura mult deoarece pregateste prompturi vocale reutilizabile si apoi "
             "genereaza fiecare bloc de vorbire pe rand. Rularea poate fi intrerupta si reluata mai tarziu. Continui?"
@@ -1517,6 +1536,7 @@ _UI_STRINGS = {
         "dialog.confirm_speech_blocks_title": "Porneste Generarea Blocurilor de Vorbire",
         "dialog.confirm_speech_blocks_rerun_title": "Confirma Rerularea Blocurilor de Vorbire",
         "dialog.confirm_speech_blocks_resplit_title": "Confirma Resegmentarea Segmentului Selectat",
+        "dialog.confirm_delete_speech_block_title": "Sterge Bloc Vorbire",
         "dialog.confirm_audio_blocks_title": "Porneste Generarea Audio",
         "dialog.confirm_audio_blocks_rerun_title": "Confirma Rerularea Generarii Audio",
         "dialog.confirm_audio_blocks_reset_title": "Confirma Resetarea Generarii Audio",

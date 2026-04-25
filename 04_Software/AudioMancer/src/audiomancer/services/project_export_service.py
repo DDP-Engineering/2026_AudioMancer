@@ -13,7 +13,7 @@
          project artifacts without modifying the active project workspace.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-25
-@version 0.3.0
+@version 0.3.1
 """
 
 # IMPORTS
@@ -482,12 +482,12 @@ def _build_speech_blocks_document(project_root: Path, manifest: dict[str, object
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.1.0
+    @version    0.1.1
     """
     report = speech_blocks_service.load_speech_blocks_report(project_root) or {}
     state = speech_blocks_service.load_operation_state(project_root) or {}
     metadata = _metadata_from_state(state)
-    speech_blocks = _sorted_by_sequence(speech_blocks_service.load_speech_blocks(project_root))
+    speech_blocks = speech_blocks_service.sort_speech_blocks(speech_blocks_service.load_speech_blocks(project_root))
     parameters = _compact_fields(
         [
             ("Source Language", _first_value(report.get("source_language"), metadata.get("source_language"))),

@@ -14,12 +14,12 @@
          controls for the Speech Blocks workflow.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-24
-@version 0.2.4
+@version 0.3.2
 """
 
 # IMPORTS
 
-from PySide6.QtCore import Signal
+from PySide6.QtCore import QTimer, Signal
 from PySide6.QtWidgets import (
     QComboBox,
     QGroupBox,
@@ -43,13 +43,15 @@ class SpeechBlocksPage(QWidget):
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-24
-    @version    0.2.3
+    @version    0.3.2
     """
 
     generate_requested = Signal(str)
     reset_generation_requested = Signal()
     approve_all_requested = Signal()
     resplit_selected_requested = Signal(str)
+    insert_block_requested = Signal(str, str)
+    delete_block_requested = Signal(str)
     edit_started = Signal(str)
     save_block_requested = Signal(str, str, str, str)
     reset_block_requested = Signal(str)
@@ -63,7 +65,7 @@ class SpeechBlocksPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-24
-        @version    0.2.3
+        @version    0.3.0
         """
         super().__init__(parent)
         self._current_language = "en"
@@ -103,10 +105,19 @@ class SpeechBlocksPage(QWidget):
         layout.addLayout(header_row)
 
         self._chunk_group = QGroupBox("Chunk List", self)
-        chunk_layout = QVBoxLayout(self._chunk_group)
+        chunk_layout = QHBoxLayout(self._chunk_group)
         self._chunk_list = QListWidget(self)
         self._chunk_list.currentRowChanged.connect(self._show_selected_chunk)
-        chunk_layout.addWidget(self._chunk_list)
+        chunk_layout.addWidget(self._chunk_list, 1)
+        chunk_actions_layout = QVBoxLayout()
+        self._insert_block_button = QPushButton("Insert Speech Block")
+        self._insert_block_button.clicked.connect(self._emit_insert_block)
+        chunk_actions_layout.addWidget(self._insert_block_button)
+        self._delete_block_button = QPushButton("Delete Speech Block")
+        self._delete_block_button.clicked.connect(self._emit_delete_block)
+        chunk_actions_layout.addWidget(self._delete_block_button)
+        chunk_actions_layout.addStretch(1)
+        chunk_layout.addLayout(chunk_actions_layout)
         self._chunk_group.setMinimumHeight(94)
         self._chunk_group.setMaximumHeight(130)
         layout.addWidget(self._chunk_group)
@@ -258,7 +269,7 @@ class SpeechBlocksPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-24
-        @version    0.2.1
+        @version    0.2.2
         """
         _ = selected_source_language
         _ = processed_chunk_count
@@ -266,7 +277,7 @@ class SpeechBlocksPage(QWidget):
         _ = approved_block_count
         _ = total_block_count
         self._source_chunks = sorted(source_chunks, key=lambda item: int(item.get("sequence_index", 0)))
-        self._speech_blocks = sorted(speech_blocks, key=lambda item: int(item.get("sequence_index", 0)))
+        self._speech_blocks = speech_blocks_service.sort_speech_blocks(speech_blocks)
         self._speaker_catalog = list(speaker_catalog or [])
         self._content_kind_options = list(content_kind_options or [])
         self._stage_status = stage_status
@@ -296,7 +307,7 @@ class SpeechBlocksPage(QWidget):
                         break
             self._chunk_list.setCurrentRow(selected_row)
             self._select_block_by_id(current_block_id)
-            self._restore_source_scroll_position(current_source_scroll_position)
+            self.restore_source_scroll_position(current_source_scroll_position)
         else:
             self._show_selected_chunk(-1)
         self._apply_control_state()
@@ -348,6 +359,30 @@ class SpeechBlocksPage(QWidget):
         """
         return self._current_block_id
 
+    def source_scroll_position(self) -> int:
+        """
+        @brief      Return the selected-chunk text vertical scroll position.
+        @return     Current vertical scrollbar value.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-25
+        @version    0.1.0
+        """
+        return int(self._source_text_edit.verticalScrollBar().value())
+
+    def restore_source_scroll_position(self, scroll_position: int) -> None:
+        """
+        @brief      Restore the selected-chunk text vertical scroll position.
+        @param[in]  scroll_position Vertical scrollbar value to restore.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-25
+        @version    0.2.0
+        """
+        self._restore_source_scroll_position(scroll_position)
+        QTimer.singleShot(0, lambda: self._restore_source_scroll_position(scroll_position))
+
     def advance_to_next_block(self) -> None:
         """
         @brief      Move the visible Speech Block selection one row forward when possible.
@@ -364,6 +399,45 @@ class SpeechBlocksPage(QWidget):
         if next_row < self._speech_block_list.count():
             self._speech_block_list.setCurrentRow(next_row)
 
+    def select_speech_block(self, speech_block_id: str) -> None:
+        """
+        @brief      Select one Speech Block and its owning chunk in the page lists.
+        @param[in]  speech_block_id Speech Block identifier to select.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-25
+        @version    0.1.0
+        """
+        normalized_id = str(speech_block_id).strip()
+        selected_block = next(
+            (block for block in self._speech_blocks if str(block.get("speech_block_id", "")).strip() == normalized_id),
+            None,
+        )
+        if selected_block is None:
+            return
+        selected_chunk_id = str(selected_block.get("chunk_id", "")).strip()
+        for chunk_index, chunk in enumerate(self._source_chunks):
+            if str(chunk.get("chunk_id", "")).strip() == selected_chunk_id:
+                self._chunk_list.setCurrentRow(chunk_index)
+                break
+        self._select_block_by_id(normalized_id)
+
+    def begin_editing_selected_block(self) -> None:
+        """
+        @brief      Enable edit mode for the currently selected Speech Block.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-25
+        @version    0.1.0
+        """
+        if self.selected_block_id() is None:
+            return
+        self._editing = True
+        self._warning_label.clear()
+        self._apply_control_state()
+
     def apply_language(self, language: str) -> None:
         """
         @brief      Apply one translated UI language to the page widgets.
@@ -372,7 +446,7 @@ class SpeechBlocksPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-24
-        @version    0.2.1
+        @version    0.3.0
         """
         self._current_language = language
         self._title_label.setText(f"<h2>{ui_state_service.translate('speech_blocks.title', language)}</h2>")
@@ -381,6 +455,8 @@ class SpeechBlocksPage(QWidget):
         self._reset_generation_button.setText(ui_state_service.translate("speech_blocks.reset_generation", language))
         self._approve_all_button.setText(ui_state_service.translate("speech_blocks.approve_all", language))
         self._chunk_group.setTitle(ui_state_service.translate("speech_blocks.chunk_list_group", language))
+        self._insert_block_button.setText(ui_state_service.translate("speech_blocks.insert_block", language))
+        self._delete_block_button.setText(ui_state_service.translate("speech_blocks.delete_block", language))
         self._source_group.setTitle(ui_state_service.translate("speech_blocks.selected_group", language))
         self._blocks_group.setTitle(ui_state_service.translate("speech_blocks.blocks_group", language))
         self._speaker_label.setText(ui_state_service.translate("speech_blocks.detail_speaker", language))
@@ -427,7 +503,7 @@ class SpeechBlocksPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-24
-        @version    0.2.1
+        @version    0.3.0
         """
         selected_block = self._current_display_block()
         can_generate = (
@@ -438,6 +514,9 @@ class SpeechBlocksPage(QWidget):
         )
         can_edit_selected = self._project_active and not self._busy and selected_block is not None
         can_approve_selected = can_edit_selected and not bool(selected_block.get("approved", False))
+        can_insert_block = (
+            self._project_active and not self._busy and bool(self._speech_blocks) and self._current_chunk_id is not None
+        )
         self._profile_combo.setEnabled(self._project_active and not self._busy)
         self._generate_button.setEnabled(can_generate)
         self._reset_generation_button.setEnabled(self._project_active and not self._busy and self._can_reset)
@@ -450,6 +529,8 @@ class SpeechBlocksPage(QWidget):
             and self.current_profile_id() is not None
         )
         self._chunk_list.setEnabled(self._project_active and not self._busy)
+        self._insert_block_button.setEnabled(can_insert_block and not self._editing)
+        self._delete_block_button.setEnabled(can_edit_selected and not self._editing)
         self._speech_block_list.setEnabled(self._project_active and not self._busy and not self._editing)
         self._speaker_combo.setEnabled(can_edit_selected and self._editing)
         self._content_kind_combo.setEnabled(can_edit_selected and self._editing)
@@ -484,6 +565,33 @@ class SpeechBlocksPage(QWidget):
         chunk_id = self.selected_chunk_id()
         if chunk_id is not None:
             self.resplit_selected_requested.emit(chunk_id)
+
+    def _emit_insert_block(self) -> None:
+        """
+        @brief      Emit the selected-position Speech Block insertion request.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-25
+        @version    0.1.0
+        """
+        chunk_id = self.selected_chunk_id()
+        if chunk_id is None:
+            return
+        self.insert_block_requested.emit(chunk_id, self.selected_block_id() or "")
+
+    def _emit_delete_block(self) -> None:
+        """
+        @brief      Emit the selected Speech Block deletion request.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-25
+        @version    0.1.0
+        """
+        block_id = self.selected_block_id()
+        if block_id is not None:
+            self.delete_block_requested.emit(block_id)
 
     def _show_selected_chunk(self, row: int) -> None:
         """

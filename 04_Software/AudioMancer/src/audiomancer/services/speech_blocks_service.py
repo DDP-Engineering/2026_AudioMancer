@@ -15,7 +15,7 @@
          based operation state plus AI transaction logging.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 0.3.1
+@version 0.5.0
 """
 
 # IMPORTS
@@ -24,6 +24,7 @@ from datetime import UTC, datetime
 import hashlib
 import json
 from pathlib import Path
+import re
 
 from audiomancer import config
 from audiomancer.services import (
@@ -57,16 +58,19 @@ SPEECH_BLOCKS_STAGE_COMPLETED = "completed"
 
 SPEAKER_KIND_NARRATOR = "narrator"
 SPEAKER_KIND_CHARACTER = "character"
+SPEAKER_KIND_OPERATION = "operation"
 CONTENT_KIND_NARRATION = "narration"
 CONTENT_KIND_DIALOGUE = "dialogue"
 CONTENT_KIND_BACKGROUND_NOISE = "background_noise"
 CONTENT_KIND_PAUSE = "pause"
+CONTENT_KIND_INDICATION = "indication"
 
 SPEECH_BLOCK_CONTENT_KINDS = (
     CONTENT_KIND_NARRATION,
     CONTENT_KIND_DIALOGUE,
     CONTENT_KIND_BACKGROUND_NOISE,
     CONTENT_KIND_PAUSE,
+    CONTENT_KIND_INDICATION,
 )
 
 _NARRATOR_SPEAKER_ID = "narrator"
@@ -152,7 +156,7 @@ def load_speech_blocks(project_root: str | Path) -> list[SpeechBlockPayload]:
     payload = json.loads(output_path.read_text(encoding="utf-8"))
     if not isinstance(payload, list):
         return []
-    return [_normalize_persisted_speech_block(item) for item in payload if isinstance(item, dict)]
+    return sort_speech_blocks([_normalize_persisted_speech_block(item) for item in payload if isinstance(item, dict)])
 
 
 @trace_function(_SPEECH_BLOCKS_LOGGER)
@@ -362,7 +366,6 @@ def start_or_continue_generation(
             source_chunk,
             dict(response_result.get("payload", {})),
             speaker_catalog,
-            len(all_blocks),
             source_language,
         )
         all_blocks.extend(chunk_blocks)
@@ -465,6 +468,56 @@ def speaker_catalog_entries(project_root: str | Path) -> list[dict[str, object]]
     return list(_speaker_catalog(character_discovery_service.load_character_profiles(Path(project_root))).values())
 
 
+def speech_block_book_sort_key(speech_block: dict[str, object]) -> tuple[int, int, str]:
+    """
+    @brief      Build the canonical book-order sort key for one Speech Block.
+    @param[in]  speech_block Speech Block or Audio Block payload.
+    @return     Tuple of chunk order, chunk-local sequence index, and identifier.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-25
+    @version    0.2.0
+    """
+    chunk_id = str(speech_block.get("chunk_id", "")).strip()
+    return (
+        _chunk_order_from_id(chunk_id),
+        int(speech_block.get("sequence_index", 0)),
+        str(speech_block.get("speech_block_id", "")).strip(),
+    )
+
+
+def sort_speech_blocks(speech_blocks: list[dict[str, object]]) -> list[dict[str, object]]:
+    """
+    @brief      Sort Speech Blocks or Audio Blocks in canonical book order.
+    @param[in]  speech_blocks Speech Block or Audio Block payload list.
+    @return     Ordered payload list.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-25
+    @version    0.1.0
+    """
+    return sorted(speech_blocks, key=speech_block_book_sort_key)
+
+
+def pause_duration_ms(text: object) -> int:
+    """
+    @brief      Parse a pause Speech Block duration from free-form text.
+    @param[in]  text Candidate pause text.
+    @return     Positive duration in milliseconds, or the configured default.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-25
+    @version    0.1.0
+    """
+    match = re.search(r"\b(\d{1,9})\b", str(text))
+    if match is None:
+        return config.DEFAULT_SPEECH_BLOCK_PAUSE_DURATION_MS
+    duration_ms = int(match.group(1))
+    if duration_ms <= 0:
+        return config.DEFAULT_SPEECH_BLOCK_PAUSE_DURATION_MS
+    return duration_ms
+
+
 @trace_function(_SPEECH_BLOCKS_LOGGER)
 def reset_speech_blocks(project_root: str | Path) -> None:
     """
@@ -477,6 +530,84 @@ def reset_speech_blocks(project_root: str | Path) -> None:
     @version    0.1.0
     """
     reset_operation_data(project_root, "speech_blocks", include_current=True, keep_input_snapshots=False)
+
+
+@trace_function(_SPEECH_BLOCKS_LOGGER)
+def insert_speech_block(
+    project_root: str | Path,
+    chunk_id: str,
+    before_speech_block_id: str | None = None,
+) -> tuple[SpeechBlocksReportPayload, str]:
+    """
+    @brief      Insert one manual Speech Block into a selected chunk.
+    @param[in]  project_root Active project root folder.
+    @param[in]  chunk_id Source chunk that receives the new block.
+    @param[in]  before_speech_block_id Optional block id before which to insert.
+    @return     Updated report payload and final inserted Speech Block id.
+    @exception  ValueError Raised when Speech Blocks state, chunk, or before-block is invalid.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-25
+    @version    0.1.0
+    """
+    resolved_project_root = Path(project_root)
+    selected_chunk_id = str(chunk_id).strip()
+    source_chunks = load_input_source_chunks(resolved_project_root)
+    if not source_chunks:
+        raise ValueError("Generate Speech Blocks before inserting a Speech Block.")
+    if not any(str(chunk.get("chunk_id", "")).strip() == selected_chunk_id for chunk in source_chunks):
+        raise ValueError("The selected chunk was not found.")
+    speech_blocks = load_speech_blocks(resolved_project_root)
+    if not speech_blocks:
+        raise ValueError("Generate Speech Blocks before inserting a Speech Block.")
+    blocks_for_chunk = [block for block in speech_blocks if str(block.get("chunk_id", "")).strip() == selected_chunk_id]
+    insertion_index = 1
+    normalized_before_id = str(before_speech_block_id or "").strip()
+    if normalized_before_id:
+        before_block = _speech_block_by_id(blocks_for_chunk, normalized_before_id)
+        if before_block is None:
+            raise ValueError("The selected Speech Block was not found in the selected chunk.")
+        insertion_index = int(before_block.get("sequence_index", 1))
+    for block in speech_blocks:
+        if (
+            str(block.get("chunk_id", "")).strip() == selected_chunk_id
+            and int(block.get("sequence_index", 0)) >= insertion_index
+        ):
+            block["sequence_index"] = int(block.get("sequence_index", 0)) + 1
+    temporary_id = _speech_block_id(selected_chunk_id, insertion_index)
+    speech_blocks.append(_manual_inserted_speech_block(selected_chunk_id, insertion_index, temporary_id))
+    updated_report = _persist_report_update(resolved_project_root, speech_blocks)
+    inserted_block = _manual_inserted_block_by_temporary_id(
+        load_speech_blocks(resolved_project_root),
+        selected_chunk_id,
+        temporary_id,
+        insertion_index,
+    )
+    if inserted_block is None:
+        raise ValueError("The inserted Speech Block could not be reloaded.")
+    return updated_report, str(inserted_block.get("speech_block_id", ""))
+
+
+@trace_function(_SPEECH_BLOCKS_LOGGER)
+def delete_speech_block(project_root: str | Path, speech_block_id: str) -> SpeechBlocksReportPayload:
+    """
+    @brief      Delete one selected Speech Block and renumber its chunk.
+    @param[in]  project_root Active project root folder.
+    @param[in]  speech_block_id Target Speech Block identifier.
+    @return     Updated Speech Blocks report payload.
+    @exception  ValueError Raised when the block is unknown.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-25
+    @version    0.1.0
+    """
+    resolved_project_root = Path(project_root)
+    normalized_id = str(speech_block_id).strip()
+    speech_blocks = load_speech_blocks(resolved_project_root)
+    if _speech_block_by_id(speech_blocks, normalized_id) is None:
+        raise ValueError("The selected Speech Block was not found.")
+    return _persist_report_update(
+        resolved_project_root,
+        [block for block in speech_blocks if str(block.get("speech_block_id", "")).strip() != normalized_id],
+    )
 
 
 @trace_function(_SPEECH_BLOCKS_LOGGER)
@@ -540,22 +671,25 @@ def update_speech_block(
     @exception  ValueError Raised when the block or speaker is unknown.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-24
-    @version    0.1.0
+    @version    0.2.0
     """
     resolved_project_root = Path(project_root)
     speech_blocks = load_speech_blocks(resolved_project_root)
     selected_block = _speech_block_by_id(speech_blocks, speech_block_id)
     if selected_block is None:
         raise ValueError("The selected Speech Block was not found.")
-    speaker_entry = _speaker_catalog(character_discovery_service.load_character_profiles(resolved_project_root)).get(
-        str(speaker_id).strip()
-    )
-    if speaker_entry is None:
-        raise ValueError("The selected speaker was not found.")
+    normalized_content_kind = _normalize_content_kind(content_kind)
+    if _is_operation_content_kind(normalized_content_kind):
+        speaker_entry = _operation_speaker_entry(normalized_content_kind)
+    else:
+        speaker_catalog = _speaker_catalog(character_discovery_service.load_character_profiles(resolved_project_root))
+        speaker_entry = speaker_catalog.get(str(speaker_id).strip())
+        if speaker_entry is None:
+            raise ValueError("The selected speaker was not found.")
     selected_block["speaker_kind"] = str(speaker_entry.get("speaker_kind", SPEAKER_KIND_NARRATOR))
     selected_block["speaker_id"] = str(speaker_entry.get("speaker_id", _NARRATOR_SPEAKER_ID))
     selected_block["speaker_display_name"] = str(speaker_entry.get("display_name", _NARRATOR_DISPLAY_NAME))
-    selected_block["content_kind"] = _normalize_content_kind(content_kind)
+    selected_block["content_kind"] = normalized_content_kind
     selected_block["text"] = str(text)
     selected_block["warning_flags"] = []
     selected_block["approved"] = False
@@ -676,7 +810,6 @@ def regenerate_chunk_speech_blocks(
         dict(selected_chunk),
         dict(response_result.get("payload", {})),
         speaker_catalog,
-        0,
         source_language,
     )
     all_blocks = _renumber_speech_blocks(source_chunks, [*existing_blocks, *new_blocks])
@@ -787,7 +920,6 @@ def _normalize_chunk_blocks(
     source_chunk: dict[str, object],
     response_payload: dict[str, object],
     speaker_catalog: dict[str, dict[str, object]],
-    existing_block_count: int,
     source_language: str,
 ) -> tuple[list[SpeechBlockPayload], list[dict[str, object]]]:
     """
@@ -795,13 +927,12 @@ def _normalize_chunk_blocks(
     @param[in]  source_chunk Current source chunk payload.
     @param[in]  response_payload Raw model response payload.
     @param[in]  speaker_catalog Allowed speaker catalog.
-    @param[in]  existing_block_count Global block count before this chunk.
     @param[in]  source_language Active source language code.
     @return     Tuple of normalized chunk blocks and warning entries.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.3.0
+    @version    0.4.0
     """
     chunk_id = str(source_chunk.get("chunk_id", "")).strip()
     candidate_blocks = response_payload.get("speech_blocks", response_payload.get("blocks", []))
@@ -823,13 +954,12 @@ def _normalize_chunk_blocks(
             source_units,
             ai_blocks,
             speaker_catalog,
-            existing_block_count,
             source_language,
         )
 
     normalized_blocks: list[SpeechBlockPayload] = []
     warning_entries: list[dict[str, object]] = []
-    for chunk_sequence_index, ai_block in enumerate(ai_blocks, start=1):
+    for local_sequence_index, ai_block in enumerate(ai_blocks, start=1):
         text = str(ai_block.get("text", ""))
         content_kind = str(ai_block.get("content_kind", CONTENT_KIND_NARRATION))
         warning_flags = list(ai_block.get("warning_flags", []))
@@ -840,12 +970,10 @@ def _normalize_chunk_blocks(
                     "reason": "Speaker attribution was ambiguous and fell back to narrator.",
                 }
             )
-        sequence_index = existing_block_count + len(normalized_blocks) + 1
         normalized_blocks.append(
             _build_speech_block_payload(
-                sequence_index,
                 chunk_id,
-                chunk_sequence_index,
+                local_sequence_index,
                 source_language,
                 str(ai_block.get("speaker_kind", SPEAKER_KIND_NARRATOR)),
                 str(ai_block.get("speaker_id", _NARRATOR_SPEAKER_ID)),
@@ -862,7 +990,6 @@ def _normalize_chunk_blocks(
     return (
         [
             _build_speech_block_payload(
-                existing_block_count + 1,
                 chunk_id,
                 1,
                 source_language,
@@ -879,9 +1006,8 @@ def _normalize_chunk_blocks(
 
 
 def _build_speech_block_payload(
-    sequence_index: int,
     chunk_id: str,
-    chunk_sequence_index: int,
+    sequence_index: int,
     source_language: str,
     speaker_kind: str,
     speaker_id: str,
@@ -892,9 +1018,8 @@ def _build_speech_block_payload(
 ) -> SpeechBlockPayload:
     """
     @brief      Build one persisted Speech Blocks payload with AI baseline fields.
-    @param[in]  sequence_index Global block sequence index.
     @param[in]  chunk_id Source chunk identifier.
-    @param[in]  chunk_sequence_index Chunk-local block index.
+    @param[in]  sequence_index Chunk-local block index.
     @param[in]  source_language Active source language code.
     @param[in]  speaker_kind Current speaker kind token.
     @param[in]  speaker_id Current speaker identifier.
@@ -906,19 +1031,24 @@ def _build_speech_block_payload(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-24
-    @version    0.1.0
+    @version    0.4.0
     """
     normalized_content_kind = _normalize_content_kind(content_kind)
     normalized_warning_flags = _normalize_warning_flags(warning_flags)
-    normalized_speaker_kind = str(speaker_kind).strip() or SPEAKER_KIND_NARRATOR
-    normalized_speaker_id = str(speaker_id).strip() or _NARRATOR_SPEAKER_ID
-    normalized_speaker_display_name = str(speaker_display_name).strip() or _NARRATOR_DISPLAY_NAME
+    if _is_operation_content_kind(normalized_content_kind):
+        speaker_entry = _operation_speaker_entry(normalized_content_kind)
+        normalized_speaker_kind = str(speaker_entry["speaker_kind"])
+        normalized_speaker_id = str(speaker_entry["speaker_id"])
+        normalized_speaker_display_name = str(speaker_entry["display_name"])
+    else:
+        normalized_speaker_kind = str(speaker_kind).strip() or SPEAKER_KIND_NARRATOR
+        normalized_speaker_id = str(speaker_id).strip() or _NARRATOR_SPEAKER_ID
+        normalized_speaker_display_name = str(speaker_display_name).strip() or _NARRATOR_DISPLAY_NAME
     normalized_text = str(text)
     return {
         "speech_block_id": _speech_block_id(chunk_id, sequence_index),
         "sequence_index": int(sequence_index),
         "chunk_id": str(chunk_id).strip(),
-        "chunk_sequence_index": int(chunk_sequence_index),
         "source_language": str(source_language).strip(),
         "speaker_kind": normalized_speaker_kind,
         "speaker_id": normalized_speaker_id,
@@ -948,10 +1078,20 @@ def _normalize_ai_block(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.1.0
+    @version    0.2.0
     """
     content_kind = _normalize_content_kind(candidate_block.get("content_kind", CONTENT_KIND_NARRATION))
     text = _normalize_block_text(str(candidate_block.get("text", "")), content_kind)
+    if _is_operation_content_kind(content_kind):
+        speaker_entry = _operation_speaker_entry(content_kind)
+        return {
+            "speaker_kind": str(speaker_entry["speaker_kind"]),
+            "speaker_id": str(speaker_entry["speaker_id"]),
+            "speaker_display_name": str(speaker_entry["display_name"]),
+            "content_kind": content_kind,
+            "text": text,
+            "warning_flags": _normalize_warning_flags(candidate_block.get("warning_flags")),
+        }
     requested_speaker_id = str(candidate_block.get("speaker_id", "")).strip()
     speaker_entry, ambiguous_speaker = _resolve_speaker_entry(requested_speaker_id, speaker_catalog)
     warning_flags = _normalize_warning_flags(candidate_block.get("warning_flags"))
@@ -972,7 +1112,6 @@ def _normalize_source_unit_blocks(
     source_units: list[dict[str, object]],
     ai_blocks: list[dict[str, object]],
     speaker_catalog: dict[str, dict[str, object]],
-    existing_block_count: int,
     source_language: str,
 ) -> tuple[list[SpeechBlockPayload], list[dict[str, object]]]:
     """
@@ -981,18 +1120,17 @@ def _normalize_source_unit_blocks(
     @param[in]  source_units Deterministic source text spans.
     @param[in]  ai_blocks Normalized AI blocks used only as speaker hints.
     @param[in]  speaker_catalog Allowed speaker catalog.
-    @param[in]  existing_block_count Global block count before this chunk.
     @param[in]  source_language Active source language code.
     @return     Tuple of normalized chunk blocks and warning entries.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.2.0
+    @version    0.3.0
     """
     ai_lookup = _build_ai_block_lookup(ai_blocks)
     normalized_blocks: list[SpeechBlockPayload] = []
     warning_entries: list[dict[str, object]] = []
-    for chunk_sequence_index, source_unit in enumerate(source_units, start=1):
+    for local_sequence_index, source_unit in enumerate(source_units, start=1):
         content_kind = str(source_unit.get("content_kind", CONTENT_KIND_NARRATION))
         text = str(source_unit.get("text", ""))
         speaker_entry = speaker_catalog[_NARRATOR_SPEAKER_ID]
@@ -1007,17 +1145,15 @@ def _normalize_source_unit_blocks(
                 }
                 warning_flags = list(ai_match.get("warning_flags", []))
             else:
-                speaker_entry = _infer_dialogue_speaker(source_units, chunk_sequence_index - 1, speaker_catalog)
+                speaker_entry = _infer_dialogue_speaker(source_units, local_sequence_index - 1, speaker_catalog)
                 if str(speaker_entry.get("speaker_id", _NARRATOR_SPEAKER_ID)) == _NARRATOR_SPEAKER_ID:
                     _append_warning_flag(warning_flags, "ambiguous_speaker")
             if str(speaker_entry.get("speaker_id", _NARRATOR_SPEAKER_ID)) == _NARRATOR_SPEAKER_ID:
                 _append_warning_flag(warning_flags, "ambiguous_speaker")
-        sequence_index = existing_block_count + len(normalized_blocks) + 1
         normalized_blocks.append(
             _build_speech_block_payload(
-                sequence_index,
                 chunk_id,
-                chunk_sequence_index,
+                local_sequence_index,
                 source_language,
                 str(speaker_entry.get("speaker_kind", SPEAKER_KIND_NARRATOR)),
                 str(speaker_entry.get("speaker_id", _NARRATOR_SPEAKER_ID)),
@@ -1320,20 +1456,85 @@ def _normalize_content_kind(value: object) -> str:
     return CONTENT_KIND_NARRATION
 
 
+def _is_operation_content_kind(content_kind: str) -> bool:
+    """
+    @brief      Return whether one content kind is represented as an operation row.
+    @param[in]  content_kind Normalized content-kind token.
+    @return     True for metadata-only operation content kinds.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-25
+    @version    0.1.0
+    """
+    return str(content_kind).strip() in {
+        CONTENT_KIND_BACKGROUND_NOISE,
+        CONTENT_KIND_PAUSE,
+        CONTENT_KIND_INDICATION,
+    }
+
+
+def _operation_speaker_entry(content_kind: str) -> dict[str, object]:
+    """
+    @brief      Build the persisted speaker fields for one metadata-only operation.
+    @param[in]  content_kind Normalized operation content-kind token.
+    @return     Speaker-like operation entry used by JSON and list rendering.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-25
+    @version    0.1.0
+    """
+    normalized_content_kind = _normalize_content_kind(content_kind)
+    return {
+        "speaker_kind": SPEAKER_KIND_OPERATION,
+        "speaker_id": normalized_content_kind,
+        "display_name": _operation_display_name(normalized_content_kind),
+    }
+
+
+def _operation_display_name(content_kind: str) -> str:
+    """
+    @brief      Resolve the stable persisted display name for a metadata-only operation.
+    @param[in]  content_kind Normalized operation content-kind token.
+    @return     Operator-facing operation name.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-25
+    @version    0.1.0
+    """
+    return {
+        CONTENT_KIND_BACKGROUND_NOISE: "Background Noise",
+        CONTENT_KIND_PAUSE: "Pause",
+        CONTENT_KIND_INDICATION: "Indication",
+    }.get(str(content_kind).strip(), "Operation")
+
+
 def _speech_block_id(chunk_id: str, sequence_index: int) -> str:
     """
     @brief      Build the persisted `CCCC-BBBBBB` Speech Block identifier.
     @param[in]  chunk_id Source chunk identifier.
-    @param[in]  sequence_index Global Speech Block sequence index.
+    @param[in]  sequence_index Chunk-local Speech Block sequence index.
     @return     Stable Speech Block identifier.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
+    @date       2026-04-25
+    @version    0.2.0
+    """
+    chunk_number = _chunk_order_from_id(chunk_id)
+    return f"{chunk_number:04d}-{max(int(sequence_index), 0):06d}"
+
+
+def _chunk_order_from_id(chunk_id: str) -> int:
+    """
+    @brief      Resolve a numeric chunk-order token from one chunk identifier.
+    @param[in]  chunk_id Source chunk identifier.
+    @return     Positive chunk-order value or zero when no digits are present.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-25
     @version    0.1.0
     """
     digits = "".join(character for character in str(chunk_id) if character.isdigit())
-    chunk_number = int(digits[-4:] or "0")
-    return f"{chunk_number:04d}-{max(int(sequence_index), 0):06d}"
+    return int(digits[-4:] or "0")
 
 
 def _normalize_warning_flags(value: object) -> list[str]:
@@ -1364,8 +1565,12 @@ def _normalize_persisted_speech_block(payload: dict[str, object]) -> SpeechBlock
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.2.0
+    @version    0.3.0
     """
+    if "chunk_sequence_index" in payload:
+        raise ValueError(
+            "Speech Blocks uses a legacy global-sequence schema. Reset and regenerate Speech Blocks for this project."
+        )
     sequence_index = int(payload.get("sequence_index", 0))
     chunk_id = str(payload.get("chunk_id", "")).strip()
     speaker_kind = str(payload.get("speaker_kind", SPEAKER_KIND_NARRATOR)).strip() or SPEAKER_KIND_NARRATOR
@@ -1374,6 +1579,11 @@ def _normalize_persisted_speech_block(payload: dict[str, object]) -> SpeechBlock
     if not speaker_display_name:
         speaker_display_name = _NARRATOR_DISPLAY_NAME
     content_kind = _normalize_content_kind(payload.get("content_kind", CONTENT_KIND_NARRATION))
+    if _is_operation_content_kind(content_kind):
+        operation_entry = _operation_speaker_entry(content_kind)
+        speaker_kind = str(operation_entry["speaker_kind"])
+        speaker_id = str(operation_entry["speaker_id"])
+        speaker_display_name = str(operation_entry["display_name"])
     text = str(payload.get("text", ""))
     ai_speaker_kind = str(payload.get("ai_speaker_kind", speaker_kind)).strip() or speaker_kind
     ai_speaker_id = str(payload.get("ai_speaker_id", speaker_id)).strip() or speaker_id
@@ -1381,12 +1591,16 @@ def _normalize_persisted_speech_block(payload: dict[str, object]) -> SpeechBlock
     if not ai_speaker_display_name:
         ai_speaker_display_name = speaker_display_name
     ai_content_kind = _normalize_content_kind(payload.get("ai_content_kind", content_kind))
+    if _is_operation_content_kind(ai_content_kind):
+        operation_entry = _operation_speaker_entry(ai_content_kind)
+        ai_speaker_kind = str(operation_entry["speaker_kind"])
+        ai_speaker_id = str(operation_entry["speaker_id"])
+        ai_speaker_display_name = str(operation_entry["display_name"])
     ai_text = str(payload.get("ai_text", text))
     return {
         "speech_block_id": _speech_block_id(chunk_id, sequence_index),
         "sequence_index": sequence_index,
         "chunk_id": chunk_id,
-        "chunk_sequence_index": int(payload.get("chunk_sequence_index", 0)),
         "source_language": str(payload.get("source_language", "")).strip(),
         "speaker_kind": speaker_kind,
         "speaker_id": speaker_id,
@@ -1707,14 +1921,14 @@ def _renumber_speech_blocks(
     speech_blocks: list[SpeechBlockPayload],
 ) -> list[SpeechBlockPayload]:
     """
-    @brief      Recompute global and chunk-local Speech Block order fields.
+    @brief      Recompute chunk-local Speech Block order fields.
     @param[in]  source_chunks Source chunks in workflow order.
     @param[in]  speech_blocks Current Speech Blocks payload list.
     @return     Renumbered Speech Blocks payload list.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-24
-    @version    0.1.0
+    @version    0.2.0
     """
     chunk_order = {
         str(chunk.get("chunk_id", "")).strip(): int(chunk.get("sequence_index", 0)) for chunk in source_chunks
@@ -1725,19 +1939,86 @@ def _renumber_speech_blocks(
         speech_blocks,
         key=lambda block: (
             chunk_order.get(str(block.get("chunk_id", "")).strip(), 10**9),
-            int(block.get("chunk_sequence_index", 0)),
             int(block.get("sequence_index", 0)),
         ),
     )
-    for sequence_index, block in enumerate(ordered_blocks, start=1):
+    for block in ordered_blocks:
         chunk_id = str(block.get("chunk_id", "")).strip()
         local_counts[chunk_id] = local_counts.get(chunk_id, 0) + 1
+        sequence_index = local_counts[chunk_id]
         renumbered_block = dict(block)
         renumbered_block["sequence_index"] = sequence_index
-        renumbered_block["chunk_sequence_index"] = local_counts[chunk_id]
+        renumbered_block.pop("chunk_sequence_index", None)
         renumbered_block["speech_block_id"] = _speech_block_id(chunk_id, sequence_index)
         renumbered_blocks.append(renumbered_block)
     return renumbered_blocks
+
+
+def _manual_inserted_speech_block(chunk_id: str, sequence_index: int, speech_block_id: str) -> SpeechBlockPayload:
+    """
+    @brief      Build the default payload for a manually inserted Speech Block.
+    @param[in]  chunk_id Source chunk identifier.
+    @param[in]  sequence_index Requested chunk-local insertion index.
+    @param[in]  speech_block_id Temporary Speech Block identifier.
+    @return     New unapproved narrator narration Speech Block payload.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-25
+    @version    0.1.0
+    """
+    return {
+        "speech_block_id": speech_block_id,
+        "sequence_index": sequence_index,
+        "chunk_id": chunk_id,
+        "source_language": "",
+        "speaker_kind": SPEAKER_KIND_NARRATOR,
+        "speaker_id": _NARRATOR_SPEAKER_ID,
+        "speaker_display_name": _NARRATOR_DISPLAY_NAME,
+        "content_kind": CONTENT_KIND_NARRATION,
+        "text": "",
+        "ai_speaker_kind": SPEAKER_KIND_NARRATOR,
+        "ai_speaker_id": _NARRATOR_SPEAKER_ID,
+        "ai_speaker_display_name": _NARRATOR_DISPLAY_NAME,
+        "ai_content_kind": CONTENT_KIND_NARRATION,
+        "ai_text": "",
+        "warning_flags": [],
+        "approved": False,
+        "approved_at": None,
+    }
+
+
+def _manual_inserted_block_by_temporary_id(
+    speech_blocks: list[SpeechBlockPayload],
+    chunk_id: str,
+    temporary_id: str,
+    insertion_index: int,
+) -> SpeechBlockPayload | None:
+    """
+    @brief      Resolve the final inserted block after chunk-local renumbering.
+    @param[in]  speech_blocks Reloaded Speech Blocks payload list.
+    @param[in]  chunk_id Source chunk identifier.
+    @param[in]  temporary_id Pre-renumber inserted Speech Block id.
+    @param[in]  insertion_index Requested insertion sequence index.
+    @return     Matching inserted block or `None`.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-25
+    @version    0.1.0
+    """
+    return next(
+        (
+            block
+            for block in speech_blocks
+            if str(block.get("chunk_id", "")).strip() == chunk_id
+            and int(block.get("sequence_index", 0)) == insertion_index
+            and str(block.get("ai_text", "")) == ""
+            and str(block.get("text", "")) == ""
+            and str(block.get("ai_speaker_id", "")).strip() == _NARRATOR_SPEAKER_ID
+            and str(block.get("speech_block_id", "")).strip()
+            in {temporary_id, _speech_block_id(chunk_id, insertion_index)}
+        ),
+        None,
+    )
 
 
 def _speech_block_by_id(

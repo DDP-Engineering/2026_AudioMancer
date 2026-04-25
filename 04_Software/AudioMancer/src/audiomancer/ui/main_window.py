@@ -14,7 +14,7 @@
          so the window remains a thin coordinator.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 1.29.0
+@version 1.30.0
 """
 
 # IMPORTS
@@ -135,7 +135,7 @@ class MainWindow(QMainWindow):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-06
-        @version    0.16.0
+        @version    0.17.0
         """
         super().__init__(parent)
         self.setWindowTitle(misc_ui_controller.build_window_title())
@@ -730,6 +730,16 @@ class MainWindow(QMainWindow):
         )
         self._speech_blocks_page.resplit_selected_requested.connect(
             lambda chunk_id: speech_blocks_ui_controller.handle_resplit_selected_requested(self, chunk_id)
+        )
+        self._speech_blocks_page.insert_block_requested.connect(
+            lambda chunk_id, before_speech_block_id: speech_blocks_ui_controller.handle_insert_block_requested(
+                self,
+                chunk_id,
+                before_speech_block_id,
+            )
+        )
+        self._speech_blocks_page.delete_block_requested.connect(
+            lambda speech_block_id: speech_blocks_ui_controller.handle_delete_block_requested(self, speech_block_id)
         )
         self._speech_blocks_page.edit_started.connect(
             lambda speech_block_id: speech_blocks_ui_controller.handle_edit_started(self, speech_block_id)

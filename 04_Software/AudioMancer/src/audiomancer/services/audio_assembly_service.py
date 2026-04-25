@@ -14,7 +14,7 @@
          generation through root-level state and report artifacts.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-25
-@version 0.1.0
+@version 0.3.0
 """
 
 # IMPORTS
@@ -26,7 +26,12 @@ from pathlib import Path
 import wave
 
 from audiomancer import config
-from audiomancer.services import audio_blocks_service, operation_runtime_service, project_workspace_service
+from audiomancer.services import (
+    audio_blocks_service,
+    operation_runtime_service,
+    project_workspace_service,
+    speech_blocks_service,
+)
 from audiomancer.services.logging_service import get_component_logger, trace_function
 from audiomancer.services.operation_runtime_service import (
     build_operation_output_path,
@@ -375,12 +380,9 @@ def _load_approved_audio_blocks(project_root: Path) -> list[dict[str, object]]:
     @exception  ValueError Raised when prerequisites are not satisfied.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.1.0
+    @version    0.2.0
     """
-    audio_blocks = sorted(
-        audio_blocks_service.load_audio_blocks(project_root),
-        key=lambda item: int(item.get("sequence_index", 0)),
-    )
+    audio_blocks = speech_blocks_service.sort_speech_blocks(audio_blocks_service.load_audio_blocks(project_root))
     if not audio_blocks:
         raise ValueError("Generate and approve Audio Blocks before running Audio Assembly.")
     unapproved = [block for block in audio_blocks if not bool(block.get("approved", False))]
@@ -411,25 +413,31 @@ def _build_output_plan(
     @exception  ValueError Raised when no playable blocks exist.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.1.0
+    @version    0.2.0
     """
     playable_blocks = [
-        _enrich_block_duration(project_root, block) for block in audio_blocks if _audio_path(project_root, block)
+        _enrich_block_duration(project_root, block) for block in audio_blocks if _is_assembly_block(block)
     ]
     output_mode = str(settings["output_mode"])
     if output_mode == OUTPUT_MODE_PER_CHUNK:
-        return _plan_per_chunk_outputs(playable_blocks)
+        return _with_reference_audio_path(_plan_per_chunk_outputs(playable_blocks), playable_blocks)
     if output_mode == OUTPUT_MODE_TIME_LIMIT:
-        return _plan_time_limited_outputs(playable_blocks, int(settings["max_duration_minutes"]))
-    return [
-        {
-            "output_key": "audiobook",
-            "file_name": "audiobook.wav",
-            "blocks": playable_blocks,
-            "chunk_ids": sorted({str(block.get("chunk_id", "")) for block in playable_blocks}),
-            "over_limit_warning": False,
-        }
-    ]
+        return _with_reference_audio_path(
+            _plan_time_limited_outputs(playable_blocks, int(settings["max_duration_minutes"])),
+            playable_blocks,
+        )
+    return _with_reference_audio_path(
+        [
+            {
+                "output_key": "audiobook",
+                "file_name": "audiobook.wav",
+                "blocks": playable_blocks,
+                "chunk_ids": sorted({str(block.get("chunk_id", "")) for block in playable_blocks}),
+                "over_limit_warning": False,
+            }
+        ],
+        playable_blocks,
+    )
 
 
 def _plan_per_chunk_outputs(blocks: list[dict[str, object]]) -> list[dict[str, object]]:
@@ -516,6 +524,33 @@ def _time_part_record(
     }
 
 
+def _with_reference_audio_path(
+    output_plan: list[dict[str, object]],
+    blocks: list[dict[str, object]],
+) -> list[dict[str, object]]:
+    """
+    @brief      Add a fallback source WAV reference to planned outputs.
+    @param[in]  output_plan Planned output records.
+    @param[in]  blocks Full composable Audio Block list.
+    @return     Output plan with optional reference audio paths.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-25
+    @version    0.1.0
+    """
+    reference_path = next(
+        (
+            str(block.get("audio_relative_path", "")).strip()
+            for block in blocks
+            if str(block.get("audio_relative_path", "") or "").strip()
+        ),
+        "",
+    )
+    for output_item in output_plan:
+        output_item["reference_audio_relative_path"] = reference_path
+    return output_plan
+
+
 def _compose_output_file(
     project_root: Path,
     output_item: dict[str, object],
@@ -532,7 +567,7 @@ def _compose_output_file(
     @exception  RuntimeError Raised when source WAV files are invalid.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.1.0
+    @version    0.2.0
     """
     output_root = project_root / config.AUDIOBOOK_OUTPUT_FOLDER_NAME
     output_root.mkdir(parents=True, exist_ok=True)
@@ -541,41 +576,48 @@ def _compose_output_file(
     if temp_path.is_file():
         temp_path.unlink()
     blocks = [dict(block) for block in output_item.get("blocks", []) if isinstance(block, dict)]
-    expected_params = None
+    reference_params = _reference_wav_params(
+        project_root,
+        blocks,
+        str(output_item.get("reference_audio_relative_path", "")),
+    )
+    expected_params = (reference_params[:3], reference_params[4:])
     total_frames = 0
     with wave.open(str(temp_path), "wb") as output_wav:
+        output_wav.setparams(reference_params)
         previous_chunk_id = None
         for block_index, block in enumerate(blocks):
             raise_if_cancelled(cancel_requested)
             source_path = _audio_path(project_root, block)
-            if source_path is None:
+            if source_path is None and not _is_pause_block(block):
                 continue
+            if block_index > 0:
+                gap_ms = (
+                    int(settings["inter_chunk_silence_ms"])
+                    if str(block.get("chunk_id", "")) != str(previous_chunk_id)
+                    else int(settings["inter_block_silence_ms"])
+                )
+                silence_frames = _write_silence(output_wav, gap_ms, reference_params)
+                total_frames += silence_frames
+            if _is_pause_block(block):
+                pause_frames = _write_silence(output_wav, _pause_duration_ms(block), reference_params)
+                total_frames += pause_frames
+                previous_chunk_id = str(block.get("chunk_id", ""))
+                continue
+            assert source_path is not None
             with wave.open(str(source_path), "rb") as source_wav:
                 params = source_wav.getparams()
                 comparable_params = params[:3], params[4:]
-                if expected_params is None:
-                    expected_params = comparable_params
-                    output_wav.setparams(params)
-                elif comparable_params != expected_params:
+                if comparable_params != expected_params:
                     raise RuntimeError("Audio Assembly found incompatible source WAV parameters.")
-                if block_index > 0:
-                    gap_ms = (
-                        int(settings["inter_chunk_silence_ms"])
-                        if str(block.get("chunk_id", "")) != str(previous_chunk_id)
-                        else int(settings["inter_block_silence_ms"])
-                    )
-                    silence_frames = _write_silence(output_wav, gap_ms, params)
-                    total_frames += silence_frames
                 frame_count = source_wav.getnframes()
                 output_wav.writeframes(source_wav.readframes(frame_count))
                 total_frames += frame_count
                 previous_chunk_id = str(block.get("chunk_id", ""))
-    if expected_params is None:
-        raise RuntimeError("Audio Assembly cannot write an empty output file.")
     if output_path.is_file():
         output_path.unlink()
     temp_path.replace(output_path)
-    sample_rate = int(expected_params[0][2])
+    sample_rate = int(reference_params.framerate)
     duration_seconds = 0.0 if sample_rate <= 0 else total_frames / sample_rate
     return {
         "output_key": str(output_item["output_key"]),
@@ -807,20 +849,103 @@ def _audio_path(project_root: Path, audio_block: dict[str, object]) -> Path | No
     return project_root / relative_path
 
 
+def _is_assembly_block(audio_block: dict[str, object]) -> bool:
+    """
+    @brief      Return whether one Audio Block contributes to final composition.
+    @param[in]  audio_block Audio Block payload.
+    @return     True for generated audio blocks and metadata-only pause blocks.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-25
+    @version    0.1.0
+    """
+    return bool(str(audio_block.get("audio_relative_path", "") or "").strip()) or _is_pause_block(audio_block)
+
+
+def _is_pause_block(audio_block: dict[str, object]) -> bool:
+    """
+    @brief      Return whether one Audio Block represents metadata-only pause silence.
+    @param[in]  audio_block Audio Block payload.
+    @return     True for pause content-kind blocks.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-25
+    @version    0.1.0
+    """
+    return (
+        bool(audio_block.get("metadata_only", False))
+        and str(audio_block.get("content_kind", "")).strip() == speech_blocks_service.CONTENT_KIND_PAUSE
+    )
+
+
+def _pause_duration_ms(audio_block: dict[str, object]) -> int:
+    """
+    @brief      Resolve one metadata-only pause block duration.
+    @param[in]  audio_block Audio Block payload.
+    @return     Positive pause duration in milliseconds.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-25
+    @version    0.1.0
+    """
+    value = audio_block.get("pause_duration_ms")
+    if value in (None, ""):
+        return speech_blocks_service.pause_duration_ms(audio_block.get("text", ""))
+    try:
+        duration_ms = int(value)
+    except (TypeError, ValueError):
+        return speech_blocks_service.pause_duration_ms(audio_block.get("text", ""))
+    if duration_ms <= 0:
+        return config.DEFAULT_SPEECH_BLOCK_PAUSE_DURATION_MS
+    return duration_ms
+
+
 def _enrich_block_duration(project_root: Path, block: dict[str, object]) -> dict[str, object]:
     """
-    @brief      Add measured WAV duration to one Audio Block payload copy.
+    @brief      Add measured WAV or pause duration to one Audio Block payload copy.
     @param[in]  project_root Active project root folder.
     @param[in]  block Audio Block payload.
     @return     Audio Block payload copy with `duration_seconds`.
     @exception  wave.Error Raised when the source file is not a readable WAV.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.1.0
+    @version    0.2.0
     """
     enriched = dict(block)
+    if _is_pause_block(enriched):
+        enriched["duration_seconds"] = _pause_duration_ms(enriched) / 1000.0
+        return enriched
     enriched["duration_seconds"] = _wav_duration_seconds(project_root / str(block.get("audio_relative_path", "")))
     return enriched
+
+
+def _reference_wav_params(
+    project_root: Path,
+    blocks: list[dict[str, object]],
+    fallback_relative_path: str,
+) -> wave._wave_params:
+    """
+    @brief      Resolve the WAV params used to write an output containing pauses.
+    @param[in]  project_root Active project root folder.
+    @param[in]  blocks Output Audio Blocks.
+    @param[in]  fallback_relative_path Project-relative WAV used when output only contains pauses.
+    @return     Reference WAV params from the first playable source block.
+    @exception  RuntimeError Raised when no source WAV exists for the output.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-25
+    @version    0.1.0
+    """
+    for block in blocks:
+        source_path = _audio_path(project_root, block)
+        if source_path is None:
+            continue
+        with wave.open(str(source_path), "rb") as source_wav:
+            return source_wav.getparams()
+    fallback_path = project_root / fallback_relative_path if fallback_relative_path.strip() else None
+    if fallback_path is not None and fallback_path.is_file():
+        with wave.open(str(fallback_path), "rb") as source_wav:
+            return source_wav.getparams()
+    raise RuntimeError("Audio Assembly cannot write an output file without at least one source WAV.")
 
 
 def _wav_duration_seconds(path: Path) -> float:
@@ -889,6 +1014,8 @@ def _build_input_fingerprint(
                 "speech_block_id": str(block.get("speech_block_id", "")),
                 "sequence_index": int(block.get("sequence_index", 0)),
                 "chunk_id": str(block.get("chunk_id", "")),
+                "content_kind": str(block.get("content_kind", "")),
+                "pause_duration_ms": block.get("pause_duration_ms"),
                 "audio_relative_path": block.get("audio_relative_path"),
                 "file_sha1": _file_sha1(_audio_path(project_root, block)) if _audio_path(project_root, block) else None,
             }

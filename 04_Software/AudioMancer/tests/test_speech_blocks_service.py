@@ -15,7 +15,7 @@
          chunk-based generation.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-24
-@version 0.3.1
+@version 0.5.0
 """
 
 # IMPORTS
@@ -179,16 +179,15 @@ def test_start_or_continue_generation_creates_artifacts_and_normalizes_blocks(mo
     report = speech_blocks_service.start_or_continue_generation(project_root, manifest, _profile_payload())
 
     speech_blocks_root = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH
-    assert (speech_blocks_root / "input_source_chunks.json").is_file()
     assert (speech_blocks_root / config.SPEECH_BLOCKS_OUTPUT_FILE_NAME).is_file()
     assert (speech_blocks_root / config.SPEECH_BLOCKS_REPORT_FILE_NAME).is_file()
-    assert (speech_blocks_root / config.OPERATION_STATE_FILE_NAME).is_file()
+    assert (speech_blocks_root / config.SPEECH_BLOCKS_STATE_FILE_NAME).is_file()
     speech_blocks = speech_blocks_service.load_speech_blocks(project_root)
     assert [block["speech_block_id"] for block in speech_blocks] == [
         "0001-000001",
         "0001-000002",
-        "0002-000003",
-        "0002-000004",
+        "0002-000001",
+        "0002-000002",
     ]
     assert [block["approved"] for block in speech_blocks] == [False, False, False, False]
     assert speech_blocks[0]["text"] == "Narration."
@@ -206,6 +205,168 @@ def test_start_or_continue_generation_creates_artifacts_and_normalizes_blocks(mo
     assert report["token_usage"]["total_tokens"] == 45
     assert report["approved_block_count"] == 0
     assert report["total_block_count"] == 4
+
+
+def test_load_speech_blocks_rejects_legacy_global_sequence_schema(tmp_path) -> None:
+    """
+    @brief      Verify legacy global Speech Blocks artifacts require reset/regeneration.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-25
+    @version    0.1.0
+    """
+    project_root, _manifest = _create_chunked_project(tmp_path, "SpeechBlocksLegacySchema")
+    output_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.SPEECH_BLOCKS_OUTPUT_FILE_NAME
+    output_path.write_text(
+        json.dumps(
+            [
+                {
+                    "speech_block_id": "0002-000004",
+                    "sequence_index": 4,
+                    "chunk_sequence_index": 1,
+                    "chunk_id": "chunk-0002",
+                    "source_language": "en",
+                    "speaker_kind": speech_blocks_service.SPEAKER_KIND_NARRATOR,
+                    "speaker_id": "narrator",
+                    "speaker_display_name": "Narrator",
+                    "content_kind": speech_blocks_service.CONTENT_KIND_NARRATION,
+                    "text": "Legacy block.",
+                    "warning_flags": [],
+                }
+            ],
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="legacy global-sequence schema"):
+        speech_blocks_service.load_speech_blocks(project_root)
+
+
+def test_insert_speech_block_renumbers_selected_chunk_only(tmp_path) -> None:
+    """
+    @brief      Verify manual insertion before a selected block renumbers only that chunk.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-25
+    @version    0.1.0
+    """
+    project_root, _manifest = _create_chunked_project(tmp_path, "SpeechBlocksInsert")
+    _seed_review_speech_blocks(project_root)
+
+    _report, inserted_id = speech_blocks_service.insert_speech_block(project_root, "chunk-0001", "0001-000001")
+
+    speech_blocks = speech_blocks_service.load_speech_blocks(project_root)
+    assert inserted_id == "0001-000001"
+    assert [block["speech_block_id"] for block in speech_blocks] == [
+        "0001-000001",
+        "0001-000002",
+        "0002-000001",
+    ]
+    assert speech_blocks[0]["speaker_id"] == "narrator"
+    assert speech_blocks[0]["content_kind"] == speech_blocks_service.CONTENT_KIND_NARRATION
+    assert speech_blocks[0]["text"] == ""
+    assert speech_blocks[0]["approved"] is False
+    assert speech_blocks[1]["text"] == "Hello."
+    assert speech_blocks[2]["text"] == "Later narration."
+
+
+def test_insert_speech_block_into_empty_chunk_creates_unapproved_narration(tmp_path) -> None:
+    """
+    @brief      Verify manual insertion can recreate the first block in an empty source chunk.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-25
+    @version    0.1.0
+    """
+    project_root, _manifest = _create_chunked_project(tmp_path, "SpeechBlocksInsertEmpty")
+    _seed_review_speech_blocks(project_root)
+    speech_blocks_service.delete_speech_block(project_root, "0001-000001")
+
+    _report, inserted_id = speech_blocks_service.insert_speech_block(project_root, "chunk-0001")
+
+    speech_blocks = speech_blocks_service.load_speech_blocks(project_root)
+    inserted_block = next(block for block in speech_blocks if str(block["speech_block_id"]) == inserted_id)
+    assert inserted_id == "0001-000001"
+    assert inserted_block["chunk_id"] == "chunk-0001"
+    assert inserted_block["speaker_id"] == "narrator"
+    assert inserted_block["content_kind"] == speech_blocks_service.CONTENT_KIND_NARRATION
+    assert inserted_block["approved"] is False
+
+
+def test_delete_speech_block_renumbers_remaining_chunk_blocks(tmp_path) -> None:
+    """
+    @brief      Verify manual deletion removes the selected block and closes sequence gaps.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-25
+    @version    0.1.0
+    """
+    project_root, _manifest = _create_chunked_project(tmp_path, "SpeechBlocksDelete")
+    _seed_review_speech_blocks(project_root)
+    speech_blocks_service.insert_speech_block(project_root, "chunk-0001", "0001-000001")
+
+    speech_blocks_service.delete_speech_block(project_root, "0001-000001")
+
+    speech_blocks = speech_blocks_service.load_speech_blocks(project_root)
+    assert [block["speech_block_id"] for block in speech_blocks] == ["0001-000001", "0002-000001"]
+    assert speech_blocks[0]["text"] == "Hello."
+
+
+def test_delete_unknown_speech_block_raises(tmp_path) -> None:
+    """
+    @brief      Verify deleting an unknown Speech Block reports a service error.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-25
+    @version    0.1.0
+    """
+    project_root, _manifest = _create_chunked_project(tmp_path, "SpeechBlocksDeleteUnknown")
+    _seed_review_speech_blocks(project_root)
+
+    with pytest.raises(ValueError, match="not found"):
+        speech_blocks_service.delete_speech_block(project_root, "9999-999999")
+
+
+def test_indication_content_kind_normalizes_and_pause_duration_parses(tmp_path) -> None:
+    """
+    @brief      Verify indication persists as a content kind and pause duration parsing has a default.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-25
+    @version    0.1.0
+    """
+    project_root, _manifest = _create_chunked_project(tmp_path, "SpeechBlocksIndication")
+    _seed_review_speech_blocks(project_root)
+
+    speech_blocks_service.update_speech_block(
+        project_root,
+        "0001-000001",
+        "narrator",
+        "Indication",
+        "[whisper]",
+    )
+
+    speech_blocks = speech_blocks_service.load_speech_blocks(project_root)
+    assert speech_blocks[0]["content_kind"] == speech_blocks_service.CONTENT_KIND_INDICATION
+    assert speech_blocks[0]["speaker_kind"] == speech_blocks_service.SPEAKER_KIND_OPERATION
+    assert speech_blocks[0]["speaker_id"] == speech_blocks_service.CONTENT_KIND_INDICATION
+    assert speech_blocks[0]["speaker_display_name"] == "Indication"
+    assert speech_blocks_service.pause_duration_ms("pause 2500 ms") == 2500
+    assert speech_blocks_service.pause_duration_ms("pause") == config.DEFAULT_SPEECH_BLOCK_PAUSE_DURATION_MS
 
 
 def test_approve_all_edit_and_reset_preserve_warning_cleared_state(tmp_path) -> None:
@@ -238,6 +399,9 @@ def test_approve_all_edit_and_reset_preserve_warning_cleared_state(tmp_path) -> 
     assert edited_blocks[0]["warning_flags"] == []
     assert edited_blocks[0]["approved"] is False
     assert edited_blocks[0]["content_kind"] == speech_blocks_service.CONTENT_KIND_BACKGROUND_NOISE
+    assert edited_blocks[0]["speaker_kind"] == speech_blocks_service.SPEAKER_KIND_OPERATION
+    assert edited_blocks[0]["speaker_id"] == speech_blocks_service.CONTENT_KIND_BACKGROUND_NOISE
+    assert edited_blocks[0]["speaker_display_name"] == "Background Noise"
     assert edited_blocks[0]["text"] == "Wind against the shutters."
 
     reset_report = speech_blocks_service.reset_speech_block_to_ai_baseline(project_root, "0001-000001")
@@ -322,11 +486,7 @@ def test_regenerate_selected_chunk_replaces_chunk_and_renumbers_following_blocks
     )
 
     speech_blocks = speech_blocks_service.load_speech_blocks(project_root)
-    assert [block["speech_block_id"] for block in speech_blocks] == [
-        "0001-000001",
-        "0001-000002",
-        "0002-000003",
-    ]
+    assert [block["speech_block_id"] for block in speech_blocks] == ["0001-000001", "0001-000002", "0002-000001"]
     assert [block["chunk_id"] for block in speech_blocks] == ["chunk-0001", "chunk-0001", "chunk-0002"]
     assert speech_blocks[0]["approved"] is False
     assert speech_blocks[0]["text"] == "Narration."
@@ -398,7 +558,6 @@ def test_normalize_chunk_blocks_preserves_dialogue_and_attribution_boundaries() 
         source_chunk,
         response_payload,
         speaker_catalog,
-        0,
         "en",
     )
 
@@ -464,7 +623,6 @@ def test_normalize_chunk_blocks_resolves_unique_speaker_suffix_alias() -> None:
             ]
         },
         speaker_catalog,
-        0,
         "en",
     )
 
@@ -518,7 +676,6 @@ def test_start_or_continue_generation_resumes_from_next_chunk(monkeypatch, tmp_p
             "speech_block_id": "0001-000001",
             "sequence_index": 1,
             "chunk_id": "chunk-0001",
-            "chunk_sequence_index": 1,
             "source_language": "en",
             "speaker_kind": "narrator",
             "speaker_id": "narrator",
@@ -686,7 +843,6 @@ def _seed_review_speech_blocks(project_root) -> None:
             "speech_block_id": "0001-000001",
             "sequence_index": 1,
             "chunk_id": "chunk-0001",
-            "chunk_sequence_index": 1,
             "source_language": "en",
             "speaker_kind": speech_blocks_service.SPEAKER_KIND_NARRATOR,
             "speaker_id": "narrator",
@@ -703,10 +859,9 @@ def _seed_review_speech_blocks(project_root) -> None:
             "approved_at": None,
         },
         {
-            "speech_block_id": "0002-000002",
-            "sequence_index": 2,
+            "speech_block_id": "0002-000001",
+            "sequence_index": 1,
             "chunk_id": "chunk-0002",
-            "chunk_sequence_index": 1,
             "source_language": "en",
             "speaker_kind": speech_blocks_service.SPEAKER_KIND_NARRATOR,
             "speaker_id": "narrator",
@@ -723,13 +878,7 @@ def _seed_review_speech_blocks(project_root) -> None:
             "approved_at": None,
         },
     ]
-    source_chunks_path = (
-        speech_blocks_root / f"{config.OPERATION_INPUT_FILE_PREFIX}{config.SPEECH_BLOCKS_SOURCE_CHUNKS_FILE_NAME}"
-    )
-    source_chunks_path.write_text(
-        json.dumps(source_chunks_payload, indent=2) + "\n",
-        encoding="utf-8",
-    )
+    _ = source_chunks_payload
     (speech_blocks_root / config.SPEECH_BLOCKS_OUTPUT_FILE_NAME).write_text(
         json.dumps(speech_blocks_payload, indent=2) + "\n",
         encoding="utf-8",
@@ -753,6 +902,22 @@ def _seed_review_speech_blocks(project_root) -> None:
                     "output_tokens": 0,
                     "total_tokens": 0,
                     "usage_available": False,
+                },
+            },
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    (speech_blocks_root / config.SPEECH_BLOCKS_STATE_FILE_NAME).write_text(
+        json.dumps(
+            {
+                "status": "review_pending",
+                "metadata": {
+                    "source_language": "en",
+                    "source_kind": "original",
+                    "ai_profile_id": "profile-1",
+                    "source_chunks": source_chunks_payload,
                 },
             },
             indent=2,

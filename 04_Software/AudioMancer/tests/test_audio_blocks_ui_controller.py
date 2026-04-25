@@ -13,7 +13,7 @@
          manifest advancement after approval of all generated audio blocks.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-23
-@version 0.3.0
+@version 0.3.1
 """
 
 # IMPORTS
@@ -80,7 +80,7 @@ def test_audio_blocks_ui_controller_completed_rerun_resets_downstream_before_dis
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-23
-    @version    0.2.0
+    @version    0.3.0
     """
     project_root = _create_project(tmp_path, "AudioBlocksControllerRerun")
     manifest = project_workspace_service.load_manifest(project_root)
@@ -89,7 +89,6 @@ def test_audio_blocks_ui_controller_completed_rerun_resets_downstream_before_dis
     manifest["operations"]["audio_assembly"]["status"] = "completed"
     project_workspace_service.save_manifest(manifest, project_root)
     _seed_audio_blocks_run(project_root, approved=False)
-    (project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / "artifact.txt").write_text("stale", encoding="utf-8")
     window = _build_window(qtbot, project_root, default_settings_payload)
     monkeypatch.setattr(
         audio_blocks_ui_controller.tts_runtime_ui_support,
@@ -115,8 +114,9 @@ def test_audio_blocks_ui_controller_completed_rerun_resets_downstream_before_dis
     assert window._current_manifest["current_stage"] == "speech_blocks_ready"
     assert window._current_manifest["operations"]["audio_blocks"]["status"] == "not_started"
     assert window._current_manifest["operations"]["audio_assembly"]["status"] == "not_started"
-    assert not (project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / "artifact.txt").exists()
-    assert not (project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / "artifact.txt").exists()
+    assert not (project_root / config.AUDIO_BLOCKS_OUTPUT_FILE_NAME).exists()
+    assert not (project_root / config.AUDIO_BLOCKS_STATE_FILE_NAME).exists()
+    assert not (project_root / config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME / "0001_000001_narrator.wav").exists()
 
 
 def test_audio_blocks_ui_controller_approve_all_advances_manifest_after_full_approval(
@@ -201,6 +201,14 @@ def test_audio_blocks_ui_controller_preserves_selected_block_after_regeneration_
         cancel_handler,
         cancellable=True,
     ):
+        """
+        @brief      Synchronously invoke the success handler for operation-start testing.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-25
+        @version    0.1.0
+        """
         _ = window
         _ = operation_kind
         _ = operation_name
@@ -266,7 +274,7 @@ def _create_project(tmp_path, name: str):
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-24
-    @version    0.1.0
+    @version    0.2.0
     """
     project_root, manifest = project_workspace_service.create_project(name, tmp_path)
     manifest["source_document"] = {
@@ -312,7 +320,6 @@ def _create_project(tmp_path, name: str):
                     "speech_block_id": "0001-000001",
                     "sequence_index": 1,
                     "chunk_id": "chunk-0001",
-                    "chunk_sequence_index": 1,
                     "source_language": "en",
                     "speaker_kind": speech_blocks_service.SPEAKER_KIND_NARRATOR,
                     "speaker_id": "narrator",
@@ -325,7 +332,6 @@ def _create_project(tmp_path, name: str):
                     "speech_block_id": "0001-000002",
                     "sequence_index": 2,
                     "chunk_id": "chunk-0001",
-                    "chunk_sequence_index": 1,
                     "source_language": "en",
                     "speaker_kind": speech_blocks_service.SPEAKER_KIND_CHARACTER,
                     "speaker_id": "alice",
@@ -372,7 +378,7 @@ def _seed_audio_blocks_run(project_root, approved: bool) -> None:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-24
-    @version    0.1.0
+    @version    0.2.0
     """
     audio_root = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH
     generated_root = audio_root / config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME
@@ -388,8 +394,8 @@ def _seed_audio_blocks_run(project_root, approved: bool) -> None:
             "text": "Narration one.",
             "voice_target_id": "narrator",
             "voice_source_kind": "narrator_sample",
-            "audio_relative_path": "80_audio_blocks/generated_audio/000001_narrator.wav",
-            "metadata_relative_path": "80_audio_blocks/generated_audio/000001_narrator.json",
+            "audio_relative_path": "audio_blocks/0001_000001_narrator.wav",
+            "metadata_relative_path": "audio_blocks/0001_000001_narrator.json",
             "generated": True,
             "approved": approved,
             "approved_at": "2026-04-23T12:10:00+00:00" if approved else None,
@@ -407,8 +413,8 @@ def _seed_audio_blocks_run(project_root, approved: bool) -> None:
             "text": "Hello there.",
             "voice_target_id": "character_alice",
             "voice_source_kind": "character_sample",
-            "audio_relative_path": "80_audio_blocks/generated_audio/000002_alice.wav",
-            "metadata_relative_path": "80_audio_blocks/generated_audio/000002_alice.json",
+            "audio_relative_path": "audio_blocks/0001_000002_alice.wav",
+            "metadata_relative_path": "audio_blocks/0001_000002_alice.json",
             "generated": True,
             "approved": approved,
             "approved_at": "2026-04-23T12:10:00+00:00" if approved else None,
@@ -418,10 +424,10 @@ def _seed_audio_blocks_run(project_root, approved: bool) -> None:
         },
     ]
     (audio_root / "artifact.txt").write_text("stale", encoding="utf-8")
-    (generated_root / "000001_narrator.wav").write_bytes(b"RIFF-1")
-    (generated_root / "000001_narrator.json").write_text("{}\n", encoding="utf-8")
-    (generated_root / "000002_alice.wav").write_bytes(b"RIFF-2")
-    (generated_root / "000002_alice.json").write_text("{}\n", encoding="utf-8")
+    (generated_root / "0001_000001_narrator.wav").write_bytes(b"RIFF-1")
+    (generated_root / "0001_000001_narrator.json").write_text("{}\n", encoding="utf-8")
+    (generated_root / "0001_000002_alice.wav").write_bytes(b"RIFF-2")
+    (generated_root / "0001_000002_alice.json").write_text("{}\n", encoding="utf-8")
     (audio_root / config.AUDIO_BLOCKS_OUTPUT_FILE_NAME).write_text(
         json.dumps(output_payload, indent=2) + "\n",
         encoding="utf-8",
@@ -443,13 +449,13 @@ def _seed_audio_blocks_run(project_root, approved: bool) -> None:
         + "\n",
         encoding="utf-8",
     )
-    (audio_root / config.OPERATION_STATE_FILE_NAME).write_text(
+    (audio_root / config.AUDIO_BLOCKS_STATE_FILE_NAME).write_text(
         json.dumps(
             {
                 "folder_relative_path": config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH,
                 "status": "completed",
                 "input_paths": [
-                    f"{config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH}/{config.AUDIO_BLOCKS_INPUT_SPEECH_BLOCKS_FILE_NAME}"
+                    f"{config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH}/{config.SPEECH_BLOCKS_OUTPUT_FILE_NAME}"
                 ],
                 "output_paths": [
                     f"{config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH}/{config.AUDIO_BLOCKS_OUTPUT_FILE_NAME}"

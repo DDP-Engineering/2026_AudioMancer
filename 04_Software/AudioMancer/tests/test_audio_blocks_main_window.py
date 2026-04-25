@@ -13,7 +13,7 @@
          persisted `80_audio_blocks` artifacts.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-23
-@version 0.2.0
+@version 0.2.1
 """
 
 # IMPORTS
@@ -60,7 +60,7 @@ def _create_project(tmp_path, name: str):
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-24
-    @version    0.1.0
+    @version    0.2.0
     """
     project_root, manifest = project_workspace_service.create_project(name, tmp_path)
     manifest["source_document"] = {
@@ -118,7 +118,6 @@ def _create_project(tmp_path, name: str):
                     "speech_block_id": "0001-000001",
                     "sequence_index": 1,
                     "chunk_id": "chunk-0001",
-                    "chunk_sequence_index": 1,
                     "source_language": "en",
                     "speaker_kind": speech_blocks_service.SPEAKER_KIND_NARRATOR,
                     "speaker_id": "narrator",
@@ -128,10 +127,9 @@ def _create_project(tmp_path, name: str):
                     "warning_flags": [],
                 },
                 {
-                    "speech_block_id": "0002-000002",
-                    "sequence_index": 2,
+                    "speech_block_id": "0002-000001",
+                    "sequence_index": 1,
                     "chunk_id": "chunk-0002",
-                    "chunk_sequence_index": 2,
                     "source_language": "en",
                     "speaker_kind": speech_blocks_service.SPEAKER_KIND_CHARACTER,
                     "speaker_id": "alice",
@@ -160,8 +158,8 @@ def _create_project(tmp_path, name: str):
                     "text": "Narration one.",
                     "voice_target_id": "narrator",
                     "voice_source_kind": "narrator_sample",
-                    "audio_relative_path": "80_audio_blocks/generated_audio/000001_narrator.wav",
-                    "metadata_relative_path": "80_audio_blocks/generated_audio/000001_narrator.json",
+                    "audio_relative_path": "audio_blocks/0001_000001_narrator.wav",
+                    "metadata_relative_path": "audio_blocks/0001_000001_narrator.json",
                     "generated": True,
                     "approved": False,
                     "approved_at": None,
@@ -192,13 +190,13 @@ def _create_project(tmp_path, name: str):
         + "\n",
         encoding="utf-8",
     )
-    (audio_root / config.OPERATION_STATE_FILE_NAME).write_text(
+    (audio_root / config.AUDIO_BLOCKS_STATE_FILE_NAME).write_text(
         json.dumps(
             {
                 "folder_relative_path": config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH,
                 "status": "running",
                 "input_paths": [
-                    f"{config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH}/{config.AUDIO_BLOCKS_INPUT_SPEECH_BLOCKS_FILE_NAME}"
+                    f"{config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH}/{config.SPEECH_BLOCKS_OUTPUT_FILE_NAME}"
                 ],
                 "output_paths": [
                     f"{config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH}/{config.AUDIO_BLOCKS_OUTPUT_FILE_NAME}"

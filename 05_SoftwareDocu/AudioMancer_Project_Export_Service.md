@@ -104,6 +104,8 @@ Translation, and Speech Blocks bodies include only readable text/speaker data,
 not internal ids, JSON keys, or workflow metadata. Markdown character exports
 render each character as its own subsection with a visible attribute table so
 extracted traits and voice-definition fields remain scannable.
+Speech Blocks exports use the shared canonical book order helper, so blocks are
+rendered by source chunk order and then by each chunk's local `sequence_index`.
 
 ## 7. Workflow Integration
 

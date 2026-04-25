@@ -13,7 +13,7 @@
          notes, and ready-for-assembly summaries.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-23
-@version 0.3.0
+@version 0.3.1
 """
 
 # IMPORTS
@@ -87,13 +87,13 @@ def test_build_audio_blocks_state_surfaces_progress_current_block_and_full_sourc
         + "\n",
         encoding="utf-8",
     )
-    (audio_root / config.OPERATION_STATE_FILE_NAME).write_text(
+    (audio_root / config.AUDIO_BLOCKS_STATE_FILE_NAME).write_text(
         json.dumps(
             {
                 "folder_relative_path": config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH,
                 "status": "running",
                 "input_paths": [
-                    f"{config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH}/{config.AUDIO_BLOCKS_INPUT_SPEECH_BLOCKS_FILE_NAME}"
+                    f"{config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH}/{config.SPEECH_BLOCKS_OUTPUT_FILE_NAME}"
                 ],
                 "output_paths": [
                     f"{config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH}/{config.AUDIO_BLOCKS_OUTPUT_FILE_NAME}"
@@ -119,7 +119,7 @@ def test_build_audio_blocks_state_surfaces_progress_current_block_and_full_sourc
                     "reused_prompt_count": 1,
                     "regenerated_prompt_count": 1,
                     "current_phase": "prepare_prompts",
-                    "current_block_id": "0002-000002",
+                    "current_block_id": "0002-000001",
                 },
                 "resume_checkpoint": {"next_profile_index": 2, "next_speech_block_index": 1},
             },
@@ -136,7 +136,7 @@ def test_build_audio_blocks_state_surfaces_progress_current_block_and_full_sourc
     )
 
     assert state["full_source_text"] == 'Narration one.\n\n"Alice spoke."'
-    assert state["current_block_id"] == "0002-000002"
+    assert state["current_block_id"] == "0002-000001"
     assert state["current_block_speaker"] == "Alice"
     assert state["current_block_text"] == "Hello there."
     assert state["progress_current"] == 1
@@ -165,14 +165,14 @@ def test_build_audio_blocks_notes_cover_resume_and_ready_for_assembly_states() -
     """
     speech_blocks = [
         {"speech_block_id": "0001-000001", "speaker_display_name": "Narrator", "text": "Narration one."},
-        {"speech_block_id": "0002-000002", "speaker_display_name": "Alice", "text": "Hello there."},
+        {"speech_block_id": "0002-000001", "speaker_display_name": "Alice", "text": "Hello there."},
     ]
     failed_notes = audio_blocks_state_service.build_audio_blocks_notes(
         manifest={"source_document": {"original_name": "story.txt"}},
         speech_blocks=speech_blocks,
         audio_blocks=[
             {"speech_block_id": "0001-000001", "generated": True, "approved": False},
-            {"speech_block_id": "0002-000002", "generated": False, "approved": False},
+            {"speech_block_id": "0002-000001", "generated": False, "approved": False},
         ],
         report={
             "audio_blocks_stage_status": "in_progress",
@@ -188,7 +188,7 @@ def test_build_audio_blocks_notes_cover_resume_and_ready_for_assembly_states() -
         speech_blocks=speech_blocks,
         audio_blocks=[
             {"speech_block_id": "0001-000001", "generated": True, "approved": True},
-            {"speech_block_id": "0002-000002", "generated": True, "approved": True},
+            {"speech_block_id": "0002-000001", "generated": True, "approved": True},
         ],
         report={
             "audio_blocks_stage_status": "completed",
@@ -213,7 +213,7 @@ def _create_audio_blocks_project(tmp_path, name: str):
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-24
-    @version    0.1.0
+    @version    0.2.0
     """
     project_root, manifest = project_workspace_service.create_project(name, tmp_path)
     manifest["source_document"] = {
@@ -269,7 +269,6 @@ def _create_audio_blocks_project(tmp_path, name: str):
                     "speech_block_id": "0001-000001",
                     "sequence_index": 1,
                     "chunk_id": "chunk-0001",
-                    "chunk_sequence_index": 1,
                     "source_language": "en",
                     "speaker_kind": speech_blocks_service.SPEAKER_KIND_NARRATOR,
                     "speaker_id": "narrator",
@@ -279,10 +278,9 @@ def _create_audio_blocks_project(tmp_path, name: str):
                     "warning_flags": [],
                 },
                 {
-                    "speech_block_id": "0002-000002",
-                    "sequence_index": 2,
+                    "speech_block_id": "0002-000001",
+                    "sequence_index": 1,
                     "chunk_id": "chunk-0002",
-                    "chunk_sequence_index": 2,
                     "source_language": "en",
                     "speaker_kind": speech_blocks_service.SPEAKER_KIND_CHARACTER,
                     "speaker_id": "alice",

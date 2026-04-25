@@ -14,7 +14,7 @@
          preservation, translated labels, and generation button enablement.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-24
-@version 0.4.0
+@version 0.5.0
 """
 
 # IMPORTS
@@ -46,7 +46,6 @@ def test_speech_blocks_page_renders_chunks_and_read_only_block_details(qtbot) ->
                 "speech_block_id": "0001-000001",
                 "sequence_index": 1,
                 "chunk_id": "chunk-0001",
-                "chunk_sequence_index": 1,
                 "source_language": "en",
                 "speaker_kind": "character",
                 "speaker_id": "alice",
@@ -86,6 +85,103 @@ def test_speech_blocks_page_renders_chunks_and_read_only_block_details(qtbot) ->
     assert page._speech_block_text_edit.toPlainText() == "Hello there."
 
 
+def test_speech_blocks_page_insert_delete_buttons_emit_selection(qtbot) -> None:
+    """
+    @brief      Verify Insert/Delete controls render beside chunks and emit selected ids.
+    @param[in]  qtbot Qt test helper fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-25
+    @version    0.1.0
+    """
+    page = SpeechBlocksPage()
+    qtbot.addWidget(page)
+    page.set_project_active(True)
+    page.set_ai_profiles([("Profile One", "profile-1")], "profile-1")
+    page.set_speech_blocks_state(
+        source_chunks=[{"chunk_id": "chunk-0001", "sequence_index": 1, "text": "Narration."}],
+        speech_blocks=[
+            {
+                "speech_block_id": "0001-000001",
+                "sequence_index": 1,
+                "chunk_id": "chunk-0001",
+                "speaker_id": "narrator",
+                "speaker_display_name": "Narrator",
+                "content_kind": speech_blocks_service.CONTENT_KIND_NARRATION,
+                "text": "Narration.",
+                "warning_flags": [],
+            }
+        ],
+        notes=["Ready."],
+        selected_profile_id="profile-1",
+        stage_status="in_progress",
+        selected_source_language="en",
+        processed_chunk_count=1,
+        total_chunk_count=1,
+        speaker_catalog=[{"speaker_id": "narrator", "display_name": "Narrator", "speaker_kind": "narrator"}],
+        content_kind_options=[
+            (speech_blocks_service.CONTENT_KIND_NARRATION, "Narration"),
+            (speech_blocks_service.CONTENT_KIND_INDICATION, "Indication"),
+        ],
+    )
+    insert_payloads: list[tuple[str, str]] = []
+    delete_payloads: list[str] = []
+    page.insert_block_requested.connect(lambda *payload: insert_payloads.append(tuple(str(value) for value in payload)))
+    page.delete_block_requested.connect(lambda speech_block_id: delete_payloads.append(str(speech_block_id)))
+
+    page._insert_block_button.click()
+    page._delete_block_button.click()
+
+    assert page._insert_block_button.text() == "Insert Speech Block"
+    assert page._delete_block_button.text() == "Delete Speech Block"
+    assert insert_payloads == [("chunk-0001", "0001-000001")]
+    assert delete_payloads == ["0001-000001"]
+    assert page._content_kind_combo.findData(speech_blocks_service.CONTENT_KIND_INDICATION) >= 0
+
+
+def test_speech_blocks_page_list_shows_operation_name_for_metadata_block(qtbot) -> None:
+    """
+    @brief      Verify metadata-only Speech Blocks display the operation label in the list.
+    @param[in]  qtbot Qt test helper fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-25
+    @version    0.1.0
+    """
+    page = SpeechBlocksPage()
+    qtbot.addWidget(page)
+    page.set_project_active(True)
+    page.set_ai_profiles([("Profile One", "profile-1")], "profile-1")
+    page.set_speech_blocks_state(
+        source_chunks=[{"chunk_id": "chunk-0001", "sequence_index": 1, "text": "Wind."}],
+        speech_blocks=[
+            {
+                "speech_block_id": "0001-000001",
+                "sequence_index": 1,
+                "chunk_id": "chunk-0001",
+                "speaker_kind": speech_blocks_service.SPEAKER_KIND_OPERATION,
+                "speaker_id": speech_blocks_service.CONTENT_KIND_BACKGROUND_NOISE,
+                "speaker_display_name": "Background Noise",
+                "content_kind": speech_blocks_service.CONTENT_KIND_BACKGROUND_NOISE,
+                "text": "Wind.",
+                "warning_flags": [],
+            }
+        ],
+        notes=["Ready."],
+        selected_profile_id="profile-1",
+        stage_status="in_progress",
+        selected_source_language="en",
+        processed_chunk_count=1,
+        total_chunk_count=1,
+        speaker_catalog=[{"speaker_id": "narrator", "display_name": "Narrator", "speaker_kind": "narrator"}],
+        content_kind_options=[(speech_blocks_service.CONTENT_KIND_BACKGROUND_NOISE, "Background Noise")],
+    )
+
+    assert "Background Noise" in page._speech_block_list.item(0).text()
+
+
 def test_speech_blocks_page_edit_enables_fields_and_save_returns_to_indicators(qtbot) -> None:
     """
     @brief      Verify Edit enables selected-block inputs and Save disables them after emitting changes.
@@ -109,7 +205,6 @@ def test_speech_blocks_page_edit_enables_fields_and_save_returns_to_indicators(q
                 "speech_block_id": "0001-000001",
                 "sequence_index": 1,
                 "chunk_id": "chunk-0001",
-                "chunk_sequence_index": 1,
                 "source_language": "en",
                 "speaker_kind": "character",
                 "speaker_id": "alice",
@@ -186,7 +281,6 @@ def test_speech_blocks_page_approve_selected_emits_only_selected_block(qtbot) ->
                 "speech_block_id": "0001-000001",
                 "sequence_index": 1,
                 "chunk_id": "chunk-0001",
-                "chunk_sequence_index": 1,
                 "source_language": "en",
                 "speaker_kind": "narrator",
                 "speaker_id": "narrator",
@@ -200,7 +294,6 @@ def test_speech_blocks_page_approve_selected_emits_only_selected_block(qtbot) ->
                 "speech_block_id": "0001-000002",
                 "sequence_index": 2,
                 "chunk_id": "chunk-0001",
-                "chunk_sequence_index": 1,
                 "source_language": "en",
                 "speaker_kind": "narrator",
                 "speaker_id": "narrator",
@@ -250,7 +343,6 @@ def test_speech_blocks_page_advances_visible_block_selection_with_limit(qtbot) -
                 "speech_block_id": "0001-000001",
                 "sequence_index": 1,
                 "chunk_id": "chunk-0001",
-                "chunk_sequence_index": 1,
                 "source_language": "en",
                 "speaker_kind": "narrator",
                 "speaker_id": "narrator",
@@ -264,7 +356,6 @@ def test_speech_blocks_page_advances_visible_block_selection_with_limit(qtbot) -
                 "speech_block_id": "0001-000002",
                 "sequence_index": 2,
                 "chunk_id": "chunk-0001",
-                "chunk_sequence_index": 2,
                 "source_language": "en",
                 "speaker_kind": "narrator",
                 "speaker_id": "narrator",
@@ -318,7 +409,6 @@ def test_speech_blocks_page_refresh_preserves_block_selection_and_source_scroll(
             "speech_block_id": "0001-000001",
             "sequence_index": 1,
             "chunk_id": "chunk-0001",
-            "chunk_sequence_index": 1,
             "source_language": "en",
             "speaker_kind": "narrator",
             "speaker_id": "narrator",
@@ -332,7 +422,6 @@ def test_speech_blocks_page_refresh_preserves_block_selection_and_source_scroll(
             "speech_block_id": "0001-000002",
             "sequence_index": 2,
             "chunk_id": "chunk-0001",
-            "chunk_sequence_index": 1,
             "source_language": "en",
             "speaker_kind": "narrator",
             "speaker_id": "narrator",

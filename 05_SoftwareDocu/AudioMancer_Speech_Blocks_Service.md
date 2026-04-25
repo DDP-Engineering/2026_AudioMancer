@@ -31,13 +31,15 @@ artifacts.
   dialogue quotes when they are delimiters
 - fall back to `narrator` when speaker attribution is ambiguous or invalid
 - expose speaker choices from `Narrator` plus discovered characters
-- expose content kinds `Narration`, `Dialogue`, `Background Noise`, and
-  `Pause`
+- expose content kinds `Narration`, `Dialogue`, `Background Noise`, `Pause`,
+  and `Indication`
 - support selected-block edit, save, and reset-to-AI-baseline operations
+- support manual selected-chunk Speech Block insertion and deletion, with
+  chunk-local ID renumbering from the changed point onward
 - clear warning indicators as soon as an operator starts editing a block
 - approve all speech blocks and report approval counts
-- regenerate one selected chunk and rebuild global sequence indexes plus block
-  IDs
+- regenerate one selected chunk and rebuild only that chunk's local sequence
+  indexes plus block IDs
 - reset Speech Blocks plus downstream Audio Blocks and Audio Assembly artifacts
 - persist resumable chunk-based operation state, report data, and AI
   transaction logs
@@ -52,7 +54,7 @@ It does not:
 - preserve compatibility with old `speech-block-0001` style artifacts
 - migrate old Speech Blocks or Audio Blocks artifacts
 - generate audio segments from speech blocks
-- send `Pause` or `Background Noise` blocks to VoiceWeaver
+- send `Pause`, `Background Noise`, or `Indication` blocks to VoiceWeaver
 - own character discovery, narrator selection, or voice sample generation
 
 ## 3. Implementation Overview
@@ -68,8 +70,8 @@ The workflow is split across:
   approval counts, and operator notes
 - `04_Software/AudioMancer/src/audiomancer/ui/pages/speech_blocks_page.py`
   for the top chunk list, selected chunk preview, speech block list, selected
-  block editor, approval button, reset button, and selected-chunk re-split
-  action
+  block editor, manual insert/delete buttons, approval button, reset button,
+  and selected-chunk re-split action
 - `04_Software/AudioMancer/src/audiomancer/ui/controllers/speech_blocks_ui_controller.py`
   for prerequisite validation, confirmation popups, modal progress,
   cancellation, explicit reset, approve-all, selected-block edit/reset/save,
@@ -90,7 +92,7 @@ High-level flow:
    per model request.
 5. Each response is normalized into new speech-block payloads, including AI
    baseline values, editable current values, warning flags, approval fields,
-   continuous sequence indexes, and `CCCC-BBBBBB` IDs.
+   chunk-local sequence indexes, and `CCCC-BBBBBB` IDs.
 6. The current `speech_blocks_report.json`, `speech_blocks_state.json`, and
    transaction log metadata are rewritten after every chunk so cancellation can
    resume from the next chunk.
@@ -99,10 +101,14 @@ High-level flow:
 8. `Approve All Speech Blocks` marks every block approved and advances the
    manifest to `speech_blocks_ready`.
 9. Editing one block invalidates affected downstream Audio Blocks state.
-10. Re-splitting one chunk replaces only that chunk's Speech Blocks, rebuilds
-    every later sequence index and block ID, marks new blocks unapproved, rolls
-    Speech Blocks back from complete, and asks Audio Blocks to delete/remap only
-    the affected downstream records.
+10. Inserting or deleting a block rewrites `speech_blocks.json`, renumbers only
+    the selected chunk, leaves inserted blocks unapproved, resets downstream
+    Audio Blocks plus Audio Assembly, and rolls the manifest back until review
+    is complete again.
+11. Re-splitting one chunk replaces only that chunk's Speech Blocks, rebuilds
+    that chunk's local sequence indexes and block IDs, marks new blocks
+    unapproved, rolls Speech Blocks back from complete, and asks Audio Blocks to
+    delete/remap only the affected downstream records.
 
 ## 4. Dependencies
 
@@ -158,7 +164,6 @@ Persisted speech-block payloads use:
 - `speech_block_id`
 - `sequence_index`
 - `chunk_id`
-- `chunk_sequence_index`
 - `source_language`
 - `speaker_kind`
 - `speaker_id`
@@ -177,19 +182,29 @@ Persisted speech-block payloads use:
 Current invariants:
 
 - one AI request is issued per source chunk
-- `sequence_index` is global across the whole run
-- `chunk_sequence_index` is local within a chunk
+- `sequence_index` is 1-based and local within the source chunk
 - `speech_block_id` is always `CCCC-BBBBBB`
 - `CCCC` is derived from the numeric chunk id
-- `BBBBBB` is the continuous global sequence index
+- `BBBBBB` is the chunk-local `sequence_index`
+- canonical book order is source chunk order, then chunk-local
+  `sequence_index`
 - `speaker_id` must be `narrator` or one discovered `character_id`
+- for metadata-only operation kinds, `speaker_kind` is `operation`,
+  `speaker_id` is the content-kind token, and `speaker_display_name` is the
+  operation name shown in the Speech Blocks list
 - unrecognized or ambiguous speakers fall back to narrator and add
   `ambiguous_speaker`
 - narration text is stored unchanged
 - dialogue text strips only one outer pair of straight double quotes when both
   ends are quotes
-- `background_noise` and `pause` are metadata-only content kinds for now
+- `background_noise`, `pause`, and `indication` are metadata-only content kinds
+  for Audio Blocks
+- pause text may include a millisecond duration; when no valid duration exists,
+  downstream audio composition uses `1000 ms`
 - block ordering never crosses chunk boundaries
+- manual insert creates an unapproved narrator narration block with empty text
+- manual delete removes only the selected block and leaves the source chunk in
+  the chunk list even when no Speech Blocks remain for that chunk
 - warning flags are cleared when the operator starts editing a block
 - resetting one edited block restores only the AI baseline speaker, content
   kind, and text while preserving the current warning-cleared state

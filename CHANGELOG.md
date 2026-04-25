@@ -10,7 +10,44 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
-No unreleased application changes.
+### Added
+
+- added manual Speech Blocks insertion and deletion on the Speech Blocks page,
+  including chunk-local renumbering, automatic edit mode for inserted blocks,
+  localized controls, and downstream Audio Blocks plus Audio Assembly reset
+- added `Indication` as a Speech Blocks content kind; Audio Blocks stores it as
+  metadata-only and skips VoiceWeaver generation for now
+- added pause-duration parsing for Speech Blocks and Audio Blocks, with Audio
+  Assembly converting metadata-only pause blocks into generated WAV silence
+- changed metadata-only Speech Blocks so pause, background-noise, and
+  indication blocks persist and display their operation name instead of a
+  narrator or character name
+
+### Fixed
+
+- preserved the selected chunk text scroll position after saving or resetting
+  an edited Speech Block on the Speech Blocks page
+
+## [0.24.0] - 2026-04-25
+
+### Changed
+
+- changed Speech Blocks and Audio Blocks identity to chunk-local numbering:
+  `speech_block_id` remains `CCCC-BBBBBB`, but `BBBBBB` now resets to
+  `000001` for each source chunk
+- changed Speech Blocks re-splitting so only the selected chunk's local
+  sequence values and IDs are rebuilt, preparing later insert/delete work
+- changed Audio Blocks generation, merge, approval, playback, and Audio
+  Assembly ordering to use source chunk order plus chunk-local `sequence_index`
+- changed generated Audio Blocks file stems to include both chunk order and
+  chunk-local sequence, for example `0002_000001_alice.wav`
+- package version updated to `0.24.0`
+
+### Fixed
+
+- stale legacy Speech Blocks or Audio Blocks artifacts that still contain
+  global-sequence schema fields are now rejected and must be reset/regenerated
+  instead of being silently normalized
 
 ## [0.23.0] - 2026-04-25
 

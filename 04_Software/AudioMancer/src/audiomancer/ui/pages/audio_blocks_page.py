@@ -13,7 +13,7 @@
          review controls for the Audio Blocks workflow.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-23
-@version 0.3.2
+@version 0.3.3
 """
 
 # IMPORTS
@@ -32,7 +32,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from audiomancer.services import audio_blocks_service, ui_state_service
+from audiomancer.services import audio_blocks_service, speech_blocks_service, ui_state_service
 
 
 class AudioBlocksPage(QWidget):
@@ -238,7 +238,7 @@ class AudioBlocksPage(QWidget):
         @date       2026-04-23
         @version    0.3.0
         """
-        self._speech_blocks = sorted(speech_blocks, key=lambda item: int(item.get("sequence_index", 0)))
+        self._speech_blocks = speech_blocks_service.sort_speech_blocks(speech_blocks)
         self._stage_status = stage_status
         self._can_start_or_continue = can_start_or_continue
         self._can_reset = can_reset

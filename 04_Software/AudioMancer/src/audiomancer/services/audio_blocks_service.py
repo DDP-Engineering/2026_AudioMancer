@@ -16,7 +16,7 @@
          `80_audio_blocks` workflow artifacts.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-23
-@version 0.6.0
+@version 0.7.0
 """
 
 # IMPORTS
@@ -114,7 +114,7 @@ def load_audio_blocks(project_root: str | Path) -> list[AudioBlockPayload]:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-23
-    @version    0.1.0
+    @version    0.2.0
     """
     output_path = resolve_operation_path(project_root, "audio_blocks", config.AUDIO_BLOCKS_OUTPUT_FILE_NAME)
     if not output_path.is_file():
@@ -122,7 +122,9 @@ def load_audio_blocks(project_root: str | Path) -> list[AudioBlockPayload]:
     payload = json.loads(output_path.read_text(encoding="utf-8"))
     if not isinstance(payload, list):
         return []
-    return [_normalize_persisted_audio_block(item) for item in payload if isinstance(item, dict)]
+    return speech_blocks_service.sort_speech_blocks(
+        [_normalize_persisted_audio_block(item) for item in payload if isinstance(item, dict)]
+    )
 
 
 @trace_function(_AUDIO_BLOCKS_LOGGER)
@@ -660,18 +662,17 @@ def reconcile_after_speech_blocks_resplit(project_root: str | Path, changed_chun
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-24
-    @version    0.1.0
+    @version    0.2.0
     """
     resolved_project_root = Path(project_root)
-    speech_blocks = sorted(
-        speech_blocks_service.load_speech_blocks(resolved_project_root),
-        key=lambda item: int(item.get("sequence_index", 0)),
+    speech_blocks = speech_blocks_service.sort_speech_blocks(
+        speech_blocks_service.load_speech_blocks(resolved_project_root)
     )
     existing_audio_blocks = load_audio_blocks(resolved_project_root)
     if not existing_audio_blocks:
         return load_audio_blocks_report(resolved_project_root) or _persist_report_update(resolved_project_root, [])
     existing_by_chunk_order = {
-        (str(block.get("chunk_id", "")).strip(), int(block.get("chunk_sequence_index", 0))): block
+        (str(block.get("chunk_id", "")).strip(), int(block.get("sequence_index", 0))): block
         for block in existing_audio_blocks
     }
     reconciled_blocks: list[AudioBlockPayload] = []
@@ -679,12 +680,12 @@ def reconcile_after_speech_blocks_resplit(project_root: str | Path, changed_chun
         chunk_id = str(speech_block.get("chunk_id", "")).strip()
         new_block = _initialize_audio_blocks([speech_block])[0]
         if chunk_id == str(changed_chunk_id).strip():
-            old_block = existing_by_chunk_order.get((chunk_id, int(speech_block.get("chunk_sequence_index", 0))))
+            old_block = existing_by_chunk_order.get((chunk_id, int(speech_block.get("sequence_index", 0))))
             if old_block is not None:
                 _delete_audio_block_artifacts(resolved_project_root, old_block)
             reconciled_blocks.append(new_block)
             continue
-        old_block = existing_by_chunk_order.get((chunk_id, int(speech_block.get("chunk_sequence_index", 0))))
+        old_block = existing_by_chunk_order.get((chunk_id, int(speech_block.get("sequence_index", 0))))
         if old_block is None:
             reconciled_blocks.append(new_block)
             continue
@@ -710,10 +711,9 @@ def reconcile_after_speech_blocks_resplit(project_root: str | Path, changed_chun
         )
         reconciled_blocks.append(new_block)
     for old_block in existing_audio_blocks:
-        key = (str(old_block.get("chunk_id", "")).strip(), int(old_block.get("chunk_sequence_index", 0)))
+        key = (str(old_block.get("chunk_id", "")).strip(), int(old_block.get("sequence_index", 0)))
         if key not in {
-            (str(block.get("chunk_id", "")).strip(), int(block.get("chunk_sequence_index", 0)))
-            for block in speech_blocks
+            (str(block.get("chunk_id", "")).strip(), int(block.get("sequence_index", 0))) for block in speech_blocks
         }:
             _delete_audio_block_artifacts(resolved_project_root, old_block)
     return _persist_report_update(resolved_project_root, reconciled_blocks)
@@ -863,12 +863,9 @@ def _resolve_generation_context(
     @exception  ValueError Raised when prerequisites or runtime settings are invalid.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-23
-    @version    0.2.0
+    @version    0.3.0
     """
-    speech_blocks = sorted(
-        speech_blocks_service.load_speech_blocks(project_root),
-        key=lambda item: int(item.get("sequence_index", 0)),
-    )
+    speech_blocks = speech_blocks_service.sort_speech_blocks(speech_blocks_service.load_speech_blocks(project_root))
     if not speech_blocks:
         raise ValueError("Generate Speech Blocks before starting Audio Blocks.")
     approved_speech_blocks = [block for block in speech_blocks if _speech_block_is_approved(block)]
@@ -1427,6 +1424,7 @@ def _generate_audio_block(
     split_plan = _plan_audio_block_splits(str(audio_block.get("text", "")), generation_context)
     audio_path, metadata_path = _audio_artifact_paths(
         project_root,
+        str(audio_block.get("chunk_id", "")).strip(),
         int(audio_block.get("sequence_index", 0)),
         str(audio_block.get("normalized_speaker_name", "")),
     )
@@ -1493,6 +1491,7 @@ def _generate_audio_block(
     generated_at = _utc_now_iso()
     metadata_payload = {
         "speech_block_id": str(audio_block.get("speech_block_id", "")).strip(),
+        "chunk_id": str(audio_block.get("chunk_id", "")).strip(),
         "sequence_index": int(audio_block.get("sequence_index", 0)),
         "speaker_display_name": str(audio_block.get("speaker_display_name", "")).strip(),
         "normalized_speaker_name": str(audio_block.get("normalized_speaker_name", "")).strip(),
@@ -1743,7 +1742,6 @@ def _remap_audio_block_artifacts(
             "speech_block_id": str(new_block.get("speech_block_id", "")).strip(),
             "sequence_index": int(new_block.get("sequence_index", 0)),
             "chunk_id": str(new_block.get("chunk_id", "")).strip(),
-            "chunk_sequence_index": int(new_block.get("chunk_sequence_index", 0)),
             "speaker_id": str(new_block.get("speaker_id", "")).strip(),
             "speaker_display_name": str(new_block.get("speaker_display_name", "")).strip(),
             "normalized_speaker_name": str(new_block.get("normalized_speaker_name", "")).strip(),
@@ -1760,6 +1758,7 @@ def _remap_audio_block_artifacts(
     old_metadata_relative_path = _optional_string(old_block.get("metadata_relative_path"))
     new_audio_path, new_metadata_path = _audio_artifact_paths(
         project_root,
+        str(new_block.get("chunk_id", "")).strip(),
         int(new_block.get("sequence_index", 0)),
         str(new_block.get("normalized_speaker_name", "")),
     )
@@ -1780,6 +1779,7 @@ def _remap_audio_block_artifacts(
             metadata_payload.update(
                 {
                     "speech_block_id": str(new_block.get("speech_block_id", "")).strip(),
+                    "chunk_id": str(new_block.get("chunk_id", "")).strip(),
                     "sequence_index": int(new_block.get("sequence_index", 0)),
                     "speaker_display_name": str(new_block.get("speaker_display_name", "")).strip(),
                     "normalized_speaker_name": str(new_block.get("normalized_speaker_name", "")).strip(),
@@ -1836,13 +1836,18 @@ def _initialize_audio_blocks(speech_blocks: list[dict[str, object]]) -> list[Aud
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-23
-    @version    0.4.0
+    @version    0.6.0
     """
     audio_blocks: list[AudioBlockPayload] = []
-    for speech_block in speech_blocks:
+    for speech_block in speech_blocks_service.sort_speech_blocks(speech_blocks):
         speaker_display_name = str(speech_block.get("speaker_display_name", "")).strip() or "Narrator"
         content_kind = str(speech_block.get("content_kind", speech_blocks_service.CONTENT_KIND_NARRATION)).strip()
         metadata_only = _is_metadata_only_speech_block(speech_block)
+        pause_duration_ms = (
+            speech_blocks_service.pause_duration_ms(speech_block.get("text", ""))
+            if content_kind == speech_blocks_service.CONTENT_KIND_PAUSE
+            else None
+        )
         speech_block_approved = _speech_block_is_approved(speech_block)
         metadata_only_completed = metadata_only and speech_block_approved
         audio_blocks.append(
@@ -1850,12 +1855,12 @@ def _initialize_audio_blocks(speech_blocks: list[dict[str, object]]) -> list[Aud
                 "speech_block_id": str(speech_block.get("speech_block_id", "")).strip(),
                 "sequence_index": int(speech_block.get("sequence_index", 0)),
                 "chunk_id": str(speech_block.get("chunk_id", "")).strip(),
-                "chunk_sequence_index": int(speech_block.get("chunk_sequence_index", 0)),
                 "speaker_id": str(speech_block.get("speaker_id", "")).strip(),
                 "speaker_display_name": speaker_display_name,
                 "normalized_speaker_name": normalize_speaker_name(speaker_display_name),
                 "content_kind": content_kind,
                 "metadata_only": metadata_only,
+                "pause_duration_ms": pause_duration_ms,
                 "speech_block_approved": speech_block_approved,
                 "text": str(speech_block.get("text", "")),
                 "voice_target_id": _voice_target_id_for_block(speech_block),
@@ -1905,6 +1910,7 @@ def _merge_existing_audio_blocks(
             {
                 "audio_relative_path": existing_block.get("audio_relative_path"),
                 "metadata_relative_path": existing_block.get("metadata_relative_path"),
+                "pause_duration_ms": existing_block.get("pause_duration_ms"),
                 "generated": bool(existing_block.get("generated", False)),
                 "approved": bool(existing_block.get("approved", False)),
                 "approved_at": existing_block.get("approved_at"),
@@ -2370,39 +2376,44 @@ def _generated_audio_root(project_root: Path) -> Path:
 
 def _audio_artifact_paths(
     project_root: Path,
+    chunk_id: str,
     sequence_index: int,
     normalized_speaker_name: str,
 ) -> tuple[Path, Path]:
     """
     @brief      Resolve one stable WAV and JSON metadata path pair for a speech block.
     @param[in]  project_root Active project root folder.
-    @param[in]  sequence_index Stable speech-block sequence index.
+    @param[in]  chunk_id Stable source chunk identifier.
+    @param[in]  sequence_index Stable chunk-local speech-block sequence index.
     @param[in]  normalized_speaker_name Stable normalized speaker-name token.
     @return     Tuple of WAV path and metadata JSON path.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-24
-    @version    0.2.0
+    @version    0.3.0
     """
-    file_stem = _audio_artifact_file_stem(sequence_index, normalized_speaker_name)
+    file_stem = _audio_artifact_file_stem(chunk_id, sequence_index, normalized_speaker_name)
     generated_root = _generated_audio_root(project_root)
     return generated_root / f"{file_stem}.wav", generated_root / f"{file_stem}.json"
 
 
-def _audio_artifact_file_stem(sequence_index: int, normalized_speaker_name: str) -> str:
+def _audio_artifact_file_stem(chunk_id: str, sequence_index: int, normalized_speaker_name: str) -> str:
     """
     @brief      Build the compact Audio Blocks artifact file stem.
-    @param[in]  sequence_index Stable speech-block sequence index.
+    @param[in]  chunk_id Stable source chunk identifier.
+    @param[in]  sequence_index Stable chunk-local speech-block sequence index.
     @param[in]  normalized_speaker_name Stable normalized speaker-name token.
-    @return     File stem in `<order_no_6digits>_<character_normalized_name>` format.
+    @return     File stem in `<chunk_no_4digits>_<block_no_6digits>_<character_normalized_name>` format.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-24
-    @version    0.1.0
+    @version    0.2.0
     """
+    chunk_sort_key = speech_blocks_service.speech_block_book_sort_key({"chunk_id": chunk_id, "sequence_index": 0})
+    safe_chunk = f"{chunk_sort_key[0]:04d}"
     safe_sequence = f"{max(int(sequence_index), 0):06d}"
     safe_name = str(normalized_speaker_name or "").strip() or "speaker"
-    return f"{safe_sequence}_{safe_name}"
+    return f"{safe_chunk}_{safe_sequence}_{safe_name}"
 
 
 def normalize_speaker_name(value: str) -> str:
@@ -2458,15 +2469,16 @@ def _is_metadata_only_speech_block(speech_block: dict[str, object]) -> bool:
     """
     @brief      Return whether one Speech Block has no speech audio generation.
     @param[in]  speech_block Speech Blocks payload.
-    @return     True for pause and background-noise blocks.
+    @return     True for pause, background-noise, and indication blocks.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-24
-    @version    0.1.0
+    @version    0.2.0
     """
     return str(speech_block.get("content_kind", "")).strip() in {
         speech_blocks_service.CONTENT_KIND_BACKGROUND_NOISE,
         speech_blocks_service.CONTENT_KIND_PAUSE,
+        speech_blocks_service.CONTENT_KIND_INDICATION,
     }
 
 
@@ -2533,18 +2545,22 @@ def _normalize_persisted_audio_block(payload: dict[str, object]) -> AudioBlockPa
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-23
-    @version    0.1.0
+    @version    0.3.0
     """
+    if "chunk_sequence_index" in payload:
+        raise ValueError(
+            "Audio Blocks uses a legacy global-sequence schema. Reset and regenerate Audio Blocks for this project."
+        )
     return {
         "speech_block_id": str(payload.get("speech_block_id", "")).strip(),
         "sequence_index": int(payload.get("sequence_index", 0)),
         "chunk_id": str(payload.get("chunk_id", "")).strip(),
-        "chunk_sequence_index": int(payload.get("chunk_sequence_index", 0)),
         "speaker_id": str(payload.get("speaker_id", "")).strip(),
         "speaker_display_name": str(payload.get("speaker_display_name", "")).strip(),
         "normalized_speaker_name": str(payload.get("normalized_speaker_name", "")).strip() or "speaker",
         "content_kind": str(payload.get("content_kind", speech_blocks_service.CONTENT_KIND_NARRATION)).strip(),
         "metadata_only": bool(payload.get("metadata_only", False)),
+        "pause_duration_ms": _optional_int(payload.get("pause_duration_ms"), None),
         "speech_block_approved": bool(payload.get("speech_block_approved", True)),
         "text": str(payload.get("text", "")),
         "voice_target_id": str(payload.get("voice_target_id", "")).strip(),

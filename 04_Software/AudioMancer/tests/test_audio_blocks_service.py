@@ -14,12 +14,14 @@
          normalization.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-23
-@version 1.1.0
+@version 1.3.0
 """
 
 # IMPORTS
 
 import json
+
+import pytest
 
 from audiomancer import config
 from audiomancer.services import (
@@ -145,10 +147,56 @@ def test_audio_blocks_service_generates_clone_prompts_and_ordered_wavs(monkeypat
     ]
     first_audio_path = project_root / str(audio_blocks[0]["audio_relative_path"])
     second_audio_path = project_root / str(audio_blocks[1]["audio_relative_path"])
-    assert first_audio_path.name == "000001_narrator.wav"
-    assert second_audio_path.name == "000002_alice.wav"
+    assert first_audio_path.name == "0001_000001_narrator.wav"
+    assert second_audio_path.name == "0001_000002_alice.wav"
     assert first_audio_path.read_bytes() == b"RIFF-narrator"
     assert second_audio_path.read_bytes() == b"RIFF-alice"
+
+
+def test_audio_blocks_service_rejects_legacy_global_sequence_schema(tmp_path) -> None:
+    """
+    @brief      Verify legacy global Audio Blocks artifacts require reset/regeneration.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-25
+    @version    0.1.0
+    """
+    project_root, _manifest = _create_audio_blocks_project(tmp_path, "AudioBlocksLegacySchema")
+    output_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.AUDIO_BLOCKS_OUTPUT_FILE_NAME
+    output_path.write_text(
+        json.dumps(
+            [
+                {
+                    "speech_block_id": "0002-000004",
+                    "sequence_index": 4,
+                    "chunk_sequence_index": 1,
+                    "chunk_id": "chunk-0002",
+                    "speaker_id": "alice",
+                    "speaker_display_name": "Alice",
+                    "normalized_speaker_name": "alice",
+                    "text": "Legacy block.",
+                    "voice_target_id": "character_alice",
+                    "voice_source_kind": "character_sample",
+                    "audio_relative_path": None,
+                    "metadata_relative_path": None,
+                    "generated": False,
+                    "approved": False,
+                    "approved_at": None,
+                    "generated_at": None,
+                    "runtime_result_summary": "",
+                    "warning_flags": [],
+                }
+            ],
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="legacy global-sequence schema"):
+        audio_blocks_service.load_audio_blocks(project_root)
 
 
 def test_audio_blocks_service_generates_only_approved_speech_blocks(monkeypatch, tmp_path) -> None:
@@ -243,14 +291,14 @@ def test_audio_blocks_service_generates_only_approved_speech_blocks(monkeypatch,
 
 def test_audio_blocks_service_skips_voiceweaver_for_metadata_only_blocks(monkeypatch, tmp_path) -> None:
     """
-    @brief      Verify Pause and Background Noise Speech Blocks are represented without VoiceWeaver generation.
+    @brief      Verify pause, background-noise, and indication blocks skip VoiceWeaver generation.
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-24
-    @version    0.2.0
+    @version    0.3.0
     """
     project_root, manifest = _create_audio_blocks_project(tmp_path, "AudioBlocksServiceMetadataOnly")
     speech_blocks_path = (
@@ -262,15 +310,30 @@ def test_audio_blocks_service_skips_voiceweaver_for_metadata_only_blocks(monkeyp
             "speech_block_id": "0001-000003",
             "sequence_index": 3,
             "chunk_id": "chunk-0001",
-            "chunk_sequence_index": 3,
             "source_language": "en",
             "speaker_kind": speech_blocks_service.SPEAKER_KIND_NARRATOR,
             "speaker_id": "narrator",
             "speaker_display_name": "Narrator",
             "content_kind": speech_blocks_service.CONTENT_KIND_PAUSE,
-            "text": "Pause between sections.",
+            "text": "Pause between sections for 1500 ms.",
             "approved": True,
             "approved_at": "2026-04-23T12:04:00+00:00",
+            "warning_flags": [],
+        }
+    )
+    speech_blocks_payload.append(
+        {
+            "speech_block_id": "0001-000004",
+            "sequence_index": 4,
+            "chunk_id": "chunk-0001",
+            "source_language": "en",
+            "speaker_kind": speech_blocks_service.SPEAKER_KIND_NARRATOR,
+            "speaker_id": "narrator",
+            "speaker_display_name": "Narrator",
+            "content_kind": speech_blocks_service.CONTENT_KIND_INDICATION,
+            "text": "[whisper]",
+            "approved": True,
+            "approved_at": "2026-04-23T12:05:00+00:00",
             "warning_flags": [],
         }
     )
@@ -337,13 +400,17 @@ def test_audio_blocks_service_skips_voiceweaver_for_metadata_only_blocks(monkeyp
     report = audio_blocks_service.start_or_continue_generation(project_root, manifest, _runtime_settings())
 
     audio_blocks = audio_blocks_service.load_audio_blocks(project_root)
-    assert report["total_block_count"] == 3
+    assert report["total_block_count"] == 4
     assert observed_generate_requests == ["Narration one.", "Hello there."]
     assert audio_blocks[2]["speech_block_id"] == "0001-000003"
     assert audio_blocks[2]["metadata_only"] is True
+    assert audio_blocks[2]["pause_duration_ms"] == 1500
     assert audio_blocks[2]["generated"] is True
     assert audio_blocks[2]["approved"] is True
     assert audio_blocks[2]["audio_relative_path"] is None
+    assert audio_blocks[3]["content_kind"] == speech_blocks_service.CONTENT_KIND_INDICATION
+    assert audio_blocks[3]["metadata_only"] is True
+    assert audio_blocks[3]["audio_relative_path"] is None
 
 
 def test_audio_blocks_service_approve_and_regenerate_selected_block(monkeypatch, tmp_path) -> None:
@@ -448,7 +515,6 @@ def test_audio_blocks_service_reconcile_after_resplit_deletes_changed_chunk_and_
                     "speech_block_id": "0001-000001",
                     "sequence_index": 1,
                     "chunk_id": "chunk-0001",
-                    "chunk_sequence_index": 1,
                     "source_language": "en",
                     "speaker_kind": speech_blocks_service.SPEAKER_KIND_NARRATOR,
                     "speaker_id": "narrator",
@@ -458,10 +524,9 @@ def test_audio_blocks_service_reconcile_after_resplit_deletes_changed_chunk_and_
                     "warning_flags": [],
                 },
                 {
-                    "speech_block_id": "0002-000002",
-                    "sequence_index": 2,
+                    "speech_block_id": "0002-000001",
+                    "sequence_index": 1,
                     "chunk_id": "chunk-0002",
-                    "chunk_sequence_index": 1,
                     "source_language": "en",
                     "speaker_kind": speech_blocks_service.SPEAKER_KIND_CHARACTER,
                     "speaker_id": "alice",
@@ -481,13 +546,13 @@ def test_audio_blocks_service_reconcile_after_resplit_deletes_changed_chunk_and_
     generated_root.mkdir(parents=True, exist_ok=True)
     changed_audio_path = generated_root / "000001_narrator.wav"
     changed_metadata_path = generated_root / "000001_narrator.json"
-    later_audio_path = generated_root / "000003_alice.wav"
-    later_metadata_path = generated_root / "000003_alice.json"
+    later_audio_path = generated_root / "0002_000001_alice.wav"
+    later_metadata_path = generated_root / "0002_000001_alice.json"
     changed_audio_path.write_bytes(b"RIFF-old-changed")
     changed_metadata_path.write_text("{}\n", encoding="utf-8")
     later_audio_path.write_bytes(b"RIFF-later")
     later_metadata_path.write_text(
-        json.dumps({"speech_block_id": "0002-000003", "sequence_index": 3}, indent=2) + "\n",
+        json.dumps({"speech_block_id": "0002-000001", "chunk_id": "chunk-0002", "sequence_index": 1}, indent=2) + "\n",
         encoding="utf-8",
     )
     (audio_root / config.AUDIO_BLOCKS_OUTPUT_FILE_NAME).write_text(
@@ -497,7 +562,6 @@ def test_audio_blocks_service_reconcile_after_resplit_deletes_changed_chunk_and_
                     "speech_block_id": "0001-000001",
                     "sequence_index": 1,
                     "chunk_id": "chunk-0001",
-                    "chunk_sequence_index": 1,
                     "speaker_id": "narrator",
                     "speaker_display_name": "Narrator",
                     "normalized_speaker_name": "narrator",
@@ -514,10 +578,9 @@ def test_audio_blocks_service_reconcile_after_resplit_deletes_changed_chunk_and_
                     "warning_flags": [],
                 },
                 {
-                    "speech_block_id": "0002-000003",
-                    "sequence_index": 3,
+                    "speech_block_id": "0002-000001",
+                    "sequence_index": 1,
                     "chunk_id": "chunk-0002",
-                    "chunk_sequence_index": 1,
                     "speaker_id": "alice",
                     "speaker_display_name": "Alice",
                     "normalized_speaker_name": "alice",
@@ -543,18 +606,18 @@ def test_audio_blocks_service_reconcile_after_resplit_deletes_changed_chunk_and_
     report = audio_blocks_service.reconcile_after_speech_blocks_resplit(project_root, "chunk-0001")
 
     audio_blocks = audio_blocks_service.load_audio_blocks(project_root)
-    remapped_audio_path = generated_root / "000002_alice.wav"
-    remapped_metadata_path = generated_root / "000002_alice.json"
+    remapped_audio_path = generated_root / "0002_000001_alice.wav"
+    remapped_metadata_path = generated_root / "0002_000001_alice.json"
     assert report["generated_block_count"] == 1
     assert audio_blocks[0]["speech_block_id"] == "0001-000001"
     assert audio_blocks[0]["generated"] is False
-    assert audio_blocks[1]["speech_block_id"] == "0002-000002"
-    assert audio_blocks[1]["sequence_index"] == 2
+    assert audio_blocks[1]["speech_block_id"] == "0002-000001"
+    assert audio_blocks[1]["sequence_index"] == 1
     assert audio_blocks[1]["generated"] is True
     assert not changed_audio_path.exists()
-    assert not later_audio_path.exists()
+    assert later_audio_path.exists()
     assert remapped_audio_path.read_bytes() == b"RIFF-later"
-    assert json.loads(remapped_metadata_path.read_text(encoding="utf-8"))["speech_block_id"] == "0002-000002"
+    assert json.loads(remapped_metadata_path.read_text(encoding="utf-8"))["speech_block_id"] == "0002-000001"
 
 
 def test_audio_blocks_service_normalize_speaker_name_handles_diacritics() -> None:
@@ -566,7 +629,7 @@ def test_audio_blocks_service_normalize_speaker_name_handles_diacritics() -> Non
     @date       2026-04-23
     @version    0.1.0
     """
-    assert audio_blocks_service.normalize_speaker_name(" Maria-Elena È˜tefan!? ") == "maria_elena_stefan"
+    assert audio_blocks_service.normalize_speaker_name(" Maria-Elena ÃˆËœtefan!? ") == "maria_elena_stefan"
 
 
 def test_audio_blocks_service_resume_continues_from_saved_checkpoint(monkeypatch, tmp_path) -> None:
@@ -966,7 +1029,6 @@ def _create_audio_blocks_project(tmp_path, name: str):
             "speech_block_id": "0001-000001",
             "sequence_index": 1,
             "chunk_id": "chunk-0001",
-            "chunk_sequence_index": 1,
             "source_language": "en",
             "speaker_kind": speech_blocks_service.SPEAKER_KIND_NARRATOR,
             "speaker_id": "narrator",
@@ -981,7 +1043,6 @@ def _create_audio_blocks_project(tmp_path, name: str):
             "speech_block_id": "0001-000002",
             "sequence_index": 2,
             "chunk_id": "chunk-0001",
-            "chunk_sequence_index": 1,
             "source_language": "en",
             "speaker_kind": speech_blocks_service.SPEAKER_KIND_CHARACTER,
             "speaker_id": "alice",
@@ -1061,10 +1122,12 @@ def _seed_generated_audio_blocks(project_root) -> None:
     )
     audio_root.mkdir(parents=True, exist_ok=True)
     audio_blocks_payload = []
-    for sequence_index, speech_block in enumerate(speech_blocks, start=1):
+    for speech_block in speech_blocks:
+        sequence_index = int(speech_block["sequence_index"])
         speaker_name = audio_blocks_service.normalize_speaker_name(str(speech_block["speaker_display_name"]))
-        audio_path = audio_root / f"{sequence_index:06d}_{speaker_name}.wav"
-        metadata_path = audio_root / f"{sequence_index:06d}_{speaker_name}.json"
+        stem = str(speech_block["speech_block_id"]).replace("-", "_")
+        audio_path = audio_root / f"{stem}_{speaker_name}.wav"
+        metadata_path = audio_root / f"{stem}_{speaker_name}.json"
         audio_path.write_bytes(f"RIFF-{sequence_index}".encode())
         metadata_path.write_text("{}\n", encoding="utf-8")
         audio_blocks_payload.append(

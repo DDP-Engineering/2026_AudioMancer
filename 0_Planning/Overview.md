@@ -186,8 +186,12 @@ using the assigned narrator and character voice plan.
 
 This stage should support:
 
+- manual insertion and deletion of Speech Blocks when extraction or AI splitting
+  needs operator correction
 - narrator voice generation for narration Speech Blocks
 - character voice generation for dialogue or character-linked Speech Blocks
+- metadata-only Speech Blocks such as pause, indication, and background-noise
+  markers without treating them as narrator or character speech
 - use of personalized synthetic voices
 - use of real cloned voices where supported
 - generation of only the currently approved Speech Blocks so partial review can
@@ -199,7 +203,8 @@ The generation stage should make it possible to use different voices inside the
 same book, for example narrator voice plus one or more character voices.
 
 The current implementation generates WAV files through the Audio Blocks workflow
-under `audio_blocks/`, keeps unapproved Speech Blocks pending, and advances only
+under `audio_blocks/`, keeps unapproved Speech Blocks pending, stores
+metadata-only operation blocks without VoiceWeaver generation, and advances only
 after generated audio is explicitly approved.
 
 ### 5.10 Export And Assembly
@@ -216,6 +221,7 @@ The current implementation supports these Audio Assembly output modes:
 The assembly stage supports:
 
 - combining generated Speech Block audio in canonical order
+- converting metadata-only pause blocks into silence
 - deterministic output naming
 - project-local `audiobook/` deliverables
 - `audio_assembly_state.json` and `audio_assembly_report.json`

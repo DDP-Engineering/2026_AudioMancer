@@ -14,7 +14,7 @@
          targeted downstream invalidation when upstream voice inputs change.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-23
-@version 0.2.3
+@version 0.2.4
 """
 
 # IMPORTS
@@ -30,6 +30,7 @@ from audiomancer import config
 from audiomancer.services import (
     audio_blocks_service,
     project_workspace_service,
+    speech_blocks_service,
     text_cleanup_state_service,
     ui_state_service,
 )
@@ -260,7 +261,7 @@ def handle_audiobook_playback_toggle_requested(window: "MainWindow") -> None:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-24
-    @version    0.1.0
+    @version    0.2.0
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._audio_blocks_playback_mode == "audiobook":
@@ -765,9 +766,8 @@ def _playable_audio_blocks(window: "MainWindow") -> list[dict[str, object]]:
     if window._current_project_root is None:
         return []
     playable_blocks: list[dict[str, object]] = []
-    for audio_block in sorted(
-        audio_blocks_service.load_audio_blocks(window._current_project_root),
-        key=lambda item: int(item.get("sequence_index", 0)),
+    for audio_block in speech_blocks_service.sort_speech_blocks(
+        audio_blocks_service.load_audio_blocks(window._current_project_root)
     ):
         if _audio_path_for_block(window, audio_block) is not None:
             playable_blocks.append(audio_block)

@@ -14,7 +14,7 @@
          Blocks output, and the resumable runtime operation state.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-23
-@version 0.3.0
+@version 0.3.1
 """
 
 # IMPORTS
@@ -46,15 +46,12 @@ def build_audio_blocks_state(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-23
-    @version    0.2.0
+    @version    0.3.1
     """
     if project_root is None or manifest is None:
         return _empty_state(language)
 
-    speech_blocks = sorted(
-        speech_blocks_service.load_speech_blocks(project_root),
-        key=lambda item: int(item.get("sequence_index", 0)),
-    )
+    speech_blocks = speech_blocks_service.sort_speech_blocks(speech_blocks_service.load_speech_blocks(project_root))
     audio_blocks = audio_blocks_service.load_audio_blocks(project_root)
     report = audio_blocks_service.load_audio_blocks_report(project_root)
     operation_state = audio_blocks_service.load_operation_state(project_root)
@@ -307,7 +304,7 @@ def _merge_audio_block_state(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-23
-    @version    0.2.0
+    @version    0.3.0
     """
     audio_by_id = {str(block.get("speech_block_id", "")).strip(): dict(block) for block in audio_blocks}
     current_block_id = None

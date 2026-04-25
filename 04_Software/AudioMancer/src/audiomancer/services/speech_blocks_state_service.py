@@ -359,7 +359,7 @@ def _content_kind_options(language: str) -> list[tuple[str, str]]:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-24
-    @version    0.1.0
+    @version    0.2.0
     """
     return [
         (
@@ -377,6 +377,10 @@ def _content_kind_options(language: str) -> list[tuple[str, str]]:
         (
             speech_blocks_service.CONTENT_KIND_PAUSE,
             ui_state_service.translate("speech_blocks.content_pause", language),
+        ),
+        (
+            speech_blocks_service.CONTENT_KIND_INDICATION,
+            ui_state_service.translate("speech_blocks.content_indication", language),
         ),
     ]
 

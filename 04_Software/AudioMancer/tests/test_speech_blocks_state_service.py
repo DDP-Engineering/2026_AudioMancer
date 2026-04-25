@@ -13,7 +13,7 @@
          and operator note rendering for resumable and warning-bearing state.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 0.1.0
+@version 0.1.1
 """
 
 # IMPORTS
@@ -81,7 +81,6 @@ def test_build_speech_blocks_state_loads_persisted_blocks_and_summary(tmp_path) 
                     "speech_block_id": "0001-000001",
                     "sequence_index": 1,
                     "chunk_id": "chunk-0001",
-                    "chunk_sequence_index": 1,
                     "source_language": "en",
                     "speaker_kind": "narrator",
                     "speaker_id": "narrator",
@@ -121,7 +120,7 @@ def test_build_speech_blocks_state_loads_persisted_blocks_and_summary(tmp_path) 
         + "\n",
         encoding="utf-8",
     )
-    (speech_blocks_root / config.OPERATION_STATE_FILE_NAME).write_text(
+    (speech_blocks_root / config.SPEECH_BLOCKS_STATE_FILE_NAME).write_text(
         json.dumps(
             {
                 "folder_relative_path": config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH,
@@ -212,6 +211,16 @@ def test_build_speech_blocks_notes_show_resume_and_warning_entries() -> None:
 
 
 def _create_chunked_project(tmp_path, name: str):
+    """
+    @brief      Create one project fixture with chunking output for state-service tests.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @param[in]  name Project display name.
+    @return     Tuple containing project root and loaded manifest payload.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-25
+    @version    0.1.0
+    """
     project_root, manifest = project_workspace_service.create_project(name, tmp_path)
     manifest["source_document"] = {
         "original_name": "story.txt",

@@ -13,7 +13,7 @@
          user-facing export artifacts.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-25
-@version 0.3.0
+@version 0.3.1
 """
 
 # IMPORTS
@@ -377,7 +377,8 @@ def _build_export_project(tmp_path):
         project_root / config.SPEECH_BLOCKS_OUTPUT_FILE_NAME,
         [
             {
-                "speech_block_id": "speech-0001",
+                "speech_block_id": "0001-000001",
+                "chunk_id": "chunk-0001",
                 "sequence_index": 1,
                 "speaker_id": "stefan",
                 "speaker_display_name": "Ștefan",

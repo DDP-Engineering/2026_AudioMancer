@@ -13,7 +13,7 @@
          the Speech Blocks workflow.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 0.3.0
+@version 0.4.0
 """
 
 # IMPORTS
@@ -111,6 +111,146 @@ def test_speech_blocks_ui_controller_edit_start_does_not_refresh_page(monkeypatc
     assert update_calls == [(project_root, "0001-000001", "alice", "dialogue", "Hello.")]
 
 
+def test_speech_blocks_ui_controller_save_restores_chunk_text_scroll(monkeypatch, tmp_path) -> None:
+    """
+    @brief      Verify saving an edited block restores the selected chunk text scroll position.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-25
+    @version    0.1.0
+    """
+    project_root = tmp_path / "SpeechBlocksSaveScroll"
+    project_root.mkdir()
+    restore_calls: list[int] = []
+    window = SimpleNamespace(
+        _settings_payload={"language": "en"},
+        _current_project_root=project_root,
+        _current_manifest={"current_stage": "speech_blocks_ready"},
+        _speech_blocks_page=SimpleNamespace(
+            source_scroll_position=lambda: 37,
+            restore_source_scroll_position=lambda position: restore_calls.append(int(position)),
+        ),
+    )
+    monkeypatch.setattr(speech_blocks_ui_controller.speech_blocks_service, "update_speech_block", lambda *args: {})
+    monkeypatch.setattr(speech_blocks_ui_controller, "_sync_manifest_after_speech_blocks_update", lambda _window: None)
+    monkeypatch.setattr(
+        speech_blocks_ui_controller,
+        "_invalidate_audio_blocks_after_speech_block_change",
+        lambda *_args: None,
+    )
+    monkeypatch.setattr(speech_blocks_ui_controller.misc_ui_controller, "show_message", lambda *args, **kwargs: None)
+
+    speech_blocks_ui_controller.handle_save_block_requested(
+        window,
+        "0001-000001",
+        "narrator",
+        "narration",
+        "Edited text.",
+    )
+
+    assert restore_calls == [37]
+
+
+def test_speech_blocks_ui_controller_insert_resets_downstream_and_selects_new_block(monkeypatch, tmp_path) -> None:
+    """
+    @brief      Verify insert delegates to service, resets downstream state, and selects edit mode.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-25
+    @version    0.1.0
+    """
+    project_root = tmp_path / "SpeechBlocksInsertController"
+    project_root.mkdir()
+    page_calls: list[tuple[str, str]] = []
+    window = SimpleNamespace(
+        _settings_payload={"language": "en"},
+        _current_project_root=project_root,
+        _current_manifest={"current_stage": "audio_blocks_ready"},
+        _speech_blocks_page=SimpleNamespace(
+            select_speech_block=lambda speech_block_id: page_calls.append(("select", speech_block_id)),
+            begin_editing_selected_block=lambda: page_calls.append(("edit", "")),
+        ),
+    )
+    service_calls = []
+    reset_calls = []
+    monkeypatch.setattr(
+        speech_blocks_ui_controller.speech_blocks_service,
+        "insert_speech_block",
+        lambda *args: service_calls.append(args) or ({}, "0001-000002"),
+    )
+    monkeypatch.setattr(
+        speech_blocks_ui_controller,
+        "_sync_manifest_after_speech_blocks_update",
+        lambda _window: reset_calls.append("sync"),
+    )
+    monkeypatch.setattr(
+        speech_blocks_ui_controller,
+        "_reset_downstream_after_speech_blocks_structure_change",
+        lambda _window: reset_calls.append("reset"),
+    )
+    monkeypatch.setattr(speech_blocks_ui_controller.misc_ui_controller, "show_message", lambda *args, **kwargs: None)
+
+    speech_blocks_ui_controller.handle_insert_block_requested(window, "chunk-0001", "0001-000001")
+
+    assert service_calls == [(project_root, "chunk-0001", "0001-000001")]
+    assert reset_calls == ["sync", "reset"]
+    assert page_calls == [("select", "0001-000002"), ("edit", "")]
+
+
+def test_speech_blocks_ui_controller_delete_confirms_and_resets_downstream(monkeypatch, tmp_path) -> None:
+    """
+    @brief      Verify delete asks confirmation, delegates to service, and resets downstream state.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-25
+    @version    0.1.0
+    """
+    project_root = tmp_path / "SpeechBlocksDeleteController"
+    project_root.mkdir()
+    window = SimpleNamespace(
+        _settings_payload={"language": "en"},
+        _current_project_root=project_root,
+        _current_manifest={"current_stage": "audio_blocks_ready"},
+    )
+    service_calls = []
+    reset_calls = []
+    monkeypatch.setattr(
+        speech_blocks_ui_controller.QMessageBox,
+        "question",
+        lambda *_args, **_kwargs: QMessageBox.StandardButton.Yes,
+    )
+    monkeypatch.setattr(
+        speech_blocks_ui_controller.speech_blocks_service,
+        "delete_speech_block",
+        lambda *args: service_calls.append(args) or {},
+    )
+    monkeypatch.setattr(
+        speech_blocks_ui_controller,
+        "_sync_manifest_after_speech_blocks_update",
+        lambda _window: reset_calls.append("sync"),
+    )
+    monkeypatch.setattr(
+        speech_blocks_ui_controller,
+        "_reset_downstream_after_speech_blocks_structure_change",
+        lambda _window: reset_calls.append("reset"),
+    )
+    monkeypatch.setattr(speech_blocks_ui_controller.misc_ui_controller, "show_message", lambda *args, **kwargs: None)
+
+    speech_blocks_ui_controller.handle_delete_block_requested(window, "0001-000001")
+
+    assert service_calls == [(project_root, "0001-000001")]
+    assert reset_calls == ["sync", "reset"]
+
+
 def test_speech_blocks_ui_controller_explicit_reset_clears_speech_blocks_and_downstream(
     monkeypatch, qtbot, tmp_path
 ) -> None:
@@ -132,12 +272,14 @@ def test_speech_blocks_ui_controller_explicit_reset_clears_speech_blocks_and_dow
     manifest["operations"]["audio_blocks"]["status"] = "completed"
     manifest["operations"]["audio_assembly"]["status"] = "completed"
     project_workspace_service.save_manifest(manifest, project_root)
-    for folder_name in (
-        config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH,
-        config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH,
-        config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH,
-    ):
-        (project_root / folder_name / "artifact.txt").write_text("stale", encoding="utf-8")
+    stale_artifacts = [
+        project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.SPEECH_BLOCKS_OUTPUT_FILE_NAME,
+        project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.AUDIO_BLOCKS_OUTPUT_FILE_NAME,
+        project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.AUDIO_ASSEMBLY_REPORT_FILE_NAME,
+    ]
+    stale_artifacts[0].write_text("[]\n", encoding="utf-8")
+    stale_artifacts[1].write_text("[]\n", encoding="utf-8")
+    stale_artifacts[2].write_text("{}\n", encoding="utf-8")
     window = _build_window(qtbot, project_root)
     monkeypatch.setattr(
         speech_blocks_ui_controller.QMessageBox,
@@ -153,12 +295,22 @@ def test_speech_blocks_ui_controller_explicit_reset_clears_speech_blocks_and_dow
     assert window._current_manifest["operations"]["speech_blocks"]["status"] == "not_started"
     assert window._current_manifest["operations"]["audio_blocks"]["status"] == "not_started"
     assert window._current_manifest["operations"]["audio_assembly"]["status"] == "not_started"
-    assert not (project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / "artifact.txt").exists()
-    assert not (project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / "artifact.txt").exists()
-    assert not (project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / "artifact.txt").exists()
+    assert not stale_artifacts[0].exists()
+    assert not stale_artifacts[1].exists()
+    assert not stale_artifacts[2].exists()
 
 
 def _create_project(tmp_path, name: str):
+    """
+    @brief      Create one Speech Blocks controller project fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @param[in]  name Project display name.
+    @return     Project root path.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-25
+    @version    0.1.0
+    """
     project_root, manifest = project_workspace_service.create_project(name, tmp_path)
     manifest["source_document"] = {
         "original_name": "story.txt",
@@ -196,6 +348,16 @@ def _create_project(tmp_path, name: str):
 
 
 def _build_window(qtbot, project_root):
+    """
+    @brief      Build a MainWindow bound to one temporary project.
+    @param[in]  qtbot Qt test helper fixture.
+    @param[in]  project_root Active project root folder.
+    @return     Activated MainWindow test instance.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-25
+    @version    0.1.0
+    """
     window = MainWindow(settings_payload=_settings_payload())
     qtbot.addWidget(window)
     window._activate_project(project_root, project_workspace_service.load_manifest(project_root))
