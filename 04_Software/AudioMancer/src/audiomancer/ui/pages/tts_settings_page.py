@@ -14,7 +14,7 @@
          plus the simplified project-local voice-assignment plan.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-18
-@version 1.1.0
+@version 1.2.0
 """
 
 # IMPORTS
@@ -46,7 +46,7 @@ class TtsSettingsPage(QWidget):
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-18
-    @version    1.1.0
+    @version    1.2.0
     """
 
     def __init__(self, parent=None) -> None:
@@ -57,7 +57,7 @@ class TtsSettingsPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-18
-        @version    1.1.0
+        @version    1.2.0
         """
         super().__init__(parent)
         self._current_language = config.DEFAULT_LANGUAGE
@@ -70,8 +70,6 @@ class TtsSettingsPage(QWidget):
         self._active_model_id: str | None = None
 
         layout = QVBoxLayout(self)
-        self._title_label = QLabel("<h2>TTS Settings</h2>", self)
-        layout.addWidget(self._title_label)
 
         self._runtime_group = QGroupBox("VoiceWeaver Runtime", self)
         runtime_layout = QVBoxLayout(self._runtime_group)
@@ -133,6 +131,11 @@ class TtsSettingsPage(QWidget):
         self._generation_timeout_spin.setRange(30, 7200)
         self._generation_timeout_spin.setValue(config.DEFAULT_TTS_AUDIO_GENERATION_TIMEOUT_SECONDS)
         planning_form.addRow(self._generation_timeout_label, self._generation_timeout_spin)
+        self._preview_text_limit_label = QLabel("Preview Text Limit (chars)", self)
+        self._preview_text_limit_spin = QSpinBox(self)
+        self._preview_text_limit_spin.setRange(64, 8192)
+        self._preview_text_limit_spin.setValue(config.DEFAULT_TTS_PREVIEW_TEXT_CHARACTER_LIMIT)
+        planning_form.addRow(self._preview_text_limit_label, self._preview_text_limit_spin)
         planning_layout.addLayout(planning_form)
         self._planning_group.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         layout.addWidget(self._planning_group)
@@ -161,7 +164,7 @@ class TtsSettingsPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-18
-        @version    1.1.0
+        @version    1.2.0
         """
         self._project_active = project_active
         self._base_url_edit.setText(
@@ -183,6 +186,14 @@ class TtsSettingsPage(QWidget):
                 settings_payload.get(
                     "tts_audio_generation_timeout_seconds",
                     config.DEFAULT_TTS_AUDIO_GENERATION_TIMEOUT_SECONDS,
+                )
+            )
+        )
+        self._preview_text_limit_spin.setValue(
+            int(
+                settings_payload.get(
+                    "tts_preview_text_character_limit",
+                    config.DEFAULT_TTS_PREVIEW_TEXT_CHARACTER_LIMIT,
                 )
             )
         )
@@ -243,7 +254,7 @@ class TtsSettingsPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-17
-        @version    1.0.0
+        @version    1.1.0
         """
         merged_settings = copy.deepcopy(existing_settings_payload)
         merged_settings["tts_runtime_base_url"] = self._base_url_edit.text().strip()
@@ -255,6 +266,7 @@ class TtsSettingsPage(QWidget):
         merged_settings["tts_runtime_device_diagnostics"] = dict(self._device_diagnostics)
         merged_settings["tts_audio_preview_timeout_seconds"] = self._preview_timeout_spin.value()
         merged_settings["tts_audio_generation_timeout_seconds"] = self._generation_timeout_spin.value()
+        merged_settings["tts_preview_text_character_limit"] = self._preview_text_limit_spin.value()
         return merged_settings
 
     def build_tts_plan_payload(self) -> dict[str, object] | None:
@@ -281,10 +293,9 @@ class TtsSettingsPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-17
-        @version    1.0.0
+        @version    1.1.0
         """
         self._current_language = language
-        self._title_label.setText(f"<h2>{ui_state_service.translate('tts_settings.title', language)}</h2>")
         self._runtime_group.setTitle(ui_state_service.translate("tts_settings.runtime_group", language))
         self._base_url_label.setText(ui_state_service.translate("tts_settings.base_url", language))
         self._api_key_label.setText(ui_state_service.translate("tts_settings.api_key", language))
@@ -294,6 +305,7 @@ class TtsSettingsPage(QWidget):
         self._voice_assignment_label.setText(ui_state_service.translate("tts_settings.voice_assignment", language))
         self._preview_timeout_label.setText(ui_state_service.translate("tts_settings.preview_timeout", language))
         self._generation_timeout_label.setText(ui_state_service.translate("tts_settings.generation_timeout", language))
+        self._preview_text_limit_label.setText(ui_state_service.translate("tts_settings.preview_text_limit", language))
         self._cancel_button.setText(ui_state_service.translate("tts_settings.cancel", language))
         self._save_button.setText(ui_state_service.translate("tts_settings.save", language))
         self._voice_assignment_combo.setItemText(

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-  # noqa: UP009
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -126,7 +127,7 @@ def test_character_ui_controller_selection_change_cancel_restores_current_row(mo
     second_profile = dict(_saved_profile_payload())
     second_profile["character_id"] = "bob"
     second_profile["canonical_name"] = "Bob"
-    (project_root / config.CHARACTER_DISCOVERY_FOLDER_NAME / config.CHARACTER_PROFILE_FILE_NAME).write_text(
+    (project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.CHARACTER_PROFILE_FILE_NAME).write_text(
         json.dumps([_saved_profile_payload(), second_profile], indent=2) + "\n",
         encoding="utf-8",
     )
@@ -180,13 +181,13 @@ def _create_project(tmp_path, name: str):
     manifest["current_stage"] = "character_discovery_ready"
     manifest["operations"]["chunking"]["status"] = "completed"
     manifest["operations"]["chunking"]["output_paths"] = [
-        f"{config.CHUNKING_FOLDER_NAME}/{config.CHUNK_ARTIFACT_FILE_NAME}"
+        f"{config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH}/{config.CHUNK_ARTIFACT_FILE_NAME}"
     ]
     manifest["operations"]["translation"]["status"] = "completed"
     manifest["operations"]["character_discovery"]["status"] = "completed"
     project_workspace_service.save_manifest(manifest, project_root)
-    chunk_root = project_root / config.CHUNKING_FOLDER_NAME
-    discovery_root = project_root / config.CHARACTER_DISCOVERY_FOLDER_NAME
+    chunk_root = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH
+    discovery_root = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH
     chunk_root.mkdir(parents=True, exist_ok=True)
     discovery_root.mkdir(parents=True, exist_ok=True)
     (chunk_root / config.CHUNK_ARTIFACT_FILE_NAME).write_text(
@@ -241,12 +242,12 @@ def _create_project(tmp_path, name: str):
     (discovery_root / config.OPERATION_STATE_FILE_NAME).write_text(
         json.dumps(
             {
-                "folder_relative_path": config.CHARACTER_DISCOVERY_FOLDER_NAME,
+                "folder_relative_path": config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH,
                 "status": "completed",
                 "input_paths": [],
-                "output_paths": [f"{config.CHARACTER_DISCOVERY_FOLDER_NAME}/{config.CHARACTER_PROFILE_FILE_NAME}"],
+                "output_paths": [f"{config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH}/{config.CHARACTER_PROFILE_FILE_NAME}"],
                 "artifact_paths": [
-                    f"{config.CHARACTER_DISCOVERY_FOLDER_NAME}/{config.CHARACTER_DISCOVERY_REPORT_FILE_NAME}"
+                    f"{config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH}/{config.CHARACTER_DISCOVERY_REPORT_FILE_NAME}"
                 ],
                 "progress_current": 1,
                 "progress_total": 1,

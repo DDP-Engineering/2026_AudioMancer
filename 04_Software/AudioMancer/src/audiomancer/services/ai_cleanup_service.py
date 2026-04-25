@@ -34,7 +34,6 @@ from audiomancer.services import (
 )
 from audiomancer.services.logging_service import get_component_logger, trace_function
 from audiomancer.services.operation_runtime_service import (
-    build_operation_input_snapshot_path,
     build_operation_output_path,
     progress_percent,
     raise_if_cancelled,
@@ -58,9 +57,13 @@ _SEPARATOR_PATTERN = re.compile(r"^[*#=_~.\-]{3,}$|^(?:[*#=_~.\-]\s+){2,}[*#=_~.
 # @brief Sentence-terminal matcher used to decide whether wrapped lines should join.
 _PARAGRAPH_TERMINAL_PATTERN = re.compile(r'[.!?\u2026](?:["\')\]\}]+)?$')
 # @brief Dialogue formatter rule that inserts line breaks before continued spoken text.
-_DIALOGUE_BREAK_AFTER_PUNCTUATION_PATTERN = re.compile(r'([:;.!?\u2026]["Â»â€\']?)\s+-\s+(?=[A-ZÄ‚Ã‚ÃŽÈ˜Èš])')
+_DIALOGUE_BREAK_AFTER_PUNCTUATION_PATTERN = re.compile(
+    r'([:;.!?\u2026]["ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â»ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â\']?)\s+-\s+(?=[A-ZÃƒÆ’Ã¢â‚¬Å¾ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã†â€™Ãƒâ€¦Ã‚Â½ÃƒÆ’Ã‹â€ Ãƒâ€¹Ã…â€œÃƒÆ’Ã‹â€ Ãƒâ€¦Ã‚Â¡])'
+)  # noqa: E501
 # @brief Dialogue formatter rule that inserts line breaks after attributions and pauses.
-_DIALOGUE_BREAK_AFTER_ATTRIBUTION_PATTERN = re.compile(r"([,:])\s+-\s+(?=[A-ZÄ‚Ã‚ÃŽÈ˜Èš])")
+_DIALOGUE_BREAK_AFTER_ATTRIBUTION_PATTERN = re.compile(
+    r"([,:])\s+-\s+(?=[A-ZÃƒÆ’Ã¢â‚¬Å¾ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã†â€™Ãƒâ€¦Ã‚Â½ÃƒÆ’Ã‹â€ Ãƒâ€¹Ã…â€œÃƒÆ’Ã‹â€ Ãƒâ€¦Ã‚Â¡])"
+)  # noqa: E501
 # @brief Labels that preserve one cleanup unit in the final cleaned output.
 _KEEP_LABELS = {"story", "unknown"}
 # @brief Labels that remove one cleanup unit from the final cleaned output.
@@ -131,13 +134,8 @@ def clean_text(
     if not input_text.strip():
         raise ValueError("Extracted text does not contain any content to clean.")
 
-    original_name = str(source_document.get("original_name") or Path(extracted_relative_path).name)
-    input_snapshot_path = build_operation_input_snapshot_path(
-        resolved_project_root,
-        "cleanup",
-        original_name,
-    )
-    input_snapshot_path.write_text(input_text, encoding="utf-8")
+    _ = source_document
+    input_snapshot_path = extracted_path
 
     output_path = build_operation_output_path(
         resolved_project_root,
@@ -152,7 +150,7 @@ def clean_text(
     state_path = build_operation_output_path(
         resolved_project_root,
         "cleanup",
-        config.OPERATION_STATE_FILE_NAME,
+        config.CLEANUP_STATE_FILE_NAME,
     )
 
     prompt_template_service.validate_required_prompts(["text_cleanup_system", "text_cleanup_user"])
@@ -349,7 +347,7 @@ def load_operation_state(project_root: str | Path) -> OperationStatePayload | No
     @date       2026-04-06
     @version    0.1.0
     """
-    return _load_operation_state(resolve_operation_path(project_root, "cleanup", config.OPERATION_STATE_FILE_NAME))
+    return _load_operation_state(resolve_operation_path(project_root, "cleanup", config.CLEANUP_STATE_FILE_NAME))
 
 
 # LOCAL HELPERS
@@ -843,7 +841,7 @@ def _build_operation_state(
     if report_path is not None and report_path.is_file():
         artifact_paths.append(relative_to_project(project_root, report_path))
     return {
-        "folder_relative_path": config.CLEANUP_FOLDER_NAME,
+        "folder_relative_path": config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH,
         "status": status,
         "input_paths": [relative_to_project(project_root, input_snapshot_path)],
         "output_paths": ([relative_to_project(project_root, output_path)] if output_path.is_file() else []),
@@ -905,7 +903,7 @@ def _build_ai_log_path(project_root: Path, started_at: str) -> Path:
     return build_operation_output_path(
         project_root,
         "cleanup",
-        f"{config.AI_TRANSACTION_LOG_FILE_PREFIX}{started_fragment}.log",
+        config.ai_transaction_log_file_name("cleanup", started_fragment),
     )
 
 

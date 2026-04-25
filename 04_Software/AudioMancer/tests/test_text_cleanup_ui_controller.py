@@ -366,20 +366,22 @@ def test_text_cleanup_ui_controller_save_cleaned_text_updates_project_state(
         "ControllerCleanupEditProject",
         tmp_path,
     )
-    cleanup_root = project_root / config.CLEANUP_FOLDER_NAME
+    cleanup_root = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH
     cleanup_root.mkdir(exist_ok=True)
     (cleanup_root / config.CLEANED_TEXT_FILE_NAME).write_text("Clean text\n", encoding="utf-8")
-    extraction_root = project_root / config.EXTRACTION_FOLDER_NAME
+    extraction_root = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH
     extraction_root.mkdir(exist_ok=True)
     (extraction_root / config.EXTRACTED_TEXT_FILE_NAME).write_text("Raw text\n", encoding="utf-8")
     manifest["source_document"] = {
         "original_name": "story.txt",
-        "stored_relative_path": f"{config.EXTRACTION_FOLDER_NAME}/story.txt",
+        "stored_relative_path": f"{config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH}/story.txt",
         "file_type": "txt",
         "imported_at": "2026-04-24T00:00:00+00:00",
         "size_bytes": 10,
     }
-    manifest["extracted_text_relative_path"] = f"{config.EXTRACTION_FOLDER_NAME}/{config.EXTRACTED_TEXT_FILE_NAME}"
+    manifest["extracted_text_relative_path"] = (
+        f"{config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH}/{config.EXTRACTED_TEXT_FILE_NAME}"
+    )
     manifest["current_stage"] = "text_chunking_ready"
     manifest["operations"]["cleanup"]["status"] = "completed"
     project_workspace_service.save_manifest(manifest, project_root)

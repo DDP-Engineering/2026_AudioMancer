@@ -11,29 +11,30 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
 
 Provides the project-persistence and source-import layer for `AudioMancer`.
 
-It gives the desktop shell a stable way to create a new project root, open an
-existing project from its root or one child folder, import one locked source
-document into the project root, persist compact workflow-operation summaries,
-and validate the current `project.json` contract used by the application shell.
+It gives the desktop shell a stable way to create a new flat project root, open
+that project root, import one locked source document, persist compact
+workflow-operation summaries, and validate the current `project.json` contract
+used by the application shell.
 
 ## 2. Responsibilities
 
 - validate exact project names against the current Windows and Linux folder
   safety rules
-- create the numbered project workflow folders
+- create the project root without numbered workflow folders
 - create and save the minimal `project.json` manifest
-- resolve the project root from a selected root folder or child workflow folder
+- resolve and validate the selected project root
 - validate and copy one supported source file into the active project root
 - persist structured source metadata and lock the project to that source
-- validate required folders and required manifest fields during open
-- detect recoverable corruption in workflow folders or stage metadata during open
-- repair the corrupted step and all downstream step folders after operator confirmation
+- reject unsupported legacy numbered workflow-folder layouts during open
+- validate required manifest fields during open
+- detect recoverable stage metadata corruption during open
 - persist compact extraction, cleanup, chunking, translation, and
   character-discovery summaries in the root manifest
 - persist project-local narrator workflow settings such as
   `voice_assignment_mode` in the root manifest
-- keep detailed per-step state, reports, outputs, checkpoints, and AI logs in
-  the corresponding workflow folders
+- keep detailed per-step state, reports, outputs, checkpoints, and AI logs as
+  root-level project artifacts, except generated Audio Blocks files under
+  `audio_blocks/`
 - feed the main window with loaded project root and manifest state
 
 It does not extract text by itself, own narrator content storage, or implement
@@ -64,25 +65,27 @@ High-level flow:
 2. `MainWindow` calls `audiomancer.services.project_workspace_service`
    directly.
 3. The workspace service validates the project name, creates or resolves the
-   project root, validates the structure, and loads or writes `project.json`.
-4. If one recoverable corruption is detected, the service returns a
+   project root, rejects unsupported legacy numbered layouts, and loads or
+   writes `project.json`.
+4. If recoverable metadata corruption is detected, the service returns a
    `repair_required` result payload and `MainWindow` asks the operator for
    confirmation.
-5. After confirmation, the workspace service recreates or resets the corrupted
-   step folder and all downstream step folders, repairs the manifest stage,
-   and reloads the project.
+5. After confirmation, the workspace service repairs the manifest stage and
+   reloads the project. Missing numbered workflow folders are not repaired
+   because numbered runtime layouts are no longer supported.
 6. `MainWindow` lets the operator choose one supported source file, calls
    `audiomancer.services.import_service`, stores the copied file in the
    project root, saves `source_document` in `project.json`, and advances the
    project to `source_selected`.
-7. After one workflow step writes its full local state into the step folder,
-   `MainWindow` stores only the compact operation summary back into
-   `project.json`.
+7. After one workflow step writes its full local state into root-level
+   operation artifacts, `MainWindow` stores only the compact operation summary
+   back into `project.json`.
 8. After deterministic cleanup completes, `MainWindow` advances the project to
-   `text_chunking_ready` while keeping cleanup detail files in `10_cleanup`.
+   `text_chunking_ready` while keeping cleanup detail files at the project
+   root.
 9. After a selected chunk is manually edited and saved from `Text Chunking`,
-   `MainWindow` keeps `20_chunking/output_chunks.json`, resets downstream
-   workflow folders from translation onward, and returns the project to
+   `MainWindow` keeps `chunks_text.json`, resets downstream
+   downstream runtime artifacts from translation onward, and returns the project to
    `translation_ready` without changing the cleaned-text reference or chunk
    list scroll positions.
 10. `MainWindow` stores the active project root and manifest, updates the home
@@ -110,16 +113,14 @@ Inputs:
 Outputs:
 
 - one new project root folder under the selected parent
-- required workflow subfolders:
-  `00_extraction`, `10_cleanup`, `20_chunking`, `30_translation`,
-  `40_character_discovery`, `50_narrator_definition`, `60_character_voices`,
-  `70_speech_blocks`, `80_audio_blocks`, and `90_audio_assembly`
 - one root-level `project.json`
 - one copied source file stored directly in the project root
+- root-level workflow artifacts written by each operation
+- one `audio_blocks/` runtime subfolder for generated Audio Blocks files
 - one loaded validated manifest dictionary for the UI shell
 - persisted compact operation summaries in `project.json`
-- persisted detailed operation state in workflow-local `state_operation.json`
-  files and related artifacts
+- persisted detailed operation state in operation-specific root state files and
+  related artifacts
 - operator-visible status and validation feedback through the main window
 
 ## 6. Data Contracts
@@ -172,21 +173,14 @@ Each compact operation entry stores:
 
 Detailed operation payloads such as input or output paths, metadata,
 checkpoints, translated chunks, warning details, and similar workflow
-internals are stored only in the corresponding workflow folder files such as
-`state_operation.json`, reports, and canonical output artifacts.
+internals are stored only in root-level state files, reports, and canonical
+output artifacts.
 
 Required folder contract:
 
-- `00_extraction`
-- `10_cleanup`
-- `20_chunking`
-- `30_translation`
-- `40_character_discovery`
-- `50_narrator_definition`
-- `60_character_voices`
-- `70_speech_blocks`
-- `80_audio_blocks`
-- `90_audio_assembly`
+- no workflow folders are required for new projects
+- `audio_blocks/` may be created by the Audio Blocks workflow for generated
+  audio artifacts
 
 Current validation invariants:
 
@@ -195,10 +189,10 @@ Current validation invariants:
 - `project.json` must exist at the project root
 - `current_stage` must match one of the configured workflow stage tokens
 - `source_document`, when present, must contain one valid structured payload
-- opening a project walks upward from the selected folder until `project.json`
-  is found
-- a missing workflow step folder is treated as recoverable corruption
-- repair resets the corrupted step folder and every later workflow step folder
+- opening a project expects a selected project root with `project.json`
+- legacy numbered workflow folders cause validation to fail with an unsupported
+  legacy layout error
+- repair is metadata-only and does not recreate numbered workflow folders
 - repaired metadata keeps the last consistent workflow stage
 - a project with one imported source is considered source-locked
 
@@ -236,15 +230,14 @@ Service usage:
 from audiomancer.services.project_workspace_service import create_project, open_project
 
 project_root, manifest = create_project("Book5_CAL_CAL", "D:/Projects")
-resolved_root, loaded_manifest = open_project(project_root / "20_chunking")
+open_result = open_project(project_root)
 ```
 
 UI integration:
 
 - use the toolbar `New Project` action to choose a parent folder and enter the
   exact project name
-- use the toolbar `Open Project` action to select either the project root or a
-  child workflow folder
+- use the toolbar `Open Project` action to select the project root
 - use the Home page `Select Source File` button to import exactly one source
   document into the active project
 
@@ -263,9 +256,9 @@ Covered behaviors:
 - exact-name validation for unsupported Windows characters
 - rejection of Linux-reserved names
 - rejection of reserved Windows device names
-- open-project root resolution from child workflow folders
+- open-project validation from the project root
 - missing manifest handling
-- repair handling for missing required folders
+- rejection of unsupported legacy numbered workflow folders
 - missing required manifest-field handling
 - repair handling for invalid `current_stage` metadata
 - source import acceptance for supported file types
@@ -274,7 +267,7 @@ Covered behaviors:
 - manifest defaults for extraction fields and operation-state entries
 - main-window activation and workflow progress updates after create/open
 - main-window source import and lock behavior
-- main-window repair confirmation flow during open
+- main-window metadata repair confirmation flow during open
 
 Minimum validation after a change:
 

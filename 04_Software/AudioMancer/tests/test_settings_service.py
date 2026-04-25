@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-  # noqa: UP009
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -12,7 +13,7 @@
          persisted settings self-healing, and validated save behavior.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-22
-@version 0.5.0
+@version 0.5.1
 """
 
 # IMPORTS
@@ -400,18 +401,19 @@ def test_load_settings_logs_repair_summary_only_when_repairs_occur(tmp_path, mon
     assert "without requiring repairs" in caplog.text
 
 
-def test_validate_settings_repairs_tts_audio_timeouts() -> None:
+def test_validate_settings_repairs_tts_audio_timeouts_and_preview_limit() -> None:
     """
-    @brief      Verify invalid TTS audio timeout settings are repaired to their defaults.
+    @brief      Verify invalid TTS audio timeout and preview-limit settings are repaired to their defaults.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-18
-    @version    1.0.0
+    @version    1.1.0
     """
     candidate_settings = settings_service.build_default_settings()
     candidate_settings["tts_audio_preview_timeout_seconds"] = 0
     candidate_settings["tts_audio_generation_timeout_seconds"] = "bad"
+    candidate_settings["tts_preview_text_character_limit"] = -1
 
     validated_settings = settings_service.validate_settings(candidate_settings)
 
@@ -420,6 +422,7 @@ def test_validate_settings_repairs_tts_audio_timeouts() -> None:
         validated_settings["tts_audio_generation_timeout_seconds"]
         == config.DEFAULT_TTS_AUDIO_GENERATION_TIMEOUT_SECONDS
     )
+    assert validated_settings["tts_preview_text_character_limit"] == config.DEFAULT_TTS_PREVIEW_TEXT_CHARACTER_LIMIT
 
 
 def test_validate_settings_repairs_invalid_urls() -> None:

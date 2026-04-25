@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-  # noqa: UP009
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -12,7 +13,7 @@
          settings scaffold exist with the expected baseline contract.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-20
-@version 0.8.5
+@version 0.8.7
 """
 
 # IMPORTS
@@ -33,7 +34,7 @@ def test_config_exposes_expected_identity_and_window_defaults() -> None:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.2.3
+    @version    0.2.4
     """
     assert config.APP_NAME == "AudioMancer"
     assert config.PACKAGE_NAME == "audiomancer"
@@ -42,25 +43,31 @@ def test_config_exposes_expected_identity_and_window_defaults() -> None:
     assert config.DEFAULT_MAIN_WINDOW_MIN_WIDTH == 900
     assert config.DEFAULT_MAIN_WINDOW_MIN_HEIGHT == 560
     assert config.PROJECT_MANIFEST_FILE_NAME == "project.json"
-    assert "50_narrator_definition" in config.PROJECT_REQUIRED_SUBDIRECTORIES
-    assert "60_character_voices" in config.PROJECT_REQUIRED_SUBDIRECTORIES
-    assert "70_speech_blocks" in config.PROJECT_REQUIRED_SUBDIRECTORIES
-    assert "80_audio_blocks" in config.PROJECT_REQUIRED_SUBDIRECTORIES
-    assert "90_audio_assembly" in config.PROJECT_REQUIRED_SUBDIRECTORIES
     assert config.DEFAULT_WORKFLOW_STAGE == "project_created"
     assert "character_voices_ready" in config.PROJECT_WORKFLOW_STAGES
     assert "speech_blocks_ready" in config.PROJECT_WORKFLOW_STAGES
     assert "audio_blocks_ready" in config.PROJECT_WORKFLOW_STAGES
     assert "audio_assembly_ready" in config.PROJECT_WORKFLOW_STAGES
-    assert config.CHARACTER_VOICES_TARGETS_FILE_NAME == "voice_targets.json"
+    assert config.CHARACTER_VOICES_TARGETS_FILE_NAME == "characters_voice.json"
     assert config.SUPPORTED_SOURCE_SUFFIXES[".epub"] == "epub"
     assert config.SUPPORTED_SOURCE_SUFFIXES[".docx"] == "docx"
-    assert config.EXTRACTION_FOLDER_NAME == "00_extraction"
-    assert config.EXTRACTED_TEXT_FILE_NAME == "output_raw_text.txt"
+    assert config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH == "."
+    assert config.EXTRACTED_TEXT_FILE_NAME == "extracted_text.txt"
     assert config.EXTRACTION_REPORT_FILE_NAME == "extraction_report.json"
-    assert config.CHUNK_ARTIFACT_FILE_NAME == "output_chunks.json"
+    assert config.EXTRACTION_STATE_FILE_NAME == "extraction_state.json"
+    assert config.CLEANED_TEXT_FILE_NAME == "clean_text.txt"
+    assert config.CLEANUP_STATE_FILE_NAME == "cleanup_state.json"
+    assert config.CHUNK_ARTIFACT_FILE_NAME == "chunks_text.json"
     assert config.CHUNKING_REPORT_FILE_NAME == "chunking_report.json"
-    assert config.OPERATION_STATE_FILE_NAME == "state_operation.json"
+    assert config.CHUNKING_STATE_FILE_NAME == "chunking_state.json"
+    assert config.TRANSLATED_CHUNKS_FILE_NAME == "translated_text.json"
+    assert config.TRANSLATION_STATE_FILE_NAME == "translation_state.json"
+    assert config.NARRATOR_PROFILE_FILE_NAME == "audio_profiles.json"
+    assert config.NARRATOR_SELECTION_FILE_NAME == "narator.json"
+    assert config.SELECTED_NARRATOR_AUDIO_FILE_NAME == "narator.wav"
+    assert config.SPEECH_BLOCKS_OUTPUT_FILE_NAME == "speech_blocks.json"
+    assert config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME == "audio_blocks"
+    assert config.DEFAULT_TTS_PREVIEW_TEXT_CHARACTER_LIMIT == 512
     assert "ai_chunking" in config.AVAILABLE_LOG_COMPONENTS
     assert "text_extraction" in config.AVAILABLE_LOG_COMPONENTS
 
@@ -82,6 +89,21 @@ def test_settings_json_scaffold_matches_service_defaults() -> None:
     assert isinstance(loaded_payload, dict)
     assert payload == loaded_payload
     assert settings_path == config.APP_SETTINGS_PATH
+
+
+def test_config_translation_languages_include_qwen3_tts_languages_without_chinese() -> None:
+    """
+    @brief      Verify shared language options include Qwen3 TTS languages, Romanian, and no Chinese entry.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-25
+    @version    0.1.0
+    """
+    language_codes = [language_code for language_code, _label in config.TRANSLATION_LANGUAGE_OPTIONS]
+
+    assert language_codes == ["en", "ro", "ja", "ko", "de", "fr", "ru", "pt", "es", "it"]
+    assert "zh" not in language_codes
 
 
 # END OF FILE

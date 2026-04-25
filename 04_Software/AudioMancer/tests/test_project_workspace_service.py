@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-  # noqa: UP009
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -18,7 +19,6 @@
 # IMPORTS
 
 import json
-import shutil
 
 import pytest
 
@@ -51,13 +51,12 @@ def test_create_project_creates_required_structure_and_manifest(tmp_path) -> Non
     assert manifest["extraction_report_relative_path"] is None
     assert manifest["extraction_warning_count"] == 0
     assert manifest["operations"]["extraction"]["status"] == "not_started"
-    assert manifest["operations"]["cleanup"]["folder_relative_path"] == "10_cleanup"
+    assert manifest["operations"]["cleanup"]["folder_relative_path"] == "."
     assert manifest["voice_assignment_mode"] == config.DEFAULT_TTS_VOICE_ASSIGNMENT_MODE
     assert "metadata" not in manifest["operations"]["extraction"]
     assert "output_paths" not in manifest["operations"]["cleanup"]
     assert (project_root / config.PROJECT_MANIFEST_FILE_NAME).is_file()
-    for folder_name in config.PROJECT_REQUIRED_SUBDIRECTORIES:
-        assert (project_root / folder_name).is_dir()
+    assert not any(path.is_dir() for path in project_root.iterdir())
 
 
 def test_validate_project_name_rejects_unsupported_windows_characters() -> None:
@@ -117,9 +116,9 @@ def test_create_project_rejects_non_empty_target_folder(tmp_path) -> None:
         project_workspace_service.create_project("Book5_CAL_CAL", tmp_path)
 
 
-def test_open_project_resolves_root_from_child_folder(tmp_path) -> None:
+def test_open_project_resolves_flat_project_root(tmp_path) -> None:
     """
-    @brief      Verify opening succeeds when selecting one child workflow folder.
+    @brief      Verify opening succeeds when selecting the flat project root.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
@@ -132,7 +131,7 @@ def test_open_project_resolves_root_from_child_folder(tmp_path) -> None:
         tmp_path,
     )
 
-    open_result = project_workspace_service.open_project(created_root / "20_chunking")
+    open_result = project_workspace_service.open_project(created_root)
 
     assert open_result["status"] == "ok"
     assert open_result["project_root"] == created_root
@@ -156,9 +155,9 @@ def test_open_project_fails_when_manifest_is_missing(tmp_path) -> None:
         project_workspace_service.open_project(orphan_folder)
 
 
-def test_open_project_fails_when_required_folder_is_missing(tmp_path) -> None:
+def test_open_project_rejects_legacy_numbered_layout(tmp_path) -> None:
     """
-    @brief      Verify opening fails when the required project structure is incomplete.
+    @brief      Verify opening fails when legacy numbered workflow folders are present.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
@@ -170,12 +169,10 @@ def test_open_project_fails_when_required_folder_is_missing(tmp_path) -> None:
         "Book5_CAL_CAL",
         tmp_path,
     )
-    (project_root / "50_narrator_definition").rmdir()
+    (project_root / "50_narrator_definition").mkdir()
 
-    open_result = project_workspace_service.open_project(project_root)
-
-    assert open_result["status"] == "repair_required"
-    assert open_result["corrupted_step"] == "50_narrator_definition"
+    with pytest.raises(ValueError, match="unsupported legacy numbered runtime layout"):
+        project_workspace_service.open_project(project_root)
 
 
 def test_open_project_fails_when_required_manifest_field_is_missing(tmp_path) -> None:
@@ -204,11 +201,11 @@ def test_open_project_fails_when_required_manifest_field_is_missing(tmp_path) ->
         project_workspace_service.open_project(project_root)
 
 
-def test_repair_project_recreates_missing_downstream_folders_and_resets_stage(
+def test_open_project_rejects_legacy_downstream_folder_layout(
     tmp_path,
 ) -> None:
     """
-    @brief      Verify repair recreates downstream step folders and resets metadata.
+    @brief      Verify numbered downstream folders are rejected instead of repaired.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
@@ -224,31 +221,11 @@ def test_repair_project_recreates_missing_downstream_folders_and_resets_stage(
     manifest["narrator_profile_name"] = "Warm Storyteller"
     manifest["narrator_language"] = "English"
     project_workspace_service.save_manifest(manifest, project_root)
-    shutil_target = project_root / "30_translation"
-    (shutil_target / "artifact.txt").write_text("old-data", encoding="utf-8")
-    shutil.rmtree(shutil_target)
+    (project_root / "30_translation").mkdir()
+    (project_root / "30_translation" / "artifact.txt").write_text("old-data", encoding="utf-8")
 
-    open_result = project_workspace_service.open_project(project_root)
-    assert open_result["status"] == "repair_required"
-
-    repaired_result = project_workspace_service.repair_project(open_result)
-
-    assert repaired_result["status"] == "ok"
-    assert repaired_result["project_root"] == project_root
-    assert repaired_result["manifest"]["current_stage"] == "text_chunking_ready"
-    assert repaired_result["manifest"]["narrator_profile_name"] is None
-    assert repaired_result["manifest"]["narrator_language"] is None
-    for folder_name in (
-        "30_translation",
-        "40_character_discovery",
-        "50_narrator_definition",
-        "60_character_voices",
-        "70_speech_blocks",
-        "80_audio_blocks",
-        "90_audio_assembly",
-    ):
-        assert (project_root / folder_name).is_dir()
-        assert list((project_root / folder_name).iterdir()) == []
+    with pytest.raises(ValueError, match="unsupported legacy numbered runtime layout"):
+        project_workspace_service.open_project(project_root)
 
 
 def test_open_project_accepts_current_required_folder_contract(tmp_path) -> None:
@@ -281,12 +258,11 @@ def test_open_project_accepts_current_required_folder_contract(tmp_path) -> None
     assert open_result["manifest"]["current_stage"] == "character_voices_ready"
 
 
-def test_repair_project_recreates_missing_speech_blocks_folder_without_resetting_character_voices_stage(
+def test_open_project_does_not_require_speech_blocks_folder_for_flat_layout(
     tmp_path,
 ) -> None:
     """
-    @brief      Verify repair recreates one missing Speech Blocks folder
-                without resetting the trusted Character Voices stage.
+    @brief      Verify flat-layout validation does not require a Speech Blocks folder.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
@@ -307,16 +283,12 @@ def test_repair_project_recreates_missing_speech_blocks_folder_without_resetting
     }
     manifest["current_stage"] = "character_voices_ready"
     project_workspace_service.save_manifest(manifest, project_root)
-    shutil.rmtree(project_root / config.SPEECH_BLOCKS_FOLDER_NAME)
 
     open_result = project_workspace_service.open_project(project_root)
-    repaired_result = project_workspace_service.repair_project(open_result)
 
-    assert open_result["status"] == "repair_required"
-    assert open_result["corrupted_step"] == config.SPEECH_BLOCKS_FOLDER_NAME
-    assert repaired_result["status"] == "ok"
-    assert repaired_result["manifest"]["current_stage"] == "character_voices_ready"
-    assert (project_root / config.SPEECH_BLOCKS_FOLDER_NAME).is_dir()
+    assert open_result["status"] == "ok"
+    assert open_result["manifest"]["current_stage"] == "character_voices_ready"
+    assert (project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH).is_dir()
 
 
 def test_repair_project_fixes_invalid_current_stage_metadata_only(tmp_path) -> None:
@@ -413,7 +385,7 @@ def test_validate_project_manifest_normalizes_operations_map() -> None:
     manifest = project_workspace_service.build_project_manifest("Book5_CAL_CAL")
     manifest["operations"] = {
         "extraction": {
-            "folder_relative_path": "00_extraction",
+            "folder_relative_path": ".",
             "status": "running",
             "progress_current": 1,
             "progress_total": 3,
@@ -444,11 +416,11 @@ def test_save_manifest_projects_detailed_operation_state_to_compact_summary(tmp_
         tmp_path,
     )
     manifest["operations"]["translation"] = {
-        "folder_relative_path": config.TRANSLATION_FOLDER_NAME,
+        "folder_relative_path": config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH,
         "status": "completed",
-        "input_paths": [f"{config.TRANSLATION_FOLDER_NAME}/input_story.json"],
-        "output_paths": [f"{config.TRANSLATION_FOLDER_NAME}/{config.TRANSLATED_CHUNKS_FILE_NAME}"],
-        "artifact_paths": [f"{config.TRANSLATION_FOLDER_NAME}/{config.TRANSLATION_REPORT_FILE_NAME}"],
+        "input_paths": [config.CHUNK_ARTIFACT_FILE_NAME],
+        "output_paths": [config.TRANSLATED_CHUNKS_FILE_NAME],
+        "artifact_paths": [config.TRANSLATION_REPORT_FILE_NAME],
         "progress_current": 8,
         "progress_total": 8,
         "mode": "ai_assisted",
@@ -490,11 +462,11 @@ def test_validate_project_manifest_accepts_legacy_detailed_operation_payloads() 
     """
     manifest = project_workspace_service.build_project_manifest("LegacyManifest")
     manifest["operations"]["cleanup"] = {
-        "folder_relative_path": config.CLEANUP_FOLDER_NAME,
+        "folder_relative_path": config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH,
         "status": "completed",
-        "input_paths": [f"{config.CLEANUP_FOLDER_NAME}/input_story.txt"],
-        "output_paths": [f"{config.CLEANUP_FOLDER_NAME}/{config.CLEANED_TEXT_FILE_NAME}"],
-        "artifact_paths": [f"{config.CLEANUP_FOLDER_NAME}/{config.CLEANUP_REPORT_FILE_NAME}"],
+        "input_paths": [config.EXTRACTED_TEXT_FILE_NAME],
+        "output_paths": [config.CLEANED_TEXT_FILE_NAME],
+        "artifact_paths": [config.CLEANUP_REPORT_FILE_NAME],
         "progress_current": 3,
         "progress_total": 3,
         "mode": "ai_assisted",

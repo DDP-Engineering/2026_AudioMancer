@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-  # noqa: UP009
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -35,9 +36,9 @@ def test_progress_percent_clamps_to_zero_and_hundred() -> None:
     assert operation_runtime_service.progress_percent(99, 4) == 100
 
 
-def test_reset_operation_data_clears_selected_and_downstream_folders(tmp_path) -> None:
+def test_reset_operation_data_clears_known_root_artifacts_only(tmp_path) -> None:
     """
-    @brief      Verify one operation reset clears the selected step and all downstream folders.
+    @brief      Verify one operation reset clears known flat artifacts without deleting unrelated root files.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
@@ -46,13 +47,13 @@ def test_reset_operation_data_clears_selected_and_downstream_folders(tmp_path) -
     @version    0.1.0
     """
     project_root, _manifest = project_workspace_service.create_project("ResetRuntime", tmp_path)
-    (project_root / "00_extraction" / "input_story.txt").write_text("raw", encoding="utf-8")
-    (project_root / config.CLEANUP_FOLDER_NAME / config.CLEANED_TEXT_FILE_NAME).write_text(
-        "clean",
-        encoding="utf-8",
-    )
-    (project_root / "20_chunking" / config.CHUNK_ARTIFACT_FILE_NAME).write_text("[]", encoding="utf-8")
-    (project_root / "30_translation" / "translation.json").write_text("{}", encoding="utf-8")
+    (project_root / "story.txt").write_text("raw", encoding="utf-8")
+    (project_root / config.EXTRACTED_TEXT_FILE_NAME).write_text("raw", encoding="utf-8")
+    (project_root / config.CLEANED_TEXT_FILE_NAME).write_text("clean", encoding="utf-8")
+    (project_root / config.CLEANUP_REPORT_FILE_NAME).write_text("{}", encoding="utf-8")
+    (project_root / config.CHUNK_ARTIFACT_FILE_NAME).write_text("[]", encoding="utf-8")
+    (project_root / config.TRANSLATED_CHUNKS_FILE_NAME).write_text("[]", encoding="utf-8")
+    (project_root / "notes.txt").write_text("keep", encoding="utf-8")
 
     operation_runtime_service.reset_operation_data(
         project_root,
@@ -61,15 +62,18 @@ def test_reset_operation_data_clears_selected_and_downstream_folders(tmp_path) -
         keep_input_snapshots=False,
     )
 
-    assert (project_root / "00_extraction" / "input_story.txt").is_file()
-    assert list((project_root / config.CLEANUP_FOLDER_NAME).iterdir()) == []
-    assert list((project_root / "20_chunking").iterdir()) == []
-    assert list((project_root / "30_translation").iterdir()) == []
+    assert (project_root / "story.txt").is_file()
+    assert (project_root / "notes.txt").read_text(encoding="utf-8") == "keep"
+    assert (project_root / config.EXTRACTED_TEXT_FILE_NAME).is_file()
+    assert (project_root / config.CLEANED_TEXT_FILE_NAME).exists() is False
+    assert (project_root / config.CLEANUP_REPORT_FILE_NAME).exists() is False
+    assert (project_root / config.CHUNK_ARTIFACT_FILE_NAME).exists() is False
+    assert (project_root / config.TRANSLATED_CHUNKS_FILE_NAME).exists() is False
 
 
-def test_resolve_operation_path_does_not_create_missing_step_folder(tmp_path) -> None:
+def test_resolve_operation_path_uses_project_root_without_creating_folders(tmp_path) -> None:
     """
-    @brief      Verify read-only path resolution does not create workflow folders as a side effect.
+    @brief      Verify read-only path resolution uses the flat project root as a side effect-free operation path.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
@@ -78,18 +82,17 @@ def test_resolve_operation_path_does_not_create_missing_step_folder(tmp_path) ->
     @version    0.1.0
     """
     project_root, _manifest = project_workspace_service.create_project("ResolveRuntime", tmp_path)
-    translation_root = project_root / config.TRANSLATION_FOLDER_NAME
-    operation_runtime_service.reset_operation_data(project_root, "translation", include_current=True)
-    translation_root.rmdir()
 
     resolved_path = operation_runtime_service.resolve_operation_path(
         project_root,
         "translation",
-        config.OPERATION_STATE_FILE_NAME,
+        config.TRANSLATION_STATE_FILE_NAME,
     )
 
-    assert resolved_path == translation_root / config.OPERATION_STATE_FILE_NAME
-    assert translation_root.exists() is False
+    assert resolved_path == project_root / config.TRANSLATION_STATE_FILE_NAME
+    assert not any(
+        (project_root / folder_name).exists() for folder_name in ("30_translation", "40_character_discovery")
+    )
 
 
 # END OF FILE

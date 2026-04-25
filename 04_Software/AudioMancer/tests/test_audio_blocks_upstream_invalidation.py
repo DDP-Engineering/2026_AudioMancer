@@ -83,7 +83,7 @@ def test_selected_narrator_change_invalidates_persisted_audio_blocks_after_confi
     updated_manifest = project_workspace_service.load_manifest(project_root)
     assert updated_manifest["current_stage"] == "narrator_definition_ready"
     assert updated_manifest["operations"]["audio_blocks"]["status"] == "not_started"
-    assert not (project_root / config.AUDIO_BLOCKS_FOLDER_NAME / "artifact.txt").exists()
+    assert not (project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / "artifact.txt").exists()
 
 
 def _create_project(tmp_path, name: str):
@@ -139,7 +139,7 @@ def _seed_audio_blocks_artifacts(project_root) -> None:
     @date       2026-04-24
     @version    0.1.0
     """
-    audio_root = project_root / config.AUDIO_BLOCKS_FOLDER_NAME
+    audio_root = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH
     audio_root.mkdir(parents=True, exist_ok=True)
     (audio_root / "artifact.txt").write_text("stale", encoding="utf-8")
     (audio_root / config.AUDIO_BLOCKS_REPORT_FILE_NAME).write_text(
@@ -162,11 +162,13 @@ def _seed_audio_blocks_artifacts(project_root) -> None:
     (audio_root / config.OPERATION_STATE_FILE_NAME).write_text(
         json.dumps(
             {
-                "folder_relative_path": config.AUDIO_BLOCKS_FOLDER_NAME,
+                "folder_relative_path": config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH,
                 "status": "completed",
                 "input_paths": [],
                 "output_paths": [],
-                "artifact_paths": [f"{config.AUDIO_BLOCKS_FOLDER_NAME}/{config.AUDIO_BLOCKS_REPORT_FILE_NAME}"],
+                "artifact_paths": [
+                    f"{config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH}/{config.AUDIO_BLOCKS_REPORT_FILE_NAME}"
+                ],
                 "progress_current": 1,
                 "progress_total": 1,
                 "mode": "tts_generation",

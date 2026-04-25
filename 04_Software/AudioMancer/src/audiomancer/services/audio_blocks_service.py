@@ -39,7 +39,6 @@ from audiomancer.services import (
 )
 from audiomancer.services.logging_service import get_component_logger, trace_function
 from audiomancer.services.operation_runtime_service import (
-    build_operation_input_snapshot_path,
     build_operation_output_path,
     progress_percent,
     raise_if_cancelled,
@@ -83,7 +82,7 @@ def load_operation_state(project_root: str | Path) -> OperationStatePayload | No
     @date       2026-04-23
     @version    0.1.0
     """
-    state_path = resolve_operation_path(project_root, "audio_blocks", config.OPERATION_STATE_FILE_NAME)
+    state_path = resolve_operation_path(project_root, "audio_blocks", config.AUDIO_BLOCKS_STATE_FILE_NAME)
     if not state_path.is_file():
         return None
     return dict(json.loads(state_path.read_text(encoding="utf-8")))
@@ -2207,7 +2206,7 @@ def _build_operation_state(
     if generated_root.is_dir():
         artifact_paths.extend(relative_to_project(project_root, path) for path in sorted(generated_root.rglob("*")))
     return {
-        "folder_relative_path": config.AUDIO_BLOCKS_FOLDER_NAME,
+        "folder_relative_path": config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH,
         "status": status,
         "input_paths": [relative_to_project(project_root, input_path)],
         "output_paths": [relative_to_project(project_root, output_path)],
@@ -2265,10 +2264,7 @@ def _persist_state(
     @date       2026-04-23
     @version    0.1.0
     """
-    _speech_blocks_snapshot_path(project_root).write_text(
-        json.dumps(speech_blocks, indent=2, ensure_ascii=False) + "\n",
-        encoding="utf-8",
-    )
+    _ = speech_blocks
     build_operation_output_path(project_root, "audio_blocks", config.AUDIO_BLOCKS_OUTPUT_FILE_NAME).write_text(
         json.dumps(audio_blocks, indent=2, ensure_ascii=False) + "\n",
         encoding="utf-8",
@@ -2285,7 +2281,7 @@ def _persist_state(
         json.dumps(report, indent=2, ensure_ascii=False) + "\n",
         encoding="utf-8",
     )
-    build_operation_output_path(project_root, "audio_blocks", config.OPERATION_STATE_FILE_NAME).write_text(
+    build_operation_output_path(project_root, "audio_blocks", config.AUDIO_BLOCKS_STATE_FILE_NAME).write_text(
         json.dumps(operation_state, indent=2, ensure_ascii=False) + "\n",
         encoding="utf-8",
     )
@@ -2301,11 +2297,7 @@ def _speech_blocks_snapshot_path(project_root: Path) -> Path:
     @date       2026-04-23
     @version    0.1.0
     """
-    return build_operation_input_snapshot_path(
-        project_root,
-        "audio_blocks",
-        config.AUDIO_BLOCKS_INPUT_SPEECH_BLOCKS_FILE_NAME,
-    )
+    return project_root / config.SPEECH_BLOCKS_OUTPUT_FILE_NAME
 
 
 def _generated_audio_root(project_root: Path) -> Path:
@@ -2318,7 +2310,7 @@ def _generated_audio_root(project_root: Path) -> Path:
     @date       2026-04-23
     @version    0.1.0
     """
-    return project_root / config.AUDIO_BLOCKS_FOLDER_NAME / config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME
+    return project_root / config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME
 
 
 def _audio_artifact_paths(

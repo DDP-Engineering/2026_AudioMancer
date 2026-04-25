@@ -26,14 +26,13 @@ by the Narator Voice page.
   built-ins
 - migrate legacy `qwen3_tts_customvoice_seed` prompt-seed entries into
   editable custom narrator profiles so they remain generatable and deletable
-- persist built-in presets and custom user profiles under
-  `50_narrator_definition`
+- persist built-in presets and custom user profiles in root-level
+  `audio_profiles.json`
 - persist the explicitly selected narrator profile and narrator language
   runtime code
-- persist the currently generated narrator WAV and JSON sample artifacts while
-  clearing older files from `50_narrator_definition/audio_samples/`
-- record selected-sample state in the per-profile sample JSON instead of
-  writing a duplicate selected narrator WAV
+- persist one generated narrator WAV per narrator profile so multiple profiles
+  can be previewed later without regenerating audio
+- record selected-sample state in each profile's `sample_metadata`
 - derive Narator Voice page enablement for `Generate Sample`, `Select`, and
   `Preview` from the cached VoiceWeaver runtime state and stored sample
   metadata
@@ -86,13 +85,12 @@ High-level flow:
    unlocks the page editor.
 5. `Generate Sample` re-probes runtime readiness, requires the fixed minimum
    Qwen3 capability set (`base`, `voice_designer`, `custom_voice`), waits for
-   model-load completion before submitting generation, stores
-   `<profile_id>.wav` and `<profile_id>.json`, clears older files from
-   `50_narrator_definition/audio_samples/`, uses the saved TTS preview
-   timeout, and marks the generated sample JSON as selected when the
-   regenerated profile is already selected.
-6. `Select` persists `selected_profile.json`, updates the compact manifest
-   summary, and marks the chosen profile sample JSON as selected.
+   model-load completion before submitting generation, stores or replaces only
+   the current profile's `audio_narator_<profile>.wav`, keeps other profile
+   samples intact, uses the saved TTS preview timeout, and marks the generated
+   sample metadata as selected when the regenerated profile is already selected.
+6. `Select` persists `narator.json`, updates the compact manifest summary,
+   and marks the chosen profile sample metadata as selected.
 7. `Preview` plays the stored per-profile WAV locally through Qt media
    playback.
 
@@ -125,10 +123,11 @@ Inputs:
 
 Outputs:
 
-- `50_narrator_definition/profiles.json`
-- `50_narrator_definition/selected_profile.json`
-- `50_narrator_definition/audio_samples/<profile_id>.wav`
-- `50_narrator_definition/audio_samples/<profile_id>.json`
+- `audio_profiles.json`
+- `narator.json`
+- `audio_narator_<profile>.wav`
+- per-profile `sample_audio_path` and `sample_metadata` entries stored inside
+  `audio_profiles.json`
 - updated manifest summary fields:
   `narrator_profile_name`
   `narrator_language`
@@ -152,6 +151,8 @@ Narrator profile payloads currently use:
 - `editable`
 - `protected`
 - `is_selected`
+- `sample_audio_path`
+- `sample_metadata`
 - `updated_at`
 
 Profile rules:
@@ -229,10 +230,17 @@ Current runtime-aware rules:
 - only the three fixed seeded Qwen presets are protected from deletion;
   runtime-synced presets and migrated legacy prompt-seed profiles are not
 - runtime requests use VoiceWeaver language codes even when operator-facing
-  labels such as `English` or `Romanian` are shown in the UI or manifest
+  labels such as `English` or `Romanian` are shown in the UI or manifest,
+  except Romanian TTS requests intentionally omit the outbound `language`
+  field so the runtime can infer pronunciation from the text
+- the Voice Designer Prompt and Preview Text editors expose vertical scrollbars
+- Preview Text is capped by the global TTS preview text limit, defaulting to
+  512 characters
 - `Select` requires an existing per-profile sample and is disabled for the
   already selected profile
-- `Preview` requires a stored per-profile sample
+- `Preview` requires a stored per-profile sample and plays the currently
+  inspected profile's WAV, so switching profiles can preview each saved sample
+  without regenerating audio
 - entering edit mode clears any existing sample for that profile and also
   clears explicit selection if the edited profile had been selected
 

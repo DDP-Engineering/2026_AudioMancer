@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-  # noqa: UP009
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -12,7 +13,7 @@
          derivation for the TTS Settings and Narrator runtime-awareness flow.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-22
-@version 0.4.0
+@version 0.4.1
 """
 
 # IMPORTS
@@ -177,14 +178,14 @@ def test_build_capability_matrix_ignores_unhealthy_models() -> None:
 
 def test_voiceweaver_runtime_service_generation_payloads_use_current_contract(monkeypatch) -> None:
     """
-    @brief      Verify runtime generation helpers send language codes and optional model parameters using the current
+    @brief      Verify runtime generation helpers send explicit language fields only when required by the current
                 REST contract.
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-18
-    @version    1.0.0
+    @version    1.1.0
     """
     observed_calls: list[tuple[str, str, dict[str, object] | None, int]] = []
 
@@ -232,7 +233,6 @@ def test_voiceweaver_runtime_service_generation_payloads_use_current_contract(mo
             "http://127.0.0.1:8059",
             "/v1/voice/design",
             {
-                "language": "ro",
                 "text": "Salut",
                 "voice_description": "Warm narrator.",
                 "model_parameters": {"top_k": 33},
@@ -250,7 +250,7 @@ def test_voiceweaver_runtime_service_clone_prompt_wrappers_use_documented_contra
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-23
-    @version    0.1.0
+    @version    0.2.0
     """
     observed_multipart_calls: list[tuple[str, str, dict[str, object], str, str, bytes, int]] = []
     observed_json_calls: list[tuple[str, str, dict[str, object], int]] = []
@@ -329,13 +329,61 @@ def test_voiceweaver_runtime_service_clone_prompt_wrappers_use_documented_contra
             "/v1/voice/clone-from-prompt",
             {
                 "voice_clone_prompt": {"format": "qwen_voice_clone_prompt_v1", "prompt": {"ref_code": {"data": "..."}}},
-                "language": "ro",
                 "text": "Salut.",
                 "model_parameters": {"top_k": 22},
             },
             44,
         )
     ]
+
+
+def test_voiceweaver_runtime_service_direct_clone_omits_romanian_language(monkeypatch) -> None:
+    """
+    @brief      Verify direct clone requests omit the VoiceWeaver language field for Romanian synthesis.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-25
+    @version    0.1.0
+    """
+    observed_form_fields: list[dict[str, object]] = []
+
+    def _fake_send_multipart_request(
+        method,
+        url,
+        headers,
+        timeout_seconds,
+        form_fields,
+        file_field_name,
+        file_name,
+        file_bytes,
+        file_content_type="audio/wav",
+    ):
+        _ = method
+        _ = url
+        _ = headers
+        _ = timeout_seconds
+        _ = file_field_name
+        _ = file_name
+        _ = file_bytes
+        _ = file_content_type
+        observed_form_fields.append(dict(form_fields))
+        return {"status": "running"}
+
+    monkeypatch.setattr(voiceweaver_runtime_service, "_send_multipart_request", _fake_send_multipart_request)
+
+    voiceweaver_runtime_service.generate_voice_clone(
+        "http://127.0.0.1:8059",
+        "",
+        b"sample-bytes",
+        "Text de referinta.",
+        "ro",
+        "Salut.",
+        timeout_seconds=44,
+    )
+
+    assert observed_form_fields == [{"sample_text": "Text de referinta.", "text": "Salut."}]
 
 
 def test_voiceweaver_runtime_service_endpoint_wrappers_cover_extended_rest_surface(monkeypatch) -> None:

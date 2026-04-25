@@ -14,7 +14,7 @@
          settings file to the application root.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-22
-@version 0.7.0
+@version 0.7.1
 """
 
 # IMPORTS
@@ -76,7 +76,7 @@ def _optional_profile_id(value: object) -> str | None:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-05
-    @version    0.1.0
+    @version    0.1.1
     """
     if value in (None, ""):
         return None
@@ -411,6 +411,7 @@ def _validate_settings_internal(settings_payload: object) -> tuple[dict[str, Any
     for field_name in (
         "tts_audio_preview_timeout_seconds",
         "tts_audio_generation_timeout_seconds",
+        "tts_preview_text_character_limit",
     ):
         if not isinstance(normalized_settings[field_name], int) or normalized_settings[field_name] <= 0:
             _log_settings_repair(
@@ -618,7 +619,7 @@ def build_default_settings() -> dict[str, Any]:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.5.0
+    @version    0.5.1
     """
     return {
         "language": config.DEFAULT_LANGUAGE,
@@ -640,6 +641,7 @@ def build_default_settings() -> dict[str, Any]:
         "tts_runtime_device_diagnostics": {},
         "tts_audio_preview_timeout_seconds": config.DEFAULT_TTS_AUDIO_PREVIEW_TIMEOUT_SECONDS,
         "tts_audio_generation_timeout_seconds": config.DEFAULT_TTS_AUDIO_GENERATION_TIMEOUT_SECONDS,
+        "tts_preview_text_character_limit": config.DEFAULT_TTS_PREVIEW_TEXT_CHARACTER_LIMIT,
     }
 
 

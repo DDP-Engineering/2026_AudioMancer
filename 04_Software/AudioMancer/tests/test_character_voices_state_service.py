@@ -1,4 +1,5 @@
-﻿#!/usr/bin/env python3
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-  # noqa: UP009
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -41,7 +42,9 @@ def test_state_contains_narrator_first_and_approved_translated_language(tmp_path
     project_root, manifest = _create_project_with_narrator_and_character(tmp_path, "CharacterVoicesState")
     manifest["original_language"] = "de"
     project_workspace_service.save_manifest(manifest, project_root)
-    translation_report_path = project_root / config.TRANSLATION_FOLDER_NAME / config.TRANSLATION_REPORT_FILE_NAME
+    translation_report_path = (
+        project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.TRANSLATION_REPORT_FILE_NAME
+    )
     translation_report_path.write_text(
         json.dumps(
             {
@@ -218,4 +221,3 @@ def _minimum_qwen_models() -> list[dict[str, object]]:
 
 
 # END OF FILE
-

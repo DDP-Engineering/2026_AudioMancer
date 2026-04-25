@@ -199,7 +199,12 @@ Current UI behavior:
 - narrator sample generation uses the saved runtime base URL, API key,
   discovered models, fixed Qwen3 capability classification, VoiceWeaver
   language codes, the shared controller-side runtime cache helpers, and the
-  saved preview timeout from this component
+  saved preview timeout from this component; Romanian is stored as `ro` in
+  AudioMancer state but TTS requests omit the outbound `language` field so
+  the runtime can infer pronunciation from the text
+- the narrator sample preview text character limit is stored in
+  `tts_preview_text_character_limit`; the default is
+  `DEFAULT_TTS_PREVIEW_TEXT_CHARACTER_LIMIT = 512`
 
 ## 8. Usage
 

@@ -30,13 +30,11 @@ from audiomancer.services import (
     deterministic_chunking_service,
     llm_provider_service,
     prompt_template_service,
-    text_cleanup_state_service,
     token_usage_service,
 )
 from audiomancer.services.logging_service import get_component_logger, trace_function
 from audiomancer.services.operation_runtime_service import (
     OperationCancelledError,
-    build_operation_input_snapshot_path,
     build_operation_output_path,
     progress_percent,
     raise_if_cancelled,
@@ -100,7 +98,7 @@ def load_operation_state(project_root: str | Path) -> OperationStatePayload | No
     state_path = resolve_operation_path(
         project_root,
         "character_discovery",
-        config.OPERATION_STATE_FILE_NAME,
+        config.CHARACTER_DISCOVERY_STATE_FILE_NAME,
     )
     if not state_path.is_file():
         return None
@@ -246,13 +244,7 @@ def load_input_chunks(project_root: str | Path) -> list[dict[str, object]]:
     @date       2026-04-08
     @version    0.1.0
     """
-    input_path = _resolve_chunk_input_snapshot_path(Path(project_root))
-    if input_path is None or not input_path.is_file():
-        return []
-    payload = json.loads(input_path.read_text(encoding="utf-8"))
-    if not isinstance(payload, list):
-        return []
-    return [dict(item) for item in payload if isinstance(item, dict)]
+    return deterministic_chunking_service.load_chunks(project_root)
 
 
 @trace_function(_CHARACTER_DISCOVERY_LOGGER)
@@ -316,7 +308,7 @@ def start_or_continue_discovery(
     state_path = build_operation_output_path(
         resolved_project_root,
         "character_discovery",
-        config.OPERATION_STATE_FILE_NAME,
+        config.CHARACTER_DISCOVERY_STATE_FILE_NAME,
     )
 
     input_fingerprint = _build_input_fingerprint(source_chunks)
@@ -925,7 +917,7 @@ def _sync_character_count_metadata(project_root: Path, character_count: int) -> 
     state_path = build_operation_output_path(
         project_root,
         "character_discovery",
-        config.OPERATION_STATE_FILE_NAME,
+        config.CHARACTER_DISCOVERY_STATE_FILE_NAME,
     )
     state_path.write_text(
         json.dumps(state_payload, indent=2, ensure_ascii=False) + "\n",
@@ -948,33 +940,12 @@ def _persist_input_snapshots(
     @date       2026-04-21
     @version    0.1.0
     """
-    source_base_name = _source_snapshot_base_name(manifest)
-    chunk_input_path = build_operation_input_snapshot_path(
-        project_root,
-        "character_discovery",
-        f"{source_base_name}.json",
-    )
-    clean_text_input_path = build_operation_input_snapshot_path(
-        project_root,
-        "character_discovery",
-        f"{source_base_name}.txt",
-    )
-    chunk_input_path.write_text(
-        json.dumps(source_chunks, indent=2, ensure_ascii=False) + "\n",
-        encoding="utf-8",
-    )
-    cleaned_text = text_cleanup_state_service.read_optional_project_text(
-        project_root,
-        f"{config.CLEANUP_FOLDER_NAME}/{config.CLEANED_TEXT_FILE_NAME}",
-    )
-    if cleaned_text is None:
-        cleaned_text = "\n\n".join(
-            str(chunk.get("text", "")).strip() for chunk in source_chunks if str(chunk.get("text", "")).strip()
-        )
-    clean_text_input_path.write_text(
-        cleaned_text.strip() + "\n",
-        encoding="utf-8",
-    )
+    _ = source_chunks
+    _ = manifest
+    chunk_input_path = project_root / config.CHUNK_ARTIFACT_FILE_NAME
+    clean_text_input_path = project_root / config.CLEANED_TEXT_FILE_NAME
+    if not clean_text_input_path.is_file():
+        clean_text_input_path = chunk_input_path
     return chunk_input_path, clean_text_input_path
 
 
@@ -987,23 +958,8 @@ def _resolve_chunk_input_snapshot_path(project_root: Path) -> Path | None:
     @date       2026-04-21
     @version    0.1.0
     """
-    operation_state = load_operation_state(project_root)
-    if isinstance(operation_state, dict):
-        input_paths = operation_state.get("input_paths", [])
-        if isinstance(input_paths, list):
-            for relative_path in input_paths:
-                if not isinstance(relative_path, str):
-                    continue
-                candidate_path = project_root / relative_path
-                if (
-                    candidate_path.is_file()
-                    and candidate_path.suffix.casefold() == ".json"
-                    and candidate_path.name.startswith(config.OPERATION_INPUT_FILE_PREFIX)
-                ):
-                    return candidate_path
-    discovery_root = project_root / config.CHARACTER_DISCOVERY_FOLDER_NAME
-    candidates = sorted(discovery_root.glob(f"{config.OPERATION_INPUT_FILE_PREFIX}*.json"))
-    return candidates[0] if candidates else None
+    candidate_path = project_root / config.CHUNK_ARTIFACT_FILE_NAME
+    return candidate_path if candidate_path.is_file() else None
 
 
 def _source_snapshot_base_name(manifest: dict[str, object]) -> str:
@@ -1195,7 +1151,7 @@ def _resolve_log_path(
     resolved_log_path = build_operation_output_path(
         project_root,
         "character_discovery",
-        f"{config.AI_TRANSACTION_LOG_FILE_PREFIX}{timestamp_token}.log",
+        config.ai_transaction_log_file_name("characters", timestamp_token),
     )
     if not resolved_log_path.exists():
         resolved_log_path.write_text("", encoding="utf-8")
@@ -1255,7 +1211,7 @@ def _write_operation_state(
     if report_path is not None and report_path.is_file():
         artifact_paths.insert(0, relative_to_project(project_root, report_path))
     state_payload: OperationStatePayload = {
-        "folder_relative_path": config.CHARACTER_DISCOVERY_FOLDER_NAME,
+        "folder_relative_path": config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH,
         "status": status,
         "input_paths": [
             relative_to_project(project_root, input_path) for input_path in input_paths if input_path.is_file()

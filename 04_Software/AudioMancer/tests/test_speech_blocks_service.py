@@ -178,7 +178,7 @@ def test_start_or_continue_generation_creates_artifacts_and_normalizes_blocks(mo
 
     report = speech_blocks_service.start_or_continue_generation(project_root, manifest, _profile_payload())
 
-    speech_blocks_root = project_root / config.SPEECH_BLOCKS_FOLDER_NAME
+    speech_blocks_root = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH
     assert (speech_blocks_root / "input_source_chunks.json").is_file()
     assert (speech_blocks_root / config.SPEECH_BLOCKS_OUTPUT_FILE_NAME).is_file()
     assert (speech_blocks_root / config.SPEECH_BLOCKS_REPORT_FILE_NAME).is_file()
@@ -556,7 +556,7 @@ def test_start_or_continue_generation_resumes_from_next_chunk(monkeypatch, tmp_p
             profile_id="profile-1",
             warning_records=[],
             input_fingerprint=fingerprint,
-            log_path=project_root / config.SPEECH_BLOCKS_FOLDER_NAME / "log_ai_transactions_resume.log",
+            log_path=project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / "log_ai_transactions_resume.log",
             token_usage={"input_tokens": 5, "output_tokens": 2, "total_tokens": 7, "usage_available": True},
             next_chunk_index=1,
         ),
@@ -624,7 +624,7 @@ def _create_chunked_project(tmp_path, name: str):
     manifest["operations"]["chunking"]["status"] = "completed"
     manifest["current_stage"] = "character_voices_ready"
     project_workspace_service.save_manifest(manifest, project_root)
-    (project_root / config.CHUNKING_FOLDER_NAME / config.CHUNK_ARTIFACT_FILE_NAME).write_text(
+    (project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.CHUNK_ARTIFACT_FILE_NAME).write_text(
         json.dumps(
             [
                 {
@@ -668,7 +668,7 @@ def _seed_review_speech_blocks(project_root) -> None:
     @date       2026-04-24
     @version    0.1.0
     """
-    speech_blocks_root = project_root / config.SPEECH_BLOCKS_FOLDER_NAME
+    speech_blocks_root = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH
     source_chunks_payload = [
         {
             "chunk_id": "chunk-0001",
@@ -778,7 +778,7 @@ def _write_translation_artifacts(
     @date       2026-04-24
     @version    0.1.0
     """
-    (project_root / config.TRANSLATION_FOLDER_NAME / config.TRANSLATION_REPORT_FILE_NAME).write_text(
+    (project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.TRANSLATION_REPORT_FILE_NAME).write_text(
         json.dumps(
             {
                 "target_language": "ro",
@@ -791,7 +791,7 @@ def _write_translation_artifacts(
         + "\n",
         encoding="utf-8",
     )
-    (project_root / config.TRANSLATION_FOLDER_NAME / config.TRANSLATED_CHUNKS_FILE_NAME).write_text(
+    (project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.TRANSLATED_CHUNKS_FILE_NAME).write_text(
         json.dumps(translated_chunks, indent=2) + "\n",
         encoding="utf-8",
     )

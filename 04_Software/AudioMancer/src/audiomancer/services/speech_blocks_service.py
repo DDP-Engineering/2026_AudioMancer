@@ -39,7 +39,6 @@ from audiomancer.services import (
 from audiomancer.services.logging_service import get_component_logger, trace_function
 from audiomancer.services.operation_runtime_service import (
     OperationCancelledError,
-    build_operation_input_snapshot_path,
     build_operation_output_path,
     progress_percent,
     raise_if_cancelled,
@@ -92,7 +91,7 @@ def load_operation_state(project_root: str | Path) -> OperationStatePayload | No
     @date       2026-04-21
     @version    0.2.0
     """
-    state_path = resolve_operation_path(project_root, "speech_blocks", config.OPERATION_STATE_FILE_NAME)
+    state_path = resolve_operation_path(project_root, "speech_blocks", config.SPEECH_BLOCKS_STATE_FILE_NAME)
     if not state_path.is_file():
         return None
     return dict(json.loads(state_path.read_text(encoding="utf-8")))
@@ -118,18 +117,19 @@ def load_speech_blocks_report(project_root: str | Path) -> SpeechBlocksReportPay
 @trace_function(_SPEECH_BLOCKS_LOGGER)
 def load_input_source_chunks(project_root: str | Path) -> list[dict[str, object]]:
     """
-    @brief      Load one optional Speech Blocks source snapshot.
+    @brief      Load one optional Speech Blocks source payload from operation state.
     @param[in]  project_root Active project root folder.
     @return     Ordered source-chunk snapshot payloads.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.1.0
+    @version    0.2.0
     """
-    input_path = _source_chunks_snapshot_path(Path(project_root))
-    if not input_path.is_file():
+    operation_state = load_operation_state(project_root) or {}
+    metadata = operation_state.get("metadata", {}) if isinstance(operation_state, dict) else {}
+    if not isinstance(metadata, dict):
         return []
-    payload = json.loads(input_path.read_text(encoding="utf-8"))
+    payload = metadata.get("source_chunks")
     if not isinstance(payload, list):
         return []
     return [dict(item) for item in payload if isinstance(item, dict)]
@@ -1540,13 +1540,13 @@ def _build_operation_state(
     @version    0.2.0
     """
     _ = warning_records
-    input_path = _source_chunks_snapshot_path(project_root)
+    input_path = _source_chunks_input_path(project_root, source_kind)
     output_path = build_operation_output_path(project_root, "speech_blocks", config.SPEECH_BLOCKS_OUTPUT_FILE_NAME)
     report_path = build_operation_output_path(project_root, "speech_blocks", config.SPEECH_BLOCKS_REPORT_FILE_NAME)
     processed_chunk_count = len({str(block.get("chunk_id", "")).strip() for block in speech_blocks})
     warning_entries = _warning_records_from_blocks(speech_blocks)
     return {
-        "folder_relative_path": config.SPEECH_BLOCKS_FOLDER_NAME,
+        "folder_relative_path": config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH,
         "status": status,
         "input_paths": [relative_to_project(project_root, input_path)],
         "output_paths": [relative_to_project(project_root, output_path)],
@@ -1572,6 +1572,14 @@ def _build_operation_state(
             "total_block_count": len(speech_blocks),
             "warnings": warning_entries,
             "source_snapshot_fingerprint": input_fingerprint,
+            "source_chunks": [
+                {
+                    "chunk_id": str(chunk.get("chunk_id", "")),
+                    "sequence_index": int(chunk.get("sequence_index", 0)),
+                    "text": str(chunk.get("text", "")),
+                }
+                for chunk in source_chunks
+            ],
             "log_relative_path": relative_to_project(project_root, log_path),
             "token_usage": token_usage_service.coerce_token_usage(token_usage),
         },
@@ -1596,7 +1604,7 @@ def _persist_state(
     operation_state: OperationStatePayload,
 ) -> None:
     """
-    @brief      Persist the Speech Blocks snapshot, output, report, and state.
+    @brief      Persist the Speech Blocks output, report, and state.
     @param[in]  project_root Active project root folder.
     @param[in]  source_chunks Source snapshot payload list.
     @param[in]  speech_blocks Current Speech Blocks payload list.
@@ -1606,12 +1614,9 @@ def _persist_state(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.1.0
+    @version    0.2.0
     """
-    _source_chunks_snapshot_path(project_root).write_text(
-        json.dumps(source_chunks, indent=2, ensure_ascii=False) + "\n",
-        encoding="utf-8",
-    )
+    _ = source_chunks
     build_operation_output_path(project_root, "speech_blocks", config.SPEECH_BLOCKS_OUTPUT_FILE_NAME).write_text(
         json.dumps(speech_blocks, indent=2, ensure_ascii=False) + "\n",
         encoding="utf-8",
@@ -1620,7 +1625,7 @@ def _persist_state(
         json.dumps(report, indent=2, ensure_ascii=False) + "\n",
         encoding="utf-8",
     )
-    build_operation_output_path(project_root, "speech_blocks", config.OPERATION_STATE_FILE_NAME).write_text(
+    build_operation_output_path(project_root, "speech_blocks", config.SPEECH_BLOCKS_STATE_FILE_NAME).write_text(
         json.dumps(operation_state, indent=2, ensure_ascii=False) + "\n",
         encoding="utf-8",
     )
@@ -1756,21 +1761,20 @@ def _speech_block_by_id(
     )
 
 
-def _source_chunks_snapshot_path(project_root: Path) -> Path:
+def _source_chunks_input_path(project_root: Path, source_kind: str) -> Path:
     """
-    @brief      Resolve the Speech Blocks source snapshot path.
+    @brief      Resolve the upstream Speech Blocks source artifact path.
     @param[in]  project_root Active project root folder.
-    @return     Absolute project-local source snapshot path.
+    @param[in]  source_kind Active source-kind token.
+    @return     Absolute project-local source artifact path.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.1.0
+    @version    0.2.0
     """
-    return build_operation_input_snapshot_path(
-        project_root,
-        "speech_blocks",
-        config.SPEECH_BLOCKS_SOURCE_CHUNKS_FILE_NAME,
-    )
+    if str(source_kind).strip() == "translated":
+        return project_root / config.TRANSLATED_CHUNKS_FILE_NAME
+    return project_root / config.CHUNK_ARTIFACT_FILE_NAME
 
 
 def _build_source_fingerprint(source_chunks: list[dict[str, object]], source_language: str, source_kind: str) -> str:
@@ -1883,7 +1887,7 @@ def _resolve_log_path(project_root: Path, started_at: str) -> Path:
     log_path = build_operation_output_path(
         project_root,
         "speech_blocks",
-        f"{config.AI_TRANSACTION_LOG_FILE_PREFIX}{timestamp_token}.log",
+        config.ai_transaction_log_file_name("speech_blocks", timestamp_token),
     )
     if not log_path.exists():
         log_path.write_text("", encoding="utf-8")

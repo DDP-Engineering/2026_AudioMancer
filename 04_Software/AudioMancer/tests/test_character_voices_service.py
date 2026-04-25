@@ -1,4 +1,5 @@
-﻿#!/usr/bin/env python3
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-  # noqa: UP009
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -12,7 +13,7 @@
          persistence, and narrator-copy sample sync behavior.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-20
-@version 1.2.0
+@version 1.2.1
 """
 
 # IMPORTS
@@ -64,7 +65,9 @@ def test_build_character_default_prompt_prefers_character_owned_voice_definition
         {
             "canonical_name": "Elizabeth",
             "role_summary": "noblewoman",
-            "voice_definition_prompt": "Create a consistent spoken voice for Elizabeth. Warm mezzo tone with restrained authority.",
+            "voice_definition_prompt": (
+                "Create a consistent spoken voice for Elizabeth. Warm mezzo tone with restrained authority."
+            ),
         }
     )
 
@@ -87,6 +90,19 @@ def test_selected_voice_language_persists(tmp_path) -> None:
 
     assert saved_language == "ro"
     assert character_voices_service.load_selected_voice_language(project_root) == "ro"
+
+
+def test_preview_text_covers_qwen3_tts_languages_without_chinese() -> None:
+    """
+    @brief      Verify deterministic preview text exists for every non-Chinese Qwen3 TTS language plus Romanian.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-25
+    @version    0.1.0
+    """
+    for language_code in ("en", "ro", "ja", "ko", "de", "fr", "ru", "pt", "es", "it"):
+        assert character_voices_service.preview_text_for_language(language_code)
 
 
 def test_save_target_prompt_persists_preview_text(tmp_path) -> None:
@@ -194,4 +210,3 @@ def _create_project_with_selected_narrator(tmp_path, name: str):
 
 
 # END OF FILE
-

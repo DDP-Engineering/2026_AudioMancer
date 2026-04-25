@@ -13,7 +13,7 @@
          file support used by the current AudioMancer implementation scaffold.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 1.23.0
+@version 1.24.2
 """
 
 # IMPORTS
@@ -41,49 +41,8 @@ APP_PROMPTS_PATH = APP_ROOT / "prompts"
 # @brief Stable manifest file name stored at the project root.
 PROJECT_MANIFEST_FILE_NAME = "project.json"
 
-# @brief Stable project folder name for text extraction artifacts.
-EXTRACTION_FOLDER_NAME = "00_extraction"
-
-# @brief Stable project folder name for deterministic cleanup artifacts.
-CLEANUP_FOLDER_NAME = "10_cleanup"
-
-# @brief Stable project folder name for chunking artifacts.
-CHUNKING_FOLDER_NAME = "20_chunking"
-
-# @brief Stable project folder name for translation artifacts.
-TRANSLATION_FOLDER_NAME = "30_translation"
-
-# @brief Stable project folder name for character-discovery artifacts.
-CHARACTER_DISCOVERY_FOLDER_NAME = "40_character_discovery"
-
-# @brief Stable project folder name for narrator-definition artifacts.
-NARRATOR_DEFINITION_FOLDER_NAME = "50_narrator_definition"
-
-# @brief Stable project folder name for character-voices artifacts.
-CHARACTER_VOICES_FOLDER_NAME = "60_character_voices"
-
-# @brief Stable project folder name for speech-block artifacts.
-SPEECH_BLOCKS_FOLDER_NAME = "70_speech_blocks"
-
-# @brief Stable project folder name for audio-block artifacts.
-AUDIO_BLOCKS_FOLDER_NAME = "80_audio_blocks"
-
-# @brief Stable project folder name for audio-assembly artifacts.
-AUDIO_ASSEMBLY_FOLDER_NAME = "90_audio_assembly"
-
-# @brief Standard workflow directories created for each project workspace.
-PROJECT_REQUIRED_SUBDIRECTORIES = (
-    EXTRACTION_FOLDER_NAME,
-    CLEANUP_FOLDER_NAME,
-    CHUNKING_FOLDER_NAME,
-    TRANSLATION_FOLDER_NAME,
-    CHARACTER_DISCOVERY_FOLDER_NAME,
-    NARRATOR_DEFINITION_FOLDER_NAME,
-    CHARACTER_VOICES_FOLDER_NAME,
-    SPEECH_BLOCKS_FOLDER_NAME,
-    AUDIO_BLOCKS_FOLDER_NAME,
-    AUDIO_ASSEMBLY_FOLDER_NAME,
-)
+# @brief Stable relative path used by root-level runtime operation artifacts.
+PROJECT_ROOT_ARTIFACT_RELATIVE_PATH = "."
 
 # @brief Stable ordered workflow stage identifiers used by the current project shell.
 PROJECT_WORKFLOW_STAGES = (
@@ -132,20 +91,11 @@ WINDOWS_RESERVED_DIRECTORY_NAMES = (
     "LPT9",
 )
 
-# @brief Stable operation-folder file name for persisted state.
-OPERATION_STATE_FILE_NAME = "state_operation.json"
-
-# @brief Stable prefix used for copied operation-local input snapshots.
-OPERATION_INPUT_FILE_PREFIX = "input_"
-
-# @brief Stable prefix used for primary operation outputs.
-OPERATION_OUTPUT_FILE_PREFIX = "output_"
-
-# @brief Stable prefix used for operation artifacts and reports.
-OPERATION_ARTIFACT_FILE_PREFIX = "artifact_"
-
 # @brief Stable prefix used for project-local AI transaction logs.
-AI_TRANSACTION_LOG_FILE_PREFIX = "log_ai_transactions_"
+AI_TRANSACTION_LOG_FILE_PREFIX = "log_ai_"
+
+# @brief Stable extension used for project-local AI transaction logs.
+AI_TRANSACTION_LOG_FILE_EXTENSION = ".log"
 
 
 # Source Import And Processing Artifacts
@@ -161,82 +111,106 @@ SUPPORTED_SOURCE_SUFFIXES = {
 }
 
 # @brief File name used for persisted raw extracted text.
-EXTRACTED_TEXT_FILE_NAME = f"{OPERATION_OUTPUT_FILE_PREFIX}raw_text.txt"
+EXTRACTED_TEXT_FILE_NAME = "extracted_text.txt"
 
 # @brief File name used for the extraction metadata report.
 EXTRACTION_REPORT_FILE_NAME = "extraction_report.json"
 
+# @brief File name used for persisted extraction runtime state.
+EXTRACTION_STATE_FILE_NAME = "extraction_state.json"
+
 # @brief File name used for persisted cleaned text.
-CLEANED_TEXT_FILE_NAME = f"{OPERATION_OUTPUT_FILE_PREFIX}clean_text.txt"
+CLEANED_TEXT_FILE_NAME = "clean_text.txt"
 
 # @brief File name used for cleanup metadata.
-CLEANUP_REPORT_FILE_NAME = f"{OPERATION_ARTIFACT_FILE_PREFIX}cleanup_report.json"
+CLEANUP_REPORT_FILE_NAME = "cleanup_report.json"
+
+# @brief File name used for persisted cleanup runtime state.
+CLEANUP_STATE_FILE_NAME = "cleanup_state.json"
 
 # @brief File name used for the persisted chunk list artifact.
-CHUNK_ARTIFACT_FILE_NAME = f"{OPERATION_OUTPUT_FILE_PREFIX}chunks.json"
+CHUNK_ARTIFACT_FILE_NAME = "chunks_text.json"
 
 # @brief File name used for persisted chunking metadata.
 CHUNKING_REPORT_FILE_NAME = "chunking_report.json"
 
+# @brief File name used for persisted chunking runtime state.
+CHUNKING_STATE_FILE_NAME = "chunking_state.json"
+
 # @brief File name used for persisted translated chunk records.
-TRANSLATED_CHUNKS_FILE_NAME = "translated_chunks.json"
+TRANSLATED_CHUNKS_FILE_NAME = "translated_text.json"
 
 # @brief File name used for persisted translation session metadata.
-TRANSLATION_REPORT_FILE_NAME = f"{OPERATION_ARTIFACT_FILE_PREFIX}translation_report.json"
+TRANSLATION_REPORT_FILE_NAME = "translation_report.json"
+
+# @brief File name used for persisted translation runtime state.
+TRANSLATION_STATE_FILE_NAME = "translation_state.json"
 
 # @brief File name used for persisted discovered character profiles.
-CHARACTER_PROFILE_FILE_NAME = f"{OPERATION_OUTPUT_FILE_PREFIX}character_profiles.json"
+CHARACTER_PROFILE_FILE_NAME = "characters_profile.json"
 
 # @brief File name used for persisted character-discovery metadata.
-CHARACTER_DISCOVERY_REPORT_FILE_NAME = f"{OPERATION_ARTIFACT_FILE_PREFIX}character_discovery_report.json"
+CHARACTER_DISCOVERY_REPORT_FILE_NAME = "characters_report.json"
+
+# @brief File name used for persisted character-discovery runtime state.
+CHARACTER_DISCOVERY_STATE_FILE_NAME = "characters_state.json"
 
 # @brief File name used for persisted narrator-definition profile records.
-NARRATOR_PROFILE_FILE_NAME = "profiles.json"
+NARRATOR_PROFILE_FILE_NAME = "audio_profiles.json"
 
 # @brief File name used for persisted narrator-definition selection state.
-NARRATOR_SELECTION_FILE_NAME = "selected_profile.json"
-
-# @brief Folder name used for per-profile narrator sample files under `50_narrator_definition`.
-NARRATOR_PROFILE_AUDIO_SAMPLES_FOLDER_NAME = "audio_samples"
+NARRATOR_SELECTION_FILE_NAME = "narator.json"
 
 # @brief File name used for persisted character-voices target records.
-CHARACTER_VOICES_TARGETS_FILE_NAME = "voice_targets.json"
+CHARACTER_VOICES_TARGETS_FILE_NAME = "characters_voice.json"
 
-# @brief File name used for persisted character-voices selected voice language.
-CHARACTER_VOICES_SELECTED_LANGUAGE_FILE_NAME = "selected_voice_language.json"
+# @brief File name used for the selected narrator sample at the project root.
+SELECTED_NARRATOR_AUDIO_FILE_NAME = "narator.wav"
 
-# @brief Folder name used for per-target character-voices sample files under `60_character_voices`.
-CHARACTER_VOICES_AUDIO_SAMPLES_FOLDER_NAME = "audio_samples"
-
-# @brief File name used for the selected narrator sample under `50_narrator_definition/audio_samples/`.
-SELECTED_NARRATOR_AUDIO_FILE_NAME = "narrator.wav"
-
-# @brief File name used for the selected narrator sample metadata under `50_narrator_definition/audio_samples/`.
-SELECTED_NARRATOR_METADATA_FILE_NAME = "narrator.json"
-
-# @brief File name used for the Speech Blocks source-chunk input snapshot.
-SPEECH_BLOCKS_SOURCE_CHUNKS_FILE_NAME = "source_chunks.json"
+# @brief File name used for the selected narrator sample metadata at the project root.
+SELECTED_NARRATOR_METADATA_FILE_NAME = "narator.json"
 
 # @brief File name used for persisted Speech Blocks output.
-SPEECH_BLOCKS_OUTPUT_FILE_NAME = f"{OPERATION_OUTPUT_FILE_PREFIX}speech_blocks.json"
+SPEECH_BLOCKS_OUTPUT_FILE_NAME = "speech_blocks.json"
 
 # @brief File name used for persisted Speech Blocks report metadata.
-SPEECH_BLOCKS_REPORT_FILE_NAME = f"{OPERATION_ARTIFACT_FILE_PREFIX}speech_blocks_report.json"
+SPEECH_BLOCKS_REPORT_FILE_NAME = "speech_blocks_report.json"
 
-# @brief File name used for the Audio Blocks speech-block input snapshot.
-AUDIO_BLOCKS_INPUT_SPEECH_BLOCKS_FILE_NAME = "input_speech_blocks.json"
+# @brief File name used for persisted Speech Blocks runtime state.
+SPEECH_BLOCKS_STATE_FILE_NAME = "speech_blocks_state.json"
 
 # @brief File name used for persisted Audio Blocks output.
-AUDIO_BLOCKS_OUTPUT_FILE_NAME = f"{OPERATION_OUTPUT_FILE_PREFIX}audio_blocks.json"
+AUDIO_BLOCKS_OUTPUT_FILE_NAME = "audio_blocks.json"
 
 # @brief File name used for persisted Audio Blocks report metadata.
-AUDIO_BLOCKS_REPORT_FILE_NAME = f"{OPERATION_ARTIFACT_FILE_PREFIX}audio_blocks_report.json"
+AUDIO_BLOCKS_REPORT_FILE_NAME = "audio_blocks_report.json"
+
+# @brief File name used for persisted Audio Blocks runtime state.
+AUDIO_BLOCKS_STATE_FILE_NAME = "audio_blocks_state.json"
 
 # @brief File name used for persisted Audio Blocks voice-clone profile metadata.
 AUDIO_BLOCKS_VOICE_CLONE_PROFILES_FILE_NAME = "voice_clone_profiles.json"
 
-# @brief Folder name used for generated per-speech-block audio artifacts under `80_audio_blocks`.
-AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME = "generated_audio"
+# @brief Folder name used for generated per-speech-block audio artifacts.
+AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME = "audio_blocks"
+
+
+def ai_transaction_log_file_name(operation_kind: str, timestamp_token: str) -> str:
+    """
+    @brief      Compose one project-local AI transaction log file name.
+    @param[in]  operation_kind Stable AI operation token.
+    @param[in]  timestamp_token Filesystem-safe date/time token.
+    @return     AI log file name.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-25
+    @version    0.1.0
+    """
+    normalized_operation = str(operation_kind).strip().replace("-", "_")
+    normalized_timestamp = str(timestamp_token).strip()
+    return (
+        f"{AI_TRANSACTION_LOG_FILE_PREFIX}{normalized_operation}_{normalized_timestamp}"
+        f"{AI_TRANSACTION_LOG_FILE_EXTENSION}"
+    )
 
 
 # Workflow And UI Defaults
@@ -310,6 +284,9 @@ DEFAULT_TTS_AUDIO_PREVIEW_TIMEOUT_SECONDS = 60
 # @brief Default timeout in seconds for long-form audio generation requests.
 DEFAULT_TTS_AUDIO_GENERATION_TIMEOUT_SECONDS = 300
 
+# @brief Default maximum narrator preview text length for TTS samples.
+DEFAULT_TTS_PREVIEW_TEXT_CHARACTER_LIMIT = 512
+
 # @brief Default per-project narrator voice-assignment mode.
 DEFAULT_TTS_VOICE_ASSIGNMENT_MODE = "narrator_and_characters"
 
@@ -349,9 +326,14 @@ DEFAULT_TRANSLATION_TARGET_LANGUAGE = "en"
 TRANSLATION_LANGUAGE_OPTIONS = (
     ("en", "English"),
     ("ro", "Romanian"),
+    ("ja", "Japanese"),
+    ("ko", "Korean"),
     ("de", "German"),
     ("fr", "French"),
+    ("ru", "Russian"),
+    ("pt", "Portuguese"),
     ("es", "Spanish"),
+    ("it", "Italian"),
 )
 
 # @brief Default chunk-window size used for AI character discovery.

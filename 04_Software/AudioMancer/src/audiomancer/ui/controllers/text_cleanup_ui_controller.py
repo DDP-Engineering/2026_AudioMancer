@@ -479,7 +479,7 @@ def handle_extraction_success(window: "MainWindow", result_payload: object) -> N
     updated_manifest = dict(window._current_manifest)
     updated_manifest["extracted_text_relative_path"] = str(result_payload["extracted_text_relative_path"])
     updated_manifest["extraction_report_relative_path"] = (
-        f"{config.EXTRACTION_FOLDER_NAME}/{config.EXTRACTION_REPORT_FILE_NAME}"
+        f"{config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH}/{config.EXTRACTION_REPORT_FILE_NAME}"
     )
     updated_manifest["extraction_warning_count"] = len(list(result_payload.get("warnings", [])))
     operations = text_cleanup_state_service.normalized_manifest_operations(updated_manifest)

@@ -34,7 +34,7 @@ The current baseline consists of:
 The configuration module currently centralizes:
 
 - app identity and paths
-- project artifact naming
+- flat project runtime artifact naming
 - workflow and UI defaults
 - AI/provider defaults
 - export defaults
@@ -83,12 +83,36 @@ Current stable contracts are:
 - `audiomancer.services.settings_service`
 - `04_Software/AudioMancer/settings.json`
 
+Project runtime artifact contracts currently include:
+
+- `PROJECT_ROOT_ARTIFACT_RELATIVE_PATH = "."`
+- no per-operation workflow folder constants
+- no required-workflow-subdirectory configuration for new projects
+- root-level state files such as `extraction_state.json`,
+  `cleanup_state.json`, `chunking_state.json`, `translation_state.json`,
+  `characters_state.json`, `speech_blocks_state.json`, and
+  `audio_blocks_state.json`
+- root-level output/report artifacts such as `extracted_text.txt`,
+  `clean_text.txt`, `chunks_text.json`, `translated_text.json`,
+  `characters_profile.json`, `audio_profiles.json`, `characters_voice.json`,
+  `speech_blocks.json`, and `audio_blocks.json`
+- `audio_blocks/` as the only runtime artifact subfolder, used for generated
+  audio-block WAV and metadata files
+
 The settings scaffold currently includes fields for:
 
 - language and recent projects
 - default project and runtime-model paths
 - provider profile placeholders
 - LLM profile storage with no default selected profile-id fields
+
+`TRANSLATION_LANGUAGE_OPTIONS` includes the non-Chinese Qwen3-TTS language
+set plus Romanian: English, Romanian, Japanese, Korean, German, French,
+Russian, Portuguese, Spanish, and Italian. Romanian is intentionally retained
+as an AudioMancer selection even though outbound TTS requests omit the
+VoiceWeaver `language` field for `ro`.
+`DEFAULT_TTS_PREVIEW_TEXT_CHARACTER_LIMIT` caps narrator sample preview text,
+with a default of 512 characters.
 - AI cleanup and chunking profile defaults
 - notification and UI text-scale preferences
 

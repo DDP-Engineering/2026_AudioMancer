@@ -69,7 +69,7 @@ def build_text_cleanup_state(
     extraction_operation_state = text_extraction_service.load_operation_state(project_root)
     cleaned_text = read_optional_project_text(
         project_root,
-        f"{config.CLEANUP_FOLDER_NAME}/{config.CLEANED_TEXT_FILE_NAME}",
+        f"{config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH}/{config.CLEANED_TEXT_FILE_NAME}",
     )
     cleanup_report_payload = deterministic_cleanup_service.load_cleanup_report(project_root)
     cleanup_operation_state = deterministic_cleanup_service.load_operation_state(project_root)
@@ -142,7 +142,7 @@ def save_cleaned_text_edit(project_root: Path, manifest: dict[str, object], clea
     @date       2026-04-24
     @version    0.1.0
     """
-    cleaned_text_path = project_root / config.CLEANUP_FOLDER_NAME / config.CLEANED_TEXT_FILE_NAME
+    cleaned_text_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.CLEANED_TEXT_FILE_NAME
     if not cleaned_text_path.is_file():
         raise ValueError("No cleaned text is available to edit.")
     cleaned_text_path.write_text(cleaned_text, encoding="utf-8")
@@ -402,16 +402,16 @@ def normalized_manifest_operations(
         operations = {}
     normalized: dict[str, dict[str, object]] = {}
     for operation_kind, folder_name in (
-        ("extraction", config.EXTRACTION_FOLDER_NAME),
-        ("cleanup", config.CLEANUP_FOLDER_NAME),
-        ("chunking", config.CHUNKING_FOLDER_NAME),
-        ("translation", config.TRANSLATION_FOLDER_NAME),
-        ("character_discovery", config.CHARACTER_DISCOVERY_FOLDER_NAME),
-        ("narrator_definition", config.NARRATOR_DEFINITION_FOLDER_NAME),
-        ("character_voices", config.CHARACTER_VOICES_FOLDER_NAME),
-        ("speech_blocks", config.SPEECH_BLOCKS_FOLDER_NAME),
-        ("audio_blocks", config.AUDIO_BLOCKS_FOLDER_NAME),
-        ("audio_assembly", config.AUDIO_ASSEMBLY_FOLDER_NAME),
+        ("extraction", config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH),
+        ("cleanup", config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH),
+        ("chunking", config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH),
+        ("translation", config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH),
+        ("character_discovery", config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH),
+        ("narrator_definition", config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH),
+        ("character_voices", config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH),
+        ("speech_blocks", config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH),
+        ("audio_blocks", config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH),
+        ("audio_assembly", config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH),
     ):
         candidate = operations.get(operation_kind)
         normalized[operation_kind] = project_workspace_service.project_manifest_operation_summary(

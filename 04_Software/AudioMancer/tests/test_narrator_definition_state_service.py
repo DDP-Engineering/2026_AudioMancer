@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-  # noqa: UP009
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -12,7 +13,7 @@
          status-line composition for the simplified narrator workflow.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-20
-@version 3.3.0
+@version 3.3.1
 """
 
 # IMPORTS
@@ -40,7 +41,9 @@ def test_narrator_state_service_exposes_project_languages_and_no_default_selecti
     project_root, manifest = _create_project(tmp_path, "NarratorStateProject")
     manifest["original_language"] = "Italian"
     project_workspace_service.save_manifest(manifest, project_root)
-    translation_report_path = project_root / config.TRANSLATION_FOLDER_NAME / config.TRANSLATION_REPORT_FILE_NAME
+    translation_report_path = (
+        project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.TRANSLATION_REPORT_FILE_NAME
+    )
     translation_report_path.parent.mkdir(parents=True, exist_ok=True)
     translation_report_path.write_text(
         json.dumps({"target_language": "ro"}, indent=2) + "\n",
@@ -58,16 +61,16 @@ def test_narrator_state_service_exposes_project_languages_and_no_default_selecti
 
 def test_narrator_state_service_uses_cleanup_detected_original_language_when_manifest_is_empty(tmp_path) -> None:
     """
-    @brief      Verify narrator state falls back to cleanup-detected source language when the manifest original language is empty.
+    @brief      Verify narrator state falls back to cleanup-detected language when manifest language is empty.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.1.0
+    @version    0.2.0
     """
     project_root, manifest = _create_project(tmp_path, "NarratorStateCleanupLanguageProject")
-    cleanup_report_path = project_root / config.CLEANUP_FOLDER_NAME / config.CLEANUP_REPORT_FILE_NAME
+    cleanup_report_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.CLEANUP_REPORT_FILE_NAME
     cleanup_report_path.parent.mkdir(parents=True, exist_ok=True)
     cleanup_report_path.write_text(
         json.dumps({"detected_language": "it"}, indent=2) + "\n",
@@ -76,8 +79,8 @@ def test_narrator_state_service_uses_cleanup_detected_original_language_when_man
 
     state = narrator_definition_state_service.build_narrator_definition_state(project_root, manifest, "en")
 
-    assert state["original_language"] == "it"
-    assert state["effective_language"] == narrator_definition_service.DEFAULT_NARRATOR_LANGUAGE
+    assert state["original_language"] == "Italian"
+    assert state["effective_language"] == "it"
 
 
 def test_narrator_state_service_marks_sampled_custom_profile_selectable(tmp_path) -> None:
@@ -220,7 +223,7 @@ def test_narrator_state_service_legacy_default_custom_profile_is_deletable(tmp_p
     @version    1.0.0
     """
     project_root, manifest = _create_project(tmp_path, "NarratorStateLegacyDefaultProject")
-    profiles_path = project_root / config.NARRATOR_DEFINITION_FOLDER_NAME / config.NARRATOR_PROFILE_FILE_NAME
+    profiles_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.NARRATOR_PROFILE_FILE_NAME
     profiles_path.write_text(
         json.dumps(
             [
@@ -265,7 +268,7 @@ def test_narrator_state_service_legacy_customvoice_seed_profile_is_deletable_and
     @version    1.0.0
     """
     project_root, manifest = _create_project(tmp_path, "NarratorStateLegacySeedProject")
-    profiles_path = project_root / config.NARRATOR_DEFINITION_FOLDER_NAME / config.NARRATOR_PROFILE_FILE_NAME
+    profiles_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.NARRATOR_PROFILE_FILE_NAME
     profiles_path.write_text(
         json.dumps(
             [

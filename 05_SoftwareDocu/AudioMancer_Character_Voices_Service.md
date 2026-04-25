@@ -193,6 +193,8 @@ Downstream integrations:
 
 Current rules:
 
+- the shared voice-language selector offers English, Romanian, Japanese,
+  Korean, German, French, Russian, Portuguese, Spanish, and Italian
 - translated language becomes selectable only when all translated chunks are
   approved
 - changing the selected voice language clears `70_speech_blocks`,

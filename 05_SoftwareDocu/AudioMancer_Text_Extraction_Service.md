@@ -11,23 +11,20 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
 
 Provides the deterministic raw-text extraction slice for `AudioMancer`.
 
-It gives the `Text Cleanup` page one self-contained extraction workflow that
-copies the selected source into `00_extraction`, produces `output_raw_text.txt`,
-persists extraction metadata, stores resumable operation state, and reports
-progress through the shared modal operation runner.
+It gives the `Text Cleanup` page one extraction workflow that reads the
+imported source from the project root, produces `extracted_text.txt`, persists
+extraction metadata, stores resumable operation state, and reports progress
+through the shared modal operation runner.
 
 ## 2. Responsibilities
 
-- copy the imported source into `00_extraction/input_<original_name>`
 - extract raw text from the currently supported source formats
-- normalize extracted text and persist it as `00_extraction/output_raw_text.txt`
-- persist extraction metadata as
-  `00_extraction/extraction_report.json`
-- persist resumable operation state as
-  `00_extraction/state_operation.json`
+- normalize extracted text and persist it as `extracted_text.txt`
+- persist extraction metadata as `extraction_report.json`
+- persist resumable operation state as `extraction_state.json`
 - support resume for interrupted extraction when the saved checkpoint is safe
-- clear extraction outputs and downstream operation folders for a confirmed
-  rerun of a completed extraction
+- clear known extraction and downstream runtime artifacts for a confirmed rerun
+  of a completed extraction
 - emit unit-based progress and support cooperative cancellation for long runs
 - emit one immediate preparation-status update before the heavier format-specific
   extraction steps begin
@@ -61,11 +58,11 @@ High-level flow:
 4. If extraction is unfinished, `MainWindow` starts the extraction again
    without the destructive confirmation and resumes from saved progress when
    possible.
-5. `text_extraction_service.extract_text(...)` ensures one copied input
-   snapshot exists inside `00_extraction`.
-6. The service extracts text units, updates `state_operation.json` while the
+5. `text_extraction_service.extract_text(...)` resolves the imported source
+   from `project.json`.
+6. The service extracts text units, updates `extraction_state.json` while the
    work is in progress, emits unit-based progress callbacks, then writes
-   `output_raw_text.txt` and `extraction_report.json`.
+   `extracted_text.txt` and `extraction_report.json`.
 7. `MainWindow` drives the extraction run through the reusable modal progress
    dialog, including cooperative cancellation.
 8. `MainWindow` stores the resulting artifact paths and operation state in
@@ -91,15 +88,14 @@ Inputs:
 
 - active project root folder
 - current `project.json` manifest with a populated `source_document`
-- the copied source snapshot or root-level imported source file
+- root-level imported source file
 - extraction format implied by `source_document.file_type`
 
 Outputs:
 
-- `00_extraction/input_<original_name>`
-- `00_extraction/output_raw_text.txt`
-- `00_extraction/extraction_report.json`
-- `00_extraction/state_operation.json`
+- `extracted_text.txt`
+- `extraction_report.json`
+- `extraction_state.json`
 - updated `project.json` fields:
   `extracted_text_relative_path`,
   `extraction_report_relative_path`,
@@ -150,7 +146,7 @@ Supported extraction formats in the current implementation:
 
 Current deterministic behavior:
 
-- extracted output is always written as `00_extraction/output_raw_text.txt`
+- extracted output is always written as `extracted_text.txt`
 - line endings are normalized to `\n`
 - leading and trailing unusable whitespace is trimmed
 - one final trailing newline is written to the completed output file
@@ -162,8 +158,8 @@ Current deterministic behavior:
   payload is converted to plain text
 - EPUB extraction progress now advances across paragraph-sized units derived
   from extracted XHTML content
-- a completed rerun keeps the copied input snapshot but clears generated
-  extraction data and all downstream operation folders
+- a completed rerun keeps the imported source file but clears known generated
+  extraction and downstream runtime artifacts
 
 ## 7. Workflow Integration
 
@@ -174,7 +170,7 @@ Upstream:
 
 Downstream:
 
-- deterministic cleanup now consumes `output_raw_text.txt`
+- deterministic cleanup now consumes `extracted_text.txt`
 - future chunking, translation, and character-discovery steps are reset when
   the operator confirms a destructive extraction rerun
 - the shared modal progress dialog now blocks the main shell while extraction is

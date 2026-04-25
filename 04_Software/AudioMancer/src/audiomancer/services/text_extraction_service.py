@@ -35,7 +35,6 @@ from striprtf.striprtf import rtf_to_text
 from audiomancer import config
 from audiomancer.services.logging_service import get_component_logger, trace_function
 from audiomancer.services.operation_runtime_service import (
-    build_operation_input_snapshot_path,
     progress_percent,
     raise_if_cancelled,
     reset_operation_data,
@@ -52,7 +51,7 @@ ExtractionReportPayload = dict[str, object]
 # @brief Internal extraction-units payload type used during format-specific parsing.
 ExtractionUnitsPayload = dict[str, object]
 # @brief Stable extraction-folder name used for local artifact path construction.
-_EXTRACTION_FOLDER_NAME = config.EXTRACTION_FOLDER_NAME
+_EXTRACTION_FOLDER_NAME = config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH
 # @brief Stable prefix used for copied extraction input snapshots.
 _EXTRACTION_INPUT_PREFIX = "input_"
 # @brief Stable file name used for extracted raw text output.
@@ -60,7 +59,7 @@ _EXTRACTION_OUTPUT_NAME = config.EXTRACTED_TEXT_FILE_NAME
 # @brief Stable file name used for the extraction report artifact.
 _EXTRACTION_REPORT_NAME = config.EXTRACTION_REPORT_FILE_NAME
 # @brief Stable file name used for persisted extraction runtime state.
-_EXTRACTION_STATE_NAME = config.OPERATION_STATE_FILE_NAME
+_EXTRACTION_STATE_NAME = config.EXTRACTION_STATE_FILE_NAME
 # @brief Canonical separator inserted between extracted pages for downstream cleanup.
 _PAGE_BREAK_SEPARATOR = "\n\n\f\n\n"
 
@@ -182,7 +181,7 @@ def extract_text(
 
     extraction_dir = resolved_project_root / _EXTRACTION_FOLDER_NAME
     extraction_dir.mkdir(parents=True, exist_ok=True)
-    input_snapshot_path = _ensure_input_snapshot(resolved_project_root, source_document)
+    input_snapshot_path = _source_path_from_manifest(resolved_project_root, source_document)
     output_path = extraction_dir / _EXTRACTION_OUTPUT_NAME
     report_path = extraction_dir / _EXTRACTION_REPORT_NAME
     state_path = extraction_dir / _EXTRACTION_STATE_NAME
@@ -569,7 +568,7 @@ def _write_running_state(
     @date       2026-04-06
     @version    0.2.0
     """
-    project_root = state_path.parent.parent
+    project_root = state_path.parent
     input_paths = []
     if input_snapshot_path.exists():
         input_paths.append(_relative_to_project(project_root, input_snapshot_path))
@@ -858,30 +857,23 @@ def _load_operation_state(state_path: Path) -> OperationStatePayload | None:
     return dict(json.loads(state_path.read_text(encoding="utf-8")))
 
 
-def _ensure_input_snapshot(project_root: Path, source_document: dict[str, object]) -> Path:
+def _source_path_from_manifest(project_root: Path, source_document: dict[str, object]) -> Path:
     """
-    @brief      Ensure the extraction folder contains the copied source snapshot.
+    @brief      Resolve the root-level imported source file for extraction.
     @param[in]  project_root Active project root folder.
     @param[in]  source_document Normalized source-document payload.
-    @return     Absolute extraction input snapshot path.
+    @return     Absolute imported source path.
     @exception  FileNotFoundError Raised when the root-level source file is missing.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.2.0
+    @version    0.3.0
     """
     source_relative_path = str(source_document["stored_relative_path"])
     source_path = project_root / source_relative_path
     if not source_path.is_file():
         raise FileNotFoundError(f"Imported source file is missing: {source_path}")
 
-    input_snapshot_path = build_operation_input_snapshot_path(
-        project_root,
-        "extraction",
-        str(source_document.get("original_name") or Path(source_relative_path).name),
-    )
-    if not input_snapshot_path.exists():
-        input_snapshot_path.write_bytes(source_path.read_bytes())
-    return input_snapshot_path
+    return source_path
 
 
 def _source_document_from_manifest(manifest: dict[str, object]) -> dict[str, object] | None:

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-  # noqa: UP009
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -57,7 +57,7 @@ def test_ai_translation_service_creates_translation_artifacts(monkeypatch, tmp_p
         "ro",
     )
 
-    translation_root = project_root / config.TRANSLATION_FOLDER_NAME
+    translation_root = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH
     assert (translation_root / "input_story.json").is_file()
     assert (translation_root / config.TRANSLATED_CHUNKS_FILE_NAME).is_file()
     assert (translation_root / config.TRANSLATION_REPORT_FILE_NAME).is_file()
@@ -92,7 +92,7 @@ def test_ai_translation_service_approve_and_edit_update_review_state(tmp_path) -
             completed_at=None,
             profile_id="profile-1",
             target_language="ro",
-            log_path=project_root / config.TRANSLATION_FOLDER_NAME / "log_ai_transactions_20260407.log",
+            log_path=project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / "log_ai_transactions_20260407.log",
             token_usage={
                 "input_tokens": 11,
                 "output_tokens": 7,
@@ -137,7 +137,7 @@ def test_ai_translation_service_resume_preserves_completed_chunks(monkeypatch, t
             completed_at=None,
             profile_id="profile-1",
             target_language="ro",
-            log_path=project_root / config.TRANSLATION_FOLDER_NAME / "log_ai_transactions_20260407.log",
+            log_path=project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / "log_ai_transactions_20260407.log",
             token_usage={
                 "input_tokens": 20,
                 "output_tokens": 10,

@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env python3
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-  # noqa: UP009
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
@@ -25,8 +25,8 @@ from audiomancer import config
 from audiomancer.services import (
     ai_translation_service,
     character_discovery_service,
-    home_presenter_service,
     character_voices_service,
+    home_presenter_service,
     narrator_definition_service,
     ui_state_service,
     voiceweaver_runtime_service,
@@ -91,7 +91,9 @@ def build_character_voices_state(
         "voice_assignment_mode"
     ]
 
-    voice_targets = character_voices_service.sync_voice_plan(project_root, character_profiles, selected_narrator_profile)
+    voice_targets = character_voices_service.sync_voice_plan(
+        project_root, character_profiles, selected_narrator_profile
+    )
     language_entries, selected_voice_language, original_language, translated_language, translation_ready = (
         _voice_language_state(project_root, manifest, language)
     )
@@ -499,4 +501,3 @@ def _assignment_mode_label(assignment_mode: str, language: str) -> str:
 
 
 # END OF FILE
-

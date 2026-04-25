@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-  # noqa: UP009
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -99,19 +100,23 @@ def test_start_discovery_persists_outputs_and_report(monkeypatch, tmp_path) -> N
     assert "gentle authority" in profiles[0]["voice_definition_prompt"]
     assert profiles[0]["evidence"][0]["chunk_id"] == "chunk-0001"
     assert character_discovery_service.load_input_chunks(project_root)[0]["chunk_id"] == "chunk-0001"
-    assert (project_root / config.CHARACTER_DISCOVERY_FOLDER_NAME / "input_story.json").is_file()
-    assert (project_root / config.CHARACTER_DISCOVERY_FOLDER_NAME / "input_story.txt").is_file()
+    assert (project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / "input_story.json").is_file()
+    assert (project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / "input_story.txt").is_file()
     state = character_discovery_service.load_operation_state(project_root)
     assert state is not None
     assert state["status"] == "completed"
-    assert state["output_paths"] == [f"{config.CHARACTER_DISCOVERY_FOLDER_NAME}/{config.CHARACTER_PROFILE_FILE_NAME}"]
+    assert state["output_paths"] == [
+        f"{config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH}/{config.CHARACTER_PROFILE_FILE_NAME}"
+    ]
     assert report["token_usage"]["total_tokens"] == 135
 
 
 def test_start_discovery_resumes_from_saved_synthesis_checkpoint(monkeypatch, tmp_path) -> None:
     project_root, manifest = _create_character_project(tmp_path, "CharacterDiscoveryResume")
     source_chunks = json.loads(
-        (project_root / config.CHUNKING_FOLDER_NAME / config.CHUNK_ARTIFACT_FILE_NAME).read_text(encoding="utf-8")
+        (project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.CHUNK_ARTIFACT_FILE_NAME).read_text(
+            encoding="utf-8"
+        )
     )
     fingerprint = character_discovery_service._build_input_fingerprint(source_chunks)
     resume_candidate = {
@@ -139,11 +144,11 @@ def test_start_discovery_resumes_from_saved_synthesis_checkpoint(monkeypatch, tm
         ],
         "has_dialogue_evidence": True,
     }
-    state_path = project_root / config.CHARACTER_DISCOVERY_FOLDER_NAME / config.OPERATION_STATE_FILE_NAME
+    state_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.OPERATION_STATE_FILE_NAME
     state_path.write_text(
         json.dumps(
             {
-                "folder_relative_path": config.CHARACTER_DISCOVERY_FOLDER_NAME,
+                "folder_relative_path": config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH,
                 "status": "running",
                 "input_paths": [],
                 "output_paths": [],
@@ -229,7 +234,7 @@ def test_start_discovery_resumes_from_saved_synthesis_checkpoint(monkeypatch, tm
 
 def test_manual_add_update_delete_and_reset(tmp_path) -> None:
     project_root, _manifest = _create_character_project(tmp_path, "CharacterDiscoveryManual")
-    discovery_root = project_root / config.CHARACTER_DISCOVERY_FOLDER_NAME
+    discovery_root = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH
     (discovery_root / config.CHARACTER_PROFILE_FILE_NAME).write_text(
         json.dumps([_saved_profile_payload()], indent=2) + "\n",
         encoding="utf-8",
@@ -237,10 +242,10 @@ def test_manual_add_update_delete_and_reset(tmp_path) -> None:
     (discovery_root / config.OPERATION_STATE_FILE_NAME).write_text(
         json.dumps(
             {
-                "folder_relative_path": config.CHARACTER_DISCOVERY_FOLDER_NAME,
+                "folder_relative_path": config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH,
                 "status": "completed",
                 "input_paths": [],
-                "output_paths": [f"{config.CHARACTER_DISCOVERY_FOLDER_NAME}/{config.CHARACTER_PROFILE_FILE_NAME}"],
+                "output_paths": [f"{config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH}/{config.CHARACTER_PROFILE_FILE_NAME}"],
                 "artifact_paths": [],
                 "progress_current": 1,
                 "progress_total": 1,
@@ -257,7 +262,7 @@ def test_manual_add_update_delete_and_reset(tmp_path) -> None:
         + "\n",
         encoding="utf-8",
     )
-    narrator_root = project_root / config.NARRATOR_DEFINITION_FOLDER_NAME
+    narrator_root = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH
     narrator_root.mkdir(parents=True, exist_ok=True)
     (narrator_root / "profile.json").write_text("{}\n", encoding="utf-8")
 
@@ -382,7 +387,7 @@ def test_update_character_profile_marks_voice_definition_stale_when_facts_change
     @version    1.0.0
     """
     project_root, _manifest = _create_character_project(tmp_path, "CharacterDiscoveryVoiceStale")
-    discovery_root = project_root / config.CHARACTER_DISCOVERY_FOLDER_NAME
+    discovery_root = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH
     persisted_profile = character_discovery_service.regenerate_character_voice_definition(_saved_profile_payload())
     (discovery_root / config.CHARACTER_PROFILE_FILE_NAME).write_text(
         json.dumps([persisted_profile], indent=2) + "\n",
@@ -434,16 +439,16 @@ def _create_character_project(tmp_path, project_name: str):
     }
     manifest["operations"]["cleanup"]["status"] = "completed"
     manifest["operations"]["cleanup"]["output_paths"] = [
-        f"{config.CLEANUP_FOLDER_NAME}/{config.CLEANED_TEXT_FILE_NAME}"
+        f"{config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH}/{config.CLEANED_TEXT_FILE_NAME}"
     ]
     manifest["operations"]["chunking"]["status"] = "completed"
     manifest["operations"]["chunking"]["output_paths"] = [
-        f"{config.CHUNKING_FOLDER_NAME}/{config.CHUNK_ARTIFACT_FILE_NAME}"
+        f"{config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH}/{config.CHUNK_ARTIFACT_FILE_NAME}"
     ]
     project_workspace_service.save_manifest(manifest, project_root)
-    cleanup_root = project_root / config.CLEANUP_FOLDER_NAME
-    chunk_root = project_root / config.CHUNKING_FOLDER_NAME
-    discovery_root = project_root / config.CHARACTER_DISCOVERY_FOLDER_NAME
+    cleanup_root = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH
+    chunk_root = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH
+    discovery_root = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH
     cleanup_root.mkdir(parents=True, exist_ok=True)
     chunk_root.mkdir(parents=True, exist_ok=True)
     discovery_root.mkdir(parents=True, exist_ok=True)

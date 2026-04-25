@@ -65,7 +65,7 @@ def build_text_chunking_state(
 
     cleaned_text = text_cleanup_state_service.read_optional_project_text(
         project_root,
-        f"{config.CLEANUP_FOLDER_NAME}/{config.CLEANED_TEXT_FILE_NAME}",
+        f"{config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH}/{config.CLEANED_TEXT_FILE_NAME}",
     )
     chunking_report_payload = deterministic_chunking_service.load_chunking_report(project_root)
     chunking_operation_state = deterministic_chunking_service.load_operation_state(project_root)
@@ -147,7 +147,7 @@ def save_chunk_text_edit(
     @date       2026-04-24
     @version    0.1.0
     """
-    chunk_artifact_path = project_root / config.CHUNKING_FOLDER_NAME / config.CHUNK_ARTIFACT_FILE_NAME
+    chunk_artifact_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.CHUNK_ARTIFACT_FILE_NAME
     if not chunk_artifact_path.is_file():
         raise ValueError("No chunk artifact is available to edit.")
     chunks = deterministic_chunking_service.load_chunks(project_root)

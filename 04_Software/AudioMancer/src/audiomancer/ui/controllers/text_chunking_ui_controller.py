@@ -67,7 +67,7 @@ def handle_deterministic_chunking_requested(window: "MainWindow") -> None:
 
     cleaned_text = text_cleanup_state_service.read_optional_project_text(
         window._current_project_root,
-        f"{config.CLEANUP_FOLDER_NAME}/{config.CLEANED_TEXT_FILE_NAME}",
+        f"{config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH}/{config.CLEANED_TEXT_FILE_NAME}",
     )
     if not cleaned_text or not cleaned_text.strip():
         QMessageBox.warning(
@@ -122,7 +122,7 @@ def handle_ai_chunking_requested(window: "MainWindow", profile_id: str, strategy
 
     cleaned_text = text_cleanup_state_service.read_optional_project_text(
         window._current_project_root,
-        f"{config.CLEANUP_FOLDER_NAME}/{config.CLEANED_TEXT_FILE_NAME}",
+        f"{config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH}/{config.CLEANED_TEXT_FILE_NAME}",
     )
     if not cleaned_text or not cleaned_text.strip():
         QMessageBox.warning(

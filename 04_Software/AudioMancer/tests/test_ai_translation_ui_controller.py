@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-  # noqa: UP009
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -93,15 +94,17 @@ def test_sync_manifest_after_translation_advances_only_after_full_approval(qtbot
     @version    0.1.0
     """
     project_root, _manifest = _create_project(tmp_path, "TranslationApprovalControllerProject")
-    translation_root = project_root / config.TRANSLATION_FOLDER_NAME
+    translation_root = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH
     translation_root.mkdir(parents=True, exist_ok=True)
     (translation_root / config.OPERATION_STATE_FILE_NAME).write_text(
         json.dumps(
             {
-                "folder_relative_path": config.TRANSLATION_FOLDER_NAME,
+                "folder_relative_path": config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH,
                 "status": "completed",
-                "output_paths": [f"{config.TRANSLATION_FOLDER_NAME}/{config.TRANSLATED_CHUNKS_FILE_NAME}"],
-                "artifact_paths": [f"{config.TRANSLATION_FOLDER_NAME}/{config.TRANSLATION_REPORT_FILE_NAME}"],
+                "output_paths": [f"{config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH}/{config.TRANSLATED_CHUNKS_FILE_NAME}"],
+                "artifact_paths": [
+                    f"{config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH}/{config.TRANSLATION_REPORT_FILE_NAME}"
+                ],
             },
             indent=2,
         )

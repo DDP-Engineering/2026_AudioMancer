@@ -10,6 +10,47 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.21.0] - 2026-04-25
+
+### Added
+
+- added Qwen3 TTS target-language options for Japanese, Korean, Russian,
+  Portuguese, Italian, plus Romanian while continuing to exclude Chinese
+- added configurable narrator preview-text character limit with a default of
+  512 characters and a TTS Settings control
+- added always-visible scrollbars for narrator Voice Designer Prompt and
+  Preview Text editors
+- added per-profile narrator sample preservation so generated narrator profile
+  audio can be previewed again without regenerating after switching profiles
+- added code-style prologue cleanup for modified Python test files
+
+### Changed
+
+- flattened project runtime artifact storage so operation reports, state files,
+  canonical text/JSON outputs, AI transaction logs, narrator samples, and
+  character voice samples are written directly in the project root
+- removed numbered workflow-folder creation and validation for new projects;
+  existing numbered-layout projects are treated as unsupported legacy layouts
+- renamed operation artifacts to the flat-layout names such as
+  `extracted_text.txt`, `clean_text.txt`, `chunks_text.json`,
+  `translated_text.json`, `characters_profile.json`, `audio_profiles.json`,
+  `characters_voice.json`, `speech_blocks.json`, and `audio_blocks.json`
+- changed reset behavior to delete only known root-level runtime artifacts and
+  generated `audio_blocks/` content instead of clearing workflow directories
+- changed Romanian Qwen3 TTS requests to omit the outbound language field so the
+  runtime can infer pronunciation from the text
+- changed Narrator Voice, Text Chunking, and TTS Settings page layouts for more
+  compact operator-facing panels and clearer action spacing
+- changed Narrator Voice edit mode so `Save Profile` is enabled immediately
+- package version updated to `0.21.0`
+
+### Fixed
+
+- fixed narrator sample generation clearing previously generated samples for
+  other narrator profiles
+- fixed narrator sample lookup after profile renames by honoring the stored
+  `sample_audio_path`
+
 ## [0.20.0] - 2026-04-25
 
 ### Added

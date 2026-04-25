@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-  # noqa: UP009
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -648,15 +649,15 @@ def test_main_window_runs_deterministic_cleanup_and_updates_preview(
 
     def _fake_clean_text(*_args, progress_callback=None, cancel_requested=None, **_kwargs):
         progress_callback(1, 1, 100, "Deterministic cleanup completed.")
-        cleanup_root = project_root / config.CLEANUP_FOLDER_NAME
+        cleanup_root = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH
         cleanup_root.mkdir(exist_ok=True)
         (cleanup_root / "input_story.pdf").write_text("Chapter I\n\nParagraph one.", encoding="utf-8")
         (cleanup_root / config.CLEANED_TEXT_FILE_NAME).write_text("Chapter I\n\nParagraph one.\n", encoding="utf-8")
         (cleanup_root / config.CLEANUP_REPORT_FILE_NAME).write_text(
             json.dumps(
                 {
-                    "input_relative_path": f"{config.CLEANUP_FOLDER_NAME}/input_story.pdf",
-                    "cleaned_text_relative_path": f"{config.CLEANUP_FOLDER_NAME}/{config.CLEANED_TEXT_FILE_NAME}",
+                    "input_relative_path": f"{config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH}/input_story.pdf",
+                    "cleaned_text_relative_path": f"{config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH}/{config.CLEANED_TEXT_FILE_NAME}",
                     "cleaned_at": "2026-04-06T12:02:00+00:00",
                     "detected_language": "en",
                     "warnings": [],
@@ -674,11 +675,13 @@ def test_main_window_runs_deterministic_cleanup_and_updates_preview(
         (cleanup_root / "state_operation.json").write_text(
             json.dumps(
                 {
-                    "folder_relative_path": config.CLEANUP_FOLDER_NAME,
+                    "folder_relative_path": config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH,
                     "status": "completed",
-                    "input_paths": [f"{config.CLEANUP_FOLDER_NAME}/input_story.pdf"],
-                    "output_paths": [f"{config.CLEANUP_FOLDER_NAME}/{config.CLEANED_TEXT_FILE_NAME}"],
-                    "artifact_paths": [f"{config.CLEANUP_FOLDER_NAME}/{config.CLEANUP_REPORT_FILE_NAME}"],
+                    "input_paths": [f"{config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH}/input_story.pdf"],
+                    "output_paths": [f"{config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH}/{config.CLEANED_TEXT_FILE_NAME}"],
+                    "artifact_paths": [
+                        f"{config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH}/{config.CLEANUP_REPORT_FILE_NAME}"
+                    ],
                     "progress_current": 1,
                     "progress_total": 1,
                     "mode": "deterministic",
@@ -749,10 +752,10 @@ def test_main_window_runs_deterministic_chunking_and_updates_preview(
     }
     manifest["operations"]["cleanup"]["status"] = "completed"
     manifest["operations"]["cleanup"]["output_paths"] = [
-        f"{config.CLEANUP_FOLDER_NAME}/{config.CLEANED_TEXT_FILE_NAME}"
+        f"{config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH}/{config.CLEANED_TEXT_FILE_NAME}"
     ]
     project_workspace_service.save_manifest(manifest, project_root)
-    cleanup_root = project_root / config.CLEANUP_FOLDER_NAME
+    cleanup_root = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH
     cleanup_root.mkdir(exist_ok=True)
     (cleanup_root / config.CLEANED_TEXT_FILE_NAME).write_text("Chapter I\n\nParagraph one.\n", encoding="utf-8")
 
@@ -888,9 +891,9 @@ def test_main_window_runs_ai_chunking_and_updates_preview(
     }
     manifest["operations"]["cleanup"]["status"] = "completed"
     manifest["operations"]["cleanup"]["output_paths"] = [
-        f"{config.CLEANUP_FOLDER_NAME}/{config.CLEANED_TEXT_FILE_NAME}"
+        f"{config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH}/{config.CLEANED_TEXT_FILE_NAME}"
     ]
-    cleanup_root = project_root / config.CLEANUP_FOLDER_NAME
+    cleanup_root = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH
     cleanup_root.mkdir(parents=True, exist_ok=True)
     (cleanup_root / config.CLEANED_TEXT_FILE_NAME).write_text(
         "Chapter I\n\nParagraph one.\n\nParagraph two.\n",
@@ -1009,9 +1012,11 @@ def test_main_window_runs_ai_translation_and_updates_preview(
         ai_translation_ui_controller.ai_translation_service,
         "start_or_continue_translation",
         lambda project_root, _manifest, _profile, target_language, progress_callback=None, cancel_requested=None: (
-            (project_root / config.TRANSLATION_FOLDER_NAME).mkdir(parents=True, exist_ok=True),
-            (project_root / config.TRANSLATION_FOLDER_NAME / "input_story.json").write_text("[]\n", encoding="utf-8"),
-            (project_root / config.TRANSLATION_FOLDER_NAME / config.TRANSLATED_CHUNKS_FILE_NAME).write_text(
+            (project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH).mkdir(parents=True, exist_ok=True),
+            (project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / "input_story.json").write_text(
+                "[]\n", encoding="utf-8"
+            ),
+            (project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.TRANSLATED_CHUNKS_FILE_NAME).write_text(
                 json.dumps(
                     [
                         {
@@ -1032,7 +1037,9 @@ def test_main_window_runs_ai_translation_and_updates_preview(
                 + "\n",
                 encoding="utf-8",
             ),
-            (project_root / config.TRANSLATION_FOLDER_NAME / config.TRANSLATION_REPORT_FILE_NAME).write_text(
+            (
+                project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.TRANSLATION_REPORT_FILE_NAME
+            ).write_text(
                 json.dumps(
                     {
                         "target_language": target_language,
@@ -1049,14 +1056,18 @@ def test_main_window_runs_ai_translation_and_updates_preview(
                 + "\n",
                 encoding="utf-8",
             ),
-            (project_root / config.TRANSLATION_FOLDER_NAME / config.OPERATION_STATE_FILE_NAME).write_text(
+            (project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.OPERATION_STATE_FILE_NAME).write_text(
                 json.dumps(
                     {
-                        "folder_relative_path": config.TRANSLATION_FOLDER_NAME,
+                        "folder_relative_path": config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH,
                         "status": "completed",
-                        "input_paths": [f"{config.TRANSLATION_FOLDER_NAME}/input_story.json"],
-                        "output_paths": [f"{config.TRANSLATION_FOLDER_NAME}/{config.TRANSLATED_CHUNKS_FILE_NAME}"],
-                        "artifact_paths": [f"{config.TRANSLATION_FOLDER_NAME}/{config.TRANSLATION_REPORT_FILE_NAME}"],
+                        "input_paths": [f"{config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH}/input_story.json"],
+                        "output_paths": [
+                            f"{config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH}/{config.TRANSLATED_CHUNKS_FILE_NAME}"
+                        ],
+                        "artifact_paths": [
+                            f"{config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH}/{config.TRANSLATION_REPORT_FILE_NAME}"
+                        ],
                         "progress_current": 1,
                         "progress_total": 1,
                         "mode": "ai_assisted",
@@ -1275,7 +1286,7 @@ def test_main_window_loads_narrator_definition_state_into_narator_voice_page(
     manifest["narrator_profile_name"] = "My Warm Narrator"
     manifest["narrator_language"] = "English"
     project_workspace_service.save_manifest(manifest, project_root)
-    narrator_root = project_root / config.NARRATOR_DEFINITION_FOLDER_NAME
+    narrator_root = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH
     narrator_root.mkdir(parents=True, exist_ok=True)
     (narrator_root / config.NARRATOR_PROFILE_FILE_NAME).write_text(
         json.dumps(

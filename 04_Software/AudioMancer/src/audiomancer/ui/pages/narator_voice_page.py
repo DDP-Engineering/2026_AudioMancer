@@ -14,14 +14,14 @@
          preview controls for the fixed Qwen3-backed narrator workflow.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-17
-@version 3.2.0
+@version 3.3.5
 """
 
 # IMPORTS
 
 from copy import deepcopy
 
-from PySide6.QtCore import Signal
+from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
     QFormLayout,
     QGroupBox,
@@ -36,6 +36,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from audiomancer import config
 from audiomancer.services import ui_state_service
 
 
@@ -45,7 +46,7 @@ class NaratorVoicePage(QWidget):
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-17
-    @version    1.1.0
+    @version    1.2.5
     """
 
     create_profile_requested = Signal(dict)
@@ -65,7 +66,7 @@ class NaratorVoicePage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-17
-        @version    1.1.0
+        @version    1.2.5
         """
         super().__init__(parent)
         self._project_active = False
@@ -85,6 +86,8 @@ class NaratorVoicePage(QWidget):
         self._can_select = False
         self._preview_available = False
         self._original_profile: dict[str, object] | None = None
+        self._preview_text_character_limit = config.DEFAULT_TTS_PREVIEW_TEXT_CHARACTER_LIMIT
+        self._enforcing_preview_text_limit = False
 
         layout = QVBoxLayout(self)
         header_layout = QVBoxLayout()
@@ -121,6 +124,7 @@ class NaratorVoicePage(QWidget):
         editor_container = QWidget(self)
         editor_layout = QVBoxLayout(editor_container)
         editor_layout.setContentsMargins(0, 0, 0, 0)
+        editor_layout.setSpacing(10)
 
         self._setup_group = QGroupBox("Profile Setup", self)
         setup_layout = QFormLayout(self._setup_group)
@@ -133,21 +137,23 @@ class NaratorVoicePage(QWidget):
         self._select_profile_button.clicked.connect(self._emit_select_profile)
         profile_name_row.addWidget(self._select_profile_button)
         setup_layout.addRow(self._profile_name_label, profile_name_row)
-        editor_layout.addWidget(self._setup_group)
+        editor_layout.addWidget(self._setup_group, 0)
 
         self._designer_group = QGroupBox("Voice Designer Prompt", self)
         designer_layout = QVBoxLayout(self._designer_group)
         self._designer_prompt = QPlainTextEdit(self)
-        self._designer_prompt.setMinimumHeight(220)
+        self._designer_prompt.setMinimumHeight(112)
+        self._designer_prompt.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOn)
         self._designer_prompt.textChanged.connect(self._handle_editor_changed)
         designer_layout.addWidget(self._designer_prompt)
-        editor_layout.addWidget(self._designer_group)
+        editor_layout.addWidget(self._designer_group, 1)
 
         self._preview_group = QGroupBox("Preview Text", self)
         preview_layout = QVBoxLayout(self._preview_group)
         self._preview_text_edit = QPlainTextEdit(self)
         self._preview_text_edit.setMinimumHeight(92)
-        self._preview_text_edit.textChanged.connect(self._handle_editor_changed)
+        self._preview_text_edit.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOn)
+        self._preview_text_edit.textChanged.connect(self._handle_preview_text_changed)
         preview_layout.addWidget(self._preview_text_edit)
         actions_row = QHBoxLayout()
         self._create_profile_button = QPushButton("Create Profile", self)
@@ -170,7 +176,7 @@ class NaratorVoicePage(QWidget):
         actions_row.addWidget(self._preview_toggle_button)
         actions_row.addStretch(1)
         preview_layout.addLayout(actions_row)
-        editor_layout.addWidget(self._preview_group)
+        editor_layout.addWidget(self._preview_group, 1)
 
         self._main_splitter.addWidget(editor_container)
         self._main_splitter.setStretchFactor(0, 18)
@@ -183,8 +189,8 @@ class NaratorVoicePage(QWidget):
         self._status_edit = QPlainTextEdit(self)
         self._status_edit.setReadOnly(True)
         status_layout.addWidget(self._status_edit)
-        self._status_group.setMinimumHeight(96)
-        self._status_group.setMaximumHeight(120)
+        self._status_group.setMinimumHeight(112)
+        self._status_group.setMaximumHeight(132)
         layout.addWidget(self._status_group, 0)
 
         self.set_project_active(False)
@@ -248,6 +254,7 @@ class NaratorVoicePage(QWidget):
         can_select: bool,
         preview_available: bool,
         status_lines: list[str],
+        preview_text_character_limit: int = config.DEFAULT_TTS_PREVIEW_TEXT_CHARACTER_LIMIT,
     ) -> None:
         """
         @brief      Apply one complete narrator-definition page state payload.
@@ -269,11 +276,12 @@ class NaratorVoicePage(QWidget):
         @param[in]  can_select True when the current profile may become the selected narator_voice.
         @param[in]  preview_available True when one stored preview sample may play.
         @param[in]  status_lines Bottom status-window lines.
+        @param[in]  preview_text_character_limit Maximum preview text length in characters.
         @return     None.
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-17
-        @version    1.0.0
+        @version    1.1.0
         """
         _ = notes
         _ = is_preset
@@ -286,6 +294,7 @@ class NaratorVoicePage(QWidget):
         self._can_generate = can_generate
         self._can_select = can_select
         self._preview_available = preview_available
+        self._preview_text_character_limit = _positive_character_limit(preview_text_character_limit)
         self._dirty = False
         self._edit_mode = False
         self._original_profile = None
@@ -433,7 +442,7 @@ class NaratorVoicePage(QWidget):
         @return     None.
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-21
-        @version    0.1.0
+        @version    0.2.0
         """
         list_enabled = self._project_active and not self._busy and not self._preview_active and not self._edit_mode
         editor_enabled = self._project_active and not self._busy and not self._preview_active and self._edit_mode
@@ -447,7 +456,7 @@ class NaratorVoicePage(QWidget):
             and not self._edit_mode
         )
         self._save_profile_button.setEnabled(
-            self._project_active and not self._busy and not self._preview_active and self._edit_mode and self._dirty
+            self._project_active and not self._busy and not self._preview_active and self._edit_mode
         )
         self._delete_profile_button.setEnabled(
             self._project_active
@@ -517,13 +526,24 @@ class NaratorVoicePage(QWidget):
         @return     None.
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-21
-        @version    0.1.0
+        @version    0.2.0
         """
         self._loading_profile = True
         self._profile_name_edit.setText(profile_name)
         self._designer_prompt.setPlainText(prompt_text)
-        self._preview_text_edit.setPlainText(preview_text)
+        self._preview_text_edit.setPlainText(self._limited_preview_text(preview_text))
         self._loading_profile = False
+
+    def _limited_preview_text(self, preview_text: object) -> str:
+        """
+        @brief      Limit preview text to the configured character budget.
+        @param[in]  preview_text Candidate preview text.
+        @return     Preview text truncated to the configured maximum length.
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-25
+        @version    0.1.0
+        """
+        return str(preview_text or "")[: self._preview_text_character_limit]
 
     def _set_language_labels(self, original_language: str, translated_language: str) -> None:
         """
@@ -616,6 +636,28 @@ class NaratorVoicePage(QWidget):
             return
         self._dirty = self.current_editor_payload() != (self._original_profile or {})
         self._apply_control_state()
+
+    def _handle_preview_text_changed(self) -> None:
+        """
+        @brief      Enforce the configured preview text character limit and mark editor changes.
+        @return     None.
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-25
+        @version    0.1.0
+        """
+        if self._enforcing_preview_text_limit:
+            return
+        preview_text = self._preview_text_edit.toPlainText()
+        limited_text = self._limited_preview_text(preview_text)
+        if limited_text != preview_text:
+            self._enforcing_preview_text_limit = True
+            cursor = self._preview_text_edit.textCursor()
+            cursor_position = min(cursor.position(), len(limited_text))
+            self._preview_text_edit.setPlainText(limited_text)
+            cursor.setPosition(cursor_position)
+            self._preview_text_edit.setTextCursor(cursor)
+            self._enforcing_preview_text_limit = False
+        self._handle_editor_changed()
 
     def _emit_create_profile(self) -> None:
         """
@@ -714,6 +756,22 @@ def _display_profile_name(display_name: str) -> str:
     if normalized_name.startswith("CustomVoice | "):
         return normalized_name.removeprefix("CustomVoice | ").strip()
     return normalized_name
+
+
+def _positive_character_limit(value: object) -> int:
+    """
+    @brief      Normalize a configured character limit.
+    @param[in]  value Candidate character limit.
+    @return     Positive character limit or the configured default.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-25
+    @version    0.1.0
+    """
+    try:
+        resolved_value = int(value)
+    except (TypeError, ValueError):
+        return config.DEFAULT_TTS_PREVIEW_TEXT_CHARACTER_LIMIT
+    return resolved_value if resolved_value > 0 else config.DEFAULT_TTS_PREVIEW_TEXT_CHARACTER_LIMIT
 
 
 # END OF FILE

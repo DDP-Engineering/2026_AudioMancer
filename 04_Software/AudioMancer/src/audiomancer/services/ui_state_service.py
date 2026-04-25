@@ -13,7 +13,7 @@
          application through one centralized string catalog and scale mapping.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 0.22.6
+@version 0.22.7
 """
 
 # IMPORTS
@@ -170,7 +170,6 @@ _UI_STRINGS = {
         "ai_settings.popup_discovered_models": "Discovered models",
         "ai_settings.popup_success_message": "Connection successful.",
         "ai_settings.popup_failure_message": "Connection failed.",
-        "tts_settings.title": "TTS Settings",
         "tts_settings.runtime_group": "VoiceWeaver Runtime",
         "tts_settings.base_url": "Base URL",
         "tts_settings.api_key": "API Key",
@@ -188,6 +187,7 @@ _UI_STRINGS = {
         "tts_settings.voice_assignment_with_characters": "Narrator + character voices",
         "tts_settings.preview_timeout": "Audio Preview Timeout (s)",
         "tts_settings.generation_timeout": "Audio Generation Timeout (s)",
+        "tts_settings.preview_text_limit": "Preview Text Limit (chars)",
         "tts_settings.plan_no_project": "Open one project to configure the project-local TTS plan.",
         "tts_settings.plan_probe_required": "Test the VoiceWeaver connection first so AudioMancer can verify the required Qwen3 TTS models.",
         "tts_settings.plan_missing_qwen": "The required Qwen3 TTS capabilities are missing: {missing_capabilities}.",
@@ -853,7 +853,6 @@ _UI_STRINGS = {
         "ai_settings.popup_discovered_models": "Modele descoperite",
         "ai_settings.popup_success_message": "Conectare reusita.",
         "ai_settings.popup_failure_message": "Conectarea a esuat.",
-        "tts_settings.title": "Setari TTS",
         "tts_settings.runtime_group": "Runtime VoiceWeaver",
         "tts_settings.base_url": "URL Baza",
         "tts_settings.api_key": "Cheie API",
@@ -871,6 +870,7 @@ _UI_STRINGS = {
         "tts_settings.voice_assignment_with_characters": "Narator + voci personaje",
         "tts_settings.preview_timeout": "Timeout Preview Audio (s)",
         "tts_settings.generation_timeout": "Timeout Generare Audio (s)",
+        "tts_settings.preview_text_limit": "Limita Text Previzualizare (caractere)",
         "tts_settings.plan_no_project": "Deschide un proiect pentru a configura planul TTS local al proiectului.",
         "tts_settings.plan_probe_required": "Testeaza mai intai conexiunea VoiceWeaver pentru ca AudioMancer sa poata verifica modelele Qwen3 TTS necesare.",
         "tts_settings.plan_missing_qwen": "Capabilitatile Qwen3 TTS necesare lipsesc: {missing_capabilities}.",

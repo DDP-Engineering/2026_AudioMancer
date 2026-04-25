@@ -9,39 +9,83 @@
 """
 @file operation_runtime_service.py
 @brief Shared runtime helpers for cancelable workflow operations.
-@details Centralizes numbered-folder lookup, operation-local path building,
-         downstream reset behavior, and progress helpers shared by extraction,
-         cleanup, and future long-running workflow operations.
+@details Centralizes root-level artifact path building, downstream reset
+         behavior, and progress helpers shared by long-running workflow
+         operations.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-22
-@version 0.2.0
+@version 0.3.0
 """
 
 # IMPORTS
 
 import math
 from pathlib import Path
-import shutil
 
 from audiomancer import config
 
 # CONSTANTS
 
-# @brief Mapping from operation kind to its numbered project-workspace folder.
-_OPERATION_FOLDER_NAMES = {
-    "extraction": config.EXTRACTION_FOLDER_NAME,
-    "cleanup": config.CLEANUP_FOLDER_NAME,
-    "chunking": config.CHUNKING_FOLDER_NAME,
-    "translation": config.TRANSLATION_FOLDER_NAME,
-    "character_discovery": config.CHARACTER_DISCOVERY_FOLDER_NAME,
-    "narrator_definition": config.NARRATOR_DEFINITION_FOLDER_NAME,
-    "character_voices": config.CHARACTER_VOICES_FOLDER_NAME,
-    "speech_blocks": config.SPEECH_BLOCKS_FOLDER_NAME,
-    "audio_blocks": config.AUDIO_BLOCKS_FOLDER_NAME,
-    "audio_assembly": config.AUDIO_ASSEMBLY_FOLDER_NAME,
-}
 # @brief Stable execution order used for downstream reset calculations.
-_OPERATION_ORDER = tuple(_OPERATION_FOLDER_NAMES.keys())
+_OPERATION_ORDER = (
+    "extraction",
+    "cleanup",
+    "chunking",
+    "translation",
+    "character_discovery",
+    "narrator_definition",
+    "character_voices",
+    "speech_blocks",
+    "audio_blocks",
+    "audio_assembly",
+)
+
+# @brief Root-level runtime artifact files owned by each resettable operation.
+_OPERATION_ARTIFACT_FILE_NAMES = {
+    "extraction": (
+        config.EXTRACTED_TEXT_FILE_NAME,
+        config.EXTRACTION_REPORT_FILE_NAME,
+        config.EXTRACTION_STATE_FILE_NAME,
+    ),
+    "cleanup": (
+        config.CLEANED_TEXT_FILE_NAME,
+        config.CLEANUP_REPORT_FILE_NAME,
+        config.CLEANUP_STATE_FILE_NAME,
+    ),
+    "chunking": (
+        config.CHUNK_ARTIFACT_FILE_NAME,
+        config.CHUNKING_REPORT_FILE_NAME,
+        config.CHUNKING_STATE_FILE_NAME,
+    ),
+    "translation": (
+        config.TRANSLATED_CHUNKS_FILE_NAME,
+        config.TRANSLATION_REPORT_FILE_NAME,
+        config.TRANSLATION_STATE_FILE_NAME,
+    ),
+    "character_discovery": (
+        config.CHARACTER_PROFILE_FILE_NAME,
+        config.CHARACTER_DISCOVERY_REPORT_FILE_NAME,
+        config.CHARACTER_DISCOVERY_STATE_FILE_NAME,
+    ),
+    "narrator_definition": (
+        config.NARRATOR_PROFILE_FILE_NAME,
+        config.NARRATOR_SELECTION_FILE_NAME,
+        config.SELECTED_NARRATOR_AUDIO_FILE_NAME,
+    ),
+    "character_voices": (config.CHARACTER_VOICES_TARGETS_FILE_NAME,),
+    "speech_blocks": (
+        config.SPEECH_BLOCKS_OUTPUT_FILE_NAME,
+        config.SPEECH_BLOCKS_REPORT_FILE_NAME,
+        config.SPEECH_BLOCKS_STATE_FILE_NAME,
+    ),
+    "audio_blocks": (
+        config.AUDIO_BLOCKS_OUTPUT_FILE_NAME,
+        config.AUDIO_BLOCKS_REPORT_FILE_NAME,
+        config.AUDIO_BLOCKS_STATE_FILE_NAME,
+        config.AUDIO_BLOCKS_VOICE_CLONE_PROFILES_FILE_NAME,
+    ),
+    "audio_assembly": (),
+}
 
 
 # DATA MODELS / TYPEDEFINITIONS
@@ -62,15 +106,17 @@ class OperationCancelledError(RuntimeError):
 
 def operation_folder_name(operation_kind: str) -> str:
     """
-    @brief      Resolve one operation kind to its numbered project folder.
+    @brief      Resolve one operation kind to its project-relative artifact root.
     @param[in]  operation_kind Stable workflow operation token.
-    @return     Project-relative folder name.
+    @return     Project-relative artifact-root name.
     @exception  KeyError Raised when the operation kind is unsupported.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.1.0
+    @version    0.2.0
     """
-    return _OPERATION_FOLDER_NAMES[operation_kind]
+    if operation_kind not in _OPERATION_ORDER:
+        raise ValueError(f"Unsupported operation kind: {operation_kind}")
+    return config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH
 
 
 def downstream_operation_kinds(
@@ -101,19 +147,20 @@ def build_operation_input_snapshot_path(
     original_name: str,
 ) -> Path:
     """
-    @brief      Build one operation-local input snapshot path.
+    @brief      Reject operation-local input snapshot path creation.
     @param[in]  project_root Active project root.
     @param[in]  operation_kind Stable workflow operation token.
     @param[in]  original_name Original imported source file name.
-    @return     Absolute operation-local input snapshot path.
-    @exception  None
+    @return     Never returns.
+    @exception  RuntimeError Raised because input snapshots are no longer supported.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.1.0
+    @version    0.2.0
     """
-    operation_root = Path(project_root) / operation_folder_name(operation_kind)
-    operation_root.mkdir(parents=True, exist_ok=True)
-    return operation_root / f"{config.OPERATION_INPUT_FILE_PREFIX}{Path(original_name).name}"
+    _ = project_root
+    _ = operation_kind
+    _ = original_name
+    raise RuntimeError("Operation-local input snapshots are not supported by the flat project layout.")
 
 
 def resolve_operation_path(
@@ -122,17 +169,18 @@ def resolve_operation_path(
     file_name: str,
 ) -> Path:
     """
-    @brief      Resolve one operation-local file path without mutating the project tree.
+    @brief      Resolve one project-local operation artifact path without mutating the project tree.
     @param[in]  project_root Active project root.
     @param[in]  operation_kind Stable workflow operation token.
-    @param[in]  file_name Operation-local file name.
-    @return     Absolute operation-local file path.
+    @param[in]  file_name Operation artifact file name.
+    @return     Absolute project-local artifact path.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-22
-    @version    0.1.0
+    @version    0.2.0
     """
-    return Path(project_root) / operation_folder_name(operation_kind) / file_name
+    _ = operation_kind
+    return Path(project_root) / file_name
 
 
 def build_operation_output_path(
@@ -141,18 +189,17 @@ def build_operation_output_path(
     file_name: str,
 ) -> Path:
     """
-    @brief      Build one operation-local file path and ensure the step folder exists.
+    @brief      Build one project-local artifact path and ensure the root exists.
     @param[in]  project_root Active project root.
     @param[in]  operation_kind Stable workflow operation token.
-    @param[in]  file_name Operation-local file name.
-    @return     Absolute operation-local file path.
+    @param[in]  file_name Operation artifact file name.
+    @return     Absolute project-local artifact path.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-22
-    @version    0.2.0
+    @version    0.3.0
     """
-    operation_root = Path(project_root) / operation_folder_name(operation_kind)
-    operation_root.mkdir(parents=True, exist_ok=True)
+    Path(project_root).mkdir(parents=True, exist_ok=True)
     return resolve_operation_path(project_root, operation_kind, file_name)
 
 
@@ -194,31 +241,37 @@ def reset_operation_data(
     keep_input_snapshots: bool = False,
 ) -> None:
     """
-    @brief      Clear one workflow step and optional downstream runtime folders.
+    @brief      Clear one workflow step and optional downstream root-level runtime artifacts.
     @param[in]  project_root Active project root.
     @param[in]  operation_kind Selected workflow operation token.
     @param[in]  include_current True to clear the selected operation folder too.
-    @param[in]  keep_input_snapshots True to preserve files prefixed with `input_`.
+    @param[in]  keep_input_snapshots Ignored; input snapshots are no longer created.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.1.1
+    @version    0.2.0
     """
+    _ = keep_input_snapshots
     operation_kinds = downstream_operation_kinds(
         operation_kind,
         include_current=include_current,
     )
+    root_path = Path(project_root)
     for selected_kind in operation_kinds:
-        folder_path = Path(project_root) / operation_folder_name(selected_kind)
-        folder_path.mkdir(parents=True, exist_ok=True)
-        for child in list(folder_path.iterdir()):
-            if keep_input_snapshots and child.is_file() and child.name.startswith(config.OPERATION_INPUT_FILE_PREFIX):
-                continue
-            if child.is_dir():
-                shutil.rmtree(child)
-            else:
-                child.unlink()
+        for file_name in _OPERATION_ARTIFACT_FILE_NAMES.get(selected_kind, ()):
+            artifact_path = root_path / file_name
+            if artifact_path.is_file():
+                artifact_path.unlink()
+        for log_path in root_path.glob(f"{config.AI_TRANSACTION_LOG_FILE_PREFIX}{selected_kind}_*.log"):
+            if log_path.is_file():
+                log_path.unlink()
+        if selected_kind == "audio_blocks":
+            audio_blocks_root = root_path / config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME
+            if audio_blocks_root.is_dir():
+                for child in audio_blocks_root.rglob("*"):
+                    if child.is_file():
+                        child.unlink()
 
 
 def raise_if_cancelled(cancel_requested) -> None:

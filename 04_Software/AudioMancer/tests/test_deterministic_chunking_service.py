@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-  # noqa: UP009
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -46,24 +46,20 @@ def test_chunking_writes_runtime_artifacts_and_detects_chapters(tmp_path) -> Non
         "imported_at": "2026-04-07T12:00:00+00:00",
         "size_bytes": source_path.stat().st_size,
     }
-    cleanup_root = project_root / config.CLEANUP_FOLDER_NAME
-    cleanup_root.mkdir(exist_ok=True)
-    cleaned_relative_path = f"{config.CLEANUP_FOLDER_NAME}/{config.CLEANED_TEXT_FILE_NAME}"
+    cleaned_relative_path = config.CLEANED_TEXT_FILE_NAME
     manifest["operations"]["cleanup"]["status"] = "completed"
     manifest["operations"]["cleanup"]["output_paths"] = [cleaned_relative_path]
-    (cleanup_root / config.CLEANED_TEXT_FILE_NAME).write_text(
+    (project_root / config.CLEANED_TEXT_FILE_NAME).write_text(
         "Chapter I\n\nParagraph one.\n\nParagraph two.\n",
         encoding="utf-8",
     )
 
     report_payload = deterministic_chunking_service.chunk_text(project_root, manifest)
 
-    chunk_root = project_root / "20_chunking"
-    assert (chunk_root / "input_story.pdf").is_file()
-    assert (chunk_root / config.CHUNK_ARTIFACT_FILE_NAME).is_file()
-    assert (chunk_root / config.CHUNKING_REPORT_FILE_NAME).is_file()
-    assert (chunk_root / config.OPERATION_STATE_FILE_NAME).is_file()
-    chunks = json.loads((chunk_root / config.CHUNK_ARTIFACT_FILE_NAME).read_text(encoding="utf-8"))
+    assert (project_root / config.CHUNK_ARTIFACT_FILE_NAME).is_file()
+    assert (project_root / config.CHUNKING_REPORT_FILE_NAME).is_file()
+    assert (project_root / config.CHUNKING_STATE_FILE_NAME).is_file()
+    chunks = json.loads((project_root / config.CHUNK_ARTIFACT_FILE_NAME).read_text(encoding="utf-8"))
     assert chunks[0]["chunk_id"] == "chunk-0001"
     assert chunks[1]["chapter_label"] == "Chapter I"
     assert chunks[2]["chapter_label"] == "Chapter I"
@@ -74,7 +70,7 @@ def test_chunking_writes_runtime_artifacts_and_detects_chapters(tmp_path) -> Non
 
 def test_chunking_uses_canonical_cleanup_output_with_compact_manifest(tmp_path) -> None:
     """
-    @brief      Verify chunking reads the canonical cleanup artifact even when the manifest stores only compact operation summaries.
+    @brief      Verify chunking reads the canonical cleanup artifact with compact operation summaries.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
@@ -98,9 +94,7 @@ def test_chunking_uses_canonical_cleanup_output_with_compact_manifest(tmp_path) 
     manifest["operations"]["cleanup"]["status"] = "completed"
     manifest["operations"]["cleanup"]["progress_current"] = 1
     manifest["operations"]["cleanup"]["progress_total"] = 1
-    cleanup_root = project_root / config.CLEANUP_FOLDER_NAME
-    cleanup_root.mkdir(exist_ok=True)
-    (cleanup_root / config.CLEANED_TEXT_FILE_NAME).write_text(
+    (project_root / config.CLEANED_TEXT_FILE_NAME).write_text(
         "Paragraph one.\n\nParagraph two.\n",
         encoding="utf-8",
     )
@@ -108,9 +102,7 @@ def test_chunking_uses_canonical_cleanup_output_with_compact_manifest(tmp_path) 
     report_payload = deterministic_chunking_service.chunk_text(project_root, manifest)
 
     assert report_payload["chunk_count"] == 2
-    chunks = json.loads(
-        (project_root / config.CHUNKING_FOLDER_NAME / config.CHUNK_ARTIFACT_FILE_NAME).read_text(encoding="utf-8")
-    )
+    chunks = json.loads((project_root / config.CHUNK_ARTIFACT_FILE_NAME).read_text(encoding="utf-8"))
     assert len(chunks) == 2
 
 
@@ -134,13 +126,9 @@ def test_chunking_persists_resumable_state_after_cancellation(tmp_path) -> None:
         "imported_at": "2026-04-07T12:00:00+00:00",
         "size_bytes": source_path.stat().st_size,
     }
-    cleanup_root = project_root / config.CLEANUP_FOLDER_NAME
-    cleanup_root.mkdir(exist_ok=True)
     manifest["operations"]["cleanup"]["status"] = "completed"
-    manifest["operations"]["cleanup"]["output_paths"] = [
-        f"{config.CLEANUP_FOLDER_NAME}/{config.CLEANED_TEXT_FILE_NAME}"
-    ]
-    (cleanup_root / config.CLEANED_TEXT_FILE_NAME).write_text(
+    manifest["operations"]["cleanup"]["output_paths"] = [config.CLEANED_TEXT_FILE_NAME]
+    (project_root / config.CLEANED_TEXT_FILE_NAME).write_text(
         "Paragraph one.\n\nParagraph two.\n",
         encoding="utf-8",
     )
@@ -157,9 +145,7 @@ def test_chunking_persists_resumable_state_after_cancellation(tmp_path) -> None:
             cancel_requested=lambda: should_cancel["value"],
         )
 
-    state_payload = json.loads(
-        (project_root / "20_chunking" / config.OPERATION_STATE_FILE_NAME).read_text(encoding="utf-8")
-    )
+    state_payload = json.loads((project_root / config.CHUNKING_STATE_FILE_NAME).read_text(encoding="utf-8"))
     assert state_payload["status"] == "running"
     assert state_payload["progress_current"] < state_payload["progress_total"]
     assert state_payload["resume_checkpoint"] is not None
@@ -185,19 +171,13 @@ def test_chunking_resumes_after_interruption(tmp_path) -> None:
         "imported_at": "2026-04-07T12:00:00+00:00",
         "size_bytes": source_path.stat().st_size,
     }
-    cleanup_root = project_root / config.CLEANUP_FOLDER_NAME
-    cleanup_root.mkdir(exist_ok=True)
     manifest["operations"]["cleanup"]["status"] = "completed"
-    manifest["operations"]["cleanup"]["output_paths"] = [
-        f"{config.CLEANUP_FOLDER_NAME}/{config.CLEANED_TEXT_FILE_NAME}"
-    ]
-    (cleanup_root / config.CLEANED_TEXT_FILE_NAME).write_text(
+    manifest["operations"]["cleanup"]["output_paths"] = [config.CLEANED_TEXT_FILE_NAME]
+    (project_root / config.CLEANED_TEXT_FILE_NAME).write_text(
         "Paragraph one.\n\nParagraph two.\n",
         encoding="utf-8",
     )
-    chunk_root = project_root / "20_chunking"
-    chunk_root.mkdir(exist_ok=True)
-    (chunk_root / config.CHUNK_ARTIFACT_FILE_NAME).write_text(
+    (project_root / config.CHUNK_ARTIFACT_FILE_NAME).write_text(
         json.dumps(
             [
                 {
@@ -217,13 +197,13 @@ def test_chunking_resumes_after_interruption(tmp_path) -> None:
         + "\n",
         encoding="utf-8",
     )
-    (chunk_root / config.OPERATION_STATE_FILE_NAME).write_text(
+    (project_root / config.CHUNKING_STATE_FILE_NAME).write_text(
         json.dumps(
             {
-                "folder_relative_path": "20_chunking",
+                "folder_relative_path": ".",
                 "status": "running",
-                "input_paths": ["20_chunking/input_story.txt"],
-                "output_paths": [f"20_chunking/{config.CHUNK_ARTIFACT_FILE_NAME}"],
+                "input_paths": [config.CLEANED_TEXT_FILE_NAME],
+                "output_paths": [config.CHUNK_ARTIFACT_FILE_NAME],
                 "artifact_paths": [],
                 "progress_current": 1,
                 "progress_total": 2,
@@ -243,7 +223,7 @@ def test_chunking_resumes_after_interruption(tmp_path) -> None:
 
     report_payload = deterministic_chunking_service.chunk_text(project_root, manifest)
 
-    chunks = json.loads((chunk_root / config.CHUNK_ARTIFACT_FILE_NAME).read_text(encoding="utf-8"))
+    chunks = json.loads((project_root / config.CHUNK_ARTIFACT_FILE_NAME).read_text(encoding="utf-8"))
     assert report_payload["chunk_count"] == 2
     assert len(chunks) == 2
     assert chunks[1]["chunk_id"] == "chunk-0002"
@@ -269,13 +249,9 @@ def test_chunking_rejects_empty_cleaned_text(tmp_path) -> None:
         "imported_at": "2026-04-07T12:00:00+00:00",
         "size_bytes": source_path.stat().st_size,
     }
-    cleanup_root = project_root / config.CLEANUP_FOLDER_NAME
-    cleanup_root.mkdir(exist_ok=True)
     manifest["operations"]["cleanup"]["status"] = "completed"
-    manifest["operations"]["cleanup"]["output_paths"] = [
-        f"{config.CLEANUP_FOLDER_NAME}/{config.CLEANED_TEXT_FILE_NAME}"
-    ]
-    (cleanup_root / config.CLEANED_TEXT_FILE_NAME).write_text("\n\n", encoding="utf-8")
+    manifest["operations"]["cleanup"]["output_paths"] = [config.CLEANED_TEXT_FILE_NAME]
+    (project_root / config.CLEANED_TEXT_FILE_NAME).write_text("\n\n", encoding="utf-8")
 
     with pytest.raises(ValueError, match="chunkable paragraphs"):
         deterministic_chunking_service.chunk_text(project_root, manifest)

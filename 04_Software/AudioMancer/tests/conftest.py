@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-  # noqa: UP009
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -12,7 +13,7 @@
          setup to reduce boilerplate across test files.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 1.2.0
+@version 1.2.1
 """
 
 # IMPORTS
@@ -61,7 +62,7 @@ def default_settings_payload():
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.3.0
+    @version    0.3.1
     """
     return {
         "language": "en",
@@ -97,6 +98,7 @@ def default_settings_payload():
         "tts_runtime_active_model_id": None,
         "tts_runtime_device_diagnostics": {},
         "tts_audio_preview_timeout_seconds": 60,
+        "tts_preview_text_character_limit": config.DEFAULT_TTS_PREVIEW_TEXT_CHARACTER_LIMIT,
         "tts_audio_generation_timeout_seconds": 300,
     }
 
@@ -130,7 +132,7 @@ def mock_extracted_project(mock_clean_project):
     """
     project_root, manifest = mock_clean_project
 
-    extracted_path = project_root / config.EXTRACTION_FOLDER_NAME / config.EXTRACTED_TEXT_FILE_NAME
+    extracted_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.EXTRACTED_TEXT_FILE_NAME
     extracted_path.parent.mkdir(parents=True, exist_ok=True)
 
     # Put a dummy payload, tests can overwrite if they need to
@@ -143,7 +145,9 @@ def mock_extracted_project(mock_clean_project):
         "imported_at": "2026-04-06T12:00:00+00:00",
         "size_bytes": 10,
     }
-    manifest["extracted_text_relative_path"] = f"{config.EXTRACTION_FOLDER_NAME}/{config.EXTRACTED_TEXT_FILE_NAME}"
+    manifest["extracted_text_relative_path"] = (
+        f"{config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH}/{config.EXTRACTED_TEXT_FILE_NAME}"
+    )
     project_workspace_service.save_manifest(manifest, project_root)
 
     return project_root, manifest

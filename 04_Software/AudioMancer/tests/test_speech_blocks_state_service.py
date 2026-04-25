@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-  # noqa: UP009
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -58,7 +59,7 @@ def test_build_speech_blocks_state_loads_persisted_blocks_and_summary(tmp_path) 
     """
     project_root, manifest = _create_chunked_project(tmp_path, "SpeechBlocksState")
     character_voices_service.save_selected_voice_language(project_root, "en")
-    speech_blocks_root = project_root / config.SPEECH_BLOCKS_FOLDER_NAME
+    speech_blocks_root = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH
     (speech_blocks_root / "input_source_chunks.json").write_text(
         json.dumps(
             [
@@ -123,11 +124,15 @@ def test_build_speech_blocks_state_loads_persisted_blocks_and_summary(tmp_path) 
     (speech_blocks_root / config.OPERATION_STATE_FILE_NAME).write_text(
         json.dumps(
             {
-                "folder_relative_path": config.SPEECH_BLOCKS_FOLDER_NAME,
+                "folder_relative_path": config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH,
                 "status": "completed",
-                "input_paths": [f"{config.SPEECH_BLOCKS_FOLDER_NAME}/input_source_chunks.json"],
-                "output_paths": [f"{config.SPEECH_BLOCKS_FOLDER_NAME}/{config.SPEECH_BLOCKS_OUTPUT_FILE_NAME}"],
-                "artifact_paths": [f"{config.SPEECH_BLOCKS_FOLDER_NAME}/{config.SPEECH_BLOCKS_REPORT_FILE_NAME}"],
+                "input_paths": [f"{config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH}/input_source_chunks.json"],
+                "output_paths": [
+                    f"{config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH}/{config.SPEECH_BLOCKS_OUTPUT_FILE_NAME}"
+                ],
+                "artifact_paths": [
+                    f"{config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH}/{config.SPEECH_BLOCKS_REPORT_FILE_NAME}"
+                ],
                 "progress_current": 1,
                 "progress_total": 1,
                 "mode": "ai_assisted",
@@ -219,7 +224,7 @@ def _create_chunked_project(tmp_path, name: str):
     manifest["operations"]["chunking"]["status"] = "completed"
     manifest["current_stage"] = "character_voices_ready"
     project_workspace_service.save_manifest(manifest, project_root)
-    (project_root / config.CHUNKING_FOLDER_NAME / config.CHUNK_ARTIFACT_FILE_NAME).write_text(
+    (project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.CHUNK_ARTIFACT_FILE_NAME).write_text(
         json.dumps(
             [
                 {

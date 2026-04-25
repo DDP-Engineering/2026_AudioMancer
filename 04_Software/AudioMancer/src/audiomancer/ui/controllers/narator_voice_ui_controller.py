@@ -14,7 +14,7 @@
          project-local narrator profile editing.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-18
-@version 3.8.0
+@version 3.8.1
 """
 
 # IMPORTS
@@ -25,6 +25,7 @@ from PySide6.QtCore import QUrl
 from PySide6.QtMultimedia import QMediaPlayer
 from PySide6.QtWidgets import QInputDialog, QMessageBox
 
+from audiomancer import config
 from audiomancer.services import (
     narrator_definition_service,
     project_workspace_service,
@@ -167,7 +168,7 @@ def handle_save_profile_requested(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-17
-    @version    1.3.0
+    @version    1.4.0
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._current_project_root is None:
@@ -325,7 +326,10 @@ def handle_generate_sample_requested(window: "MainWindow", profile_id: str) -> N
     )
     if _selected_profile_id(window) == profile_id and not invalidate_audio_blocks:
         return
-    preview_text = str(window._narator_voice_page.current_editor_payload().get("preview_text", "")).strip()
+    preview_text = _limited_preview_text(
+        window._narator_voice_page.current_editor_payload().get("preview_text", ""),
+        window._settings_payload,
+    ).strip()
     if not preview_text:
         QMessageBox.warning(
             window,
@@ -684,6 +688,29 @@ def _generate_and_store_sample(
             project_root,
             str(profile_payload.get("profile_id", "")).strip(),
         )
+
+
+def _limited_preview_text(preview_text: object, settings_payload: dict[str, object]) -> str:
+    """
+    @brief      Limit narrator sample preview text using the persisted TTS setting.
+    @param[in]  preview_text Candidate preview text.
+    @param[in]  settings_payload Current application settings payload.
+    @return     Preview text capped at the configured character limit.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-25
+    @version    0.1.0
+    """
+    try:
+        character_limit = int(
+            settings_payload.get(
+                "tts_preview_text_character_limit",
+                config.DEFAULT_TTS_PREVIEW_TEXT_CHARACTER_LIMIT,
+            )
+        )
+    except (TypeError, ValueError):
+        character_limit = config.DEFAULT_TTS_PREVIEW_TEXT_CHARACTER_LIMIT
+    return str(preview_text or "")[: max(character_limit, 1)]
 
 
 def _update_generation_progress(

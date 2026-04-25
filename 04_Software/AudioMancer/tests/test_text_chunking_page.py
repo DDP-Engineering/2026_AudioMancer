@@ -13,7 +13,7 @@
          selected chunk preview editing and search behavior.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-24
-@version 0.3.0
+@version 0.3.1
 """
 
 # IMPORTS
@@ -32,7 +32,7 @@ def test_text_chunking_page_renders_chunks_and_selected_preview(qtbot) -> None:
     @exception  None.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-07
-    @version    0.1.0
+    @version    0.2.0
     """
     page = TextChunkingPage()
     qtbot.addWidget(page)
@@ -65,6 +65,7 @@ def test_text_chunking_page_renders_chunks_and_selected_preview(qtbot) -> None:
     assert "Chunk artifact contains 1 chunks." in page._notes_edit.toPlainText()
     assert page.current_ai_strategy() == "paragraph"
     assert page._notes_group.maximumHeight() == 112
+    assert page._chunk_list.minimumHeight() == 132
 
 
 def test_text_chunking_page_keeps_selectors_readable_while_busy(qtbot) -> None:

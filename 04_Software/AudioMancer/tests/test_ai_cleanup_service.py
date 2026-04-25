@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-  # noqa: UP009
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -49,7 +49,7 @@ def test_ai_cleanup_writes_cleanup_artifacts_and_log(
     """Verify AI-assisted cleanup writes output, report, state, and AI log artifacts."""
     project_root, manifest = mock_extracted_project
 
-    extracted_path = project_root / config.EXTRACTION_FOLDER_NAME / config.EXTRACTED_TEXT_FILE_NAME
+    extracted_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.EXTRACTED_TEXT_FILE_NAME
     extracted_path.write_text(
         "CHAPTER I\n\nStory paragraph one.\n\n***\n\nStory paragraph two.\n",
         encoding="utf-8",
@@ -78,7 +78,7 @@ def test_ai_cleanup_writes_cleanup_artifacts_and_log(
 
     report_payload = ai_cleanup_service.clean_text(project_root, manifest, _MOCK_PROFILE)
 
-    cleanup_root = project_root / config.CLEANUP_FOLDER_NAME
+    cleanup_root = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH
     assert (cleanup_root / f"{config.OPERATION_INPUT_FILE_PREFIX}story.txt").is_file()
     assert (cleanup_root / config.CLEANED_TEXT_FILE_NAME).is_file()
     assert (cleanup_root / config.CLEANUP_REPORT_FILE_NAME).is_file()
@@ -140,7 +140,7 @@ def test_ai_cleanup_text_transformations(
 ) -> None:
     """Verify various AI cleanup text join/heal permutations via parametrization."""
     project_root, manifest = mock_extracted_project
-    extracted_path = project_root / config.EXTRACTION_FOLDER_NAME / config.EXTRACTED_TEXT_FILE_NAME
+    extracted_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.EXTRACTED_TEXT_FILE_NAME
     extracted_path.write_text(source_text, encoding="utf-8")
 
     monkeypatch.setattr(
@@ -154,9 +154,9 @@ def test_ai_cleanup_text_transformations(
 
     ai_cleanup_service.clean_text(project_root, manifest, _MOCK_PROFILE)
 
-    cleaned_text = (project_root / config.CLEANUP_FOLDER_NAME / config.CLEANED_TEXT_FILE_NAME).read_text(
-        encoding="utf-8"
-    )
+    cleaned_text = (
+        project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.CLEANED_TEXT_FILE_NAME
+    ).read_text(encoding="utf-8")
     assert expected_in in cleaned_text
     assert expected_out not in cleaned_text
 
@@ -166,7 +166,7 @@ def test_ai_cleanup_corrects_invalid_tail_labels_and_persists_warnings(
 ) -> None:
     """Verify AI-assisted cleanup corrects page-number drift near one late window tail and persists warnings."""
     project_root, manifest = mock_extracted_project
-    extracted_path = project_root / config.EXTRACTION_FOLDER_NAME / config.EXTRACTED_TEXT_FILE_NAME
+    extracted_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.EXTRACTED_TEXT_FILE_NAME
     extracted_path.write_text(
         "Story before.\n\n* * *\n\nHi, I'm Dario Cerulli of Axiom Ordnance, and I'm here to tell you about the Warhound.\n\n"
         '22\n\n"You know what it wasn\'t for?" Drenthe asked.\n\n23\n\nHolorecorders were cheap, and they were everywhere.\n',
@@ -193,9 +193,9 @@ def test_ai_cleanup_corrects_invalid_tail_labels_and_persists_warnings(
 
     report_payload = ai_cleanup_service.clean_text(project_root, manifest, _MOCK_PROFILE)
 
-    cleaned_text = (project_root / config.CLEANUP_FOLDER_NAME / config.CLEANED_TEXT_FILE_NAME).read_text(
-        encoding="utf-8"
-    )
+    cleaned_text = (
+        project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.CLEANED_TEXT_FILE_NAME
+    ).read_text(encoding="utf-8")
     assert "Hi, I'm Dario Cerulli" in cleaned_text
     assert '"You know what it wasn\'t for?" Drenthe asked.' in cleaned_text
     assert "Holorecorders were cheap" in cleaned_text
@@ -207,7 +207,9 @@ def test_ai_cleanup_corrects_invalid_tail_labels_and_persists_warnings(
         for warning_detail in report_payload["warning_details"]
     )
     state_payload = json.loads(
-        (project_root / config.CLEANUP_FOLDER_NAME / config.OPERATION_STATE_FILE_NAME).read_text(encoding="utf-8")
+        (project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.OPERATION_STATE_FILE_NAME).read_text(
+            encoding="utf-8"
+        )
     )
     assert state_payload["warning_count"] >= 1
     assert any(
@@ -221,7 +223,7 @@ def test_ai_cleanup_splits_long_input_into_multiple_windows(
 ) -> None:
     """Verify AI-assisted cleanup splits long extracted input into multiple request windows."""
     project_root, manifest = mock_extracted_project
-    extracted_path = project_root / config.EXTRACTION_FOLDER_NAME / config.EXTRACTED_TEXT_FILE_NAME
+    extracted_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.EXTRACTED_TEXT_FILE_NAME
     extracted_text = "\n\n".join(f"Paragraph {index} keeps enough words." for index in range(1, 31)) + "\n"
     extracted_path.write_text(extracted_text, encoding="utf-8")
 

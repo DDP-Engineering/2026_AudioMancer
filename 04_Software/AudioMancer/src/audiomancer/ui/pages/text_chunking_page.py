@@ -14,7 +14,7 @@
          with local text search.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-24
-@version 0.4.0
+@version 0.4.1
 """
 
 # IMPORTS
@@ -49,7 +49,7 @@ class TextChunkingPage(QWidget):
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-24
-    @version    0.3.0
+    @version    0.3.1
     """
 
     chunk_requested = Signal()
@@ -64,7 +64,7 @@ class TextChunkingPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-24
-        @version    0.4.0
+        @version    0.4.1
         """
         super().__init__(parent)
         self._chunks: list[dict[str, object]] = []
@@ -128,9 +128,10 @@ class TextChunkingPage(QWidget):
         chunk_list_group = QGroupBox("Chunk List", self)
         chunk_list_layout = QVBoxLayout(chunk_list_group)
         self._chunk_list = QListWidget(self)
+        self._chunk_list.setMinimumHeight(132)
         self._chunk_list.currentRowChanged.connect(self._show_selected_chunk)
         chunk_list_layout.addWidget(self._chunk_list)
-        left_layout.addWidget(chunk_list_group, 2)
+        left_layout.addWidget(chunk_list_group, 3)
         top_splitter.addWidget(left_container)
 
         chunk_preview_group = QGroupBox("Selected Chunk", self)
@@ -153,7 +154,7 @@ class TextChunkingPage(QWidget):
 
         top_splitter.setStretchFactor(0, 3)
         top_splitter.setStretchFactor(1, 2)
-        layout.addWidget(top_splitter, 6)
+        layout.addWidget(top_splitter, 7)
 
         notes_group = QGroupBox("Chunking Notes", self)
         notes_layout = QVBoxLayout(notes_group)

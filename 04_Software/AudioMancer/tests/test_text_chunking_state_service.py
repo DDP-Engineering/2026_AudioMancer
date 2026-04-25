@@ -131,7 +131,7 @@ def test_save_chunk_text_edit_persists_text_and_resets_downstream(tmp_path) -> N
         "ChunkEditProject",
         tmp_path,
     )
-    chunking_root = project_root / config.CHUNKING_FOLDER_NAME
+    chunking_root = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH
     chunking_root.mkdir(exist_ok=True)
     chunk_artifact_path = chunking_root / config.CHUNK_ARTIFACT_FILE_NAME
     chunk_artifact_path.write_text(
@@ -148,7 +148,7 @@ def test_save_chunk_text_edit_persists_text_and_resets_downstream(tmp_path) -> N
         + "\n",
         encoding="utf-8",
     )
-    translation_root = project_root / config.TRANSLATION_FOLDER_NAME
+    translation_root = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH
     translation_root.mkdir(exist_ok=True)
     (translation_root / "artifact.txt").write_text("stale", encoding="utf-8")
     manifest["current_stage"] = "character_discovery_ready"

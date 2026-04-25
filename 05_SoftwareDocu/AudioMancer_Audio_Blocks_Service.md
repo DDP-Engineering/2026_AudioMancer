@@ -141,6 +141,10 @@ Inputs:
 - ordered speech blocks in `70_speech_blocks/output_speech_blocks.json`
 - runtime connection settings and discovered models from `settings.json`
 
+Romanian remains a valid selected voice language in AudioMancer metadata, but
+VoiceWeaver TTS calls omit the outbound `language` field for `ro` so the
+runtime can infer pronunciation from the Romanian text.
+
 Outputs:
 
 - `80_audio_blocks/input_speech_blocks.json`

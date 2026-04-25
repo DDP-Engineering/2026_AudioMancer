@@ -10,10 +10,10 @@
 @file project_workspace_service.py
 @brief Functional project workspace persistence helpers for AudioMancer.
 @details Creates, validates, saves, and opens file-based project workspaces
-         using one minimal `project.json` manifest contract.
+         using one minimal root-level `project.json` manifest contract.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-20
-@version    1.5.0
+@version    1.6.0
 """
 
 # IMPORTS
@@ -21,7 +21,6 @@
 from datetime import UTC, datetime
 import json
 from pathlib import Path
-import shutil
 from uuid import uuid4
 
 from audiomancer import config
@@ -35,18 +34,18 @@ _PROJECT_WORKSPACE_LOGGER = get_component_logger("project_workspace")
 ProjectManifestPayload = dict[str, object]
 # @brief Normalized project-open result payload returned by open helpers.
 ProjectOpenResult = dict[str, object]
-# @brief Ordered workflow folder list used for validation and repair checks.
-_STEP_FOLDERS_IN_ORDER = (
-    config.EXTRACTION_FOLDER_NAME,
-    config.CLEANUP_FOLDER_NAME,
-    config.CHUNKING_FOLDER_NAME,
-    config.TRANSLATION_FOLDER_NAME,
-    config.CHARACTER_DISCOVERY_FOLDER_NAME,
-    config.NARRATOR_DEFINITION_FOLDER_NAME,
-    config.CHARACTER_VOICES_FOLDER_NAME,
-    config.SPEECH_BLOCKS_FOLDER_NAME,
-    config.AUDIO_BLOCKS_FOLDER_NAME,
-    config.AUDIO_ASSEMBLY_FOLDER_NAME,
+# @brief Old numbered workflow folders rejected by the flattened project layout.
+_UNSUPPORTED_LEGACY_WORKFLOW_FOLDERS = (
+    "00_extraction",
+    "10_cleanup",
+    "20_chunking",
+    "30_translation",
+    "40_character_discovery",
+    "50_narrator_definition",
+    "60_character_voices",
+    "70_speech_blocks",
+    "80_audio_blocks",
+    "90_audio_assembly",
 )
 
 
@@ -94,7 +93,7 @@ def create_project(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-        @version    0.4.0
+        @version    0.5.0
     """
     validate_project_name(name)
     resolved_parent = Path(parent_path)
@@ -106,8 +105,6 @@ def create_project(
         raise FileExistsError(f"Project folder is not empty: {project_root}")
 
     project_root.mkdir(parents=True, exist_ok=True)
-    for folder_name in config.PROJECT_REQUIRED_SUBDIRECTORIES:
-        (project_root / folder_name).mkdir(parents=True, exist_ok=True)
 
     now_iso = _utc_now_iso()
     manifest = build_project_manifest(name, now_iso)
@@ -174,7 +171,7 @@ def validate_project(project_root: str | Path) -> ProjectOpenResult:
     @exception  ValueError Raised when required manifest fields are invalid.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.3.0
+    @version    0.4.0
     """
     resolved_root = Path(project_root)
     manifest_path = resolved_root / config.PROJECT_MANIFEST_FILE_NAME
@@ -183,16 +180,12 @@ def validate_project(project_root: str | Path) -> ProjectOpenResult:
 
     payload = json.loads(manifest_path.read_text(encoding="utf-8"))
     _validate_manifest_identity_fields(payload)
-    first_missing_directory = _first_missing_required_directory(resolved_root)
-    if first_missing_directory is not None:
-        return {
-            "status": "repair_required",
-            "project_root": resolved_root,
-            "corrupted_step": first_missing_directory,
-            "reset_stage": _repair_stage_for_folder(first_missing_directory, payload),
-            "message": (f"Project structure is incomplete. The step folder '{first_missing_directory}' is missing."),
-            "metadata_only": False,
-        }
+    legacy_folder = _first_unsupported_legacy_directory(resolved_root)
+    if legacy_folder is not None:
+        raise ValueError(
+            f"Project uses the unsupported legacy numbered runtime layout: {legacy_folder}. "
+            "Create a new flattened project; migration is not supported."
+        )
     if _is_invalid_current_stage(payload):
         return {
             "status": "repair_required",
@@ -236,7 +229,7 @@ def open_project(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.2.0
+    @version    0.3.0
     """
     project_root = resolve_project_root(selected_path)
     return validate_project(project_root)
@@ -261,11 +254,7 @@ def repair_project(
     _validate_manifest_identity_fields(payload)
 
     if not bool(repair_request.get("metadata_only", False)):
-        for folder_name in _folders_to_reset_from(str(repair_request["corrupted_step"])):
-            folder_path = project_root / folder_name
-            if folder_path.exists():
-                shutil.rmtree(folder_path)
-            folder_path.mkdir(parents=True, exist_ok=True)
+        raise ValueError("Folder-based project repair is not supported by the flattened project layout.")
 
     repaired_manifest = _build_repaired_manifest(
         payload,
@@ -307,7 +296,7 @@ def build_project_manifest(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-18
-    @version    0.6.0
+    @version    0.7.0
     """
     resolved_timestamp = timestamp_iso or _utc_now_iso()
     return {
@@ -324,6 +313,7 @@ def build_project_manifest(
         "original_language": None,
         "narrator_profile_name": None,
         "narrator_language": None,
+        "selected_voice_language": None,
         "voice_assignment_mode": config.DEFAULT_TTS_VOICE_ASSIGNMENT_MODE,
         "notes": "",
     }
@@ -338,7 +328,7 @@ def validate_project_manifest(payload: object) -> ProjectManifestPayload:
     @exception  ValueError Raised when the payload is invalid.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-18
-    @version    0.5.0
+    @version    0.6.0
     """
     _validate_manifest_payload(payload)
     assert isinstance(payload, dict)
@@ -362,6 +352,7 @@ def validate_project_manifest(payload: object) -> ProjectManifestPayload:
         "original_language": _optional_string(payload.get("original_language")),
         "narrator_profile_name": _optional_string(payload.get("narrator_profile_name")),
         "narrator_language": _optional_string(payload.get("narrator_language")),
+        "selected_voice_language": _optional_string(payload.get("selected_voice_language")),
         "voice_assignment_mode": voice_assignment_mode,
         "notes": str(payload.get("notes", "")),
     }
@@ -455,19 +446,20 @@ def _validate_manifest_identity_fields(payload: object) -> None:
             raise ValueError(f"Project manifest field '{field_name}' is missing or invalid.")
 
 
-def _first_missing_required_directory(project_root: Path) -> str | None:
+def _first_unsupported_legacy_directory(project_root: Path) -> str | None:
     """
-    @brief      Return the first missing workflow folder in stable step order.
+    @brief      Return the first legacy workflow folder present in one project root.
     @param[in]  project_root Candidate project root folder.
-    @return     Missing folder name or `None`.
+    @return     Unsupported legacy folder name or `None`.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.3.0
+    @date       2026-04-25
+    @version    0.1.0
     """
-    for folder_name in config.PROJECT_REQUIRED_SUBDIRECTORIES:
+    for folder_name in _UNSUPPORTED_LEGACY_WORKFLOW_FOLDERS:
         if not (project_root / folder_name).is_dir():
-            return folder_name
+            continue
+        return folder_name
     return None
 
 
@@ -484,16 +476,16 @@ def _repair_stage_for_folder(folder_name: str, payload: dict[str, object]) -> st
     """
     current_stage = str(payload.get("current_stage", config.DEFAULT_WORKFLOW_STAGE)).strip()
     stage_before_folder = {
-        config.EXTRACTION_FOLDER_NAME: "project_created",
-        config.CLEANUP_FOLDER_NAME: "source_selected",
-        config.CHUNKING_FOLDER_NAME: "text_cleanup_ready",
-        config.TRANSLATION_FOLDER_NAME: "text_chunking_ready",
-        config.CHARACTER_DISCOVERY_FOLDER_NAME: "translation_ready",
-        config.NARRATOR_DEFINITION_FOLDER_NAME: "character_discovery_ready",
-        config.CHARACTER_VOICES_FOLDER_NAME: "narrator_definition_ready",
-        config.SPEECH_BLOCKS_FOLDER_NAME: "character_voices_ready",
-        config.AUDIO_BLOCKS_FOLDER_NAME: "speech_blocks_ready",
-        config.AUDIO_ASSEMBLY_FOLDER_NAME: "audio_blocks_ready",
+        config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH: "project_created",
+        config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH: "source_selected",
+        config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH: "text_cleanup_ready",
+        config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH: "text_chunking_ready",
+        config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH: "translation_ready",
+        config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH: "character_discovery_ready",
+        config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH: "narrator_definition_ready",
+        config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH: "character_voices_ready",
+        config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH: "speech_blocks_ready",
+        config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH: "audio_blocks_ready",
     }.get(folder_name)
     if stage_before_folder is None:
         return _derive_trustworthy_stage(payload)
@@ -549,10 +541,8 @@ def _folders_to_reset_from(corrupted_step: str) -> tuple[str, ...]:
     @date       2026-04-21
     @version    0.4.0
     """
-    if corrupted_step not in _STEP_FOLDERS_IN_ORDER:
-        return ()
-    start_index = _STEP_FOLDERS_IN_ORDER.index(corrupted_step)
-    return _STEP_FOLDERS_IN_ORDER[start_index:]
+    _ = corrupted_step
+    return ()
 
 
 def _build_repaired_manifest(
@@ -585,6 +575,7 @@ def _build_repaired_manifest(
         "original_language": _optional_string(payload.get("original_language")),
         "narrator_profile_name": _optional_string(payload.get("narrator_profile_name")),
         "narrator_language": _optional_string(payload.get("narrator_language")),
+        "selected_voice_language": _optional_string(payload.get("selected_voice_language")),
         "voice_assignment_mode": (
             str(payload.get("voice_assignment_mode", config.DEFAULT_TTS_VOICE_ASSIGNMENT_MODE)).strip()
             if str(payload.get("voice_assignment_mode", config.DEFAULT_TTS_VOICE_ASSIGNMENT_MODE)).strip()
@@ -743,7 +734,7 @@ def _default_operation_state(operation_kind: str) -> dict[str, object]:
     @version    0.3.0
     """
     return {
-        "folder_relative_path": f"{_folder_name_for_operation(operation_kind)}",
+        "folder_relative_path": config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH,
         "status": "not_started",
         "progress_current": 0,
         "progress_total": 0,
@@ -900,18 +891,8 @@ def _folder_name_for_operation(operation_kind: str) -> str:
     @date       2026-04-06
     @version    0.3.0
     """
-    return {
-        "extraction": config.EXTRACTION_FOLDER_NAME,
-        "cleanup": config.CLEANUP_FOLDER_NAME,
-        "chunking": config.CHUNKING_FOLDER_NAME,
-        "translation": config.TRANSLATION_FOLDER_NAME,
-        "character_discovery": config.CHARACTER_DISCOVERY_FOLDER_NAME,
-        "narrator_definition": config.NARRATOR_DEFINITION_FOLDER_NAME,
-        "character_voices": config.CHARACTER_VOICES_FOLDER_NAME,
-        "speech_blocks": config.SPEECH_BLOCKS_FOLDER_NAME,
-        "audio_blocks": config.AUDIO_BLOCKS_FOLDER_NAME,
-        "audio_assembly": config.AUDIO_ASSEMBLY_FOLDER_NAME,
-    }.get(operation_kind, operation_kind)
+    _ = operation_kind
+    return config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH
 
 
 # END OF FILE

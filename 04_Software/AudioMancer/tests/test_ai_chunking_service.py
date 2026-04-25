@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-  # noqa: UP009
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -73,7 +74,7 @@ def test_ai_chunking_writes_chunking_artifacts_and_log(tmp_path, monkeypatch) ->
     monkeypatch.setattr(config, "APP_PROMPTS_PATH", prompt_root)
 
     project_root, manifest = project_workspace_service.create_project("AiChunkingProject", tmp_path)
-    cleaned_path = project_root / config.CLEANUP_FOLDER_NAME / config.CLEANED_TEXT_FILE_NAME
+    cleaned_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.CLEANED_TEXT_FILE_NAME
     cleaned_path.parent.mkdir(parents=True, exist_ok=True)
     cleaned_path.write_text(
         "CHAPTER I\n\nParagraph one.\n\nParagraph two.\n\nParagraph three.\n",
@@ -88,7 +89,7 @@ def test_ai_chunking_writes_chunking_artifacts_and_log(tmp_path, monkeypatch) ->
     }
     manifest["operations"]["cleanup"]["status"] = "completed"
     manifest["operations"]["cleanup"]["output_paths"] = [
-        f"{config.CLEANUP_FOLDER_NAME}/{config.CLEANED_TEXT_FILE_NAME}"
+        f"{config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH}/{config.CLEANED_TEXT_FILE_NAME}"
     ]
 
     monkeypatch.setattr(
@@ -157,7 +158,7 @@ def test_ai_chunking_ignores_invalid_boundaries_and_closes_last_chunk(tmp_path, 
     monkeypatch.setattr(config, "APP_PROMPTS_PATH", prompt_root)
 
     project_root, manifest = project_workspace_service.create_project("AiChunkingInvalidBreaksProject", tmp_path)
-    cleaned_path = project_root / config.CLEANUP_FOLDER_NAME / config.CLEANED_TEXT_FILE_NAME
+    cleaned_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.CLEANED_TEXT_FILE_NAME
     cleaned_path.parent.mkdir(parents=True, exist_ok=True)
     cleaned_path.write_text("Paragraph one.\n\nParagraph two.\n", encoding="utf-8")
     manifest["source_document"] = {
@@ -169,7 +170,7 @@ def test_ai_chunking_ignores_invalid_boundaries_and_closes_last_chunk(tmp_path, 
     }
     manifest["operations"]["cleanup"]["status"] = "completed"
     manifest["operations"]["cleanup"]["output_paths"] = [
-        f"{config.CLEANUP_FOLDER_NAME}/{config.CLEANED_TEXT_FILE_NAME}"
+        f"{config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH}/{config.CLEANED_TEXT_FILE_NAME}"
     ]
 
     monkeypatch.setattr(
@@ -224,7 +225,7 @@ def test_ai_chunking_resumes_from_saved_window_checkpoint(tmp_path, monkeypatch)
     monkeypatch.setattr(config, "APP_PROMPTS_PATH", prompt_root)
 
     project_root, manifest = project_workspace_service.create_project("AiChunkingResumeProject", tmp_path)
-    cleaned_path = project_root / config.CLEANUP_FOLDER_NAME / config.CLEANED_TEXT_FILE_NAME
+    cleaned_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.CLEANED_TEXT_FILE_NAME
     cleaned_path.parent.mkdir(parents=True, exist_ok=True)
     cleaned_text = "\n\n".join(f"Paragraph {index}." for index in range(1, 21)) + "\n"
     cleaned_path.write_text(cleaned_text, encoding="utf-8")
@@ -237,7 +238,7 @@ def test_ai_chunking_resumes_from_saved_window_checkpoint(tmp_path, monkeypatch)
     }
     manifest["operations"]["cleanup"]["status"] = "completed"
     manifest["operations"]["cleanup"]["output_paths"] = [
-        f"{config.CLEANUP_FOLDER_NAME}/{config.CLEANED_TEXT_FILE_NAME}"
+        f"{config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH}/{config.CLEANED_TEXT_FILE_NAME}"
     ]
 
     responses = iter(

@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env python3
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-  # noqa: UP009
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
@@ -14,7 +14,7 @@
          for the Character Voices workflow.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-20
-@version 1.3.0
+@version 1.3.1
 """
 
 # IMPORTS
@@ -25,7 +25,7 @@ import json
 from pathlib import Path
 
 from audiomancer import config
-from audiomancer.services import narrator_definition_service, voiceweaver_runtime_service
+from audiomancer.services import narrator_definition_service, project_workspace_service, voiceweaver_runtime_service
 
 # CONSTANTS
 
@@ -43,9 +43,14 @@ SAMPLE_SOURCE_COPIED_NARRATOR = "copied_narrator"
 DEFAULT_PREVIEW_TEXT_BY_LANGUAGE = {
     "en": ("The evening settled over the old house, and each voice carried a different shade of memory."),
     "ro": ("Seara s-a asezat peste casa veche, iar fiecare glas purta o alta nuanta de amintire."),
+    "ja": "å¤•æš®ã‚ŒãŒå¤ã„å®¶ã‚’åŒ…ã¿ã€ãã‚Œãžã‚Œã®å£°ãŒé•ã†è¨˜æ†¶ã®è‰²ã‚’å¸¯ã³ã¦ã„ãŸã€‚",
+    "ko": "ì €ë…ì´ ì˜¤ëž˜ëœ ì§‘ ìœ„ë¡œ ë‚´ë ¤ì•‰ìž, ì €ë§ˆë‹¤ì˜ ëª©ì†Œë¦¬ëŠ” ë‹¤ë¥¸ ê¸°ì–µì˜ ë¹›ì„ í’ˆê³  ìžˆì—ˆë‹¤.",
     "de": ("Der Abend senkte sich uber das alte Haus, und jede Stimme trug einen anderen Ton der Erinnerung."),
     "fr": ("Le soir est tombe sur la vieille maison, et chaque voix portait une autre nuance de memoire."),
+    "ru": "Ð’ÐµÑ‡ÐµÑ€ Ð¾Ð¿ÑƒÑÑ‚Ð¸Ð»ÑÑ Ð½Ð° ÑÑ‚Ð°Ñ€Ñ‹Ð¹ Ð´Ð¾Ð¼, Ð¸ Ð² ÐºÐ°Ð¶Ð´Ð¾Ð¼ Ð³Ð¾Ð»Ð¾ÑÐµ Ð·Ð²ÑƒÑ‡Ð°Ð» ÑÐ²Ð¾Ð¹ Ð¾Ñ‚Ñ‚ÐµÐ½Ð¾Ðº Ð¿Ð°Ð¼ÑÑ‚Ð¸.",
+    "pt": "A noite pousou sobre a casa antiga, e cada voz carregava um tom diferente de memoria.",
     "es": ("La tarde cayo sobre la vieja casa, y cada voz llevaba un matiz distinto de memoria."),
+    "it": "La sera scese sulla vecchia casa, e ogni voce portava una diversa sfumatura di memoria.",
 }
 
 
@@ -62,18 +67,9 @@ def ensure_character_voices_files(project_root: str | Path) -> None:
     @date       2026-04-20
     @version    1.0.1
     """
-    character_voices_root = Path(project_root) / config.CHARACTER_VOICES_FOLDER_NAME
-    character_voices_root.mkdir(parents=True, exist_ok=True)
-    _audio_samples_root(project_root).mkdir(parents=True, exist_ok=True)
     targets_path = _targets_path(project_root)
     if not targets_path.is_file():
         _write_json(targets_path, [])
-    language_path = _selected_language_path(project_root)
-    if not language_path.is_file():
-        _write_json(
-            language_path,
-            {"selected_voice_language": narrator_definition_service.DEFAULT_NARRATOR_LANGUAGE},
-        )
 
 
 def load_selected_voice_language(
@@ -90,8 +86,10 @@ def load_selected_voice_language(
     @date       2026-04-20
     @version    1.0.0
     """
-    ensure_character_voices_files(project_root)
-    payload = json.loads(_selected_language_path(project_root).read_text(encoding="utf-8"))
+    try:
+        payload = project_workspace_service.load_manifest(project_root)
+    except Exception:
+        payload = {}
     if not isinstance(payload, dict):
         return narrator_definition_service.narrator_language_code(fallback)
     return narrator_definition_service.narrator_language_code(
@@ -113,10 +111,13 @@ def save_selected_voice_language(project_root: str | Path, selected_voice_langua
     """
     ensure_character_voices_files(project_root)
     normalized_language = narrator_definition_service.narrator_language_code(selected_voice_language)
-    _write_json(
-        _selected_language_path(project_root),
-        {"selected_voice_language": normalized_language},
-    )
+    try:
+        manifest = project_workspace_service.load_manifest(project_root)
+    except Exception:
+        manifest = None
+    if isinstance(manifest, dict):
+        manifest["selected_voice_language"] = normalized_language
+        project_workspace_service.save_manifest(manifest, project_root)
     return normalized_language
 
 
@@ -458,20 +459,27 @@ def effective_target_preview_text(target_payload: dict[str, object], voice_langu
 
 def target_sample_paths(project_root: str | Path, target_id: str) -> tuple[Path, Path]:
     """
-    @brief      Resolve the audio and metadata sample paths for one character-voices target.
+    @brief      Resolve the audio and aggregate metadata sample paths for one character-voices target.
     @param[in]  project_root Active project root folder.
     @param[in]  target_id Target voice identifier.
-    @return     Tuple of WAV path and JSON metadata path.
+    @return     Tuple of WAV path and `characters_voice.json` metadata path.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-20
-    @version    1.0.0
+    @version    1.1.0
     """
-    sample_root = _audio_samples_root(project_root)
     normalized_target_id = str(target_id).strip()
+    target_payload = voice_target_by_id(project_root, normalized_target_id)
+    if isinstance(target_payload, dict) and str(target_payload.get("sample_audio_path", "") or "").strip():
+        audio_path = Path(project_root) / str(target_payload.get("sample_audio_path", "")).strip()
+    else:
+        audio_name_source = (
+            target_payload.get("display_name", normalized_target_id) if isinstance(target_payload, dict) else target_id
+        )
+        audio_path = Path(project_root) / f"audio_{_normalized_audio_name(audio_name_source)}.wav"
     return (
-        sample_root / f"{normalized_target_id}.wav",
-        sample_root / f"{normalized_target_id}.json",
+        audio_path,
+        _targets_path(project_root),
     )
 
 
@@ -484,12 +492,12 @@ def load_target_sample_metadata(project_root: str | Path, target_id: str) -> dic
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-20
-    @version    1.0.0
+    @version    1.1.0
     """
-    _audio_path, metadata_path = target_sample_paths(project_root, target_id)
-    if not metadata_path.is_file():
+    target_payload = voice_target_by_id(project_root, target_id)
+    if not isinstance(target_payload, dict):
         return None
-    payload = json.loads(metadata_path.read_text(encoding="utf-8"))
+    payload = target_payload.get("sample_metadata")
     return dict(payload) if isinstance(payload, dict) else None
 
 
@@ -498,14 +506,14 @@ def has_target_sample(project_root: str | Path, target_id: str) -> bool:
     @brief      Return whether one character-voices target currently has a persisted sample pair.
     @param[in]  project_root Active project root folder.
     @param[in]  target_id Target voice identifier.
-    @return     `True` when the sample WAV and metadata both exist.
+    @return     `True` when the sample WAV exists and `characters_voice.json` has sample metadata.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-20
-    @version    1.0.0
+    @version    1.1.0
     """
-    audio_path, metadata_path = target_sample_paths(project_root, target_id)
-    return audio_path.is_file() and metadata_path.is_file()
+    audio_path, _metadata_path = target_sample_paths(project_root, target_id)
+    return audio_path.is_file() and load_target_sample_metadata(project_root, target_id) is not None
 
 
 def delete_target_sample(project_root: str | Path, target_id: str) -> None:
@@ -517,13 +525,12 @@ def delete_target_sample(project_root: str | Path, target_id: str) -> None:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-20
-    @version    1.0.0
+    @version    1.1.0
     """
-    audio_path, metadata_path = target_sample_paths(project_root, target_id)
+    audio_path, _metadata_path = target_sample_paths(project_root, target_id)
     if audio_path.exists():
         audio_path.unlink()
-    if metadata_path.exists():
-        metadata_path.unlink()
+    _update_target_sample_metadata(project_root, target_id, None, None)
 
 
 def store_target_sample(
@@ -536,7 +543,7 @@ def store_target_sample(
     audio_bytes: bytes,
 ) -> dict[str, object]:
     """
-    @brief      Persist one generated character-voices sample WAV and metadata payload.
+    @brief      Persist one generated character-voices sample WAV and aggregate metadata payload.
     @param[in]  project_root Active project root folder.
     @param[in]  target_payload Character-voices target payload.
     @param[in]  voice_language Selected character-voices voice language code.
@@ -548,12 +555,12 @@ def store_target_sample(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-20
-    @version    1.0.0
+    @version    1.1.0
     """
     ensure_character_voices_files(project_root)
     target_id = str(target_payload.get("target_id", "")).strip()
     delete_target_sample(project_root, target_id)
-    audio_path, metadata_path = target_sample_paths(project_root, target_id)
+    audio_path, _metadata_path = target_sample_paths(project_root, target_id)
     metadata_payload = {
         "target_id": target_id,
         "target_kind": str(target_payload.get("target_kind", "")).strip(),
@@ -569,7 +576,12 @@ def store_target_sample(
         "runtime_result_summary": str(runtime_result_summary).strip(),
     }
     audio_path.write_bytes(audio_bytes)
-    _write_json(metadata_path, metadata_payload)
+    _update_target_sample_metadata(
+        project_root,
+        target_id,
+        relative_path=str(audio_path.relative_to(Path(project_root))),
+        metadata_payload=metadata_payload,
+    )
     return metadata_payload
 
 
@@ -587,9 +599,11 @@ def sync_same_narrator_samples(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-20
-    @version    1.0.1
+    @version    1.1.0
     """
     ensure_character_voices_files(project_root)
+    if not load_voice_plan(project_root):
+        save_voice_targets(project_root, character_targets)
     narrator_audio_path, narrator_metadata_path = narrator_definition_service.selected_narrator_sample_paths(
         project_root
     )
@@ -618,7 +632,7 @@ def sync_same_narrator_samples(
     narrator_generated_at = str(narrator_metadata.get("generated_at", "")).strip() or _utc_now_iso()
     for target_payload in character_targets:
         target_id = str(target_payload.get("target_id", "")).strip()
-        audio_path, metadata_path = target_sample_paths(project_root, target_id)
+        audio_path, _metadata_path = target_sample_paths(project_root, target_id)
         audio_path.parent.mkdir(parents=True, exist_ok=True)
         metadata_payload = {
             "target_id": target_id,
@@ -635,7 +649,12 @@ def sync_same_narrator_samples(
             "runtime_result_summary": narrator_runtime_summary,
         }
         audio_path.write_bytes(narrator_audio_bytes)
-        _write_json(metadata_path, metadata_payload)
+        _update_target_sample_metadata(
+            project_root,
+            target_id,
+            relative_path=str(audio_path.relative_to(Path(project_root))),
+            metadata_payload=metadata_payload,
+        )
 
 
 def sample_runtime_available(
@@ -643,7 +662,8 @@ def sample_runtime_available(
     discovered_models: list[dict[str, object]],
 ) -> bool:
     """
-    @brief      Return whether one persisted character-voices sample still references a healthy discovered runtime model.
+    @brief      Return whether one persisted character-voices sample still references
+                a healthy discovered runtime model.
     @param[in]  sample_metadata Persisted sample metadata payload.
     @param[in]  discovered_models Current normalized discovered runtime models.
     @return     `True` when the sample still references a healthy available model.
@@ -816,8 +836,61 @@ def _normalize_voice_target(target_payload: dict[str, object]) -> dict[str, obje
                 else SAMPLE_MODE_VOICE_DESIGNER,
             )
         ).strip(),
+        "sample_audio_path": _optional_string(target_payload.get("sample_audio_path")),
+        "sample_metadata": (
+            dict(target_payload.get("sample_metadata"))
+            if isinstance(target_payload.get("sample_metadata"), dict)
+            else None
+        ),
         "updated_at": None if target_payload.get("updated_at") in (None, "") else str(target_payload.get("updated_at")),
     }
+
+
+def _update_target_sample_metadata(
+    project_root: str | Path,
+    target_id: str,
+    relative_path: str | None,
+    metadata_payload: dict[str, object] | None,
+) -> None:
+    """
+    @brief      Store or clear one character-voices sample metadata entry in `characters_voice.json`.
+    @param[in]  project_root Active project root folder.
+    @param[in]  target_id Target voice identifier.
+    @param[in]  relative_path Project-relative sample WAV path or `None`.
+    @param[in]  metadata_payload Sample metadata payload or `None` to clear it.
+    @return     None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-25
+    @version    0.1.0
+    """
+    normalized_target_id = str(target_id or "").strip()
+    voice_targets = load_voice_plan(project_root)
+    updated_targets: list[dict[str, object]] = []
+    target_found = False
+    for target_payload in voice_targets:
+        if str(target_payload.get("target_id", "")).strip() != normalized_target_id:
+            updated_targets.append(target_payload)
+            continue
+        target_found = True
+        updated_targets.append(
+            {
+                **dict(target_payload),
+                "sample_audio_path": relative_path,
+                "sample_metadata": None if metadata_payload is None else dict(metadata_payload),
+            }
+        )
+    if not target_found and metadata_payload is not None:
+        updated_targets.append(
+            _normalize_voice_target(
+                {
+                    **dict(metadata_payload),
+                    "target_id": normalized_target_id,
+                    "sample_audio_path": relative_path,
+                    "sample_metadata": dict(metadata_payload),
+                }
+            )
+        )
+    save_voice_targets(project_root, updated_targets)
 
 
 def _targets_path(project_root: str | Path) -> Path:
@@ -829,7 +902,7 @@ def _targets_path(project_root: str | Path) -> Path:
     @date       2026-04-21
     @version    0.1.0
     """
-    return Path(project_root) / config.CHARACTER_VOICES_FOLDER_NAME / config.CHARACTER_VOICES_TARGETS_FILE_NAME
+    return Path(project_root) / config.CHARACTER_VOICES_TARGETS_FILE_NAME
 
 
 def _selected_language_path(project_root: str | Path) -> Path:
@@ -841,7 +914,7 @@ def _selected_language_path(project_root: str | Path) -> Path:
     @date       2026-04-21
     @version    0.1.0
     """
-    return Path(project_root) / config.CHARACTER_VOICES_FOLDER_NAME / config.CHARACTER_VOICES_SELECTED_LANGUAGE_FILE_NAME
+    return Path(project_root) / config.PROJECT_MANIFEST_FILE_NAME
 
 
 def _audio_samples_root(project_root: str | Path) -> Path:
@@ -853,7 +926,21 @@ def _audio_samples_root(project_root: str | Path) -> Path:
     @date       2026-04-21
     @version    0.1.0
     """
-    return Path(project_root) / config.CHARACTER_VOICES_FOLDER_NAME / config.CHARACTER_VOICES_AUDIO_SAMPLES_FOLDER_NAME
+    return Path(project_root)
+
+
+def _normalized_audio_name(value: object) -> str:
+    """
+    @brief      Normalize one voice target value for a root-level audio file name.
+    @param[in]  value Candidate target identifier or name.
+    @return     Filesystem-safe lowercase token.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-25
+    @version    0.1.0
+    """
+    normalized = "".join(character.lower() if character.isalnum() else "_" for character in str(value).strip())
+    normalized = "_".join(part for part in normalized.split("_") if part)
+    return normalized or "voice"
 
 
 def _build_generation_request(
@@ -959,4 +1046,3 @@ def _utc_now_iso() -> str:
 
 
 # END OF FILE
-

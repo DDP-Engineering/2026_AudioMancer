@@ -43,12 +43,12 @@ def test_build_manifest_after_cleanup_reset_preserves_extraction_outputs() -> No
         "extraction_warning_count": 0,
         "operations": {
             "extraction": {
-                "folder_relative_path": config.EXTRACTION_FOLDER_NAME,
+                "folder_relative_path": config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH,
                 "status": "completed",
                 "output_paths": ["00_extraction/output_raw_text.txt"],
             },
             "cleanup": {
-                "folder_relative_path": config.CLEANUP_FOLDER_NAME,
+                "folder_relative_path": config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH,
                 "status": "completed",
                 "output_paths": ["10_cleanup/output_clean_text.txt"],
             },
@@ -87,8 +87,8 @@ def test_build_text_cleanup_state_loads_previews_and_notes(tmp_path) -> None:
         "PresenterProject",
         tmp_path,
     )
-    extraction_root = project_root / config.EXTRACTION_FOLDER_NAME
-    cleanup_root = project_root / config.CLEANUP_FOLDER_NAME
+    extraction_root = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH
+    cleanup_root = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH
     extraction_root.mkdir(exist_ok=True)
     cleanup_root.mkdir(exist_ok=True)
     (extraction_root / config.EXTRACTED_TEXT_FILE_NAME).write_text(
@@ -115,11 +115,11 @@ def test_build_text_cleanup_state_loads_previews_and_notes(tmp_path) -> None:
     (cleanup_root / config.OPERATION_STATE_FILE_NAME).write_text(
         json.dumps(
             {
-                "folder_relative_path": config.CLEANUP_FOLDER_NAME,
+                "folder_relative_path": config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH,
                 "status": "completed",
                 "input_paths": [],
-                "output_paths": [f"{config.CLEANUP_FOLDER_NAME}/{config.CLEANED_TEXT_FILE_NAME}"],
-                "artifact_paths": [f"{config.CLEANUP_FOLDER_NAME}/{config.CLEANUP_REPORT_FILE_NAME}"],
+                "output_paths": [f"{config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH}/{config.CLEANED_TEXT_FILE_NAME}"],
+                "artifact_paths": [f"{config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH}/{config.CLEANUP_REPORT_FILE_NAME}"],
                 "progress_current": 1,
                 "progress_total": 1,
                 "mode": "deterministic",
@@ -136,10 +136,12 @@ def test_build_text_cleanup_state_loads_previews_and_notes(tmp_path) -> None:
         encoding="utf-8",
     )
     manifest["source_document"] = {"original_name": "story.txt"}
-    manifest["extracted_text_relative_path"] = f"{config.EXTRACTION_FOLDER_NAME}/{config.EXTRACTED_TEXT_FILE_NAME}"
+    manifest["extracted_text_relative_path"] = (
+        f"{config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH}/{config.EXTRACTED_TEXT_FILE_NAME}"
+    )
     manifest["operations"]["cleanup"]["status"] = "completed"
     manifest["operations"]["cleanup"]["output_paths"] = [
-        f"{config.CLEANUP_FOLDER_NAME}/{config.CLEANED_TEXT_FILE_NAME}"
+        f"{config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH}/{config.CLEANED_TEXT_FILE_NAME}"
     ]
 
     cleanup_state = text_cleanup_state_service.build_text_cleanup_state(
@@ -167,8 +169,8 @@ def test_build_text_cleanup_state_surfaces_ai_cleanup_review_warning(tmp_path) -
         "PresenterAiCleanupWarningProject",
         tmp_path,
     )
-    extraction_root = project_root / config.EXTRACTION_FOLDER_NAME
-    cleanup_root = project_root / config.CLEANUP_FOLDER_NAME
+    extraction_root = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH
+    cleanup_root = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH
     extraction_root.mkdir(exist_ok=True)
     cleanup_root.mkdir(exist_ok=True)
     (extraction_root / config.EXTRACTED_TEXT_FILE_NAME).write_text(
@@ -214,11 +216,11 @@ def test_build_text_cleanup_state_surfaces_ai_cleanup_review_warning(tmp_path) -
     (cleanup_root / config.OPERATION_STATE_FILE_NAME).write_text(
         json.dumps(
             {
-                "folder_relative_path": config.CLEANUP_FOLDER_NAME,
+                "folder_relative_path": config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH,
                 "status": "completed",
                 "input_paths": [],
-                "output_paths": [f"{config.CLEANUP_FOLDER_NAME}/{config.CLEANED_TEXT_FILE_NAME}"],
-                "artifact_paths": [f"{config.CLEANUP_FOLDER_NAME}/{config.CLEANUP_REPORT_FILE_NAME}"],
+                "output_paths": [f"{config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH}/{config.CLEANED_TEXT_FILE_NAME}"],
+                "artifact_paths": [f"{config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH}/{config.CLEANUP_REPORT_FILE_NAME}"],
                 "progress_current": 1,
                 "progress_total": 1,
                 "mode": "ai_assisted",
@@ -244,11 +246,13 @@ def test_build_text_cleanup_state_surfaces_ai_cleanup_review_warning(tmp_path) -
         encoding="utf-8",
     )
     manifest["source_document"] = {"original_name": "story.txt"}
-    manifest["extracted_text_relative_path"] = f"{config.EXTRACTION_FOLDER_NAME}/{config.EXTRACTED_TEXT_FILE_NAME}"
+    manifest["extracted_text_relative_path"] = (
+        f"{config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH}/{config.EXTRACTED_TEXT_FILE_NAME}"
+    )
     manifest["operations"]["cleanup"]["status"] = "completed"
     manifest["operations"]["cleanup"]["mode"] = "ai_assisted"
     manifest["operations"]["cleanup"]["output_paths"] = [
-        f"{config.CLEANUP_FOLDER_NAME}/{config.CLEANED_TEXT_FILE_NAME}"
+        f"{config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH}/{config.CLEANED_TEXT_FILE_NAME}"
     ]
 
     cleanup_state = text_cleanup_state_service.build_text_cleanup_state(
@@ -275,16 +279,16 @@ def test_save_cleaned_text_edit_persists_text_and_resets_downstream(tmp_path) ->
         "CleanupEditProject",
         tmp_path,
     )
-    cleanup_root = project_root / config.CLEANUP_FOLDER_NAME
+    cleanup_root = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH
     cleanup_root.mkdir(exist_ok=True)
     (cleanup_root / config.CLEANED_TEXT_FILE_NAME).write_text("Original clean text\n", encoding="utf-8")
-    chunking_root = project_root / config.CHUNKING_FOLDER_NAME
+    chunking_root = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH
     chunking_root.mkdir(exist_ok=True)
     (chunking_root / "artifact.txt").write_text("stale", encoding="utf-8")
     manifest["current_stage"] = "text_chunking_ready"
     manifest["operations"]["cleanup"]["status"] = "completed"
     manifest["operations"]["cleanup"]["output_paths"] = [
-        f"{config.CLEANUP_FOLDER_NAME}/{config.CLEANED_TEXT_FILE_NAME}"
+        f"{config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH}/{config.CLEANED_TEXT_FILE_NAME}"
     ]
     manifest["operations"]["chunking"]["status"] = "completed"
     project_workspace_service.save_manifest(manifest, project_root)
@@ -320,12 +324,12 @@ def test_build_manifest_after_character_discovery_reset_returns_translation_read
         "narrator_language": "en",
         "operations": {
             "extraction": {
-                "folder_relative_path": config.EXTRACTION_FOLDER_NAME,
+                "folder_relative_path": config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH,
                 "status": "completed",
                 "output_paths": ["00_extraction/output_raw_text.txt"],
             },
             "cleanup": {
-                "folder_relative_path": config.CLEANUP_FOLDER_NAME,
+                "folder_relative_path": config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH,
                 "status": "completed",
                 "output_paths": ["10_cleanup/output_clean_text.txt"],
             },

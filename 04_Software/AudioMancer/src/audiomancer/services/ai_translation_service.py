@@ -33,7 +33,6 @@ from audiomancer.services import (
 )
 from audiomancer.services.logging_service import get_component_logger, trace_function
 from audiomancer.services.operation_runtime_service import (
-    build_operation_input_snapshot_path,
     build_operation_output_path,
     progress_percent,
     raise_if_cancelled,
@@ -81,7 +80,7 @@ def load_operation_state(project_root: str | Path) -> dict[str, object] | None:
     state_path = resolve_operation_path(
         project_root,
         "translation",
-        config.OPERATION_STATE_FILE_NAME,
+        config.TRANSLATION_STATE_FILE_NAME,
     )
     if not state_path.is_file():
         return None
@@ -620,11 +619,17 @@ def reset_translation(project_root: str | Path) -> None:
     @date       2026-04-07
     @version    0.1.0
     """
-    translation_root = Path(project_root) / config.TRANSLATION_FOLDER_NAME
-    translation_root.mkdir(parents=True, exist_ok=True)
-    for child in list(translation_root.iterdir()):
-        if child.is_file():
-            child.unlink()
+    for artifact_name in (
+        config.TRANSLATED_CHUNKS_FILE_NAME,
+        config.TRANSLATION_REPORT_FILE_NAME,
+        config.TRANSLATION_STATE_FILE_NAME,
+    ):
+        artifact_path = Path(project_root) / artifact_name
+        if artifact_path.is_file():
+            artifact_path.unlink()
+    for log_path in Path(project_root).glob(f"{config.AI_TRANSACTION_LOG_FILE_PREFIX}translation_*.log"):
+        if log_path.is_file():
+            log_path.unlink()
 
 
 # HELPER FUNCTIONS
@@ -760,11 +765,7 @@ def _persist_translation_state(
     @date       2026-04-07
     @version    0.1.0
     """
-    input_path = _translation_input_snapshot_path(project_root)
-    input_path.write_text(
-        json.dumps(source_chunks, indent=2, ensure_ascii=False) + "\n",
-        encoding="utf-8",
-    )
+    _ = source_chunks
     translated_path = build_operation_output_path(
         project_root,
         "translation",
@@ -787,7 +788,7 @@ def _persist_translation_state(
         state_path = build_operation_output_path(
             project_root,
             "translation",
-            config.OPERATION_STATE_FILE_NAME,
+            config.TRANSLATION_STATE_FILE_NAME,
         )
         state_path.write_text(
             json.dumps(operation_state, indent=2, ensure_ascii=False) + "\n",
@@ -898,7 +899,7 @@ def _build_operation_state(
         config.TRANSLATION_REPORT_FILE_NAME,
     )
     return {
-        "folder_relative_path": config.TRANSLATION_FOLDER_NAME,
+        "folder_relative_path": config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH,
         "status": status,
         "input_paths": [relative_to_project(project_root, input_path)],
         "output_paths": [relative_to_project(project_root, output_path)],
@@ -969,7 +970,7 @@ def _resolve_log_path(project_root: Path, started_at: str) -> Path:
     log_path = build_operation_output_path(
         project_root,
         "translation",
-        f"{config.AI_TRANSACTION_LOG_FILE_PREFIX}{timestamp_token}.log",
+        config.ai_transaction_log_file_name("translation", timestamp_token),
     )
     if not log_path.exists():
         log_path.write_text("", encoding="utf-8")
@@ -978,31 +979,14 @@ def _resolve_log_path(project_root: Path, started_at: str) -> Path:
 
 def _translation_input_snapshot_path(project_root: Path) -> Path:
     """
-    @brief      Execute the translation input snapshot path helper.
+    @brief      Resolve the canonical chunking artifact used as translation input.
     @param[in]  project_root Active project root folder.
     @return     Helper result.
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
+    @date       2026-04-25
+    @version    0.2.0
     """
-    existing_state = load_operation_state(project_root) or {}
-    input_paths = existing_state.get("input_paths", [])
-    if isinstance(input_paths, list):
-        for relative_path in input_paths:
-            if not isinstance(relative_path, str):
-                continue
-            resolved_path = project_root / relative_path
-            if (
-                resolved_path.is_file()
-                and resolved_path.suffix.casefold() == ".json"
-                and resolved_path.name.startswith(config.OPERATION_INPUT_FILE_PREFIX)
-            ):
-                return resolved_path
-    return build_operation_input_snapshot_path(
-        project_root,
-        "translation",
-        f"{_translation_source_snapshot_base_name(project_root)}.json",
-    )
+    return project_root / config.CHUNK_ARTIFACT_FILE_NAME
 
 
 def _translation_source_snapshot_base_name(project_root: Path) -> str:

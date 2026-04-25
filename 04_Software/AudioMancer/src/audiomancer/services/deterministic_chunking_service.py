@@ -27,7 +27,6 @@ import re
 from audiomancer import config
 from audiomancer.services.logging_service import get_component_logger, trace_function
 from audiomancer.services.operation_runtime_service import (
-    build_operation_input_snapshot_path,
     build_operation_output_path,
     progress_percent,
     raise_if_cancelled,
@@ -85,7 +84,7 @@ def chunk_text(
     if not isinstance(source_document, dict):
         raise ValueError("No imported source is available for deterministic chunking.")
 
-    cleaned_relative_path = f"{config.CLEANUP_FOLDER_NAME}/{config.CLEANED_TEXT_FILE_NAME}"
+    cleaned_relative_path = config.CLEANED_TEXT_FILE_NAME
 
     cleaned_path = resolved_project_root / cleaned_relative_path
     if not cleaned_path.is_file():
@@ -96,13 +95,8 @@ def chunk_text(
     if not paragraph_records:
         raise ValueError("Cleaned text does not contain any chunkable paragraphs.")
 
-    original_name = str(source_document.get("original_name") or Path(cleaned_relative_path).name)
-    input_snapshot_path = build_operation_input_snapshot_path(
-        resolved_project_root,
-        "chunking",
-        original_name,
-    )
-    input_snapshot_path.write_text(input_text, encoding="utf-8")
+    _ = source_document
+    input_snapshot_path = cleaned_path
 
     output_path = build_operation_output_path(
         resolved_project_root,
@@ -117,7 +111,7 @@ def chunk_text(
     state_path = build_operation_output_path(
         resolved_project_root,
         "chunking",
-        config.OPERATION_STATE_FILE_NAME,
+        config.CHUNKING_STATE_FILE_NAME,
     )
 
     existing_state = _load_operation_state(state_path) or {}
@@ -236,7 +230,7 @@ def load_operation_state(project_root: str | Path) -> OperationStatePayload | No
     @date       2026-04-07
     @version    0.1.0
     """
-    return _load_operation_state(resolve_operation_path(project_root, "chunking", config.OPERATION_STATE_FILE_NAME))
+    return _load_operation_state(resolve_operation_path(project_root, "chunking", config.CHUNKING_STATE_FILE_NAME))
 
 
 @trace_function(_CHUNKING_LOGGER)
@@ -477,7 +471,7 @@ def _build_operation_state(
     if report_path is not None and report_path.is_file():
         artifact_paths.append(relative_to_project(project_root, report_path))
     return {
-        "folder_relative_path": config.CHUNKING_FOLDER_NAME,
+        "folder_relative_path": config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH,
         "status": status,
         "input_paths": [relative_to_project(project_root, input_snapshot_path)],
         "output_paths": ([relative_to_project(project_root, output_path)] if output_path.is_file() else []),

@@ -163,7 +163,9 @@ def test_audio_blocks_service_skips_voiceweaver_for_metadata_only_blocks(monkeyp
     @version    0.1.0
     """
     project_root, manifest = _create_audio_blocks_project(tmp_path, "AudioBlocksServiceMetadataOnly")
-    speech_blocks_path = project_root / config.SPEECH_BLOCKS_FOLDER_NAME / config.SPEECH_BLOCKS_OUTPUT_FILE_NAME
+    speech_blocks_path = (
+        project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.SPEECH_BLOCKS_OUTPUT_FILE_NAME
+    )
     speech_blocks_payload = json.loads(speech_blocks_path.read_text(encoding="utf-8"))
     speech_blocks_payload.append(
         {
@@ -344,7 +346,9 @@ def test_audio_blocks_service_reconcile_after_resplit_deletes_changed_chunk_and_
     @version    0.1.0
     """
     project_root, _manifest = _create_audio_blocks_project(tmp_path, "AudioBlocksServiceResplitReconcile")
-    speech_blocks_path = project_root / config.SPEECH_BLOCKS_FOLDER_NAME / config.SPEECH_BLOCKS_OUTPUT_FILE_NAME
+    speech_blocks_path = (
+        project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.SPEECH_BLOCKS_OUTPUT_FILE_NAME
+    )
     speech_blocks_path.write_text(
         json.dumps(
             [
@@ -380,7 +384,7 @@ def test_audio_blocks_service_reconcile_after_resplit_deletes_changed_chunk_and_
         + "\n",
         encoding="utf-8",
     )
-    audio_root = project_root / config.AUDIO_BLOCKS_FOLDER_NAME
+    audio_root = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH
     generated_root = audio_root / config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME
     generated_root.mkdir(parents=True, exist_ok=True)
     changed_audio_path = generated_root / "000001_narrator.wav"
@@ -470,7 +474,7 @@ def test_audio_blocks_service_normalize_speaker_name_handles_diacritics() -> Non
     @date       2026-04-23
     @version    0.1.0
     """
-    assert audio_blocks_service.normalize_speaker_name(" Maria-Elena Ștefan!? ") == "maria_elena_stefan"
+    assert audio_blocks_service.normalize_speaker_name(" Maria-Elena È˜tefan!? ") == "maria_elena_stefan"
 
 
 def test_audio_blocks_service_resume_continues_from_saved_checkpoint(monkeypatch, tmp_path) -> None:
@@ -611,7 +615,7 @@ def test_audio_blocks_service_input_fingerprint_mismatch_starts_fresh_run(monkey
     """
     project_root, manifest = _create_audio_blocks_project(tmp_path, "AudioBlocksServiceFingerprint")
     _seed_generated_audio_blocks(project_root)
-    state_path = project_root / config.AUDIO_BLOCKS_FOLDER_NAME / config.OPERATION_STATE_FILE_NAME
+    state_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.OPERATION_STATE_FILE_NAME
     operation_state = json.loads(state_path.read_text(encoding="utf-8"))
     operation_state["metadata"]["input_fingerprint"] = "stale-fingerprint"
     state_path.write_text(json.dumps(operation_state, indent=2) + "\n", encoding="utf-8")
@@ -773,7 +777,7 @@ def test_audio_blocks_service_approve_all_marks_only_generated_blocks(tmp_path) 
     """
     project_root, _manifest = _create_audio_blocks_project(tmp_path, "AudioBlocksServiceApproveAll")
     _seed_generated_audio_blocks(project_root)
-    output_path = project_root / config.AUDIO_BLOCKS_FOLDER_NAME / config.AUDIO_BLOCKS_OUTPUT_FILE_NAME
+    output_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.AUDIO_BLOCKS_OUTPUT_FILE_NAME
     persisted_blocks = json.loads(output_path.read_text(encoding="utf-8"))
     persisted_blocks[1]["generated"] = False
     persisted_blocks[1]["audio_relative_path"] = None
@@ -863,7 +867,7 @@ def _create_audio_blocks_project(tmp_path, name: str):
     manifest["current_stage"] = "speech_blocks_ready"
     project_workspace_service.save_manifest(manifest, project_root)
     character_voices_service.save_selected_voice_language(project_root, "en")
-    speech_blocks_root = project_root / config.SPEECH_BLOCKS_FOLDER_NAME
+    speech_blocks_root = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH
     speech_blocks_root.mkdir(parents=True, exist_ok=True)
     speech_blocks_payload = [
         {
@@ -945,7 +949,9 @@ def _seed_generated_audio_blocks(project_root) -> None:
     @version    0.1.0
     """
     speech_blocks = speech_blocks_service.load_speech_blocks(project_root)
-    audio_root = project_root / config.AUDIO_BLOCKS_FOLDER_NAME / config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME
+    audio_root = (
+        project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME
+    )
     audio_root.mkdir(parents=True, exist_ok=True)
     audio_blocks_payload = []
     for sequence_index, speech_block in enumerate(speech_blocks, start=1):
@@ -982,11 +988,13 @@ def _seed_generated_audio_blocks(project_root) -> None:
             }
         )
     audio_root.parent.mkdir(parents=True, exist_ok=True)
-    (project_root / config.AUDIO_BLOCKS_FOLDER_NAME / config.AUDIO_BLOCKS_OUTPUT_FILE_NAME).write_text(
+    (project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.AUDIO_BLOCKS_OUTPUT_FILE_NAME).write_text(
         json.dumps(audio_blocks_payload, indent=2) + "\n",
         encoding="utf-8",
     )
-    (project_root / config.AUDIO_BLOCKS_FOLDER_NAME / config.AUDIO_BLOCKS_VOICE_CLONE_PROFILES_FILE_NAME).write_text(
+    (
+        project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.AUDIO_BLOCKS_VOICE_CLONE_PROFILES_FILE_NAME
+    ).write_text(
         json.dumps(
             [
                 {
@@ -1022,16 +1030,18 @@ def _seed_generated_audio_blocks(project_root) -> None:
         "warnings": [],
         "updated_at": "2026-04-23T12:10:00+00:00",
     }
-    (project_root / config.AUDIO_BLOCKS_FOLDER_NAME / config.AUDIO_BLOCKS_REPORT_FILE_NAME).write_text(
+    (project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.AUDIO_BLOCKS_REPORT_FILE_NAME).write_text(
         json.dumps(report_payload, indent=2) + "\n",
         encoding="utf-8",
     )
     operation_state = {
-        "folder_relative_path": config.AUDIO_BLOCKS_FOLDER_NAME,
+        "folder_relative_path": config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH,
         "status": "completed",
-        "input_paths": [f"{config.AUDIO_BLOCKS_FOLDER_NAME}/{config.AUDIO_BLOCKS_INPUT_SPEECH_BLOCKS_FILE_NAME}"],
-        "output_paths": [f"{config.AUDIO_BLOCKS_FOLDER_NAME}/{config.AUDIO_BLOCKS_OUTPUT_FILE_NAME}"],
-        "artifact_paths": [f"{config.AUDIO_BLOCKS_FOLDER_NAME}/{config.AUDIO_BLOCKS_REPORT_FILE_NAME}"],
+        "input_paths": [
+            f"{config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH}/{config.AUDIO_BLOCKS_INPUT_SPEECH_BLOCKS_FILE_NAME}"
+        ],
+        "output_paths": [f"{config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH}/{config.AUDIO_BLOCKS_OUTPUT_FILE_NAME}"],
+        "artifact_paths": [f"{config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH}/{config.AUDIO_BLOCKS_REPORT_FILE_NAME}"],
         "progress_current": 2,
         "progress_total": 2,
         "mode": "tts_generation",
@@ -1054,7 +1064,7 @@ def _seed_generated_audio_blocks(project_root) -> None:
         },
         "resume_checkpoint": {"next_profile_index": 0, "next_speech_block_index": 2},
     }
-    (project_root / config.AUDIO_BLOCKS_FOLDER_NAME / config.OPERATION_STATE_FILE_NAME).write_text(
+    (project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.OPERATION_STATE_FILE_NAME).write_text(
         json.dumps(operation_state, indent=2) + "\n",
         encoding="utf-8",
     )

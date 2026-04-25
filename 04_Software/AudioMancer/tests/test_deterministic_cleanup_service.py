@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-  # noqa: UP009
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -46,9 +46,9 @@ def test_cleanup_writes_runtime_artifacts_and_preserves_structure(tmp_path) -> N
         "imported_at": "2026-04-06T12:00:00+00:00",
         "size_bytes": source_path.stat().st_size,
     }
-    extracted_relative_path = "00_extraction/output_raw_text.txt"
+    extracted_relative_path = config.EXTRACTED_TEXT_FILE_NAME
     manifest["extracted_text_relative_path"] = extracted_relative_path
-    (project_root / "00_extraction" / "output_raw_text.txt").write_text(
+    (project_root / config.EXTRACTED_TEXT_FILE_NAME).write_text(
         (
             "Book Title\n1\nChapter I\nThis is the first paragraph"
             "\n\n\f\n\n"
@@ -59,12 +59,10 @@ def test_cleanup_writes_runtime_artifacts_and_preserves_structure(tmp_path) -> N
 
     report_payload = deterministic_cleanup_service.clean_text(project_root, manifest)
 
-    cleanup_root = project_root / config.CLEANUP_FOLDER_NAME
-    assert (cleanup_root / "input_story.pdf").is_file()
-    assert (cleanup_root / config.CLEANED_TEXT_FILE_NAME).is_file()
-    assert (cleanup_root / config.CLEANUP_REPORT_FILE_NAME).is_file()
-    assert (cleanup_root / "state_operation.json").is_file()
-    output_text = (cleanup_root / config.CLEANED_TEXT_FILE_NAME).read_text(encoding="utf-8")
+    assert (project_root / config.CLEANED_TEXT_FILE_NAME).is_file()
+    assert (project_root / config.CLEANUP_REPORT_FILE_NAME).is_file()
+    assert (project_root / config.CLEANUP_STATE_FILE_NAME).is_file()
+    output_text = (project_root / config.CLEANED_TEXT_FILE_NAME).read_text(encoding="utf-8")
     assert "Book Title" not in output_text
     assert "Chapter I" in output_text
     assert "This is the first paragraph continuing on the second page." in output_text
@@ -93,8 +91,8 @@ def test_cleanup_persists_resumable_state_after_cancellation(tmp_path) -> None:
         "imported_at": "2026-04-06T12:00:00+00:00",
         "size_bytes": source_path.stat().st_size,
     }
-    manifest["extracted_text_relative_path"] = "00_extraction/output_raw_text.txt"
-    (project_root / "00_extraction" / "output_raw_text.txt").write_text(
+    manifest["extracted_text_relative_path"] = config.EXTRACTED_TEXT_FILE_NAME
+    (project_root / config.EXTRACTED_TEXT_FILE_NAME).write_text(
         "Header\n1\nParagraph one.\n\n\f\n\nHeader\n2\nParagraph two.",
         encoding="utf-8",
     )
@@ -111,9 +109,7 @@ def test_cleanup_persists_resumable_state_after_cancellation(tmp_path) -> None:
             cancel_requested=lambda: should_cancel["value"],
         )
 
-    state_payload = json.loads(
-        (project_root / config.CLEANUP_FOLDER_NAME / config.OPERATION_STATE_FILE_NAME).read_text(encoding="utf-8")
-    )
+    state_payload = json.loads((project_root / config.CLEANUP_STATE_FILE_NAME).read_text(encoding="utf-8"))
     assert state_payload["status"] == "running"
     assert state_payload["progress_current"] < state_payload["progress_total"]
     assert state_payload["resume_checkpoint"] is not None
@@ -139,8 +135,8 @@ def test_cleanup_removes_separator_marks_and_heals_false_phrase_breaks(tmp_path)
         "imported_at": "2026-04-06T12:00:00+00:00",
         "size_bytes": source_path.stat().st_size,
     }
-    manifest["extracted_text_relative_path"] = "00_extraction/output_raw_text.txt"
-    (project_root / config.EXTRACTION_FOLDER_NAME / "output_raw_text.txt").write_text(
+    manifest["extracted_text_relative_path"] = config.EXTRACTED_TEXT_FILE_NAME
+    (project_root / config.EXTRACTED_TEXT_FILE_NAME).write_text(
         (
             '"Drenthe will shoot this industrial if\n\n'
             'you swear that Heroes of the Periphery will then be the next project,"\n\n'
@@ -152,9 +148,7 @@ def test_cleanup_removes_separator_marks_and_heals_false_phrase_breaks(tmp_path)
 
     report_payload = deterministic_cleanup_service.clean_text(project_root, manifest)
 
-    output_text = (project_root / config.CLEANUP_FOLDER_NAME / config.CLEANED_TEXT_FILE_NAME).read_text(
-        encoding="utf-8"
-    )
+    output_text = (project_root / config.CLEANED_TEXT_FILE_NAME).read_text(encoding="utf-8")
     assert "* * *" not in output_text
     assert '"Drenthe will shoot this industrial if you swear that Heroes of the Periphery' in output_text
     assert report_payload["removed_separator_line_count"] == 1
@@ -180,22 +174,20 @@ def test_cleanup_displays_dialogue_markers_on_new_lines(tmp_path) -> None:
         "imported_at": "2026-04-06T12:00:00+00:00",
         "size_bytes": source_path.stat().st_size,
     }
-    manifest["extracted_text_relative_path"] = "00_extraction/output_raw_text.txt"
-    (project_root / config.EXTRACTION_FOLDER_NAME / "output_raw_text.txt").write_text(
+    manifest["extracted_text_relative_path"] = config.EXTRACTED_TEXT_FILE_NAME
+    (project_root / config.EXTRACTED_TEXT_FILE_NAME).write_text(
         (
-            "Chani îl zori, trăgându-l de mantie: - Mai iute. Se face lumină. "
-            "- Unde s-au dus oamenii care s-au urcat pe stânci?"
+            "Chani Ã®l zori, trÄƒgÃ¢ndu-l de mantie: - Mai iute. Se face luminÄƒ. "
+            "- Unde s-au dus oamenii care s-au urcat pe stÃ¢nci?"
         ),
         encoding="utf-8",
     )
 
     deterministic_cleanup_service.clean_text(project_root, manifest)
 
-    output_text = (project_root / config.CLEANUP_FOLDER_NAME / config.CLEANED_TEXT_FILE_NAME).read_text(
-        encoding="utf-8"
-    )
+    output_text = (project_root / config.CLEANED_TEXT_FILE_NAME).read_text(encoding="utf-8")
     assert "mantie:\n- Mai iute." in output_text
-    assert "lumină.\n- Unde s-au dus oamenii" in output_text
+    assert "luminÄƒ.\n- Unde s-au dus oamenii" in output_text
 
 
 def test_cleanup_preserves_original_newline_after_dialogue_line(tmp_path) -> None:
@@ -218,18 +210,16 @@ def test_cleanup_preserves_original_newline_after_dialogue_line(tmp_path) -> Non
         "imported_at": "2026-04-06T12:00:00+00:00",
         "size_bytes": source_path.stat().st_size,
     }
-    manifest["extracted_text_relative_path"] = "00_extraction/output_raw_text.txt"
-    (project_root / config.EXTRACTION_FOLDER_NAME / "output_raw_text.txt").write_text(
-        ("- E primul schimb al gărzii de zi, îi răspunse fata. Grăbește-te!\nPostează santinele, gîndi Paul."),
+    manifest["extracted_text_relative_path"] = config.EXTRACTED_TEXT_FILE_NAME
+    (project_root / config.EXTRACTED_TEXT_FILE_NAME).write_text(
+        ("- E primul schimb al gÄƒrzii de zi, Ã®i rÄƒspunse fata. GrÄƒbeÈ™te-te!\nPosteazÄƒ santinele, gÃ®ndi Paul."),
         encoding="utf-8",
     )
 
     deterministic_cleanup_service.clean_text(project_root, manifest)
 
-    output_text = (project_root / config.CLEANUP_FOLDER_NAME / config.CLEANED_TEXT_FILE_NAME).read_text(
-        encoding="utf-8"
-    )
-    assert "Grăbește-te!\nPostează santinele" in output_text
+    output_text = (project_root / config.CLEANED_TEXT_FILE_NAME).read_text(encoding="utf-8")
+    assert "GrÄƒbeÈ™te-te!\nPosteazÄƒ santinele" in output_text
 
 
 # END OF FILE

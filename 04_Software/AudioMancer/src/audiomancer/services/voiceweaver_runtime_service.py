@@ -14,7 +14,7 @@
          by the TTS Settings dialog and Narrator workflow.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-23
-@version 0.9.0
+@version 0.9.1
 """
 
 # IMPORTS
@@ -128,6 +128,22 @@ def _send_json_request(
     if not response_body.strip():
         return None
     return json.loads(response_body)
+
+
+def _add_tts_language_field(payload: dict[str, object], language: str) -> None:
+    """
+    @brief      Add the VoiceWeaver TTS language field when the selected language should be explicit.
+    @param[in]  payload Mutable outbound TTS request payload.
+    @param[in]  language Selected synthesis language code.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-25
+    @version    0.1.0
+    """
+    normalized_language = str(language).strip()
+    if normalized_language and normalized_language != "ro":
+        payload["language"] = normalized_language
 
 
 def _send_multipart_request(
@@ -818,9 +834,9 @@ def generate_custom_voice(
     """
     payload: dict[str, object] = {
         "speaker": str(speaker).strip(),
-        "language": str(language).strip(),
         "text": str(text).strip(),
     }
+    _add_tts_language_field(payload, language)
     if str(instruct).strip():
         payload["instruct"] = str(instruct).strip()
     normalized_model_parameters = _normalize_model_parameters(model_parameters)
@@ -857,10 +873,10 @@ def generate_voice_design(
     @version    1.1.0
     """
     payload = {
-        "language": str(language).strip(),
         "text": str(text).strip(),
         "voice_description": str(voice_description).strip(),
     }
+    _add_tts_language_field(payload, language)
     normalized_model_parameters = _normalize_model_parameters(model_parameters)
     if normalized_model_parameters:
         payload["model_parameters"] = normalized_model_parameters
@@ -905,9 +921,9 @@ def generate_voice_clone(
     headers = _build_request_headers(runtime_api_key)
     form_fields: dict[str, object] = {
         "sample_text": str(sample_text).strip(),
-        "language": str(language).strip(),
         "text": str(text).strip(),
     }
+    _add_tts_language_field(form_fields, language)
     normalized_model_parameters = _normalize_model_parameters(model_parameters)
     if normalized_model_parameters:
         form_fields["model_parameters_json"] = json.dumps(normalized_model_parameters)
@@ -962,8 +978,8 @@ def create_voice_clone_prompt(
     headers = _build_request_headers(runtime_api_key)
     form_fields: dict[str, object] = {
         "sample_text": str(sample_text).strip(),
-        "language": str(language).strip(),
     }
+    _add_tts_language_field(form_fields, language)
     normalized_model_parameters = _normalize_model_parameters(model_parameters)
     if normalized_model_parameters:
         form_fields["model_parameters_json"] = json.dumps(normalized_model_parameters)
@@ -1017,9 +1033,9 @@ def generate_voice_clone_from_prompt(
     """
     payload: dict[str, object] = {
         "voice_clone_prompt": voice_clone_prompt,
-        "language": str(language).strip(),
         "text": str(text).strip(),
     }
+    _add_tts_language_field(payload, language)
     normalized_model_parameters = _normalize_model_parameters(model_parameters)
     if normalized_model_parameters:
         payload["model_parameters"] = normalized_model_parameters

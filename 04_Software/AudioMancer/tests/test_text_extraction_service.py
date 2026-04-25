@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-  # noqa: UP009
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -34,7 +34,7 @@ from audiomancer.services import project_workspace_service, text_extraction_serv
 
 def test_extract_text_writes_self_contained_artifacts_for_txt_source(tmp_path) -> None:
     """
-    @brief      Verify TXT extraction writes the copied input, output, report, and state files.
+    @brief      Verify TXT extraction writes flat output, report, and state files.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
@@ -52,18 +52,18 @@ def test_extract_text_writes_self_contained_artifacts_for_txt_source(tmp_path) -
 
     report_payload = text_extraction_service.extract_text(project_root, manifest)
 
-    extraction_root = project_root / "00_extraction"
-    assert (extraction_root / "input_story.txt").is_file()
-    assert (extraction_root / config.EXTRACTED_TEXT_FILE_NAME).read_text(encoding="utf-8") == (
+    assert source_path.is_file()
+    assert (project_root / config.EXTRACTED_TEXT_FILE_NAME).read_text(encoding="utf-8") == (
         "First line\n\nSecond line\n"
     )
     assert report_payload["source_type"] == "txt"
     assert report_payload["word_count"] == 4
 
-    state_payload = json.loads((extraction_root / config.OPERATION_STATE_FILE_NAME).read_text(encoding="utf-8"))
+    state_payload = json.loads((project_root / config.EXTRACTION_STATE_FILE_NAME).read_text(encoding="utf-8"))
     assert state_payload["status"] == "completed"
-    assert state_payload["output_paths"] == [f"00_extraction/{config.EXTRACTED_TEXT_FILE_NAME}"]
-    assert state_payload["artifact_paths"] == [f"00_extraction/{config.EXTRACTION_REPORT_FILE_NAME}"]
+    assert state_payload["input_paths"] == ["story.txt"]
+    assert state_payload["output_paths"] == [config.EXTRACTED_TEXT_FILE_NAME]
+    assert state_payload["artifact_paths"] == [config.EXTRACTION_REPORT_FILE_NAME]
 
 
 @pytest.mark.parametrize(
@@ -111,7 +111,7 @@ def test_extract_text_supports_document_formats(
 
     report_payload = text_extraction_service.extract_text(project_root, manifest)
 
-    output_text = (project_root / "00_extraction" / config.EXTRACTED_TEXT_FILE_NAME).read_text(encoding="utf-8")
+    output_text = (project_root / config.EXTRACTED_TEXT_FILE_NAME).read_text(encoding="utf-8")
     assert file_type == report_payload["source_type"]
     assert report_payload["character_count"] > 0
     assert "Story" in output_text
@@ -139,11 +139,9 @@ def test_extract_text_reports_pdf_warnings_and_total_pages(tmp_path) -> None:
 
     assert report_payload["page_count"] == 2
     assert report_payload["warnings"] == ["PDF page 1 did not contain extractable text."]
-    output_text = (project_root / "00_extraction" / config.EXTRACTED_TEXT_FILE_NAME).read_text(encoding="utf-8")
+    output_text = (project_root / config.EXTRACTED_TEXT_FILE_NAME).read_text(encoding="utf-8")
     assert output_text == "Story page two\n"
-    state_payload = json.loads(
-        (project_root / "00_extraction" / config.OPERATION_STATE_FILE_NAME).read_text(encoding="utf-8")
-    )
+    state_payload = json.loads((project_root / config.EXTRACTION_STATE_FILE_NAME).read_text(encoding="utf-8"))
     assert state_payload["progress_total"] == 2
 
 
@@ -192,9 +190,7 @@ def test_extract_text_splits_rtf_into_multiple_progress_units(tmp_path) -> None:
 
     text_extraction_service.extract_text(project_root, manifest)
 
-    state_payload = json.loads(
-        (project_root / "00_extraction" / config.OPERATION_STATE_FILE_NAME).read_text(encoding="utf-8")
-    )
+    state_payload = json.loads((project_root / config.EXTRACTION_STATE_FILE_NAME).read_text(encoding="utf-8"))
     assert state_payload["progress_total"] >= 2
 
 
@@ -229,9 +225,7 @@ def test_extract_text_splits_epub_into_multiple_progress_units(tmp_path) -> None
 
     text_extraction_service.extract_text(project_root, manifest)
 
-    state_payload = json.loads(
-        (project_root / "00_extraction" / config.OPERATION_STATE_FILE_NAME).read_text(encoding="utf-8")
-    )
+    state_payload = json.loads((project_root / config.EXTRACTION_STATE_FILE_NAME).read_text(encoding="utf-8"))
     assert state_payload["progress_total"] >= 2
 
 
@@ -275,17 +269,13 @@ def test_extract_text_resumes_unfinished_docx_extraction(tmp_path) -> None:
     _write_docx_source(source_path, paragraphs=["Story first", "Story second"])
     manifest["source_document"] = _build_source_document(source_path, "docx")
 
-    extraction_root = project_root / "00_extraction"
-    extraction_root.mkdir(exist_ok=True)
-    input_snapshot = extraction_root / "input_story.docx"
-    input_snapshot.write_bytes(source_path.read_bytes())
-    output_path = extraction_root / config.EXTRACTED_TEXT_FILE_NAME
+    output_path = project_root / config.EXTRACTED_TEXT_FILE_NAME
     output_path.write_text("Story first", encoding="utf-8")
     state_payload = {
-        "folder_relative_path": "00_extraction",
+        "folder_relative_path": ".",
         "status": "running",
-        "input_paths": ["00_extraction/input_story.docx"],
-        "output_paths": [f"00_extraction/{config.EXTRACTED_TEXT_FILE_NAME}"],
+        "input_paths": ["story.docx"],
+        "output_paths": [config.EXTRACTED_TEXT_FILE_NAME],
         "artifact_paths": [],
         "progress_current": 1,
         "progress_total": 2,
@@ -297,7 +287,7 @@ def test_extract_text_resumes_unfinished_docx_extraction(tmp_path) -> None:
         "metadata": {"warnings": [], "source_type": "docx"},
         "resume_checkpoint": {"next_unit_index": 1},
     }
-    (extraction_root / config.OPERATION_STATE_FILE_NAME).write_text(
+    (project_root / config.EXTRACTION_STATE_FILE_NAME).write_text(
         json.dumps(state_payload, indent=2, ensure_ascii=False) + "\n",
         encoding="utf-8",
     )
@@ -308,9 +298,9 @@ def test_extract_text_resumes_unfinished_docx_extraction(tmp_path) -> None:
     assert output_path.read_text(encoding="utf-8") == "Story first\n\nStory second\n"
 
 
-def test_reset_extraction_and_downstream_preserves_input_snapshot(tmp_path) -> None:
+def test_reset_extraction_and_downstream_preserves_source_document(tmp_path) -> None:
     """
-    @brief      Verify a destructive extraction reset clears downstream data but keeps the copied input.
+    @brief      Verify a destructive extraction reset clears known runtime data but keeps the source document.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
@@ -322,18 +312,20 @@ def test_reset_extraction_and_downstream_preserves_input_snapshot(tmp_path) -> N
         "ResetProject",
         tmp_path,
     )
-    extraction_root = project_root / "00_extraction"
-    (extraction_root / "input_story.txt").write_text("snapshot", encoding="utf-8")
-    (extraction_root / config.EXTRACTED_TEXT_FILE_NAME).write_text("output", encoding="utf-8")
-    (project_root / "10_cleanup" / "cleanup.txt").write_text("cleanup", encoding="utf-8")
-    (project_root / "20_chunking" / config.CHUNK_ARTIFACT_FILE_NAME).write_text("[]", encoding="utf-8")
+    source_path = project_root / "story.txt"
+    source_path.write_text("snapshot", encoding="utf-8")
+    (project_root / config.EXTRACTED_TEXT_FILE_NAME).write_text("output", encoding="utf-8")
+    (project_root / config.CLEANED_TEXT_FILE_NAME).write_text("cleanup", encoding="utf-8")
+    (project_root / config.CHUNK_ARTIFACT_FILE_NAME).write_text("[]", encoding="utf-8")
+    (project_root / "operator_note.txt").write_text("keep", encoding="utf-8")
 
     text_extraction_service.reset_extraction_and_downstream(project_root)
 
-    assert (extraction_root / "input_story.txt").is_file()
-    assert (extraction_root / config.EXTRACTED_TEXT_FILE_NAME).exists() is False
-    assert list((project_root / "10_cleanup").iterdir()) == []
-    assert list((project_root / "20_chunking").iterdir()) == []
+    assert source_path.is_file()
+    assert (project_root / "operator_note.txt").is_file()
+    assert (project_root / config.EXTRACTED_TEXT_FILE_NAME).exists() is False
+    assert (project_root / config.CLEANED_TEXT_FILE_NAME).exists() is False
+    assert (project_root / config.CHUNK_ARTIFACT_FILE_NAME).exists() is False
 
 
 def _build_source_document(source_path: Path, file_type: str) -> dict[str, object]:

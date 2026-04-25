@@ -74,13 +74,13 @@ def _create_project(tmp_path, name: str):
     manifest["current_stage"] = "speech_blocks_ready"
     manifest["operations"]["chunking"]["status"] = "completed"
     manifest["operations"]["chunking"]["output_paths"] = [
-        f"{config.CHUNKING_FOLDER_NAME}/{config.CHUNK_ARTIFACT_FILE_NAME}"
+        f"{config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH}/{config.CHUNK_ARTIFACT_FILE_NAME}"
     ]
     manifest["operations"]["speech_blocks"]["status"] = "completed"
     manifest["operations"]["audio_blocks"]["status"] = "running"
     project_workspace_service.save_manifest(manifest, project_root)
     character_voices_service.save_selected_voice_language(project_root, "en")
-    (project_root / config.CHUNKING_FOLDER_NAME / config.CHUNK_ARTIFACT_FILE_NAME).write_text(
+    (project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.CHUNK_ARTIFACT_FILE_NAME).write_text(
         json.dumps(
             [
                 {
@@ -111,7 +111,7 @@ def _create_project(tmp_path, name: str):
         + "\n",
         encoding="utf-8",
     )
-    (project_root / config.SPEECH_BLOCKS_FOLDER_NAME / config.SPEECH_BLOCKS_OUTPUT_FILE_NAME).write_text(
+    (project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.SPEECH_BLOCKS_OUTPUT_FILE_NAME).write_text(
         json.dumps(
             [
                 {
@@ -146,7 +146,7 @@ def _create_project(tmp_path, name: str):
         + "\n",
         encoding="utf-8",
     )
-    audio_root = project_root / config.AUDIO_BLOCKS_FOLDER_NAME
+    audio_root = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH
     (audio_root / config.AUDIO_BLOCKS_OUTPUT_FILE_NAME).write_text(
         json.dumps(
             [
@@ -195,13 +195,17 @@ def _create_project(tmp_path, name: str):
     (audio_root / config.OPERATION_STATE_FILE_NAME).write_text(
         json.dumps(
             {
-                "folder_relative_path": config.AUDIO_BLOCKS_FOLDER_NAME,
+                "folder_relative_path": config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH,
                 "status": "running",
                 "input_paths": [
-                    f"{config.AUDIO_BLOCKS_FOLDER_NAME}/{config.AUDIO_BLOCKS_INPUT_SPEECH_BLOCKS_FILE_NAME}"
+                    f"{config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH}/{config.AUDIO_BLOCKS_INPUT_SPEECH_BLOCKS_FILE_NAME}"
                 ],
-                "output_paths": [f"{config.AUDIO_BLOCKS_FOLDER_NAME}/{config.AUDIO_BLOCKS_OUTPUT_FILE_NAME}"],
-                "artifact_paths": [f"{config.AUDIO_BLOCKS_FOLDER_NAME}/{config.AUDIO_BLOCKS_REPORT_FILE_NAME}"],
+                "output_paths": [
+                    f"{config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH}/{config.AUDIO_BLOCKS_OUTPUT_FILE_NAME}"
+                ],
+                "artifact_paths": [
+                    f"{config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH}/{config.AUDIO_BLOCKS_REPORT_FILE_NAME}"
+                ],
                 "progress_current": 1,
                 "progress_total": 2,
                 "mode": "tts_generation",

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-  # noqa: UP009
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -132,9 +133,9 @@ def test_speech_blocks_ui_controller_explicit_reset_clears_speech_blocks_and_dow
     manifest["operations"]["audio_assembly"]["status"] = "completed"
     project_workspace_service.save_manifest(manifest, project_root)
     for folder_name in (
-        config.SPEECH_BLOCKS_FOLDER_NAME,
-        config.AUDIO_BLOCKS_FOLDER_NAME,
-        config.AUDIO_ASSEMBLY_FOLDER_NAME,
+        config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH,
+        config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH,
+        config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH,
     ):
         (project_root / folder_name / "artifact.txt").write_text("stale", encoding="utf-8")
     window = _build_window(qtbot, project_root)
@@ -152,9 +153,9 @@ def test_speech_blocks_ui_controller_explicit_reset_clears_speech_blocks_and_dow
     assert window._current_manifest["operations"]["speech_blocks"]["status"] == "not_started"
     assert window._current_manifest["operations"]["audio_blocks"]["status"] == "not_started"
     assert window._current_manifest["operations"]["audio_assembly"]["status"] == "not_started"
-    assert not (project_root / config.SPEECH_BLOCKS_FOLDER_NAME / "artifact.txt").exists()
-    assert not (project_root / config.AUDIO_BLOCKS_FOLDER_NAME / "artifact.txt").exists()
-    assert not (project_root / config.AUDIO_ASSEMBLY_FOLDER_NAME / "artifact.txt").exists()
+    assert not (project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / "artifact.txt").exists()
+    assert not (project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / "artifact.txt").exists()
+    assert not (project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / "artifact.txt").exists()
 
 
 def _create_project(tmp_path, name: str):
@@ -171,7 +172,7 @@ def _create_project(tmp_path, name: str):
     manifest["operations"]["chunking"]["status"] = "completed"
     project_workspace_service.save_manifest(manifest, project_root)
     character_voices_service.save_selected_voice_language(project_root, "en")
-    (project_root / config.CHUNKING_FOLDER_NAME / config.CHUNK_ARTIFACT_FILE_NAME).write_text(
+    (project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.CHUNK_ARTIFACT_FILE_NAME).write_text(
         json.dumps(
             [
                 {

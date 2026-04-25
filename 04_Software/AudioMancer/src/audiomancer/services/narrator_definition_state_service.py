@@ -14,7 +14,7 @@
          VoiceWeaver runtime discovery data.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-20
-@version 3.5.0
+@version 3.5.1
 """
 
 # IMPORTS
@@ -50,8 +50,9 @@ def build_narrator_definition_state(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-18
-    @version    1.6.0
+    @version    1.6.1
     """
+    preview_text_character_limit = _preview_text_character_limit(settings_payload)
     if project_root is None or manifest is None:
         return {
             "profiles": [],
@@ -64,6 +65,7 @@ def build_narrator_definition_state(
             "profile_name": "",
             "prompt_text": "",
             "preview_text": narrator_definition_service.DEFAULT_PREVIEW_TEXT,
+            "preview_text_character_limit": preview_text_character_limit,
             "is_editable": False,
             "is_preset": False,
             "can_edit": False,
@@ -127,6 +129,7 @@ def build_narrator_definition_state(
         "preview_text": narrator_definition_service.DEFAULT_PREVIEW_TEXT
         if current_profile is None
         else str(current_profile.get("preview_text", narrator_definition_service.DEFAULT_PREVIEW_TEXT)),
+        "preview_text_character_limit": preview_text_character_limit,
         "is_editable": bool(current_profile) and bool(current_profile.get("editable", False)),
         "is_preset": bool(current_profile)
         and str(current_profile.get("profile_kind", "")) == narrator_definition_service.NARRATOR_PROFILE_KIND_PRESET,
@@ -137,6 +140,30 @@ def build_narrator_definition_state(
         "preview_available": bool(current_profile) and bool(current_profile.get("has_sample", False)),
         "status_lines": build_status_lines(profile_entries, notes, capability_matrix, language),
     }
+
+
+def _preview_text_character_limit(settings_payload: dict[str, object] | None) -> int:
+    """
+    @brief      Resolve the configured TTS preview text character limit.
+    @param[in]  settings_payload Optional persisted application settings payload.
+    @return     Positive preview text character limit.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-25
+    @version    0.1.0
+    """
+    if not isinstance(settings_payload, dict):
+        return config.DEFAULT_TTS_PREVIEW_TEXT_CHARACTER_LIMIT
+    try:
+        configured_limit = int(
+            settings_payload.get(
+                "tts_preview_text_character_limit",
+                config.DEFAULT_TTS_PREVIEW_TEXT_CHARACTER_LIMIT,
+            )
+        )
+    except (TypeError, ValueError):
+        return config.DEFAULT_TTS_PREVIEW_TEXT_CHARACTER_LIMIT
+    return configured_limit if configured_limit > 0 else config.DEFAULT_TTS_PREVIEW_TEXT_CHARACTER_LIMIT
 
 
 def build_narrator_definition_notes(

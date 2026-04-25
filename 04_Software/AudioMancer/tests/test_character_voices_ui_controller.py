@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-  # noqa: UP009
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -315,7 +316,7 @@ def test_character_voices_voice_language_change_resets_speech_blocks_and_downstr
     manifest["operations"]["audio_assembly"]["status"] = "completed"
     project_workspace_service.save_manifest(manifest, project_root)
     character_voices_service.save_selected_voice_language(project_root, "en")
-    (project_root / config.CHUNKING_FOLDER_NAME / config.CHUNK_ARTIFACT_FILE_NAME).write_text(
+    (project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.CHUNK_ARTIFACT_FILE_NAME).write_text(
         json.dumps(
             [
                 {
@@ -335,7 +336,7 @@ def test_character_voices_voice_language_change_resets_speech_blocks_and_downstr
         + "\n",
         encoding="utf-8",
     )
-    (project_root / config.TRANSLATION_FOLDER_NAME / config.TRANSLATION_REPORT_FILE_NAME).write_text(
+    (project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.TRANSLATION_REPORT_FILE_NAME).write_text(
         json.dumps(
             {
                 "target_language": "ro",
@@ -348,7 +349,7 @@ def test_character_voices_voice_language_change_resets_speech_blocks_and_downstr
         + "\n",
         encoding="utf-8",
     )
-    (project_root / config.TRANSLATION_FOLDER_NAME / config.TRANSLATED_CHUNKS_FILE_NAME).write_text(
+    (project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.TRANSLATED_CHUNKS_FILE_NAME).write_text(
         json.dumps(
             [
                 {
@@ -370,9 +371,9 @@ def test_character_voices_voice_language_change_resets_speech_blocks_and_downstr
         encoding="utf-8",
     )
     for folder_name in (
-        config.SPEECH_BLOCKS_FOLDER_NAME,
-        config.AUDIO_BLOCKS_FOLDER_NAME,
-        config.AUDIO_ASSEMBLY_FOLDER_NAME,
+        config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH,
+        config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH,
+        config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH,
     ):
         (project_root / folder_name / "artifact.txt").write_text("stale", encoding="utf-8")
     window = _build_window(qtbot, project_root)
@@ -390,9 +391,9 @@ def test_character_voices_voice_language_change_resets_speech_blocks_and_downstr
     assert window._current_manifest["operations"]["audio_blocks"]["status"] == "not_started"
     assert window._current_manifest["operations"]["audio_assembly"]["status"] == "not_started"
     assert character_voices_service.load_selected_voice_language(project_root) == "ro"
-    assert not (project_root / config.SPEECH_BLOCKS_FOLDER_NAME / "artifact.txt").exists()
-    assert not (project_root / config.AUDIO_BLOCKS_FOLDER_NAME / "artifact.txt").exists()
-    assert not (project_root / config.AUDIO_ASSEMBLY_FOLDER_NAME / "artifact.txt").exists()
+    assert not (project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / "artifact.txt").exists()
+    assert not (project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / "artifact.txt").exists()
+    assert not (project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / "artifact.txt").exists()
 
 
 def _create_project_with_character_and_selected_narrator(

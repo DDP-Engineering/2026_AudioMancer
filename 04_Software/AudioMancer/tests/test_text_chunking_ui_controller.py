@@ -467,7 +467,7 @@ def test_text_chunking_ui_controller_save_chunk_updates_project_state(
         "ControllerChunkEditProject",
         tmp_path,
     )
-    chunking_root = project_root / config.CHUNKING_FOLDER_NAME
+    chunking_root = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH
     chunking_root.mkdir(exist_ok=True)
     chunk_artifact_path = chunking_root / config.CHUNK_ARTIFACT_FILE_NAME
     chunk_artifact_path.write_text(

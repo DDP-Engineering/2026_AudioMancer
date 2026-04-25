@@ -296,7 +296,7 @@
       "issues": null
     }
   ],
-  "tts_runtime_active_model_id": "Qwen3-TTS-12Hz-1.7B-Base",
+  "tts_runtime_active_model_id": "Qwen3-TTS-12Hz-1.7B-VoiceDesign",
   "tts_runtime_device_diagnostics": {
     "package_flavor": "cuda",
     "torch_installed": true,
@@ -309,5 +309,6 @@
     "status_message": "CUDA active: NVIDIA GeForce RTX 5060 Ti."
   },
   "tts_audio_preview_timeout_seconds": 120,
+  "tts_preview_text_character_limit": 512,
   "tts_audio_generation_timeout_seconds": 600
 }

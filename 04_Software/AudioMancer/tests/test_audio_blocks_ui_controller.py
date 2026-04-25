@@ -89,7 +89,7 @@ def test_audio_blocks_ui_controller_completed_rerun_resets_downstream_before_dis
     manifest["operations"]["audio_assembly"]["status"] = "completed"
     project_workspace_service.save_manifest(manifest, project_root)
     _seed_audio_blocks_run(project_root, approved=False)
-    (project_root / config.AUDIO_ASSEMBLY_FOLDER_NAME / "artifact.txt").write_text("stale", encoding="utf-8")
+    (project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / "artifact.txt").write_text("stale", encoding="utf-8")
     window = _build_window(qtbot, project_root, default_settings_payload)
     monkeypatch.setattr(
         audio_blocks_ui_controller.tts_runtime_ui_support,
@@ -115,8 +115,8 @@ def test_audio_blocks_ui_controller_completed_rerun_resets_downstream_before_dis
     assert window._current_manifest["current_stage"] == "speech_blocks_ready"
     assert window._current_manifest["operations"]["audio_blocks"]["status"] == "not_started"
     assert window._current_manifest["operations"]["audio_assembly"]["status"] == "not_started"
-    assert not (project_root / config.AUDIO_BLOCKS_FOLDER_NAME / "artifact.txt").exists()
-    assert not (project_root / config.AUDIO_ASSEMBLY_FOLDER_NAME / "artifact.txt").exists()
+    assert not (project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / "artifact.txt").exists()
+    assert not (project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / "artifact.txt").exists()
 
 
 def test_audio_blocks_ui_controller_approve_all_advances_manifest_after_full_approval(
@@ -148,12 +148,12 @@ def test_audio_blocks_ui_controller_approve_all_advances_manifest_after_full_app
 
     updated_manifest = project_workspace_service.load_manifest(project_root)
     report = json.loads(
-        (project_root / config.AUDIO_BLOCKS_FOLDER_NAME / config.AUDIO_BLOCKS_REPORT_FILE_NAME).read_text(
+        (project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.AUDIO_BLOCKS_REPORT_FILE_NAME).read_text(
             encoding="utf-8"
         )
     )
     output_payload = json.loads(
-        (project_root / config.AUDIO_BLOCKS_FOLDER_NAME / config.AUDIO_BLOCKS_OUTPUT_FILE_NAME).read_text(
+        (project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.AUDIO_BLOCKS_OUTPUT_FILE_NAME).read_text(
             encoding="utf-8"
         )
     )
@@ -280,12 +280,12 @@ def _create_project(tmp_path, name: str):
     manifest["current_stage"] = "speech_blocks_ready"
     manifest["operations"]["chunking"]["status"] = "completed"
     manifest["operations"]["chunking"]["output_paths"] = [
-        f"{config.CHUNKING_FOLDER_NAME}/{config.CHUNK_ARTIFACT_FILE_NAME}"
+        f"{config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH}/{config.CHUNK_ARTIFACT_FILE_NAME}"
     ]
     manifest["operations"]["speech_blocks"]["status"] = "completed"
     project_workspace_service.save_manifest(manifest, project_root)
     character_voices_service.save_selected_voice_language(project_root, "en")
-    (project_root / config.CHUNKING_FOLDER_NAME / config.CHUNK_ARTIFACT_FILE_NAME).write_text(
+    (project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.CHUNK_ARTIFACT_FILE_NAME).write_text(
         json.dumps(
             [
                 {
@@ -305,7 +305,7 @@ def _create_project(tmp_path, name: str):
         + "\n",
         encoding="utf-8",
     )
-    (project_root / config.SPEECH_BLOCKS_FOLDER_NAME / config.SPEECH_BLOCKS_OUTPUT_FILE_NAME).write_text(
+    (project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.SPEECH_BLOCKS_OUTPUT_FILE_NAME).write_text(
         json.dumps(
             [
                 {
@@ -374,7 +374,7 @@ def _seed_audio_blocks_run(project_root, approved: bool) -> None:
     @date       2026-04-24
     @version    0.1.0
     """
-    audio_root = project_root / config.AUDIO_BLOCKS_FOLDER_NAME
+    audio_root = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH
     generated_root = audio_root / config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME
     generated_root.mkdir(parents=True, exist_ok=True)
     output_payload = [
@@ -446,13 +446,17 @@ def _seed_audio_blocks_run(project_root, approved: bool) -> None:
     (audio_root / config.OPERATION_STATE_FILE_NAME).write_text(
         json.dumps(
             {
-                "folder_relative_path": config.AUDIO_BLOCKS_FOLDER_NAME,
+                "folder_relative_path": config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH,
                 "status": "completed",
                 "input_paths": [
-                    f"{config.AUDIO_BLOCKS_FOLDER_NAME}/{config.AUDIO_BLOCKS_INPUT_SPEECH_BLOCKS_FILE_NAME}"
+                    f"{config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH}/{config.AUDIO_BLOCKS_INPUT_SPEECH_BLOCKS_FILE_NAME}"
                 ],
-                "output_paths": [f"{config.AUDIO_BLOCKS_FOLDER_NAME}/{config.AUDIO_BLOCKS_OUTPUT_FILE_NAME}"],
-                "artifact_paths": [f"{config.AUDIO_BLOCKS_FOLDER_NAME}/{config.AUDIO_BLOCKS_REPORT_FILE_NAME}"],
+                "output_paths": [
+                    f"{config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH}/{config.AUDIO_BLOCKS_OUTPUT_FILE_NAME}"
+                ],
+                "artifact_paths": [
+                    f"{config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH}/{config.AUDIO_BLOCKS_REPORT_FILE_NAME}"
+                ],
                 "progress_current": 2,
                 "progress_total": 2,
                 "mode": "tts_generation",
