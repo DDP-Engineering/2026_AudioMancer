@@ -31,7 +31,8 @@ The software subtrees currently live under:
 current app supports project creation, source import, extraction, deterministic
 and AI cleanup, deterministic and AI chunking, AI translation, character
 discovery, narrator and character voice preparation, Speech Blocks, Audio
-Blocks, and Home-page TXT/Markdown exports for completed text artifacts.
+Blocks, WAV Audio Assembly deliverables, and Home-page TXT/Markdown exports for
+completed text artifacts.
 
 Focused implementation documentation is maintained in `05_SoftwareDocu/`.
 Validation commands and targeted test groups are listed in

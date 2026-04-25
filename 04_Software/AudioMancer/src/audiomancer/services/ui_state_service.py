@@ -603,6 +603,35 @@ _UI_STRINGS = {
             "This future step will assemble approved audio blocks into final audio files and package metadata such "
             "as subtitles and speaker data."
         ),
+        "audio_assembly.title": "Audio Assembly",
+        "audio_assembly.settings_group": "Output Settings",
+        "audio_assembly.outputs_group": "Generated Audiobook Files",
+        "audio_assembly.status_group": "Audio Assembly Status",
+        "audio_assembly.output_mode": "Output Mode",
+        "audio_assembly.max_duration": "Max Duration",
+        "audio_assembly.output_format": "Output Format",
+        "audio_assembly.inter_block_silence": "Inter-Block Silence",
+        "audio_assembly.inter_chunk_silence": "Inter-Chunk Silence",
+        "audio_assembly.generate": "Generate Audio",
+        "audio_assembly.reset": "Reset Audio Assembly",
+        "audio_assembly.play_audio": "Play Audio",
+        "audio_assembly.stop_playing": "Stop Playing",
+        "audio_assembly.mode.per_chunk": "Per text chunk",
+        "audio_assembly.mode.time_limit": "Time limit",
+        "audio_assembly.mode.whole_book": "Whole audiobook",
+        "audio_assembly.note_no_project": "Create or open a project before assembling audio.",
+        "audio_assembly.note_missing_audio_blocks": "Generate and approve Audio Blocks before Audio Assembly.",
+        "audio_assembly.note_missing_approvals": (
+            "Approve every Audio Block before Audio Assembly. Approved: {approved_blocks}/{total_blocks}."
+        ),
+        "audio_assembly.note_ready": "Audio Assembly is ready. Generation can be interrupted and resumed later.",
+        "audio_assembly.note_resume": "Audio Assembly was interrupted. Press Generate Audio to continue.",
+        "audio_assembly.note_completed": "Audio Assembly completed. Generated files are stored in the audiobook folder.",
+        "audio_assembly.status_blocks": "Approved audio blocks: {approved_blocks}/{total_blocks}",
+        "audio_assembly.status_outputs": "Generated output files: {generated_outputs}/{planned_outputs}",
+        "audio_assembly.status_duration": "Total composed duration: {duration}",
+        "audio_assembly.status_mode": "Output mode: {mode}",
+        "audio_assembly.error_missing_audio": "The selected audiobook file is missing.",
         "home.title": "Home / Project",
         "home.summary_group": "Project Summary",
         "home.exports_group": "Exports",
@@ -729,6 +758,7 @@ _UI_STRINGS = {
         "progress.speech_blocks_resplit": ("Selected chunk Speech Blocks re-splitting in progress..."),
         "progress.audio_blocks": "Audio Blocks generation in progress...",
         "progress.audio_block_regeneration": "Selected audio block regeneration in progress...",
+        "progress.audio_assembly": "Audio Assembly composition in progress...",
         "dialog.confirm_translation_reset_title": "Confirm Translation Reset",
         "dialog.confirm_speech_blocks_title": "Start Speech Blocks Generation",
         "dialog.confirm_speech_blocks_rerun_title": "Confirm Speech Blocks Rerun",
@@ -737,6 +767,17 @@ _UI_STRINGS = {
         "dialog.confirm_audio_blocks_rerun_title": "Confirm Audio Generation Rerun",
         "dialog.confirm_audio_blocks_reset_title": "Confirm Audio Generation Reset",
         "dialog.confirm_audio_blocks_invalidation_title": "Confirm Audio Blocks Reset",
+        "dialog.confirm_audio_assembly_title": "Start Audio Assembly",
+        "dialog.confirm_audio_assembly_reset_title": "Confirm Audio Assembly Reset",
+        "project.confirm_audio_assembly": (
+            "Audio Assembly can take a long time for large books. The operation can be interrupted and resumed "
+            "later when the inputs and settings have not changed. Continue?"
+        ),
+        "project.confirm_audio_assembly_reset": (
+            "Continuing will delete generated audiobook files and Audio Assembly progress. Continue?"
+        ),
+        "status.audio_assembly_generated": "Audio Assembly completed.",
+        "status.audio_assembly_reset": "Audio Assembly data was reset.",
         "dialog.character_discovery_info_title": "Character Discovery Information",
         "dialog.character_add_title": "Add Character",
         "dialog.character_add_prompt": "Enter the canonical name for the new character.",
@@ -1314,6 +1355,35 @@ _UI_STRINGS = {
             "Acest pas viitor va asambla blocurile audio aprobate in fisierele finale si va impacheta metadate "
             "precum subtitrari si date despre vorbitori."
         ),
+        "audio_assembly.title": "Asamblare Audio",
+        "audio_assembly.settings_group": "Setari Iesire",
+        "audio_assembly.outputs_group": "Fisiere Audiobook Generate",
+        "audio_assembly.status_group": "Status Asamblare Audio",
+        "audio_assembly.output_mode": "Mod Iesire",
+        "audio_assembly.max_duration": "Durata Maxima",
+        "audio_assembly.output_format": "Format Iesire",
+        "audio_assembly.inter_block_silence": "Pauza Intre Blocuri",
+        "audio_assembly.inter_chunk_silence": "Pauza Intre Segmente",
+        "audio_assembly.generate": "Genereaza Audio",
+        "audio_assembly.reset": "Reseteaza Asamblarea Audio",
+        "audio_assembly.play_audio": "Reda Audio",
+        "audio_assembly.stop_playing": "Opreste Redarea",
+        "audio_assembly.mode.per_chunk": "Pe segment text",
+        "audio_assembly.mode.time_limit": "Limita de timp",
+        "audio_assembly.mode.whole_book": "Audiobook intreg",
+        "audio_assembly.note_no_project": "Creeaza sau deschide un proiect inainte de asamblarea audio.",
+        "audio_assembly.note_missing_audio_blocks": "Genereaza si aproba Blocurile Audio inainte de Asamblarea Audio.",
+        "audio_assembly.note_missing_approvals": (
+            "Aproba fiecare Bloc Audio inainte de Asamblarea Audio. Aprobate: {approved_blocks}/{total_blocks}."
+        ),
+        "audio_assembly.note_ready": "Asamblarea Audio este gata. Generarea poate fi intrerupta si reluata mai tarziu.",
+        "audio_assembly.note_resume": "Asamblarea Audio a fost intrerupta. Apasa Genereaza Audio pentru a continua.",
+        "audio_assembly.note_completed": "Asamblarea Audio s-a finalizat. Fisierele generate sunt in dosarul audiobook.",
+        "audio_assembly.status_blocks": "Blocuri audio aprobate: {approved_blocks}/{total_blocks}",
+        "audio_assembly.status_outputs": "Fisiere de iesire generate: {generated_outputs}/{planned_outputs}",
+        "audio_assembly.status_duration": "Durata compusa totala: {duration}",
+        "audio_assembly.status_mode": "Mod iesire: {mode}",
+        "audio_assembly.error_missing_audio": "Fisierul audiobook selectat lipseste.",
         "home.title": "Acasa / Proiect",
         "home.summary_group": "Rezumat Proiect",
         "home.exports_group": "Exporturi",
@@ -1442,6 +1512,7 @@ _UI_STRINGS = {
         ),
         "progress.audio_blocks": "Generarea blocurilor audio este in curs...",
         "progress.audio_block_regeneration": "Regenerarea blocului audio selectat este in curs...",
+        "progress.audio_assembly": "Asamblarea Audio este in curs...",
         "dialog.confirm_translation_reset_title": "Confirma Resetarea Traducerii",
         "dialog.confirm_speech_blocks_title": "Porneste Generarea Blocurilor de Vorbire",
         "dialog.confirm_speech_blocks_rerun_title": "Confirma Rerularea Blocurilor de Vorbire",
@@ -1450,6 +1521,17 @@ _UI_STRINGS = {
         "dialog.confirm_audio_blocks_rerun_title": "Confirma Rerularea Generarii Audio",
         "dialog.confirm_audio_blocks_reset_title": "Confirma Resetarea Generarii Audio",
         "dialog.confirm_audio_blocks_invalidation_title": "Confirma Resetarea Blocurilor Audio",
+        "dialog.confirm_audio_assembly_title": "Porneste Asamblarea Audio",
+        "dialog.confirm_audio_assembly_reset_title": "Confirma Resetarea Asamblarii Audio",
+        "project.confirm_audio_assembly": (
+            "Asamblarea Audio poate dura mult pentru carti mari. Operatia poate fi intrerupta si reluata mai tarziu "
+            "cand intrarile si setarile nu s-au schimbat. Continui?"
+        ),
+        "project.confirm_audio_assembly_reset": (
+            "Continuarea va sterge fisierele audiobook generate si progresul Asamblarii Audio. Continui?"
+        ),
+        "status.audio_assembly_generated": "Asamblarea Audio s-a finalizat.",
+        "status.audio_assembly_reset": "Datele Asamblarii Audio au fost resetate.",
         "dialog.character_discovery_info_title": "Informatii Descoperire Personaje",
         "dialog.character_add_title": "Adauga Personaj",
         "dialog.character_add_prompt": "Introdu numele canonic pentru noul personaj.",

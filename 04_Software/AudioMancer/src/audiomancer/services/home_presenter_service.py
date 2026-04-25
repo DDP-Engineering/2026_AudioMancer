@@ -13,7 +13,7 @@
          page from manifest data without depending on Qt widgets.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-06
-@version 0.2.0
+@version 0.2.1
 """
 
 # IMPORTS
@@ -36,7 +36,7 @@ def build_stage_statuses(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.2.0
+    @version    0.2.1
     """
     stage_tokens = visible_workflow_stage_tokens()
     if manifest is None:
@@ -83,6 +83,8 @@ def build_stage_statuses(
     if cleanup_status in {"running", "failed"} and len(statuses) > 1:
         statuses[0]["status"] = "finished"
         statuses[1]["status"] = "in_progress"
+    _apply_operation_status_overlays(statuses, manifest)
+    _apply_ready_stage_overlays(statuses, str(manifest.get("current_stage", config.DEFAULT_WORKFLOW_STAGE)))
     return statuses
 
 
@@ -172,6 +174,63 @@ def stage_reached_index(current_stage: str | None) -> int:
     if current_stage == "source_selected":
         return 0
     return stage_sequence.index(current_stage) - 2
+
+
+def _apply_operation_status_overlays(statuses: list[dict[str, str]], manifest: dict[str, object]) -> None:
+    """
+    @brief      Overlay workflow rows with persisted operation status summaries.
+    @param[in]  statuses Mutable Home-page status rows.
+    @param[in]  manifest Active manifest payload.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-25
+    @version    0.1.0
+    """
+    operation_to_row = {
+        "cleanup": 1,
+        "chunking": 2,
+        "translation": 3,
+        "character_discovery": 4,
+        "speech_blocks": 7,
+        "audio_blocks": 8,
+        "audio_assembly": 9,
+    }
+    for operation_kind, row_index in operation_to_row.items():
+        if row_index >= len(statuses):
+            continue
+        operation_status = str(manifest_operation(manifest, operation_kind).get("status", "not_started")).strip()
+        if operation_status == "completed":
+            statuses[row_index]["status"] = "finished"
+        elif operation_status not in {"", "not_started", "pending"}:
+            statuses[row_index]["status"] = "in_progress"
+
+
+def _apply_ready_stage_overlays(statuses: list[dict[str, str]], current_stage: str) -> None:
+    """
+    @brief      Mark later non-operation readiness stages as finished when reached.
+    @param[in]  statuses Mutable Home-page status rows.
+    @param[in]  current_stage Current manifest stage token.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-25
+    @version    0.1.0
+    """
+    stage_sequence = config.PROJECT_WORKFLOW_STAGES
+    if current_stage not in stage_sequence:
+        return
+    current_index = stage_sequence.index(current_stage)
+    ready_stage_rows = {
+        "narrator_definition_ready": 5,
+        "character_voices_ready": 6,
+        "speech_blocks_ready": 7,
+        "audio_blocks_ready": 8,
+        "audio_assembly_ready": 9,
+    }
+    for stage_token, row_index in ready_stage_rows.items():
+        if row_index < len(statuses) and current_index >= stage_sequence.index(stage_token):
+            statuses[row_index]["status"] = "finished"
 
 
 # END OF FILE

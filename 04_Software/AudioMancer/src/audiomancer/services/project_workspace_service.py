@@ -13,7 +13,7 @@
          using one minimal root-level `project.json` manifest contract.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-20
-@version    1.6.0
+@version    1.7.0
 """
 
 # IMPORTS
@@ -296,7 +296,7 @@ def build_project_manifest(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-18
-    @version    0.7.0
+    @version    0.8.0
     """
     resolved_timestamp = timestamp_iso or _utc_now_iso()
     return {
@@ -315,6 +315,7 @@ def build_project_manifest(
         "narrator_language": None,
         "selected_voice_language": None,
         "voice_assignment_mode": config.DEFAULT_TTS_VOICE_ASSIGNMENT_MODE,
+        "audio_assembly_settings": _default_audio_assembly_settings(),
         "notes": "",
     }
 
@@ -328,7 +329,7 @@ def validate_project_manifest(payload: object) -> ProjectManifestPayload:
     @exception  ValueError Raised when the payload is invalid.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-18
-    @version    0.6.0
+    @version    0.7.0
     """
     _validate_manifest_payload(payload)
     assert isinstance(payload, dict)
@@ -354,6 +355,7 @@ def validate_project_manifest(payload: object) -> ProjectManifestPayload:
         "narrator_language": _optional_string(payload.get("narrator_language")),
         "selected_voice_language": _optional_string(payload.get("selected_voice_language")),
         "voice_assignment_mode": voice_assignment_mode,
+        "audio_assembly_settings": _normalize_audio_assembly_settings(payload.get("audio_assembly_settings")),
         "notes": str(payload.get("notes", "")),
     }
 
@@ -654,6 +656,86 @@ def _non_negative_int(value: object) -> int:
     except (TypeError, ValueError):
         return 0
     return max(resolved_value, 0)
+
+
+def _default_audio_assembly_settings() -> dict[str, object]:
+    """
+    @brief      Build default Audio Assembly settings for one project manifest.
+    @return     Default Audio Assembly settings payload.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-25
+    @version    0.1.0
+    """
+    return {
+        "output_mode": config.DEFAULT_AUDIO_ASSEMBLY_OUTPUT_MODE,
+        "max_duration_minutes": config.DEFAULT_AUDIO_ASSEMBLY_MAX_DURATION_MINUTES,
+        "output_format": config.DEFAULT_AUDIO_ASSEMBLY_OUTPUT_FORMAT,
+        "inter_block_silence_ms": config.DEFAULT_AUDIO_ASSEMBLY_INTER_BLOCK_SILENCE_MS,
+        "inter_chunk_silence_ms": config.DEFAULT_AUDIO_ASSEMBLY_INTER_CHUNK_SILENCE_MS,
+    }
+
+
+def _normalize_audio_assembly_settings(value: object) -> dict[str, object]:
+    """
+    @brief      Normalize one optional Audio Assembly settings manifest payload.
+    @param[in]  value Raw decoded settings value.
+    @return     Normalized Audio Assembly settings payload.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-25
+    @version    0.1.0
+    """
+    defaults = _default_audio_assembly_settings()
+    payload = value if isinstance(value, dict) else {}
+    output_mode = str(payload.get("output_mode", defaults["output_mode"])).strip()
+    if output_mode not in config.AUDIO_ASSEMBLY_OUTPUT_MODE_OPTIONS:
+        output_mode = str(defaults["output_mode"])
+    output_format = str(payload.get("output_format", defaults["output_format"])).strip().lower()
+    if output_format not in config.AUDIO_ASSEMBLY_OUTPUT_FORMAT_OPTIONS:
+        output_format = str(defaults["output_format"])
+    return {
+        "output_mode": output_mode,
+        "max_duration_minutes": _bounded_int(
+            payload.get("max_duration_minutes", defaults["max_duration_minutes"]),
+            1,
+            24 * 60,
+            int(defaults["max_duration_minutes"]),
+        ),
+        "output_format": output_format,
+        "inter_block_silence_ms": _bounded_int(
+            payload.get("inter_block_silence_ms", defaults["inter_block_silence_ms"]),
+            0,
+            60_000,
+            int(defaults["inter_block_silence_ms"]),
+        ),
+        "inter_chunk_silence_ms": _bounded_int(
+            payload.get("inter_chunk_silence_ms", defaults["inter_chunk_silence_ms"]),
+            0,
+            60_000,
+            int(defaults["inter_chunk_silence_ms"]),
+        ),
+    }
+
+
+def _bounded_int(value: object, minimum: int, maximum: int, fallback: int) -> int:
+    """
+    @brief      Normalize one integer within inclusive bounds.
+    @param[in]  value Candidate value.
+    @param[in]  minimum Minimum accepted value.
+    @param[in]  maximum Maximum accepted value.
+    @param[in]  fallback Fallback value for invalid input.
+    @return     Normalized bounded integer.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-25
+    @version    0.1.0
+    """
+    try:
+        resolved = int(value)
+    except (TypeError, ValueError):
+        return fallback
+    return max(minimum, min(resolved, maximum))
 
 
 def _normalize_source_document(value: object) -> dict[str, object] | None:

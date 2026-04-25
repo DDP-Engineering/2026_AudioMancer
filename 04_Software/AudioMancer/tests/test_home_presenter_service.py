@@ -13,7 +13,7 @@
          from manifest data without Qt dependencies.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-06
-@version 0.2.0
+@version 0.2.1
 """
 
 # IMPORTS
@@ -70,6 +70,53 @@ def test_build_stage_statuses_keeps_chunking_not_started_after_cleanup_completio
     assert statuses[0]["status"] == "finished"
     assert statuses[1]["status"] == "finished"
     assert statuses[2]["status"] == "not_started"
+
+
+def test_build_stage_statuses_marks_character_voices_ready_as_finished() -> None:
+    """
+    @brief      Verify Character Voices is finished when the manifest stage has reached it.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-25
+    @version    0.1.0
+    """
+    manifest = {
+        "current_stage": "character_voices_ready",
+        "source_document": {"original_name": "story.txt"},
+        "operations": {
+            "character_voices": {"status": "not_started"},
+        },
+    }
+
+    statuses = home_presenter_service.build_stage_statuses(manifest, "en")
+
+    assert statuses[5]["status"] == "finished"
+    assert statuses[6]["status"] == "finished"
+
+
+def test_build_stage_statuses_marks_downstream_operation_status_as_in_progress() -> None:
+    """
+    @brief      Verify generated but unfinished downstream work appears in progress.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-25
+    @version    0.1.0
+    """
+    manifest = {
+        "current_stage": "character_voices_ready",
+        "source_document": {"original_name": "story.txt"},
+        "operations": {
+            "speech_blocks": {"status": "review_pending"},
+            "audio_blocks": {"status": "cancelled"},
+        },
+    }
+
+    statuses = home_presenter_service.build_stage_statuses(manifest, "en")
+
+    assert statuses[7]["status"] == "in_progress"
+    assert statuses[8]["status"] == "in_progress"
 
 
 # END OF FILE

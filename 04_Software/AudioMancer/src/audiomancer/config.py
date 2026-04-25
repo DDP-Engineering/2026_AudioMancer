@@ -13,7 +13,7 @@
          file support used by the current AudioMancer implementation scaffold.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 1.24.2
+@version 1.25.0
 """
 
 # IMPORTS
@@ -194,6 +194,15 @@ AUDIO_BLOCKS_VOICE_CLONE_PROFILES_FILE_NAME = "voice_clone_profiles.json"
 # @brief Folder name used for generated per-speech-block audio artifacts.
 AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME = "audio_blocks"
 
+# @brief File name used for persisted Audio Assembly report metadata.
+AUDIO_ASSEMBLY_REPORT_FILE_NAME = "audio_assembly_report.json"
+
+# @brief File name used for persisted Audio Assembly runtime state.
+AUDIO_ASSEMBLY_STATE_FILE_NAME = "audio_assembly_state.json"
+
+# @brief Folder name used for generated final audiobook deliverables.
+AUDIOBOOK_OUTPUT_FOLDER_NAME = "audiobook"
+
 
 def ai_transaction_log_file_name(operation_kind: str, timestamp_token: str) -> str:
     """
@@ -356,6 +365,27 @@ DEFAULT_EXPORT_CHANNELS = "stereo"
 # @brief Default export split strategy.
 DEFAULT_EXPORT_SPLIT_MODE = "single_file"
 
+# @brief Supported output modes for Audio Assembly.
+AUDIO_ASSEMBLY_OUTPUT_MODE_OPTIONS = ("per_chunk", "time_limit", "whole_book")
+
+# @brief Supported output formats for Audio Assembly.
+AUDIO_ASSEMBLY_OUTPUT_FORMAT_OPTIONS = ("wav",)
+
+# @brief Default Audio Assembly output mode.
+DEFAULT_AUDIO_ASSEMBLY_OUTPUT_MODE = "whole_book"
+
+# @brief Default Audio Assembly time-limit split length in minutes.
+DEFAULT_AUDIO_ASSEMBLY_MAX_DURATION_MINUTES = 30
+
+# @brief Default Audio Assembly output format.
+DEFAULT_AUDIO_ASSEMBLY_OUTPUT_FORMAT = "wav"
+
+# @brief Default silence between adjacent speech audio blocks.
+DEFAULT_AUDIO_ASSEMBLY_INTER_BLOCK_SILENCE_MS = 250
+
+# @brief Default silence between adjacent source chunks in the same output.
+DEFAULT_AUDIO_ASSEMBLY_INTER_CHUNK_SILENCE_MS = 1000
+
 
 # Logging Defaults
 # @brief Shared app-log directory name under the application root.
@@ -386,6 +416,8 @@ AVAILABLE_LOG_COMPONENTS = (
     "ai_cleanup",
     "ai_chunking",
     "ai_translation",
+    "audio_assembly",
+    "audio_blocks",
     "character_discovery",
     "deterministic_cleanup",
     "deterministic_chunking",

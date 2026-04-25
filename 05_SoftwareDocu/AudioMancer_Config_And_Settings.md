@@ -95,9 +95,12 @@ Project runtime artifact contracts currently include:
 - root-level output/report artifacts such as `extracted_text.txt`,
   `clean_text.txt`, `chunks_text.json`, `translated_text.json`,
   `characters_profile.json`, `audio_profiles.json`, `characters_voice.json`,
-  `speech_blocks.json`, and `audio_blocks.json`
-- `audio_blocks/` as the only runtime artifact subfolder, used for generated
+  `speech_blocks.json`, `audio_blocks.json`, and
+  `audio_assembly_report.json`
+- `audio_blocks/` as the runtime artifact subfolder used for generated
   audio-block WAV and metadata files
+- `audiobook/` as the runtime artifact subfolder used for generated final WAV
+  audiobook deliverables
 
 The settings scaffold currently includes fields for:
 
@@ -113,6 +116,8 @@ as an AudioMancer selection even though outbound TTS requests omit the
 VoiceWeaver `language` field for `ro`.
 `DEFAULT_TTS_PREVIEW_TEXT_CHARACTER_LIMIT` caps narrator sample preview text,
 with a default of 512 characters.
+`DEFAULT_AUDIO_ASSEMBLY_*` constants define the WAV-only Audio Assembly
+defaults for output mode, max duration, output format, and silence gaps.
 - AI cleanup and chunking profile defaults
 - notification and UI text-scale preferences
 

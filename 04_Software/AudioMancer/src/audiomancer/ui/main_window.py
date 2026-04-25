@@ -14,7 +14,7 @@
          so the window remains a thin coordinator.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 1.28.0
+@version 1.29.0
 """
 
 # IMPORTS
@@ -37,6 +37,7 @@ from PySide6.QtWidgets import (
 from audiomancer import config
 from audiomancer.services import (
     ai_translation_state_service,
+    audio_assembly_state_service,
     audio_blocks_state_service,
     character_discovery_state_service,
     character_voices_state_service,
@@ -52,6 +53,7 @@ from audiomancer.services import (
 from audiomancer.ui.controllers import (
     ai_settings_ui_controller,
     ai_translation_ui_controller,
+    audio_assembly_ui_controller,
     audio_blocks_ui_controller,
     character_voices_ui_controller,
     characters_ui_controller,
@@ -68,12 +70,12 @@ from audiomancer.ui.navigation_sidebar import NavigationSidebar
 from audiomancer.ui.operation_progress_dialog import OperationProgressDialog
 from audiomancer.ui.pages.ai_settings_page import AiSettingsPage
 from audiomancer.ui.pages.ai_translation_page import AiTranslationPage
+from audiomancer.ui.pages.audio_assembly_page import AudioAssemblyPage
 from audiomancer.ui.pages.audio_blocks_page import AudioBlocksPage
 from audiomancer.ui.pages.character_voices_page import CharacterVoicesPage
 from audiomancer.ui.pages.characters_page import CharactersPage
 from audiomancer.ui.pages.home_page import HomeProjectPage
 from audiomancer.ui.pages.narator_voice_page import NaratorVoicePage
-from audiomancer.ui.pages.placeholder_page import PlaceholderPage
 from audiomancer.ui.pages.settings_page import SettingsPage
 from audiomancer.ui.pages.speech_blocks_page import SpeechBlocksPage
 from audiomancer.ui.pages.text_chunking_page import TextChunkingPage
@@ -133,7 +135,7 @@ class MainWindow(QMainWindow):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-06
-        @version    0.15.3
+        @version    0.16.0
         """
         super().__init__(parent)
         self.setWindowTitle(misc_ui_controller.build_window_title())
@@ -181,6 +183,13 @@ class MainWindow(QMainWindow):
         self._audio_blocks_playback_mode: str | None = None
         self._audio_blocks_playback_block_ids: list[str] = []
         self._audio_blocks_playback_index = -1
+        self._audio_assembly_audio_output = QAudioOutput(self)
+        self._audio_assembly_audio_player = QMediaPlayer(self)
+        self._audio_assembly_audio_player.setAudioOutput(self._audio_assembly_audio_output)
+        self._audio_assembly_audio_player.playbackStateChanged.connect(
+            lambda _state: audio_assembly_ui_controller.handle_playback_state_changed(self)
+        )
+        self._audio_assembly_playback_output_key: str | None = None
 
         self._toolbar = self._build_toolbar()
         self.addToolBar(Qt.ToolBarArea.TopToolBarArea, self._toolbar)
@@ -255,7 +264,7 @@ class MainWindow(QMainWindow):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-16
-        @version    0.9.0
+        @version    0.10.0
         """
         self._current_project_root = project_root
         self._current_manifest = manifest
@@ -370,6 +379,14 @@ class MainWindow(QMainWindow):
                 current_language,
             )
         )
+        self._audio_assembly_page.set_project_active(project_root is not None)
+        self._audio_assembly_page.set_audio_assembly_state(
+            **audio_assembly_state_service.build_audio_assembly_state(
+                project_root,
+                manifest,
+                current_language,
+            )
+        )
 
     def show_settings_dialog(self) -> None:
         """
@@ -475,7 +492,7 @@ class MainWindow(QMainWindow):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-07
-        @version    0.15.0
+        @version    0.16.0
         """
         current_language = ui_state_service.current_language_from_settings(self._settings_payload)
         home_page = HomeProjectPage(self)
@@ -765,6 +782,19 @@ class MainWindow(QMainWindow):
                 speech_block_id,
             )
         )
+        self._audio_assembly_page = AudioAssemblyPage(self)
+        self._audio_assembly_page.settings_changed.connect(
+            lambda settings: audio_assembly_ui_controller.handle_settings_changed(self, settings)
+        )
+        self._audio_assembly_page.generate_requested.connect(
+            lambda settings: audio_assembly_ui_controller.handle_generate_requested(self, settings)
+        )
+        self._audio_assembly_page.reset_requested.connect(
+            lambda: audio_assembly_ui_controller.handle_reset_requested(self)
+        )
+        self._audio_assembly_page.playback_toggle_requested.connect(
+            lambda output_key: audio_assembly_ui_controller.handle_playback_toggle_requested(self, output_key)
+        )
 
         pages = {
             "home": home_page,
@@ -776,14 +806,7 @@ class MainWindow(QMainWindow):
             "character_voices": self._character_voices_page,
             "speech_blocks": self._speech_blocks_page,
             "audio_blocks": self._audio_blocks_page,
-            "audio_assembly": PlaceholderPage(
-                "Audio Assembly",
-                (
-                    "This future step will assemble approved audio blocks into final audio files and "
-                    "package metadata such as subtitles and speaker data."
-                ),
-                self,
-            ),
+            "audio_assembly": self._audio_assembly_page,
         }
 
         for page_id, label in self.PAGE_ORDER:

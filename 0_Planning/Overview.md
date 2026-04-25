@@ -204,20 +204,27 @@ after generated audio is explicitly approved.
 
 ### 5.10 Export And Assembly
 
-The application should support assembly and export of final audiobook outputs.
+The application supports a first WAV-only assembly stage for final audiobook
+outputs.
 
-It should support these export modes:
+The current implementation supports these Audio Assembly output modes:
 
 - one audio file for the whole book
 - split audio files by configured time limit
-- one audio file per chapter
+- one audio file per source text chunk
 
-The export stage should support:
+The assembly stage supports:
 
 - combining generated Speech Block audio in canonical order
-- preserving chapter boundaries when available
 - deterministic output naming
-- delivery-ready audio bundles and metadata
+- project-local `audiobook/` deliverables
+- `audio_assembly_state.json` and `audio_assembly_report.json`
+- completed-output resume when the source Audio Blocks and settings fingerprint
+  still match
+- local generated-output playback from the Audio Assembly page
+
+MP3 encoding, chapter metadata, silence trimming, volume normalization, pitch
+changes, and cover-art embedding remain future work.
 
 ## 6. Non-Functional Goals
 

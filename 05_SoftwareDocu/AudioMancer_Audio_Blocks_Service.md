@@ -260,7 +260,8 @@ Upstream integrations:
 Downstream integrations:
 
 - `project.json.current_stage = "audio_blocks_ready"` only after full approval
-- later `Audio Assembly`
+- `Audio Assembly`, which consumes approved generated Audio Blocks as the final
+  WAV composition source
 - resets from the page clear audio-block and audio-assembly runtime artifacts
 
 Current invalidation points:
@@ -350,4 +351,5 @@ uv run ruff format <changed_python_files>
 - cancellation stops AudioMancer polling and persists `cancelled`, but the
   current VoiceWeaver REST API does not cancel the already submitted runtime
   operation
-- `Audio Assembly` remains the next downstream placeholder step
+- `Audio Assembly` is implemented as the downstream WAV composition step; MP3
+  and richer mastering features remain future work there

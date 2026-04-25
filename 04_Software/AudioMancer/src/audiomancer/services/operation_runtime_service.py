@@ -14,7 +14,7 @@
          operations.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-22
-@version 0.3.0
+@version 0.3.1
 """
 
 # IMPORTS
@@ -84,7 +84,10 @@ _OPERATION_ARTIFACT_FILE_NAMES = {
         config.AUDIO_BLOCKS_STATE_FILE_NAME,
         config.AUDIO_BLOCKS_VOICE_CLONE_PROFILES_FILE_NAME,
     ),
-    "audio_assembly": (),
+    "audio_assembly": (
+        config.AUDIO_ASSEMBLY_REPORT_FILE_NAME,
+        config.AUDIO_ASSEMBLY_STATE_FILE_NAME,
+    ),
 }
 
 
@@ -112,7 +115,7 @@ def operation_folder_name(operation_kind: str) -> str:
     @exception  KeyError Raised when the operation kind is unsupported.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.2.0
+    @version    0.2.1
     """
     if operation_kind not in _OPERATION_ORDER:
         raise ValueError(f"Unsupported operation kind: {operation_kind}")
@@ -270,6 +273,12 @@ def reset_operation_data(
             audio_blocks_root = root_path / config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME
             if audio_blocks_root.is_dir():
                 for child in audio_blocks_root.rglob("*"):
+                    if child.is_file():
+                        child.unlink()
+        if selected_kind == "audio_assembly":
+            audiobook_root = root_path / config.AUDIOBOOK_OUTPUT_FOLDER_NAME
+            if audiobook_root.is_dir():
+                for child in audiobook_root.rglob("*"):
                     if child.is_file():
                         child.unlink()
 

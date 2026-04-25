@@ -14,7 +14,7 @@
          targeted downstream invalidation when upstream voice inputs change.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-23
-@version 0.2.2
+@version 0.2.3
 """
 
 # IMPORTS
@@ -180,7 +180,7 @@ def handle_regenerate_selected_requested(window: "MainWindow", speech_block_id: 
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-23
-    @version    0.1.0
+    @version    0.1.1
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._active_operation_kind is not None:
@@ -571,6 +571,13 @@ def _reset_audio_blocks_and_downstream(window: "MainWindow") -> None:
     assert window._current_project_root is not None
     assert window._current_manifest is not None
     _stop_audio_blocks_playback(window)
+    audio_assembly_player = getattr(window, "_audio_assembly_audio_player", None)
+    if audio_assembly_player is not None:
+        audio_assembly_player.stop()
+    if hasattr(window, "_audio_assembly_page"):
+        window._audio_assembly_page.set_playback_active(False)
+    if hasattr(window, "_audio_assembly_playback_output_key"):
+        window._audio_assembly_playback_output_key = None
     audio_blocks_service.reset_audio_blocks(window._current_project_root)
     updated_manifest = dict(window._current_manifest)
     operations = text_cleanup_state_service.normalized_manifest_operations(updated_manifest)

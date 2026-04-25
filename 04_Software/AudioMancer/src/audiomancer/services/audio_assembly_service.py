@@ -1,0 +1,996 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-  # noqa: UP009
+# -----------------------------------------------------------------------------
+# Copyright (c) 2026 DDP Engineering
+# This software is licensed under the GNU Affero General Public License v3.0
+# (AGPL-3.0) with additional Non-Commercial restriction.
+# See the LICENSE.txt and LICENSE_NC.txt files for full license details.
+# -----------------------------------------------------------------------------
+"""
+@file audio_assembly_service.py
+@brief WAV audiobook composition helpers for AudioMancer.
+@details Builds final audiobook WAV deliverables from approved Audio Blocks,
+         persists per-project assembly settings, and supports resumable output
+         generation through root-level state and report artifacts.
+@author Eng. Dan Dumitru Pasare
+@date 2026-04-25
+@version 0.1.0
+"""
+
+# IMPORTS
+
+from datetime import UTC, datetime
+import hashlib
+import json
+from pathlib import Path
+import wave
+
+from audiomancer import config
+from audiomancer.services import audio_blocks_service, operation_runtime_service, project_workspace_service
+from audiomancer.services.logging_service import get_component_logger, trace_function
+from audiomancer.services.operation_runtime_service import (
+    build_operation_output_path,
+    progress_percent,
+    raise_if_cancelled,
+    relative_to_project,
+    resolve_operation_path,
+)
+
+# CONSTANTS
+
+_AUDIO_ASSEMBLY_LOGGER = get_component_logger("audio_assembly")
+
+AUDIO_ASSEMBLY_STAGE_NOT_STARTED = "not_started"
+AUDIO_ASSEMBLY_STAGE_IN_PROGRESS = "in_progress"
+AUDIO_ASSEMBLY_STAGE_COMPLETED = "completed"
+
+OUTPUT_MODE_PER_CHUNK = "per_chunk"
+OUTPUT_MODE_TIME_LIMIT = "time_limit"
+OUTPUT_MODE_WHOLE_BOOK = "whole_book"
+OUTPUT_FORMAT_WAV = "wav"
+
+_MODE = "audio_composition"
+_TEMP_SUFFIX = ".tmp"
+_WAV_SAMPLE_WIDTH_BY_FORMAT = {
+    1: 1,
+    2: 2,
+    3: 3,
+    4: 4,
+}
+
+AudioAssemblySettings = dict[str, object]
+AudioAssemblyReport = dict[str, object]
+AudioAssemblyState = dict[str, object]
+
+
+# PUBLIC API
+
+
+@trace_function(_AUDIO_ASSEMBLY_LOGGER)
+def default_audio_assembly_settings() -> AudioAssemblySettings:
+    """
+    @brief      Build the default per-project Audio Assembly settings payload.
+    @return     Default Audio Assembly settings.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-25
+    @version    0.1.0
+    """
+    return {
+        "output_mode": config.DEFAULT_AUDIO_ASSEMBLY_OUTPUT_MODE,
+        "max_duration_minutes": config.DEFAULT_AUDIO_ASSEMBLY_MAX_DURATION_MINUTES,
+        "output_format": config.DEFAULT_AUDIO_ASSEMBLY_OUTPUT_FORMAT,
+        "inter_block_silence_ms": config.DEFAULT_AUDIO_ASSEMBLY_INTER_BLOCK_SILENCE_MS,
+        "inter_chunk_silence_ms": config.DEFAULT_AUDIO_ASSEMBLY_INTER_CHUNK_SILENCE_MS,
+    }
+
+
+@trace_function(_AUDIO_ASSEMBLY_LOGGER)
+def normalize_audio_assembly_settings(value: object) -> AudioAssemblySettings:
+    """
+    @brief      Normalize one user or manifest Audio Assembly settings payload.
+    @param[in]  value Candidate settings mapping.
+    @return     Normalized Audio Assembly settings.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-25
+    @version    0.1.0
+    """
+    defaults = default_audio_assembly_settings()
+    payload = value if isinstance(value, dict) else {}
+    output_mode = str(payload.get("output_mode", defaults["output_mode"])).strip()
+    if output_mode not in config.AUDIO_ASSEMBLY_OUTPUT_MODE_OPTIONS:
+        output_mode = str(defaults["output_mode"])
+    output_format = str(payload.get("output_format", defaults["output_format"])).strip().lower()
+    if output_format not in config.AUDIO_ASSEMBLY_OUTPUT_FORMAT_OPTIONS:
+        output_format = str(defaults["output_format"])
+    return {
+        "output_mode": output_mode,
+        "max_duration_minutes": _bounded_int(
+            payload.get("max_duration_minutes", defaults["max_duration_minutes"]),
+            1,
+            24 * 60,
+            int(defaults["max_duration_minutes"]),
+        ),
+        "output_format": output_format,
+        "inter_block_silence_ms": _bounded_int(
+            payload.get("inter_block_silence_ms", defaults["inter_block_silence_ms"]),
+            0,
+            60_000,
+            int(defaults["inter_block_silence_ms"]),
+        ),
+        "inter_chunk_silence_ms": _bounded_int(
+            payload.get("inter_chunk_silence_ms", defaults["inter_chunk_silence_ms"]),
+            0,
+            60_000,
+            int(defaults["inter_chunk_silence_ms"]),
+        ),
+    }
+
+
+@trace_function(_AUDIO_ASSEMBLY_LOGGER)
+def save_audio_assembly_settings(
+    project_root: str | Path,
+    manifest: dict[str, object],
+    settings: dict[str, object],
+) -> dict[str, object]:
+    """
+    @brief      Persist normalized Audio Assembly settings in `project.json`.
+    @param[in]  project_root Active project root folder.
+    @param[in]  manifest Current manifest payload.
+    @param[in]  settings Candidate Audio Assembly settings.
+    @return     Reloaded normalized manifest.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-25
+    @version    0.1.0
+    """
+    updated_manifest = dict(manifest)
+    updated_manifest["audio_assembly_settings"] = normalize_audio_assembly_settings(settings)
+    project_workspace_service.save_manifest(updated_manifest, project_root)
+    return project_workspace_service.load_manifest(project_root)
+
+
+@trace_function(_AUDIO_ASSEMBLY_LOGGER)
+def load_operation_state(project_root: str | Path) -> AudioAssemblyState | None:
+    """
+    @brief      Load one optional Audio Assembly operation-state payload.
+    @param[in]  project_root Active project root folder.
+    @return     Persisted state payload or `None`.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-25
+    @version    0.1.0
+    """
+    state_path = resolve_operation_path(project_root, "audio_assembly", config.AUDIO_ASSEMBLY_STATE_FILE_NAME)
+    if not state_path.is_file():
+        return None
+    return dict(json.loads(state_path.read_text(encoding="utf-8")))
+
+
+@trace_function(_AUDIO_ASSEMBLY_LOGGER)
+def load_audio_assembly_report(project_root: str | Path) -> AudioAssemblyReport | None:
+    """
+    @brief      Load one optional Audio Assembly report payload.
+    @param[in]  project_root Active project root folder.
+    @return     Persisted report payload or `None`.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-25
+    @version    0.1.0
+    """
+    report_path = resolve_operation_path(project_root, "audio_assembly", config.AUDIO_ASSEMBLY_REPORT_FILE_NAME)
+    if not report_path.is_file():
+        return None
+    return dict(json.loads(report_path.read_text(encoding="utf-8")))
+
+
+@trace_function(_AUDIO_ASSEMBLY_LOGGER)
+def load_generated_outputs(project_root: str | Path) -> list[dict[str, object]]:
+    """
+    @brief      Load generated Audio Assembly output records from the report.
+    @param[in]  project_root Active project root folder.
+    @return     Ordered output record list.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-25
+    @version    0.1.0
+    """
+    report = load_audio_assembly_report(project_root)
+    if not isinstance(report, dict):
+        return []
+    outputs = report.get("outputs", [])
+    if not isinstance(outputs, list):
+        return []
+    return [_normalize_output_record(output) for output in outputs if isinstance(output, dict)]
+
+
+@trace_function(_AUDIO_ASSEMBLY_LOGGER)
+def has_persisted_audio_assembly(project_root: str | Path) -> bool:
+    """
+    @brief      Return whether Audio Assembly state or output artifacts exist.
+    @param[in]  project_root Active project root folder.
+    @return     True when persisted assembly data exists.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-25
+    @version    0.1.0
+    """
+    output_root = Path(project_root) / config.AUDIOBOOK_OUTPUT_FOLDER_NAME
+    return any(
+        (
+            load_operation_state(project_root) is not None,
+            load_audio_assembly_report(project_root) is not None,
+            output_root.is_dir() and any(output_root.iterdir()),
+        )
+    )
+
+
+@trace_function(_AUDIO_ASSEMBLY_LOGGER)
+def reset_audio_assembly(project_root: str | Path) -> None:
+    """
+    @brief      Delete persisted Audio Assembly state and generated audiobook files.
+    @param[in]  project_root Active project root folder.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-25
+    @version    0.1.0
+    """
+    operation_runtime_service.reset_operation_data(project_root, "audio_assembly", include_current=True)
+
+
+@trace_function(_AUDIO_ASSEMBLY_LOGGER)
+def start_or_continue_composition(
+    project_root: str | Path,
+    manifest: dict[str, object],
+    progress_callback=None,
+    cancel_requested=None,
+) -> AudioAssemblyReport:
+    """
+    @brief      Compose approved Audio Blocks into final audiobook WAV output files.
+    @param[in]  project_root Active project root folder.
+    @param[in]  manifest Current project manifest payload.
+    @param[in]  progress_callback Optional progress callback for modal UI updates.
+    @param[in]  cancel_requested Optional zero-argument cancellation callback.
+    @return     Final or current Audio Assembly report payload.
+    @exception  ValueError Raised when prerequisites are missing or stale data requires reset.
+    @exception  RuntimeError Raised when source WAV files cannot be composed.
+    @exception  OperationCancelledError Raised when the operator cancels the run.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-25
+    @version    0.1.0
+    """
+    resolved_project_root = Path(project_root)
+    settings = normalize_audio_assembly_settings(manifest.get("audio_assembly_settings"))
+    approved_blocks = _load_approved_audio_blocks(resolved_project_root)
+    input_fingerprint = _build_input_fingerprint(resolved_project_root, approved_blocks, settings)
+    existing_state = load_operation_state(resolved_project_root) or {}
+    if _requires_manual_reset(existing_state, input_fingerprint):
+        raise ValueError("Audio Assembly inputs or settings changed. Reset Audio Assembly before continuing.")
+
+    output_plan = _build_output_plan(resolved_project_root, approved_blocks, settings)
+    completed_records = _completed_records_for_resume(resolved_project_root, existing_state, input_fingerprint)
+    started_at = _resolve_started_at(existing_state)
+    warnings: list[dict[str, object]] = []
+    report = _build_report(
+        settings,
+        approved_blocks,
+        output_plan,
+        completed_records,
+        warnings,
+        input_fingerprint,
+        status="running",
+        started_at=started_at,
+        completed_at=None,
+    )
+    _persist_state(resolved_project_root, report, _build_operation_state(resolved_project_root, report, output_plan))
+    _emit_progress(progress_callback, len(completed_records), len(output_plan), "Audio Assembly started.")
+
+    try:
+        for output_index, output_item in enumerate(output_plan):
+            if output_item["output_key"] in {str(record.get("output_key", "")) for record in completed_records}:
+                continue
+            raise_if_cancelled(cancel_requested)
+            if bool(output_item.get("over_limit_warning", False)):
+                warnings.append(
+                    {
+                        "code": "single_block_exceeds_limit",
+                        "message": "One source audio block exceeds the configured time limit.",
+                        "output_key": output_item["output_key"],
+                    }
+                )
+            output_record = _compose_output_file(resolved_project_root, output_item, settings, cancel_requested)
+            completed_records.append(output_record)
+            report = _build_report(
+                settings,
+                approved_blocks,
+                output_plan,
+                completed_records,
+                warnings,
+                input_fingerprint,
+                status="running",
+                started_at=started_at,
+                completed_at=None,
+            )
+            _persist_state(
+                resolved_project_root,
+                report,
+                _build_operation_state(resolved_project_root, report, output_plan, output_index + 1),
+            )
+            _emit_progress(
+                progress_callback,
+                len(completed_records),
+                len(output_plan),
+                f"Composed {output_record['file_name']}.",
+            )
+    except operation_runtime_service.OperationCancelledError:
+        cancelled_report = _build_report(
+            settings,
+            approved_blocks,
+            output_plan,
+            completed_records,
+            warnings,
+            input_fingerprint,
+            status="cancelled",
+            started_at=started_at,
+            completed_at=None,
+        )
+        _persist_state(
+            resolved_project_root,
+            cancelled_report,
+            _build_operation_state(resolved_project_root, cancelled_report, output_plan, len(completed_records)),
+        )
+        raise
+
+    completed_at = _utc_now_iso()
+    final_report = _build_report(
+        settings,
+        approved_blocks,
+        output_plan,
+        completed_records,
+        warnings,
+        input_fingerprint,
+        status="completed",
+        started_at=started_at,
+        completed_at=completed_at,
+    )
+    _persist_state(
+        resolved_project_root,
+        final_report,
+        _build_operation_state(resolved_project_root, final_report, output_plan, len(output_plan)),
+    )
+    _emit_progress(progress_callback, len(output_plan), len(output_plan), "Audio Assembly completed.")
+    return final_report
+
+
+# LOCAL HELPERS
+
+
+def _load_approved_audio_blocks(project_root: Path) -> list[dict[str, object]]:
+    """
+    @brief      Load and validate approved Audio Blocks for composition.
+    @param[in]  project_root Active project root folder.
+    @return     Approved generated Audio Blocks.
+    @exception  ValueError Raised when prerequisites are not satisfied.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-25
+    @version    0.1.0
+    """
+    audio_blocks = sorted(
+        audio_blocks_service.load_audio_blocks(project_root),
+        key=lambda item: int(item.get("sequence_index", 0)),
+    )
+    if not audio_blocks:
+        raise ValueError("Generate and approve Audio Blocks before running Audio Assembly.")
+    unapproved = [block for block in audio_blocks if not bool(block.get("approved", False))]
+    if unapproved:
+        raise ValueError("Approve every generated Audio Block before running Audio Assembly.")
+    playable_blocks = [block for block in audio_blocks if not bool(block.get("metadata_only", False))]
+    if not playable_blocks:
+        raise ValueError("Audio Assembly requires at least one generated speech audio block.")
+    for block in playable_blocks:
+        audio_path = _audio_path(project_root, block)
+        if audio_path is None or not audio_path.is_file():
+            raise ValueError("Every approved Audio Block must reference an existing WAV file.")
+    _validate_compatible_wav_inputs(project_root, playable_blocks)
+    return audio_blocks
+
+
+def _build_output_plan(
+    project_root: Path,
+    audio_blocks: list[dict[str, object]],
+    settings: AudioAssemblySettings,
+) -> list[dict[str, object]]:
+    """
+    @brief      Build ordered output-file composition groups from Audio Blocks and settings.
+    @param[in]  project_root Active project root folder.
+    @param[in]  audio_blocks Approved Audio Blocks.
+    @param[in]  settings Normalized Audio Assembly settings.
+    @return     Ordered output plan entries.
+    @exception  ValueError Raised when no playable blocks exist.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-25
+    @version    0.1.0
+    """
+    playable_blocks = [
+        _enrich_block_duration(project_root, block) for block in audio_blocks if _audio_path(project_root, block)
+    ]
+    output_mode = str(settings["output_mode"])
+    if output_mode == OUTPUT_MODE_PER_CHUNK:
+        return _plan_per_chunk_outputs(playable_blocks)
+    if output_mode == OUTPUT_MODE_TIME_LIMIT:
+        return _plan_time_limited_outputs(playable_blocks, int(settings["max_duration_minutes"]))
+    return [
+        {
+            "output_key": "audiobook",
+            "file_name": "audiobook.wav",
+            "blocks": playable_blocks,
+            "chunk_ids": sorted({str(block.get("chunk_id", "")) for block in playable_blocks}),
+            "over_limit_warning": False,
+        }
+    ]
+
+
+def _plan_per_chunk_outputs(blocks: list[dict[str, object]]) -> list[dict[str, object]]:
+    """
+    @brief      Build one output file per text chunk.
+    @param[in]  blocks Playable Audio Blocks.
+    @return     Ordered per-chunk output plan.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-25
+    @version    0.1.0
+    """
+    grouped: dict[str, list[dict[str, object]]] = {}
+    for block in blocks:
+        grouped.setdefault(str(block.get("chunk_id", "")).strip(), []).append(block)
+    output_plan = []
+    for output_index, chunk_id in enumerate(grouped, start=1):
+        output_plan.append(
+            {
+                "output_key": f"chunk-{output_index:04d}",
+                "file_name": f"chunk-{output_index:04d}.wav",
+                "blocks": grouped[chunk_id],
+                "chunk_ids": [chunk_id],
+                "over_limit_warning": False,
+            }
+        )
+    return output_plan
+
+
+def _plan_time_limited_outputs(blocks: list[dict[str, object]], max_minutes: int) -> list[dict[str, object]]:
+    """
+    @brief      Pack sequential blocks into duration-limited output parts.
+    @param[in]  blocks Playable Audio Blocks.
+    @param[in]  max_minutes Maximum requested part duration.
+    @return     Ordered time-limited output plan.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-25
+    @version    0.1.0
+    """
+    max_seconds = max(1, int(max_minutes) * 60)
+    output_plan: list[dict[str, object]] = []
+    current_blocks: list[dict[str, object]] = []
+    current_seconds = 0.0
+    for block in blocks:
+        block_seconds = float(block.get("duration_seconds", 0.0))
+        if current_blocks and current_seconds + block_seconds > max_seconds:
+            output_plan.append(_time_part_record(len(output_plan) + 1, current_blocks, False))
+            current_blocks = []
+            current_seconds = 0.0
+        current_blocks.append(block)
+        current_seconds += block_seconds
+        if block_seconds > max_seconds:
+            output_plan.append(_time_part_record(len(output_plan) + 1, current_blocks, True))
+            current_blocks = []
+            current_seconds = 0.0
+    if current_blocks:
+        output_plan.append(_time_part_record(len(output_plan) + 1, current_blocks, False))
+    return output_plan
+
+
+def _time_part_record(
+    output_index: int,
+    blocks: list[dict[str, object]],
+    over_limit_warning: bool,
+) -> dict[str, object]:
+    """
+    @brief      Build one time-limited output plan record.
+    @param[in]  output_index Sequential output index.
+    @param[in]  blocks Blocks assigned to the output.
+    @param[in]  over_limit_warning True when one block exceeds the limit.
+    @return     Output plan record.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-25
+    @version    0.1.0
+    """
+    return {
+        "output_key": f"part-{output_index:04d}",
+        "file_name": f"part-{output_index:04d}.wav",
+        "blocks": list(blocks),
+        "chunk_ids": sorted({str(block.get("chunk_id", "")) for block in blocks}),
+        "over_limit_warning": over_limit_warning,
+    }
+
+
+def _compose_output_file(
+    project_root: Path,
+    output_item: dict[str, object],
+    settings: AudioAssemblySettings,
+    cancel_requested=None,
+) -> dict[str, object]:
+    """
+    @brief      Write one final WAV output file from its assigned source blocks.
+    @param[in]  project_root Active project root folder.
+    @param[in]  output_item Output plan item.
+    @param[in]  settings Normalized Audio Assembly settings.
+    @param[in]  cancel_requested Optional cancellation callback.
+    @return     Completed output record.
+    @exception  RuntimeError Raised when source WAV files are invalid.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-25
+    @version    0.1.0
+    """
+    output_root = project_root / config.AUDIOBOOK_OUTPUT_FOLDER_NAME
+    output_root.mkdir(parents=True, exist_ok=True)
+    output_path = output_root / str(output_item["file_name"])
+    temp_path = output_path.with_name(output_path.name + _TEMP_SUFFIX)
+    if temp_path.is_file():
+        temp_path.unlink()
+    blocks = [dict(block) for block in output_item.get("blocks", []) if isinstance(block, dict)]
+    expected_params = None
+    total_frames = 0
+    with wave.open(str(temp_path), "wb") as output_wav:
+        previous_chunk_id = None
+        for block_index, block in enumerate(blocks):
+            raise_if_cancelled(cancel_requested)
+            source_path = _audio_path(project_root, block)
+            if source_path is None:
+                continue
+            with wave.open(str(source_path), "rb") as source_wav:
+                params = source_wav.getparams()
+                comparable_params = params[:3], params[4:]
+                if expected_params is None:
+                    expected_params = comparable_params
+                    output_wav.setparams(params)
+                elif comparable_params != expected_params:
+                    raise RuntimeError("Audio Assembly found incompatible source WAV parameters.")
+                if block_index > 0:
+                    gap_ms = (
+                        int(settings["inter_chunk_silence_ms"])
+                        if str(block.get("chunk_id", "")) != str(previous_chunk_id)
+                        else int(settings["inter_block_silence_ms"])
+                    )
+                    silence_frames = _write_silence(output_wav, gap_ms, params)
+                    total_frames += silence_frames
+                frame_count = source_wav.getnframes()
+                output_wav.writeframes(source_wav.readframes(frame_count))
+                total_frames += frame_count
+                previous_chunk_id = str(block.get("chunk_id", ""))
+    if expected_params is None:
+        raise RuntimeError("Audio Assembly cannot write an empty output file.")
+    if output_path.is_file():
+        output_path.unlink()
+    temp_path.replace(output_path)
+    sample_rate = int(expected_params[0][2])
+    duration_seconds = 0.0 if sample_rate <= 0 else total_frames / sample_rate
+    return {
+        "output_key": str(output_item["output_key"]),
+        "file_name": output_path.name,
+        "audio_relative_path": relative_to_project(project_root, output_path),
+        "block_count": len(blocks),
+        "chunk_ids": list(output_item.get("chunk_ids", [])),
+        "duration_seconds": duration_seconds,
+        "generated": True,
+        "generated_at": _utc_now_iso(),
+        "output_format": OUTPUT_FORMAT_WAV,
+    }
+
+
+def _write_silence(output_wav: wave.Wave_write, gap_ms: int, params) -> int:
+    """
+    @brief      Write PCM silence frames into one output WAV stream.
+    @param[in]  output_wav Active output WAV writer.
+    @param[in]  gap_ms Gap length in milliseconds.
+    @param[in]  params WAV params from the current source file.
+    @return     Number of frames written.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-25
+    @version    0.1.0
+    """
+    if gap_ms <= 0:
+        return 0
+    channels = int(params.nchannels)
+    sample_width = int(params.sampwidth)
+    frame_rate = int(params.framerate)
+    frame_count = int(frame_rate * (gap_ms / 1000.0))
+    if frame_count <= 0:
+        return 0
+    output_wav.writeframes(b"\x00" * frame_count * channels * sample_width)
+    return frame_count
+
+
+def _build_report(
+    settings: AudioAssemblySettings,
+    audio_blocks: list[dict[str, object]],
+    output_plan: list[dict[str, object]],
+    outputs: list[dict[str, object]],
+    warnings: list[dict[str, object]],
+    input_fingerprint: str,
+    status: str,
+    started_at: str,
+    completed_at: str | None,
+) -> AudioAssemblyReport:
+    """
+    @brief      Build one Audio Assembly report from current composition state.
+    @param[in]  settings Normalized Audio Assembly settings.
+    @param[in]  audio_blocks Approved Audio Blocks.
+    @param[in]  output_plan Planned output files.
+    @param[in]  outputs Completed output records.
+    @param[in]  warnings Warning records.
+    @param[in]  input_fingerprint Stable composition input fingerprint.
+    @param[in]  status Current operation status.
+    @param[in]  started_at Operation start timestamp.
+    @param[in]  completed_at Optional completion timestamp.
+    @return     Report payload.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-25
+    @version    0.1.0
+    """
+    planned_count = len(output_plan)
+    completed_count = len(outputs)
+    if planned_count > 0 and completed_count >= planned_count:
+        stage_status = AUDIO_ASSEMBLY_STAGE_COMPLETED
+    elif completed_count > 0 or status in {"running", "cancelled"}:
+        stage_status = AUDIO_ASSEMBLY_STAGE_IN_PROGRESS
+    else:
+        stage_status = AUDIO_ASSEMBLY_STAGE_NOT_STARTED
+    return {
+        "audio_assembly_stage_status": stage_status,
+        "operation_status": status,
+        "settings": normalize_audio_assembly_settings(settings),
+        "input_fingerprint": input_fingerprint,
+        "total_audio_block_count": len(audio_blocks),
+        "composed_audio_block_count": sum(int(output.get("block_count", 0)) for output in outputs),
+        "planned_output_count": planned_count,
+        "generated_output_count": completed_count,
+        "total_duration_seconds": sum(float(output.get("duration_seconds", 0.0)) for output in outputs),
+        "outputs": [_normalize_output_record(output) for output in outputs],
+        "warning_count": len(warnings),
+        "warnings": list(warnings),
+        "started_at": started_at,
+        "completed_at": completed_at,
+        "updated_at": _utc_now_iso(),
+    }
+
+
+def _build_operation_state(
+    project_root: Path,
+    report: AudioAssemblyReport,
+    output_plan: list[dict[str, object]],
+    next_output_index: int = 0,
+) -> AudioAssemblyState:
+    """
+    @brief      Build one persisted Audio Assembly operation-state payload.
+    @param[in]  project_root Active project root folder.
+    @param[in]  report Current Audio Assembly report.
+    @param[in]  output_plan Planned output files.
+    @param[in]  next_output_index Next output index to compose.
+    @return     Operation-state payload.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-25
+    @version    0.1.0
+    """
+    report_path = build_operation_output_path(project_root, "audio_assembly", config.AUDIO_ASSEMBLY_REPORT_FILE_NAME)
+    state_path = build_operation_output_path(project_root, "audio_assembly", config.AUDIO_ASSEMBLY_STATE_FILE_NAME)
+    output_paths = [str(output.get("audio_relative_path", "")) for output in report.get("outputs", [])]
+    output_paths = [path for path in output_paths if path]
+    return {
+        "folder_relative_path": config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH,
+        "status": str(report.get("operation_status", "not_started")),
+        "input_paths": [config.AUDIO_BLOCKS_OUTPUT_FILE_NAME],
+        "output_paths": output_paths,
+        "artifact_paths": [
+            relative_to_project(project_root, report_path),
+            relative_to_project(project_root, state_path),
+            *output_paths,
+        ],
+        "progress_current": int(report.get("generated_output_count", 0)),
+        "progress_total": len(output_plan),
+        "mode": _MODE,
+        "started_at": report.get("started_at"),
+        "completed_at": report.get("completed_at"),
+        "updated_at": _utc_now_iso(),
+        "warning_count": int(report.get("warning_count", 0)),
+        "metadata": {
+            "input_fingerprint": str(report.get("input_fingerprint", "")),
+            "output_mode": str(dict(report.get("settings", {})).get("output_mode", "")),
+            "output_format": OUTPUT_FORMAT_WAV,
+            "total_duration_seconds": float(report.get("total_duration_seconds", 0.0)),
+            "completed_output_keys": [str(output.get("output_key", "")) for output in report.get("outputs", [])],
+        },
+        "resume_checkpoint": {
+            "next_output_index": max(int(next_output_index), 0),
+        },
+    }
+
+
+def _persist_state(project_root: Path, report: AudioAssemblyReport, operation_state: AudioAssemblyState) -> None:
+    """
+    @brief      Persist Audio Assembly report and operation state.
+    @param[in]  project_root Active project root folder.
+    @param[in]  report Current report payload.
+    @param[in]  operation_state Current state payload.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-25
+    @version    0.1.0
+    """
+    build_operation_output_path(project_root, "audio_assembly", config.AUDIO_ASSEMBLY_REPORT_FILE_NAME).write_text(
+        json.dumps(report, indent=2, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
+    build_operation_output_path(project_root, "audio_assembly", config.AUDIO_ASSEMBLY_STATE_FILE_NAME).write_text(
+        json.dumps(operation_state, indent=2, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
+
+
+def _completed_records_for_resume(
+    project_root: Path,
+    existing_state: dict[str, object],
+    input_fingerprint: str,
+) -> list[dict[str, object]]:
+    """
+    @brief      Return completed output records that are safe to reuse.
+    @param[in]  project_root Active project root folder.
+    @param[in]  existing_state Persisted operation state.
+    @param[in]  input_fingerprint Current input fingerprint.
+    @return     Reusable completed output records.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-25
+    @version    0.1.0
+    """
+    metadata = existing_state.get("metadata", {}) if isinstance(existing_state, dict) else {}
+    if not isinstance(metadata, dict) or str(metadata.get("input_fingerprint", "")) != input_fingerprint:
+        return []
+    records = []
+    for output in load_generated_outputs(project_root):
+        audio_path = project_root / str(output.get("audio_relative_path", ""))
+        if audio_path.is_file():
+            records.append(output)
+    return records
+
+
+def _requires_manual_reset(existing_state: dict[str, object], input_fingerprint: str) -> bool:
+    """
+    @brief      Return whether existing persisted state belongs to different inputs.
+    @param[in]  existing_state Persisted state payload.
+    @param[in]  input_fingerprint Current input fingerprint.
+    @return     True when operator reset is required.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-25
+    @version    0.1.0
+    """
+    if not existing_state:
+        return False
+    metadata = existing_state.get("metadata", {}) if isinstance(existing_state, dict) else {}
+    if not isinstance(metadata, dict):
+        return False
+    persisted = str(metadata.get("input_fingerprint", "")).strip()
+    return bool(persisted) and persisted != input_fingerprint
+
+
+def _audio_path(project_root: Path, audio_block: dict[str, object]) -> Path | None:
+    """
+    @brief      Resolve one Audio Block audio path from its project-relative metadata.
+    @param[in]  project_root Active project root folder.
+    @param[in]  audio_block Audio Block payload.
+    @return     Absolute audio path or `None` when no path is stored.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-25
+    @version    0.1.0
+    """
+    relative_path = str(audio_block.get("audio_relative_path", "") or "").strip()
+    if not relative_path:
+        return None
+    return project_root / relative_path
+
+
+def _enrich_block_duration(project_root: Path, block: dict[str, object]) -> dict[str, object]:
+    """
+    @brief      Add measured WAV duration to one Audio Block payload copy.
+    @param[in]  project_root Active project root folder.
+    @param[in]  block Audio Block payload.
+    @return     Audio Block payload copy with `duration_seconds`.
+    @exception  wave.Error Raised when the source file is not a readable WAV.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-25
+    @version    0.1.0
+    """
+    enriched = dict(block)
+    enriched["duration_seconds"] = _wav_duration_seconds(project_root / str(block.get("audio_relative_path", "")))
+    return enriched
+
+
+def _wav_duration_seconds(path: Path) -> float:
+    """
+    @brief      Measure one WAV file duration in seconds.
+    @param[in]  path Source WAV file path.
+    @return     Duration in seconds.
+    @exception  wave.Error Raised when the source file is not a readable WAV.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-25
+    @version    0.1.0
+    """
+    with wave.open(str(path), "rb") as wav_file:
+        frame_rate = wav_file.getframerate()
+        if frame_rate <= 0:
+            return 0.0
+        return wav_file.getnframes() / frame_rate
+
+
+def _validate_compatible_wav_inputs(project_root: Path, audio_blocks: list[dict[str, object]]) -> None:
+    """
+    @brief      Validate that all playable Audio Blocks can be stitched together.
+    @param[in]  project_root Active project root folder.
+    @param[in]  audio_blocks Playable Audio Block payloads.
+    @return     None.
+    @exception  RuntimeError Raised when WAV parameters are unsupported or incompatible.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-25
+    @version    0.1.0
+    """
+    expected_params = None
+    for block in audio_blocks:
+        audio_path = _audio_path(project_root, block)
+        assert audio_path is not None
+        with wave.open(str(audio_path), "rb") as wav_file:
+            params = wav_file.getparams()
+            comparable_params = params[:3], params[4:]
+            if params.sampwidth not in _WAV_SAMPLE_WIDTH_BY_FORMAT:
+                raise RuntimeError("Audio Assembly supports uncompressed PCM WAV source files only.")
+            if expected_params is None:
+                expected_params = comparable_params
+            elif comparable_params != expected_params:
+                raise RuntimeError("Audio Assembly found incompatible source WAV parameters.")
+
+
+def _build_input_fingerprint(
+    project_root: Path,
+    audio_blocks: list[dict[str, object]],
+    settings: AudioAssemblySettings,
+) -> str:
+    """
+    @brief      Build a stable fingerprint for current Audio Assembly inputs.
+    @param[in]  project_root Active project root folder.
+    @param[in]  audio_blocks Approved Audio Block payloads.
+    @param[in]  settings Normalized Audio Assembly settings.
+    @return     SHA-1 fingerprint token used for resume validation.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-25
+    @version    0.1.0
+    """
+    payload = {
+        "settings": normalize_audio_assembly_settings(settings),
+        "audio_blocks": [
+            {
+                "speech_block_id": str(block.get("speech_block_id", "")),
+                "sequence_index": int(block.get("sequence_index", 0)),
+                "chunk_id": str(block.get("chunk_id", "")),
+                "audio_relative_path": block.get("audio_relative_path"),
+                "file_sha1": _file_sha1(_audio_path(project_root, block)) if _audio_path(project_root, block) else None,
+            }
+            for block in audio_blocks
+        ],
+    }
+    return hashlib.sha1(  # noqa: S324
+        json.dumps(payload, ensure_ascii=False, sort_keys=True).encode("utf-8")
+    ).hexdigest()
+
+
+def _file_sha1(path: Path | None) -> str | None:
+    """
+    @brief      Compute a SHA-1 digest for one local file.
+    @param[in]  path Candidate file path.
+    @return     Hex digest or `None` when the path is missing.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-25
+    @version    0.1.0
+    """
+    if path is None or not path.is_file():
+        return None
+    digest = hashlib.sha1()  # noqa: S324
+    with path.open("rb") as file_handle:
+        for chunk in iter(lambda: file_handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _normalize_output_record(payload: dict[str, object]) -> dict[str, object]:
+    return {
+        "output_key": str(payload.get("output_key", "")).strip(),
+        "file_name": str(payload.get("file_name", "")).strip(),
+        "audio_relative_path": str(payload.get("audio_relative_path", "")).strip(),
+        "block_count": _bounded_int(payload.get("block_count", 0), 0, 1_000_000, 0),
+        "chunk_ids": list(payload.get("chunk_ids", [])) if isinstance(payload.get("chunk_ids"), list) else [],
+        "duration_seconds": float(payload.get("duration_seconds", 0.0) or 0.0),
+        "generated": bool(payload.get("generated", False)),
+        "generated_at": str(payload.get("generated_at", "") or ""),
+        "output_format": str(payload.get("output_format", OUTPUT_FORMAT_WAV)).strip() or OUTPUT_FORMAT_WAV,
+    }
+
+
+def _bounded_int(value: object, minimum: int, maximum: int, fallback: int) -> int:
+    """
+    @brief      Convert one value to an integer clamped to a range.
+    @param[in]  value Candidate integer value.
+    @param[in]  minimum Minimum accepted value.
+    @param[in]  maximum Maximum accepted value.
+    @param[in]  fallback Fallback value for invalid input.
+    @return     Bounded integer value.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-25
+    @version    0.1.0
+    """
+    try:
+        resolved = int(value)
+    except (TypeError, ValueError):
+        return fallback
+    return max(minimum, min(resolved, maximum))
+
+
+def _resolve_started_at(existing_state: dict[str, object]) -> str:
+    """
+    @brief      Resolve the operation start timestamp for a resumed or fresh run.
+    @param[in]  existing_state Existing operation-state payload.
+    @return     Existing start timestamp or the current UTC timestamp.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-25
+    @version    0.1.0
+    """
+    started_at = str(existing_state.get("started_at", "") or "").strip() if isinstance(existing_state, dict) else ""
+    return started_at or _utc_now_iso()
+
+
+def _utc_now_iso() -> str:
+    return datetime.now(UTC).replace(microsecond=0).isoformat()
+
+
+def _emit_progress(progress_callback, progress_current: int, progress_total: int, message: str) -> None:
+    """
+    @brief      Emit one normalized progress update when a callback is available.
+    @param[in]  progress_callback Optional progress callback.
+    @param[in]  progress_current Current completed unit count.
+    @param[in]  progress_total Total planned unit count.
+    @param[in]  message Operator-facing progress message.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-25
+    @version    0.1.0
+    """
+    if callable(progress_callback):
+        progress_callback(
+            progress_current,
+            progress_total,
+            progress_percent(progress_current, progress_total),
+            message,
+        )
+
+
+# END OF FILE

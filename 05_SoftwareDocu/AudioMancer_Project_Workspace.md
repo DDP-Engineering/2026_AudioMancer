@@ -34,7 +34,7 @@ used by the application shell.
   `voice_assignment_mode` in the root manifest
 - keep detailed per-step state, reports, outputs, checkpoints, and AI logs as
   root-level project artifacts, except generated Audio Blocks files under
-  `audio_blocks/`
+  `audio_blocks/` and final Audio Assembly deliverables under `audiobook/`
 - feed the main window with loaded project root and manifest state
 
 It does not extract text by itself, own narrator content storage, or implement
@@ -117,6 +117,7 @@ Outputs:
 - one copied source file stored directly in the project root
 - root-level workflow artifacts written by each operation
 - one `audio_blocks/` runtime subfolder for generated Audio Blocks files
+- one `audiobook/` runtime subfolder for generated Audio Assembly deliverables
 - one loaded validated manifest dictionary for the UI shell
 - persisted compact operation summaries in `project.json`
 - persisted detailed operation state in operation-specific root state files and
@@ -141,6 +142,7 @@ Current root manifest contract in `project.json`:
 - `narrator_profile_name`
 - `narrator_language`
 - `voice_assignment_mode`
+- `audio_assembly_settings`
 - `notes`
 
 `source_document` payload contract:
@@ -181,6 +183,8 @@ Required folder contract:
 - no workflow folders are required for new projects
 - `audio_blocks/` may be created by the Audio Blocks workflow for generated
   audio artifacts
+- `audiobook/` may be created by the Audio Assembly workflow for generated
+  audiobook deliverables
 
 Current validation invariants:
 

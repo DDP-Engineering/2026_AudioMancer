@@ -12,6 +12,26 @@ All notable changes to this project will be documented in this file.
 
 No unreleased application changes.
 
+## [0.23.0] - 2026-04-25
+
+### Added
+
+- added the implemented `Audio Assembly` workflow with WAV-only composition
+  from approved Audio Blocks, per-project assembly settings, resumable
+  state/report artifacts, generated `audiobook/` outputs, playback controls,
+  localized UI text, and focused service/page/controller coverage
+- documented the Audio Assembly control gating: generation is available only
+  after all Audio Blocks exist and are approved, reset is available only after
+  assembly artifacts exist, and playback is available only after output files
+  are generated
+
+### Fixed
+
+- fixed Home workflow progress so Character Voices and later workflow rows are
+  shown as finished when their ready stage has been reached, and unfinished
+  downstream operation summaries are shown as in progress instead of not
+  started
+
 ## [0.22.0] - 2026-04-25
 
 ### Changed

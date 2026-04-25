@@ -10,7 +10,7 @@ Implementation-focused software documentation and component notes.
 
 ## Current Documents
 
-- `AudioMancer_App_Shell.md` documents the initial desktop application shell.
+- `AudioMancer_App_Shell.md` documents the desktop application shell, Home workflow progress presenter, project navigation, settings dialogs, and page-hosting responsibilities.
 - `AudioMancer_Config_And_Settings.md` documents the adapted configuration and settings scaffold.
 - `AudioMancer_Settings_Service.md` documents the shared settings lifecycle implementation.
 - `AudioMancer_Logging_Service.md` documents the shared runtime logging implementation.
@@ -25,6 +25,7 @@ Implementation-focused software documentation and component notes.
 - `AudioMancer_Character_Voices_Service.md` documents the Character Voices target contract, character-owned prompt handoff from `Characters` with legacy fallback, selected voice-language rules, same-narrator copy behavior, and root-level page/controller integration.
 - `AudioMancer_Speech_Blocks_Service.md` documents the Speech Blocks source-resolution rules, per-chunk AI generation flow, root-level persisted artifacts, resumable state contract, and page/controller integration.
 - `AudioMancer_Audio_Blocks_Service.md` documents the Audio Blocks reusable clone-prompt workflow, root-level persisted artifact contract, approval rules, generated `audio_blocks/` media folder, and upstream invalidation behavior.
+- `AudioMancer_Audio_Assembly_Service.md` documents the final WAV audiobook composition workflow, per-project assembly settings, resumable state/report artifacts, generated `audiobook/` deliverables, and playback/reset page integration.
 - `AudioMancer_TTS_Settings_And_VoiceWeaver_Runtime.md` documents the simplified TTS Settings dialog, VoiceWeaver runtime integration, fixed Qwen3 readiness classification, generation helpers, and project-local `voice_assignment_mode` contract.
 - `AudioMancer_Operation_Runner_Controller.md` documents the shared threaded modal-operation runner used by long-running UI workflows.
 - The app shell document also covers the shared runtime logging bootstrap.
