@@ -12,14 +12,17 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
 Implements the current `Audio Blocks` workflow in `AudioMancer`.
 
 It consumes approved persisted `Speech Blocks`, the selected narrator sample,
-per-character samples from `Character Voices`, and the selected voice language to
-generate one reviewable WAV per approved speech block under the root-level
-`audio_blocks/` generated audio folder.
+per-character samples from `Character Voices` when the project uses
+narrator-plus-character assignment, and the selected voice language to generate
+one reviewable WAV per approved speech block under the root-level
+`audio_blocks/` generated audio folder. When the project TTS plan uses
+`voice_assignment_mode == "same_narrator"`, all spoken blocks use the selected
+narrator sample and reusable narrator clone prompt.
 
 ## 2. Responsibilities
 
-- validate that `Speech Blocks`, narrator sample selection, character samples,
-  and runtime clone capability are ready before generation starts, with
+- validate that `Speech Blocks`, narrator sample selection, required character
+  samples, and runtime clone capability are ready before generation starts, with
   `Qwen3-TTS-12Hz-1.7B-Base` preferred when the runtime exposes multiple healthy
   Qwen base clone models
 - build one reusable client-owned `voice_clone_prompt` payload per referenced
@@ -48,7 +51,6 @@ generate one reviewable WAV per approved speech block under the root-level
 It does not:
 
 - assemble approved audio blocks into final chapter or book audio outputs
-- provide sample fallback for missing character voices during batch generation
 - own narrator sample generation, character sample generation, or Speech Blocks
   speaker attribution
 
@@ -81,8 +83,9 @@ High-level flow:
 2. `audio_blocks_service.start_or_continue_generation(...)` loads current
    `Speech Blocks`, filters the generation set to approved blocks, resolves
    narrator sample metadata from the selected narrator profile when
-   `narator.json` contains only selection state, loads character samples, and
-   reads the selected Character Voices language.
+   `narator.json` contains only selection state, loads character samples only
+   when narrator-plus-character assignment is active, and reads the selected
+   Character Voices language.
 3. The service selects the clone/base model from the discovered runtime catalog,
    preferring `Qwen3-TTS-12Hz-1.7B-Base` when it is available. It reads
    `/v1/status`, loads the clone model only when needed, then resolves the
@@ -150,7 +153,8 @@ Inputs:
 - selected narrator sample audio in root-level `narator.wav`; `narator.json`
   may contain either full selected-sample metadata or only the selected profile
   state, in which case the service reads the profile `sample_metadata`
-- character sample audio files and metadata from `characters_voice.json`
+- character sample audio files and metadata from `characters_voice.json` when
+  the project uses narrator-plus-character assignment
 - ordered speech blocks in `speech_blocks.json`
 - runtime connection settings and discovered models from `settings.json`
 
@@ -269,7 +273,8 @@ Upstream integrations:
 
 - selected narrator sample state from root-level `narator.wav` and
   `narator.json`
-- per-character sample state from `characters_voice.json`
+- per-character sample state from `characters_voice.json` when
+  `voice_assignment_mode == "narrator_and_characters"`
 - selected Character Voices language from `project.json`
 - ordered speech blocks from `speech_blocks.json`
 
@@ -313,7 +318,8 @@ audio_blocks_service.regenerate_audio_block(
 Operator path:
 
 - complete `Speech Blocks`
-- ensure the selected narrator sample and every referenced character sample exist
+- ensure the selected narrator sample exists; when using narrator-plus-character
+  assignment, also ensure every referenced character sample exists
 - open `Audio Blocks`
 - confirm `Start Audio Generation`
 - review generated audio per speech block
@@ -354,9 +360,8 @@ uv run ruff format <changed_python_files>
 
 ## 10. Limitations And Future Work
 
-- the current workflow assumes narrator plus all referenced character samples
-  already exist; there is no narrator fallback for missing character samples in
-  batch generation
+- same-narrator mode intentionally uses the narrator voice for all spoken
+  dialogue and does not preserve per-character vocal differences
 - the current page supports review, regeneration, and approval, but not manual
   text editing or waveform editing
 - status and progress text are persisted as simple summaries; there is no

@@ -14,7 +14,7 @@
          normalization.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-23
-@version 1.3.1
+@version 1.4.0
 """
 
 # IMPORTS
@@ -151,6 +151,102 @@ def test_audio_blocks_service_generates_clone_prompts_and_ordered_wavs(monkeypat
     assert second_audio_path.name == "0001_000002_alice.wav"
     assert first_audio_path.read_bytes() == b"RIFF-narrator"
     assert second_audio_path.read_bytes() == b"RIFF-alice"
+
+
+def test_audio_blocks_service_same_narrator_mode_uses_narrator_prompt_for_characters(monkeypatch, tmp_path) -> None:
+    """
+    @brief      Verify same-narrator mode does not require character samples for Audio Blocks generation.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-25
+    @version    0.1.0
+    """
+    project_root, manifest = _create_audio_blocks_project(tmp_path, "AudioBlocksServiceSameNarrator")
+    narrator_definition_service.save_tts_plan(
+        project_root,
+        {"voice_assignment_mode": "same_narrator"},
+        _runtime_settings()["discovered_models"],
+    )
+    character_voices_service.delete_target_sample(project_root, "character_alice")
+    manifest = project_workspace_service.load_manifest(project_root)
+    wait_payloads = [
+        {
+            "active_model": {"model_id": "Qwen3-TTS-12Hz-1.7B-Base"},
+            "operation": {"status": "completed"},
+            "result": {},
+        },
+        {
+            "operation": {
+                "status": "completed",
+                "result": {"voice_clone_prompt": {"format": "qwen_voice_clone_prompt_v1", "speaker": "narrator"}},
+            },
+            "result": {},
+        },
+        {"operation": {"status": "completed"}, "result": {"available": True, "summary": "Narrator block ready."}},
+        {"operation": {"status": "completed"}, "result": {"available": True, "summary": "Character block ready."}},
+    ]
+    observed_prompt_requests: list[tuple[str, str, str]] = []
+    observed_generate_requests: list[tuple[str, str, str]] = []
+    audio_payloads = [b"RIFF-narrator", b"RIFF-character-with-narrator"]
+    monkeypatch.setattr(
+        audio_blocks_service.voiceweaver_runtime_service,
+        "read_status",
+        lambda *_args, **_kwargs: {"active_model": None, "operation": {"status": "idle"}},
+    )
+    monkeypatch.setattr(
+        audio_blocks_service.voiceweaver_runtime_service,
+        "load_model",
+        lambda *_args, **_kwargs: {"status": "running"},
+    )
+    monkeypatch.setattr(
+        audio_blocks_service.voiceweaver_runtime_service,
+        "create_voice_clone_prompt",
+        lambda _base_url, _api_key, sample_audio_bytes, sample_text, language, **_kwargs: (
+            observed_prompt_requests.append((sample_audio_bytes.decode("utf-8"), sample_text, language)),
+            {"status": "running"},
+        )[1],
+    )
+    monkeypatch.setattr(
+        audio_blocks_service.voiceweaver_runtime_service,
+        "generate_voice_clone_from_prompt",
+        lambda _base_url, _api_key, voice_clone_prompt, _language, text, **_kwargs: (
+            observed_generate_requests.append(
+                (
+                    str(dict(voice_clone_prompt).get("format", "")),
+                    str(dict(voice_clone_prompt).get("speaker", "")),
+                    text,
+                )
+            ),
+            {"status": "running"},
+        )[1],
+    )
+    monkeypatch.setattr(
+        audio_blocks_service.voiceweaver_runtime_service,
+        "wait_for_terminal_operation",
+        lambda *_args, **_kwargs: wait_payloads.pop(0),
+    )
+    monkeypatch.setattr(
+        audio_blocks_service.voiceweaver_runtime_service,
+        "download_generated_voice",
+        lambda *_args, **_kwargs: audio_payloads.pop(0),
+    )
+
+    report = audio_blocks_service.start_or_continue_generation(project_root, manifest, _runtime_settings())
+
+    assert report["generated_block_count"] == 2
+    clone_profiles = audio_blocks_service.load_voice_clone_profiles(project_root)
+    audio_blocks = audio_blocks_service.load_audio_blocks(project_root)
+    assert [profile["voice_target_id"] for profile in clone_profiles] == ["narrator"]
+    assert observed_prompt_requests == [("selected-narrator", "Narrator preview line.", "en")]
+    assert observed_generate_requests == [
+        ("qwen_voice_clone_prompt_v1", "narrator", "Narration one."),
+        ("qwen_voice_clone_prompt_v1", "narrator", "Hello there."),
+    ]
+    assert [block["voice_target_id"] for block in audio_blocks] == ["narrator", "narrator"]
+    assert [block["voice_source_kind"] for block in audio_blocks] == ["narrator_sample", "narrator_sample"]
 
 
 def test_audio_blocks_service_rejects_legacy_global_sequence_schema(tmp_path) -> None:

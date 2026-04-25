@@ -10,7 +10,17 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
-- No unreleased application changes.
+### Added
+
+- added the English offline end-user guide under `05_SoftwareDocu/UserGuide/`,
+  including HTML, a printable PDF copy, and real UI screenshots
+- bundled the user guide into Windows and Ubuntu release archives under
+  `help/en/`
+
+### Changed
+
+- changed the toolbar Help action from a placeholder message to opening the
+  packaged offline HTML user guide
 
 ## [0.26.0] - 2026-04-25
 
@@ -58,6 +68,9 @@ All notable changes to this project will be documented in this file.
 - fixed split Audio Blocks generation so part WAV file names use chunk-local
   identity and no longer call the audio artifact stem helper with the old
   global-sequence argument list
+- fixed Audio Blocks generation in same-narrator mode so character dialogue
+  uses the selected narrator sample and reusable narrator clone prompt instead
+  of requiring separate character samples
 
 ## [0.24.0] - 2026-04-25
 

@@ -16,7 +16,7 @@
          `80_audio_blocks` workflow artifacts.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-23
-@version 0.7.1
+@version 0.7.2
 """
 
 # IMPORTS
@@ -136,7 +136,7 @@ def load_voice_clone_profiles(project_root: str | Path) -> list[VoiceCloneProfil
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-23
-    @version    0.3.0
+    @version    0.4.0
     """
     clone_path = resolve_operation_path(
         project_root,
@@ -194,7 +194,7 @@ def start_or_continue_generation(
     @exception  OperationCancelledError Raised when the operator cancels the run.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-23
-    @version    0.3.0
+    @version    0.3.2
     """
     resolved_project_root = Path(project_root)
     generation_context = _resolve_generation_context(resolved_project_root, manifest, runtime_settings)
@@ -209,10 +209,17 @@ def start_or_continue_generation(
     )
     persisted_audio_blocks = load_audio_blocks(resolved_project_root)
     if not existing_blocks:
-        existing_blocks = persisted_audio_blocks or _initialize_audio_blocks(generation_context["speech_blocks"])
+        existing_blocks = persisted_audio_blocks or _initialize_audio_blocks(
+            generation_context["speech_blocks"],
+            str(generation_context.get("voice_assignment_mode", config.DEFAULT_TTS_VOICE_ASSIGNMENT_MODE)),
+        )
     if not existing_clone_profiles:
         existing_clone_profiles = load_voice_clone_profiles(resolved_project_root)
-    existing_blocks = _merge_existing_audio_blocks(generation_context["speech_blocks"], existing_blocks)
+    existing_blocks = _merge_existing_audio_blocks(
+        generation_context["speech_blocks"],
+        existing_blocks,
+        str(generation_context.get("voice_assignment_mode", config.DEFAULT_TTS_VOICE_ASSIGNMENT_MODE)),
+    )
 
     report = _rebuild_report(
         existing_blocks,
@@ -298,14 +305,22 @@ def start_or_continue_generation(
         generation_context,
         existing_state,
     )
+    voice_assignment_mode = str(
+        generation_context.get("voice_assignment_mode", config.DEFAULT_TTS_VOICE_ASSIGNMENT_MODE)
+    )
     if restored_blocks:
-        existing_blocks = _merge_existing_audio_blocks(generation_context["speech_blocks"], restored_blocks)
+        existing_blocks = _merge_existing_audio_blocks(
+            generation_context["speech_blocks"],
+            restored_blocks,
+            voice_assignment_mode,
+        )
         existing_clone_profiles = restored_clone_profiles or existing_clone_profiles
         profile_index = restored_profile_index
     else:
         existing_blocks = _merge_existing_audio_blocks(
             generation_context["speech_blocks"],
             load_audio_blocks(resolved_project_root),
+            voice_assignment_mode,
         )
     block_index = _first_incomplete_block_index(existing_blocks)
     existing_blocks = [_apply_model_budget_to_block(block, generation_context) for block in existing_blocks]
@@ -887,6 +902,9 @@ def _resolve_generation_context(
     clone_model_id = str(clone_model.get("model_id", "")).strip()
     if not clone_model_id or timeout_seconds <= 0:
         raise ValueError("Audio Blocks generation requires a valid runtime model and timeout configuration.")
+    voice_assignment_mode = narrator_definition_service.load_tts_plan(project_root, discovered_models)[
+        "voice_assignment_mode"
+    ]
 
     voice_language = character_voices_service.load_selected_voice_language(
         project_root,
@@ -908,7 +926,7 @@ def _resolve_generation_context(
     voice_target_ids: set[str] = set()
     missing_characters: list[str] = []
     for speech_block in speech_audio_blocks:
-        voice_target_id = _voice_target_id_for_block(speech_block)
+        voice_target_id = _voice_target_id_for_block(speech_block, voice_assignment_mode)
         if voice_target_id in voice_target_ids:
             continue
         voice_target_ids.add(voice_target_id)
@@ -962,6 +980,7 @@ def _resolve_generation_context(
         "voice_language": voice_language,
         "clone_model_id": clone_model_id,
         "clone_model_payload": clone_model,
+        "voice_assignment_mode": voice_assignment_mode,
         **model_budget,
         "base_url": base_url,
         "runtime_api_key": str(runtime_settings.get("runtime_api_key", "")),
@@ -1829,15 +1848,19 @@ def _stitch_wav_parts(part_paths: list[Path], output_path: Path) -> None:
                 output_wav.writeframes(part_wav.readframes(part_wav.getnframes()))
 
 
-def _initialize_audio_blocks(speech_blocks: list[dict[str, object]]) -> list[AudioBlockPayload]:
+def _initialize_audio_blocks(
+    speech_blocks: list[dict[str, object]],
+    voice_assignment_mode: str = config.DEFAULT_TTS_VOICE_ASSIGNMENT_MODE,
+) -> list[AudioBlockPayload]:
     """
     @brief      Build the initial Audio Blocks manifest from the persisted Speech Blocks list.
     @param[in]  speech_blocks Persisted Speech Blocks payload list.
+    @param[in]  voice_assignment_mode Project-local voice assignment mode.
     @return     Initial ordered Audio Blocks payload list.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-23
-    @version    0.6.0
+    @version    0.7.0
     """
     audio_blocks: list[AudioBlockPayload] = []
     for speech_block in speech_blocks_service.sort_speech_blocks(speech_blocks):
@@ -1864,8 +1887,8 @@ def _initialize_audio_blocks(speech_blocks: list[dict[str, object]]) -> list[Aud
                 "pause_duration_ms": pause_duration_ms,
                 "speech_block_approved": speech_block_approved,
                 "text": str(speech_block.get("text", "")),
-                "voice_target_id": _voice_target_id_for_block(speech_block),
-                "voice_source_kind": _voice_source_kind_for_block(speech_block),
+                "voice_target_id": _voice_target_id_for_block(speech_block, voice_assignment_mode),
+                "voice_source_kind": _voice_source_kind_for_block(speech_block, voice_assignment_mode),
                 "audio_relative_path": None,
                 "metadata_relative_path": None,
                 "generated": metadata_only_completed,
@@ -1887,22 +1910,24 @@ def _initialize_audio_blocks(speech_blocks: list[dict[str, object]]) -> list[Aud
 def _merge_existing_audio_blocks(
     speech_blocks: list[dict[str, object]],
     existing_audio_blocks: list[AudioBlockPayload],
+    voice_assignment_mode: str = config.DEFAULT_TTS_VOICE_ASSIGNMENT_MODE,
 ) -> list[AudioBlockPayload]:
     """
     @brief      Merge persisted Audio Blocks state onto the current Speech Blocks snapshot.
     @param[in]  speech_blocks Current Speech Blocks payload list.
     @param[in]  existing_audio_blocks Persisted Audio Blocks payload list.
+    @param[in]  voice_assignment_mode Project-local voice assignment mode.
     @return     Merged ordered Audio Blocks payload list.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-23
-    @version    0.2.0
+    @version    0.3.0
     """
     existing_by_id = {
         str(block.get("speech_block_id", "")).strip(): _normalize_persisted_audio_block(block)
         for block in existing_audio_blocks
     }
-    merged_blocks = _initialize_audio_blocks(speech_blocks)
+    merged_blocks = _initialize_audio_blocks(speech_blocks, voice_assignment_mode)
     for block in merged_blocks:
         existing_block = existing_by_id.get(str(block.get("speech_block_id", "")).strip())
         if existing_block is None:
@@ -2434,34 +2459,46 @@ def normalize_speaker_name(value: str) -> str:
     return cleaned_value or "speaker"
 
 
-def _voice_target_id_for_block(speech_block: dict[str, object]) -> str:
+def _voice_target_id_for_block(
+    speech_block: dict[str, object],
+    voice_assignment_mode: str = config.DEFAULT_TTS_VOICE_ASSIGNMENT_MODE,
+) -> str:
     """
     @brief      Resolve the character-voices target identifier used by one speech block.
     @param[in]  speech_block Persisted Speech Blocks payload.
+    @param[in]  voice_assignment_mode Project-local voice assignment mode.
     @return     Character-voices target identifier.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-23
-    @version    0.1.0
+    @version    0.2.0
     """
-    if str(speech_block.get("speaker_kind", "")).strip() == speech_blocks_service.SPEAKER_KIND_NARRATOR:
+    if (
+        str(voice_assignment_mode).strip() == "same_narrator"
+        or str(speech_block.get("speaker_kind", "")).strip() == speech_blocks_service.SPEAKER_KIND_NARRATOR
+    ):
         return character_voices_service.TARGET_ID_NARRATOR
     return character_voices_service.character_target_id(str(speech_block.get("speaker_id", "")).strip())
 
 
-def _voice_source_kind_for_block(speech_block: dict[str, object]) -> str:
+def _voice_source_kind_for_block(
+    speech_block: dict[str, object],
+    voice_assignment_mode: str = config.DEFAULT_TTS_VOICE_ASSIGNMENT_MODE,
+) -> str:
     """
     @brief      Resolve the voice-source kind label persisted for one audio block.
     @param[in]  speech_block Persisted Speech Blocks payload.
+    @param[in]  voice_assignment_mode Project-local voice assignment mode.
     @return     Persisted voice-source kind label.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-23
-    @version    0.1.0
+    @version    0.2.0
     """
     return (
         "narrator_sample"
-        if str(speech_block.get("speaker_kind", "")).strip() == speech_blocks_service.SPEAKER_KIND_NARRATOR
+        if str(voice_assignment_mode).strip() == "same_narrator"
+        or str(speech_block.get("speaker_kind", "")).strip() == speech_blocks_service.SPEAKER_KIND_NARRATOR
         else "character_sample"
     )
 
