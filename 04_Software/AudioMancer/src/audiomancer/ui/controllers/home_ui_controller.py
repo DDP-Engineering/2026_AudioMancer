@@ -13,7 +13,7 @@
          and source import workflows owned by the Home page.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-06
-@version 0.3.0
+@version 0.4.0
 """
 
 # IMPORTS
@@ -28,6 +28,7 @@ from audiomancer.services import (
     home_presenter_service,
     import_service,
     project_export_service,
+    project_snapshot_service,
     project_workspace_service,
     ui_state_service,
 )
@@ -303,6 +304,71 @@ def handle_export_requested(window: "MainWindow", export_kind: str, export_forma
     misc_ui_controller.show_message(
         window,
         ui_state_service.translate("status.project_exported", current_language),
+    )
+
+
+def handle_project_snapshot_requested(window: "MainWindow") -> None:
+    """
+    @brief      Export one complete project ZIP snapshot to an external path.
+    @param[in]  window Active main window shell.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-25
+    @version    0.1.0
+    """
+    current_language = ui_state_service.current_language_from_settings(window._settings_payload)
+    if window._current_project_root is None or window._current_manifest is None:
+        QMessageBox.warning(
+            window,
+            ui_state_service.translate("dialog.project_error_title", current_language),
+            ui_state_service.translate("project.error_no_active_project", current_language),
+        )
+        return
+
+    if window._active_operation_kind is not None:
+        QMessageBox.warning(
+            window,
+            ui_state_service.translate("dialog.project_error_title", current_language),
+            ui_state_service.translate("home.snapshot_active_operation_message", current_language),
+        )
+        return
+
+    default_file_name = project_snapshot_service.default_snapshot_file_name(
+        window._current_project_root,
+        window._current_manifest,
+    )
+    selected_path, _selected_filter = QFileDialog.getSaveFileName(
+        window,
+        ui_state_service.translate("dialog.snapshot_title", current_language),
+        str(window._current_project_root.parent / default_file_name),
+        ui_state_service.translate("dialog.snapshot_filter_zip", current_language),
+    )
+    if not selected_path:
+        return
+
+    snapshot_path = project_snapshot_service.ensure_snapshot_extension(selected_path)
+    if project_snapshot_service.is_path_inside_project(window._current_project_root, snapshot_path):
+        QMessageBox.warning(
+            window,
+            ui_state_service.translate("dialog.project_error_title", current_language),
+            ui_state_service.translate("home.snapshot_inside_project_message", current_language),
+        )
+        return
+
+    try:
+        project_snapshot_service.create_project_snapshot(window._current_project_root, snapshot_path)
+    except (OSError, ValueError) as error:
+        QMessageBox.warning(
+            window,
+            ui_state_service.translate("dialog.project_error_title", current_language),
+            f"{ui_state_service.translate('home.snapshot_failure_message', current_language)}\n\n{error}",
+        )
+        return
+
+    misc_ui_controller.show_message(
+        window,
+        ui_state_service.translate("status.project_snapshot_exported", current_language),
     )
 
 

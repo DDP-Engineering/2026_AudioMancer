@@ -14,7 +14,7 @@
          normalization.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-23
-@version 1.3.0
+@version 1.3.1
 """
 
 # IMPORTS
@@ -971,6 +971,40 @@ def test_audio_blocks_split_planner_prefers_sentences_then_word_groups() -> None
     assert sentence_plan["parts"] == ["One two.", "Three four.", "Five six."]
     assert word_plan["strategy"] == "word_group"
     assert " ".join(word_plan["parts"]) == "One two three four five six."
+
+
+def test_audio_blocks_part_artifact_paths_include_chunk_order(tmp_path) -> None:
+    """
+    @brief      Verify split-part artifact names include chunk order and local sequence.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-25
+    @version    0.1.0
+    """
+    first_chunk_part = audio_blocks_service._audio_part_artifact_path(  # noqa: SLF001
+        tmp_path,
+        {
+            "chunk_id": "chunk-0001",
+            "sequence_index": 1,
+            "normalized_speaker_name": "narrator",
+        },
+        0,
+    )
+    second_chunk_part = audio_blocks_service._audio_part_artifact_path(  # noqa: SLF001
+        tmp_path,
+        {
+            "chunk_id": "chunk-0002",
+            "sequence_index": 1,
+            "normalized_speaker_name": "narrator",
+        },
+        0,
+    )
+
+    assert first_chunk_part.name == "0001_000001_narrator_part001.wav"
+    assert second_chunk_part.name == "0002_000001_narrator_part001.wav"
+    assert first_chunk_part != second_chunk_part
 
 
 def test_audio_blocks_model_budget_prefers_runtime_effective_parameters() -> None:

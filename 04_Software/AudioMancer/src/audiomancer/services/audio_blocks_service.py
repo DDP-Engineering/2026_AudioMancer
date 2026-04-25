@@ -16,7 +16,7 @@
          `80_audio_blocks` workflow artifacts.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-23
-@version 0.7.0
+@version 0.7.1
 """
 
 # IMPORTS
@@ -1660,9 +1660,10 @@ def _audio_part_artifact_path(project_root: Path, audio_block: AudioBlockPayload
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-24
-    @version    0.2.0
+    @version    0.2.1
     """
     file_stem = _audio_artifact_file_stem(
+        str(audio_block.get("chunk_id", "")).strip(),
         int(audio_block.get("sequence_index", 0)),
         str(audio_block.get("normalized_speaker_name", "")),
     )

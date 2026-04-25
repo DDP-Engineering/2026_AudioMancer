@@ -14,7 +14,7 @@
          operation finalization callbacks.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-24
-@version 0.2.0
+@version 0.2.1
 """
 
 # IMPORTS
@@ -270,7 +270,7 @@ def start_threaded_operation(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-24
-    @version    0.2.0
+    @version    0.2.1
     """
     if window._active_operation_kind is not None:
         return
@@ -296,6 +296,9 @@ def start_threaded_operation(
     worker.moveToThread(operation_thread)
 
     set_busy(True)
+    home_page = getattr(window, "_home_page", None)
+    if home_page is not None:
+        home_page.set_operation_busy(True)
     window._active_operation_kind = operation_kind
     window._active_operation_name = operation_name
     window._operation_cancel_requested = False
@@ -430,9 +433,12 @@ def _clear_threaded_operation(window: "MainWindow", set_busy) -> None:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-24
-    @version    0.1.0
+    @version    0.1.1
     """
     set_busy(False)
+    home_page = getattr(window, "_home_page", None)
+    if home_page is not None:
+        home_page.set_operation_busy(False)
     misc_ui_controller.clear_progress_dialog(window)
     window._active_operation_kind = None
     window._active_operation_name = None

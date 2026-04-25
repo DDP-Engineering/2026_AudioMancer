@@ -13,7 +13,7 @@
          the same first-page structure without implementing import behavior.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-06
-@version 0.5.0
+@version 0.6.0
 """
 
 # IMPORTS
@@ -70,10 +70,11 @@ class HomeProjectPage(QWidget):
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-05
-    @version    0.4.0
+    @version    0.5.0
     """
 
     import_requested = Signal()
+    project_snapshot_requested = Signal()
     export_requested = Signal(str, str)
 
     def __init__(self, parent=None) -> None:
@@ -84,10 +85,11 @@ class HomeProjectPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-06
-        @version    0.5.0
+        @version    0.6.0
         """
         super().__init__(parent)
         self._project_active = False
+        self._operation_busy = False
         self._source_locked = False
         self._current_language = "en"
         self._current_project_name: str | None = None
@@ -114,8 +116,13 @@ class HomeProjectPage(QWidget):
         self._source_label.setWordWrap(True)
         self._import_button = QPushButton("Select Source File")
         self._import_button.clicked.connect(self.import_requested.emit)
+        self._snapshot_button = QPushButton("Export Project ZIP")
+        self._snapshot_button.clicked.connect(self.project_snapshot_requested.emit)
+        summary_action_layout = QHBoxLayout()
+        summary_action_layout.addWidget(self._import_button)
+        summary_action_layout.addWidget(self._snapshot_button)
         summary_layout.addWidget(self._name_label, 0, 0)
-        summary_layout.addWidget(self._import_button, 0, 1)
+        summary_layout.addLayout(summary_action_layout, 0, 1)
         summary_layout.addWidget(self._path_label, 1, 0, 1, 2)
         summary_layout.addWidget(self._stage_label, 2, 0, 1, 2)
         summary_layout.addWidget(self._source_label, 3, 0, 1, 2)
@@ -231,15 +238,28 @@ class HomeProjectPage(QWidget):
 
     def set_project_active(self, is_active: bool) -> None:
         """
-        @brief      Update whether the page should allow source import.
+        @brief      Update whether the page should allow project actions.
         @param[in]  is_active True when a project is active.
         @return     None.
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-05
-        @version    0.1.0
+        @version    0.2.0
         """
         self._project_active = is_active
+        self._refresh_import_button()
+
+    def set_operation_busy(self, is_busy: bool) -> None:
+        """
+        @brief      Update summary controls that are disabled during active operations.
+        @param[in]  is_busy True when a long-running workflow operation is active.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-25
+        @version    0.1.0
+        """
+        self._operation_busy = is_busy
         self._refresh_import_button()
 
     def set_source_locked(self, is_locked: bool, source_name: str | None) -> None:
@@ -310,14 +330,15 @@ class HomeProjectPage(QWidget):
 
     def _refresh_import_button(self) -> None:
         """
-        @brief      Apply the current button-enabled state.
+        @brief      Apply the current summary button-enabled state.
         @return     None.
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-05
-        @version    0.1.0
+        @version    0.2.0
         """
         self._import_button.setEnabled(self._project_active and not self._source_locked)
+        self._snapshot_button.setEnabled(self._project_active and not self._operation_busy)
 
     def apply_language(self, language: str) -> None:
         """
@@ -335,6 +356,7 @@ class HomeProjectPage(QWidget):
         self._exports_group.setTitle(ui_state_service.translate("home.exports_group", language))
         self._stage_group.setTitle(ui_state_service.translate("home.workflow_group", language))
         self._import_button.setText(ui_state_service.translate("home.select_source", language))
+        self._snapshot_button.setText(ui_state_service.translate("home.export_project_zip", language))
         self._refresh_summary_labels()
         if self._source_locked:
             self._source_lock_label.setText(_build_locked_source_text(language, self._current_locked_source_name))

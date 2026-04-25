@@ -10,6 +10,10 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+- No unreleased application changes.
+
+## [0.25.0] - 2026-04-25
+
 ### Added
 
 - added manual Speech Blocks insertion and deletion on the Speech Blocks page,
@@ -19,14 +23,24 @@ All notable changes to this project will be documented in this file.
   metadata-only and skips VoiceWeaver generation for now
 - added pause-duration parsing for Speech Blocks and Audio Blocks, with Audio
   Assembly converting metadata-only pause blocks into generated WAV silence
+- added Home-page `Export Project ZIP` snapshots that archive the full active
+  project folder to an external `.zip` destination and block while long-running
+  operations are active
+
+### Changed
+
 - changed metadata-only Speech Blocks so pause, background-noise, and
   indication blocks persist and display their operation name instead of a
   narrator or character name
+- package version updated to `0.25.0`
 
 ### Fixed
 
 - preserved the selected chunk text scroll position after saving or resetting
   an edited Speech Block on the Speech Blocks page
+- fixed split Audio Blocks generation so part WAV file names use chunk-local
+  identity and no longer call the audio artifact stem helper with the old
+  global-sequence argument list
 
 ## [0.24.0] - 2026-04-25
 

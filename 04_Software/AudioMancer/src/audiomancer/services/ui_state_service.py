@@ -13,7 +13,7 @@
          application through one centralized string catalog and scale mapping.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 0.23.0
+@version 0.24.0
 """
 
 # ruff: noqa: E501
@@ -67,6 +67,8 @@ _UI_STRINGS = {
         "dialog.export_title": "Export Project Artifact",
         "dialog.export_filter_txt": "Text Files (*.txt)",
         "dialog.export_filter_markdown": "Markdown Files (*.md)",
+        "dialog.snapshot_title": "Export Project ZIP Snapshot",
+        "dialog.snapshot_filter_zip": "ZIP Archives (*.zip)",
         "dialog.project_error_title": "Project Error",
         "dialog.project_repair_title": "Repair Project",
         "dialog.confirm_extraction_rerun_title": "Confirm Extraction Rerun",
@@ -95,6 +97,7 @@ _UI_STRINGS = {
         "status.project_repaired": "Project repaired and opened.",
         "status.source_imported": "Source file imported.",
         "status.project_exported": "Export saved.",
+        "status.project_snapshot_exported": "Project ZIP snapshot saved.",
         "status.text_extracted": "Text extracted.",
         "status.text_cleaned": "Text cleaned.",
         "status.cleaned_text_saved": "Cleaned text saved.",
@@ -648,6 +651,7 @@ _UI_STRINGS = {
         "home.source_import_group": "Source Import",
         "home.source_import_note": "Each project is bound to exactly one source file. After the source is imported, the selection is locked for that project.",
         "home.select_source": "Select Source File",
+        "home.export_project_zip": "Export Project ZIP",
         "home.no_source": "No source imported yet.",
         "home.locked_source_prefix": "Locked source",
         "home.locked_source_suffix": ". Create a new project to use another file.",
@@ -666,6 +670,13 @@ _UI_STRINGS = {
         "home.export_inside_project_message": (
             "Choose a destination outside the active project folder so runtime files cannot be overwritten."
         ),
+        "home.snapshot_inside_project_message": (
+            "Choose a ZIP destination outside the active project folder so the snapshot is not archived into itself."
+        ),
+        "home.snapshot_active_operation_message": (
+            "Project ZIP export is blocked while an operation is running. Wait for the current operation to finish first."
+        ),
+        "home.snapshot_failure_message": "The project ZIP snapshot could not be created.",
         "home.workflow_group": "Workflow Progress",
         "home.status.not_started": "Not Started",
         "home.status.in_progress": "In Progress",
@@ -821,6 +832,8 @@ _UI_STRINGS = {
         "dialog.export_title": "Exporta Artefact Proiect",
         "dialog.export_filter_txt": "Fisiere Text (*.txt)",
         "dialog.export_filter_markdown": "Fisiere Markdown (*.md)",
+        "dialog.snapshot_title": "Exporta Snapshot ZIP Proiect",
+        "dialog.snapshot_filter_zip": "Arhive ZIP (*.zip)",
         "dialog.project_error_title": "Eroare Proiect",
         "dialog.project_repair_title": "Repara Proiectul",
         "dialog.confirm_extraction_rerun_title": "Confirma Reluarea Extragerii",
@@ -849,6 +862,7 @@ _UI_STRINGS = {
         "status.project_repaired": "Proiectul a fost reparat si deschis.",
         "status.source_imported": "Fisierul sursa a fost importat.",
         "status.project_exported": "Exportul a fost salvat.",
+        "status.project_snapshot_exported": "Snapshotul ZIP al proiectului a fost salvat.",
         "status.text_extracted": "Textul a fost extras.",
         "status.text_cleaned": "Textul a fost curatat.",
         "status.cleaned_text_saved": "Textul curatat a fost salvat.",
@@ -1410,6 +1424,7 @@ _UI_STRINGS = {
         "home.source_import_group": "Import Sursa",
         "home.source_import_note": "Fiecare proiect este legat de exact un fisier sursa. Dupa import, selectia este blocata pentru acel proiect.",
         "home.select_source": "Selecteaza Fisierul Sursa",
+        "home.export_project_zip": "Exporta ZIP Proiect",
         "home.no_source": "Nu a fost importata nicio sursa.",
         "home.locked_source_prefix": "Sursa blocata",
         "home.locked_source_suffix": ". Creeaza un proiect nou pentru a folosi alt fisier.",
@@ -1428,6 +1443,13 @@ _UI_STRINGS = {
         "home.export_inside_project_message": (
             "Alege o destinatie in afara dosarului proiectului activ pentru a evita suprascrierea fisierelor runtime."
         ),
+        "home.snapshot_inside_project_message": (
+            "Alege o destinatie ZIP in afara dosarului proiectului activ pentru ca snapshotul sa nu fie arhivat in el insusi."
+        ),
+        "home.snapshot_active_operation_message": (
+            "Exportul ZIP al proiectului este blocat cat timp ruleaza o operatie. Asteapta finalizarea operatiei curente."
+        ),
+        "home.snapshot_failure_message": "Snapshotul ZIP al proiectului nu a putut fi creat.",
         "home.workflow_group": "Progres Flux de Lucru",
         "home.status.not_started": "Nepornit",
         "home.status.in_progress": "In Curs",

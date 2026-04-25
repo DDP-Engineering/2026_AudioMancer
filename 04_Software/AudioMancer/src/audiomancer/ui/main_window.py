@@ -492,7 +492,7 @@ class MainWindow(QMainWindow):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-07
-        @version    0.16.0
+        @version    0.17.0
         """
         current_language = ui_state_service.current_language_from_settings(self._settings_payload)
         home_page = HomeProjectPage(self)
@@ -507,6 +507,7 @@ class MainWindow(QMainWindow):
         home_page.set_stage_statuses(home_presenter_service.build_stage_statuses(None, current_language))
         home_page.set_export_states(project_export_service.build_export_states(None, None))
         home_page.import_requested.connect(lambda: home_ui_controller.handle_import_source_requested(self))
+        home_page.project_snapshot_requested.connect(lambda: home_ui_controller.handle_project_snapshot_requested(self))
         home_page.export_requested.connect(
             lambda export_kind, export_format: home_ui_controller.handle_export_requested(
                 self,

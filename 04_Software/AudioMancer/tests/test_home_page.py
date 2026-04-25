@@ -13,7 +13,7 @@
          language application.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-25
-@version 0.2.0
+@version 0.3.0
 """
 
 # IMPORTS
@@ -32,11 +32,13 @@ def test_home_page_export_panel_widgets_exist(qtbot) -> None:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.1.0
+    @version    0.2.0
     """
     page = HomeProjectPage()
     qtbot.addWidget(page)
 
+    assert page._snapshot_button.text() == "Export Project ZIP"
+    assert page._snapshot_button.isEnabled() is False
     assert page._exports_group.title() == "Exports"
     assert set(page._export_rows) == set(project_export_service.EXPORT_KIND_OPTIONS)
     assert len(page._stage_rows) == 10
@@ -47,6 +49,29 @@ def test_home_page_export_panel_widgets_exist(qtbot) -> None:
         assert set(row) == {"format", "button"}
         assert row["format"].count() == 2
         assert row["button"].text() == "Export"
+
+
+def test_home_page_project_snapshot_button_follows_project_and_busy_state(qtbot) -> None:
+    """
+    @brief      Verify the project ZIP export button follows project and operation state.
+    @param[in]  qtbot Qt test helper fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-25
+    @version    0.1.0
+    """
+    page = HomeProjectPage()
+    qtbot.addWidget(page)
+
+    page.set_project_state("Project", "D:/Project", "source_selected")
+    assert page._snapshot_button.isEnabled() is True
+
+    page.set_operation_busy(True)
+    assert page._snapshot_button.isEnabled() is False
+
+    page.set_operation_busy(False)
+    assert page._snapshot_button.isEnabled() is True
 
 
 def test_home_page_export_buttons_follow_readiness_state(qtbot) -> None:
@@ -100,6 +125,7 @@ def test_home_page_language_application_updates_export_labels(qtbot) -> None:
 
     page.apply_language("ro")
 
+    assert page._snapshot_button.text() == "Exporta ZIP Proiect"
     assert page._exports_group.title() == "Exporturi"
     assert page._export_rows[project_export_service.EXPORT_KIND_CLEANED_TEXT]["button"].text() == "Exporta"
     assert (
