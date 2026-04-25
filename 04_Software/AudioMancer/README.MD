@@ -17,6 +17,7 @@ This folder contains the current Python application implementation for
 - `settings.json` provides the current persisted app-settings scaffold.
 - `src/audiomancer/` contains the Python package.
 - `src/audiomancer/config.py` defines the current developer-owned defaults and root-level runtime artifact file names.
+- `src/audiomancer/assets/icons/` stores the packaged AudioMancer application icon source PNG and Windows `.ico`.
 - `src/audiomancer/services/logging_service.py` provides per-run app logging and optional trace helpers.
 - `src/audiomancer/services/settings_service.py` provides load, validate, self-heal, and save behavior for `settings.json`.
 - `src/audiomancer/services/ai_backend_service.py` provides backend probe and model-discovery helpers for AI provider profiles.

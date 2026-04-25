@@ -13,7 +13,7 @@
          file support used by the current AudioMancer implementation scaffold.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 1.26.0
+@version 1.27.0
 """
 
 # IMPORTS
@@ -36,6 +36,9 @@ APP_SETTINGS_PATH = APP_ROOT / "settings.json"
 
 # @brief Absolute path to the application-owned prompt template folder.
 APP_PROMPTS_PATH = APP_ROOT / "prompts"
+
+# @brief Absolute path to the packaged application icon file.
+APP_ICON_PATH = Path(__file__).resolve().parent / "assets" / "icons" / "audiomancer.ico"
 
 # Project Workspace And Artifact Naming
 # @brief Stable manifest file name stored at the project root.

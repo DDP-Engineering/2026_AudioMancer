@@ -12,6 +12,23 @@ All notable changes to this project will be documented in this file.
 
 - No unreleased application changes.
 
+## [0.26.0] - 2026-04-25
+
+### Added
+
+- added the packaged AudioMancer application icon as PNG and multi-size Windows
+  `.ico` assets
+- wired the application icon into the Qt application and main window
+
+### Changed
+
+- package version updated to `0.26.0`
+
+### Fixed
+
+- improved Speech Blocks selected-chunk scroll restoration by restoring the
+  preview scrollbar again on the next Qt event cycle after refresh
+
 ## [0.25.0] - 2026-04-25
 
 ### Added

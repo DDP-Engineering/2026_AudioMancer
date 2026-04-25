@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "audiomancer"
-version = "0.25.0"
+version = "0.26.0"
 description = "AudioMancer desktop audiobook production application scaffold."
 readme = "README.MD"
 requires-python = ">=3.12,<3.13"
@@ -31,6 +31,9 @@ audiomancer = "audiomancer.app:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
+
+[tool.setuptools.package-data]
+audiomancer = ["assets/icons/*.ico", "assets/icons/*.png"]
 
 [tool.setuptools.packages.find]
 where = ["src"]

@@ -14,7 +14,7 @@
          so the window remains a thin coordinator.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 1.30.0
+@version 1.31.0
 """
 
 # IMPORTS
@@ -22,7 +22,7 @@
 from pathlib import Path
 
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QCloseEvent
+from PySide6.QtGui import QCloseEvent, QIcon
 from PySide6.QtMultimedia import QAudioOutput, QMediaPlayer
 from PySide6.QtWidgets import (
     QDialog,
@@ -135,10 +135,11 @@ class MainWindow(QMainWindow):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-06
-        @version    0.17.0
+        @version    0.17.1
         """
         super().__init__(parent)
         self.setWindowTitle(misc_ui_controller.build_window_title())
+        self.setWindowIcon(QIcon(str(config.APP_ICON_PATH)))
         self.resize(WINDOW_WIDTH, WINDOW_HEIGHT)
         self.setMinimumSize(WINDOW_MIN_WIDTH, WINDOW_MIN_HEIGHT)
         self._page_registry: dict[str, QWidget] = {}

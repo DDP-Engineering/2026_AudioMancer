@@ -13,7 +13,7 @@
          starts the event loop for the initial UI scaffold.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-04
-@version 0.1.3
+@version 0.1.4
 @example
     uv run audiomancer
 """
@@ -22,6 +22,7 @@
 
 import sys
 
+from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QApplication
 
 from . import config
@@ -43,7 +44,7 @@ def main() -> int:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-04
-    @version    0.1.3
+        @version    0.1.4
     """
     log_file_path = initialize_logging()
     logger = get_component_logger("app")
@@ -56,6 +57,7 @@ def main() -> int:
         settings_payload = load_settings()
         application = QApplication(sys.argv)
         application.setApplicationName(APPLICATION_NAME)
+        application.setWindowIcon(QIcon(str(config.APP_ICON_PATH)))
 
         window = MainWindow(settings_payload=settings_payload)
         window.show()
