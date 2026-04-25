@@ -13,7 +13,7 @@
          application through one centralized string catalog and scale mapping.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 0.25.0
+@version 0.27.0
 """
 
 # ruff: noqa: E501
@@ -100,6 +100,7 @@ _UI_STRINGS = {
         "status.source_imported": "Source file imported.",
         "status.project_exported": "Export saved.",
         "status.project_snapshot_exported": "Project ZIP snapshot saved.",
+        "status.project_snapshot_cancelled": "Project ZIP snapshot export cancelled.",
         "status.text_extracted": "Text extracted.",
         "status.text_cleaned": "Text cleaned.",
         "status.cleaned_text_saved": "Cleaned text saved.",
@@ -781,6 +782,7 @@ _UI_STRINGS = {
         "progress.audio_blocks": "Audio Blocks generation in progress...",
         "progress.audio_block_regeneration": "Selected audio block regeneration in progress...",
         "progress.audio_assembly": "Audio Assembly composition in progress...",
+        "progress.project_snapshot": "Project ZIP export in progress...",
         "dialog.confirm_translation_reset_title": "Confirm Translation Reset",
         "dialog.confirm_speech_blocks_title": "Start Speech Blocks Generation",
         "dialog.confirm_speech_blocks_rerun_title": "Confirm Speech Blocks Rerun",
@@ -811,6 +813,8 @@ _UI_STRINGS = {
         "project.repair_step_prefix": "The project is corrupted at step",
         "project.repair_reset_suffix": "This repair will recreate and reset that step and all downstream step folders.",
         "project.repair_metadata_only": "This repair will update the project metadata to the last consistent workflow stage.",
+        "project.repair_changes_header": "Metadata updates",
+        "project.repair_warnings_header": "Warnings",
         "project.repair_confirm": "Do you want to repair the project now?",
     },
     "ro": {
@@ -867,6 +871,7 @@ _UI_STRINGS = {
         "status.source_imported": "Fisierul sursa a fost importat.",
         "status.project_exported": "Exportul a fost salvat.",
         "status.project_snapshot_exported": "Snapshotul ZIP al proiectului a fost salvat.",
+        "status.project_snapshot_cancelled": "Exportul snapshotului ZIP al proiectului a fost anulat.",
         "status.text_extracted": "Textul a fost extras.",
         "status.text_cleaned": "Textul a fost curatat.",
         "status.cleaned_text_saved": "Textul curatat a fost salvat.",
@@ -1558,6 +1563,7 @@ _UI_STRINGS = {
         "progress.audio_blocks": "Generarea blocurilor audio este in curs...",
         "progress.audio_block_regeneration": "Regenerarea blocului audio selectat este in curs...",
         "progress.audio_assembly": "Asamblarea Audio este in curs...",
+        "progress.project_snapshot": "Exportul ZIP al proiectului este in curs...",
         "dialog.confirm_translation_reset_title": "Confirma Resetarea Traducerii",
         "dialog.confirm_speech_blocks_title": "Porneste Generarea Blocurilor de Vorbire",
         "dialog.confirm_speech_blocks_rerun_title": "Confirma Rerularea Blocurilor de Vorbire",
@@ -1588,6 +1594,8 @@ _UI_STRINGS = {
         "project.repair_step_prefix": "Proiectul este corupt la pasul",
         "project.repair_reset_suffix": "Aceasta reparatie va recrea si reseta acel pas si toate folderele pasilor urmatori.",
         "project.repair_metadata_only": "Aceasta reparatie va actualiza metadatele proiectului la ultima etapa coerenta a fluxului.",
+        "project.repair_changes_header": "Actualizari metadata",
+        "project.repair_warnings_header": "Avertismente",
         "project.repair_confirm": "Vrei sa repari proiectul acum?",
     },
 }

@@ -12,12 +12,62 @@
          and merged settings payload generation.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 0.4.0
+@version 0.5.0
 """
 
 # IMPORTS
 
+from PySide6.QtWidgets import QFormLayout
+
 from audiomancer.ui.pages.ai_settings_page import AiSettingsPage
+
+
+def test_ai_settings_page_default_selectors_are_stacked_in_workflow_order(qtbot) -> None:
+    """
+    @brief      Verify default AI selector rows match the operator workflow.
+    @param[in]  qtbot Qt test helper fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-25
+    @version    0.2.0
+    """
+    page = AiSettingsPage()
+    qtbot.addWidget(page)
+
+    editor_container = page._default_cleanup_combo.parentWidget()
+    editor_layout = editor_container.layout()
+    form_layout = editor_layout.itemAt(0).layout()
+
+    assert isinstance(form_layout, QFormLayout)
+
+    row_labels = []
+    for row in range(form_layout.rowCount()):
+        label_item = form_layout.itemAt(row, QFormLayout.ItemRole.LabelRole)
+        if label_item is not None:
+            row_labels.append(label_item.widget())
+    default_label_order = [
+        label.text()
+        for label in row_labels
+        if label
+        in (
+            page._default_cleanup_label,
+            page._default_chunking_label,
+            page._default_strategy_label,
+            page._default_translation_label,
+            page._default_character_label,
+            page._default_speech_blocks_label,
+        )
+    ]
+
+    assert default_label_order == [
+        "Default Cleanup Profile",
+        "Default Chunking Profile",
+        "Default AI Chunking Strategy",
+        "Default Translation Profile",
+        "Default Character Extraction Profile",
+        "Default Speech Blocks Profile",
+    ]
 
 
 def test_ai_settings_page_loads_profiles_and_builds_merged_settings(qtbot) -> None:

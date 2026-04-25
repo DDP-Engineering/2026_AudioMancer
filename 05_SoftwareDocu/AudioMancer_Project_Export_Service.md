@@ -106,6 +106,9 @@ render each character as its own subsection with a visible attribute table so
 extracted traits and voice-definition fields remain scannable.
 Speech Blocks exports use the shared canonical book order helper, so blocks are
 rendered by source chunk order and then by each chunk's local `sequence_index`.
+Each Speech Block body renders the speaker display name on its own line and the
+spoken text on the following line; Markdown exports use hard line breaks inside
+each block so previewers preserve that two-line layout.
 
 ## 7. Workflow Integration
 

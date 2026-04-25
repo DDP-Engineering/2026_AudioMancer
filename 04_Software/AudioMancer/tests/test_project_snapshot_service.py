@@ -13,7 +13,7 @@
          extension helpers, and failure cleanup behavior.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-25
-@version 0.1.0
+@version 0.2.0
 """
 
 # IMPORTS
@@ -25,7 +25,7 @@ import zipfile
 import pytest
 
 from audiomancer import config
-from audiomancer.services import project_snapshot_service, project_workspace_service
+from audiomancer.services import operation_runtime_service, project_snapshot_service, project_workspace_service
 
 # PUBLIC API
 
@@ -169,6 +169,64 @@ def test_project_snapshot_service_skips_symlink_directories_when_supported(tmp_p
 
     with zipfile.ZipFile(snapshot_path) as zip_file:
         assert f"{project_root.name}/linked_external/external.txt" not in zip_file.namelist()
+
+
+def test_project_snapshot_service_reports_progress(tmp_path) -> None:
+    """
+    @brief      Verify ZIP snapshot creation reports file-count progress.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-25
+    @version    0.1.0
+    """
+    project_root, _manifest = _build_snapshot_project(tmp_path)
+    snapshot_path = tmp_path / "exports" / "progress.zip"
+    progress_events = []
+
+    project_snapshot_service.create_project_snapshot(
+        project_root,
+        snapshot_path,
+        progress_callback=lambda current, total, percent, message: progress_events.append(
+            (current, total, percent, message)
+        ),
+    )
+
+    assert progress_events
+    assert progress_events[0][0] == 0
+    assert progress_events[-1][2] == 100
+    assert progress_events[-1][0] == progress_events[-1][1]
+    assert "Archiving" in progress_events[-1][3]
+
+
+def test_project_snapshot_service_cancellation_removes_temporary_zip(tmp_path) -> None:
+    """
+    @brief      Verify cancelling a ZIP snapshot removes the temporary archive.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  OperationCancelledError Expected cancellation signal.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-25
+    @version    0.1.0
+    """
+    project_root, _manifest = _build_snapshot_project(tmp_path)
+    snapshot_path = tmp_path / "exports" / "cancelled.zip"
+    calls = {"count": 0}
+
+    def _cancel_after_first_file() -> bool:
+        calls["count"] += 1
+        return calls["count"] > 2
+
+    with pytest.raises(operation_runtime_service.OperationCancelledError):
+        project_snapshot_service.create_project_snapshot(
+            project_root,
+            snapshot_path,
+            cancel_requested=_cancel_after_first_file,
+        )
+
+    assert snapshot_path.exists() is False
+    assert snapshot_path.with_name(f".{snapshot_path.name}.tmp").exists() is False
 
 
 # LOCAL HELPERS

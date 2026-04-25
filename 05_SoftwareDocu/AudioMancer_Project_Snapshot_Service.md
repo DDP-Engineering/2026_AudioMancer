@@ -25,6 +25,8 @@ external operator deliverable and is not registered in `project.json`.
   folder so extraction does not scatter files directly into the destination
   directory.
 - Avoid following symlink directories.
+- Emit file-count progress while files are archived.
+- Support cooperative cancellation and remove the temporary ZIP on cancel.
 - Write through a temporary ZIP beside the requested destination and replace the
   final archive only after successful completion.
 
@@ -42,7 +44,10 @@ The controller owns the UI flow:
 - open `QFileDialog.getSaveFileName`
 - apply the `.zip` extension
 - reject inside-project destinations
-- call `project_snapshot_service.create_project_snapshot`
+- start the shared threaded modal operation runner with the existing progress
+  dialog
+- call `project_snapshot_service.create_project_snapshot` from the worker
+  thread with `progress_callback` and `cancel_requested`
 - show localized success or failure messages
 
 ## 4. Data Contract
@@ -69,17 +74,19 @@ Automated coverage:
 
 - `tests/test_project_snapshot_service.py` checks top-level folder creation,
   runtime file inclusion, UTF-8 filename/content preservation, path rejection,
-  extension/default-name helpers, failure cleanup, and symlink-directory
-  skipping when the platform permits symlinks.
+  extension/default-name helpers, failure cleanup, progress reporting,
+  cancellation cleanup, and symlink-directory skipping when the platform
+  permits symlinks.
 - `tests/test_home_page.py` checks the Home button presence, translated label,
   and enablement from project/busy state.
 - `tests/test_home_ui_controller.py` checks active-operation blocking,
-  inside-project rejection, extension selection, and readable ZIP creation.
+  inside-project rejection, extension selection, threaded-runner integration,
+  and readable ZIP creation.
 
 Minimum focused validation after changes:
 
 ```powershell
-uv run python -m py_compile src/audiomancer/services/project_snapshot_service.py src/audiomancer/ui/pages/home_page.py src/audiomancer/ui/controllers/home_ui_controller.py src/audiomancer/ui/main_window.py src/audiomancer/ui/controllers/operation_runner_controller.py
+uv run python -m py_compile src/audiomancer/services/project_snapshot_service.py src/audiomancer/services/ui_state_service.py src/audiomancer/ui/controllers/home_ui_controller.py
 uv run pytest tests/test_project_snapshot_service.py tests/test_home_page.py tests/test_home_ui_controller.py
 ```
 

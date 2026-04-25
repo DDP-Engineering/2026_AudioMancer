@@ -13,7 +13,7 @@
          and source import workflows owned by the Home page.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-06
-@version 0.4.0
+@version 0.6.0
 """
 
 # IMPORTS
@@ -32,7 +32,7 @@ from audiomancer.services import (
     project_workspace_service,
     ui_state_service,
 )
-from audiomancer.ui.controllers import misc_ui_controller
+from audiomancer.ui.controllers import misc_ui_controller, operation_runner_controller
 
 if TYPE_CHECKING:
     from audiomancer.ui.main_window import MainWindow
@@ -315,7 +315,7 @@ def handle_project_snapshot_requested(window: "MainWindow") -> None:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.1.0
+    @version    0.2.0
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._current_project_root is None or window._current_manifest is None:
@@ -356,19 +356,77 @@ def handle_project_snapshot_requested(window: "MainWindow") -> None:
         )
         return
 
-    try:
-        project_snapshot_service.create_project_snapshot(window._current_project_root, snapshot_path)
-    except (OSError, ValueError) as error:
-        QMessageBox.warning(
-            window,
-            ui_state_service.translate("dialog.project_error_title", current_language),
-            f"{ui_state_service.translate('home.snapshot_failure_message', current_language)}\n\n{error}",
-        )
-        return
+    operation_runner_controller.start_threaded_operation(
+        window,
+        operation_kind="project_snapshot",
+        operation_name=ui_state_service.translate("home.export_project_zip", current_language),
+        initial_message=ui_state_service.translate("progress.project_snapshot", current_language),
+        worker_callable=lambda project_root, _manifest, progress_callback=None, cancel_requested=None: (
+            project_snapshot_service.create_project_snapshot(
+                project_root,
+                snapshot_path,
+                progress_callback=progress_callback,
+                cancel_requested=cancel_requested,
+            )
+        ),
+        set_busy=lambda _busy: None,
+        success_handler=lambda _result_payload: _handle_project_snapshot_success(window),
+        failure_handler=lambda error: _handle_project_snapshot_failure(window, error),
+        cancel_handler=lambda _message: _handle_project_snapshot_cancelled(window),
+        cancellable=True,
+    )
 
+
+def _handle_project_snapshot_success(window: "MainWindow") -> None:
+    """
+    @brief      Show the operator-facing success message after ZIP snapshot export.
+    @param[in]  window Active main window shell.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-25
+    @version    0.1.0
+    """
+    current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     misc_ui_controller.show_message(
         window,
         ui_state_service.translate("status.project_snapshot_exported", current_language),
+    )
+
+
+def _handle_project_snapshot_failure(window: "MainWindow", error: Exception) -> None:
+    """
+    @brief      Show the operator-facing failure message after ZIP snapshot export.
+    @param[in]  window Active main window shell.
+    @param[in]  error Raised snapshot export exception.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-25
+    @version    0.1.0
+    """
+    current_language = ui_state_service.current_language_from_settings(window._settings_payload)
+    QMessageBox.warning(
+        window,
+        ui_state_service.translate("dialog.project_error_title", current_language),
+        f"{ui_state_service.translate('home.snapshot_failure_message', current_language)}\n\n{error}",
+    )
+
+
+def _handle_project_snapshot_cancelled(window: "MainWindow") -> None:
+    """
+    @brief      Show the operator-facing cancellation message after ZIP snapshot export.
+    @param[in]  window Active main window shell.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-25
+    @version    0.1.0
+    """
+    current_language = ui_state_service.current_language_from_settings(window._settings_payload)
+    misc_ui_controller.show_message(
+        window,
+        ui_state_service.translate("status.project_snapshot_cancelled", current_language),
     )
 
 
@@ -386,13 +444,25 @@ def confirm_project_repair(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.1.0
+    @version    0.2.0
     """
     if bool(repair_result.get("metadata_only", False)):
         repair_detail = ui_state_service.translate(
             "project.repair_metadata_only",
             language,
         )
+        change_lines = _repair_summary_lines(
+            repair_result.get("changes"),
+            ui_state_service.translate("project.repair_changes_header", language),
+        )
+        warning_lines = _repair_summary_lines(
+            repair_result.get("warnings"),
+            ui_state_service.translate("project.repair_warnings_header", language),
+        )
+        if change_lines:
+            repair_detail = f"{repair_detail}\n\n{change_lines}"
+        if warning_lines:
+            repair_detail = f"{repair_detail}\n\n{warning_lines}"
     else:
         repair_detail = (
             f"{ui_state_service.translate('project.repair_step_prefix', language)} "
@@ -411,6 +481,22 @@ def confirm_project_repair(
         QMessageBox.StandardButton.Yes,
     )
     return decision == QMessageBox.StandardButton.Yes
+
+
+def _repair_summary_lines(value: object, header_text: str) -> str:
+    """
+    @brief      Format repair report lines for the confirmation dialog.
+    @param[in]  value Candidate repair report list.
+    @param[in]  header_text Localized section header.
+    @return     Dialog-ready text block, or an empty string.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-25
+    @version    0.1.0
+    """
+    if not isinstance(value, list) or not value:
+        return ""
+    return "\n".join((f"{header_text}:", *(f"- {item}" for item in value)))
 
 
 def activate_project(

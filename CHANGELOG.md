@@ -8,9 +8,32 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
 
 All notable changes to this project will be documented in this file.
 
-## [Unreleased]
+## [0.29.0] - 2026-04-25
 
-- No unreleased application changes.
+### Added
+
+- added artifact-backed project manifest healing during project load, with
+  operator confirmation before writing normalized project metadata
+- added Project ZIP export progress and cancellation through the shared
+  operation progress dialog
+
+### Changed
+
+- package version updated to `0.29.0`
+- changed the AI Settings default selector stack to show cleanup, chunking,
+  chunking strategy, translation, character extraction, and speech blocks in
+  workflow order
+- changed Home-page Speech Blocks TXT/Markdown exports so each block renders the
+  speaker display name on its own line above the spoken text, with Markdown hard
+  line breaks preserving the two-line layout in previewers
+
+### Fixed
+
+- fixed repeated project-load repair prompts when only warning-only stale
+  operation state remains after a successful metadata repair
+- fixed Audio Assembly playback toggling so Stop halts active playback even
+  after selecting another generated output, and Play starts from the selected
+  output in multi-part compositions
 
 ## [0.28.0] - 2026-04-25
 

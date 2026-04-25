@@ -28,6 +28,10 @@ used by the application shell.
 - reject unsupported legacy numbered workflow-folder layouts during open
 - validate required manifest fields during open
 - detect recoverable stage metadata corruption during open
+- detect recoverable stale `project.json` workflow summaries during open by
+  comparing manifest metadata with trusted local operation artifacts
+- return a metadata-only repair report with proposed changes, warnings, and a
+  normalized manifest candidate before writing any repair
 - persist compact extraction, cleanup, chunking, translation, and
   character-discovery summaries in the root manifest
 - persist project-local narrator workflow settings such as
@@ -67,12 +71,15 @@ High-level flow:
 3. The workspace service validates the project name, creates or resolves the
    project root, rejects unsupported legacy numbered layouts, and loads or
    writes `project.json`.
-4. If recoverable metadata corruption is detected, the service returns a
-   `repair_required` result payload and `MainWindow` asks the operator for
-   confirmation.
-5. After confirmation, the workspace service repairs the manifest stage and
-   reloads the project. Missing numbered workflow folders are not repaired
-   because numbered runtime layouts are no longer supported.
+4. If recoverable metadata corruption or stale workflow-summary metadata is
+   detected, the service returns a `repair_required` result payload with
+   proposed `project.json` changes, non-destructive warnings, and a normalized
+   manifest candidate. `MainWindow` asks the operator for confirmation before
+   anything is written.
+5. After confirmation, the workspace service writes only the normalized
+   `project.json` metadata and reloads the project. It does not delete
+   artifacts, rewrite operation-state files, regenerate content, or repair
+   unsupported numbered workflow folders.
 6. `MainWindow` lets the operator choose one supported source file, calls
    `audiomancer.services.import_service`, stores the copied file in the
    project root, saves `source_document` in `project.json`, and advances the
@@ -198,6 +205,14 @@ Current validation invariants:
   legacy layout error
 - repair is metadata-only and does not recreate numbered workflow folders
 - repaired metadata keeps the last consistent workflow stage
+- project-open manifest healing can promote operation summaries only when
+  local artifacts prove the step completed; `current_stage` alone never marks
+  an operation completed
+- stale operation-state files are reported as warnings and are not rewritten by
+  the project-open repair path
+- the repaired `current_stage` is derived from the highest contiguous
+  artifact-backed workflow milestone, but the first implementation does not
+  downgrade a manifest that already claims a later stage
 - a project with one imported source is considered source-locked
 
 Supported import formats:

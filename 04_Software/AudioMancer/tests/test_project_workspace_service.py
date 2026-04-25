@@ -19,11 +19,12 @@
 # IMPORTS
 
 import json
+from pathlib import Path
 
 import pytest
 
 from audiomancer import config
-from audiomancer.services import project_workspace_service
+from audiomancer.services import project_export_service, project_workspace_service
 
 # PUBLIC API
 
@@ -536,6 +537,265 @@ def test_repair_manifest_preserves_character_discovery_for_character_voices_stag
 
     assert repaired_manifest["operations"]["translation"]["status"] == "completed"
     assert repaired_manifest["operations"]["character_discovery"]["status"] == "completed"
+
+
+def test_open_project_heals_completed_speech_blocks_manifest_summary(tmp_path) -> None:
+    """
+    @brief      Verify completed Speech Blocks artifacts heal stale manifest metadata.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-25
+    @version    0.1.0
+    """
+    project_root, manifest = project_workspace_service.create_project("SpeechHeal", tmp_path)
+    _write_json(project_root / config.SPEECH_BLOCKS_STATE_FILE_NAME, _operation_state("completed", 2, 2))
+    _write_json(
+        project_root / config.SPEECH_BLOCKS_REPORT_FILE_NAME,
+        {
+            "speech_blocks_stage_status": "completed",
+            "speech_block_count": 2,
+            "approved_block_count": 2,
+            "total_block_count": 2,
+            "warning_count": 0,
+        },
+    )
+    _write_json(
+        project_root / config.SPEECH_BLOCKS_OUTPUT_FILE_NAME,
+        [
+            {"speech_block_id": "sb-1", "speaker_name": "Narrator", "text": "One", "approved": True},
+            {"speech_block_id": "sb-2", "speaker_name": "Narrator", "text": "Two", "approved": True},
+        ],
+    )
+    manifest["current_stage"] = "speech_blocks_ready"
+    manifest["operations"]["speech_blocks"]["status"] = "not_started"
+    project_workspace_service.save_manifest(manifest, project_root)
+
+    open_result = project_workspace_service.open_project(project_root)
+
+    assert open_result["status"] == "repair_required"
+    assert "speech_blocks: not_started -> completed" in open_result["changes"]
+    repaired_result = project_workspace_service.repair_project(open_result)
+    repaired_manifest = repaired_result["manifest"]
+
+    assert repaired_manifest["operations"]["speech_blocks"]["status"] == "completed"
+    readiness = project_export_service.build_export_states(project_root, repaired_manifest)
+    speech_readiness = next(
+        state for state in readiness if state["export_kind"] == project_export_service.EXPORT_KIND_SPEECH_BLOCKS
+    )
+    assert speech_readiness["status"] == "available"
+
+
+def test_open_project_heals_audio_blocks_manifest_from_completed_report_with_stale_state(tmp_path) -> None:
+    """
+    @brief      Verify completed Audio Blocks report and files heal stale state metadata with a warning.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-25
+    @version    0.1.0
+    """
+    project_root, manifest = project_workspace_service.create_project("AudioHeal", tmp_path)
+    audio_root = project_root / config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME
+    audio_root.mkdir()
+    audio_path = audio_root / "sb-1.wav"
+    audio_path.write_bytes(b"RIFF")
+    _write_json(
+        project_root / config.AUDIO_BLOCKS_STATE_FILE_NAME,
+        {
+            **_operation_state("in_progress", 1, 1),
+            "output_paths": [config.AUDIO_BLOCKS_OUTPUT_FILE_NAME],
+            "artifact_paths": [str(Path(config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME) / "sb-1.wav")],
+        },
+    )
+    _write_json(
+        project_root / config.AUDIO_BLOCKS_REPORT_FILE_NAME,
+        {
+            "audio_blocks_stage_status": "completed",
+            "generated_block_count": 1,
+            "approved_block_count": 1,
+            "total_block_count": 1,
+            "warning_count": 0,
+            "updated_at": "2026-04-25T12:00:00+00:00",
+        },
+    )
+    _write_json(
+        project_root / config.AUDIO_BLOCKS_OUTPUT_FILE_NAME,
+        [
+            {
+                "speech_block_id": "sb-1",
+                "audio_relative_path": str(Path(config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME) / "sb-1.wav"),
+                "generated": True,
+                "approved": True,
+            }
+        ],
+    )
+    manifest["current_stage"] = "audio_blocks_ready"
+    manifest["operations"]["audio_blocks"]["status"] = "in_progress"
+    project_workspace_service.save_manifest(manifest, project_root)
+
+    open_result = project_workspace_service.open_project(project_root)
+
+    assert open_result["status"] == "repair_required"
+    assert "audio_blocks: in_progress -> completed" in open_result["changes"]
+    assert any(config.AUDIO_BLOCKS_STATE_FILE_NAME in warning for warning in open_result["warnings"])
+    assert open_result["normalized_manifest"]["operations"]["audio_blocks"]["status"] == "completed"
+
+
+def test_open_project_does_not_require_repair_when_only_stale_state_warning_remains(tmp_path) -> None:
+    """
+    @brief      Verify stale operation-state warnings alone do not reopen the repair dialog.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-25
+    @version    0.1.0
+    """
+    project_root, manifest = project_workspace_service.create_project("AudioHealAlreadyApplied", tmp_path)
+    audio_root = project_root / config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME
+    audio_root.mkdir()
+    (audio_root / "sb-1.wav").write_bytes(b"RIFF")
+    _write_json(
+        project_root / config.AUDIO_BLOCKS_STATE_FILE_NAME,
+        {
+            **_operation_state("in_progress", 1, 1),
+            "output_paths": [config.AUDIO_BLOCKS_OUTPUT_FILE_NAME],
+            "artifact_paths": [str(Path(config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME) / "sb-1.wav")],
+        },
+    )
+    _write_json(
+        project_root / config.AUDIO_BLOCKS_REPORT_FILE_NAME,
+        {
+            "audio_blocks_stage_status": "completed",
+            "generated_block_count": 1,
+            "approved_block_count": 1,
+            "total_block_count": 1,
+            "warning_count": 0,
+            "updated_at": "2026-04-25T12:00:00+00:00",
+        },
+    )
+    _write_json(
+        project_root / config.AUDIO_BLOCKS_OUTPUT_FILE_NAME,
+        [
+            {
+                "speech_block_id": "sb-1",
+                "audio_relative_path": str(Path(config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME) / "sb-1.wav"),
+                "generated": True,
+                "approved": True,
+            }
+        ],
+    )
+    manifest["current_stage"] = "audio_blocks_ready"
+    manifest["operations"]["audio_blocks"]["status"] = "in_progress"
+    project_workspace_service.save_manifest(manifest, project_root)
+
+    first_open_result = project_workspace_service.open_project(project_root)
+    assert first_open_result["status"] == "repair_required"
+    project_workspace_service.repair_project(first_open_result)
+
+    open_result = project_workspace_service.open_project(project_root)
+
+    assert open_result["status"] == "ok"
+    assert open_result["manifest"]["operations"]["audio_blocks"]["status"] == "completed"
+
+
+def test_open_project_advances_current_stage_from_contiguous_completed_artifacts(tmp_path) -> None:
+    """
+    @brief      Verify current stage advances only when contiguous workflow evidence exists.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-25
+    @version    0.1.0
+    """
+    project_root, manifest = project_workspace_service.create_project("StageHeal", tmp_path)
+    source_path = project_root / "story.txt"
+    source_path.write_text("Story", encoding="utf-8")
+    manifest["source_document"] = {
+        "original_name": "story.txt",
+        "stored_relative_path": "story.txt",
+        "file_type": "txt",
+        "imported_at": "2026-04-25T12:00:00+00:00",
+        "size_bytes": source_path.stat().st_size,
+    }
+    project_workspace_service.save_manifest(manifest, project_root)
+    (project_root / config.EXTRACTED_TEXT_FILE_NAME).write_text("Story", encoding="utf-8")
+    (project_root / config.CLEANED_TEXT_FILE_NAME).write_text("Story", encoding="utf-8")
+    _write_json(project_root / config.EXTRACTION_STATE_FILE_NAME, _operation_state("completed", 1, 1))
+    _write_json(project_root / config.EXTRACTION_REPORT_FILE_NAME, {"warning_count": 0})
+    _write_json(project_root / config.CLEANUP_STATE_FILE_NAME, _operation_state("completed", 1, 1))
+    _write_json(project_root / config.CLEANUP_REPORT_FILE_NAME, {"warning_count": 0})
+
+    open_result = project_workspace_service.open_project(project_root)
+
+    assert open_result["status"] == "repair_required"
+    assert "current_stage: project_created -> text_cleanup_ready" in open_result["changes"]
+    assert open_result["normalized_manifest"]["current_stage"] == "text_cleanup_ready"
+
+
+def test_open_project_warns_for_corrupt_speech_blocks_artifact_without_healing(tmp_path) -> None:
+    """
+    @brief      Verify corrupt artifacts produce warnings but no completed metadata promotion.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-25
+    @version    0.1.0
+    """
+    project_root, manifest = project_workspace_service.create_project("CorruptSpeech", tmp_path)
+    manifest["current_stage"] = "speech_blocks_ready"
+    project_workspace_service.save_manifest(manifest, project_root)
+    (project_root / config.SPEECH_BLOCKS_OUTPUT_FILE_NAME).write_text("{broken", encoding="utf-8")
+
+    open_result = project_workspace_service.open_project(project_root)
+
+    assert open_result["status"] == "ok"
+    assert open_result["manifest"]["operations"]["speech_blocks"]["status"] == "not_started"
+
+
+def _operation_state(status: str, current: int, total: int) -> dict[str, object]:
+    """
+    @brief      Build a compact operation-state fixture.
+    @param[in]  status Operation status token.
+    @param[in]  current Current progress count.
+    @param[in]  total Total progress count.
+    @return     Operation-state fixture payload.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-25
+    @version    0.1.0
+    """
+    completed_at = "2026-04-25T12:01:00+00:00" if status == "completed" else None
+    return {
+        "folder_relative_path": ".",
+        "status": status,
+        "progress_current": current,
+        "progress_total": total,
+        "mode": "test",
+        "started_at": "2026-04-25T12:00:00+00:00",
+        "completed_at": completed_at,
+        "updated_at": "2026-04-25T12:01:00+00:00",
+        "warning_count": 0,
+    }
+
+
+def _write_json(path: Path, payload: object) -> None:
+    """
+    @brief      Write one JSON fixture file.
+    @param[in]  path Target file path.
+    @param[in]  payload JSON-serializable payload.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-25
+    @version    0.1.0
+    """
+    path.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
 
 
 # END OF FILE

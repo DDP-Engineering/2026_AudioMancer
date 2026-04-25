@@ -657,7 +657,9 @@ def test_main_window_runs_deterministic_cleanup_and_updates_preview(
             json.dumps(
                 {
                     "input_relative_path": f"{config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH}/input_story.pdf",
-                    "cleaned_text_relative_path": f"{config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH}/{config.CLEANED_TEXT_FILE_NAME}",
+                    "cleaned_text_relative_path": (
+                        f"{config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH}/{config.CLEANED_TEXT_FILE_NAME}"
+                    ),
                     "cleaned_at": "2026-04-06T12:02:00+00:00",
                     "detected_language": "en",
                     "warnings": [],
@@ -1424,13 +1426,15 @@ def test_main_window_offers_repair_and_opens_repaired_project(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.1.0
+    @version    0.2.0
     """
-    project_root, _manifest = project_workspace_service.create_project(
+    project_root, manifest = project_workspace_service.create_project(
         "Book5_CAL_CAL",
         tmp_path,
     )
-    (project_root / "40_character_discovery").rmdir()
+    manifest["current_stage"] = "broken_stage"
+    manifest_path = project_root / config.PROJECT_MANIFEST_FILE_NAME
+    manifest_path.write_text(json.dumps(manifest, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     question_calls = []
 
     monkeypatch.setattr(
@@ -1455,9 +1459,147 @@ def test_main_window_offers_repair_and_opens_repaired_project(
     assert question_calls
     assert window._current_project_root == project_root
     assert window._current_manifest is not None
-    assert (project_root / "40_character_discovery").is_dir()
     assert window._current_manifest["current_stage"] == "project_created"
     assert window._home_page._stage_list.item(0).text() == "Source Selected | Not Started"
+
+
+def test_main_window_opens_confirmed_manifest_healing_repair(
+    monkeypatch, qtbot, tmp_path, default_settings_payload
+) -> None:
+    """
+    @brief      Verify open-project applies confirmed manifest-healing changes.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  qtbot Qt test helper fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @param[in]  default_settings_payload Default settings fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-25
+    @version    0.1.0
+    """
+    project_root, manifest = project_workspace_service.create_project("SpeechRepair", tmp_path)
+    _write_json(project_root / config.SPEECH_BLOCKS_STATE_FILE_NAME, _operation_state("completed", 1, 1))
+    _write_json(
+        project_root / config.SPEECH_BLOCKS_REPORT_FILE_NAME,
+        {
+            "speech_blocks_stage_status": "completed",
+            "speech_block_count": 1,
+            "approved_block_count": 1,
+            "total_block_count": 1,
+        },
+    )
+    _write_json(
+        project_root / config.SPEECH_BLOCKS_OUTPUT_FILE_NAME,
+        [{"speech_block_id": "sb-1", "speaker_name": "Narrator", "text": "Line", "approved": True}],
+    )
+    manifest["current_stage"] = "speech_blocks_ready"
+    manifest["operations"]["speech_blocks"]["status"] = "not_started"
+    project_workspace_service.save_manifest(manifest, project_root)
+    question_calls = []
+
+    monkeypatch.setattr(
+        home_ui_controller.QFileDialog,
+        "getExistingDirectory",
+        lambda *args, **kwargs: str(project_root),
+    )
+    monkeypatch.setattr(
+        home_ui_controller.QMessageBox,
+        "question",
+        lambda *args, **kwargs: (
+            question_calls.append(args),
+            QMessageBox.StandardButton.Yes,
+        )[1],
+    )
+
+    window = MainWindow(settings_payload=dict(default_settings_payload))
+    qtbot.addWidget(window)
+
+    window._action_open_project.trigger()
+
+    assert question_calls
+    assert "speech_blocks: not_started -> completed" in question_calls[0][2]
+    assert window._current_manifest is not None
+    assert window._current_manifest["operations"]["speech_blocks"]["status"] == "completed"
+
+
+def test_main_window_declined_manifest_repair_leaves_project_unopened(
+    monkeypatch, qtbot, tmp_path, default_settings_payload
+) -> None:
+    """
+    @brief      Verify declining repair keeps the project closed and leaves manifest data untouched.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  qtbot Qt test helper fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @param[in]  default_settings_payload Default settings fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-25
+    @version    0.1.0
+    """
+    project_root, manifest = project_workspace_service.create_project("DeclineRepair", tmp_path)
+    manifest["current_stage"] = "broken_stage"
+    manifest_path = project_root / config.PROJECT_MANIFEST_FILE_NAME
+    manifest_path.write_text(json.dumps(manifest, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+
+    monkeypatch.setattr(
+        home_ui_controller.QFileDialog,
+        "getExistingDirectory",
+        lambda *args, **kwargs: str(project_root),
+    )
+    monkeypatch.setattr(
+        home_ui_controller.QMessageBox,
+        "question",
+        lambda *args, **kwargs: QMessageBox.StandardButton.No,
+    )
+
+    window = MainWindow(settings_payload=dict(default_settings_payload))
+    qtbot.addWidget(window)
+
+    window._action_open_project.trigger()
+
+    assert window._current_project_root is None
+    assert json.loads(manifest_path.read_text(encoding="utf-8"))["current_stage"] == "broken_stage"
+
+
+def _operation_state(status: str, current: int, total: int) -> dict[str, object]:
+    """
+    @brief      Build a compact operation-state fixture.
+    @param[in]  status Operation status token.
+    @param[in]  current Current progress count.
+    @param[in]  total Total progress count.
+    @return     Operation-state fixture payload.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-25
+    @version    0.1.0
+    """
+    return {
+        "folder_relative_path": ".",
+        "status": status,
+        "progress_current": current,
+        "progress_total": total,
+        "mode": "test",
+        "started_at": "2026-04-25T12:00:00+00:00",
+        "completed_at": "2026-04-25T12:01:00+00:00" if status == "completed" else None,
+        "updated_at": "2026-04-25T12:01:00+00:00",
+        "warning_count": 0,
+    }
+
+
+def _write_json(path, payload: object) -> None:
+    """
+    @brief      Write one JSON fixture file.
+    @param[in]  path Target file path.
+    @param[in]  payload JSON-serializable payload.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-25
+    @version    0.1.0
+    """
+    path.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
 
 
 # END OF FILE

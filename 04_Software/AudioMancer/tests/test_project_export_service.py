@@ -13,7 +13,7 @@
          user-facing export artifacts.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-25
-@version 0.3.1
+@version 0.3.2
 """
 
 # IMPORTS
@@ -106,7 +106,7 @@ def test_project_export_service_renders_markdown_and_hides_internal_metadata(tmp
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.1.0
+    @version    0.1.1
     """
     project_root, manifest = _build_export_project(tmp_path)
 
@@ -135,7 +135,8 @@ def test_project_export_service_renders_markdown_and_hides_internal_metadata(tmp
     assert "chunk_id" not in chunks_content
     assert "Traducere cu diacritice: țară și inimă." in translation_content
     assert "translated_text" not in translation_content
-    assert "Speaker: Ștefan" in speech_content
+    assert "Speaker:" not in speech_content
+    assert "Ștefan  \nVoi spune adevărul." in speech_content
     assert "speech_block_id" not in speech_content
     assert "speaker_id" not in speech_content
 

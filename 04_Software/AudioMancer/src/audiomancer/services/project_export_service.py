@@ -13,7 +13,7 @@
          project artifacts without modifying the active project workspace.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-25
-@version 0.3.1
+@version 0.3.2
 """
 
 # IMPORTS
@@ -563,11 +563,31 @@ def _render_markdown_section_body(section_title: str, section_body: str) -> str:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.1.0
+    @version    0.1.1
     """
     if section_title == "Character Dossiers":
         return _render_character_dossiers_markdown(section_body)
+    if section_title == "Speech Blocks":
+        return _render_speech_blocks_markdown(section_body)
     return section_body.strip()
+
+
+def _render_speech_blocks_markdown(section_body: str) -> str:
+    """
+    @brief      Render Speech Blocks with Markdown hard line breaks inside each block.
+    @param[in]  section_body Plain Speech Blocks section body.
+    @return     Markdown-ready Speech Blocks section body.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-25
+    @version    0.1.0
+    """
+    rendered_blocks: list[str] = []
+    for block_text in section_body.strip().split("\n\n"):
+        block_lines = [line.strip() for line in block_text.splitlines() if line.strip()]
+        if block_lines:
+            rendered_blocks.append("  \n".join(block_lines))
+    return "\n\n".join(rendered_blocks)
 
 
 def _render_character_dossiers_markdown(section_body: str) -> str:
@@ -745,14 +765,14 @@ def _render_speech_blocks(speech_blocks: list[dict[str, object]]) -> str:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.1.0
+    @version    0.1.1
     """
     rendered_blocks: list[str] = []
     for block in speech_blocks:
         speaker_name = str(block.get("speaker_display_name") or block.get("speaker_name") or "Unknown").strip()
         block_text = str(block.get("text", "")).strip()
         if block_text:
-            rendered_blocks.append(f"Speaker: {speaker_name}\n{block_text}")
+            rendered_blocks.append(f"{speaker_name}\n{block_text}")
     return "\n\n".join(rendered_blocks)
 
 

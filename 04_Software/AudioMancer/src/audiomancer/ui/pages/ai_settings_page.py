@@ -87,7 +87,7 @@ class AiSettingsPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-21
-        @version    0.6.0
+        @version    0.7.0
         """
         super().__init__(parent)
         self._profiles: list[dict[str, object]] = []
@@ -196,33 +196,33 @@ class AiSettingsPage(QWidget):
 
         self._default_cleanup_combo = QComboBox(self)
         self._default_chunking_combo = QComboBox(self)
-        self._default_translation_combo = QComboBox(self)
-        self._default_speech_blocks_combo = QComboBox(self)
         self._default_strategy_combo = QComboBox(self)
         for strategy in config.AI_CHUNKING_STRATEGY_OPTIONS:
             self._default_strategy_combo.addItem(strategy.title(), strategy)
 
+        self._default_translation_combo = QComboBox(self)
         self._default_character_combo = QComboBox(self)
+        self._default_speech_blocks_combo = QComboBox(self)
 
         self._default_cleanup_label = QLabel("Default Cleanup Profile", self)
         self._default_chunking_label = QLabel("Default Chunking Profile", self)
-        self._default_translation_label = QLabel("Default Translation Profile", self)
-        self._default_speech_blocks_label = QLabel("Default Speech Blocks Profile", self)
         self._default_strategy_label = QLabel("Default AI Chunking Strategy", self)
+        self._default_translation_label = QLabel("Default Translation Profile", self)
         self._default_character_label = QLabel(
             "Default Character Extraction Profile",
             self,
         )
+        self._default_speech_blocks_label = QLabel("Default Speech Blocks Profile", self)
 
         form_layout.addRow(self._default_cleanup_label, self._default_cleanup_combo)
         form_layout.addRow(self._default_chunking_label, self._default_chunking_combo)
-        form_layout.addRow(self._default_translation_label, self._default_translation_combo)
-        form_layout.addRow(self._default_speech_blocks_label, self._default_speech_blocks_combo)
         form_layout.addRow(self._default_strategy_label, self._default_strategy_combo)
+        form_layout.addRow(self._default_translation_label, self._default_translation_combo)
         form_layout.addRow(
             self._default_character_label,
             self._default_character_combo,
         )
+        form_layout.addRow(self._default_speech_blocks_label, self._default_speech_blocks_combo)
         editor_layout.addLayout(form_layout)
 
         content_row.addWidget(editor_container, 2)

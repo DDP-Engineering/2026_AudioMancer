@@ -13,7 +13,7 @@
          activation correctly through the main-window shell.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-06
-@version 0.3.0
+@version 0.4.0
 """
 
 # IMPORTS
@@ -294,7 +294,7 @@ def test_home_ui_controller_applies_zip_extension_and_writes_snapshot(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.1.0
+    @version    0.2.0
     """
     project_root, manifest = project_workspace_service.create_project("SnapshotWriteProject", tmp_path)
     (project_root / "runtime.txt").write_text("runtime payload\n", encoding="utf-8")
@@ -311,6 +311,11 @@ def test_home_ui_controller_applies_zip_extension_and_writes_snapshot(
         lambda *args, **kwargs: (str(selected_path), ""),
     )
     monkeypatch.setattr(home_ui_controller.misc_ui_controller, "show_message", lambda *args: messages.append(args))
+    monkeypatch.setattr(
+        home_ui_controller.operation_runner_controller,
+        "start_threaded_operation",
+        _run_threaded_operation_synchronously,
+    )
 
     home_ui_controller.handle_project_snapshot_requested(window)
 
@@ -320,6 +325,53 @@ def test_home_ui_controller_applies_zip_extension_and_writes_snapshot(
     assert f"{project_root.name}/project.json" in names
     assert f"{project_root.name}/runtime.txt" in names
     assert messages
+
+
+def _run_threaded_operation_synchronously(
+    window,
+    operation_kind,
+    operation_name,
+    initial_message,
+    worker_callable,
+    set_busy,
+    success_handler,
+    failure_handler,
+    cancel_handler,
+    cancellable=True,
+) -> None:
+    """
+    @brief      Execute a threaded operation inline for controller tests.
+    @param[in]  window Active main window shell.
+    @param[in]  operation_kind Stable operation token.
+    @param[in]  operation_name Operator-facing operation name.
+    @param[in]  initial_message Initial progress message.
+    @param[in]  worker_callable Worker callable.
+    @param[in]  set_busy Busy-state callback.
+    @param[in]  success_handler Success callback.
+    @param[in]  failure_handler Failure callback.
+    @param[in]  cancel_handler Cancellation callback.
+    @param[in]  cancellable Progress-dialog cancellation flag.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-25
+    @version    0.1.0
+    """
+    _ = operation_kind
+    _ = operation_name
+    _ = initial_message
+    _ = failure_handler
+    _ = cancel_handler
+    _ = cancellable
+    set_busy(True)
+    result = worker_callable(
+        window._current_project_root,
+        dict(window._current_manifest),
+        progress_callback=lambda *_args: None,
+        cancel_requested=lambda: False,
+    )
+    success_handler(result)
+    set_busy(False)
 
 
 # END OF FILE

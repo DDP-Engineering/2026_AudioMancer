@@ -14,7 +14,7 @@
          synchronization for the Audio Assembly workflow.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-25
-@version 0.1.0
+@version 0.2.0
 """
 
 # IMPORTS
@@ -142,15 +142,16 @@ def handle_playback_toggle_requested(window: "MainWindow", output_key: str) -> N
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.1.0
+    @version    0.2.0
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
-    if window._audio_assembly_playback_output_key == str(output_key).strip():
+    normalized_output_key = str(output_key).strip()
+    if _is_audio_assembly_playback_active(window):
         _stop_audio_assembly_playback(window)
         return
     if window._current_project_root is None:
         return
-    output_record = _output_by_key(window, output_key)
+    output_record = _output_by_key(window, normalized_output_key)
     output_path = _output_audio_path(window, output_record)
     if output_path is None:
         QMessageBox.warning(
@@ -160,10 +161,14 @@ def handle_playback_toggle_requested(window: "MainWindow", output_key: str) -> N
         )
         return
     _stop_other_audio_previews(window)
-    window._audio_assembly_playback_output_key = str(output_key).strip()
-    window._audio_assembly_audio_player.setSource(QUrl.fromLocalFile(str(output_path)))
-    window._audio_assembly_page.set_playback_active(True)
-    window._audio_assembly_audio_player.play()
+    window._audio_assembly_playback_output_key = normalized_output_key
+    window._audio_assembly_playback_starting = True
+    try:
+        window._audio_assembly_audio_player.setSource(QUrl.fromLocalFile(str(output_path)))
+        window._audio_assembly_page.set_playback_active(True)
+        window._audio_assembly_audio_player.play()
+    finally:
+        window._audio_assembly_playback_starting = False
 
 
 def handle_playback_state_changed(window: "MainWindow") -> None:
@@ -174,8 +179,10 @@ def handle_playback_state_changed(window: "MainWindow") -> None:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.1.0
+    @version    0.2.0
     """
+    if bool(getattr(window, "_audio_assembly_playback_starting", False)):
+        return
     if window._audio_assembly_audio_player.playbackState() != QMediaPlayer.PlaybackState.StoppedState:
         return
     window._audio_assembly_playback_output_key = None
@@ -382,13 +389,33 @@ def _stop_audio_assembly_playback(window: "MainWindow") -> None:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.1.0
+    @version    0.2.0
     """
+    window._audio_assembly_playback_starting = False
     if hasattr(window, "_audio_assembly_audio_player"):
         window._audio_assembly_audio_player.stop()
+        window._audio_assembly_audio_player.setSource(QUrl())
     if hasattr(window, "_audio_assembly_page"):
         window._audio_assembly_page.set_playback_active(False)
     window._audio_assembly_playback_output_key = None
+
+
+def _is_audio_assembly_playback_active(window: "MainWindow") -> bool:
+    """
+    @brief      Return whether Audio Assembly playback should be treated as active.
+    @param[in]  window Active main window instance.
+    @return     True when playback is starting, playing, paused, or tracked as active.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-25
+    @version    0.1.0
+    """
+    if bool(getattr(window, "_audio_assembly_playback_starting", False)):
+        return True
+    if str(getattr(window, "_audio_assembly_playback_output_key", "") or "").strip():
+        return True
+    player = getattr(window, "_audio_assembly_audio_player", None)
+    return player is not None and player.playbackState() != QMediaPlayer.PlaybackState.StoppedState
 
 
 def _stop_other_audio_previews(window: "MainWindow") -> None:
