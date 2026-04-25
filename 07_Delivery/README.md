@@ -24,7 +24,7 @@ Each delivery zip contains a portable application folder with:
 - a platform start helper, either `Start-AudioMancer.cmd` or
   `start-audiomancer.sh`
 - `README_RELEASE.txt`
-- `help/en/` with the offline HTML user guide and screenshot assets
+- `help/en/` and `help/ro/` with the offline HTML user guides and screenshot assets
 - `settings.json`
 - the four license files required by the app root
 

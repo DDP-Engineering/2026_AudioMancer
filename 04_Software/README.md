@@ -14,5 +14,6 @@ Implementation sources and runnable software artifacts.
   project-local runtime services, Qt pages/controllers, prompt templates,
   focused tests, packaging metadata, and the current end-to-end workflow from
   source import through WAV Audio Assembly. The application Help action opens
-  the offline user guide maintained under `../05_SoftwareDocu/UserGuide/` and
-  bundled into release archives as `help/en/`.
+  the offline user guide for the selected UI language, maintained under
+  `../05_SoftwareDocu/UserGuide/` and `../05_SoftwareDocu/UserGuide_ro/`, and
+  bundled into release archives as `help/en/` plus `help/ro/`.

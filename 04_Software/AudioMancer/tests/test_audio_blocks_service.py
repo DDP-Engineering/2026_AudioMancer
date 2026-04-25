@@ -14,7 +14,7 @@
          normalization.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-23
-@version 1.5.0
+@version 1.6.0
 """
 
 # IMPORTS
@@ -248,6 +248,107 @@ def test_audio_blocks_service_same_narrator_mode_uses_narrator_prompt_for_charac
     ]
     assert [block["voice_target_id"] for block in audio_blocks] == ["narrator", "narrator"]
     assert [block["voice_source_kind"] for block in audio_blocks] == ["narrator_sample", "narrator_sample"]
+
+
+def test_audio_blocks_service_clone_prompt_matching_uses_sample_language_for_romanian_output(tmp_path) -> None:
+    """
+    @brief      Verify Romanian output can reuse English reference-sample clone prompts.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-25
+    @version    0.1.0
+    """
+    project_root, manifest = _create_audio_blocks_project(tmp_path, "AudioBlocksServiceRomanianCloneReuse")
+    character_voices_service.save_selected_voice_language(project_root, "ro")
+    generation_context = audio_blocks_service._resolve_generation_context(  # noqa: SLF001
+        project_root,
+        manifest,
+        _runtime_settings(),
+    )
+    voice_target = next(
+        target for target in generation_context["voice_targets"] if target["voice_target_id"] == "character_alice"
+    )
+    matching_profile = {
+        "voice_target_id": "character_alice",
+        "display_name": "Alice",
+        "source_sample_relative_path": voice_target["sample_relative_path"],
+        "source_sample_fingerprint": voice_target["sample_fingerprint"],
+        "source_model_id": "qwen-designer",
+        "voice_language": "en",
+        "sample_text": "Character preview line.",
+        "voice_clone_prompt": {"format": "qwen_voice_clone_prompt_v1", "speaker": "alice"},
+        "prompt_format": "qwen_voice_clone_prompt_v1",
+        "generated_at": "2026-04-25T12:00:00+00:00",
+        "clone_model_id": generation_context["clone_model_id"],
+    }
+    wrong_language_profile = {**matching_profile, "voice_language": "fr"}
+
+    assert audio_blocks_service._clone_profile_matches(  # noqa: SLF001
+        matching_profile,
+        voice_target,
+        generation_context,
+    )
+    assert not audio_blocks_service._clone_profile_matches(  # noqa: SLF001
+        wrong_language_profile,
+        voice_target,
+        generation_context,
+    )
+
+
+def test_audio_blocks_service_clone_prompt_creation_uses_reference_sample_language(monkeypatch, tmp_path) -> None:
+    """
+    @brief      Verify clone-prompt requests use sample language, not selected output language.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-25
+    @version    0.1.0
+    """
+    project_root, manifest = _create_audio_blocks_project(tmp_path, "AudioBlocksServiceRomanianCloneCreate")
+    character_voices_service.save_selected_voice_language(project_root, "ro")
+    generation_context = audio_blocks_service._resolve_generation_context(  # noqa: SLF001
+        project_root,
+        manifest,
+        _runtime_settings(),
+    )
+    voice_target = next(
+        target for target in generation_context["voice_targets"] if target["voice_target_id"] == "character_alice"
+    )
+    observed_prompt_languages: list[str] = []
+    monkeypatch.setattr(
+        audio_blocks_service.voiceweaver_runtime_service,
+        "create_voice_clone_prompt",
+        lambda _base_url, _api_key, _sample_audio_bytes, _sample_text, language, **_kwargs: (
+            observed_prompt_languages.append(language),
+            {"status": "running"},
+        )[1],
+    )
+    monkeypatch.setattr(
+        audio_blocks_service.voiceweaver_runtime_service,
+        "wait_for_terminal_operation",
+        lambda *_args, **_kwargs: {
+            "operation": {
+                "status": "completed",
+                "result": {"voice_clone_prompt": {"format": "qwen_voice_clone_prompt_v1", "speaker": "alice"}},
+            },
+            "result": {},
+        },
+    )
+
+    clone_profiles, prompt_reused = audio_blocks_service._prepare_clone_profile(  # noqa: SLF001
+        generation_context,
+        voice_target,
+        [],
+        _runtime_settings(),
+    )
+
+    assert not prompt_reused
+    assert observed_prompt_languages == ["en"]
+    assert clone_profiles[0]["voice_language"] == "en"
 
 
 def test_audio_blocks_service_rejects_legacy_global_sequence_schema(tmp_path) -> None:

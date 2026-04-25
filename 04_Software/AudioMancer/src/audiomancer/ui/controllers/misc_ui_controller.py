@@ -13,7 +13,7 @@
          dialogs, the common modal progress popup, and title-bar helpers.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-06
-@version 0.8.0
+@version 0.8.1
 """
 
 # IMPORTS
@@ -95,10 +95,10 @@ def show_help(window: "MainWindow") -> None:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.2.0
+    @version    0.2.1
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
-    help_index_path = resolve_help_index_path()
+    help_index_path = resolve_help_index_path(current_language)
     if help_index_path is None:
         QMessageBox.warning(
             window,
@@ -114,18 +114,23 @@ def show_help(window: "MainWindow") -> None:
         )
 
 
-def resolve_help_index_path() -> Path | None:
+def resolve_help_index_path(language: str | None = None) -> Path | None:
     """
-    @brief      Resolve the offline English user-guide entry point.
+    @brief      Resolve the offline user-guide entry point for one UI language.
+    @param[in]  language Preferred UI language code.
     @return     Existing help index path or `None` when unavailable.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.1.0
+    @version    0.2.0
     """
-    for candidate_path in _candidate_help_index_paths():
-        if candidate_path.is_file():
-            return candidate_path
+    candidate_languages = [language or config.DEFAULT_LANGUAGE]
+    if config.DEFAULT_LANGUAGE not in candidate_languages:
+        candidate_languages.append(config.DEFAULT_LANGUAGE)
+    for candidate_language in candidate_languages:
+        for candidate_path in _candidate_help_index_paths(candidate_language):
+            if candidate_path.is_file():
+                return candidate_path
     return None
 
 
@@ -400,21 +405,25 @@ def build_window_title(context: str | None = None) -> str:
 # LOCAL HELPERS
 
 
-def _candidate_help_index_paths() -> list[Path]:
+def _candidate_help_index_paths(language: str | None) -> list[Path]:
     """
-    @brief      Build ordered candidate locations for the offline user guide.
+    @brief      Build ordered candidate locations for one offline user guide.
+    @param[in]  language Preferred UI language code.
     @return     Candidate help index paths in runtime precedence order.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.1.0
+    @version    0.2.0
     """
     executable_folder = Path(sys.executable).resolve().parent
+    resolved_language = language if language in config.APP_HELP_INDEX_RELATIVE_PATHS else config.DEFAULT_LANGUAGE
+    packaged_relative_path = config.APP_HELP_INDEX_RELATIVE_PATHS[resolved_language]
+    source_index_path = config.APP_HELP_SOURCE_INDEX_PATHS[resolved_language]
     return [
-        executable_folder / config.APP_HELP_INDEX_RELATIVE_PATH,
-        Path.cwd().resolve() / config.APP_HELP_INDEX_RELATIVE_PATH,
-        config.APP_ROOT / config.APP_HELP_INDEX_RELATIVE_PATH,
-        config.APP_HELP_SOURCE_INDEX_PATH,
+        executable_folder / packaged_relative_path,
+        Path.cwd().resolve() / packaged_relative_path,
+        config.APP_ROOT / packaged_relative_path,
+        source_index_path,
     ]
 
 

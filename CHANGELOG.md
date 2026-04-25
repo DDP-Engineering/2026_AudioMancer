@@ -12,6 +12,30 @@ All notable changes to this project will be documented in this file.
 
 - No unreleased application changes.
 
+## [0.28.0] - 2026-04-25
+
+### Added
+
+- added the Romanian offline end-user guide under `05_SoftwareDocu/UserGuide_ro/`,
+  including Romanian UI screenshots and visible version plus creator information
+
+### Changed
+
+- changed the toolbar Help action to open Romanian help when the application UI
+  language is Romanian, with English help fallback when localized help is missing
+- bundled both English and Romanian offline help into Windows and Ubuntu release
+  archives under `help/en/` and `help/ro/`
+
+### Fixed
+
+- fixed Character Voices prompt editing so downstream Audio Blocks invalidation
+  no longer relocks the voice prompt or preview text editors
+- fixed Character Voices language switching so choosing the approved translated
+  language is preserved while downstream Speech Blocks and Audio Blocks are reset
+- fixed Audio Blocks continuation for Romanian output so reusable clone prompts
+  are matched and created with the reference sample language instead of the
+  selected synthesis language
+
 ## [0.27.0] - 2026-04-25
 
 ### Added

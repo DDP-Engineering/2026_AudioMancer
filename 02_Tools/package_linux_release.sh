@@ -46,16 +46,22 @@ copy_required_root_files() {
 
 copy_user_guide() {
     local target_dir="$1"
-    local source_path="${REPO_ROOT}/05_SoftwareDocu/UserGuide"
+    local english_source_path="${REPO_ROOT}/05_SoftwareDocu/UserGuide"
+    local romanian_source_path="${REPO_ROOT}/05_SoftwareDocu/UserGuide_ro"
     local help_root="${target_dir}/help"
 
-    if [[ ! -d "${source_path}" ]]; then
-        echo "Required user guide folder is missing: ${source_path}" >&2
+    if [[ ! -d "${english_source_path}" ]]; then
+        echo "Required English user guide folder is missing: ${english_source_path}" >&2
+        exit 1
+    fi
+    if [[ ! -d "${romanian_source_path}" ]]; then
+        echo "Required Romanian user guide folder is missing: ${romanian_source_path}" >&2
         exit 1
     fi
 
     mkdir -p "${help_root}"
-    cp -a "${source_path}" "${help_root}/en"
+    cp -a "${english_source_path}" "${help_root}/en"
+    cp -a "${romanian_source_path}" "${help_root}/ro"
 }
 
 create_zip_archive() {
@@ -160,7 +166,7 @@ Install:
   the app reports missing system display dependencies.
 
 Configuration and licenses are included next to the executable.
-Offline help is included in help/en/index.html.
+Offline help is included in help/en/index.html and help/ro/index.html.
 EOF
 
 invoke_step "Create versioned delivery archive" create_zip_archive "${STAGING_PATH}" "${ARCHIVE_PATH}"

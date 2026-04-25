@@ -13,7 +13,7 @@
          page-entry warnings for the Character Voices workflow.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-20
-@version 1.3.2
+@version 1.3.3
 """
 
 # IMPORTS
@@ -45,7 +45,7 @@ def test_character_voices_ui_controller_edit_prompt_clears_sample_and_enters_edi
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-20
-    @version    1.1.0
+    @version    1.1.1
     """
     project_root = _create_project_with_character_and_selected_narrator(tmp_path, "CharacterVoicesControllerEdit")
     target_payload = character_voices_service.voice_target_by_id(project_root, "character_alice")
@@ -73,6 +73,57 @@ def test_character_voices_ui_controller_edit_prompt_clears_sample_and_enters_edi
 
     assert character_voices_service.has_target_sample(project_root, "character_alice") is False
     assert window._character_voices_page.is_edit_mode() is True
+    assert window._character_voices_page._prompt_edit.isReadOnly() is False
+    assert window._character_voices_page._preview_text_edit.isReadOnly() is False
+
+
+def test_character_voices_ui_controller_edit_prompt_keeps_editors_unlocked_after_audio_invalidation(
+    monkeypatch, qtbot, tmp_path
+) -> None:
+    """
+    @brief      Verify downstream refreshes do not relock editors after pressing Edit Voice Prompt.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  qtbot Qt test helper fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-25
+    @version    0.1.0
+    """
+    project_root = _create_project_with_character_and_selected_narrator(tmp_path, "CharacterVoicesControllerEditReset")
+    window = _build_window(qtbot, project_root)
+    monkeypatch.setattr(
+        character_voices_ui_controller.QMessageBox,
+        "question",
+        lambda *_args, **_kwargs: QMessageBox.StandardButton.Yes,
+    )
+
+    def _fake_audio_invalidation(window):
+        """
+        @brief      Emulate the downstream invalidation refresh that used to relock editors.
+        @param[in]  window Main window under test.
+        @return     None.
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-25
+        @version    0.1.0
+        """
+        window.show_project_state(
+            window._current_project_root,
+            project_workspace_service.load_manifest(window._current_project_root),
+        )
+
+    monkeypatch.setattr(
+        character_voices_ui_controller.audio_blocks_ui_controller,
+        "invalidate_audio_blocks_after_upstream_change",
+        _fake_audio_invalidation,
+    )
+
+    character_voices_ui_controller.handle_edit_prompt_requested(window, "character_alice")
+
+    assert window._character_voices_page.is_edit_mode() is True
+    assert window._character_voices_page._prompt_edit.isReadOnly() is False
+    assert window._character_voices_page._preview_text_edit.isReadOnly() is False
 
 
 def test_character_voices_ui_controller_page_activation_warns_when_narrator_sample_is_missing(
@@ -225,6 +276,23 @@ def test_character_voices_ui_controller_generate_stops_preview_before_deleting_s
         cancel_handler,
         cancellable=True,
     ):
+        """
+        @brief      Run one threaded-operation worker synchronously for the test.
+        @param[in]  window Main window under test.
+        @param[in]  operation_kind Operation kind identifier.
+        @param[in]  operation_name Operator-facing operation name.
+        @param[in]  initial_message Initial progress message.
+        @param[in]  worker_callable Worker function supplied by the controller.
+        @param[in]  set_busy Busy-state callback.
+        @param[in]  success_handler Success callback supplied by the controller.
+        @param[in]  failure_handler Failure callback supplied by the controller.
+        @param[in]  cancel_handler Cancellation callback supplied by the controller.
+        @param[in]  cancellable True when the operation is cancellable.
+        @return     None.
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-20
+        @version    0.1.1
+        """
         _ = operation_kind
         _ = operation_name
         _ = initial_message
@@ -306,7 +374,7 @@ def test_character_voices_voice_language_change_resets_speech_blocks_and_downstr
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.2.0
+    @version    0.2.1
     """
     project_root = _create_project_with_character_and_selected_narrator(tmp_path, "CharacterVoicesLanguageReset")
     manifest = project_workspace_service.load_manifest(project_root)
@@ -370,13 +438,14 @@ def test_character_voices_voice_language_change_resets_speech_blocks_and_downstr
         + "\n",
         encoding="utf-8",
     )
-    for folder_name in (
-        config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH,
-        config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH,
-        config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH,
-    ):
-        (project_root / folder_name / "artifact.txt").write_text("stale", encoding="utf-8")
     window = _build_window(qtbot, project_root)
+    stale_artifact_paths = [
+        project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.SPEECH_BLOCKS_OUTPUT_FILE_NAME,
+        project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.AUDIO_BLOCKS_OUTPUT_FILE_NAME,
+        project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.AUDIO_ASSEMBLY_REPORT_FILE_NAME,
+    ]
+    for artifact_path in stale_artifact_paths:
+        artifact_path.write_text("[]", encoding="utf-8")
     original_question = character_voices_ui_controller.QMessageBox.question
     character_voices_ui_controller.QMessageBox.question = lambda *_args, **_kwargs: QMessageBox.StandardButton.Yes
     window._character_voices_page.voice_language_change_requested.disconnect()
@@ -391,9 +460,8 @@ def test_character_voices_voice_language_change_resets_speech_blocks_and_downstr
     assert window._current_manifest["operations"]["audio_blocks"]["status"] == "not_started"
     assert window._current_manifest["operations"]["audio_assembly"]["status"] == "not_started"
     assert character_voices_service.load_selected_voice_language(project_root) == "ro"
-    assert not (project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / "artifact.txt").exists()
-    assert not (project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / "artifact.txt").exists()
-    assert not (project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / "artifact.txt").exists()
+    assert project_workspace_service.load_manifest(project_root)["selected_voice_language"] == "ro"
+    assert all(not artifact_path.exists() for artifact_path in stale_artifact_paths)
 
 
 def _create_project_with_character_and_selected_narrator(
@@ -401,6 +469,17 @@ def _create_project_with_character_and_selected_narrator(
     name: str,
     store_narrator_sample: bool = True,
 ):
+    """
+    @brief      Create one project containing a selected narrator and one character target.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @param[in]  name Project display name.
+    @param[in]  store_narrator_sample True when the narrator sample should be stored.
+    @return     Created project root path.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-20
+    @version    0.1.1
+    """
     project_root, manifest = project_workspace_service.create_project(name, tmp_path)
     manifest["source_document"] = {
         "original_name": "story.txt",
@@ -455,6 +534,16 @@ def _create_project_with_character_and_selected_narrator(
 
 
 def _build_window(qtbot, project_root):
+    """
+    @brief      Build one main window and activate a prepared project.
+    @param[in]  qtbot Qt test helper fixture.
+    @param[in]  project_root Prepared project root path.
+    @return     Main window under test.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-20
+    @version    0.1.1
+    """
     window = MainWindow(settings_payload=_default_settings_payload())
     qtbot.addWidget(window)
     window._activate_project(project_root, project_workspace_service.load_manifest(project_root))

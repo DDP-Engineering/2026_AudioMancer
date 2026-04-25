@@ -13,7 +13,7 @@
          file support used by the current AudioMancer implementation scaffold.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 1.28.1
+@version 1.28.2
 """
 
 # IMPORTS
@@ -40,8 +40,20 @@ APP_PROMPTS_PATH = APP_ROOT / "prompts"
 # @brief Absolute path to the packaged application icon file.
 APP_ICON_PATH = Path(__file__).resolve().parent / "assets" / "icons" / "audiomancer.ico"
 
+# @brief Relative paths to packaged user-guide HTML entry points by UI language.
+APP_HELP_INDEX_RELATIVE_PATHS = {
+    "en": Path("help") / "en" / "index.html",
+    "ro": Path("help") / "ro" / "index.html",
+}
+
 # @brief Relative path to the packaged English user-guide HTML entry point.
 APP_HELP_INDEX_RELATIVE_PATH = Path("help") / "en" / "index.html"
+
+# @brief Source-tree user-guide HTML entry points used during development.
+APP_HELP_SOURCE_INDEX_PATHS = {
+    "en": APP_ROOT.parents[1] / "05_SoftwareDocu" / "UserGuide" / "index.html",
+    "ro": APP_ROOT.parents[1] / "05_SoftwareDocu" / "UserGuide_ro" / "index.html",
+}
 
 # @brief Source-tree English user-guide HTML entry point used during development.
 APP_HELP_SOURCE_INDEX_PATH = APP_ROOT.parents[1] / "05_SoftwareDocu" / "UserGuide" / "index.html"

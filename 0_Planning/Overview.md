@@ -18,8 +18,9 @@ generate audiobooks with personalized character voices or real voice-based
 narration in a clear, efficient, and maintainable workflow.
 
 The application should also provide offline end-user help for non-technical
-book readers. The current help bundle is maintained under
-`05_SoftwareDocu/UserGuide/` and is delivered as local HTML.
+book readers. The current English and Romanian help bundles are maintained
+under `05_SoftwareDocu/UserGuide/` and `05_SoftwareDocu/UserGuide_ro/`, then
+delivered as local HTML.
 
 ## 2. Final Product Vision
 

@@ -16,7 +16,7 @@
          `80_audio_blocks` workflow artifacts.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-23
-@version 0.7.2
+@version 0.7.3
 """
 
 # IMPORTS
@@ -1340,7 +1340,7 @@ def _prepare_clone_profile(
     @exception  OperationCancelledError Raised when cancellation is requested.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-24
-    @version    0.4.0
+    @version    0.5.0
     """
     normalized_target_id = str(voice_target.get("voice_target_id", "")).strip()
     matching_clone = next(
@@ -1364,6 +1364,7 @@ def _prepare_clone_profile(
         raise RuntimeError(
             f"Audio Blocks could not find the required reference sample for voice target '{normalized_target_id}'."
         )
+    sample_language = _voice_target_sample_language(voice_target)
 
     base_url = str(runtime_settings.get("base_url", "")).strip()
     runtime_api_key = str(runtime_settings.get("runtime_api_key", ""))
@@ -1374,7 +1375,7 @@ def _prepare_clone_profile(
         runtime_api_key,
         sample_audio_path.read_bytes(),
         sample_text,
-        str(generation_context.get("voice_language", "")).strip(),
+        sample_language,
         timeout_seconds=timeout_seconds,
     )
     final_status = voiceweaver_runtime_service.wait_for_terminal_operation(
@@ -1395,7 +1396,7 @@ def _prepare_clone_profile(
         "source_sample_relative_path": str(voice_target.get("sample_relative_path", "")),
         "source_sample_fingerprint": str(voice_target.get("sample_fingerprint", "")),
         "source_model_id": str(sample_metadata.get("source_model_id", "")).strip() or None,
-        "voice_language": str(generation_context.get("voice_language", "")).strip(),
+        "voice_language": sample_language,
         "sample_text": sample_text,
         "voice_clone_prompt": voice_clone_prompt,
         "prompt_format": _optional_string(
@@ -2664,20 +2665,41 @@ def _clone_profile_matches(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-23
-    @version    0.3.0
+    @version    0.4.0
     """
     clone_language = str(clone_profile.get("voice_language", "")).strip()
-    context_language = str(generation_context.get("voice_language", "")).strip()
+    sample_language = _voice_target_sample_language(voice_target)
     clone_model_id = str(clone_profile.get("clone_model_id", "")).strip()
     context_model_id = str(generation_context.get("clone_model_id", "")).strip()
     return (
         str(clone_profile.get("voice_target_id", "")).strip() == str(voice_target.get("voice_target_id", "")).strip()
         and str(clone_profile.get("source_sample_fingerprint", "")).strip()
         == str(voice_target.get("sample_fingerprint", "")).strip()
-        and clone_language == context_language
+        and narrator_definition_service.narrator_language_code(clone_language) == sample_language
         and clone_model_id == context_model_id
         and str(clone_profile.get("sample_text", "")).strip() != ""
         and clone_profile.get("voice_clone_prompt") not in (None, "")
+    )
+
+
+def _voice_target_sample_language(voice_target: dict[str, object]) -> str:
+    """
+    @brief      Resolve the language of one reference voice sample.
+    @param[in]  voice_target Current voice-target payload.
+    @return     Canonical language code for clone-prompt sample transcription.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-25
+    @version    0.1.0
+    """
+    sample_metadata = voice_target.get("sample_metadata", {})
+    if not isinstance(sample_metadata, dict):
+        sample_metadata = {}
+    return narrator_definition_service.narrator_language_code(
+        sample_metadata.get("voice_language")
+        or sample_metadata.get("language")
+        or voice_target.get("voice_language")
+        or narrator_definition_service.DEFAULT_NARRATOR_LANGUAGE
     )
 
 

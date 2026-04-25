@@ -14,7 +14,7 @@
          playback, and page-entry narrator-sample warnings.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 1.6.0
+@version 1.6.1
 """
 
 # IMPORTS
@@ -178,7 +178,7 @@ def handle_edit_prompt_requested(window: "MainWindow", target_id: str) -> None:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-20
-    @version    1.3.0
+    @version    1.3.1
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._current_project_root is None:
@@ -193,10 +193,13 @@ def handle_edit_prompt_requested(window: "MainWindow", target_id: str) -> None:
     except ValueError:
         return
     window._character_voices_inspected_target_id = target_id
-    window.show_project_state(window._current_project_root, window._current_manifest)
-    window._character_voices_page.begin_edit_mode()
     _sync_manifest_stage(window)
     audio_blocks_ui_controller.invalidate_audio_blocks_after_upstream_change(window)
+    window.show_project_state(
+        window._current_project_root,
+        project_workspace_service.load_manifest(window._current_project_root),
+    )
+    window._character_voices_page.begin_edit_mode()
 
 
 def handle_save_prompt_requested(window: "MainWindow", target_payload: dict[str, object]) -> None:
@@ -776,7 +779,7 @@ def _reset_speech_blocks_and_downstream(window: "MainWindow") -> None:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.1.0
+    @version    0.1.1
     """
     if window._current_project_root is None or window._current_manifest is None:
         return
@@ -786,7 +789,7 @@ def _reset_speech_blocks_and_downstream(window: "MainWindow") -> None:
         include_current=True,
         keep_input_snapshots=False,
     )
-    updated_manifest = dict(window._current_manifest)
+    updated_manifest = project_workspace_service.load_manifest(window._current_project_root)
     operations = text_cleanup_state_service.normalized_manifest_operations(updated_manifest)
     default_operations = text_cleanup_state_service.normalized_manifest_operations({})
     for operation_kind in ("speech_blocks", "audio_blocks", "audio_assembly"):

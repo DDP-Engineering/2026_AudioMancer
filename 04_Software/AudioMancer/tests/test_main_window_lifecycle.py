@@ -13,7 +13,7 @@
          pages are created without workflow functionality.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-16
-@version 1.6.0
+@version 1.6.1
 """
 
 # IMPORTS
@@ -128,12 +128,52 @@ def test_help_index_resolves_user_guide_source() -> None:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.1.0
+    @version    0.2.0
     """
-    resolved_path = misc_ui_controller.resolve_help_index_path()
+    resolved_path = misc_ui_controller.resolve_help_index_path("en")
 
     assert resolved_path == config.APP_HELP_SOURCE_INDEX_PATH
     assert resolved_path.is_file()
+
+
+def test_help_index_resolves_romanian_user_guide_source() -> None:
+    """
+    @brief      Verify the source-tree Romanian offline help guide can be resolved.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-25
+    @version    0.1.0
+    """
+    resolved_path = misc_ui_controller.resolve_help_index_path("ro")
+
+    assert resolved_path == config.APP_HELP_SOURCE_INDEX_PATHS["ro"]
+    assert resolved_path.is_file()
+
+
+def test_help_index_falls_back_to_english_for_missing_language(monkeypatch) -> None:
+    """
+    @brief      Verify unavailable localized Help content falls back to English.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-25
+    @version    0.1.0
+    """
+    missing_path = config.APP_ROOT.parents[1] / "05_SoftwareDocu" / "MissingUserGuide" / "index.html"
+    monkeypatch.setattr(
+        config,
+        "APP_HELP_SOURCE_INDEX_PATHS",
+        {
+            "en": config.APP_HELP_SOURCE_INDEX_PATH,
+            "ro": missing_path,
+        },
+    )
+
+    resolved_path = misc_ui_controller.resolve_help_index_path("ro")
+
+    assert resolved_path == config.APP_HELP_SOURCE_INDEX_PATH
 
 
 def test_help_action_opens_resolved_user_guide(qtbot, monkeypatch, default_settings_payload) -> None:
@@ -146,7 +186,7 @@ def test_help_action_opens_resolved_user_guide(qtbot, monkeypatch, default_setti
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.1.0
+    @version    0.2.0
     """
     opened_paths: list[str] = []
     window = MainWindow(settings_payload=default_settings_payload)
@@ -169,6 +209,43 @@ def test_help_action_opens_resolved_user_guide(qtbot, monkeypatch, default_setti
     window._action_help.trigger()
 
     assert [Path(path) for path in opened_paths] == [config.APP_HELP_SOURCE_INDEX_PATH]
+
+
+def test_help_action_opens_romanian_user_guide(qtbot, monkeypatch, default_settings_payload) -> None:
+    """
+    @brief      Verify the Help toolbar action opens Romanian help for Romanian UI.
+    @param[in]  qtbot Qt test helper fixture.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  default_settings_payload Default test settings payload fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-25
+    @version    0.1.0
+    """
+    opened_paths: list[str] = []
+    settings_payload = dict(default_settings_payload)
+    settings_payload["language"] = "ro"
+    window = MainWindow(settings_payload=settings_payload)
+    qtbot.addWidget(window)
+
+    def _fake_open_url(url):
+        """
+        @brief      Record one requested Romanian help URL.
+        @param[in]  url Qt URL requested by the Help action.
+        @return     True to emulate successful system-browser opening.
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-25
+        @version    0.1.0
+        """
+        opened_paths.append(url.toLocalFile())
+        return True
+
+    monkeypatch.setattr(misc_ui_controller.QDesktopServices, "openUrl", _fake_open_url)
+
+    window._action_help.trigger()
+
+    assert [Path(path) for path in opened_paths] == [config.APP_HELP_SOURCE_INDEX_PATHS["ro"]]
 
 
 def test_about_dialog_includes_license_text(qtbot, default_settings_payload) -> None:
