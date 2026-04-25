@@ -14,7 +14,7 @@
          controls for the Speech Blocks workflow.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-24
-@version 0.2.3
+@version 0.2.4
 """
 
 # IMPORTS
@@ -347,6 +347,22 @@ class SpeechBlocksPage(QWidget):
         @version    0.1.0
         """
         return self._current_block_id
+
+    def advance_to_next_block(self) -> None:
+        """
+        @brief      Move the visible Speech Block selection one row forward when possible.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-25
+        @version    0.1.0
+        """
+        current_row = self._speech_block_list.currentRow()
+        if current_row < 0:
+            return
+        next_row = current_row + 1
+        if next_row < self._speech_block_list.count():
+            self._speech_block_list.setCurrentRow(next_row)
 
     def apply_language(self, language: str) -> None:
         """

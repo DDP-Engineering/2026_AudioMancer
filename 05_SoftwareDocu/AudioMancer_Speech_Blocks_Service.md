@@ -14,7 +14,8 @@ Implements the current approval-driven `Speech Blocks` workflow in
 
 It converts the chunk text selected through `Character Voices` into ordered
 speaker-attributed speech blocks, gives the operator a focused review and edit
-surface, and persists the approved results under `70_speech_blocks`.
+surface, and persists the approved results as root-level Speech Blocks
+artifacts.
 
 ## 2. Responsibilities
 
@@ -79,7 +80,8 @@ High-level flow:
 
 1. `Character Voices` selects the effective voice language for downstream work.
 2. `speech_blocks_service.resolve_source_chunks(...)` loads canonical chunks
-   from `20_chunking` or approved translated chunks from `30_translation`.
+   from `chunks_text.json` or approved translated chunks from
+   `translated_text.json`.
 3. The controller confirms that the operator wants to start or continue one AI
    run and warns about time plus token usage.
 4. `speech_blocks_service.start_or_continue_generation(...)` validates the
@@ -89,9 +91,9 @@ High-level flow:
 5. Each response is normalized into new speech-block payloads, including AI
    baseline values, editable current values, warning flags, approval fields,
    continuous sequence indexes, and `CCCC-BBBBBB` IDs.
-6. The current report, `state_operation.json`, and transaction log metadata
-   are rewritten after every chunk so cancellation can resume from the next
-   chunk.
+6. The current `speech_blocks_report.json`, `speech_blocks_state.json`, and
+   transaction log metadata are rewritten after every chunk so cancellation can
+   resume from the next chunk.
 7. Finished generation leaves Speech Blocks in review until all blocks are
    approved.
 8. `Approve All Speech Blocks` marks every block approved and advances the
@@ -130,11 +132,11 @@ High-level flow:
 Inputs:
 
 - active project root and manifest
-- selected voice language from `60_character_voices/selected_voice_language.json`
-- canonical chunking output in `20_chunking/output_chunks.json`
-- approved translated chunks and translation report in `30_translation/` when
-  the selected voice language is translated
-- discovered character profiles from `40_character_discovery`
+- selected voice language from `project.json`
+- canonical chunking output in `chunks_text.json`
+- approved translated chunks and `translation_report.json` when the selected
+  voice language is translated
+- discovered character profiles from `characters_profile.json`
 - selected enabled AI profile from `settings.json`
 - prompt templates:
   `04_Software/AudioMancer/prompts/speech_blocks_system.txt`
@@ -142,11 +144,10 @@ Inputs:
 
 Outputs:
 
-- `70_speech_blocks/input_source_chunks.json`
-- `70_speech_blocks/output_speech_blocks.json`
-- `70_speech_blocks/artifact_speech_blocks_report.json`
-- `70_speech_blocks/state_operation.json`
-- `70_speech_blocks/log_ai_transactions_<timestamp>.log`
+- `speech_blocks.json`
+- `speech_blocks_report.json`
+- `speech_blocks_state.json`
+- `log_ai_speech_blocks_<timestamp>.log`
 - updated manifest summary for `operations["speech_blocks"]`
 - updated manifest stage `speech_blocks_ready` only after approval is complete
 
@@ -217,11 +218,11 @@ This workflow sits immediately after `Character Voices`.
 
 Upstream integrations:
 
-- canonical chunk output from `20_chunking`
-- approved translation output from `30_translation` when the selected voice
+- canonical chunk output from `chunks_text.json`
+- approved translation output from `translated_text.json` when the selected voice
   language is translated
-- discovered character speaker catalog from `40_character_discovery`
-- selected Character Voices language from `60_character_voices`
+- discovered character speaker catalog from `characters_profile.json`
+- selected Character Voices language from `project.json`
 
 Downstream integrations:
 
@@ -229,14 +230,14 @@ Downstream integrations:
   Block is approved
 - `Audio Blocks` consumes speech blocks and skips VoiceWeaver for metadata-only
   blocks
-- `Reset Speech Blocks` clears `70_speech_blocks`, `80_audio_blocks`, and
-  `90_audio_assembly`
+- `Reset Speech Blocks` clears speech-block, audio-block, and audio-assembly
+  runtime artifacts
 - selected-block edits invalidate affected downstream Audio Blocks data
 - selected-chunk re-splitting asks Audio Blocks to delete audio for the
   re-split chunk, preserve earlier chunk audio, remap later records to rebuilt
   IDs, rename order-based artifacts when needed, and rebuild report/state
-- Character Voices language changes invalidate `70_speech_blocks`,
-  `80_audio_blocks`, and `90_audio_assembly`
+- Character Voices language changes invalidate speech-block, audio-block, and
+  audio-assembly runtime artifacts
 
 Runtime gating:
 
@@ -307,6 +308,9 @@ Operator path:
 - press `Save` after block edits
 - press `Reset` to restore a block to the AI baseline values
 - press `Approve` to approve only the selected Speech Block
+- after selected-block approval, the page advances the visible Speech Blocks
+  list to the next row when one exists and keeps the final row selected at the
+  end
 - press `Re-Split Selected Chunk` when only the selected chunk needs a new AI
   split
 - press `Approve All Speech Blocks` after review

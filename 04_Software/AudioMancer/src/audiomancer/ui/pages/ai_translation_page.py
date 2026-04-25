@@ -13,7 +13,7 @@
          chunk review, manual edits, approval controls, and progress display.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-07
-@version 0.4.0
+@version 0.4.1
 """
 
 # IMPORTS
@@ -316,6 +316,22 @@ class AiTranslationPage(QWidget):
         @version    0.1.0
         """
         return self._current_chunk_id
+
+    def advance_to_next_chunk(self) -> None:
+        """
+        @brief      Move the chunk selection one row forward when a next row exists.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-25
+        @version    0.1.0
+        """
+        current_row = self._chunk_list.currentRow()
+        if current_row < 0:
+            return
+        next_row = current_row + 1
+        if next_row < self._chunk_list.count():
+            self._chunk_list.setCurrentRow(next_row)
 
     def _apply_control_state(self) -> None:
         """

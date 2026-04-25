@@ -8,6 +8,23 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
 
 Project tooling, helper scripts, and development utilities.
 
+## Audits
+
+Repeatable repository audits live in `02_Tools/audits/`.
+
+Run them from the repository root with Python:
+
+```powershell
+python 02_Tools/audits/audit_documentation.py --changed-only
+python 02_Tools/audits/audit_codestyle.py --changed-only
+python 02_Tools/audits/audit_logging_coverage.py --changed-only
+```
+
+Omit `--changed-only` for a full scan.
+
+The logging audit is intentionally conservative: it reports candidates for
+engineering review instead of editing code automatically.
+
 ## Packaging
 
 Release packaging automation is implemented directly in this folder:

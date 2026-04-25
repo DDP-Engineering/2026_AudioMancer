@@ -1,0 +1,4 @@
+interface:
+  display_name: "Code Style Audit"
+  short_description: "Check Python style and Doxygen tags"
+  default_prompt: "Use $codestyle-audit to review changed AudioMancer Python files against AGENTS.md and Code_Style.md, fix Doxygen/style issues, and validate the changed files."

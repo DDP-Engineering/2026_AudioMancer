@@ -9,11 +9,12 @@
 """
 @file test_ai_translation_page.py
 @brief Focused Qt tests for the AudioMancer AI translation page.
-@details Verifies translation-page enablement, chunk rendering, and review
-         controls for the AI Translation workflow.
+@details Verifies translation-page enablement, chunk rendering, review
+         controls, and bounded approval navigation for the AI Translation
+         workflow.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-07
-@version 0.1.0
+@version 0.2.1
 """
 
 # IMPORTS
@@ -21,8 +22,19 @@
 from audiomancer.services import ai_translation_service
 from audiomancer.ui.pages.ai_translation_page import AiTranslationPage
 
+# PUBLIC API
+
 
 def test_ai_translation_page_locks_language_when_translation_exists(qtbot) -> None:
+    """
+    @brief      Verify the target-language selector is locked after translation exists.
+    @param[in]  qtbot Qt test helper fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-25
+    @version    0.1.0
+    """
     page = AiTranslationPage()
     qtbot.addWidget(page)
     page.set_project_active(True)
@@ -58,6 +70,15 @@ def test_ai_translation_page_locks_language_when_translation_exists(qtbot) -> No
 
 
 def test_ai_translation_page_renders_selected_chunk_and_review_actions(qtbot) -> None:
+    """
+    @brief      Verify selected translation chunks render with enabled review actions.
+    @param[in]  qtbot Qt test helper fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-25
+    @version    0.1.0
+    """
     page = AiTranslationPage()
     qtbot.addWidget(page)
     page.set_project_active(True)
@@ -96,6 +117,15 @@ def test_ai_translation_page_renders_selected_chunk_and_review_actions(qtbot) ->
 
 
 def test_ai_translation_page_edit_marks_selected_chunk_unapproved(qtbot) -> None:
+    """
+    @brief      Verify editing selected translated text emits a review-state update.
+    @param[in]  qtbot Qt test helper fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-25
+    @version    0.1.0
+    """
     page = AiTranslationPage()
     qtbot.addWidget(page)
     emitted = []
@@ -131,6 +161,71 @@ def test_ai_translation_page_edit_marks_selected_chunk_unapproved(qtbot) -> None
 
     assert emitted == [("chunk-0001", "Edited translation")]
     assert page._approve_selected_button.isEnabled() is True
+
+
+def test_ai_translation_page_advances_to_next_chunk_with_limit(qtbot) -> None:
+    """
+    @brief      Verify approval navigation advances to the next chunk without crossing the end.
+    @param[in]  qtbot Qt test helper fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-25
+    @version    0.1.0
+    """
+    page = AiTranslationPage()
+    qtbot.addWidget(page)
+    page.set_project_active(True)
+    page.set_ai_profiles([("Profile One", "profile-1")], "profile-1")
+    page.set_translation_state(
+        source_chunks=[
+            {"chunk_id": "chunk-0001", "sequence_index": 1, "text": "Original one"},
+            {"chunk_id": "chunk-0002", "sequence_index": 2, "text": "Original two"},
+        ],
+        translated_chunks=[
+            {
+                "chunk_id": "chunk-0001",
+                "sequence_index": 1,
+                "source_text": "Original one",
+                "translated_text": "Translated one",
+                "approved": False,
+                "approved_at": None,
+                "translated_at": "2026-04-07T12:00:00+00:00",
+                "translation_profile_id": "profile-1",
+                "target_language": "ro",
+                "status": ai_translation_service.TRANSLATED_CHUNK_STATUS_TRANSLATED,
+            },
+            {
+                "chunk_id": "chunk-0002",
+                "sequence_index": 2,
+                "source_text": "Original two",
+                "translated_text": "Translated two",
+                "approved": False,
+                "approved_at": None,
+                "translated_at": "2026-04-07T12:00:01+00:00",
+                "translation_profile_id": "profile-1",
+                "target_language": "ro",
+                "status": ai_translation_service.TRANSLATED_CHUNK_STATUS_TRANSLATED,
+            },
+        ],
+        notes=["Translated chunks: 2/2."],
+        target_language="ro",
+        selected_profile_id="profile-1",
+        stage_status=ai_translation_service.TRANSLATION_STAGE_IN_PROGRESS,
+        translated_count=2,
+        approved_count=0,
+        total_count=2,
+    )
+
+    page.advance_to_next_chunk()
+
+    assert page.selected_chunk_id() == "chunk-0002"
+    assert page._chunk_list.currentRow() == 1
+
+    page.advance_to_next_chunk()
+
+    assert page.selected_chunk_id() == "chunk-0002"
+    assert page._chunk_list.currentRow() == 1
 
 
 # END OF FILE

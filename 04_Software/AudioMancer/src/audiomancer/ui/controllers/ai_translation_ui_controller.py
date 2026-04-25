@@ -13,7 +13,7 @@
          selected-chunk retranslation, and modal progress lifecycle.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-22
-@version 0.5.1
+@version 0.5.2
 """
 
 # IMPORTS
@@ -231,7 +231,7 @@ def handle_approve_selected_requested(window: "MainWindow", chunk_id: str) -> No
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-07
-    @version    0.1.0
+    @version    0.2.0
     """
     if window._current_project_root is None or window._current_manifest is None:
         return
@@ -242,6 +242,7 @@ def handle_approve_selected_requested(window: "MainWindow", chunk_id: str) -> No
         _persisted_profile_id(window),
     )
     _sync_manifest_after_translation(window, report)
+    window._ai_translation_page.advance_to_next_chunk()
 
 
 def handle_translated_text_changed(window: "MainWindow", chunk_id: str, translated_text: str) -> None:

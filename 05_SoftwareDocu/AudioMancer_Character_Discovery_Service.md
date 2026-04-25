@@ -21,15 +21,15 @@ manifest.
 
 ## 2. Responsibilities
 
-- load canonical chunking input from `20_chunking`
-- snapshot chunk and cleaned-text inputs into `40_character_discovery`
+- load canonical chunking input from `chunks_text.json`
+- use root-level cleanup and chunking artifacts as the discovery source
 - split chunk input into overlapping AI analysis windows
 - call the configured AI profile for window extraction and profile synthesis
 - normalize, merge, filter, and persist discovered speaking characters
 - derive and persist one structured voice-definition brief plus one final
   voice-definition prompt for each character profile
-- persist `state_operation.json`, one discovery report, one profile output,
-  and one per-run AI transaction log
+- persist `characters_state.json`, `characters_report.json`, one
+  `characters_profile.json` output, and one per-run AI transaction log
 - expose Character Discovery page state, notes, and default AI-profile
   selection
 - handle page-level start, resume, reset, guarded manual add or edit or save
@@ -76,15 +76,15 @@ High-level runtime flow:
 3. On first start only, the controller shows one informational popup about
    long-running AI work.
 4. `character_discovery_service.start_or_continue_discovery(...)` loads
-   `20_chunking/output_chunks.json`, snapshots the chunk set and cleaned text,
-   and restores resumable state when fingerprints and profile ids still match.
+   `chunks_text.json`, resolves the current chunk and cleanup context, and
+   restores resumable state when fingerprints and profile ids still match.
 5. The service analyzes chunk windows, normalizes candidate evidence against
    known chunk ids, merges character candidates by canonical or alias identity,
    filters to speaking characters, and runs one synthesis pass per merged
    character.
-6. The service writes `output_character_profiles.json`,
-   `artifact_character_discovery_report.json`, `state_operation.json`, and one
-   AI transaction log in `40_character_discovery`.
+6. The service writes `characters_profile.json`, `characters_report.json`,
+   `characters_state.json`, and one `log_ai_characters_<timestamp>.log`
+   transaction log at the project root.
 7. The controller syncs `operations["character_discovery"]` into
    `project.json`, sets `current_stage` to `character_discovery_ready`, and
    reloads the window state.
@@ -97,8 +97,9 @@ High-level runtime flow:
 10. The page also exposes editable voice-definition fields plus one final
     `voice_definition_prompt`; `Regenerate Voice Definition` rebuilds both
     from the current literary character facts without leaving edit mode.
-11. Reset clears `40_character_discovery` plus downstream
-   `50_narrator_definition`, resets manifest state through
+11. Reset clears character-discovery artifacts plus downstream narrator,
+   character-voice, speech-block, audio-block, and audio-assembly runtime
+   artifacts, resets manifest state through
    `build_manifest_after_operation_reset(...)`, and returns the project to
    `translation_ready`.
 
@@ -119,20 +120,17 @@ Inputs:
 
 - active project root and manifest
 - enabled AI profile payload from `settings.json`
-- canonical chunking output at
-  `04_Software/AudioMancer/<project>/20_chunking/output_chunks.json`
-- optional cleaned text from `10_cleanup/output_clean_text.txt`
+- canonical chunking output at `chunks_text.json`
+- optional cleaned text from `clean_text.txt`
 - prompt templates from the app-root `prompts/` directory
-- optional resumable `40_character_discovery/state_operation.json`
+- optional resumable `characters_state.json`
 
 Outputs:
 
-- `40_character_discovery/input_<original_name>.json`
-- `40_character_discovery/input_<original_name>.txt`
-- `40_character_discovery/output_character_profiles.json`
-- `40_character_discovery/artifact_character_discovery_report.json`
-- `40_character_discovery/state_operation.json`
-- `40_character_discovery/log_ai_transactions_<timestamp>.log`
+- `characters_profile.json`
+- `characters_report.json`
+- `characters_state.json`
+- `log_ai_characters_<timestamp>.log`
 - updated `project.json` operation state and workflow stage
 
 ## 6. Data Contracts

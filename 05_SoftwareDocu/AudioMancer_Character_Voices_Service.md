@@ -16,7 +16,7 @@ later `Audio Blocks` and `Audio Assembly` stages.
 
 ## 2. Responsibilities
 
-- persist the Character Voices target list under `60_character_voices`
+- persist the Character Voices target list as root-level `characters_voice.json`
 - persist one selected voice language for character sample generation
 - prefer the character-owned `voice_definition_prompt` from `Characters` as
   the default voice-designer prompt for each character, with one legacy
@@ -54,9 +54,8 @@ The workflow is split across:
 
 High-level flow:
 
-1. Project load ensures `60_character_voices/voice_targets.json`,
-   `60_character_voices/selected_voice_language.json`, and
-   `60_character_voices/audio_samples/` exist.
+1. Project load ensures `characters_voice.json` exists and the selected voice
+   language is present in `project.json`.
 2. The state service loads the selected narrator, discovered character
    profiles, translation report, cached VoiceWeaver models, and persisted
    Character Voices data.
@@ -99,8 +98,8 @@ Inputs:
 
 - active project root and manifest
 - selected narrator profile plus selected narrator sample
-- discovered character profiles from `40_character_discovery`
-- translation approval report from `30_translation`
+- discovered character profiles from `characters_profile.json`
+- translation approval report from `translation_report.json`
 - cached VoiceWeaver discovery fields from `settings.json`
 - Character Voices page actions:
   reset prompt, edit prompt, save prompt, generate sample, preview, stop
@@ -108,10 +107,10 @@ Inputs:
 
 Outputs:
 
-- `60_character_voices/voice_targets.json`
-- `60_character_voices/selected_voice_language.json`
-- `60_character_voices/audio_samples/<target_id>.wav`
-- `60_character_voices/audio_samples/<target_id>.json`
+- `characters_voice.json`
+- selected voice language stored in `project.json`
+- root-level `audio_<target_display_name>.wav` character samples
+- sample metadata stored inside each `characters_voice.json` target entry
 - updated manifest stage:
   `current_stage = "character_voices_ready"` when narrator plus all character
   samples exist
@@ -176,20 +175,19 @@ order.
 
 Upstream integrations:
 
-- selected narrator state and narrator sample artifacts from
-  `50_narrator_definition`
+- selected narrator state and narrator sample artifacts from `narator.json`
+  and `narator.wav`
 - project-local `voice_assignment_mode` from `project.json`
-- character discovery artifacts from `40_character_discovery`, including the
+- character discovery artifacts from `characters_profile.json`, including the
   structured voice brief and final `voice_definition_prompt`
-- translation approval state from `30_translation`
+- translation approval state from `translation_report.json`
 
 Downstream integrations:
 
-- `70_speech_blocks`, which reads the selected Character Voices language and
+- `Speech Blocks`, which reads the selected Character Voices language and
   is invalidated when that language changes
-- placeholder `Audio Blocks` page and future `80_audio_blocks` workflow data
-- placeholder `Audio Assembly` page and future `90_audio_assembly` workflow
-  data
+- `Audio Blocks` workflow data
+- placeholder `Audio Assembly` workflow data
 
 Current rules:
 
@@ -197,9 +195,9 @@ Current rules:
   Korean, German, French, Russian, Portuguese, Spanish, and Italian
 - translated language becomes selectable only when all translated chunks are
   approved
-- changing the selected voice language clears `70_speech_blocks`,
-  `80_audio_blocks`, and `90_audio_assembly`, then returns the project stage
-  to `character_voices_ready`
+- changing the selected voice language clears speech-block, audio-block, and
+  audio-assembly runtime artifacts, then returns the project stage to
+  `character_voices_ready`
 - narrator is visible on the page but remains preview-only
 - character editing and generation are enabled only in
   `narrator_and_characters` mode
@@ -278,5 +276,5 @@ uv run ruff format <changed_python_files>
   edited and saved
 - per-character preview text still starts from a deterministic language-based
   sample text instead of automatically using real dialogue excerpts
-- `Audio Blocks` and `Audio Assembly` are still placeholder stages and do not
-  yet consume the generated Speech Blocks output
+- `Audio Assembly` is still a placeholder stage and does not yet consume the
+  generated Audio Blocks output

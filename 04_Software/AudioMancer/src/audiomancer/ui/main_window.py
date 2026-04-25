@@ -14,7 +14,7 @@
          so the window remains a thin coordinator.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 1.27.6
+@version 1.28.0
 """
 
 # IMPORTS
@@ -42,6 +42,7 @@ from audiomancer.services import (
     character_voices_state_service,
     home_presenter_service,
     narrator_definition_state_service,
+    project_export_service,
     settings_service,
     speech_blocks_state_service,
     text_chunking_state_service,
@@ -254,7 +255,7 @@ class MainWindow(QMainWindow):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-16
-        @version    0.8.0
+        @version    0.9.0
         """
         self._current_project_root = project_root
         self._current_manifest = manifest
@@ -275,6 +276,7 @@ class MainWindow(QMainWindow):
                 current_language,
             )
         )
+        self._home_page.set_export_states(project_export_service.build_export_states(project_root, manifest))
         self._text_cleanup_page.set_project_active(project_root is not None)
         self._text_cleanup_page.set_ai_profiles(
             **text_cleanup_state_service.build_ai_cleanup_profile_state(self._settings_payload)
@@ -473,7 +475,7 @@ class MainWindow(QMainWindow):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-07
-        @version    0.14.3
+        @version    0.15.0
         """
         current_language = ui_state_service.current_language_from_settings(self._settings_payload)
         home_page = HomeProjectPage(self)
@@ -486,7 +488,15 @@ class MainWindow(QMainWindow):
         home_page.set_source_summary(None)
         home_page.set_source_locked(False, None)
         home_page.set_stage_statuses(home_presenter_service.build_stage_statuses(None, current_language))
+        home_page.set_export_states(project_export_service.build_export_states(None, None))
         home_page.import_requested.connect(lambda: home_ui_controller.handle_import_source_requested(self))
+        home_page.export_requested.connect(
+            lambda export_kind, export_format: home_ui_controller.handle_export_requested(
+                self,
+                export_kind,
+                export_format,
+            )
+        )
 
         self._text_cleanup_page = TextCleanupPage(self)
         self._text_cleanup_page.extract_requested.connect(

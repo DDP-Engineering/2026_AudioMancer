@@ -13,8 +13,10 @@
          application through one centralized string catalog and scale mapping.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 0.22.7
+@version 0.23.0
 """
+
+# ruff: noqa: E501
 
 # IMPORTS
 
@@ -62,6 +64,9 @@ _UI_STRINGS = {
         "dialog.select_project_parent_title": "Select Project Parent Folder",
         "dialog.select_source_title": "Select Source File",
         "dialog.select_source_filter": "Supported source files (*.txt *.pdf *.rtf *.docx *.odt *.md *.epub)",
+        "dialog.export_title": "Export Project Artifact",
+        "dialog.export_filter_txt": "Text Files (*.txt)",
+        "dialog.export_filter_markdown": "Markdown Files (*.md)",
         "dialog.project_error_title": "Project Error",
         "dialog.project_repair_title": "Repair Project",
         "dialog.confirm_extraction_rerun_title": "Confirm Extraction Rerun",
@@ -89,6 +94,7 @@ _UI_STRINGS = {
         "status.project_opened": "Project opened.",
         "status.project_repaired": "Project repaired and opened.",
         "status.source_imported": "Source file imported.",
+        "status.project_exported": "Export saved.",
         "status.text_extracted": "Text extracted.",
         "status.text_cleaned": "Text cleaned.",
         "status.cleaned_text_saved": "Cleaned text saved.",
@@ -599,6 +605,7 @@ _UI_STRINGS = {
         ),
         "home.title": "Home / Project",
         "home.summary_group": "Project Summary",
+        "home.exports_group": "Exports",
         "home.project": "Project",
         "home.path": "Path",
         "home.stage": "Stage",
@@ -610,6 +617,21 @@ _UI_STRINGS = {
         "home.no_source": "No source imported yet.",
         "home.locked_source_prefix": "Locked source",
         "home.locked_source_suffix": ". Create a new project to use another file.",
+        "home.export.cleaned_text": "Cleaned Text",
+        "home.export.text_chunks": "Text Chunks",
+        "home.export.ai_translation": "AI Translation",
+        "home.export.characters": "Characters",
+        "home.export.speech_blocks": "Speech Blocks",
+        "home.export_status.available": "Available",
+        "home.export_status.not_ready": "Not ready",
+        "home.export_status.missing_artifact": "Missing artifact",
+        "home.export_format.txt": "TXT",
+        "home.export_format.markdown": "Markdown",
+        "home.export_button": "Export",
+        "home.export_not_ready_message": "This export is not available yet.",
+        "home.export_inside_project_message": (
+            "Choose a destination outside the active project folder so runtime files cannot be overwritten."
+        ),
         "home.workflow_group": "Workflow Progress",
         "home.status.not_started": "Not Started",
         "home.status.in_progress": "In Progress",
@@ -745,6 +767,9 @@ _UI_STRINGS = {
         "dialog.select_project_parent_title": "Selecteaza Dosarul Parinte Al Proiectului",
         "dialog.select_source_title": "Selecteaza Fisierul Sursa",
         "dialog.select_source_filter": "Fisiere sursa acceptate (*.txt *.pdf *.rtf *.docx *.odt *.md *.epub)",
+        "dialog.export_title": "Exporta Artefact Proiect",
+        "dialog.export_filter_txt": "Fisiere Text (*.txt)",
+        "dialog.export_filter_markdown": "Fisiere Markdown (*.md)",
         "dialog.project_error_title": "Eroare Proiect",
         "dialog.project_repair_title": "Repara Proiectul",
         "dialog.confirm_extraction_rerun_title": "Confirma Reluarea Extragerii",
@@ -772,6 +797,7 @@ _UI_STRINGS = {
         "status.project_opened": "Proiectul a fost deschis.",
         "status.project_repaired": "Proiectul a fost reparat si deschis.",
         "status.source_imported": "Fisierul sursa a fost importat.",
+        "status.project_exported": "Exportul a fost salvat.",
         "status.text_extracted": "Textul a fost extras.",
         "status.text_cleaned": "Textul a fost curatat.",
         "status.cleaned_text_saved": "Textul curatat a fost salvat.",
@@ -1290,6 +1316,7 @@ _UI_STRINGS = {
         ),
         "home.title": "Acasa / Proiect",
         "home.summary_group": "Rezumat Proiect",
+        "home.exports_group": "Exporturi",
         "home.project": "Proiect",
         "home.path": "Cale",
         "home.stage": "Etapa",
@@ -1301,6 +1328,21 @@ _UI_STRINGS = {
         "home.no_source": "Nu a fost importata nicio sursa.",
         "home.locked_source_prefix": "Sursa blocata",
         "home.locked_source_suffix": ". Creeaza un proiect nou pentru a folosi alt fisier.",
+        "home.export.cleaned_text": "Text Curatat",
+        "home.export.text_chunks": "Segmente Text",
+        "home.export.ai_translation": "Traducere AI",
+        "home.export.characters": "Personaje",
+        "home.export.speech_blocks": "Blocuri Vorbire",
+        "home.export_status.available": "Disponibil",
+        "home.export_status.not_ready": "Nepregatit",
+        "home.export_status.missing_artifact": "Artefact lipsa",
+        "home.export_format.txt": "TXT",
+        "home.export_format.markdown": "Markdown",
+        "home.export_button": "Exporta",
+        "home.export_not_ready_message": "Acest export nu este inca disponibil.",
+        "home.export_inside_project_message": (
+            "Alege o destinatie in afara dosarului proiectului activ pentru a evita suprascrierea fisierelor runtime."
+        ),
         "home.workflow_group": "Progres Flux de Lucru",
         "home.status.not_started": "Nepornit",
         "home.status.in_progress": "In Curs",

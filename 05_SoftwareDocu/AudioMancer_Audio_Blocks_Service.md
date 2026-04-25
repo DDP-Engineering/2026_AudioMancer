@@ -11,9 +11,10 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
 
 Implements the current `Audio Blocks` workflow in `AudioMancer`.
 
-It consumes persisted `Speech Blocks`, the selected narrator sample, per-character
-samples from `Character Voices`, and the selected voice language to generate one
-reviewable WAV per speech block under `80_audio_blocks`.
+It consumes approved persisted `Speech Blocks`, the selected narrator sample,
+per-character samples from `Character Voices`, and the selected voice language to
+generate one reviewable WAV per approved speech block under the root-level
+`audio_blocks/` generated audio folder.
 
 ## 2. Responsibilities
 
@@ -23,8 +24,8 @@ reviewable WAV per speech block under `80_audio_blocks`.
   Qwen base clone models
 - build one reusable client-owned `voice_clone_prompt` payload per referenced
   narrator or character sample through `POST /v1/voice/clone-prompt`
-- generate one final WAV plus metadata pair per speech block in stable sequence
-  order, splitting long Audio Blocks internally when the loaded clone model's
+- generate one final WAV plus metadata pair per approved speech block in stable
+  sequence order, splitting long Audio Blocks internally when the loaded clone model's
   runtime `max_new_tokens` budget requires it
 - persist resumable operation state, report data, reusable prompt metadata, and
   generated artifacts after each meaningful step
@@ -32,6 +33,9 @@ reviewable WAV per speech block under `80_audio_blocks`.
   checkpoint, including checkpoints inside split Audio Blocks
 - support per-block approval, per-block regeneration, and approve-all updates
   without regenerating missing audio
+- allow incremental generation when only some Speech Blocks are approved; the
+  remaining unapproved Speech Blocks stay pending until they are approved and
+  generation is run again
 - build page state, notes, progress, and selected-block details for the
   `Audio Blocks` page
 - coordinate confirmation popups, modal progress, destructive rerun or reset,
@@ -73,8 +77,10 @@ High-level flow:
 1. The controller probes the configured VoiceWeaver runtime and reuses the
    cached discovered-model list from `TTS Settings`.
 2. `audio_blocks_service.start_or_continue_generation(...)` loads current
-   `Speech Blocks`, narrator sample metadata, character samples, and selected
-   Character Voices language.
+   `Speech Blocks`, filters the generation set to approved blocks, resolves
+   narrator sample metadata from the selected narrator profile when
+   `narator.json` contains only selection state, loads character samples, and
+   reads the selected Character Voices language.
 3. The service selects the clone/base model from the discovered runtime catalog,
    preferring `Qwen3-TTS-12Hz-1.7B-Base` when it is available. It reads
    `/v1/status`, loads the clone model only when needed, then resolves the
@@ -85,26 +91,29 @@ High-level flow:
    source sample fingerprints, selected voice language, selected project
    language context, the chosen clone/base model identifier, and the resolved
    model budget.
-5. When an existing `state_operation.json` still matches that fingerprint, the
+5. When an existing `audio_blocks_state.json` still matches that fingerprint, the
    service restores the saved reusable prompt checkpoint and the next
    speech-block index.
 6. Voice targets are processed first. Existing persisted reusable prompt
    payloads are reused only when target id, sample fingerprint, sample text,
    selected language, and clone-model id still match.
-7. Each speech block is then synthesized in `sequence_index` order through the
-   documented `POST /v1/voice/clone-from-prompt` endpoint using the persisted
-   client-owned `voice_clone_prompt` payload and
+7. Each approved speech block is then synthesized in `sequence_index` order
+   through the documented `POST /v1/voice/clone-from-prompt` endpoint using the
+   persisted client-owned `voice_clone_prompt` payload and
    `model_parameters={"max_new_tokens": resolved_budget}`. Long blocks are split
    by paragraph/sentence, then clause punctuation, then word groups, and the
    completed part WAVs are stitched with Python `wave`.
 8. After each generated block, and after each completed split part, the service rewrites
-   `output_audio_blocks.json`, `artifact_audio_blocks_report.json`,
-   `voice_clone_profiles.json`, and `state_operation.json`.
+   `audio_blocks.json`, `audio_blocks_report.json`, `voice_clone_profiles.json`,
+   and `audio_blocks_state.json`.
 9. Operators can later approve one block, approve all generated blocks, or
    regenerate one selected block, which clears only that block approval.
-10. The controller advances `project.json.current_stage` to
-   `audio_blocks_ready` only when every speech block has generated audio and is
-   approved.
+10. If only a subset of Speech Blocks was approved, the operation state remains
+    `in_progress`, generated blocks are kept, and the operator can approve more
+    Speech Blocks and continue later.
+11. The controller advances `project.json.current_stage` to
+    `audio_blocks_ready` only when every speech block has generated audio and is
+    approved.
 
 ## 4. Dependencies
 
@@ -134,11 +143,12 @@ High-level flow:
 Inputs:
 
 - active project root and manifest
-- selected voice language from `60_character_voices/selected_voice_language.json`
-- selected narrator sample pair in
-  `50_narrator_definition/audio_samples/`
-- character sample pairs in `60_character_voices/audio_samples/`
-- ordered speech blocks in `70_speech_blocks/output_speech_blocks.json`
+- selected voice language from `project.json`
+- selected narrator sample audio in root-level `narator.wav`; `narator.json`
+  may contain either full selected-sample metadata or only the selected profile
+  state, in which case the service reads the profile `sample_metadata`
+- character sample audio files and metadata from `characters_voice.json`
+- ordered speech blocks in `speech_blocks.json`
 - runtime connection settings and discovered models from `settings.json`
 
 Romanian remains a valid selected voice language in AudioMancer metadata, but
@@ -147,15 +157,14 @@ runtime can infer pronunciation from the Romanian text.
 
 Outputs:
 
-- `80_audio_blocks/input_speech_blocks.json`
-- `80_audio_blocks/output_audio_blocks.json`
-- `80_audio_blocks/artifact_audio_blocks_report.json`
-- `80_audio_blocks/state_operation.json`
-- `80_audio_blocks/voice_clone_profiles.json`
-- `80_audio_blocks/generated_audio/<order_no_6digits>_<character_normalized_name>.wav`
-- `80_audio_blocks/generated_audio/<order_no_6digits>_<character_normalized_name>.json`
+- `audio_blocks.json`
+- `audio_blocks_report.json`
+- `audio_blocks_state.json`
+- `voice_clone_profiles.json`
+- `audio_blocks/<order_no_6digits>_<character_normalized_name>.wav`
+- `audio_blocks/<order_no_6digits>_<character_normalized_name>.json`
 - optional split part WAVs under
-  `80_audio_blocks/generated_audio/parts/<order_no_6digits>_<character_normalized_name>_partNNN.wav`
+  `audio_blocks/parts/<order_no_6digits>_<character_normalized_name>_partNNN.wav`
 - updated compact manifest summary for `operations["audio_blocks"]`
 - updated manifest stage `audio_blocks_ready` after full generation plus approval
 
@@ -169,6 +178,7 @@ Persisted audio-block payloads include at minimum:
 - `speaker_id`
 - `speaker_display_name`
 - `normalized_speaker_name`
+- `speech_block_approved`
 - `text`
 - `voice_target_id`
 - `voice_source_kind`
@@ -208,6 +218,8 @@ Current invariants:
   `normalize_speaker_name(...)`
 - one referenced voice target produces one reusable client-owned clone-prompt
   payload per input fingerprint
+- unapproved Speech Blocks remain present in `audio_blocks.json`, but they are
+  skipped by generation until `speech_block_approved` becomes true
 - all approvals are explicit; generation never auto-approves audio
 - `approve_all_audio_blocks(...)` updates only already generated blocks
 - `audio_blocks_stage_status` becomes `completed` only when generated and
@@ -239,16 +251,17 @@ This workflow sits immediately after `Speech Blocks`.
 
 Upstream integrations:
 
-- selected narrator sample state from `50_narrator_definition/audio_samples/`
-- per-character sample state from `60_character_voices`
-- selected Character Voices language from `60_character_voices`
-- ordered speech blocks from `70_speech_blocks`
+- selected narrator sample state from root-level `narator.wav` and
+  `narator.json`
+- per-character sample state from `characters_voice.json`
+- selected Character Voices language from `project.json`
+- ordered speech blocks from `speech_blocks.json`
 
 Downstream integrations:
 
 - `project.json.current_stage = "audio_blocks_ready"` only after full approval
-- later `Audio Assembly` under `90_audio_assembly`
-- resets from the page clear both `80_audio_blocks` and `90_audio_assembly`
+- later `Audio Assembly`
+- resets from the page clear audio-block and audio-assembly runtime artifacts
 
 Current invalidation points:
 
@@ -290,6 +303,8 @@ Operator path:
 - play one selected block or use `Play Audiobook` to review generated blocks in
   sequence from the selected row
 - approve one block or all generated blocks
+- after selected-block approval, the page advances the speech-block list to
+  the next row when one exists and keeps the final row selected at the end
 - if interrupted, press `Start Audio Generation` again to continue from the
   saved checkpoint
 

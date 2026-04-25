@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env python3
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-  # noqa: UP009
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
@@ -14,14 +14,14 @@
          sample preview controls for the Character Voices workflow.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-20
-@version 1.3.1
+@version 1.3.2
 """
 
 # IMPORTS
 
 from copy import deepcopy
 
-from PySide6.QtCore import Signal
+from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
     QComboBox,
     QGroupBox,
@@ -63,7 +63,7 @@ class CharacterVoicesPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-20
-        @version    1.0.0
+        @version    1.0.1
         """
         super().__init__(parent)
         self._project_active = False
@@ -129,20 +129,22 @@ class CharacterVoicesPage(QWidget):
         editor_container = QWidget(self)
         editor_layout = QVBoxLayout(editor_container)
         editor_layout.setContentsMargins(0, 0, 0, 0)
+        editor_layout.setSpacing(10)
 
         self._prompt_group = QGroupBox("Voice Designer Prompt", self)
         prompt_layout = QVBoxLayout(self._prompt_group)
         self._prompt_edit = QPlainTextEdit(self)
-        self._prompt_edit.setMinimumHeight(240)
+        self._prompt_edit.setMinimumHeight(112)
+        self._prompt_edit.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOn)
         self._prompt_edit.textChanged.connect(self._handle_editor_changed)
         prompt_layout.addWidget(self._prompt_edit)
-        editor_layout.addWidget(self._prompt_group)
+        editor_layout.addWidget(self._prompt_group, 1)
 
         self._preview_group = QGroupBox("Preview Text", self)
         preview_layout = QVBoxLayout(self._preview_group)
         self._preview_text_edit = QPlainTextEdit(self)
-        self._preview_text_edit.setMinimumHeight(76)
-        self._preview_text_edit.setMaximumHeight(108)
+        self._preview_text_edit.setMinimumHeight(92)
+        self._preview_text_edit.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOn)
         self._preview_text_edit.textChanged.connect(self._handle_editor_changed)
         preview_layout.addWidget(self._preview_text_edit)
         actions_row = QHBoxLayout()
@@ -163,7 +165,7 @@ class CharacterVoicesPage(QWidget):
         actions_row.addWidget(self._preview_toggle_button)
         actions_row.addStretch(1)
         preview_layout.addLayout(actions_row)
-        editor_layout.addWidget(self._preview_group)
+        editor_layout.addWidget(self._preview_group, 1)
 
         self._main_splitter.addWidget(editor_container)
         self._main_splitter.setStretchFactor(0, 18)
@@ -177,7 +179,7 @@ class CharacterVoicesPage(QWidget):
         self._status_edit.setReadOnly(True)
         status_layout.addWidget(self._status_edit)
         self._status_group.setMinimumHeight(96)
-        self._status_group.setMaximumHeight(132)
+        self._status_group.setMaximumHeight(112)
         layout.addWidget(self._status_group, 0)
 
         self.set_project_active(False)
@@ -706,4 +708,3 @@ def _format_target_list_item(target_payload: dict[str, object]) -> str:
 
 
 # END OF FILE
-

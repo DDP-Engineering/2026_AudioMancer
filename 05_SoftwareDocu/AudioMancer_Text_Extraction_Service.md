@@ -171,10 +171,11 @@ Upstream:
 Downstream:
 
 - deterministic cleanup now consumes `extracted_text.txt`
-- future chunking, translation, and character-discovery steps are reset when
-  the operator confirms a destructive extraction rerun
-- the shared modal progress dialog now blocks the main shell while extraction is
-  active
+- cleanup, chunking, translation, character discovery, narrator, character
+  voice, Speech Blocks, Audio Blocks, and Audio Assembly runtime artifacts are
+  reset when the operator confirms a destructive extraction rerun
+- the shared threaded modal progress dialog runs extraction off the Qt UI
+  thread while the dialog owns progress, cancellation, and final refresh
 
 ## 8. Usage
 
@@ -211,7 +212,7 @@ Covered behaviors:
 - PDF page-count and warning reporting
 - rejection of empty-text PDFs without OCR
 - resume of unfinished incremental extraction
-- destructive reset behavior for extraction and downstream folders
+- destructive reset behavior for extraction and downstream runtime artifacts
 - cleanup-page button enablement and preview updates
 - main-window extraction, completed-rerun confirmation, and unfinished-resume flow
 

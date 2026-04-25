@@ -13,7 +13,7 @@
          review controls for the Audio Blocks workflow.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-23
-@version 0.3.0
+@version 0.3.2
 """
 
 # IMPORTS
@@ -156,8 +156,8 @@ class AudioBlocksPage(QWidget):
         self._status_edit = QPlainTextEdit(self)
         self._status_edit.setReadOnly(True)
         status_layout.addWidget(self._status_edit)
-        self._status_group.setMinimumHeight(120)
-        self._status_group.setMaximumHeight(180)
+        self._status_group.setMinimumHeight(96)
+        self._status_group.setMaximumHeight(112)
         layout.addWidget(self._status_group)
 
         self.apply_language(self._current_language)
@@ -342,6 +342,22 @@ class AudioBlocksPage(QWidget):
             if str(speech_block.get("speech_block_id", "")).strip() == normalized_block_id:
                 self._speech_block_list.setCurrentRow(row)
                 return
+
+    def advance_to_next_block(self) -> None:
+        """
+        @brief      Move the Audio Blocks speech-block selection one row forward when possible.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-25
+        @version    0.1.0
+        """
+        current_row = self._speech_block_list.currentRow()
+        if current_row < 0:
+            return
+        next_row = current_row + 1
+        if next_row < self._speech_block_list.count():
+            self._speech_block_list.setCurrentRow(next_row)
 
     def apply_language(self, language: str) -> None:
         """

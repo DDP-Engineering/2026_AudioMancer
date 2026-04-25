@@ -16,7 +16,7 @@
          `80_audio_blocks` workflow artifacts.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-23
-@version 0.5.0
+@version 0.6.0
 """
 
 # IMPORTS
@@ -192,7 +192,7 @@ def start_or_continue_generation(
     @exception  OperationCancelledError Raised when the operator cancels the run.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-23
-    @version    0.2.0
+    @version    0.3.0
     """
     resolved_project_root = Path(project_root)
     generation_context = _resolve_generation_context(resolved_project_root, manifest, runtime_settings)
@@ -420,6 +420,8 @@ def start_or_continue_generation(
             raise
         current_block = dict(existing_blocks[current_block_index])
         current_block_id = str(current_block.get("speech_block_id", "")).strip()
+        if not bool(current_block.get("speech_block_approved", False)):
+            continue
         if bool(current_block.get("metadata_only", False)):
             continue
         clone_profile = clone_profiles_by_id.get(str(current_block.get("voice_target_id", "")).strip())
@@ -525,6 +527,12 @@ def start_or_continue_generation(
         regenerated_prompt_count=regenerated_prompt_count,
         current_phase=_GENERATE_PHASE,
     )
+    final_status = (
+        "completed"
+        if str(report.get("audio_blocks_stage_status", "")).strip() == AUDIO_BLOCKS_STAGE_COMPLETED
+        else "in_progress"
+    )
+    final_completed_at = completed_at if final_status == "completed" else None
     _persist_state(
         resolved_project_root,
         generation_context["speech_blocks"],
@@ -536,9 +544,9 @@ def start_or_continue_generation(
             generation_context["speech_blocks"],
             existing_blocks,
             existing_clone_profiles,
-            status="completed",
+            status=final_status,
             started_at=started_at,
-            completed_at=completed_at,
+            completed_at=final_completed_at,
             voice_language=generation_context["voice_language"],
             input_fingerprint=generation_context["input_fingerprint"],
             current_phase=_GENERATE_PHASE,
@@ -553,7 +561,9 @@ def start_or_continue_generation(
         progress_callback,
         _generated_count(existing_blocks),
         len(generation_context["speech_blocks"]),
-        "Audio Blocks generation completed.",
+        "Audio Blocks generation completed."
+        if final_status == "completed"
+        else "Generated approved Audio Blocks. Approve more Speech Blocks to continue.",
     )
     return report
 
@@ -853,7 +863,7 @@ def _resolve_generation_context(
     @exception  ValueError Raised when prerequisites or runtime settings are invalid.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-23
-    @version    0.1.2
+    @version    0.2.0
     """
     speech_blocks = sorted(
         speech_blocks_service.load_speech_blocks(project_root),
@@ -861,7 +871,10 @@ def _resolve_generation_context(
     )
     if not speech_blocks:
         raise ValueError("Generate Speech Blocks before starting Audio Blocks.")
-    speech_audio_blocks = [block for block in speech_blocks if not _is_metadata_only_speech_block(block)]
+    approved_speech_blocks = [block for block in speech_blocks if _speech_block_is_approved(block)]
+    if not approved_speech_blocks:
+        raise ValueError("Approve at least one Speech Block before starting Audio Blocks.")
+    speech_audio_blocks = [block for block in approved_speech_blocks if not _is_metadata_only_speech_block(block)]
     base_url = str(runtime_settings.get("base_url", "")).strip()
     timeout_seconds = int(runtime_settings.get("timeout_seconds", config.DEFAULT_LLM_REQUEST_TIMEOUT_SECONDS))
     discovered_models = list(runtime_settings.get("discovered_models", []))
@@ -892,6 +905,7 @@ def _resolve_generation_context(
         narrator_metadata = json.loads(narrator_metadata_path.read_text(encoding="utf-8"))
         if not isinstance(narrator_metadata, dict):
             raise ValueError("The selected narrator sample metadata is missing or invalid.")
+        narrator_metadata = _resolve_selected_narrator_sample_metadata(project_root, narrator_metadata)
 
     voice_targets: list[dict[str, object]] = []
     voice_target_ids: set[str] = set()
@@ -959,6 +973,43 @@ def _resolve_generation_context(
     }
 
 
+def _resolve_selected_narrator_sample_metadata(
+    project_root: Path,
+    selected_metadata: dict[str, object],
+) -> dict[str, object]:
+    """
+    @brief      Resolve selected narrator metadata, falling back to the selected profile sample.
+    @param[in]  project_root Active project root folder.
+    @param[in]  selected_metadata Persisted selected-narrator metadata or selection state.
+    @return     Sample metadata with preview text when the selected profile provides it.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-25
+    @version    0.1.0
+    """
+    resolved_metadata = dict(selected_metadata)
+    if str(resolved_metadata.get("preview_text", "")).strip():
+        return resolved_metadata
+
+    selected_profile_id = str(
+        resolved_metadata.get("selected_profile_id") or resolved_metadata.get("profile_id") or ""
+    ).strip()
+    if not selected_profile_id:
+        selected_state = narrator_definition_service.load_selected_profile_state(project_root)
+        selected_profile_id = str(selected_state.get("selected_profile_id", "") or "").strip()
+    if not selected_profile_id:
+        return resolved_metadata
+
+    profile_metadata = narrator_definition_service.load_profile_sample_metadata(project_root, selected_profile_id)
+    if not isinstance(profile_metadata, dict):
+        return resolved_metadata
+    resolved_metadata.update(dict(profile_metadata))
+    resolved_metadata["selected_profile_id"] = selected_profile_id
+    resolved_metadata["is_selected"] = True
+    resolved_metadata.setdefault("role", "narrator")
+    return resolved_metadata
+
+
 def _build_input_fingerprint(
     speech_blocks: list[dict[str, object]],
     voice_targets: list[dict[str, object]],
@@ -996,6 +1047,7 @@ def _build_input_fingerprint(
                 "speaker_id": str(block.get("speaker_id", "")),
                 "speaker_display_name": str(block.get("speaker_display_name", "")),
                 "content_kind": str(block.get("content_kind", "")),
+                "approved": bool(block.get("approved", False)),
                 "text": str(block.get("text", "")),
             }
             for block in speech_blocks
@@ -1784,13 +1836,15 @@ def _initialize_audio_blocks(speech_blocks: list[dict[str, object]]) -> list[Aud
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-23
-    @version    0.3.0
+    @version    0.4.0
     """
     audio_blocks: list[AudioBlockPayload] = []
     for speech_block in speech_blocks:
         speaker_display_name = str(speech_block.get("speaker_display_name", "")).strip() or "Narrator"
         content_kind = str(speech_block.get("content_kind", speech_blocks_service.CONTENT_KIND_NARRATION)).strip()
         metadata_only = _is_metadata_only_speech_block(speech_block)
+        speech_block_approved = _speech_block_is_approved(speech_block)
+        metadata_only_completed = metadata_only and speech_block_approved
         audio_blocks.append(
             {
                 "speech_block_id": str(speech_block.get("speech_block_id", "")).strip(),
@@ -1802,14 +1856,15 @@ def _initialize_audio_blocks(speech_blocks: list[dict[str, object]]) -> list[Aud
                 "normalized_speaker_name": normalize_speaker_name(speaker_display_name),
                 "content_kind": content_kind,
                 "metadata_only": metadata_only,
+                "speech_block_approved": speech_block_approved,
                 "text": str(speech_block.get("text", "")),
                 "voice_target_id": _voice_target_id_for_block(speech_block),
                 "voice_source_kind": _voice_source_kind_for_block(speech_block),
                 "audio_relative_path": None,
                 "metadata_relative_path": None,
-                "generated": metadata_only,
-                "approved": metadata_only,
-                "approved_at": _utc_now_iso() if metadata_only else None,
+                "generated": metadata_only_completed,
+                "approved": metadata_only_completed,
+                "approved_at": _utc_now_iso() if metadata_only_completed else None,
                 "generated_at": None,
                 "runtime_result_summary": "Metadata-only block; no speech audio generated." if metadata_only else "",
                 "split_part_count": 1,
@@ -1835,7 +1890,7 @@ def _merge_existing_audio_blocks(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-23
-    @version    0.1.0
+    @version    0.2.0
     """
     existing_by_id = {
         str(block.get("speech_block_id", "")).strip(): _normalize_persisted_audio_block(block)
@@ -2358,9 +2413,10 @@ def normalize_speaker_name(value: str) -> str:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-23
-    @version    0.1.0
+    @version    0.2.0
     """
-    normalized_value = unicodedata.normalize("NFKD", str(value or ""))
+    normalized_value = str(value or "").replace("\u00c3\u02c6\u00cb\u0153", "\u0218").replace("\u00c8\u02dc", "\u0218")
+    normalized_value = unicodedata.normalize("NFKD", normalized_value)
     ascii_value = normalized_value.encode("ascii", "ignore").decode("ascii")
     cleaned_value = re.sub(r"[^A-Za-z0-9]+", "_", ascii_value).strip("_").lower()
     return cleaned_value or "speaker"
@@ -2414,6 +2470,19 @@ def _is_metadata_only_speech_block(speech_block: dict[str, object]) -> bool:
     }
 
 
+def _speech_block_is_approved(speech_block: dict[str, object]) -> bool:
+    """
+    @brief      Return whether one Speech Block is approved for Audio Blocks generation.
+    @param[in]  speech_block Persisted Speech Blocks payload.
+    @return     `True` when the Speech Block approval flag is set.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-25
+    @version    0.1.0
+    """
+    return bool(speech_block.get("approved", False))
+
+
 def _generated_count(audio_blocks: list[AudioBlockPayload]) -> int:
     """
     @brief      Count generated Audio Blocks entries.
@@ -2435,10 +2504,10 @@ def _first_incomplete_block_index(audio_blocks: list[AudioBlockPayload]) -> int:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-24
-    @version    0.1.0
+    @version    0.2.0
     """
     for index, block in enumerate(audio_blocks):
-        if not bool(block.get("generated", False)):
+        if bool(block.get("speech_block_approved", False)) and not bool(block.get("generated", False)):
             return index
     return len(audio_blocks)
 
@@ -2476,6 +2545,7 @@ def _normalize_persisted_audio_block(payload: dict[str, object]) -> AudioBlockPa
         "normalized_speaker_name": str(payload.get("normalized_speaker_name", "")).strip() or "speaker",
         "content_kind": str(payload.get("content_kind", speech_blocks_service.CONTENT_KIND_NARRATION)).strip(),
         "metadata_only": bool(payload.get("metadata_only", False)),
+        "speech_block_approved": bool(payload.get("speech_block_approved", True)),
         "text": str(payload.get("text", "")),
         "voice_target_id": str(payload.get("voice_target_id", "")).strip(),
         "voice_source_kind": str(payload.get("voice_source_kind", "")).strip(),

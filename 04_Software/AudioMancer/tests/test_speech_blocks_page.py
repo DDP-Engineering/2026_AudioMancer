@@ -10,11 +10,11 @@
 @file test_speech_blocks_page.py
 @brief Focused Qt tests for the AudioMancer Speech Blocks page.
 @details Verifies Speech Blocks rendering, editable selected-block behavior,
-         approval controls, refresh-state preservation, translated labels, and
-         generation button enablement.
+         approval controls, bounded approval navigation, refresh-state
+         preservation, translated labels, and generation button enablement.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-24
-@version 0.3.1
+@version 0.4.0
 """
 
 # IMPORTS
@@ -227,6 +227,73 @@ def test_speech_blocks_page_approve_selected_emits_only_selected_block(qtbot) ->
     page._approve_block_button.click()
 
     assert approved_block_ids == ["0001-000002"]
+
+
+def test_speech_blocks_page_advances_visible_block_selection_with_limit(qtbot) -> None:
+    """
+    @brief      Verify approval navigation moves within the visible Speech Blocks list only.
+    @param[in]  qtbot Qt test helper fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-25
+    @version    0.1.0
+    """
+    page = SpeechBlocksPage()
+    qtbot.addWidget(page)
+    page.set_project_active(True)
+    page.set_ai_profiles([("Profile One", "profile-1")], "profile-1")
+    page.set_speech_blocks_state(
+        source_chunks=[{"chunk_id": "chunk-0001", "sequence_index": 1, "text": "First chunk."}],
+        speech_blocks=[
+            {
+                "speech_block_id": "0001-000001",
+                "sequence_index": 1,
+                "chunk_id": "chunk-0001",
+                "chunk_sequence_index": 1,
+                "source_language": "en",
+                "speaker_kind": "narrator",
+                "speaker_id": "narrator",
+                "speaker_display_name": "Narrator",
+                "content_kind": speech_blocks_service.CONTENT_KIND_NARRATION,
+                "text": "First block.",
+                "warning_flags": [],
+                "approved": False,
+            },
+            {
+                "speech_block_id": "0001-000002",
+                "sequence_index": 2,
+                "chunk_id": "chunk-0001",
+                "chunk_sequence_index": 2,
+                "source_language": "en",
+                "speaker_kind": "narrator",
+                "speaker_id": "narrator",
+                "speaker_display_name": "Narrator",
+                "content_kind": speech_blocks_service.CONTENT_KIND_NARRATION,
+                "text": "Second block.",
+                "warning_flags": [],
+                "approved": False,
+            },
+        ],
+        notes=["Ready."],
+        selected_profile_id="profile-1",
+        stage_status="in_progress",
+        selected_source_language="en",
+        processed_chunk_count=1,
+        total_chunk_count=1,
+        speaker_catalog=[{"speaker_id": "narrator", "display_name": "Narrator", "speaker_kind": "narrator"}],
+        content_kind_options=[(speech_blocks_service.CONTENT_KIND_NARRATION, "Narration")],
+    )
+
+    page.advance_to_next_block()
+
+    assert page.selected_block_id() == "0001-000002"
+    assert page._speech_block_list.currentRow() == 1
+
+    page.advance_to_next_block()
+
+    assert page.selected_block_id() == "0001-000002"
+    assert page._speech_block_list.currentRow() == 1
 
 
 def test_speech_blocks_page_refresh_preserves_block_selection_and_source_scroll(qtbot) -> None:

@@ -66,9 +66,9 @@ The workflow is split across:
 
 High-level flow:
 
-1. Project load ensures `profiles.json`, `selected_profile.json`,
-   `50_narrator_definition/audio_samples/`, and the required narrator-related
-   `project.json` fields exist.
+1. Project load ensures `audio_profiles.json`, `narator.json`, root-level
+   narrator sample paths, and the required narrator-related `project.json`
+   fields exist.
 2. The state service loads all stored profiles, the explicit selected narrator
    state, the project TTS plan, and the cached runtime discovery models.
 3. Each profile is enriched with `is_selected`, `has_sample`,
@@ -126,6 +126,8 @@ Outputs:
 - `audio_profiles.json`
 - `narator.json`
 - `audio_narator_<profile>.wav`
+- `narator.wav` and `narator.json` selected-sample copies for the explicit
+  narrator selection
 - per-profile `sample_audio_path` and `sample_metadata` entries stored inside
   `audio_profiles.json`
 - updated manifest summary fields:
@@ -214,10 +216,9 @@ Upstream integrations:
 Downstream integrations:
 
 - `Character Voices`, which consumes the explicit selected narrator state plus
-  the selected profile's WAV and JSON under
-  `50_narrator_definition/audio_samples/`
+  the root-level selected `narator.wav` and `narator.json`
 - future narration generation that will consume the same selected narrator
-  contract together with `60_character_voices`
+  contract together with `characters_voice.json`
 
 Current runtime-aware rules:
 

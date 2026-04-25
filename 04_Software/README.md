@@ -10,4 +10,6 @@ Implementation sources and runnable software artifacts.
 
 ## Current Application Subtree
 
-- `AudioMancer/` contains the Python 3.12 desktop application scaffold.
+- `AudioMancer/` contains the Python 3.12/PySide6 desktop application,
+  project-local runtime services, Qt pages/controllers, prompt templates,
+  focused tests, and packaging metadata for the current AudioMancer app.

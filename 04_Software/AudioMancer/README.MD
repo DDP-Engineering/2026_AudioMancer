@@ -40,12 +40,13 @@ This folder contains the current Python application implementation for
 - `src/audiomancer/services/character_voices_state_service.py` provides Character Voices page state shaping plus selected voice-language, narrator-plus-character target ordering, translation-language gating, and sample-status loading.
 - `src/audiomancer/services/speech_blocks_service.py` provides AI-assisted speech-block generation, source-language resolution from Character Voices, approval-gated review state, selected-block editing/reset, selected-chunk re-splitting, continuous `CCCC-BBBBBB` ID rebuilds, and root-level Speech Blocks artifacts.
 - `src/audiomancer/services/speech_blocks_state_service.py` provides Speech Blocks page state shaping plus persisted block, report, approval-count, speaker-catalog, content-kind, and resumable note loading.
-- `src/audiomancer/services/audio_blocks_service.py` provides resumable Audio Blocks reusable clone-prompt preparation, preferred `Qwen3-TTS-12Hz-1.7B-Base` clone-model selection when available, ordered per-speech-block WAV generation in `audio_blocks/`, metadata-only handling for `Pause` and `Background Noise`, selective upstream invalidation/remapping, approval updates, regeneration, and root-level Audio Blocks reports/state.
+- `src/audiomancer/services/audio_blocks_service.py` provides resumable Audio Blocks reusable clone-prompt preparation, selected narrator profile metadata fallback when `narator.json` only stores selection state, preferred `Qwen3-TTS-12Hz-1.7B-Base` clone-model selection when available, ordered approved-speech-block WAV generation in `audio_blocks/`, metadata-only handling for `Pause` and `Background Noise`, selective upstream invalidation/remapping, approval updates, regeneration, and root-level Audio Blocks reports/state.
 - `src/audiomancer/services/audio_blocks_state_service.py` provides Audio Blocks page state shaping plus persisted generated-block, report, and resumable note loading.
 - `src/audiomancer/services/llm_provider_service.py` provides OpenAI-compatible chat-completion requests, transient-only retry handling, conservative malformed-JSON repair, responsive cooperative cancellation during model waits, normalized token-usage extraction, append-only AI transaction logging, and endpoint normalization for complete or base-only chat URLs.
 - `src/audiomancer/services/prompt_template_service.py` provides strict prompt loading and placeholder rendering from the app-root `prompts/` folder.
 - `src/audiomancer/services/operation_runtime_service.py` provides shared runtime helpers for root-level operation artifacts, side-effect-free read-path resolution, known-artifact resets, and progress conversion.
 - `src/audiomancer/services/home_presenter_service.py` provides pure manifest-to-view shaping for the Home page workflow progress and source summary.
+- `src/audiomancer/services/project_export_service.py` provides Home-page export readiness and UTF-8 TXT/Markdown document projections for cleaned text, text chunks, AI translations, character dossiers, and Speech Blocks without registering deliverables in `project.json`; AI-generated exports include the persisted model request parameters from the operation-local transaction log without exporting prompts or API-key-like values.
 - `src/audiomancer/services/text_cleanup_state_service.py` provides Text Cleanup page state shaping plus extraction/cleanup manifest reset helpers.
 - `src/audiomancer/ui/` provides the copied toolbar, sidebar, page, and status-bar shell used by the first desktop window.
 - `src/audiomancer/ui/controllers/` provides page/window-oriented Qt controllers for Home, Text Cleanup, Settings, AI Settings, and shared shell UI helpers.
@@ -66,6 +67,7 @@ This folder contains the current Python application implementation for
 - opening a project now expects the project root; numbered workflow-folder projects are treated as unsupported legacy layouts and are not migrated.
 - `project.json` now keeps only compact workflow summaries under `operations`, while detailed runtime state remains authoritative in operation-specific root files such as `extraction_state.json`, `cleanup_state.json`, `chunking_state.json`, and related report/output artifacts.
 - the Home page `Select Source File` action now imports exactly one source file into the project root, stores structured source metadata in `project.json`, and locks the source for that project.
+- the Home page now places Workflow Progress on the left as one read-only row box per stage and a compact `Exports` panel on the right with export controls aligned to their matching workflow rows; the panel enables Cleaned Text, Text Chunks, AI Translation, Characters, and Speech Blocks export buttons only when the matching completed operation has a usable artifact, and exports are saved through an external save-file dialog as UTF-8 `.txt` or `.md` files outside the active project root.
 - supported source import formats are `.txt`, `.pdf`, `.rtf`, `.docx`, `.odt`, `.md`, and `.epub`.
 - the `Text Cleanup` page now runs deterministic text extraction for the imported source and writes root-level extraction artifacts.
 - the `Text Cleanup` page now also runs deterministic cleanup into root-level cleanup artifacts.
@@ -84,10 +86,10 @@ This folder contains the current Python application implementation for
 - Narator Voice artifacts currently use `audio_profiles.json`, `audio_narator_<normalized_profile>.wav`, selected narrator `narator.json`, and selected narrator `narator.wav`.
 - Character Voices artifacts currently use `characters_voice.json`, root-level `audio_<normalized_character_name>.wav` files, and `project.json.selected_voice_language`.
 - Speech Blocks artifacts currently use `speech_blocks.json`, `speech_blocks_report.json`, `speech_blocks_state.json`, and one per-run `log_ai_speech_blocks_<timestamp>.log`; persisted speech block IDs use `CCCC-BBBBBB`, such as `0001-000001`, with AI-extracted baseline speaker/type/text stored beside the current editable values.
-- pressing `Extract Text` after a completed extraction now asks for confirmation before clearing extraction data and all downstream workflow folders.
-- pressing `Deterministic Cleanup` after a completed cleanup now asks for confirmation before clearing cleanup data plus chunking and all following workflow folders.
-- pressing `AI-Assisted Cleanup` now first warns that AI operations can take longer, then asks for confirmation before clearing completed cleanup data plus chunking and all following workflow folders when a rerun is required.
-- pressing `Deterministic Chunking` after a completed chunking run now asks for confirmation before clearing chunking data plus all following workflow folders.
+- pressing `Extract Text` after a completed extraction now asks for confirmation before clearing extraction data and all downstream runtime artifacts.
+- pressing `Deterministic Cleanup` after a completed cleanup now asks for confirmation before clearing cleanup data plus chunking and all following runtime artifacts.
+- pressing `AI-Assisted Cleanup` now first warns that AI operations can take longer, then asks for confirmation before clearing completed cleanup data plus chunking and all following runtime artifacts when a rerun is required.
+- pressing `Deterministic Chunking` after a completed chunking run now asks for confirmation before clearing chunking data plus all following runtime artifacts.
 - pressing `Extract Text` after an unfinished extraction now continues from saved state when possible, or restarts safely from the copied extraction input snapshot.
 - pressing `Deterministic Cleanup` after an unfinished cleanup now continues from saved state when possible.
 - pressing `AI-Assisted Cleanup` after an unfinished AI cleanup now resumes from the saved cleanup checkpoint and AI transaction log.
@@ -95,6 +97,7 @@ This folder contains the current Python application implementation for
 - pressing `AI-Assisted Chunking` after an unfinished AI chunking run now resumes from the saved chunking checkpoint and AI transaction log.
 - pressing `Start Translation` after an unfinished translation run now continues from the persisted translated chunk state and translates only the remaining chunks.
 - pressing `Reset Translation` now asks for confirmation, clears only known translation artifacts, and unlocks the target-language selector for a fresh translation run.
+- pressing selected-row approval in AI Translation, Speech Blocks, or Audio Blocks now moves the corresponding review list to the next row when one exists and keeps the last row selected at the end.
 - pressing `Start Discovery` now shows one first-run information popup for long AI work, resumes interrupted discovery when possible, and stays disabled after successful completion until reset.
 - pressing `Reset Discovery` now clears known character-discovery artifacts plus downstream narrator-definition data without extra confirmation and returns the workflow to `translation_ready`.
 - discovered character profiles are now read-only by default, require explicit `Edit Character` before changes, and are saved only when `Save Character` is pressed.
@@ -127,7 +130,7 @@ This folder contains the current Python application implementation for
 - the `Character Voices` page now disables character prompt editing and sample generation when `voice_assignment_mode` is `same_narrator`, automatically copies the selected narrator sample into each character sample slot, and warns on page entry when the selected narrator still lacks a generated sample.
 - the `Speech Blocks` page and `Audio Blocks` page are now real localized workflow surfaces, while `Audio Assembly` remains the next downstream placeholder stage.
 - the `Speech Blocks` page supports `Generate Speech Blocks`, `Reset Speech Blocks`, `Approve All Speech Blocks`, selected-block `Edit`/`Save`/`Reset`, warning clearing on edit, speaker and content-kind selectors, and `Re-Split Selected Chunk`; re-splitting one chunk replaces only that chunk's speech blocks, rebuilds later global IDs, rolls Speech Blocks back from complete, and reconciles downstream Audio Blocks.
-- the `Audio Blocks` page now consumes approved persisted `Speech Blocks`, narrator plus character voice samples, and the selected Character Voices language; prepares reusable client-owned Qwen3 voice clone prompts through VoiceWeaver; resolves the loaded clone model's effective `max_new_tokens` budget; generates one ordered final WAV per speech block under `audio_blocks/`; skips VoiceWeaver generation for metadata-only `Pause` and `Background Noise` blocks; internally splits and stitches over-budget blocks; supports selected-block and sequential audiobook playback for review; supports responsive cancellation plus resume from saved state; and requires explicit per-block approval before the workflow advances to `audio_blocks_ready`.
+- the `Audio Blocks` page now consumes approved persisted `Speech Blocks`, narrator plus character voice samples, and the selected Character Voices language; prepares reusable client-owned Qwen3 voice clone prompts through VoiceWeaver; resolves the loaded clone model's effective `max_new_tokens` budget; generates one ordered final WAV per approved speech block under `audio_blocks/`; skips unapproved speech blocks until they are approved and generation is continued; skips VoiceWeaver generation for metadata-only `Pause` and `Background Noise` blocks; internally splits and stitches over-budget blocks; supports selected-block and sequential audiobook playback for review; supports responsive cancellation plus resume from saved state; and requires explicit per-block approval before the workflow advances to `audio_blocks_ready`.
 - Audio Blocks artifacts currently use `audio_blocks.json`, `audio_blocks_report.json`, `audio_blocks_state.json`, `voice_clone_profiles.json`, one WAV plus JSON metadata pair per generated speech block under `audio_blocks/`, and split part WAVs under `audio_blocks/parts/` when long blocks require internal splitting.
 - changing selected narrator or character-voice inputs that affect generation now confirms and invalidates persisted Audio Blocks data before the upstream mutation proceeds.
 - `LICENSE.txt`, `LICENSE_NC.txt`, `LICENSE_ro.txt`, and `LICENSE_NC_ro.txt` are stored in the app root so the About dialog can display English or Romanian license text and the delivered app keeps the license set at the app-root level.
@@ -295,6 +298,15 @@ uv run pytest tests/test_home_presenter_service.py
 uv run pytest tests/test_text_cleanup_state_service.py
 uv run pytest tests/test_home_ui_controller.py
 uv run pytest tests/test_text_cleanup_ui_controller.py
+```
+
+Focused validation used for the current Home export panel:
+
+```powershell
+uv run pytest tests/test_project_export_service.py
+uv run pytest tests/test_home_page.py
+uv run pytest tests/test_home_ui_controller.py
+uv run pytest tests/test_main_window_home_exports.py
 ```
 
 ## Packaging

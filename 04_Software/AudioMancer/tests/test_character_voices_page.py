@@ -1,4 +1,5 @@
-﻿#!/usr/bin/env python3
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-  # noqa: UP009
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -12,10 +13,12 @@
          bottom status rendering for the Character Voices page.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-20
-@version 1.3.1
+@version 1.3.2
 """
 
 # IMPORTS
+
+from PySide6.QtCore import Qt
 
 from audiomancer.ui.pages.character_voices_page import CharacterVoicesPage
 
@@ -216,5 +219,28 @@ def test_character_voices_page_header_indicators_render_languages_and_assignment
     assert page._assignment_mode_value_label.text() == "Narrator + character voices"
 
 
-# END OF FILE
+def test_character_voices_page_matches_translation_notes_and_narrator_editor_sizing(qtbot) -> None:
+    """
+    @brief      Verify Character Voices uses the shared compact editor and status layout sizing.
+    @param[in]  qtbot Qt test helper fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-25
+    @version    0.1.0
+    """
+    page = CharacterVoicesPage()
+    qtbot.addWidget(page)
+    editor_layout = page._prompt_group.parentWidget().layout()
 
+    assert page._status_group.minimumHeight() == 96
+    assert page._status_group.maximumHeight() == 112
+    assert editor_layout.stretch(editor_layout.indexOf(page._prompt_group)) == 1
+    assert editor_layout.stretch(editor_layout.indexOf(page._preview_group)) == 1
+    assert page._prompt_edit.minimumHeight() == 112
+    assert page._preview_text_edit.minimumHeight() == 92
+    assert page._prompt_edit.verticalScrollBarPolicy() == Qt.ScrollBarPolicy.ScrollBarAlwaysOn
+    assert page._preview_text_edit.verticalScrollBarPolicy() == Qt.ScrollBarPolicy.ScrollBarAlwaysOn
+
+
+# END OF FILE

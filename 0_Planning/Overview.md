@@ -63,7 +63,7 @@ The intended end-to-end workflow is:
 6. run optional AI-assisted processing where useful and justified
 7. review and edit chunk, translation, and character outputs
 8. prepare downstream narration and generation data
-9. generate per-chunk audio with assigned voices
+9. generate reviewed speech-block audio with assigned voices
 10. assemble and export final audiobook outputs
 
 Each stage must have:
@@ -82,7 +82,7 @@ The application must support:
 
 - project creation
 - project opening and reopening
-- deterministic project folder structure
+- deterministic flat project structure
 - persisted project manifest and operation state
 - safe handling of incomplete or failed operations
 
@@ -95,13 +95,18 @@ The application must support:
 - preserving imported source artifacts
 - validating format and basic integrity
 
-Initial source formats should include:
+Current implementation supports:
 
 - `TXT`
 - `PDF`
+- `RTF`
+- `DOCX`
+- `ODT`
+- `Markdown`
+- `EPUB`
 
-Other formats may be added later, but only when the import and extraction path
-remains simple and reliable.
+Other formats should be added only when the import and extraction path remains
+simple and reliable.
 
 ### 5.3 Text Extraction
 
@@ -176,20 +181,26 @@ later audio synthesis and assembly stages.
 
 ### 5.9 Audio Generation
 
-The application should support generation of audio per chunk using the assigned
-voice plan.
+The application should support generation of audio per approved Speech Block
+using the assigned narrator and character voice plan.
 
 This stage should support:
 
-- narrator voice generation for narration chunks
-- character voice generation for dialogue or character-linked chunks
+- narrator voice generation for narration Speech Blocks
+- character voice generation for dialogue or character-linked Speech Blocks
 - use of personalized synthetic voices
 - use of real cloned voices where supported
-- regeneration of selected chunks without rerunning the whole book
-- persisted per-chunk audio artifacts and generation metadata
+- generation of only the currently approved Speech Blocks so partial review can
+  progress without forcing approval of the whole book
+- regeneration of selected Speech Blocks without rerunning the whole book
+- persisted per-block audio artifacts and generation metadata
 
 The generation stage should make it possible to use different voices inside the
 same book, for example narrator voice plus one or more character voices.
+
+The current implementation generates WAV files through the Audio Blocks workflow
+under `audio_blocks/`, keeps unapproved Speech Blocks pending, and advances only
+after generated audio is explicitly approved.
 
 ### 5.10 Export And Assembly
 
@@ -203,7 +214,7 @@ It should support these export modes:
 
 The export stage should support:
 
-- combining generated chunk audio in canonical order
+- combining generated Speech Block audio in canonical order
 - preserving chapter boundaries when available
 - deterministic output naming
 - delivery-ready audio bundles and metadata

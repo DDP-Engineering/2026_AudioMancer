@@ -14,7 +14,7 @@
          normalization.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-23
-@version 1.0.0
+@version 1.1.0
 """
 
 # IMPORTS
@@ -151,6 +151,96 @@ def test_audio_blocks_service_generates_clone_prompts_and_ordered_wavs(monkeypat
     assert second_audio_path.read_bytes() == b"RIFF-alice"
 
 
+def test_audio_blocks_service_generates_only_approved_speech_blocks(monkeypatch, tmp_path) -> None:
+    """
+    @brief      Verify Audio Blocks generation skips Speech Blocks that are not approved yet.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-25
+    @version    0.2.0
+    """
+    project_root, manifest = _create_audio_blocks_project(tmp_path, "AudioBlocksServiceApprovedOnly")
+    speech_blocks_path = (
+        project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.SPEECH_BLOCKS_OUTPUT_FILE_NAME
+    )
+    speech_blocks_payload = json.loads(speech_blocks_path.read_text(encoding="utf-8"))
+    speech_blocks_payload[1]["approved"] = False
+    speech_blocks_payload[1]["approved_at"] = None
+    speech_blocks_path.write_text(json.dumps(speech_blocks_payload, indent=2) + "\n", encoding="utf-8")
+
+    wait_payloads = [
+        {
+            "active_model": {"model_id": "Qwen3-TTS-12Hz-1.7B-Base"},
+            "operation": {"status": "completed"},
+            "result": {},
+        },
+        {
+            "operation": {
+                "status": "completed",
+                "result": {"voice_clone_prompt": {"format": "qwen_voice_clone_prompt_v1", "speaker": "narrator"}},
+            },
+            "result": {},
+        },
+        {"operation": {"status": "completed"}, "result": {"available": True, "summary": "Narrator ready."}},
+    ]
+    observed_prompt_requests: list[tuple[str, str, str]] = []
+    observed_generate_requests: list[str] = []
+    audio_payloads = [b"RIFF-narrator"]
+    monkeypatch.setattr(
+        audio_blocks_service.voiceweaver_runtime_service,
+        "read_status",
+        lambda *_args, **_kwargs: {"active_model": None, "operation": {"status": "idle"}},
+    )
+    monkeypatch.setattr(
+        audio_blocks_service.voiceweaver_runtime_service,
+        "load_model",
+        lambda *_args, **_kwargs: {"status": "running"},
+    )
+    monkeypatch.setattr(
+        audio_blocks_service.voiceweaver_runtime_service,
+        "create_voice_clone_prompt",
+        lambda _base_url, _api_key, sample_audio_bytes, sample_text, language, **_kwargs: (
+            observed_prompt_requests.append((sample_audio_bytes.decode("utf-8"), sample_text, language)),
+            {"status": "running"},
+        )[1],
+    )
+    monkeypatch.setattr(
+        audio_blocks_service.voiceweaver_runtime_service,
+        "generate_voice_clone_from_prompt",
+        lambda _base_url, _api_key, _voice_clone_prompt, _language, text, **_kwargs: (
+            observed_generate_requests.append(text),
+            {"status": "running"},
+        )[1],
+    )
+    monkeypatch.setattr(
+        audio_blocks_service.voiceweaver_runtime_service,
+        "wait_for_terminal_operation",
+        lambda *_args, **_kwargs: wait_payloads.pop(0),
+    )
+    monkeypatch.setattr(
+        audio_blocks_service.voiceweaver_runtime_service,
+        "download_generated_voice",
+        lambda *_args, **_kwargs: audio_payloads.pop(0),
+    )
+
+    report = audio_blocks_service.start_or_continue_generation(project_root, manifest, _runtime_settings())
+
+    audio_blocks = audio_blocks_service.load_audio_blocks(project_root)
+    operation_state = audio_blocks_service.load_operation_state(project_root)
+    assert report["audio_blocks_stage_status"] == audio_blocks_service.AUDIO_BLOCKS_STAGE_IN_PROGRESS
+    assert report["generated_block_count"] == 1
+    assert report["total_block_count"] == 2
+    assert operation_state is not None
+    assert operation_state["status"] == "in_progress"
+    assert [block["generated"] for block in audio_blocks] == [True, False]
+    assert [block["speech_block_approved"] for block in audio_blocks] == [True, False]
+    assert observed_prompt_requests == [("selected-narrator", "Narrator preview line.", "en")]
+    assert observed_generate_requests == ["Narration one."]
+
+
 def test_audio_blocks_service_skips_voiceweaver_for_metadata_only_blocks(monkeypatch, tmp_path) -> None:
     """
     @brief      Verify Pause and Background Noise Speech Blocks are represented without VoiceWeaver generation.
@@ -160,7 +250,7 @@ def test_audio_blocks_service_skips_voiceweaver_for_metadata_only_blocks(monkeyp
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-24
-    @version    0.1.0
+    @version    0.2.0
     """
     project_root, manifest = _create_audio_blocks_project(tmp_path, "AudioBlocksServiceMetadataOnly")
     speech_blocks_path = (
@@ -179,6 +269,8 @@ def test_audio_blocks_service_skips_voiceweaver_for_metadata_only_blocks(monkeyp
             "speaker_display_name": "Narrator",
             "content_kind": speech_blocks_service.CONTENT_KIND_PAUSE,
             "text": "Pause between sections.",
+            "approved": True,
+            "approved_at": "2026-04-23T12:04:00+00:00",
             "warning_flags": [],
         }
     )
@@ -615,7 +707,7 @@ def test_audio_blocks_service_input_fingerprint_mismatch_starts_fresh_run(monkey
     """
     project_root, manifest = _create_audio_blocks_project(tmp_path, "AudioBlocksServiceFingerprint")
     _seed_generated_audio_blocks(project_root)
-    state_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.OPERATION_STATE_FILE_NAME
+    state_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.AUDIO_BLOCKS_STATE_FILE_NAME
     operation_state = json.loads(state_path.read_text(encoding="utf-8"))
     operation_state["metadata"]["input_fingerprint"] = "stale-fingerprint"
     state_path.write_text(json.dumps(operation_state, indent=2) + "\n", encoding="utf-8")
@@ -853,7 +945,7 @@ def _create_audio_blocks_project(tmp_path, name: str):
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-24
-    @version    0.1.0
+    @version    0.2.0
     """
     project_root, manifest = project_workspace_service.create_project(name, tmp_path)
     manifest["source_document"] = {
@@ -881,6 +973,8 @@ def _create_audio_blocks_project(tmp_path, name: str):
             "speaker_display_name": "Narrator",
             "content_kind": speech_blocks_service.CONTENT_KIND_NARRATION,
             "text": "Narration one.",
+            "approved": True,
+            "approved_at": "2026-04-23T12:02:00+00:00",
             "warning_flags": [],
         },
         {
@@ -894,6 +988,8 @@ def _create_audio_blocks_project(tmp_path, name: str):
             "speaker_display_name": "Alice",
             "content_kind": speech_blocks_service.CONTENT_KIND_DIALOGUE,
             "text": "Hello there.",
+            "approved": True,
+            "approved_at": "2026-04-23T12:03:00+00:00",
             "warning_flags": [],
         },
     ]
@@ -915,25 +1011,36 @@ def _create_audio_blocks_project(tmp_path, name: str):
         b"selected-narrator",
     )
     narrator_definition_service.copy_selected_narrator_sample(project_root, narrator_profile["profile_id"])
-    alice_audio_path, alice_metadata_path = character_voices_service.target_sample_paths(
-        project_root,
-        "character_alice",
-    )
-    alice_audio_path.parent.mkdir(parents=True, exist_ok=True)
-    alice_audio_path.write_bytes(b"alice-sample")
-    alice_metadata_path.write_text(
+    (project_root / config.NARRATOR_SELECTION_FILE_NAME).write_text(
         json.dumps(
             {
-                "target_id": "character_alice",
-                "display_name": "Alice",
-                "source_model_id": "qwen-designer",
-                "voice_language": "en",
-                "preview_text": "Character preview line.",
+                "selected_profile_id": narrator_profile["profile_id"],
+                "selected_language": "en",
             },
             indent=2,
         )
         + "\n",
         encoding="utf-8",
+    )
+    alice_target = {
+        "target_id": "character_alice",
+        "target_kind": character_voices_service.TARGET_KIND_CHARACTER,
+        "display_name": "Alice",
+        "prompt_text": "Alice voice prompt.",
+        "preview_text": "Character preview line.",
+    }
+    character_voices_service.save_voice_targets(project_root, [alice_target])
+    character_voices_service.store_target_sample(
+        project_root,
+        alice_target,
+        "en",
+        "Character preview line.",
+        {
+            "generation_mode": "voice_designer",
+            "source_model_id": "qwen-designer",
+        },
+        "Character sample ready.",
+        b"alice-sample",
     )
     return project_root, project_workspace_service.load_manifest(project_root)
 
@@ -979,6 +1086,7 @@ def _seed_generated_audio_blocks(project_root) -> None:
                 ),
                 "audio_relative_path": audio_path.relative_to(project_root).as_posix(),
                 "metadata_relative_path": metadata_path.relative_to(project_root).as_posix(),
+                "speech_block_approved": bool(speech_block.get("approved", False)),
                 "generated": True,
                 "approved": False,
                 "approved_at": None,
@@ -1037,9 +1145,7 @@ def _seed_generated_audio_blocks(project_root) -> None:
     operation_state = {
         "folder_relative_path": config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH,
         "status": "completed",
-        "input_paths": [
-            f"{config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH}/{config.AUDIO_BLOCKS_INPUT_SPEECH_BLOCKS_FILE_NAME}"
-        ],
+        "input_paths": [f"{config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH}/{config.SPEECH_BLOCKS_OUTPUT_FILE_NAME}"],
         "output_paths": [f"{config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH}/{config.AUDIO_BLOCKS_OUTPUT_FILE_NAME}"],
         "artifact_paths": [f"{config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH}/{config.AUDIO_BLOCKS_REPORT_FILE_NAME}"],
         "progress_current": 2,
@@ -1064,7 +1170,7 @@ def _seed_generated_audio_blocks(project_root) -> None:
         },
         "resume_checkpoint": {"next_profile_index": 0, "next_speech_block_index": 2},
     }
-    (project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.OPERATION_STATE_FILE_NAME).write_text(
+    (project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.AUDIO_BLOCKS_STATE_FILE_NAME).write_text(
         json.dumps(operation_state, indent=2) + "\n",
         encoding="utf-8",
     )

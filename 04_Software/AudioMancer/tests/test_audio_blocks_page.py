@@ -10,10 +10,10 @@
 @file test_audio_blocks_page.py
 @brief Focused Qt tests for the AudioMancer Audio Blocks page.
 @details Verifies Audio Blocks rendering, translated labels, progress display,
-         and selected-row action enablement.
+         bounded approval navigation, and selected-row action enablement.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-23
-@version 0.4.0
+@version 0.5.1
 """
 
 # IMPORTS
@@ -101,6 +101,8 @@ def test_audio_blocks_page_renders_source_list_markers_and_selected_details(qtbo
     assert page._approval_status_label.text() == "Status: Pending"
     assert page._block_text_edit.toPlainText() == "Hello there."
     assert page._progress_bar.value() == 50
+    assert page._status_group.minimumHeight() == 96
+    assert page._status_group.maximumHeight() == 112
     assert page._approve_button.isEnabled() is True
     assert page._selected_playback_button.isEnabled() is True
     assert page._audiobook_playback_button.isEnabled() is True
@@ -183,6 +185,74 @@ def test_audio_blocks_page_applies_translated_labels_and_tracks_selected_row_act
     assert page._start_button.isEnabled() is False
     assert page._approve_button.isEnabled() is False
     assert page._speech_block_list.isEnabled() is False
+
+
+def test_audio_blocks_page_advances_block_selection_with_limit(qtbot) -> None:
+    """
+    @brief      Verify approval navigation advances through Audio Blocks rows without crossing the end.
+    @param[in]  qtbot Qt test helper fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-25
+    @version    0.1.0
+    """
+    page = AudioBlocksPage()
+    qtbot.addWidget(page)
+    page.set_project_active(True)
+    page.set_audio_blocks_state(
+        full_source_text="Text source.",
+        speech_blocks=[
+            {
+                "speech_block_id": "0001-000001",
+                "sequence_index": 1,
+                "speaker_display_name": "Narrator",
+                "text": "First.",
+                "generated": True,
+                "approved": False,
+                "audio_file_name": "000001_narrator.wav",
+                "audio_duration_seconds": 1.0,
+                "can_play": True,
+                "is_current": True,
+            },
+            {
+                "speech_block_id": "0001-000002",
+                "sequence_index": 2,
+                "speaker_display_name": "Alice",
+                "text": "Second.",
+                "generated": True,
+                "approved": False,
+                "audio_file_name": "000002_alice.wav",
+                "audio_duration_seconds": 1.5,
+                "can_play": True,
+                "is_current": False,
+            },
+        ],
+        current_block_id="0001-000001",
+        current_block_speaker="Narrator",
+        current_block_text="First.",
+        notes=["Ready."],
+        status_lines=["Generated audio: 2/2"],
+        progress_current=2,
+        progress_total=2,
+        progress_percent=100,
+        stage_status="in_progress",
+        can_start_or_continue=True,
+        can_reset=True,
+        can_approve_all=True,
+        can_regenerate_selected=True,
+        can_approve_selected=True,
+    )
+
+    page.advance_to_next_block()
+
+    assert page.selected_block_id() == "0001-000002"
+    assert page._speech_block_list.currentRow() == 1
+
+    page.advance_to_next_block()
+
+    assert page.selected_block_id() == "0001-000002"
+    assert page._speech_block_list.currentRow() == 1
 
 
 # END OF FILE

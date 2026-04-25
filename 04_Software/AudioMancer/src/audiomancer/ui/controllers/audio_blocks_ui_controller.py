@@ -14,7 +14,7 @@
          targeted downstream invalidation when upstream voice inputs change.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-23
-@version 0.2.1
+@version 0.2.2
 """
 
 # IMPORTS
@@ -149,7 +149,7 @@ def handle_approve_selected_requested(window: "MainWindow", speech_block_id: str
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-23
-    @version    0.1.0
+    @version    0.2.0
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._current_project_root is None or window._current_manifest is None:
@@ -164,6 +164,7 @@ def handle_approve_selected_requested(window: "MainWindow", speech_block_id: str
         )
         return
     _sync_manifest_after_audio_blocks_update(window)
+    window._audio_blocks_page.advance_to_next_block()
     misc_ui_controller.show_message(
         window,
         ui_state_service.translate("status.audio_block_approved", current_language),

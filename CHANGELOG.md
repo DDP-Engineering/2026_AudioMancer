@@ -10,6 +10,22 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+No unreleased application changes.
+
+## [0.22.0] - 2026-04-25
+
+### Changed
+
+- changed Audio Blocks generation to run only for approved Speech Blocks, leaving
+  unapproved blocks pending and keeping the operation `in_progress` until all
+  blocks are generated and approved
+
+### Fixed
+
+- fixed Audio Blocks narrator validation when `narator.json` stores only the
+  selected profile state by falling back to the selected narrator profile sample
+  metadata for `preview_text`
+
 ## [0.21.0] - 2026-04-25
 
 ### Added

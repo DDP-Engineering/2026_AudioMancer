@@ -14,8 +14,8 @@ Provides the AI-assisted cleanup slice for `AudioMancer`.
 It gives the `Text Cleanup` page one second cleanup mode that consumes the
 canonical extracted text, calls one configured AI provider through the profile
 selected in `AI Settings`, writes the cleaned result back into the shared
-`10_cleanup` workspace, and keeps one resumable checkpoint plus one per-run AI
-transaction log.
+root-level cleanup artifact set, and keeps one resumable checkpoint plus one
+per-run AI transaction log.
 
 ## 2. Responsibilities
 
@@ -33,12 +33,9 @@ transaction log.
 - retry transient provider failures conservatively
 - normalize model JSON output before parsing and attempt one conservative
   malformed-JSON repair pass when the assistant content is not valid JSON
-- copy the AI cleanup input snapshot as `10_cleanup/input_<original_source_name>`
-- persist `10_cleanup/output_clean_text.txt`,
-  `10_cleanup/artifact_cleanup_report.json`, and
-  `10_cleanup/state_operation.json`
+- persist `clean_text.txt`, `cleanup_report.json`, and `cleanup_state.json`
 - append project-local AI transaction records to
-  `10_cleanup/log_ai_transactions_<timestamp>.log`
+  `log_ai_cleanup_<timestamp>.log`
 - allow the operator to manually edit and save the shared cleaned-text output
   from the `Text Cleanup` page after AI cleanup completes
 - provide right-click `Find` search in both extracted-text and cleaned-text
@@ -89,9 +86,9 @@ High-level flow:
    the cleaned text, writes the shared cleanup artifacts, and stores
    `mode="ai_assisted"` in the cleanup operation state.
 8. On success, the shell advances the workflow stage to `text_chunking_ready`.
-9. Manual edits to the cleaned text save back to
-   `10_cleanup/output_clean_text.txt` and reset downstream workflow state from
-   chunking onward while preserving the extracted-text preview scroll position.
+9. Manual edits to the cleaned text save back to `clean_text.txt` and reset
+   downstream workflow state from chunking onward while preserving the
+   extracted-text preview scroll position.
 
 ## 4. Dependencies
 
@@ -118,11 +115,10 @@ Inputs:
 
 Outputs:
 
-- `10_cleanup/input_<original_source_name>`
-- `10_cleanup/output_clean_text.txt`
-- `10_cleanup/artifact_cleanup_report.json`
-- `10_cleanup/state_operation.json`
-- `10_cleanup/log_ai_transactions_<timestamp>.log`
+- `clean_text.txt`
+- `cleanup_report.json`
+- `cleanup_state.json`
+- `log_ai_cleanup_<timestamp>.log`
 - updated `project.json` cleanup operation entry with `mode="ai_assisted"`
 - updated `project.json` stage `text_chunking_ready` after successful cleanup
 - updated `project.json` stage `text_cleanup_ready` after a manual
@@ -172,7 +168,7 @@ Upstream:
 Downstream:
 
 - the shared cleanup preview and notes on the `Text Cleanup` page
-- future chunking consumes the same `10_cleanup/output_clean_text.txt`
+- chunking consumes the same `clean_text.txt`
 - confirmed AI cleanup reruns reset chunking, translation, and
   character-discovery data
 - manual cleaned-text edits reset chunking and all later workflow artifacts
@@ -225,8 +221,9 @@ Minimum validation after a change:
 - the provider flow currently assumes an OpenAI-compatible
   `/v1/chat/completions` interface for requests, even though it now tolerates
   providers that require `max_completion_tokens` instead of `max_tokens`
-- AI cleanup is synchronous from the shell perspective and blocks the main
-  window through the modal progress dialog
+- AI cleanup runs through the shared threaded modal-operation runner; provider
+  requests still complete sequentially within the worker and honor cancellation
+  only at cooperative checkpoints
 - transaction logs are newline-delimited JSON records inside a `.log` file, not
   a richer indexed audit store
 - canceling during an in-flight provider call is cooperative; the shell stops

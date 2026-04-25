@@ -14,12 +14,11 @@ Provides the deterministic text-cleanup slice for `AudioMancer`.
 It gives the `Text Cleanup` page one conservative cleanup workflow that
 consumes extracted text, removes repeated header/footer and page-number noise,
 preserves paragraph and chapter structure, and persists self-contained cleanup
-artifacts inside `10_cleanup`.
+artifacts at the active project root.
 
 ## 2. Responsibilities
 
 - read the canonical extracted text selected by `project.json`
-- copy the cleanup input snapshot as `10_cleanup/input_<original_source_name>`
 - remove repeated page headers and footers when the extracted text still
   exposes page boundaries
 - remove simple page-number markers
@@ -28,9 +27,9 @@ artifacts inside `10_cleanup`.
   the surrounding punctuation clearly marks spoken dialogue
 - preserve meaningful paragraph, chapter, and scene separation for later
   chunking
-- persist cleanup output as `10_cleanup/output_clean_text.txt`
-- persist cleanup metadata as `10_cleanup/artifact_cleanup_report.json`
-- persist resumable operation state as `10_cleanup/state_operation.json`
+- persist cleanup output as `clean_text.txt`
+- persist cleanup metadata as `cleanup_report.json`
+- persist resumable operation state as `cleanup_state.json`
 - allow the operator to manually edit and save the persisted cleaned text from
   the `Text Cleanup` page after cleanup output exists
 - provide right-click `Find` search in both extracted-text and cleaned-text
@@ -46,7 +45,7 @@ The component is implemented in:
 
 - `src/audiomancer/services/deterministic_cleanup_service.py`
 - `src/audiomancer/services/operation_runtime_service.py`
-- `src/audiomancer/ui/main_window.py`
+- `src/audiomancer/ui/controllers/text_cleanup_ui_controller.py`
 - `src/audiomancer/ui/pages/text_cleanup_page.py`
 
 Main public entrypoints:
@@ -58,25 +57,23 @@ Main public entrypoints:
 High-level flow:
 
 1. `TextCleanupPage` emits `clean_requested`.
-2. `MainWindow._handle_deterministic_cleanup_requested()` validates the active
-   project and extracted-text prerequisite.
-3. If cleanup is already completed, `MainWindow` asks for confirmation before
+2. `text_cleanup_ui_controller.handle_deterministic_cleanup_requested(...)`
+   validates the active project and extracted-text prerequisite.
+3. If cleanup is already completed, the controller asks for confirmation before
    clearing cleanup plus downstream chunking, translation, and
    character-discovery data.
-4. `MainWindow` starts the cleanup service through the reusable modal
+4. The controller starts the cleanup service through the reusable modal
    operation-progress dialog.
-5. The cleanup service copies the extracted input into `10_cleanup` using the
-   original source file name after the `input_` prefix.
-6. The service splits pages when extraction preserved page separators, removes
+5. The service splits pages when extraction preserved page separators, removes
    repeated headers and footers, removes page numbers and ornamental separator
    lines, heals false blank-line paragraph splits when one sentence clearly
-   continues, rebuilds cleaned paragraphs, and updates `state_operation.json`
+   continues, rebuilds cleaned paragraphs, and updates `cleanup_state.json`
    after each processed page.
-7. On success, `MainWindow` stores the completed cleanup operation state in
+6. On success, the shell stores the completed cleanup operation state in
    `project.json` and advances the workflow stage to `text_chunking_ready`.
-8. After cleanup output exists, the operator can press `Edit` under the cleaned
+7. After cleanup output exists, the operator can press `Edit` under the cleaned
    text preview, change the text, and press `Save`; the page writes
-   `10_cleanup/output_clean_text.txt`, resets downstream workflow data, and
+   `clean_text.txt`, resets downstream workflow data, and
    preserves the extracted-text preview scroll position.
 
 ## 4. Dependencies
@@ -102,10 +99,9 @@ Inputs:
 
 Outputs:
 
-- `10_cleanup/input_<original_source_name>`
-- `10_cleanup/output_clean_text.txt`
-- `10_cleanup/artifact_cleanup_report.json`
-- `10_cleanup/state_operation.json`
+- `clean_text.txt`
+- `cleanup_report.json`
+- `cleanup_state.json`
 - updated `project.json` operation entry `operations.cleanup`
 - updated `project.json` stage value `text_chunking_ready` after successful
   cleanup
@@ -148,9 +144,7 @@ Current cleanup operation-state fields:
 
 Current deterministic cleanup invariants:
 
-- the operation-local input snapshot always preserves the original imported
-  source file name after the `input_` prefix
-- cleanup folder and primary file names are defined centrally in
+- cleanup primary file names are defined centrally in
   `audiomancer.config`
 - cleanup output is always UTF-8 text with a trailing newline
 - page-header and footer removal is conservative and requires repeated
@@ -175,12 +169,12 @@ Upstream:
 
 Downstream:
 
-- future deterministic and AI chunking will consume
-  `10_cleanup/output_clean_text.txt`
-- confirmed cleanup reruns reset `20_chunking`, `30_translation`, and
-  `40_character_discovery`
-- manual cleaned-text edits reset all downstream workflow folders from
-  `20_chunking` onward because the chunking source changed
+- deterministic and AI chunking consume `clean_text.txt`
+- confirmed cleanup reruns reset chunking, translation, character discovery,
+  narrator, character voice, speech-block, audio-block, and audio-assembly
+  runtime artifacts
+- manual cleaned-text edits reset all downstream runtime artifacts and state
+  because the chunking source changed
 - the modal progress dialog is shared with extraction and future long-running
   operations
 
@@ -213,11 +207,13 @@ Automated tests:
 - `tests/test_deterministic_cleanup_service.py`
 - `tests/test_operation_runtime_service.py`
 - `tests/test_text_cleanup_page.py`
-- `tests/test_main_window.py`
+- `tests/test_text_cleanup_ui_controller.py`
+- `tests/test_text_cleanup_state_service.py`
+- `tests/test_main_window_project_flow.py`
 
 Covered behaviors:
 
-- runtime artifact naming and persistence in `10_cleanup`
+- runtime artifact naming and persistence at the project root
 - repeated header/footer removal
 - page-number removal
 - structure-preserving cleanup across page breaks

@@ -6,7 +6,8 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
 -->
 # 2026_AudioMancer
 
-Repository scaffold for the AudioMancer project.
+Repository for the AudioMancer desktop application and its planning,
+documentation, tooling, delivery, and support material.
 
 ## Top-Level Structure
 
@@ -23,3 +24,15 @@ Repository scaffold for the AudioMancer project.
 The software subtrees currently live under:
 
 - `04_Software/AudioMancer/`
+
+## Current Implementation
+
+`04_Software/AudioMancer/` contains the Python 3.12/PySide6 application. The
+current app supports project creation, source import, extraction, deterministic
+and AI cleanup, deterministic and AI chunking, AI translation, character
+discovery, narrator and character voice preparation, Speech Blocks, Audio
+Blocks, and Home-page TXT/Markdown exports for completed text artifacts.
+
+Focused implementation documentation is maintained in `05_SoftwareDocu/`.
+Validation commands and targeted test groups are listed in
+`04_Software/AudioMancer/README.MD`.
