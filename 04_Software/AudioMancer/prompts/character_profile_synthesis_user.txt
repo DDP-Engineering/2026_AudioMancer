@@ -33,6 +33,8 @@ Return exactly one JSON object with this shape:
 
 Do not invent unsupported details.
 Preserve the provided evidence chunk ids.
+Preserve canonical_name, aliases, role-based speaker labels, and evidence excerpts in the same language/form already present in the merged candidate payload.
+Do not translate character names or evidence excerpts during synthesis.
 If the payload does not support spoken dialogue, return empty strings and empty lists for the profile fields.
 Escape any inner quotes and embedded newlines correctly inside JSON string values.
 The voice-definition fields must be written for later Qwen3-TTS voice design, not as plot summary.

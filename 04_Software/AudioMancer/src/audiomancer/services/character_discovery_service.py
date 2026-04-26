@@ -14,7 +14,7 @@
          workflow artifacts, and maintains resumable AI operation state.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-22
-@version 0.5.2
+@version 0.6.1
 """
 
 # IMPORTS
@@ -60,6 +60,26 @@ CHARACTER_DISCOVERY_STAGE_COMPLETED = "completed"
 MANUAL_CHARACTER_EVIDENCE_CHUNK_ID = "manual"
 # @brief Stable note used for manual character evidence entries.
 MANUAL_CHARACTER_EVIDENCE_NOTE = "Added manually by the operator."
+# @brief Discovery input is the canonical source chunking output.
+CHARACTER_DISCOVERY_INPUT_SOURCE_CHUNKS = "chunks"
+# @brief Internal review status for AI-discovered character profiles.
+CHARACTER_REVIEW_STATUS_DISCOVERED = "discovered"
+# @brief Internal review status for manually added character profiles.
+CHARACTER_REVIEW_STATUS_MANUAL = "manual"
+# @brief Internal review status for operator-edited character profiles.
+CHARACTER_REVIEW_STATUS_EDITED = "edited"
+# @brief Supported review-status tokens persisted with character profiles.
+CHARACTER_REVIEW_STATUSES = {
+    CHARACTER_REVIEW_STATUS_DISCOVERED,
+    CHARACTER_REVIEW_STATUS_MANUAL,
+    CHARACTER_REVIEW_STATUS_EDITED,
+}
+# @brief Evidence confidence token for direct dialogue-span support.
+EVIDENCE_CONFIDENCE_HIGH = "high"
+# @brief Evidence confidence token for probable dialogue support.
+EVIDENCE_CONFIDENCE_MEDIUM = "medium"
+# @brief Evidence confidence token for weak or narrative-only support.
+EVIDENCE_CONFIDENCE_LOW = "low"
 
 # @brief Persisted character-profile payload type.
 CharacterProfilePayload = dict[str, object]
@@ -137,7 +157,7 @@ def build_character_voice_definition_prompt(character_profile: dict[str, object]
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-20
-    @version    1.1.0
+    @version    1.2.0
     """
     normalized_profile = _normalized_character_profile_core(character_profile)
     derived_voice_fields = _derived_voice_definition_fields(normalized_profile)
@@ -147,14 +167,14 @@ def build_character_voice_definition_prompt(character_profile: dict[str, object]
         )
     character_name = str(normalized_profile.get("canonical_name", "Character")).strip() or "Character"
     descriptor_parts = [
-        _sentence_fragment(normalized_profile.get("voice_persona_summary")),
-        _sentence_fragment(normalized_profile.get("voice_timbre_and_range")),
-        _sentence_fragment(normalized_profile.get("voice_pacing_and_rhythm")),
-        _sentence_fragment(normalized_profile.get("voice_emotional_baseline")),
-        _sentence_fragment(normalized_profile.get("voice_articulation_and_pronunciation")),
-        _sentence_fragment(normalized_profile.get("voice_delivery_constraints")),
+        ("Persona", _sentence_fragment(normalized_profile.get("voice_persona_summary"))),
+        ("Timbre", _sentence_fragment(normalized_profile.get("voice_timbre_and_range"))),
+        ("Pace", _sentence_fragment(normalized_profile.get("voice_pacing_and_rhythm"))),
+        ("Emotion", _sentence_fragment(normalized_profile.get("voice_emotional_baseline"))),
+        ("Articulation", _sentence_fragment(normalized_profile.get("voice_articulation_and_pronunciation"))),
+        ("Constraints", _sentence_fragment(normalized_profile.get("voice_delivery_constraints"))),
     ]
-    cleaned_descriptors = [part for part in descriptor_parts if part]
+    cleaned_descriptors = [f"{label}: {value}" for label, value in descriptor_parts if value]
     if cleaned_descriptors:
         return (f"Create a consistent spoken voice for {character_name}. " + " ".join(cleaned_descriptors)).strip()
     return (
@@ -171,7 +191,7 @@ def regenerate_character_voice_definition(profile_payload: dict[str, object]) ->
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-20
-    @version    1.0.0
+    @version    1.1.0
     """
     normalized_profile = _normalize_character_profile(profile_payload)
     derived_voice_fields = _derived_voice_definition_fields(normalized_profile)
@@ -191,7 +211,7 @@ def voice_definition_source_signature(profile_payload: dict[str, object]) -> str
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-20
-    @version    1.0.0
+    @version    1.1.0
     """
     signature_payload = {
         "canonical_name": str(profile_payload.get("canonical_name", "")).strip(),
@@ -242,9 +262,10 @@ def load_input_chunks(project_root: str | Path) -> list[dict[str, object]]:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-08
-    @version    0.1.0
+    @version    0.2.0
     """
-    return deterministic_chunking_service.load_chunks(project_root)
+    input_chunks, _input_source = _resolve_discovery_input_chunks(Path(project_root))
+    return input_chunks
 
 
 @trace_function(_CHARACTER_DISCOVERY_LOGGER)
@@ -254,6 +275,7 @@ def start_or_continue_discovery(
     ai_profile_payload: dict[str, object],
     progress_callback=None,
     cancel_requested=None,
+    force_rerun: bool = False,
 ) -> CharacterDiscoveryReportPayload:
     """
     @brief      Run AI-assisted character discovery for the active project.
@@ -262,18 +284,16 @@ def start_or_continue_discovery(
     @param[in]  ai_profile_payload Selected validated AI profile payload.
     @param[in]  progress_callback Optional progress callback for the modal popup.
     @param[in]  cancel_requested Optional zero-argument cancellation callback.
+    @param[in]  force_rerun Ignore compatible resumable state and start a fresh internal run.
     @return     Final character-discovery report payload.
     @exception  ValueError Raised on missing chunking input or invalid profile data.
     @exception  OperationCancelledError Raised when the operator cancels the run.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-08
-    @version    0.1.0
+    @version    0.2.0
     """
     resolved_project_root = Path(project_root)
-    source_chunks = sorted(
-        deterministic_chunking_service.load_chunks(resolved_project_root),
-        key=lambda item: int(item.get("sequence_index", 0)),
-    )
+    source_chunks, input_source = _resolve_discovery_input_chunks(resolved_project_root)
     if not source_chunks:
         raise ValueError("Run text chunking before starting Character Discovery.")
 
@@ -290,10 +310,11 @@ def start_or_continue_discovery(
             "character_profile_synthesis_user",
         ]
     )
-    chunk_input_path, clean_text_input_path = _persist_input_snapshots(
+    input_paths = _persist_input_snapshots(
         resolved_project_root,
         source_chunks,
         manifest,
+        input_source,
     )
     output_path = build_operation_output_path(
         resolved_project_root,
@@ -320,12 +341,13 @@ def start_or_continue_discovery(
     if not windows:
         raise ValueError("Character discovery requires at least one chunk window.")
 
-    existing_state = load_operation_state(resolved_project_root) or {}
+    existing_state = {} if force_rerun else (load_operation_state(resolved_project_root) or {})
     started_at = str(existing_state.get("started_at") or _utc_now_iso())
     (
         start_window_index,
         raw_candidates,
         merged_candidates,
+        rejected_candidates,
         synthesized_profiles,
         log_relative_path,
     ) = _restore_resume_state(
@@ -344,7 +366,7 @@ def start_or_continue_discovery(
     _write_operation_state(
         state_path=state_path,
         project_root=resolved_project_root,
-        input_paths=[chunk_input_path, clean_text_input_path],
+        input_paths=input_paths,
         output_path=None,
         report_path=None,
         status="running",
@@ -357,17 +379,21 @@ def start_or_continue_discovery(
         character_count=len(synthesized_profiles),
         analyzed_window_count=len(windows),
         merged_candidate_count=len(merged_candidates),
+        rejected_candidate_count=len(rejected_candidates),
+        input_source=input_source,
         warnings=[],
         input_fingerprint=input_fingerprint,
         log_path=log_path,
         token_usage=token_usage,
         resume_checkpoint={
             "input_fingerprint": input_fingerprint,
+            "input_source": input_source,
             "profile_id": profile_id,
             "completed_window_count": start_window_index,
             "total_window_count": len(windows),
             "raw_candidates": list(raw_candidates),
             "merged_candidates": list(merged_candidates),
+            "rejected_candidates": list(rejected_candidates),
             "synthesized_profiles": list(synthesized_profiles),
             "synthesis_progress_count": len(synthesized_profiles),
             "log_relative_path": relative_to_project(resolved_project_root, log_path),
@@ -429,7 +455,7 @@ def start_or_continue_discovery(
         _write_operation_state(
             state_path=state_path,
             project_root=resolved_project_root,
-            input_paths=[chunk_input_path, clean_text_input_path],
+            input_paths=input_paths,
             output_path=None,
             report_path=None,
             status="running",
@@ -442,17 +468,21 @@ def start_or_continue_discovery(
             character_count=0,
             analyzed_window_count=len(windows),
             merged_candidate_count=0,
+            rejected_candidate_count=len(rejected_candidates),
+            input_source=input_source,
             warnings=[],
             input_fingerprint=input_fingerprint,
             log_path=log_path,
             token_usage=token_usage,
             resume_checkpoint={
                 "input_fingerprint": input_fingerprint,
+                "input_source": input_source,
                 "profile_id": profile_id,
                 "completed_window_count": window_index + 1,
                 "total_window_count": len(windows),
                 "raw_candidates": list(raw_candidates),
                 "merged_candidates": [],
+                "rejected_candidates": [],
                 "synthesized_profiles": [],
                 "synthesis_progress_count": 0,
                 "log_relative_path": relative_to_project(resolved_project_root, log_path),
@@ -467,12 +497,12 @@ def start_or_continue_discovery(
         )
 
     if not merged_candidates:
-        merged_candidates = _merge_character_candidates(raw_candidates)
+        merged_candidates, rejected_candidates = _merge_character_candidates_with_rejections(raw_candidates)
     total_progress = max(len(windows) + len(merged_candidates), 1)
     _write_operation_state(
         state_path=state_path,
         project_root=resolved_project_root,
-        input_paths=[chunk_input_path, clean_text_input_path],
+        input_paths=input_paths,
         output_path=None,
         report_path=None,
         status="running",
@@ -485,17 +515,21 @@ def start_or_continue_discovery(
         character_count=len(synthesized_profiles),
         analyzed_window_count=len(windows),
         merged_candidate_count=len(merged_candidates),
+        rejected_candidate_count=len(rejected_candidates),
+        input_source=input_source,
         warnings=[],
         input_fingerprint=input_fingerprint,
         log_path=log_path,
         token_usage=token_usage,
         resume_checkpoint={
             "input_fingerprint": input_fingerprint,
+            "input_source": input_source,
             "profile_id": profile_id,
             "completed_window_count": len(windows),
             "total_window_count": len(windows),
             "raw_candidates": list(raw_candidates),
             "merged_candidates": list(merged_candidates),
+            "rejected_candidates": list(rejected_candidates),
             "synthesized_profiles": list(synthesized_profiles),
             "synthesis_progress_count": len(synthesized_profiles),
             "log_relative_path": relative_to_project(resolved_project_root, log_path),
@@ -542,7 +576,7 @@ def start_or_continue_discovery(
         _write_operation_state(
             state_path=state_path,
             project_root=resolved_project_root,
-            input_paths=[chunk_input_path, clean_text_input_path],
+            input_paths=input_paths,
             output_path=None,
             report_path=None,
             status="running",
@@ -555,17 +589,21 @@ def start_or_continue_discovery(
             character_count=len(synthesized_profiles),
             analyzed_window_count=len(windows),
             merged_candidate_count=len(merged_candidates),
+            rejected_candidate_count=len(rejected_candidates),
+            input_source=input_source,
             warnings=[],
             input_fingerprint=input_fingerprint,
             log_path=log_path,
             token_usage=token_usage,
             resume_checkpoint={
                 "input_fingerprint": input_fingerprint,
+                "input_source": input_source,
                 "profile_id": profile_id,
                 "completed_window_count": len(windows),
                 "total_window_count": len(windows),
                 "raw_candidates": list(raw_candidates),
                 "merged_candidates": list(merged_candidates),
+                "rejected_candidates": list(rejected_candidates),
                 "synthesized_profiles": list(synthesized_profiles),
                 "synthesis_progress_count": len(synthesized_profiles),
                 "log_relative_path": relative_to_project(resolved_project_root, log_path),
@@ -582,9 +620,13 @@ def start_or_continue_discovery(
     ordered_profiles = sorted(synthesized_profiles, key=_profile_sort_key)
     report_payload = {
         "input_chunk_count": len(source_chunks),
+        "input_source": input_source,
         "analyzed_window_count": len(windows),
         "merged_candidate_count": len(merged_candidates),
+        "rejected_candidate_count": len(rejected_candidates),
+        "rejected_candidates": list(rejected_candidates),
         "character_count": len(ordered_profiles),
+        "review_status_summary": _review_status_summary(ordered_profiles),
         "character_discovery_mode": CHARACTER_DISCOVERY_MODE_AI_ASSISTED,
         "character_profile_id_last_used": profile_id,
         "window_size": config.DEFAULT_CHARACTER_DISCOVERY_WINDOW_SIZE,
@@ -605,7 +647,7 @@ def start_or_continue_discovery(
     _write_operation_state(
         state_path=state_path,
         project_root=resolved_project_root,
-        input_paths=[chunk_input_path, clean_text_input_path],
+        input_paths=input_paths,
         output_path=output_path,
         report_path=report_path,
         status="completed",
@@ -618,6 +660,8 @@ def start_or_continue_discovery(
         character_count=len(ordered_profiles),
         analyzed_window_count=len(windows),
         merged_candidate_count=len(merged_candidates),
+        rejected_candidate_count=len(rejected_candidates),
+        input_source=input_source,
         warnings=[],
         input_fingerprint=input_fingerprint,
         log_path=log_path,
@@ -647,7 +691,7 @@ def add_character_profile(
     @exception  ValueError Raised when the name is invalid or duplicated.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-08
-    @version    1.0.0
+    @version    1.1.0
     """
     resolved_project_root = Path(project_root)
     existing_profiles = load_character_profiles(resolved_project_root)
@@ -728,6 +772,8 @@ def update_character_profile(
             existing_normalized_profile = _normalize_character_profile(existing_profile)
             merged_profile = _normalize_character_profile(profile_payload)
             merged_profile["canonical_name"] = normalized_name
+            if not str(profile_payload.get("review_status", "")).strip():
+                merged_profile["review_status"] = _edited_review_status(existing_normalized_profile)
             merged_profile["updated_at"] = _utc_now_iso()
             current_signature = voice_definition_source_signature(merged_profile)
             stored_signature = str(existing_normalized_profile.get(CHARACTER_VOICE_SIGNATURE_FIELD, "")).strip()
@@ -859,6 +905,7 @@ def _build_manual_character_profile(
             "voice_notes": "",
             "relationship_hints": [],
             "confidence": "",
+            "review_status": CHARACTER_REVIEW_STATUS_MANUAL,
             "evidence": [
                 {
                     "chunk_id": MANUAL_CHARACTER_EVIDENCE_CHUNK_ID,
@@ -929,24 +976,71 @@ def _persist_input_snapshots(
     project_root: Path,
     source_chunks: list[dict[str, object]],
     manifest: dict[str, object],
-) -> tuple[Path, Path]:
+    input_source: str,
+) -> list[Path]:
     """
     @brief      Persist the input snapshots.
     @param[in]  project_root Active project root folder.
     @param[in]  source_chunks Value for `source_chunks`.
     @param[in]  manifest Active project manifest payload.
-    @return     None.
+    @param[in]  input_source Selected discovery input source token.
+    @return     Existing input artifact paths used by the run.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.1.0
+    @version    0.2.0
     """
     _ = source_chunks
     _ = manifest
     chunk_input_path = project_root / config.CHUNK_ARTIFACT_FILE_NAME
     clean_text_input_path = project_root / config.CLEANED_TEXT_FILE_NAME
+    _ = input_source
+    input_paths = [chunk_input_path]
     if not clean_text_input_path.is_file():
         clean_text_input_path = chunk_input_path
-    return chunk_input_path, clean_text_input_path
+    input_paths.append(clean_text_input_path)
+    deduped_paths: list[Path] = []
+    for input_path in input_paths:
+        if input_path not in deduped_paths:
+            deduped_paths.append(input_path)
+    return deduped_paths
+
+
+def _resolve_discovery_input_chunks(project_root: Path) -> tuple[list[dict[str, object]], str]:
+    """
+    @brief      Resolve the authoritative internal input for character discovery.
+    @param[in]  project_root Active project root folder.
+    @return     Ordered discovery chunks plus the input-source token.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-27
+    @version    0.2.0
+    """
+    source_chunks = sorted(
+        deterministic_chunking_service.load_chunks(project_root),
+        key=lambda item: int(item.get("sequence_index", 0)),
+    )
+    return (
+        [_discovery_chunk_from_source(source_chunk) for source_chunk in source_chunks],
+        CHARACTER_DISCOVERY_INPUT_SOURCE_CHUNKS,
+    )
+
+
+def _discovery_chunk_from_source(source_chunk: dict[str, object]) -> dict[str, object]:
+    """
+    @brief      Build one discovery chunk from canonical source chunking output.
+    @param[in]  source_chunk Source chunk payload.
+    @return     Discovery chunk payload.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-27
+    @version    0.1.0
+    """
+    discovery_chunk = dict(source_chunk)
+    text = str(discovery_chunk.get("text", "")).strip()
+    discovery_chunk["source_text"] = text
+    discovery_chunk["input_source"] = CHARACTER_DISCOVERY_INPUT_SOURCE_CHUNKS
+    discovery_chunk["dialogue_spans"] = _detect_dialogue_spans(text)
+    return discovery_chunk
 
 
 def _resolve_chunk_input_snapshot_path(project_root: Path) -> Path | None:
@@ -986,7 +1080,7 @@ def _build_input_fingerprint(source_chunks: list[dict[str, object]]) -> str:
     @return     Derived helper result.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.1.0
+    @version    0.2.0
     """
     digest = hashlib.sha256()
     for chunk in source_chunks:
@@ -994,9 +1088,92 @@ def _build_input_fingerprint(source_chunks: list[dict[str, object]]) -> str:
         digest.update(b"\n")
         digest.update(str(chunk.get("sequence_index", 0)).encode("utf-8"))
         digest.update(b"\n")
+        digest.update(str(chunk.get("input_source", "")).encode("utf-8"))
+        digest.update(b"\n")
         digest.update(str(chunk.get("text", "")).encode("utf-8"))
         digest.update(b"\n")
     return digest.hexdigest()
+
+
+def _detect_dialogue_spans(text: str) -> list[dict[str, object]]:
+    """
+    @brief      Detect direct-dialogue spans inside one discovery text chunk.
+    @param[in]  text Discovery input text.
+    @return     Ordered dialogue-span payloads.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-27
+    @version    0.1.0
+    """
+    spans: list[dict[str, object]] = []
+    normalized_text = str(text)
+    quote_patterns = (
+        ('"([^"\\n]{1,500})"', "quote"),
+        ("\u201c([^\u201d\\n]{1,500})\u201d", "quote"),
+        ("\u00ab([^\u00bb\\n]{1,500})\u00bb", "quote"),
+        ("\u300c([^\u300d\\n]{1,500})\u300d", "quote"),
+        ("\u300e([^\u300f\\n]{1,500})\u300f", "quote"),
+    )
+    for pattern, marker_type in quote_patterns:
+        for match in re.finditer(pattern, normalized_text):
+            spans.append(
+                _dialogue_span_payload(
+                    marker_type,
+                    normalized_text[match.start() : match.end()],
+                    match.start(),
+                    match.end(),
+                    len(spans) + 1,
+                )
+            )
+    search_offset = 0
+    for line in normalized_text.splitlines():
+        line_start = normalized_text.find(line, search_offset)
+        search_offset = line_start + len(line) if line_start >= 0 else search_offset
+        stripped_line = line.strip()
+        if not stripped_line.startswith(("- ", "--", "\u2014", "\u2013")):
+            continue
+        start_offset = line_start + line.find(stripped_line) if line_start >= 0 else 0
+        end_offset = start_offset + len(stripped_line)
+        spans.append(
+            _dialogue_span_payload(
+                "dash",
+                stripped_line,
+                start_offset,
+                end_offset,
+                len(spans) + 1,
+            )
+        )
+    return sorted(spans, key=lambda item: int(item.get("start_offset", 0)))
+
+
+def _dialogue_span_payload(
+    marker_type: str,
+    source_text: str,
+    start_offset: int,
+    end_offset: int,
+    sequence_index: int,
+) -> dict[str, object]:
+    """
+    @brief      Build one normalized dialogue-span payload.
+    @param[in]  marker_type Dialogue marker type.
+    @param[in]  source_text Span source text.
+    @param[in]  start_offset Span start offset.
+    @param[in]  end_offset Span end offset.
+    @param[in]  sequence_index One-based span sequence index.
+    @return     Dialogue-span payload.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-27
+    @version    0.1.0
+    """
+    return {
+        "dialogue_span_id": f"dialogue-{sequence_index:03d}",
+        "marker_type": marker_type,
+        "source_excerpt": _excerpt_text(source_text),
+        "start_offset": max(int(start_offset), 0),
+        "end_offset": max(int(end_offset), 0),
+        "confidence": EVIDENCE_CONFIDENCE_HIGH,
+    }
 
 
 def _build_chunk_windows(
@@ -1035,7 +1212,7 @@ def _build_units_block(window_records: list[dict[str, object]]) -> str:
     @return     Derived helper result.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.1.0
+    @version    0.2.0
     """
     blocks: list[str] = []
     for chunk in window_records:
@@ -1043,6 +1220,10 @@ def _build_units_block(window_records: list[dict[str, object]]) -> str:
             f"CHUNK_ID: {chunk.get('chunk_id', '')}\n"
             f"SEQUENCE_INDEX: {chunk.get('sequence_index', 0)}\n"
             f"CHAPTER_LABEL: {chunk.get('chapter_label', '') or ''}\n"
+            f"INPUT_SOURCE: {chunk.get('input_source', CHARACTER_DISCOVERY_INPUT_SOURCE_CHUNKS)}\n"
+            "DIALOGUE_SPANS_BEGIN\n"
+            f"{json.dumps(list(chunk.get('dialogue_spans', [])), ensure_ascii=False)}\n"
+            "DIALOGUE_SPANS_END\n"
             "TEXT_BEGIN\n"
             f"{str(chunk.get('text', ''))}\n"
             "TEXT_END"
@@ -1060,6 +1241,7 @@ def _restore_resume_state(
     list[dict[str, object]],
     list[dict[str, object]],
     list[dict[str, object]],
+    list[dict[str, object]],
     str | None,
 ]:
     """
@@ -1071,23 +1253,24 @@ def _restore_resume_state(
     @return     Derived helper result.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.1.0
+    @version    0.2.0
     """
     if str(existing_state.get("status", "")) not in {"running", "failed"}:
-        return 0, [], [], [], None
+        return 0, [], [], [], [], None
     if str(existing_state.get("mode", "")) != CHARACTER_DISCOVERY_MODE_AI_ASSISTED:
-        return 0, [], [], [], None
+        return 0, [], [], [], [], None
     resume_checkpoint = dict(existing_state.get("resume_checkpoint") or {})
     if str(resume_checkpoint.get("input_fingerprint", "")) != input_fingerprint:
-        return 0, [], [], [], None
+        return 0, [], [], [], [], None
     if str(resume_checkpoint.get("profile_id", "")) != profile_id:
-        return 0, [], [], [], None
+        return 0, [], [], [], [], None
     if int(resume_checkpoint.get("total_window_count", 0)) != total_windows:
-        return 0, [], [], [], None
+        return 0, [], [], [], [], None
     return (
         min(int(resume_checkpoint.get("completed_window_count", 0)), total_windows),
         _restore_mapping_list(resume_checkpoint.get("raw_candidates")),
         _restore_mapping_list(resume_checkpoint.get("merged_candidates")),
+        _restore_mapping_list(resume_checkpoint.get("rejected_candidates")),
         _restore_mapping_list(resume_checkpoint.get("synthesized_profiles")),
         (
             None
@@ -1174,6 +1357,8 @@ def _write_operation_state(
     character_count: int,
     analyzed_window_count: int,
     merged_candidate_count: int,
+    rejected_candidate_count: int,
+    input_source: str,
     warnings: list[str],
     input_fingerprint: str,
     log_path: Path,
@@ -1197,6 +1382,8 @@ def _write_operation_state(
     @param[in]  character_count Value for `character_count`.
     @param[in]  analyzed_window_count Value for `analyzed_window_count`.
     @param[in]  merged_candidate_count Value for `merged_candidate_count`.
+    @param[in]  rejected_candidate_count Value for `rejected_candidate_count`.
+    @param[in]  input_source Selected discovery input source token.
     @param[in]  warnings Value for `warnings`.
     @param[in]  input_fingerprint Value for `input_fingerprint`.
     @param[in]  log_path Operation log file path.
@@ -1205,7 +1392,7 @@ def _write_operation_state(
     @return     None.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.1.0
+    @version    0.2.0
     """
     artifact_paths = [relative_to_project(project_root, log_path)]
     if report_path is not None and report_path.is_file():
@@ -1235,6 +1422,8 @@ def _write_operation_state(
             "character_count": character_count,
             "analyzed_window_count": analyzed_window_count,
             "merged_candidate_count": merged_candidate_count,
+            "rejected_candidate_count": rejected_candidate_count,
+            "input_source": input_source,
             "window_size": config.DEFAULT_CHARACTER_DISCOVERY_WINDOW_SIZE,
             "window_overlap": config.DEFAULT_CHARACTER_DISCOVERY_WINDOW_OVERLAP,
             "warnings": list(warnings),
@@ -1261,7 +1450,7 @@ def _normalize_window_candidates(
     @return     Derived helper result.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.1.0
+    @version    0.2.0
     """
     if not isinstance(payload, list):
         return []
@@ -1299,11 +1488,7 @@ def _normalize_window_candidates(
                 "confidence": str(entry.get("confidence", "")).strip(),
                 "evidence": evidence,
                 "has_dialogue_evidence": any(
-                    _text_contains_dialogue_markers(str(chunk_map[item["chunk_id"]].get("text", "")))
-                    or _text_contains_dialogue_markers(str(item.get("source_excerpt", "")))
-                    or _reason_mentions_dialogue(str(item.get("reason", "")))
-                    for item in evidence
-                    if item.get("chunk_id") in chunk_map
+                    _evidence_has_direct_dialogue(item) for item in evidence if item.get("chunk_id") in chunk_map
                 ),
             }
         )
@@ -1343,7 +1528,7 @@ def _normalize_evidence(
     @return     Derived helper result.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.1.0
+    @version    0.2.0
     """
     if not isinstance(payload, list):
         return []
@@ -1355,17 +1540,82 @@ def _normalize_evidence(
         if not chunk_id or chunk_id not in chunk_map:
             continue
         source_chunk = dict(chunk_map[chunk_id])
+        dialogue_span_id = str(entry.get("dialogue_span_id", "")).strip()
+        source_excerpt = str(entry.get("source_excerpt", "")).strip()
+        if not source_excerpt and dialogue_span_id:
+            source_excerpt = _dialogue_span_excerpt(source_chunk, dialogue_span_id)
+        if not source_excerpt:
+            source_excerpt = _excerpt_text(str(source_chunk.get("text", "")))
+        reason = str(entry.get("reason", "")).strip() or "Mentioned in source chunk."
+        confidence = _normalize_evidence_confidence(
+            entry.get("confidence"),
+            source_chunk,
+            dialogue_span_id,
+            source_excerpt,
+            reason,
+        )
         evidence_items.append(
             {
                 "chunk_id": chunk_id,
                 "sequence_index": int(source_chunk.get("sequence_index", 0)),
-                "source_excerpt": (
-                    str(entry.get("source_excerpt", "")).strip() or _excerpt_text(str(source_chunk.get("text", "")))
-                ),
-                "reason": (str(entry.get("reason", "")).strip() or "Mentioned in source chunk."),
+                "dialogue_span_id": dialogue_span_id,
+                "source_excerpt": source_excerpt,
+                "reason": reason,
+                "confidence": confidence,
             }
         )
     return _dedupe_evidence(evidence_items)
+
+
+def _dialogue_span_excerpt(source_chunk: dict[str, object], dialogue_span_id: str) -> str:
+    """
+    @brief      Resolve one dialogue-span excerpt from a source chunk.
+    @param[in]  source_chunk Discovery chunk payload.
+    @param[in]  dialogue_span_id Dialogue span identifier.
+    @return     Span excerpt or an empty string.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-27
+    @version    0.1.0
+    """
+    for dialogue_span in list(source_chunk.get("dialogue_spans", [])):
+        if not isinstance(dialogue_span, dict):
+            continue
+        if str(dialogue_span.get("dialogue_span_id", "")).strip() == dialogue_span_id:
+            return str(dialogue_span.get("source_excerpt", "")).strip()
+    return ""
+
+
+def _normalize_evidence_confidence(
+    raw_confidence: object,
+    source_chunk: dict[str, object],
+    dialogue_span_id: str,
+    source_excerpt: str,
+    reason: str,
+) -> str:
+    """
+    @brief      Normalize or derive one evidence confidence token.
+    @param[in]  raw_confidence Confidence value returned by the model.
+    @param[in]  source_chunk Discovery chunk payload.
+    @param[in]  dialogue_span_id Optional referenced dialogue span id.
+    @param[in]  source_excerpt Evidence source excerpt.
+    @param[in]  reason Evidence reason.
+    @return     Evidence confidence token.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-27
+    @version    0.1.0
+    """
+    confidence = str(raw_confidence or "").strip().casefold()
+    if confidence in {EVIDENCE_CONFIDENCE_HIGH, EVIDENCE_CONFIDENCE_MEDIUM, EVIDENCE_CONFIDENCE_LOW}:
+        return confidence
+    if dialogue_span_id and _dialogue_span_excerpt(source_chunk, dialogue_span_id):
+        return EVIDENCE_CONFIDENCE_HIGH
+    if _text_contains_dialogue_markers(source_excerpt):
+        return EVIDENCE_CONFIDENCE_HIGH
+    if _reason_mentions_dialogue(reason):
+        return EVIDENCE_CONFIDENCE_MEDIUM
+    return EVIDENCE_CONFIDENCE_LOW
 
 
 def _merge_character_candidates(
@@ -1377,21 +1627,96 @@ def _merge_character_candidates(
     @return     Derived helper result.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
+    @version    0.2.0
+    """
+    merged, _rejected = _merge_character_candidates_with_rejections(candidates)
+    return merged
+
+
+def _merge_character_candidates_with_rejections(
+    candidates: list[dict[str, object]],
+) -> tuple[list[dict[str, object]], list[dict[str, object]]]:
+    """
+    @brief      Merge candidates by identity and retain rejected candidate diagnostics.
+    @param[in]  candidates Candidate payload list.
+    @return     Accepted merged candidates and rejected candidate diagnostics.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-27
     @version    0.1.0
     """
-    merged: list[dict[str, object]] = []
+    merged = [_merge_candidate_identity_group(group) for group in _group_character_candidates_by_identity(candidates)]
+    accepted: list[dict[str, object]] = []
+    rejected: list[dict[str, object]] = []
+    for entry in sorted(merged, key=_candidate_sort_key):
+        entry["evidence"] = _restore_evidence(entry.get("evidence", []))
+        if not entry["evidence"]:
+            rejected.append(_rejected_candidate_payload(entry, "missing_evidence"))
+            continue
+        if not _candidate_has_spoken_dialogue(entry):
+            rejected.append(_rejected_candidate_payload(entry, "missing_spoken_dialogue_evidence"))
+            continue
+        accepted.append(entry)
+    for index, entry in enumerate(accepted, start=1):
+        entry["character_id"] = _slugify_character_id(
+            str(entry.get("canonical_name", "")),
+            index,
+        )
+    return accepted, rejected
+
+
+def _group_character_candidates_by_identity(candidates: list[dict[str, object]]) -> list[list[dict[str, object]]]:
+    """
+    @brief      Group candidates by normalized canonical or alias identity.
+    @param[in]  candidates Candidate payload list.
+    @return     Identity groups.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-27
+    @version    0.1.0
+    """
+    groups: list[list[dict[str, object]]] = []
     for candidate in candidates:
         alias_keys = {_normalize_identity(str(candidate.get("canonical_name", "")))}
         alias_keys.update(_normalize_identity(alias) for alias in list(candidate.get("aliases", [])))
         alias_keys.discard("")
-        target = next(
-            (item for item in merged if alias_keys.intersection(set(item.get("_alias_keys", [])))),
-            None,
-        )
-        if target is None:
+        target_group = None
+        for group in groups:
+            group_alias_keys: set[str] = set()
+            for group_candidate in group:
+                group_alias_keys.add(_normalize_identity(str(group_candidate.get("canonical_name", ""))))
+                group_alias_keys.update(
+                    _normalize_identity(alias) for alias in list(group_candidate.get("aliases", []))
+                )
+            if alias_keys.intersection(group_alias_keys):
+                target_group = group
+                break
+        if target_group is None:
+            groups.append([dict(candidate)])
+        else:
+            target_group.append(dict(candidate))
+    return groups
+
+
+def _merge_candidate_identity_group(identity_group: list[dict[str, object]]) -> dict[str, object]:
+    """
+    @brief      Synthesize one candidate payload from an identity group.
+    @param[in]  identity_group Candidates believed to represent the same character.
+    @return     Merged candidate payload.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-27
+    @version    0.1.0
+    """
+    target: dict[str, object] = {}
+    alias_keys: set[str] = set()
+    for candidate in identity_group:
+        candidate_alias_keys = {_normalize_identity(str(candidate.get("canonical_name", "")))}
+        candidate_alias_keys.update(_normalize_identity(alias) for alias in list(candidate.get("aliases", [])))
+        candidate_alias_keys.discard("")
+        alias_keys.update(candidate_alias_keys)
+        if not target:
             target = dict(candidate)
-            target["_alias_keys"] = sorted(alias_keys)
-            merged.append(target)
             continue
         target["aliases"] = _normalize_string_list(list(target.get("aliases", [])) + list(candidate.get("aliases", [])))
         target["relationship_hints"] = _normalize_string_list(
@@ -1426,18 +1751,29 @@ def _merge_character_candidates(
             candidate_value = str(candidate.get(field_name, "")).strip()
             if candidate_value and len(candidate_value) > len(existing_value):
                 target[field_name] = candidate_value
-        target["_alias_keys"] = sorted(set(target.get("_alias_keys", [])) | alias_keys)
-    filtered: list[dict[str, object]] = []
-    for index, entry in enumerate(sorted(merged, key=_candidate_sort_key), start=1):
-        entry["character_id"] = _slugify_character_id(
-            str(entry.get("canonical_name", "")),
-            index,
-        )
-        entry["evidence"] = _restore_evidence(entry.get("evidence", []))
-        entry.pop("_alias_keys", None)
-        if _candidate_has_spoken_dialogue(entry):
-            filtered.append(entry)
-    return filtered
+    target["identity_alias_keys"] = sorted(alias_keys)
+    target["identity_merge_count"] = len(identity_group)
+    return target
+
+
+def _rejected_candidate_payload(candidate: dict[str, object], reason: str) -> dict[str, object]:
+    """
+    @brief      Build one rejected-candidate diagnostic payload.
+    @param[in]  candidate Candidate payload.
+    @param[in]  reason Rejection reason token.
+    @return     Rejected-candidate diagnostic payload.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-27
+    @version    0.1.0
+    """
+    evidence = _restore_evidence(candidate.get("evidence", []))
+    return {
+        "canonical_name": str(candidate.get("canonical_name", "")).strip(),
+        "reason": reason,
+        "evidence_count": len(evidence),
+        "identity_merge_count": int(candidate.get("identity_merge_count", 1)),
+    }
 
 
 def _restore_evidence(payload: object) -> list[dict[str, object]]:
@@ -1570,6 +1906,12 @@ def _build_profile_from_synthesis(
                 )
             ),
             "confidence": str(response_payload.get("confidence", candidate.get("confidence", ""))).strip(),
+            "review_status": _normalize_review_status(
+                response_payload.get(
+                    "review_status",
+                    candidate.get("review_status", CHARACTER_REVIEW_STATUS_DISCOVERED),
+                )
+            ),
             "evidence": _restore_evidence(response_payload.get("evidence", candidate.get("evidence", [])))
             or _restore_evidence(candidate.get("evidence", [])),
             "updated_at": _utc_now_iso(),
@@ -1600,6 +1942,55 @@ def _normalize_character_profile(profile_payload: dict[str, object]) -> Characte
     stored_signature = str(normalized_profile.get(CHARACTER_VOICE_SIGNATURE_FIELD, "")).strip()
     normalized_profile["voice_definition_stale"] = bool(stored_signature and stored_signature != current_signature)
     return normalized_profile
+
+
+def _normalize_review_status(raw_status: object) -> str:
+    """
+    @brief      Normalize one internal character review-status token.
+    @param[in]  raw_status Raw review status.
+    @return     Supported review-status token.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-27
+    @version    0.1.0
+    """
+    review_status = str(raw_status or "").strip().casefold()
+    if review_status in CHARACTER_REVIEW_STATUSES:
+        return review_status
+    return CHARACTER_REVIEW_STATUS_DISCOVERED
+
+
+def _edited_review_status(existing_profile: dict[str, object]) -> str:
+    """
+    @brief      Derive review status for an operator-edited profile without UI changes.
+    @param[in]  existing_profile Existing normalized character profile.
+    @return     Updated review-status token.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-27
+    @version    0.1.0
+    """
+    existing_status = _normalize_review_status(existing_profile.get("review_status", ""))
+    if existing_status == CHARACTER_REVIEW_STATUS_MANUAL:
+        return CHARACTER_REVIEW_STATUS_MANUAL
+    return CHARACTER_REVIEW_STATUS_EDITED
+
+
+def _review_status_summary(profiles: list[dict[str, object]]) -> dict[str, int]:
+    """
+    @brief      Build a count summary for persisted internal review statuses.
+    @param[in]  profiles Character profile payload list.
+    @return     Review-status count summary.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-27
+    @version    0.1.0
+    """
+    summary = dict.fromkeys(sorted(CHARACTER_REVIEW_STATUSES), 0)
+    for profile in profiles:
+        review_status = _normalize_review_status(profile.get("review_status", ""))
+        summary[review_status] = summary.get(review_status, 0) + 1
+    return summary
 
 
 def _normalized_character_profile_core(profile_payload: dict[str, object]) -> CharacterProfilePayload:
@@ -1637,6 +2028,7 @@ def _normalized_character_profile_core(profile_payload: dict[str, object]) -> Ch
         CHARACTER_VOICE_SIGNATURE_FIELD: str(profile_payload.get(CHARACTER_VOICE_SIGNATURE_FIELD, "")).strip(),
         "relationship_hints": _normalize_string_list(profile_payload.get("relationship_hints", [])),
         "confidence": str(profile_payload.get("confidence", "")).strip(),
+        "review_status": _normalize_review_status(profile_payload.get("review_status", "")),
         "evidence": _restore_evidence(profile_payload.get("evidence", [])),
         "updated_at": None
         if profile_payload.get("updated_at") in (None, "")
@@ -1897,19 +2289,33 @@ def _candidate_has_spoken_dialogue(candidate: dict[str, object]) -> bool:
     @return     Helper result.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.1.0
+    @version    0.2.0
     """
     if bool(candidate.get("has_dialogue_evidence")):
         return True
     evidence_items = _restore_evidence(candidate.get("evidence", []))
     if not evidence_items:
         return False
-    for evidence in evidence_items:
-        if _text_contains_dialogue_markers(str(evidence.get("source_excerpt", ""))):
-            return True
-        if _reason_mentions_dialogue(str(evidence.get("reason", ""))):
-            return True
-    return False
+    return any(_evidence_has_direct_dialogue(evidence) for evidence in evidence_items)
+
+
+def _evidence_has_direct_dialogue(evidence: dict[str, object]) -> bool:
+    """
+    @brief      Decide whether one evidence item directly supports spoken dialogue.
+    @param[in]  evidence Evidence payload.
+    @return     True when the evidence is anchored to dialogue without depending on natural-language keywords.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-27
+    @version    0.1.0
+    """
+    if str(evidence.get("dialogue_span_id", "")).strip():
+        return True
+    if str(evidence.get("confidence", "")).strip().casefold() == EVIDENCE_CONFIDENCE_HIGH:
+        return True
+    if _text_contains_dialogue_markers(str(evidence.get("source_excerpt", ""))):
+        return True
+    return _reason_mentions_dialogue(str(evidence.get("reason", "")))
 
 
 def _text_contains_dialogue_markers(text: str) -> bool:
@@ -1919,14 +2325,14 @@ def _text_contains_dialogue_markers(text: str) -> bool:
     @return     Helper result.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.1.0
+    @version    0.2.0
     """
     normalized = text.strip()
     if not normalized:
         return False
-    if '"' in normalized:
+    if any(marker in normalized for marker in ('"', "\u201c", "\u201d", "\u00ab", "\u00bb", "\u300c", "\u300d")):
         return True
-    return normalized.startswith("- ") or normalized.startswith("--")
+    return normalized.startswith(("- ", "--", "\u2014", "\u2013"))
 
 
 def _reason_mentions_dialogue(reason: str) -> bool:

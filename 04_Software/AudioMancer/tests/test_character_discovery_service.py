@@ -14,7 +14,7 @@
          discovery workflow.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-08
-@version 0.3.1
+@version 0.4.0
 """
 
 # IMPORTS
@@ -111,11 +111,7 @@ def test_start_discovery_persists_outputs_and_report(monkeypatch, tmp_path) -> N
 
 def test_start_discovery_resumes_from_saved_synthesis_checkpoint(monkeypatch, tmp_path) -> None:
     project_root, manifest = _create_character_project(tmp_path, "CharacterDiscoveryResume")
-    source_chunks = json.loads(
-        (project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.CHUNK_ARTIFACT_FILE_NAME).read_text(
-            encoding="utf-8"
-        )
-    )
+    source_chunks = character_discovery_service.load_input_chunks(project_root)
     fingerprint = character_discovery_service._build_input_fingerprint(source_chunks)
     resume_candidate = {
         "character_id": "alice",
@@ -169,6 +165,7 @@ def test_start_discovery_resumes_from_saved_synthesis_checkpoint(monkeypatch, tm
                     "total_window_count": 1,
                     "raw_candidates": [resume_candidate],
                     "merged_candidates": [resume_candidate],
+                    "rejected_candidates": [],
                     "synthesized_profiles": [],
                     "synthesis_progress_count": 0,
                     "log_relative_path": None,
@@ -223,6 +220,7 @@ def test_start_discovery_resumes_from_saved_synthesis_checkpoint(monkeypatch, tm
 
     assert call_count["value"] == 1
     assert report["character_count"] == 1
+    assert report["input_source"] == character_discovery_service.CHARACTER_DISCOVERY_INPUT_SOURCE_CHUNKS
     assert report["token_usage"]["total_tokens"] == 90
     assert (
         character_discovery_service.load_character_profiles(project_root)[0]["description"]
@@ -267,6 +265,7 @@ def test_manual_add_update_delete_and_reset(tmp_path) -> None:
     added_profiles = character_discovery_service.add_character_profile(project_root, "Bob")
     bob_profile = next(profile for profile in added_profiles if str(profile.get("canonical_name")) == "Bob")
     assert bob_profile["evidence"][0]["chunk_id"] == character_discovery_service.MANUAL_CHARACTER_EVIDENCE_CHUNK_ID
+    assert bob_profile["review_status"] == character_discovery_service.CHARACTER_REVIEW_STATUS_MANUAL
 
     updated_profiles = character_discovery_service.update_character_profile(
         project_root,
@@ -293,6 +292,7 @@ def test_manual_add_update_delete_and_reset(tmp_path) -> None:
         profile for profile in updated_profiles if str(profile.get("character_id")) == str(bob_profile["character_id"])
     )
     assert updated_bob["role_summary"] == "Manual role"
+    assert updated_bob["review_status"] == character_discovery_service.CHARACTER_REVIEW_STATUS_MANUAL
 
     remaining_profiles = character_discovery_service.delete_character_profile(
         project_root,
@@ -374,6 +374,168 @@ def test_merge_character_candidates_keeps_role_speaker_candidate() -> None:
     assert len(merged_candidates) == 1
     assert merged_candidates[0]["character_id"] == "his_agent"
     assert merged_candidates[0]["canonical_name"] == "His Agent"
+
+
+def test_load_input_chunks_uses_source_chunks_when_translation_exists(tmp_path) -> None:
+    """
+    @brief      Verify character discovery keeps source chunks as the authoritative discovery input.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  AssertionError Raised when translated input is selected.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-27
+    @version    0.1.0
+    """
+    project_root, _manifest = _create_character_project(tmp_path, "CharacterDiscoverySourcePreferred")
+    artifact_root = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH
+    (artifact_root / config.TRANSLATED_CHUNKS_FILE_NAME).write_text(
+        json.dumps(
+            [
+                {
+                    "chunk_id": "chunk-0001",
+                    "sequence_index": 1,
+                    "source_text": '"Hello there," said Alice.',
+                    "translated_text": "\u00abBonjour\u00bb, dit Alice.",
+                    "status": "approved",
+                    "approved": True,
+                    "target_language": "fr",
+                }
+            ],
+            indent=2,
+            ensure_ascii=False,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    input_chunks = character_discovery_service.load_input_chunks(project_root)
+
+    assert input_chunks[0]["text"] == '"Hello there," said Alice.'
+    assert input_chunks[0]["input_source"] == character_discovery_service.CHARACTER_DISCOVERY_INPUT_SOURCE_CHUNKS
+    assert input_chunks[0]["dialogue_spans"][0]["dialogue_span_id"] == "dialogue-001"
+
+
+def test_load_input_chunks_ignores_mixed_translation_targets(tmp_path) -> None:
+    """
+    @brief      Verify character discovery never consumes mixed-language translation records.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  AssertionError Raised when mixed translation input is selected.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-27
+    @version    0.1.0
+    """
+    project_root, _manifest = _create_character_project(tmp_path, "CharacterDiscoveryMixedTranslation")
+    artifact_root = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH
+    (artifact_root / config.CHUNK_ARTIFACT_FILE_NAME).write_text(
+        json.dumps(
+            [
+                {
+                    "chunk_id": "chunk-0001",
+                    "sequence_index": 1,
+                    "chapter_label": None,
+                    "text": '"Hello there," said Alice.',
+                },
+                {
+                    "chunk_id": "chunk-0002",
+                    "sequence_index": 2,
+                    "chapter_label": None,
+                    "text": '"Goodbye," said Bob.',
+                },
+            ],
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    (artifact_root / config.TRANSLATED_CHUNKS_FILE_NAME).write_text(
+        json.dumps(
+            [
+                {
+                    "chunk_id": "chunk-0001",
+                    "sequence_index": 1,
+                    "source_text": '"Hello there," said Alice.',
+                    "translated_text": "\u00abBonjour\u00bb, dit Alice.",
+                    "status": "approved",
+                    "approved": True,
+                    "target_language": "fr",
+                },
+                {
+                    "chunk_id": "chunk-0002",
+                    "sequence_index": 2,
+                    "source_text": '"Goodbye," said Bob.',
+                    "translated_text": "\u00abAdios\u00bb, dijo Bob.",
+                    "status": "approved",
+                    "approved": True,
+                    "target_language": "es",
+                },
+            ],
+            indent=2,
+            ensure_ascii=False,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    input_chunks = character_discovery_service.load_input_chunks(project_root)
+
+    assert [chunk["input_source"] for chunk in input_chunks] == [
+        character_discovery_service.CHARACTER_DISCOVERY_INPUT_SOURCE_CHUNKS,
+        character_discovery_service.CHARACTER_DISCOVERY_INPUT_SOURCE_CHUNKS,
+    ]
+    assert input_chunks[0]["text"] == '"Hello there," said Alice.'
+
+
+def test_merge_character_candidates_reports_rejected_non_dialogue_candidates() -> None:
+    """
+    @brief      Verify rejected candidate diagnostics are retained for review.
+    @return     None.
+    @exception  AssertionError Raised when rejection diagnostics are missing.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-27
+    @version    0.1.0
+    """
+    accepted, rejected = character_discovery_service._merge_character_candidates_with_rejections(  # noqa: SLF001
+        [
+            {
+                "canonical_name": "Alice",
+                "aliases": [],
+                "evidence": [
+                    {
+                        "chunk_id": "chunk-0001",
+                        "sequence_index": 1,
+                        "dialogue_span_id": "dialogue-001",
+                        "source_excerpt": "\u00abBonjour\u00bb",
+                        "reason": "Direct speech punctuation.",
+                        "confidence": "high",
+                    }
+                ],
+            },
+            {
+                "canonical_name": "Narrated Bob",
+                "aliases": [],
+                "evidence": [
+                    {
+                        "chunk_id": "chunk-0001",
+                        "sequence_index": 1,
+                        "source_excerpt": "Bob walked into the room.",
+                        "reason": "Mentioned in narration.",
+                        "confidence": "low",
+                    }
+                ],
+            },
+        ]
+    )
+
+    assert [candidate["canonical_name"] for candidate in accepted] == ["Alice"]
+    assert rejected == [
+        {
+            "canonical_name": "Narrated Bob",
+            "reason": "missing_spoken_dialogue_evidence",
+            "evidence_count": 1,
+            "identity_merge_count": 1,
+        }
+    ]
 
 
 def test_update_character_profile_marks_voice_definition_stale_when_facts_change(tmp_path) -> None:

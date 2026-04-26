@@ -8,6 +8,24 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
 
 All notable changes to this project will be documented in this file.
 
+## [0.33.2] - 2026-04-27
+
+### Changed
+
+- changed Character Discovery to use canonical source chunks as the
+  authoritative discovery input so translated artifacts cannot reduce dialogue
+  character recall or mix source and translated character names
+- added language-agnostic dialogue-span evidence, evidence confidence,
+  rejected-candidate diagnostics, identity-merge separation, resumable rerun
+  internals, and persisted internal review-status metadata for character
+  profiles
+- updated character discovery prompts to preserve names, role labels, aliases,
+  and evidence excerpts in the selected source text form while keeping the
+  voice-definition prompt as the English TTS handoff
+- updated Character Discovery tests and documentation for source-only
+  discovery input, rejected-candidate reporting, and review-status metadata
+- package version updated to `0.33.2`
+
 ## [0.33.1] - 2026-04-27
 
 ### Changed

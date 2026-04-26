@@ -12,8 +12,9 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
 Provides the Character Discovery workflow used by the `Characters` page in
 `AudioMancer`.
 
-It analyzes canonical chunking output with an AI profile, produces one
-persisted set of speaking-character profiles, synthesizes one structured
+It analyzes canonical chunking output as the authoritative source for character
+identity and dialogue evidence. It produces one persisted set of
+speaking-character profiles, synthesizes one structured
 Qwen-oriented voice-definition brief plus one final
 `voice_definition_prompt` per character, exposes resumable operation state,
 and keeps the page state and UI controller aligned with the project
@@ -21,11 +22,15 @@ manifest.
 
 ## 2. Responsibilities
 
-- load canonical chunking input from `chunks_text.json`
+- resolve the discovery input from `chunks_text.json`
 - use root-level cleanup and chunking artifacts as the discovery source
 - split chunk input into overlapping AI analysis windows
 - call the configured AI profile for window extraction and profile synthesis
-- normalize, merge, filter, and persist discovered speaking characters
+- detect language-agnostic dialogue spans from quotation and dash-style direct
+  speech markers
+- normalize, score, merge, filter, and persist discovered speaking characters
+- retain rejected non-speaking or weak-evidence candidates in the report for
+  diagnostics
 - derive and persist one structured voice-definition brief plus one final
   voice-definition prompt for each character profile
 - persist `characters_state.json`, `characters_report.json`, one
@@ -36,8 +41,8 @@ manifest.
   or delete behavior, explicit `Regenerate Voice Definition`, and
   unsaved-change prompts
 
-It does not own chunk creation, translation, narrator-definition editing, or
-AI profile persistence.
+It does not own chunk creation, translation approval, narrator-definition
+editing, or AI profile persistence.
 
 ## 3. Implementation Overview
 
@@ -75,13 +80,15 @@ High-level runtime flow:
    the active project, chunking output, and selected enabled AI profile.
 3. On first start only, the controller shows one informational popup about
    long-running AI work.
-4. `character_discovery_service.start_or_continue_discovery(...)` loads
-   `chunks_text.json`, resolves the current chunk and cleanup context, and
-   restores resumable state when fingerprints and profile ids still match.
-5. The service analyzes chunk windows, normalizes candidate evidence against
-   known chunk ids, merges character candidates by canonical or alias identity,
-   filters to speaking characters, and runs one synthesis pass per merged
-   character.
+4. `character_discovery_service.start_or_continue_discovery(...)` resolves
+   canonical chunking output as the discovery input and restores resumable state
+   when fingerprints and profile ids still match.
+5. The service detects direct-dialogue spans in each chunk using punctuation
+   structure rather than English-only speech verbs, analyzes chunk windows,
+   normalizes candidate evidence against known chunk ids and optional
+   `dialogue_span_id` values, merges character candidates by canonical or alias
+   identity, filters to speaking characters, records rejected candidates, and
+   runs one synthesis pass per merged character.
 6. The service writes `characters_profile.json`, `characters_report.json`,
    `characters_state.json`, and one `log_ai_characters_<timestamp>.log`
    transaction log at the project root.
@@ -164,8 +171,16 @@ Persisted character profile fields:
 - `voice_definition_source_signature`
 - `relationship_hints`
 - `confidence`
+- `review_status`
 - `evidence`
 - `updated_at`
+
+Internal review statuses are persisted without adding controls to the AI
+Translation page:
+
+- `discovered`: produced by AI-assisted discovery
+- `manual`: added by the operator from the Characters page
+- `edited`: originally discovered and then edited by the operator
 
 Runtime-only page shaping also uses:
 
@@ -187,8 +202,10 @@ Evidence items currently store:
 
 - `chunk_id`
 - `sequence_index`
+- `dialogue_span_id`
 - `source_excerpt`
 - `reason`
+- `confidence`
 
 Manual profiles use one synthetic evidence entry with:
 
@@ -200,9 +217,13 @@ Manual profiles use one synthetic evidence entry with:
 Report fields currently include:
 
 - `input_chunk_count`
+- `input_source`
 - `analyzed_window_count`
 - `merged_candidate_count`
+- `rejected_candidate_count`
+- `rejected_candidates`
 - `character_count`
+- `review_status_summary`
 - `character_discovery_mode`
 - `character_profile_id_last_used`
 - `window_size`
