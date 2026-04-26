@@ -8,7 +8,4 @@ Chunk id: {chunk_id}
 Chunk text:
 {chunk_text}
 
-Pre-split source units:
-{source_units_json}
-
-Return the ordered JSON `speech_blocks` array for this chunk only.
+Analyze this chunk and return one JSON object with the ordered `speech_blocks` array only.

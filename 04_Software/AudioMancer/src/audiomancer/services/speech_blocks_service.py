@@ -15,7 +15,7 @@
          based operation state plus AI transaction logging.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 0.5.0
+@version 0.6.0
 """
 
 # IMPORTS
@@ -710,7 +710,7 @@ def reset_speech_block_to_ai_baseline(
     @exception  ValueError Raised when the block is unknown.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-24
-    @version    0.1.0
+    @version    0.2.0
     """
     resolved_project_root = Path(project_root)
     speech_blocks = load_speech_blocks(resolved_project_root)
@@ -723,6 +723,7 @@ def reset_speech_block_to_ai_baseline(
     selected_block["content_kind"] = _normalize_content_kind(
         selected_block.get("ai_content_kind", CONTENT_KIND_NARRATION)
     )
+    selected_block["source_text"] = str(selected_block.get("ai_source_text", selected_block.get("source_text", "")))
     selected_block["text"] = str(selected_block.get("ai_text", ""))
     selected_block["approved"] = False
     selected_block["approved_at"] = None
@@ -898,7 +899,7 @@ def _chunk_user_prompt(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-24
-    @version    0.1.0
+    @version    0.2.0
     """
     return prompt_template_service.render_prompt(
         "speech_blocks_user",
@@ -906,11 +907,6 @@ def _chunk_user_prompt(
             "source_language": narrator_definition_service.narrator_language_label(source_language),
             "chunk_id": str(source_chunk.get("chunk_id", "")),
             "chunk_text": str(source_chunk.get("text", "")),
-            "source_units_json": json.dumps(
-                _split_source_text_units(str(source_chunk.get("text", ""))),
-                indent=2,
-                ensure_ascii=False,
-            ),
             "speaker_catalog_json": json.dumps(list(speaker_catalog.values()), indent=2, ensure_ascii=False),
         },
     )
@@ -932,9 +928,10 @@ def _normalize_chunk_blocks(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.4.0
+    @version    0.5.0
     """
     chunk_id = str(source_chunk.get("chunk_id", "")).strip()
+    chunk_text = str(source_chunk.get("text", ""))
     candidate_blocks = response_payload.get("speech_blocks", response_payload.get("blocks", []))
     if not isinstance(candidate_blocks, list):
         candidate_blocks = []
@@ -947,29 +944,38 @@ def _normalize_chunk_blocks(
         if str(ai_block.get("text", "")).strip():
             ai_blocks.append(ai_block)
 
-    source_units = _split_source_text_units(str(source_chunk.get("text", "")))
-    if source_units:
-        return _normalize_source_unit_blocks(
-            chunk_id,
-            source_units,
-            ai_blocks,
-            speaker_catalog,
-            source_language,
+    normalized_blocks: list[SpeechBlockPayload] = []
+    if not ai_blocks:
+        fallback_flags = ["ambiguous_speaker", "source_coverage_mismatch"]
+        return (
+            [
+                _build_speech_block_payload(
+                    chunk_id,
+                    1,
+                    source_language,
+                    SPEAKER_KIND_NARRATOR,
+                    _NARRATOR_SPEAKER_ID,
+                    _NARRATOR_DISPLAY_NAME,
+                    CONTENT_KIND_NARRATION,
+                    chunk_text,
+                    fallback_flags,
+                    source_text=chunk_text,
+                )
+            ],
+            [
+                {
+                    "chunk_id": chunk_id,
+                    "reason": "The model response did not contain usable Speech Blocks and fell back to narrator.",
+                }
+            ],
         )
 
-    normalized_blocks: list[SpeechBlockPayload] = []
-    warning_entries: list[dict[str, object]] = []
+    warning_entries = _validate_ai_block_source_spans(chunk_id, chunk_text, ai_blocks)
     for local_sequence_index, ai_block in enumerate(ai_blocks, start=1):
         text = str(ai_block.get("text", ""))
         content_kind = str(ai_block.get("content_kind", CONTENT_KIND_NARRATION))
         warning_flags = list(ai_block.get("warning_flags", []))
-        if "ambiguous_speaker" in warning_flags:
-            warning_entries.append(
-                {
-                    "chunk_id": chunk_id,
-                    "reason": "Speaker attribution was ambiguous and fell back to narrator.",
-                }
-            )
+        source_text = str(ai_block.get("source_text", text))
         normalized_blocks.append(
             _build_speech_block_payload(
                 chunk_id,
@@ -981,28 +987,11 @@ def _normalize_chunk_blocks(
                 content_kind,
                 text,
                 warning_flags,
+                source_text=source_text,
             )
         )
 
-    if normalized_blocks:
-        return normalized_blocks, warning_entries
-
-    return (
-        [
-            _build_speech_block_payload(
-                chunk_id,
-                1,
-                source_language,
-                SPEAKER_KIND_NARRATOR,
-                _NARRATOR_SPEAKER_ID,
-                _NARRATOR_DISPLAY_NAME,
-                CONTENT_KIND_NARRATION,
-                str(source_chunk.get("text", "")),
-                ["ambiguous_speaker"],
-            )
-        ],
-        [{"chunk_id": chunk_id, "reason": "The model response could not be validated and fell back to narrator."}],
-    )
+    return normalized_blocks, warning_entries
 
 
 def _build_speech_block_payload(
@@ -1015,6 +1004,7 @@ def _build_speech_block_payload(
     content_kind: str,
     text: str,
     warning_flags: list[str],
+    source_text: str | None = None,
 ) -> SpeechBlockPayload:
     """
     @brief      Build one persisted Speech Blocks payload with AI baseline fields.
@@ -1027,11 +1017,12 @@ def _build_speech_block_payload(
     @param[in]  content_kind Current content-kind token.
     @param[in]  text Current block text.
     @param[in]  warning_flags Current warning flags.
+    @param[in]  source_text Exact source text span represented by this block.
     @return     Persisted Speech Blocks payload.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-24
-    @version    0.4.0
+    @version    0.5.0
     """
     normalized_content_kind = _normalize_content_kind(content_kind)
     normalized_warning_flags = _normalize_warning_flags(warning_flags)
@@ -1045,6 +1036,7 @@ def _build_speech_block_payload(
         normalized_speaker_id = str(speaker_id).strip() or _NARRATOR_SPEAKER_ID
         normalized_speaker_display_name = str(speaker_display_name).strip() or _NARRATOR_DISPLAY_NAME
     normalized_text = str(text)
+    normalized_source_text = normalized_text if source_text is None else str(source_text)
     return {
         "speech_block_id": _speech_block_id(chunk_id, sequence_index),
         "sequence_index": int(sequence_index),
@@ -1054,11 +1046,13 @@ def _build_speech_block_payload(
         "speaker_id": normalized_speaker_id,
         "speaker_display_name": normalized_speaker_display_name,
         "content_kind": normalized_content_kind,
+        "source_text": normalized_source_text,
         "text": normalized_text,
         "ai_speaker_kind": normalized_speaker_kind,
         "ai_speaker_id": normalized_speaker_id,
         "ai_speaker_display_name": normalized_speaker_display_name,
         "ai_content_kind": normalized_content_kind,
+        "ai_source_text": normalized_source_text,
         "ai_text": normalized_text,
         "warning_flags": normalized_warning_flags,
         "approved": False,
@@ -1078,10 +1072,14 @@ def _normalize_ai_block(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.2.0
+    @version    0.5.0
     """
     content_kind = _normalize_content_kind(candidate_block.get("content_kind", CONTENT_KIND_NARRATION))
-    text = _normalize_block_text(str(candidate_block.get("text", "")), content_kind)
+    source_text = str(candidate_block.get("source_text", candidate_block.get("text", "")))
+    raw_text = str(candidate_block.get("text", source_text))
+    if not raw_text.strip():
+        raw_text = source_text
+    text = _normalize_block_text(raw_text, content_kind)
     if _is_operation_content_kind(content_kind):
         speaker_entry = _operation_speaker_entry(content_kind)
         return {
@@ -1089,6 +1087,7 @@ def _normalize_ai_block(
             "speaker_id": str(speaker_entry["speaker_id"]),
             "speaker_display_name": str(speaker_entry["display_name"]),
             "content_kind": content_kind,
+            "source_text": source_text,
             "text": text,
             "warning_flags": _normalize_warning_flags(candidate_block.get("warning_flags")),
         }
@@ -1102,9 +1101,71 @@ def _normalize_ai_block(
         "speaker_id": str(speaker_entry.get("speaker_id", _NARRATOR_SPEAKER_ID)),
         "speaker_display_name": str(speaker_entry.get("display_name", _NARRATOR_DISPLAY_NAME)),
         "content_kind": content_kind,
+        "source_text": source_text,
         "text": text,
         "warning_flags": warning_flags,
     }
+
+
+def _validate_ai_block_source_spans(
+    chunk_id: str,
+    chunk_text: str,
+    ai_blocks: list[dict[str, object]],
+) -> list[dict[str, object]]:
+    """
+    @brief      Validate AI-owned source spans without replacing model block boundaries.
+    @param[in]  chunk_id Source chunk identifier.
+    @param[in]  chunk_text Full source chunk text.
+    @param[in]  ai_blocks Normalized AI blocks to validate and annotate.
+    @return     Human-readable warning entries for the chunk.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-26
+    @version    0.1.0
+    """
+    warning_entries: list[dict[str, object]] = []
+    cursor = 0
+    for ai_block in ai_blocks:
+        source_text = str(ai_block.get("source_text", ""))
+        text = str(ai_block.get("text", ""))
+        content_kind = str(ai_block.get("content_kind", CONTENT_KIND_NARRATION))
+        warning_flags = list(ai_block.get("warning_flags", []))
+
+        if not source_text.strip():
+            _append_warning_flag(warning_flags, "source_coverage_mismatch")
+        else:
+            ordered_index = chunk_text.find(source_text, cursor)
+            if ordered_index >= 0:
+                if chunk_text[cursor:ordered_index].strip():
+                    _append_warning_flag(warning_flags, "source_coverage_mismatch")
+                cursor = ordered_index + len(source_text)
+            elif chunk_text.find(source_text) >= 0:
+                _append_warning_flag(warning_flags, "source_order_mismatch")
+            else:
+                _append_warning_flag(warning_flags, "source_coverage_mismatch")
+
+        expected_audio_text = _normalize_block_text(source_text, content_kind)
+        if _block_text_key(text) != _block_text_key(expected_audio_text):
+            _append_warning_flag(warning_flags, "model_text_modified")
+
+        ai_block["warning_flags"] = warning_flags
+
+    if ai_blocks and chunk_text[cursor:].strip():
+        warning_flags = list(ai_blocks[-1].get("warning_flags", []))
+        _append_warning_flag(warning_flags, "source_coverage_mismatch")
+        ai_blocks[-1]["warning_flags"] = warning_flags
+
+    if _block_text_key(" ".join(str(block.get("source_text", "")) for block in ai_blocks)) != _block_text_key(
+        chunk_text
+    ):
+        warning_flags = list(ai_blocks[-1].get("warning_flags", []))
+        _append_warning_flag(warning_flags, "source_coverage_mismatch")
+        ai_blocks[-1]["warning_flags"] = warning_flags
+
+    for ai_block in ai_blocks:
+        for warning_flag in _normalize_warning_flags(ai_block.get("warning_flags")):
+            warning_entries.append({"chunk_id": chunk_id, "reason": _speech_block_warning_reason(warning_flag)})
+    return warning_entries
 
 
 def _normalize_source_unit_blocks(
@@ -1422,6 +1483,24 @@ def _append_warning_flag(warning_flags: list[str], warning_flag: str) -> None:
         warning_flags.append(warning_flag)
 
 
+def _speech_block_warning_reason(warning_flag: str) -> str:
+    """
+    @brief      Resolve a report note for one Speech Blocks warning flag.
+    @param[in]  warning_flag Warning flag token.
+    @return     Human-readable warning reason.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-26
+    @version    0.1.0
+    """
+    return {
+        "ambiguous_speaker": "Speaker attribution was ambiguous and fell back to narrator.",
+        "source_coverage_mismatch": "Model source spans do not fully cover the chunk in reading order.",
+        "source_order_mismatch": "Model source spans are not in chunk reading order.",
+        "model_text_modified": "Model audio text differs from the source span beyond delimiter cleanup.",
+    }.get(str(warning_flag).strip(), str(warning_flag).strip() or "Speech Block warning.")
+
+
 def _normalize_block_text(text: str, content_kind: str) -> str:
     """
     @brief      Normalize one Speech Blocks text span without changing wording.
@@ -1431,13 +1510,20 @@ def _normalize_block_text(text: str, content_kind: str) -> str:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.1.0
+    @version    0.2.0
     """
     if content_kind != CONTENT_KIND_DIALOGUE:
         return text
-    if len(text) >= 2 and text.startswith('"') and text.endswith('"'):
-        return text[1:-1]
-    return text
+    normalized_text = text.strip()
+    normalized_text = re.sub(r"^[-–—]\s+", "", normalized_text, count=1)
+    for opening_quote, closing_quote in (('"', '"'), ("“", "”"), ("‘", "’"), ("«", "»")):
+        if (
+            len(normalized_text) >= 2
+            and normalized_text.startswith(opening_quote)
+            and normalized_text.endswith(closing_quote)
+        ):
+            return normalized_text[1:-1].strip()
+    return normalized_text
 
 
 def _normalize_content_kind(value: object) -> str:
@@ -1585,6 +1671,7 @@ def _normalize_persisted_speech_block(payload: dict[str, object]) -> SpeechBlock
         speaker_id = str(operation_entry["speaker_id"])
         speaker_display_name = str(operation_entry["display_name"])
     text = str(payload.get("text", ""))
+    source_text = str(payload.get("source_text", text))
     ai_speaker_kind = str(payload.get("ai_speaker_kind", speaker_kind)).strip() or speaker_kind
     ai_speaker_id = str(payload.get("ai_speaker_id", speaker_id)).strip() or speaker_id
     ai_speaker_display_name = str(payload.get("ai_speaker_display_name", speaker_display_name)).strip()
@@ -1596,6 +1683,7 @@ def _normalize_persisted_speech_block(payload: dict[str, object]) -> SpeechBlock
         ai_speaker_kind = str(operation_entry["speaker_kind"])
         ai_speaker_id = str(operation_entry["speaker_id"])
         ai_speaker_display_name = str(operation_entry["display_name"])
+    ai_source_text = str(payload.get("ai_source_text", source_text))
     ai_text = str(payload.get("ai_text", text))
     return {
         "speech_block_id": _speech_block_id(chunk_id, sequence_index),
@@ -1606,11 +1694,13 @@ def _normalize_persisted_speech_block(payload: dict[str, object]) -> SpeechBlock
         "speaker_id": speaker_id,
         "speaker_display_name": speaker_display_name,
         "content_kind": content_kind,
+        "source_text": source_text,
         "text": text,
         "ai_speaker_kind": ai_speaker_kind,
         "ai_speaker_id": ai_speaker_id,
         "ai_speaker_display_name": ai_speaker_display_name,
         "ai_content_kind": ai_content_kind,
+        "ai_source_text": ai_source_text,
         "ai_text": ai_text,
         "warning_flags": _normalize_warning_flags(payload.get("warning_flags")),
         "approved": bool(payload.get("approved", False)),
@@ -1964,7 +2054,7 @@ def _manual_inserted_speech_block(chunk_id: str, sequence_index: int, speech_blo
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.1.0
+    @version    0.2.0
     """
     return {
         "speech_block_id": speech_block_id,
@@ -1975,11 +2065,13 @@ def _manual_inserted_speech_block(chunk_id: str, sequence_index: int, speech_blo
         "speaker_id": _NARRATOR_SPEAKER_ID,
         "speaker_display_name": _NARRATOR_DISPLAY_NAME,
         "content_kind": CONTENT_KIND_NARRATION,
+        "source_text": "",
         "text": "",
         "ai_speaker_kind": SPEAKER_KIND_NARRATOR,
         "ai_speaker_id": _NARRATOR_SPEAKER_ID,
         "ai_speaker_display_name": _NARRATOR_DISPLAY_NAME,
         "ai_content_kind": CONTENT_KIND_NARRATION,
+        "ai_source_text": "",
         "ai_text": "",
         "warning_flags": [],
         "approved": False,

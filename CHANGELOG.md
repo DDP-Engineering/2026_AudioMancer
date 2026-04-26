@@ -8,6 +8,34 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
 
 All notable changes to this project will be documented in this file.
 
+## [0.30.0] - 2026-04-26
+
+### Added
+
+- added AI-first Speech Blocks source-span validation with warning flags for
+  source coverage mismatches, source order mismatches, and model text changes
+  beyond allowed dialogue delimiter cleanup
+- added persisted `source_text` and `ai_source_text` traceability fields to
+  Speech Blocks so operators can review the exact source span behind each audio
+  text block
+- added Speech Blocks test coverage for straight quotes, curly quotes, French
+  guillemets, dash-led dialogue, invalid speakers, invalid source spans, and
+  French multi-block generation flow
+
+### Changed
+
+- changed Speech Blocks generation so AI output owns the final block boundaries
+  while deterministic code normalizes speakers, content kinds, delimiters, IDs,
+  and warnings
+- changed the Speech Blocks prompt contract to split full chunks directly and
+  explicitly support quoted dialogue, French guillemets, and dash-led dialogue
+- changed dialogue text cleanup to remove straight quote pairs, curly quote
+  pairs, French guillemet pairs, or one leading dialogue dash without rewriting
+  source wording
+- updated Speech Blocks implementation and component documentation to describe
+  the AI-first splitter, source-span validation, and persisted traceability
+- package version updated to `0.30.0`
+
 ## [0.29.0] - 2026-04-25
 
 ### Added

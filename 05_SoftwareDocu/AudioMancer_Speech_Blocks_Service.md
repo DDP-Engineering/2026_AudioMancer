@@ -12,23 +12,29 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
 Implements the current approval-driven `Speech Blocks` workflow in
 `AudioMancer`.
 
-It converts the chunk text selected through the Narator Voice language into ordered
-speaker-attributed speech blocks, gives the operator a focused review and edit
-surface, and persists the approved results as root-level Speech Blocks
-artifacts.
+It converts the chunk text selected through the Narator Voice language into
+AI-owned ordered speaker-attributed speech blocks, gives the operator a focused
+review and edit surface, and persists the approved results as root-level Speech
+Blocks artifacts.
 
 ## 2. Responsibilities
 
 - resolve the active source language from `project.json.selected_voice_language`
 - choose canonical chunking text or approved translated text as the source
 - send one AI request per chunk using the selected AI profile
-- normalize model output into the new persisted speech-block schema only
+- normalize model output into the new persisted speech-block schema only, with
+  the model owning final block boundaries
 - assign speech block IDs in `CCCC-BBBBBB` format, for example
   `0001-000001`
-- persist AI-extracted baseline speaker, content kind, and text values beside
-  the current editable values
-- preserve source wording exactly except for stripping one outer pair of
-  dialogue quotes when they are delimiters
+- persist AI-extracted baseline source span, speaker, content kind, and text
+  values beside the current editable values
+- preserve exact `source_text` spans for review traceability
+- validate model source spans for source coverage, source order, and text edits
+  without replacing AI block boundaries
+- preserve source wording exactly except for stripping dialogue delimiters from
+  audio text
+- support straight quotes, curly quotes, French guillemets, and dash-led
+  dialogue
 - fall back to `narrator` when speaker attribution is ambiguous or invalid
 - expose speaker choices from `Narrator` plus discovered characters
 - expose content kinds `Narration`, `Dialogue`, `Background Noise`, `Pause`,
@@ -90,9 +96,12 @@ High-level flow:
    prompt files, restores resumable state when the saved checkpoint still
    matches the current source snapshot and AI profile, and processes one chunk
    per model request.
-5. Each response is normalized into new speech-block payloads, including AI
-   baseline values, editable current values, warning flags, approval fields,
-   chunk-local sequence indexes, and `CCCC-BBBBBB` IDs.
+5. Each response is normalized into new speech-block payloads, including exact
+   source spans, AI baseline values, editable current values, warning flags,
+   approval fields, chunk-local sequence indexes, and `CCCC-BBBBBB` IDs.
+   Deterministic validation annotates suspicious spans with warning flags such
+   as `source_coverage_mismatch`, `source_order_mismatch`, and
+   `model_text_modified`.
 6. The current `speech_blocks_report.json`, `speech_blocks_state.json`, and
    transaction log metadata are rewritten after every chunk so cancellation can
    resume from the next chunk.
@@ -169,11 +178,13 @@ Persisted speech-block payloads use:
 - `speaker_id`
 - `speaker_display_name`
 - `content_kind`
+- `source_text`
 - `text`
 - `ai_speaker_kind`
 - `ai_speaker_id`
 - `ai_speaker_display_name`
 - `ai_content_kind`
+- `ai_source_text`
 - `ai_text`
 - `warning_flags`
 - `approved`
@@ -188,15 +199,20 @@ Current invariants:
 - `BBBBBB` is the chunk-local `sequence_index`
 - canonical book order is source chunk order, then chunk-local
   `sequence_index`
+- AI output is the primary Speech Block list; deterministic helpers validate
+  and annotate the model result but do not force quote-based boundaries
 - `speaker_id` must be `narrator` or one discovered `character_id`
 - for metadata-only operation kinds, `speaker_kind` is `operation`,
   `speaker_id` is the content-kind token, and `speaker_display_name` is the
   operation name shown in the Speech Blocks list
 - unrecognized or ambiguous speakers fall back to narrator and add
   `ambiguous_speaker`
-- narration text is stored unchanged
-- dialogue text strips only one outer pair of straight double quotes when both
-  ends are quotes
+- `source_text` stores the exact chunk span represented by the block
+- narration text is stored as model audio text after validation against
+  `source_text`
+- dialogue text strips only dialogue delimiters: one outer straight quote pair,
+  one outer curly quote pair, one French guillemet pair, or one leading dialogue
+  dash
 - `background_noise`, `pause`, and `indication` are metadata-only content kinds
   for Audio Blocks
 - pause text may include a millisecond duration; when no valid duration exists,
@@ -206,8 +222,8 @@ Current invariants:
 - manual delete removes only the selected block and leaves the source chunk in
   the chunk list even when no Speech Blocks remain for that chunk
 - warning flags are cleared when the operator starts editing a block
-- resetting one edited block restores only the AI baseline speaker, content
-  kind, and text while preserving the current warning-cleared state
+- resetting one edited block restores only the AI baseline source span, speaker,
+  content kind, and text while preserving the current warning-cleared state
 - generation creates unapproved blocks
 - Speech Blocks is complete only when every block is approved
 
@@ -367,9 +383,8 @@ uv run ruff format <changed_python_files>
 
 ## 10. Limitations And Future Work
 
-- contiguous source coverage is delegated to the model output plus narrator
-  fallback; the service does not currently verify exact span coverage against
-  the source chunk
+- source-span validation is deterministic and warning-based; suspicious AI
+  splits remain editable instead of being automatically replaced
 - speaker attribution uses only the discovered-character catalog plus narrator
 - prosody and detailed delivery hints are not stored
 - `Pause` and `Background Noise` are metadata-only placeholders until

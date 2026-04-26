@@ -15,7 +15,7 @@
          chunk-based generation.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-24
-@version 0.5.0
+@version 0.6.0
 """
 
 # IMPORTS
@@ -143,12 +143,14 @@ def test_start_or_continue_generation_creates_artifacts_and_normalizes_blocks(mo
                     {
                         "speaker_id": "narrator",
                         "content_kind": "narration",
-                        "text": "Narration. ",
+                        "source_text": "Narration. ",
+                        "text": "Narration.",
                         "warning_flags": [],
                     },
                     {
                         "speaker_id": "maria",
                         "content_kind": "dialogue",
+                        "source_text": '"Hello there."',
                         "text": '"Hello there."',
                         "warning_flags": [],
                     },
@@ -160,11 +162,19 @@ def test_start_or_continue_generation_creates_artifacts_and_normalizes_blocks(mo
             "payload": {
                 "speech_blocks": [
                     {
+                        "speaker_id": "narrator",
+                        "content_kind": "narration",
+                        "source_text": "Maria smiled. ",
+                        "text": "Maria smiled.",
+                        "warning_flags": [],
+                    },
+                    {
                         "speaker_id": "unknown_speaker",
                         "content_kind": "dialogue",
+                        "source_text": '"Welcome."',
                         "text": '"Welcome."',
                         "warning_flags": [],
-                    }
+                    },
                 ]
             },
             "usage": {"input_tokens": 20, "output_tokens": 10, "total_tokens": 30, "usage_available": True},
@@ -191,9 +201,12 @@ def test_start_or_continue_generation_creates_artifacts_and_normalizes_blocks(mo
     ]
     assert [block["approved"] for block in speech_blocks] == [False, False, False, False]
     assert speech_blocks[0]["text"] == "Narration."
+    assert speech_blocks[0]["source_text"] == "Narration. "
     assert speech_blocks[0]["ai_text"] == "Narration."
+    assert speech_blocks[0]["ai_source_text"] == "Narration. "
     assert speech_blocks[1]["speaker_id"] == "maria"
     assert speech_blocks[1]["text"] == "Hello there."
+    assert speech_blocks[1]["source_text"] == '"Hello there."'
     assert speech_blocks[2]["speaker_id"] == "narrator"
     assert speech_blocks[2]["content_kind"] == "narration"
     assert speech_blocks[2]["text"] == "Maria smiled."
@@ -469,9 +482,17 @@ def test_regenerate_selected_chunk_replaces_chunk_and_renumbers_following_blocks
                     {
                         "speaker_id": "narrator",
                         "content_kind": "narration",
-                        "text": 'Narration. "Hello there."',
+                        "source_text": "Narration. ",
+                        "text": "Narration.",
                         "warning_flags": [],
-                    }
+                    },
+                    {
+                        "speaker_id": "narrator",
+                        "content_kind": "dialogue",
+                        "source_text": '"Hello there."',
+                        "text": '"Hello there."',
+                        "warning_flags": [],
+                    },
                 ]
             },
             "usage": {"input_tokens": 5, "output_tokens": 4, "total_tokens": 9, "usage_available": True},
@@ -496,14 +517,14 @@ def test_regenerate_selected_chunk_replaces_chunk_and_renumbers_following_blocks
     assert report["total_block_count"] == 3
 
 
-def test_normalize_chunk_blocks_preserves_dialogue_and_attribution_boundaries() -> None:
+def test_normalize_chunk_blocks_preserves_ai_dialogue_and_attribution_boundaries() -> None:
     """
-    @brief      Verify deterministic source spans prevent dialogue and attribution text from being merged.
+    @brief      Verify AI source spans drive dialogue and attribution boundaries.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.1.0
+    @version    0.2.0
     """
     speaker_catalog = {
         "narrator": {
@@ -530,25 +551,50 @@ def test_normalize_chunk_blocks_preserves_dialogue_and_attribution_boundaries() 
             {
                 "speaker_id": "narrator",
                 "content_kind": "narration",
+                "source_text": "Ottmar Drenthe watched the screen.\n",
                 "text": "Ottmar Drenthe watched the screen.",
                 "warning_flags": [],
             },
             {
                 "speaker_id": "ottmar_drenthe",
                 "content_kind": "dialogue",
-                "text": "Different how?",
-                "warning_flags": [],
-            },
-            {
-                "speaker_id": "ottmar_drenthe",
-                "content_kind": "dialogue",
-                "text": "I am Drenthe.",
+                "source_text": '"Different how?"',
+                "text": '"Different how?"',
                 "warning_flags": [],
             },
             {
                 "speaker_id": "narrator",
                 "content_kind": "narration",
-                "text": "Sure, absolutely, his agent said. But I have an offer.",
+                "source_text": " Drenthe snapped. ",
+                "text": "Drenthe snapped.",
+                "warning_flags": [],
+            },
+            {
+                "speaker_id": "ottmar_drenthe",
+                "content_kind": "dialogue",
+                "source_text": '"I am Drenthe."',
+                "text": '"I am Drenthe."',
+                "warning_flags": [],
+            },
+            {
+                "speaker_id": "narrator",
+                "content_kind": "dialogue",
+                "source_text": '"Sure, absolutely,"',
+                "text": '"Sure, absolutely,"',
+                "warning_flags": ["ambiguous_speaker"],
+            },
+            {
+                "speaker_id": "narrator",
+                "content_kind": "narration",
+                "source_text": " his agent said. ",
+                "text": "his agent said.",
+                "warning_flags": [],
+            },
+            {
+                "speaker_id": "narrator",
+                "content_kind": "dialogue",
+                "source_text": '"But I have an offer."',
+                "text": '"But I have an offer."',
                 "warning_flags": ["ambiguous_speaker"],
             },
         ]
@@ -617,6 +663,7 @@ def test_normalize_chunk_blocks_resolves_unique_speaker_suffix_alias() -> None:
                 {
                     "speaker_id": "drenthe",
                     "content_kind": "dialogue",
+                    "source_text": '"Where is the engineer now?"',
                     "text": "Where is the engineer now?",
                     "warning_flags": ["ambiguous_speaker"],
                 }
@@ -632,6 +679,144 @@ def test_normalize_chunk_blocks_resolves_unique_speaker_suffix_alias() -> None:
     assert len(warnings) == 1
 
 
+def test_normalize_chunk_blocks_supports_french_guillemets() -> None:
+    """
+    @brief      Verify French guillemet dialogue keeps exact source text and clean audio text.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-26
+    @version    0.1.0
+    """
+    speaker_catalog = {"narrator": _narrator_catalog_entry()}
+
+    blocks, warnings = speech_blocks_service._normalize_chunk_blocks(  # noqa: SLF001
+        {"chunk_id": "chunk-0001", "text": "Il dit : « Bonjour. » Elle sourit."},
+        {
+            "speech_blocks": [
+                {
+                    "speaker_id": "narrator",
+                    "content_kind": "narration",
+                    "source_text": "Il dit : ",
+                    "text": "Il dit :",
+                    "warning_flags": [],
+                },
+                {
+                    "speaker_id": "narrator",
+                    "content_kind": "dialogue",
+                    "source_text": "« Bonjour. »",
+                    "text": "« Bonjour. »",
+                    "warning_flags": ["ambiguous_speaker"],
+                },
+                {
+                    "speaker_id": "narrator",
+                    "content_kind": "narration",
+                    "source_text": " Elle sourit.",
+                    "text": "Elle sourit.",
+                    "warning_flags": [],
+                },
+            ]
+        },
+        speaker_catalog,
+        "fr",
+    )
+
+    assert [block["source_text"] for block in blocks] == ["Il dit : ", "« Bonjour. »", " Elle sourit."]
+    assert [block["text"] for block in blocks] == ["Il dit :", "Bonjour.", "Elle sourit."]
+    assert blocks[1]["content_kind"] == speech_blocks_service.CONTENT_KIND_DIALOGUE
+    assert warnings == [
+        {
+            "chunk_id": "chunk-0001",
+            "reason": "Speaker attribution was ambiguous and fell back to narrator.",
+        }
+    ]
+
+
+def test_normalize_chunk_blocks_supports_dash_dialogue() -> None:
+    """
+    @brief      Verify dash-led dialogue removes only the leading dash from audio text.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-26
+    @version    0.1.0
+    """
+    speaker_catalog = {"narrator": _narrator_catalog_entry()}
+
+    blocks, _warnings = speech_blocks_service._normalize_chunk_blocks(  # noqa: SLF001
+        {"chunk_id": "chunk-0001", "text": "- Bonjour, dit-elle. - Venez ici."},
+        {
+            "speech_blocks": [
+                {
+                    "speaker_id": "narrator",
+                    "content_kind": "dialogue",
+                    "source_text": "- Bonjour, dit-elle.",
+                    "text": "- Bonjour, dit-elle.",
+                    "warning_flags": ["ambiguous_speaker"],
+                },
+                {
+                    "speaker_id": "narrator",
+                    "content_kind": "dialogue",
+                    "source_text": " - Venez ici.",
+                    "text": "- Venez ici.",
+                    "warning_flags": ["ambiguous_speaker"],
+                },
+            ]
+        },
+        speaker_catalog,
+        "fr",
+    )
+
+    assert [block["source_text"] for block in blocks] == ["- Bonjour, dit-elle.", " - Venez ici."]
+    assert [block["text"] for block in blocks] == ["Bonjour, dit-elle.", "Venez ici."]
+    assert [block["speech_block_id"] for block in blocks] == ["0001-000001", "0001-000002"]
+
+
+def test_normalize_chunk_blocks_flags_invalid_source_spans_and_modified_text() -> None:
+    """
+    @brief      Verify source-span validation annotates suspicious AI output.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-26
+    @version    0.1.0
+    """
+    speaker_catalog = {"narrator": _narrator_catalog_entry()}
+
+    blocks, warnings = speech_blocks_service._normalize_chunk_blocks(  # noqa: SLF001
+        {"chunk_id": "chunk-0001", "text": "A. B. C."},
+        {
+            "speech_blocks": [
+                {
+                    "speaker_id": "narrator",
+                    "content_kind": "narration",
+                    "source_text": "B.",
+                    "text": "B.",
+                    "warning_flags": [],
+                },
+                {
+                    "speaker_id": "narrator",
+                    "content_kind": "narration",
+                    "source_text": "A.",
+                    "text": "Altered.",
+                    "warning_flags": [],
+                },
+            ]
+        },
+        speaker_catalog,
+        "en",
+    )
+
+    assert "source_coverage_mismatch" in blocks[0]["warning_flags"]
+    assert "source_order_mismatch" in blocks[1]["warning_flags"]
+    assert "model_text_modified" in blocks[1]["warning_flags"]
+    assert {warning["reason"] for warning in warnings} >= {
+        "Model source spans do not fully cover the chunk in reading order.",
+        "Model source spans are not in chunk reading order.",
+        "Model audio text differs from the source span beyond delimiter cleanup.",
+    }
+
+
 def test_normalize_block_text_only_strips_wrapping_dialogue_quotes() -> None:
     """
     @brief      Verify dialogue quote stripping removes only one outer quote pair for dialogue spans.
@@ -644,6 +829,18 @@ def test_normalize_block_text_only_strips_wrapping_dialogue_quotes() -> None:
     assert (
         speech_blocks_service._normalize_block_text('"Hello there."', "dialogue")  # noqa: SLF001
         == "Hello there."
+    )
+    assert (
+        speech_blocks_service._normalize_block_text("“Hello there.”", "dialogue")  # noqa: SLF001
+        == "Hello there."
+    )
+    assert (
+        speech_blocks_service._normalize_block_text("« Bonjour. »", "dialogue")  # noqa: SLF001
+        == "Bonjour."
+    )
+    assert (
+        speech_blocks_service._normalize_block_text("- Bonjour.", "dialogue")  # noqa: SLF001
+        == "Bonjour."
     )
     assert (
         speech_blocks_service._normalize_block_text('He said "Hello there."', "dialogue")  # noqa: SLF001
@@ -681,7 +878,8 @@ def test_start_or_continue_generation_resumes_from_next_chunk(monkeypatch, tmp_p
             "speaker_id": "narrator",
             "speaker_display_name": "Narrator",
             "content_kind": "narration",
-            "text": "Narration. ",
+            "source_text": "Narration. ",
+            "text": "Narration.",
             "warning_flags": [],
         }
     ]
@@ -736,9 +934,17 @@ def test_start_or_continue_generation_resumes_from_next_chunk(monkeypatch, tmp_p
                         {
                             "speaker_id": "narrator",
                             "content_kind": "narration",
-                            "text": 'Maria smiled. "Welcome."',
+                            "source_text": "Maria smiled. ",
+                            "text": "Maria smiled.",
                             "warning_flags": [],
-                        }
+                        },
+                        {
+                            "speaker_id": "narrator",
+                            "content_kind": "dialogue",
+                            "source_text": '"Welcome."',
+                            "text": '"Welcome."',
+                            "warning_flags": [],
+                        },
                     ]
                 },
                 "usage": {"input_tokens": 10, "output_tokens": 5, "total_tokens": 15, "usage_available": True},
@@ -757,6 +963,113 @@ def test_start_or_continue_generation_resumes_from_next_chunk(monkeypatch, tmp_p
     assert speech_blocks[2]["text"] == "Welcome."
     assert report["processed_chunk_count"] == 2
     assert report["token_usage"]["total_tokens"] == 22
+
+
+def test_start_generation_preserves_french_dash_and_guillemet_source_spans(monkeypatch, tmp_path) -> None:
+    """
+    @brief      Verify generation can persist multiple French guillemet and dash Speech Blocks per chunk.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-26
+    @version    0.1.0
+    """
+    project_root, manifest = _create_chunked_project(tmp_path, "SpeechBlocksFrenchGeneration")
+    manifest["original_language"] = "en"
+    project_workspace_service.save_manifest(manifest, project_root)
+    character_voices_service.save_selected_voice_language(project_root, "fr")
+    _write_translation_artifacts(
+        project_root,
+        approved_chunk_count=2,
+        target_language="fr",
+        translated_chunks=[
+            {"chunk_id": "chunk-0001", "translated_text": "Il dit : « Bonjour. » Elle sourit."},
+            {"chunk_id": "chunk-0002", "translated_text": "- Bonjour, dit-elle. - Venez ici."},
+        ],
+    )
+    monkeypatch.setattr(speech_blocks_service.prompt_template_service, "validate_required_prompts", lambda _names: None)
+    monkeypatch.setattr(
+        speech_blocks_service.prompt_template_service,
+        "render_prompt",
+        lambda _name, variables: f"prompt {variables}",
+    )
+    responses = [
+        {
+            "payload": {
+                "speech_blocks": [
+                    {
+                        "speaker_id": "narrator",
+                        "content_kind": "narration",
+                        "source_text": "Il dit : ",
+                        "text": "Il dit :",
+                        "warning_flags": [],
+                    },
+                    {
+                        "speaker_id": "narrator",
+                        "content_kind": "dialogue",
+                        "source_text": "« Bonjour. »",
+                        "text": "« Bonjour. »",
+                        "warning_flags": ["ambiguous_speaker"],
+                    },
+                    {
+                        "speaker_id": "narrator",
+                        "content_kind": "narration",
+                        "source_text": " Elle sourit.",
+                        "text": "Elle sourit.",
+                        "warning_flags": [],
+                    },
+                ]
+            },
+            "usage": {"input_tokens": 10, "output_tokens": 5, "total_tokens": 15, "usage_available": True},
+        },
+        {
+            "payload": {
+                "speech_blocks": [
+                    {
+                        "speaker_id": "narrator",
+                        "content_kind": "dialogue",
+                        "source_text": "- Bonjour, dit-elle.",
+                        "text": "- Bonjour, dit-elle.",
+                        "warning_flags": ["ambiguous_speaker"],
+                    },
+                    {
+                        "speaker_id": "narrator",
+                        "content_kind": "dialogue",
+                        "source_text": " - Venez ici.",
+                        "text": "- Venez ici.",
+                        "warning_flags": ["ambiguous_speaker"],
+                    },
+                ]
+            },
+            "usage": {"input_tokens": 10, "output_tokens": 5, "total_tokens": 15, "usage_available": True},
+        },
+    ]
+    monkeypatch.setattr(
+        speech_blocks_service.llm_provider_service,
+        "chat_json",
+        lambda *_args, **_kwargs: responses.pop(0),
+    )
+
+    report = speech_blocks_service.start_or_continue_generation(project_root, manifest, _profile_payload())
+
+    speech_blocks = speech_blocks_service.load_speech_blocks(project_root)
+    assert [block["speech_block_id"] for block in speech_blocks] == [
+        "0001-000001",
+        "0001-000002",
+        "0001-000003",
+        "0002-000001",
+        "0002-000002",
+    ]
+    assert {block["source_language"] for block in speech_blocks} == {"fr"}
+    assert speech_blocks[1]["source_text"] == "« Bonjour. »"
+    assert speech_blocks[1]["text"] == "Bonjour."
+    assert speech_blocks[3]["source_text"] == "- Bonjour, dit-elle."
+    assert speech_blocks[3]["text"] == "Bonjour, dit-elle."
+    assert speech_blocks[4]["source_text"] == " - Venez ici."
+    assert speech_blocks[4]["text"] == "Venez ici."
+    assert report["total_block_count"] == 5
 
 
 def _create_chunked_project(tmp_path, name: str):
@@ -848,11 +1161,13 @@ def _seed_review_speech_blocks(project_root) -> None:
             "speaker_id": "narrator",
             "speaker_display_name": "Narrator",
             "content_kind": speech_blocks_service.CONTENT_KIND_DIALOGUE,
+            "source_text": '"Hello."',
             "text": "Hello.",
             "ai_speaker_kind": speech_blocks_service.SPEAKER_KIND_NARRATOR,
             "ai_speaker_id": "narrator",
             "ai_speaker_display_name": "Narrator",
             "ai_content_kind": speech_blocks_service.CONTENT_KIND_DIALOGUE,
+            "ai_source_text": '"Hello."',
             "ai_text": "Hello.",
             "warning_flags": ["ambiguous_speaker"],
             "approved": False,
@@ -867,11 +1182,13 @@ def _seed_review_speech_blocks(project_root) -> None:
             "speaker_id": "narrator",
             "speaker_display_name": "Narrator",
             "content_kind": speech_blocks_service.CONTENT_KIND_NARRATION,
+            "source_text": "Later narration.",
             "text": "Later narration.",
             "ai_speaker_kind": speech_blocks_service.SPEAKER_KIND_NARRATOR,
             "ai_speaker_id": "narrator",
             "ai_speaker_display_name": "Narrator",
             "ai_content_kind": speech_blocks_service.CONTENT_KIND_NARRATION,
+            "ai_source_text": "Later narration.",
             "ai_text": "Later narration.",
             "warning_flags": [],
             "approved": False,
@@ -931,22 +1248,24 @@ def _write_translation_artifacts(
     project_root,
     approved_chunk_count: int,
     translated_chunks: list[dict[str, object]],
+    target_language: str = "ro",
 ) -> None:
     """
     @brief      Write translated chunk artifacts for Speech Blocks source resolution tests.
     @param[in]  project_root Active project root folder.
     @param[in]  approved_chunk_count Number of approved translated chunks.
     @param[in]  translated_chunks Translated chunk payload list.
+    @param[in]  target_language Translation target language code.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-24
-    @version    0.1.0
+    @version    0.2.0
     """
     (project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.TRANSLATION_REPORT_FILE_NAME).write_text(
         json.dumps(
             {
-                "target_language": "ro",
+                "target_language": target_language,
                 "translated_chunk_count": len(translated_chunks),
                 "approved_chunk_count": approved_chunk_count,
                 "total_chunk_count": len(translated_chunks),
@@ -960,6 +1279,22 @@ def _write_translation_artifacts(
         json.dumps(translated_chunks, indent=2) + "\n",
         encoding="utf-8",
     )
+
+
+def _narrator_catalog_entry() -> dict[str, object]:
+    """
+    @brief      Build the minimal narrator speaker-catalog entry used by direct normalization tests.
+    @return     Narrator speaker catalog entry.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-26
+    @version    0.1.0
+    """
+    return {
+        "speaker_id": "narrator",
+        "speaker_kind": "narrator",
+        "display_name": "Narrator",
+    }
 
 
 def _profile_payload() -> dict[str, object]:
