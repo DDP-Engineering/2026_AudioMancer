@@ -207,9 +207,11 @@ output artifacts.
 
 Default operation-state files are lazy page metadata. Opening a workflow page
 may create a `not_started` state file with empty `input_paths`, `output_paths`,
-`artifact_paths`, `metadata`, and `resume_checkpoint = null`. This initialization
-does not imply that the workflow step has run and does not create reports or
-canonical outputs.
+`artifact_paths`, operation-specific default `metadata`, and
+`resume_checkpoint = null`. For example, opening the Characters page creates
+`characters_state.json` with zero-valued character-discovery metadata counters.
+This initialization does not imply that the workflow step has run and does not
+create reports or canonical outputs.
 
 Voice workflow metadata is also lazy. Project activation and Home-page refreshes
 do not create `audio_profiles.json`, `narator.json`, or `characters_voice.json`.

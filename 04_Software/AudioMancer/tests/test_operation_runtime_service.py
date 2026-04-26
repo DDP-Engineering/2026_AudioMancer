@@ -13,7 +13,7 @@
          extraction, cleanup, and future workflow operations.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-22
-@version 0.3.0
+@version 0.4.0
 """
 
 # IMPORTS
@@ -122,6 +122,37 @@ def test_ensure_default_operation_state_creates_not_started_state_only(tmp_path)
     assert state_payload["output_paths"] == []
     assert state_payload["artifact_paths"] == []
     assert state_payload["metadata"] == {}
+    assert state_payload["resume_checkpoint"] is None
+
+
+def test_ensure_default_operation_state_creates_zero_character_discovery_metadata(tmp_path) -> None:
+    """
+    @brief      Verify first Characters page access creates zero-valued discovery metadata.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-26
+    @version    0.1.0
+    """
+    project_root, _manifest = project_workspace_service.create_project("DefaultCharacterStateRuntime", tmp_path)
+
+    state_path = operation_runtime_service.ensure_default_operation_state(project_root, "character_discovery")
+
+    assert state_path == project_root / config.CHARACTER_DISCOVERY_STATE_FILE_NAME
+    state_payload = json.loads(state_path.read_text(encoding="utf-8"))
+    assert state_payload["status"] == "not_started"
+    assert state_payload["progress_current"] == 0
+    assert state_payload["progress_total"] == 0
+    assert state_payload["output_paths"] == []
+    assert state_payload["artifact_paths"] == []
+    assert state_payload["metadata"]["source_chunk_count"] == 0
+    assert state_payload["metadata"]["character_count"] == 0
+    assert state_payload["metadata"]["analyzed_window_count"] == 0
+    assert state_payload["metadata"]["merged_candidate_count"] == 0
+    assert state_payload["metadata"]["window_size"] == 0
+    assert state_payload["metadata"]["window_overlap"] == 0
+    assert state_payload["metadata"]["warnings"] == []
     assert state_payload["resume_checkpoint"] is None
 
 

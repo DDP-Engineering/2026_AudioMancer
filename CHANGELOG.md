@@ -8,6 +8,22 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
 
 All notable changes to this project will be documented in this file.
 
+## [0.33.1] - 2026-04-27
+
+### Changed
+
+- changed lazy Characters page state initialization so first access creates
+  `characters_state.json` with explicit zero-valued character-discovery
+  metadata counters without creating character outputs or reports
+- changed manual character add, edit, and delete handling to preserve the
+  current Characters output while clearing downstream narrator, character voice,
+  speech block, audio block, and audio assembly artifacts and manifest summaries
+- updated Character Discovery and project workspace documentation for the
+  zero-metadata and downstream invalidation contracts
+- updated focused tests for Characters metadata initialization, manual
+  maintenance downstream resets, and current flat-project artifact names
+- package version updated to `0.33.1`
+
 ## [0.33.0] - 2026-04-26
 
 ### Changed

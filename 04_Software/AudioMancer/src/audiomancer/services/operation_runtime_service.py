@@ -14,7 +14,7 @@
          operations.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-22
-@version 0.5.0
+@version 0.6.0
 """
 
 # IMPORTS
@@ -229,7 +229,7 @@ def default_operation_state(operation_kind: str) -> dict[str, object]:
     @exception  ValueError Raised when the operation kind is unsupported.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-26
-    @version    0.1.0
+    @version    0.2.0
     """
     if operation_kind not in _OPERATION_ORDER:
         raise ValueError(f"Unsupported operation kind: {operation_kind}")
@@ -246,8 +246,40 @@ def default_operation_state(operation_kind: str) -> dict[str, object]:
         "completed_at": None,
         "updated_at": None,
         "warning_count": 0,
-        "metadata": {},
+        "metadata": _default_operation_metadata(operation_kind),
         "resume_checkpoint": None,
+    }
+
+
+def _default_operation_metadata(operation_kind: str) -> dict[str, object]:
+    """
+    @brief      Build operation-specific default metadata for first page access.
+    @param[in]  operation_kind Stable workflow operation token.
+    @return     Default metadata payload for the operation.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-26
+    @version    0.1.0
+    """
+    if operation_kind != "character_discovery":
+        return {}
+    return {
+        "ai_profile_id": "",
+        "source_chunk_count": 0,
+        "character_count": 0,
+        "analyzed_window_count": 0,
+        "merged_candidate_count": 0,
+        "window_size": 0,
+        "window_overlap": 0,
+        "warnings": [],
+        "input_fingerprint": "",
+        "log_relative_path": "",
+        "token_usage": {
+            "input_tokens": None,
+            "output_tokens": None,
+            "total_tokens": None,
+            "usage_available": False,
+        },
     }
 
 

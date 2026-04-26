@@ -14,7 +14,7 @@
          for the Characters page.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-11
-@version 0.7.1
+@version 0.8.0
 """
 
 # IMPORTS
@@ -26,6 +26,7 @@ from PySide6.QtWidgets import QInputDialog, QMessageBox
 from audiomancer.services import (
     character_discovery_service,
     deterministic_chunking_service,
+    operation_runtime_service,
     project_workspace_service,
     text_cleanup_state_service,
     ui_state_service,
@@ -522,12 +523,25 @@ def _sync_manifest_after_manual_change(window: "MainWindow") -> None:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-11
-    @version    0.2.0
+    @version    0.3.0
     """
     if window._current_project_root is None or window._current_manifest is None:
         return
+    operation_runtime_service.reset_operation_data(
+        window._current_project_root,
+        "character_discovery",
+        include_current=False,
+        keep_input_snapshots=False,
+    )
     updated_manifest = dict(window._current_manifest)
     operations = text_cleanup_state_service.normalized_manifest_operations(updated_manifest)
+    default_operations = text_cleanup_state_service.normalized_manifest_operations({})
+    for selected_kind in operation_runtime_service.downstream_operation_kinds(
+        "character_discovery",
+        include_current=False,
+    ):
+        if selected_kind in default_operations:
+            operations[selected_kind] = default_operations[selected_kind]
     operation_state = character_discovery_service.load_operation_state(window._current_project_root)
     if operation_state is not None:
         operations["character_discovery"] = project_workspace_service.project_manifest_operation_summary(
@@ -536,6 +550,8 @@ def _sync_manifest_after_manual_change(window: "MainWindow") -> None:
         )
     updated_manifest["operations"] = operations
     updated_manifest["current_stage"] = "character_discovery_ready"
+    updated_manifest["narrator_profile_name"] = None
+    updated_manifest["narrator_language"] = None
     project_workspace_service.save_manifest(updated_manifest, window._current_project_root)
 
 

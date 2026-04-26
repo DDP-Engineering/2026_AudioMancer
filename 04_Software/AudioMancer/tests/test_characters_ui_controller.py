@@ -13,7 +13,7 @@
          start and reset behavior for the Characters page controller.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-08
-@version 0.3.0
+@version 0.4.0
 """
 
 # IMPORTS
@@ -95,6 +95,7 @@ def test_character_ui_controller_add_rejects_duplicate_name(monkeypatch, qtbot, 
 def test_character_ui_controller_save_new_character_persists_and_selects(monkeypatch, qtbot, tmp_path) -> None:
     project_root, _manifest = _create_project(tmp_path, "CharacterControllerSave")
     window = _build_window(qtbot, project_root)
+    _write_downstream_artifacts(project_root, window)
     window._characters_page.begin_add_mode(_manual_draft_payload("Bob"))
 
     characters_ui_controller.handle_save_character_requested(
@@ -105,11 +106,19 @@ def test_character_ui_controller_save_new_character_persists_and_selects(monkeyp
     saved_profiles = character_discovery_service.load_character_profiles(project_root)
     assert any(profile["canonical_name"] == "Bob" for profile in saved_profiles)
     assert window._characters_page.current_character_id() is not None
+    assert not (project_root / config.NARRATOR_PROFILE_FILE_NAME).exists()
+    assert not (project_root / config.CHARACTER_VOICES_TARGETS_FILE_NAME).exists()
+    assert not (project_root / config.SPEECH_BLOCKS_OUTPUT_FILE_NAME).exists()
+    assert window._current_manifest["operations"]["narrator_definition"]["status"] == "not_started"
+    assert window._current_manifest["operations"]["character_voices"]["status"] == "not_started"
+    assert window._current_manifest["operations"]["speech_blocks"]["status"] == "not_started"
+    assert window._current_manifest["current_stage"] == "character_discovery_ready"
 
 
 def test_character_ui_controller_delete_flow_confirms_and_removes(monkeypatch, qtbot, tmp_path) -> None:
     project_root, _manifest = _create_project(tmp_path, "CharacterControllerDelete")
     window = _build_window(qtbot, project_root)
+    _write_downstream_artifacts(project_root, window)
     monkeypatch.setattr(
         characters_ui_controller.QMessageBox,
         "question",
@@ -119,6 +128,10 @@ def test_character_ui_controller_delete_flow_confirms_and_removes(monkeypatch, q
     characters_ui_controller.handle_delete_character_requested(window, "alice")
 
     assert character_discovery_service.load_character_profiles(project_root) == []
+    assert not (project_root / config.NARRATOR_PROFILE_FILE_NAME).exists()
+    assert not (project_root / config.CHARACTER_VOICES_TARGETS_FILE_NAME).exists()
+    assert window._current_manifest["operations"]["narrator_definition"]["status"] == "not_started"
+    assert window._current_manifest["operations"]["character_voices"]["status"] == "not_started"
 
 
 def test_character_ui_controller_selection_change_cancel_restores_current_row(monkeypatch, qtbot, tmp_path) -> None:
@@ -239,7 +252,7 @@ def _create_project(tmp_path, name: str):
         + "\n",
         encoding="utf-8",
     )
-    (discovery_root / config.OPERATION_STATE_FILE_NAME).write_text(
+    (discovery_root / config.CHARACTER_DISCOVERY_STATE_FILE_NAME).write_text(
         json.dumps(
             {
                 "folder_relative_path": config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH,
@@ -293,7 +306,29 @@ def _build_window(qtbot, project_root):
     window = MainWindow(settings_payload=settings_payload)
     qtbot.addWidget(window)
     window._activate_project(project_root, project_workspace_service.load_manifest(project_root))
+    window.set_current_page("characters")
     return window
+
+
+def _write_downstream_artifacts(project_root, window: MainWindow) -> None:
+    """
+    @brief      Create representative downstream artifacts and completed manifest entries.
+    @param[in]  project_root Active temporary project root.
+    @param[in]  window Main window carrying the manifest under test.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-26
+    @version    0.1.0
+    """
+    (project_root / config.NARRATOR_PROFILE_FILE_NAME).write_text("[]\n", encoding="utf-8")
+    (project_root / config.CHARACTER_VOICES_TARGETS_FILE_NAME).write_text("[]\n", encoding="utf-8")
+    (project_root / config.SPEECH_BLOCKS_OUTPUT_FILE_NAME).write_text("[]\n", encoding="utf-8")
+    for operation_kind in ("narrator_definition", "character_voices", "speech_blocks"):
+        window._current_manifest["operations"][operation_kind]["status"] = "completed"
+    window._current_manifest["current_stage"] = "speech_blocks_ready"
+    window._current_manifest["narrator_profile_name"] = "Narrator"
+    window._current_manifest["narrator_language"] = "en"
 
 
 def _saved_profile_payload() -> dict[str, object]:

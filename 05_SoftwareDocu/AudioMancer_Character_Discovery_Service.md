@@ -97,7 +97,12 @@ High-level runtime flow:
 10. The page also exposes editable voice-definition fields plus one final
     `voice_definition_prompt`; `Regenerate Voice Definition` rebuilds both
     from the current literary character facts without leaving edit mode.
-11. Reset clears character-discovery artifacts plus downstream narrator,
+11. Saving a manual add or edit, or deleting a character, preserves the current
+    `characters_profile.json` list and character-discovery state, then clears
+    downstream narrator, character-voice, speech-block, audio-block, and
+    audio-assembly runtime artifacts and resets their manifest summaries. The
+    project returns to `character_discovery_ready`.
+12. Reset clears character-discovery artifacts plus downstream narrator,
    character-voice, speech-block, audio-block, and audio-assembly runtime
    artifacts, resets manifest state through
    `build_manifest_after_operation_reset(...)`, and returns the project to
@@ -208,14 +213,20 @@ Report fields currently include:
 
 Operation-state invariants:
 
+- opening the Characters page before discovery lazily creates
+  `characters_state.json` with `not_started` progress and zero-valued
+  character-discovery metadata counters; it does not create
+  `characters_profile.json` or `characters_report.json`
 - `mode` is `ai_assisted`
 - resume checkpoints are reused only when the chunk fingerprint, total window
   count, and AI profile id still match
 - completed discovery disables the page start action until reset
 - reset preserves upstream translation artifacts and clears downstream narrator
   data
-- manual add or delete operations update the persisted operation-state
-  `metadata.character_count` when a state file already exists
+- manual add, edit, or delete operations update the persisted operation-state
+  `metadata.character_count` when a state file already exists, then clear
+  downstream narrator, character voice, speech, audio block, and assembly
+  outputs
 
 Relevant config values in `src/audiomancer/config.py`:
 

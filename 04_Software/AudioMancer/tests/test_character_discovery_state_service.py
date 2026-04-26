@@ -14,7 +14,7 @@
          profile behavior.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-08
-@version 0.3.0
+@version 0.3.1
 """
 
 # IMPORTS
@@ -220,7 +220,7 @@ def _create_project(tmp_path, name: str):
         + "\n",
         encoding="utf-8",
     )
-    (discovery_root / config.OPERATION_STATE_FILE_NAME).write_text(
+    (discovery_root / config.CHARACTER_DISCOVERY_STATE_FILE_NAME).write_text(
         json.dumps(
             {
                 "folder_relative_path": config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH,
