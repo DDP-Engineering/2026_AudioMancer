@@ -13,7 +13,7 @@
          using one minimal root-level `project.json` manifest contract.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-20
-@version    1.9.0
+@version    2.0.0
 """
 
 # IMPORTS
@@ -666,14 +666,14 @@ def _chunking_completion_evidence(project_root: Path, warnings: list[str]) -> di
 
 def _translation_completion_evidence(project_root: Path, warnings: list[str]) -> dict[str, object] | None:
     """
-    @brief      Verify completed Translation artifacts.
+    @brief      Verify fully approved Translation artifacts.
     @param[in]  project_root Active project root folder.
     @param[out] warnings Non-destructive repair warnings appended by the check.
     @return     Completed operation evidence payload or `None`.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.1.0
+    @version    0.2.0
     """
     _ = warnings
     state = _load_json_artifact(project_root, config.TRANSLATION_STATE_FILE_NAME)
@@ -684,6 +684,7 @@ def _translation_completion_evidence(project_root: Path, warnings: list[str]) ->
         or not isinstance(report, dict)
         or not _non_empty_payload_list(translations)
         or not any(_payload_has_text(item, ("translated_text", "text")) for item in translations)
+        or not _translation_report_is_fully_approved(report)
     ):
         return None
     return {"operation": state, "report": report}
@@ -1136,6 +1137,27 @@ def _status_is_completed(payload: object) -> bool:
     @version    0.1.0
     """
     return isinstance(payload, dict) and str(payload.get("status", "")).strip() == "completed"
+
+
+def _translation_report_is_fully_approved(report: object) -> bool:
+    """
+    @brief      Return whether one translation report proves full approval.
+    @param[in]  report Candidate translation report payload.
+    @return     True when every translated chunk is approved.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-26
+    @version    0.1.0
+    """
+    if not isinstance(report, dict):
+        return False
+    total_count = int(report.get("total_chunk_count", 0) or 0)
+    translated_count = int(report.get("translated_chunk_count", 0) or 0)
+    approved_count = int(report.get("approved_chunk_count", 0) or 0)
+    stage_status = str(report.get("translation_stage_status", "")).strip()
+    if stage_status not in {"approved", "completed"}:
+        return False
+    return total_count > 0 and translated_count >= total_count and approved_count >= total_count
 
 
 def _non_empty_payload_list(payload: object) -> bool:

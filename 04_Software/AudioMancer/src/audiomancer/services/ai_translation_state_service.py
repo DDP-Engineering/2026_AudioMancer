@@ -13,7 +13,7 @@
          chunk records, translation reports, and current operation state.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-07
-@version 0.5.0
+@version 0.6.0
 """
 
 # IMPORTS
@@ -220,10 +220,9 @@ def build_ai_translation_notes(
                 progress_total=progress_total,
             )
         )
-    elif (
-        report is not None
-        and str(report.get("translation_stage_status", "")) == ai_translation_service.TRANSLATION_STAGE_COMPLETED
-    ):
+    elif report is not None and _normalized_report_stage(report) == ai_translation_service.TRANSLATION_STAGE_TRANSLATED:
+        notes.append(ui_state_service.translate("ai_translation.note_approval_pending", language))
+    elif report is not None and _normalized_report_stage(report) == ai_translation_service.TRANSLATION_STAGE_APPROVED:
         notes.append(ui_state_service.translate("ai_translation.note_completed_locked", language))
     else:
         notes.append(ui_state_service.translate("ai_translation.note_ready", language))
@@ -286,13 +285,33 @@ def _translation_stage_status(report: dict[str, object] | None, operation_state:
         if operation_status in {"running", "failed"}:
             return operation_status
     if isinstance(report, dict):
-        return str(
-            report.get(
-                "translation_stage_status",
-                ai_translation_service.TRANSLATION_STAGE_NOT_STARTED,
-            )
-        )
+        return _normalized_report_stage(report)
     return ai_translation_service.TRANSLATION_STAGE_NOT_STARTED
+
+
+def _normalized_report_stage(report: dict[str, object]) -> str:
+    """
+    @brief      Normalize current and legacy translation report stage tokens.
+    @param[in]  report Persisted translation report payload.
+    @return     Normalized translation stage token.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-26
+    @version    0.1.0
+    """
+    stage_status = str(
+        report.get(
+            "translation_stage_status",
+            ai_translation_service.TRANSLATION_STAGE_NOT_STARTED,
+        )
+    )
+    if stage_status == "completed":
+        total_count = int(report.get("total_chunk_count", 0) or 0)
+        approved_count = int(report.get("approved_chunk_count", 0) or 0)
+        if total_count > 0 and approved_count >= total_count:
+            return ai_translation_service.TRANSLATION_STAGE_APPROVED
+        return ai_translation_service.TRANSLATION_STAGE_TRANSLATED
+    return stage_status
 
 
 def _is_legacy_auto_pass_through(operation_state: dict[str, object] | None) -> bool:

@@ -344,16 +344,20 @@ class AiTranslationPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-07
-        @version    0.1.0
+        @version    0.2.0
         """
         has_source_chunks = bool(self._source_chunks)
         has_started_translation = self._stage_status in {
             "running",
             "failed",
             ai_translation_service.TRANSLATION_STAGE_IN_PROGRESS,
+            ai_translation_service.TRANSLATION_STAGE_TRANSLATED,
             ai_translation_service.TRANSLATION_STAGE_COMPLETED,
         }
         has_translated_chunks = any(str(chunk.get("translated_text", "")).strip() for chunk in self._display_chunks)
+        has_untranslated_chunks = any(
+            not str(chunk.get("translated_text", "")).strip() for chunk in self._display_chunks
+        )
         selected_chunk = self._current_display_chunk()
         has_selected_translation = selected_chunk is not None and bool(
             str(selected_chunk.get("translated_text", "")).strip()
@@ -366,6 +370,7 @@ class AiTranslationPage(QWidget):
             self._project_active
             and has_source_chunks
             and not self._busy
+            and has_untranslated_chunks
             and self._stage_status != ai_translation_service.TRANSLATION_STAGE_COMPLETED
             and selected_profile_id is not None
         )

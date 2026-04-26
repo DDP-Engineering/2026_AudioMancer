@@ -13,7 +13,7 @@
          executes resumable translation over canonical chunking output.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-07
-@version 0.5.0
+@version 0.6.0
 """
 
 # IMPORTS
@@ -37,6 +37,7 @@ from audiomancer.services.operation_runtime_service import (
     progress_percent,
     raise_if_cancelled,
     relative_to_project,
+    reset_operation_data,
     resolve_operation_path,
 )
 
@@ -50,8 +51,12 @@ _AI_TRANSLATION_LOGGER = get_component_logger("ai_translation")
 TRANSLATION_STAGE_NOT_STARTED = "not_started"
 # @brief Translation stage token used while translation work remains incomplete.
 TRANSLATION_STAGE_IN_PROGRESS = "in_progress"
-# @brief Translation stage token used when all chunks were translated.
-TRANSLATION_STAGE_COMPLETED = "completed"
+# @brief Translation stage token used when all chunks were translated but still need approval.
+TRANSLATION_STAGE_TRANSLATED = "translated"
+# @brief Translation stage token used when all translated chunks are approved.
+TRANSLATION_STAGE_APPROVED = "approved"
+# @brief Backward-compatible alias for callers that still mean approved workflow completion.
+TRANSLATION_STAGE_COMPLETED = TRANSLATION_STAGE_APPROVED
 # @brief Translated-chunk status token used before a chunk receives translated text.
 TRANSLATED_CHUNK_STATUS_NOT_STARTED = "not_started"
 # @brief Translated-chunk status token used after a chunk receives translated text.
@@ -147,7 +152,7 @@ def ensure_translation_records(
     @exception  ValueError When chunking output is missing.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-07
-    @version    0.1.0
+    @version    0.2.0
     """
     project_root = Path(project_root)
     source_chunks = deterministic_chunking_service.load_chunks(project_root)
@@ -193,7 +198,16 @@ def ensure_translation_records(
         source_chunks,
         translated_chunks,
         report,
-        operation_state=existing_operation_state,
+        operation_state=_refresh_operation_state(
+            project_root,
+            source_chunks,
+            translated_chunks,
+            report,
+            existing_operation_state,
+            profile_id,
+            target_language,
+            _restore_persisted_token_usage(existing_report, existing_operation_state),
+        ),
     )
     return source_chunks, translated_chunks, report
 
@@ -276,7 +290,7 @@ def start_or_continue_translation(
     @exception  ValueError When inputs are invalid or the model returns empty text.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-07
-    @version    0.2.0
+    @version    0.3.0
     """
     project_root = Path(project_root)
     profile_id = str(ai_profile_payload.get("id", "")).strip()
@@ -388,9 +402,9 @@ def start_or_continue_translation(
         source_chunks,
         translated_chunks,
         report,
-        status="completed",
+        status=_operation_status_from_report(report),
         started_at=started_at,
-        completed_at=completed_at,
+        completed_at=completed_at if _operation_status_from_report(report) == "completed" else None,
         profile_id=profile_id,
         target_language=target_language,
         log_path=log_path,
@@ -431,7 +445,7 @@ def retranslate_chunk(
     @exception  ValueError When the selected chunk is unknown or translation is empty.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-07
-    @version    0.2.0
+    @version    0.3.0
     """
     project_root = Path(project_root)
     profile_id = str(ai_profile_payload.get("id", "")).strip()
@@ -500,9 +514,9 @@ def retranslate_chunk(
         source_chunks,
         translated_chunks,
         report,
-        status=str(report["translation_stage_status"]),
+        status=_operation_status_from_report(report),
         started_at=started_at,
-        completed_at=_utc_now_iso(),
+        completed_at=report["updated_at"] if _operation_status_from_report(report) == "completed" else None,
         profile_id=profile_id,
         target_language=target_language,
         log_path=log_path,
@@ -539,7 +553,7 @@ def update_translated_text(
     @exception  ValueError When the selected chunk is unknown.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-07
-    @version    0.1.0
+    @version    0.2.0
     """
     project_root = Path(project_root)
     source_chunks, translated_chunks, report = ensure_translation_records(project_root, target_language, profile_id)
@@ -576,7 +590,20 @@ def update_translated_text(
         ),
     )
     _persist_translation_state(
-        project_root, source_chunks, translated_chunks, report, operation_state=load_operation_state(project_root)
+        project_root,
+        source_chunks,
+        translated_chunks,
+        report,
+        operation_state=_refresh_operation_state(
+            project_root,
+            source_chunks,
+            translated_chunks,
+            report,
+            load_operation_state(project_root),
+            profile_id,
+            target_language,
+            _restore_persisted_token_usage(report, load_operation_state(project_root)),
+        ),
     )
     return report
 
@@ -598,7 +625,7 @@ def approve_chunk(
     @exception  ValueError When the chunk is unknown or still untranslated.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-07
-    @version    0.1.0
+    @version    0.2.0
     """
     project_root = Path(project_root)
     source_chunks, translated_chunks, report = ensure_translation_records(project_root, target_language, profile_id)
@@ -621,7 +648,20 @@ def approve_chunk(
         ),
     )
     _persist_translation_state(
-        project_root, source_chunks, translated_chunks, report, operation_state=load_operation_state(project_root)
+        project_root,
+        source_chunks,
+        translated_chunks,
+        report,
+        operation_state=_refresh_operation_state(
+            project_root,
+            source_chunks,
+            translated_chunks,
+            report,
+            load_operation_state(project_root),
+            profile_id,
+            target_language,
+            _restore_persisted_token_usage(report, load_operation_state(project_root)),
+        ),
     )
     return report
 
@@ -641,7 +681,7 @@ def approve_all(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-07
-    @version    0.1.0
+    @version    0.2.0
     """
     project_root = Path(project_root)
     source_chunks, translated_chunks, report = ensure_translation_records(project_root, target_language, profile_id)
@@ -663,7 +703,20 @@ def approve_all(
         ),
     )
     _persist_translation_state(
-        project_root, source_chunks, translated_chunks, report, operation_state=load_operation_state(project_root)
+        project_root,
+        source_chunks,
+        translated_chunks,
+        report,
+        operation_state=_refresh_operation_state(
+            project_root,
+            source_chunks,
+            translated_chunks,
+            report,
+            load_operation_state(project_root),
+            profile_id,
+            target_language,
+            _restore_persisted_token_usage(report, load_operation_state(project_root)),
+        ),
     )
     return report
 
@@ -671,25 +724,20 @@ def approve_all(
 @trace_function(_AI_TRANSLATION_LOGGER)
 def reset_translation(project_root: str | Path) -> None:
     """
-    @brief      Remove all persisted translation artifacts for the project.
+    @brief      Remove translation and downstream persisted runtime artifacts.
     @param[in]  project_root Active project root path.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-07
-    @version    0.1.0
+    @version    0.2.0
     """
-    for artifact_name in (
-        config.TRANSLATED_CHUNKS_FILE_NAME,
-        config.TRANSLATION_REPORT_FILE_NAME,
-        config.TRANSLATION_STATE_FILE_NAME,
-    ):
-        artifact_path = Path(project_root) / artifact_name
-        if artifact_path.is_file():
-            artifact_path.unlink()
-    for log_path in Path(project_root).glob(f"{config.AI_TRANSACTION_LOG_FILE_PREFIX}translation_*.log"):
-        if log_path.is_file():
-            log_path.unlink()
+    reset_operation_data(
+        project_root,
+        "translation",
+        include_current=True,
+        keep_input_snapshots=False,
+    )
 
 
 # HELPER FUNCTIONS
@@ -819,14 +867,17 @@ def _rebuild_report(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-07
-    @version    0.2.0
+    @version    0.3.0
     """
     translated_count = _translated_count(translated_chunks)
     approved_count = sum(1 for chunk in translated_chunks if bool(chunk.get("approved", False)))
+    total_count = len(translated_chunks)
     if translated_count <= 0:
         stage_status = TRANSLATION_STAGE_NOT_STARTED
-    elif translated_count >= len(translated_chunks):
-        stage_status = TRANSLATION_STAGE_COMPLETED
+    elif total_count > 0 and translated_count >= total_count and approved_count >= total_count:
+        stage_status = TRANSLATION_STAGE_APPROVED
+    elif total_count > 0 and translated_count >= total_count:
+        stage_status = TRANSLATION_STAGE_TRANSLATED
     else:
         stage_status = TRANSLATION_STAGE_IN_PROGRESS
     return {
@@ -835,10 +886,109 @@ def _rebuild_report(
         "translation_stage_status": stage_status,
         "translated_chunk_count": translated_count,
         "approved_chunk_count": approved_count,
-        "total_chunk_count": len(translated_chunks),
+        "total_chunk_count": total_count,
         "updated_at": updated_at or _utc_now_iso(),
         "warnings": list(warnings or []),
         "token_usage": token_usage_service.coerce_token_usage(token_usage),
+    }
+
+
+def _operation_status_from_report(report: dict[str, object]) -> str:
+    """
+    @brief      Resolve persisted operation status from translation review state.
+    @param[in]  report Current translation report payload.
+    @return     Operation status token for translation runtime metadata.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-26
+    @version    0.1.0
+    """
+    stage_status = str(report.get("translation_stage_status", TRANSLATION_STAGE_NOT_STARTED))
+    if stage_status == TRANSLATION_STAGE_APPROVED:
+        return "completed"
+    if stage_status == TRANSLATION_STAGE_TRANSLATED:
+        return TRANSLATION_STAGE_TRANSLATED
+    return stage_status
+
+
+def _refresh_operation_state(
+    project_root: Path,
+    source_chunks: list[dict[str, object]],
+    translated_chunks: list[dict[str, object]],
+    report: dict[str, object],
+    existing_operation_state: dict[str, object] | None,
+    profile_id: str | None,
+    target_language: str,
+    token_usage: TokenUsagePayload,
+) -> dict[str, object]:
+    """
+    @brief      Refresh translation operation metadata from the current report.
+    @param[in]  project_root Active project root path.
+    @param[in]  source_chunks Source chunk payloads.
+    @param[in]  translated_chunks Current translated chunk payloads.
+    @param[in]  report Current translation report payload.
+    @param[in]  existing_operation_state Previous operation state, if any.
+    @param[in]  profile_id Active translation profile identifier or `None`.
+    @param[in]  target_language Active target language code.
+    @param[in]  token_usage Current cumulative token usage payload.
+    @return     Refreshed operation state payload.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-26
+    @version    0.1.0
+    """
+    state = dict(existing_operation_state or {})
+    metadata = state.get("metadata", {})
+    metadata = dict(metadata) if isinstance(metadata, dict) else {}
+    input_path = _translation_input_snapshot_path(project_root)
+    output_path = build_operation_output_path(project_root, "translation", config.TRANSLATED_CHUNKS_FILE_NAME)
+    report_path = build_operation_output_path(project_root, "translation", config.TRANSLATION_REPORT_FILE_NAME)
+    report_relative_path = relative_to_project(project_root, report_path)
+    artifact_paths = [report_relative_path]
+    log_relative_path = metadata.get("log_relative_path")
+    if log_relative_path not in (None, ""):
+        artifact_paths.append(str(log_relative_path))
+    status = _operation_status_from_report(report)
+    completed_at = str(report["updated_at"]) if status == "completed" else None
+    started_at = None if state.get("started_at") in (None, "") else str(state.get("started_at"))
+    mode = state.get("mode")
+    if mode in (None, "") and (profile_id not in (None, "") or int(report.get("translated_chunk_count", 0)) > 0):
+        mode = "ai_assisted"
+    refreshed_metadata = {
+        "target_language": target_language,
+        "translation_profile_id": profile_id,
+        "translated_chunk_count": report["translated_chunk_count"],
+        "approved_chunk_count": report["approved_chunk_count"],
+        "total_chunk_count": report["total_chunk_count"],
+        "warnings": list(report.get("warnings", [])),
+        "translated_chunks": translated_chunks,
+        "source_chunk_count": len(source_chunks),
+        "token_usage": token_usage_service.coerce_token_usage(token_usage),
+    }
+    if log_relative_path not in (None, ""):
+        refreshed_metadata["log_relative_path"] = str(log_relative_path)
+    resume_checkpoint = None
+    if str(report.get("translation_stage_status", "")) == TRANSLATION_STAGE_IN_PROGRESS:
+        resume_checkpoint = {
+            "next_untranslated_chunk_id": _next_untranslated_chunk_id(translated_chunks),
+            "translated_chunk_count": report["translated_chunk_count"],
+            "total_chunk_count": report["total_chunk_count"],
+        }
+    return {
+        "folder_relative_path": config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH,
+        "status": status,
+        "input_paths": [relative_to_project(project_root, input_path)],
+        "output_paths": [relative_to_project(project_root, output_path)],
+        "artifact_paths": artifact_paths,
+        "progress_current": report["translated_chunk_count"],
+        "progress_total": report["total_chunk_count"],
+        "mode": mode,
+        "started_at": started_at,
+        "completed_at": completed_at,
+        "updated_at": report["updated_at"],
+        "warning_count": len(list(report.get("warnings", []))),
+        "metadata": refreshed_metadata,
+        "resume_checkpoint": resume_checkpoint,
     }
 
 

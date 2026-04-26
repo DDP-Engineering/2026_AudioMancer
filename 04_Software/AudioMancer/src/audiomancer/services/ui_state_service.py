@@ -13,7 +13,7 @@
          application through one centralized string catalog and scale mapping.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 0.30.0
+@version 0.31.0
 """
 
 # ruff: noqa: E501
@@ -306,7 +306,8 @@ _UI_STRINGS = {
         "ai_translation.note_ready": "AI translation is ready for the current chunk set and selected target language.",
         "ai_translation.note_in_progress": "AI translation is in progress at {progress_current}/{progress_total}.",
         "ai_translation.note_resume": "A previous translation run was not finalized. Press Start Translation to continue from progress {progress_current}/{progress_total}.",
-        "ai_translation.note_completed_locked": "Translation is completed. Reset Translation to change the language or start over.",
+        "ai_translation.note_approval_pending": "Translation is generated. Review and approve every chunk before continuing.",
+        "ai_translation.note_completed_locked": "Translation is fully approved. Reset Translation to change the language or start over.",
         "ai_translation.note_summary": "Translated chunks: {translated_count}/{total_count}. Approved chunks: {approved_count}/{total_count}.",
         "ai.note_token_usage_summary": "Input tokens: {input_tokens} | Output tokens: {output_tokens} | Total: {total_tokens}",
         "ai.note_token_usage_unavailable": "Token usage was not reported by the backend.",
@@ -794,7 +795,10 @@ _UI_STRINGS = {
             "This change affects the current Audio Blocks inputs. Continuing will reset generated audio blocks, "
             "their approvals, and downstream Audio Assembly data. Continue?"
         ),
-        "project.confirm_translation_reset": "Continuing will delete the current translation data and reset the language lock for this step. Continue?",
+        "project.confirm_translation_reset": (
+            "Continuing will delete the current translation data plus downstream character, voice, speech, audio, "
+            "and audiobook outputs. Continue?"
+        ),
         "project.confirm_ai_cleanup": "AI-assisted cleanup can take longer because it sends multiple requests through the selected AI provider. Continue?",
         "project.confirm_ai_cleanup_rerun": "Continuing will delete the current cleanup data, clear chunking and all following operation folders, and reset workflow progress after extraction before starting a new AI-assisted cleanup. Continue?",
         "project.info_character_discovery": "Character discovery can take a long time because it analyzes overlapping chunk windows and then synthesizes final character profiles. You can continue the run later if needed. A fresh discovery rerun replaces the current character list, including manual additions and deletions.",
@@ -1106,7 +1110,8 @@ _UI_STRINGS = {
         "ai_translation.note_ready": "Traducerea AI este pregatita pentru setul curent de segmente si limba tinta selectata.",
         "ai_translation.note_in_progress": "Traducerea AI este in curs la progresul {progress_current}/{progress_total}.",
         "ai_translation.note_resume": "O rulare anterioara de traducere nu a fost finalizata. Apasa Porneste Traducerea pentru a continua de la progresul {progress_current}/{progress_total}.",
-        "ai_translation.note_completed_locked": "Traducerea este finalizata. Reseteaza Traducerea pentru a schimba limba sau a porni din nou.",
+        "ai_translation.note_approval_pending": "Traducerea este generata. Revizuieste si aproba fiecare segment inainte de a continua.",
+        "ai_translation.note_completed_locked": "Traducerea este complet aprobata. Reseteaza Traducerea pentru a schimba limba sau a porni din nou.",
         "ai_translation.note_summary": "Segmente traduse: {translated_count}/{total_count}. Segmente aprobate: {approved_count}/{total_count}.",
         "ai.note_token_usage_summary": "Tokeni intrare: {input_tokens} | Tokeni iesire: {output_tokens} | Total: {total_tokens}",
         "ai.note_token_usage_unavailable": "Utilizarea tokenilor nu a fost raportata de backend.",
@@ -1602,7 +1607,10 @@ _UI_STRINGS = {
             "Aceasta schimbare afecteaza intrarile curente pentru Blocurile Audio. Continuarea va reseta blocurile "
             "audio generate, aprobarile lor si datele din aval pentru Asamblarea Audio. Continui?"
         ),
-        "project.confirm_translation_reset": "Continuarea va sterge datele curente de traducere si va reseta blocarea limbii pentru acest pas. Continui?",
+        "project.confirm_translation_reset": (
+            "Continuarea va sterge datele curente de traducere plus iesirile downstream pentru personaje, voci, "
+            "vorbire, audio si audiobook. Continui?"
+        ),
         "project.confirm_ai_cleanup": "Curatarea asistata de AI poate dura mai mult deoarece trimite mai multe cereri catre furnizorul AI selectat. Continui?",
         "project.confirm_ai_cleanup_rerun": "Continuarea va sterge datele curente de curatare, va goli segmentarea si toate folderele operatiilor urmatoare si va reseta progresul fluxului dupa extragere inainte de a porni o noua curatare asistata de AI. Continui?",
         "project.info_character_discovery": "Descoperirea personajelor poate dura mai mult deoarece analizeaza ferestre suprapuse de segmente si apoi sintetizeaza profilurile finale. Poti continua rularea mai tarziu daca este necesar. O noua rulare de descoperire inlocuieste lista curenta de personaje, inclusiv adaugarile si stergerile manuale.",

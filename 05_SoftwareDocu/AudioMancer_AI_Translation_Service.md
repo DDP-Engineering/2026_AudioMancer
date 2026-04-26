@@ -25,6 +25,8 @@ the `AI Translation` UI.
   calls
 - persist translated chunk records, operation state, report data, and AI logs
 - support selected-chunk edit, retranslate, approve, approve-all, and reset
+- reset downstream character, narrator, speech, audio, and audiobook artifacts
+  whenever translation is reset or becomes unapproved after editing
 - shape page state with original-language and target-language indicators
 
 It does not own source import, chunking, character discovery, voice generation,
@@ -62,7 +64,11 @@ High-level flow:
    pass-through translated chunks without an AI call.
 5. Otherwise, the service translates one chunk at a time, persists progress
    after each chunk, and appends provider transaction metadata.
-6. Review remains incomplete until translated chunks are approved.
+6. The generated-translation phase ends with `translation_stage_status =
+   translated`.
+7. Review remains incomplete until translated chunks are approved.
+8. The translation operation is considered complete only when
+   `translation_stage_status = approved`.
 
 ## 4. Dependencies
 
@@ -94,7 +100,6 @@ Outputs:
 - `translated_text.json`
 - `translation_report.json`
 - `translation_state.json`
-- `translation_input_snapshot.json`
 - `log_ai_translation_<timestamp>.log`
 - compact manifest operation summary for `operations["translation"]`
 
@@ -114,12 +119,14 @@ Translated chunk records include:
 Invariants:
 
 - target language comes from `project.json.target_language`
-- reset clears translation artifacts but does not unlock or change target
-  language
+- reset clears translation artifacts and all downstream runtime artifacts, but
+  does not unlock or change target language
 - same-language pass-through uses source text as translated text and avoids AI
   rewriting
 - approval is required before downstream character and voice workflows consume
   translated text
+- manual translation edits clear the edited chunk approval and reset downstream
+  runtime data
 
 ## 7. Workflow Integration
 
@@ -135,6 +142,7 @@ Downstream:
   Audio Assembly consume either canonical text or approved translation state
 - workflow stage advances to `character_discovery_ready` only after translation
   review is complete
+- unapproved translation state keeps the workflow at `translation_ready`
 
 ## 8. Usage
 

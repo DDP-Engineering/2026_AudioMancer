@@ -59,7 +59,7 @@ def test_ai_translation_page_displays_locked_language_indicators(qtbot) -> None:
         original_language="English",
         target_language="ro",
         selected_profile_id="profile-1",
-        stage_status=ai_translation_service.TRANSLATION_STAGE_COMPLETED,
+        stage_status=ai_translation_service.TRANSLATION_STAGE_TRANSLATED,
         translated_count=1,
         approved_count=0,
         total_count=1,

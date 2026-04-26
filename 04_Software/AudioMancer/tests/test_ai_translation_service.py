@@ -13,7 +13,7 @@
          review-state updates, and approval helpers.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-07
-@version 0.3.0
+@version 0.4.0
 """
 
 # IMPORTS
@@ -62,7 +62,9 @@ def test_ai_translation_service_creates_translation_artifacts(monkeypatch, tmp_p
     assert (translation_root / config.TRANSLATION_REPORT_FILE_NAME).is_file()
     assert (translation_root / config.TRANSLATION_STATE_FILE_NAME).is_file()
     assert report["translated_chunk_count"] == 2
+    assert report["translation_stage_status"] == ai_translation_service.TRANSLATION_STAGE_TRANSLATED
     assert report["token_usage"]["total_tokens"] == 250
+    assert ai_translation_service.load_operation_state(project_root)["status"] == "translated"
 
 
 def test_ai_translation_service_approve_and_edit_update_review_state(tmp_path) -> None:
@@ -104,10 +106,12 @@ def test_ai_translation_service_approve_and_edit_update_review_state(tmp_path) -
 
     report = ai_translation_service.approve_chunk(project_root, "chunk-0001", "ro", "profile-1")
     assert report["approved_chunk_count"] == 1
+    assert report["translation_stage_status"] == ai_translation_service.TRANSLATION_STAGE_IN_PROGRESS
     report = ai_translation_service.update_translated_text(
         project_root, "chunk-0001", "Edited translation", "ro", "profile-1"
     )
     assert report["approved_chunk_count"] == 0
+    assert ai_translation_service.load_operation_state(project_root)["metadata"]["approved_chunk_count"] == 0
 
 
 def test_ai_translation_service_resume_preserves_completed_chunks(monkeypatch, tmp_path) -> None:
@@ -186,7 +190,33 @@ def test_ai_translation_service_resume_preserves_completed_chunks(monkeypatch, t
     assert translated_chunks[0]["translated_text"] == "Existing translation"
     assert translated_chunks[1]["translated_text"] == "New translation"
     assert report["translated_chunk_count"] == 2
+    assert report["translation_stage_status"] == ai_translation_service.TRANSLATION_STAGE_TRANSLATED
     assert report["token_usage"]["total_tokens"] == 95
+
+
+def test_ai_translation_service_initializes_empty_operation_metadata(tmp_path) -> None:
+    """
+    @brief      Verify first page access creates empty translation state from chunks.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-26
+    @version    0.1.0
+    """
+    project_root, _manifest = _create_chunked_project(tmp_path, "TranslationInitialStateProject")
+
+    _source_chunks, translated_chunks, report = ai_translation_service.ensure_translation_records(
+        project_root,
+        "ro",
+        "profile-1",
+    )
+
+    operation_state = ai_translation_service.load_operation_state(project_root)
+    assert report["translation_stage_status"] == ai_translation_service.TRANSLATION_STAGE_NOT_STARTED
+    assert translated_chunks[0]["translated_text"] == ""
+    assert operation_state["status"] == "not_started"
+    assert operation_state["metadata"]["total_chunk_count"] == 2
 
 
 def _create_chunked_project(tmp_path, name: str):

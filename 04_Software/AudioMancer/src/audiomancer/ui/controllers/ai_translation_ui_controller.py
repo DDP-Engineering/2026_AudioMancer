@@ -13,7 +13,7 @@
          selected-chunk retranslation, and modal progress lifecycle.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-22
-@version 0.6.0
+@version 0.7.0
 """
 
 # IMPORTS
@@ -26,6 +26,7 @@ from audiomancer import config
 from audiomancer.services import (
     ai_translation_service,
     deterministic_chunking_service,
+    operation_runtime_service,
     project_workspace_service,
     text_cleanup_state_service,
     ui_state_service,
@@ -152,7 +153,7 @@ def handle_reset_translation_requested(window: "MainWindow") -> None:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-22
-    @version    0.2.0
+    @version    0.3.0
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._current_project_root is None or window._current_manifest is None:
@@ -167,11 +168,10 @@ def handle_reset_translation_requested(window: "MainWindow") -> None:
     if decision != QMessageBox.StandardButton.Yes:
         return
     ai_translation_service.reset_translation(window._current_project_root)
-    updated_manifest = dict(window._current_manifest)
-    operations = text_cleanup_state_service.normalized_manifest_operations(updated_manifest)
-    operations["translation"] = text_cleanup_state_service.normalized_manifest_operations({})["translation"]
-    updated_manifest["operations"] = operations
-    updated_manifest["current_stage"] = "translation_ready"
+    updated_manifest = text_cleanup_state_service.build_manifest_after_operation_reset(
+        window._current_manifest,
+        "translation",
+    )
     project_workspace_service.save_manifest(updated_manifest, window._current_project_root)
     window.show_project_state(
         window._current_project_root,
@@ -371,7 +371,7 @@ def _sync_manifest_after_translation(window: "MainWindow", report: dict[str, obj
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-07
-    @version    0.1.0
+    @version    0.2.0
     """
     assert window._current_project_root is not None
     assert window._current_manifest is not None
@@ -380,6 +380,22 @@ def _sync_manifest_after_translation(window: "MainWindow", report: dict[str, obj
         return
     updated_manifest = dict(window._current_manifest)
     operations = text_cleanup_state_service.normalized_manifest_operations(updated_manifest)
+    if _translation_manifest_stage(report) == "translation_ready":
+        operation_runtime_service.reset_operation_data(
+            window._current_project_root,
+            "translation",
+            include_current=False,
+            keep_input_snapshots=False,
+        )
+        default_operations = text_cleanup_state_service.normalized_manifest_operations({})
+        for selected_kind in operation_runtime_service.downstream_operation_kinds(
+            "translation",
+            include_current=False,
+        ):
+            if selected_kind in default_operations:
+                operations[selected_kind] = default_operations[selected_kind]
+        updated_manifest["narrator_profile_name"] = None
+        updated_manifest["narrator_language"] = None
     operations["translation"] = project_workspace_service.project_manifest_operation_summary(
         "translation",
         operation_state,

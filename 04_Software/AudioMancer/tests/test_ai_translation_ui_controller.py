@@ -13,7 +13,7 @@
          persists reset behavior through the main window shell.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-22
-@version 0.3.0
+@version 0.4.0
 """
 
 # IMPORTS
@@ -35,7 +35,7 @@ def test_ai_translation_ui_controller_start_request_uses_modal_runner(monkeypatc
         lambda _project_root, _manifest, profile, target_language, progress_callback=None, cancel_requested=None: {
             "target_language": target_language,
             "translation_profile_id_last_used": profile["id"],
-            "translation_stage_status": "completed",
+            "translation_stage_status": "translated",
             "translated_chunk_count": 1,
             "approved_chunk_count": 0,
             "total_chunk_count": 1,
@@ -59,15 +59,18 @@ def test_ai_translation_ui_controller_start_request_uses_modal_runner(monkeypatc
         progress_callback=lambda *_args: None,
         cancel_requested=lambda: False,
     )
-    assert result["translation_stage_status"] == "completed"
+    assert result["translation_stage_status"] == "translated"
 
 
 def test_ai_translation_ui_controller_reset_clears_translation_state(monkeypatch, qtbot, tmp_path) -> None:
     project_root, _manifest = _create_project(tmp_path, "TranslationResetControllerProject")
-    translation_root = project_root / "30_translation"
-    translation_root.mkdir(parents=True, exist_ok=True)
-    (translation_root / config.TRANSLATED_CHUNKS_FILE_NAME).write_text("[]\n", encoding="utf-8")
+    (project_root / config.TRANSLATED_CHUNKS_FILE_NAME).write_text("[]\n", encoding="utf-8")
+    (project_root / config.CHARACTER_PROFILE_FILE_NAME).write_text("[]\n", encoding="utf-8")
+    (project_root / config.SPEECH_BLOCKS_OUTPUT_FILE_NAME).write_text("[]\n", encoding="utf-8")
     window = _build_window(qtbot, project_root)
+    assert window._current_manifest is not None
+    window._current_manifest["operations"]["character_discovery"]["status"] = "completed"
+    window._current_manifest["operations"]["speech_blocks"]["status"] = "completed"
     monkeypatch.setattr(
         ai_translation_ui_controller.QMessageBox,
         "question",
@@ -78,8 +81,11 @@ def test_ai_translation_ui_controller_reset_clears_translation_state(monkeypatch
 
     assert window._current_manifest is not None
     assert window._current_manifest["operations"]["translation"]["status"] == "not_started"
-    translated_payload = json.loads((project_root / config.TRANSLATED_CHUNKS_FILE_NAME).read_text(encoding="utf-8"))
-    assert translated_payload[0]["translated_text"] == ""
+    assert window._current_manifest["operations"]["character_discovery"]["status"] == "not_started"
+    assert window._current_manifest["operations"]["speech_blocks"]["status"] == "not_started"
+    assert not (project_root / config.TRANSLATED_CHUNKS_FILE_NAME).exists()
+    assert not (project_root / config.CHARACTER_PROFILE_FILE_NAME).exists()
+    assert not (project_root / config.SPEECH_BLOCKS_OUTPUT_FILE_NAME).exists()
 
 
 def test_sync_manifest_after_translation_advances_only_after_full_approval(qtbot, tmp_path) -> None:
@@ -116,7 +122,7 @@ def test_sync_manifest_after_translation_advances_only_after_full_approval(qtbot
     ai_translation_ui_controller._sync_manifest_after_translation(
         window,
         {
-            "translation_stage_status": "completed",
+            "translation_stage_status": "translated",
             "translated_chunk_count": 1,
             "approved_chunk_count": 0,
             "total_chunk_count": 1,
@@ -128,13 +134,62 @@ def test_sync_manifest_after_translation_advances_only_after_full_approval(qtbot
     ai_translation_ui_controller._sync_manifest_after_translation(
         window,
         {
-            "translation_stage_status": "completed",
+            "translation_stage_status": "approved",
             "translated_chunk_count": 1,
             "approved_chunk_count": 1,
             "total_chunk_count": 1,
         },
     )
     assert window._current_manifest["current_stage"] == "character_discovery_ready"
+
+
+def test_sync_manifest_after_translation_resets_downstream_when_approval_is_lost(qtbot, tmp_path) -> None:
+    """
+    @brief      Verify unapproved translation state clears downstream artifacts and manifest metadata.
+    @param[in]  qtbot Qt test helper fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-26
+    @version    0.1.0
+    """
+    project_root, _manifest = _create_project(tmp_path, "TranslationDownstreamResetProject")
+    (project_root / config.TRANSLATION_STATE_FILE_NAME).write_text(
+        json.dumps(
+            {
+                "folder_relative_path": config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH,
+                "status": "translated",
+                "output_paths": [config.TRANSLATED_CHUNKS_FILE_NAME],
+                "artifact_paths": [config.TRANSLATION_REPORT_FILE_NAME],
+            },
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    (project_root / config.CHARACTER_PROFILE_FILE_NAME).write_text("[]\n", encoding="utf-8")
+    (project_root / config.SPEECH_BLOCKS_OUTPUT_FILE_NAME).write_text("[]\n", encoding="utf-8")
+    window = _build_window(qtbot, project_root)
+    assert window._current_manifest is not None
+    window._current_manifest["operations"]["character_discovery"]["status"] = "completed"
+    window._current_manifest["operations"]["speech_blocks"]["status"] = "completed"
+
+    ai_translation_ui_controller._sync_manifest_after_translation(
+        window,
+        {
+            "translation_stage_status": "translated",
+            "translated_chunk_count": 1,
+            "approved_chunk_count": 0,
+            "total_chunk_count": 1,
+        },
+    )
+
+    assert window._current_manifest["current_stage"] == "translation_ready"
+    assert window._current_manifest["operations"]["character_discovery"]["status"] == "not_started"
+    assert window._current_manifest["operations"]["speech_blocks"]["status"] == "not_started"
+    assert not (project_root / config.CHARACTER_PROFILE_FILE_NAME).exists()
+    assert not (project_root / config.SPEECH_BLOCKS_OUTPUT_FILE_NAME).exists()
 
 
 def _create_project(tmp_path, name: str):

@@ -8,6 +8,26 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
 
 All notable changes to this project will be documented in this file.
 
+## [0.33.0] - 2026-04-26
+
+### Changed
+
+- changed AI Translation completion semantics so fully translated chunks enter
+  an approval-pending `translated` state and the operation is only completed
+  after every translated chunk is approved
+- changed translation metadata initialization so first page access creates
+  operation metadata from existing chunking output without marking translation
+  complete
+- changed Reset Translation to clear translation runtime artifacts, downstream
+  operation outputs, downstream operation metadata, and downstream manifest
+  summaries
+- changed translation edits, retranslations, and approval updates to refresh
+  operation metadata and invalidate downstream workflow readiness when approval
+  is lost
+- updated AI Translation UI notes, reset warning text, focused tests, README,
+  and software documentation for the approval-gated workflow
+- package version updated to `0.33.0`
+
 ## [0.32.0] - 2026-04-26
 
 ### Added
