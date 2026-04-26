@@ -217,6 +217,8 @@ def test_character_voices_page_header_indicators_render_languages_and_assignment
     assert page._original_language_value_label.text() == "Italian"
     assert page._translated_language_value_label.text() == "Romanian"
     assert page._assignment_mode_value_label.text() == "Narrator + character voices"
+    assert page._voice_language_value_label.text() == "English"
+    assert hasattr(page, "_voice_language_combo") is False
 
 
 def test_character_voices_page_matches_translation_notes_and_narrator_editor_sizing(qtbot) -> None:

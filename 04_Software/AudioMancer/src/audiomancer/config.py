@@ -361,6 +361,7 @@ TRANSLATION_LANGUAGE_OPTIONS = (
     ("ro", "Romanian"),
     ("ja", "Japanese"),
     ("ko", "Korean"),
+    ("zh", "Chinese"),
     ("de", "German"),
     ("fr", "French"),
     ("ru", "Russian"),

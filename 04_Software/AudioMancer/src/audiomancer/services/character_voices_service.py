@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-  # noqa: UP009
-# ruff: noqa: E501
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -15,7 +14,7 @@
          for the Character Voices workflow.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-20
-@version 1.3.1
+@version 1.4.0
 """
 
 # IMPORTS
@@ -42,15 +41,16 @@ SAMPLE_SOURCE_VOICE_DESIGNER = "voice_designer"
 SAMPLE_SOURCE_COPIED_NARRATOR = "copied_narrator"
 
 DEFAULT_PREVIEW_TEXT_BY_LANGUAGE = {
-    "en": ("The evening settled over the old house, and each voice carried a different shade of memory."),
-    "ro": ("Seara s-a asezat peste casa veche, iar fiecare glas purta o alta nuanta de amintire."),
-    "ja": "å¤•æš®ã‚ŒãŒå¤ã„å®¶ã‚’åŒ…ã¿ã€ãã‚Œãžã‚Œã®å£°ãŒé•ã†è¨˜æ†¶ã®è‰²ã‚’å¸¯ã³ã¦ã„ãŸã€‚",
-    "ko": "ì €ë…ì´ ì˜¤ëž˜ëœ ì§‘ ìœ„ë¡œ ë‚´ë ¤ì•‰ìž, ì €ë§ˆë‹¤ì˜ ëª©ì†Œë¦¬ëŠ” ë‹¤ë¥¸ ê¸°ì–µì˜ ë¹›ì„ í’ˆê³  ìžˆì—ˆë‹¤.",
-    "de": ("Der Abend senkte sich uber das alte Haus, und jede Stimme trug einen anderen Ton der Erinnerung."),
-    "fr": ("Le soir est tombe sur la vieille maison, et chaque voix portait une autre nuance de memoire."),
-    "ru": "Ð’ÐµÑ‡ÐµÑ€ Ð¾Ð¿ÑƒÑÑ‚Ð¸Ð»ÑÑ Ð½Ð° ÑÑ‚Ð°Ñ€Ñ‹Ð¹ Ð´Ð¾Ð¼, Ð¸ Ð² ÐºÐ°Ð¶Ð´Ð¾Ð¼ Ð³Ð¾Ð»Ð¾ÑÐµ Ð·Ð²ÑƒÑ‡Ð°Ð» ÑÐ²Ð¾Ð¹ Ð¾Ñ‚Ñ‚ÐµÐ½Ð¾Ðº Ð¿Ð°Ð¼ÑÑ‚Ð¸.",
+    "en": "The evening settled over the old house, and each voice carried a different shade of memory.",
+    "ro": "Seara s-a asezat peste casa veche, iar fiecare glas purta o alta nuanta de amintire.",
+    "ja": "夕暮れが古い家を包み、それぞれの声が異なる記憶の色合いを帯びていた。",
+    "ko": "저녁이 오래된 집 위로 내려앉자, 저마다의 목소리는 서로 다른 기억의 빛을 품고 있었다.",
+    "zh": "夜色笼罩着老屋，每个声音都带着不同色调的回忆。",
+    "de": ("Der Abend senkte sich ueber das alte Haus, und jede Stimme trug einen anderen Ton der Erinnerung."),
+    "fr": "Le soir est tombe sur la vieille maison, et chaque voix portait une autre nuance de memoire.",
+    "ru": "Вечер опустился на старый дом, и в каждом голосе звучал свой оттенок памяти.",
     "pt": "A noite pousou sobre a casa antiga, e cada voz carregava um tom diferente de memoria.",
-    "es": ("La tarde cayo sobre la vieja casa, y cada voz llevaba un matiz distinto de memoria."),
+    "es": "La tarde cayo sobre la vieja casa, y cada voz llevaba un matiz distinto de memoria.",
     "it": "La sera scese sulla vecchia casa, e ogni voce portava una diversa sfumatura di memoria.",
 }
 
@@ -731,6 +731,38 @@ def selected_narrator_sample_metadata(project_root: str | Path) -> dict[str, obj
     @version    1.1.0
     """
     return narrator_definition_service.load_selected_narrator_sample_metadata(project_root)
+
+
+def reset_samples_and_preview_texts_for_language(project_root: str | Path, voice_language: object) -> str:
+    """
+    @brief      Clear generated character samples and reset character preview text for one voice language.
+    @param[in]  project_root Active project root folder.
+    @param[in]  voice_language Candidate selected audiobook voice language.
+    @return     Canonical selected voice language code.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-26
+    @version    0.1.0
+    """
+    normalized_language = narrator_definition_service.narrator_language_code(voice_language)
+    localized_preview_text = preview_text_for_language(normalized_language)
+    updated_targets: list[dict[str, object]] = []
+    for target_payload in load_voice_plan(project_root):
+        target_id = str(target_payload.get("target_id", "")).strip()
+        if target_id:
+            audio_path, _metadata_path = target_sample_paths(project_root, target_id)
+            if audio_path.exists():
+                audio_path.unlink()
+        updated_target = {
+            **dict(target_payload),
+            "sample_audio_path": None,
+            "sample_metadata": None,
+        }
+        if str(target_payload.get("target_kind", "")).strip() == TARGET_KIND_CHARACTER:
+            updated_target["preview_text"] = localized_preview_text
+        updated_targets.append(_normalize_voice_target(updated_target))
+    save_voice_targets(project_root, updated_targets)
+    return normalized_language
 
 
 # LOCAL HELPERS

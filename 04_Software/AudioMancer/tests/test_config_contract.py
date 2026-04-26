@@ -13,7 +13,7 @@
          settings scaffold exist with the expected baseline contract.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-20
-@version 0.8.8
+@version 0.8.9
 """
 
 # IMPORTS
@@ -92,19 +92,18 @@ def test_settings_json_scaffold_matches_service_defaults() -> None:
     assert settings_path == config.APP_SETTINGS_PATH
 
 
-def test_config_translation_languages_include_qwen3_tts_languages_without_chinese() -> None:
+def test_config_translation_languages_include_qwen3_tts_languages_with_chinese() -> None:
     """
-    @brief      Verify shared language options include Qwen3 TTS languages, Romanian, and no Chinese entry.
+    @brief      Verify shared language options include Qwen3 TTS languages, Romanian, and Chinese.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
+    @date       2026-04-26
+    @version    0.2.0
     """
     language_codes = [language_code for language_code, _label in config.TRANSLATION_LANGUAGE_OPTIONS]
 
-    assert language_codes == ["en", "ro", "ja", "ko", "de", "fr", "ru", "pt", "es", "it"]
-    assert "zh" not in language_codes
+    assert language_codes == ["en", "ro", "ja", "ko", "zh", "de", "fr", "ru", "pt", "es", "it"]
 
 
 # END OF FILE

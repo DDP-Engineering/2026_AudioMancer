@@ -10,18 +10,19 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
 ## 1. Purpose
 
 Implements the current `Character Voices` workflow in `AudioMancer`.
-It prepares the narrator-plus-character voice target set and the selected
-voice language that the downstream `Speech Blocks` workflow consumes before the
-later `Audio Blocks` and `Audio Assembly` stages.
+It prepares the narrator-plus-character voice target set for the voice language
+selected on the `Narator Voice` page before the later `Speech Blocks`,
+`Audio Blocks`, and `Audio Assembly` stages.
 
 ## 2. Responsibilities
 
 - persist the Character Voices target list as root-level `characters_voice.json`
-- persist one selected voice language for character sample generation
 - prefer the character-owned `voice_definition_prompt` from `Characters` as
   the default voice-designer prompt for each character, with one legacy
   fallback builder for older projects
 - persist one editable per-character preview text used for sample generation
+  and reset that text to the localized default when the selected voice
+  language changes
 - persist per-character generated samples and sample metadata
 - mirror the selected narrator into the page as one preview-only target
 - auto-copy narrator samples into all character sample slots when
@@ -32,6 +33,7 @@ later `Audio Blocks` and `Audio Assembly` stages.
 It does not:
 
 - own the selected narrator profile itself
+- own the selected project voice language selector
 - own global VoiceWeaver runtime settings
 - implement `Speech Blocks`, `Audio Blocks`, or `Audio Assembly`
 
@@ -46,16 +48,16 @@ The workflow is split across:
   for page-state shaping from narrator selection, character discovery,
   translation readiness, and runtime capability cache
 - `04_Software/AudioMancer/src/audiomancer/ui/pages/character_voices_page.py`
-  for the target list, voice-language selector, prompt editor, preview-text
+  for the target list, voice-language indicator, prompt editor, preview-text
   editor, and bottom status area
 - `04_Software/AudioMancer/src/audiomancer/ui/controllers/character_voices_ui_controller.py`
-  for destructive edit confirmation, selected voice-language persistence,
-  VoiceWeaver generation, preview playback, and stage synchronization
+  for destructive edit confirmation, VoiceWeaver generation, preview playback,
+  and stage synchronization
 
 High-level flow:
 
-1. Project load ensures `characters_voice.json` exists and the selected voice
-   language is present in `project.json`.
+1. Project load ensures `characters_voice.json` exists and reads the selected
+   voice language from `project.json`.
 2. The state service loads the selected narrator, discovered character
    profiles, translation report, cached VoiceWeaver models, and persisted
    Character Voices data.
@@ -102,13 +104,13 @@ Inputs:
 - translation approval report from `translation_report.json`
 - cached VoiceWeaver discovery fields from `settings.json`
 - Character Voices page actions:
-  reset prompt, edit prompt, save prompt, generate sample, preview, stop
-  preview, and voice-language selection
+  reset prompt, edit prompt, save prompt, generate sample, preview, and stop
+  preview
 
 Outputs:
 
 - `characters_voice.json`
-- selected voice language stored in `project.json`
+- selected voice language read from `project.json`
 - root-level `audio_<target_display_name>.wav` character samples
 - sample metadata stored inside each `characters_voice.json` target entry
 - updated manifest stage:
@@ -142,7 +144,9 @@ Target rules:
   and falls back to the legacy deterministic builder only when that prompt is
   missing
 - character `prompt_text` is preserved until reset
-- character `preview_text` is preserved until explicitly edited and saved
+- character `preview_text` is preserved until explicitly edited and saved, or
+  reset to the localized default when the selected voice language changes on
+  `Narator Voice`
 
 Selected voice-language payload uses:
 
@@ -184,20 +188,23 @@ Upstream integrations:
 
 Downstream integrations:
 
-- `Speech Blocks`, which reads the selected Character Voices language and
-  is invalidated when that language changes
+- `Speech Blocks`, which reads the selected project voice language and is
+  invalidated when that language changes
 - `Audio Blocks` workflow data
 - placeholder `Audio Assembly` workflow data
 
 Current rules:
 
-- the shared voice-language selector offers English, Romanian, Japanese,
-  Korean, German, French, Russian, Portuguese, Spanish, and Italian
+- the selected voice language is displayed as a read-only indicator; the
+  selector lives on the `Narator Voice` page
+- the supported voice-language set offers English, Romanian, Japanese, Korean,
+  Chinese, German, French, Russian, Portuguese, Spanish, and Italian
 - translated language becomes selectable only when all translated chunks are
   approved
-- changing the selected voice language clears speech-block, audio-block, and
+- changing the selected voice language clears narrator samples, character
+  samples, character preview metadata, speech-block, audio-block, and
   audio-assembly runtime artifacts, then returns the project stage to
-  `character_voices_ready`
+  `narrator_definition_ready`
 - narrator is visible on the page but remains preview-only
 - character editing and generation are enabled only in
   `narrator_and_characters` mode
@@ -237,7 +244,7 @@ Operator path:
 
 - open one project with a selected narrator
 - enter `Character Voices`
-- choose the voice language
+- confirm the voice language shown from `Narator Voice`
 - inspect each character
 - optionally reset or edit the derived voice prompt
 - generate and preview the character sample
@@ -274,7 +281,7 @@ uv run ruff format <changed_python_files>
 - older projects without `voice_definition_prompt` still rely on the legacy
   fallback builder until Character Discovery is rerun or the character is
   edited and saved
-- per-character preview text still starts from a deterministic language-based
+- per-character preview text still starts from a deterministic localized
   sample text instead of automatically using real dialogue excerpts
 - `Audio Assembly` is still a placeholder stage and does not yet consume the
   generated Audio Blocks output

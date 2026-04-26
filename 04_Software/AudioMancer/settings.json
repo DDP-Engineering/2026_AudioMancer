@@ -296,7 +296,7 @@
       "issues": null
     }
   ],
-  "tts_runtime_active_model_id": "Qwen3-TTS-12Hz-1.7B-Base",
+  "tts_runtime_active_model_id": "Qwen3-TTS-12Hz-1.7B-VoiceDesign",
   "tts_runtime_device_diagnostics": {
     "package_flavor": "cuda",
     "torch_installed": true,

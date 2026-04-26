@@ -370,6 +370,7 @@ _UI_STRINGS = {
         "narator_voice.status_group": "Narator Voice Status",
         "narator_voice.original_language": "Original language: {language_label}",
         "narator_voice.translated_language": "Translated language: {language_label}",
+        "narator_voice.voice_language": "Voice language",
         "narator_voice.language_unknown": "Unknown",
         "narator_voice.language_not_translated": "Not translated",
         "narator_voice.create_profile": "Create Profile",
@@ -419,6 +420,11 @@ _UI_STRINGS = {
         "dialog.narator_voice_generate_sample_title": "Generate Narator Voice Sample",
         "dialog.narator_voice_generate_sample_message": "AudioMancer will contact the configured TTS runtime and requires the connection to be tested first in TTS Settings. Continue?",
         "dialog.narator_voice_generate_sample_message_replace": "Continuing will delete the current audio sample and AudioMancer will contact the configured TTS runtime. The connection must be tested first in TTS Settings. Continue?",
+        "dialog.narator_voice_language_change_title": "Change Audiobook Voice Language",
+        "dialog.narator_voice_language_change_message": (
+            "Changing the audiobook voice language will delete generated narrator samples, character voice samples, "
+            "Speech Blocks, Audio Blocks, Audio Assembly data, and generated audio outputs. Continue?"
+        ),
         "progress.narator_voice_sample_prepare": "Preparing narator voice sample generation...",
         "progress.narator_voice_sample_load_model": "Loading voice generation model...",
         "progress.narator_voice_sample_generate": "Generating narator voice sample...",
@@ -430,6 +436,7 @@ _UI_STRINGS = {
         "status.narator_voice_profile_selected": "Narator voice profile selected.",
         "status.narator_voice_profiles_imported": "Imported {imported_count} model profiles and skipped {skipped_count} existing ones.",
         "status.narator_voice_sample_generated": "Narator voice sample generated.",
+        "status.narator_voice_language_changed": "Audiobook voice language changed. Generated samples and downstream data were reset.",
         "status.character_voices_prompt_reset": "Voice prompt reset.",
         "status.character_voices_prompt_saved": "Voice prompt saved.",
         "status.character_voices_sample_generated": "Character sample generated.",
@@ -1141,6 +1148,7 @@ _UI_STRINGS = {
         "narator_voice.status_group": "Stare Voce Narator",
         "narator_voice.original_language": "Limba originala: {language_label}",
         "narator_voice.translated_language": "Limba tradusa: {language_label}",
+        "narator_voice.voice_language": "Limba vocii",
         "narator_voice.language_unknown": "Necunoscuta",
         "narator_voice.language_not_translated": "Netradusa",
         "narator_voice.create_profile": "Creeaza Profil",
@@ -1190,6 +1198,12 @@ _UI_STRINGS = {
         "dialog.narator_voice_generate_sample_title": "Genereaza Sample Voce Narator",
         "dialog.narator_voice_generate_sample_message": "AudioMancer va contacta runtime-ul TTS configurat si conexiunea trebuie testata inainte din Setari TTS. Continui?",
         "dialog.narator_voice_generate_sample_message_replace": "Continuarea va sterge sample-ul audio curent, iar AudioMancer va contacta runtime-ul TTS configurat. Conexiunea trebuie testata inainte din Setari TTS. Continui?",
+        "dialog.narator_voice_language_change_title": "Schimba Limba Vocii Audiobookului",
+        "dialog.narator_voice_language_change_message": (
+            "Schimbarea limbii vocii audiobookului va sterge sample-urile naratorului, sample-urile vocilor "
+            "personajelor, Blocurile de Vorbire, Blocurile Audio, datele de Asamblare Audio si iesirile audio "
+            "generate. Continui?"
+        ),
         "progress.narator_voice_sample_prepare": "Se pregateste generarea sample-ului pentru narator...",
         "progress.narator_voice_sample_load_model": "Se incarca modelul pentru generarea vocii...",
         "progress.narator_voice_sample_generate": "Se genereaza sample-ul pentru narator...",
@@ -1201,6 +1215,7 @@ _UI_STRINGS = {
         "status.narator_voice_profile_selected": "Profilul naratorului a fost selectat.",
         "status.narator_voice_profiles_imported": "Au fost importate {imported_count} profiluri de model si au fost omise {skipped_count} existente.",
         "status.narator_voice_sample_generated": "Sample-ul naratorului a fost generat.",
+        "status.narator_voice_language_changed": "Limba vocii audiobookului a fost schimbata. Sample-urile generate si datele ulterioare au fost resetate.",
         "status.character_voices_prompt_reset": "Promptul vocal a fost resetat.",
         "status.character_voices_prompt_saved": "Promptul vocal a fost salvat.",
         "status.character_voices_sample_generated": "Sample-ul personajului a fost generat.",

@@ -86,7 +86,7 @@ High-level flow:
    selected narrator profile sample metadata for older projects where
    `narator.json` contains only selection state, loads character samples only
    when narrator-plus-character assignment is active, and reads the selected
-   Character Voices language.
+   project voice language.
 3. The service selects the clone/base model from the discovered runtime catalog,
    preferring `Qwen3-TTS-12Hz-1.7B-Base` when it is available. It reads
    `/v1/status`, loads the clone model only when needed, then resolves the
@@ -276,7 +276,7 @@ Upstream integrations:
   `narator_sample.json`, and selected profile state in `narator.json`
 - per-character sample state from `characters_voice.json` when
   `voice_assignment_mode == "narrator_and_characters"`
-- selected Character Voices language from `project.json`
+- selected project voice language from `project.json`
 - ordered speech blocks from `speech_blocks.json`
 
 Downstream integrations:
@@ -290,8 +290,8 @@ Current invalidation points:
 
 - narrator profile selection, selected-sample regeneration, selected-profile
   edit, and selected-profile deletion
-- Character Voices prompt reset, prompt edit start, target sample regeneration,
-  and selected voice-language change
+- Narator Voice selected voice-language change, Character Voices prompt reset,
+  prompt edit start, and target sample regeneration
 - Speech Blocks rerun or reset through its own controller
 
 ## 8. Usage

@@ -14,7 +14,7 @@
          metadata records whether that sample is selected.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-20
-@version 3.10.0
+@version 3.11.0
 """
 
 # IMPORTS
@@ -46,6 +46,34 @@ DEFAULT_NARRATOR_PROFILE_ID = "qwen_preset_vivian"
 DEFAULT_PREVIEW_TEXT = (
     "The hall fell silent as the final lantern dimmed, and every step carried the weight of an unspoken decision."
 )
+DEFAULT_PREVIEW_TEXT_BY_LANGUAGE = {
+    "en": DEFAULT_PREVIEW_TEXT,
+    "ro": "Sala a amutit cand ultimul felinar s-a stins, iar fiecare pas purta greutatea unei hotarari nerostite.",
+    "ja": "最後のランタンが暗くなると広間は静まり返り、一歩ごとに言葉にならない決断の重みが宿っていた。",
+    "ko": "마지막 등불이 어두워지자 홀은 고요해졌고, 걸음마다 말하지 못한 결정의 무게가 실려 있었다.",
+    "zh": "最后一盏灯笼暗下去时，大厅陷入寂静，每一步都承载着未出口决定的重量。",
+    "de": (
+        "Der Saal wurde still, als die letzte Laterne erlosch, "
+        "und jeder Schritt trug das Gewicht einer unausgesprochenen Entscheidung."
+    ),
+    "fr": (
+        "La salle devint silencieuse lorsque la derniere lanterne faiblit, "
+        "et chaque pas portait le poids d'une decision tue."
+    ),
+    "ru": "Зал затих, когда последний фонарь померк, и каждый шаг нес тяжесть невысказанного решения.",
+    "pt": (
+        "O salao ficou em silencio quando a ultima lanterna se apagou, "
+        "e cada passo carregava o peso de uma decisao nao dita."
+    ),
+    "es": (
+        "El salon quedo en silencio cuando la ultima linterna se apago, "
+        "y cada paso llevaba el peso de una decision no pronunciada."
+    ),
+    "it": (
+        "La sala cadde nel silenzio quando l'ultima lanterna si affievoli, "
+        "e ogni passo portava il peso di una decisione non detta."
+    ),
+}
 _NARRATOR_LANGUAGE_LABELS = dict(config.TRANSLATION_LANGUAGE_OPTIONS)
 
 _BUILTIN_QWEN_PRESET_DEFINITIONS = (
@@ -186,6 +214,56 @@ def narrator_language_label(language_value: object, fallback: str = DEFAULT_NARR
         if normalized_casefold == str(language_label).casefold():
             return str(language_label)
     return normalized_value
+
+
+def preview_text_for_language(language_value: object) -> str:
+    """
+    @brief      Resolve the default narrator preview text for one selected audiobook language.
+    @param[in]  language_value Candidate selected voice language.
+    @return     Stable localized narrator preview text.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-26
+    @version    0.1.0
+    """
+    normalized_language = narrator_language_code(language_value)
+    return DEFAULT_PREVIEW_TEXT_BY_LANGUAGE.get(
+        normalized_language,
+        DEFAULT_PREVIEW_TEXT_BY_LANGUAGE[DEFAULT_NARRATOR_LANGUAGE],
+    )
+
+
+def apply_voice_language_to_profiles(project_root: str | Path, voice_language: object) -> str:
+    """
+    @brief      Apply one selected audiobook language to narrator profiles and their default preview text.
+    @param[in]  project_root Active project root folder.
+    @param[in]  voice_language Candidate selected audiobook voice language.
+    @return     Persisted canonical voice language code.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-26
+    @version    0.1.0
+    """
+    normalized_language = narrator_language_code(voice_language)
+    localized_preview_text = preview_text_for_language(normalized_language)
+    profiles = []
+    for profile in load_profiles(project_root):
+        previous_language = narrator_language_code(profile.get("language", DEFAULT_NARRATOR_LANGUAGE))
+        profiles.append(
+            _normalize_profile(
+                {
+                    **dict(profile),
+                    "language": normalized_language,
+                    "preview_text": (
+                        localized_preview_text
+                        if previous_language != normalized_language
+                        else profile.get("preview_text", localized_preview_text)
+                    ),
+                }
+            )
+        )
+    _write_json(_profiles_path(project_root), profiles)
+    return normalized_language
 
 
 def load_profiles(project_root: str | Path) -> list[dict[str, object]]:

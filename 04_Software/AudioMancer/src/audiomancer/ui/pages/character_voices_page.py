@@ -14,7 +14,7 @@
          sample preview controls for the Character Voices workflow.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-20
-@version 1.3.2
+@version 1.4.0
 """
 
 # IMPORTS
@@ -23,7 +23,6 @@ from copy import deepcopy
 
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
-    QComboBox,
     QGroupBox,
     QHBoxLayout,
     QLabel,
@@ -48,7 +47,6 @@ class CharacterVoicesPage(QWidget):
     """
 
     selection_change_requested = Signal(object)
-    voice_language_change_requested = Signal(object)
     reset_prompt_requested = Signal(str)
     edit_prompt_requested = Signal(str)
     save_prompt_requested = Signal(dict)
@@ -107,9 +105,8 @@ class CharacterVoicesPage(QWidget):
         assignment_layout.addWidget(self._assignment_mode_value_label)
         self._voice_language_group = QGroupBox("Voice language", self)
         voice_language_layout = QVBoxLayout(self._voice_language_group)
-        self._voice_language_combo = QComboBox(self)
-        self._voice_language_combo.currentIndexChanged.connect(self._handle_voice_language_changed)
-        voice_language_layout.addWidget(self._voice_language_combo)
+        self._voice_language_value_label = QLabel("", self)
+        voice_language_layout.addWidget(self._voice_language_value_label)
         indicator_row.addWidget(self._original_language_group, 1)
         indicator_row.addWidget(self._translated_language_group, 1)
         indicator_row.addWidget(self._assignment_mode_group, 1)
@@ -270,7 +267,7 @@ class CharacterVoicesPage(QWidget):
             @exception  None
             @author     Eng. Dan Dumitru Pasare
             @date       2026-04-20
-        @version    1.3.0
+        @version    1.4.0
         """
         _ = notes
         _ = missing_narrator_sample
@@ -289,7 +286,7 @@ class CharacterVoicesPage(QWidget):
         self._load_editor(prompt_text, preview_text)
         self._set_language_labels(original_language, translated_language)
         self._assignment_mode_value_label.setText(assignment_mode_label)
-        self._load_language_entries(language_entries, selected_voice_language)
+        self._set_voice_language_label(language_entries, selected_voice_language)
         self._status_edit.setPlainText("\n".join(line for line in status_lines if str(line).strip()))
         self._apply_control_state()
 
@@ -356,10 +353,9 @@ class CharacterVoicesPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-20
-        @version    1.1.0
+        @version    1.3.0
         """
-        voice_language = self._voice_language_combo.currentData()
-        return str(voice_language).strip() if voice_language not in (None, "") else self._selected_voice_language
+        return self._selected_voice_language
 
     def current_editor_payload(self) -> dict[str, object]:
         """
@@ -368,7 +364,7 @@ class CharacterVoicesPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-20
-        @version    1.0.0
+        @version    1.1.0
         """
         current_target = self._current_target() or {}
         return {
@@ -438,7 +434,7 @@ class CharacterVoicesPage(QWidget):
         @return     None.
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-21
-        @version    0.1.0
+        @version    0.2.0
         """
         list_enabled = self._project_active and not self._busy and not self._preview_active and not self._edit_mode
         editor_enabled = (
@@ -449,7 +445,6 @@ class CharacterVoicesPage(QWidget):
             and self._current_target_is_editable
         )
         self._target_list.setEnabled(list_enabled)
-        self._voice_language_combo.setEnabled(self._project_active and not self._busy and not self._preview_active)
         self._reset_prompt_button.setEnabled(
             self._project_active
             and not self._busy
@@ -511,23 +506,22 @@ class CharacterVoicesPage(QWidget):
             self._target_list.setCurrentRow(selected_row)
         self._target_list.blockSignals(False)
 
-    def _load_language_entries(self, language_entries: list[tuple[str, str]], selected_voice_language: str) -> None:
+    def _set_voice_language_label(self, language_entries: list[tuple[str, str]], selected_voice_language: str) -> None:
         """
-        @brief      Load the language entries.
+        @brief      Set the read-only voice-language label.
         @param[in]  language_entries Value for `language_entries`.
         @param[in]  selected_voice_language Value for `selected_voice_language`.
         @return     None.
         @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-21
-        @version    0.1.0
+        @date       2026-04-26
+        @version    0.2.0
         """
-        self._loading_state = True
-        self._voice_language_combo.clear()
+        display_label = str(selected_voice_language or "").strip()
         for label, value in language_entries:
-            self._voice_language_combo.addItem(label, value)
-        selected_index = self._voice_language_combo.findData(selected_voice_language)
-        self._voice_language_combo.setCurrentIndex(0 if selected_index < 0 else selected_index)
-        self._loading_state = False
+            if str(value).strip() == str(selected_voice_language).strip():
+                display_label = str(label).strip()
+                break
+        self._voice_language_value_label.setText(display_label)
 
     def _load_editor(self, prompt_text: str, preview_text: str) -> None:
         """
@@ -622,18 +616,6 @@ class CharacterVoicesPage(QWidget):
         if target_id == str(self._current_target_id or "").strip():
             return
         self.selection_change_requested.emit(target_id)
-
-    def _handle_voice_language_changed(self) -> None:
-        """
-        @brief      Handle the voice language changed.
-        @return     None.
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-21
-        @version    0.1.0
-        """
-        if self._loading_state:
-            return
-        self.voice_language_change_requested.emit(self.current_voice_language())
 
     def _handle_editor_changed(self) -> None:
         """

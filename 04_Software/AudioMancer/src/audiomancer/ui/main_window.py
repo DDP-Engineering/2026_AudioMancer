@@ -677,17 +677,17 @@ class MainWindow(QMainWindow):
         self._narator_voice_page.preview_toggle_requested.connect(
             lambda: narator_voice_ui_controller.handle_preview_toggle_requested(self)
         )
+        self._narator_voice_page.voice_language_change_requested.connect(
+            lambda voice_language: narator_voice_ui_controller.handle_voice_language_change_requested(
+                self,
+                voice_language,
+            )
+        )
         self._character_voices_page = CharacterVoicesPage(self)
         self._character_voices_page.selection_change_requested.connect(
             lambda target_id: character_voices_ui_controller.handle_selection_change_requested(
                 self,
                 target_id,
-            )
-        )
-        self._character_voices_page.voice_language_change_requested.connect(
-            lambda voice_language: character_voices_ui_controller.handle_voice_language_change_requested(
-                self,
-                voice_language,
             )
         )
         self._character_voices_page.reset_prompt_requested.connect(

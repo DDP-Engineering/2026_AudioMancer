@@ -13,7 +13,7 @@
          page-entry warnings for the Character Voices workflow.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-20
-@version 1.3.3
+@version 1.4.0
 """
 
 # IMPORTS
@@ -29,7 +29,7 @@ from audiomancer.services import (
     narrator_definition_service,
     project_workspace_service,
 )
-from audiomancer.ui.controllers import character_voices_ui_controller
+from audiomancer.ui.controllers import character_voices_ui_controller, narator_voice_ui_controller
 from audiomancer.ui.main_window import MainWindow
 
 
@@ -365,16 +365,16 @@ def test_character_voices_progress_messages_hide_model_id(monkeypatch, qtbot, tm
     assert all("qwen" not in message.casefold() for _percent, message in observed_updates)
 
 
-def test_character_voices_voice_language_change_resets_speech_blocks_and_downstream(qtbot, tmp_path) -> None:
+def test_narator_voice_language_change_resets_samples_and_downstream(qtbot, tmp_path) -> None:
     """
-    @brief      Verify changing the Character Voices language clears Speech Blocks and downstream workflow state.
+    @brief      Verify changing the Narator Voice language clears generated samples and downstream workflow state.
     @param[in]  qtbot Qt test helper fixture.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.2.1
+    @date       2026-04-26
+    @version    0.3.0
     """
     project_root = _create_project_with_character_and_selected_narrator(tmp_path, "CharacterVoicesLanguageReset")
     manifest = project_workspace_service.load_manifest(project_root)
@@ -446,21 +446,22 @@ def test_character_voices_voice_language_change_resets_speech_blocks_and_downstr
     ]
     for artifact_path in stale_artifact_paths:
         artifact_path.write_text("[]", encoding="utf-8")
-    original_question = character_voices_ui_controller.QMessageBox.question
-    character_voices_ui_controller.QMessageBox.question = lambda *_args, **_kwargs: QMessageBox.StandardButton.Yes
-    window._character_voices_page.voice_language_change_requested.disconnect()
+    original_question = narator_voice_ui_controller.QMessageBox.question
+    narator_voice_ui_controller.QMessageBox.question = lambda *_args, **_kwargs: QMessageBox.StandardButton.Yes
     try:
-        character_voices_ui_controller.handle_voice_language_change_requested(window, "ro")
+        narator_voice_ui_controller.handle_voice_language_change_requested(window, "ro")
     finally:
-        character_voices_ui_controller.QMessageBox.question = original_question
+        narator_voice_ui_controller.QMessageBox.question = original_question
 
     assert window._current_manifest is not None
-    assert window._current_manifest["current_stage"] == "character_voices_ready"
+    assert window._current_manifest["current_stage"] == "narrator_definition_ready"
+    assert window._current_manifest["operations"]["character_voices"]["status"] == "not_started"
     assert window._current_manifest["operations"]["speech_blocks"]["status"] == "not_started"
     assert window._current_manifest["operations"]["audio_blocks"]["status"] == "not_started"
     assert window._current_manifest["operations"]["audio_assembly"]["status"] == "not_started"
     assert character_voices_service.load_selected_voice_language(project_root) == "ro"
     assert project_workspace_service.load_manifest(project_root)["selected_voice_language"] == "ro"
+    assert narrator_definition_service.load_selected_profile_state(project_root)["selected_profile_id"] is None
     assert all(not artifact_path.exists() for artifact_path in stale_artifact_paths)
 
 

@@ -14,7 +14,7 @@
          project-local narrator profile editing.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-18
-@version 3.8.1
+@version 3.9.0
 """
 
 # IMPORTS
@@ -27,8 +27,11 @@ from PySide6.QtWidgets import QInputDialog, QMessageBox
 
 from audiomancer import config
 from audiomancer.services import (
+    character_voices_service,
     narrator_definition_service,
+    operation_runtime_service,
     project_workspace_service,
+    text_cleanup_state_service,
     ui_state_service,
     voiceweaver_runtime_service,
 )
@@ -61,6 +64,63 @@ def handle_selection_change_requested(window: "MainWindow", target_profile_id: o
     window.show_project_state(
         window._current_project_root,
         window._current_manifest,
+    )
+
+
+def handle_voice_language_change_requested(window: "MainWindow", voice_language: object) -> None:
+    """
+    @brief      Persist one audiobook voice language selection and clear stale generated voice data.
+    @param[in]  window Main application window.
+    @param[in]  voice_language Requested audiobook voice language code.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-26
+    @version    0.1.0
+    """
+    if window._current_project_root is None or window._current_manifest is None:
+        return
+    current_language = ui_state_service.current_language_from_settings(window._settings_payload)
+    previous_voice_language = character_voices_service.load_selected_voice_language(window._current_project_root)
+    requested_voice_language = narrator_definition_service.narrator_language_code(voice_language)
+    if previous_voice_language == requested_voice_language:
+        window.show_project_state(
+            window._current_project_root,
+            project_workspace_service.load_manifest(window._current_project_root),
+        )
+        return
+    if not _confirm_voice_language_change(window, current_language):
+        window.show_project_state(
+            window._current_project_root,
+            project_workspace_service.load_manifest(window._current_project_root),
+        )
+        return
+
+    _stop_preview_playback(window)
+    window._character_voices_audio_player.stop()
+    window._character_voices_audio_player.setSource(QUrl())
+    window._character_voices_page.set_preview_active(False)
+    persisted_voice_language = character_voices_service.save_selected_voice_language(
+        window._current_project_root,
+        requested_voice_language,
+    )
+    narrator_definition_service.apply_voice_language_to_profiles(window._current_project_root, persisted_voice_language)
+    narrator_definition_service.clear_all_profile_samples(window._current_project_root)
+    narrator_definition_service.clear_selected_narrator_sample(window._current_project_root)
+    character_voices_service.reset_samples_and_preview_texts_for_language(
+        window._current_project_root,
+        persisted_voice_language,
+    )
+    _reset_voice_language_downstream(window)
+    window._narator_voice_inspected_profile_id = None
+    window._character_voices_inspected_target_id = None
+    window.show_project_state(
+        window._current_project_root,
+        project_workspace_service.load_manifest(window._current_project_root),
+    )
+    misc_ui_controller.show_message(
+        window,
+        ui_state_service.translate("status.narator_voice_language_changed", current_language),
     )
 
 
@@ -304,7 +364,7 @@ def handle_generate_sample_requested(window: "MainWindow", profile_id: str) -> N
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-17
-    @version    1.3.0
+    @version    1.4.0
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._active_operation_kind is not None:
@@ -319,6 +379,8 @@ def handle_generate_sample_requested(window: "MainWindow", profile_id: str) -> N
     profile_payload = narrator_definition_service.profile_by_id(window._current_project_root, profile_id)
     if profile_payload is None:
         return
+    selected_voice_language = window._narator_voice_page.current_voice_language()
+    profile_payload = {**dict(profile_payload), "language": selected_voice_language}
     if not _confirm_generate_sample(window, current_language, profile_id):
         return
     invalidate_audio_blocks = _selected_profile_id(window) == profile_id and (
@@ -871,6 +933,41 @@ def _sync_manifest_summary(
     )
 
 
+def _reset_voice_language_downstream(window: "MainWindow") -> None:
+    """
+    @brief      Reset narrator-dependent and downstream manifest operation metadata after a language change.
+    @param[in]  window Main application window.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-26
+    @version    0.1.0
+    """
+    if window._current_project_root is None or window._current_manifest is None:
+        return
+    operation_runtime_service.reset_operation_data(
+        window._current_project_root,
+        "speech_blocks",
+        include_current=True,
+        keep_input_snapshots=False,
+    )
+    updated_manifest = project_workspace_service.load_manifest(window._current_project_root)
+    operations = text_cleanup_state_service.normalized_manifest_operations(updated_manifest)
+    default_operations = text_cleanup_state_service.normalized_manifest_operations({})
+    for operation_kind in ("character_voices", "speech_blocks", "audio_blocks", "audio_assembly"):
+        operations[operation_kind] = default_operations[operation_kind]
+    updated_manifest["operations"] = operations
+    updated_manifest["narrator_profile_name"] = None
+    updated_manifest["narrator_language"] = None
+    current_stage = str(updated_manifest.get("current_stage", "")).strip()
+    if current_stage in config.PROJECT_WORKFLOW_STAGES:
+        narrator_stage_rank = config.PROJECT_WORKFLOW_STAGES.index("narrator_definition_ready")
+        if config.PROJECT_WORKFLOW_STAGES.index(current_stage) >= narrator_stage_rank:
+            updated_manifest["current_stage"] = "narrator_definition_ready"
+    project_workspace_service.save_manifest(updated_manifest, window._current_project_root)
+    window._current_manifest = project_workspace_service.load_manifest(window._current_project_root)
+
+
 def _stop_preview_playback(window: "MainWindow") -> None:
     """
     @brief      Execute the stop preview playback helper.
@@ -883,6 +980,26 @@ def _stop_preview_playback(window: "MainWindow") -> None:
     window._narator_voice_audio_player.stop()
     window._narator_voice_audio_player.setSource(QUrl())
     window._narator_voice_page.set_preview_active(False)
+
+
+def _confirm_voice_language_change(window: "MainWindow", language: str) -> bool:
+    """
+    @brief      Confirm destructive audiobook voice-language switching.
+    @param[in]  window Main application window.
+    @param[in]  language Runtime UI language code.
+    @return     True when the operator confirms the reset.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-26
+    @version    0.1.0
+    """
+    return (
+        QMessageBox.question(
+            window,
+            ui_state_service.translate("dialog.narator_voice_language_change_title", language),
+            ui_state_service.translate("dialog.narator_voice_language_change_message", language),
+        )
+        == QMessageBox.StandardButton.Yes
+    )
 
 
 def _confirm_delete_profile(window: "MainWindow", language: str) -> bool:

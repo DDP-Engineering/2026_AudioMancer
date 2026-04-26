@@ -13,7 +13,7 @@
          status-line composition for the simplified narrator workflow.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-20
-@version 3.3.1
+@version 3.4.0
 """
 
 # IMPORTS
@@ -36,7 +36,7 @@ def test_narrator_state_service_exposes_project_languages_and_no_default_selecti
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-17
-    @version    1.1.0
+    @version    1.2.0
     """
     project_root, manifest = _create_project(tmp_path, "NarratorStateProject")
     manifest["original_language"] = "Italian"
@@ -46,7 +46,7 @@ def test_narrator_state_service_exposes_project_languages_and_no_default_selecti
     )
     translation_report_path.parent.mkdir(parents=True, exist_ok=True)
     translation_report_path.write_text(
-        json.dumps({"target_language": "ro"}, indent=2) + "\n",
+        json.dumps({"target_language": "ro", "total_chunk_count": 1, "approved_chunk_count": 1}, indent=2) + "\n",
         encoding="utf-8",
     )
 
@@ -55,7 +55,9 @@ def test_narrator_state_service_exposes_project_languages_and_no_default_selecti
     assert state["selected_profile_id"] is None
     assert state["original_language"] == "Italian"
     assert state["translated_language"] == "Romanian"
-    assert state["effective_language"] == "ro"
+    assert state["effective_language"] == "it"
+    assert state["selected_voice_language"] == "it"
+    assert state["language_entries"] == [("Italian", "it"), ("Romanian", "ro")]
     assert state["can_select"] is False
 
 
@@ -67,7 +69,7 @@ def test_narrator_state_service_uses_cleanup_detected_original_language_when_man
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.2.0
+    @version    0.3.0
     """
     project_root, manifest = _create_project(tmp_path, "NarratorStateCleanupLanguageProject")
     cleanup_report_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.CLEANUP_REPORT_FILE_NAME
@@ -81,6 +83,7 @@ def test_narrator_state_service_uses_cleanup_detected_original_language_when_man
 
     assert state["original_language"] == "Italian"
     assert state["effective_language"] == "it"
+    assert state["selected_voice_language"] == "it"
 
 
 def test_narrator_state_service_marks_sampled_custom_profile_selectable(tmp_path) -> None:

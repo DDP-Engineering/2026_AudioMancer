@@ -12,7 +12,7 @@
          explicit narrator selection, and Qwen3-backed sample generation.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-18
-@version 3.1.1
+@version 3.2.0
 """
 
 # IMPORTS
@@ -21,6 +21,7 @@ import json
 
 from PySide6.QtWidgets import QMessageBox
 
+from audiomancer import config
 from audiomancer.services import narrator_definition_service, project_workspace_service
 from audiomancer.ui.controllers import narator_voice_ui_controller
 from audiomancer.ui.main_window import MainWindow
@@ -186,7 +187,7 @@ def test_narator_voice_ui_controller_selection_change_refreshes_delete_state(qtb
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-18
-    @version    1.0.0
+    @version    1.1.0
     """
     project_root, _manifest = _create_project(tmp_path, "NarratorControllerSelectionRefresh")
     custom_profile = narrator_definition_service.create_custom_profile(
@@ -196,7 +197,7 @@ def test_narator_voice_ui_controller_selection_change_refreshes_delete_state(qtb
         "Prompt.",
         "Preview text.",
     )
-    profiles_path = project_root / "50_narrator_definition" / "profiles.json"
+    profiles_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.NARRATOR_PROFILE_FILE_NAME
     profiles_path.write_text(
         json.dumps(
             [

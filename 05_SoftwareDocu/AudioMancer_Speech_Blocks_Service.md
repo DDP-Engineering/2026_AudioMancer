@@ -12,14 +12,14 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
 Implements the current approval-driven `Speech Blocks` workflow in
 `AudioMancer`.
 
-It converts the chunk text selected through `Character Voices` into ordered
+It converts the chunk text selected through the Narator Voice language into ordered
 speaker-attributed speech blocks, gives the operator a focused review and edit
 surface, and persists the approved results as root-level Speech Blocks
 artifacts.
 
 ## 2. Responsibilities
 
-- resolve the active source language from `Character Voices`
+- resolve the active source language from `project.json.selected_voice_language`
 - choose canonical chunking text or approved translated text as the source
 - send one AI request per chunk using the selected AI profile
 - normalize model output into the new persisted speech-block schema only
@@ -80,7 +80,7 @@ The workflow is split across:
 
 High-level flow:
 
-1. `Character Voices` selects the effective voice language for downstream work.
+1. `Narator Voice` selects the effective voice language for downstream work.
 2. `speech_blocks_service.resolve_source_chunks(...)` loads canonical chunks
    from `chunks_text.json` or approved translated chunks from
    `translated_text.json`.
@@ -237,7 +237,7 @@ Upstream integrations:
 - approved translation output from `translated_text.json` when the selected voice
   language is translated
 - discovered character speaker catalog from `characters_profile.json`
-- selected Character Voices language from `project.json`
+- selected project voice language from `project.json`
 
 Downstream integrations:
 
@@ -251,14 +251,14 @@ Downstream integrations:
 - selected-chunk re-splitting asks Audio Blocks to delete audio for the
   re-split chunk, preserve earlier chunk audio, remap later records to rebuilt
   IDs, rename order-based artifacts when needed, and rebuild report/state
-- Character Voices language changes invalidate speech-block, audio-block, and
+- Narator Voice language changes invalidate speech-block, audio-block, and
   audio-assembly runtime artifacts
 
 Runtime gating:
 
 - one project must be open
 - chunking output must exist
-- the Character Voices language must resolve to either the original language or
+- the selected project voice language must resolve to either the original language or
   a fully approved translation target
 - at least one enabled AI profile must be configured
 
@@ -313,7 +313,7 @@ report = speech_blocks_service.regenerate_chunk_speech_blocks(
 Operator path:
 
 - open one project that has completed `Character Voices`
-- choose the desired source language on the `Character Voices` page
+- choose the desired source language on the `Narator Voice` page
 - open `Speech Blocks`
 - select the AI profile
 - press `Generate Speech Blocks`

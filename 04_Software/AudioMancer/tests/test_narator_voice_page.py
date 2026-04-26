@@ -13,7 +13,7 @@
          sample-dependent button enablement, and bottom status rendering.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-18
-@version 3.3.5
+@version 3.3.6
 """
 
 # IMPORTS
@@ -49,7 +49,7 @@ def test_narator_voice_page_prompt_and_preview_editors_expose_scrollbars_and_lim
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.2.0
+    @version    0.3.0
     """
     page = NaratorVoicePage()
     qtbot.addWidget(page)
@@ -70,6 +70,8 @@ def test_narator_voice_page_prompt_and_preview_editors_expose_scrollbars_and_lim
         current_profile_id="custom_1",
         selected_profile_id=None,
         effective_language="en",
+        selected_voice_language="en",
+        language_entries=[("English", "en")],
         original_language="Unknown",
         translated_language="Not translated",
         profile_name="Custom One",
@@ -88,8 +90,12 @@ def test_narator_voice_page_prompt_and_preview_editors_expose_scrollbars_and_lim
 
     assert page._designer_prompt.verticalScrollBarPolicy() == Qt.ScrollBarPolicy.ScrollBarAlwaysOn
     assert page._preview_text_edit.verticalScrollBarPolicy() == Qt.ScrollBarPolicy.ScrollBarAlwaysOn
-    assert page._designer_prompt.minimumHeight() == 112
-    assert page._preview_text_edit.minimumHeight() == 92
+    assert page._designer_prompt.minimumHeight() == 76
+    assert page._designer_prompt.maximumHeight() == 104
+    assert page._designer_group.maximumHeight() == 164
+    assert page._preview_text_edit.minimumHeight() == 48
+    assert page._preview_text_edit.maximumHeight() == 68
+    assert page._preview_group.maximumHeight() == 136
     assert page._status_group.minimumHeight() == 112
     assert page._status_group.maximumHeight() == 132
     assert page._preview_text_edit.toPlainText() == "abcde"
@@ -130,6 +136,8 @@ def test_narator_voice_page_edit_mode_disables_list_and_enables_save_after_chang
         current_profile_id="custom_1",
         selected_profile_id=None,
         effective_language="en",
+        selected_voice_language="en",
+        language_entries=[("English", "en")],
         original_language="Unknown",
         translated_language="Not translated",
         profile_name="Custom One",
@@ -184,6 +192,8 @@ def test_narator_voice_page_preview_toggle_updates_label_and_select_enablement(q
         current_profile_id="preset_1",
         selected_profile_id=None,
         effective_language="en",
+        selected_voice_language="en",
+        language_entries=[("English", "en")],
         original_language="Unknown",
         translated_language="Not translated",
         profile_name="Vivian",
@@ -223,6 +233,8 @@ def test_narator_voice_page_status_panel_and_language_labels_render_state(qtbot)
         current_profile_id=None,
         selected_profile_id=None,
         effective_language="ro",
+        selected_voice_language="ro",
+        language_entries=[("Romanian", "ro")],
         original_language="Italian",
         translated_language="Romanian",
         profile_name="",
@@ -240,8 +252,10 @@ def test_narator_voice_page_status_panel_and_language_labels_render_state(qtbot)
 
     assert page._original_language_group.title() == "Original language"
     assert page._translated_language_group.title() == "Translated language"
+    assert page._voice_language_group.title() == "Voice language"
     assert page._original_language_value_label.text() == "Italian"
     assert page._translated_language_value_label.text() == "Romanian"
+    assert page.current_voice_language() == "ro"
     assert "Profiles: 3" in page._status_edit.toPlainText()
 
 

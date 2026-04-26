@@ -13,7 +13,7 @@
          persistence, and narrator-copy sample sync behavior.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-20
-@version 1.2.1
+@version 1.3.0
 """
 
 # IMPORTS
@@ -92,16 +92,16 @@ def test_selected_voice_language_persists(tmp_path) -> None:
     assert character_voices_service.load_selected_voice_language(project_root) == "ro"
 
 
-def test_preview_text_covers_qwen3_tts_languages_without_chinese() -> None:
+def test_preview_text_covers_qwen3_tts_languages_with_chinese() -> None:
     """
-    @brief      Verify deterministic preview text exists for every non-Chinese Qwen3 TTS language plus Romanian.
+    @brief      Verify deterministic preview text exists for every supported voice language.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
+    @date       2026-04-26
+    @version    0.2.0
     """
-    for language_code in ("en", "ro", "ja", "ko", "de", "fr", "ru", "pt", "es", "it"):
+    for language_code in ("en", "ro", "ja", "ko", "zh", "de", "fr", "ru", "pt", "es", "it"):
         assert character_voices_service.preview_text_for_language(language_code)
 
 
