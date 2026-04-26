@@ -365,20 +365,23 @@ def test_character_voices_progress_messages_hide_model_id(monkeypatch, qtbot, tm
     assert all("qwen" not in message.casefold() for _percent, message in observed_updates)
 
 
-def test_narator_voice_language_change_resets_samples_and_downstream(qtbot, tmp_path) -> None:
+def test_narator_voice_language_change_is_ignored_when_project_options_are_locked(qtbot, tmp_path) -> None:
     """
-    @brief      Verify changing the Narator Voice language clears generated samples and downstream workflow state.
+    @brief      Verify narrator language changes are ignored after project options are locked.
     @param[in]  qtbot Qt test helper fixture.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-26
-    @version    0.3.0
+    @version    0.4.0
     """
     project_root = _create_project_with_character_and_selected_narrator(tmp_path, "CharacterVoicesLanguageReset")
     manifest = project_workspace_service.load_manifest(project_root)
     manifest["current_stage"] = "audio_assembly_ready"
+    manifest["target_language"] = "en"
+    manifest["selected_voice_language"] = "en"
+    manifest["project_options_locked"] = True
     manifest["operations"]["speech_blocks"]["status"] = "completed"
     manifest["operations"]["audio_blocks"]["status"] = "completed"
     manifest["operations"]["audio_assembly"]["status"] = "completed"
@@ -454,15 +457,15 @@ def test_narator_voice_language_change_resets_samples_and_downstream(qtbot, tmp_
         narator_voice_ui_controller.QMessageBox.question = original_question
 
     assert window._current_manifest is not None
-    assert window._current_manifest["current_stage"] == "narrator_definition_ready"
+    assert window._current_manifest["current_stage"] == "audio_assembly_ready"
     assert window._current_manifest["operations"]["character_voices"]["status"] == "not_started"
-    assert window._current_manifest["operations"]["speech_blocks"]["status"] == "not_started"
-    assert window._current_manifest["operations"]["audio_blocks"]["status"] == "not_started"
-    assert window._current_manifest["operations"]["audio_assembly"]["status"] == "not_started"
-    assert character_voices_service.load_selected_voice_language(project_root) == "ro"
-    assert project_workspace_service.load_manifest(project_root)["selected_voice_language"] == "ro"
-    assert narrator_definition_service.load_selected_profile_state(project_root)["selected_profile_id"] is None
-    assert all(not artifact_path.exists() for artifact_path in stale_artifact_paths)
+    assert window._current_manifest["operations"]["speech_blocks"]["status"] == "completed"
+    assert window._current_manifest["operations"]["audio_blocks"]["status"] == "completed"
+    assert window._current_manifest["operations"]["audio_assembly"]["status"] == "completed"
+    assert character_voices_service.load_selected_voice_language(project_root) == "en"
+    assert project_workspace_service.load_manifest(project_root)["selected_voice_language"] == "en"
+    assert narrator_definition_service.load_selected_profile_state(project_root)["selected_profile_id"] is not None
+    assert all(artifact_path.exists() for artifact_path in stale_artifact_paths)
 
 
 def _create_project_with_character_and_selected_narrator(

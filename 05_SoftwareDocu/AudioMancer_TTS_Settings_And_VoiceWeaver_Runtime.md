@@ -16,7 +16,7 @@ support narrator sample generation.
 It separates:
 
 - global runtime connection and discovery cache in `settings.json`
-- project-local narrator planning under `project.json.voice_assignment_mode`
+- project-locked audiobook planning owned by the Home page in `project.json`
 
 ## 2. Responsibilities
 
@@ -33,7 +33,6 @@ It separates:
 - persist runtime connection fields and the most recent discovery cache in
   `settings.json`
 - expose one static `TTS Settings` dialog beside `AI Settings`
-- persist the project-local TTS plan for one active project
 - classify fixed Qwen3 narrator-generation readiness from the discovered
   runtime models
 - load VoiceWeaver models on demand for narrator sample generation
@@ -42,7 +41,8 @@ It separates:
 
 It does not:
 
-- own narrator profile persistence beyond the project TTS plan contract
+- own narrator profile persistence
+- own or mutate the project target language or narration mode
 - own local WAV playback once the audio has been downloaded
 
 ## 3. Implementation Overview
@@ -60,17 +60,15 @@ High-level flow:
 
 1. The operator opens `TTS Settings` from the main toolbar.
 2. The page loads global runtime fields from `settings.json`.
-3. If a project is active, the page also loads `project.json.voice_assignment_mode`.
-4. `Test Connection` probes VoiceWeaver and refreshes the cached discovered
+3. `Test Connection` probes VoiceWeaver and refreshes the cached discovered
    model list plus the fixed Qwen3 capability matrix.
-5. The page rebuilds:
+4. The page rebuilds:
    - the discovered-model list
    - the capability matrix
    - the operator-facing connection status label
-   - the project-local planning note
-6. `Save TTS Settings` writes global runtime fields through the shared settings
-   service and writes the project-local TTS plan when a project is open.
-7. The Narator Voice workflow later reuses the same service to load models, poll
+5. `Save TTS Settings` writes global runtime fields through the shared settings
+   service.
+6. The Narator Voice workflow later reuses the same service to load models, poll
    `/v1/status` until the load reaches a terminal state, submit generation,
    poll again, and download `/v1/voice`.
 
@@ -101,7 +99,6 @@ Inputs:
 Outputs:
 
 - updated runtime fields in `settings.json`
-- updated `project.json.voice_assignment_mode` for the active project
 - popup feedback for successful or failed runtime probes
 - a discovered-model list rendered in the dialog
 - normalized load or generation results returned to the Narrator controller
@@ -133,14 +130,6 @@ Normalized discovered-model payloads keep:
 - `default_model_parameters`
 - `device_mode`
 - `issues`
-
-Project-local TTS plan contract:
-
-- `voice_assignment_mode`
-
-New-project default:
-
-- `voice_assignment_mode = "narrator_and_characters"`
 
 Current capability rules:
 
@@ -194,8 +183,11 @@ Current UI behavior:
   discovered-model column
 - the right side keeps only the discovered-model list and constrains its height
   to roughly the same height as the runtime controls
-- the project plan now exposes `Voice Assignment Mode`, `Audio Preview Timeout`,
-  and `Audio Generation Timeout`
+- the runtime limits group exposes `Audio Preview Timeout` and
+  `Audio Generation Timeout`
+- the project target language and `voice_assignment_mode` are locked from the
+  Home page and are displayed by downstream workflow pages instead of being
+  edited in this dialog
 - narrator sample generation uses the saved runtime base URL, API key,
   discovered models, fixed Qwen3 capability classification, VoiceWeaver
   language codes, the shared controller-side runtime cache helpers, and the
@@ -239,9 +231,8 @@ Operator path:
 - enter `Base URL` and optional `API Key`
 - press `Test Connection`
 - review discovered models
-- optionally choose the project `Voice Assignment Mode`
 - optionally adjust `Audio Preview Timeout` and `Audio Generation Timeout`
-- save the project-local TTS plan when one project is open
+- save the runtime settings
 
 ## 9. Validation And Tests
 

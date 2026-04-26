@@ -8,6 +8,48 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
 
 All notable changes to this project will be documented in this file.
 
+## [0.31.0] - 2026-04-26
+
+### Added
+
+- added Home-page project option locking for target translation language and
+  audio output style before the workflow starts
+- added narrator-only Speech Blocks prompt support for `same_narrator` projects,
+  using continuous narrator segments under the resolved TTS token budget
+- added lazy default operation-state initialization so `<step>_state.json` files
+  are created on first page open without creating reports or output artifacts
+
+### Changed
+
+- changed new project initialization to create only `project.json`; page-specific
+  metadata such as `audio_profiles.json`, `narator.json`, and
+  `characters_voice.json` is now initialized only when the matching voice page
+  is opened
+- changed project activation to return to the Home page before refreshing state,
+  preventing previously selected workflow pages from eagerly creating metadata
+  for a new or newly opened project
+- changed AI Translation to read the locked target language from `project.json`
+  and pass through same-language projects without AI rewriting
+- changed Speech Blocks prompt selection to use the dialogue/speaker splitter in
+  narrator-plus-character mode and the narrator-only segmentation prompt in
+  same-narrator mode
+- changed Home workflow progress to hide the `Source Selected` row, leaving
+  source state in Project Summary and starting the visible workflow at
+  `Text Cleanup`
+
+### Fixed
+
+- fixed Home-page layout overflow at large UI text sizes by tightening Project
+  Summary spacing and allowing the page body to scroll when content exceeds the
+  available height
+- fixed Home source replacement before project start so selecting another source
+  removes the previously imported source file and preserves the selected target
+  language and audio output style
+- fixed AI Translation page enablement so `Start Translation` is enabled and
+  `Reset Translation` is disabled when no translation operation has completed
+- fixed repeated Speech Blocks source-chunk errors during new-project page
+  refresh before text chunking has run
+
 ## [0.30.0] - 2026-04-26
 
 ### Added

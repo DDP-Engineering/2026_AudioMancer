@@ -13,7 +13,7 @@
          file support used by the current AudioMancer implementation scaffold.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 1.28.2
+@version 1.29.0
 """
 
 # IMPORTS
@@ -325,6 +325,18 @@ DEFAULT_TTS_VOICE_ASSIGNMENT_MODE = "narrator_and_characters"
 
 # @brief Supported narrator voice-assignment modes for one project.
 TTS_VOICE_ASSIGNMENT_MODE_OPTIONS = ("same_narrator", "narrator_and_characters")
+
+# @brief Conservative fallback max_new_tokens budget used before the TTS model reports one.
+DEFAULT_TTS_NARRATOR_ONLY_TOKEN_BUDGET = 2048
+
+# @brief Approximate generated-audio seconds represented by one VoiceWeaver max_new_tokens unit.
+DEFAULT_TTS_APPROX_AUDIO_SECONDS_PER_TOKEN = 0.08
+
+# @brief Safety factor applied when asking AI to split narrator-only Speech Blocks.
+DEFAULT_TTS_SPLIT_SAFETY_FACTOR = 0.85
+
+# @brief Approximate spoken-word rate used to convert audio token budget into text guidance.
+DEFAULT_TTS_WORDS_PER_AUDIO_SECOND = 2.5
 
 # AI Workflow Defaults
 # @brief Default maximum cleanup-unit count sent in one AI cleanup request window.

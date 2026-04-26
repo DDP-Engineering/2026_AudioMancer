@@ -13,10 +13,12 @@
          extraction, cleanup, and future workflow operations.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-22
-@version 0.2.0
+@version 0.3.0
 """
 
 # IMPORTS
+
+import json
 
 from audiomancer import config
 from audiomancer.services import operation_runtime_service, project_workspace_service
@@ -93,6 +95,34 @@ def test_resolve_operation_path_uses_project_root_without_creating_folders(tmp_p
     assert not any(
         (project_root / folder_name).exists() for folder_name in ("30_translation", "40_character_discovery")
     )
+
+
+def test_ensure_default_operation_state_creates_not_started_state_only(tmp_path) -> None:
+    """
+    @brief      Verify default state initialization creates state metadata without reports or outputs.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-26
+    @version    0.1.0
+    """
+    project_root, _manifest = project_workspace_service.create_project("DefaultStateRuntime", tmp_path)
+
+    state_path = operation_runtime_service.ensure_default_operation_state(project_root, "translation")
+    second_state_path = operation_runtime_service.ensure_default_operation_state(project_root, "translation")
+
+    assert state_path == project_root / config.TRANSLATION_STATE_FILE_NAME
+    assert second_state_path == state_path
+    assert (project_root / config.TRANSLATION_REPORT_FILE_NAME).exists() is False
+    assert (project_root / config.TRANSLATED_CHUNKS_FILE_NAME).exists() is False
+    state_payload = json.loads(state_path.read_text(encoding="utf-8"))
+    assert state_payload["status"] == "not_started"
+    assert state_payload["input_paths"] == []
+    assert state_payload["output_paths"] == []
+    assert state_payload["artifact_paths"] == []
+    assert state_payload["metadata"] == {}
+    assert state_payload["resume_checkpoint"] is None
 
 
 # END OF FILE

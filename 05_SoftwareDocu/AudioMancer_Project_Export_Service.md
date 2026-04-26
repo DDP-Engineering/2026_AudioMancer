@@ -114,7 +114,7 @@ each block so previewers preserve that two-line layout.
 
 The Main Window refreshes export readiness whenever project state is shown. The
 Home page displays Workflow Progress on the left as one read-only row box per
-stage and a compact `Exports` group on the right. Export controls are placed on
+operation stage after source selection and a compact `Exports` group on the right. Export controls are placed on
 the same vertical row as the workflow stage that produces that deliverable, with
 only format selectors and export buttons visible. It emits
 `export_requested(export_kind, export_format)` for enabled rows. The Home

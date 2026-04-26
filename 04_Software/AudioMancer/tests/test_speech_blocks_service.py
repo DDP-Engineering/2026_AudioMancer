@@ -11,11 +11,11 @@
 @brief Focused Speech Blocks service tests for AudioMancer.
 @details Verifies source-language resolution, persisted Speech Blocks
          artifacts, warning fallback behavior, dialogue-quote stripping,
-         approval/edit state, selected-chunk re-splitting, and resumable
-         chunk-based generation.
+         approval/edit state, selected-chunk re-splitting, resumable
+         chunk-based generation, and narrator-only segmentation.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-24
-@version 0.6.0
+@version 0.7.0
 """
 
 # IMPORTS
@@ -1070,6 +1070,124 @@ def test_start_generation_preserves_french_dash_and_guillemet_source_spans(monke
     assert speech_blocks[4]["source_text"] == " - Venez ici."
     assert speech_blocks[4]["text"] == "Venez ici."
     assert report["total_block_count"] == 5
+
+
+def test_start_generation_uses_narrator_only_prompt_for_same_narrator(monkeypatch, tmp_path) -> None:
+    """
+    @brief      Verify same-narrator projects use the narrator-only prompt pair and force narrator blocks.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-26
+    @version    0.1.0
+    """
+    project_root, manifest = _create_chunked_project(tmp_path, "SpeechBlocksNarratorOnly")
+    manifest["original_language"] = "en"
+    manifest["target_language"] = "en"
+    manifest["selected_voice_language"] = "en"
+    manifest["voice_assignment_mode"] = "same_narrator"
+    manifest["project_options_locked"] = True
+    project_workspace_service.save_manifest(manifest, project_root)
+    character_voices_service.save_selected_voice_language(project_root, "en")
+    validated_prompt_names = []
+    rendered_prompts = []
+    monkeypatch.setattr(
+        speech_blocks_service.prompt_template_service,
+        "validate_required_prompts",
+        lambda names: validated_prompt_names.extend(names),
+    )
+
+    def _render_prompt(name, variables):
+        rendered_prompts.append((name, dict(variables)))
+        return f"prompt {name}"
+
+    monkeypatch.setattr(speech_blocks_service.prompt_template_service, "render_prompt", _render_prompt)
+    responses = [
+        {
+            "payload": {
+                "speech_blocks": [
+                    {
+                        "speaker_id": "maria",
+                        "content_kind": "dialogue",
+                        "source_text": 'Narration. "Hello there."',
+                        "text": 'Narration. "Hello there."',
+                        "warning_flags": [],
+                    }
+                ]
+            },
+            "usage": {"input_tokens": 5, "output_tokens": 5, "total_tokens": 10, "usage_available": True},
+        },
+        {
+            "payload": {
+                "speech_blocks": [
+                    {
+                        "speaker_id": "maria",
+                        "content_kind": "dialogue",
+                        "source_text": 'Maria smiled. "Welcome."',
+                        "text": 'Maria smiled. "Welcome."',
+                        "warning_flags": [],
+                    }
+                ]
+            },
+            "usage": {"input_tokens": 5, "output_tokens": 5, "total_tokens": 10, "usage_available": True},
+        },
+    ]
+    monkeypatch.setattr(
+        speech_blocks_service.llm_provider_service,
+        "chat_json",
+        lambda *_args, **_kwargs: responses.pop(0),
+    )
+
+    speech_blocks_service.start_or_continue_generation(project_root, manifest, _profile_payload())
+
+    speech_blocks = speech_blocks_service.load_speech_blocks(project_root)
+    assert validated_prompt_names == ["speech_blocks_narrator_only_system", "speech_blocks_narrator_only_user"]
+    assert rendered_prompts[1][0] == "speech_blocks_narrator_only_user"
+    assert rendered_prompts[1][1]["voice_assignment_mode"] == "same_narrator"
+    assert rendered_prompts[1][1]["max_tts_tokens"]
+    assert {block["speaker_id"] for block in speech_blocks} == {"narrator"}
+    assert {block["content_kind"] for block in speech_blocks} == {speech_blocks_service.CONTENT_KIND_NARRATION}
+    assert speech_blocks[0]["text"] == 'Narration. "Hello there."'
+
+
+def test_normalize_chunk_blocks_narrator_only_preserves_delimiters_and_flags_budget() -> None:
+    """
+    @brief      Verify narrator-only normalization preserves dialogue delimiters and flags over-budget spans.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-26
+    @version    0.1.0
+    """
+    source_chunk = {"chunk_id": "chunk-0001", "text": "- Bonjour. Â« Venez. Â»"}
+    blocks, warnings = speech_blocks_service._normalize_chunk_blocks(  # noqa: SLF001
+        source_chunk,
+        {
+            "speech_blocks": [
+                {
+                    "speaker_id": "maria",
+                    "content_kind": "dialogue",
+                    "source_text": "- Bonjour. Â« Venez. Â»",
+                    "text": "- Bonjour. Â« Venez. Â»",
+                    "warning_flags": [],
+                }
+            ]
+        },
+        {"narrator": _narrator_catalog_entry()},
+        "fr",
+        voice_assignment_mode="same_narrator",
+        tts_budget={"safe_word_count": 1},
+    )
+
+    assert blocks[0]["speaker_id"] == "narrator"
+    assert blocks[0]["content_kind"] == speech_blocks_service.CONTENT_KIND_NARRATION
+    assert blocks[0]["text"] == "- Bonjour. Â« Venez. Â»"
+    assert blocks[0]["source_text"] == "- Bonjour. Â« Venez. Â»"
+    assert "ambiguous_speaker" not in blocks[0]["warning_flags"]
+    assert "tts_budget_exceeded" in blocks[0]["warning_flags"]
+    assert any("safe cached TTS budget" in str(warning["reason"]) for warning in warnings)
 
 
 def _create_chunked_project(tmp_path, name: str):

@@ -13,7 +13,7 @@
          the same first-page structure without implementing import behavior.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-06
-@version 0.6.0
+@version 0.10.4
 """
 
 # IMPORTS
@@ -28,6 +28,7 @@ from PySide6.QtWidgets import (
     QLabel,
     QLineEdit,
     QPushButton,
+    QScrollArea,
     QSizePolicy,
     QSpacerItem,
     QVBoxLayout,
@@ -47,7 +48,9 @@ _STATUS_COLORS = {
 }
 # @brief Ordered visible workflow stage tokens used by the Home progress grid.
 _WORKFLOW_STAGE_TOKENS = tuple(
-    stage_token for stage_token in config.PROJECT_WORKFLOW_STAGES if stage_token != config.DEFAULT_WORKFLOW_STAGE
+    stage_token
+    for stage_token in config.PROJECT_WORKFLOW_STAGES
+    if stage_token not in {config.DEFAULT_WORKFLOW_STAGE, "source_selected"}
 )
 # @brief Export-capable workflow stages mapped to the matching Home export kind.
 _EXPORT_KIND_BY_STAGE_TOKEN = {
@@ -57,8 +60,8 @@ _EXPORT_KIND_BY_STAGE_TOKEN = {
     "character_discovery_ready": project_export_service.EXPORT_KIND_CHARACTERS,
     "speech_blocks_ready": project_export_service.EXPORT_KIND_SPEECH_BLOCKS,
 }
-# @brief Stable height for correlated workflow and export rows.
-_WORKFLOW_ROW_MIN_HEIGHT = 34
+# @brief Stable compact height for correlated workflow and export rows.
+_WORKFLOW_ROW_MIN_HEIGHT = 32
 
 
 # PUBLIC API
@@ -70,12 +73,13 @@ class HomeProjectPage(QWidget):
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-05
-    @version    0.5.0
+    @version    0.9.0
     """
 
     import_requested = Signal()
     project_snapshot_requested = Signal()
     export_requested = Signal(str, str)
+    project_options_lock_requested = Signal(str, str)
 
     def __init__(self, parent=None) -> None:
         """
@@ -85,12 +89,15 @@ class HomeProjectPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-06
-        @version    0.6.0
+        @version    0.10.2
         """
         super().__init__(parent)
         self._project_active = False
         self._operation_busy = False
         self._source_locked = False
+        self._project_options_locked = False
+        self._target_language = config.DEFAULT_TRANSLATION_TARGET_LANGUAGE
+        self._voice_assignment_mode = config.DEFAULT_TTS_VOICE_ASSIGNMENT_MODE
         self._current_language = "en"
         self._current_project_name: str | None = None
         self._current_project_path: str | None = None
@@ -102,30 +109,64 @@ class HomeProjectPage(QWidget):
         self._export_states: dict[str, dict[str, object]] = {}
         self._export_rows: dict[str, dict[str, object]] = {}
 
-        layout = QVBoxLayout(self)
+        root_layout = QVBoxLayout(self)
+        root_layout.setContentsMargins(0, 0, 0, 0)
+        root_layout.setSpacing(0)
+        scroll_area = QScrollArea(self)
+        scroll_area.setWidgetResizable(True)
+        scroll_area.setFrameShape(QScrollArea.Shape.NoFrame)
+        scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        root_layout.addWidget(scroll_area)
+        content_widget = QWidget(scroll_area)
+        scroll_area.setWidget(content_widget)
+        layout = QVBoxLayout(content_widget)
+        layout.setContentsMargins(8, 6, 8, 6)
+        layout.setSpacing(4)
         self._title_label = QLabel("<h2>Home / Project</h2>")
         layout.addWidget(self._title_label)
 
         summary_group = QGroupBox("Project Summary", self)
         summary_layout = QGridLayout(summary_group)
+        summary_layout.setContentsMargins(10, 8, 10, 8)
+        summary_layout.setHorizontalSpacing(12)
+        summary_layout.setVerticalSpacing(4)
         self._name_label = QLabel("Project: none")
         self._path_label = QLabel("Path: none")
         self._path_label.setWordWrap(True)
-        self._stage_label = QLabel("Stage: none")
         self._source_label = QLabel("Source: none")
         self._source_label.setWordWrap(True)
+        self._options_status_label = QLabel("Project options are not locked.")
+        self._options_status_label.setWordWrap(True)
+        self._target_language_caption = QLabel("Translation language")
+        self._narration_mode_caption = QLabel("Audio output style")
+        self._target_language_combo = QComboBox(self)
+        for language_code, language_label in config.TRANSLATION_LANGUAGE_OPTIONS:
+            self._target_language_combo.addItem(language_label, language_code)
+        self._narration_mode_combo = QComboBox(self)
+        self._narration_mode_combo.addItem("Same narrator for whole book", "same_narrator")
+        self._narration_mode_combo.addItem("Narrator + character voices", "narrator_and_characters")
+        self._start_project_button = QPushButton("Start Project")
+        self._start_project_button.clicked.connect(self._emit_lock_project_options)
         self._import_button = QPushButton("Select Source File")
         self._import_button.clicked.connect(self.import_requested.emit)
         self._snapshot_button = QPushButton("Export Project ZIP")
         self._snapshot_button.clicked.connect(self.project_snapshot_requested.emit)
-        summary_action_layout = QHBoxLayout()
+        summary_action_layout = QVBoxLayout()
+        summary_action_layout.setContentsMargins(0, 0, 0, 0)
+        summary_action_layout.setSpacing(4)
+        summary_action_layout.addWidget(self._target_language_caption)
+        summary_action_layout.addWidget(self._target_language_combo)
+        summary_action_layout.addWidget(self._narration_mode_caption)
+        summary_action_layout.addWidget(self._narration_mode_combo)
         summary_action_layout.addWidget(self._import_button)
+        summary_action_layout.addWidget(self._start_project_button)
         summary_action_layout.addWidget(self._snapshot_button)
         summary_layout.addWidget(self._name_label, 0, 0)
-        summary_layout.addLayout(summary_action_layout, 0, 1)
-        summary_layout.addWidget(self._path_label, 1, 0, 1, 2)
-        summary_layout.addWidget(self._stage_label, 2, 0, 1, 2)
-        summary_layout.addWidget(self._source_label, 3, 0, 1, 2)
+        summary_layout.addLayout(summary_action_layout, 0, 1, 5, 1)
+        summary_layout.addWidget(self._path_label, 1, 0)
+        summary_layout.addWidget(self._source_label, 2, 0)
+        summary_layout.addWidget(self._options_status_label, 3, 0)
         summary_layout.addWidget(self._source_lock_label_placeholder(), 4, 0, 1, 2)
         summary_layout.setColumnStretch(0, 1)
         summary_layout.setColumnStretch(1, 0)
@@ -197,6 +238,7 @@ class HomeProjectPage(QWidget):
         self._exports_group = exports_group
         self._stage_group = stage_group
         self._refresh_import_button()
+        self._refresh_project_options_controls()
         self._refresh_summary_labels()
         self.set_export_states(project_export_service.build_export_states(None, None))
 
@@ -215,7 +257,7 @@ class HomeProjectPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-05
-        @version    0.2.0
+        @version    0.4.0
         """
         self._current_project_name = display_name
         self._current_project_path = project_path
@@ -248,6 +290,7 @@ class HomeProjectPage(QWidget):
         """
         self._project_active = is_active
         self._refresh_import_button()
+        self._refresh_project_options_controls()
 
     def set_operation_busy(self, is_busy: bool) -> None:
         """
@@ -261,6 +304,7 @@ class HomeProjectPage(QWidget):
         """
         self._operation_busy = is_busy
         self._refresh_import_button()
+        self._refresh_project_options_controls()
 
     def set_source_locked(self, is_locked: bool, source_name: str | None) -> None:
         """
@@ -275,16 +319,53 @@ class HomeProjectPage(QWidget):
         """
         self._source_locked = is_locked
         self._current_locked_source_name = source_name
-        if is_locked:
-            self._source_lock_label.setText(
-                _build_locked_source_text(
-                    self._current_language,
-                    source_name,
-                )
-            )
-        else:
-            self._source_lock_label.setText(ui_state_service.translate("home.no_source", self._current_language))
+        self._refresh_summary_labels()
         self._refresh_import_button()
+        self._refresh_project_options_controls()
+
+    def set_project_options(
+        self,
+        project_options_locked: bool,
+        target_language: str,
+        voice_assignment_mode: str,
+    ) -> None:
+        """
+        @brief      Update the displayed and editable project-level audiobook options.
+        @param[in]  project_options_locked True when project options are immutable.
+        @param[in]  target_language Selected audiobook target language code.
+        @param[in]  voice_assignment_mode Selected narration mode.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-26
+        @version    0.1.0
+        """
+        self._project_options_locked = bool(project_options_locked)
+        self._target_language = _normalize_language_code(target_language)
+        self._voice_assignment_mode = _normalize_voice_assignment_mode(voice_assignment_mode)
+        target_index = self._target_language_combo.findData(self._target_language)
+        if target_index >= 0:
+            self._target_language_combo.setCurrentIndex(target_index)
+        mode_index = self._narration_mode_combo.findData(self._voice_assignment_mode)
+        if mode_index >= 0:
+            self._narration_mode_combo.setCurrentIndex(mode_index)
+        self._refresh_summary_labels()
+        self._refresh_project_options_controls()
+        self._refresh_import_button()
+
+    def selected_project_options(self) -> tuple[str, str]:
+        """
+        @brief      Return the currently selected draft project options.
+        @return     Tuple of target language and voice-assignment mode tokens.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-26
+        @version    0.1.0
+        """
+        return (
+            str(self._target_language_combo.currentData() or config.DEFAULT_TRANSLATION_TARGET_LANGUAGE),
+            str(self._narration_mode_combo.currentData() or config.DEFAULT_TTS_VOICE_ASSIGNMENT_MODE),
+        )
 
     def set_stage_statuses(self, stages: list[dict[str, str]]) -> None:
         """
@@ -335,10 +416,26 @@ class HomeProjectPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-05
-        @version    0.2.0
+        @version    0.4.0
         """
-        self._import_button.setEnabled(self._project_active and not self._source_locked)
-        self._snapshot_button.setEnabled(self._project_active and not self._operation_busy)
+        self._import_button.setEnabled(self._project_active and not self._project_options_locked)
+        self._snapshot_button.setEnabled(
+            self._project_active and self._project_options_locked and not self._operation_busy
+        )
+
+    def _refresh_project_options_controls(self) -> None:
+        """
+        @brief      Apply project option selector enabled state.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-26
+        @version    0.1.0
+        """
+        can_edit_options = self._project_active and not self._project_options_locked and not self._operation_busy
+        self._target_language_combo.setEnabled(can_edit_options)
+        self._narration_mode_combo.setEnabled(can_edit_options)
+        self._start_project_button.setEnabled(can_edit_options and self._source_locked)
 
     def apply_language(self, language: str) -> None:
         """
@@ -348,15 +445,26 @@ class HomeProjectPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-05
-        @version    0.3.0
+        @version    0.5.0
         """
         self._current_language = language
         self._title_label.setText(f"<h2>{ui_state_service.translate('home.title', language)}</h2>")
         self._summary_group.setTitle(ui_state_service.translate("home.summary_group", language))
         self._exports_group.setTitle(ui_state_service.translate("home.exports_group", language))
         self._stage_group.setTitle(ui_state_service.translate("home.workflow_group", language))
+        self._target_language_caption.setText(ui_state_service.translate("home.translation_language", language))
+        self._narration_mode_caption.setText(ui_state_service.translate("home.audio_output_style", language))
         self._import_button.setText(ui_state_service.translate("home.select_source", language))
         self._snapshot_button.setText(ui_state_service.translate("home.export_project_zip", language))
+        self._start_project_button.setText(ui_state_service.translate("home.start_project", language))
+        self._narration_mode_combo.setItemText(
+            0,
+            ui_state_service.translate("home.mode_same_narrator", language),
+        )
+        self._narration_mode_combo.setItemText(
+            1,
+            ui_state_service.translate("home.mode_narrator_and_characters", language),
+        )
         self._refresh_summary_labels()
         if self._source_locked:
             self._source_lock_label.setText(_build_locked_source_text(language, self._current_locked_source_name))
@@ -364,6 +472,7 @@ class HomeProjectPage(QWidget):
             self._source_lock_label.setText(ui_state_service.translate("home.no_source", language))
         self.set_stage_statuses(self._stage_entries)
         self._refresh_export_rows()
+        self._refresh_project_options_controls()
 
     def _refresh_export_rows(self) -> None:
         """
@@ -420,7 +529,6 @@ class HomeProjectPage(QWidget):
         @version    0.1.0
         """
         none_text = ui_state_service.translate("home.none", self._current_language)
-        idle_text = ui_state_service.translate("status.idle", self._current_language)
         self._name_label.setText(
             _build_summary_text(
                 "home.project",
@@ -435,13 +543,6 @@ class HomeProjectPage(QWidget):
                 self._current_project_path or none_text,
             )
         )
-        self._stage_label.setText(
-            _build_summary_text(
-                "home.stage",
-                self._current_language,
-                self._current_stage_name or idle_text,
-            )
-        )
         self._source_label.setText(
             _build_summary_text(
                 "home.source",
@@ -449,12 +550,22 @@ class HomeProjectPage(QWidget):
                 self._current_source_summary or none_text,
             )
         )
+        self._options_status_label.setText(
+            ui_state_service.translate(
+                "home.options_locked" if self._project_options_locked else "home.options_unlocked",
+                self._current_language,
+            )
+        )
         self._source_lock_label.setText(
             _build_source_status_text(
                 self._current_language,
                 self._source_locked,
+                self._project_options_locked,
                 self._current_locked_source_name,
             )
+        )
+        self._source_lock_label.setStyleSheet(
+            "color: #7A1F1F;" if self._source_locked and self._project_options_locked else "color: #333333;"
         )
 
     def _source_lock_label_placeholder(self) -> QLabel:
@@ -473,6 +584,17 @@ class HomeProjectPage(QWidget):
         self._source_lock_label.setFont(locked_font)
         self._source_lock_label.setStyleSheet("color: #7A1F1F;")
         return self._source_lock_label
+
+    def _emit_lock_project_options(self) -> None:
+        """
+        @brief      Emit the selected immutable project options.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-26
+        @version    0.1.1
+        """
+        self.project_options_lock_requested.emit(*self.selected_project_options())
 
 
 def _status_title(status: str, language: str) -> str:
@@ -530,6 +652,68 @@ def _build_summary_text(label_key: str, language: str, value: str) -> str:
     return f"{ui_state_service.translate(label_key, language)}: {value}"
 
 
+def _normalize_language_code(value: object) -> str:
+    """
+    @brief      Normalize one translation-language code for Home-page display.
+    @param[in]  value Candidate language code.
+    @return     Supported language code.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-26
+    @version    0.1.0
+    """
+    normalized_value = str(value or "").strip()
+    if normalized_value in dict(config.TRANSLATION_LANGUAGE_OPTIONS):
+        return normalized_value
+    return config.DEFAULT_TRANSLATION_TARGET_LANGUAGE
+
+
+def _language_label(value: object) -> str:
+    """
+    @brief      Resolve one translation-language label.
+    @param[in]  value Candidate language code.
+    @return     Operator-facing language label.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-26
+    @version    0.1.0
+    """
+    language_code = _normalize_language_code(value)
+    return str(dict(config.TRANSLATION_LANGUAGE_OPTIONS).get(language_code, language_code))
+
+
+def _normalize_voice_assignment_mode(value: object) -> str:
+    """
+    @brief      Normalize one voice-assignment mode.
+    @param[in]  value Candidate mode.
+    @return     Supported voice-assignment mode.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-26
+    @version    0.1.0
+    """
+    normalized_value = str(value or "").strip()
+    if normalized_value in config.TTS_VOICE_ASSIGNMENT_MODE_OPTIONS:
+        return normalized_value
+    return config.DEFAULT_TTS_VOICE_ASSIGNMENT_MODE
+
+
+def _voice_assignment_mode_label(value: object, language: str) -> str:
+    """
+    @brief      Resolve one voice-assignment mode label.
+    @param[in]  value Candidate mode.
+    @param[in]  language Target UI language code.
+    @return     Operator-facing mode label.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-26
+    @version    0.1.0
+    """
+    if _normalize_voice_assignment_mode(value) == "same_narrator":
+        return ui_state_service.translate("home.mode_same_narrator", language)
+    return ui_state_service.translate("home.mode_narrator_and_characters", language)
+
+
 def _build_locked_source_text(language: str, source_name: str | None) -> str:
     """
     @brief      Build the translated locked-source status line.
@@ -549,24 +733,47 @@ def _build_locked_source_text(language: str, source_name: str | None) -> str:
     )
 
 
+def _build_selected_source_text(language: str, source_name: str | None) -> str:
+    """
+    @brief      Build the translated selected-source status line before project start.
+    @param[in]  language Target UI language code.
+    @param[in]  source_name Optional selected source display name.
+    @return     One translated selected-source text string.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-26
+    @version    0.1.0
+    """
+    resolved_source = source_name or "selected source"
+    return (
+        f"{ui_state_service.translate('home.selected_source_prefix', language)}: "
+        f"{resolved_source}"
+        f"{ui_state_service.translate('home.selected_source_suffix', language)}"
+    )
+
+
 def _build_source_status_text(
     language: str,
-    is_locked: bool,
+    has_source: bool,
+    is_project_locked: bool,
     source_name: str | None,
 ) -> str:
     """
     @brief      Build one translated source-status text line.
     @param[in]  language Target UI language code.
-    @param[in]  is_locked True when the source selection is locked.
+    @param[in]  has_source True when a source has been selected.
+    @param[in]  is_project_locked True when the source selection is locked.
     @param[in]  source_name Optional source display name.
     @return     One translated source-status text line.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-05
-    @version    0.1.0
+    @version    0.2.0
     """
-    if is_locked:
+    if has_source and is_project_locked:
         return _build_locked_source_text(language, source_name)
+    if has_source:
+        return _build_selected_source_text(language, source_name)
     return ui_state_service.translate("home.no_source", language)
 
 

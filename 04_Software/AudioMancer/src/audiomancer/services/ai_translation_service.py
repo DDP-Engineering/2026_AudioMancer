@@ -13,7 +13,7 @@
          executes resumable translation over canonical chunking output.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-07
-@version 0.3.0
+@version 0.5.0
 """
 
 # IMPORTS
@@ -199,6 +199,63 @@ def ensure_translation_records(
 
 
 @trace_function(_AI_TRANSLATION_LOGGER)
+def ensure_pass_through_translation(
+    project_root: str | Path,
+    target_language: str,
+    profile_id: str | None = None,
+) -> tuple[list[dict[str, object]], list[dict[str, object]], dict[str, object]]:
+    """
+    @brief      Persist same-language translation records without calling an AI model.
+    @param[in]  project_root Active project root path.
+    @param[in]  target_language Active target language code.
+    @param[in]  profile_id Optional selected translation profile identifier.
+    @return     Source chunks, pass-through translated chunks, and translation report.
+    @exception  ValueError When chunking output is missing.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-26
+    @version    0.2.0
+    """
+    project_root = Path(project_root)
+    source_chunks = deterministic_chunking_service.load_chunks(project_root)
+    if not source_chunks:
+        raise ValueError("Run text chunking before starting AI translation.")
+    passed_at = _utc_now_iso()
+    translated_chunks = [
+        _build_pass_through_translated_chunk(source_chunk, target_language, profile_id, passed_at)
+        for source_chunk in sorted(source_chunks, key=lambda item: int(item.get("sequence_index", 0)))
+    ]
+    token_usage = token_usage_service.empty_token_usage()
+    report = _rebuild_report(
+        translated_chunks,
+        target_language,
+        profile_id,
+        warnings=["Translation target matches the original language; source chunks were passed through."],
+        updated_at=passed_at,
+        token_usage=token_usage,
+    )
+    log_path = _resolve_log_path(project_root, passed_at)
+    operation_state = _build_operation_state(
+        project_root,
+        source_chunks,
+        translated_chunks,
+        report,
+        status="completed",
+        started_at=passed_at,
+        completed_at=passed_at,
+        profile_id=profile_id,
+        target_language=target_language,
+        log_path=log_path,
+        token_usage=token_usage,
+        resume_checkpoint=None,
+    )
+    operation_state["mode"] = "pass_through"
+    operation_state["metadata"]["pass_through"] = True
+    operation_state["metadata"]["started_by_operator"] = True
+    _persist_translation_state(project_root, source_chunks, translated_chunks, report, operation_state)
+    return source_chunks, translated_chunks, report
+
+
+@trace_function(_AI_TRANSLATION_LOGGER)
 def start_or_continue_translation(
     project_root: str | Path,
     manifest: dict[str, object],
@@ -229,6 +286,9 @@ def start_or_continue_translation(
         raise ValueError("AI translation requires a valid enabled AI profile.")
     if target_language not in _TRANSLATION_LANGUAGE_LABELS:
         raise ValueError("AI translation requires a valid target language.")
+    if _manifest_original_language(manifest) == target_language:
+        _emit_progress(progress_callback, 1, 1, "AI translation completed.", token_usage_service.empty_token_usage())
+        return ensure_pass_through_translation(project_root, target_language, profile_id)
     source_chunks, translated_chunks, report = ensure_translation_records(
         project_root,
         target_language,
@@ -661,6 +721,56 @@ def _build_default_translated_chunk(
         "target_language": target_language,
         "status": TRANSLATED_CHUNK_STATUS_NOT_STARTED,
     }
+
+
+def _build_pass_through_translated_chunk(
+    source_chunk: dict[str, object],
+    target_language: str,
+    profile_id: str | None,
+    translated_at: str,
+) -> dict[str, object]:
+    """
+    @brief      Build one approved same-language pass-through translation record.
+    @param[in]  source_chunk Source chunk payload.
+    @param[in]  target_language Active target language code.
+    @param[in]  profile_id Active translation profile identifier or `None`.
+    @param[in]  translated_at Shared completion timestamp.
+    @return     Approved pass-through translated-chunk payload.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-26
+    @version    0.1.0
+    """
+    source_text = str(source_chunk.get("text", ""))
+    return {
+        "chunk_id": str(source_chunk.get("chunk_id", "")),
+        "sequence_index": int(source_chunk.get("sequence_index", 0)),
+        "source_text": source_text,
+        "translated_text": source_text,
+        "approved": True,
+        "translated_at": translated_at,
+        "approved_at": translated_at,
+        "translation_profile_id": profile_id,
+        "target_language": target_language,
+        "status": TRANSLATED_CHUNK_STATUS_APPROVED,
+        "pass_through": True,
+    }
+
+
+def _manifest_original_language(manifest: dict[str, object]) -> str | None:
+    """
+    @brief      Resolve the manifest original language when it is supported.
+    @param[in]  manifest Active project manifest payload.
+    @return     Supported language code or `None`.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-26
+    @version    0.1.0
+    """
+    original_language = str(manifest.get("original_language", "") or "").strip()
+    if original_language in _TRANSLATION_LANGUAGE_LABELS:
+        return original_language
+    return None
 
 
 def _normalize_translated_chunk(payload: dict[str, object], target_language: str) -> dict[str, object]:

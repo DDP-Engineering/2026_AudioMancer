@@ -12,9 +12,9 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
 Implements the narrator-definition persistence and state contract for the
 current `Narator Voice` workflow in `AudioMancer`.
 It owns the project-local narrator profile catalog, explicit selected narrator
-state, selected project voice language, per-profile sample artifacts, localized
-preview text, and the runtime-aware state shaping used by the Narator Voice
-page.
+state, locked project voice-language display, per-profile sample artifacts,
+localized preview text, and the runtime-aware state shaping used by the Narator
+Voice page.
 
 ## 2. Responsibilities
 
@@ -31,8 +31,8 @@ page.
   `audio_profiles.json`
 - persist the explicitly selected narrator profile and narrator language
   runtime code
-- persist the selected project voice language in `project.json` and expose its
-  selector on the Narator Voice page
+- read the locked project voice language from `project.json.target_language`
+  and expose it as a read-only indicator on the Narator Voice page
 - persist one generated narrator WAV per narrator profile so multiple profiles
   can be previewed later without regenerating audio
 - localize the default narrator preview text for supported voice languages
@@ -55,8 +55,8 @@ It does not:
 The workflow is split across:
 
 - `04_Software/AudioMancer/src/audiomancer/services/narrator_definition_service.py`
-  for profile persistence, selection state, `project.json`-backed simplified
-  TTS plan and voice-language persistence, localized preview text, and sample
+  for profile persistence, selection state, locked project-language display,
+  localized preview text, and sample
   artifact helpers
 - `04_Software/AudioMancer/src/audiomancer/services/narrator_definition_state_service.py`
   for Narator Voice page state shaping, project-language display, and
@@ -65,19 +65,21 @@ The workflow is split across:
   for Qt actions, destructive edit/sample confirmations, manifest summary sync,
   VoiceWeaver sample generation, and preview playback
 - `04_Software/AudioMancer/src/audiomancer/ui/pages/narator_voice_page.py`
-  for the project-aware editor, read-only original/translated language display,
-  voice-language selector, profile list, and bottom status panel
+  for the project-aware editor, read-only original/translated/voice-language
+  display, profile list, and bottom status panel
 
 High-level flow:
 
-1. Project load ensures `audio_profiles.json`, `narator.json`, root-level
-   narrator sample paths, and the required narrator-related `project.json`
-   fields exist.
+1. Project load refreshes read-only Narator Voice indicators without creating
+   narrator metadata. Opening the Narator Voice page initializes
+   `audio_profiles.json`, `narator.json`, root-level narrator sample paths, and
+   the required narrator-related `project.json` fields when they do not already
+   exist.
 2. The state service loads all stored profiles, the explicit selected narrator
-   state, the project TTS plan, and the cached runtime discovery models.
-3. The selected voice language is resolved from `project.json`, constrained to
-   the original language or a fully approved translation target, then applied
-   to narrator profile generation requests and default preview text.
+   state, locked project options, and the cached runtime discovery models.
+3. The selected voice language is resolved from the locked
+   `project.json.target_language`, then applied to narrator profile generation
+   requests and default preview text.
 4. Each profile is enriched with `is_selected`, `has_sample`,
    `runtime_available`, `can_generate`, `can_select`, and an operator-facing
    availability note.
@@ -96,10 +98,8 @@ High-level flow:
    the current profile's `audio_narator_<profile>.wav`, keeps other profile
    samples intact, uses the saved TTS preview timeout, and marks the generated
    sample metadata as selected when the regenerated profile is already selected.
-7. Changing the voice language shows a confirmation and, when accepted, clears
-   narrator samples, character samples, character preview metadata, Speech
-   Blocks, Audio Blocks, and Audio Assembly artifacts before rolling the stage
-   back to `narrator_definition_ready`.
+7. The legacy voice-language change handler is a no-op for locked projects;
+   the normal workflow changes language only by creating a new project.
 8. `Select` persists `narator.json`, updates the compact manifest summary,
    and marks the chosen profile sample metadata as selected.
 9. `Preview` plays the stored per-profile WAV locally through Qt media
@@ -126,10 +126,10 @@ Inputs:
 
 - active project root and manifest
 - cached runtime discovery fields from `settings.json`
-- active project TTS plan from `project.json.voice_assignment_mode`
+- locked project options from `project.json.target_language` and
+  `project.json.voice_assignment_mode`
 - Narator Voice page actions:
-  create, edit, save, delete, change voice language, generate sample, preview,
-  and explicit select
+  create, edit, save, delete, generate sample, preview, and explicit select
 - narrator editor fields:
   display name, prompt text, and preview text
 
@@ -137,7 +137,8 @@ Outputs:
 
 - `audio_profiles.json`
 - `narator.json`
-- selected voice language in `project.json.selected_voice_language`
+- selected voice language read from `project.json.selected_voice_language`,
+  which is mirrored from locked `project.json.target_language`
 - `audio_narator_<profile>.wav`
 - `narator.wav` and `narator_sample.json` selected-sample copies for the
   explicit narrator selection
@@ -245,11 +246,10 @@ Current runtime-aware rules:
 - `Generate Sample` is enabled only when the current runtime exposes the fixed
   minimum Qwen3 capability set and the profile resolves to either
   `voice/design` or `voice/custom`
-- the voice-language selector lives on the Narator Voice page and offers the
-  original document language plus the fully approved translation language when
-  available
-- changing the selected voice language invalidates generated narrator samples,
-  Character Voices samples, Speech Blocks, Audio Blocks, and Audio Assembly
+- the voice-language control on Narator Voice is a read-only locked project
+  indicator
+- changing the selected voice language is not part of the normal workflow after
+  Home-page project locking
   state because those artifacts depend on the selected output language
 - only the three fixed seeded Qwen presets are protected from deletion;
   runtime-synced presets and migrated legacy prompt-seed profiles are not
@@ -296,7 +296,7 @@ Operator path:
 - open one project
 - run `TTS Settings -> Test Connection`
 - inspect the seeded Qwen3 presets or create additional custom profiles
-- choose the voice language for narrator and downstream audiobook generation
+- review the locked voice language chosen on the Home page
 - optionally edit one profile after confirming the destructive sample reset
 - generate one sample for a narrator profile
 - preview the stored WAV locally

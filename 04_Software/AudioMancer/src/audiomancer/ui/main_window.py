@@ -14,7 +14,7 @@
          so the window remains a thin coordinator.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 1.32.0
+@version 1.35.0
 """
 
 # IMPORTS
@@ -43,6 +43,7 @@ from audiomancer.services import (
     character_voices_state_service,
     home_presenter_service,
     narrator_definition_state_service,
+    operation_runtime_service,
     project_export_service,
     settings_service,
     speech_blocks_state_service,
@@ -93,6 +94,17 @@ WINDOW_MIN_WIDTH = config.DEFAULT_MAIN_WINDOW_MIN_WIDTH
 # @brief Minimum allowed main-window height.
 WINDOW_MIN_HEIGHT = config.DEFAULT_MAIN_WINDOW_MIN_HEIGHT
 
+# @brief Page-to-operation-state mapping initialized only when a workflow page is opened.
+_PAGE_OPERATION_STATE_KINDS = {
+    "text_cleanup": ("extraction", "cleanup"),
+    "text_chunking": ("chunking",),
+    "ai_translation": ("translation",),
+    "characters": ("character_discovery",),
+    "speech_blocks": ("speech_blocks",),
+    "audio_blocks": ("audio_blocks",),
+    "audio_assembly": ("audio_assembly",),
+}
+
 
 # PUBLIC API
 
@@ -135,7 +147,7 @@ class MainWindow(QMainWindow):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-06
-        @version    0.17.1
+        @version    0.17.2
         """
         super().__init__(parent)
         self.setWindowTitle(misc_ui_controller.build_window_title())
@@ -143,6 +155,7 @@ class MainWindow(QMainWindow):
         self.resize(WINDOW_WIDTH, WINDOW_HEIGHT)
         self.setMinimumSize(WINDOW_MIN_WIDTH, WINDOW_MIN_HEIGHT)
         self._page_registry: dict[str, QWidget] = {}
+        self._current_page_id = "home"
         self._current_manifest: dict[str, object] | None = None
         self._current_project_root: Path | None = None
         self._operation_progress_dialog: OperationProgressDialog | None = None
@@ -221,16 +234,20 @@ class MainWindow(QMainWindow):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-20
-        @version    0.2.0
+        @version    0.4.0
         """
         page = self._page_registry.get(page_id)
         if page is None:
             return
+        self._ensure_page_default_metadata(page_id)
+        self._current_page_id = page_id
         self._stack.setCurrentWidget(page)
         self._sidebar.set_current_page(page_id)
         if page_id == "character_voices":
             self._character_voices_missing_narrator_popup_shown = False
             character_voices_ui_controller.handle_page_activated(self)
+        if self._current_project_root is not None and self._current_manifest is not None:
+            self.show_project_state(self._current_project_root, self._current_manifest)
 
     def set_project_active(self, is_active: bool) -> None:
         """
@@ -280,6 +297,17 @@ class MainWindow(QMainWindow):
         )
         self._home_page.set_source_summary(source_name)
         self._home_page.set_source_locked(source_name is not None, source_name)
+        manifest_payload = {} if manifest is None else manifest
+        self._home_page.set_project_options(
+            bool(manifest_payload.get("project_options_locked", False)),
+            str(manifest_payload.get("target_language", config.DEFAULT_TRANSLATION_TARGET_LANGUAGE)),
+            str(
+                manifest_payload.get(
+                    "voice_assignment_mode",
+                    config.DEFAULT_TTS_VOICE_ASSIGNMENT_MODE,
+                )
+            ),
+        )
         self._home_page.set_stage_statuses(
             home_presenter_service.build_stage_statuses(
                 manifest,
@@ -346,6 +374,7 @@ class MainWindow(QMainWindow):
                 current_language,
                 self._settings_payload,
                 self._narator_voice_inspected_profile_id,
+                initialize_defaults=self._current_page_id == "narator_voice",
             )
         )
         self._character_voices_page.set_project_active(project_root is not None)
@@ -356,6 +385,7 @@ class MainWindow(QMainWindow):
                 current_language,
                 self._settings_payload,
                 self._character_voices_inspected_target_id,
+                initialize_defaults=self._current_page_id == "character_voices",
             )
         )
         self._speech_blocks_page.set_project_active(project_root is not None)
@@ -505,10 +535,22 @@ class MainWindow(QMainWindow):
         )
         home_page.set_source_summary(None)
         home_page.set_source_locked(False, None)
+        home_page.set_project_options(
+            False,
+            config.DEFAULT_TRANSLATION_TARGET_LANGUAGE,
+            config.DEFAULT_TTS_VOICE_ASSIGNMENT_MODE,
+        )
         home_page.set_stage_statuses(home_presenter_service.build_stage_statuses(None, current_language))
         home_page.set_export_states(project_export_service.build_export_states(None, None))
         home_page.import_requested.connect(lambda: home_ui_controller.handle_import_source_requested(self))
         home_page.project_snapshot_requested.connect(lambda: home_ui_controller.handle_project_snapshot_requested(self))
+        home_page.project_options_lock_requested.connect(
+            lambda target_language, voice_assignment_mode: home_ui_controller.handle_project_options_lock_requested(
+                self,
+                target_language,
+                voice_assignment_mode,
+            )
+        )
         home_page.export_requested.connect(
             lambda export_kind, export_format: home_ui_controller.handle_export_requested(
                 self,
@@ -553,10 +595,9 @@ class MainWindow(QMainWindow):
         )
         self._ai_translation_page = AiTranslationPage(self)
         self._ai_translation_page.start_translation_requested.connect(
-            lambda profile_id, target_language: ai_translation_ui_controller.handle_start_translation_requested(
+            lambda profile_id: ai_translation_ui_controller.handle_start_translation_requested(
                 self,
                 profile_id,
-                target_language,
             )
         )
         self._ai_translation_page.reset_translation_requested.connect(
@@ -572,13 +613,10 @@ class MainWindow(QMainWindow):
             )
         )
         self._ai_translation_page.retranslate_selected_requested.connect(
-            lambda profile_id, target_language, chunk_id: (
-                ai_translation_ui_controller.handle_retranslate_selected_requested(
-                    self,
-                    profile_id,
-                    target_language,
-                    chunk_id,
-                )
+            lambda profile_id, chunk_id: ai_translation_ui_controller.handle_retranslate_selected_requested(
+                self,
+                profile_id,
+                chunk_id,
             )
         )
         self._ai_translation_page.translated_text_changed.connect(
@@ -923,6 +961,21 @@ class MainWindow(QMainWindow):
         @version    0.3.0
         """
         home_ui_controller.activate_project(self, project_root, manifest)
+
+    def _ensure_page_default_metadata(self, page_id: str) -> None:
+        """
+        @brief      Persist default operation-state metadata for the opened workflow page.
+        @param[in]  page_id Registered page identifier.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-26
+        @version    0.1.0
+        """
+        if self._current_project_root is None or self._current_manifest is None:
+            return
+        for operation_kind in _PAGE_OPERATION_STATE_KINDS.get(page_id, ()):
+            operation_runtime_service.ensure_default_operation_state(self._current_project_root, operation_kind)
 
     def _build_about_dialog(self) -> QDialog:
         """

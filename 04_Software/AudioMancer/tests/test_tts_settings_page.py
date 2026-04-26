@@ -10,10 +10,10 @@
 @file test_tts_settings_page.py
 @brief Focused tests for the AudioMancer TTS settings page.
 @details Verifies the simplified runtime layout, connection-status labeling,
-         discovered-model rendering, and one-field project TTS plan contract.
+         discovered-model rendering, and runtime limit persistence.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-17
-@version 1.1.0
+@version 1.2.0
 """
 
 # IMPORTS
@@ -22,16 +22,16 @@ from audiomancer import config
 from audiomancer.ui.pages.tts_settings_page import TtsSettingsPage
 
 
-def test_tts_settings_page_loads_runtime_and_project_plan(qtbot, default_settings_payload) -> None:
+def test_tts_settings_page_loads_runtime_limits_without_project_plan(qtbot, default_settings_payload) -> None:
     """
-    @brief      Verify the page loads persisted runtime settings and the simplified project plan value.
+    @brief      Verify the page loads persisted runtime settings without exposing project voice assignment.
     @param[in]  qtbot Qt test helper fixture.
     @param[in]  default_settings_payload Shared default settings fixture.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-17
-    @version    1.1.0
+    @version    1.2.0
     """
     page = TtsSettingsPage()
     qtbot.addWidget(page)
@@ -51,11 +51,11 @@ def test_tts_settings_page_loads_runtime_and_project_plan(qtbot, default_setting
     )
 
     assert page._model_list.count() == 3
-    assert page._voice_assignment_combo.currentData() == "narrator_and_characters"
+    assert hasattr(page, "_voice_assignment_combo") is False
     assert page._preview_timeout_spin.value() == 75
     assert page._generation_timeout_spin.value() == 420
     assert page._preview_text_limit_spin.value() == 640
-    assert page.build_tts_plan_payload() == {"voice_assignment_mode": "narrator_and_characters"}
+    assert page.build_tts_plan_payload() is None
     assert page.build_settings(default_settings_payload)["tts_audio_preview_timeout_seconds"] == 75
     assert page.build_settings(default_settings_payload)["tts_audio_generation_timeout_seconds"] == 420
     assert page.build_settings(default_settings_payload)["tts_preview_text_character_limit"] == 640
@@ -138,23 +138,23 @@ def test_tts_settings_page_omits_redundant_title_label(qtbot) -> None:
     assert hasattr(page, "_title_label") is False
 
 
-def test_tts_settings_page_disables_project_plan_without_project(qtbot) -> None:
+def test_tts_settings_page_keeps_runtime_limits_available_without_project(qtbot) -> None:
     """
-    @brief      Verify the project-planning section stays read-only when no project is open.
+    @brief      Verify runtime audio limits remain editable when no project is open.
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-17
-    @version    1.0.0
+    @version    1.1.0
     """
     page = TtsSettingsPage()
     qtbot.addWidget(page)
 
     page.load_state({}, {}, False)
 
-    assert page._planning_group.isEnabled() is False
-    assert page._voice_assignment_combo.isEnabled() is False
+    assert page._planning_group.isEnabled() is True
+    assert hasattr(page, "_voice_assignment_combo") is False
     assert page.build_tts_plan_payload() is None
 
 

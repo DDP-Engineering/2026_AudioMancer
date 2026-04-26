@@ -151,9 +151,9 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                     SalveazÄƒ numai dupÄƒ ce aplicaÈ›ia confirmÄƒ cÄƒ modelele necesare sunt disponibile.
                 </p>
                 <p>
-                    <strong>Mod Alocare Voci</strong> stabileÈ™te dacÄƒ toatÄƒ cartea foloseÈ™te acelaÈ™i narator sau dacÄƒ
-                    personajele primesc voci separate. Pentru primul test al unei cÄƒrÈ›i, varianta cu acelaÈ™i narator
-                    este mai simplÄƒ. Pentru audiobook-uri mai expresive, alege narator plus voci personaje.
+                    Limba audiobook-ului si modul de narare nu se mai modifica aici. Ele se aleg pe pagina Acasa,
+                    inainte de importul sursei, apoi se blocheaza pentru proiect. Setarile TTS raman pentru conexiunea
+                    la runtime, descoperirea modelelor, limitele de text si timeout-uri.
                 </p>
                 <p>
                     <strong>Limita Text Previzualizare</strong> controleazÄƒ cÃ¢t text se trimite pentru un sample audio.
@@ -168,6 +168,12 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                     Un proiect conÈ›ine cartea importatÄƒ, textul curÄƒÈ›at, segmentele, vocile, fiÈ™ierele audio generate
                     È™i setÄƒrile locale ale cÄƒrÈ›ii. FoloseÈ™te <strong>Proiect Nou</strong> pentru o carte nouÄƒ È™i
                     <strong>Deschide Proiect</strong> pentru a continua lucrul.
+                </p>
+                <p>
+                    Pentru un proiect nou, selecteaza mai intai fisierul sursa, apoi foloseste partea dreapta din
+                    sumarul proiectului pentru <strong>Limba traducerii</strong> si <strong>Stil iesire audio</strong>.
+                    Apasa <strong>Start Project</strong> si confirma avertismentul. Fisierul sursa si aceste optiuni
+                    devin fixe pentru proiect; dupa aceea poti exporta proiectul ca ZIP.
                 </p>
                 <p>
                     DupÄƒ ce alegi fiÈ™ierul sursÄƒ, AudioMancer Ã®l blocheazÄƒ pentru proiect. DacÄƒ vrei altÄƒ carte,
@@ -216,9 +222,14 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                     <figcaption>Traducerea este aprobatÄƒ segment cu segment Ã®nainte de paÈ™ii audio.</figcaption>
                 </figure>
                 <p>
-                    Alege limba È›intÄƒ È™i profilul AI, apoi porneÈ™te traducerea. DupÄƒ generare, citeÈ™te fiecare segment
-                    tradus. PoÈ›i retraduce un segment dacÄƒ rezultatul nu este bun, apoi Ã®l aprobi. PaÈ™ii de voci È™i
-                    audio folosesc numai textul aprobat.
+                    Limba tinta este limba blocata la pornirea proiectului. Pagina arata limba originala si limba tinta
+                    ca indicatori, fara selector editabil. Alege profilul AI, porneste traducerea, citeste fiecare
+                    segment tradus, retradu ce este necesar si aproba textul pentru pasii audio.
+                </p>
+                <p>
+                    Daca limba originala detectata este aceeasi cu limba tinta blocata, AudioMancer creeaza automat o
+                    traducere pass-through: textul tradus este identic cu sursa, fara apel AI de rescriere, si starea
+                    este marcata completata pentru verificare.
                 </p>
                 <p>
                     Pentru limba romÃ¢nÄƒ, AudioMancer poate trimite textul romÃ¢nesc cÄƒtre TTS fÄƒrÄƒ sÄƒ forÈ›eze un cÃ¢mp
@@ -267,6 +278,11 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                     vorbitor. GenereazÄƒ sample-uri numai pentru personajele importante la Ã®nceput. Pentru personaje
                     secundare, poÈ›i folosi profiluri mai simple sau aceeaÈ™i voce.
                 </p>
+                <p>
+                    In modul acelasi narator, pagina ramane disponibila pentru verificarea metadatelor de personaje,
+                    dar este sincronizata cu naratorul: nu se genereaza sample-uri separate pe personaje, iar vocea
+                    naratorului este reutilizata.
+                </p>
             </section>
 
             <section id="speech-blocks">
@@ -279,6 +295,12 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                     AudioMancer Ã®mparte fiecare segment Ã®n blocuri de naraÈ›iune, dialog È™i operaÈ›ii speciale. PoÈ›i
                     edita textul, poÈ›i aproba blocuri È™i poÈ›i introduce blocuri noi dacÄƒ extracÈ›ia iniÈ›ialÄƒ a ratat
                     un pasaj.
+                </p>
+                <p>
+                    Segmentarea urmeaza modul de narare blocat. Proiectele cu narator plus personaje folosesc promptul
+                    AI pentru dialog si vorbitori. Proiectele cu acelasi narator folosesc un prompt AI separat care
+                    creeaza segmente continue de fraza, actiune sau paragraf sub bugetul TTS, pastrand ghilimelele,
+                    guillemets, liniile de dialog, punctuatia si paragrafele in textul audio.
                 </p>
                 <p>
                     Blocurile <strong>pauzÄƒ</strong>, <strong>indicaÈ›ie</strong> È™i <strong>zgomot de fundal</strong>

@@ -13,7 +13,7 @@
          and operator note rendering for resumable and warning-bearing state.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 0.1.1
+@version 0.2.0
 """
 
 # IMPORTS
@@ -208,6 +208,44 @@ def test_build_speech_blocks_notes_show_resume_and_warning_entries() -> None:
     assert any("Generated 2 speech blocks from 1/2 chunks." in note for note in notes)
     assert any("chunk-0002: ambiguous speaker" in note for note in notes)
     assert any("was not finalized" in note for note in notes)
+
+
+def test_build_speech_blocks_state_does_not_resolve_missing_chunks(monkeypatch, tmp_path) -> None:
+    """
+    @brief      Verify normal pre-chunking page state avoids noisy source-resolution errors.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-26
+    @version    0.1.0
+    """
+    project_root, manifest = project_workspace_service.create_project("SpeechBlocksNoChunks", tmp_path)
+    manifest["source_document"] = {
+        "original_name": "story.txt",
+        "stored_relative_path": "story.txt",
+        "file_type": "txt",
+        "imported_at": "2026-04-26T12:00:00+00:00",
+        "size_bytes": 12,
+    }
+    project_workspace_service.save_manifest(manifest, project_root)
+
+    def fail_resolve(*_args, **_kwargs):
+        raise AssertionError("resolve_source_chunks should not be called before chunking output exists")
+
+    monkeypatch.setattr(speech_blocks_state_service.speech_blocks_service, "resolve_source_chunks", fail_resolve)
+
+    state = speech_blocks_state_service.build_speech_blocks_state(
+        project_root,
+        project_workspace_service.load_manifest(project_root),
+        "en",
+        {"llm_profiles": [{"id": "profile-1", "label": "Speech Blocks Profile", "enabled": True}]},
+    )
+
+    assert state["source_chunks"] == []
+    assert state["total_chunk_count"] == 0
+    assert any("Run text chunking" in note for note in state["notes"])
 
 
 def _create_chunked_project(tmp_path, name: str):

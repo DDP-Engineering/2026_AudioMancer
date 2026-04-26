@@ -14,7 +14,7 @@
          project-local narrator profile editing.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-18
-@version 3.9.0
+@version 3.10.0
 """
 
 # IMPORTS
@@ -76,9 +76,15 @@ def handle_voice_language_change_requested(window: "MainWindow", voice_language:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-26
-    @version    0.1.0
+    @version    0.2.0
     """
     if window._current_project_root is None or window._current_manifest is None:
+        return
+    if bool(window._current_manifest.get("project_options_locked", False)):
+        window.show_project_state(
+            window._current_project_root,
+            project_workspace_service.load_manifest(window._current_project_root),
+        )
         return
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     previous_voice_language = character_voices_service.load_selected_voice_language(window._current_project_root)

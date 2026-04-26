@@ -1,0 +1,14 @@
+Source language: {source_language}
+
+Voice assignment mode: {voice_assignment_mode}
+
+TTS maximum model token budget: {max_tts_tokens}
+Safe approximate words per block: {safe_tts_words}
+TTS budget source: {tts_budget_source}
+
+Chunk id: {chunk_id}
+
+Chunk text:
+{chunk_text}
+
+Split this chunk into ordered narrator-only `speech_blocks` for continuous audiobook audio. Return one JSON object with the ordered `speech_blocks` array only.

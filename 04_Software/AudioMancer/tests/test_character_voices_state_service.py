@@ -31,7 +31,7 @@ from audiomancer.services import (
 
 def test_state_contains_narrator_first_and_approved_translated_language(tmp_path) -> None:
     """
-    @brief      Verify the Character Voices state starts with narrator and exposes translated language only when approved.
+    @brief      Verify narrator-first Character Voices state and approved translated language display.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
@@ -41,6 +41,9 @@ def test_state_contains_narrator_first_and_approved_translated_language(tmp_path
     """
     project_root, manifest = _create_project_with_narrator_and_character(tmp_path, "CharacterVoicesState")
     manifest["original_language"] = "de"
+    manifest["target_language"] = "ro"
+    manifest["selected_voice_language"] = "ro"
+    manifest["project_options_locked"] = True
     project_workspace_service.save_manifest(manifest, project_root)
     translation_report_path = (
         project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.TRANSLATION_REPORT_FILE_NAME
@@ -72,7 +75,7 @@ def test_state_contains_narrator_first_and_approved_translated_language(tmp_path
     assert [target["target_kind"] for target in state["targets"][:2]] == ["narrator", "character"]
     assert state["original_language"] == "German"
     assert state["translated_language"] == "Romanian"
-    assert ("Romanian", "ro") in state["language_entries"]
+    assert state["language_entries"] == [("Romanian", "ro")]
     assert state["targets"][0]["can_edit_prompt"] is False
     assert state["targets"][1]["preview_text"]
     assert state["targets"][1]["preview_text"] == state["preview_text"]

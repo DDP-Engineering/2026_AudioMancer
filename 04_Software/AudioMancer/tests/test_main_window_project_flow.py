@@ -13,7 +13,7 @@
          pages are created without workflow functionality.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-20
-@version 1.5.1
+@version 1.6.2
 """
 
 # IMPORTS
@@ -94,17 +94,18 @@ def test_main_window_opens_project_from_child_folder(monkeypatch, qtbot, tmp_pat
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.1.0
+    @version    0.2.1
     """
     project_root, _manifest = project_workspace_service.create_project(
         "Book5_CAL_CAL",
         tmp_path,
     )
+    (project_root / "notes").mkdir(parents=True, exist_ok=True)
 
     monkeypatch.setattr(
         home_ui_controller.QFileDialog,
         "getExistingDirectory",
-        lambda *args, **kwargs: str(project_root / "40_character_discovery"),
+        lambda *args, **kwargs: str(project_root / "notes"),
     )
 
     window = MainWindow(settings_payload=dict(default_settings_payload))
@@ -128,7 +129,7 @@ def test_main_window_imports_source_and_locks_selection(monkeypatch, qtbot, tmp_
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.1.0
+    @version    0.2.1
     """
     project_root, _manifest = project_workspace_service.create_project(
         "Book5_CAL_CAL",
@@ -136,11 +137,14 @@ def test_main_window_imports_source_and_locks_selection(monkeypatch, qtbot, tmp_
     )
     source_path = tmp_path / "story.epub"
     source_path.write_text("content", encoding="utf-8")
+    replacement_source_path = tmp_path / "replacement.txt"
+    replacement_source_path.write_text("replacement", encoding="utf-8")
+    selected_source_path = [source_path]
 
     monkeypatch.setattr(
         home_ui_controller.QFileDialog,
         "getOpenFileName",
-        lambda *args, **kwargs: (str(source_path), ""),
+        lambda *args, **kwargs: (str(selected_source_path[0]), ""),
     )
 
     window = MainWindow(settings_payload=dict(default_settings_payload))
@@ -153,8 +157,76 @@ def test_main_window_imports_source_and_locks_selection(monkeypatch, qtbot, tmp_
     assert window._current_manifest["current_stage"] == "source_selected"
     assert window._current_manifest["source_document"]["original_name"] == "story.epub"
     assert window._home_page._source_label.text() == "Source: story.epub"
-    assert window._home_page._stage_list.item(0).text() == "Source Selected | Finished"
-    assert window._home_page._import_button.isEnabled() is False
+    assert window._home_page._stage_list.item(0).text() == "Text Cleanup | Not Started"
+    assert window._home_page._import_button.isEnabled() is True
+
+    selected_source_path[0] = replacement_source_path
+    window._home_page.import_requested.emit()
+
+    assert window._current_manifest["source_document"]["original_name"] == "replacement.txt"
+    assert (project_root / "story.epub").exists() is False
+    assert (project_root / "replacement.txt").read_text(encoding="utf-8") == "replacement"
+
+
+def test_main_window_initializes_step_state_only_when_page_is_opened(qtbot, tmp_path, default_settings_payload) -> None:
+    """
+    @brief      Verify project activation does not create blank artifacts, but opening workflow pages creates state.
+    @param[in]  qtbot Qt test helper fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @param[in]  default_settings_payload Fixture supplying default test settings.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-26
+    @version    0.1.0
+    """
+    project_root, manifest = project_workspace_service.create_project("PageStateProject", tmp_path)
+    window = MainWindow(settings_payload=dict(default_settings_payload))
+    qtbot.addWidget(window)
+
+    window._activate_project(project_root, manifest)
+
+    assert (project_root / config.PROJECT_MANIFEST_FILE_NAME).is_file()
+    assert (project_root / config.EXTRACTION_STATE_FILE_NAME).exists() is False
+    assert (project_root / config.CLEANUP_STATE_FILE_NAME).exists() is False
+    assert (project_root / config.CHUNKING_STATE_FILE_NAME).exists() is False
+    assert (project_root / config.CHUNKING_REPORT_FILE_NAME).exists() is False
+    assert (project_root / config.CHUNK_ARTIFACT_FILE_NAME).exists() is False
+    assert (project_root / config.NARRATOR_PROFILE_FILE_NAME).exists() is False
+    assert (project_root / config.NARRATOR_SELECTION_FILE_NAME).exists() is False
+    assert (project_root / config.CHARACTER_VOICES_TARGETS_FILE_NAME).exists() is False
+
+    window.set_current_page("text_cleanup")
+
+    assert json.loads((project_root / config.EXTRACTION_STATE_FILE_NAME).read_text(encoding="utf-8"))["status"] == (
+        "not_started"
+    )
+    assert json.loads((project_root / config.CLEANUP_STATE_FILE_NAME).read_text(encoding="utf-8"))["status"] == (
+        "not_started"
+    )
+    assert (project_root / config.CLEANUP_REPORT_FILE_NAME).exists() is False
+    assert (project_root / config.CLEANED_TEXT_FILE_NAME).exists() is False
+
+    window.set_current_page("text_chunking")
+
+    assert json.loads((project_root / config.CHUNKING_STATE_FILE_NAME).read_text(encoding="utf-8"))["status"] == (
+        "not_started"
+    )
+    assert (project_root / config.CHUNKING_REPORT_FILE_NAME).exists() is False
+    assert (project_root / config.CHUNK_ARTIFACT_FILE_NAME).exists() is False
+    assert (project_root / config.NARRATOR_PROFILE_FILE_NAME).exists() is False
+    assert (project_root / config.NARRATOR_SELECTION_FILE_NAME).exists() is False
+    assert (project_root / config.CHARACTER_VOICES_TARGETS_FILE_NAME).exists() is False
+
+    window.set_current_page("narator_voice")
+
+    assert (project_root / config.NARRATOR_PROFILE_FILE_NAME).is_file()
+    assert (project_root / config.NARRATOR_SELECTION_FILE_NAME).is_file()
+    assert (project_root / config.CHARACTER_VOICES_TARGETS_FILE_NAME).exists() is False
+
+    window.set_current_page("character_voices")
+
+    assert (project_root / config.CHARACTER_VOICES_TARGETS_FILE_NAME).is_file()
 
 
 def test_main_window_extracts_text_and_updates_cleanup_page(
@@ -187,11 +259,11 @@ def test_main_window_extracts_text_and_updates_cleanup_page(
     project_workspace_service.save_manifest(manifest, project_root)
 
     extraction_state = {
-        "folder_relative_path": "00_extraction",
+        "folder_relative_path": config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH,
         "status": "completed",
-        "input_paths": ["00_extraction/input_story.txt"],
-        "output_paths": [f"00_extraction/{config.EXTRACTED_TEXT_FILE_NAME}"],
-        "artifact_paths": [f"00_extraction/{config.EXTRACTION_REPORT_FILE_NAME}"],
+        "input_paths": ["input_story.txt"],
+        "output_paths": [config.EXTRACTED_TEXT_FILE_NAME],
+        "artifact_paths": [config.EXTRACTION_REPORT_FILE_NAME],
         "progress_current": 1,
         "progress_total": 1,
         "mode": "deterministic",
@@ -212,7 +284,7 @@ def test_main_window_extracts_text_and_updates_cleanup_page(
         @date       2026-04-06
         @version    0.1.0
         """
-        extraction_root = project_root / "00_extraction"
+        extraction_root = project_root
         extraction_root.mkdir(exist_ok=True)
         (extraction_root / "input_story.txt").write_text("Story body", encoding="utf-8")
         (extraction_root / config.EXTRACTED_TEXT_FILE_NAME).write_text(
@@ -222,9 +294,9 @@ def test_main_window_extracts_text_and_updates_cleanup_page(
         (extraction_root / config.EXTRACTION_REPORT_FILE_NAME).write_text(
             (
                 "{\n"
-                '  "source_relative_path": "00_extraction/input_story.txt",\n'
+                '  "source_relative_path": "input_story.txt",\n'
                 '  "source_type": "txt",\n'
-                f'  "extracted_text_relative_path": "00_extraction/{config.EXTRACTED_TEXT_FILE_NAME}",\n'
+                f'  "extracted_text_relative_path": "{config.EXTRACTED_TEXT_FILE_NAME}",\n'
                 '  "extracted_at": "2026-04-06T12:01:00+00:00",\n'
                 '  "page_count": null,\n'
                 '  "warnings": [],\n'
@@ -235,14 +307,14 @@ def test_main_window_extracts_text_and_updates_cleanup_page(
             ),
             encoding="utf-8",
         )
-        (extraction_root / config.OPERATION_STATE_FILE_NAME).write_text(
+        (extraction_root / config.EXTRACTION_STATE_FILE_NAME).write_text(
             json.dumps(extraction_state, indent=2) + "\n",
             encoding="utf-8",
         )
         return {
-            "source_relative_path": "00_extraction/input_story.txt",
+            "source_relative_path": "input_story.txt",
             "source_type": "txt",
-            "extracted_text_relative_path": f"00_extraction/{config.EXTRACTED_TEXT_FILE_NAME}",
+            "extracted_text_relative_path": config.EXTRACTED_TEXT_FILE_NAME,
             "extracted_at": "2026-04-06T12:01:00+00:00",
             "page_count": None,
             "warnings": [],
@@ -276,9 +348,7 @@ def test_main_window_extracts_text_and_updates_cleanup_page(
     window._text_cleanup_page.extract_requested.emit()
 
     assert window._current_manifest is not None
-    assert window._current_manifest["extracted_text_relative_path"] == (
-        f"00_extraction/{config.EXTRACTED_TEXT_FILE_NAME}"
-    )
+    assert window._current_manifest["extracted_text_relative_path"] == config.EXTRACTED_TEXT_FILE_NAME
     assert window._current_manifest["operations"]["extraction"]["status"] == "completed"
     assert window._home_page._stage_list.item(1).text() == "Text Cleanup | In Progress"
     assert window._text_cleanup_page._extracted_text_edit.toPlainText() == "Story body\n"
@@ -410,7 +480,7 @@ def test_main_window_continues_unfinished_extraction_without_confirmation(
             "{}\n",
             encoding="utf-8",
         )
-        (extraction_root / config.OPERATION_STATE_FILE_NAME).write_text(
+        (extraction_root / config.EXTRACTION_STATE_FILE_NAME).write_text(
             json.dumps(
                 {
                     "folder_relative_path": "00_extraction",
@@ -611,7 +681,8 @@ def test_main_window_closes_progress_dialog_after_synchronous_completion(
         failure_handler=lambda error: (_ for _ in ()).throw(error),
     )
 
-    assert success_payloads == [{"status": "ok"}]
+    qtbot.waitUntil(lambda: success_payloads == [{"status": "ok"}], timeout=5000)
+    qtbot.waitUntil(lambda: window._operation_progress_dialog is None, timeout=5000)
     assert window._operation_progress_dialog is None
     assert window._active_operation_kind is None
 
@@ -763,7 +834,7 @@ def test_main_window_runs_deterministic_chunking_and_updates_preview(
 
     def _fake_chunk_text(*_args, progress_callback=None, cancel_requested=None, **_kwargs):
         progress_callback(1, 1, 100, "Deterministic chunking completed.")
-        chunk_root = project_root / "20_chunking"
+        chunk_root = project_root
         chunk_root.mkdir(exist_ok=True)
         (chunk_root / "input_story.pdf").write_text("Chapter I\n\nParagraph one.\n", encoding="utf-8")
         (chunk_root / config.CHUNK_ARTIFACT_FILE_NAME).write_text(
@@ -800,8 +871,8 @@ def test_main_window_runs_deterministic_chunking_and_updates_preview(
         (chunk_root / config.CHUNKING_REPORT_FILE_NAME).write_text(
             json.dumps(
                 {
-                    "input_relative_path": "20_chunking/input_story.pdf",
-                    "chunk_artifact_relative_path": f"20_chunking/{config.CHUNK_ARTIFACT_FILE_NAME}",
+                    "input_relative_path": "input_story.pdf",
+                    "chunk_artifact_relative_path": config.CHUNK_ARTIFACT_FILE_NAME,
                     "chunked_at": "2026-04-07T12:02:00+00:00",
                     "warnings": [],
                     "chunk_count": 2,
@@ -813,14 +884,14 @@ def test_main_window_runs_deterministic_chunking_and_updates_preview(
             + "\n",
             encoding="utf-8",
         )
-        (chunk_root / config.OPERATION_STATE_FILE_NAME).write_text(
+        (chunk_root / config.CHUNKING_STATE_FILE_NAME).write_text(
             json.dumps(
                 {
-                    "folder_relative_path": "20_chunking",
+                    "folder_relative_path": config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH,
                     "status": "completed",
-                    "input_paths": ["20_chunking/input_story.pdf"],
-                    "output_paths": [f"20_chunking/{config.CHUNK_ARTIFACT_FILE_NAME}"],
-                    "artifact_paths": [f"20_chunking/{config.CHUNKING_REPORT_FILE_NAME}"],
+                    "input_paths": ["input_story.pdf"],
+                    "output_paths": [config.CHUNK_ARTIFACT_FILE_NAME],
+                    "artifact_paths": [config.CHUNKING_REPORT_FILE_NAME],
                     "progress_current": 2,
                     "progress_total": 2,
                     "mode": "deterministic",
@@ -969,9 +1040,12 @@ def test_main_window_runs_ai_translation_and_updates_preview(
         "size_bytes": 4,
     }
     manifest["operations"]["chunking"]["status"] = "completed"
-    manifest["operations"]["chunking"]["output_paths"] = [f"20_chunking/{config.CHUNK_ARTIFACT_FILE_NAME}"]
+    manifest["operations"]["chunking"]["output_paths"] = [config.CHUNK_ARTIFACT_FILE_NAME]
+    manifest["target_language"] = "ro"
+    manifest["selected_voice_language"] = "ro"
+    manifest["project_options_locked"] = True
     project_workspace_service.save_manifest(manifest, project_root)
-    chunk_root = project_root / "20_chunking"
+    chunk_root = project_root
     chunk_root.mkdir(parents=True, exist_ok=True)
     (chunk_root / config.CHUNK_ARTIFACT_FILE_NAME).write_text(
         json.dumps(
@@ -1058,7 +1132,7 @@ def test_main_window_runs_ai_translation_and_updates_preview(
                 + "\n",
                 encoding="utf-8",
             ),
-            (project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.OPERATION_STATE_FILE_NAME).write_text(
+            (project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.TRANSLATION_STATE_FILE_NAME).write_text(
                 json.dumps(
                     {
                         "folder_relative_path": config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH,
@@ -1108,7 +1182,7 @@ def test_main_window_runs_ai_translation_and_updates_preview(
         )[-1],
     )
 
-    window._ai_translation_page.start_translation_requested.emit("profile_1", "ro")
+    window._ai_translation_page.start_translation_requested.emit("profile_1")
     window.show_project_state(project_root, project_workspace_service.load_manifest(project_root))
 
     assert window._current_manifest is not None
@@ -1143,11 +1217,11 @@ def test_main_window_loads_character_discovery_state_into_characters_page(
     }
     manifest["current_stage"] = "character_discovery_ready"
     manifest["operations"]["chunking"]["status"] = "completed"
-    manifest["operations"]["chunking"]["output_paths"] = [f"20_chunking/{config.CHUNK_ARTIFACT_FILE_NAME}"]
+    manifest["operations"]["chunking"]["output_paths"] = [config.CHUNK_ARTIFACT_FILE_NAME]
     manifest["operations"]["character_discovery"]["status"] = "completed"
     project_workspace_service.save_manifest(manifest, project_root)
-    chunk_root = project_root / "20_chunking"
-    discovery_root = project_root / "40_character_discovery"
+    chunk_root = project_root
+    discovery_root = project_root
     chunk_root.mkdir(parents=True, exist_ok=True)
     discovery_root.mkdir(parents=True, exist_ok=True)
     chunk_payload = [
@@ -1225,14 +1299,14 @@ def test_main_window_loads_character_discovery_state_into_characters_page(
         + "\n",
         encoding="utf-8",
     )
-    (discovery_root / config.OPERATION_STATE_FILE_NAME).write_text(
+    (discovery_root / config.CHARACTER_DISCOVERY_STATE_FILE_NAME).write_text(
         json.dumps(
             {
-                "folder_relative_path": "40_character_discovery",
+                "folder_relative_path": config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH,
                 "status": "completed",
                 "input_paths": [],
-                "output_paths": [f"40_character_discovery/{config.CHARACTER_PROFILE_FILE_NAME}"],
-                "artifact_paths": [f"40_character_discovery/{config.CHARACTER_DISCOVERY_REPORT_FILE_NAME}"],
+                "output_paths": [config.CHARACTER_PROFILE_FILE_NAME],
+                "artifact_paths": [config.CHARACTER_DISCOVERY_REPORT_FILE_NAME],
                 "progress_current": 1,
                 "progress_total": 1,
                 "mode": "ai_assisted",
@@ -1395,6 +1469,7 @@ def test_main_window_prevents_reimport_when_source_is_locked(
         "size_bytes": 4,
     }
     manifest["current_stage"] = "source_selected"
+    manifest["project_options_locked"] = True
     project_workspace_service.save_manifest(manifest, project_root)
     popup_calls = []
 
@@ -1411,7 +1486,7 @@ def test_main_window_prevents_reimport_when_source_is_locked(
     window._home_page.import_requested.emit()
 
     assert popup_calls
-    assert "locked source file" in popup_calls[0][2]
+    assert "already started" in popup_calls[0][2]
 
 
 def test_main_window_offers_repair_and_opens_repaired_project(
@@ -1460,7 +1535,7 @@ def test_main_window_offers_repair_and_opens_repaired_project(
     assert window._current_project_root == project_root
     assert window._current_manifest is not None
     assert window._current_manifest["current_stage"] == "project_created"
-    assert window._home_page._stage_list.item(0).text() == "Source Selected | Not Started"
+    assert window._home_page._stage_list.item(0).text() == "Text Cleanup | Not Started"
 
 
 def test_main_window_opens_confirmed_manifest_healing_repair(

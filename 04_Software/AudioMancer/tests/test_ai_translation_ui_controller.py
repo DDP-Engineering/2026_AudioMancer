@@ -13,7 +13,7 @@
          persists reset behavior through the main window shell.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-22
-@version 0.2.0
+@version 0.3.0
 """
 
 # IMPORTS
@@ -50,7 +50,7 @@ def test_ai_translation_ui_controller_start_request_uses_modal_runner(monkeypatc
         lambda _window, **kwargs: start_calls.append(kwargs),
     )
 
-    ai_translation_ui_controller.handle_start_translation_requested(window, "profile-1", "ro")
+    ai_translation_ui_controller.handle_start_translation_requested(window, "profile-1")
 
     assert len(start_calls) == 1
     result = start_calls[0]["worker_callable"](
@@ -78,7 +78,7 @@ def test_ai_translation_ui_controller_reset_clears_translation_state(monkeypatch
 
     assert window._current_manifest is not None
     assert window._current_manifest["operations"]["translation"]["status"] == "not_started"
-    translated_payload = json.loads((translation_root / config.TRANSLATED_CHUNKS_FILE_NAME).read_text(encoding="utf-8"))
+    translated_payload = json.loads((project_root / config.TRANSLATED_CHUNKS_FILE_NAME).read_text(encoding="utf-8"))
     assert translated_payload[0]["translated_text"] == ""
 
 
@@ -96,7 +96,7 @@ def test_sync_manifest_after_translation_advances_only_after_full_approval(qtbot
     project_root, _manifest = _create_project(tmp_path, "TranslationApprovalControllerProject")
     translation_root = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH
     translation_root.mkdir(parents=True, exist_ok=True)
-    (translation_root / config.OPERATION_STATE_FILE_NAME).write_text(
+    (translation_root / config.TRANSLATION_STATE_FILE_NAME).write_text(
         json.dumps(
             {
                 "folder_relative_path": config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH,
@@ -147,9 +147,12 @@ def _create_project(tmp_path, name: str):
         "size_bytes": 12,
     }
     manifest["operations"]["chunking"]["status"] = "completed"
-    manifest["operations"]["chunking"]["output_paths"] = [f"20_chunking/{config.CHUNK_ARTIFACT_FILE_NAME}"]
+    manifest["operations"]["chunking"]["output_paths"] = [config.CHUNK_ARTIFACT_FILE_NAME]
+    manifest["target_language"] = "ro"
+    manifest["selected_voice_language"] = "ro"
+    manifest["project_options_locked"] = True
     project_workspace_service.save_manifest(manifest, project_root)
-    chunk_root = project_root / "20_chunking"
+    chunk_root = project_root
     chunk_root.mkdir(parents=True, exist_ok=True)
     (chunk_root / config.CHUNK_ARTIFACT_FILE_NAME).write_text(
         json.dumps(

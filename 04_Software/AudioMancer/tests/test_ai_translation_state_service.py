@@ -13,12 +13,15 @@
          and the persisted default AI translation profile selection.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-07
-@version 0.2.0
+@version 0.3.0
 """
 
 # IMPORTS
 
-from audiomancer.services import ai_translation_state_service
+import json
+
+from audiomancer import config
+from audiomancer.services import ai_translation_service, ai_translation_state_service, project_workspace_service
 
 # PUBLIC API
 
@@ -81,6 +84,144 @@ def test_build_ai_translation_notes_include_persisted_token_usage() -> None:
     )
 
     assert any("Input tokens: 220 | Output tokens: 80 | Total: 300" in note for note in notes)
+
+
+def test_build_ai_translation_state_does_not_auto_finalize_same_language(tmp_path) -> None:
+    """
+    @brief      Verify same-language projects stay startable until the operator starts translation.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-26
+    @version    0.1.0
+    """
+    project_root, manifest = project_workspace_service.create_project("SameLanguageState", tmp_path)
+    manifest["source_document"] = {
+        "original_name": "story.txt",
+        "stored_relative_path": "story.txt",
+        "file_type": "txt",
+        "imported_at": "2026-04-26T12:00:00+00:00",
+        "size_bytes": 12,
+    }
+    manifest["original_language"] = "en"
+    manifest["target_language"] = "en"
+    manifest["selected_voice_language"] = "en"
+    manifest["project_options_locked"] = True
+    manifest["operations"]["chunking"]["status"] = "completed"
+    project_workspace_service.save_manifest(manifest, project_root)
+    (project_root / config.CHUNK_ARTIFACT_FILE_NAME).write_text(
+        json.dumps(
+            [
+                {
+                    "chunk_id": "chunk-0001",
+                    "sequence_index": 1,
+                    "chapter_label": None,
+                    "text": "Original text.",
+                    "source_start_line": 1,
+                    "source_end_line": 1,
+                    "chunking_mode": "deterministic",
+                    "semantic_strategy": None,
+                    "scene_note": None,
+                }
+            ],
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    state = ai_translation_state_service.build_ai_translation_state(
+        project_root,
+        project_workspace_service.load_manifest(project_root),
+        "en",
+        {"llm_profiles": [{"id": "profile-1", "label": "GPT", "enabled": True}]},
+    )
+
+    assert state["stage_status"] == "not_started"
+    assert state["translated_chunks"] == []
+    assert state["translated_count"] == 0
+    assert state["approved_count"] == 0
+
+
+def test_build_ai_translation_state_ignores_legacy_auto_pass_through(tmp_path) -> None:
+    """
+    @brief      Verify old passive pass-through artifacts do not disable Start Translation.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-26
+    @version    0.1.0
+    """
+    project_root, manifest = _create_same_language_chunked_project(tmp_path, "LegacyPassThroughState")
+    ai_translation_service.ensure_pass_through_translation(project_root, "en", "profile-1")
+    operation_state = ai_translation_service.load_operation_state(project_root)
+    operation_state["metadata"].pop("started_by_operator", None)
+    (project_root / config.TRANSLATION_STATE_FILE_NAME).write_text(
+        json.dumps(operation_state, indent=2) + "\n",
+        encoding="utf-8",
+    )
+
+    state = ai_translation_state_service.build_ai_translation_state(
+        project_root,
+        project_workspace_service.load_manifest(project_root),
+        "en",
+        {"llm_profiles": [{"id": "profile-1", "label": "GPT", "enabled": True}]},
+    )
+
+    assert state["stage_status"] == "not_started"
+    assert state["translated_chunks"] == []
+    assert state["translated_count"] == 0
+    assert state["approved_count"] == 0
+
+
+def _create_same_language_chunked_project(tmp_path, name: str):
+    """
+    @brief      Create a same-language project with one chunking artifact.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @param[in]  name Project display name.
+    @return     Project root and manifest payload.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-26
+    @version    0.1.0
+    """
+    project_root, manifest = project_workspace_service.create_project(name, tmp_path)
+    manifest["source_document"] = {
+        "original_name": "story.txt",
+        "stored_relative_path": "story.txt",
+        "file_type": "txt",
+        "imported_at": "2026-04-26T12:00:00+00:00",
+        "size_bytes": 12,
+    }
+    manifest["original_language"] = "en"
+    manifest["target_language"] = "en"
+    manifest["selected_voice_language"] = "en"
+    manifest["project_options_locked"] = True
+    manifest["operations"]["chunking"]["status"] = "completed"
+    project_workspace_service.save_manifest(manifest, project_root)
+    (project_root / config.CHUNK_ARTIFACT_FILE_NAME).write_text(
+        json.dumps(
+            [
+                {
+                    "chunk_id": "chunk-0001",
+                    "sequence_index": 1,
+                    "chapter_label": None,
+                    "text": "Original text.",
+                    "source_start_line": 1,
+                    "source_end_line": 1,
+                    "chunking_mode": "deterministic",
+                    "semantic_strategy": None,
+                    "scene_note": None,
+                }
+            ],
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    return project_root, manifest
 
 
 # END OF FILE

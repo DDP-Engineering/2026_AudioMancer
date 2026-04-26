@@ -14,7 +14,7 @@
          voices targets, and cached VoiceWeaver runtime discovery data.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-20
-@version 1.2.0
+@version 1.4.0
 """
 
 # IMPORTS
@@ -39,6 +39,7 @@ def build_character_voices_state(
     language: str,
     settings_payload: dict[str, object] | None = None,
     inspected_target_id: str | None = None,
+    initialize_defaults: bool = False,
 ) -> dict[str, object]:
     """
     @brief      Build the full Character Voices page state from project-local artifacts.
@@ -47,11 +48,12 @@ def build_character_voices_state(
     @param[in]  language Runtime UI language code.
     @param[in]  settings_payload Optional persisted application settings payload.
     @param[in]  inspected_target_id Optional currently inspected character-voices target identifier.
+    @param[in]  initialize_defaults True when opening the page may create default voice target metadata.
     @return     Page-state payload consumed by the Character Voices page.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-20
-    @version    1.1.1
+    @version    1.2.0
     """
     if project_root is None or manifest is None:
         return {
@@ -75,6 +77,8 @@ def build_character_voices_state(
             "status_lines": [ui_state_service.translate("character_voices.note_no_project", language)],
             "missing_narrator_sample": False,
         }
+    if not initialize_defaults and not (Path(project_root) / config.CHARACTER_VOICES_TARGETS_FILE_NAME).is_file():
+        return _empty_project_state(manifest, language)
 
     discovered_models = (
         settings_payload.get("tts_runtime_discovered_models", []) if isinstance(settings_payload, dict) else []
@@ -189,6 +193,59 @@ def build_character_voices_state(
             language,
         ),
         "missing_narrator_sample": missing_narrator_sample,
+    }
+
+
+def _empty_project_state(manifest: dict[str, object], language: str) -> dict[str, object]:
+    """
+    @brief      Build a read-only Character Voices state before page metadata is initialized.
+    @param[in]  manifest Active project manifest payload.
+    @param[in]  language Runtime UI language code.
+    @return     Page-state payload without creating character voice metadata files.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-26
+    @version    0.1.0
+    """
+    selected_voice_language = narrator_definition_service.narrator_language_code(
+        manifest.get("target_language", manifest.get("selected_voice_language")),
+        narrator_definition_service.DEFAULT_NARRATOR_LANGUAGE,
+    )
+    language_label = narrator_definition_service.narrator_language_label(selected_voice_language)
+    assignment_mode = str(manifest.get("voice_assignment_mode", config.DEFAULT_TTS_VOICE_ASSIGNMENT_MODE)).strip()
+    if assignment_mode not in config.TTS_VOICE_ASSIGNMENT_MODE_OPTIONS:
+        assignment_mode = config.DEFAULT_TTS_VOICE_ASSIGNMENT_MODE
+    return {
+        "targets": [],
+        "notes": build_character_voices_notes(
+            manifest,
+            [],
+            assignment_mode,
+            None,
+            False,
+            voiceweaver_runtime_service.build_capability_matrix([]),
+            False,
+            False,
+            False,
+            language,
+        ),
+        "current_target_id": None,
+        "selected_voice_language": selected_voice_language,
+        "language_entries": [(language_label, selected_voice_language)],
+        "original_language": ui_state_service.translate("narator_voice.language_unknown", language),
+        "translated_language": language_label,
+        "assignment_mode_label": _assignment_mode_label(assignment_mode, language),
+        "target_name": "",
+        "target_kind_label": "",
+        "prompt_text": "",
+        "preview_text": character_voices_service.preview_text_for_language(selected_voice_language),
+        "is_editable": False,
+        "can_reset_prompt": False,
+        "can_edit_prompt": False,
+        "can_generate_sample": False,
+        "preview_available": False,
+        "status_lines": [ui_state_service.translate("character_voices.note_no_characters", language)],
+        "missing_narrator_sample": False,
     }
 
 
@@ -426,22 +483,27 @@ def _voice_language_state(
     language: str,
 ) -> tuple[list[tuple[str, str]], str, str, str, bool]:
     """
-    @brief      Execute the voice language state helper.
+    @brief      Resolve locked character-voices language state.
     @param[in]  project_root Active project root folder.
     @param[in]  manifest Active project manifest payload.
     @param[in]  language Language code.
     @return     Helper result.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.1.0
+    @version    0.2.0
     """
     translation_report = ai_translation_service.load_translation_report(project_root)
     original_language_code = narrator_definition_service.narrator_language_code(
         manifest.get("original_language", narrator_definition_service.DEFAULT_NARRATOR_LANGUAGE)
     )
     original_language_label = narrator_definition_service.narrator_language_label(original_language_code)
-    language_entries = [(original_language_label, original_language_code)]
-    translated_language_label = ui_state_service.translate("narator_voice.language_not_translated", language)
+    target_language_code = narrator_definition_service.narrator_language_code(
+        manifest.get("target_language", manifest.get("selected_voice_language")),
+        narrator_definition_service.DEFAULT_NARRATOR_LANGUAGE,
+    )
+    target_language_label = narrator_definition_service.narrator_language_label(target_language_code)
+    language_entries = [(target_language_label, target_language_code)]
+    translated_language_label = target_language_label
     translation_ready = False
     if isinstance(translation_report, dict):
         translated_language_code = str(translation_report.get("target_language", "")).strip()
@@ -450,11 +512,9 @@ def _voice_language_state(
         if translated_language_code in dict(config.TRANSLATION_LANGUAGE_OPTIONS):
             translated_language_label = narrator_definition_service.narrator_language_label(translated_language_code)
             translation_ready = translated_total_count > 0 and translated_total_count == translated_approved_count
-            if translation_ready and translated_language_code != original_language_code:
-                language_entries.append((translated_language_label, translated_language_code))
     return (
         language_entries,
-        original_language_code,
+        target_language_code,
         original_language_label,
         translated_language_label,
         translation_ready,

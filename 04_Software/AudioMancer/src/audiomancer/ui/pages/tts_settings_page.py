@@ -10,11 +10,10 @@
 @file tts_settings_page.py
 @brief TTS settings page for AudioMancer.
 @details Renders the operator-facing TTS Settings dialog and exposes load or
-         build helpers so the main window can coordinate runtime persistence
-         plus the simplified project-local voice-assignment plan.
+         build helpers so the main window can coordinate runtime persistence.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-18
-@version 1.2.0
+@version 1.3.0
 """
 
 # IMPORTS
@@ -22,7 +21,6 @@
 import copy
 
 from PySide6.QtWidgets import (
-    QComboBox,
     QFormLayout,
     QGroupBox,
     QHBoxLayout,
@@ -42,11 +40,11 @@ from audiomancer.services import ui_state_service, voiceweaver_runtime_service
 
 class TtsSettingsPage(QWidget):
     """
-    @brief      Display and edit global TTS runtime settings plus project voice-assignment mode.
+    @brief      Display and edit global TTS runtime settings.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-18
-    @version    1.2.0
+    @version    1.3.0
     """
 
     def __init__(self, parent=None) -> None:
@@ -57,7 +55,7 @@ class TtsSettingsPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-18
-        @version    1.2.0
+        @version    1.3.0
         """
         super().__init__(parent)
         self._current_language = config.DEFAULT_LANGUAGE
@@ -110,17 +108,12 @@ class TtsSettingsPage(QWidget):
         self._runtime_group.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         layout.addWidget(self._runtime_group)
 
-        self._planning_group = QGroupBox("Project TTS Plan", self)
+        self._planning_group = QGroupBox("Runtime Audio Limits", self)
         planning_layout = QVBoxLayout(self._planning_group)
         self._planning_status_label = QLabel("", self)
         self._planning_status_label.setWordWrap(True)
         planning_layout.addWidget(self._planning_status_label)
         planning_form = QFormLayout()
-        self._voice_assignment_label = QLabel("Voice Assignment Mode", self)
-        self._voice_assignment_combo = QComboBox(self)
-        self._voice_assignment_combo.addItem("Same narrator for whole book", "same_narrator")
-        self._voice_assignment_combo.addItem("Narrator + character voices", "narrator_and_characters")
-        planning_form.addRow(self._voice_assignment_label, self._voice_assignment_combo)
         self._preview_timeout_label = QLabel("Audio Preview Timeout (s)", self)
         self._preview_timeout_spin = QSpinBox(self)
         self._preview_timeout_spin.setRange(10, 3600)
@@ -156,7 +149,7 @@ class TtsSettingsPage(QWidget):
         project_active: bool,
     ) -> None:
         """
-        @brief      Load one combined runtime and project TTS state into the page.
+        @brief      Load one runtime TTS state into the page.
         @param[in]  settings_payload Current application settings payload.
         @param[in]  project_plan_payload Optional normalized project TTS plan payload.
         @param[in]  project_active True when one project is currently open.
@@ -164,7 +157,7 @@ class TtsSettingsPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-18
-        @version    1.2.0
+        @version    1.3.0
         """
         self._project_active = project_active
         self._base_url_edit.setText(
@@ -271,19 +264,14 @@ class TtsSettingsPage(QWidget):
 
     def build_tts_plan_payload(self) -> dict[str, object] | None:
         """
-        @brief      Build one project-local TTS plan payload from the current editor state.
+        @brief      Return no project-local TTS plan because project options are locked on Home.
         @return     Project-local TTS plan payload or None when no project is active.
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-18
-        @version    1.1.0
+        @version    1.2.0
         """
-        if not self._project_active:
-            return None
-        return {
-            "voice_assignment_mode": self._optional_combo_value(self._voice_assignment_combo)
-            or config.DEFAULT_TTS_VOICE_ASSIGNMENT_MODE,
-        }
+        return None
 
     def apply_language(self, language: str) -> None:
         """
@@ -302,18 +290,11 @@ class TtsSettingsPage(QWidget):
         self._test_connection_button.setText(ui_state_service.translate("tts_settings.test_connection", language))
         self._models_group.setTitle(ui_state_service.translate("tts_settings.models_group", language))
         self._planning_group.setTitle(ui_state_service.translate("tts_settings.plan_group", language))
-        self._voice_assignment_label.setText(ui_state_service.translate("tts_settings.voice_assignment", language))
         self._preview_timeout_label.setText(ui_state_service.translate("tts_settings.preview_timeout", language))
         self._generation_timeout_label.setText(ui_state_service.translate("tts_settings.generation_timeout", language))
         self._preview_text_limit_label.setText(ui_state_service.translate("tts_settings.preview_text_limit", language))
         self._cancel_button.setText(ui_state_service.translate("tts_settings.cancel", language))
         self._save_button.setText(ui_state_service.translate("tts_settings.save", language))
-        self._voice_assignment_combo.setItemText(
-            0, ui_state_service.translate("tts_settings.voice_assignment_same_narrator", language)
-        )
-        self._voice_assignment_combo.setItemText(
-            1, ui_state_service.translate("tts_settings.voice_assignment_with_characters", language)
-        )
         self._runtime_status_label.setText(self._build_runtime_status_text())
         self._rebuild_model_list()
         self._apply_planning_state()
@@ -327,10 +308,7 @@ class TtsSettingsPage(QWidget):
         @date       2026-04-21
         @version    0.1.0
         """
-        self._set_optional_combo(
-            self._voice_assignment_combo,
-            project_plan_payload.get("voice_assignment_mode", config.DEFAULT_TTS_VOICE_ASSIGNMENT_MODE),
-        )
+        _ = project_plan_payload
         self._apply_planning_state()
 
     def _rebuild_model_list(self) -> None:
@@ -383,16 +361,10 @@ class TtsSettingsPage(QWidget):
         @return     None.
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-21
-        @version    0.1.0
+        @version    0.2.0
         """
         minimum_qwen_ready = bool(self._capability_matrix.get("minimum_qwen_ready", False))
-        self._planning_group.setEnabled(self._project_active)
-        self._voice_assignment_combo.setEnabled(self._project_active)
-        if not self._project_active:
-            self._planning_status_label.setText(
-                ui_state_service.translate("tts_settings.plan_no_project", self._current_language)
-            )
-            return
+        self._planning_group.setEnabled(True)
         if not self._probe_succeeded:
             self._planning_status_label.setText(
                 ui_state_service.translate("tts_settings.plan_probe_required", self._current_language)
@@ -408,34 +380,6 @@ class TtsSettingsPage(QWidget):
         self._planning_status_label.setText(
             ui_state_service.translate("tts_settings.plan_ready", self._current_language)
         )
-
-    def _set_optional_combo(self, combo: QComboBox, value: object) -> None:
-        """
-        @brief      Set the optional combo.
-        @param[in]  combo Value for `combo`.
-        @param[in]  value Candidate value.
-        @return     None.
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-21
-        @version    0.1.0
-        """
-        index = combo.findData(value)
-        if index >= 0:
-            combo.setCurrentIndex(index)
-        elif combo.count() > 0:
-            combo.setCurrentIndex(0)
-
-    def _optional_combo_value(self, combo: QComboBox) -> str | None:
-        """
-        @brief      Resolve the optional combo value.
-        @param[in]  combo Value for `combo`.
-        @return     Helper result.
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-21
-        @version    0.1.0
-        """
-        value = combo.currentData()
-        return None if value in (None, "") else str(value)
 
 
 # END OF FILE

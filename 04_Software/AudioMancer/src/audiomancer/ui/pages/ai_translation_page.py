@@ -9,11 +9,11 @@
 """
 @file ai_translation_page.py
 @brief AI Translation workflow page for AudioMancer.
-@details Provides target-language selection, translation profile selection,
+@details Provides locked-language indicators, translation profile selection,
          chunk review, manual edits, approval controls, and progress display.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-07
-@version 0.4.1
+@version 0.5.0
 """
 
 # IMPORTS
@@ -35,11 +35,6 @@ from PySide6.QtWidgets import (
 from audiomancer import config
 from audiomancer.services import ai_translation_service, ui_state_service
 
-# CONSTANTS
-
-
-_TRANSLATION_LANGUAGE_OPTIONS = list(config.TRANSLATION_LANGUAGE_OPTIONS)
-
 
 class AiTranslationPage(QWidget):
     """
@@ -47,14 +42,14 @@ class AiTranslationPage(QWidget):
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-07
-    @version    0.2.0
+    @version    0.3.0
     """
 
-    start_translation_requested = Signal(str, str)
+    start_translation_requested = Signal(str)
     reset_translation_requested = Signal()
     approve_all_requested = Signal()
     approve_selected_requested = Signal(str)
-    retranslate_selected_requested = Signal(str, str, str)
+    retranslate_selected_requested = Signal(str, str)
     translated_text_changed = Signal(str, str)
 
     def __init__(self, parent=None) -> None:
@@ -65,7 +60,7 @@ class AiTranslationPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-07
-        @version    0.2.0
+        @version    0.3.0
         """
         super().__init__(parent)
         self._project_active = False
@@ -75,18 +70,22 @@ class AiTranslationPage(QWidget):
         self._display_chunks: list[dict[str, object]] = []
         self._current_chunk_id: str | None = None
         self._loading_translation_text = False
+        self._target_language = config.DEFAULT_TRANSLATION_TARGET_LANGUAGE
+        self._original_language = "Unknown"
 
         layout = QVBoxLayout(self)
         header_row = QHBoxLayout()
         self._title_label = QLabel("<h2>AI Translation</h2>")
         header_row.addWidget(self._title_label)
         header_row.addStretch(1)
-        self._language_label = QLabel("Target Language")
-        header_row.addWidget(self._language_label)
-        self._language_combo = QComboBox(self)
-        for code, label in _TRANSLATION_LANGUAGE_OPTIONS:
-            self._language_combo.addItem(label, code)
-        header_row.addWidget(self._language_combo)
+        self._original_language_label = QLabel("Original Language")
+        header_row.addWidget(self._original_language_label)
+        self._original_language_value_label = QLabel("Unknown")
+        header_row.addWidget(self._original_language_value_label)
+        self._target_language_label = QLabel("Target Language")
+        header_row.addWidget(self._target_language_label)
+        self._target_language_value_label = QLabel("English")
+        header_row.addWidget(self._target_language_value_label)
         self._profile_label = QLabel("AI Profile")
         header_row.addWidget(self._profile_label)
         self._profile_combo = QComboBox(self)
@@ -165,6 +164,7 @@ class AiTranslationPage(QWidget):
             [],
             [],
             ["Run text chunking before AI Translation."],
+            "Unknown",
             config.DEFAULT_TRANSLATION_TARGET_LANGUAGE,
             None,
             ai_translation_service.TRANSLATION_STAGE_NOT_STARTED,
@@ -217,6 +217,7 @@ class AiTranslationPage(QWidget):
         source_chunks: list[dict[str, object]],
         translated_chunks: list[dict[str, object]],
         notes: list[str],
+        original_language: str,
         target_language: str,
         selected_profile_id: str | None,
         stage_status: str,
@@ -229,6 +230,7 @@ class AiTranslationPage(QWidget):
         @param[in]  source_chunks Source chunk payloads from chunking.
         @param[in]  translated_chunks Persisted translated chunk payloads.
         @param[in]  notes Operator-facing translation notes.
+        @param[in]  original_language Source language label.
         @param[in]  target_language Active target language code.
         @param[in]  selected_profile_id Active profile identifier or `None`.
         @param[in]  stage_status Effective translation stage token.
@@ -239,13 +241,15 @@ class AiTranslationPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-07
-        @version    0.1.0
+        @version    0.2.0
         """
         self._source_chunks = sorted(source_chunks, key=lambda item: int(item.get("sequence_index", 0)))
         self._display_chunks = _build_display_chunks(self._source_chunks, translated_chunks)
         self._stage_status = stage_status
-        language_index = self._language_combo.findData(target_language)
-        self._language_combo.setCurrentIndex(0 if language_index < 0 else language_index)
+        self._original_language = str(original_language)
+        self._target_language = str(target_language or config.DEFAULT_TRANSLATION_TARGET_LANGUAGE)
+        self._original_language_value_label.setText(self._original_language)
+        self._target_language_value_label.setText(_language_label(self._target_language))
         if selected_profile_id is not None:
             profile_index = self._profile_combo.findData(selected_profile_id)
             if profile_index >= 0:
@@ -304,7 +308,7 @@ class AiTranslationPage(QWidget):
         @date       2026-04-07
         @version    0.1.0
         """
-        return str(self._language_combo.currentData() or config.DEFAULT_TRANSLATION_TARGET_LANGUAGE)
+        return self._target_language
 
     def selected_chunk_id(self) -> str | None:
         """
@@ -355,9 +359,8 @@ class AiTranslationPage(QWidget):
             str(selected_chunk.get("translated_text", "")).strip()
         )
         selected_profile_id = self.current_profile_id()
-        self._language_combo.setEnabled(
-            self._project_active and not self._busy and not has_started_translation and not has_translated_chunks
-        )
+        _ = has_started_translation
+        _ = has_translated_chunks
         self._profile_combo.setEnabled(self._project_active and not self._busy)
         self._start_button.setEnabled(
             self._project_active
@@ -426,7 +429,7 @@ class AiTranslationPage(QWidget):
         """
         profile_id = self.current_profile_id()
         if profile_id is not None:
-            self.start_translation_requested.emit(profile_id, self.current_target_language())
+            self.start_translation_requested.emit(profile_id)
 
     def _emit_retranslate_selected(self) -> None:
         """
@@ -440,7 +443,7 @@ class AiTranslationPage(QWidget):
         profile_id = self.current_profile_id()
         chunk_id = self.selected_chunk_id()
         if profile_id is not None and chunk_id is not None:
-            self.retranslate_selected_requested.emit(profile_id, self.current_target_language(), chunk_id)
+            self.retranslate_selected_requested.emit(profile_id, chunk_id)
 
     def _emit_approve_selected(self) -> None:
         """
@@ -519,7 +522,8 @@ class AiTranslationPage(QWidget):
         @version    0.1.0
         """
         self._title_label.setText(f"<h2>{ui_state_service.translate('ai_translation.title', language)}</h2>")
-        self._language_label.setText(ui_state_service.translate("ai_translation.target_language", language))
+        self._original_language_label.setText(ui_state_service.translate("ai_translation.original_language", language))
+        self._target_language_label.setText(ui_state_service.translate("ai_translation.target_language", language))
         self._profile_label.setText(ui_state_service.translate("ai_translation.ai_profile", language))
         self._chunk_list_group.setTitle(ui_state_service.translate("ai_translation.chunk_list_group", language))
         self._start_button.setText(ui_state_service.translate("ai_translation.start", language))
@@ -573,6 +577,20 @@ def _build_display_chunks(
         translated_chunk["source_text"] = str(source_chunk.get("text", ""))
         display_chunks.append(translated_chunk)
     return display_chunks
+
+
+def _language_label(language_code: object) -> str:
+    """
+    @brief      Resolve one translation-language label.
+    @param[in]  language_code Candidate language code.
+    @return     Operator-facing language label.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-26
+    @version    0.1.0
+    """
+    normalized_code = str(language_code or "").strip()
+    return str(dict(config.TRANSLATION_LANGUAGE_OPTIONS).get(normalized_code, normalized_code or "-"))
 
 
 def _format_chunk_list_item(chunk: dict[str, object]) -> str:

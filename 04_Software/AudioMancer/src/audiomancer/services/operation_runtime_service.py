@@ -14,11 +14,12 @@
          operations.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-22
-@version 0.3.2
+@version 0.4.0
 """
 
 # IMPORTS
 
+import json
 import math
 from pathlib import Path
 
@@ -89,6 +90,18 @@ _OPERATION_ARTIFACT_FILE_NAMES = {
         config.AUDIO_ASSEMBLY_REPORT_FILE_NAME,
         config.AUDIO_ASSEMBLY_STATE_FILE_NAME,
     ),
+}
+
+# @brief Optional operation-state file names that may be initialized on first page open.
+_OPERATION_STATE_FILE_NAMES = {
+    "extraction": config.EXTRACTION_STATE_FILE_NAME,
+    "cleanup": config.CLEANUP_STATE_FILE_NAME,
+    "chunking": config.CHUNKING_STATE_FILE_NAME,
+    "translation": config.TRANSLATION_STATE_FILE_NAME,
+    "character_discovery": config.CHARACTER_DISCOVERY_STATE_FILE_NAME,
+    "speech_blocks": config.SPEECH_BLOCKS_STATE_FILE_NAME,
+    "audio_blocks": config.AUDIO_BLOCKS_STATE_FILE_NAME,
+    "audio_assembly": config.AUDIO_ASSEMBLY_STATE_FILE_NAME,
 }
 
 
@@ -205,6 +218,61 @@ def build_operation_output_path(
     """
     Path(project_root).mkdir(parents=True, exist_ok=True)
     return resolve_operation_path(project_root, operation_kind, file_name)
+
+
+def default_operation_state(operation_kind: str) -> dict[str, object]:
+    """
+    @brief      Build one persisted default operation-state payload.
+    @param[in]  operation_kind Stable workflow operation token.
+    @return     Default operation-state payload.
+    @exception  ValueError Raised when the operation kind is unsupported.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-26
+    @version    0.1.0
+    """
+    if operation_kind not in _OPERATION_ORDER:
+        raise ValueError(f"Unsupported operation kind: {operation_kind}")
+    return {
+        "folder_relative_path": config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH,
+        "status": "not_started",
+        "input_paths": [],
+        "output_paths": [],
+        "artifact_paths": [],
+        "progress_current": 0,
+        "progress_total": 0,
+        "mode": None,
+        "started_at": None,
+        "completed_at": None,
+        "updated_at": None,
+        "warning_count": 0,
+        "metadata": {},
+        "resume_checkpoint": None,
+    }
+
+
+def ensure_default_operation_state(project_root: str | Path, operation_kind: str) -> Path | None:
+    """
+    @brief      Create one default operation-state file if the workflow page has no state yet.
+    @param[in]  project_root Active project root folder.
+    @param[in]  operation_kind Stable workflow operation token.
+    @return     Created or existing state path, or `None` when the operation has no state file.
+    @exception  ValueError Raised when the operation kind is unsupported.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-26
+    @version    0.1.0
+    """
+    if operation_kind not in _OPERATION_ORDER:
+        raise ValueError(f"Unsupported operation kind: {operation_kind}")
+    state_file_name = _OPERATION_STATE_FILE_NAMES.get(operation_kind)
+    if state_file_name is None:
+        return None
+    state_path = build_operation_output_path(project_root, operation_kind, state_file_name)
+    if not state_path.is_file():
+        state_path.write_text(
+            json.dumps(default_operation_state(operation_kind), indent=2, ensure_ascii=False) + "\n",
+            encoding="utf-8",
+        )
+    return state_path
 
 
 def relative_to_project(project_root: str | Path, artifact_path: str | Path) -> str:

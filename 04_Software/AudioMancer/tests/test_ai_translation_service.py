@@ -13,7 +13,7 @@
          review-state updates, and approval helpers.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-07
-@version 0.2.0
+@version 0.3.0
 """
 
 # IMPORTS
@@ -58,10 +58,9 @@ def test_ai_translation_service_creates_translation_artifacts(monkeypatch, tmp_p
     )
 
     translation_root = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH
-    assert (translation_root / "input_story.json").is_file()
     assert (translation_root / config.TRANSLATED_CHUNKS_FILE_NAME).is_file()
     assert (translation_root / config.TRANSLATION_REPORT_FILE_NAME).is_file()
-    assert (translation_root / config.OPERATION_STATE_FILE_NAME).is_file()
+    assert (translation_root / config.TRANSLATION_STATE_FILE_NAME).is_file()
     assert report["translated_chunk_count"] == 2
     assert report["token_usage"]["total_tokens"] == 250
 
@@ -200,9 +199,9 @@ def _create_chunked_project(tmp_path, name: str):
         "size_bytes": 12,
     }
     manifest["operations"]["chunking"]["status"] = "completed"
-    manifest["operations"]["chunking"]["output_paths"] = [f"20_chunking/{config.CHUNK_ARTIFACT_FILE_NAME}"]
+    manifest["operations"]["chunking"]["output_paths"] = [config.CHUNK_ARTIFACT_FILE_NAME]
     project_workspace_service.save_manifest(manifest, project_root)
-    chunk_root = project_root / "20_chunking"
+    chunk_root = project_root
     chunk_root.mkdir(parents=True, exist_ok=True)
     (chunk_root / config.CHUNK_ARTIFACT_FILE_NAME).write_text(
         json.dumps(

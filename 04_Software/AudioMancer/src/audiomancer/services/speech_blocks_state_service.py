@@ -14,7 +14,7 @@
          current operation state, and enabled AI profile settings.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 0.2.0
+@version 0.3.0
 """
 
 # IMPORTS
@@ -22,6 +22,7 @@
 from pathlib import Path
 
 from audiomancer.services import (
+    deterministic_chunking_service,
     home_presenter_service,
     speech_blocks_service,
     token_usage_service,
@@ -41,7 +42,7 @@ def build_speech_blocks_profile_state(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.1.0
+    @version    0.2.0
     """
     if not isinstance(settings_payload, dict):
         return {"entries": [], "selected_profile_id": None}
@@ -112,14 +113,17 @@ def build_speech_blocks_state(
     selected_profile_id = _persisted_profile_id(report, operation_state)
     profile_state = build_speech_blocks_profile_state(settings_payload, selected_profile_id)
 
-    try:
-        source_resolution = speech_blocks_service.resolve_source_chunks(project_root, manifest)
-        source_chunks = list(source_resolution["source_chunks"])
-        selected_source_language = str(source_resolution["selected_source_language"])
-    except ValueError:
-        source_resolution = None
+    if not deterministic_chunking_service.load_chunks(project_root):
         source_chunks = []
         selected_source_language = _persisted_source_language(report, operation_state)
+    else:
+        try:
+            source_resolution = speech_blocks_service.resolve_source_chunks(project_root, manifest)
+            source_chunks = list(source_resolution["source_chunks"])
+            selected_source_language = str(source_resolution["selected_source_language"])
+        except ValueError:
+            source_chunks = []
+            selected_source_language = _persisted_source_language(report, operation_state)
 
     return {
         "source_chunks": source_chunks,

@@ -13,7 +13,7 @@
          selected-chunk retranslation, and modal progress lifecycle.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-22
-@version 0.5.2
+@version 0.6.0
 """
 
 # IMPORTS
@@ -42,18 +42,16 @@ if TYPE_CHECKING:
 def handle_start_translation_requested(
     window: "MainWindow",
     profile_id: str,
-    target_language: str,
 ) -> None:
     """
     @brief      Validate and start or continue one AI translation run.
     @param[in]  window Active main window instance.
     @param[in]  profile_id Selected enabled AI profile identifier.
-    @param[in]  target_language Requested target language code.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-11
-    @version    0.2.0
+    @version    0.3.0
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._active_operation_kind is not None:
@@ -72,6 +70,7 @@ def handle_start_translation_requested(
             ui_state_service.translate("project.error_missing_chunk_artifact", current_language),
         )
         return
+    target_language = _manifest_target_language(window)
     profile_payload = _resolve_ai_profile(window._settings_payload, profile_id)
     if profile_payload is None:
         QMessageBox.warning(
@@ -100,26 +99,25 @@ def handle_start_translation_requested(
 def handle_retranslate_selected_requested(
     window: "MainWindow",
     profile_id: str,
-    target_language: str,
     chunk_id: str,
 ) -> None:
     """
     @brief      Re-translate one selected chunk through the AI workflow.
     @param[in]  window Active main window instance.
     @param[in]  profile_id Selected enabled AI profile identifier.
-    @param[in]  target_language Requested target language code.
     @param[in]  chunk_id Selected chunk identifier.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-22
-    @version    0.2.0
+    @version    0.3.0
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._active_operation_kind is not None:
         return
     if window._current_project_root is None or window._current_manifest is None:
         return
+    target_language = _manifest_target_language(window)
     profile_payload = _resolve_ai_profile(window._settings_payload, profile_id)
     if profile_payload is None:
         QMessageBox.warning(
@@ -464,14 +462,17 @@ def _has_chunking_output(project_root: str | None) -> bool:
 
 def _persisted_target_language(window: "MainWindow") -> str:
     """
-    @brief      Resolve the translation target language from persisted state or UI.
+    @brief      Resolve the translation target language from the locked project options.
     @param[in]  window Active main window instance.
-    @return     Persisted or currently selected target language code.
+    @return     Persisted target language code.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-07
-    @version    0.1.0
+    @version    0.2.0
     """
+    manifest_language = _manifest_target_language(window)
+    if manifest_language:
+        return manifest_language
     if window._current_project_root is None:
         return config.DEFAULT_TRANSLATION_TARGET_LANGUAGE
     report = ai_translation_service.load_translation_report(window._current_project_root)
@@ -479,7 +480,26 @@ def _persisted_target_language(window: "MainWindow") -> str:
         target_language = str(report.get("target_language", "")).strip()
         if target_language:
             return target_language
-    return window._ai_translation_page.current_target_language()
+    return config.DEFAULT_TRANSLATION_TARGET_LANGUAGE
+
+
+def _manifest_target_language(window: "MainWindow") -> str:
+    """
+    @brief      Resolve the locked target language from the active manifest.
+    @param[in]  window Active main window instance.
+    @return     Supported target language code.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-26
+    @version    0.1.0
+    """
+    if isinstance(window._current_manifest, dict):
+        target_language = str(
+            window._current_manifest.get("target_language", config.DEFAULT_TRANSLATION_TARGET_LANGUAGE)
+        ).strip()
+        if target_language in dict(config.TRANSLATION_LANGUAGE_OPTIONS):
+            return target_language
+    return config.DEFAULT_TRANSLATION_TARGET_LANGUAGE
 
 
 def _persisted_profile_id(window: "MainWindow") -> str | None:

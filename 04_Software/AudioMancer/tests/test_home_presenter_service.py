@@ -13,7 +13,7 @@
          from manifest data without Qt dependencies.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-06
-@version 0.2.1
+@version 0.3.0
 """
 
 # IMPORTS
@@ -30,7 +30,7 @@ def test_build_stage_statuses_marks_cleanup_as_in_progress() -> None:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.1.0
+    @version    0.2.0
     """
     manifest = {
         "current_stage": "source_selected",
@@ -43,8 +43,8 @@ def test_build_stage_statuses_marks_cleanup_as_in_progress() -> None:
 
     statuses = home_presenter_service.build_stage_statuses(manifest, "en")
 
-    assert statuses[0]["status"] == "finished"
-    assert statuses[1]["status"] == "in_progress"
+    assert statuses[0]["label"] == "Text Cleanup"
+    assert statuses[0]["status"] == "in_progress"
 
 
 def test_build_stage_statuses_keeps_chunking_not_started_after_cleanup_completion() -> None:
@@ -54,7 +54,7 @@ def test_build_stage_statuses_keeps_chunking_not_started_after_cleanup_completio
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.1.0
+    @version    0.2.0
     """
     manifest = {
         "current_stage": "text_chunking_ready",
@@ -68,8 +68,7 @@ def test_build_stage_statuses_keeps_chunking_not_started_after_cleanup_completio
     statuses = home_presenter_service.build_stage_statuses(manifest, "en")
 
     assert statuses[0]["status"] == "finished"
-    assert statuses[1]["status"] == "finished"
-    assert statuses[2]["status"] == "not_started"
+    assert statuses[1]["status"] == "not_started"
 
 
 def test_build_stage_statuses_marks_character_voices_ready_as_finished() -> None:
@@ -79,7 +78,7 @@ def test_build_stage_statuses_marks_character_voices_ready_as_finished() -> None
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.1.0
+    @version    0.2.0
     """
     manifest = {
         "current_stage": "character_voices_ready",
@@ -91,8 +90,8 @@ def test_build_stage_statuses_marks_character_voices_ready_as_finished() -> None
 
     statuses = home_presenter_service.build_stage_statuses(manifest, "en")
 
+    assert statuses[4]["status"] == "finished"
     assert statuses[5]["status"] == "finished"
-    assert statuses[6]["status"] == "finished"
 
 
 def test_build_stage_statuses_marks_downstream_operation_status_as_in_progress() -> None:
@@ -102,7 +101,7 @@ def test_build_stage_statuses_marks_downstream_operation_status_as_in_progress()
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.1.0
+    @version    0.2.0
     """
     manifest = {
         "current_stage": "character_voices_ready",
@@ -115,8 +114,8 @@ def test_build_stage_statuses_marks_downstream_operation_status_as_in_progress()
 
     statuses = home_presenter_service.build_stage_statuses(manifest, "en")
 
+    assert statuses[6]["status"] == "in_progress"
     assert statuses[7]["status"] == "in_progress"
-    assert statuses[8]["status"] == "in_progress"
 
 
 # END OF FILE

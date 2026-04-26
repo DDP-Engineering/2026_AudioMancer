@@ -30,6 +30,7 @@ not only a collection of separate tools.
 It should allow an operator to:
 
 - create and manage one project per book
+- choose and lock the audiobook language and narration mode for that project
 - import source material from supported formats
 - extract raw text from the source
 - clean and normalize the text into canonical book content
@@ -61,15 +62,16 @@ The final application should follow these principles:
 The intended end-to-end workflow is:
 
 1. create or open a project
-2. import and lock the source material for that project
-3. extract raw text
-4. clean and normalize the extracted text
-5. split the text into canonical narration chunks
-6. run optional AI-assisted processing where useful and justified
-7. review and edit chunk, translation, and character outputs
-8. prepare downstream narration and generation data
-9. generate reviewed speech-block audio with assigned voices
-10. assemble and export final audiobook outputs
+2. import or replace the source material before the project is started
+3. choose and lock the source, audiobook language, and narration mode
+4. extract raw text
+5. clean and normalize the extracted text
+6. split the text into canonical narration chunks
+7. run optional AI-assisted processing where useful and justified
+8. review and edit chunk, translation, and character outputs
+9. prepare downstream narration and generation data
+10. generate reviewed speech-block audio with assigned voices
+11. assemble and export final audiobook outputs
 
 Each stage must have:
 
@@ -162,7 +164,8 @@ Only data that helps downstream narration should be kept.
 
 The translation workflow must:
 
-- translate chunks into a selected target language when needed
+- translate chunks into the project-locked target language when needed
+- create pass-through translation state when source and target languages match
 - preserve source-to-translation alignment
 - support partial progress, edits, approvals, and retranslation
 - keep translation state explicit and reviewable
@@ -176,6 +179,7 @@ This stage should consolidate:
 
 - cleaned and approved chunk text
 - approved character profiles
+- locked audiobook language and narration mode
 - character-to-voice assignment data
 - real-voice assignment data where supported
 - pronunciation or style notes where needed
@@ -204,8 +208,10 @@ This stage should support:
 - regeneration of selected Speech Blocks without rerunning the whole book
 - persisted per-block audio artifacts and generation metadata
 
-The generation stage should make it possible to use different voices inside the
-same book, for example narrator voice plus one or more character voices.
+The generation stage should support both locked narration modes: one narrator
+for the whole book, and narrator plus one or more character voices. Same-narrator
+projects should preserve continuous phrases and emotional flow by segmenting
+text for the TTS budget instead of forcing dialogue speaker splits.
 
 The current implementation generates WAV files through the Audio Blocks workflow
 under `audio_blocks/`, keeps unapproved Speech Blocks pending, stores

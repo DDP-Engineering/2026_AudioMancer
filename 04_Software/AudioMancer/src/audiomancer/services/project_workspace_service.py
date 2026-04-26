@@ -13,7 +13,7 @@
          using one minimal root-level `project.json` manifest contract.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-20
-@version    1.8.1
+@version    1.9.0
 """
 
 # IMPORTS
@@ -159,6 +159,38 @@ def save_manifest(
         json.dumps(normalized_manifest, indent=2, ensure_ascii=False) + "\n",
         encoding="utf-8",
     )
+
+
+@trace_function(_PROJECT_WORKSPACE_LOGGER)
+def lock_project_options(
+    project_root: str | Path,
+    target_language: str,
+    voice_assignment_mode: str,
+) -> ProjectManifestPayload:
+    """
+    @brief      Persist the immutable project-level audiobook options.
+    @param[in]  project_root Active project root folder.
+    @param[in]  target_language Selected audiobook translation and voice language code.
+    @param[in]  voice_assignment_mode Selected narration mode.
+    @return     Updated project manifest payload.
+    @exception  ValueError Raised when options are invalid or already locked.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-26
+    @version    0.2.0
+    """
+    manifest = load_manifest(project_root)
+    if bool(manifest.get("project_options_locked", False)):
+        raise ValueError("Project options are already locked for this project.")
+    normalized_target_language = _normalize_target_language(target_language)
+    normalized_voice_assignment_mode = str(voice_assignment_mode).strip()
+    if normalized_voice_assignment_mode not in config.TTS_VOICE_ASSIGNMENT_MODE_OPTIONS:
+        raise ValueError("Project narration mode is invalid.")
+    manifest["target_language"] = normalized_target_language
+    manifest["selected_voice_language"] = normalized_target_language
+    manifest["voice_assignment_mode"] = normalized_voice_assignment_mode
+    manifest["project_options_locked"] = True
+    save_manifest(manifest, project_root)
+    return load_manifest(project_root)
 
 
 @trace_function(_PROJECT_WORKSPACE_LOGGER)
@@ -334,6 +366,8 @@ def build_project_manifest(
         "extraction_report_relative_path": None,
         "extraction_warning_count": 0,
         "operations": _build_default_operation_states(),
+        "project_options_locked": False,
+        "target_language": config.DEFAULT_TRANSLATION_TARGET_LANGUAGE,
         "original_language": None,
         "narrator_profile_name": None,
         "narrator_language": None,
@@ -363,6 +397,13 @@ def validate_project_manifest(payload: object) -> ProjectManifestPayload:
     voice_assignment_mode = str(payload.get("voice_assignment_mode", config.DEFAULT_TTS_VOICE_ASSIGNMENT_MODE)).strip()
     if voice_assignment_mode not in config.TTS_VOICE_ASSIGNMENT_MODE_OPTIONS:
         voice_assignment_mode = config.DEFAULT_TTS_VOICE_ASSIGNMENT_MODE
+    target_language = _normalize_target_language(
+        payload.get("target_language", config.DEFAULT_TRANSLATION_TARGET_LANGUAGE)
+    )
+    project_options_locked = bool(payload.get("project_options_locked", False))
+    selected_voice_language = _optional_string(payload.get("selected_voice_language"))
+    if project_options_locked:
+        selected_voice_language = target_language
     return {
         "project_id": str(payload["project_id"]),
         "display_name": str(payload["display_name"]),
@@ -374,10 +415,12 @@ def validate_project_manifest(payload: object) -> ProjectManifestPayload:
         "extraction_report_relative_path": _optional_string(payload.get("extraction_report_relative_path")),
         "extraction_warning_count": _non_negative_int(payload.get("extraction_warning_count", 0)),
         "operations": _normalize_operations(payload.get("operations")),
+        "project_options_locked": project_options_locked,
+        "target_language": target_language,
         "original_language": _optional_string(payload.get("original_language")),
         "narrator_profile_name": _optional_string(payload.get("narrator_profile_name")),
         "narrator_language": _optional_string(payload.get("narrator_language")),
-        "selected_voice_language": _optional_string(payload.get("selected_voice_language")),
+        "selected_voice_language": selected_voice_language,
         "voice_assignment_mode": voice_assignment_mode,
         "audio_assembly_settings": _normalize_audio_assembly_settings(payload.get("audio_assembly_settings")),
         "notes": str(payload.get("notes", "")),
@@ -970,8 +1013,11 @@ def _heal_character_voice_manifest_fields(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.1.0
+    @version    0.2.0
     """
+    if bool(manifest.get("project_options_locked", False)):
+        _record_manifest_value_change(manifest, "selected_voice_language", manifest.get("target_language"), changes)
+        return
     targets = evidence.get("targets")
     if not isinstance(targets, list):
         return
@@ -1468,6 +1514,10 @@ def _build_repaired_manifest(
         "extraction_report_relative_path": _optional_string(payload.get("extraction_report_relative_path")),
         "extraction_warning_count": _non_negative_int(payload.get("extraction_warning_count", 0)),
         "operations": _normalize_operations(payload.get("operations")),
+        "project_options_locked": bool(payload.get("project_options_locked", False)),
+        "target_language": _normalize_target_language(
+            payload.get("target_language", config.DEFAULT_TRANSLATION_TARGET_LANGUAGE)
+        ),
         "original_language": _optional_string(payload.get("original_language")),
         "narrator_profile_name": _optional_string(payload.get("narrator_profile_name")),
         "narrator_language": _optional_string(payload.get("narrator_language")),
@@ -1481,6 +1531,8 @@ def _build_repaired_manifest(
         "audio_assembly_settings": _normalize_audio_assembly_settings(payload.get("audio_assembly_settings")),
         "notes": str(payload.get("notes", "")),
     }
+    if bool(repaired_manifest.get("project_options_locked", False)):
+        repaired_manifest["selected_voice_language"] = repaired_manifest["target_language"]
     if _stage_rank(str(repaired_manifest["current_stage"])) < _stage_rank("narrator_definition_ready"):
         repaired_manifest["narrator_profile_name"] = None
         repaired_manifest["narrator_language"] = None
@@ -1534,6 +1586,23 @@ def _optional_string(value: object) -> str | None:
     if value in (None, ""):
         return None
     return str(value)
+
+
+def _normalize_target_language(value: object) -> str:
+    """
+    @brief      Normalize one project target-language value.
+    @param[in]  value Candidate language code.
+    @return     Supported target-language code.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-26
+    @version    0.1.0
+    """
+    normalized_value = str(value or "").strip()
+    supported_languages = dict(config.TRANSLATION_LANGUAGE_OPTIONS)
+    if normalized_value in supported_languages:
+        return normalized_value
+    return config.DEFAULT_TRANSLATION_TARGET_LANGUAGE
 
 
 def _non_negative_int(value: object) -> int:

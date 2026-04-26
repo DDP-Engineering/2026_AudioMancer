@@ -15,7 +15,7 @@
          synchronization for the Text Cleanup page.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-24
-@version 0.6.2
+@version 0.6.3
 """
 
 # IMPORTS
@@ -166,7 +166,7 @@ def handle_ai_cleanup_requested(window: "MainWindow", profile_id: str) -> None:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-11
-    @version    0.2.0
+    @version    0.2.1
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._active_operation_kind is not None:
@@ -542,6 +542,10 @@ def handle_cleanup_success(window: "MainWindow", result_payload: object) -> None
     assert window._current_manifest is not None
     updated_manifest = dict(window._current_manifest)
     updated_manifest["current_stage"] = "text_chunking_ready"
+    if isinstance(result_payload, dict):
+        detected_language = str(result_payload.get("detected_language", "") or "").strip()
+        if detected_language:
+            updated_manifest["original_language"] = detected_language
     operations = text_cleanup_state_service.normalized_manifest_operations(updated_manifest)
     operations["cleanup"] = project_workspace_service.project_manifest_operation_summary(
         "cleanup",

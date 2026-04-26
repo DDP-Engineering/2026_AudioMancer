@@ -14,7 +14,7 @@
          workflow.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-07
-@version 0.2.1
+@version 0.3.0
 """
 
 # IMPORTS
@@ -25,15 +25,15 @@ from audiomancer.ui.pages.ai_translation_page import AiTranslationPage
 # PUBLIC API
 
 
-def test_ai_translation_page_locks_language_when_translation_exists(qtbot) -> None:
+def test_ai_translation_page_displays_locked_language_indicators(qtbot) -> None:
     """
-    @brief      Verify the target-language selector is locked after translation exists.
+    @brief      Verify locked original and target language indicators are shown without a selector.
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.1.0
+    @version    0.2.0
     """
     page = AiTranslationPage()
     qtbot.addWidget(page)
@@ -56,6 +56,7 @@ def test_ai_translation_page_locks_language_when_translation_exists(qtbot) -> No
             }
         ],
         notes=["Translated chunks: 1/1."],
+        original_language="English",
         target_language="ro",
         selected_profile_id="profile-1",
         stage_status=ai_translation_service.TRANSLATION_STAGE_COMPLETED,
@@ -64,7 +65,9 @@ def test_ai_translation_page_locks_language_when_translation_exists(qtbot) -> No
         total_count=1,
     )
 
-    assert page._language_combo.isEnabled() is False
+    assert hasattr(page, "_language_combo") is False
+    assert page._original_language_value_label.text() == "English"
+    assert page._target_language_value_label.text() == "Romanian"
     assert page._start_button.isEnabled() is False
     assert page._reset_button.isEnabled() is True
 
@@ -100,6 +103,7 @@ def test_ai_translation_page_renders_selected_chunk_and_review_actions(qtbot) ->
             }
         ],
         notes=["Translated chunks: 1/1."],
+        original_language="English",
         target_language="ro",
         selected_profile_id="profile-1",
         stage_status=ai_translation_service.TRANSLATION_STAGE_IN_PROGRESS,
@@ -149,6 +153,7 @@ def test_ai_translation_page_edit_marks_selected_chunk_unapproved(qtbot) -> None
             }
         ],
         notes=["Translated chunks: 1/1."],
+        original_language="English",
         target_language="ro",
         selected_profile_id="profile-1",
         stage_status=ai_translation_service.TRANSLATION_STAGE_IN_PROGRESS,
@@ -209,6 +214,7 @@ def test_ai_translation_page_advances_to_next_chunk_with_limit(qtbot) -> None:
             },
         ],
         notes=["Translated chunks: 2/2."],
+        original_language="English",
         target_language="ro",
         selected_profile_id="profile-1",
         stage_status=ai_translation_service.TRANSLATION_STAGE_IN_PROGRESS,

@@ -85,7 +85,7 @@ def load_selected_voice_language(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-20
-    @version    1.0.0
+    @version    1.1.0
     """
     try:
         payload = project_workspace_service.load_manifest(project_root)
@@ -117,6 +117,11 @@ def save_selected_voice_language(project_root: str | Path, selected_voice_langua
     except Exception:
         manifest = None
     if isinstance(manifest, dict):
+        if bool(manifest.get("project_options_locked", False)):
+            normalized_language = narrator_definition_service.narrator_language_code(
+                manifest.get("target_language", manifest.get("selected_voice_language")),
+                normalized_language,
+            )
         manifest["selected_voice_language"] = normalized_language
         project_workspace_service.save_manifest(manifest, project_root)
     return normalized_language

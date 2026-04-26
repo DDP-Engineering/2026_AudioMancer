@@ -13,7 +13,7 @@
          and source import workflows owned by the Home page.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-06
-@version 0.6.0
+@version 0.9.2
 """
 
 # IMPORTS
@@ -49,7 +49,7 @@ def handle_new_project_requested(window: "MainWindow") -> None:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.1.1
+    @version    0.3.0
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     selected_parent = QFileDialog.getExistingDirectory(
@@ -108,7 +108,7 @@ def handle_open_project_requested(window: "MainWindow") -> None:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.1.1
+    @version    0.2.0
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     selected_folder = QFileDialog.getExistingDirectory(
@@ -159,7 +159,7 @@ def handle_import_source_requested(window: "MainWindow") -> None:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.1.1
+    @version    0.1.2
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._current_project_root is None or window._current_manifest is None:
@@ -170,11 +170,11 @@ def handle_import_source_requested(window: "MainWindow") -> None:
         )
         return
 
-    if home_presenter_service.source_document_name(window._current_manifest) is not None:
+    if bool(window._current_manifest.get("project_options_locked", False)):
         QMessageBox.warning(
             window,
             ui_state_service.translate("dialog.project_error_title", current_language),
-            ui_state_service.translate("project.error_locked_source", current_language),
+            ui_state_service.translate("project.error_project_already_started", current_language),
         )
         return
 
@@ -188,9 +188,11 @@ def handle_import_source_requested(window: "MainWindow") -> None:
         return
 
     try:
+        previous_source_document = window._current_manifest.get("source_document")
         source_document = import_service.import_source(
             window._current_project_root,
             selected_file,
+            previous_source_document if isinstance(previous_source_document, dict) else None,
         )
     except (FileNotFoundError, ValueError) as error:
         QMessageBox.warning(
@@ -203,6 +205,11 @@ def handle_import_source_requested(window: "MainWindow") -> None:
     updated_manifest = dict(window._current_manifest)
     updated_manifest["source_document"] = source_document
     updated_manifest["current_stage"] = "source_selected"
+    if not bool(updated_manifest.get("project_options_locked", False)):
+        target_language, voice_assignment_mode = window._home_page.selected_project_options()
+        updated_manifest["target_language"] = target_language
+        updated_manifest["selected_voice_language"] = target_language
+        updated_manifest["voice_assignment_mode"] = voice_assignment_mode
     project_workspace_service.save_manifest(
         updated_manifest,
         window._current_project_root,
@@ -212,6 +219,68 @@ def handle_import_source_requested(window: "MainWindow") -> None:
     misc_ui_controller.show_message(
         window,
         ui_state_service.translate("status.source_imported", current_language),
+    )
+
+
+def handle_project_options_lock_requested(
+    window: "MainWindow",
+    target_language: str,
+    voice_assignment_mode: str,
+) -> None:
+    """
+    @brief      Confirm and lock project-level audiobook options.
+    @param[in]  window Active main window shell.
+    @param[in]  target_language Requested project target language.
+    @param[in]  voice_assignment_mode Requested narration mode.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-26
+    @version    0.2.0
+    """
+    current_language = ui_state_service.current_language_from_settings(window._settings_payload)
+    if window._current_project_root is None or window._current_manifest is None:
+        QMessageBox.warning(
+            window,
+            ui_state_service.translate("dialog.project_error_title", current_language),
+            ui_state_service.translate("project.error_no_active_project", current_language),
+        )
+        return
+    if bool(window._current_manifest.get("project_options_locked", False)):
+        return
+    if home_presenter_service.source_document_name(window._current_manifest) is None:
+        QMessageBox.warning(
+            window,
+            ui_state_service.translate("dialog.project_error_title", current_language),
+            ui_state_service.translate("project.error_start_project_missing_source", current_language),
+        )
+        return
+    decision = QMessageBox.question(
+        window,
+        ui_state_service.translate("dialog.confirm_project_options_title", current_language),
+        ui_state_service.translate("project.confirm_project_options_lock", current_language),
+        QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+        QMessageBox.StandardButton.No,
+    )
+    if decision != QMessageBox.StandardButton.Yes:
+        return
+    try:
+        manifest = project_workspace_service.lock_project_options(
+            window._current_project_root,
+            target_language,
+            voice_assignment_mode,
+        )
+    except ValueError as error:
+        QMessageBox.warning(
+            window,
+            ui_state_service.translate("dialog.project_error_title", current_language),
+            str(error),
+        )
+        return
+    window.show_project_state(window._current_project_root, manifest)
+    misc_ui_controller.show_message(
+        window,
+        ui_state_service.translate("status.project_options_locked", current_language),
     )
 
 
@@ -315,7 +384,7 @@ def handle_project_snapshot_requested(window: "MainWindow") -> None:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.2.0
+    @version    0.3.0
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._current_project_root is None or window._current_manifest is None:
@@ -323,6 +392,14 @@ def handle_project_snapshot_requested(window: "MainWindow") -> None:
             window,
             ui_state_service.translate("dialog.project_error_title", current_language),
             ui_state_service.translate("project.error_no_active_project", current_language),
+        )
+        return
+
+    if not bool(window._current_manifest.get("project_options_locked", False)):
+        QMessageBox.warning(
+            window,
+            ui_state_service.translate("dialog.project_error_title", current_language),
+            ui_state_service.translate("project.error_project_options_unlocked", current_language),
         )
         return
 
@@ -513,9 +590,14 @@ def activate_project(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.1.0
+    @version    0.2.0
     """
     window.set_project_active(True)
+    window._current_page_id = "home"
+    home_page = window._page_registry.get("home")
+    if home_page is not None:
+        window._stack.setCurrentWidget(home_page)
+        window._sidebar.set_current_page("home")
     window.show_project_state(project_root, manifest)
 
 

@@ -14,7 +14,7 @@
          Blocks output, and the resumable runtime operation state.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-23
-@version 0.3.1
+@version 0.3.2
 """
 
 # IMPORTS
@@ -25,6 +25,7 @@ import wave
 from audiomancer.services import (
     audio_blocks_service,
     character_voices_service,
+    deterministic_chunking_service,
     home_presenter_service,
     narrator_definition_service,
     speech_blocks_service,
@@ -46,7 +47,7 @@ def build_audio_blocks_state(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-23
-    @version    0.3.1
+    @version    0.3.2
     """
     if project_root is None or manifest is None:
         return _empty_state(language)
@@ -275,8 +276,10 @@ def _build_full_source_text(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-23
-    @version    0.1.1
+    @version    0.1.2
     """
+    if not deterministic_chunking_service.load_chunks(project_root):
+        return "\n\n".join(str(block.get("text", "")) for block in speech_blocks)
     try:
         source_resolution = speech_blocks_service.resolve_source_chunks(project_root, manifest)
         source_chunks = sorted(

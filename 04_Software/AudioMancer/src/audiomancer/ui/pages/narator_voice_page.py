@@ -14,7 +14,7 @@
          preview controls for the fixed Qwen3-backed narrator workflow.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-17
-@version 3.4.1
+@version 3.5.0
 """
 
 # IMPORTS
@@ -47,7 +47,7 @@ class NaratorVoicePage(QWidget):
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-17
-    @version    1.2.5
+    @version    1.3.0
     """
 
     create_profile_requested = Signal(dict)
@@ -68,7 +68,7 @@ class NaratorVoicePage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-17
-        @version    1.2.6
+        @version    1.3.0
         """
         super().__init__(parent)
         self._project_active = False
@@ -114,7 +114,6 @@ class NaratorVoicePage(QWidget):
         self._voice_language_group = QGroupBox("Voice language", self)
         voice_language_layout = QVBoxLayout(self._voice_language_group)
         self._voice_language_combo = QComboBox(self)
-        self._voice_language_combo.currentIndexChanged.connect(self._handle_voice_language_changed)
         voice_language_layout.addWidget(self._voice_language_combo)
         indicator_row.addWidget(self._original_language_group, 1)
         indicator_row.addWidget(self._translated_language_group, 1)
@@ -476,12 +475,12 @@ class NaratorVoicePage(QWidget):
         @return     None.
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-21
-        @version    0.3.0
+        @version    0.4.0
         """
         list_enabled = self._project_active and not self._busy and not self._preview_active and not self._edit_mode
         editor_enabled = self._project_active and not self._busy and not self._preview_active and self._edit_mode
         self._profile_list.setEnabled(list_enabled)
-        self._voice_language_combo.setEnabled(list_enabled)
+        self._voice_language_combo.setEnabled(False)
         self._create_profile_button.setEnabled(list_enabled)
         self._edit_profile_button.setEnabled(
             self._project_active

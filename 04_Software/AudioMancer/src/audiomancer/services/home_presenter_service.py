@@ -13,7 +13,7 @@
          page from manifest data without depending on Qt widgets.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-06
-@version 0.2.1
+@version 0.3.0
 """
 
 # IMPORTS
@@ -36,7 +36,7 @@ def build_stage_statuses(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.2.1
+    @version    0.3.0
     """
     stage_tokens = visible_workflow_stage_tokens()
     if manifest is None:
@@ -71,18 +71,9 @@ def build_stage_statuses(
                 ),
             }
         )
-    extraction_status = str(manifest_operation(manifest, "extraction").get("status", "not_started"))
-    if (
-        source_document_name(manifest) is not None
-        and extraction_status in {"running", "failed", "completed"}
-        and finished_index < 1
-    ):
-        statuses[0]["status"] = "finished"
-        statuses[1]["status"] = "in_progress"
     cleanup_status = str(manifest_operation(manifest, "cleanup").get("status", "not_started"))
-    if cleanup_status in {"running", "failed"} and len(statuses) > 1:
-        statuses[0]["status"] = "finished"
-        statuses[1]["status"] = "in_progress"
+    if cleanup_status in {"running", "failed"} and statuses:
+        statuses[0]["status"] = "in_progress"
     _apply_operation_status_overlays(statuses, manifest)
     _apply_ready_stage_overlays(statuses, str(manifest.get("current_stage", config.DEFAULT_WORKFLOW_STAGE)))
     return statuses
@@ -151,10 +142,12 @@ def visible_workflow_stage_tokens() -> tuple[str, ...]:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.1.0
+    @version    0.2.0
     """
     return tuple(
-        stage_token for stage_token in config.PROJECT_WORKFLOW_STAGES if stage_token != config.DEFAULT_WORKFLOW_STAGE
+        stage_token
+        for stage_token in config.PROJECT_WORKFLOW_STAGES
+        if stage_token not in {config.DEFAULT_WORKFLOW_STAGE, "source_selected"}
     )
 
 
@@ -166,14 +159,12 @@ def stage_reached_index(current_stage: str | None) -> int:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.2.0
+    @version    0.3.0
     """
     stage_sequence = config.PROJECT_WORKFLOW_STAGES
     if current_stage not in stage_sequence:
         return -1
-    if current_stage == "source_selected":
-        return 0
-    return stage_sequence.index(current_stage) - 2
+    return stage_sequence.index(current_stage) - 3
 
 
 def _apply_operation_status_overlays(statuses: list[dict[str, str]], manifest: dict[str, object]) -> None:
@@ -185,16 +176,16 @@ def _apply_operation_status_overlays(statuses: list[dict[str, str]], manifest: d
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.1.0
+    @version    0.2.0
     """
     operation_to_row = {
-        "cleanup": 1,
-        "chunking": 2,
-        "translation": 3,
-        "character_discovery": 4,
-        "speech_blocks": 7,
-        "audio_blocks": 8,
-        "audio_assembly": 9,
+        "cleanup": 0,
+        "chunking": 1,
+        "translation": 2,
+        "character_discovery": 3,
+        "speech_blocks": 6,
+        "audio_blocks": 7,
+        "audio_assembly": 8,
     }
     for operation_kind, row_index in operation_to_row.items():
         if row_index >= len(statuses):
@@ -215,18 +206,18 @@ def _apply_ready_stage_overlays(statuses: list[dict[str, str]], current_stage: s
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.1.0
+    @version    0.2.0
     """
     stage_sequence = config.PROJECT_WORKFLOW_STAGES
     if current_stage not in stage_sequence:
         return
     current_index = stage_sequence.index(current_stage)
     ready_stage_rows = {
-        "narrator_definition_ready": 5,
-        "character_voices_ready": 6,
-        "speech_blocks_ready": 7,
-        "audio_blocks_ready": 8,
-        "audio_assembly_ready": 9,
+        "narrator_definition_ready": 4,
+        "character_voices_ready": 5,
+        "speech_blocks_ready": 6,
+        "audio_blocks_ready": 7,
+        "audio_assembly_ready": 8,
     }
     for stage_token, row_index in ready_stage_rows.items():
         if row_index < len(statuses) and current_index >= stage_sequence.index(stage_token):

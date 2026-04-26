@@ -12,9 +12,10 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
 Provides the project-persistence and source-import layer for `AudioMancer`.
 
 It gives the desktop shell a stable way to create a new flat project root, open
-that project root, import one locked source document, persist compact
-workflow-operation summaries, and validate the current `project.json` contract
-used by the application shell.
+that project root, import or replace one pre-start source document, lock
+immutable audiobook options with that selected source, persist compact workflow-operation
+summaries, and validate the current `project.json` contract used by the
+application shell.
 
 ## 2. Responsibilities
 
@@ -22,9 +23,13 @@ used by the application shell.
   safety rules
 - create the project root without numbered workflow folders
 - create and save the minimal `project.json` manifest
+- keep new project creation limited to `project.json`; page-level state files
+  are initialized only when the operator first opens the related workflow page
+- lock the selected source, project target language, and narration mode when
+  the operator starts the project
 - resolve and validate the selected project root
 - validate and copy one supported source file into the active project root
-- persist structured source metadata and lock the project to that source
+- persist structured source metadata and allow replacement until project start
 - reject unsupported legacy numbered workflow-folder layouts during open
 - validate required manifest fields during open
 - detect recoverable stage metadata corruption during open
@@ -34,11 +39,15 @@ used by the application shell.
   normalized manifest candidate before writing any repair
 - persist compact extraction, cleanup, chunking, translation, and
   character-discovery summaries in the root manifest
-- persist project-local narrator workflow settings such as
-  `voice_assignment_mode` in the root manifest
+- persist locked project-local narrator workflow settings such as
+  `target_language`, `selected_voice_language`, and `voice_assignment_mode` in
+  the root manifest
 - keep detailed per-step state, reports, outputs, checkpoints, and AI logs as
   root-level project artifacts, except generated Audio Blocks files under
   `audio_blocks/` and final Audio Assembly deliverables under `audiobook/`
+- create `<step>_state.json` defaults on first page open, while creating
+  `<step>_report.json` files and output artifacts only after real workflow
+  results exist
 - feed the main window with loaded project root and manifest state
 
 It does not extract text by itself, own narrator content storage, or implement
@@ -61,6 +70,7 @@ Main public entrypoints:
 - `resolve_project_root(selected_path)`
 - `validate_project(project_root)`
 - `open_project(selected_path)`
+- `lock_project_options(project_root, target_language, voice_assignment_mode)`
 - `import_source(project_root, source_path)`
 
 High-level flow:
@@ -84,18 +94,25 @@ High-level flow:
    `audiomancer.services.import_service`, stores the copied file in the
    project root, saves `source_document` in `project.json`, and advances the
    project to `source_selected`.
-7. After one workflow step writes its full local state into root-level
+7. After source selection, `MainWindow` lets the operator choose the project
+   target language and narration mode on the Home page. The workspace service
+   persists `project_options_locked = true`, stores `target_language`, mirrors
+   it into `selected_voice_language`, and stores `voice_assignment_mode`.
+8. When the operator first opens a workflow page with operation-state
+   metadata, `MainWindow` creates the missing `<step>_state.json` file with a
+   `not_started` payload. It does not create reports or output artifacts.
+9. After one workflow step writes its full local state into root-level
    operation artifacts, `MainWindow` stores only the compact operation summary
    back into `project.json`.
-8. After deterministic cleanup completes, `MainWindow` advances the project to
+10. After deterministic cleanup completes, `MainWindow` advances the project to
    `text_chunking_ready` while keeping cleanup detail files at the project
    root.
-9. After a selected chunk is manually edited and saved from `Text Chunking`,
+11. After a selected chunk is manually edited and saved from `Text Chunking`,
    `MainWindow` keeps `chunks_text.json`, resets downstream
    downstream runtime artifacts from translation onward, and returns the project to
    `translation_ready` without changing the cleaned-text reference or chunk
    list scroll positions.
-10. `MainWindow` stores the active project root and manifest, updates the home
+12. `MainWindow` stores the active project root and manifest, updates the home
    summary, updates workflow progress, and enables the workflow pages.
 
 ## 4. Dependencies
@@ -146,6 +163,9 @@ Current root manifest contract in `project.json`:
 - `extraction_warning_count`
 - `operations`
 - `original_language`
+- `project_options_locked`
+- `target_language`
+- `selected_voice_language`
 - `narrator_profile_name`
 - `narrator_language`
 - `voice_assignment_mode`
@@ -185,6 +205,17 @@ checkpoints, translated chunks, warning details, and similar workflow
 internals are stored only in root-level state files, reports, and canonical
 output artifacts.
 
+Default operation-state files are lazy page metadata. Opening a workflow page
+may create a `not_started` state file with empty `input_paths`, `output_paths`,
+`artifact_paths`, `metadata`, and `resume_checkpoint = null`. This initialization
+does not imply that the workflow step has run and does not create reports or
+canonical outputs.
+
+Voice workflow metadata is also lazy. Project activation and Home-page refreshes
+do not create `audio_profiles.json`, `narator.json`, or `characters_voice.json`.
+Opening the Narator Voice page initializes only narrator metadata; opening the
+Character Voices page initializes the character-voice target metadata.
+
 Required folder contract:
 
 - no workflow folders are required for new projects
@@ -198,6 +229,11 @@ Current validation invariants:
 - project names are stored exactly as entered
 - invalid names are rejected rather than rewritten
 - `project.json` must exist at the project root
+- new projects start with `project_options_locked = false`
+- source import is available before `project_options_locked = true`
+- source import is disabled after the project is started
+- locked project options cannot be changed through the normal workflow
+- once locked, `selected_voice_language` is kept equal to `target_language`
 - `current_stage` must match one of the configured workflow stage tokens
 - `source_document`, when present, must contain one valid structured payload
 - opening a project expects a selected project root with `project.json`
@@ -213,7 +249,8 @@ Current validation invariants:
 - the repaired `current_stage` is derived from the highest contiguous
   artifact-backed workflow milestone, but the first implementation does not
   downgrade a manifest that already claims a later stage
-- a project with one imported source is considered source-locked
+- a project with one imported source remains replaceable until
+  `project_options_locked = true`
 
 Supported import formats:
 
@@ -257,8 +294,8 @@ UI integration:
 - use the toolbar `New Project` action to choose a parent folder and enter the
   exact project name
 - use the toolbar `Open Project` action to select the project root
-- use the Home page `Select Source File` button to import exactly one source
-  document into the active project
+- use the Home page `Select Source File` button to import or replace one source
+  document before starting the project
 
 ## 9. Validation And Tests
 
@@ -282,10 +319,11 @@ Covered behaviors:
 - repair handling for invalid `current_stage` metadata
 - source import acceptance for supported file types
 - source import rejection for `.doc`
-- copied source metadata persistence and collision-safe file naming
+- copied source metadata persistence, collision-safe file naming, and pre-start
+  source replacement cleanup
 - manifest defaults for extraction fields and operation-state entries
 - main-window activation and workflow progress updates after create/open
-- main-window source import and lock behavior
+- main-window source import, replacement, and project-start lock behavior
 - main-window metadata repair confirmation flow during open
 
 Minimum validation after a change:

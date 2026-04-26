@@ -14,7 +14,7 @@
          Speech Blocks workflow.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 0.3.1
+@version 0.3.2
 """
 
 # IMPORTS
@@ -89,6 +89,7 @@ def handle_generate_requested(window: "MainWindow", profile_id: str) -> None:
                 project_root,
                 manifest,
                 profile_payload,
+                settings_payload=window._settings_payload,
                 progress_callback=progress_callback,
                 cancel_requested=cancel_requested,
             )
@@ -394,6 +395,7 @@ def handle_resplit_selected_requested(window: "MainWindow", chunk_id: str) -> No
                 manifest,
                 chunk_id,
                 profile_payload,
+                settings_payload=window._settings_payload,
                 progress_callback=progress_callback,
                 cancel_requested=cancel_requested,
             )

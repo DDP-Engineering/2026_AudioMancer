@@ -13,7 +13,7 @@
          activation correctly through the main-window shell.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-06
-@version 0.4.0
+@version 0.5.1
 """
 
 # IMPORTS
@@ -211,6 +211,7 @@ def test_home_ui_controller_rejects_snapshot_inside_project(
     @version    0.1.0
     """
     project_root, manifest = project_workspace_service.create_project("SnapshotRejectProject", tmp_path)
+    manifest = project_workspace_service.lock_project_options(project_root, "en", "narrator_and_characters")
     window = MainWindow(settings_payload=dict(default_settings_payload))
     qtbot.addWidget(window)
     window._current_project_root = project_root
@@ -256,6 +257,7 @@ def test_home_ui_controller_blocks_snapshot_during_active_operation(
     @version    0.1.0
     """
     project_root, manifest = project_workspace_service.create_project("SnapshotBusyProject", tmp_path)
+    manifest = project_workspace_service.lock_project_options(project_root, "en", "narrator_and_characters")
     window = MainWindow(settings_payload=dict(default_settings_payload))
     qtbot.addWidget(window)
     window._current_project_root = project_root
@@ -297,6 +299,7 @@ def test_home_ui_controller_applies_zip_extension_and_writes_snapshot(
     @version    0.2.0
     """
     project_root, manifest = project_workspace_service.create_project("SnapshotWriteProject", tmp_path)
+    manifest = project_workspace_service.lock_project_options(project_root, "en", "narrator_and_characters")
     (project_root / "runtime.txt").write_text("runtime payload\n", encoding="utf-8")
     window = MainWindow(settings_payload=dict(default_settings_payload))
     qtbot.addWidget(window)
@@ -325,6 +328,102 @@ def test_home_ui_controller_applies_zip_extension_and_writes_snapshot(
     assert f"{project_root.name}/project.json" in names
     assert f"{project_root.name}/runtime.txt" in names
     assert messages
+
+
+def test_home_ui_controller_locks_project_options_in_manifest(
+    monkeypatch,
+    qtbot,
+    tmp_path,
+    default_settings_payload,
+) -> None:
+    """
+    @brief      Verify Home option locking persists target language and narration mode.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  qtbot Qt test helper fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @param[in]  default_settings_payload Fixture supplying default test settings.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-26
+    @version    0.1.0
+    """
+    project_root, manifest = project_workspace_service.create_project("LockedOptionsProject", tmp_path)
+    manifest["source_document"] = {
+        "original_name": "story.txt",
+        "stored_relative_path": "story.txt",
+        "file_type": "txt",
+        "imported_at": "2026-04-26T12:00:00+00:00",
+        "size_bytes": 5,
+    }
+    manifest["current_stage"] = "source_selected"
+    project_workspace_service.save_manifest(manifest, project_root)
+    window = MainWindow(settings_payload=dict(default_settings_payload))
+    qtbot.addWidget(window)
+    window.show_project_state(project_root, project_workspace_service.load_manifest(project_root))
+    messages = []
+
+    monkeypatch.setattr(
+        home_ui_controller.QMessageBox,
+        "question",
+        lambda *args, **kwargs: home_ui_controller.QMessageBox.StandardButton.Yes,
+    )
+    monkeypatch.setattr(home_ui_controller.misc_ui_controller, "show_message", lambda *args: messages.append(args))
+
+    home_ui_controller.handle_project_options_lock_requested(window, "ro", "same_narrator")
+
+    saved_manifest = project_workspace_service.load_manifest(project_root)
+    assert saved_manifest["project_options_locked"] is True
+    assert saved_manifest["target_language"] == "ro"
+    assert saved_manifest["selected_voice_language"] == "ro"
+    assert saved_manifest["voice_assignment_mode"] == "same_narrator"
+    assert window._home_page._import_button.isEnabled() is False
+    assert messages
+
+
+def test_home_ui_controller_import_preserves_unlocked_draft_project_options(
+    monkeypatch,
+    qtbot,
+    tmp_path,
+    default_settings_payload,
+) -> None:
+    """
+    @brief      Verify source import keeps Home draft language and narration mode selections.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  qtbot Qt test helper fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @param[in]  default_settings_payload Fixture supplying default test settings.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-26
+    @version    0.1.0
+    """
+    project_root, manifest = project_workspace_service.create_project("ImportDraftOptionsProject", tmp_path)
+    source_path = tmp_path / "story.txt"
+    source_path.write_text("Story text.\n", encoding="utf-8")
+    window = MainWindow(settings_payload=dict(default_settings_payload))
+    qtbot.addWidget(window)
+    window.show_project_state(project_root, manifest)
+    window._home_page._target_language_combo.setCurrentIndex(window._home_page._target_language_combo.findData("fr"))
+    window._home_page._narration_mode_combo.setCurrentIndex(
+        window._home_page._narration_mode_combo.findData("same_narrator")
+    )
+
+    monkeypatch.setattr(
+        home_ui_controller.QFileDialog,
+        "getOpenFileName",
+        lambda *args, **kwargs: (str(source_path), ""),
+    )
+
+    home_ui_controller.handle_import_source_requested(window)
+
+    saved_manifest = project_workspace_service.load_manifest(project_root)
+    assert saved_manifest["project_options_locked"] is False
+    assert saved_manifest["target_language"] == "fr"
+    assert saved_manifest["selected_voice_language"] == "fr"
+    assert saved_manifest["voice_assignment_mode"] == "same_narrator"
+    assert window._home_page._target_language_combo.currentData() == "fr"
 
 
 def _run_threaded_operation_synchronously(

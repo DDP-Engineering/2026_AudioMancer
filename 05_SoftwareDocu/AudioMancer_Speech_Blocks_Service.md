@@ -12,16 +12,22 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
 Implements the current approval-driven `Speech Blocks` workflow in
 `AudioMancer`.
 
-It converts the chunk text selected through the Narator Voice language into
-AI-owned ordered speaker-attributed speech blocks, gives the operator a focused
-review and edit surface, and persists the approved results as root-level Speech
-Blocks artifacts.
+It converts the chunk text selected through the locked project language into
+AI-owned ordered speech blocks, gives the operator a focused review and edit
+surface, and persists the approved results as root-level Speech Blocks
+artifacts. In `narrator_and_characters` projects the AI owns dialogue and
+speaker attribution. In `same_narrator` projects the AI creates continuous
+narrator-only phrase/action/paragraph segments under the TTS text budget.
 
 ## 2. Responsibilities
 
-- resolve the active source language from `project.json.selected_voice_language`
+- resolve the active source language from the locked `project.json.target_language`
 - choose canonical chunking text or approved translated text as the source
+- choose the dialogue/speaker prompt or narrator-only segmentation prompt from
+  `project.json.voice_assignment_mode`
 - send one AI request per chunk using the selected AI profile
+- include the resolved TTS token budget and conservative word guidance in
+  narrator-only requests
 - normalize model output into the new persisted speech-block schema only, with
   the model owning final block boundaries
 - assign speech block IDs in `CCCC-BBBBBB` format, for example
@@ -32,11 +38,14 @@ Blocks artifacts.
 - validate model source spans for source coverage, source order, and text edits
   without replacing AI block boundaries
 - preserve source wording exactly except for stripping dialogue delimiters from
-  audio text
+  dialogue audio text in `narrator_and_characters` mode
+- preserve quotes, guillemets, dashes, punctuation, and paragraph breaks in
+  `same_narrator` mode
 - support straight quotes, curly quotes, French guillemets, and dash-led
   dialogue
 - fall back to `narrator` when speaker attribution is ambiguous or invalid
-- expose speaker choices from `Narrator` plus discovered characters
+- expose speaker choices from `Narrator` plus discovered characters when the
+  project uses separate character voices
 - expose content kinds `Narration`, `Dialogue`, `Background Noise`, `Pause`,
   and `Indication`
 - support selected-block edit, save, and reset-to-AI-baseline operations
@@ -86,22 +95,23 @@ The workflow is split across:
 
 High-level flow:
 
-1. `Narator Voice` selects the effective voice language for downstream work.
+1. The Home page locks the target language and narration mode before source
+   import.
 2. `speech_blocks_service.resolve_source_chunks(...)` loads canonical chunks
    from `chunks_text.json` or approved translated chunks from
    `translated_text.json`.
 3. The controller confirms that the operator wants to start or continue one AI
    run and warns about time plus token usage.
 4. `speech_blocks_service.start_or_continue_generation(...)` validates the
-   prompt files, restores resumable state when the saved checkpoint still
-   matches the current source snapshot and AI profile, and processes one chunk
-   per model request.
+   selected prompt files, restores resumable state when the saved checkpoint
+   still matches the current source snapshot, AI profile, and mode, and
+   processes one chunk per model request.
 5. Each response is normalized into new speech-block payloads, including exact
    source spans, AI baseline values, editable current values, warning flags,
    approval fields, chunk-local sequence indexes, and `CCCC-BBBBBB` IDs.
    Deterministic validation annotates suspicious spans with warning flags such
-   as `source_coverage_mismatch`, `source_order_mismatch`, and
-   `model_text_modified`.
+   as `source_coverage_mismatch`, `source_order_mismatch`,
+   `model_text_modified`, and narrator-only `tts_budget_exceeded`.
 6. The current `speech_blocks_report.json`, `speech_blocks_state.json`, and
    transaction log metadata are rewritten after every chunk so cancellation can
    resume from the next chunk.
@@ -133,6 +143,7 @@ High-level flow:
   `04_Software/AudioMancer/src/audiomancer/services/prompt_template_service.py`
   `04_Software/AudioMancer/src/audiomancer/services/token_usage_service.py`
   `04_Software/AudioMancer/src/audiomancer/services/project_workspace_service.py`
+  `04_Software/AudioMancer/src/audiomancer/services/tts_budget_service.py`
   `04_Software/AudioMancer/src/audiomancer/services/text_cleanup_state_service.py`
   `04_Software/AudioMancer/src/audiomancer/services/ui_state_service.py`
   `04_Software/AudioMancer/src/audiomancer/ui/controllers/misc_ui_controller.py`
@@ -147,7 +158,8 @@ High-level flow:
 Inputs:
 
 - active project root and manifest
-- selected voice language from `project.json`
+- locked target and selected voice language from `project.json`
+- locked voice assignment mode from `project.json`
 - canonical chunking output in `chunks_text.json`
 - approved translated chunks and `translation_report.json` when the selected
   voice language is translated
@@ -156,6 +168,11 @@ Inputs:
 - prompt templates:
   `04_Software/AudioMancer/prompts/speech_blocks_system.txt`
   `04_Software/AudioMancer/prompts/speech_blocks_user.txt`
+- narrator-only prompt templates:
+  `04_Software/AudioMancer/prompts/speech_blocks_narrator_only_system.txt`
+  `04_Software/AudioMancer/prompts/speech_blocks_narrator_only_user.txt`
+- cached VoiceWeaver discovered-model payloads from `settings.json`, used to
+  resolve narrator-only TTS budget metadata
 
 Outputs:
 
@@ -213,6 +230,12 @@ Current invariants:
 - dialogue text strips only dialogue delimiters: one outer straight quote pair,
   one outer curly quote pair, one French guillemet pair, or one leading dialogue
   dash
+- in `same_narrator` mode every generated block is normalized to
+  `speaker_id = "narrator"` and `content_kind = "narration"`
+- in `same_narrator` mode block text preserves the source span exactly except
+  harmless outer whitespace cleanup
+- narrator-only blocks that exceed the resolved safe TTS budget are retained and
+  flagged with `tts_budget_exceeded`
 - `background_noise`, `pause`, and `indication` are metadata-only content kinds
   for Audio Blocks
 - pause text may include a millisecond duration; when no valid duration exists,
@@ -253,7 +276,7 @@ Upstream integrations:
 - approved translation output from `translated_text.json` when the selected voice
   language is translated
 - discovered character speaker catalog from `characters_profile.json`
-- selected project voice language from `project.json`
+- locked project target language and narration mode from `project.json`
 
 Downstream integrations:
 
@@ -267,15 +290,15 @@ Downstream integrations:
 - selected-chunk re-splitting asks Audio Blocks to delete audio for the
   re-split chunk, preserve earlier chunk audio, remap later records to rebuilt
   IDs, rename order-based artifacts when needed, and rebuild report/state
-- Narator Voice language changes invalidate speech-block, audio-block, and
-  audio-assembly runtime artifacts
+- project language changes are not part of the normal workflow after Home-page
+  locking
 
 Runtime gating:
 
 - one project must be open
 - chunking output must exist
-- the selected project voice language must resolve to either the original language or
-  a fully approved translation target
+- the locked target language must resolve to either the original language or a
+  fully approved translation target
 - at least one enabled AI profile must be configured
 
 ## 8. Usage
@@ -329,7 +352,6 @@ report = speech_blocks_service.regenerate_chunk_speech_blocks(
 Operator path:
 
 - open one project that has completed `Character Voices`
-- choose the desired source language on the `Narator Voice` page
 - open `Speech Blocks`
 - select the AI profile
 - press `Generate Speech Blocks`

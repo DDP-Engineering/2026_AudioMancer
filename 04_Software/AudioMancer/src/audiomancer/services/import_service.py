@@ -13,7 +13,7 @@
          workspace, and returns normalized source metadata for `project.json`.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-06
-@version 0.1.0
+@version 0.2.0
 """
 
 # IMPORTS
@@ -40,17 +40,19 @@ SourceDocumentPayload = dict[str, object]
 def import_source(
     project_root: str | Path,
     source_path: str | Path,
+    previous_source_document: dict[str, object] | None = None,
 ) -> SourceDocumentPayload:
     """
     @brief      Validate and copy one supported source file into the project.
     @param[in]  project_root Root path of the active project workspace.
     @param[in]  source_path Path to the source file selected by the operator.
+    @param[in]  previous_source_document Optional previous manifest source to replace.
     @return     Normalized source-document payload for manifest persistence.
     @exception  FileNotFoundError Raised when the source file is missing.
     @exception  ValueError Raised when the file type is unsupported.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.1.0
+    @version    0.2.0
     """
     resolved_source = Path(source_path)
     if not resolved_source.is_file():
@@ -62,6 +64,11 @@ def import_source(
         raise ValueError(f"Unsupported source format: {suffix}")
 
     resolved_project_root = Path(project_root)
+    _delete_previous_source_file(
+        resolved_project_root,
+        previous_source_document,
+        resolved_source,
+    )
     destination_path = _build_unique_destination(
         resolved_project_root,
         resolved_source.name,
@@ -78,6 +85,40 @@ def import_source(
 
 
 # HELPER FUNCTIONS
+
+
+def _delete_previous_source_file(
+    project_root: Path,
+    previous_source_document: dict[str, object] | None,
+    selected_source: Path,
+) -> None:
+    """
+    @brief      Delete the previous imported source file before replacement.
+    @param[in]  project_root Active project root.
+    @param[in]  previous_source_document Previous source-document manifest payload.
+    @param[in]  selected_source Newly selected source path.
+    @return     None.
+    @exception  ValueError Raised when the previous path resolves outside the project.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-26
+    @version    0.1.0
+    """
+    if not isinstance(previous_source_document, dict):
+        return
+    stored_relative_path = str(previous_source_document.get("stored_relative_path") or "").strip()
+    if not stored_relative_path:
+        return
+    resolved_project_root = project_root.resolve()
+    previous_path = (resolved_project_root / stored_relative_path).resolve()
+    if previous_path != resolved_project_root and resolved_project_root not in previous_path.parents:
+        raise ValueError("Previous source file path is outside the active project.")
+    try:
+        if previous_path == selected_source.resolve():
+            return
+    except FileNotFoundError:
+        pass
+    if previous_path.is_file():
+        previous_path.unlink()
 
 
 def _utc_now_iso() -> str:

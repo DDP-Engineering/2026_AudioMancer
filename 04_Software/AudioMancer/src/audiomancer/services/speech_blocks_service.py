@@ -15,7 +15,7 @@
          based operation state plus AI transaction logging.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 0.6.0
+@version 0.7.0
 """
 
 # IMPORTS
@@ -36,6 +36,7 @@ from audiomancer.services import (
     narrator_definition_service,
     prompt_template_service,
     token_usage_service,
+    tts_budget_service,
 )
 from audiomancer.services.logging_service import get_component_logger, trace_function
 from audiomancer.services.operation_runtime_service import (
@@ -247,6 +248,7 @@ def start_or_continue_generation(
     project_root: str | Path,
     manifest: dict[str, object],
     ai_profile_payload: dict[str, object],
+    settings_payload: dict[str, object] | None = None,
     progress_callback=None,
     cancel_requested=None,
 ) -> SpeechBlocksReportPayload:
@@ -255,6 +257,7 @@ def start_or_continue_generation(
     @param[in]  project_root Active project root folder.
     @param[in]  manifest Active project manifest payload.
     @param[in]  ai_profile_payload Selected validated AI profile payload.
+    @param[in]  settings_payload Optional application settings payload for cached TTS model budgets.
     @param[in]  progress_callback Optional progress callback for the modal popup.
     @param[in]  cancel_requested Optional zero-argument cancellation callback.
     @return     Final Speech Blocks report payload.
@@ -262,7 +265,7 @@ def start_or_continue_generation(
     @exception  OperationCancelledError Raised when the operator cancels the run.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.1.0
+    @version    0.2.0
     """
     resolved_project_root = Path(project_root)
     profile_id = str(ai_profile_payload.get("id", "")).strip()
@@ -275,7 +278,10 @@ def start_or_continue_generation(
     source_chunks = list(source_resolution["source_chunks"])
     source_language = str(source_resolution["selected_source_language"])
     source_kind = str(source_resolution["source_kind"])
-    prompt_template_service.validate_required_prompts(["speech_blocks_system", "speech_blocks_user"])
+    voice_assignment_mode = _voice_assignment_mode(manifest)
+    prompt_names = _prompt_names_for_mode(voice_assignment_mode)
+    prompt_template_service.validate_required_prompts(list(prompt_names))
+    tts_budget = _resolve_narrator_only_budget(settings_payload)
 
     speaker_catalog = _speaker_catalog(character_discovery_service.load_character_profiles(resolved_project_root))
     input_fingerprint = _build_source_fingerprint(source_chunks, source_language, source_kind)
@@ -334,13 +340,20 @@ def start_or_continue_generation(
         token_usage,
     )
 
-    system_prompt = prompt_template_service.render_prompt("speech_blocks_system", {})
+    system_prompt = prompt_template_service.render_prompt(prompt_names[0], {})
     all_blocks = list(existing_blocks)
     warning_entries = list(warning_records)
     for chunk_index in range(start_chunk_index, len(source_chunks)):
         raise_if_cancelled(cancel_requested)
         source_chunk = dict(source_chunks[chunk_index])
-        user_prompt = _chunk_user_prompt(source_chunk, source_language, speaker_catalog)
+        user_prompt = _chunk_user_prompt(
+            source_chunk,
+            source_language,
+            speaker_catalog,
+            voice_assignment_mode,
+            tts_budget,
+            prompt_names[1],
+        )
         try:
             response_result = llm_provider_service.chat_json(
                 ai_profile_payload,
@@ -367,6 +380,8 @@ def start_or_continue_generation(
             dict(response_result.get("payload", {})),
             speaker_catalog,
             source_language,
+            voice_assignment_mode=voice_assignment_mode,
+            tts_budget=tts_budget,
         )
         all_blocks.extend(chunk_blocks)
         warning_entries.extend(chunk_warnings)
@@ -736,6 +751,7 @@ def regenerate_chunk_speech_blocks(
     manifest: dict[str, object],
     chunk_id: str,
     ai_profile_payload: dict[str, object],
+    settings_payload: dict[str, object] | None = None,
     progress_callback=None,
     cancel_requested=None,
 ) -> SpeechBlocksReportPayload:
@@ -745,6 +761,7 @@ def regenerate_chunk_speech_blocks(
     @param[in]  manifest Active project manifest payload.
     @param[in]  chunk_id Source chunk identifier to regenerate.
     @param[in]  ai_profile_payload Selected validated AI profile payload.
+    @param[in]  settings_payload Optional application settings payload for cached TTS model budgets.
     @param[in]  progress_callback Optional progress callback for the modal popup.
     @param[in]  cancel_requested Optional zero-argument cancellation callback.
     @return     Updated Speech Blocks report payload.
@@ -752,7 +769,7 @@ def regenerate_chunk_speech_blocks(
     @exception  OperationCancelledError Raised when the operator cancels the run.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-24
-    @version    0.1.0
+    @version    0.2.0
     """
     resolved_project_root = Path(project_root)
     profile_id = str(ai_profile_payload.get("id", "")).strip()
@@ -764,13 +781,16 @@ def regenerate_chunk_speech_blocks(
     source_chunks = list(source_resolution["source_chunks"])
     source_language = str(source_resolution["selected_source_language"])
     source_kind = str(source_resolution["source_kind"])
+    voice_assignment_mode = _voice_assignment_mode(manifest)
+    prompt_names = _prompt_names_for_mode(voice_assignment_mode)
+    tts_budget = _resolve_narrator_only_budget(settings_payload)
     selected_chunk = next(
         (chunk for chunk in source_chunks if str(chunk.get("chunk_id", "")).strip() == chunk_id),
         None,
     )
     if selected_chunk is None:
         raise ValueError("The selected chunk was not found.")
-    prompt_template_service.validate_required_prompts(["speech_blocks_system", "speech_blocks_user"])
+    prompt_template_service.validate_required_prompts(list(prompt_names))
     existing_report = load_speech_blocks_report(resolved_project_root)
     existing_state = load_operation_state(resolved_project_root) or {}
     token_usage = token_usage_service.restore_token_usage(
@@ -780,9 +800,16 @@ def regenerate_chunk_speech_blocks(
     started_at = _resolve_started_at(existing_state)
     log_path = _resolve_log_path(resolved_project_root, started_at)
     speaker_catalog = _speaker_catalog(character_discovery_service.load_character_profiles(resolved_project_root))
-    system_prompt = prompt_template_service.render_prompt("speech_blocks_system", {})
+    system_prompt = prompt_template_service.render_prompt(prompt_names[0], {})
     raise_if_cancelled(cancel_requested)
-    user_prompt = _chunk_user_prompt(selected_chunk, source_language, speaker_catalog)
+    user_prompt = _chunk_user_prompt(
+        selected_chunk,
+        source_language,
+        speaker_catalog,
+        voice_assignment_mode,
+        tts_budget,
+        prompt_names[1],
+    )
     try:
         response_result = llm_provider_service.chat_json(
             ai_profile_payload,
@@ -812,6 +839,8 @@ def regenerate_chunk_speech_blocks(
         dict(response_result.get("payload", {})),
         speaker_catalog,
         source_language,
+        voice_assignment_mode=voice_assignment_mode,
+        tts_budget=tts_budget,
     )
     all_blocks = _renumber_speech_blocks(source_chunks, [*existing_blocks, *new_blocks])
     input_fingerprint = _build_source_fingerprint(source_chunks, source_language, source_kind)
@@ -885,29 +914,91 @@ def _speaker_catalog(character_profiles: list[dict[str, object]]) -> dict[str, d
     return catalog
 
 
+def _voice_assignment_mode(manifest: dict[str, object]) -> str:
+    """
+    @brief      Resolve the active Speech Blocks generation mode.
+    @param[in]  manifest Active project manifest payload.
+    @return     Supported voice-assignment mode.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-26
+    @version    0.1.0
+    """
+    mode = str(manifest.get("voice_assignment_mode", config.DEFAULT_TTS_VOICE_ASSIGNMENT_MODE)).strip()
+    if mode in config.TTS_VOICE_ASSIGNMENT_MODE_OPTIONS:
+        return mode
+    return config.DEFAULT_TTS_VOICE_ASSIGNMENT_MODE
+
+
+def _prompt_names_for_mode(voice_assignment_mode: str) -> tuple[str, str]:
+    """
+    @brief      Resolve the Speech Blocks prompt pair for one narration mode.
+    @param[in]  voice_assignment_mode Active project voice-assignment mode.
+    @return     `(system_prompt_name, user_prompt_name)`.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-26
+    @version    0.1.0
+    """
+    if str(voice_assignment_mode).strip() == "same_narrator":
+        return "speech_blocks_narrator_only_system", "speech_blocks_narrator_only_user"
+    return "speech_blocks_system", "speech_blocks_user"
+
+
+def _resolve_narrator_only_budget(settings_payload: dict[str, object] | None) -> dict[str, object]:
+    """
+    @brief      Resolve TTS budget metadata for narrator-only splitting.
+    @param[in]  settings_payload Optional application settings payload.
+    @return     TTS budget payload.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-26
+    @version    0.1.0
+    """
+    discovered_models = []
+    if isinstance(settings_payload, dict):
+        discovered_models = [
+            dict(model)
+            for model in settings_payload.get("tts_runtime_discovered_models", [])
+            if isinstance(model, dict)
+        ]
+    return tts_budget_service.resolve_cached_tts_budget(discovered_models)
+
+
 def _chunk_user_prompt(
     source_chunk: dict[str, object],
     source_language: str,
     speaker_catalog: dict[str, dict[str, object]],
+    voice_assignment_mode: str = config.DEFAULT_TTS_VOICE_ASSIGNMENT_MODE,
+    tts_budget: dict[str, object] | None = None,
+    prompt_name: str = "speech_blocks_user",
 ) -> str:
     """
     @brief      Render the chunk-specific Speech Blocks user prompt.
     @param[in]  source_chunk Source chunk payload.
     @param[in]  source_language Active source language code.
     @param[in]  speaker_catalog Allowed speaker catalog.
+    @param[in]  voice_assignment_mode Active project voice-assignment mode.
+    @param[in]  tts_budget Optional narrator-only TTS budget metadata.
+    @param[in]  prompt_name Prompt template name.
     @return     Rendered prompt text.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-24
-    @version    0.2.0
+    @version    0.3.0
     """
+    budget_payload = tts_budget or _resolve_narrator_only_budget(None)
     return prompt_template_service.render_prompt(
-        "speech_blocks_user",
+        prompt_name,
         {
             "source_language": narrator_definition_service.narrator_language_label(source_language),
             "chunk_id": str(source_chunk.get("chunk_id", "")),
             "chunk_text": str(source_chunk.get("text", "")),
             "speaker_catalog_json": json.dumps(list(speaker_catalog.values()), indent=2, ensure_ascii=False),
+            "voice_assignment_mode": voice_assignment_mode,
+            "max_tts_tokens": str(int(budget_payload.get("model_token_budget", 0))),
+            "safe_tts_words": str(int(budget_payload.get("safe_word_count", 0))),
+            "tts_budget_source": str(budget_payload.get("model_budget_source", "")),
         },
     )
 
@@ -917,6 +1008,8 @@ def _normalize_chunk_blocks(
     response_payload: dict[str, object],
     speaker_catalog: dict[str, dict[str, object]],
     source_language: str,
+    voice_assignment_mode: str = config.DEFAULT_TTS_VOICE_ASSIGNMENT_MODE,
+    tts_budget: dict[str, object] | None = None,
 ) -> tuple[list[SpeechBlockPayload], list[dict[str, object]]]:
     """
     @brief      Normalize one AI response into persisted Speech Blocks payloads.
@@ -924,14 +1017,17 @@ def _normalize_chunk_blocks(
     @param[in]  response_payload Raw model response payload.
     @param[in]  speaker_catalog Allowed speaker catalog.
     @param[in]  source_language Active source language code.
+    @param[in]  voice_assignment_mode Active project voice-assignment mode.
+    @param[in]  tts_budget Optional narrator-only TTS budget metadata.
     @return     Tuple of normalized chunk blocks and warning entries.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.5.0
+    @version    0.7.0
     """
     chunk_id = str(source_chunk.get("chunk_id", "")).strip()
     chunk_text = str(source_chunk.get("text", ""))
+    narrator_only = str(voice_assignment_mode).strip() == "same_narrator"
     candidate_blocks = response_payload.get("speech_blocks", response_payload.get("blocks", []))
     if not isinstance(candidate_blocks, list):
         candidate_blocks = []
@@ -940,13 +1036,15 @@ def _normalize_chunk_blocks(
     for candidate_block in candidate_blocks:
         if not isinstance(candidate_block, dict):
             continue
-        ai_block = _normalize_ai_block(candidate_block, speaker_catalog)
+        ai_block = _normalize_ai_block(candidate_block, speaker_catalog, narrator_only=narrator_only)
         if str(ai_block.get("text", "")).strip():
             ai_blocks.append(ai_block)
 
     normalized_blocks: list[SpeechBlockPayload] = []
     if not ai_blocks:
-        fallback_flags = ["ambiguous_speaker", "source_coverage_mismatch"]
+        fallback_flags = ["source_coverage_mismatch"]
+        if not narrator_only:
+            fallback_flags.append("ambiguous_speaker")
         return (
             [
                 _build_speech_block_payload(
@@ -971,6 +1069,8 @@ def _normalize_chunk_blocks(
         )
 
     warning_entries = _validate_ai_block_source_spans(chunk_id, chunk_text, ai_blocks)
+    if narrator_only:
+        warning_entries.extend(_validate_narrator_only_budget(chunk_id, ai_blocks, tts_budget))
     for local_sequence_index, ai_block in enumerate(ai_blocks, start=1):
         text = str(ai_block.get("text", ""))
         content_kind = str(ai_block.get("content_kind", CONTENT_KIND_NARRATION))
@@ -1063,23 +1163,40 @@ def _build_speech_block_payload(
 def _normalize_ai_block(
     candidate_block: dict[str, object],
     speaker_catalog: dict[str, dict[str, object]],
+    narrator_only: bool = False,
 ) -> dict[str, object]:
     """
     @brief      Normalize one model-supplied Speech Blocks payload before source-span reconciliation.
     @param[in]  candidate_block Raw model-supplied block payload.
     @param[in]  speaker_catalog Allowed speaker catalog.
+    @param[in]  narrator_only True when the project uses one narrator voice for all text.
     @return     Normalized AI block with resolved speaker metadata.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.5.0
+    @version    0.6.0
     """
-    content_kind = _normalize_content_kind(candidate_block.get("content_kind", CONTENT_KIND_NARRATION))
+    content_kind = (
+        CONTENT_KIND_NARRATION
+        if narrator_only
+        else _normalize_content_kind(candidate_block.get("content_kind", CONTENT_KIND_NARRATION))
+    )
     source_text = str(candidate_block.get("source_text", candidate_block.get("text", "")))
     raw_text = str(candidate_block.get("text", source_text))
     if not raw_text.strip():
         raw_text = source_text
-    text = _normalize_block_text(raw_text, content_kind)
+    text = raw_text.strip() if narrator_only else _normalize_block_text(raw_text, content_kind)
+    if narrator_only:
+        warning_flags = _normalize_warning_flags(candidate_block.get("warning_flags"))
+        return {
+            "speaker_kind": SPEAKER_KIND_NARRATOR,
+            "speaker_id": _NARRATOR_SPEAKER_ID,
+            "speaker_display_name": _NARRATOR_DISPLAY_NAME,
+            "content_kind": CONTENT_KIND_NARRATION,
+            "source_text": source_text,
+            "text": text,
+            "warning_flags": warning_flags,
+        }
     if _is_operation_content_kind(content_kind):
         speaker_entry = _operation_speaker_entry(content_kind)
         return {
@@ -1165,6 +1282,43 @@ def _validate_ai_block_source_spans(
     for ai_block in ai_blocks:
         for warning_flag in _normalize_warning_flags(ai_block.get("warning_flags")):
             warning_entries.append({"chunk_id": chunk_id, "reason": _speech_block_warning_reason(warning_flag)})
+    return warning_entries
+
+
+def _validate_narrator_only_budget(
+    chunk_id: str,
+    ai_blocks: list[dict[str, object]],
+    tts_budget: dict[str, object] | None,
+) -> list[dict[str, object]]:
+    """
+    @brief      Flag narrator-only blocks that exceed the safe cached TTS word budget.
+    @param[in]  chunk_id Source chunk identifier.
+    @param[in]  ai_blocks Normalized AI blocks to validate and annotate.
+    @param[in]  tts_budget Optional TTS budget metadata.
+    @return     Human-readable warning entries.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-26
+    @version    0.1.0
+    """
+    budget_payload = tts_budget or _resolve_narrator_only_budget(None)
+    safe_word_count = int(budget_payload.get("safe_word_count", 0) or 0)
+    if safe_word_count <= 0:
+        return []
+    warning_entries: list[dict[str, object]] = []
+    for ai_block in ai_blocks:
+        text = str(ai_block.get("text", ""))
+        if tts_budget_service.estimated_word_count(text) <= safe_word_count:
+            continue
+        warning_flags = list(ai_block.get("warning_flags", []))
+        _append_warning_flag(warning_flags, "tts_budget_exceeded")
+        ai_block["warning_flags"] = warning_flags
+        warning_entries.append(
+            {
+                "chunk_id": chunk_id,
+                "reason": (f"Narrator-only block may exceed the safe cached TTS budget of {safe_word_count} words."),
+            }
+        )
     return warning_entries
 
 
@@ -1498,6 +1652,7 @@ def _speech_block_warning_reason(warning_flag: str) -> str:
         "source_coverage_mismatch": "Model source spans do not fully cover the chunk in reading order.",
         "source_order_mismatch": "Model source spans are not in chunk reading order.",
         "model_text_modified": "Model audio text differs from the source span beyond delimiter cleanup.",
+        "tts_budget_exceeded": "Narrator-only block exceeds the safe TTS word budget.",
     }.get(str(warning_flag).strip(), str(warning_flag).strip() or "Speech Block warning.")
 
 

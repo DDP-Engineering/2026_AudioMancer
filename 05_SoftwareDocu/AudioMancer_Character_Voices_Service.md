@@ -11,7 +11,7 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
 
 Implements the current `Character Voices` workflow in `AudioMancer`.
 It prepares the narrator-plus-character voice target set for the voice language
-selected on the `Narator Voice` page before the later `Speech Blocks`,
+locked on the Home page before the later `Speech Blocks`,
 `Audio Blocks`, and `Audio Assembly` stages.
 
 ## 2. Responsibilities
@@ -23,10 +23,12 @@ selected on the `Narator Voice` page before the later `Speech Blocks`,
 - persist one editable per-character preview text used for sample generation
   and reset that text to the localized default when the selected voice
   language changes
-- persist per-character generated samples and sample metadata
+- persist per-character generated samples and sample metadata in
+  `narrator_and_characters` mode
 - mirror the selected narrator into the page as one preview-only target
 - auto-copy narrator samples into all character sample slots when
   `voice_assignment_mode == "same_narrator"`
+- keep `same_narrator` projects read-only for per-character voice generation
 - build page state for target ordering, enablement, notes, and status lines
 - keep the manifest stage aligned with Character Voices readiness
 
@@ -56,8 +58,10 @@ The workflow is split across:
 
 High-level flow:
 
-1. Project load ensures `characters_voice.json` exists and reads the selected
-   voice language from `project.json`.
+1. Project load refreshes read-only Character Voices indicators without
+   creating `characters_voice.json`. Opening the Character Voices page
+   initializes that metadata file when it does not already exist and reads the
+   locked selected voice language from `project.json`.
 2. The state service loads the selected narrator, discovered character
    profiles, translation report, cached VoiceWeaver models, and persisted
    Character Voices data.
@@ -67,7 +71,8 @@ High-level flow:
    older projects fall back to the deterministic builder from stored character
    facts.
 5. In `same_narrator` mode, narrator-derived character samples are copied into
-   each character slot during state build.
+   each character slot during state build and per-character editing/generation
+   stays disabled.
 6. `Edit Voice Prompt` deletes the stored character sample and enters explicit
    edit mode after confirmation.
 7. `Generate Sample` verifies the fixed Qwen3 capability set, waits for model
@@ -110,7 +115,8 @@ Inputs:
 Outputs:
 
 - `characters_voice.json`
-- selected voice language read from `project.json`
+- selected voice language read from locked `project.json.target_language` and
+  mirrored `project.json.selected_voice_language`
 - root-level `audio_<target_display_name>.wav` character samples
 - sample metadata stored inside each `characters_voice.json` target entry
 - updated manifest stage:
@@ -196,15 +202,11 @@ Downstream integrations:
 Current rules:
 
 - the selected voice language is displayed as a read-only indicator; the
-  selector lives on the `Narator Voice` page
+  editable project language is locked on the Home page before source import
 - the supported voice-language set offers English, Romanian, Japanese, Korean,
   Chinese, German, French, Russian, Portuguese, Spanish, and Italian
-- translated language becomes selectable only when all translated chunks are
-  approved
-- changing the selected voice language clears narrator samples, character
-  samples, character preview metadata, speech-block, audio-block, and
-  audio-assembly runtime artifacts, then returns the project stage to
-  `narrator_definition_ready`
+- changing the selected voice language is not part of the normal workflow after
+  project locking
 - narrator is visible on the page but remains preview-only
 - character editing and generation are enabled only in
   `narrator_and_characters` mode

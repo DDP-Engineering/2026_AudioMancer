@@ -174,12 +174,15 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                     <li>Open <strong>TTS Settings</strong>.</li>
                     <li>Set the runtime base URL and API key if your runtime requires one.</li>
                     <li>Use the connection test to confirm AudioMancer can reach the runtime.</li>
-                    <li>Choose the voice assignment mode that matches how you want narration and dialogue handled.</li>
-                    <li>Save the settings.</li>
+                    <li>Review runtime text limits, timeouts, and retry settings.</li>
+                    <li>Save the runtime settings.</li>
                 </ol>
                 <p>
-                    Recommended value for most home users: keep the default timeouts first. Increase them only when
-                    large samples or long speech blocks fail because the runtime needs more time.
+                    The audiobook language and narration mode are no longer edited here. They are locked on the Home
+                    page when the project starts, so TTS Settings stays focused on the runtime connection, model
+                    discovery, text limits, and generation timeouts. Recommended value for most home users: keep the
+                    default timeouts first. Increase them only when large samples or long speech blocks fail because
+                    the runtime needs more time.
                 </p>
                 <figure>
                     <img src="assets/screenshots/tts-settings-dialog.png" alt="TTS Settings dialog">
@@ -194,10 +197,13 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                     <li>Choose a simple project name, such as the book title.</li>
                     <li>Click <strong>Select Source File</strong> on the Home page.</li>
                     <li>Select the book or story file. Supported formats include TXT, PDF, RTF, DOCX, ODT, MD, and EPUB.</li>
+                    <li>Use the right side of Project Summary to choose <strong>Translation language</strong> and <strong>Audio output style</strong>.</li>
+                    <li>Click <strong>Start Project</strong> and confirm the warning. The source file and these options cannot be changed later in this project.</li>
                 </ol>
                 <p>
                     Use <strong>Open Project</strong> to return to an existing AudioMancer project folder. The Home
-                    page shows which workflow stages are finished and which are still waiting.
+                    page shows which workflow stages are finished and which are still waiting. <strong>Export Project ZIP</strong>
+                    becomes available after the project is started.
                 </p>
             </section>
 
@@ -257,14 +263,20 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
             <section id="translation">
                 <h2>AI Translation</h2>
                 <p>
-                    AI Translation is optional. Use it when you want the audiobook in another language. Choose the
-                    target language, start translation, review each translated chunk, and approve the chunks you want
-                    to use.
+                    AI Translation is optional. Use it when you want the audiobook in another language. The target
+                    language is the locked project language selected on the Home page, so this page shows original and
+                    target language indicators instead of an editable selector. Start translation, review each
+                    translated chunk, and approve the chunks you want to use.
                 </p>
                 <p>
                     Translation uses the selected AI Translation profile. The app stores translated chunks separately,
                     so the original cleaned/chunked text remains available. Approving a translation means you accept it
                     for the following voice workflow.
+                </p>
+                <p>
+                    If the detected original language already matches the locked target language, AudioMancer creates a
+                    pass-through translation state. The translated text is the source text, marked complete and ready
+                    for approval/review without sending it to the AI model for rewriting.
                 </p>
                 <div class="note">
                     Romanian is available as a target language in AudioMancer. For Qwen3 TTS, Romanian speech uses an
@@ -334,6 +346,11 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                     target. Character voice samples are used later when dialogue Speech Blocks are converted into
                     audio.
                 </p>
+                <p>
+                    In same-narrator projects this page becomes a read-only synced workflow page. Character metadata
+                    can still be reviewed, but the narrator sample is reused and no separate per-character samples are
+                    generated.
+                </p>
                 <figure>
                     <img src="assets/screenshots/character-voices.png" alt="Character Voices page">
                     <figcaption>Generate and preview character samples before moving to Speech Blocks.</figcaption>
@@ -345,6 +362,12 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                 <p>
                     Speech Blocks split each text chunk into audiobook instructions. A block can be narration,
                     dialogue, pause, indication, or background noise metadata.
+                </p>
+                <p>
+                    The splitter follows the locked narration mode. Narrator + character projects use the dialogue and
+                    speaker AI splitter. Same-narrator projects use a narrator-only AI splitter that creates continuous
+                    phrase, action, and paragraph segments under the TTS text budget, while preserving quotes,
+                    guillemets, dashes, punctuation, and paragraph breaks in the audio text.
                 </p>
                 <ul>
                     <li>Generate Speech Blocks after narrator and character voices are ready.</li>
