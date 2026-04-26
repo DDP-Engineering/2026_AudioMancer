@@ -13,13 +13,26 @@
          page from manifest data without depending on Qt widgets.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-06
-@version 0.3.0
+@version 0.4.0
 """
 
 # IMPORTS
 
 from audiomancer import config
 from audiomancer.services import ui_state_service
+
+# CONSTANTS
+
+# @brief Workflow operation rows used by persisted and active operation overlays.
+_OPERATION_TO_WORKFLOW_ROW = {
+    "cleanup": 0,
+    "chunking": 1,
+    "translation": 2,
+    "character_discovery": 3,
+    "speech_blocks": 6,
+    "audio_blocks": 7,
+    "audio_assembly": 8,
+}
 
 # PUBLIC API
 
@@ -135,6 +148,25 @@ def manifest_operation(
     return dict(operation_payload) if isinstance(operation_payload, dict) else {}
 
 
+def apply_active_operation_status(
+    statuses: list[dict[str, str]],
+    operation_kind: str | None,
+) -> None:
+    """
+    @brief      Overlay workflow rows with the currently running UI operation.
+    @param[in]  statuses Mutable Home-page status rows.
+    @param[in]  operation_kind Active operation kind or `None`.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-26
+    @version    0.1.0
+    """
+    row_index = _OPERATION_TO_WORKFLOW_ROW.get(str(operation_kind or "").strip())
+    if row_index is not None and row_index < len(statuses):
+        statuses[row_index]["status"] = "in_progress"
+
+
 def visible_workflow_stage_tokens() -> tuple[str, ...]:
     """
     @brief      Return the visible workflow stages derived from shared config.
@@ -178,16 +210,7 @@ def _apply_operation_status_overlays(statuses: list[dict[str, str]], manifest: d
     @date       2026-04-25
     @version    0.2.0
     """
-    operation_to_row = {
-        "cleanup": 0,
-        "chunking": 1,
-        "translation": 2,
-        "character_discovery": 3,
-        "speech_blocks": 6,
-        "audio_blocks": 7,
-        "audio_assembly": 8,
-    }
-    for operation_kind, row_index in operation_to_row.items():
+    for operation_kind, row_index in _OPERATION_TO_WORKFLOW_ROW.items():
         if row_index >= len(statuses):
             continue
         operation_status = str(manifest_operation(manifest, operation_kind).get("status", "not_started")).strip()

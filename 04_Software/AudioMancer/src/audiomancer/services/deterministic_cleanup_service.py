@@ -10,11 +10,12 @@
 @file deterministic_cleanup_service.py
 @brief Deterministic text cleanup helpers for AudioMancer.
 @details Consumes extracted text, removes repeated headers and footers plus
-         page-number noise conservatively, preserves paragraph and chapter
+         page-number noise conservatively, applies script-aware paragraph
+         cleanup for supported languages, preserves paragraph and chapter
          structure, and persists cleanup artifacts with resumable state.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-06
-@version 0.2.2
+@version 0.3.0
 """
 
 # IMPORTS
@@ -48,15 +49,14 @@ OperationStatePayload = dict[str, object]
 CleanupLineParts = list[tuple[str, bool]]
 # @brief Page-break separator pattern used to reconstruct extracted PDF pages.
 _PAGE_SPLIT_PATTERN = re.compile(r"\n\n\f\n\n")
-# @brief Conservative page-number matcher used during deterministic cleanup.
-_PAGE_NUMBER_PATTERN = re.compile(r"^(?:page\s+)?\d+(?:\s*/\s*\d+)?$", re.IGNORECASE)
-# @brief Supported chapter-heading detection patterns reused for cleanup summary metadata.
-_CHAPTER_PATTERNS = (
-    re.compile(r"^(chapter|capitolul|scene|scena)\s+[\wIVXLCDM0-9][\wIVXLCDM0-9 .:-]*$", re.IGNORECASE),
-    re.compile(r"^[IVXLCDM]+$", re.IGNORECASE),
+# @brief Conservative page-number matchers used during deterministic cleanup.
+_PAGE_NUMBER_PATTERNS = (
+    re.compile(r"^(?:page\s+)?\d+(?:\s*(?:/|of)\s*\d+)?\.?$", re.IGNORECASE),
+    re.compile(r"^[-–—]\s*\d+\s*[-–—]$"),
+    re.compile(r"^第\s*[0-9０-９一二三四五六七八九十百千〇零]+\s*[页頁]$"),
 )
-# @brief Sentence-terminal matcher used to detect soft-wrapped paragraph continuation.
-_PARAGRAPH_TERMINAL_PATTERN = re.compile(r'[.!?\u2026](?:["\')\]\}]+)?$')
+# @brief Roman numeral page-number matcher used only at page edges.
+_ROMAN_PAGE_NUMBER_PATTERN = re.compile(r"^[ivxlcdm]{1,8}\.?$", re.IGNORECASE)
 # @brief Decorative-separator matcher used to remove non-story break lines.
 _SEPARATOR_LINE_PATTERN = re.compile(r"^[*#=_~.\-]{3,}$|^(?:[*#=_~.\-]\s+){2,}[*#=_~.\-]?$")
 # @brief Dialogue formatter rule that inserts line breaks before continued spoken text.
@@ -517,12 +517,12 @@ def _split_pages(extracted_text: str) -> list[str]:
 
 def _remove_repeated_headers_and_footers(pages: list[str]) -> tuple[list[str], int]:
     """
-    @brief      Execute the remove repeated headers and footers helper.
+    @brief      Remove repeated normalized page-edge headers and footers.
     @param[in]  pages Value for `pages`.
     @return     Helper result.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.1.0
+    @version    0.2.0
     """
     top_counts: Counter[str] = Counter()
     bottom_counts: Counter[str] = Counter()
@@ -534,11 +534,11 @@ def _remove_repeated_headers_and_footers(pages: list[str]) -> tuple[list[str], i
         for index in non_empty_indexes[:2]:
             candidate = lines[index].strip()
             if _is_header_footer_candidate(candidate):
-                top_counts[candidate] += 1
+                top_counts[_header_footer_match_key(candidate)] += 1
         for index in non_empty_indexes[-2:]:
             candidate = lines[index].strip()
             if _is_header_footer_candidate(candidate):
-                bottom_counts[candidate] += 1
+                bottom_counts[_header_footer_match_key(candidate)] += 1
     repeated_top = {value for value, count in top_counts.items() if count >= 2}
     repeated_bottom = {value for value, count in bottom_counts.items() if count >= 2}
     cleaned_pages: list[str] = []
@@ -546,10 +546,10 @@ def _remove_repeated_headers_and_footers(pages: list[str]) -> tuple[list[str], i
     for lines, non_empty_indexes in page_entries:
         candidate_indexes: set[int] = set()
         for index in non_empty_indexes[:2]:
-            if lines[index].strip() in repeated_top:
+            if _header_footer_match_key(lines[index].strip()) in repeated_top:
                 candidate_indexes.add(index)
         for index in non_empty_indexes[-2:]:
-            if lines[index].strip() in repeated_bottom:
+            if _header_footer_match_key(lines[index].strip()) in repeated_bottom:
                 candidate_indexes.add(index)
         cleaned_lines: list[str] = []
         for index, line in enumerate(lines):
@@ -574,7 +574,7 @@ def _build_page_paragraphs(
     @return     Derived helper result.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.1.0
+    @version    0.2.0
     """
     paragraph_texts: list[str] = []
     current_lines = list(carried_lines)
@@ -582,6 +582,7 @@ def _build_page_paragraphs(
     removed_separator_count = 0
     merge_with_previous_line = bool(carried_lines)
     normalized_lines = [re.sub(r"\s+", " ", raw_line).strip() for raw_line in page.split("\n")]
+    page_edge_indexes = set(_page_edge_line_indexes(normalized_lines))
     for line_index, normalized_line in enumerate(normalized_lines):
         if not normalized_line:
             if current_lines:
@@ -594,7 +595,7 @@ def _build_page_paragraphs(
                 paragraph_texts.append(_compose_paragraph_text(current_lines))
                 current_lines = []
             continue
-        if _looks_like_page_number(normalized_line):
+        if _looks_like_page_number(normalized_line, page_edge=line_index in page_edge_indexes):
             removed_page_number_count += 1
             continue
         if _looks_like_separator_line(normalized_line):
@@ -671,26 +672,31 @@ def _is_header_footer_candidate(line: str) -> bool:
     @return     True when the helper condition is satisfied.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.1.0
+    @version    0.2.0
     """
+    normalized_line = cleanup_text_analysis_service.normalize_text_line(line)
     return (
-        len(line) >= 4
-        and any(character.isalpha() for character in line)
-        and not _looks_like_page_number(line)
-        and _detect_chapter_label(line) is None
+        len(normalized_line) >= 4
+        and any(character.isalpha() for character in normalized_line)
+        and not _looks_like_page_number(normalized_line, page_edge=True)
+        and _detect_chapter_label(normalized_line) is None
     )
 
 
-def _looks_like_page_number(line: str) -> bool:
+def _looks_like_page_number(line: str, page_edge: bool = False) -> bool:
     """
     @brief      Determine whether page number.
     @param[in]  line Value for `line`.
+    @param[in]  page_edge True when the line is near the top or bottom of a page.
     @return     True when the helper condition is satisfied.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.1.0
+    @version    0.2.0
     """
-    return bool(_PAGE_NUMBER_PATTERN.fullmatch(line.strip()))
+    normalized = cleanup_text_analysis_service.normalize_text_line(line)
+    if any(pattern.fullmatch(normalized) for pattern in _PAGE_NUMBER_PATTERNS):
+        return True
+    return page_edge and bool(_ROMAN_PAGE_NUMBER_PATTERN.fullmatch(normalized))
 
 
 def _looks_like_separator_line(line: str) -> bool:
@@ -745,7 +751,7 @@ def _should_continue_paragraph(current_last_line: str, next_line: str | None) ->
     @return     True when the helper condition is satisfied.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.1.0
+    @version    0.2.0
     """
     if next_line is None:
         return False
@@ -753,7 +759,19 @@ def _should_continue_paragraph(current_last_line: str, next_line: str | None) ->
         return False
     if _looks_like_page_number(next_line) or _looks_like_separator_line(next_line):
         return False
-    return next_line[:1].islower()
+    current_normalized = cleanup_text_analysis_service.normalize_text_line(current_last_line)
+    next_normalized = cleanup_text_analysis_service.normalize_text_line(next_line)
+    script_name = cleanup_text_analysis_service.classify_text_script(f"{current_normalized} {next_normalized}")
+    first_letter = _first_letter(next_normalized)
+    if script_name in {"latin", "cyrillic"}:
+        return bool(first_letter and first_letter.islower())
+    if script_name in {"cjk", "hangul"}:
+        return not cleanup_text_analysis_service.has_sentence_terminal(current_normalized)
+    return (
+        len(current_normalized) >= 24
+        and len(next_normalized) >= 8
+        and not cleanup_text_analysis_service.has_sentence_terminal(current_normalized)
+    )
 
 
 def _should_continue_paragraph_across_page_break(
@@ -801,19 +819,63 @@ def _first_content_line(page: str | None) -> str | None:
     @return     Resolved helper result.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.1.0
+    @version    0.2.0
     """
     if page is None:
         return None
-    for raw_line in page.split("\n"):
-        normalized_line = re.sub(r"\s+", " ", raw_line).strip()
+    normalized_lines = [re.sub(r"\s+", " ", raw_line).strip() for raw_line in page.split("\n")]
+    page_edge_indexes = set(_page_edge_line_indexes(normalized_lines))
+    for line_index, normalized_line in enumerate(normalized_lines):
         if (
             not normalized_line
-            or _looks_like_page_number(normalized_line)
+            or _looks_like_page_number(
+                normalized_line,
+                page_edge=line_index in page_edge_indexes,
+            )
             or _looks_like_separator_line(normalized_line)
         ):
             continue
         return normalized_line
+    return None
+
+
+def _header_footer_match_key(line: str) -> str:
+    """
+    @brief      Build one normalized repeated-header/footer comparison key.
+    @param[in]  line Candidate page-edge line.
+    @return     Header/footer comparison key.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-26
+    @version    0.1.0
+    """
+    return cleanup_text_analysis_service.normalized_header_footer_key(line)
+
+
+def _page_edge_line_indexes(lines: list[str]) -> tuple[int, ...]:
+    """
+    @brief      Return the non-empty line indexes considered page-edge context.
+    @param[in]  lines Normalized page lines.
+    @return     Tuple of top and bottom candidate indexes.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-26
+    @version    0.1.0
+    """
+    non_empty_indexes = [index for index, line in enumerate(lines) if line.strip()]
+    return tuple(dict.fromkeys([*non_empty_indexes[:2], *non_empty_indexes[-2:]]))
+
+
+def _first_letter(text: str) -> str | None:
+    """
+    @brief      Return the first alphabetic character from one text fragment.
+    @param[in]  text Source text fragment.
+    @return     First letter or `None`.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-26
+    @version    0.1.0
+    """
+    for character in text:
+        if character.isalpha():
+            return character
     return None
 
 

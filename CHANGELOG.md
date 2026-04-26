@@ -18,6 +18,12 @@ All notable changes to this project will be documented in this file.
   using continuous narrator segments under the resolved TTS token budget
 - added lazy default operation-state initialization so `<step>_state.json` files
   are created on first page open without creating reports or output artifacts
+- added language-agnostic deterministic cleanup coverage for supported-language
+  prose, including Unicode-aware chapter detection, script-aware paragraph
+  continuation, expanded page-number cleanup, and dash-dialogue formatting
+- added a richer AI-assisted cleanup prompt contract with source language and
+  script hints, neighboring unit context, separate artifact/action fields, and
+  model confidence values
 
 ### Changed
 
@@ -36,6 +42,12 @@ All notable changes to this project will be documented in this file.
 - changed Home workflow progress to hide the `Source Selected` row, leaving
   source state in Project Summary and starting the visible workflow at
   `Text Cleanup`
+- changed deterministic cleanup to normalize repeated header/footer comparisons
+  while preserving conservative text-removal behavior and the existing cleanup
+  artifact contract
+- changed AI-assisted cleanup to preserve low-confidence removal decisions for
+  operator review while staying backward-compatible with legacy `label` output
+- package version updated to `0.31.0`
 
 ### Fixed
 
@@ -49,6 +61,14 @@ All notable changes to this project will be documented in this file.
   `Reset Translation` is disabled when no translation operation has completed
 - fixed repeated Speech Blocks source-chunk errors during new-project page
   refresh before text chunking has run
+- fixed Home workflow progress so active deterministic and AI chunking runs mark
+  the Text Chunking row as in progress before the completion manifest refresh
+- fixed Speech Blocks page-state refresh so earlier workflow pages no longer
+  log translation-approval prerequisite errors during normal cleanup or
+  chunking updates
+- fixed Audio Blocks source-preview refresh so projects with unapproved
+  translated chunks no longer log Speech Blocks prerequisite errors during
+  passive page updates
 
 ## [0.30.0] - 2026-04-26
 

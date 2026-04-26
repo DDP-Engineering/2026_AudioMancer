@@ -13,7 +13,7 @@
          from manifest data without Qt dependencies.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-06
-@version 0.3.0
+@version 0.4.0
 """
 
 # IMPORTS
@@ -69,6 +69,55 @@ def test_build_stage_statuses_keeps_chunking_not_started_after_cleanup_completio
 
     assert statuses[0]["status"] == "finished"
     assert statuses[1]["status"] == "not_started"
+
+
+def test_build_stage_statuses_marks_chunking_finished_after_chunking_completion() -> None:
+    """
+    @brief      Verify Text Chunking is finished after the workflow reaches translation readiness.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-26
+    @version    0.1.0
+    """
+    manifest = {
+        "current_stage": "translation_ready",
+        "source_document": {"original_name": "story.txt"},
+        "operations": {
+            "cleanup": {"status": "completed"},
+            "chunking": {"status": "completed"},
+        },
+    }
+
+    statuses = home_presenter_service.build_stage_statuses(manifest, "en")
+
+    assert statuses[1]["label"] == "Text Chunking"
+    assert statuses[1]["status"] == "finished"
+    assert statuses[2]["status"] == "not_started"
+
+
+def test_apply_active_operation_status_marks_chunking_in_progress() -> None:
+    """
+    @brief      Verify active chunking runs update the Home progress row before manifest completion.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-26
+    @version    0.1.0
+    """
+    manifest = {
+        "current_stage": "text_chunking_ready",
+        "source_document": {"original_name": "story.txt"},
+        "operations": {
+            "cleanup": {"status": "completed"},
+            "chunking": {"status": "not_started"},
+        },
+    }
+    statuses = home_presenter_service.build_stage_statuses(manifest, "en")
+
+    home_presenter_service.apply_active_operation_status(statuses, "chunking")
+
+    assert statuses[1]["status"] == "in_progress"
 
 
 def test_build_stage_statuses_marks_character_voices_ready_as_finished() -> None:

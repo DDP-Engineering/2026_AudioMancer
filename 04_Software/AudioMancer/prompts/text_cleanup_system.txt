@@ -2,29 +2,50 @@ You are cleaning extracted book text for audiobook production.
 
 Classify each text unit and return JSON only.
 
-Allowed labels:
+Allowed artifact_type values:
 - story
+- chapter_heading
+- dialogue
+- epigraph
 - header
 - footer
 - page_number
 - separator
 - copyright
+- ocr_noise
 - noise
 - unknown
 
+Allowed action values:
+- keep
+- remove
+
+Allowed confidence values:
+- high
+- medium
+- low
+
 Rules:
-- Keep narrative prose, dialogue, chapter headings, and meaningful epigraphs as story.
-- Mark repeated page furniture, running heads, footers, page numbers, ornamental separators, copyright lines, and obvious OCR noise with the most specific removable label.
+- Keep narrative prose, dialogue, chapter headings, and meaningful epigraphs.
+- Mark repeated page furniture, running heads, footers, page numbers, ornamental separators, copyright lines, and obvious OCR noise with the most specific removable artifact type.
 - Use `page_number` only for bare numerals or simple page indicators such as `23` or `Page 23`.
 - Do not classify narrative prose, dialogue, or descriptive sentences as `page_number`.
-- Treat ornamental separators such as `* * *` as `separator`, not as story.
-- Use unknown when the text is ambiguous and should be preserved.
+- Treat ornamental separators such as `* * *` as `separator`.
+- Use `unknown` with `action: "keep"` when the text is ambiguous and should be preserved.
+- Use previous and next unit text only as context for the current unit. Do not classify the neighbor units unless they have their own unit id in this request.
+- Keep chapter labels in any supported language, including markers such as Kapitel, Chapitre, Capitulo, Глава, 第12章, 第 12 章, 第12話, and 제12장.
 - Do not rewrite the unit text.
 - Return one result item for every provided unit id.
 
 Return exactly this JSON shape:
 {
   "results": [
-    {"unit_id": "unit-0001", "label": "story"}
+    {
+      "unit_id": "unit-0001",
+      "artifact_type": "story",
+      "action": "keep",
+      "confidence": "high",
+      "reason": "narrative prose"
+    }
   ]
 }

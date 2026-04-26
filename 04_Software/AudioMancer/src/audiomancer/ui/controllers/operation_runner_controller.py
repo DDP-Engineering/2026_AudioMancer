@@ -14,7 +14,7 @@
          operation finalization callbacks.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-24
-@version 0.2.1
+@version 0.3.0
 """
 
 # IMPORTS
@@ -25,7 +25,7 @@ from typing import TYPE_CHECKING
 
 from PySide6.QtCore import QObject, QThread, Signal, Slot
 
-from audiomancer.services import operation_runtime_service
+from audiomancer.services import home_presenter_service, operation_runtime_service, ui_state_service
 from audiomancer.ui.controllers import misc_ui_controller
 
 if TYPE_CHECKING:
@@ -270,7 +270,7 @@ def start_threaded_operation(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-24
-    @version    0.2.1
+    @version    0.3.0
     """
     if window._active_operation_kind is not None:
         return
@@ -306,6 +306,7 @@ def start_threaded_operation(
     window._active_operation_thread = operation_thread
     window._active_operation_worker = worker
     window._active_operation_ui_bridge = ui_bridge
+    _refresh_home_active_operation_status(window)
 
     misc_ui_controller.create_progress_dialog(
         window,
@@ -447,6 +448,25 @@ def _clear_threaded_operation(window: "MainWindow", set_busy) -> None:
     window._active_operation_thread = None
     window._active_operation_worker = None
     window._active_operation_ui_bridge = None
+
+
+def _refresh_home_active_operation_status(window: "MainWindow") -> None:
+    """
+    @brief      Refresh Home workflow progress with the current active operation.
+    @param[in]  window Active main window.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-26
+    @version    0.1.0
+    """
+    home_page = getattr(window, "_home_page", None)
+    if home_page is None:
+        return
+    language = ui_state_service.current_language_from_settings(window._settings_payload)
+    statuses = home_presenter_service.build_stage_statuses(window._current_manifest, language)
+    home_presenter_service.apply_active_operation_status(statuses, window._active_operation_kind)
+    home_page.set_stage_statuses(statuses)
 
 
 # END OF FILE

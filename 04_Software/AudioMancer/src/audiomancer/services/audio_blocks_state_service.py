@@ -14,7 +14,7 @@
          Blocks output, and the resumable runtime operation state.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-23
-@version 0.3.2
+@version 0.4.0
 """
 
 # IMPORTS
@@ -23,6 +23,7 @@ from pathlib import Path
 import wave
 
 from audiomancer.services import (
+    ai_translation_service,
     audio_blocks_service,
     character_voices_service,
     deterministic_chunking_service,
@@ -276,9 +277,12 @@ def _build_full_source_text(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-23
-    @version    0.1.2
+    @version    0.2.0
     """
-    if not deterministic_chunking_service.load_chunks(project_root):
+    if not deterministic_chunking_service.load_chunks(project_root) or not _source_chunks_are_resolvable(
+        project_root,
+        manifest,
+    ):
         return "\n\n".join(str(block.get("text", "")) for block in speech_blocks)
     try:
         source_resolution = speech_blocks_service.resolve_source_chunks(project_root, manifest)
@@ -351,6 +355,37 @@ def _merge_audio_block_state(
             }
         )
     return merged_blocks
+
+
+def _source_chunks_are_resolvable(project_root: Path, manifest: dict[str, object]) -> bool:
+    """
+    @brief      Determine whether Speech Blocks source chunks can be resolved quietly.
+    @param[in]  project_root Active project root.
+    @param[in]  manifest Active project manifest payload.
+    @return     True when original or approved translated source chunks are available.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-26
+    @version    0.1.0
+    """
+    selected_voice_language = character_voices_service.load_selected_voice_language(
+        project_root,
+        narrator_definition_service.DEFAULT_NARRATOR_LANGUAGE,
+    )
+    original_language = narrator_definition_service.narrator_language_code(
+        manifest.get("original_language", narrator_definition_service.DEFAULT_NARRATOR_LANGUAGE)
+    )
+    if selected_voice_language == original_language:
+        return True
+
+    translation_report = ai_translation_service.load_translation_report(project_root)
+    if not isinstance(translation_report, dict):
+        return False
+    if selected_voice_language != str(translation_report.get("target_language", "")).strip():
+        return False
+    total_chunk_count = int(translation_report.get("total_chunk_count", 0))
+    approved_chunk_count = int(translation_report.get("approved_chunk_count", 0))
+    return total_chunk_count > 0 and total_chunk_count == approved_chunk_count
 
 
 def _resolve_existing_audio_path(project_root: Path, audio_relative_path: object) -> Path | None:

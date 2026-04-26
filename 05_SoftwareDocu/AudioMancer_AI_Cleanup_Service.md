@@ -74,17 +74,22 @@ High-level flow:
 4. The shared modal progress dialog starts through the existing blocking
    operation flow.
 5. `ai_cleanup_service` loads prompt files, splits extracted text into
-   paragraph-like units, windows them to fit the selected profile budget, and
-   resumes from `resume_checkpoint` when possible.
+   paragraph-like units, windows them to fit the selected profile budget,
+   computes source-language and dominant-script hints, adds previous and next
+   unit context for each classified unit, and resumes from `resume_checkpoint`
+   when possible.
 6. `llm_provider_service` sends one chat-completion request per window,
    retries one compatibility-adjusted request when a provider rejects
    `max_tokens`, attempts one follow-up JSON-repair request when the returned
    assistant content is malformed, appends request or response or failure
    records to the operation-local AI log, and keeps polling for cancellation
    while the provider request runs in a small helper thread.
-7. The AI cleanup service keeps units labeled `story` or `unknown`, rebuilds
-   the cleaned text, writes the shared cleanup artifacts, and stores
-   `mode="ai_assisted"` in the cleanup operation state.
+7. The AI cleanup service accepts the current artifact/action/confidence
+   schema and legacy `label` output, preserves `keep` decisions and
+   low-confidence removals conservatively, removes only high-confidence or
+   medium-confidence removable artifacts, rebuilds the cleaned text, writes
+   the shared cleanup artifacts, and stores `mode="ai_assisted"` in the cleanup
+   operation state.
 8. On success, the shell advances the workflow stage to `text_chunking_ready`.
 9. Manual edits to the cleaned text save back to `clean_text.txt` and reset
    downstream workflow state from chunking onward while preserving the
@@ -128,9 +133,17 @@ Outputs:
 
 Current prompt contract:
 
-- `text_cleanup_system.txt` owns the allowed cleanup labels and the required
-  JSON response shape
-- `text_cleanup_user.txt` must expose the `{units_block}` placeholder
+- `text_cleanup_system.txt` owns the allowed cleanup artifact types, actions,
+  confidence values, and required JSON response shape
+- `text_cleanup_user.txt` must expose the `{units_block}` placeholder and may
+  also use `{source_language_hint}`, `{dominant_script_hint}`, and
+  `{unit_count}`
+- each current-schema result item contains `unit_id`, `artifact_type`,
+  `action`, `confidence`, and a short `reason`
+- legacy result items containing only `unit_id` and `label` remain accepted for
+  compatibility with older prompts and tests
+- ambiguous units should use `artifact_type="unknown"` and `action="keep"` so
+  the cleaned text preserves content unless removal is high-confidence
 
 Current AI cleanup report fields extend the shared cleanup report with:
 

@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-  # noqa: UP009
+# ruff: noqa: E501
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -10,11 +11,11 @@
 @file ai_cleanup_service.py
 @brief AI-assisted text cleanup helpers for AudioMancer.
 @details Consumes canonical extracted text, classifies cleanup units through
-         one configured AI profile, persists cleanup artifacts in `10_cleanup`,
-         and supports resumable window-based progress plus AI transaction logs.
+         one configured AI profile, persists cleanup artifacts, and supports
+         resumable window-based progress plus AI transaction logs.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-07
-@version 0.3.0
+@version 0.4.0
 """
 
 # IMPORTS
@@ -76,6 +77,33 @@ _REMOVABLE_LABELS = {
     "noise",
     "remove",
 }
+# @brief New AI cleanup artifact types accepted from the prompt contract.
+_ARTIFACT_TYPES = {
+    "story",
+    "chapter_heading",
+    "dialogue",
+    "epigraph",
+    "header",
+    "footer",
+    "page_number",
+    "separator",
+    "copyright",
+    "ocr_noise",
+    "noise",
+    "unknown",
+}
+# @brief Artifact types treated as removable when the action is omitted.
+_REMOVABLE_ARTIFACT_TYPES = {
+    "header",
+    "footer",
+    "page_number",
+    "separator",
+    "copyright",
+    "ocr_noise",
+    "noise",
+}
+# @brief Confidence values accepted from the AI cleanup prompt contract.
+_CONFIDENCE_VALUES = {"high", "medium", "low"}
 # @brief Removal-ratio threshold above which one cleanup window is flagged as suspicious.
 _MAX_REMOVAL_RATIO_WARNING = 0.55
 # @brief Tail length inspected for late-window alternating label drift.
@@ -110,7 +138,7 @@ def clean_text(
     @exception  ValueError Raised on missing profile data or unusable cleanup output.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-07
-    @version    0.3.0
+    @version    0.4.0
     """
     resolved_project_root = Path(project_root)
     source_document = manifest.get("source_document")
@@ -203,13 +231,20 @@ def clean_text(
         token_usage=token_usage,
     )
 
+    language_hint = _language_hint_for_text(input_text)
+    script_hint = cleanup_text_analysis_service.classify_text_script(input_text)
     system_prompt = prompt_template_service.render_prompt("text_cleanup_system", {})
     for window_index in range(start_window_index, total_windows):
         raise_if_cancelled(cancel_requested)
         window_units = units[windows[window_index]["start_index"] : windows[window_index]["end_index"] + 1]
-        user_prompt = prompt_template_service.render_prompt(
-            "text_cleanup_user",
-            {"units_block": _build_units_block(window_units)},
+        user_prompt = _render_cleanup_user_prompt(
+            _cleanup_prompt_variables(
+                units,
+                windows[window_index]["start_index"],
+                windows[window_index]["end_index"],
+                language_hint,
+                script_hint,
+            )
         )
         response_result = llm_provider_service.chat_json(
             ai_profile_payload,
@@ -537,16 +572,105 @@ def _restore_token_usage(existing_state: dict[str, object]) -> TokenUsagePayload
     return token_usage_service.restore_token_usage(metadata.get("token_usage"))
 
 
-def _build_units_block(units: list[dict[str, object]]) -> str:
+def _render_cleanup_user_prompt(variables: dict[str, object]) -> str:
     """
-    @brief      Build the units block.
-    @param[in]  units Value for `units`.
+    @brief      Render the AI cleanup user prompt with backward-compatible variables.
+    @param[in]  variables Preferred prompt variables.
+    @return     Rendered AI cleanup user prompt.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-26
+    @version    0.2.0
+    """
+    template = prompt_template_service.load_prompt("text_cleanup_user")
+    placeholder_names = set(re.findall(r"{([A-Za-z_][A-Za-z0-9_]*)}", template))
+    return prompt_template_service.render_prompt(
+        "text_cleanup_user",
+        {key: value for key, value in variables.items() if key in placeholder_names},
+    )
+
+
+def _cleanup_prompt_variables(
+    units: list[dict[str, object]],
+    start_index: int,
+    end_index: int,
+    language_hint: str,
+    script_hint: str,
+) -> dict[str, object]:
+    """
+    @brief      Build AI cleanup prompt variables with language and neighbor context.
+    @param[in]  units Ordered cleanup units.
+    @param[in]  start_index First window unit index.
+    @param[in]  end_index Last window unit index.
+    @param[in]  language_hint Detected source-language hint.
+    @param[in]  script_hint Detected dominant-script hint.
+    @return     Prompt variable mapping.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-26
+    @version    0.1.0
+    """
+    window_units = units[start_index : end_index + 1]
+    return {
+        "source_language_hint": language_hint,
+        "dominant_script_hint": script_hint,
+        "units_block": _build_units_block(units, start_index, end_index),
+        "unit_count": len(window_units),
+    }
+
+
+def _build_units_block(units: list[dict[str, object]], start_index: int, end_index: int) -> str:
+    """
+    @brief      Build the units block with neighboring context.
+    @param[in]  units Ordered cleanup units.
+    @param[in]  start_index First window unit index.
+    @param[in]  end_index Last window unit index.
     @return     Derived helper result.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
+    @version    0.2.0
+    """
+    blocks: list[str] = []
+    for unit_index in range(start_index, end_index + 1):
+        unit = units[unit_index]
+        previous_text = "" if unit_index <= 0 else str(units[unit_index - 1]["text"])
+        next_text = "" if unit_index + 1 >= len(units) else str(units[unit_index + 1]["text"])
+        blocks.append(
+            "\n".join(
+                [
+                    f"unit_id: {unit['unit_id']}",
+                    f"previous_unit_text: {_prompt_context_text(previous_text)}",
+                    f"unit_text: {unit['text']}",
+                    f"next_unit_text: {_prompt_context_text(next_text)}",
+                ]
+            )
+        )
+    return "\n\n".join(blocks)
+
+
+def _prompt_context_text(text: str) -> str:
+    """
+    @brief      Trim one neighbor context text fragment for prompt inclusion.
+    @param[in]  text Neighbor unit text.
+    @return     Trimmed prompt context text.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-26
     @version    0.1.0
     """
-    return "\n\n".join(f"{unit['unit_id']}:\n{unit['text']}" for unit in units)
+    normalized = re.sub(r"\s+", " ", str(text)).strip()
+    if len(normalized) <= 240:
+        return normalized or "(none)"
+    return normalized[:237].rstrip() + "..."
+
+
+def _language_hint_for_text(text: str) -> str:
+    """
+    @brief      Build one source-language hint for the AI cleanup prompt.
+    @param[in]  text Extracted text.
+    @return     Detected language code or `unknown`.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-26
+    @version    0.1.0
+    """
+    return _detect_language(text) or "unknown"
 
 
 def _compose_paragraph_text(lines: list[tuple[str, bool]]) -> str:
@@ -688,22 +812,19 @@ def _apply_response_labels(
     @exception    ValueError Raised when the AI response does not contain a valid results list.
     @author       Eng. Dan Dumitru Pasare
     @date         2026-04-07
-    @version      0.1.0
+    @version      0.2.0
     """
     results = response_payload.get("results", [])
     if not isinstance(results, list):
         raise ValueError("AI cleanup response does not contain a valid results list.")
     window_unit_map = {str(unit["unit_id"]): str(unit["text"]) for unit in window_units}
-    window_labels: dict[str, str] = {}
+    window_classifications: dict[str, dict[str, str]] = {}
     for item in results:
         if not isinstance(item, dict):
             continue
         unit_id = str(item.get("unit_id", "")).strip()
-        label = str(item.get("label", "unknown")).strip().lower() or "unknown"
         if not unit_id:
             continue
-        if label not in _KEEP_LABELS and label not in _REMOVABLE_LABELS:
-            label = "unknown"
         if unit_id not in window_unit_map:
             _append_warning_detail(
                 warning_details,
@@ -716,10 +837,10 @@ def _apply_response_labels(
                 unit_id=unit_id,
             )
             continue
-        window_labels[unit_id] = label
+        window_classifications[unit_id] = _classification_from_result_item(item)
     normalized_labels = _normalize_window_labels(
         window_units,
-        window_labels,
+        window_classifications,
         warning_details,
         window_index,
     )
@@ -1046,30 +1167,30 @@ def _split_cleanup_block(block: str) -> list[str]:
 
 def _normalize_window_labels(
     window_units: list[dict[str, object]],
-    window_labels: dict[str, str],
+    window_classifications: dict[str, dict[str, str]],
     warning_details: list[dict[str, object]],
     window_index: int,
 ) -> dict[str, str]:
     """
     @brief      Normalize the window labels.
     @param[in]  window_units Value for `window_units`.
-    @param[in]  window_labels Value for `window_labels`.
+    @param[in]  window_classifications AI classification payloads by unit id.
     @param[in]  warning_details Value for `warning_details`.
     @param[in]  window_index Current window index.
     @return     Derived helper result.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.1.0
+    @version    0.2.0
     """
     normalized_labels: dict[str, str] = {}
     removal_count = 0
     for unit in window_units:
         unit_id = str(unit["unit_id"])
         unit_text = str(unit["text"])
-        label = window_labels.get(unit_id, "unknown")
+        classification = window_classifications.get(unit_id, _unknown_classification())
         corrected_label = _normalize_label_for_unit(
             unit_text,
-            label,
+            classification,
             warning_details,
             window_index,
             unit_id,
@@ -1087,9 +1208,86 @@ def _normalize_window_labels(
     return normalized_labels
 
 
+def _classification_from_result_item(item: dict[str, object]) -> dict[str, str]:
+    """
+    @brief      Normalize one AI cleanup result item into the internal classification shape.
+    @param[in]  item Raw AI result item.
+    @return     Classification with label, confidence, artifact type, action, and reason.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-26
+    @version    0.1.0
+    """
+    artifact_type = str(item.get("artifact_type", "")).strip().lower()
+    if artifact_type not in _ARTIFACT_TYPES:
+        artifact_type = ""
+    action = str(item.get("action", "")).strip().lower()
+    if action not in {"keep", "remove"}:
+        action = ""
+    confidence = str(item.get("confidence", "")).strip().lower()
+    if confidence not in _CONFIDENCE_VALUES:
+        confidence = "high" if "label" in item and "confidence" not in item else "medium"
+    label = _label_from_artifact_action(
+        artifact_type,
+        action,
+        str(item.get("label", "")).strip().lower(),
+    )
+    return {
+        "label": label,
+        "confidence": confidence,
+        "artifact_type": artifact_type or label,
+        "action": action or ("remove" if label in _REMOVABLE_LABELS else "keep"),
+        "reason": str(item.get("reason", "")).strip(),
+    }
+
+
+def _label_from_artifact_action(artifact_type: str, action: str, legacy_label: str) -> str:
+    """
+    @brief      Derive the legacy cleanup label from the new prompt schema.
+    @param[in]  artifact_type Normalized artifact type.
+    @param[in]  action Normalized keep/remove action.
+    @param[in]  legacy_label Backward-compatible label field.
+    @return     Internal cleanup label.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-26
+    @version    0.1.0
+    """
+    if action == "keep":
+        return "story" if artifact_type not in {"unknown", ""} else "unknown"
+    if action == "remove":
+        if artifact_type == "ocr_noise":
+            return "noise"
+        if artifact_type in _REMOVABLE_LABELS:
+            return artifact_type
+        return "unknown"
+    if legacy_label in _KEEP_LABELS or legacy_label in _REMOVABLE_LABELS:
+        return legacy_label
+    if artifact_type in _REMOVABLE_ARTIFACT_TYPES:
+        return "noise" if artifact_type == "ocr_noise" else artifact_type
+    if artifact_type in _ARTIFACT_TYPES:
+        return "story" if artifact_type != "unknown" else "unknown"
+    return "unknown"
+
+
+def _unknown_classification() -> dict[str, str]:
+    """
+    @brief      Return the default preserve classification.
+    @return     Unknown classification payload.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-26
+    @version    0.1.0
+    """
+    return {
+        "label": "unknown",
+        "confidence": "medium",
+        "artifact_type": "unknown",
+        "action": "keep",
+        "reason": "",
+    }
+
+
 def _normalize_label_for_unit(
     unit_text: str,
-    label: str,
+    classification: dict[str, str],
     warning_details: list[dict[str, object]],
     window_index: int,
     unit_id: str,
@@ -1097,16 +1295,20 @@ def _normalize_label_for_unit(
     """
     @brief      Normalize the label for unit.
     @param[in]  unit_text Text value for `unit_text`.
-    @param[in]  label Value for `label`.
+    @param[in]  classification Normalized AI classification payload.
     @param[in]  warning_details Value for `warning_details`.
     @param[in]  window_index Current window index.
     @param[in]  unit_id Identifier for `unit_id`.
     @return     Derived helper result.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.1.0
+    @version    0.2.0
     """
     normalized_text = unit_text.strip()
+    label = classification["label"]
+    confidence = classification["confidence"]
+    artifact_type = classification["artifact_type"]
+    action = classification["action"]
     if _looks_like_page_number(normalized_text):
         if label != "page_number":
             _append_warning_detail(
@@ -1119,7 +1321,11 @@ def _normalize_label_for_unit(
                 window_index=window_index,
                 unit_id=unit_id,
                 original_label=label,
+                original_artifact_type=artifact_type,
+                original_action=action,
                 corrected_label="page_number",
+                confidence=confidence,
+                reason=classification.get("reason", ""),
             )
         return "page_number"
     if _looks_like_separator_line(normalized_text):
@@ -1134,9 +1340,45 @@ def _normalize_label_for_unit(
                 window_index=window_index,
                 unit_id=unit_id,
                 original_label=label,
+                original_artifact_type=artifact_type,
+                original_action=action,
                 corrected_label="separator",
+                confidence=confidence,
+                reason=classification.get("reason", ""),
             )
         return "separator"
+    if action == "remove" and label == "unknown":
+        _append_warning_detail(
+            warning_details,
+            kind="unsupported_removal_artifact_preserved",
+            message=(
+                f"AI cleanup preserved one unsupported removal artifact in window {window_index} for operator review."
+            ),
+            window_index=window_index,
+            unit_id=unit_id,
+            original_label=label,
+            original_artifact_type=artifact_type,
+            original_action=action,
+            corrected_label="unknown",
+            confidence=confidence,
+            reason=classification.get("reason", ""),
+        )
+        return "unknown"
+    if label in _REMOVABLE_LABELS and confidence == "low":
+        _append_warning_detail(
+            warning_details,
+            kind="low_confidence_removal_preserved",
+            message=(
+                f"AI cleanup preserved one low-confidence removable label in window {window_index} for operator review."
+            ),
+            window_index=window_index,
+            unit_id=unit_id,
+            original_label=label,
+            corrected_label="unknown",
+            confidence=confidence,
+            reason=classification.get("reason", ""),
+        )
+        return "unknown"
     if label == "page_number":
         _append_warning_detail(
             warning_details,
@@ -1149,6 +1391,7 @@ def _normalize_label_for_unit(
             unit_id=unit_id,
             original_label=label,
             corrected_label="unknown",
+            confidence=confidence,
         )
         return "unknown"
     if label == "separator":
@@ -1163,6 +1406,7 @@ def _normalize_label_for_unit(
             unit_id=unit_id,
             original_label=label,
             corrected_label="unknown",
+            confidence=confidence,
         )
         return "unknown"
     return label

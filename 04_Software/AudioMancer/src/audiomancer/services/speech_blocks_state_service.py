@@ -14,7 +14,7 @@
          current operation state, and enabled AI profile settings.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 0.3.0
+@version 0.4.0
 """
 
 # IMPORTS
@@ -22,8 +22,11 @@
 from pathlib import Path
 
 from audiomancer.services import (
+    ai_translation_service,
+    character_voices_service,
     deterministic_chunking_service,
     home_presenter_service,
+    narrator_definition_service,
     speech_blocks_service,
     token_usage_service,
     ui_state_service,
@@ -86,7 +89,7 @@ def build_speech_blocks_state(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.1.0
+    @version    0.2.0
     """
     if project_root is None or manifest is None:
         return {
@@ -113,7 +116,10 @@ def build_speech_blocks_state(
     selected_profile_id = _persisted_profile_id(report, operation_state)
     profile_state = build_speech_blocks_profile_state(settings_payload, selected_profile_id)
 
-    if not deterministic_chunking_service.load_chunks(project_root):
+    if not deterministic_chunking_service.load_chunks(project_root) or not _source_chunks_are_resolvable(
+        project_root,
+        manifest,
+    ):
         source_chunks = []
         selected_source_language = _persisted_source_language(report, operation_state)
     else:
@@ -305,6 +311,37 @@ def _speech_blocks_stage_status(report: dict[str, object] | None, operation_stat
             )
         )
     return speech_blocks_service.SPEECH_BLOCKS_STAGE_NOT_STARTED
+
+
+def _source_chunks_are_resolvable(project_root: Path, manifest: dict[str, object]) -> bool:
+    """
+    @brief      Determine whether source chunks can be resolved without prerequisite errors.
+    @param[in]  project_root Active project root.
+    @param[in]  manifest Active project manifest payload.
+    @return     True when original or approved translated source chunks are available.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-26
+    @version    0.1.0
+    """
+    selected_voice_language = character_voices_service.load_selected_voice_language(
+        project_root,
+        narrator_definition_service.DEFAULT_NARRATOR_LANGUAGE,
+    )
+    original_language = narrator_definition_service.narrator_language_code(
+        manifest.get("original_language", narrator_definition_service.DEFAULT_NARRATOR_LANGUAGE)
+    )
+    if selected_voice_language == original_language:
+        return True
+
+    translation_report = ai_translation_service.load_translation_report(project_root)
+    if not isinstance(translation_report, dict):
+        return False
+    if selected_voice_language != str(translation_report.get("target_language", "")).strip():
+        return False
+    total_chunk_count = int(translation_report.get("total_chunk_count", 0))
+    approved_chunk_count = int(translation_report.get("approved_chunk_count", 0))
+    return total_chunk_count > 0 and total_chunk_count == approved_chunk_count
 
 
 def _persisted_profile_id(report: dict[str, object] | None, operation_state: dict[str, object] | None) -> str | None:

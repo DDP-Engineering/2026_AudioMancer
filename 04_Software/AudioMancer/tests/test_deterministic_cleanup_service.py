@@ -13,7 +13,7 @@
          resumable cancellation state for deterministic text cleanup.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-06
-@version 0.1.4
+@version 0.2.0
 """
 
 # IMPORTS
@@ -220,6 +220,195 @@ def test_cleanup_preserves_original_newline_after_dialogue_line(tmp_path) -> Non
 
     output_text = (project_root / config.CLEANED_TEXT_FILE_NAME).read_text(encoding="utf-8")
     assert "GrÄƒbeÈ™te-te!\nPosteazÄƒ santinele" in output_text
+
+
+def test_cleanup_removes_repeated_headers_with_changing_page_numbers(tmp_path) -> None:
+    """
+    @brief      Verify repeated headers are matched after page-number affix normalization.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-26
+    @version    0.1.0
+    """
+    project_root, manifest = _build_cleanup_project(tmp_path, "CleanupHeaderNormalization")
+    (project_root / config.EXTRACTED_TEXT_FILE_NAME).write_text(
+        ("Chronicles of Dawn - 1\nFirst page text.\n\n\f\n\nChronicles of Dawn - 2\nSecond page text."),
+        encoding="utf-8",
+    )
+
+    report_payload = deterministic_cleanup_service.clean_text(project_root, manifest)
+
+    output_text = (project_root / config.CLEANED_TEXT_FILE_NAME).read_text(encoding="utf-8")
+    assert "Chronicles of Dawn" not in output_text
+    assert "First page text." in output_text
+    assert "Second page text." in output_text
+    assert report_payload["removed_header_footer_line_count"] == 2
+
+
+def test_cleanup_counts_supported_language_chapter_markers(tmp_path) -> None:
+    """
+    @brief      Verify localized chapter headings are detected without being removed.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-26
+    @version    0.1.0
+    """
+    project_root, manifest = _build_cleanup_project(tmp_path, "CleanupLocalizedChapters")
+    (project_root / config.EXTRACTED_TEXT_FILE_NAME).write_text(
+        ("Kapitel 1\n\nChapitre 2\n\nCapítulo 3\n\nГлава 4\n\n第5章 はじまり\n\n제6장 시작\n"),
+        encoding="utf-8",
+    )
+
+    report_payload = deterministic_cleanup_service.clean_text(project_root, manifest)
+
+    output_text = (project_root / config.CLEANED_TEXT_FILE_NAME).read_text(encoding="utf-8")
+    assert report_payload["detected_chapter_count"] == 6
+    assert "Kapitel 1" in output_text
+    assert "第5章 はじまり" in output_text
+    assert "제6장 시작" in output_text
+
+
+def test_cleanup_merges_cjk_continuation_without_terminal_punctuation(tmp_path) -> None:
+    """
+    @brief      Verify CJK text can continue across a false blank-line split.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-26
+    @version    0.1.0
+    """
+    project_root, manifest = _build_cleanup_project(tmp_path, "CleanupCjkContinuation")
+    (project_root / config.EXTRACTED_TEXT_FILE_NAME).write_text(
+        "这是一个没有句号的长句\n\n继续在下一行展开。\n",
+        encoding="utf-8",
+    )
+
+    deterministic_cleanup_service.clean_text(project_root, manifest)
+
+    output_text = (project_root / config.CLEANED_TEXT_FILE_NAME).read_text(encoding="utf-8")
+    assert "这是一个没有句号的长句 继续在下一行展开。" in output_text
+
+
+def test_cleanup_does_not_merge_cjk_after_terminal_punctuation(tmp_path) -> None:
+    """
+    @brief      Verify CJK sentence punctuation prevents false continuation merging.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-26
+    @version    0.1.0
+    """
+    project_root, manifest = _build_cleanup_project(tmp_path, "CleanupCjkTerminal")
+    (project_root / config.EXTRACTED_TEXT_FILE_NAME).write_text(
+        "这是完整的一句。\n\n这是下一句。\n",
+        encoding="utf-8",
+    )
+
+    deterministic_cleanup_service.clean_text(project_root, manifest)
+
+    output_text = (project_root / config.CLEANED_TEXT_FILE_NAME).read_text(encoding="utf-8")
+    assert "这是完整的一句。\n\n这是下一句。" in output_text
+
+
+def test_cleanup_merges_hangul_continuation_without_lowercase_assumption(tmp_path) -> None:
+    """
+    @brief      Verify Hangul continuation does not depend on lowercase letters.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-26
+    @version    0.1.0
+    """
+    project_root, manifest = _build_cleanup_project(tmp_path, "CleanupHangulContinuation")
+    (project_root / config.EXTRACTED_TEXT_FILE_NAME).write_text(
+        "이 문장은 아직 끝나지 않은 긴 문장\n\n다음 줄에서 계속된다.\n",
+        encoding="utf-8",
+    )
+
+    deterministic_cleanup_service.clean_text(project_root, manifest)
+
+    output_text = (project_root / config.CLEANED_TEXT_FILE_NAME).read_text(encoding="utf-8")
+    assert "이 문장은 아직 끝나지 않은 긴 문장 다음 줄에서 계속된다." in output_text
+
+
+def test_cleanup_removes_expanded_page_number_forms(tmp_path) -> None:
+    """
+    @brief      Verify conservative page-number forms are removed across scripts.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-26
+    @version    0.1.0
+    """
+    project_root, manifest = _build_cleanup_project(tmp_path, "CleanupPageNumbers")
+    (project_root / config.EXTRACTED_TEXT_FILE_NAME).write_text(
+        "- 12 -\nText one.\n\nPage 13 of 240\nText two.\n\n第 14 页\nText three.\n",
+        encoding="utf-8",
+    )
+
+    report_payload = deterministic_cleanup_service.clean_text(project_root, manifest)
+
+    output_text = (project_root / config.CLEANED_TEXT_FILE_NAME).read_text(encoding="utf-8")
+    assert "- 12 -" not in output_text
+    assert "Page 13 of 240" not in output_text
+    assert "第 14 页" not in output_text
+    assert report_payload["removed_page_number_line_count"] == 3
+
+
+def test_cleanup_formats_unicode_dash_dialogue_markers(tmp_path) -> None:
+    """
+    @brief      Verify en dash and em dash dialogue markers are normalized onto new lines.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-26
+    @version    0.1.0
+    """
+    project_root, manifest = _build_cleanup_project(tmp_path, "CleanupUnicodeDialogue")
+    (project_root / config.EXTRACTED_TEXT_FILE_NAME).write_text(
+        "He stopped: — Wait. She answered, – Now.\n",
+        encoding="utf-8",
+    )
+
+    deterministic_cleanup_service.clean_text(project_root, manifest)
+
+    output_text = (project_root / config.CLEANED_TEXT_FILE_NAME).read_text(encoding="utf-8")
+    assert "He stopped:\n- Wait." in output_text
+    assert "She answered,\n- Now." in output_text
+
+
+def _build_cleanup_project(tmp_path, project_name: str):
+    """
+    @brief      Build one project fixture ready for deterministic cleanup.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @param[in]  project_name Project name.
+    @return     Tuple containing project root and manifest.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-26
+    @version    0.1.0
+    """
+    project_root, manifest = project_workspace_service.create_project(project_name, tmp_path)
+    source_path = project_root / "story.txt"
+    source_path.write_text("placeholder", encoding="utf-8")
+    manifest["source_document"] = {
+        "original_name": "story.txt",
+        "stored_relative_path": "story.txt",
+        "file_type": "txt",
+        "imported_at": "2026-04-26T12:00:00+00:00",
+        "size_bytes": source_path.stat().st_size,
+    }
+    manifest["extracted_text_relative_path"] = config.EXTRACTED_TEXT_FILE_NAME
+    return project_root, manifest
 
 
 # END OF FILE

@@ -14,7 +14,7 @@
          correctly.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-24
-@version 0.3.1
+@version 0.3.2
 """
 
 # IMPORTS
@@ -159,10 +159,8 @@ def test_text_chunking_ui_controller_chunk_request_uses_controller_start(
         "size_bytes": 10,
     }
     manifest["operations"]["cleanup"]["status"] = "completed"
-    manifest["operations"]["cleanup"]["output_paths"] = ["10_cleanup/output_clean_text.txt"]
-    cleanup_root = project_root / "10_cleanup"
-    cleanup_root.mkdir(exist_ok=True)
-    (cleanup_root / "output_clean_text.txt").write_text("Paragraph one.\n", encoding="utf-8")
+    manifest["operations"]["cleanup"]["output_paths"] = [config.CLEANED_TEXT_FILE_NAME]
+    (project_root / config.CLEANED_TEXT_FILE_NAME).write_text("Paragraph one.\n", encoding="utf-8")
     project_workspace_service.save_manifest(manifest, project_root)
 
     window = MainWindow(
@@ -223,11 +221,9 @@ def test_text_chunking_ui_controller_completed_rerun_requires_confirmation(
         "size_bytes": 10,
     }
     manifest["operations"]["cleanup"]["status"] = "completed"
-    manifest["operations"]["cleanup"]["output_paths"] = ["10_cleanup/output_clean_text.txt"]
+    manifest["operations"]["cleanup"]["output_paths"] = [config.CLEANED_TEXT_FILE_NAME]
     manifest["operations"]["chunking"]["status"] = "completed"
-    cleanup_root = project_root / "10_cleanup"
-    cleanup_root.mkdir(exist_ok=True)
-    (cleanup_root / "output_clean_text.txt").write_text("Paragraph one.\n", encoding="utf-8")
+    (project_root / config.CLEANED_TEXT_FILE_NAME).write_text("Paragraph one.\n", encoding="utf-8")
     project_workspace_service.save_manifest(manifest, project_root)
 
     window = MainWindow(
@@ -288,10 +284,8 @@ def test_text_chunking_ui_controller_ai_chunk_request_uses_selected_profile_and_
         "size_bytes": 10,
     }
     manifest["operations"]["cleanup"]["status"] = "completed"
-    manifest["operations"]["cleanup"]["output_paths"] = ["10_cleanup/output_clean_text.txt"]
-    cleanup_root = project_root / "10_cleanup"
-    cleanup_root.mkdir(exist_ok=True)
-    (cleanup_root / "output_clean_text.txt").write_text("Paragraph one.\n", encoding="utf-8")
+    manifest["operations"]["cleanup"]["output_paths"] = [config.CLEANED_TEXT_FILE_NAME]
+    (project_root / config.CLEANED_TEXT_FILE_NAME).write_text("Paragraph one.\n", encoding="utf-8")
     project_workspace_service.save_manifest(manifest, project_root)
 
     window = MainWindow(
@@ -373,7 +367,7 @@ def test_text_chunking_ui_controller_ai_chunk_resume_skips_confirmation(
         "size_bytes": 10,
     }
     manifest["operations"]["cleanup"]["status"] = "completed"
-    manifest["operations"]["cleanup"]["output_paths"] = ["10_cleanup/output_clean_text.txt"]
+    manifest["operations"]["cleanup"]["output_paths"] = [config.CLEANED_TEXT_FILE_NAME]
     manifest["operations"]["chunking"] = {
         "folder_relative_path": "20_chunking",
         "status": "running",
@@ -383,9 +377,7 @@ def test_text_chunking_ui_controller_ai_chunk_resume_skips_confirmation(
             "semantic_strategy": "scene",
         },
     }
-    cleanup_root = project_root / "10_cleanup"
-    cleanup_root.mkdir(exist_ok=True)
-    (cleanup_root / "output_clean_text.txt").write_text("Paragraph one.\n", encoding="utf-8")
+    (project_root / config.CLEANED_TEXT_FILE_NAME).write_text("Paragraph one.\n", encoding="utf-8")
     project_workspace_service.save_manifest(manifest, project_root)
 
     window = MainWindow(

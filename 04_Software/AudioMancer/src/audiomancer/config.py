@@ -432,7 +432,7 @@ APP_LOG_DIRECTORY_NAME = "Logs"
 DEFAULT_LOG_FORMAT = "text"
 
 # @brief Default app execution log severity.
-DEFAULT_LOG_LEVEL = "INFO"
+DEFAULT_LOG_LEVEL = "DEBUG"
 
 # @brief Default number of days that app execution logs are retained.
 DEFAULT_LOG_RETENTION_DAYS = 14

@@ -13,20 +13,24 @@ Provides the deterministic text-cleanup slice for `AudioMancer`.
 
 It gives the `Text Cleanup` page one conservative cleanup workflow that
 consumes extracted text, removes repeated header/footer and page-number noise,
-preserves paragraph and chapter structure, and persists self-contained cleanup
-artifacts at the active project root.
+uses script-aware paragraph cleanup for supported languages, preserves
+paragraph and chapter structure, and persists self-contained cleanup artifacts
+at the active project root.
 
 ## 2. Responsibilities
 
 - read the canonical extracted text selected by `project.json`
 - remove repeated page headers and footers when the extracted text still
-  exposes page boundaries
-- remove simple page-number markers
+  exposes page boundaries, including repeated lines whose page-number suffixes
+  change from page to page
+- remove high-confidence page-number markers across Latin and CJK formats
 - remove ornamental separator-only lines such as `***` or `* * *`
 - keep dialogue markers such as `- Replica...` on separate display lines when
-  the surrounding punctuation clearly marks spoken dialogue
+  the surrounding punctuation clearly marks spoken dialogue, including en dash
+  and em dash source markers
 - preserve meaningful paragraph, chapter, and scene separation for later
-  chunking
+  chunking with localized chapter/scene/part labels for the configured
+  translation-language set
 - persist cleanup output as `clean_text.txt`
 - persist cleanup metadata as `cleanup_report.json`
 - persist resumable operation state as `cleanup_state.json`
@@ -65,10 +69,10 @@ High-level flow:
 4. The controller starts the cleanup service through the reusable modal
    operation-progress dialog.
 5. The service splits pages when extraction preserved page separators, removes
-   repeated headers and footers, removes page numbers and ornamental separator
-   lines, heals false blank-line paragraph splits when one sentence clearly
-   continues, rebuilds cleaned paragraphs, and updates `cleanup_state.json`
-   after each processed page.
+   repeated normalized headers and footers, removes high-confidence page
+   numbers and ornamental separator lines, heals false blank-line paragraph
+   splits with script-aware continuation rules, rebuilds cleaned paragraphs,
+   and updates `cleanup_state.json` after each processed page.
 6. On success, the shell stores the completed cleanup operation state in
    `project.json` and advances the workflow stage to `text_chunking_ready`.
 7. After cleanup output exists, the operator can press `Edit` under the cleaned
@@ -149,10 +153,14 @@ Current deterministic cleanup invariants:
 - cleanup output is always UTF-8 text with a trailing newline
 - page-header and footer removal is conservative and requires repeated
   candidates across at least two pages
+- repeated header/footer matching normalizes Unicode width, whitespace, case,
+  and page-number affixes before comparison
 - separator-only lines such as `***` and `* * *` are removed as non-semantic
   formatting noise
-- blank lines inside one continuing sentence may be healed when the surrounding
-  text strongly indicates a false paragraph break
+- blank lines inside one continuing sentence may be healed when script-aware
+  punctuation and continuation rules strongly indicate a false paragraph break
+- deterministic cleanup is format-independent after extraction; it is strongest
+  for sources such as PDFs where extraction preserved page boundaries
 - interrupted cleanup leaves resumable state instead of deleting partial
   output
 - manual cleaned-text edits preserve the cleanup operation artifacts but reset

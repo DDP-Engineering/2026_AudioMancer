@@ -13,7 +13,7 @@
          notes, and ready-for-assembly summaries.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-23
-@version 0.3.2
+@version 0.4.0
 """
 
 # IMPORTS
@@ -239,6 +239,47 @@ def test_build_audio_blocks_state_does_not_resolve_missing_chunks(monkeypatch, t
     assert state["full_source_text"] == ""
     assert state["can_start_or_continue"] is False
     assert any("Generate Speech Blocks before starting Audio Blocks." in note for note in state["notes"])
+
+
+def test_build_audio_blocks_state_does_not_resolve_unapproved_translation(monkeypatch, tmp_path) -> None:
+    """
+    @brief      Verify Audio Blocks page refresh avoids noisy source-resolution errors before translation approval.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-26
+    @version    0.1.0
+    """
+    project_root, manifest = _create_audio_blocks_project(tmp_path, "AudioBlocksUnapprovedTranslation")
+    character_voices_service.save_selected_voice_language(project_root, "ro")
+    (project_root / config.TRANSLATION_REPORT_FILE_NAME).write_text(
+        json.dumps(
+            {
+                "target_language": "ro",
+                "total_chunk_count": 2,
+                "approved_chunk_count": 1,
+            },
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    def fail_resolve(*_args, **_kwargs):
+        raise AssertionError("resolve_source_chunks should not be called before translated chunks are approved")
+
+    monkeypatch.setattr(audio_blocks_state_service.speech_blocks_service, "resolve_source_chunks", fail_resolve)
+
+    state = audio_blocks_state_service.build_audio_blocks_state(
+        project_root,
+        project_workspace_service.load_manifest(project_root),
+        "en",
+    )
+
+    assert "Narration one." in state["full_source_text"]
+    assert state["can_start_or_continue"] is True
 
 
 def _create_audio_blocks_project(tmp_path, name: str):
