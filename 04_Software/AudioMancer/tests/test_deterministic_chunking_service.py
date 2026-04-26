@@ -106,6 +106,98 @@ def test_chunking_uses_canonical_cleanup_output_with_compact_manifest(tmp_path) 
     assert len(chunks) == 2
 
 
+def test_chunking_prefers_cleanup_metadata_paragraph_records(tmp_path) -> None:
+    """
+    @brief      Verify deterministic chunking uses cleanup metadata before blank-line fallback.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-26
+    @version    0.1.0
+    """
+    project_root, manifest = project_workspace_service.create_project("ChunkMetadata", tmp_path)
+    source_path = project_root / "story.txt"
+    source_path.write_text("placeholder", encoding="utf-8")
+    manifest["source_document"] = {
+        "original_name": "story.txt",
+        "stored_relative_path": "story.txt",
+        "file_type": "txt",
+        "imported_at": "2026-04-26T12:00:00+00:00",
+        "size_bytes": source_path.stat().st_size,
+    }
+    manifest["operations"]["cleanup"]["status"] = "completed"
+    (project_root / config.CLEANED_TEXT_FILE_NAME).write_text(
+        "Split by visible text.\n\nBut metadata says one unit.\n",
+        encoding="utf-8",
+    )
+    (project_root / config.CLEANED_TEXT_METADATA_FILE_NAME).write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "paragraphs": [
+                    {
+                        "paragraph_id": "paragraph-0001",
+                        "text": "Split by visible text.\n\nBut metadata says one unit.",
+                        "source_start_line": 1,
+                        "source_end_line": 3,
+                        "source_page_start": 1,
+                        "source_page_end": 2,
+                        "starts_after_page_break": False,
+                        "joined_across_page_break": True,
+                        "boundary_confidence": "repaired",
+                        "warning_flags": [],
+                    }
+                ],
+            },
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    report_payload = deterministic_chunking_service.chunk_text(project_root, manifest)
+
+    chunks = json.loads((project_root / config.CHUNK_ARTIFACT_FILE_NAME).read_text(encoding="utf-8"))
+    assert report_payload["chunk_count"] == 1
+    assert len(chunks) == 1
+    assert chunks[0]["cleanup_joined_across_page_break"] is True
+    assert chunks[0]["cleanup_boundary_confidence"] == "repaired"
+
+
+def test_chunking_falls_back_when_cleanup_metadata_is_missing(tmp_path) -> None:
+    """
+    @brief      Verify old projects without cleanup metadata still chunk from cleaned text.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-26
+    @version    0.1.0
+    """
+    project_root, manifest = project_workspace_service.create_project("ChunkNoMetadata", tmp_path)
+    source_path = project_root / "story.txt"
+    source_path.write_text("placeholder", encoding="utf-8")
+    manifest["source_document"] = {
+        "original_name": "story.txt",
+        "stored_relative_path": "story.txt",
+        "file_type": "txt",
+        "imported_at": "2026-04-26T12:00:00+00:00",
+        "size_bytes": source_path.stat().st_size,
+    }
+    manifest["operations"]["cleanup"]["status"] = "completed"
+    (project_root / config.CLEANED_TEXT_FILE_NAME).write_text(
+        "Paragraph one.\n\nParagraph two.\n",
+        encoding="utf-8",
+    )
+
+    report_payload = deterministic_chunking_service.chunk_text(project_root, manifest)
+
+    chunks = json.loads((project_root / config.CHUNK_ARTIFACT_FILE_NAME).read_text(encoding="utf-8"))
+    assert report_payload["chunk_count"] == 2
+    assert len(chunks) == 2
+
+
 def test_chunking_persists_resumable_state_after_cancellation(tmp_path) -> None:
     """
     @brief      Verify one cancelled chunking run leaves resumable state on disk.

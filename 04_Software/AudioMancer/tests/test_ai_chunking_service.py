@@ -119,15 +119,10 @@ def test_ai_chunking_writes_chunking_artifacts_and_log(tmp_path, monkeypatch) ->
         "meaning",
     )
 
-    chunking_root = (
-        project_root / config.CHUNK_FOLDER_NAME
-        if hasattr(config, "CHUNK_FOLDER_NAME")
-        else project_root / "20_chunking"
-    )
-    assert (chunking_root / f"{config.OPERATION_INPUT_FILE_PREFIX}story.txt").is_file()
+    chunking_root = project_root
     assert (chunking_root / config.CHUNK_ARTIFACT_FILE_NAME).is_file()
     assert (chunking_root / config.CHUNKING_REPORT_FILE_NAME).is_file()
-    assert (chunking_root / config.OPERATION_STATE_FILE_NAME).is_file()
+    assert (chunking_root / config.CHUNKING_STATE_FILE_NAME).is_file()
     assert any(path.name.startswith(config.AI_TRANSACTION_LOG_FILE_PREFIX) for path in chunking_root.glob("*.log"))
     assert report_payload["chunking_mode"] == "ai_assisted"
     assert report_payload["semantic_strategy"] == "meaning"
@@ -200,11 +195,99 @@ def test_ai_chunking_ignores_invalid_boundaries_and_closes_last_chunk(tmp_path, 
         "paragraph",
     )
 
-    chunking_root = project_root / "20_chunking"
+    chunking_root = project_root
     chunks = json.loads((chunking_root / config.CHUNK_ARTIFACT_FILE_NAME).read_text(encoding="utf-8"))
     assert len(chunks) == 1
     assert "Paragraph one." in chunks[0]["text"]
     assert "Paragraph two." in chunks[0]["text"]
+
+
+def test_ai_chunking_uses_cleanup_metadata_paragraph_ids(tmp_path, monkeypatch) -> None:
+    """
+    @brief      Verify AI chunking sends stable metadata paragraph ids to the model.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-26
+    @version    0.1.0
+    """
+    prompt_root = tmp_path / "prompts"
+    prompt_root.mkdir()
+    (prompt_root / "text_chunking_system.txt").write_text("{strategy}", encoding="utf-8")
+    (prompt_root / "text_chunking_user.txt").write_text("{strategy}\n{units_block}", encoding="utf-8")
+    monkeypatch.setattr(config, "APP_PROMPTS_PATH", prompt_root)
+
+    project_root, manifest = project_workspace_service.create_project("AiChunkingMetadataIds", tmp_path)
+    (project_root / config.CLEANED_TEXT_FILE_NAME).write_text(
+        "Visible first.\n\nVisible second.\n",
+        encoding="utf-8",
+    )
+    (project_root / config.CLEANED_TEXT_METADATA_FILE_NAME).write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "paragraphs": [
+                    {
+                        "paragraph_id": "paragraph-0042",
+                        "text": "Visible first.\n\nVisible second.",
+                        "source_start_line": 1,
+                        "source_end_line": 3,
+                        "source_page_start": 1,
+                        "source_page_end": 2,
+                        "starts_after_page_break": False,
+                        "joined_across_page_break": True,
+                        "boundary_confidence": "repaired",
+                        "warning_flags": [],
+                    }
+                ],
+            },
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    manifest["source_document"] = {
+        "original_name": "story.txt",
+        "stored_relative_path": "story.txt",
+        "file_type": "txt",
+        "imported_at": "2026-04-26T12:00:00+00:00",
+        "size_bytes": 10,
+    }
+    manifest["operations"]["cleanup"]["status"] = "completed"
+    captured_prompt = {"text": ""}
+
+    def _chat_json(_profile, _system_prompt, user_prompt, **_kwargs):
+        captured_prompt["text"] = user_prompt
+        return {
+            "payload": {"break_after_unit_ids": ["paragraph-0042"]},
+            "usage": {"input_tokens": 10, "output_tokens": 2, "total_tokens": 12, "usage_available": True},
+        }
+
+    monkeypatch.setattr(ai_chunking_service.llm_provider_service, "chat_json", _chat_json)
+
+    ai_chunking_service.chunk_text(
+        project_root,
+        manifest,
+        {
+            "id": "profile_1",
+            "label": "Chunking Profile",
+            "backend_kind": "lmstudio",
+            "base_url": "http://127.0.0.1:1234",
+            "api_key": "",
+            "model_name": "qwen3-8b",
+            "context_window": 4096,
+            "max_output_tokens": 512,
+            "request_timeout_seconds": 30,
+            "temperature": 0.2,
+        },
+        "paragraph",
+    )
+
+    chunks = json.loads((project_root / config.CHUNK_ARTIFACT_FILE_NAME).read_text(encoding="utf-8"))
+    assert "paragraph-0042" in captured_prompt["text"]
+    assert chunks[0]["cleanup_joined_across_page_break"] is True
 
 
 def test_ai_chunking_resumes_from_saved_window_checkpoint(tmp_path, monkeypatch) -> None:
@@ -283,9 +366,7 @@ def test_ai_chunking_resumes_from_saved_window_checkpoint(tmp_path, monkeypatch)
             "paragraph",
         )
 
-    state_payload = json.loads(
-        (project_root / "20_chunking" / config.OPERATION_STATE_FILE_NAME).read_text(encoding="utf-8")
-    )
+    state_payload = json.loads((project_root / config.CHUNKING_STATE_FILE_NAME).read_text(encoding="utf-8"))
     assert state_payload["status"] == "running"
     assert state_payload["progress_current"] == 1
 
@@ -323,9 +404,7 @@ def test_ai_chunking_resumes_from_saved_window_checkpoint(tmp_path, monkeypatch)
 
     assert report_payload["chunk_count"] == 3
     assert report_payload["token_usage"]["total_tokens"] == 85
-    completed_state = json.loads(
-        (project_root / "20_chunking" / config.OPERATION_STATE_FILE_NAME).read_text(encoding="utf-8")
-    )
+    completed_state = json.loads((project_root / config.CHUNKING_STATE_FILE_NAME).read_text(encoding="utf-8"))
     assert completed_state["status"] == "completed"
     assert completed_state["progress_current"] == 2
 

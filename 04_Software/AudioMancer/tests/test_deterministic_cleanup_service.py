@@ -60,6 +60,7 @@ def test_cleanup_writes_runtime_artifacts_and_preserves_structure(tmp_path) -> N
     report_payload = deterministic_cleanup_service.clean_text(project_root, manifest)
 
     assert (project_root / config.CLEANED_TEXT_FILE_NAME).is_file()
+    assert (project_root / config.CLEANED_TEXT_METADATA_FILE_NAME).is_file()
     assert (project_root / config.CLEANUP_REPORT_FILE_NAME).is_file()
     assert (project_root / config.CLEANUP_STATE_FILE_NAME).is_file()
     output_text = (project_root / config.CLEANED_TEXT_FILE_NAME).read_text(encoding="utf-8")
@@ -68,7 +69,109 @@ def test_cleanup_writes_runtime_artifacts_and_preserves_structure(tmp_path) -> N
     assert "This is the first paragraph continuing on the second page." in output_text
     assert "\n\nNew paragraph.\n" in output_text
     assert report_payload["paragraph_count"] == 2
+    assert report_payload["page_break_repair_count"] == 1
     assert report_payload["removed_line_count"] >= 3
+
+
+def test_cleanup_repairs_uppercase_name_fragment_after_page_break(tmp_path) -> None:
+    """
+    @brief      Verify page-break metadata repair joins uppercase name fragments after incomplete text.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-26
+    @version    0.1.0
+    """
+    project_root, manifest = _build_cleanup_project(tmp_path, "CleanupPageBreakName")
+    (project_root / config.EXTRACTED_TEXT_FILE_NAME).write_text(
+        '"If you make sure Drenthe gets out, Drenthe will make sure this story gets out," said\n\n\f\n\nDrenthe.\n',
+        encoding="utf-8",
+    )
+
+    report_payload = deterministic_cleanup_service.clean_text(project_root, manifest)
+
+    output_text = (project_root / config.CLEANED_TEXT_FILE_NAME).read_text(encoding="utf-8")
+    metadata_payload = json.loads((project_root / config.CLEANED_TEXT_METADATA_FILE_NAME).read_text(encoding="utf-8"))
+    assert (
+        '"If you make sure Drenthe gets out, Drenthe will make sure this story gets out," said Drenthe.' in output_text
+    )
+    assert report_payload["page_break_repair_count"] == 1
+    assert metadata_payload["paragraphs"][0]["joined_across_page_break"] is True
+    assert metadata_payload["paragraphs"][0]["boundary_confidence"] == "repaired"
+
+
+def test_cleanup_keeps_heading_after_page_break_separate(tmp_path) -> None:
+    """
+    @brief      Verify explicit headings are not joined backward across page breaks.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-26
+    @version    0.1.0
+    """
+    project_root, manifest = _build_cleanup_project(tmp_path, "CleanupPageBreakHeading")
+    (project_root / config.EXTRACTED_TEXT_FILE_NAME).write_text(
+        "The previous scene ended without a hard stop\n\n\f\n\nChapter II\n\nThe next scene begins.",
+        encoding="utf-8",
+    )
+
+    report_payload = deterministic_cleanup_service.clean_text(project_root, manifest)
+
+    output_text = (project_root / config.CLEANED_TEXT_FILE_NAME).read_text(encoding="utf-8")
+    assert "hard stop\n\nChapter II" in output_text
+    assert report_payload["page_break_repair_count"] == 0
+
+
+def test_cleanup_ignores_page_number_before_continuation_decision(tmp_path) -> None:
+    """
+    @brief      Verify page-number lines do not block cross-page continuation repair.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-26
+    @version    0.1.0
+    """
+    project_root, manifest = _build_cleanup_project(tmp_path, "CleanupPageNumberContinuation")
+    (project_root / config.EXTRACTED_TEXT_FILE_NAME).write_text(
+        "He looked up and whispered\n\n\f\n\nPage 13\nsoftly to the room.",
+        encoding="utf-8",
+    )
+
+    report_payload = deterministic_cleanup_service.clean_text(project_root, manifest)
+
+    output_text = (project_root / config.CLEANED_TEXT_FILE_NAME).read_text(encoding="utf-8")
+    assert "He looked up and whispered softly to the room." in output_text
+    assert "Page 13" not in output_text
+    assert report_payload["page_break_repair_count"] == 1
+
+
+def test_cleanup_preserves_complete_short_transition_after_page_break(tmp_path) -> None:
+    """
+    @brief      Verify complete short transition paragraphs remain separate after page breaks.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-26
+    @version    0.1.0
+    """
+    project_root, manifest = _build_cleanup_project(tmp_path, "CleanupShortTransition")
+    (project_root / config.EXTRACTED_TEXT_FILE_NAME).write_text(
+        "The door closed.\n\n\f\n\nThree days.\n\nThe factory was gone.",
+        encoding="utf-8",
+    )
+
+    report_payload = deterministic_cleanup_service.clean_text(project_root, manifest)
+
+    output_text = (project_root / config.CLEANED_TEXT_FILE_NAME).read_text(encoding="utf-8")
+    metadata_payload = json.loads((project_root / config.CLEANED_TEXT_METADATA_FILE_NAME).read_text(encoding="utf-8"))
+    assert "The door closed.\n\nThree days.\n\nThe factory was gone." in output_text
+    assert report_payload["page_break_repair_count"] == 0
+    assert report_payload["weak_boundary_count"] == 1
+    assert metadata_payload["paragraphs"][1]["warning_flags"] == ["short_fragment_after_page_break"]
 
 
 def test_cleanup_persists_resumable_state_after_cancellation(tmp_path) -> None:

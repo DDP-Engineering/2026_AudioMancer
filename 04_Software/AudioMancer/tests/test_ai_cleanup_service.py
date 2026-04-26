@@ -82,16 +82,21 @@ def test_ai_cleanup_writes_cleanup_artifacts_and_log(
     cleanup_root = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH
     assert (cleanup_root / config.EXTRACTED_TEXT_FILE_NAME).is_file()
     assert (cleanup_root / config.CLEANED_TEXT_FILE_NAME).is_file()
+    assert (cleanup_root / config.CLEANED_TEXT_METADATA_FILE_NAME).is_file()
     assert (cleanup_root / config.CLEANUP_REPORT_FILE_NAME).is_file()
     assert (cleanup_root / config.CLEANUP_STATE_FILE_NAME).is_file()
     assert report_payload["cleanup_mode"] == "ai_assisted"
+    assert report_payload["cleaned_text_metadata_relative_path"] == config.CLEANED_TEXT_METADATA_FILE_NAME
     assert report_payload["ai_profile_id"] == "profile_1"
     assert "Story paragraph one." in (cleanup_root / config.CLEANED_TEXT_FILE_NAME).read_text(encoding="utf-8")
     assert any(path.name.startswith(config.AI_TRANSACTION_LOG_FILE_PREFIX) for path in cleanup_root.glob("*.log"))
 
     state_payload = json.loads((cleanup_root / config.CLEANUP_STATE_FILE_NAME).read_text(encoding="utf-8"))
+    metadata_payload = json.loads((cleanup_root / config.CLEANED_TEXT_METADATA_FILE_NAME).read_text(encoding="utf-8"))
     assert state_payload["mode"] == "ai_assisted"
     assert state_payload["status"] == "completed"
+    assert metadata_payload["cleanup_mode"] == "ai_assisted"
+    assert metadata_payload["paragraphs"][0]["source_page_start"] is None
 
 
 @pytest.mark.parametrize(

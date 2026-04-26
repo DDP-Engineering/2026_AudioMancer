@@ -13,7 +13,7 @@
          application through one centralized string catalog and scale mapping.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 0.29.0
+@version 0.30.0
 """
 
 # ruff: noqa: E501
@@ -242,6 +242,7 @@ _UI_STRINGS = {
         "text_cleanup.note_cleanup_ready": "Deterministic cleanup is ready to run for the current extracted text.",
         "text_cleanup.note_cleanup_resume": "A previous cleanup was not finalized. Press Deterministic Cleanup to continue from progress {progress_current}/{progress_total}.",
         "text_cleanup.note_cleanup_summary": "Cleanup produced {paragraph_count} paragraphs, removed {removed_line_count} lines, and detected {chapter_count} chapter or scene headings.",
+        "text_cleanup.note_page_break_metadata": "Page-break cleanup repaired {page_break_repair_count} continuation(s) and preserved {weak_boundary_count} low-confidence boundary/boundaries.",
         "text_cleanup.note_cleanup_rerun_warning": "Running deterministic cleanup again will replace the current cleanup data and reset chunking plus all following workflow data.",
         "text_cleanup.note_ai_cleanup_ready": "AI-assisted cleanup is ready for the current extracted text and selected AI profile.",
         "text_cleanup.note_ai_cleanup_resume": "A previous AI-assisted cleanup was not finalized. Press AI-Assisted Cleanup to continue from progress {progress_current}/{progress_total}.",
@@ -1041,6 +1042,7 @@ _UI_STRINGS = {
         "text_cleanup.note_cleanup_ready": "Curatarea determinista este pregatita pentru textul extras curent.",
         "text_cleanup.note_cleanup_resume": "O curatare anterioara nu a fost finalizata. Apasa Curatare Determinista pentru a continua de la progresul {progress_current}/{progress_total}.",
         "text_cleanup.note_cleanup_summary": "Curatarea a produs {paragraph_count} paragrafe, a eliminat {removed_line_count} linii si a detectat {chapter_count} titluri de capitol sau scena.",
+        "text_cleanup.note_page_break_metadata": "Curatarea salturilor de pagina a reparat {page_break_repair_count} continuari si a pastrat {weak_boundary_count} limite cu incredere scazuta.",
         "text_cleanup.note_cleanup_rerun_warning": "Rularea curatarii deterministe din nou va inlocui datele actuale de curatare si va reseta segmentarea plus toti pasii urmatori.",
         "text_cleanup.note_ai_cleanup_ready": "Curatarea asistata de AI este pregatita pentru textul extras curent si profilul AI selectat.",
         "text_cleanup.note_ai_cleanup_resume": "O curatare asistata de AI anterioara nu a fost finalizata. Apasa Curatare Asistata de AI pentru a continua de la progresul {progress_current}/{progress_total}.",

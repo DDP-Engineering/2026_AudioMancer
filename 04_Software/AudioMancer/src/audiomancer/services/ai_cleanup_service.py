@@ -28,6 +28,7 @@ import re
 
 from audiomancer import config
 from audiomancer.services import (
+    cleanup_metadata_service,
     cleanup_text_analysis_service,
     llm_provider_service,
     prompt_template_service,
@@ -306,6 +307,11 @@ def clean_text(
 
     cleaned_text = "\n\n".join(cleaned_paragraphs).strip() + "\n"
     output_path.write_text(cleaned_text, encoding="utf-8")
+    metadata_payload = cleanup_metadata_service.write_minimal_cleanup_metadata(
+        resolved_project_root,
+        cleaned_text,
+        "ai_assisted",
+    )
     detected_language = _detect_language(cleaned_text)
     chapter_count = _count_detected_chapters(cleaned_paragraphs)
     warning_details.extend(
@@ -319,6 +325,10 @@ def clean_text(
     report_payload: CleanupReportPayload = {
         "input_relative_path": relative_to_project(resolved_project_root, input_snapshot_path),
         "cleaned_text_relative_path": relative_to_project(resolved_project_root, output_path),
+        "cleaned_text_metadata_relative_path": relative_to_project(
+            resolved_project_root,
+            cleanup_metadata_service.cleanup_metadata_path(resolved_project_root),
+        ),
         "cleaned_at": _utc_now_iso(),
         "detected_language": detected_language,
         "warnings": warnings,
@@ -326,6 +336,8 @@ def clean_text(
         "paragraph_count": len(cleaned_paragraphs),
         "removed_line_count": max(0, len(units) - len(kept_units)),
         "detected_chapter_count": chapter_count,
+        "page_break_repair_count": int(metadata_payload.get("page_break_repair_count", 0)),
+        "weak_boundary_count": int(metadata_payload.get("weak_boundary_count", 0)),
         "cleanup_mode": "ai_assisted",
         "ai_profile_id": profile_id,
         "ai_log_relative_path": log_relative_path,
@@ -341,6 +353,7 @@ def clean_text(
         input_snapshot_path,
         output_path,
         report_path,
+        cleanup_metadata_service.cleanup_metadata_path(resolved_project_root),
         status="completed",
         progress_current=total_windows,
         progress_total=total_windows,
@@ -405,7 +418,7 @@ def _emit_progress(
     @return     None.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.1.0
+    @version    0.2.0
     """
     if callable(progress_callback):
         progress_callback(
@@ -424,7 +437,7 @@ def _build_cleanup_units(text: str) -> list[dict[str, object]]:
     @return     Derived helper result.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.1.0
+    @version    0.2.0
     """
     normalized = text.replace("\r\n", "\n").replace("\r", "\n")
     units: list[dict[str, object]] = []
@@ -889,6 +902,7 @@ def _write_running_state(
         input_snapshot_path,
         output_path,
         report_path=None,
+        metadata_path=None,
         status="running",
         progress_current=progress_current,
         progress_total=progress_total,
@@ -916,6 +930,7 @@ def _build_operation_state(
     input_snapshot_path: Path,
     output_path: Path,
     report_path: Path | None,
+    metadata_path: Path | None,
     status: str,
     progress_current: int,
     progress_total: int,
@@ -961,11 +976,14 @@ def _build_operation_state(
     artifact_paths: list[str] = [log_relative_path]
     if report_path is not None and report_path.is_file():
         artifact_paths.append(relative_to_project(project_root, report_path))
+    output_paths = [relative_to_project(project_root, output_path)] if output_path.is_file() else []
+    if metadata_path is not None and metadata_path.is_file():
+        output_paths.append(relative_to_project(project_root, metadata_path))
     return {
         "folder_relative_path": config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH,
         "status": status,
         "input_paths": [relative_to_project(project_root, input_snapshot_path)],
-        "output_paths": ([relative_to_project(project_root, output_path)] if output_path.is_file() else []),
+        "output_paths": output_paths,
         "artifact_paths": artifact_paths,
         "progress_current": progress_current,
         "progress_total": progress_total,

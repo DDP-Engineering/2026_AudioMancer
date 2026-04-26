@@ -8,6 +8,31 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
 
 All notable changes to this project will be documented in this file.
 
+## [0.32.0] - 2026-04-26
+
+### Added
+
+- added `clean_text_metadata.json` cleanup metadata with stable paragraph IDs,
+  source page provenance, page-break repair flags, boundary confidence, and
+  warning flags for chunking diagnostics
+- added metadata-aware deterministic and AI chunking so both modes prefer
+  cleanup paragraph records while remaining compatible with legacy projects
+  that only have `clean_text.txt`
+- added cleanup UI notes and tests for language-agnostic page-break repair,
+  metadata fallback, AI chunking paragraph IDs, cleanup reset, and manual
+  cleaned-text edits
+
+### Changed
+
+- changed deterministic cleanup to repair uncertain PDF page-break continuations
+  before flattening the canonical cleaned text, while avoiding joins into
+  headings, page numbers, separators, or complete standalone paragraphs
+- changed cleanup reruns and manual cleaned-text edits to clear stale downstream
+  state and prevent stale cleanup metadata from driving later chunking
+- updated cleanup and chunking documentation for the new metadata sidecar
+  contract
+- package version updated to `0.32.0`
+
 ## [0.31.0] - 2026-04-26
 
 ### Added

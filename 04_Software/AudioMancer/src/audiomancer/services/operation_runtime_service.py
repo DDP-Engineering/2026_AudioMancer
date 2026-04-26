@@ -14,7 +14,7 @@
          operations.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-22
-@version 0.4.0
+@version 0.5.0
 """
 
 # IMPORTS
@@ -50,6 +50,7 @@ _OPERATION_ARTIFACT_FILE_NAMES = {
     ),
     "cleanup": (
         config.CLEANED_TEXT_FILE_NAME,
+        config.CLEANED_TEXT_METADATA_FILE_NAME,
         config.CLEANUP_REPORT_FILE_NAME,
         config.CLEANUP_STATE_FILE_NAME,
     ),
@@ -172,7 +173,7 @@ def build_operation_input_snapshot_path(
     @exception  RuntimeError Raised because input snapshots are no longer supported.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.2.0
+    @version    0.3.0
     """
     _ = project_root
     _ = operation_kind

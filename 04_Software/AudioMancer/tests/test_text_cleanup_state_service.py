@@ -22,7 +22,7 @@
 import json
 
 from audiomancer import config
-from audiomancer.services import project_workspace_service, text_cleanup_state_service
+from audiomancer.services import operation_runtime_service, project_workspace_service, text_cleanup_state_service
 
 # PUBLIC API
 
@@ -112,7 +112,7 @@ def test_build_text_cleanup_state_loads_previews_and_notes(tmp_path) -> None:
         + "\n",
         encoding="utf-8",
     )
-    (cleanup_root / config.OPERATION_STATE_FILE_NAME).write_text(
+    (cleanup_root / config.CLEANUP_STATE_FILE_NAME).write_text(
         json.dumps(
             {
                 "folder_relative_path": config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH,
@@ -213,7 +213,7 @@ def test_build_text_cleanup_state_surfaces_ai_cleanup_review_warning(tmp_path) -
         + "\n",
         encoding="utf-8",
     )
-    (cleanup_root / config.OPERATION_STATE_FILE_NAME).write_text(
+    (cleanup_root / config.CLEANUP_STATE_FILE_NAME).write_text(
         json.dumps(
             {
                 "folder_relative_path": config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH,
@@ -284,7 +284,7 @@ def test_save_cleaned_text_edit_persists_text_and_resets_downstream(tmp_path) ->
     (cleanup_root / config.CLEANED_TEXT_FILE_NAME).write_text("Original clean text\n", encoding="utf-8")
     chunking_root = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH
     chunking_root.mkdir(exist_ok=True)
-    (chunking_root / "artifact.txt").write_text("stale", encoding="utf-8")
+    (chunking_root / config.CHUNK_ARTIFACT_FILE_NAME).write_text("[]\n", encoding="utf-8")
     manifest["current_stage"] = "text_chunking_ready"
     manifest["operations"]["cleanup"]["status"] = "completed"
     manifest["operations"]["cleanup"]["output_paths"] = [
@@ -303,7 +303,35 @@ def test_save_cleaned_text_edit_persists_text_and_resets_downstream(tmp_path) ->
     assert updated_manifest["current_stage"] == "text_cleanup_ready"
     assert updated_manifest["operations"]["cleanup"]["status"] == "completed"
     assert updated_manifest["operations"]["chunking"]["status"] == "not_started"
-    assert not (chunking_root / "artifact.txt").exists()
+    assert not (chunking_root / config.CHUNK_ARTIFACT_FILE_NAME).exists()
+    metadata_payload = json.loads((cleanup_root / config.CLEANED_TEXT_METADATA_FILE_NAME).read_text(encoding="utf-8"))
+    assert metadata_payload["cleanup_mode"] == "manual_edit"
+    assert metadata_payload["paragraphs"][0]["text"] == "Edited clean text"
+
+
+def test_cleanup_reset_removes_stale_cleaned_text_metadata(tmp_path) -> None:
+    """
+    @brief      Verify cleanup reset deletes stale cleaned-text metadata with cleanup artifacts.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-26
+    @version    0.1.0
+    """
+    project_root, _manifest = project_workspace_service.create_project(
+        "CleanupMetadataResetProject",
+        tmp_path,
+    )
+    cleanup_root = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH
+    cleanup_root.mkdir(exist_ok=True)
+    (cleanup_root / config.CLEANED_TEXT_FILE_NAME).write_text("Cleaned text\n", encoding="utf-8")
+    (cleanup_root / config.CLEANED_TEXT_METADATA_FILE_NAME).write_text("{}\n", encoding="utf-8")
+
+    operation_runtime_service.reset_operation_data(project_root, "cleanup", include_current=True)
+
+    assert not (cleanup_root / config.CLEANED_TEXT_FILE_NAME).exists()
+    assert not (cleanup_root / config.CLEANED_TEXT_METADATA_FILE_NAME).exists()
 
 
 def test_build_manifest_after_character_discovery_reset_returns_translation_ready() -> None:

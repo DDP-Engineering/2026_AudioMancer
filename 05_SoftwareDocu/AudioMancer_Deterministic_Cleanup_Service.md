@@ -14,8 +14,8 @@ Provides the deterministic text-cleanup slice for `AudioMancer`.
 It gives the `Text Cleanup` page one conservative cleanup workflow that
 consumes extracted text, removes repeated header/footer and page-number noise,
 uses script-aware paragraph cleanup for supported languages, preserves
-paragraph and chapter structure, and persists self-contained cleanup artifacts
-at the active project root.
+paragraph and chapter structure, records page-break provenance, and persists
+self-contained cleanup artifacts at the active project root.
 
 ## 2. Responsibilities
 
@@ -32,6 +32,7 @@ at the active project root.
   chunking with localized chapter/scene/part labels for the configured
   translation-language set
 - persist cleanup output as `clean_text.txt`
+- persist page-break-aware paragraph metadata as `clean_text_metadata.json`
 - persist cleanup metadata as `cleanup_report.json`
 - persist resumable operation state as `cleanup_state.json`
 - allow the operator to manually edit and save the persisted cleaned text from
@@ -71,14 +72,17 @@ High-level flow:
 5. The service splits pages when extraction preserved page separators, removes
    repeated normalized headers and footers, removes high-confidence page
    numbers and ornamental separator lines, heals false blank-line paragraph
-   splits with script-aware continuation rules, rebuilds cleaned paragraphs,
-   and updates `cleanup_state.json` after each processed page.
+   splits with script-aware continuation rules plus language-agnostic page-break
+   continuation cues, rebuilds cleaned paragraphs, records paragraph provenance
+   in `clean_text_metadata.json`, and updates `cleanup_state.json` after each
+   processed page.
 6. On success, the shell stores the completed cleanup operation state in
    `project.json` and advances the workflow stage to `text_chunking_ready`.
 7. After cleanup output exists, the operator can press `Edit` under the cleaned
    text preview, change the text, and press `Save`; the page writes
-   `clean_text.txt`, resets downstream workflow data, and
-   preserves the extracted-text preview scroll position.
+  `clean_text.txt`, regenerates minimal cleaned-text metadata, resets
+  downstream workflow data, and preserves the extracted-text preview scroll
+  position.
 
 ## 4. Dependencies
 
@@ -104,6 +108,7 @@ Inputs:
 Outputs:
 
 - `clean_text.txt`
+- `clean_text_metadata.json`
 - `cleanup_report.json`
 - `cleanup_state.json`
 - updated `project.json` operation entry `operations.cleanup`
@@ -119,10 +124,13 @@ Current cleanup report fields:
 
 - `input_relative_path`
 - `cleaned_text_relative_path`
+- `cleaned_text_metadata_relative_path`
 - `cleaned_at`
 - `detected_language`
 - `warnings`
 - `paragraph_count`
+- `page_break_repair_count`
+- `weak_boundary_count`
 - `removed_line_count`
 - `removed_header_footer_line_count`
 - `removed_page_number_line_count`
@@ -159,6 +167,12 @@ Current deterministic cleanup invariants:
   formatting noise
 - blank lines inside one continuing sentence may be healed when script-aware
   punctuation and continuation rules strongly indicate a false paragraph break
+- page-break boundaries are preserved as paragraph metadata so deterministic
+  and AI chunking can prefer cleanup paragraph records over ad-hoc blank-line
+  splitting
+- cross-page joins are marked with `boundary_confidence` value `repaired`;
+  preserved first paragraphs after page breaks are marked `weak` when their
+  boundary is low confidence
 - deterministic cleanup is format-independent after extraction; it is strongest
   for sources such as PDFs where extraction preserved page boundaries
 - interrupted cleanup leaves resumable state instead of deleting partial
@@ -177,7 +191,8 @@ Upstream:
 
 Downstream:
 
-- deterministic and AI chunking consume `clean_text.txt`
+- deterministic and AI chunking consume `clean_text_metadata.json` when present
+  and fall back to `clean_text.txt` for older projects
 - confirmed cleanup reruns reset chunking, translation, character discovery,
   narrator, character voice, speech-block, audio-block, and audio-assembly
   runtime artifacts

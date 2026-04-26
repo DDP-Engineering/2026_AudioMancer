@@ -13,7 +13,7 @@
          file support used by the current AudioMancer implementation scaffold.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 1.29.0
+@version 1.30.0
 """
 
 # IMPORTS
@@ -142,6 +142,9 @@ EXTRACTION_STATE_FILE_NAME = "extraction_state.json"
 
 # @brief File name used for persisted cleaned text.
 CLEANED_TEXT_FILE_NAME = "clean_text.txt"
+
+# @brief File name used for persisted cleaned-text paragraph metadata.
+CLEANED_TEXT_METADATA_FILE_NAME = "clean_text_metadata.json"
 
 # @brief File name used for cleanup metadata.
 CLEANUP_REPORT_FILE_NAME = "cleanup_report.json"

@@ -14,7 +14,7 @@
          including manual cleaned-text edits.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-24
-@version 0.8.0
+@version 0.9.0
 """
 
 # IMPORTS
@@ -23,6 +23,7 @@ from pathlib import Path
 
 from audiomancer import config
 from audiomancer.services import (
+    cleanup_metadata_service,
     deterministic_cleanup_service,
     home_presenter_service,
     operation_runtime_service,
@@ -140,12 +141,13 @@ def save_cleaned_text_edit(project_root: Path, manifest: dict[str, object], clea
     @exception  ValueError Raised when the cleaned text artifact does not exist yet.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-24
-    @version    0.1.0
+    @version    0.2.0
     """
     cleaned_text_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.CLEANED_TEXT_FILE_NAME
     if not cleaned_text_path.is_file():
         raise ValueError("No cleaned text is available to edit.")
     cleaned_text_path.write_text(cleaned_text, encoding="utf-8")
+    cleanup_metadata_service.write_minimal_cleanup_metadata(project_root, cleaned_text, "manual_edit")
     operation_runtime_service.reset_operation_data(
         project_root,
         "cleanup",
@@ -200,7 +202,7 @@ def build_text_cleanup_notes(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.1.1
+    @version    0.2.0
     """
     notes: list[str] = []
     if home_presenter_service.source_document_name(manifest) is None:
@@ -271,6 +273,15 @@ def build_text_cleanup_notes(
                 chapter_count=cleanup_report_payload.get("detected_chapter_count", 0),
             )
         )
+        page_break_repair_count = int(cleanup_report_payload.get("page_break_repair_count", 0))
+        weak_boundary_count = int(cleanup_report_payload.get("weak_boundary_count", 0))
+        if page_break_repair_count > 0 or weak_boundary_count > 0:
+            notes.append(
+                ui_state_service.translate("text_cleanup.note_page_break_metadata", language).format(
+                    page_break_repair_count=page_break_repair_count,
+                    weak_boundary_count=weak_boundary_count,
+                )
+            )
         ai_profile_id = cleanup_report_payload.get("ai_profile_id")
         if cleanup_mode == "ai_assisted" and ai_profile_id not in (None, ""):
             notes.append(

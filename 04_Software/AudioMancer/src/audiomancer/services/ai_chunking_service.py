@@ -15,7 +15,7 @@
          window-based operation state plus AI transaction logging.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-11
-@version 0.3.1
+@version 0.4.0
 """
 
 # IMPORTS
@@ -84,7 +84,7 @@ def chunk_text(
     @exception  OperationCancelledError Raised when the operator cancels the run.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-11
-        @version    0.3.0
+    @version    0.3.0
     """
     resolved_project_root = Path(project_root)
     source_document = manifest.get("source_document")
@@ -107,7 +107,7 @@ def chunk_text(
         raise FileNotFoundError("AI-assisted chunking requires cleaned text first.")
 
     input_text = cleaned_path.read_text(encoding="utf-8")
-    paragraph_records = _build_paragraph_records(input_text)
+    paragraph_records = _build_paragraph_records(input_text, resolved_project_root)
     if not paragraph_records:
         raise ValueError("Cleaned text does not contain any paragraphs for AI chunking.")
 
@@ -359,7 +359,7 @@ def _emit_progress(
     @return     None.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.1.0
+    @version    0.2.0
     """
     if callable(progress_callback):
         progress_callback(
@@ -378,7 +378,7 @@ def _compute_input_fingerprint(input_text: str) -> str:
     @return     Helper result.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.1.0
+    @version    0.2.0
     """
     return hashlib.sha256(input_text.encode("utf-8")).hexdigest()
 
@@ -414,18 +414,18 @@ def _build_windows(
     return windows
 
 
-def _build_paragraph_records(cleaned_text: str) -> list[dict[str, object]]:
+def _build_paragraph_records(cleaned_text: str, project_root: str | Path | None = None) -> list[dict[str, object]]:
     """
     @brief      Build the paragraph records.
     @param[in]  cleaned_text Text value for `cleaned_text`.
     @return     Derived helper result.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.1.0
+    @version    0.2.0
     """
-    records = deterministic_chunking_service._build_paragraph_records(cleaned_text)
+    records = deterministic_chunking_service._build_paragraph_records(cleaned_text, project_root)
     for index, record in enumerate(records, start=1):
-        record["unit_id"] = f"paragraph-{index:04d}"
+        record["unit_id"] = str(record.get("paragraph_id") or f"paragraph-{index:04d}")
     return records
 
 
@@ -446,7 +446,7 @@ def _restore_resume_state(
     @return     Derived helper result.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.1.0
+    @version    0.2.0
     """
     if str(existing_state.get("status", "")) not in {"running", "failed"}:
         return 0, [], None
@@ -588,6 +588,13 @@ def _build_chunks_from_break_ids(
                 "text": "\n\n".join(str(item["text"]) for item in selected_records).strip(),
                 "source_start_line": int(selected_records[0]["line_start"]),
                 "source_end_line": int(selected_records[-1]["line_end"]),
+                "source_page_start": selected_records[0].get("source_page_start"),
+                "source_page_end": selected_records[-1].get("source_page_end"),
+                "cleanup_boundary_confidence": selected_records[0].get("boundary_confidence"),
+                "cleanup_joined_across_page_break": any(
+                    bool(item.get("joined_across_page_break", False)) for item in selected_records
+                ),
+                "cleanup_warning_flags": _merged_warning_flags(selected_records),
                 "chunking_mode": "ai_assisted",
                 "semantic_strategy": semantic_strategy,
                 "scene_note": None,
@@ -612,6 +619,24 @@ def _write_chunk_payload(output_path: Path, chunks: list[ChunkPayload]) -> None:
         json.dumps(chunks, indent=2, ensure_ascii=False) + "\n",
         encoding="utf-8",
     )
+
+
+def _merged_warning_flags(paragraph_records: list[dict[str, object]]) -> list[str]:
+    """
+    @brief      Merge cleanup warning flags across selected paragraph records.
+    @param[in]  paragraph_records Paragraph records in one AI chunk span.
+    @return     Ordered unique warning flags.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-26
+    @version    0.1.0
+    """
+    flags: list[str] = []
+    for record in paragraph_records:
+        for flag in list(record.get("warning_flags", [])):
+            resolved_flag = str(flag)
+            if resolved_flag and resolved_flag not in flags:
+                flags.append(resolved_flag)
+    return flags
 
 
 def _write_running_state(

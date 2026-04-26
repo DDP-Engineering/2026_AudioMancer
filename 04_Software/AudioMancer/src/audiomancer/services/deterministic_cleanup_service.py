@@ -15,7 +15,7 @@
          structure, and persists cleanup artifacts with resumable state.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-06
-@version 0.3.0
+@version 0.4.0
 """
 
 # IMPORTS
@@ -27,7 +27,7 @@ from pathlib import Path
 import re
 
 from audiomancer import config
-from audiomancer.services import cleanup_text_analysis_service
+from audiomancer.services import cleanup_metadata_service, cleanup_text_analysis_service
 from audiomancer.services.logging_service import get_component_logger, trace_function
 from audiomancer.services.operation_runtime_service import (
     build_operation_output_path,
@@ -46,7 +46,10 @@ CleanupReportPayload = dict[str, object]
 # @brief Persisted deterministic cleanup operation-state payload type.
 OperationStatePayload = dict[str, object]
 # @brief Internal paragraph-line accumulator type used while rebuilding cleaned text.
-CleanupLineParts = list[tuple[str, bool]]
+CleanupLineParts = list[dict[str, object]]
+
+# @brief Internal cleaned paragraph metadata record type.
+CleanupParagraphRecord = dict[str, object]
 # @brief Page-break separator pattern used to reconstruct extracted PDF pages.
 _PAGE_SPLIT_PATTERN = re.compile(r"\n\n\f\n\n")
 # @brief Conservative page-number matchers used during deterministic cleanup.
@@ -91,7 +94,7 @@ def clean_text(
     @exception  OperationCancelledError Raised when the operator cancels the run.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.2.1
+    @version    0.3.0
     """
     resolved_project_root = Path(project_root)
     source_document = manifest.get("source_document")
@@ -147,11 +150,15 @@ def clean_text(
         start_page_index = 0
         output_path.write_text("", encoding="utf-8")
 
-    paragraph_texts: list[str] = []
+    paragraph_records: list[CleanupParagraphRecord] = []
     current_lines: CleanupLineParts = []
     if start_page_index > 0 and output_path.is_file():
         restored_output = output_path.read_text(encoding="utf-8").strip()
-        paragraph_texts = [paragraph.strip() for paragraph in restored_output.split("\n\n") if paragraph.strip()]
+        paragraph_records = [
+            {"text": paragraph.strip(), "boundary_confidence": "strong"}
+            for paragraph in restored_output.split("\n\n")
+            if paragraph.strip()
+        ]
 
     warnings: list[str] = []
     _write_running_state(
@@ -181,11 +188,12 @@ def clean_text(
             cleaned_pages[page_index],
             cleaned_pages[page_index + 1] if page_index + 1 < len(cleaned_pages) else None,
             current_lines,
+            page_index,
         )
         removed_page_number_count += page_number_removed_count
         removed_separator_count += separator_removed_count
-        paragraph_texts.extend(page_paragraphs)
-        _write_partial_output(output_path, paragraph_texts, current_lines)
+        paragraph_records.extend(page_paragraphs)
+        _write_partial_output(output_path, [str(record["text"]) for record in paragraph_records], current_lines)
         _write_running_state(
             state_path,
             resolved_project_root,
@@ -208,25 +216,46 @@ def clean_text(
         )
 
     if current_lines:
-        paragraph_texts.append(_compose_paragraph_text(current_lines))
+        paragraph_records.append(_build_paragraph_record(current_lines))
 
-    paragraph_texts = [_format_dialogue_lines(text) for text in paragraph_texts if text.strip()]
-    if not paragraph_texts:
+    paragraph_records = [
+        {**record, "text": _format_dialogue_lines(str(record["text"]))}
+        for record in paragraph_records
+        if str(record.get("text", "")).strip()
+    ]
+    paragraph_records = cleanup_metadata_service.finalize_paragraph_records(paragraph_records)
+    if not paragraph_records:
         raise ValueError("Cleanup removed all usable text.")
 
+    paragraph_texts = [str(record["text"]) for record in paragraph_records]
     cleaned_text = "\n\n".join(paragraph_texts).strip() + "\n"
     output_path.write_text(cleaned_text, encoding="utf-8")
+    metadata_payload = cleanup_metadata_service.write_cleanup_metadata(
+        resolved_project_root,
+        input_snapshot_path,
+        output_path,
+        paragraph_records,
+        "deterministic",
+    )
 
     detected_language = _detect_language(cleaned_text)
     chapter_count = _count_detected_chapters(paragraph_texts)
-    warnings = _build_cleanup_warnings(detected_language, chapter_count)
+    page_break_repair_count = int(metadata_payload.get("page_break_repair_count", 0))
+    weak_boundary_count = int(metadata_payload.get("weak_boundary_count", 0))
+    warnings = _build_cleanup_warnings(detected_language, chapter_count, page_break_repair_count, weak_boundary_count)
     report_payload: CleanupReportPayload = {
         "input_relative_path": relative_to_project(resolved_project_root, input_snapshot_path),
         "cleaned_text_relative_path": relative_to_project(resolved_project_root, output_path),
+        "cleaned_text_metadata_relative_path": relative_to_project(
+            resolved_project_root,
+            cleanup_metadata_service.cleanup_metadata_path(resolved_project_root),
+        ),
         "cleaned_at": _utc_now_iso(),
         "detected_language": detected_language,
         "warnings": warnings,
         "paragraph_count": len(paragraph_texts),
+        "page_break_repair_count": page_break_repair_count,
+        "weak_boundary_count": weak_boundary_count,
         "removed_line_count": (removed_header_footer_count + removed_page_number_count + removed_separator_count),
         "removed_header_footer_line_count": removed_header_footer_count,
         "removed_page_number_line_count": removed_page_number_count,
@@ -242,6 +271,7 @@ def clean_text(
         input_snapshot_path=input_snapshot_path,
         output_path=output_path,
         report_path=report_path,
+        metadata_path=cleanup_metadata_service.cleanup_metadata_path(resolved_project_root),
         status="completed",
         progress_current=progress_total,
         progress_total=progress_total,
@@ -293,7 +323,7 @@ def load_cleanup_report(project_root: str | Path) -> CleanupReportPayload | None
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.1.0
+    @version    0.2.0
     """
     report_path = build_operation_output_path(
         project_root,
@@ -321,7 +351,7 @@ def _write_partial_output(
     @return     None.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.1.0
+    @version    0.2.0
     """
     payload_parts = list(paragraphs)
     if current_lines:
@@ -391,6 +421,7 @@ def _write_running_state(
         input_snapshot_path=input_snapshot_path,
         output_path=output_path,
         report_path=None,
+        metadata_path=None,
         status="running",
         progress_current=progress_current,
         progress_total=progress_total,
@@ -417,6 +448,7 @@ def _build_operation_state(
     input_snapshot_path: Path,
     output_path: Path,
     report_path: Path | None,
+    metadata_path: Path | None,
     status: str,
     progress_current: int,
     progress_total: int,
@@ -460,11 +492,14 @@ def _build_operation_state(
     artifact_paths: list[str] = []
     if report_path is not None and report_path.is_file():
         artifact_paths.append(relative_to_project(project_root, report_path))
+    output_paths = [relative_to_project(project_root, output_path)] if output_path.is_file() else []
+    if metadata_path is not None and metadata_path.is_file():
+        output_paths.append(relative_to_project(project_root, metadata_path))
     return {
         "folder_relative_path": config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH,
         "status": status,
         "input_paths": [relative_to_project(project_root, input_snapshot_path)],
-        "output_paths": ([relative_to_project(project_root, output_path)] if output_path.is_file() else []),
+        "output_paths": output_paths,
         "artifact_paths": artifact_paths,
         "progress_current": progress_current,
         "progress_total": progress_total,
@@ -522,7 +557,7 @@ def _remove_repeated_headers_and_footers(pages: list[str]) -> tuple[list[str], i
     @return     Helper result.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.2.0
+    @version    0.3.0
     """
     top_counts: Counter[str] = Counter()
     bottom_counts: Counter[str] = Counter()
@@ -565,7 +600,8 @@ def _build_page_paragraphs(
     page: str,
     next_page: str | None,
     carried_lines: CleanupLineParts,
-) -> tuple[list[str], CleanupLineParts, int, int]:
+    page_index: int,
+) -> tuple[list[CleanupParagraphRecord], CleanupLineParts, int, int]:
     """
     @brief      Build the page paragraphs.
     @param[in]  page Value for `page`.
@@ -576,23 +612,24 @@ def _build_page_paragraphs(
     @date       2026-04-21
     @version    0.2.0
     """
-    paragraph_texts: list[str] = []
+    paragraph_records: list[CleanupParagraphRecord] = []
     current_lines = list(carried_lines)
     removed_page_number_count = 0
     removed_separator_count = 0
     merge_with_previous_line = bool(carried_lines)
     normalized_lines = [re.sub(r"\s+", " ", raw_line).strip() for raw_line in page.split("\n")]
     page_edge_indexes = set(_page_edge_line_indexes(normalized_lines))
+    first_content_line_seen = False
     for line_index, normalized_line in enumerate(normalized_lines):
         if not normalized_line:
             if current_lines:
                 next_line = _next_content_line(normalized_lines, line_index + 1)
                 if next_line is None:
                     next_line = _first_content_line(next_page) if next_page is not None else None
-                if _should_continue_paragraph(current_lines[-1][0], next_line):
+                if _should_continue_paragraph(_line_text(current_lines[-1]), next_line):
                     merge_with_previous_line = True
                     continue
-                paragraph_texts.append(_compose_paragraph_text(current_lines))
+                paragraph_records.append(_build_paragraph_record(current_lines))
                 current_lines = []
             continue
         if _looks_like_page_number(normalized_line, page_edge=line_index in page_edge_indexes):
@@ -601,15 +638,28 @@ def _build_page_paragraphs(
         if _looks_like_separator_line(normalized_line):
             removed_separator_count += 1
             continue
-        current_lines.append((normalized_line, merge_with_previous_line))
+        current_lines.append(
+            _build_line_part(
+                normalized_line,
+                merge_with_previous_line,
+                page_index,
+                starts_after_page_break=(page_index > 0 and not current_lines and not first_content_line_seen),
+            )
+        )
+        first_content_line_seen = True
         merge_with_previous_line = False
     if current_lines and not _should_continue_paragraph_across_page_break(current_lines, next_page):
-        paragraph_texts.append(_compose_paragraph_text(current_lines))
+        paragraph_records.append(_build_paragraph_record(current_lines))
         current_lines = []
-    return paragraph_texts, current_lines, removed_page_number_count, removed_separator_count
+    return paragraph_records, current_lines, removed_page_number_count, removed_separator_count
 
 
-def _build_cleanup_warnings(detected_language: str | None, chapter_count: int) -> list[str]:
+def _build_cleanup_warnings(
+    detected_language: str | None,
+    chapter_count: int,
+    page_break_repair_count: int,
+    weak_boundary_count: int,
+) -> list[str]:
     """
     @brief      Build the cleanup warnings.
     @param[in]  detected_language Value for `detected_language`.
@@ -617,7 +667,7 @@ def _build_cleanup_warnings(detected_language: str | None, chapter_count: int) -
     @return     Derived helper result.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.1.0
+    @version    0.2.0
     """
     warnings: list[str] = []
     if detected_language is None:
@@ -625,6 +675,14 @@ def _build_cleanup_warnings(detected_language: str | None, chapter_count: int) -
     if chapter_count == 0:
         warnings.append(
             "No explicit chapter or scene headings were detected; chunking will rely on sequential paragraph order."
+        )
+    if page_break_repair_count > 0:
+        warnings.append(
+            f"Repaired {page_break_repair_count} paragraph continuation(s) across page breaks before chunking."
+        )
+    if weak_boundary_count > 0:
+        warnings.append(
+            f"Preserved {weak_boundary_count} low-confidence paragraph boundary/boundaries after page breaks."
         )
     return warnings
 
@@ -636,7 +694,7 @@ def _count_detected_chapters(paragraph_texts: list[str]) -> int:
     @return     Derived helper result.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.1.0
+    @version    0.2.0
     """
     return cleanup_text_analysis_service.count_detected_chapters(paragraph_texts)
 
@@ -672,7 +730,7 @@ def _is_header_footer_candidate(line: str) -> bool:
     @return     True when the helper condition is satisfied.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.2.0
+    @version    0.3.0
     """
     normalized_line = cleanup_text_analysis_service.normalize_text_line(line)
     return (
@@ -706,7 +764,7 @@ def _looks_like_separator_line(line: str) -> bool:
     @return     True when the helper condition is satisfied.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.1.0
+    @version    0.2.0
     """
     normalized = line.strip()
     return bool(normalized) and bool(_SEPARATOR_LINE_PATTERN.fullmatch(normalized))
@@ -724,6 +782,70 @@ def _format_dialogue_lines(paragraph_text: str) -> str:
     return cleanup_text_analysis_service.format_dialogue_lines(paragraph_text)
 
 
+def _build_line_part(
+    text: str,
+    join_with_previous: bool,
+    page_index: int,
+    starts_after_page_break: bool,
+) -> dict[str, object]:
+    """
+    @brief      Build one paragraph-line accumulator payload.
+    @param[in]  text Normalized line text.
+    @param[in]  join_with_previous True when the line should be joined with a space.
+    @param[in]  page_index Zero-based source page index.
+    @param[in]  starts_after_page_break True when the line starts a paragraph after a page break.
+    @return     Line accumulator payload.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-26
+    @version    0.1.0
+    """
+    return {
+        "text": text,
+        "join_with_previous": join_with_previous,
+        "page_index": page_index,
+        "starts_after_page_break": starts_after_page_break,
+    }
+
+
+def _line_text(line_part: dict[str, object]) -> str:
+    """
+    @brief      Return the normalized text from one line accumulator payload.
+    @param[in]  line_part Line accumulator payload.
+    @return     Line text.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-26
+    @version    0.1.0
+    """
+    return str(line_part.get("text", ""))
+
+
+def _build_paragraph_record(lines: CleanupLineParts) -> CleanupParagraphRecord:
+    """
+    @brief      Build one page-break-aware paragraph metadata record.
+    @param[in]  lines Paragraph line accumulator payloads.
+    @return     Paragraph metadata record without final paragraph id.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-26
+    @version    0.1.0
+    """
+    page_indexes = [int(line["page_index"]) for line in lines if "page_index" in line]
+    starts_after_page_break = bool(lines and lines[0].get("starts_after_page_break", False))
+    joined_across_page_break = len(set(page_indexes)) > 1
+    warning_flags: list[str] = []
+    if starts_after_page_break and len(_compose_paragraph_text(lines).split()) <= 3:
+        warning_flags.append("short_fragment_after_page_break")
+    boundary_confidence = "repaired" if joined_across_page_break else ("weak" if starts_after_page_break else "strong")
+    return {
+        "text": _compose_paragraph_text(lines),
+        "source_page_start": (min(page_indexes) + 1 if page_indexes else None),
+        "source_page_end": (max(page_indexes) + 1 if page_indexes else None),
+        "starts_after_page_break": starts_after_page_break,
+        "joined_across_page_break": joined_across_page_break,
+        "boundary_confidence": boundary_confidence,
+        "warning_flags": warning_flags,
+    }
+
+
 def _compose_paragraph_text(lines: CleanupLineParts) -> str:
     """
     @brief      Compose the paragraph text.
@@ -735,15 +857,18 @@ def _compose_paragraph_text(lines: CleanupLineParts) -> str:
     """
     if not lines:
         return ""
-    first_line, _joined_with_previous = lines[0]
-    paragraph_text = first_line.strip()
-    for current_line, join_with_previous in lines[1:]:
-        separator = " " if join_with_previous else "\n"
-        paragraph_text += separator + current_line.strip()
+    paragraph_text = _line_text(lines[0]).strip()
+    for line_part in lines[1:]:
+        separator = " " if bool(line_part.get("join_with_previous", False)) else "\n"
+        paragraph_text += separator + _line_text(line_part).strip()
     return paragraph_text.strip()
 
 
-def _should_continue_paragraph(current_last_line: str, next_line: str | None) -> bool:
+def _should_continue_paragraph(
+    current_last_line: str,
+    next_line: str | None,
+    page_break_context: bool = False,
+) -> bool:
     """
     @brief      Determine whether continue paragraph.
     @param[in]  current_last_line Value for `current_last_line`.
@@ -761,6 +886,8 @@ def _should_continue_paragraph(current_last_line: str, next_line: str | None) ->
         return False
     current_normalized = cleanup_text_analysis_service.normalize_text_line(current_last_line)
     next_normalized = cleanup_text_analysis_service.normalize_text_line(next_line)
+    if page_break_context and _has_language_agnostic_continuation_shape(current_normalized):
+        return True
     script_name = cleanup_text_analysis_service.classify_text_script(f"{current_normalized} {next_normalized}")
     first_letter = _first_letter(next_normalized)
     if script_name in {"latin", "cyrillic"}:
@@ -772,6 +899,46 @@ def _should_continue_paragraph(current_last_line: str, next_line: str | None) ->
         and len(next_normalized) >= 8
         and not cleanup_text_analysis_service.has_sentence_terminal(current_normalized)
     )
+
+
+def _has_language_agnostic_continuation_shape(text: str) -> bool:
+    """
+    @brief      Detect structural continuation cues that do not depend on vocabulary.
+    @param[in]  text Normalized current paragraph ending.
+    @return     True when the next page likely continues the same paragraph.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-26
+    @version    0.1.0
+    """
+    normalized = text.strip()
+    if not normalized:
+        return False
+    if not cleanup_text_analysis_service.has_sentence_terminal(normalized):
+        return True
+    continuation_suffixes = (",", ":", ";", "-", "–", "—", "(", "[", "{", '"', "'", "„", "“", "«")
+    if normalized.endswith(continuation_suffixes):
+        return True
+    return _has_unclosed_quote(normalized)
+
+
+def _has_unclosed_quote(text: str) -> bool:
+    """
+    @brief      Detect a likely unclosed quoted span using common quote marks.
+    @param[in]  text Text to inspect.
+    @return     True when quote counts suggest an unfinished quotation.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-26
+    @version    0.1.0
+    """
+    quote_pairs = (('"', '"'), ("“", "”"), ("„", "”"), ("«", "»"), ("'", "'"))
+    for opening_quote, closing_quote in quote_pairs:
+        if opening_quote == closing_quote:
+            if text.count(opening_quote) % 2 == 1:
+                return True
+            continue
+        if text.count(opening_quote) > text.count(closing_quote):
+            return True
+    return False
 
 
 def _should_continue_paragraph_across_page_break(
@@ -790,7 +957,7 @@ def _should_continue_paragraph_across_page_break(
     if not current_lines or next_page is None:
         return False
     next_content_line = _first_content_line(next_page)
-    return _should_continue_paragraph(current_lines[-1][0].strip(), next_content_line)
+    return _should_continue_paragraph(_line_text(current_lines[-1]).strip(), next_content_line, page_break_context=True)
 
 
 def _next_content_line(lines: list[str], start_index: int) -> str | None:

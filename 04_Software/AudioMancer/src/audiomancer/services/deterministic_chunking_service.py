@@ -14,7 +14,7 @@
          operation state for interrupted deterministic chunking runs.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-11
-@version 0.2.0
+@version 0.3.0
 """
 
 # IMPORTS
@@ -25,6 +25,7 @@ from pathlib import Path
 import re
 
 from audiomancer import config
+from audiomancer.services import cleanup_metadata_service
 from audiomancer.services.logging_service import get_component_logger, trace_function
 from audiomancer.services.operation_runtime_service import (
     build_operation_output_path,
@@ -77,7 +78,7 @@ def chunk_text(
     @exception  OperationCancelledError Raised when the operator cancels the run.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-11
-        @version    0.2.0
+    @version    0.2.0
     """
     resolved_project_root = Path(project_root)
     source_document = manifest.get("source_document")
@@ -91,7 +92,7 @@ def chunk_text(
         raise FileNotFoundError("Deterministic chunking requires cleaned text first.")
 
     input_text = cleaned_path.read_text(encoding="utf-8")
-    paragraph_records = _build_paragraph_records(input_text)
+    paragraph_records = _build_paragraph_records(input_text, resolved_project_root)
     if not paragraph_records:
         raise ValueError("Cleaned text does not contain any chunkable paragraphs.")
 
@@ -286,7 +287,7 @@ def _emit_progress(progress_callback, progress_current: int, progress_total: int
     @return     None.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.1.0
+    @version    0.2.0
     """
     if callable(progress_callback):
         progress_callback(
@@ -297,28 +298,28 @@ def _emit_progress(progress_callback, progress_current: int, progress_total: int
         )
 
 
-def _build_paragraph_records(cleaned_text: str) -> list[dict[str, object]]:
+def _build_paragraph_records(cleaned_text: str, project_root: str | Path | None = None) -> list[dict[str, object]]:
     """
     @brief      Build the paragraph records.
     @param[in]  cleaned_text Text value for `cleaned_text`.
     @return     Derived helper result.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.1.0
+    @version    0.2.0
     """
-    normalized = cleaned_text.replace("\r\n", "\n").replace("\r", "\n")
-    paragraph_texts = [paragraph.strip() for paragraph in normalized.split("\n\n") if paragraph.strip()]
+    if project_root is not None:
+        paragraph_records = cleanup_metadata_service.load_or_build_paragraph_records(project_root, cleaned_text)
+    else:
+        paragraph_records = cleanup_metadata_service.build_paragraph_records_from_text(cleaned_text)
     records: list[dict[str, object]] = []
-    line_number = 1
-    for paragraph_text in paragraph_texts:
+    for record in paragraph_records:
         records.append(
             {
-                "text": paragraph_text,
-                "line_start": line_number,
-                "line_end": line_number,
+                **dict(record),
+                "line_start": int(record.get("source_start_line", 1)),
+                "line_end": int(record.get("source_end_line", record.get("source_start_line", 1))),
             }
         )
-        line_number += 2
     return records
 
 
@@ -344,6 +345,11 @@ def _build_chunk_payload(
         "text": str(paragraph_record["text"]),
         "source_start_line": int(paragraph_record["line_start"]),
         "source_end_line": int(paragraph_record["line_end"]),
+        "source_page_start": paragraph_record.get("source_page_start"),
+        "source_page_end": paragraph_record.get("source_page_end"),
+        "cleanup_boundary_confidence": paragraph_record.get("boundary_confidence"),
+        "cleanup_joined_across_page_break": bool(paragraph_record.get("joined_across_page_break", False)),
+        "cleanup_warning_flags": list(paragraph_record.get("warning_flags", [])),
         "chunking_mode": "deterministic",
         "semantic_strategy": None,
         "scene_note": None,
