@@ -13,7 +13,7 @@
          language application.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-25
-@version 0.4.1
+@version 0.4.2
 """
 
 # IMPORTS
@@ -59,15 +59,12 @@ def test_home_page_project_snapshot_button_follows_project_and_busy_state(qtbot)
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.2.0
+    @version    0.3.0
     """
     page = HomeProjectPage()
     qtbot.addWidget(page)
 
     page.set_project_state("Project", "D:/Project", "source_selected")
-    assert page._snapshot_button.isEnabled() is False
-
-    page.set_project_options(True, "en", "narrator_and_characters")
     assert page._snapshot_button.isEnabled() is True
 
     page.set_operation_busy(True)
@@ -140,13 +137,13 @@ def test_home_page_language_application_updates_export_labels(qtbot) -> None:
 
 def test_home_page_project_options_lock_controls_source_import(qtbot) -> None:
     """
-    @brief      Verify source import and project locking follow selected source state.
+    @brief      Verify source import, ZIP export, and project locking follow project state.
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-26
-    @version    0.2.0
+    @version    0.3.0
     """
     page = HomeProjectPage()
     qtbot.addWidget(page)
@@ -155,7 +152,7 @@ def test_home_page_project_options_lock_controls_source_import(qtbot) -> None:
     page.set_project_options(False, "ro", "same_narrator")
 
     assert page._import_button.isEnabled() is True
-    assert page._snapshot_button.isEnabled() is False
+    assert page._snapshot_button.isEnabled() is True
     assert page._target_language_caption.text() == "Translation language"
     assert page._narration_mode_caption.text() == "Audio output style"
     assert page._target_language_combo.isEnabled() is True

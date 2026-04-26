@@ -14,7 +14,7 @@
          so the window remains a thin coordinator.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 1.35.0
+@version 1.36.0
 """
 
 # IMPORTS
@@ -234,7 +234,7 @@ class MainWindow(QMainWindow):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-20
-        @version    0.4.0
+        @version    0.5.0
         """
         page = self._page_registry.get(page_id)
         if page is None:
@@ -242,7 +242,9 @@ class MainWindow(QMainWindow):
         self._ensure_page_default_metadata(page_id)
         self._current_page_id = page_id
         self._stack.setCurrentWidget(page)
+        was_blocked = self._sidebar.blockSignals(True)
         self._sidebar.set_current_page(page_id)
+        self._sidebar.blockSignals(was_blocked)
         if page_id == "character_voices":
             self._character_voices_missing_narrator_popup_shown = False
             character_voices_ui_controller.handle_page_activated(self)
@@ -282,7 +284,7 @@ class MainWindow(QMainWindow):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-16
-        @version    0.10.0
+        @version    0.11.0
         """
         self._current_project_root = project_root
         self._current_manifest = manifest
@@ -315,17 +317,79 @@ class MainWindow(QMainWindow):
             )
         )
         self._home_page.set_export_states(project_export_service.build_export_states(project_root, manifest))
-        self._text_cleanup_page.set_project_active(project_root is not None)
-        self._text_cleanup_page.set_ai_profiles(
-            **text_cleanup_state_service.build_ai_cleanup_profile_state(self._settings_payload)
-        )
-        self._text_cleanup_page.set_processing_state(
-            **text_cleanup_state_service.build_text_cleanup_state(
-                project_root,
-                manifest,
-                current_language,
+        self._refresh_current_page_state(project_root, manifest, current_language)
+
+    def _refresh_current_page_state(
+        self,
+        project_root: Path | None,
+        manifest: dict[str, object] | None,
+        current_language: str,
+    ) -> None:
+        """
+        @brief      Refresh only the currently visible workflow page.
+        @param[in]  project_root Active project root or `None`.
+        @param[in]  manifest Active project manifest or `None`.
+        @param[in]  current_language Current UI language code.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-26
+        @version    0.1.0
+        """
+        if self._current_page_id == "text_cleanup":
+            self._text_cleanup_page.set_project_active(project_root is not None)
+            self._text_cleanup_page.set_ai_profiles(
+                **text_cleanup_state_service.build_ai_cleanup_profile_state(self._settings_payload)
             )
-        )
+            self._text_cleanup_page.set_processing_state(
+                **text_cleanup_state_service.build_text_cleanup_state(
+                    project_root,
+                    manifest,
+                    current_language,
+                )
+            )
+            return
+        if self._current_page_id == "text_chunking":
+            self._refresh_text_chunking_page_state(project_root, manifest, current_language)
+            return
+        if self._current_page_id == "ai_translation":
+            self._refresh_ai_translation_page_state(project_root, manifest, current_language)
+            return
+        if self._current_page_id == "characters":
+            self._refresh_characters_page_state(project_root, manifest, current_language)
+            return
+        if self._current_page_id == "narator_voice":
+            self._refresh_narator_voice_page_state(project_root, manifest, current_language)
+            return
+        if self._current_page_id == "character_voices":
+            self._refresh_character_voices_page_state(project_root, manifest, current_language)
+            return
+        if self._current_page_id == "speech_blocks":
+            self._refresh_speech_blocks_page_state(project_root, manifest, current_language)
+            return
+        if self._current_page_id == "audio_blocks":
+            self._refresh_audio_blocks_page_state(project_root, manifest, current_language)
+            return
+        if self._current_page_id == "audio_assembly":
+            self._refresh_audio_assembly_page_state(project_root, manifest, current_language)
+
+    def _refresh_text_chunking_page_state(
+        self,
+        project_root: Path | None,
+        manifest: dict[str, object] | None,
+        current_language: str,
+    ) -> None:
+        """
+        @brief      Refresh the Text Chunking page state.
+        @param[in]  project_root Active project root or `None`.
+        @param[in]  manifest Active project manifest or `None`.
+        @param[in]  current_language Current UI language code.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-26
+        @version    0.1.0
+        """
         self._text_chunking_page.set_project_active(project_root is not None)
         self._text_chunking_page.set_ai_profiles(
             **text_chunking_state_service.build_ai_chunking_profile_state(self._settings_payload)
@@ -338,6 +402,24 @@ class MainWindow(QMainWindow):
                 self._settings_payload,
             )
         )
+
+    def _refresh_ai_translation_page_state(
+        self,
+        project_root: Path | None,
+        manifest: dict[str, object] | None,
+        current_language: str,
+    ) -> None:
+        """
+        @brief      Refresh the AI Translation page state.
+        @param[in]  project_root Active project root or `None`.
+        @param[in]  manifest Active project manifest or `None`.
+        @param[in]  current_language Current UI language code.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-26
+        @version    0.1.0
+        """
         self._ai_translation_page.set_project_active(project_root is not None)
         translation_state = ai_translation_state_service.build_ai_translation_state(
             project_root,
@@ -352,6 +434,24 @@ class MainWindow(QMainWindow):
             )
         )
         self._ai_translation_page.set_translation_state(**translation_state)
+
+    def _refresh_characters_page_state(
+        self,
+        project_root: Path | None,
+        manifest: dict[str, object] | None,
+        current_language: str,
+    ) -> None:
+        """
+        @brief      Refresh the Characters page state.
+        @param[in]  project_root Active project root or `None`.
+        @param[in]  manifest Active project manifest or `None`.
+        @param[in]  current_language Current UI language code.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-26
+        @version    0.1.0
+        """
         self._characters_page.set_project_active(project_root is not None)
         character_state = character_discovery_state_service.build_character_discovery_state(
             project_root,
@@ -366,6 +466,24 @@ class MainWindow(QMainWindow):
             )
         )
         self._characters_page.set_character_state(**character_state)
+
+    def _refresh_narator_voice_page_state(
+        self,
+        project_root: Path | None,
+        manifest: dict[str, object] | None,
+        current_language: str,
+    ) -> None:
+        """
+        @brief      Refresh the Narrator Voice page state.
+        @param[in]  project_root Active project root or `None`.
+        @param[in]  manifest Active project manifest or `None`.
+        @param[in]  current_language Current UI language code.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-26
+        @version    0.1.0
+        """
         self._narator_voice_page.set_project_active(project_root is not None)
         self._narator_voice_page.set_narator_voice_state(
             **narrator_definition_state_service.build_narrator_definition_state(
@@ -377,6 +495,24 @@ class MainWindow(QMainWindow):
                 initialize_defaults=self._current_page_id == "narator_voice",
             )
         )
+
+    def _refresh_character_voices_page_state(
+        self,
+        project_root: Path | None,
+        manifest: dict[str, object] | None,
+        current_language: str,
+    ) -> None:
+        """
+        @brief      Refresh the Character Voices page state.
+        @param[in]  project_root Active project root or `None`.
+        @param[in]  manifest Active project manifest or `None`.
+        @param[in]  current_language Current UI language code.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-26
+        @version    0.1.0
+        """
         self._character_voices_page.set_project_active(project_root is not None)
         self._character_voices_page.set_character_voices_state(
             **character_voices_state_service.build_character_voices_state(
@@ -388,6 +524,24 @@ class MainWindow(QMainWindow):
                 initialize_defaults=self._current_page_id == "character_voices",
             )
         )
+
+    def _refresh_speech_blocks_page_state(
+        self,
+        project_root: Path | None,
+        manifest: dict[str, object] | None,
+        current_language: str,
+    ) -> None:
+        """
+        @brief      Refresh the Speech Blocks page state.
+        @param[in]  project_root Active project root or `None`.
+        @param[in]  manifest Active project manifest or `None`.
+        @param[in]  current_language Current UI language code.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-26
+        @version    0.1.0
+        """
         self._speech_blocks_page.set_project_active(project_root is not None)
         speech_blocks_state = speech_blocks_state_service.build_speech_blocks_state(
             project_root,
@@ -402,6 +556,24 @@ class MainWindow(QMainWindow):
             )
         )
         self._speech_blocks_page.set_speech_blocks_state(**speech_blocks_state)
+
+    def _refresh_audio_blocks_page_state(
+        self,
+        project_root: Path | None,
+        manifest: dict[str, object] | None,
+        current_language: str,
+    ) -> None:
+        """
+        @brief      Refresh the Audio Blocks page state.
+        @param[in]  project_root Active project root or `None`.
+        @param[in]  manifest Active project manifest or `None`.
+        @param[in]  current_language Current UI language code.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-26
+        @version    0.1.0
+        """
         self._audio_blocks_page.set_project_active(project_root is not None)
         self._audio_blocks_page.set_audio_blocks_state(
             **audio_blocks_state_service.build_audio_blocks_state(
@@ -410,6 +582,24 @@ class MainWindow(QMainWindow):
                 current_language,
             )
         )
+
+    def _refresh_audio_assembly_page_state(
+        self,
+        project_root: Path | None,
+        manifest: dict[str, object] | None,
+        current_language: str,
+    ) -> None:
+        """
+        @brief      Refresh the Audio Assembly page state.
+        @param[in]  project_root Active project root or `None`.
+        @param[in]  manifest Active project manifest or `None`.
+        @param[in]  current_language Current UI language code.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-26
+        @version    0.1.0
+        """
         self._audio_assembly_page.set_project_active(project_root is not None)
         self._audio_assembly_page.set_audio_assembly_state(
             **audio_assembly_state_service.build_audio_assembly_state(

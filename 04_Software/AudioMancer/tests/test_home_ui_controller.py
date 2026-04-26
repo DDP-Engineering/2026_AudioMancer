@@ -13,12 +13,14 @@
          activation correctly through the main-window shell.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-06
-@version 0.5.1
+@version 0.5.2
 """
 
 # IMPORTS
 
 import zipfile
+
+from PySide6.QtCore import Qt
 
 from audiomancer.services import project_export_service, project_workspace_service
 from audiomancer.ui.controllers import home_ui_controller
@@ -296,10 +298,9 @@ def test_home_ui_controller_applies_zip_extension_and_writes_snapshot(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.2.0
+    @version    0.3.0
     """
     project_root, manifest = project_workspace_service.create_project("SnapshotWriteProject", tmp_path)
-    manifest = project_workspace_service.lock_project_options(project_root, "en", "narrator_and_characters")
     (project_root / "runtime.txt").write_text("runtime payload\n", encoding="utf-8")
     window = MainWindow(settings_payload=dict(default_settings_payload))
     qtbot.addWidget(window)
@@ -324,6 +325,117 @@ def test_home_ui_controller_applies_zip_extension_and_writes_snapshot(
 
     snapshot_path = selected_path.with_suffix(".zip")
     with zipfile.ZipFile(snapshot_path) as zip_file:
+        names = set(zip_file.namelist())
+    assert f"{project_root.name}/project.json" in names
+    assert f"{project_root.name}/runtime.txt" in names
+    assert messages
+
+
+def test_home_ui_controller_snapshot_button_click_exports_open_unlocked_project(
+    monkeypatch,
+    qtbot,
+    tmp_path,
+    default_settings_payload,
+) -> None:
+    """
+    @brief      Verify the Home ZIP button exports an active project before option locking.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  qtbot Qt test helper fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @param[in]  default_settings_payload Fixture supplying default test settings.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-26
+    @version    0.1.0
+    """
+    project_root, manifest = project_workspace_service.create_project("SnapshotButtonProject", tmp_path)
+    (project_root / "draft.txt").write_text("draft payload\n", encoding="utf-8")
+    window = MainWindow(settings_payload=dict(default_settings_payload))
+    qtbot.addWidget(window)
+    home_ui_controller.activate_project(window, project_root, manifest)
+    selected_path = tmp_path / "external" / "button_snapshot.zip"
+    messages = []
+
+    monkeypatch.setattr(
+        home_ui_controller.QFileDialog,
+        "getSaveFileName",
+        lambda *args, **kwargs: (str(selected_path), ""),
+    )
+    monkeypatch.setattr(home_ui_controller.misc_ui_controller, "show_message", lambda *args: messages.append(args))
+    monkeypatch.setattr(
+        home_ui_controller.operation_runner_controller,
+        "start_threaded_operation",
+        _run_threaded_operation_synchronously,
+    )
+
+    assert window._home_page._snapshot_button.isEnabled() is True
+
+    qtbot.mouseClick(window._home_page._snapshot_button, Qt.MouseButton.LeftButton)
+
+    with zipfile.ZipFile(selected_path) as zip_file:
+        names = set(zip_file.namelist())
+    assert f"{project_root.name}/project.json" in names
+    assert f"{project_root.name}/draft.txt" in names
+    assert messages
+
+
+def test_home_ui_controller_snapshot_button_click_exports_locked_source_project(
+    monkeypatch,
+    qtbot,
+    tmp_path,
+    default_settings_payload,
+) -> None:
+    """
+    @brief      Verify the Home ZIP button remains clickable when the locked-source note is visible.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  qtbot Qt test helper fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @param[in]  default_settings_payload Fixture supplying default test settings.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-26
+    @version    0.1.0
+    """
+    project_root, manifest = project_workspace_service.create_project("SnapshotLockedSourceProject", tmp_path)
+    source_path = tmp_path / "Command Performance.pdf"
+    source_path.write_text("source placeholder\n", encoding="utf-8")
+    manifest["source_document"] = {
+        "original_name": source_path.name,
+        "stored_relative_path": source_path.name,
+        "file_type": "pdf",
+        "imported_at": "2026-04-26T00:00:00+00:00",
+        "size_bytes": source_path.stat().st_size,
+    }
+    manifest["project_options_locked"] = True
+    manifest["current_stage"] = "text_chunking_ready"
+    project_workspace_service.save_manifest(manifest, project_root)
+    (project_root / "runtime.txt").write_text("runtime payload\n", encoding="utf-8")
+    window = MainWindow(settings_payload=dict(default_settings_payload))
+    qtbot.addWidget(window)
+    home_ui_controller.activate_project(window, project_root, manifest)
+    selected_path = tmp_path / "external" / "locked_source_snapshot.zip"
+    messages = []
+
+    monkeypatch.setattr(
+        home_ui_controller.QFileDialog,
+        "getSaveFileName",
+        lambda *args, **kwargs: (str(selected_path), ""),
+    )
+    monkeypatch.setattr(home_ui_controller.misc_ui_controller, "show_message", lambda *args: messages.append(args))
+    monkeypatch.setattr(
+        home_ui_controller.operation_runner_controller,
+        "start_threaded_operation",
+        _run_threaded_operation_synchronously,
+    )
+
+    assert "Locked source: Command Performance.pdf" in window._home_page._source_lock_label.text()
+    assert window._home_page._snapshot_button.isEnabled() is True
+
+    qtbot.mouseClick(window._home_page._snapshot_button, Qt.MouseButton.LeftButton)
+
+    with zipfile.ZipFile(selected_path) as zip_file:
         names = set(zip_file.namelist())
     assert f"{project_root.name}/project.json" in names
     assert f"{project_root.name}/runtime.txt" in names

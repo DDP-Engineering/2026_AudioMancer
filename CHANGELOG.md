@@ -29,6 +29,11 @@ All notable changes to this project will be documented in this file.
   headings, page numbers, separators, or complete standalone paragraphs
 - changed cleanup reruns and manual cleaned-text edits to clear stale downstream
   state and prevent stale cleanup metadata from driving later chunking
+- changed Home-page Project ZIP export so active projects can be archived before
+  workflow completion or project-option locking
+- changed main-window project refresh to update only the active workflow page,
+  preventing passive Audio Blocks and Audio Assembly artifact reads when those
+  pages have not been opened
 - updated cleanup and chunking documentation for the new metadata sidecar
   contract
 - package version updated to `0.32.0`

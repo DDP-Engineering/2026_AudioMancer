@@ -13,7 +13,7 @@
          and source import workflows owned by the Home page.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-06
-@version 0.9.2
+@version 0.9.3
 """
 
 # IMPORTS
@@ -49,7 +49,7 @@ def handle_new_project_requested(window: "MainWindow") -> None:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.3.0
+    @version    0.4.0
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     selected_parent = QFileDialog.getExistingDirectory(
@@ -392,14 +392,6 @@ def handle_project_snapshot_requested(window: "MainWindow") -> None:
             window,
             ui_state_service.translate("dialog.project_error_title", current_language),
             ui_state_service.translate("project.error_no_active_project", current_language),
-        )
-        return
-
-    if not bool(window._current_manifest.get("project_options_locked", False)):
-        QMessageBox.warning(
-            window,
-            ui_state_service.translate("dialog.project_error_title", current_language),
-            ui_state_service.translate("project.error_project_options_unlocked", current_language),
         )
         return
 

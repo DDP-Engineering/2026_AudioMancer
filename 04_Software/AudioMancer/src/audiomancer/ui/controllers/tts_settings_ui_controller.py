@@ -10,10 +10,11 @@
 @file tts_settings_ui_controller.py
 @brief TTS Settings-dialog UI controller for AudioMancer.
 @details Handles TTS Settings dialog presentation, VoiceWeaver runtime probing,
-         and persistence of global runtime settings.
+         and persistence of global runtime settings plus active-project TTS plan
+         normalization.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-16
-@version 0.2.0
+@version 0.3.0
 """
 
 # IMPORTS
@@ -63,11 +64,26 @@ def save_tts_settings_from_dialog(window) -> None:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-16
-    @version    0.2.0
+    @version    0.3.0
     """
     merged_settings = window._tts_settings_page.build_settings(window._settings_payload)
     settings_service.save_settings(merged_settings)
     window._settings_payload = settings_service.load_settings()
+    if window._current_project_root is not None:
+        discovered_models = [
+            dict(model)
+            for model in window._settings_payload.get("tts_runtime_discovered_models", [])
+            if isinstance(model, dict)
+        ]
+        project_plan_payload = narrator_definition_service.load_tts_plan(
+            window._current_project_root,
+            discovered_models,
+        )
+        narrator_definition_service.save_tts_plan(
+            window._current_project_root,
+            project_plan_payload,
+            discovered_models,
+        )
     settings_ui_controller.apply_current_ui_settings(window)
     window.show_project_state(window._current_project_root, window._current_manifest)
     window._tts_settings_dialog.close()

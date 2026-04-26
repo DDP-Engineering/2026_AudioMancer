@@ -13,7 +13,7 @@
          the same first-page structure without implementing import behavior.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-06
-@version 0.10.4
+@version 0.10.6
 """
 
 # IMPORTS
@@ -73,7 +73,7 @@ class HomeProjectPage(QWidget):
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-05
-    @version    0.9.0
+    @version    0.9.1
     """
 
     import_requested = Signal()
@@ -89,7 +89,7 @@ class HomeProjectPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-06
-        @version    0.10.2
+        @version    0.10.3
         """
         super().__init__(parent)
         self._project_active = False
@@ -167,7 +167,7 @@ class HomeProjectPage(QWidget):
         summary_layout.addWidget(self._path_label, 1, 0)
         summary_layout.addWidget(self._source_label, 2, 0)
         summary_layout.addWidget(self._options_status_label, 3, 0)
-        summary_layout.addWidget(self._source_lock_label_placeholder(), 4, 0, 1, 2)
+        summary_layout.addWidget(self._source_lock_label_placeholder(), 4, 0)
         summary_layout.setColumnStretch(0, 1)
         summary_layout.setColumnStretch(1, 0)
         layout.addWidget(summary_group)
@@ -257,7 +257,7 @@ class HomeProjectPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-05
-        @version    0.4.0
+        @version    0.4.1
         """
         self._current_project_name = display_name
         self._current_project_path = project_path
@@ -419,9 +419,7 @@ class HomeProjectPage(QWidget):
         @version    0.4.0
         """
         self._import_button.setEnabled(self._project_active and not self._project_options_locked)
-        self._snapshot_button.setEnabled(
-            self._project_active and self._project_options_locked and not self._operation_busy
-        )
+        self._snapshot_button.setEnabled(self._project_active and not self._operation_busy)
 
     def _refresh_project_options_controls(self) -> None:
         """

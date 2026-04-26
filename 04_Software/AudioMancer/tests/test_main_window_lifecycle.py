@@ -13,7 +13,7 @@
          pages are created without workflow functionality.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-16
-@version 1.6.1
+@version 1.7.0
 """
 
 # IMPORTS
@@ -119,6 +119,91 @@ def test_main_window_show_message_does_not_create_status_bar(qtbot, default_sett
     window.show_message("Transient shell message")
 
     assert not window.findChildren(QStatusBar)
+
+
+def test_main_window_refreshes_only_current_workflow_page(
+    monkeypatch,
+    qtbot,
+    tmp_path,
+    default_settings_payload,
+) -> None:
+    """
+    @brief      Verify project-state refresh does not eagerly load non-visible workflow pages.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  qtbot Qt test helper fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @param[in]  default_settings_payload Default test settings payload fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-26
+    @version    0.1.0
+    """
+    calls = {"audio_blocks": 0, "audio_assembly": 0}
+
+    def _audio_blocks_state(*_args, **_kwargs):
+        calls["audio_blocks"] += 1
+        return {
+            "full_source_text": "",
+            "speech_blocks": [],
+            "audio_blocks": [],
+            "current_block_id": None,
+            "current_block_speaker": "",
+            "current_block_text": "",
+            "notes": [],
+            "status_lines": [],
+            "progress_current": 0,
+            "progress_total": 0,
+            "progress_percent": 0,
+            "stage_status": "not_started",
+            "can_start_or_continue": False,
+            "can_reset": False,
+            "can_approve_all": False,
+            "can_regenerate_selected": False,
+            "can_approve_selected": False,
+            "can_play_selected": False,
+        }
+
+    def _audio_assembly_state(*_args, **_kwargs):
+        calls["audio_assembly"] += 1
+        return {
+            "settings": {},
+            "outputs": [],
+            "current_output_key": None,
+            "notes": [],
+            "status_lines": [],
+            "progress_current": 0,
+            "progress_total": 0,
+            "progress_percent": 0,
+            "stage_status": "not_started",
+            "can_generate": False,
+            "can_reset": False,
+            "can_play_selected": False,
+        }
+
+    monkeypatch.setattr(
+        main_window_module.audio_blocks_state_service,
+        "build_audio_blocks_state",
+        _audio_blocks_state,
+    )
+    monkeypatch.setattr(
+        main_window_module.audio_assembly_state_service,
+        "build_audio_assembly_state",
+        _audio_assembly_state,
+    )
+    project_root, manifest = project_workspace_service.create_project("LazyRefreshProject", tmp_path)
+    window = MainWindow(settings_payload=default_settings_payload)
+    qtbot.addWidget(window)
+
+    window.show_project_state(project_root, manifest)
+
+    assert calls == {"audio_blocks": 0, "audio_assembly": 0}
+
+    window.set_current_page("audio_blocks")
+    assert calls == {"audio_blocks": 1, "audio_assembly": 0}
+
+    window.set_current_page("audio_assembly")
+    assert calls == {"audio_blocks": 1, "audio_assembly": 1}
 
 
 def test_help_index_resolves_user_guide_source() -> None:
