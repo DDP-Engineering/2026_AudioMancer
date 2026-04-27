@@ -8,6 +8,21 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
 
 All notable changes to this project will be documented in this file.
 
+## [0.34.2] - 2026-04-27
+
+### Changed
+
+- changed Audio Assembly generated-output playback to show an inline
+  Play/Stop control beside the seek controls instead of in the page header
+- changed Audio Assembly generated-output review so double-clicking a file
+  stops any active Audio Assembly preview and starts the clicked file from the
+  beginning
+- added Audio Assembly playback position display, drag-to-seek progress bar,
+  and `-10s` / `+10s` quick-seek buttons for long generated audiobook files
+- updated Audio Assembly documentation, user guides, and focused page/controller
+  tests for the new playback controls
+- package version updated to `0.34.2`
+
 ## [0.34.1] - 2026-04-27
 
 ### Changed

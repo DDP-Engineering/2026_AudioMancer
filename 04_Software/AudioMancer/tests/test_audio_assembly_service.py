@@ -13,7 +13,7 @@
          stale-input protection, and generated-output reset behavior.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-25
-@version 0.3.1
+@version 0.4.0
 """
 
 # IMPORTS
@@ -133,6 +133,60 @@ def test_audio_assembly_service_composes_time_limited_outputs(tmp_path) -> None:
 
     assert [output["file_name"] for output in report["outputs"]] == ["part-0001.wav"]
     assert report["outputs"][0]["block_count"] == 3
+
+
+def test_audio_assembly_service_time_limit_counts_inserted_silence(tmp_path) -> None:
+    """
+    @brief      Verify time-limit planning accounts for automatic silence gaps.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-27
+    @version    0.1.0
+    """
+    project_root, manifest = _create_project_with_audio_blocks(tmp_path, frame_count=24_000 * 20)
+    manifest["audio_assembly_settings"] = {
+        **audio_assembly_service.default_audio_assembly_settings(),
+        "output_mode": audio_assembly_service.OUTPUT_MODE_TIME_LIMIT,
+        "max_duration_minutes": 1,
+        "inter_block_silence_ms": 1000,
+        "inter_chunk_silence_ms": 1000,
+    }
+
+    report = audio_assembly_service.start_or_continue_composition(project_root, manifest)
+
+    assert [output["file_name"] for output in report["outputs"]] == ["part-0001.wav", "part-0002.wav"]
+    assert all(float(output["duration_seconds"]) <= 60.0 for output in report["outputs"])
+
+
+def test_audio_assembly_service_resume_preserves_time_limit_warnings(tmp_path) -> None:
+    """
+    @brief      Verify resumed completed-output runs keep deterministic warnings.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-27
+    @version    0.1.0
+    """
+    project_root, manifest = _create_project_with_audio_blocks(tmp_path, frame_count=24_000 * 61)
+    manifest["audio_assembly_settings"] = {
+        **audio_assembly_service.default_audio_assembly_settings(),
+        "output_mode": audio_assembly_service.OUTPUT_MODE_TIME_LIMIT,
+        "max_duration_minutes": 1,
+    }
+
+    first_report = audio_assembly_service.start_or_continue_composition(project_root, manifest)
+    resumed_report = audio_assembly_service.start_or_continue_composition(project_root, manifest)
+
+    assert first_report["warning_count"] == 3
+    assert resumed_report["warning_count"] == 3
+    assert [warning["output_key"] for warning in resumed_report["warnings"]] == [
+        "part-0001",
+        "part-0002",
+        "part-0003",
+    ]
 
 
 def test_audio_assembly_service_rejects_unapproved_audio_blocks(tmp_path) -> None:

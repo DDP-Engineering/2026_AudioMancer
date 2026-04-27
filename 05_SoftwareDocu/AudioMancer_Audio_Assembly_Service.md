@@ -29,8 +29,9 @@ deliverables under the project-root `audiobook/` folder.
 - reset generated audiobook files, report data, and operation state
 - build page state, status notes, progress values, and generated-output records
   for the `Audio Assembly` page
-- coordinate confirmation popups, modal progress, playback, and manifest
-  synchronization through the page controller
+- coordinate confirmation popups, modal progress, generated-output playback,
+  double-click restart, seek controls, and manifest synchronization through the
+  page controller
 
 It does not regenerate TTS, approve Audio Blocks, encode MP3, trim silence,
 normalize volume, edit pitch, write chapter metadata, or embed cover art.
@@ -45,11 +46,12 @@ The workflow is split across:
 - `04_Software/AudioMancer/src/audiomancer/services/audio_assembly_state_service.py`
   for page-state shaping, notes, status lines, progress, and readiness checks
 - `04_Software/AudioMancer/src/audiomancer/ui/pages/audio_assembly_page.py`
-  for the operator-facing settings, generated-output list, progress bar,
-  status panel, and playback controls
+  for the operator-facing settings, generated-output list, operation progress
+  bar, playback position slider, status panel, and playback controls
 - `04_Software/AudioMancer/src/audiomancer/ui/controllers/audio_assembly_ui_controller.py`
   for settings persistence, long-running confirmation, threaded composition,
-  generated-output playback, reset handling, and manifest synchronization
+  generated-output playback, double-click restart, seek/skip handling, reset
+  handling, and manifest synchronization
 
 High-level flow:
 
@@ -124,8 +126,9 @@ Persisted settings in `project.json.audio_assembly_settings`:
 Output modes:
 
 - `per_chunk` writes one `chunk-000N.wav` file per source chunk
-- `time_limit` writes sequential `part-000N.wav` files and places a block that
-  exceeds the duration limit alone in its own part with a warning
+- `time_limit` writes sequential `part-000N.wav` files, accounts for automatic
+  inter-block and inter-chunk silence while packing parts, and places a block
+  that exceeds the duration limit alone in its own part with a warning
 - `whole_book` writes one `audiobook.wav` file
 
 Persisted output records include:
@@ -149,6 +152,9 @@ Current invariants:
   that pause position, so the pause duration is not double-counted
 - metadata-only indication and background-noise Audio Blocks are skipped by the
   current composer
+- time-limited planning uses the same automatic silence-gap rules as WAV
+  composition, so published part durations do not exceed the configured limit
+  except when one individual block is already longer than the limit
 - approved Audio Blocks are assembled in canonical book order: source chunk
   order, then chunk-local `sequence_index`
 - all source WAV files in a run must share compatible channel count, sample
@@ -214,12 +220,17 @@ Operator path:
 - if interrupted, press `Generate Audio` again to continue completed-output
   resume when the inputs and settings still match
 - select a generated output and use `Play Audio` or `Stop Playing` for preview
+- double-click a generated output to stop any active Audio Assembly playback and
+  restart the clicked file from the beginning
+- use the playback progress slider to drag to a specific position, or the
+  `-10s` and `+10s` buttons for quick review jumps
 
 ## 9. Validation And Tests
 
 Focused automated coverage exists in:
 
 - `04_Software/AudioMancer/tests/test_audio_assembly_service.py`
+- `04_Software/AudioMancer/tests/test_audio_assembly_state_service.py`
 - `04_Software/AudioMancer/tests/test_audio_assembly_page.py`
 - `04_Software/AudioMancer/tests/test_audio_assembly_ui_controller.py`
 - adjacent manifest coverage in
@@ -246,5 +257,5 @@ uv run ruff format <changed_python_files>
   complete final write
 - silence trimming, volume normalization, pitch changes, chapter metadata, and
   cover-art embedding are intentionally deferred
-- the page lists generated outputs, but it does not provide waveform editing or
-  per-output metadata editing
+- the page lists generated outputs and supports position seeking, but it does
+  not provide waveform editing or per-output metadata editing

@@ -13,7 +13,7 @@
          application through one centralized string catalog and scale mapping.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 0.33.1
+@version 0.34.0
 """
 
 # ruff: noqa: E501
@@ -648,6 +648,8 @@ _UI_STRINGS = {
         "audio_assembly.reset": "Reset Audio Assembly",
         "audio_assembly.play_audio": "Play Audio",
         "audio_assembly.stop_playing": "Stop Playing",
+        "audio_assembly.rewind_10s": "-10s",
+        "audio_assembly.forward_10s": "+10s",
         "audio_assembly.mode.per_chunk": "Per text chunk",
         "audio_assembly.mode.time_limit": "Time limit",
         "audio_assembly.mode.whole_book": "Whole audiobook",
@@ -664,6 +666,7 @@ _UI_STRINGS = {
         "audio_assembly.status_duration": "Total composed duration: {duration}",
         "audio_assembly.status_mode": "Output mode: {mode}",
         "audio_assembly.error_missing_audio": "The selected audiobook file is missing.",
+        "audio_assembly.output_item": "{file_name} | {duration} | {block_count} audio blocks",
         "home.title": "Home / Project",
         "home.summary_group": "Project Summary",
         "home.exports_group": "Exports",
@@ -1476,6 +1479,8 @@ _UI_STRINGS = {
         "audio_assembly.reset": "Reseteaza Asamblarea Audio",
         "audio_assembly.play_audio": "Reda Audio",
         "audio_assembly.stop_playing": "Opreste Redarea",
+        "audio_assembly.rewind_10s": "-10s",
+        "audio_assembly.forward_10s": "+10s",
         "audio_assembly.mode.per_chunk": "Pe segment text",
         "audio_assembly.mode.time_limit": "Limita de timp",
         "audio_assembly.mode.whole_book": "Audiobook intreg",
@@ -1492,6 +1497,7 @@ _UI_STRINGS = {
         "audio_assembly.status_duration": "Durata compusa totala: {duration}",
         "audio_assembly.status_mode": "Mod iesire: {mode}",
         "audio_assembly.error_missing_audio": "Fisierul audiobook selectat lipseste.",
+        "audio_assembly.output_item": "{file_name} | {duration} | {block_count} blocuri audio",
         "home.title": "Acasa / Proiect",
         "home.summary_group": "Rezumat Proiect",
         "home.exports_group": "Exporturi",

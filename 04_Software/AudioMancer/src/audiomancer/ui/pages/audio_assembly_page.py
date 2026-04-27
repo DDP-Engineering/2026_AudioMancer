@@ -13,12 +13,12 @@
          generated-output inspection, and local preview playback controls.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-25
-@version 0.1.0
+@version 0.3.0
 """
 
 # IMPORTS
 
-from PySide6.QtCore import Signal
+from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
     QComboBox,
     QFormLayout,
@@ -29,6 +29,7 @@ from PySide6.QtWidgets import (
     QPlainTextEdit,
     QProgressBar,
     QPushButton,
+    QSlider,
     QSpinBox,
     QVBoxLayout,
     QWidget,
@@ -50,6 +51,9 @@ class AudioAssemblyPage(QWidget):
     reset_requested = Signal()
     settings_changed = Signal(dict)
     playback_toggle_requested = Signal(str)
+    playback_restart_requested = Signal(str)
+    playback_seek_requested = Signal(int)
+    playback_skip_requested = Signal(int)
 
     def __init__(self, parent=None) -> None:
         """
@@ -59,7 +63,7 @@ class AudioAssemblyPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-25
-        @version    0.1.0
+        @version    0.4.0
         """
         super().__init__(parent)
         self._current_language = "en"
@@ -67,6 +71,9 @@ class AudioAssemblyPage(QWidget):
         self._busy = False
         self._playback_active = False
         self._loading_state = False
+        self._updating_playback_slider = False
+        self._playback_position_ms = 0
+        self._playback_duration_ms = 0
         self._outputs: list[dict[str, object]] = []
 
         layout = QVBoxLayout(self)
@@ -77,9 +84,6 @@ class AudioAssemblyPage(QWidget):
         self._generate_button = QPushButton("Generate Audio", self)
         self._generate_button.clicked.connect(self._emit_generate)
         header_row.addWidget(self._generate_button)
-        self._playback_button = QPushButton("Play Audio", self)
-        self._playback_button.clicked.connect(self._emit_playback_toggle)
-        header_row.addWidget(self._playback_button)
         self._reset_button = QPushButton("Reset Audio Assembly", self)
         self._reset_button.clicked.connect(self.reset_requested.emit)
         header_row.addWidget(self._reset_button)
@@ -132,8 +136,29 @@ class AudioAssemblyPage(QWidget):
         self._outputs_group = QGroupBox("Generated Audiobook Files", self)
         outputs_layout = QVBoxLayout(self._outputs_group)
         self._output_list = QListWidget(self)
-        self._output_list.currentRowChanged.connect(self._apply_control_state)
+        self._output_list.currentRowChanged.connect(self._handle_output_selection_changed)
+        self._output_list.itemDoubleClicked.connect(self._emit_playback_restart)
         outputs_layout.addWidget(self._output_list)
+        playback_row = QHBoxLayout()
+        self._playback_button = QPushButton("Play Audio", self)
+        self._playback_button.clicked.connect(self._emit_playback_toggle)
+        playback_row.addWidget(self._playback_button)
+        self._rewind_button = QPushButton("-10s", self)
+        self._rewind_button.clicked.connect(lambda: self.playback_skip_requested.emit(-10_000))
+        playback_row.addWidget(self._rewind_button)
+        self._playback_position_label = QLabel("00:00", self)
+        playback_row.addWidget(self._playback_position_label)
+        self._playback_slider = QSlider(Qt.Orientation.Horizontal, self)
+        self._playback_slider.setRange(0, 0)
+        self._playback_slider.sliderMoved.connect(self._emit_playback_seek)
+        self._playback_slider.sliderReleased.connect(self._emit_playback_slider_release)
+        playback_row.addWidget(self._playback_slider, 1)
+        self._playback_duration_label = QLabel("00:00", self)
+        playback_row.addWidget(self._playback_duration_label)
+        self._forward_button = QPushButton("+10s", self)
+        self._forward_button.clicked.connect(lambda: self.playback_skip_requested.emit(10_000))
+        playback_row.addWidget(self._forward_button)
+        outputs_layout.addLayout(playback_row)
         layout.addWidget(self._outputs_group, 1)
 
         self._status_group = QGroupBox("Audio Assembly Status", self)
@@ -157,7 +182,7 @@ class AudioAssemblyPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-25
-        @version    0.1.0
+        @version    0.2.0
         """
         self._project_active = is_active
         self._apply_control_state()
@@ -187,6 +212,30 @@ class AudioAssemblyPage(QWidget):
         """
         self._playback_active = is_active
         self._apply_control_state()
+
+    def set_playback_progress(self, position_ms: int, duration_ms: int) -> None:
+        """
+        @brief      Refresh the generated-output playback progress controls.
+        @param[in]  position_ms Current media position in milliseconds.
+        @param[in]  duration_ms Current media duration in milliseconds.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-27
+        @version    0.1.0
+        """
+        resolved_duration = max(0, int(duration_ms))
+        resolved_position = max(0, min(int(position_ms), resolved_duration)) if resolved_duration > 0 else 0
+        self._playback_position_ms = resolved_position
+        self._playback_duration_ms = resolved_duration
+        self._updating_playback_slider = True
+        try:
+            self._playback_slider.setRange(0, resolved_duration)
+            self._playback_slider.setValue(resolved_position)
+        finally:
+            self._updating_playback_slider = False
+        self._playback_position_label.setText(_format_playback_time(resolved_position))
+        self._playback_duration_label.setText(_format_playback_time(resolved_duration))
 
     def set_audio_assembly_state(
         self,
@@ -221,7 +270,7 @@ class AudioAssemblyPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-25
-        @version    0.1.0
+        @version    0.3.0
         """
         self._loading_state = True
         self._stage_status = stage_status
@@ -244,9 +293,11 @@ class AudioAssemblyPage(QWidget):
         for index, output in enumerate(self._outputs):
             if str(output.get("output_key", "")) == str(current_output_key or ""):
                 selected_index = index
-            self._output_list.addItem(_format_output_item(output))
+            self._output_list.addItem(_format_output_item(output, self._current_language))
         if self._outputs:
             self._output_list.setCurrentRow(selected_index)
+        if not self._playback_active:
+            self.set_playback_progress(0, _selected_output_duration_ms(self._outputs, selected_index))
         self._loading_state = False
         self._apply_control_state()
 
@@ -260,6 +311,20 @@ class AudioAssemblyPage(QWidget):
         @version    0.1.0
         """
         row = self._output_list.currentRow()
+        if row < 0 or row >= len(self._outputs):
+            return None
+        return str(self._outputs[row].get("output_key", "")).strip() or None
+
+    def output_key_for_row(self, row: int) -> str | None:
+        """
+        @brief      Return the generated-output key for one list row.
+        @param[in]  row Generated-output list row.
+        @return     Output key or `None`.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-27
+        @version    0.1.0
+        """
         if row < 0 or row >= len(self._outputs):
             return None
         return str(self._outputs[row].get("output_key", "")).strip() or None
@@ -291,7 +356,7 @@ class AudioAssemblyPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-25
-        @version    0.1.0
+        @version    0.3.0
         """
         self._current_language = language
         self._title_label.setText(f"<h2>{ui_state_service.translate('audio_assembly.title', language)}</h2>")
@@ -303,8 +368,28 @@ class AudioAssemblyPage(QWidget):
         self._output_format_label.setText(ui_state_service.translate("audio_assembly.output_format", language))
         self._inter_block_gap_label.setText(ui_state_service.translate("audio_assembly.inter_block_silence", language))
         self._inter_chunk_gap_label.setText(ui_state_service.translate("audio_assembly.inter_chunk_silence", language))
+        per_chunk_index = self._output_mode_combo.findData(audio_assembly_service.OUTPUT_MODE_PER_CHUNK)
+        time_limit_index = self._output_mode_combo.findData(audio_assembly_service.OUTPUT_MODE_TIME_LIMIT)
+        whole_book_index = self._output_mode_combo.findData(audio_assembly_service.OUTPUT_MODE_WHOLE_BOOK)
+        if per_chunk_index >= 0:
+            self._output_mode_combo.setItemText(
+                per_chunk_index,
+                ui_state_service.translate("audio_assembly.mode.per_chunk", language),
+            )
+        if time_limit_index >= 0:
+            self._output_mode_combo.setItemText(
+                time_limit_index,
+                ui_state_service.translate("audio_assembly.mode.time_limit", language),
+            )
+        if whole_book_index >= 0:
+            self._output_mode_combo.setItemText(
+                whole_book_index,
+                ui_state_service.translate("audio_assembly.mode.whole_book", language),
+            )
         self._generate_button.setText(ui_state_service.translate("audio_assembly.generate", language))
         self._reset_button.setText(ui_state_service.translate("audio_assembly.reset", language))
+        self._rewind_button.setText(ui_state_service.translate("audio_assembly.rewind_10s", language))
+        self._forward_button.setText(ui_state_service.translate("audio_assembly.forward_10s", language))
         self._apply_control_state()
 
     def _emit_generate(self) -> None:
@@ -331,6 +416,45 @@ class AudioAssemblyPage(QWidget):
         if output_key:
             self.playback_toggle_requested.emit(output_key)
 
+    def _emit_playback_restart(self, item) -> None:
+        """
+        @brief      Emit playback restart for the double-clicked generated output.
+        @param[in]  item Double-clicked list item.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-27
+        @version    0.1.0
+        """
+        output_key = self.output_key_for_row(self._output_list.row(item))
+        if output_key:
+            self.playback_restart_requested.emit(output_key)
+
+    def _emit_playback_seek(self, position_ms: int) -> None:
+        """
+        @brief      Emit a seek request for slider-drag playback navigation.
+        @param[in]  position_ms Requested absolute playback position.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-27
+        @version    0.1.0
+        """
+        if not self._updating_playback_slider:
+            self.playback_seek_requested.emit(max(0, int(position_ms)))
+
+    def _emit_playback_slider_release(self) -> None:
+        """
+        @brief      Emit the final seek position after slider release.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-27
+        @version    0.1.0
+        """
+        if not self._updating_playback_slider:
+            self.playback_seek_requested.emit(max(0, int(self._playback_slider.value())))
+
     def _handle_settings_changed(self) -> None:
         """
         @brief      Persist UI setting changes and refresh dependent controls.
@@ -338,13 +462,27 @@ class AudioAssemblyPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-25
-        @version    0.1.0
+        @version    0.2.0
         """
         self._max_duration_spin.setEnabled(
             self._output_mode_combo.currentData() == audio_assembly_service.OUTPUT_MODE_TIME_LIMIT
         )
         if not self._loading_state:
             self.settings_changed.emit(self.current_settings_payload())
+        self._apply_control_state()
+
+    def _handle_output_selection_changed(self, *_args) -> None:
+        """
+        @brief      Refresh controls after the selected generated output changes.
+        @param[in]  *_args Optional Qt signal arguments.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-27
+        @version    0.1.0
+        """
+        if not self._loading_state and not self._playback_active:
+            self.set_playback_progress(0, _selected_output_duration_ms(self._outputs, self._output_list.currentRow()))
         self._apply_control_state()
 
     def _apply_control_state(self, *_args) -> None:
@@ -376,6 +514,10 @@ class AudioAssemblyPage(QWidget):
             and self.selected_output_key() is not None
         )
         self._playback_button.setEnabled(can_play)
+        can_seek = can_play and self._playback_active and self._playback_duration_ms > 0
+        self._rewind_button.setEnabled(can_seek)
+        self._playback_slider.setEnabled(can_seek)
+        self._forward_button.setEnabled(can_seek)
         self._playback_button.setText(
             ui_state_service.translate("audio_assembly.stop_playing", self._current_language)
             if self._playback_active
@@ -400,23 +542,41 @@ def _empty_page_state() -> dict[str, object]:
     }
 
 
-def _format_output_item(output: dict[str, object]) -> str:
+def _format_output_item(output: dict[str, object], language: str) -> str:
     """
     @brief      Format one generated-output record for the output list.
     @param[in]  output Generated-output record.
+    @param[in]  language Runtime UI language code.
     @return     Display text for the output list row.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.1.0
+    @version    0.2.0
     """
     duration_seconds = int(float(output.get("duration_seconds", 0.0) or 0.0))
     minutes = duration_seconds // 60
     seconds = duration_seconds % 60
-    return (
-        f"{output.get('file_name', '')} | {minutes:02d}:{seconds:02d} | "
-        f"{int(output.get('block_count', 0))} audio blocks"
+    return ui_state_service.translate("audio_assembly.output_item", language).format(
+        file_name=output.get("file_name", ""),
+        duration=f"{minutes:02d}:{seconds:02d}",
+        block_count=int(output.get("block_count", 0)),
     )
+
+
+def _selected_output_duration_ms(outputs: list[dict[str, object]], selected_index: int) -> int:
+    if selected_index < 0 or selected_index >= len(outputs):
+        return 0
+    return max(0, int(float(outputs[selected_index].get("duration_seconds", 0.0) or 0.0) * 1000))
+
+
+def _format_playback_time(position_ms: int) -> str:
+    total_seconds = max(0, int(position_ms) // 1000)
+    hours = total_seconds // 3600
+    minutes = (total_seconds % 3600) // 60
+    seconds = total_seconds % 60
+    if hours > 0:
+        return f"{hours:02d}:{minutes:02d}:{seconds:02d}"
+    return f"{minutes:02d}:{seconds:02d}"
 
 
 # END OF FILE

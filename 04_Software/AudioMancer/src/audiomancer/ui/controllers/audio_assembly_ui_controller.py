@@ -14,7 +14,7 @@
          synchronization for the Audio Assembly workflow.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-25
-@version 0.2.0
+@version 0.4.0
 """
 
 # IMPORTS
@@ -142,13 +142,45 @@ def handle_playback_toggle_requested(window: "MainWindow", output_key: str) -> N
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.2.0
+    @version    0.4.0
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
-    normalized_output_key = str(output_key).strip()
     if _is_audio_assembly_playback_active(window):
         _stop_audio_assembly_playback(window)
         return
+    _start_audio_assembly_playback(window, output_key, current_language)
+
+
+def handle_playback_restart_requested(window: "MainWindow", output_key: str) -> None:
+    """
+    @brief      Restart playback from the beginning of one generated output file.
+    @param[in]  window Active main window instance.
+    @param[in]  output_key Selected output key.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-27
+    @version    0.1.0
+    """
+    current_language = ui_state_service.current_language_from_settings(window._settings_payload)
+    if _is_audio_assembly_playback_active(window):
+        _stop_audio_assembly_playback(window)
+    _start_audio_assembly_playback(window, output_key, current_language)
+
+
+def _start_audio_assembly_playback(window: "MainWindow", output_key: str, current_language: str) -> None:
+    """
+    @brief      Start playback of one generated Audio Assembly output from the beginning.
+    @param[in]  window Active main window instance.
+    @param[in]  output_key Selected output key.
+    @param[in]  current_language Runtime UI language code.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-27
+    @version    0.1.0
+    """
+    normalized_output_key = str(output_key).strip()
     if window._current_project_root is None:
         return
     output_record = _output_by_key(window, normalized_output_key)
@@ -166,6 +198,8 @@ def handle_playback_toggle_requested(window: "MainWindow", output_key: str) -> N
     try:
         window._audio_assembly_audio_player.setSource(QUrl.fromLocalFile(str(output_path)))
         window._audio_assembly_page.set_playback_active(True)
+        window._audio_assembly_page.set_playback_progress(0, _output_duration_ms(output_record))
+        window._audio_assembly_audio_player.setPosition(0)
         window._audio_assembly_audio_player.play()
     finally:
         window._audio_assembly_playback_starting = False
@@ -179,7 +213,7 @@ def handle_playback_state_changed(window: "MainWindow") -> None:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.2.0
+    @version    0.3.0
     """
     if bool(getattr(window, "_audio_assembly_playback_starting", False)):
         return
@@ -187,6 +221,77 @@ def handle_playback_state_changed(window: "MainWindow") -> None:
         return
     window._audio_assembly_playback_output_key = None
     window._audio_assembly_page.set_playback_active(False)
+    window._audio_assembly_page.set_playback_progress(0, _media_duration_ms(window._audio_assembly_audio_player))
+
+
+def handle_playback_position_changed(window: "MainWindow", position_ms: int) -> None:
+    """
+    @brief      Refresh Audio Assembly page progress after player position changes.
+    @param[in]  window Active main window instance.
+    @param[in]  position_ms Current media position in milliseconds.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-27
+    @version    0.1.0
+    """
+    player = getattr(window, "_audio_assembly_audio_player", None)
+    page = getattr(window, "_audio_assembly_page", None)
+    if player is None or page is None:
+        return
+    page.set_playback_progress(position_ms, _media_duration_ms(player))
+
+
+def handle_playback_duration_changed(window: "MainWindow", duration_ms: int) -> None:
+    """
+    @brief      Refresh Audio Assembly page progress after player duration changes.
+    @param[in]  window Active main window instance.
+    @param[in]  duration_ms Current media duration in milliseconds.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-27
+    @version    0.1.0
+    """
+    player = getattr(window, "_audio_assembly_audio_player", None)
+    page = getattr(window, "_audio_assembly_page", None)
+    if player is None or page is None:
+        return
+    page.set_playback_progress(_media_position_ms(player), duration_ms)
+
+
+def handle_playback_seek_requested(window: "MainWindow", position_ms: int) -> None:
+    """
+    @brief      Seek the current Audio Assembly player to an absolute position.
+    @param[in]  window Active main window instance.
+    @param[in]  position_ms Requested playback position in milliseconds.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-27
+    @version    0.1.0
+    """
+    player = getattr(window, "_audio_assembly_audio_player", None)
+    if player is None:
+        return
+    player.setPosition(_clamped_position_ms(position_ms, _media_duration_ms(player)))
+
+
+def handle_playback_skip_requested(window: "MainWindow", delta_ms: int) -> None:
+    """
+    @brief      Seek the current Audio Assembly player by a relative offset.
+    @param[in]  window Active main window instance.
+    @param[in]  delta_ms Requested relative offset in milliseconds.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-27
+    @version    0.1.0
+    """
+    player = getattr(window, "_audio_assembly_audio_player", None)
+    if player is None:
+        return
+    player.setPosition(_clamped_position_ms(_media_position_ms(player) + int(delta_ms), _media_duration_ms(player)))
 
 
 def _handle_success(window: "MainWindow", result_payload: object) -> None:
@@ -389,14 +494,17 @@ def _stop_audio_assembly_playback(window: "MainWindow") -> None:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.2.0
+    @version    0.3.0
     """
     window._audio_assembly_playback_starting = False
+    duration_ms = 0
     if hasattr(window, "_audio_assembly_audio_player"):
+        duration_ms = _media_duration_ms(window._audio_assembly_audio_player)
         window._audio_assembly_audio_player.stop()
         window._audio_assembly_audio_player.setSource(QUrl())
     if hasattr(window, "_audio_assembly_page"):
         window._audio_assembly_page.set_playback_active(False)
+        window._audio_assembly_page.set_playback_progress(0, duration_ms)
     window._audio_assembly_playback_output_key = None
 
 
@@ -478,6 +586,29 @@ def _stage_rank(stage: str) -> int:
         return stages.index(stage)
     except ValueError:
         return 0
+
+
+def _output_duration_ms(output_record: dict[str, object] | None) -> int:
+    if not isinstance(output_record, dict):
+        return 0
+    return max(0, int(float(output_record.get("duration_seconds", 0.0) or 0.0) * 1000))
+
+
+def _media_position_ms(player) -> int:
+    position = getattr(player, "position", None)
+    return max(0, int(position())) if callable(position) else 0
+
+
+def _media_duration_ms(player) -> int:
+    duration = getattr(player, "duration", None)
+    return max(0, int(duration())) if callable(duration) else 0
+
+
+def _clamped_position_ms(position_ms: int, duration_ms: int) -> int:
+    resolved_duration = max(0, int(duration_ms))
+    if resolved_duration <= 0:
+        return 0
+    return max(0, min(int(position_ms), resolved_duration))
 
 
 # END OF FILE

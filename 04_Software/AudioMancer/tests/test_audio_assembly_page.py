@@ -13,7 +13,7 @@
          and playback button state on the Audio Assembly page.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-25
-@version 0.1.0
+@version 0.4.0
 """
 
 # IMPORTS
@@ -54,7 +54,7 @@ def test_audio_assembly_page_renders_outputs_progress_and_playback_state(qtbot) 
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.1.0
+    @version    0.2.0
     """
     page = AudioAssemblyPage()
     qtbot.addWidget(page)
@@ -89,8 +89,175 @@ def test_audio_assembly_page_renders_outputs_progress_and_playback_state(qtbot) 
     assert page._progress_bar.value() == 100
     assert page._output_list.count() == 1
     assert page._playback_button.isEnabled() is True
+    assert page._playback_slider.maximum() == 75_000
+    assert page._playback_duration_label.text() == "01:15"
     page.set_playback_active(True)
     assert page._playback_button.text() == "Stop Playing"
+
+
+def test_audio_assembly_page_updates_and_emits_playback_progress(qtbot) -> None:
+    """
+    @brief      Verify playback progress controls display and emit seek requests.
+    @param[in]  qtbot Qt test helper fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-27
+    @version    0.1.0
+    """
+    page = AudioAssemblyPage()
+    qtbot.addWidget(page)
+    page.set_project_active(True)
+    page.set_audio_assembly_state(
+        settings=audio_assembly_service.default_audio_assembly_settings(),
+        outputs=[
+            {
+                "output_key": "audiobook",
+                "file_name": "audiobook.wav",
+                "audio_relative_path": "audiobook/audiobook.wav",
+                "block_count": 3,
+                "chunk_ids": ["chunk-0001"],
+                "duration_seconds": 3661.0,
+                "generated": True,
+                "generated_at": "2026-04-25T00:00:00+00:00",
+                "output_format": "wav",
+            }
+        ],
+        current_output_key="audiobook",
+        notes=["Ready."],
+        status_lines=["Generated output files: 1/1"],
+        progress_current=1,
+        progress_total=1,
+        progress_percent=100,
+        stage_status=audio_assembly_service.AUDIO_ASSEMBLY_STAGE_COMPLETED,
+        can_generate=True,
+        can_reset=True,
+        can_play_selected=True,
+    )
+    seeks: list[int] = []
+    skips: list[int] = []
+    page.playback_seek_requested.connect(seeks.append)
+    page.playback_skip_requested.connect(skips.append)
+
+    page.set_playback_progress(12_345, 3_661_000)
+    page.set_playback_active(True)
+    page._playback_slider.setValue(40_000)
+    page._emit_playback_slider_release()
+    page._rewind_button.click()
+    page._forward_button.click()
+
+    assert page._playback_position_label.text() == "00:12"
+    assert page._playback_duration_label.text() == "01:01:01"
+    assert page._playback_slider.value() == 40_000
+    assert seeks == [40_000]
+    assert skips == [-10_000, 10_000]
+
+
+def test_audio_assembly_page_double_click_emits_restart_for_clicked_output(qtbot) -> None:
+    """
+    @brief      Verify double-click playback uses the clicked output row.
+    @param[in]  qtbot Qt test helper fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-27
+    @version    0.1.0
+    """
+    page = AudioAssemblyPage()
+    qtbot.addWidget(page)
+    page.set_project_active(True)
+    page.set_audio_assembly_state(
+        settings=audio_assembly_service.default_audio_assembly_settings(),
+        outputs=[
+            {
+                "output_key": "part-0001",
+                "file_name": "part-0001.wav",
+                "audio_relative_path": "audiobook/part-0001.wav",
+                "block_count": 1,
+                "chunk_ids": ["chunk-0001"],
+                "duration_seconds": 10.0,
+                "generated": True,
+                "generated_at": "2026-04-25T00:00:00+00:00",
+                "output_format": "wav",
+            },
+            {
+                "output_key": "part-0002",
+                "file_name": "part-0002.wav",
+                "audio_relative_path": "audiobook/part-0002.wav",
+                "block_count": 1,
+                "chunk_ids": ["chunk-0002"],
+                "duration_seconds": 20.0,
+                "generated": True,
+                "generated_at": "2026-04-25T00:00:00+00:00",
+                "output_format": "wav",
+            },
+        ],
+        current_output_key="part-0001",
+        notes=["Ready."],
+        status_lines=["Generated output files: 2/2"],
+        progress_current=2,
+        progress_total=2,
+        progress_percent=100,
+        stage_status=audio_assembly_service.AUDIO_ASSEMBLY_STAGE_COMPLETED,
+        can_generate=True,
+        can_reset=True,
+        can_play_selected=True,
+    )
+    restarts: list[str] = []
+    page.playback_restart_requested.connect(restarts.append)
+
+    page._emit_playback_restart(page._output_list.item(1))
+
+    assert restarts == ["part-0002"]
+
+
+def test_audio_assembly_page_localizes_mode_and_output_rows(qtbot) -> None:
+    """
+    @brief      Verify runtime language refresh covers mode labels and output rows.
+    @param[in]  qtbot Qt test helper fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-27
+    @version    0.1.0
+    """
+    page = AudioAssemblyPage()
+    qtbot.addWidget(page)
+    page.apply_language("ro")
+    page.set_audio_assembly_state(
+        settings=audio_assembly_service.default_audio_assembly_settings(),
+        outputs=[
+            {
+                "output_key": "audiobook",
+                "file_name": "audiobook.wav",
+                "audio_relative_path": "audiobook/audiobook.wav",
+                "block_count": 3,
+                "chunk_ids": ["chunk-0001"],
+                "duration_seconds": 75.0,
+                "generated": True,
+                "generated_at": "2026-04-25T00:00:00+00:00",
+                "output_format": "wav",
+            }
+        ],
+        current_output_key="audiobook",
+        notes=["Gata."],
+        status_lines=["Fisiere de iesire generate: 1/1"],
+        progress_current=1,
+        progress_total=1,
+        progress_percent=100,
+        stage_status=audio_assembly_service.AUDIO_ASSEMBLY_STAGE_COMPLETED,
+        can_generate=True,
+        can_reset=True,
+        can_play_selected=True,
+    )
+
+    assert (
+        page._output_mode_combo.itemText(
+            page._output_mode_combo.findData(audio_assembly_service.OUTPUT_MODE_WHOLE_BOOK)
+        )
+        == "Audiobook intreg"
+    )
+    assert "blocuri audio" in page._output_list.item(0).text()
 
 
 # END OF FILE

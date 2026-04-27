@@ -14,7 +14,7 @@
          generation through root-level state and report artifacts.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-25
-@version 0.3.1
+@version 0.4.0
 """
 
 # IMPORTS
@@ -56,6 +56,7 @@ OUTPUT_FORMAT_WAV = "wav"
 
 _MODE = "audio_composition"
 _TEMP_SUFFIX = ".tmp"
+_WAV_COPY_FRAME_CHUNK_SIZE = 65_536
 _WAV_SAMPLE_WIDTH_BY_FORMAT = {
     1: 1,
     2: 2,
@@ -219,14 +220,25 @@ def has_persisted_audio_assembly(project_root: str | Path) -> bool:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.1.0
+    @version    0.2.0
     """
     output_root = Path(project_root) / config.AUDIOBOOK_OUTPUT_FOLDER_NAME
+    operation_state = load_operation_state(project_root)
+    has_runtime_state = False
+    if isinstance(operation_state, dict):
+        has_runtime_state = str(operation_state.get("status", "")).strip() != AUDIO_ASSEMBLY_STAGE_NOT_STARTED or any(
+            (
+                bool(operation_state.get("output_paths")),
+                bool(operation_state.get("artifact_paths")),
+                int(operation_state.get("progress_current", 0) or 0) > 0,
+                int(operation_state.get("progress_total", 0) or 0) > 0,
+            )
+        )
     return any(
         (
-            load_operation_state(project_root) is not None,
             load_audio_assembly_report(project_root) is not None,
-            output_root.is_dir() and any(output_root.iterdir()),
+            has_runtime_state,
+            output_root.is_dir() and any(path.is_file() for path in output_root.rglob("*")),
         )
     )
 
@@ -264,7 +276,7 @@ def start_or_continue_composition(
     @exception  OperationCancelledError Raised when the operator cancels the run.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.1.0
+    @version    0.2.0
     """
     resolved_project_root = Path(project_root)
     settings = normalize_audio_assembly_settings(manifest.get("audio_assembly_settings"))
@@ -277,7 +289,7 @@ def start_or_continue_composition(
     output_plan = _build_output_plan(resolved_project_root, approved_blocks, settings)
     completed_records = _completed_records_for_resume(resolved_project_root, existing_state, input_fingerprint)
     started_at = _resolve_started_at(existing_state)
-    warnings: list[dict[str, object]] = []
+    warnings = _warnings_for_output_plan(output_plan)
     report = _build_report(
         settings,
         approved_blocks,
@@ -297,14 +309,6 @@ def start_or_continue_composition(
             if output_item["output_key"] in {str(record.get("output_key", "")) for record in completed_records}:
                 continue
             raise_if_cancelled(cancel_requested)
-            if bool(output_item.get("over_limit_warning", False)):
-                warnings.append(
-                    {
-                        "code": "single_block_exceeds_limit",
-                        "message": "One source audio block exceeds the configured time limit.",
-                        "output_key": output_item["output_key"],
-                    }
-                )
             output_record = _compose_output_file(resolved_project_root, output_item, settings, cancel_requested)
             completed_records.append(output_record)
             report = _build_report(
@@ -413,7 +417,7 @@ def _build_output_plan(
     @exception  ValueError Raised when no playable blocks exist.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.2.0
+    @version    0.3.0
     """
     playable_blocks = [
         _enrich_block_duration(project_root, block) for block in audio_blocks if _is_assembly_block(block)
@@ -423,7 +427,7 @@ def _build_output_plan(
         return _with_reference_audio_path(_plan_per_chunk_outputs(playable_blocks), playable_blocks)
     if output_mode == OUTPUT_MODE_TIME_LIMIT:
         return _with_reference_audio_path(
-            _plan_time_limited_outputs(playable_blocks, int(settings["max_duration_minutes"])),
+            _plan_time_limited_outputs(playable_blocks, int(settings["max_duration_minutes"]), settings),
             playable_blocks,
         )
     return _with_reference_audio_path(
@@ -467,16 +471,21 @@ def _plan_per_chunk_outputs(blocks: list[dict[str, object]]) -> list[dict[str, o
     return output_plan
 
 
-def _plan_time_limited_outputs(blocks: list[dict[str, object]], max_minutes: int) -> list[dict[str, object]]:
+def _plan_time_limited_outputs(
+    blocks: list[dict[str, object]],
+    max_minutes: int,
+    settings: AudioAssemblySettings,
+) -> list[dict[str, object]]:
     """
     @brief      Pack sequential blocks into duration-limited output parts.
     @param[in]  blocks Playable Audio Blocks.
     @param[in]  max_minutes Maximum requested part duration.
+    @param[in]  settings Normalized Audio Assembly settings.
     @return     Ordered time-limited output plan.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.1.0
+    @version    0.2.0
     """
     max_seconds = max(1, int(max_minutes) * 60)
     output_plan: list[dict[str, object]] = []
@@ -484,12 +493,16 @@ def _plan_time_limited_outputs(blocks: list[dict[str, object]], max_minutes: int
     current_seconds = 0.0
     for block in blocks:
         block_seconds = float(block.get("duration_seconds", 0.0))
-        if current_blocks and current_seconds + block_seconds > max_seconds:
+        added_seconds = block_seconds
+        if current_blocks:
+            added_seconds += _automatic_gap_ms(current_blocks[-1], block, settings) / 1000.0
+        if current_blocks and current_seconds + added_seconds > max_seconds:
             output_plan.append(_time_part_record(len(output_plan) + 1, current_blocks, False))
             current_blocks = []
             current_seconds = 0.0
+            added_seconds = block_seconds
         current_blocks.append(block)
-        current_seconds += block_seconds
+        current_seconds += added_seconds
         if block_seconds > max_seconds:
             output_plan.append(_time_part_record(len(output_plan) + 1, current_blocks, True))
             current_blocks = []
@@ -551,6 +564,50 @@ def _with_reference_audio_path(
     return output_plan
 
 
+def _warnings_for_output_plan(output_plan: list[dict[str, object]]) -> list[dict[str, object]]:
+    """
+    @brief      Build deterministic warning records from one output plan.
+    @param[in]  output_plan Planned output records.
+    @return     Warning records for the planned outputs.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-27
+    @version    0.1.0
+    """
+    return [
+        {
+            "code": "single_block_exceeds_limit",
+            "message": "One source audio block exceeds the configured time limit.",
+            "output_key": str(output_item.get("output_key", "")),
+        }
+        for output_item in output_plan
+        if bool(output_item.get("over_limit_warning", False))
+    ]
+
+
+def _automatic_gap_ms(
+    previous_block: dict[str, object],
+    current_block: dict[str, object],
+    settings: AudioAssemblySettings,
+) -> int:
+    """
+    @brief      Resolve automatic silence inserted between two adjacent blocks.
+    @param[in]  previous_block Previous planned Audio Block.
+    @param[in]  current_block Current planned Audio Block.
+    @param[in]  settings Normalized Audio Assembly settings.
+    @return     Automatic gap in milliseconds.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-27
+    @version    0.1.0
+    """
+    if _is_pause_block(previous_block) or _is_pause_block(current_block):
+        return 0
+    if str(current_block.get("chunk_id", "")) != str(previous_block.get("chunk_id", "")):
+        return int(settings["inter_chunk_silence_ms"])
+    return int(settings["inter_block_silence_ms"])
+
+
 def _compose_output_file(
     project_root: Path,
     output_item: dict[str, object],
@@ -567,7 +624,7 @@ def _compose_output_file(
     @exception  RuntimeError Raised when source WAV files are invalid.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.3.0
+    @version    0.4.0
     """
     output_root = project_root / config.AUDIOBOOK_OUTPUT_FOLDER_NAME
     output_root.mkdir(parents=True, exist_ok=True)
@@ -585,25 +642,19 @@ def _compose_output_file(
     total_frames = 0
     with wave.open(str(temp_path), "wb") as output_wav:
         output_wav.setparams(reference_params)
-        previous_chunk_id = None
         previous_block = None
         for block_index, block in enumerate(blocks):
             raise_if_cancelled(cancel_requested)
             source_path = _audio_path(project_root, block)
             if source_path is None and not _is_pause_block(block):
                 continue
-            if block_index > 0 and not _is_pause_block(block) and not _is_pause_block(previous_block or {}):
-                gap_ms = (
-                    int(settings["inter_chunk_silence_ms"])
-                    if str(block.get("chunk_id", "")) != str(previous_chunk_id)
-                    else int(settings["inter_block_silence_ms"])
-                )
+            if block_index > 0 and previous_block is not None:
+                gap_ms = _automatic_gap_ms(previous_block, block, settings)
                 silence_frames = _write_silence(output_wav, gap_ms, reference_params)
                 total_frames += silence_frames
             if _is_pause_block(block):
                 pause_frames = _write_silence(output_wav, _pause_duration_ms(block), reference_params)
                 total_frames += pause_frames
-                previous_chunk_id = str(block.get("chunk_id", ""))
                 previous_block = block
                 continue
             assert source_path is not None
@@ -612,10 +663,7 @@ def _compose_output_file(
                 comparable_params = params[:3], params[4:]
                 if comparable_params != expected_params:
                     raise RuntimeError("Audio Assembly found incompatible source WAV parameters.")
-                frame_count = source_wav.getnframes()
-                output_wav.writeframes(source_wav.readframes(frame_count))
-                total_frames += frame_count
-                previous_chunk_id = str(block.get("chunk_id", ""))
+                total_frames += _copy_wav_frames(source_wav, output_wav, cancel_requested)
                 previous_block = block
     if output_path.is_file():
         output_path.unlink()
@@ -657,6 +705,36 @@ def _write_silence(output_wav: wave.Wave_write, gap_ms: int, params) -> int:
         return 0
     output_wav.writeframes(b"\x00" * frame_count * channels * sample_width)
     return frame_count
+
+
+def _copy_wav_frames(source_wav, output_wav: wave.Wave_write, cancel_requested=None) -> int:
+    """
+    @brief      Copy source WAV frames to the output in bounded chunks.
+    @param[in]  source_wav Active source WAV reader.
+    @param[in]  output_wav Active output WAV writer.
+    @param[in]  cancel_requested Optional cancellation callback.
+    @return     Number of frames copied.
+    @exception  OperationCancelledError Raised when the operator cancels the run.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-27
+    @version    0.1.0
+    """
+    frame_size = max(int(source_wav.getnchannels()) * int(source_wav.getsampwidth()), 1)
+    remaining_frames = int(source_wav.getnframes())
+    copied_frames = 0
+    while remaining_frames > 0:
+        raise_if_cancelled(cancel_requested)
+        frames_to_read = min(remaining_frames, _WAV_COPY_FRAME_CHUNK_SIZE)
+        frame_data = source_wav.readframes(frames_to_read)
+        if not frame_data:
+            break
+        output_wav.writeframes(frame_data)
+        frames_read = len(frame_data) // frame_size
+        copied_frames += frames_read
+        remaining_frames -= frames_read
+        if frames_read <= 0:
+            break
+    return copied_frames
 
 
 def _build_report(

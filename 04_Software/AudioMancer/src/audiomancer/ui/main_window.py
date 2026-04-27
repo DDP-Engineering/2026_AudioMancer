@@ -14,7 +14,7 @@
          so the window remains a thin coordinator.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 1.36.0
+@version 1.38.0
 """
 
 # IMPORTS
@@ -147,7 +147,7 @@ class MainWindow(QMainWindow):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-06
-        @version    0.17.2
+        @version    0.19.0
         """
         super().__init__(parent)
         self.setWindowTitle(misc_ui_controller.build_window_title())
@@ -202,6 +202,12 @@ class MainWindow(QMainWindow):
         self._audio_assembly_audio_player.setAudioOutput(self._audio_assembly_audio_output)
         self._audio_assembly_audio_player.playbackStateChanged.connect(
             lambda _state: audio_assembly_ui_controller.handle_playback_state_changed(self)
+        )
+        self._audio_assembly_audio_player.positionChanged.connect(
+            lambda position_ms: audio_assembly_ui_controller.handle_playback_position_changed(self, position_ms)
+        )
+        self._audio_assembly_audio_player.durationChanged.connect(
+            lambda duration_ms: audio_assembly_ui_controller.handle_playback_duration_changed(self, duration_ms)
         )
         self._audio_assembly_playback_output_key: str | None = None
 
@@ -1034,6 +1040,15 @@ class MainWindow(QMainWindow):
         )
         self._audio_assembly_page.playback_toggle_requested.connect(
             lambda output_key: audio_assembly_ui_controller.handle_playback_toggle_requested(self, output_key)
+        )
+        self._audio_assembly_page.playback_restart_requested.connect(
+            lambda output_key: audio_assembly_ui_controller.handle_playback_restart_requested(self, output_key)
+        )
+        self._audio_assembly_page.playback_seek_requested.connect(
+            lambda position_ms: audio_assembly_ui_controller.handle_playback_seek_requested(self, position_ms)
+        )
+        self._audio_assembly_page.playback_skip_requested.connect(
+            lambda delta_ms: audio_assembly_ui_controller.handle_playback_skip_requested(self, delta_ms)
         )
 
         pages = {

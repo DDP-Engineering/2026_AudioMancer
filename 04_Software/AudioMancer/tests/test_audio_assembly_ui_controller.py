@@ -13,7 +13,7 @@
          playback, and reset synchronization for the Audio Assembly controller.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-25
-@version 0.2.0
+@version 0.4.0
 """
 
 # IMPORTS
@@ -138,7 +138,7 @@ def test_audio_assembly_ui_controller_starts_selected_output(tmp_path) -> None:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.1.0
+    @version    0.2.0
     """
     window = _controller_window(tmp_path)
     output_paths = _write_audio_assembly_report(window._current_project_root)
@@ -148,7 +148,79 @@ def test_audio_assembly_ui_controller_starts_selected_output(tmp_path) -> None:
     assert window._audio_assembly_audio_player.play_count == 1
     assert window._audio_assembly_audio_player.source.toLocalFile() == output_paths["part-0002"].as_posix()
     assert window._audio_assembly_page.playback_active is True
+    assert window._audio_assembly_page.playback_progress == (0, 1000)
     assert window._audio_assembly_playback_output_key == "part-0002"
+
+
+def test_audio_assembly_ui_controller_restarts_clicked_output_from_beginning(tmp_path) -> None:
+    """
+    @brief      Verify double-click restart stops active playback and starts the clicked output.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-27
+    @version    0.1.0
+    """
+    window = _controller_window(tmp_path)
+    output_paths = _write_audio_assembly_report(window._current_project_root)
+    window._audio_assembly_playback_output_key = "part-0001"
+    window._audio_assembly_audio_player.position_ms = 30_000
+
+    audio_assembly_ui_controller.handle_playback_restart_requested(window, "part-0002")
+
+    assert window._audio_assembly_audio_player.stop_count == 1
+    assert window._audio_assembly_audio_player.play_count == 1
+    assert window._audio_assembly_audio_player.source.toLocalFile() == output_paths["part-0002"].as_posix()
+    assert window._audio_assembly_audio_player.position_ms == 0
+    assert window._audio_assembly_page.playback_active is True
+    assert window._audio_assembly_page.playback_progress == (0, 1000)
+    assert window._audio_assembly_playback_output_key == "part-0002"
+
+
+def test_audio_assembly_ui_controller_updates_playback_progress(tmp_path) -> None:
+    """
+    @brief      Verify media position and duration callbacks refresh the page progress bar.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-27
+    @version    0.1.0
+    """
+    window = _controller_window(tmp_path)
+    window._audio_assembly_audio_player.duration_ms = 60_000
+    window._audio_assembly_audio_player.position_ms = 12_000
+
+    audio_assembly_ui_controller.handle_playback_position_changed(window, 14_000)
+    assert window._audio_assembly_page.playback_progress == (14_000, 60_000)
+
+    audio_assembly_ui_controller.handle_playback_duration_changed(window, 90_000)
+    assert window._audio_assembly_page.playback_progress == (12_000, 90_000)
+
+
+def test_audio_assembly_ui_controller_seeks_and_skips_with_clamping(tmp_path) -> None:
+    """
+    @brief      Verify seek and skip requests clamp to the current media duration.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-27
+    @version    0.1.0
+    """
+    window = _controller_window(tmp_path)
+    window._audio_assembly_audio_player.duration_ms = 60_000
+    window._audio_assembly_audio_player.position_ms = 20_000
+
+    audio_assembly_ui_controller.handle_playback_skip_requested(window, 10_000)
+    assert window._audio_assembly_audio_player.position_ms == 30_000
+
+    audio_assembly_ui_controller.handle_playback_skip_requested(window, -40_000)
+    assert window._audio_assembly_audio_player.position_ms == 0
+
+    audio_assembly_ui_controller.handle_playback_seek_requested(window, 70_000)
+    assert window._audio_assembly_audio_player.position_ms == 60_000
 
 
 def test_audio_assembly_ui_controller_ignores_startup_stopped_state(tmp_path) -> None:
@@ -284,10 +356,11 @@ class _AudioAssemblyPageDouble:
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-25
-        @version    0.1.0
+        @version    0.2.0
         """
         self.busy = False
         self.playback_active = False
+        self.playback_progress = (0, 0)
 
     def set_busy(self, is_busy: bool) -> None:
         """
@@ -313,6 +386,19 @@ class _AudioAssemblyPageDouble:
         """
         self.playback_active = is_active
 
+    def set_playback_progress(self, position_ms: int, duration_ms: int) -> None:
+        """
+        @brief      Capture playback progress updates.
+        @param[in]  position_ms Current playback position in milliseconds.
+        @param[in]  duration_ms Current playback duration in milliseconds.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-27
+        @version    0.1.0
+        """
+        self.playback_progress = (position_ms, duration_ms)
+
 
 class _AudioAssemblyPlayerDouble:
     """
@@ -330,12 +416,14 @@ class _AudioAssemblyPlayerDouble:
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-25
-        @version    0.1.0
+        @version    0.2.0
         """
         self.state = QMediaPlayer.PlaybackState.StoppedState
         self.source = None
         self.stop_count = 0
         self.play_count = 0
+        self.position_ms = 0
+        self.duration_ms = 0
 
     def stop(self) -> None:
         """
@@ -372,6 +460,40 @@ class _AudioAssemblyPlayerDouble:
         """
         self.play_count += 1
         self.state = QMediaPlayer.PlaybackState.PlayingState
+
+    def setPosition(self, position_ms: int) -> None:
+        """
+        @brief      Capture seek requests.
+        @param[in]  position_ms New playback position in milliseconds.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-27
+        @version    0.1.0
+        """
+        self.position_ms = int(position_ms)
+
+    def position(self) -> int:
+        """
+        @brief      Return the captured playback position.
+        @return     Current playback position in milliseconds.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-27
+        @version    0.1.0
+        """
+        return self.position_ms
+
+    def duration(self) -> int:
+        """
+        @brief      Return the captured playback duration.
+        @return     Current playback duration in milliseconds.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-27
+        @version    0.1.0
+        """
+        return self.duration_ms
 
     def playbackState(self):
         """
