@@ -14,7 +14,7 @@
          VoiceWeaver runtime discovery data.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-20
-@version 3.9.0
+@version 3.10.0
 """
 
 # IMPORTS
@@ -53,8 +53,9 @@ def build_narrator_definition_state(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-18
-    @version    1.9.0
+    @version    2.0.0
     """
+    _ = initialize_defaults
     preview_text_character_limit = _preview_text_character_limit(settings_payload)
     if project_root is None or manifest is None:
         return {
@@ -80,8 +81,8 @@ def build_narrator_definition_state(
             "preview_available": False,
             "status_lines": [ui_state_service.translate("narator_voice.note_no_project", language)],
         }
-    if not initialize_defaults and not (Path(project_root) / config.NARRATOR_PROFILE_FILE_NAME).is_file():
-        return _empty_project_state(project_root, manifest, language, preview_text_character_limit)
+    if not (Path(project_root) / config.NARRATOR_PROFILE_FILE_NAME).is_file():
+        narrator_definition_service.ensure_narrator_definition_files(project_root)
 
     discovered_models = (
         settings_payload.get("tts_runtime_discovered_models", []) if isinstance(settings_payload, dict) else []

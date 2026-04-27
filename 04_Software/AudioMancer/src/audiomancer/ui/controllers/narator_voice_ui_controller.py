@@ -14,7 +14,7 @@
          project-local narrator profile editing.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-18
-@version 3.10.0
+@version 3.11.0
 """
 
 # IMPORTS
@@ -32,6 +32,7 @@ from audiomancer.services import (
     operation_runtime_service,
     project_workspace_service,
     text_cleanup_state_service,
+    tts_budget_service,
     ui_state_service,
     voiceweaver_runtime_service,
 )
@@ -420,6 +421,10 @@ def handle_generate_sample_requested(window: "MainWindow", profile_id: str) -> N
             "narator_voice.error_generation_missing_audio",
             current_language,
         ),
+        "preview_text_over_budget": ui_state_service.translate(
+            "narator_voice.error_preview_text_over_budget",
+            current_language,
+        ),
     }
     operation_runner_controller.start_threaded_operation(
         window,
@@ -603,7 +608,7 @@ def _generate_and_store_sample(
     @exception  RuntimeError Raised when VoiceWeaver fails or does not expose downloadable audio.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-18
-    @version    1.3.0
+    @version    1.4.0
     """
     _ = cancel_requested
     _emit_sample_progress(
@@ -628,6 +633,16 @@ def _generate_and_store_sample(
         tts_plan,
         discovered_models,
     )
+    budget_payload = tts_budget_service.resolve_cached_tts_budget(discovered_models)
+    safe_word_count = tts_budget_service.estimated_safe_word_count(budget_payload)
+    preview_word_count = tts_budget_service.estimated_word_count(preview_text)
+    if preview_word_count > safe_word_count:
+        raise RuntimeError(
+            progress_messages["preview_text_over_budget"].format(
+                word_count=preview_word_count,
+                safe_word_count=safe_word_count,
+            )
+        )
     if not bool(generation_request.get("can_generate", False)):
         raise RuntimeError(str(generation_request.get("unavailable_reason", "")))
     narrator_definition_service.delete_profile_sample(
@@ -696,6 +711,9 @@ def _generate_and_store_sample(
             model_parameters=dict(generation_request.get("model_parameters", {}))
             if isinstance(generation_request.get("model_parameters"), dict)
             else None,
+            supported_languages=list(generation_request.get("supported_languages", []))
+            if isinstance(generation_request.get("supported_languages"), list)
+            else None,
             timeout_seconds=preview_timeout_seconds,
         )
     else:
@@ -707,6 +725,9 @@ def _generate_and_store_sample(
             str(profile_payload.get("prompt_text", "")),
             model_parameters=dict(generation_request.get("model_parameters", {}))
             if isinstance(generation_request.get("model_parameters"), dict)
+            else None,
+            supported_languages=list(generation_request.get("supported_languages", []))
+            if isinstance(generation_request.get("supported_languages"), list)
             else None,
             timeout_seconds=preview_timeout_seconds,
         )

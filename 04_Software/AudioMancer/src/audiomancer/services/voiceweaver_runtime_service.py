@@ -14,7 +14,7 @@
          by the TTS Settings dialog and Narrator workflow.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-23
-@version 0.9.1
+@version 0.10.0
 """
 
 # IMPORTS
@@ -130,7 +130,11 @@ def _send_json_request(
     return json.loads(response_body)
 
 
-def _add_tts_language_field(payload: dict[str, object], language: str) -> None:
+def _add_tts_language_field(
+    payload: dict[str, object],
+    language: str,
+    supported_languages: list[str] | None = None,
+) -> None:
     """
     @brief      Add the VoiceWeaver TTS language field when the selected language should be explicit.
     @param[in]  payload Mutable outbound TTS request payload.
@@ -139,10 +143,19 @@ def _add_tts_language_field(payload: dict[str, object], language: str) -> None:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.1.0
+    @version    0.2.0
     """
     normalized_language = str(language).strip()
-    if normalized_language and normalized_language != "ro":
+    normalized_supported_languages = (
+        {str(item).strip() for item in supported_languages if str(item).strip()}
+        if supported_languages is not None
+        else None
+    )
+    if normalized_language == "ro":
+        return
+    if normalized_supported_languages is not None and normalized_language not in normalized_supported_languages:
+        return
+    if normalized_language:
         payload["language"] = normalized_language
 
 
@@ -814,6 +827,7 @@ def generate_custom_voice(
     text: str,
     instruct: str = "",
     model_parameters: dict[str, object] | None = None,
+    supported_languages: list[str] | None = None,
     timeout_seconds: int = config.DEFAULT_TTS_CONNECT_TIMEOUT_SECONDS,
 ) -> dict[str, object]:
     """
@@ -830,13 +844,13 @@ def generate_custom_voice(
     @exception  RuntimeError Raised when the runtime request fails.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-16
-    @version    1.1.0
+    @version    1.2.0
     """
     payload: dict[str, object] = {
         "speaker": str(speaker).strip(),
         "text": str(text).strip(),
     }
-    _add_tts_language_field(payload, language)
+    _add_tts_language_field(payload, language, supported_languages)
     if str(instruct).strip():
         payload["instruct"] = str(instruct).strip()
     normalized_model_parameters = _normalize_model_parameters(model_parameters)
@@ -855,6 +869,7 @@ def generate_voice_design(
     text: str,
     voice_description: str,
     model_parameters: dict[str, object] | None = None,
+    supported_languages: list[str] | None = None,
     timeout_seconds: int = config.DEFAULT_TTS_CONNECT_TIMEOUT_SECONDS,
 ) -> dict[str, object]:
     """
@@ -870,13 +885,13 @@ def generate_voice_design(
     @exception  RuntimeError Raised when the runtime request fails.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-16
-    @version    1.1.0
+    @version    1.2.0
     """
     payload = {
         "text": str(text).strip(),
         "voice_description": str(voice_description).strip(),
     }
-    _add_tts_language_field(payload, language)
+    _add_tts_language_field(payload, language, supported_languages)
     normalized_model_parameters = _normalize_model_parameters(model_parameters)
     if normalized_model_parameters:
         payload["model_parameters"] = normalized_model_parameters

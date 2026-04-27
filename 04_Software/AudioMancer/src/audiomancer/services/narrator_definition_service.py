@@ -14,7 +14,7 @@
          metadata records whether that sample is selected.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-20
-@version 3.11.0
+@version 3.12.0
 """
 
 # IMPORTS
@@ -346,7 +346,7 @@ def select_narrator_profile(
     @exception  ValueError Raised when the target profile is missing.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-17
-    @version    1.3.0
+    @version    1.4.0
     """
     normalized_profile_id = str(profile_id or "").strip()
     profiles = load_profiles(project_root)
@@ -688,6 +688,9 @@ def profile_generation_request(
             model_id=resolved_model_id,
             source_model_id=resolved_model_id,
             speaker_id=speaker_id,
+            supported_languages=[
+                str(item).strip() for item in custom_voice_model.get("supported_languages", []) if str(item).strip()
+            ],
         )
 
     voice_designer_model = _first_model(capability_matrix.get("qwen_voice_designer_models", []))
@@ -710,6 +713,9 @@ def profile_generation_request(
         model_id=resolved_model_id,
         source_model_id=resolved_model_id,
         speaker_id=None,
+        supported_languages=[
+            str(item).strip() for item in voice_designer_model.get("supported_languages", []) if str(item).strip()
+        ],
     )
 
 
@@ -1524,6 +1530,7 @@ def _build_generation_request(
     model_id: str | None = None,
     source_model_id: str | None = None,
     speaker_id: str | None = None,
+    supported_languages: list[str] | None = None,
 ) -> dict[str, object]:
     """
     @brief      Build the generation request.
@@ -1539,7 +1546,7 @@ def _build_generation_request(
     @return     Derived helper result.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.1.0
+    @version    0.2.0
     """
     return {
         "runtime_available": runtime_available,
@@ -1549,6 +1556,7 @@ def _build_generation_request(
         "model_id": model_id,
         "source_model_id": source_model_id,
         "speaker_id": speaker_id,
+        "supported_languages": [] if supported_languages is None else list(supported_languages),
         "language": language,
         "prompt_text": prompt_text,
     }

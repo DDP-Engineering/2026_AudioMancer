@@ -8,6 +8,21 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
 
 All notable changes to this project will be documented in this file.
 
+## [0.33.3] - 2026-04-27
+
+### Changed
+
+- changed Narator Voice first-access behavior so narrator profile and selection
+  metadata are initialized when the page is opened
+- changed narrator sample playback labels to `Play sample` / `Stop play` and
+  updated the runtime Romanian translations
+- changed narrator sample generation to reject preview text that exceeds the
+  runtime-derived TTS word budget before sending the generation request
+- changed VoiceWeaver language-field handling so Romanian and languages not
+  reported by the active runtime model are omitted from outbound sample
+  generation payloads
+- package version updated to `0.33.3`
+
 ## [0.33.2] - 2026-04-27
 
 ### Changed

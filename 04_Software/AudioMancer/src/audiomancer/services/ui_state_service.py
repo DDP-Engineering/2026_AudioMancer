@@ -13,7 +13,7 @@
          application through one centralized string catalog and scale mapping.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 0.31.0
+@version 0.32.0
 """
 
 # ruff: noqa: E501
@@ -384,8 +384,8 @@ _UI_STRINGS = {
         "narator_voice.delete_profile": "Delete Profile",
         "narator_voice.select_profile": "Select",
         "narator_voice.generate_sample": "Generate Sample",
-        "narator_voice.preview": "Preview",
-        "narator_voice.stop_preview": "Stop Preview",
+        "narator_voice.preview": "Play sample",
+        "narator_voice.stop_preview": "Stop play",
         "narator_voice.list_selected": "Selected",
         "narator_voice.profile_kind_preset": "Preset",
         "narator_voice.profile_kind_custom": "Custom",
@@ -411,6 +411,7 @@ _UI_STRINGS = {
         "narator_voice.error_runtime_model_missing": "The TTS model required by this narator voice profile is not reported by the current VoiceWeaver runtime.",
         "narator_voice.error_qwen_capabilities_missing": "Cannot generate the narator voice sample because the required Qwen3 TTS capabilities are missing: {missing_capabilities}.",
         "narator_voice.error_generation_missing_audio": "VoiceWeaver finished the request but did not report any downloadable audio.",
+        "narator_voice.error_preview_text_over_budget": "Preview text is too long for the active TTS runtime budget ({word_count} words, safe limit {safe_word_count}). Shorten the preview text before generating a sample.",
         "narator_voice.status_profile_count": "Profiles: {profile_count}",
         "narator_voice.status_sample_count": "Profiles with samples: {sample_count}",
         "narator_voice.status_selected_count": "Selected profiles: {selected_count}",
@@ -1188,8 +1189,8 @@ _UI_STRINGS = {
         "narator_voice.delete_profile": "Sterge Profil",
         "narator_voice.select_profile": "Selecteaza",
         "narator_voice.generate_sample": "Genereaza Sample",
-        "narator_voice.preview": "Previzualizare",
-        "narator_voice.stop_preview": "Opreste Previzualizarea",
+        "narator_voice.preview": "Reda sample",
+        "narator_voice.stop_preview": "Opreste redarea",
         "narator_voice.list_selected": "Selectat",
         "narator_voice.profile_kind_preset": "Preset",
         "narator_voice.profile_kind_custom": "Personalizat",
@@ -1215,6 +1216,7 @@ _UI_STRINGS = {
         "narator_voice.error_runtime_model_missing": "Modelul TTS necesar pentru acest profil de narator nu este raportat de runtime-ul VoiceWeaver curent.",
         "narator_voice.error_qwen_capabilities_missing": "Nu se poate genera sample-ul naratorului deoarece lipsesc capabilitatile Qwen3 TTS necesare: {missing_capabilities}.",
         "narator_voice.error_generation_missing_audio": "VoiceWeaver a terminat cererea, dar nu a raportat niciun fisier audio disponibil pentru descarcare.",
+        "narator_voice.error_preview_text_over_budget": "Textul de previzualizare este prea lung pentru limita runtime-ului TTS activ ({word_count} cuvinte, limita sigura {safe_word_count}). Scurteaza textul de previzualizare inainte de a genera un sample.",
         "narator_voice.status_profile_count": "Profiluri: {profile_count}",
         "narator_voice.status_sample_count": "Profiluri cu sample: {sample_count}",
         "narator_voice.status_selected_count": "Profiluri selectate: {selected_count}",
