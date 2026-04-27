@@ -8,6 +8,21 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
 
 All notable changes to this project will be documented in this file.
 
+## [0.33.4] - 2026-04-27
+
+### Changed
+
+- changed Narator Voice profile listing to visually separate Qwen CustomVoice
+  presets from custom profiles
+- added live narrator preview-text budget feedback and expanded the existing
+  Narator Voice Status area with runtime connection, active-model, and preview
+  budget readiness lines
+- aligned the Narator Voice Status window height and placement with the shared
+  Cleanup Notes and AI Translation Notes layout reference
+- increased the Narator Voice Preview Text editor height and reduced the Voice
+  Designer Prompt height for better preview-text editing
+- package version updated to `0.33.4`
+
 ## [0.33.3] - 2026-04-27
 
 ### Changed

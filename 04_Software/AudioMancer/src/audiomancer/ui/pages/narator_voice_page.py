@@ -14,7 +14,7 @@
          preview controls for the fixed Qwen3-backed narrator workflow.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-17
-@version 3.5.0
+@version 3.7.0
 """
 
 # IMPORTS
@@ -30,6 +30,7 @@ from PySide6.QtWidgets import (
     QLabel,
     QLineEdit,
     QListWidget,
+    QListWidgetItem,
     QPlainTextEdit,
     QPushButton,
     QSplitter,
@@ -68,7 +69,7 @@ class NaratorVoicePage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-17
-        @version    1.3.0
+        @version    1.5.0
         """
         super().__init__(parent)
         self._project_active = False
@@ -76,6 +77,7 @@ class NaratorVoicePage(QWidget):
         self._preview_active = False
         self._ui_language = "en"
         self._profiles: list[dict[str, object]] = []
+        self._profile_row_ids: list[str | None] = []
         self._current_profile_id: str | None = None
         self._selected_profile_id: str | None = None
         self._current_language = ""
@@ -91,6 +93,7 @@ class NaratorVoicePage(QWidget):
         self._preview_available = False
         self._original_profile: dict[str, object] | None = None
         self._preview_text_character_limit = config.DEFAULT_TTS_PREVIEW_TEXT_CHARACTER_LIMIT
+        self._preview_text_safe_word_limit = 0
         self._enforcing_preview_text_limit = False
 
         layout = QVBoxLayout(self)
@@ -149,25 +152,27 @@ class NaratorVoicePage(QWidget):
         editor_layout.addWidget(self._setup_group, 0)
 
         self._designer_group = QGroupBox("Voice Designer Prompt", self)
-        self._designer_group.setMaximumHeight(164)
+        self._designer_group.setMaximumHeight(132)
         designer_layout = QVBoxLayout(self._designer_group)
         self._designer_prompt = QPlainTextEdit(self)
-        self._designer_prompt.setMinimumHeight(76)
-        self._designer_prompt.setMaximumHeight(104)
+        self._designer_prompt.setMinimumHeight(52)
+        self._designer_prompt.setMaximumHeight(72)
         self._designer_prompt.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOn)
         self._designer_prompt.textChanged.connect(self._handle_editor_changed)
         designer_layout.addWidget(self._designer_prompt)
         editor_layout.addWidget(self._designer_group, 0)
 
         self._preview_group = QGroupBox("Preview Text", self)
-        self._preview_group.setMaximumHeight(136)
+        self._preview_group.setMaximumHeight(184)
         preview_layout = QVBoxLayout(self._preview_group)
         self._preview_text_edit = QPlainTextEdit(self)
-        self._preview_text_edit.setMinimumHeight(48)
-        self._preview_text_edit.setMaximumHeight(68)
+        self._preview_text_edit.setMinimumHeight(88)
+        self._preview_text_edit.setMaximumHeight(116)
         self._preview_text_edit.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOn)
         self._preview_text_edit.textChanged.connect(self._handle_preview_text_changed)
         preview_layout.addWidget(self._preview_text_edit)
+        self._preview_budget_label = QLabel("Preview budget: 0/0 safe words", self)
+        preview_layout.addWidget(self._preview_budget_label)
         actions_row = QHBoxLayout()
         self._create_profile_button = QPushButton("Create Profile", self)
         self._create_profile_button.clicked.connect(self._emit_create_profile)
@@ -203,8 +208,8 @@ class NaratorVoicePage(QWidget):
         self._status_edit = QPlainTextEdit(self)
         self._status_edit.setReadOnly(True)
         status_layout.addWidget(self._status_edit)
-        self._status_group.setMinimumHeight(112)
-        self._status_group.setMaximumHeight(132)
+        self._status_group.setMinimumHeight(96)
+        self._status_group.setMaximumHeight(112)
         layout.addWidget(self._status_group, 0)
 
         self.set_project_active(False)
@@ -217,7 +222,7 @@ class NaratorVoicePage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-17
-        @version    1.2.0
+        @version    1.3.0
         """
         self._project_active = is_active
         self._apply_control_state()
@@ -271,6 +276,7 @@ class NaratorVoicePage(QWidget):
         preview_available: bool,
         status_lines: list[str],
         preview_text_character_limit: int = config.DEFAULT_TTS_PREVIEW_TEXT_CHARACTER_LIMIT,
+        preview_text_safe_word_limit: int = 0,
     ) -> None:
         """
         @brief      Apply one complete narrator-definition page state payload.
@@ -295,6 +301,7 @@ class NaratorVoicePage(QWidget):
         @param[in]  preview_available True when one stored preview sample may play.
         @param[in]  status_lines Bottom status-window lines.
         @param[in]  preview_text_character_limit Maximum preview text length in characters.
+        @param[in]  preview_text_safe_word_limit Safe preview text word limit from the active TTS model budget.
         @return     None.
         @exception  None
         @author     Eng. Dan Dumitru Pasare
@@ -314,6 +321,7 @@ class NaratorVoicePage(QWidget):
         self._can_select = can_select
         self._preview_available = preview_available
         self._preview_text_character_limit = _positive_character_limit(preview_text_character_limit)
+        self._preview_text_safe_word_limit = max(0, int(preview_text_safe_word_limit))
         self._dirty = False
         self._edit_mode = False
         self._original_profile = None
@@ -447,7 +455,7 @@ class NaratorVoicePage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-17
-        @version    1.1.0
+        @version    1.2.0
         """
         self._ui_language = language
         self._title_label.setText(f"<h2>{ui_state_service.translate('narator_voice.title', language)}</h2>")
@@ -468,6 +476,8 @@ class NaratorVoicePage(QWidget):
         self._generate_sample_button.setText(ui_state_service.translate("narator_voice.generate_sample", language))
         self._preview_toggle_button.setText(ui_state_service.translate(self._preview_label_key(), language))
         self._set_language_labels(self._current_original_language_text(), self._current_translated_language_text())
+        self._refresh_profile_list(self._current_profile_id)
+        self._update_preview_budget_label()
 
     def _apply_control_state(self) -> None:
         """
@@ -527,7 +537,7 @@ class NaratorVoicePage(QWidget):
         @return     Helper result.
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-21
-        @version    0.1.0
+        @version    0.2.0
         """
         return "narator_voice.stop_preview" if self._preview_active else "narator_voice.preview"
 
@@ -542,11 +552,38 @@ class NaratorVoicePage(QWidget):
         """
         self._profile_list.blockSignals(True)
         self._profile_list.clear()
+        self._profile_row_ids = []
         selected_row = -1
-        for index, profile in enumerate(self._profiles):
-            self._profile_list.addItem(_format_profile_list_item(profile))
-            if str(profile.get("profile_id", "")).strip() == str(selected_profile_id or "").strip():
-                selected_row = index
+        for header_key, grouped_profiles in (
+            (
+                "narator_voice.presets_group_header",
+                [
+                    profile
+                    for profile in self._profiles
+                    if str(profile.get("profile_kind", "")).strip() == "preset"
+                ],
+            ),
+            (
+                "narator_voice.custom_profiles_group_header",
+                [
+                    profile
+                    for profile in self._profiles
+                    if str(profile.get("profile_kind", "")).strip() != "preset"
+                ],
+            ),
+        ):
+            if not grouped_profiles:
+                continue
+            header_item = QListWidgetItem(ui_state_service.translate(header_key, self._ui_language))
+            header_item.setFlags(header_item.flags() & ~Qt.ItemFlag.ItemIsSelectable & ~Qt.ItemFlag.ItemIsEnabled)
+            self._profile_list.addItem(header_item)
+            self._profile_row_ids.append(None)
+            for profile in grouped_profiles:
+                profile_id = str(profile.get("profile_id", "")).strip()
+                self._profile_list.addItem(_format_profile_list_item(profile))
+                self._profile_row_ids.append(profile_id)
+                if profile_id == str(selected_profile_id or "").strip():
+                    selected_row = len(self._profile_row_ids) - 1
         if selected_row >= 0:
             self._profile_list.setCurrentRow(selected_row)
         self._profile_list.blockSignals(False)
@@ -578,13 +615,32 @@ class NaratorVoicePage(QWidget):
         @return     None.
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-21
-        @version    0.2.0
+        @version    0.3.0
         """
         self._loading_profile = True
         self._profile_name_edit.setText(profile_name)
         self._designer_prompt.setPlainText(prompt_text)
         self._preview_text_edit.setPlainText(self._limited_preview_text(preview_text))
         self._loading_profile = False
+        self._update_preview_budget_label()
+
+    def _update_preview_budget_label(self) -> None:
+        """
+        @brief      Update the live preview-text word-budget label.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-27
+        @version    0.1.0
+        """
+        word_count = len([word for word in self._preview_text_edit.toPlainText().split() if word.strip()])
+        safe_word_count = max(0, int(self._preview_text_safe_word_limit))
+        self._preview_budget_label.setText(
+            ui_state_service.translate("narator_voice.preview_budget", self._ui_language).format(
+                word_count=word_count,
+                safe_word_count=safe_word_count,
+            )
+        )
 
     def _limited_preview_text(self, preview_text: object) -> str:
         """
@@ -593,7 +649,7 @@ class NaratorVoicePage(QWidget):
         @return     Preview text truncated to the configured maximum length.
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-25
-        @version    0.1.0
+        @version    0.2.0
         """
         return str(preview_text or "")[: self._preview_text_character_limit]
 
@@ -669,9 +725,13 @@ class NaratorVoicePage(QWidget):
         @date       2026-04-21
         @version    0.1.0
         """
-        if self._loading_profile or row < 0 or row >= len(self._profiles):
+        if self._loading_profile or row < 0:
             return
-        target_profile_id = str(self._profiles[row].get("profile_id", "")).strip()
+        if row >= len(self._profile_row_ids):
+            return
+        target_profile_id = str(self._profile_row_ids[row] or "").strip()
+        if not target_profile_id:
+            return
         if target_profile_id == str(self._current_profile_id or "").strip():
             return
         self.selection_change_requested.emit(target_profile_id)
@@ -682,7 +742,7 @@ class NaratorVoicePage(QWidget):
         @return     None.
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-26
-        @version    0.1.0
+        @version    0.2.0
         """
         if self._loading_language_entries:
             return
@@ -721,6 +781,7 @@ class NaratorVoicePage(QWidget):
             cursor.setPosition(cursor_position)
             self._preview_text_edit.setTextCursor(cursor)
             self._enforcing_preview_text_limit = False
+        self._update_preview_budget_label()
         self._handle_editor_changed()
 
     def _emit_create_profile(self) -> None:

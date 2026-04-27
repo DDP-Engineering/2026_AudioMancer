@@ -13,7 +13,7 @@
          application through one centralized string catalog and scale mapping.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 0.32.0
+@version 0.33.0
 """
 
 # ruff: noqa: E501
@@ -386,6 +386,9 @@ _UI_STRINGS = {
         "narator_voice.generate_sample": "Generate Sample",
         "narator_voice.preview": "Play sample",
         "narator_voice.stop_preview": "Stop play",
+        "narator_voice.presets_group_header": "Qwen CustomVoice presets",
+        "narator_voice.custom_profiles_group_header": "Custom profiles",
+        "narator_voice.preview_budget": "Preview budget: {word_count}/{safe_word_count} safe words",
         "narator_voice.list_selected": "Selected",
         "narator_voice.profile_kind_preset": "Preset",
         "narator_voice.profile_kind_custom": "Custom",
@@ -412,6 +415,11 @@ _UI_STRINGS = {
         "narator_voice.error_qwen_capabilities_missing": "Cannot generate the narator voice sample because the required Qwen3 TTS capabilities are missing: {missing_capabilities}.",
         "narator_voice.error_generation_missing_audio": "VoiceWeaver finished the request but did not report any downloadable audio.",
         "narator_voice.error_preview_text_over_budget": "Preview text is too long for the active TTS runtime budget ({word_count} words, safe limit {safe_word_count}). Shorten the preview text before generating a sample.",
+        "narator_voice.status_runtime_connected": "Runtime: connected",
+        "narator_voice.status_runtime_not_connected": "Runtime: not connected",
+        "narator_voice.status_active_model": "Active model: {model_id}",
+        "narator_voice.status_active_model_none": "Active model: none",
+        "narator_voice.status_preview_budget": "Preview budget: {word_count}/{safe_word_count} safe words",
         "narator_voice.status_profile_count": "Profiles: {profile_count}",
         "narator_voice.status_sample_count": "Profiles with samples: {sample_count}",
         "narator_voice.status_selected_count": "Selected profiles: {selected_count}",
@@ -1191,6 +1199,9 @@ _UI_STRINGS = {
         "narator_voice.generate_sample": "Genereaza Sample",
         "narator_voice.preview": "Reda sample",
         "narator_voice.stop_preview": "Opreste redarea",
+        "narator_voice.presets_group_header": "Preseturi Qwen CustomVoice",
+        "narator_voice.custom_profiles_group_header": "Profiluri personalizate",
+        "narator_voice.preview_budget": "Buget previzualizare: {word_count}/{safe_word_count} cuvinte sigure",
         "narator_voice.list_selected": "Selectat",
         "narator_voice.profile_kind_preset": "Preset",
         "narator_voice.profile_kind_custom": "Personalizat",
@@ -1217,6 +1228,11 @@ _UI_STRINGS = {
         "narator_voice.error_qwen_capabilities_missing": "Nu se poate genera sample-ul naratorului deoarece lipsesc capabilitatile Qwen3 TTS necesare: {missing_capabilities}.",
         "narator_voice.error_generation_missing_audio": "VoiceWeaver a terminat cererea, dar nu a raportat niciun fisier audio disponibil pentru descarcare.",
         "narator_voice.error_preview_text_over_budget": "Textul de previzualizare este prea lung pentru limita runtime-ului TTS activ ({word_count} cuvinte, limita sigura {safe_word_count}). Scurteaza textul de previzualizare inainte de a genera un sample.",
+        "narator_voice.status_runtime_connected": "Runtime: conectat",
+        "narator_voice.status_runtime_not_connected": "Runtime: neconectat",
+        "narator_voice.status_active_model": "Model activ: {model_id}",
+        "narator_voice.status_active_model_none": "Model activ: niciunul",
+        "narator_voice.status_preview_budget": "Buget previzualizare: {word_count}/{safe_word_count} cuvinte sigure",
         "narator_voice.status_profile_count": "Profiluri: {profile_count}",
         "narator_voice.status_sample_count": "Profiluri cu sample: {sample_count}",
         "narator_voice.status_selected_count": "Profiluri selectate: {selected_count}",

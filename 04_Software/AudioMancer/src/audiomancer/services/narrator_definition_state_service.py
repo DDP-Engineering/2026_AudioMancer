@@ -14,7 +14,7 @@
          VoiceWeaver runtime discovery data.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-20
-@version 3.10.0
+@version 3.11.0
 """
 
 # IMPORTS
@@ -28,6 +28,7 @@ from audiomancer.services import (
     deterministic_cleanup_service,
     home_presenter_service,
     narrator_definition_service,
+    tts_budget_service,
     ui_state_service,
     voiceweaver_runtime_service,
 )
@@ -53,7 +54,7 @@ def build_narrator_definition_state(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-18
-    @version    2.0.0
+    @version    2.1.0
     """
     _ = initialize_defaults
     preview_text_character_limit = _preview_text_character_limit(settings_payload)
@@ -87,6 +88,8 @@ def build_narrator_definition_state(
     discovered_models = (
         settings_payload.get("tts_runtime_discovered_models", []) if isinstance(settings_payload, dict) else []
     )
+    preview_budget = tts_budget_service.resolve_cached_tts_budget(discovered_models)
+    preview_safe_word_limit = tts_budget_service.estimated_safe_word_count(preview_budget)
     runtime_probe_succeeded = bool(
         settings_payload.get("tts_runtime_probe_succeeded", False) if isinstance(settings_payload, dict) else False
     )
@@ -162,6 +165,7 @@ def build_narrator_definition_state(
             )
         ),
         "preview_text_character_limit": preview_text_character_limit,
+        "preview_text_safe_word_limit": preview_safe_word_limit,
         "is_editable": bool(current_profile) and bool(current_profile.get("editable", False)),
         "is_preset": bool(current_profile)
         and str(current_profile.get("profile_kind", "")) == narrator_definition_service.NARRATOR_PROFILE_KIND_PRESET,
@@ -170,7 +174,16 @@ def build_narrator_definition_state(
         "can_generate": bool(current_profile) and bool(current_profile.get("can_generate", False)),
         "can_select": bool(current_profile) and bool(current_profile.get("can_select", False)),
         "preview_available": bool(current_profile) and bool(current_profile.get("has_sample", False)),
-        "status_lines": build_status_lines(profile_entries, notes, capability_matrix, language),
+        "status_lines": build_status_lines(
+            profile_entries,
+            notes,
+            capability_matrix,
+            language,
+            runtime_probe_succeeded,
+            settings_payload,
+            current_profile,
+            preview_safe_word_limit,
+        ),
     }
 
 
@@ -329,6 +342,10 @@ def build_status_lines(
     notes: list[str],
     capability_matrix: dict[str, object],
     language: str,
+    runtime_probe_succeeded: bool = False,
+    settings_payload: dict[str, object] | None = None,
+    current_profile: dict[str, object] | None = None,
+    preview_safe_word_limit: int = 0,
 ) -> list[str]:
     """
     @brief      Build the bottom status-window lines for the Narator Voice page.
@@ -340,7 +357,7 @@ def build_status_lines(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-17
-    @version    1.2.0
+    @version    1.3.0
     """
     sample_count = sum(1 for profile in profiles if bool(profile.get("has_sample", False)))
     selected_count = sum(1 for profile in profiles if bool(profile.get("is_selected", False)))
@@ -351,16 +368,61 @@ def build_status_lines(
             missing_capabilities=", ".join(capability_matrix.get("missing_qwen_capabilities", [])),
         )
     )
+    active_model_id = _active_model_id_from_settings(settings_payload)
+    preview_word_count = (
+        tts_budget_service.estimated_word_count(str(current_profile.get("preview_text", "")))
+        if isinstance(current_profile, dict)
+        else 0
+    )
     lines = [
         ui_state_service.translate("narator_voice.status_profile_count", language).format(profile_count=len(profiles)),
         ui_state_service.translate("narator_voice.status_sample_count", language).format(sample_count=sample_count),
         ui_state_service.translate("narator_voice.status_selected_count", language).format(
             selected_count=selected_count,
         ),
+        ui_state_service.translate(
+            "narator_voice.status_runtime_connected"
+            if runtime_probe_succeeded
+            else "narator_voice.status_runtime_not_connected",
+            language,
+        ),
+        ui_state_service.translate(
+            "narator_voice.status_active_model" if active_model_id else "narator_voice.status_active_model_none",
+            language,
+        ).format(model_id=active_model_id or ""),
+        ui_state_service.translate("narator_voice.status_preview_budget", language).format(
+            word_count=preview_word_count,
+            safe_word_count=max(0, int(preview_safe_word_limit)),
+        ),
         qwen_status,
     ]
     lines.extend(note for note in notes if note.strip())
     return lines
+
+
+def _active_model_id_from_settings(settings_payload: dict[str, object] | None) -> str:
+    """
+    @brief      Resolve the cached VoiceWeaver active model identifier from settings.
+    @param[in]  settings_payload Current application settings payload.
+    @return     Active model identifier or an empty string.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-27
+    @version    0.1.0
+    """
+    if not isinstance(settings_payload, dict):
+        return ""
+    for field_name in ("tts_runtime_active_model_id", "active_model_id"):
+        active_model_id = str(settings_payload.get(field_name, "") or "").strip()
+        if active_model_id:
+            return active_model_id
+    status_payload = settings_payload.get("tts_runtime_status")
+    if not isinstance(status_payload, dict):
+        return ""
+    active_model_payload = status_payload.get("active_model")
+    if isinstance(active_model_payload, dict):
+        return str(active_model_payload.get("model_id", "") or "").strip()
+    return str(active_model_payload or "").strip()
 
 
 def voice_capability_matrix(discovered_models: list[dict[str, object]]) -> dict[str, object]:
