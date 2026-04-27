@@ -14,12 +14,14 @@
          normalization.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-23
-@version 1.6.1
+@version 1.7.1
 """
 
 # IMPORTS
 
+import io
 import json
+import wave
 
 import pytest
 
@@ -72,7 +74,7 @@ def test_audio_blocks_service_generates_clone_prompts_and_ordered_wavs(monkeypat
     ]
     observed_prompt_requests: list[tuple[str, str, str]] = []
     observed_generate_requests: list[tuple[str, str, str]] = []
-    audio_payloads = [b"RIFF-narrator", b"RIFF-alice"]
+    audio_payloads = [_wav_bytes("narrator"), _wav_bytes("alice")]
     monkeypatch.setattr(
         audio_blocks_service.voiceweaver_runtime_service,
         "read_status",
@@ -149,8 +151,8 @@ def test_audio_blocks_service_generates_clone_prompts_and_ordered_wavs(monkeypat
     second_audio_path = project_root / str(audio_blocks[1]["audio_relative_path"])
     assert first_audio_path.name == "0001_000001_narrator.wav"
     assert second_audio_path.name == "0001_000002_alice.wav"
-    assert first_audio_path.read_bytes() == b"RIFF-narrator"
-    assert second_audio_path.read_bytes() == b"RIFF-alice"
+    assert first_audio_path.read_bytes() == _wav_bytes("narrator")
+    assert second_audio_path.read_bytes() == _wav_bytes("alice")
 
 
 def test_audio_blocks_service_same_narrator_mode_uses_narrator_prompt_for_characters(monkeypatch, tmp_path) -> None:
@@ -191,7 +193,7 @@ def test_audio_blocks_service_same_narrator_mode_uses_narrator_prompt_for_charac
     ]
     observed_prompt_requests: list[tuple[str, str, str]] = []
     observed_generate_requests: list[tuple[str, str, str]] = []
-    audio_payloads = [b"RIFF-narrator", b"RIFF-character-with-narrator"]
+    audio_payloads = [_wav_bytes("narrator"), _wav_bytes("character-with-narrator")]
     monkeypatch.setattr(
         audio_blocks_service.voiceweaver_runtime_service,
         "read_status",
@@ -434,7 +436,7 @@ def test_audio_blocks_service_generates_only_approved_speech_blocks(monkeypatch,
     ]
     observed_prompt_requests: list[tuple[str, str, str]] = []
     observed_generate_requests: list[str] = []
-    audio_payloads = [b"RIFF-narrator"]
+    audio_payloads = [_wav_bytes("narrator")]
     monkeypatch.setattr(
         audio_blocks_service.voiceweaver_runtime_service,
         "read_status",
@@ -560,7 +562,7 @@ def test_audio_blocks_service_skips_voiceweaver_for_metadata_only_blocks(monkeyp
         {"operation": {"status": "completed"}, "result": {"available": True, "summary": "Alice ready."}},
     ]
     observed_generate_requests: list[str] = []
-    audio_payloads = [b"RIFF-narrator", b"RIFF-alice"]
+    audio_payloads = [_wav_bytes("narrator"), _wav_bytes("alice")]
     monkeypatch.setattr(
         audio_blocks_service.voiceweaver_runtime_service,
         "read_status",
@@ -602,13 +604,132 @@ def test_audio_blocks_service_skips_voiceweaver_for_metadata_only_blocks(monkeyp
     assert observed_generate_requests == ["Narration one.", "Hello there."]
     assert audio_blocks[2]["speech_block_id"] == "0001-000003"
     assert audio_blocks[2]["metadata_only"] is True
+    assert audio_blocks[2]["special_block_status"] == "implemented"
     assert audio_blocks[2]["pause_duration_ms"] == 1500
     assert audio_blocks[2]["generated"] is True
     assert audio_blocks[2]["approved"] is True
     assert audio_blocks[2]["audio_relative_path"] is None
     assert audio_blocks[3]["content_kind"] == speech_blocks_service.CONTENT_KIND_INDICATION
     assert audio_blocks[3]["metadata_only"] is True
+    assert audio_blocks[3]["special_block_status"] == "not_implemented"
+    assert "not implemented" in audio_blocks[3]["runtime_result_summary"]
     assert audio_blocks[3]["audio_relative_path"] is None
+
+
+def test_audio_blocks_service_invalidates_stale_block_fingerprint_and_deletes_artifacts(tmp_path) -> None:
+    """
+    @brief      Verify persisted audio is not reused when its block fingerprint no longer matches.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-27
+    @version    0.1.0
+    """
+    project_root, manifest = _create_audio_blocks_project(tmp_path, "AudioBlocksBlockFingerprint")
+    speech_blocks = speech_blocks_service.load_speech_blocks(project_root)
+    generation_context = audio_blocks_service._resolve_generation_context(  # noqa: SLF001
+        project_root,
+        manifest,
+        _runtime_settings(),
+    )
+    existing_block = audio_blocks_service._initialize_audio_blocks(speech_blocks)[0]  # noqa: SLF001
+    audio_path = project_root / config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME / "stale.wav"
+    metadata_path = project_root / config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME / "stale.json"
+    audio_path.parent.mkdir(parents=True, exist_ok=True)
+    audio_path.write_bytes(_wav_bytes("stale"))
+    metadata_path.write_text("{}\n", encoding="utf-8")
+    existing_block.update(
+        {
+            "audio_relative_path": audio_path.relative_to(project_root).as_posix(),
+            "metadata_relative_path": metadata_path.relative_to(project_root).as_posix(),
+            "generated": True,
+            "approved": True,
+            "generation_fingerprint": "stale-fingerprint",
+        }
+    )
+
+    merged_blocks = audio_blocks_service._merge_existing_audio_blocks(  # noqa: SLF001
+        speech_blocks,
+        [existing_block],
+        generation_context=generation_context,
+        project_root=project_root,
+    )
+
+    assert merged_blocks[0]["generated"] is False
+    assert merged_blocks[0]["approved"] is False
+    assert merged_blocks[0]["audio_relative_path"] is None
+    assert merged_blocks[0]["generation_fingerprint"] != "stale-fingerprint"
+    assert not audio_path.exists()
+    assert not metadata_path.exists()
+
+
+def test_audio_blocks_service_rejects_invalid_generated_wav_bytes() -> None:
+    """
+    @brief      Verify downloaded generation payloads must be readable non-empty WAV files.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-27
+    @version    0.1.0
+    """
+    with pytest.raises(RuntimeError, match="invalid WAV audio"):
+        audio_blocks_service._validate_wav_bytes(b"not-a-wav")  # noqa: SLF001
+
+
+def test_audio_blocks_service_split_resume_rejects_invalid_part_checkpoint(tmp_path) -> None:
+    """
+    @brief      Verify split resume ignores corrupt or mismatched persisted part checkpoints.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-27
+    @version    0.1.0
+    """
+    project_root, _manifest = _create_audio_blocks_project(tmp_path, "AudioBlocksSplitCheckpoint")
+    audio_block = audio_blocks_service._initialize_audio_blocks(  # noqa: SLF001
+        speech_blocks_service.load_speech_blocks(project_root)
+    )[0]
+    split_plan = {"parts": ["Part one.", "Part two."], "strategy": "sentence"}
+    part_path = audio_blocks_service._audio_part_artifact_path(project_root, audio_block, 0)  # noqa: SLF001
+    part_path.parent.mkdir(parents=True, exist_ok=True)
+    part_path.write_bytes(b"not-a-wav")
+    audio_block["generated_part_relative_paths"] = [part_path.relative_to(project_root).as_posix()]
+    audio_block["split_plan_fingerprint"] = audio_blocks_service._split_plan_fingerprint(split_plan)  # noqa: SLF001
+
+    assert (
+        audio_blocks_service._existing_part_paths(  # noqa: SLF001
+            project_root,
+            audio_block,
+            split_plan,
+            force_restart=False,
+        )
+        == []
+    )
+
+
+def test_audio_blocks_service_reset_empty_generated_subfolders_are_not_persisted_data(tmp_path) -> None:
+    """
+    @brief      Verify reset leaves Audio Blocks reset-state detection disabled with empty generated folders.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-27
+    @version    0.1.0
+    """
+    project_root, _manifest = _create_audio_blocks_project(tmp_path, "AudioBlocksResetEmptyFolders")
+    parts_root = project_root / config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME / "parts"
+    parts_root.mkdir(parents=True)
+    (parts_root / "old_part.wav").write_bytes(_wav_bytes("old-part"))
+
+    assert audio_blocks_service.has_persisted_audio_blocks(project_root) is True
+
+    audio_blocks_service.reset_audio_blocks(project_root)
+
+    assert parts_root.is_dir()
+    assert audio_blocks_service.has_persisted_audio_blocks(project_root) is False
 
 
 def test_audio_blocks_service_approve_and_regenerate_selected_block(monkeypatch, tmp_path) -> None:
@@ -646,7 +767,7 @@ def test_audio_blocks_service_approve_and_regenerate_selected_block(monkeypatch,
         },
         {"operation": {"status": "completed"}, "result": {"available": True, "summary": "Narrator regenerated."}},
     ]
-    generated_audio = [b"RIFF-regenerated"]
+    generated_audio = [_wav_bytes("regenerated")]
     monkeypatch.setattr(
         audio_blocks_service.voiceweaver_runtime_service,
         "read_status",
@@ -689,7 +810,7 @@ def test_audio_blocks_service_approve_and_regenerate_selected_block(monkeypatch,
     assert regen_report["generated_block_count"] == 2
     assert regenerated_blocks[0]["approved"] is False
     assert regenerated_blocks[0]["runtime_result_summary"] == "Narrator regenerated."
-    assert (project_root / str(regenerated_blocks[0]["audio_relative_path"])).read_bytes() == b"RIFF-regenerated"
+    assert (project_root / str(regenerated_blocks[0]["audio_relative_path"])).read_bytes() == _wav_bytes("regenerated")
 
 
 def test_audio_blocks_service_reconcile_after_resplit_deletes_changed_chunk_and_remaps_later_audio(tmp_path) -> None:
@@ -746,9 +867,9 @@ def test_audio_blocks_service_reconcile_after_resplit_deletes_changed_chunk_and_
     changed_metadata_path = generated_root / "000001_narrator.json"
     later_audio_path = generated_root / "0002_000001_alice.wav"
     later_metadata_path = generated_root / "0002_000001_alice.json"
-    changed_audio_path.write_bytes(b"RIFF-old-changed")
+    changed_audio_path.write_bytes(_wav_bytes("old-changed"))
     changed_metadata_path.write_text("{}\n", encoding="utf-8")
-    later_audio_path.write_bytes(b"RIFF-later")
+    later_audio_path.write_bytes(_wav_bytes("later"))
     later_metadata_path.write_text(
         json.dumps({"speech_block_id": "0002-000001", "chunk_id": "chunk-0002", "sequence_index": 1}, indent=2) + "\n",
         encoding="utf-8",
@@ -817,7 +938,7 @@ def test_audio_blocks_service_reconcile_after_resplit_deletes_changed_chunk_and_
     assert audio_blocks[1]["generated"] is True
     assert not changed_audio_path.exists()
     assert later_audio_path.exists()
-    assert remapped_audio_path.read_bytes() == b"RIFF-later"
+    assert remapped_audio_path.read_bytes() == _wav_bytes("later")
     assert json.loads(remapped_metadata_path.read_text(encoding="utf-8"))["speech_block_id"] == "0002-000001"
 
 
@@ -870,7 +991,7 @@ def test_audio_blocks_service_resume_continues_from_saved_checkpoint(monkeypatch
         {"operation": {"status": "completed"}, "result": {"available": True, "summary": "Alice ready."}},
     ]
     observed_generate_requests: list[tuple[str, str, str]] = []
-    audio_payloads = [b"RIFF-narrator", b"RIFF-alice", b"RIFF-alice"]
+    audio_payloads = [_wav_bytes("narrator"), _wav_bytes("alice"), _wav_bytes("alice")]
     read_status_calls = {"count": 0}
     monkeypatch.setattr(
         audio_blocks_service.voiceweaver_runtime_service,
@@ -1027,7 +1148,7 @@ def test_audio_blocks_service_input_fingerprint_mismatch_starts_fresh_run(monkey
     monkeypatch.setattr(
         audio_blocks_service.voiceweaver_runtime_service,
         "download_generated_voice",
-        lambda *_args, **_kwargs: b"RIFF-fresh",
+        lambda *_args, **_kwargs: _wav_bytes("fresh"),
     )
 
     report = audio_blocks_service.start_or_continue_generation(
@@ -1077,7 +1198,7 @@ def test_audio_blocks_service_prefers_qwen_1_7b_base_model(monkeypatch, tmp_path
         {"operation": {"status": "completed"}, "result": {"available": True, "summary": "Narrator ready."}},
         {"operation": {"status": "completed"}, "result": {"available": True, "summary": "Alice ready."}},
     ]
-    audio_payloads = [b"RIFF-narrator", b"RIFF-alice"]
+    audio_payloads = [_wav_bytes("narrator"), _wav_bytes("alice")]
     monkeypatch.setattr(
         audio_blocks_service.voiceweaver_runtime_service,
         "read_status",
@@ -1349,9 +1470,14 @@ def _seed_generated_audio_blocks(project_root) -> None:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-24
-    @version    0.1.0
+    @version    0.2.0
     """
     speech_blocks = speech_blocks_service.load_speech_blocks(project_root)
+    generation_context = audio_blocks_service._resolve_generation_context(  # noqa: SLF001
+        project_root,
+        project_workspace_service.load_manifest(project_root),
+        _runtime_settings(),
+    )
     audio_root = (
         project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME
     )
@@ -1363,36 +1489,48 @@ def _seed_generated_audio_blocks(project_root) -> None:
         stem = str(speech_block["speech_block_id"]).replace("-", "_")
         audio_path = audio_root / f"{stem}_{speaker_name}.wav"
         metadata_path = audio_root / f"{stem}_{speaker_name}.json"
-        audio_path.write_bytes(f"RIFF-{sequence_index}".encode())
+        audio_path.write_bytes(_wav_bytes(str(sequence_index)))
         metadata_path.write_text("{}\n", encoding="utf-8")
-        audio_blocks_payload.append(
-            {
-                "speech_block_id": speech_block["speech_block_id"],
-                "sequence_index": sequence_index,
-                "chunk_id": speech_block["chunk_id"],
-                "speaker_id": speech_block["speaker_id"],
-                "speaker_display_name": speech_block["speaker_display_name"],
-                "normalized_speaker_name": speaker_name,
-                "text": speech_block["text"],
-                "voice_target_id": (
-                    "narrator"
-                    if speech_block["speaker_id"] == "narrator"
-                    else character_voices_service.character_target_id(speech_block["speaker_id"])
-                ),
-                "voice_source_kind": (
-                    "narrator_sample" if speech_block["speaker_id"] == "narrator" else "character_sample"
-                ),
-                "audio_relative_path": audio_path.relative_to(project_root).as_posix(),
-                "metadata_relative_path": metadata_path.relative_to(project_root).as_posix(),
-                "speech_block_approved": bool(speech_block.get("approved", False)),
-                "generated": True,
-                "approved": False,
-                "approved_at": None,
-                "generated_at": "2026-04-23T12:10:00+00:00",
-                "runtime_result_summary": "Generated.",
-                "warning_flags": [],
-            }
+        audio_block = {
+            "speech_block_id": speech_block["speech_block_id"],
+            "sequence_index": sequence_index,
+            "chunk_id": speech_block["chunk_id"],
+            "speaker_id": speech_block["speaker_id"],
+            "speaker_display_name": speech_block["speaker_display_name"],
+            "normalized_speaker_name": speaker_name,
+            "content_kind": speech_block.get("content_kind", speech_blocks_service.CONTENT_KIND_NARRATION),
+            "metadata_only": False,
+            "special_block_status": None,
+            "text": speech_block["text"],
+            "voice_target_id": (
+                "narrator"
+                if speech_block["speaker_id"] == "narrator"
+                else character_voices_service.character_target_id(speech_block["speaker_id"])
+            ),
+            "voice_source_kind": (
+                "narrator_sample" if speech_block["speaker_id"] == "narrator" else "character_sample"
+            ),
+            "audio_relative_path": audio_path.relative_to(project_root).as_posix(),
+            "metadata_relative_path": metadata_path.relative_to(project_root).as_posix(),
+            "speech_block_approved": bool(speech_block.get("approved", False)),
+            "generated": True,
+            "approved": False,
+            "approved_at": None,
+            "generated_at": "2026-04-23T12:10:00+00:00",
+            "runtime_result_summary": "Generated.",
+            "split_part_count": 1,
+            "split_strategy": "single",
+            "model_token_budget": 512,
+            "model_audio_seconds_budget": 40.96,
+            "generated_part_relative_paths": [],
+            "split_plan_fingerprint": None,
+            "warning_flags": [],
+        }
+        audio_block["generation_fingerprint"] = audio_blocks_service._build_audio_block_fingerprint(  # noqa: SLF001
+            audio_block,
+            generation_context,
         )
+        audio_blocks_payload.append(audio_block)
     audio_root.parent.mkdir(parents=True, exist_ok=True)
     (project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.AUDIO_BLOCKS_OUTPUT_FILE_NAME).write_text(
         json.dumps(audio_blocks_payload, indent=2) + "\n",
@@ -1472,6 +1610,27 @@ def _seed_generated_audio_blocks(project_root) -> None:
         json.dumps(operation_state, indent=2) + "\n",
         encoding="utf-8",
     )
+
+
+def _wav_bytes(label: str, frame_count: int = 240) -> bytes:
+    """
+    @brief      Build deterministic non-empty mono PCM WAV bytes for generation tests.
+    @param[in]  label Payload label used to vary the sample byte pattern.
+    @param[in]  frame_count Number of audio frames.
+    @return     WAV payload bytes.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-27
+    @version    0.1.0
+    """
+    sample_value = len(str(label).encode("utf-8")) % 128
+    buffer = io.BytesIO()
+    with wave.open(buffer, "wb") as wav_file:
+        wav_file.setnchannels(1)
+        wav_file.setsampwidth(2)
+        wav_file.setframerate(24_000)
+        wav_file.writeframes(bytes([sample_value, 0]) * frame_count)
+    return buffer.getvalue()
 
 
 def _runtime_settings() -> dict[str, object]:

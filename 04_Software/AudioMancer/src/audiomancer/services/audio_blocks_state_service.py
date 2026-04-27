@@ -14,7 +14,7 @@
          Blocks output, and the resumable runtime operation state.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-23
-@version 0.4.1
+@version 0.4.2
 """
 
 # IMPORTS
@@ -48,7 +48,7 @@ def build_audio_blocks_state(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-23
-    @version    0.4.0
+    @version    0.4.1
     """
     if project_root is None or manifest is None:
         return _empty_state(language)
@@ -105,7 +105,7 @@ def build_audio_blocks_state(
             regenerated_prompt_count=regenerated_prompt_count,
         ),
     ]
-    speech_blocks_ready = bool(speech_blocks) and all(bool(block.get("approved", False)) for block in speech_blocks)
+    speech_blocks_ready = bool(speech_blocks) and any(bool(block.get("approved", False)) for block in speech_blocks)
     return {
         "full_source_text": _build_full_source_text(project_root, manifest, speech_blocks),
         "speech_blocks": merged_blocks,
@@ -312,7 +312,7 @@ def _merge_audio_block_state(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-23
-    @version    0.3.0
+    @version    0.3.1
     """
     audio_by_id = {str(block.get("speech_block_id", "")).strip(): dict(block) for block in audio_blocks}
     current_block_id = None
@@ -346,7 +346,9 @@ def _merge_audio_block_state(
                 in {
                     speech_blocks_service.CONTENT_KIND_BACKGROUND_NOISE,
                     speech_blocks_service.CONTENT_KIND_PAUSE,
+                    speech_blocks_service.CONTENT_KIND_INDICATION,
                 },
+                "special_block_status": str(persisted_audio_block.get("special_block_status", "") or ""),
                 "audio_relative_path": audio_relative_path,
                 "audio_file_name": "" if audio_path is None else audio_path.name,
                 "audio_duration_seconds": None if audio_path is None else _audio_duration_seconds(audio_path),

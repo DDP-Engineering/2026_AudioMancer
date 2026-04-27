@@ -14,7 +14,7 @@
          operations.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-22
-@version 0.7.0
+@version 0.7.1
 """
 
 # IMPORTS
@@ -263,28 +263,45 @@ def _default_operation_metadata(operation_kind: str) -> dict[str, object]:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-26
-    @version    0.1.0
+    @version    0.2.0
     """
-    if operation_kind != "character_discovery":
-        return {}
-    return {
-        "ai_profile_id": "",
-        "source_chunk_count": 0,
-        "character_count": 0,
-        "analyzed_window_count": 0,
-        "merged_candidate_count": 0,
-        "window_size": 0,
-        "window_overlap": 0,
-        "warnings": [],
-        "input_fingerprint": "",
-        "log_relative_path": "",
-        "token_usage": {
-            "input_tokens": None,
-            "output_tokens": None,
-            "total_tokens": None,
-            "usage_available": False,
-        },
-    }
+    if operation_kind == "character_discovery":
+        return {
+            "ai_profile_id": "",
+            "source_chunk_count": 0,
+            "character_count": 0,
+            "analyzed_window_count": 0,
+            "merged_candidate_count": 0,
+            "window_size": 0,
+            "window_overlap": 0,
+            "warnings": [],
+            "input_fingerprint": "",
+            "log_relative_path": "",
+            "token_usage": {
+                "input_tokens": None,
+                "output_tokens": None,
+                "total_tokens": None,
+                "usage_available": False,
+            },
+        }
+    if operation_kind == "audio_blocks":
+        return {
+            "voice_language": "",
+            "input_fingerprint": "",
+            "speech_block_count": 0,
+            "generated_block_count": 0,
+            "approved_block_count": 0,
+            "clone_profile_count": 0,
+            "prompt_count": 0,
+            "reused_prompt_count": 0,
+            "regenerated_prompt_count": 0,
+            "current_phase": "",
+            "current_block_id": "",
+            "model_id": "",
+            "model_token_budget": 0,
+            "model_audio_seconds_budget": 0.0,
+        }
+    return {}
 
 
 def ensure_default_operation_state(project_root: str | Path, operation_kind: str) -> Path | None:

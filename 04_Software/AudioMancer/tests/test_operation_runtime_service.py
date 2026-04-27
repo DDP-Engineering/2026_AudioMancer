@@ -13,7 +13,7 @@
          extraction, cleanup, and future workflow operations.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-22
-@version 0.5.0
+@version 0.5.1
 """
 
 # IMPORTS
@@ -188,6 +188,42 @@ def test_ensure_default_operation_state_creates_zero_character_discovery_metadat
     assert state_payload["metadata"]["window_size"] == 0
     assert state_payload["metadata"]["window_overlap"] == 0
     assert state_payload["metadata"]["warnings"] == []
+    assert state_payload["resume_checkpoint"] is None
+
+
+def test_ensure_default_operation_state_creates_zero_audio_blocks_metadata(tmp_path) -> None:
+    """
+    @brief      Verify first Audio Blocks page access creates zero-valued generation metadata.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-27
+    @version    0.1.0
+    """
+    project_root, _manifest = project_workspace_service.create_project("DefaultAudioBlocksStateRuntime", tmp_path)
+
+    state_path = operation_runtime_service.ensure_default_operation_state(project_root, "audio_blocks")
+
+    assert state_path == project_root / config.AUDIO_BLOCKS_STATE_FILE_NAME
+    state_payload = json.loads(state_path.read_text(encoding="utf-8"))
+    assert state_payload["status"] == "not_started"
+    assert state_payload["progress_current"] == 0
+    assert state_payload["progress_total"] == 0
+    assert state_payload["output_paths"] == []
+    assert state_payload["artifact_paths"] == []
+    assert state_payload["metadata"]["voice_language"] == ""
+    assert state_payload["metadata"]["speech_block_count"] == 0
+    assert state_payload["metadata"]["generated_block_count"] == 0
+    assert state_payload["metadata"]["approved_block_count"] == 0
+    assert state_payload["metadata"]["clone_profile_count"] == 0
+    assert state_payload["metadata"]["prompt_count"] == 0
+    assert state_payload["metadata"]["reused_prompt_count"] == 0
+    assert state_payload["metadata"]["regenerated_prompt_count"] == 0
+    assert state_payload["metadata"]["current_phase"] == ""
+    assert state_payload["metadata"]["current_block_id"] == ""
+    assert state_payload["metadata"]["model_token_budget"] == 0
+    assert state_payload["metadata"]["model_audio_seconds_budget"] == 0.0
     assert state_payload["resume_checkpoint"] is None
 
 

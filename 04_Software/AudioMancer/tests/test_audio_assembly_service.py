@@ -13,7 +13,7 @@
          stale-input protection, and generated-output reset behavior.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-25
-@version 0.3.0
+@version 0.3.1
 """
 
 # IMPORTS
@@ -54,17 +54,18 @@ def test_audio_assembly_service_composes_per_chunk_outputs(tmp_path) -> None:
 
 def test_audio_assembly_service_writes_pause_blocks_as_silence(tmp_path) -> None:
     """
-    @brief      Verify metadata-only pause Audio Blocks contribute silence to final WAV output.
+    @brief      Verify explicit pause blocks contribute silence without adjacent automatic gaps.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.1.0
+    @version    0.2.0
     """
     project_root, manifest = _create_project_with_audio_blocks(tmp_path)
     payload_path = project_root / config.AUDIO_BLOCKS_OUTPUT_FILE_NAME
     payload = json.loads(payload_path.read_text(encoding="utf-8"))
+    payload[1]["sequence_index"] = 3
     payload.insert(
         1,
         {
@@ -99,7 +100,7 @@ def test_audio_assembly_service_writes_pause_blocks_as_silence(tmp_path) -> None
     manifest["audio_assembly_settings"] = {
         **audio_assembly_service.default_audio_assembly_settings(),
         "output_mode": audio_assembly_service.OUTPUT_MODE_WHOLE_BOOK,
-        "inter_block_silence_ms": 0,
+        "inter_block_silence_ms": 1000,
         "inter_chunk_silence_ms": 0,
     }
 

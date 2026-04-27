@@ -145,6 +145,8 @@ Current invariants:
 - Audio Assembly uses approved, generated Audio Blocks only
 - metadata-only pause Audio Blocks are included as silence using
   `pause_duration_ms`, or `1000 ms` when no valid duration exists
+- an explicit pause block replaces adjacent automatic inter-block silence for
+  that pause position, so the pause duration is not double-counted
 - metadata-only indication and background-noise Audio Blocks are skipped by the
   current composer
 - approved Audio Blocks are assembled in canonical book order: source chunk

@@ -13,7 +13,7 @@
          notes, and ready-for-assembly summaries.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-23
-@version 0.4.1
+@version 0.4.3
 """
 
 # IMPORTS
@@ -24,6 +24,7 @@ from audiomancer import config
 from audiomancer.services import (
     audio_blocks_state_service,
     character_voices_service,
+    operation_runtime_service,
     project_workspace_service,
     speech_blocks_service,
 )
@@ -282,15 +283,15 @@ def test_build_audio_blocks_state_does_not_resolve_unapproved_translation(monkey
     assert state["can_start_or_continue"] is True
 
 
-def test_build_audio_blocks_state_requires_approved_speech_blocks_to_start(tmp_path) -> None:
+def test_build_audio_blocks_state_starts_when_any_speech_block_is_approved(tmp_path) -> None:
     """
-    @brief      Verify Audio Blocks generation stays disabled until every Speech Block is approved.
+    @brief      Verify Audio Blocks generation is enabled when at least one Speech Block is approved.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-27
-    @version    0.1.0
+    @version    0.2.0
     """
     project_root, manifest = _create_audio_blocks_project(tmp_path, "AudioBlocksRequiresSpeechApproval")
     speech_blocks_path = (
@@ -303,7 +304,29 @@ def test_build_audio_blocks_state_requires_approved_speech_blocks_to_start(tmp_p
 
     state = audio_blocks_state_service.build_audio_blocks_state(project_root, manifest, "en")
 
-    assert state["can_start_or_continue"] is False
+    assert state["can_start_or_continue"] is True
+
+
+def test_build_audio_blocks_state_keeps_reset_disabled_for_default_metadata(tmp_path) -> None:
+    """
+    @brief      Verify first-access default Audio Blocks metadata does not enable reset generation.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-27
+    @version    0.1.0
+    """
+    project_root, manifest = _create_audio_blocks_project(tmp_path, "AudioBlocksDefaultMetadataNoReset")
+    operation_runtime_service.ensure_default_operation_state(project_root, "audio_blocks")
+
+    state = audio_blocks_state_service.build_audio_blocks_state(project_root, manifest, "en")
+
+    assert state["stage_status"] == "not_started"
+    assert state["prompt_count"] == 0
+    assert state["reused_prompt_count"] == 0
+    assert state["regenerated_prompt_count"] == 0
+    assert state["can_reset"] is False
 
 
 def _create_audio_blocks_project(tmp_path, name: str):

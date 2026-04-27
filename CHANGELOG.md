@@ -8,6 +8,34 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
 
 All notable changes to this project will be documented in this file.
 
+## [0.34.1] - 2026-04-27
+
+### Changed
+
+- changed Audio Blocks generation reuse to invalidate persisted generated audio
+  at block level when text, voice target, language, sample, model budget, or
+  split-plan inputs no longer match
+- changed Audio Blocks readiness so generation can start when at least one
+  Speech Block is approved, matching the service's partial-generation behavior
+- changed metadata-only special block persistence to record explicit
+  implementation status, with pause implemented and background-noise /
+  indication marked as not implemented
+- changed Audio Assembly pause handling so explicit pause blocks do not
+  double-count adjacent automatic inter-block silence
+- updated Audio Blocks and Audio Assembly software documentation for
+  generation fingerprints, reset detection, special blocks, WAV validation, and
+  pause composition semantics
+- package version updated to `0.34.1`
+
+### Fixed
+
+- fixed generated Audio Blocks WAV persistence to reject invalid downloaded WAV
+  payloads immediately
+- fixed split-part resume so stale, corrupt, or mismatched split checkpoints are
+  not reused
+- fixed Reset Audio Blocks button enablement so empty generated-audio
+  subfolders left after reset no longer keep the reset action active
+
 ## [0.34.0] - 2026-04-27
 
 ### Added

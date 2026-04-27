@@ -14,7 +14,7 @@
          generation through root-level state and report artifacts.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-25
-@version 0.3.0
+@version 0.3.1
 """
 
 # IMPORTS
@@ -567,7 +567,7 @@ def _compose_output_file(
     @exception  RuntimeError Raised when source WAV files are invalid.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.2.0
+    @version    0.3.0
     """
     output_root = project_root / config.AUDIOBOOK_OUTPUT_FOLDER_NAME
     output_root.mkdir(parents=True, exist_ok=True)
@@ -586,12 +586,13 @@ def _compose_output_file(
     with wave.open(str(temp_path), "wb") as output_wav:
         output_wav.setparams(reference_params)
         previous_chunk_id = None
+        previous_block = None
         for block_index, block in enumerate(blocks):
             raise_if_cancelled(cancel_requested)
             source_path = _audio_path(project_root, block)
             if source_path is None and not _is_pause_block(block):
                 continue
-            if block_index > 0:
+            if block_index > 0 and not _is_pause_block(block) and not _is_pause_block(previous_block or {}):
                 gap_ms = (
                     int(settings["inter_chunk_silence_ms"])
                     if str(block.get("chunk_id", "")) != str(previous_chunk_id)
@@ -603,6 +604,7 @@ def _compose_output_file(
                 pause_frames = _write_silence(output_wav, _pause_duration_ms(block), reference_params)
                 total_frames += pause_frames
                 previous_chunk_id = str(block.get("chunk_id", ""))
+                previous_block = block
                 continue
             assert source_path is not None
             with wave.open(str(source_path), "rb") as source_wav:
@@ -614,6 +616,7 @@ def _compose_output_file(
                 output_wav.writeframes(source_wav.readframes(frame_count))
                 total_frames += frame_count
                 previous_chunk_id = str(block.get("chunk_id", ""))
+                previous_block = block
     if output_path.is_file():
         output_path.unlink()
     temp_path.replace(output_path)

@@ -161,8 +161,9 @@ Inputs:
 - character sample audio files and metadata from `characters_voice.json` when
   the project uses narrator-plus-character assignment
 - ordered speech blocks in `speech_blocks.json`
-- every Speech Block must be approved before the Audio Blocks start/continue
-  action is enabled in the UI
+- at least one Speech Block must be approved before the Audio Blocks
+  start/continue action is enabled in the UI; unapproved blocks are skipped
+  until they are approved
 - runtime connection settings and discovered models from `settings.json`
 
 Romanian remains a valid selected voice language in AudioMancer metadata, but
@@ -194,6 +195,7 @@ Persisted audio-block payloads include at minimum:
 - `normalized_speaker_name`
 - `content_kind`
 - `metadata_only`
+- `special_block_status`
 - `pause_duration_ms` for pause blocks when an explicit duration was parsed
 - `speech_block_approved`
 - `text`
@@ -211,6 +213,8 @@ Persisted audio-block payloads include at minimum:
 - `model_token_budget`
 - `model_audio_seconds_budget`
 - `generated_part_relative_paths`
+- `generation_fingerprint`
+- `split_plan_fingerprint`
 - `warning_flags`
 
 Persisted reusable clone-prompt payloads include:
@@ -234,6 +238,9 @@ Current invariants:
 - `sequence_index` mirrors the Speech Blocks chunk-local index; it is not
   globally unique
 - Audio Blocks lookup and merge operations match records by `speech_block_id`
+  and reuse generated audio only when the block-level generation fingerprint
+  still matches the current text, voice target, model budget, language, special
+  block status, and source voice sample inputs
 - generated output ordering is source chunk order, then chunk-local
   `sequence_index`
 - `normalized_speaker_name` is ASCII-safe and derived through
@@ -242,18 +249,24 @@ Current invariants:
   payload per input fingerprint
 - unapproved Speech Blocks remain present in `audio_blocks.json`, but they are
   skipped by generation until `speech_block_approved` becomes true
-- the Audio Blocks page disables start/continue while any Speech Block remains
-  unapproved
-- metadata-only `pause`, `background_noise`, and `indication` blocks are marked
-  generated and approved automatically when their source Speech Block is
+- the Audio Blocks page enables start/continue when at least one Speech Block is
   approved
+- metadata-only `pause`, `background_noise`, and `indication` blocks persist an
+  explicit `special_block_status`; `pause` is implemented, while
+  `background_noise` and `indication` are represented as `not_implemented`
+  until downstream behavior is added
 - pause blocks retain a millisecond duration for Audio Assembly silence
   insertion; the downstream default is `1000 ms`
 - all approvals are explicit; generation never auto-approves audio
 - `approve_all_audio_blocks(...)` updates only already generated blocks
 - `audio_blocks_stage_status` becomes `completed` only when generated and
   approved counts both match the total speech-block count
-- mismatched fingerprints require an explicit reset and are never resumed
+- mismatched operation input fingerprints require an explicit reset and are
+  never resumed
+- downloaded VoiceWeaver payloads must validate as readable non-empty WAV files
+  before Audio Blocks persists them
+- split-part resume reuses part WAVs only when the split-plan fingerprint,
+  expected deterministic part paths, and WAV validation all match
 
 Current operation-state metadata includes:
 
