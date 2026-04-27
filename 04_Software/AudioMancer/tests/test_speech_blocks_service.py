@@ -15,7 +15,7 @@
          chunk-based generation, and narrator-only segmentation.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-24
-@version 0.7.0
+@version 0.7.5
 """
 
 # IMPORTS
@@ -29,6 +29,7 @@ from audiomancer.services import (
     character_discovery_service,
     character_voices_service,
     project_workspace_service,
+    prompt_template_service,
     speech_blocks_service,
 )
 
@@ -380,6 +381,108 @@ def test_indication_content_kind_normalizes_and_pause_duration_parses(tmp_path) 
     assert speech_blocks[0]["speaker_display_name"] == "Indication"
     assert speech_blocks_service.pause_duration_ms("pause 2500 ms") == 2500
     assert speech_blocks_service.pause_duration_ms("pause") == config.DEFAULT_SPEECH_BLOCK_PAUSE_DURATION_MS
+
+
+def test_same_narrator_edit_forces_narration_but_preserves_operations(tmp_path) -> None:
+    """
+    @brief      Verify same-narrator manual edits keep narrator flow while preserving operation labels.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-27
+    @version    0.1.0
+    """
+    project_root, manifest = _create_chunked_project(tmp_path, "SpeechBlocksSameNarratorEdit")
+    manifest["voice_assignment_mode"] = "same_narrator"
+    project_workspace_service.save_manifest(manifest, project_root)
+    _seed_review_speech_blocks(project_root)
+
+    speech_blocks_service.update_speech_block(
+        project_root,
+        "0001-000001",
+        "unknown-character",
+        speech_blocks_service.CONTENT_KIND_DIALOGUE,
+        "Narrator reads everything.",
+    )
+    speech_blocks = speech_blocks_service.load_speech_blocks(project_root)
+    assert speech_blocks[0]["speaker_kind"] == speech_blocks_service.SPEAKER_KIND_NARRATOR
+    assert speech_blocks[0]["speaker_id"] == "narrator"
+    assert speech_blocks[0]["speaker_display_name"] == "Narrator"
+    assert speech_blocks[0]["content_kind"] == speech_blocks_service.CONTENT_KIND_NARRATION
+
+    speech_blocks_service.update_speech_block(
+        project_root,
+        "0001-000001",
+        "unknown-character",
+        speech_blocks_service.CONTENT_KIND_BACKGROUND_NOISE,
+        "Wind against the shutters.",
+    )
+    speech_blocks = speech_blocks_service.load_speech_blocks(project_root)
+    assert speech_blocks[0]["speaker_kind"] == speech_blocks_service.SPEAKER_KIND_OPERATION
+    assert speech_blocks[0]["speaker_id"] == speech_blocks_service.CONTENT_KIND_BACKGROUND_NOISE
+    assert speech_blocks[0]["speaker_display_name"] == "Background Noise"
+    assert speech_blocks[0]["content_kind"] == speech_blocks_service.CONTENT_KIND_BACKGROUND_NOISE
+
+
+def test_null_like_started_at_creates_timestamped_speech_blocks_log(tmp_path) -> None:
+    """
+    @brief      Verify null-like persisted timestamps do not produce `None` Speech Blocks log names.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-27
+    @version    0.1.0
+    """
+    project_root, _manifest = _create_chunked_project(tmp_path, "SpeechBlocksNullTimestamp")
+    state_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.SPEECH_BLOCKS_STATE_FILE_NAME
+    state_path.write_text(
+        json.dumps(
+            {
+                "started_at": None,
+                "artifact_paths": ["log_ai_speech_blocks_None.log"],
+            },
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    started_at = speech_blocks_service._resolve_started_at({"started_at": None})  # noqa: SLF001
+    log_path = speech_blocks_service._resolve_log_path(project_root, started_at)  # noqa: SLF001
+
+    assert started_at != "None"
+    assert "None" not in log_path.name
+    assert log_path.name.startswith("log_ai_speech_blocks_")
+
+
+def test_review_update_replaces_null_like_started_at(tmp_path) -> None:
+    """
+    @brief      Verify review-only Speech Blocks saves replace null-like operation timestamps.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-27
+    @version    0.1.0
+    """
+    project_root, _manifest = _create_chunked_project(tmp_path, "SpeechBlocksReviewNullTimestamp")
+    _seed_review_speech_blocks(project_root)
+    state_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.SPEECH_BLOCKS_STATE_FILE_NAME
+    state_payload = json.loads(state_path.read_text(encoding="utf-8"))
+    state_payload["started_at"] = "None"
+    state_payload["completed_at"] = "null"
+    state_payload["artifact_paths"] = ["speech_blocks_report.json", "log_ai_speech_blocks_None.log"]
+    state_path.write_text(json.dumps(state_payload, indent=2) + "\n", encoding="utf-8")
+
+    speech_blocks_service.approve_speech_block(project_root, "0001-000001")
+
+    updated_state = speech_blocks_service.load_operation_state(project_root)
+    assert updated_state is not None
+    assert updated_state["started_at"] != "None"
+    assert updated_state["completed_at"] != "null"
+    assert all("None" not in str(path) for path in updated_state["artifact_paths"])
 
 
 def test_approve_all_edit_and_reset_preserve_warning_cleared_state(tmp_path) -> None:
@@ -1152,14 +1255,86 @@ def test_start_generation_uses_narrator_only_prompt_for_same_narrator(monkeypatc
     assert speech_blocks[0]["text"] == 'Narration. "Hello there."'
 
 
-def test_normalize_chunk_blocks_narrator_only_preserves_delimiters_and_flags_budget() -> None:
+@pytest.mark.parametrize(
+    ("voice_assignment_mode", "system_prompt_name", "user_prompt_name", "include_character", "expected_snippets"),
+    [
+        (
+            "narrator_and_characters",
+            "speech_blocks_system",
+            "speech_blocks_user",
+            True,
+            ("Voice assignment mode: narrator_and_characters", '"speaker_id": "maria"'),
+        ),
+        (
+            "same_narrator",
+            "speech_blocks_narrator_only_system",
+            "speech_blocks_narrator_only_user",
+            False,
+            ("Voice assignment mode: same_narrator", '"speaker_id": "narrator"'),
+        ),
+    ],
+)
+def test_speech_blocks_production_prompt_contract_matrix(
+    voice_assignment_mode: str,
+    system_prompt_name: str,
+    user_prompt_name: str,
+    include_character: bool,
+    expected_snippets: tuple[str, ...],
+) -> None:
     """
-    @brief      Verify narrator-only normalization preserves dialogue delimiters and flags over-budget spans.
+    @brief      Verify production Speech Blocks prompt pairs render with their runtime variable contract.
+    @param[in]  voice_assignment_mode Runtime voice-assignment mode under test.
+    @param[in]  system_prompt_name Production system prompt name.
+    @param[in]  user_prompt_name Production user prompt name.
+    @param[in]  include_character True when the matrix case includes one character speaker.
+    @param[in]  expected_snippets Rendered prompt snippets expected for this prompt pair.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-27
+    @version    0.1.0
+    """
+    speaker_catalog = {"narrator": _narrator_catalog_entry()}
+    if include_character:
+        speaker_catalog["maria"] = {
+            "speaker_id": "maria",
+            "speaker_kind": "character",
+            "display_name": "Maria",
+        }
+
+    rendered_system_prompt = prompt_template_service.render_prompt(system_prompt_name, {})
+    rendered_prompt = speech_blocks_service._chunk_user_prompt(  # noqa: SLF001
+        {"chunk_id": "chunk-contract-0001", "text": 'Contract narration. "Hello there."'},
+        "en",
+        speaker_catalog,
+        voice_assignment_mode=voice_assignment_mode,
+        tts_budget={
+            "model_token_budget": 9876,
+            "safe_word_count": 321,
+            "model_budget_source": "contract-test-cache",
+        },
+        prompt_name=user_prompt_name,
+    )
+
+    assert rendered_system_prompt.strip()
+    assert "chunk-contract-0001" in rendered_prompt
+    assert "Contract narration" in rendered_prompt
+    assert "TTS maximum model token budget: 9876" in rendered_prompt
+    assert "Safe approximate words per block: 321" in rendered_prompt
+    assert "TTS budget source: contract-test-cache" in rendered_prompt
+    assert "Allowed speaker catalog:" in rendered_prompt
+    for expected_snippet in expected_snippets:
+        assert expected_snippet in rendered_prompt
+
+
+def test_normalize_chunk_blocks_narrator_only_preserves_delimiters() -> None:
+    """
+    @brief      Verify narrator-only normalization preserves dialogue delimiters.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-26
-    @version    0.1.0
+    @version    0.2.0
     """
     source_chunk = {"chunk_id": "chunk-0001", "text": "- Bonjour. Â« Venez. Â»"}
     blocks, warnings = speech_blocks_service._normalize_chunk_blocks(  # noqa: SLF001
@@ -1178,7 +1353,7 @@ def test_normalize_chunk_blocks_narrator_only_preserves_delimiters_and_flags_bud
         {"narrator": _narrator_catalog_entry()},
         "fr",
         voice_assignment_mode="same_narrator",
-        tts_budget={"safe_word_count": 1},
+        tts_budget={"safe_word_count": 20},
     )
 
     assert blocks[0]["speaker_id"] == "narrator"
@@ -1186,8 +1361,112 @@ def test_normalize_chunk_blocks_narrator_only_preserves_delimiters_and_flags_bud
     assert blocks[0]["text"] == "- Bonjour. Â« Venez. Â»"
     assert blocks[0]["source_text"] == "- Bonjour. Â« Venez. Â»"
     assert "ambiguous_speaker" not in blocks[0]["warning_flags"]
-    assert "tts_budget_exceeded" in blocks[0]["warning_flags"]
-    assert any("safe cached TTS budget" in str(warning["reason"]) for warning in warnings)
+    assert "tts_budget_exceeded" not in blocks[0]["warning_flags"]
+    assert warnings == []
+
+
+def test_normalize_chunk_blocks_splits_over_budget_sentence_boundaries() -> None:
+    """
+    @brief      Verify over-budget AI output is split on sentence boundaries before payload persistence.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-27
+    @version    0.1.0
+    """
+    source_text = "One two. Three four. Five six."
+    blocks, warnings = speech_blocks_service._normalize_chunk_blocks(  # noqa: SLF001
+        {"chunk_id": "chunk-0001", "text": source_text},
+        {
+            "speech_blocks": [
+                {
+                    "speaker_id": "narrator",
+                    "content_kind": "narration",
+                    "source_text": source_text,
+                    "text": source_text,
+                    "warning_flags": [],
+                }
+            ]
+        },
+        {"narrator": _narrator_catalog_entry()},
+        "en",
+        tts_budget={"safe_word_count": 2},
+    )
+
+    assert [block["text"] for block in blocks] == ["One two.", "Three four.", "Five six."]
+    assert [block["source_text"] for block in blocks] == ["One two.", "Three four.", "Five six."]
+    assert [block["speaker_id"] for block in blocks] == ["narrator", "narrator", "narrator"]
+    assert [block["content_kind"] for block in blocks] == ["narration", "narration", "narration"]
+    assert all("tts_hard_split" not in block["warning_flags"] for block in blocks)
+    assert any("split after AI output" in str(warning["reason"]) for warning in warnings)
+
+
+def test_normalize_chunk_blocks_hard_splits_over_budget_without_boundaries() -> None:
+    """
+    @brief      Verify hard fallback splits oversized text and marks the resulting blocks for review.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-27
+    @version    0.1.0
+    """
+    source_text = "one two three four five"
+    blocks, warnings = speech_blocks_service._normalize_chunk_blocks(  # noqa: SLF001
+        {"chunk_id": "chunk-0001", "text": source_text},
+        {
+            "speech_blocks": [
+                {
+                    "speaker_id": "narrator",
+                    "content_kind": "narration",
+                    "source_text": source_text,
+                    "text": source_text,
+                    "warning_flags": [],
+                }
+            ]
+        },
+        {"narrator": _narrator_catalog_entry()},
+        "en",
+        tts_budget={"safe_word_count": 2},
+    )
+
+    assert [block["text"] for block in blocks] == ["one two", "three four", "five"]
+    assert all("tts_hard_split" in block["warning_flags"] for block in blocks)
+    assert any("split after AI output" in str(warning["reason"]) for warning in warnings)
+
+
+def test_normalize_chunk_blocks_narrator_only_preserves_operation_blocks() -> None:
+    """
+    @brief      Verify narrator-only normalization does not coerce operation blocks into narrator rows.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-27
+    @version    0.1.0
+    """
+    blocks, _warnings = speech_blocks_service._normalize_chunk_blocks(  # noqa: SLF001
+        {"chunk_id": "chunk-0001", "text": "pause 2500 ms"},
+        {
+            "speech_blocks": [
+                {
+                    "speaker_id": "narrator",
+                    "content_kind": "pause",
+                    "source_text": "pause 2500 ms",
+                    "text": "pause 2500 ms",
+                    "warning_flags": [],
+                }
+            ]
+        },
+        {"narrator": _narrator_catalog_entry()},
+        "en",
+        voice_assignment_mode="same_narrator",
+        tts_budget={"safe_word_count": 20},
+    )
+
+    assert blocks[0]["speaker_kind"] == speech_blocks_service.SPEAKER_KIND_OPERATION
+    assert blocks[0]["speaker_id"] == speech_blocks_service.CONTENT_KIND_PAUSE
+    assert blocks[0]["speaker_display_name"] == "Pause"
+    assert blocks[0]["content_kind"] == speech_blocks_service.CONTENT_KIND_PAUSE
+    assert "tts_budget_exceeded" not in blocks[0]["warning_flags"]
 
 
 def _create_chunked_project(tmp_path, name: str):

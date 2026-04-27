@@ -12,7 +12,7 @@
 @details Exposes the package version for the desktop application shell.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-25
-@version 0.5.0
+@version 0.5.1
 """
 
 # IMPORTS
@@ -21,7 +21,7 @@ from .app import main
 
 # CONSTANTS
 
-__version__ = "0.33.5"
+__version__ = "0.34.0"
 
 # PUBLIC API
 

@@ -13,7 +13,7 @@
          notes, and ready-for-assembly summaries.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-23
-@version 0.4.0
+@version 0.4.1
 """
 
 # IMPORTS
@@ -282,6 +282,30 @@ def test_build_audio_blocks_state_does_not_resolve_unapproved_translation(monkey
     assert state["can_start_or_continue"] is True
 
 
+def test_build_audio_blocks_state_requires_approved_speech_blocks_to_start(tmp_path) -> None:
+    """
+    @brief      Verify Audio Blocks generation stays disabled until every Speech Block is approved.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-27
+    @version    0.1.0
+    """
+    project_root, manifest = _create_audio_blocks_project(tmp_path, "AudioBlocksRequiresSpeechApproval")
+    speech_blocks_path = (
+        project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.SPEECH_BLOCKS_OUTPUT_FILE_NAME
+    )
+    speech_blocks = json.loads(speech_blocks_path.read_text(encoding="utf-8"))
+    speech_blocks[1]["approved"] = False
+    speech_blocks[1]["approved_at"] = None
+    speech_blocks_path.write_text(json.dumps(speech_blocks, indent=2) + "\n", encoding="utf-8")
+
+    state = audio_blocks_state_service.build_audio_blocks_state(project_root, manifest, "en")
+
+    assert state["can_start_or_continue"] is False
+
+
 def _create_audio_blocks_project(tmp_path, name: str):
     """
     @brief      Create one project fixture with chunking and Speech Blocks artifacts.
@@ -353,6 +377,8 @@ def _create_audio_blocks_project(tmp_path, name: str):
                     "speaker_display_name": "Narrator",
                     "content_kind": speech_blocks_service.CONTENT_KIND_NARRATION,
                     "text": "Narration one.",
+                    "approved": True,
+                    "approved_at": "2026-04-23T12:02:00+00:00",
                     "warning_flags": [],
                 },
                 {
@@ -365,6 +391,8 @@ def _create_audio_blocks_project(tmp_path, name: str):
                     "speaker_display_name": "Alice",
                     "content_kind": speech_blocks_service.CONTENT_KIND_DIALOGUE,
                     "text": "Hello there.",
+                    "approved": True,
+                    "approved_at": "2026-04-23T12:03:00+00:00",
                     "warning_flags": [],
                 },
             ],

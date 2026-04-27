@@ -14,7 +14,7 @@
          Speech Blocks workflow.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 0.3.2
+@version 0.4.1
 """
 
 # IMPORTS
@@ -47,7 +47,7 @@ def handle_generate_requested(window: "MainWindow", profile_id: str) -> None:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.2.0
+    @version    0.3.0
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._active_operation_kind is not None:
@@ -105,7 +105,7 @@ def handle_reset_generation_requested(window: "MainWindow") -> None:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-24
-    @version    0.2.0
+    @version    0.3.0
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._current_project_root is None or window._current_manifest is None:
@@ -153,10 +153,13 @@ def handle_approve_block_requested(window: "MainWindow", speech_block_id: str) -
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-24
-    @version    0.2.0
+    @version    0.3.0
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._current_project_root is None or window._current_manifest is None:
+        return
+    chunk_id = _chunk_id_for_speech_block(window, speech_block_id)
+    if not _confirm_chunk_audio_reset_if_needed(window, chunk_id, current_language):
         return
     try:
         speech_blocks_service.approve_speech_block(window._current_project_root, speech_block_id)
@@ -168,6 +171,7 @@ def handle_approve_block_requested(window: "MainWindow", speech_block_id: str) -
         )
         return
     _sync_manifest_after_speech_blocks_update(window)
+    _reset_audio_blocks_after_speech_chunk_change(window, chunk_id)
     window._speech_blocks_page.advance_to_next_block()
     misc_ui_controller.show_message(
         window,
@@ -185,10 +189,12 @@ def handle_insert_block_requested(window: "MainWindow", chunk_id: str, before_sp
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.1.0
+    @version    0.2.0
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._current_project_root is None or window._current_manifest is None:
+        return
+    if not _confirm_chunk_audio_reset_if_needed(window, chunk_id, current_language):
         return
     try:
         _report, inserted_block_id = speech_blocks_service.insert_speech_block(
@@ -204,7 +210,7 @@ def handle_insert_block_requested(window: "MainWindow", chunk_id: str, before_sp
         )
         return
     _sync_manifest_after_speech_blocks_update(window)
-    _reset_downstream_after_speech_blocks_structure_change(window)
+    _reset_audio_blocks_after_speech_chunk_change(window, chunk_id)
     window._speech_blocks_page.select_speech_block(inserted_block_id)
     window._speech_blocks_page.begin_editing_selected_block()
     misc_ui_controller.show_message(
@@ -222,12 +228,15 @@ def handle_delete_block_requested(window: "MainWindow", speech_block_id: str) ->
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.1.0
+    @version    0.2.0
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._current_project_root is None or window._current_manifest is None:
         return
+    chunk_id = _chunk_id_for_speech_block(window, speech_block_id)
     if not _confirm_delete_speech_block(window, current_language):
+        return
+    if not _confirm_chunk_audio_reset_if_needed(window, chunk_id, current_language):
         return
     try:
         speech_blocks_service.delete_speech_block(window._current_project_root, speech_block_id)
@@ -239,7 +248,7 @@ def handle_delete_block_requested(window: "MainWindow", speech_block_id: str) ->
         )
         return
     _sync_manifest_after_speech_blocks_update(window)
-    _reset_downstream_after_speech_blocks_structure_change(window)
+    _reset_audio_blocks_after_speech_chunk_change(window, chunk_id)
     misc_ui_controller.show_message(
         window,
         ui_state_service.translate("status.speech_block_deleted", current_language),
@@ -296,10 +305,13 @@ def handle_save_block_requested(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-24
-    @version    0.2.0
+    @version    0.3.0
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._current_project_root is None or window._current_manifest is None:
+        return
+    chunk_id = _chunk_id_for_speech_block(window, speech_block_id)
+    if not _confirm_chunk_audio_reset_if_needed(window, chunk_id, current_language):
         return
     source_scroll_position = window._speech_blocks_page.source_scroll_position()
     try:
@@ -318,7 +330,7 @@ def handle_save_block_requested(
         )
         return
     _sync_manifest_after_speech_blocks_update(window)
-    _invalidate_audio_blocks_after_speech_block_change(window, speech_block_id)
+    _reset_audio_blocks_after_speech_chunk_change(window, chunk_id)
     window._speech_blocks_page.restore_source_scroll_position(source_scroll_position)
     misc_ui_controller.show_message(
         window,
@@ -335,10 +347,13 @@ def handle_reset_block_requested(window: "MainWindow", speech_block_id: str) -> 
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-24
-    @version    0.2.0
+    @version    0.3.0
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._current_project_root is None or window._current_manifest is None:
+        return
+    chunk_id = _chunk_id_for_speech_block(window, speech_block_id)
+    if not _confirm_chunk_audio_reset_if_needed(window, chunk_id, current_language):
         return
     source_scroll_position = window._speech_blocks_page.source_scroll_position()
     try:
@@ -351,7 +366,7 @@ def handle_reset_block_requested(window: "MainWindow", speech_block_id: str) -> 
         )
         return
     _sync_manifest_after_speech_blocks_update(window)
-    _invalidate_audio_blocks_after_speech_block_change(window, speech_block_id)
+    _reset_audio_blocks_after_speech_chunk_change(window, chunk_id)
     window._speech_blocks_page.restore_source_scroll_position(source_scroll_position)
     misc_ui_controller.show_message(
         window,
@@ -368,7 +383,7 @@ def handle_resplit_selected_requested(window: "MainWindow", chunk_id: str) -> No
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-24
-    @version    0.1.0
+    @version    0.2.0
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._active_operation_kind is not None:
@@ -465,6 +480,8 @@ def _handle_speech_blocks_success(
     _sync_manifest_after_speech_blocks_update(window)
     if changed_chunk_id is not None:
         _reconcile_audio_blocks_after_resplit(window, changed_chunk_id)
+    else:
+        _reset_downstream_after_speech_blocks_structure_change(window)
     misc_ui_controller.show_message(
         window,
         ui_state_service.translate(success_message_key, current_language_from_window(window)),
@@ -522,16 +539,13 @@ def _sync_manifest_after_speech_blocks_update(window: "MainWindow") -> None:
     assert window._current_project_root is not None
     assert window._current_manifest is not None
     operation_state = speech_blocks_service.load_operation_state(window._current_project_root)
-    if operation_state is None:
+    report = speech_blocks_service.load_speech_blocks_report(window._current_project_root)
+    if operation_state is None and not isinstance(report, dict):
         return
     updated_manifest = dict(window._current_manifest)
     operations = text_cleanup_state_service.normalized_manifest_operations(updated_manifest)
-    operations["speech_blocks"] = project_workspace_service.project_manifest_operation_summary(
-        "speech_blocks",
-        operation_state,
-    )
+    operations["speech_blocks"] = _speech_blocks_manifest_operation_summary(operation_state, report)
     updated_manifest["operations"] = operations
-    report = speech_blocks_service.load_speech_blocks_report(window._current_project_root)
     if (
         isinstance(report, dict)
         and str(report.get("speech_blocks_stage_status", "")).strip()
@@ -607,10 +621,12 @@ def _reset_speech_blocks_and_downstream(window: "MainWindow") -> None:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-24
-    @version    0.2.0
+    @version    0.3.0
     """
     assert window._current_project_root is not None
     assert window._current_manifest is not None
+    audio_blocks_service.reset_audio_blocks(window._current_project_root)
+    audio_assembly_service.reset_audio_assembly(window._current_project_root)
     speech_blocks_service.reset_speech_blocks(window._current_project_root)
     reset_manifest = text_cleanup_state_service.build_manifest_after_operation_reset(
         window._current_manifest,
@@ -620,20 +636,44 @@ def _reset_speech_blocks_and_downstream(window: "MainWindow") -> None:
     window._current_manifest = project_workspace_service.load_manifest(window._current_project_root)
 
 
-def _invalidate_audio_blocks_after_speech_block_change(window: "MainWindow", speech_block_id: str) -> None:
+def _chunk_id_for_speech_block(window: "MainWindow", speech_block_id: str) -> str | None:
     """
-    @brief      Remove one stale Audio Blocks entry after one Speech Block edit.
+    @brief      Resolve the chunk identifier for one Speech Block.
     @param[in]  window Active main window instance.
-    @param[in]  speech_block_id Changed Speech Block identifier.
-    @return     None.
+    @param[in]  speech_block_id Selected Speech Block identifier.
+    @return     Source chunk identifier or `None`.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
+    @date       2026-04-27
     @version    0.1.0
     """
     if window._current_project_root is None:
+        return None
+    normalized_block_id = str(speech_block_id).strip()
+    for block in speech_blocks_service.load_speech_blocks(window._current_project_root):
+        if str(block.get("speech_block_id", "")).strip() == normalized_block_id:
+            return str(block.get("chunk_id", "")).strip() or None
+    return None
+
+
+def _reset_audio_blocks_after_speech_chunk_change(window: "MainWindow", chunk_id: str | None) -> None:
+    """
+    @brief      Reset stale Audio Blocks entries after one Speech Blocks chunk changes.
+    @param[in]  window Active main window instance.
+    @param[in]  chunk_id Changed source chunk identifier.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-27
+    @version    0.3.0
+    """
+    if window._current_project_root is None or not chunk_id:
         return
-    audio_blocks_service.invalidate_audio_for_speech_block(window._current_project_root, speech_block_id)
+    audio_player = getattr(window, "_audio_blocks_audio_player", None)
+    if audio_player is not None:
+        audio_player.stop()
+    audio_blocks_service.reset_audio_for_speech_chunk(window._current_project_root, chunk_id)
+    audio_assembly_service.reset_audio_assembly(window._current_project_root)
     _sync_audio_blocks_manifest_summary(window)
 
 
@@ -646,12 +686,11 @@ def _reconcile_audio_blocks_after_resplit(window: "MainWindow", changed_chunk_id
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-24
-    @version    0.1.0
+    @version    0.2.0
     """
     if window._current_project_root is None:
         return
-    audio_blocks_service.reconcile_after_speech_blocks_resplit(window._current_project_root, changed_chunk_id)
-    _sync_audio_blocks_manifest_summary(window)
+    _reset_audio_blocks_after_speech_chunk_change(window, changed_chunk_id)
 
 
 def _reset_downstream_after_speech_blocks_structure_change(window: "MainWindow") -> None:
@@ -662,7 +701,7 @@ def _reset_downstream_after_speech_blocks_structure_change(window: "MainWindow")
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.1.0
+    @version    0.2.0
     """
     if window._current_project_root is None or window._current_manifest is None:
         return
@@ -681,11 +720,7 @@ def _reset_downstream_after_speech_blocks_structure_change(window: "MainWindow")
         reset_manifest["current_stage"] = "character_voices_ready"
     operation_state = speech_blocks_service.load_operation_state(window._current_project_root)
     operations = text_cleanup_state_service.normalized_manifest_operations(reset_manifest)
-    if operation_state is not None:
-        operations["speech_blocks"] = project_workspace_service.project_manifest_operation_summary(
-            "speech_blocks",
-            operation_state,
-        )
+    operations["speech_blocks"] = _speech_blocks_manifest_operation_summary(operation_state, report)
     reset_manifest["operations"] = operations
     project_workspace_service.save_manifest(reset_manifest, window._current_project_root)
     window.show_project_state(
@@ -702,18 +737,20 @@ def _sync_audio_blocks_manifest_summary(window: "MainWindow") -> None:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-24
-    @version    0.1.0
+    @version    0.2.0
     """
     if window._current_project_root is None or window._current_manifest is None:
         return
     updated_manifest = dict(window._current_manifest)
     operations = text_cleanup_state_service.normalized_manifest_operations(updated_manifest)
+    default_operations = text_cleanup_state_service.normalized_manifest_operations({})
     operation_state = audio_blocks_service.load_operation_state(window._current_project_root)
     if operation_state is not None:
         operations["audio_blocks"] = project_workspace_service.project_manifest_operation_summary(
             "audio_blocks",
             operation_state,
         )
+    operations["audio_assembly"] = default_operations["audio_assembly"]
     updated_manifest["operations"] = operations
     if _stage_rank(str(updated_manifest.get("current_stage", "")).strip()) > _stage_rank("speech_blocks_ready"):
         updated_manifest["current_stage"] = "speech_blocks_ready"
@@ -749,6 +786,34 @@ def _is_cancel_requested(window: "MainWindow") -> bool:
     @version    0.1.1
     """
     return bool(window._operation_cancel_requested)
+
+
+def _speech_blocks_manifest_operation_summary(
+    operation_state: dict[str, object] | None,
+    report: dict[str, object] | None,
+) -> dict[str, object]:
+    """
+    @brief      Build the manifest summary for Speech Blocks from approval-aware report state.
+    @param[in]  operation_state Persisted Speech Blocks runtime state.
+    @param[in]  report Persisted Speech Blocks report payload.
+    @return     Compact manifest operation summary.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-27
+    @version    0.1.0
+    """
+    summary = project_workspace_service.project_manifest_operation_summary("speech_blocks", operation_state)
+    if not isinstance(report, dict):
+        return summary
+    stage_status = str(report.get("speech_blocks_stage_status", "")).strip()
+    if stage_status == speech_blocks_service.SPEECH_BLOCKS_STAGE_COMPLETED:
+        summary["status"] = "completed"
+    elif stage_status == speech_blocks_service.SPEECH_BLOCKS_STAGE_IN_PROGRESS and str(summary.get("status")) not in {
+        "running",
+        "failed",
+    }:
+        summary["status"] = "review_pending"
+    return summary
 
 
 def _confirm_generation(window: "MainWindow", language: str) -> bool:
@@ -790,6 +855,34 @@ def _confirm_speech_blocks_reset(window: "MainWindow", language: str) -> bool:
             window,
             ui_state_service.translate("dialog.confirm_speech_blocks_rerun_title", language),
             ui_state_service.translate("project.confirm_speech_blocks_rerun", language),
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        == QMessageBox.StandardButton.Yes
+    )
+
+
+def _confirm_chunk_audio_reset_if_needed(window: "MainWindow", chunk_id: str | None, language: str) -> bool:
+    """
+    @brief      Ask before resetting generated Audio Blocks data for one changed Speech Blocks chunk.
+    @param[in]  window Active main window instance.
+    @param[in]  chunk_id Changed source chunk identifier.
+    @param[in]  language Current UI language code.
+    @return     True when the operation may continue.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-27
+    @version    0.1.0
+    """
+    if window._current_project_root is None or not chunk_id:
+        return True
+    if not audio_blocks_service.has_persisted_audio_for_chunk(window._current_project_root, chunk_id):
+        return True
+    return (
+        QMessageBox.question(
+            window,
+            ui_state_service.translate("dialog.confirm_speech_block_audio_reset_title", language),
+            ui_state_service.translate("project.confirm_speech_block_audio_reset", language),
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.No,
         )

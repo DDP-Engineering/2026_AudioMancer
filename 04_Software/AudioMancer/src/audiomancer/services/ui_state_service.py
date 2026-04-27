@@ -13,7 +13,7 @@
          application through one centralized string catalog and scale mapping.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 0.33.0
+@version 0.33.1
 """
 
 # ruff: noqa: E501
@@ -778,15 +778,20 @@ _UI_STRINGS = {
         "project.confirm_cleanup_rerun": "Continuing will delete the current cleanup data, clear chunking and all following operation folders, and reset workflow progress after extraction. Continue?",
         "project.confirm_chunking_rerun": "Continuing will delete the current chunking data, clear translation and all following operation folders, and reset workflow progress after cleanup. Continue?",
         "project.confirm_ai_chunking_rerun": "Continuing will delete the current chunking data, clear translation and all following operation folders, and reset workflow progress after cleanup before starting new AI-assisted chunking. Continue?",
-        "project.confirm_speech_blocks": "Speech Blocks generation can take time because it sends one AI request per chunk and consumes AI tokens. Continue?",
+        "project.confirm_speech_blocks": "Speech Blocks generation can take time because it sends one AI request per chunk and consumes AI tokens. A successful run will reset Audio Blocks and Audio Assembly. Continue?",
         "project.confirm_speech_blocks_rerun": "Continuing will delete the current Speech Blocks data, clear Audio Blocks and Audio Assembly, and reset workflow progress after Character Voices before starting a new Speech Blocks run. Continue?",
         "project.confirm_speech_blocks_resplit": (
             "Continuing will erase the Speech Blocks for the selected chunk and send a new AI request. "
             "AI operations can take a long time and may consume paid tokens. Continue?"
         ),
         "project.confirm_delete_speech_block": (
-            "Continuing will delete the selected Speech Block, renumber the chunk, and reset Audio Blocks plus "
-            "Audio Assembly. Continue?"
+            "Continuing will delete the selected Speech Block, renumber the chunk, and reset generated Audio Blocks "
+            "for that chunk. Continue?"
+        ),
+        "project.confirm_speech_block_audio_reset": (
+            "This Speech Block change affects generated Audio Blocks for the current chunk. Continuing will delete "
+            "that chunk's generated WAV files, reset its audio metadata, and reset downstream Audio Assembly data. "
+            "Continue?"
         ),
         "project.confirm_audio_blocks": (
             "Audio generation can take a long time because it prepares reusable voice prompts and then "
@@ -830,6 +835,7 @@ _UI_STRINGS = {
         "dialog.confirm_speech_blocks_rerun_title": "Confirm Speech Blocks Rerun",
         "dialog.confirm_speech_blocks_resplit_title": "Confirm Selected Chunk Re-Split",
         "dialog.confirm_delete_speech_block_title": "Delete Speech Block",
+        "dialog.confirm_speech_block_audio_reset_title": "Confirm Chunk Audio Reset",
         "dialog.confirm_audio_blocks_title": "Start Audio Generation",
         "dialog.confirm_audio_blocks_rerun_title": "Confirm Audio Generation Rerun",
         "dialog.confirm_audio_blocks_reset_title": "Confirm Audio Generation Reset",
@@ -1599,7 +1605,7 @@ _UI_STRINGS = {
         "project.confirm_cleanup_rerun": "Continuarea va sterge datele curente de curatare, va goli segmentarea si toate folderele operatiilor urmatoare si va reseta progresul fluxului dupa extragere. Continui?",
         "project.confirm_chunking_rerun": "Continuarea va sterge datele curente de segmentare, va goli traducerea si toate folderele operatiilor urmatoare si va reseta progresul fluxului dupa curatare. Continui?",
         "project.confirm_ai_chunking_rerun": "Continuarea va sterge datele curente de segmentare, va goli traducerea si toate folderele operatiilor urmatoare si va reseta progresul fluxului dupa curatare inainte de a porni o noua segmentare asistata de AI. Continui?",
-        "project.confirm_speech_blocks": "Generarea blocurilor de vorbire poate dura deoarece trimite cate o cerere AI pentru fiecare segment si consuma tokeni AI. Continui?",
+        "project.confirm_speech_blocks": "Generarea blocurilor de vorbire poate dura deoarece trimite cate o cerere AI pentru fiecare segment si consuma tokeni AI. O rulare reusita va reseta Blocurile Audio si Asamblarea Audio. Continui?",
         "project.confirm_speech_blocks_rerun": "Continuarea va sterge datele curente pentru blocurile de vorbire, va goli Blocurile Audio si Asamblarea Audio si va reseta progresul fluxului dupa Vocile Personajelor inainte de a porni o noua rulare. Continui?",
         "project.confirm_speech_blocks_resplit": (
             "Continuarea va sterge blocurile de vorbire pentru segmentul selectat si va trimite o noua cerere AI. "
@@ -1607,7 +1613,12 @@ _UI_STRINGS = {
         ),
         "project.confirm_delete_speech_block": (
             "Continuarea va sterge blocul de vorbire selectat, va renumerota segmentul si va reseta Blocurile Audio "
-            "plus Asamblarea Audio. Continui?"
+            "generate pentru acel segment. Continui?"
+        ),
+        "project.confirm_speech_block_audio_reset": (
+            "Aceasta schimbare a blocului de vorbire afecteaza Blocurile Audio generate pentru segmentul curent. "
+            "Continuarea va sterge fisierele WAV generate pentru acel segment, va reseta metadatele audio ale "
+            "segmentului si va reseta datele din aval pentru Asamblarea Audio. Continui?"
         ),
         "project.confirm_audio_blocks": (
             "Generarea audio poate dura mult deoarece pregateste prompturi vocale reutilizabile si apoi "
@@ -1653,6 +1664,7 @@ _UI_STRINGS = {
         "dialog.confirm_speech_blocks_rerun_title": "Confirma Rerularea Blocurilor de Vorbire",
         "dialog.confirm_speech_blocks_resplit_title": "Confirma Resegmentarea Segmentului Selectat",
         "dialog.confirm_delete_speech_block_title": "Sterge Bloc Vorbire",
+        "dialog.confirm_speech_block_audio_reset_title": "Confirma Resetarea Audio a Segmentului",
         "dialog.confirm_audio_blocks_title": "Porneste Generarea Audio",
         "dialog.confirm_audio_blocks_rerun_title": "Confirma Rerularea Generarii Audio",
         "dialog.confirm_audio_blocks_reset_title": "Confirma Resetarea Generarii Audio",

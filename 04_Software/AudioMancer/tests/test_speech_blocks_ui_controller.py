@@ -13,7 +13,7 @@
          the Speech Blocks workflow.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 0.4.0
+@version 0.4.2
 """
 
 # IMPORTS
@@ -120,7 +120,7 @@ def test_speech_blocks_ui_controller_save_restores_chunk_text_scroll(monkeypatch
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.1.0
+    @version    0.2.0
     """
     project_root = tmp_path / "SpeechBlocksSaveScroll"
     project_root.mkdir()
@@ -135,10 +135,20 @@ def test_speech_blocks_ui_controller_save_restores_chunk_text_scroll(monkeypatch
         ),
     )
     monkeypatch.setattr(speech_blocks_ui_controller.speech_blocks_service, "update_speech_block", lambda *args: {})
+    monkeypatch.setattr(
+        speech_blocks_ui_controller,
+        "_chunk_id_for_speech_block",
+        lambda *_args: "chunk-0001",
+    )
+    monkeypatch.setattr(
+        speech_blocks_ui_controller,
+        "_confirm_chunk_audio_reset_if_needed",
+        lambda *_args: True,
+    )
     monkeypatch.setattr(speech_blocks_ui_controller, "_sync_manifest_after_speech_blocks_update", lambda _window: None)
     monkeypatch.setattr(
         speech_blocks_ui_controller,
-        "_invalidate_audio_blocks_after_speech_block_change",
+        "_reset_audio_blocks_after_speech_chunk_change",
         lambda *_args: None,
     )
     monkeypatch.setattr(speech_blocks_ui_controller.misc_ui_controller, "show_message", lambda *args, **kwargs: None)
@@ -156,14 +166,14 @@ def test_speech_blocks_ui_controller_save_restores_chunk_text_scroll(monkeypatch
 
 def test_speech_blocks_ui_controller_insert_resets_downstream_and_selects_new_block(monkeypatch, tmp_path) -> None:
     """
-    @brief      Verify insert delegates to service, resets downstream state, and selects edit mode.
+    @brief      Verify insert delegates to service, resets chunk audio state, and selects edit mode.
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.1.0
+    @version    0.2.0
     """
     project_root = tmp_path / "SpeechBlocksInsertController"
     project_root.mkdir()
@@ -191,28 +201,33 @@ def test_speech_blocks_ui_controller_insert_resets_downstream_and_selects_new_bl
     )
     monkeypatch.setattr(
         speech_blocks_ui_controller,
-        "_reset_downstream_after_speech_blocks_structure_change",
-        lambda _window: reset_calls.append("reset"),
+        "_confirm_chunk_audio_reset_if_needed",
+        lambda *_args: True,
+    )
+    monkeypatch.setattr(
+        speech_blocks_ui_controller,
+        "_reset_audio_blocks_after_speech_chunk_change",
+        lambda _window, chunk_id: reset_calls.append(f"reset:{chunk_id}"),
     )
     monkeypatch.setattr(speech_blocks_ui_controller.misc_ui_controller, "show_message", lambda *args, **kwargs: None)
 
     speech_blocks_ui_controller.handle_insert_block_requested(window, "chunk-0001", "0001-000001")
 
     assert service_calls == [(project_root, "chunk-0001", "0001-000001")]
-    assert reset_calls == ["sync", "reset"]
+    assert reset_calls == ["sync", "reset:chunk-0001"]
     assert page_calls == [("select", "0001-000002"), ("edit", "")]
 
 
 def test_speech_blocks_ui_controller_delete_confirms_and_resets_downstream(monkeypatch, tmp_path) -> None:
     """
-    @brief      Verify delete asks confirmation, delegates to service, and resets downstream state.
+    @brief      Verify delete asks confirmation, delegates to service, and resets chunk audio state.
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.1.0
+    @version    0.2.0
     """
     project_root = tmp_path / "SpeechBlocksDeleteController"
     project_root.mkdir()
@@ -235,20 +250,30 @@ def test_speech_blocks_ui_controller_delete_confirms_and_resets_downstream(monke
     )
     monkeypatch.setattr(
         speech_blocks_ui_controller,
+        "_chunk_id_for_speech_block",
+        lambda *_args: "chunk-0001",
+    )
+    monkeypatch.setattr(
+        speech_blocks_ui_controller,
         "_sync_manifest_after_speech_blocks_update",
         lambda _window: reset_calls.append("sync"),
     )
     monkeypatch.setattr(
         speech_blocks_ui_controller,
-        "_reset_downstream_after_speech_blocks_structure_change",
-        lambda _window: reset_calls.append("reset"),
+        "_confirm_chunk_audio_reset_if_needed",
+        lambda *_args: True,
+    )
+    monkeypatch.setattr(
+        speech_blocks_ui_controller,
+        "_reset_audio_blocks_after_speech_chunk_change",
+        lambda _window, chunk_id: reset_calls.append(f"reset:{chunk_id}"),
     )
     monkeypatch.setattr(speech_blocks_ui_controller.misc_ui_controller, "show_message", lambda *args, **kwargs: None)
 
     speech_blocks_ui_controller.handle_delete_block_requested(window, "0001-000001")
 
     assert service_calls == [(project_root, "0001-000001")]
-    assert reset_calls == ["sync", "reset"]
+    assert reset_calls == ["sync", "reset:chunk-0001"]
 
 
 def test_speech_blocks_ui_controller_explicit_reset_clears_speech_blocks_and_downstream(
@@ -298,6 +323,76 @@ def test_speech_blocks_ui_controller_explicit_reset_clears_speech_blocks_and_dow
     assert not stale_artifacts[0].exists()
     assert not stale_artifacts[1].exists()
     assert not stale_artifacts[2].exists()
+
+
+def test_speech_blocks_sync_manifest_completes_only_after_full_approval(tmp_path) -> None:
+    """
+    @brief      Verify manifest metadata treats Speech Blocks as complete only after approval.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-27
+    @version    0.1.0
+    """
+    project_root = _create_project(tmp_path, "SpeechBlocksManifestApproval")
+    manifest = project_workspace_service.load_manifest(project_root)
+    artifacts_root = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH
+    report_path = artifacts_root / config.SPEECH_BLOCKS_REPORT_FILE_NAME
+    state_path = artifacts_root / config.SPEECH_BLOCKS_STATE_FILE_NAME
+    state_path.write_text(
+        json.dumps(
+            {
+                "folder_relative_path": config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH,
+                "status": "review_pending",
+                "progress_current": 1,
+                "progress_total": 1,
+                "mode": "ai_assisted",
+                "started_at": "2026-04-27T10:00:00+00:00",
+                "completed_at": "2026-04-27T10:01:00+00:00",
+                "updated_at": "2026-04-27T10:01:00+00:00",
+                "warning_count": 0,
+            },
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    report_path.write_text(
+        json.dumps(
+            {
+                "speech_blocks_stage_status": "in_progress",
+                "processed_chunk_count": 1,
+                "total_chunk_count": 1,
+                "speech_block_count": 1,
+                "approved_block_count": 0,
+            },
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    window = SimpleNamespace(_current_project_root=project_root, _current_manifest=manifest)
+
+    def _show_project_state(_project_root, loaded_manifest):
+        window._current_manifest = loaded_manifest
+
+    window.show_project_state = _show_project_state
+
+    speech_blocks_ui_controller._sync_manifest_after_speech_blocks_update(window)  # noqa: SLF001
+
+    assert window._current_manifest["current_stage"] == "character_voices_ready"
+    assert window._current_manifest["operations"]["speech_blocks"]["status"] == "review_pending"
+
+    report_payload = json.loads(report_path.read_text(encoding="utf-8"))
+    report_payload["speech_blocks_stage_status"] = "completed"
+    report_payload["approved_block_count"] = 1
+    report_path.write_text(json.dumps(report_payload, indent=2) + "\n", encoding="utf-8")
+
+    speech_blocks_ui_controller._sync_manifest_after_speech_blocks_update(window)  # noqa: SLF001
+
+    assert window._current_manifest["current_stage"] == "speech_blocks_ready"
+    assert window._current_manifest["operations"]["speech_blocks"]["status"] == "completed"
 
 
 def _create_project(tmp_path, name: str):

@@ -13,7 +13,7 @@
          persisted `80_audio_blocks` artifacts.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-23
-@version 0.2.1
+@version 0.2.2
 """
 
 # IMPORTS
@@ -36,12 +36,13 @@ def test_main_window_loads_audio_blocks_state_into_real_page(qtbot, tmp_path, de
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-23
-    @version    0.2.0
+    @version    0.3.0
     """
     project_root = _create_project(tmp_path, "AudioBlocksWindowProject")
     window = MainWindow(settings_payload=dict(default_settings_payload))
     qtbot.addWidget(window)
     window._activate_project(project_root, project_workspace_service.load_manifest(project_root))
+    window.set_current_page("audio_blocks")
 
     assert isinstance(window._audio_blocks_page, AudioBlocksPage)
     assert window._audio_blocks_page._speech_block_list.count() == 2
@@ -60,7 +61,7 @@ def _create_project(tmp_path, name: str):
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-24
-    @version    0.2.0
+    @version    0.3.0
     """
     project_root, manifest = project_workspace_service.create_project(name, tmp_path)
     manifest["source_document"] = {
@@ -124,6 +125,8 @@ def _create_project(tmp_path, name: str):
                     "speaker_display_name": "Narrator",
                     "content_kind": speech_blocks_service.CONTENT_KIND_NARRATION,
                     "text": "Narration one.",
+                    "approved": True,
+                    "approved_at": "2026-04-23T12:02:00+00:00",
                     "warning_flags": [],
                 },
                 {
@@ -136,6 +139,8 @@ def _create_project(tmp_path, name: str):
                     "speaker_display_name": "Alice",
                     "content_kind": speech_blocks_service.CONTENT_KIND_DIALOGUE,
                     "text": "Hello there.",
+                    "approved": True,
+                    "approved_at": "2026-04-23T12:03:00+00:00",
                     "warning_flags": [],
                 },
             ],

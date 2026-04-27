@@ -46,8 +46,9 @@ High-level flow:
 3. The service returns a normalized budget payload containing the model token
    budget, derived audio-second estimates, safety factor, safe word count, and
    budget source.
-4. Speech Blocks injects the budget into narrator-only prompts and flags model
-   output that exceeds the safe word count.
+4. Speech Blocks injects the budget into prompts and uses it after AI output
+   to split oversized non-operation speech blocks deterministically. The split
+   prefers paragraph and sentence boundaries before hard word/character chunks.
 
 ## 4. Dependencies
 
@@ -96,10 +97,11 @@ Upstream:
 
 Downstream:
 
-- Speech Blocks narrator-only prompting uses the budget payload for prompt
-  instructions.
-- Speech Blocks normalization adds `tts_budget_exceeded` when narrator-only
-  output is longer than the safe estimate.
+- Speech Blocks prompting uses the budget payload for prompt instructions.
+- Speech Blocks normalization uses the budget as a post-AI safety net that
+  splits oversized non-operation blocks before TTS generation.
+- Speech Blocks normalization adds `tts_hard_split` when no paragraph or
+  sentence boundary can satisfy the safe estimate.
 - Audio Blocks remains the final guard for actual runtime model limits.
 
 ## 8. Usage

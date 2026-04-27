@@ -14,7 +14,7 @@
          Blocks output, and the resumable runtime operation state.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-23
-@version 0.4.0
+@version 0.4.1
 """
 
 # IMPORTS
@@ -48,7 +48,7 @@ def build_audio_blocks_state(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-23
-    @version    0.3.2
+    @version    0.4.0
     """
     if project_root is None or manifest is None:
         return _empty_state(language)
@@ -105,6 +105,7 @@ def build_audio_blocks_state(
             regenerated_prompt_count=regenerated_prompt_count,
         ),
     ]
+    speech_blocks_ready = bool(speech_blocks) and all(bool(block.get("approved", False)) for block in speech_blocks)
     return {
         "full_source_text": _build_full_source_text(project_root, manifest, speech_blocks),
         "speech_blocks": merged_blocks,
@@ -122,7 +123,7 @@ def build_audio_blocks_state(
         "regenerated_prompt_count": regenerated_prompt_count,
         "invalidation_reason": invalidation_reason,
         "stage_status": resolved_stage_status,
-        "can_start_or_continue": bool(speech_blocks),
+        "can_start_or_continue": speech_blocks_ready,
         "can_reset": audio_blocks_service.has_persisted_audio_blocks(project_root),
         "can_approve_all": any(
             bool(block.get("generated", False)) and not bool(block.get("approved", False)) for block in merged_blocks

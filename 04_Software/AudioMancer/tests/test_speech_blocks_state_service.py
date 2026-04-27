@@ -13,7 +13,7 @@
          and operator note rendering for resumable and warning-bearing state.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 0.3.0
+@version 0.3.1
 """
 
 # IMPORTS
@@ -289,6 +289,43 @@ def test_build_speech_blocks_state_does_not_resolve_unapproved_translation(monke
     assert state["source_chunks"] == []
     assert state["total_chunk_count"] == 0
     assert any("approve translation" in note for note in state["notes"])
+
+
+def test_build_speech_blocks_state_filters_speaker_catalog_for_same_narrator(monkeypatch, tmp_path) -> None:
+    """
+    @brief      Verify same-narrator projects expose only narrator in the Speech Blocks speaker selector.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-27
+    @version    0.1.0
+    """
+    project_root, manifest = _create_chunked_project(tmp_path, "SpeechBlocksSameNarratorSpeakers")
+    manifest["voice_assignment_mode"] = "same_narrator"
+    project_workspace_service.save_manifest(manifest, project_root)
+    character_voices_service.save_selected_voice_language(project_root, "en")
+    monkeypatch.setattr(
+        speech_blocks_state_service.speech_blocks_service,
+        "speaker_catalog_entries",
+        lambda _project_root: [
+            {"speaker_id": "narrator", "display_name": "Narrator", "speaker_kind": "narrator"},
+            {"speaker_id": "alice", "display_name": "Alice", "speaker_kind": "character"},
+        ],
+    )
+
+    state = speech_blocks_state_service.build_speech_blocks_state(
+        project_root,
+        project_workspace_service.load_manifest(project_root),
+        "en",
+        {"llm_profiles": [{"id": "profile-1", "label": "Speech Blocks Profile", "enabled": True}]},
+    )
+
+    assert state["voice_assignment_mode"] == "same_narrator"
+    assert state["speaker_catalog"] == [
+        {"speaker_id": "narrator", "display_name": "Narrator", "speaker_kind": "narrator"}
+    ]
 
 
 def _create_chunked_project(tmp_path, name: str):

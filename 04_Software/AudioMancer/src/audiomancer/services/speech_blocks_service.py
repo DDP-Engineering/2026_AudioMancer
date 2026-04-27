@@ -15,7 +15,7 @@
          based operation state plus AI transaction logging.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 0.7.0
+@version 0.7.3
 """
 
 # IMPORTS
@@ -34,6 +34,7 @@ from audiomancer.services import (
     deterministic_chunking_service,
     llm_provider_service,
     narrator_definition_service,
+    project_workspace_service,
     prompt_template_service,
     token_usage_service,
     tts_budget_service,
@@ -686,7 +687,7 @@ def update_speech_block(
     @exception  ValueError Raised when the block or speaker is unknown.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-24
-    @version    0.2.0
+    @version    0.3.0
     """
     resolved_project_root = Path(project_root)
     speech_blocks = load_speech_blocks(resolved_project_root)
@@ -694,8 +695,16 @@ def update_speech_block(
     if selected_block is None:
         raise ValueError("The selected Speech Block was not found.")
     normalized_content_kind = _normalize_content_kind(content_kind)
+    manifest = project_workspace_service.load_manifest(resolved_project_root)
+    narrator_only = _voice_assignment_mode(manifest) == "same_narrator"
+    if narrator_only and not _is_operation_content_kind(normalized_content_kind):
+        normalized_content_kind = CONTENT_KIND_NARRATION
     if _is_operation_content_kind(normalized_content_kind):
         speaker_entry = _operation_speaker_entry(normalized_content_kind)
+    elif narrator_only:
+        speaker_entry = _speaker_catalog(character_discovery_service.load_character_profiles(resolved_project_root))[
+            _NARRATOR_SPEAKER_ID
+        ]
     else:
         speaker_catalog = _speaker_catalog(character_discovery_service.load_character_profiles(resolved_project_root))
         speaker_entry = speaker_catalog.get(str(speaker_id).strip())
@@ -1023,7 +1032,7 @@ def _normalize_chunk_blocks(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.7.0
+    @version    0.8.0
     """
     chunk_id = str(source_chunk.get("chunk_id", "")).strip()
     chunk_text = str(source_chunk.get("text", ""))
@@ -1069,6 +1078,8 @@ def _normalize_chunk_blocks(
         )
 
     warning_entries = _validate_ai_block_source_spans(chunk_id, chunk_text, ai_blocks)
+    ai_blocks, split_warnings = _split_over_budget_ai_blocks(chunk_id, ai_blocks, tts_budget)
+    warning_entries.extend(split_warnings)
     if narrator_only:
         warning_entries.extend(_validate_narrator_only_budget(chunk_id, ai_blocks, tts_budget))
     for local_sequence_index, ai_block in enumerate(ai_blocks, start=1):
@@ -1174,29 +1185,16 @@ def _normalize_ai_block(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.6.0
+    @version    0.6.1
     """
-    content_kind = (
-        CONTENT_KIND_NARRATION
-        if narrator_only
-        else _normalize_content_kind(candidate_block.get("content_kind", CONTENT_KIND_NARRATION))
-    )
+    content_kind = _normalize_content_kind(candidate_block.get("content_kind", CONTENT_KIND_NARRATION))
+    if narrator_only and not _is_operation_content_kind(content_kind):
+        content_kind = CONTENT_KIND_NARRATION
     source_text = str(candidate_block.get("source_text", candidate_block.get("text", "")))
     raw_text = str(candidate_block.get("text", source_text))
     if not raw_text.strip():
         raw_text = source_text
     text = raw_text.strip() if narrator_only else _normalize_block_text(raw_text, content_kind)
-    if narrator_only:
-        warning_flags = _normalize_warning_flags(candidate_block.get("warning_flags"))
-        return {
-            "speaker_kind": SPEAKER_KIND_NARRATOR,
-            "speaker_id": _NARRATOR_SPEAKER_ID,
-            "speaker_display_name": _NARRATOR_DISPLAY_NAME,
-            "content_kind": CONTENT_KIND_NARRATION,
-            "source_text": source_text,
-            "text": text,
-            "warning_flags": warning_flags,
-        }
     if _is_operation_content_kind(content_kind):
         speaker_entry = _operation_speaker_entry(content_kind)
         return {
@@ -1207,6 +1205,17 @@ def _normalize_ai_block(
             "source_text": source_text,
             "text": text,
             "warning_flags": _normalize_warning_flags(candidate_block.get("warning_flags")),
+        }
+    if narrator_only:
+        warning_flags = _normalize_warning_flags(candidate_block.get("warning_flags"))
+        return {
+            "speaker_kind": SPEAKER_KIND_NARRATOR,
+            "speaker_id": _NARRATOR_SPEAKER_ID,
+            "speaker_display_name": _NARRATOR_DISPLAY_NAME,
+            "content_kind": CONTENT_KIND_NARRATION,
+            "source_text": source_text,
+            "text": text,
+            "warning_flags": warning_flags,
         }
     requested_speaker_id = str(candidate_block.get("speaker_id", "")).strip()
     speaker_entry, ambiguous_speaker = _resolve_speaker_entry(requested_speaker_id, speaker_catalog)
@@ -1299,7 +1308,7 @@ def _validate_narrator_only_budget(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-26
-    @version    0.1.0
+    @version    0.2.0
     """
     budget_payload = tts_budget or _resolve_narrator_only_budget(None)
     safe_word_count = int(budget_payload.get("safe_word_count", 0) or 0)
@@ -1307,8 +1316,10 @@ def _validate_narrator_only_budget(
         return []
     warning_entries: list[dict[str, object]] = []
     for ai_block in ai_blocks:
+        if _is_operation_content_kind(str(ai_block.get("content_kind", ""))):
+            continue
         text = str(ai_block.get("text", ""))
-        if tts_budget_service.estimated_word_count(text) <= safe_word_count:
+        if _tts_budget_unit_count(text) <= safe_word_count:
             continue
         warning_flags = list(ai_block.get("warning_flags", []))
         _append_warning_flag(warning_flags, "tts_budget_exceeded")
@@ -1322,200 +1333,278 @@ def _validate_narrator_only_budget(
     return warning_entries
 
 
-def _normalize_source_unit_blocks(
+def _split_over_budget_ai_blocks(
     chunk_id: str,
-    source_units: list[dict[str, object]],
     ai_blocks: list[dict[str, object]],
-    speaker_catalog: dict[str, dict[str, object]],
-    source_language: str,
-) -> tuple[list[SpeechBlockPayload], list[dict[str, object]]]:
+    tts_budget: dict[str, object] | None,
+) -> tuple[list[dict[str, object]], list[dict[str, object]]]:
     """
-    @brief      Build persisted blocks from deterministic source spans and AI speaker hints.
+    @brief      Split oversized AI blocks after model output as a deterministic TTS safety net.
     @param[in]  chunk_id Source chunk identifier.
-    @param[in]  source_units Deterministic source text spans.
-    @param[in]  ai_blocks Normalized AI blocks used only as speaker hints.
-    @param[in]  speaker_catalog Allowed speaker catalog.
-    @param[in]  source_language Active source language code.
-    @return     Tuple of normalized chunk blocks and warning entries.
+    @param[in]  ai_blocks Normalized AI blocks to split when needed.
+    @param[in]  tts_budget Optional TTS budget metadata.
+    @return     Tuple of split AI blocks and human-readable warning entries.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.3.0
+    @date       2026-04-27
+    @version    0.1.0
     """
-    ai_lookup = _build_ai_block_lookup(ai_blocks)
-    normalized_blocks: list[SpeechBlockPayload] = []
+    safe_word_count = _safe_tts_word_count(tts_budget)
+    if safe_word_count <= 0:
+        return ai_blocks, []
+
+    split_blocks: list[dict[str, object]] = []
     warning_entries: list[dict[str, object]] = []
-    for local_sequence_index, source_unit in enumerate(source_units, start=1):
-        content_kind = str(source_unit.get("content_kind", CONTENT_KIND_NARRATION))
-        text = str(source_unit.get("text", ""))
-        speaker_entry = speaker_catalog[_NARRATOR_SPEAKER_ID]
-        warning_flags: list[str] = []
-        if content_kind == CONTENT_KIND_DIALOGUE:
-            ai_match = _pop_ai_block_match(ai_lookup, text, content_kind)
-            if ai_match is not None:
-                speaker_entry = {
-                    "speaker_kind": str(ai_match.get("speaker_kind", SPEAKER_KIND_NARRATOR)),
-                    "speaker_id": str(ai_match.get("speaker_id", _NARRATOR_SPEAKER_ID)),
-                    "display_name": str(ai_match.get("speaker_display_name", _NARRATOR_DISPLAY_NAME)),
-                }
-                warning_flags = list(ai_match.get("warning_flags", []))
-            else:
-                speaker_entry = _infer_dialogue_speaker(source_units, local_sequence_index - 1, speaker_catalog)
-                if str(speaker_entry.get("speaker_id", _NARRATOR_SPEAKER_ID)) == _NARRATOR_SPEAKER_ID:
-                    _append_warning_flag(warning_flags, "ambiguous_speaker")
-            if str(speaker_entry.get("speaker_id", _NARRATOR_SPEAKER_ID)) == _NARRATOR_SPEAKER_ID:
-                _append_warning_flag(warning_flags, "ambiguous_speaker")
-        normalized_blocks.append(
-            _build_speech_block_payload(
-                chunk_id,
-                local_sequence_index,
-                source_language,
-                str(speaker_entry.get("speaker_kind", SPEAKER_KIND_NARRATOR)),
-                str(speaker_entry.get("speaker_id", _NARRATOR_SPEAKER_ID)),
-                str(speaker_entry.get("display_name", _NARRATOR_DISPLAY_NAME)),
-                content_kind,
-                text,
-                warning_flags,
-            )
-        )
-        if "ambiguous_speaker" in warning_flags:
-            warning_entries.append(
-                {
-                    "chunk_id": chunk_id,
-                    "reason": "Speaker attribution was ambiguous and fell back to narrator.",
-                }
-            )
-    return normalized_blocks, warning_entries
-
-
-def _split_source_text_units(text: str) -> list[dict[str, object]]:
-    """
-    @brief      Split source text into deterministic narration and quoted-dialogue spans.
-    @param[in]  text Source chunk text.
-    @return     Ordered source-unit payloads covering all non-empty source text.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
-    """
-    source_units: list[dict[str, object]] = []
-    cursor = 0
-    unit_index = 1
-    in_dialogue = False
-    span_start = 0
-    while cursor < len(text):
-        if text[cursor] != '"':
-            cursor += 1
-            continue
-        if in_dialogue:
-            unit_index = _append_source_unit(
-                source_units,
-                unit_index,
-                CONTENT_KIND_DIALOGUE,
-                text[span_start:cursor],
-            )
-            in_dialogue = False
-            span_start = cursor + 1
-        else:
-            unit_index = _append_source_unit(
-                source_units,
-                unit_index,
-                CONTENT_KIND_NARRATION,
-                text[span_start:cursor],
-            )
-            in_dialogue = True
-            span_start = cursor + 1
-        cursor += 1
-    unit_index = _append_source_unit(
-        source_units,
-        unit_index,
-        CONTENT_KIND_DIALOGUE if in_dialogue else CONTENT_KIND_NARRATION,
-        text[span_start:],
-    )
-    return source_units
-
-
-def _append_source_unit(
-    source_units: list[dict[str, object]],
-    unit_index: int,
-    content_kind: str,
-    text: str,
-) -> int:
-    """
-    @brief      Append one non-empty deterministic source unit.
-    @param[in]  source_units Target source-unit list.
-    @param[in]  unit_index Next source-unit sequence number.
-    @param[in]  content_kind Unit content kind.
-    @param[in]  text Unit text.
-    @return     Next source-unit sequence number.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
-    """
-    normalized_text = text.strip()
-    if not normalized_text:
-        return unit_index
-    source_units.append(
-        {
-            "source_unit_id": f"source-unit-{unit_index:04d}",
-            "content_kind": content_kind,
-            "text": normalized_text,
-        }
-    )
-    return unit_index + 1
-
-
-def _build_ai_block_lookup(ai_blocks: list[dict[str, object]]) -> dict[tuple[str, str], list[dict[str, object]]]:
-    """
-    @brief      Build a text lookup for model blocks used as speaker hints.
-    @param[in]  ai_blocks Normalized model blocks.
-    @return     Lookup keyed by content kind and normalized text.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
-    """
-    lookup: dict[tuple[str, str], list[dict[str, object]]] = {}
     for ai_block in ai_blocks:
-        text_key = _block_text_key(str(ai_block.get("text", "")))
-        if not text_key:
+        content_kind = _normalize_content_kind(ai_block.get("content_kind", CONTENT_KIND_NARRATION))
+        if _is_operation_content_kind(content_kind):
+            split_blocks.append(ai_block)
             continue
-        content_kind = str(ai_block.get("content_kind", CONTENT_KIND_NARRATION))
-        lookup.setdefault((content_kind, text_key), []).append(ai_block)
-        lookup.setdefault(("", text_key), []).append(ai_block)
-    return lookup
+
+        source_text = str(ai_block.get("source_text", ai_block.get("text", "")))
+        audio_text = str(ai_block.get("text", source_text))
+        if _tts_budget_unit_count(audio_text) <= safe_word_count:
+            split_blocks.append(ai_block)
+            continue
+
+        source_audio_text = _normalize_block_text(source_text, content_kind)
+        source_text_matches_audio = _block_text_key(source_audio_text) == _block_text_key(audio_text)
+        split_basis_text = source_text if source_text_matches_audio else audio_text
+        split_text_parts, used_hard_split = _split_text_for_tts_budget(
+            split_basis_text,
+            content_kind,
+            safe_word_count,
+        )
+        if len(split_text_parts) <= 1:
+            split_blocks.append(ai_block)
+            continue
+
+        warning_entries.append(
+            {
+                "chunk_id": chunk_id,
+                "reason": (
+                    f"Speech Block was split after AI output to fit the safe TTS budget of {safe_word_count} words."
+                ),
+            }
+        )
+        for text_part in split_text_parts:
+            split_block = dict(ai_block)
+            split_block["source_text"] = text_part
+            split_block["text"] = _normalize_block_text(text_part, content_kind)
+            if used_hard_split:
+                warning_flags = list(split_block.get("warning_flags", []))
+                _append_warning_flag(warning_flags, "tts_hard_split")
+                split_block["warning_flags"] = warning_flags
+            split_blocks.append(split_block)
+    return split_blocks, warning_entries
 
 
-def _pop_ai_block_match(
-    ai_lookup: dict[tuple[str, str], list[dict[str, object]]],
+def _split_text_for_tts_budget(
     text: str,
     content_kind: str,
-) -> dict[str, object] | None:
+    safe_word_count: int,
+    boundary_index: int = 0,
+) -> tuple[list[str], bool]:
     """
-    @brief      Pop one model block whose text matches a deterministic source unit.
-    @param[in]  ai_lookup Model-block lookup.
-    @param[in]  text Deterministic source-unit text.
-    @param[in]  content_kind Source-unit content kind.
-    @return     Matching model block or `None`.
+    @brief      Split one text span using language-agnostic boundaries before hard fallbacks.
+    @param[in]  text Text span to split.
+    @param[in]  content_kind Current content-kind token.
+    @param[in]  safe_word_count Maximum estimated budget units per part.
+    @param[in]  boundary_index Preferred boundary level index.
+    @return     Tuple of split text spans and whether a hard fallback was used.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
+    @date       2026-04-27
     @version    0.1.0
     """
-    text_key = _block_text_key(text)
-    for lookup_key in ((content_kind, text_key), ("", text_key)):
-        matches = ai_lookup.get(lookup_key, [])
-        if matches:
-            matched_block = matches.pop(0)
-            for sibling_lookup_key in ((content_kind, text_key), ("", text_key)):
-                if sibling_lookup_key == lookup_key:
-                    continue
-                sibling_matches = ai_lookup.get(sibling_lookup_key, [])
-                if matched_block in sibling_matches:
-                    sibling_matches.remove(matched_block)
-            return matched_block
-    return None
+    normalized_text = str(text).strip()
+    if not normalized_text:
+        return [], False
+    if _tts_budget_unit_count(_normalize_block_text(normalized_text, content_kind)) <= safe_word_count:
+        return [normalized_text], False
+
+    boundary_splitters = (_split_paragraph_spans, _split_sentence_spans)
+    for splitter in boundary_splitters[boundary_index:]:
+        spans = splitter(normalized_text)
+        if len(spans) <= 1:
+            boundary_index += 1
+            continue
+
+        split_parts: list[str] = []
+        used_hard_split = False
+        for span in spans:
+            span_parts, span_used_hard_split = _split_text_for_tts_budget(
+                span,
+                content_kind,
+                safe_word_count,
+                boundary_index + 1,
+            )
+            split_parts.extend(span_parts)
+            used_hard_split = used_hard_split or span_used_hard_split
+        return _pack_tts_split_parts(split_parts, content_kind, safe_word_count), used_hard_split
+
+    return _hard_split_text_for_tts_budget(normalized_text, content_kind, safe_word_count), True
+
+
+def _split_paragraph_spans(text: str) -> list[str]:
+    """
+    @brief      Split text into paragraph-like spans.
+    @param[in]  text Text span to split.
+    @return     Non-empty paragraph spans.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-27
+    @version    0.1.0
+    """
+    return [part.strip() for part in re.split(r"\n\s*\n+", str(text)) if part.strip()]
+
+
+def _split_sentence_spans(text: str) -> list[str]:
+    """
+    @brief      Split text into sentence-like spans using punctuation conventions from multiple scripts.
+    @param[in]  text Text span to split.
+    @return     Non-empty sentence-like spans.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-27
+    @version    0.1.0
+    """
+    normalized_text = str(text).strip()
+    sentence_end_pattern = r"[.!?;:。！？；：؟؛…]+[\"'”’»)\]]*(?=\s+|$)"
+    sentence_parts: list[str] = []
+    cursor = 0
+    for match in re.finditer(sentence_end_pattern, normalized_text):
+        sentence_part = normalized_text[cursor : match.end()].strip()
+        if sentence_part:
+            sentence_parts.append(sentence_part)
+        cursor = match.end()
+    tail_part = normalized_text[cursor:].strip()
+    if tail_part:
+        sentence_parts.append(tail_part)
+    return sentence_parts if len(sentence_parts) > 1 else [normalized_text]
+
+
+def _pack_tts_split_parts(parts: list[str], content_kind: str, safe_word_count: int) -> list[str]:
+    """
+    @brief      Recombine adjacent split spans when their combined text remains inside the TTS budget.
+    @param[in]  parts Candidate split spans.
+    @param[in]  content_kind Current content-kind token.
+    @param[in]  safe_word_count Maximum estimated budget units per part.
+    @return     Packed split spans.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-27
+    @version    0.1.0
+    """
+    packed_parts: list[str] = []
+    current_part = ""
+    for part in parts:
+        candidate_part = part.strip()
+        if not candidate_part:
+            continue
+        merged_part = f"{current_part} {candidate_part}".strip() if current_part else candidate_part
+        if _tts_budget_unit_count(_normalize_block_text(merged_part, content_kind)) <= safe_word_count:
+            current_part = merged_part
+            continue
+        if current_part:
+            packed_parts.append(current_part)
+        current_part = candidate_part
+    if current_part:
+        packed_parts.append(current_part)
+    return packed_parts
+
+
+def _hard_split_text_for_tts_budget(text: str, content_kind: str, safe_word_count: int) -> list[str]:
+    """
+    @brief      Split text without semantic boundaries using word groups and character chunks.
+    @param[in]  text Text span to split.
+    @param[in]  content_kind Current content-kind token.
+    @param[in]  safe_word_count Maximum estimated budget units per part.
+    @return     Hard-split text spans.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-27
+    @version    0.1.0
+    """
+    word_spans = re.findall(r"\S+", str(text))
+    if len(word_spans) <= 1:
+        return _hard_split_text_by_characters(str(text), safe_word_count)
+
+    split_parts: list[str] = []
+    current_words: list[str] = []
+    for word_span in word_spans:
+        word_units = _tts_budget_unit_count(_normalize_block_text(word_span, content_kind))
+        if word_units > safe_word_count:
+            if current_words:
+                split_parts.append(" ".join(current_words))
+                current_words = []
+            split_parts.extend(_hard_split_text_by_characters(word_span, safe_word_count))
+            continue
+
+        candidate_words = [*current_words, word_span]
+        candidate_text = " ".join(candidate_words)
+        if _tts_budget_unit_count(_normalize_block_text(candidate_text, content_kind)) <= safe_word_count:
+            current_words = candidate_words
+            continue
+        if current_words:
+            split_parts.append(" ".join(current_words))
+        current_words = [word_span]
+
+    if current_words:
+        split_parts.append(" ".join(current_words))
+    return split_parts
+
+
+def _hard_split_text_by_characters(text: str, safe_word_count: int) -> list[str]:
+    """
+    @brief      Split one unbroken text span into deterministic character chunks.
+    @param[in]  text Text span to split.
+    @param[in]  safe_word_count Maximum estimated budget units per part.
+    @return     Character chunks.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-27
+    @version    0.1.0
+    """
+    normalized_text = str(text).strip()
+    max_characters = max(1, int(safe_word_count) * 6)
+    return [
+        normalized_text[start_index : start_index + max_characters]
+        for start_index in range(0, len(normalized_text), max_characters)
+        if normalized_text[start_index : start_index + max_characters].strip()
+    ]
+
+
+def _safe_tts_word_count(tts_budget: dict[str, object] | None) -> int:
+    """
+    @brief      Resolve the safe TTS word budget for deterministic post-AI splitting.
+    @param[in]  tts_budget Optional TTS budget metadata.
+    @return     Positive safe word count or zero when unavailable.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-27
+    @version    0.1.0
+    """
+    budget_payload = tts_budget or _resolve_narrator_only_budget(None)
+    return max(0, int(budget_payload.get("safe_word_count", 0) or 0))
+
+
+def _tts_budget_unit_count(text: str) -> int:
+    """
+    @brief      Estimate spoken budget units with fallbacks for punctuation-heavy and no-space scripts.
+    @param[in]  text Candidate text span.
+    @return     Conservative budget-unit count.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-27
+    @version    0.1.0
+    """
+    normalized_text = str(text).strip()
+    if not normalized_text:
+        return 0
+    word_like_count = len(re.findall(r"[^\W_]+(?:['’][^\W_]+)?", normalized_text, flags=re.UNICODE))
+    compact_length_units = (len(re.sub(r"\s+", "", normalized_text)) + 5) // 6
+    return max(1, word_like_count, compact_length_units)
 
 
 def _block_text_key(text: str) -> str:
@@ -1571,44 +1660,6 @@ def _resolve_speaker_entry(
     return speaker_catalog[_NARRATOR_SPEAKER_ID], True
 
 
-def _infer_dialogue_speaker(
-    source_units: list[dict[str, object]],
-    unit_index: int,
-    speaker_catalog: dict[str, dict[str, object]],
-) -> dict[str, object]:
-    """
-    @brief      Infer a dialogue speaker from nearby named narration attribution.
-    @param[in]  source_units Deterministic source units.
-    @param[in]  unit_index Index of the dialogue unit.
-    @param[in]  speaker_catalog Allowed speaker catalog.
-    @return     Inferred speaker entry or narrator when no safe inference exists.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
-    """
-    context_parts: list[str] = []
-    for neighbor_index in (unit_index + 1, unit_index - 1):
-        if 0 <= neighbor_index < len(source_units):
-            neighbor = source_units[neighbor_index]
-            if str(neighbor.get("content_kind", "")) == CONTENT_KIND_NARRATION:
-                context_parts.append(str(neighbor.get("text", "")))
-    context = " ".join(context_parts).casefold()
-    if not any(verb in context for verb in (" said", " asked", " snapped", " demanded", " replied", " sneered")):
-        return speaker_catalog[_NARRATOR_SPEAKER_ID]
-    matches: list[dict[str, object]] = []
-    for speaker_id, speaker_entry in speaker_catalog.items():
-        if speaker_id == _NARRATOR_SPEAKER_ID:
-            continue
-        display_name = str(speaker_entry.get("display_name", "")).strip()
-        name_parts = [part.casefold() for part in display_name.replace("_", " ").split() if part.strip()]
-        if display_name.casefold() in context or any(part in context.split() for part in name_parts):
-            matches.append(speaker_entry)
-    if len(matches) == 1:
-        return matches[0]
-    return speaker_catalog[_NARRATOR_SPEAKER_ID]
-
-
 def _speaker_match_key(value: str) -> str:
     """
     @brief      Build a conservative speaker matching key.
@@ -1645,7 +1696,7 @@ def _speech_block_warning_reason(warning_flag: str) -> str:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-26
-    @version    0.1.0
+    @version    0.2.0
     """
     return {
         "ambiguous_speaker": "Speaker attribution was ambiguous and fell back to narrator.",
@@ -1653,6 +1704,7 @@ def _speech_block_warning_reason(warning_flag: str) -> str:
         "source_order_mismatch": "Model source spans are not in chunk reading order.",
         "model_text_modified": "Model audio text differs from the source span beyond delimiter cleanup.",
         "tts_budget_exceeded": "Narrator-only block exceeds the safe TTS word budget.",
+        "tts_hard_split": "Speech Block was hard-split after no paragraph or sentence boundary fit the TTS budget.",
     }.get(str(warning_flag).strip(), str(warning_flag).strip() or "Speech Block warning.")
 
 
@@ -2102,7 +2154,7 @@ def _persist_report_update(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-24
-    @version    0.1.0
+    @version    0.2.0
     """
     source_chunks = load_input_source_chunks(project_root)
     report = load_speech_blocks_report(project_root) or {}
@@ -2117,8 +2169,11 @@ def _persist_report_update(
     input_fingerprint = str(metadata.get("source_snapshot_fingerprint", "")).strip()
     if not input_fingerprint and source_chunks and source_language and source_kind:
         input_fingerprint = _build_source_fingerprint(source_chunks, source_language, source_kind)
-    started_at = str(operation_state.get("started_at", "")).strip() or _utc_now_iso()
-    completed_at = str(operation_state.get("completed_at", "")).strip() or _utc_now_iso()
+    started_at = _valid_runtime_value(operation_state.get("started_at") if isinstance(operation_state, dict) else "")
+    started_at = started_at or _utc_now_iso()
+    completed_at_value = operation_state.get("completed_at") if isinstance(operation_state, dict) else ""
+    completed_at = _valid_runtime_value(completed_at_value)
+    completed_at = completed_at or _utc_now_iso()
     log_path = _resolve_log_path(project_root, started_at)
     renumbered_blocks = _renumber_speech_blocks(source_chunks, speech_blocks)
     updated_report = _rebuild_report(
@@ -2385,9 +2440,9 @@ def _resolve_started_at(existing_state: dict[str, object]) -> str:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.1.0
+    @version    0.2.0
     """
-    started_at = str(existing_state.get("started_at", "")).strip() if isinstance(existing_state, dict) else ""
+    started_at = _valid_runtime_value(existing_state.get("started_at") if isinstance(existing_state, dict) else "")
     return started_at or _utc_now_iso()
 
 
@@ -2400,12 +2455,14 @@ def _resolve_log_path(project_root: Path, started_at: str) -> Path:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.1.0
+    @version    0.2.0
     """
     existing_state = load_operation_state(project_root) or {}
     for artifact_path in list(existing_state.get("artifact_paths", [])):
         relative_path = str(artifact_path)
         if Path(relative_path).name.startswith(config.AI_TRANSACTION_LOG_FILE_PREFIX):
+            if any(_is_missing_runtime_value(part) for part in Path(relative_path).stem.split("_")):
+                continue
             resolved_path = project_root / relative_path
             resolved_path.parent.mkdir(parents=True, exist_ok=True)
             if not resolved_path.exists():
@@ -2420,6 +2477,33 @@ def _resolve_log_path(project_root: Path, started_at: str) -> Path:
     if not log_path.exists():
         log_path.write_text("", encoding="utf-8")
     return log_path
+
+
+def _valid_runtime_value(value: object) -> str:
+    """
+    @brief      Return one persisted runtime value unless it is null-like.
+    @param[in]  value Candidate runtime value.
+    @return     String value or an empty string for null-like values.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-27
+    @version    0.1.0
+    """
+    text = str(value).strip() if value is not None else ""
+    return "" if _is_missing_runtime_value(text) else text
+
+
+def _is_missing_runtime_value(value: object) -> bool:
+    """
+    @brief      Return whether one persisted runtime value is missing or null-like.
+    @param[in]  value Candidate runtime value.
+    @return     True when the value represents a missing runtime field.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-27
+    @version    0.1.0
+    """
+    return str(value).strip().casefold() in {"", "none", "null"}
 
 
 def _metadata_token_usage(existing_state: dict[str, object]) -> dict[str, object] | None:

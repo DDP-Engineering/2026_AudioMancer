@@ -14,13 +14,14 @@
          current operation state, and enabled AI profile settings.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 0.4.0
+@version 0.4.1
 """
 
 # IMPORTS
 
 from pathlib import Path
 
+from audiomancer import config
 from audiomancer.services import (
     ai_translation_service,
     character_voices_service,
@@ -89,7 +90,7 @@ def build_speech_blocks_state(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.2.0
+    @version    0.3.0
     """
     if project_root is None or manifest is None:
         return {
@@ -103,6 +104,7 @@ def build_speech_blocks_state(
             "total_chunk_count": 0,
             "approved_block_count": 0,
             "total_block_count": 0,
+            "voice_assignment_mode": config.DEFAULT_TTS_VOICE_ASSIGNMENT_MODE,
             "speaker_catalog": [],
             "content_kind_options": _content_kind_options(language),
             "can_reset": False,
@@ -149,7 +151,8 @@ def build_speech_blocks_state(
         "total_chunk_count": len(source_chunks),
         "approved_block_count": 0 if report is None else int(report.get("approved_block_count", 0)),
         "total_block_count": len(speech_blocks),
-        "speaker_catalog": speech_blocks_service.speaker_catalog_entries(project_root),
+        "voice_assignment_mode": _voice_assignment_mode(manifest),
+        "speaker_catalog": _speaker_catalog_entries(project_root, manifest),
         "content_kind_options": _content_kind_options(language),
         "can_reset": bool(speech_blocks),
         "can_approve_all": any(not bool(block.get("approved", False)) for block in speech_blocks),
@@ -390,6 +393,41 @@ def _persisted_source_language(report: dict[str, object] | None, operation_state
             if source_language:
                 return source_language
     return ""
+
+
+def _speaker_catalog_entries(project_root: Path, manifest: dict[str, object]) -> list[dict[str, object]]:
+    """
+    @brief      Build speaker selector entries for the current voice-assignment mode.
+    @param[in]  project_root Active project root.
+    @param[in]  manifest Active project manifest payload.
+    @return     Ordered speaker selector entries.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-27
+    @version    0.1.0
+    """
+    speaker_entries = speech_blocks_service.speaker_catalog_entries(project_root)
+    if _voice_assignment_mode(manifest) != "same_narrator":
+        return speaker_entries
+    return [
+        entry
+        for entry in speaker_entries
+        if str(entry.get("speaker_id", "")).strip() == speech_blocks_service.SPEAKER_KIND_NARRATOR
+    ]
+
+
+def _voice_assignment_mode(manifest: dict[str, object]) -> str:
+    """
+    @brief      Resolve the current project voice-assignment mode.
+    @param[in]  manifest Active project manifest payload.
+    @return     Supported voice-assignment mode.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-27
+    @version    0.1.0
+    """
+    mode = str(manifest.get("voice_assignment_mode", config.DEFAULT_TTS_VOICE_ASSIGNMENT_MODE)).strip()
+    return mode if mode in config.TTS_VOICE_ASSIGNMENT_MODE_OPTIONS else config.DEFAULT_TTS_VOICE_ASSIGNMENT_MODE
 
 
 def _content_kind_options(language: str) -> list[tuple[str, str]]:

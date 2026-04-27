@@ -8,6 +8,47 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
 
 All notable changes to this project will be documented in this file.
 
+## [0.34.0] - 2026-04-27
+
+### Added
+
+- added production prompt-contract coverage for Speech Blocks prompt templates
+  so runtime placeholder mismatches are caught by tests
+- added deterministic post-AI Speech Blocks splitting for over-budget
+  non-operation blocks, preferring paragraph and sentence boundaries and
+  marking hard fallback splits for review
+- added online OpenAI model-profile recommendations for AI Cleanup, AI
+  Chunking, AI Translation, and Speech Blocks in SoftwareDocu
+
+### Changed
+
+- changed same-narrator Speech Blocks handling so generated and manually edited
+  non-operation blocks are forced to narrator/narration while pause,
+  background-noise, and indication operation blocks keep their operation labels
+- changed Speech Blocks generation and reset to invalidate downstream Audio
+  Blocks and Audio Assembly artifacts, while selected-block edits, resets,
+  approvals, inserts, deletes, and selected-chunk re-splits reset only the
+  affected chunk's generated audio
+- changed Speech Blocks completion semantics so full generation enters
+  `review_pending`, disables generation, enables reset, and only marks the
+  project/home workflow complete after every Speech Block is approved
+- changed same-narrator Speech Blocks editing so the speaker selector exposes
+  only Narrator and disables speaker reassignment
+- changed Audio Blocks readiness so generation is available only after all
+  Speech Blocks are approved
+- updated Speech Blocks, Audio Blocks, and TTS budget documentation for the new
+  reset, approval, operation-block, and budget-splitting contracts
+- package version updated to `0.34.0`
+
+### Fixed
+
+- fixed Speech Blocks prompt placeholder mismatches for TTS budget and speaker
+  catalog variables
+- fixed null-like Speech Blocks runtime timestamps so review updates no longer
+  create `log_ai_speech_blocks_None.log`
+- removed unused legacy deterministic source-unit Speech Blocks helpers that
+  only handled straight double quotes
+
 ## [0.33.5] - 2026-04-27
 
 ### Changed

@@ -14,7 +14,7 @@
          controls for the Speech Blocks workflow.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-24
-@version 0.3.2
+@version 0.3.4
 """
 
 # IMPORTS
@@ -43,7 +43,7 @@ class SpeechBlocksPage(QWidget):
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-24
-    @version    0.3.2
+    @version    0.3.4
     """
 
     generate_requested = Signal(str)
@@ -77,6 +77,9 @@ class SpeechBlocksPage(QWidget):
         self._speech_blocks: list[dict[str, object]] = []
         self._speaker_catalog: list[dict[str, object]] = []
         self._content_kind_options: list[tuple[str, str]] = []
+        self._voice_assignment_mode = "narrator_and_characters"
+        self._processed_chunk_count = 0
+        self._total_chunk_count = 0
         self._can_reset = False
         self._can_approve_all = False
         self._can_resplit_selected = False
@@ -243,6 +246,7 @@ class SpeechBlocksPage(QWidget):
         total_block_count: int = 0,
         speaker_catalog: list[dict[str, object]] | None = None,
         content_kind_options: list[tuple[str, str]] | None = None,
+        voice_assignment_mode: str = "narrator_and_characters",
         can_reset: bool = False,
         can_approve_all: bool = False,
         can_resplit_selected: bool = False,
@@ -262,6 +266,7 @@ class SpeechBlocksPage(QWidget):
         @param[in]  total_block_count Total Speech Block count.
         @param[in]  speaker_catalog Ordered speaker selector entries.
         @param[in]  content_kind_options Ordered content-kind selector entries.
+        @param[in]  voice_assignment_mode Current project voice-assignment mode.
         @param[in]  can_reset Controller-resolved reset enablement flag.
         @param[in]  can_approve_all Controller-resolved approve-all enablement flag.
         @param[in]  can_resplit_selected Controller-resolved selected re-split enablement flag.
@@ -269,18 +274,19 @@ class SpeechBlocksPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-24
-        @version    0.2.2
+        @version    0.2.4
         """
         _ = selected_source_language
-        _ = processed_chunk_count
-        _ = total_chunk_count
         _ = approved_block_count
         _ = total_block_count
         self._source_chunks = sorted(source_chunks, key=lambda item: int(item.get("sequence_index", 0)))
         self._speech_blocks = speech_blocks_service.sort_speech_blocks(speech_blocks)
         self._speaker_catalog = list(speaker_catalog or [])
         self._content_kind_options = list(content_kind_options or [])
+        self._voice_assignment_mode = str(voice_assignment_mode).strip() or "narrator_and_characters"
         self._stage_status = stage_status
+        self._processed_chunk_count = max(0, int(processed_chunk_count))
+        self._total_chunk_count = max(0, int(total_chunk_count))
         self._can_reset = can_reset
         self._can_approve_all = can_approve_all
         self._can_resplit_selected = can_resplit_selected
@@ -480,11 +486,18 @@ class SpeechBlocksPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-24
-        @version    0.1.0
+        @version    0.2.0
         """
         self._speaker_combo.blockSignals(True)
         self._speaker_combo.clear()
-        for speaker_entry in self._speaker_catalog:
+        speaker_entries = self._speaker_catalog
+        if self._voice_assignment_mode == "same_narrator":
+            speaker_entries = [
+                speaker_entry
+                for speaker_entry in self._speaker_catalog
+                if str(speaker_entry.get("speaker_id", "")).strip() == speech_blocks_service.SPEAKER_KIND_NARRATOR
+            ]
+        for speaker_entry in speaker_entries:
             self._speaker_combo.addItem(
                 str(speaker_entry.get("display_name", "")),
                 str(speaker_entry.get("speaker_id", "")),
@@ -503,14 +516,20 @@ class SpeechBlocksPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-24
-        @version    0.3.0
+        @version    0.3.2
         """
         selected_block = self._current_display_block()
+        generated_all_chunks = (
+            bool(self._speech_blocks)
+            and self._total_chunk_count > 0
+            and (self._processed_chunk_count >= self._total_chunk_count)
+        )
         can_generate = (
             self._project_active
             and not self._busy
             and bool(self._source_chunks)
             and self.current_profile_id() is not None
+            and not generated_all_chunks
         )
         can_edit_selected = self._project_active and not self._busy and selected_block is not None
         can_approve_selected = can_edit_selected and not bool(selected_block.get("approved", False))
@@ -532,7 +551,9 @@ class SpeechBlocksPage(QWidget):
         self._insert_block_button.setEnabled(can_insert_block and not self._editing)
         self._delete_block_button.setEnabled(can_edit_selected and not self._editing)
         self._speech_block_list.setEnabled(self._project_active and not self._busy and not self._editing)
-        self._speaker_combo.setEnabled(can_edit_selected and self._editing)
+        self._speaker_combo.setEnabled(
+            can_edit_selected and self._editing and self._voice_assignment_mode != "same_narrator"
+        )
         self._content_kind_combo.setEnabled(can_edit_selected and self._editing)
         self._speech_block_text_edit.setReadOnly(not (can_edit_selected and self._editing))
         self._reset_block_button.setEnabled(can_edit_selected and not self._editing)

@@ -14,7 +14,7 @@
          normalization.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-23
-@version 1.6.0
+@version 1.6.1
 """
 
 # IMPORTS
@@ -700,7 +700,7 @@ def test_audio_blocks_service_reconcile_after_resplit_deletes_changed_chunk_and_
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-24
-    @version    0.1.0
+    @version    0.2.0
     """
     project_root, _manifest = _create_audio_blocks_project(tmp_path, "AudioBlocksServiceResplitReconcile")
     speech_blocks_path = (
@@ -801,7 +801,10 @@ def test_audio_blocks_service_reconcile_after_resplit_deletes_changed_chunk_and_
         encoding="utf-8",
     )
 
-    report = audio_blocks_service.reconcile_after_speech_blocks_resplit(project_root, "chunk-0001")
+    assert audio_blocks_service.has_persisted_audio_for_chunk(project_root, "chunk-0001") is True
+    assert audio_blocks_service.has_persisted_audio_for_chunk(project_root, "chunk-missing") is False
+
+    report = audio_blocks_service.reset_audio_for_speech_chunk(project_root, "chunk-0001")
 
     audio_blocks = audio_blocks_service.load_audio_blocks(project_root)
     remapped_audio_path = generated_root / "0002_000001_alice.wav"

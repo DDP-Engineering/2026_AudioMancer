@@ -16,7 +16,7 @@
          `80_audio_blocks` workflow artifacts.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-23
-@version 0.7.3
+@version 0.7.4
 """
 
 # IMPORTS
@@ -172,6 +172,37 @@ def has_persisted_audio_blocks(project_root: str | Path) -> bool:
             generated_root.is_dir() and any(generated_root.iterdir()),
         )
     )
+
+
+@trace_function(_AUDIO_BLOCKS_LOGGER)
+def has_persisted_audio_for_chunk(project_root: str | Path, chunk_id: str) -> bool:
+    """
+    @brief      Return whether one chunk has persisted Audio Blocks progress or generated artifacts.
+    @param[in]  project_root Active project root folder.
+    @param[in]  chunk_id Source chunk identifier.
+    @return     `True` when the selected chunk has Audio Blocks records or files.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-27
+    @version    0.1.0
+    """
+    normalized_chunk_id = str(chunk_id).strip()
+    if not normalized_chunk_id:
+        return False
+    for block in load_audio_blocks(project_root):
+        if str(block.get("chunk_id", "")).strip() != normalized_chunk_id:
+            continue
+        if any(
+            (
+                bool(block.get("generated", False)),
+                bool(block.get("approved", False)),
+                bool(_optional_string(block.get("audio_relative_path"))),
+                bool(_optional_string(block.get("metadata_relative_path"))),
+                bool(block.get("generated_part_relative_paths")),
+            )
+        ):
+            return True
+    return False
 
 
 @trace_function(_AUDIO_BLOCKS_LOGGER)
@@ -732,6 +763,21 @@ def reconcile_after_speech_blocks_resplit(project_root: str | Path, changed_chun
         }:
             _delete_audio_block_artifacts(resolved_project_root, old_block)
     return _persist_report_update(resolved_project_root, reconciled_blocks)
+
+
+@trace_function(_AUDIO_BLOCKS_LOGGER)
+def reset_audio_for_speech_chunk(project_root: str | Path, changed_chunk_id: str) -> AudioBlocksReportPayload:
+    """
+    @brief      Reset generated Audio Blocks data for one changed Speech Blocks chunk.
+    @param[in]  project_root Active project root folder.
+    @param[in]  changed_chunk_id Changed source chunk identifier.
+    @return     Updated Audio Blocks report payload.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-27
+    @version    0.1.0
+    """
+    return reconcile_after_speech_blocks_resplit(project_root, changed_chunk_id)
 
 
 @trace_function(_AUDIO_BLOCKS_LOGGER)

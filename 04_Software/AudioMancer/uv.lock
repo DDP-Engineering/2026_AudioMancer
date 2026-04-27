@@ -13,7 +13,7 @@ wheels = [
 
 [[package]]
 name = "audiomancer"
-version = "0.33.5"
+version = "0.34.0"
 source = { editable = "." }
 dependencies = [
     { name = "ebooklib" },

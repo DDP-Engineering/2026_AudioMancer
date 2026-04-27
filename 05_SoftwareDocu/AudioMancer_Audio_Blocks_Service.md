@@ -118,7 +118,11 @@ High-level flow:
 10. If only a subset of Speech Blocks was approved, the operation state remains
     `in_progress`, generated blocks are kept, and the operator can approve more
     Speech Blocks and continue later.
-11. The controller advances `project.json.current_stage` to
+11. Speech Blocks edits, resets, approvals, inserts, deletes, and selected-chunk
+    re-splits reset generated Audio Blocks data only for the affected source
+    chunk, deleting that chunk's WAV/metadata files while preserving other
+    chunks.
+12. The controller advances `project.json.current_stage` to
     `audio_blocks_ready` only when every speech block has generated audio and is
     approved.
 
@@ -157,6 +161,8 @@ Inputs:
 - character sample audio files and metadata from `characters_voice.json` when
   the project uses narrator-plus-character assignment
 - ordered speech blocks in `speech_blocks.json`
+- every Speech Block must be approved before the Audio Blocks start/continue
+  action is enabled in the UI
 - runtime connection settings and discovered models from `settings.json`
 
 Romanian remains a valid selected voice language in AudioMancer metadata, but
@@ -236,6 +242,8 @@ Current invariants:
   payload per input fingerprint
 - unapproved Speech Blocks remain present in `audio_blocks.json`, but they are
   skipped by generation until `speech_block_approved` becomes true
+- the Audio Blocks page disables start/continue while any Speech Block remains
+  unapproved
 - metadata-only `pause`, `background_noise`, and `indication` blocks are marked
   generated and approved automatically when their source Speech Block is
   approved

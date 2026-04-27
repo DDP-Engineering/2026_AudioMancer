@@ -46,6 +46,8 @@ narrator-only phrase/action/paragraph segments under the TTS text budget.
 - fall back to `narrator` when speaker attribution is ambiguous or invalid
 - expose speaker choices from `Narrator` plus discovered characters when the
   project uses separate character voices
+- expose only `Narrator` and disable speaker reassignment in `same_narrator`
+  projects, because the narrator voice plays all speech blocks
 - expose content kinds `Narration`, `Dialogue`, `Background Noise`, `Pause`,
   and `Indication`
 - support selected-block edit, save, and reset-to-AI-baseline operations
@@ -58,8 +60,9 @@ narrator-only phrase/action/paragraph segments under the TTS text budget.
 - reset Speech Blocks plus downstream Audio Blocks and Audio Assembly artifacts
 - persist resumable chunk-based operation state, report data, and AI
   transaction logs
-- build page state, notes, speaker catalogs, content-kind labels, and
-  AI-profile selector entries for the `Speech Blocks` page
+- build page state, notes, speaker catalogs, content-kind labels, generated-run
+  button state, reset state, and AI-profile selector entries for the
+  `Speech Blocks` page
 - coordinate confirmation popups, modal progress, cancellation, reset,
   re-splitting, downstream audio reconciliation, and manifest updates through
   the page controller
@@ -110,20 +113,26 @@ High-level flow:
    source spans, AI baseline values, editable current values, warning flags,
    approval fields, chunk-local sequence indexes, and `CCCC-BBBBBB` IDs.
    Deterministic validation annotates suspicious spans with warning flags such
-   as `source_coverage_mismatch`, `source_order_mismatch`,
-   `model_text_modified`, and narrator-only `tts_budget_exceeded`.
+   as `source_coverage_mismatch`, `source_order_mismatch`, and
+   `model_text_modified`. After validation, non-operation blocks that still
+   exceed the safe TTS budget are split locally as a safety net, preferring
+   paragraph and sentence boundaries before hard word/character splits. Hard
+   fallback splits add `tts_hard_split`; operation rows such as `pause`,
+   `background_noise`, and `indication` are never split.
 6. The current `speech_blocks_report.json`, `speech_blocks_state.json`, and
    transaction log metadata are rewritten after every chunk so cancellation can
    resume from the next chunk.
-7. Finished generation leaves Speech Blocks in review until all blocks are
-   approved.
+7. Finished full generation disables `Generate Speech Blocks`, enables
+   `Reset Speech Blocks`, resets downstream Audio Blocks plus Audio Assembly
+   data, and leaves Speech Blocks in review until all blocks are approved.
 8. `Approve All Speech Blocks` marks every block approved and advances the
-   manifest to `speech_blocks_ready`.
-9. Editing one block invalidates affected downstream Audio Blocks state.
+   manifest and Home-page operation summary to completed `speech_blocks_ready`.
+9. Editing, resetting, or approving one block asks for confirmation when the
+   current chunk already has generated audio, then deletes only that chunk's
+   generated Audio Blocks WAV/metadata artifacts and resets Audio Assembly.
 10. Inserting or deleting a block rewrites `speech_blocks.json`, renumbers only
-    the selected chunk, leaves inserted blocks unapproved, resets downstream
-    Audio Blocks plus Audio Assembly, and rolls the manifest back until review
-    is complete again.
+    the selected chunk, leaves inserted blocks unapproved, and resets generated
+    Audio Blocks data for that chunk.
 11. Re-splitting one chunk replaces only that chunk's Speech Blocks, rebuilds
     that chunk's local sequence indexes and block IDs, marks new blocks
     unapproved, rolls Speech Blocks back from complete, and asks Audio Blocks to
@@ -182,6 +191,8 @@ Outputs:
 - `log_ai_speech_blocks_<timestamp>.log`
 - updated manifest summary for `operations["speech_blocks"]`
 - updated manifest stage `speech_blocks_ready` only after approval is complete
+- reset downstream Audio Blocks and Audio Assembly artifacts after full
+  generation or Speech Blocks reset
 
 ## 6. Data Contracts
 
@@ -247,8 +258,12 @@ Current invariants:
 - warning flags are cleared when the operator starts editing a block
 - resetting one edited block restores only the AI baseline source span, speaker,
   content kind, and text while preserving the current warning-cleared state
+- selected-block edits, resets, approvals, inserts, deletes, and selected-chunk
+  re-splits reset generated Audio Blocks data for the affected chunk only
 - generation creates unapproved blocks
-- Speech Blocks is complete only when every block is approved
+- Speech Blocks is complete only when every block is approved; generated but
+  unapproved full output is persisted as `review_pending` in `project.json`
+  operation metadata
 
 Report and operation-state metadata include:
 

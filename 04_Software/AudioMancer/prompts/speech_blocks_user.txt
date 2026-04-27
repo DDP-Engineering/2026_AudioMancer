@@ -1,5 +1,11 @@
 Source language: {source_language}
 
+Voice assignment mode: {voice_assignment_mode}
+
+TTS maximum model token budget: {max_tts_tokens}
+Safe approximate words per block: {safe_tts_words}
+TTS budget source: {tts_budget_source}
+
 Allowed speaker catalog:
 {speaker_catalog_json}
 
