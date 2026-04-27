@@ -8,7 +8,7 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
 
 All notable changes to this project will be documented in this file.
 
-## [0.34.2] - 2026-04-27
+## [1.0.0] - 2026-04-27
 
 ### Changed
 
@@ -21,7 +21,10 @@ All notable changes to this project will be documented in this file.
   and `-10s` / `+10s` quick-seek buttons for long generated audiobook files
 - updated Audio Assembly documentation, user guides, and focused page/controller
   tests for the new playback controls
-- package version updated to `0.34.2`
+- refreshed the English and Romanian offline help guides with current workflow
+  screenshots, AI model recommendations, and VoiceWeaver audio-generation
+  requirements
+- package version updated to `1.0.0`
 
 ## [0.34.1] - 2026-04-27
 

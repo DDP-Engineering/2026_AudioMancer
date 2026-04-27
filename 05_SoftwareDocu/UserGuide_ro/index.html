@@ -1,4 +1,4 @@
-﻿<!doctype html>
+<!doctype html>
 <!--
 Copyright (c) 2026 DDP Engineering
 This software is licensed under the GNU Affero General Public License v3.0
@@ -9,21 +9,22 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Ghid AudioMancer v0.29.0</title>
+    <title>Ghid AudioMancer v1.0.0</title>
     <link rel="stylesheet" href="assets/styles/help.css">
 </head>
 <body>
     <div class="layout">
         <nav class="toc" aria-label="Cuprins">
             <h1>Ajutor AudioMancer</h1>
-            <p>Versiune 0.29.0<br>Ghid offline pentru Windows È™i Ubuntu.</p>
+            <p>Versiune 1.0.0<br>Ghid offline pentru Windows si Ubuntu.</p>
             <a href="#welcome">Bun venit</a>
-            <a href="#install">Instalare È™i pornire</a>
-            <a href="#settings">SetÄƒri</a>
-            <a href="#ai-settings">SetÄƒri AI</a>
-            <a href="#tts-settings">SetÄƒri TTS</a>
+            <a href="#requirements">Ce este necesar</a>
+            <a href="#install">Instalare si pornire</a>
+            <a href="#settings">Setari</a>
+            <a href="#ai-settings">Setari AI</a>
+            <a href="#tts-settings">Setari TTS</a>
             <a href="#project">Proiecte</a>
-            <a href="#cleanup">CurÄƒÈ›are text</a>
+            <a href="#cleanup">Curatare text</a>
             <a href="#chunking">Segmentare text</a>
             <a href="#translation">Traducere AI</a>
             <a href="#characters">Personaje</a>
@@ -41,360 +42,449 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
             <section id="welcome">
                 <h2>Bun venit</h2>
                 <div class="version-box">
-                    <p><strong>Versiune ajutor:</strong> 0.29.0</p>
-                    <p><strong>Versiune aplicaÈ›ie:</strong> 0.29.0</p>
+                    <p><strong>Versiune ajutor:</strong> 1.0.0</p>
+                    <p><strong>Versiune aplicatie:</strong> 1.0.0</p>
                     <p><strong>Creator:</strong> Eng. Dipl. Dan Dumitru Pasare</p>
                     <p><strong>Contact:</strong> pasaredan1979@gmail.com</p>
                 </div>
                 <p>
-                    AudioMancer transformÄƒ o carte sau o poveste scrisÄƒ Ã®n fiÈ™iere audio pentru audiobook. AplicaÈ›ia
-                    te conduce pas cu pas: imporÈ›i textul, Ã®l cureÈ›i, Ã®l Ã®mparÈ›i Ã®n segmente, pregÄƒteÈ™ti vocile,
-                    generezi audio È™i apoi asamblezi audiobook-ul final.
+                    AudioMancer transforma un text de carte sau poveste in fisiere audio pentru audiobook. Fluxul este
+                    impartit in pagini clare: proiect, curatare text, segmentare, traducere optionala, personaje, voci,
+                    blocuri de vorbire, blocuri audio si asamblare audio.
                 </p>
                 <p>
-                    Ghidul este scris pentru cititori È™i utilizatori casnici. Nu ai nevoie de cunoÈ™tinÈ›e de
-                    programare. LucreazÄƒ paginile din bara stÃ¢ngÄƒ de sus Ã®n jos. ApasÄƒ butoanele de generare,
-                    aprobare sau salvare numai dupÄƒ ce ai verificat textul sau sunetul afiÈ™at.
+                    Lucreaza paginile din bara stanga de sus in jos. Apasa butoanele de generare, aprobare sau salvare
+                    numai dupa ce ai verificat textul si sunetul afisat.
                 </p>
                 <div class="note">
-                    AudioMancer pÄƒstreazÄƒ fiecare carte Ã®ntr-un dosar de proiect. Nu muta fiÈ™ierele generate Ã®n timp
-                    ce aplicaÈ›ia este deschisÄƒ.
+                    AudioMancer pastreaza fiecare carte intr-un dosar de proiect. Nu muta fisierele proiectului cat timp
+                    aplicatia este deschisa.
+                </div>
+                <div class="warning">
+                    Toate operatiile de generare din flux pot fi intrerupte si reluate mai tarziu din starea salvata a
+                    proiectului. Revino pe aceeasi pagina si porneste operatia din nou pentru continuare sau regenerare.
                 </div>
                 <figure>
-                    <img src="assets/screenshots/home-project.png" alt="Pagina AcasÄƒ / Proiect Ã®n limba romÃ¢nÄƒ">
-                    <figcaption>Pagina AcasÄƒ / Proiect aratÄƒ proiectul curent, progresul È™i opÈ›iunile de export.</figcaption>
+                    <img src="assets/screenshots/home-project.png" alt="Pagina Acasa / Proiect">
+                    <figcaption>Pagina Acasa / Proiect arata proiectul curent, starea fluxului si actiunile principale.</figcaption>
                 </figure>
             </section>
 
+            <section id="requirements">
+                <h2>Ce este necesar</h2>
+                <p>
+                    AudioMancer poate folosi modele AI online sau locale pentru text, dar generarea audio este disponibila
+                    in aplicatia curenta numai prin VoiceWeaver.
+                </p>
+                <ul>
+                    <li><strong>VoiceWeaver este obligatoriu pentru audio.</strong> Instaleaza VoiceWeaver pe acelasi calculator sau pe un calculator din aceeasi retea.</li>
+                    <li><strong>OpenAI</strong> poate fi folosit pentru curatare, segmentare, traducere, personaje si blocuri de vorbire.</li>
+                    <li><strong>LM Studio</strong> poate fi folosit pentru aceleasi etape text, daca modelul local este incarcat si serverul API este pornit.</li>
+                    <li>OpenAI si LM Studio nu genereaza audio direct in AudioMancer 1.0.0; ele pregatesc textul si structura pentru VoiceWeaver.</li>
+                </ul>
+                <div class="warning">
+                    Daca VoiceWeaver nu este instalat sau nu poate fi accesat in retea, paginile text pot functiona, dar
+                    generarea blocurilor audio nu va putea produce fisiere WAV.
+                </div>
+                <p>
+                    Limbile tinta pentru traducere sunt: engleza, romana, japoneza, coreeana, chineza, germana,
+                    franceza, rusa, portugheza, spaniola si italiana. Limba audio urmeaza limba aleasa pentru proiect
+                    pe pagina Acasa / Proiect si necesita modele sau voci VoiceWeaver compatibile cu acea limba.
+                </p>
+                <div class="warning">
+                    AudioMancer creeaza definitii de voce si mostre dedicate pentru narator si, cand este activat,
+                    pentru fiecare personaj. Aceste voci sunt pregatite special pentru proiectul curent, nu sunt simple
+                    presetari generice.
+                </div>
+            </section>
+
             <section id="install">
-                <h2>Instalare È™i pornire</h2>
+                <h2>Instalare si pornire</h2>
                 <div class="two-column">
                     <div class="step-card">
                         <h3>Windows</h3>
                         <ol>
-                            <li>DescarcÄƒ arhiva zip AudioMancer pentru Windows.</li>
-                            <li>Click dreapta pe arhivÄƒ È™i alege <strong>Extract All</strong> / <strong>Extrage tot</strong>.</li>
+                            <li>Descarca arhiva zip AudioMancer pentru Windows.</li>
+                            <li>Click dreapta pe arhiva si alege <strong>Extract All</strong> / <strong>Extrage tot</strong>.</li>
                             <li>Deschide dosarul extras.</li>
-                            <li>PorneÈ™te <code>AudioMancer.exe</code> sau <code>Start-AudioMancer.cmd</code>.</li>
+                            <li>Porneste <code>AudioMancer.exe</code> sau <code>Start-AudioMancer.cmd</code>.</li>
                         </ol>
                     </div>
                     <div class="step-card">
                         <h3>Ubuntu</h3>
                         <ol>
-                            <li>DescarcÄƒ arhiva zip AudioMancer pentru Ubuntu.</li>
-                            <li>Extrage arhiva Ã®ntr-un dosar unde ai drept de scriere.</li>
-                            <li>Deschide un terminal Ã®n dosarul extras.</li>
-                            <li>PorneÈ™te <code>./AudioMancer</code> sau <code>./start-audiomancer.sh</code>.</li>
+                            <li>Descarca arhiva AudioMancer pentru Ubuntu.</li>
+                            <li>Extrage arhiva intr-un dosar unde ai drept de scriere.</li>
+                            <li>Ruleaza scriptul de pornire inclus in livrare.</li>
+                            <li>Verifica in Setari ca limba si marimea textului sunt corecte.</li>
                         </ol>
                     </div>
                 </div>
-                <p>
-                    PÄƒstreazÄƒ toate fiÈ™ierele din arhivÄƒ Ã®mpreunÄƒ. AplicaÈ›ia foloseÈ™te fiÈ™ierele de configurare,
-                    licenÈ›ele È™i ajutorul offline din acelaÈ™i dosar.
-                </p>
             </section>
 
             <section id="settings">
-                <h2>SetÄƒri</h2>
+                <h2>Setari</h2>
+                <p>
+                    Fereastra Setari controleaza limba interfetei, marimea textului si optiunile generale. Schimbarea
+                    limbii actualizeaza interfata si ghidul de ajutor corespunzator.
+                </p>
                 <figure>
-                    <img src="assets/screenshots/settings-dialog.png" alt="Fereastra SetÄƒri Ã®n limba romÃ¢nÄƒ">
-                    <figcaption>Alege limba interfeÈ›ei, dimensiunea textului È™i semnalul sonor de finalizare.</figcaption>
+                    <img src="assets/screenshots/settings-dialog.png" alt="Fereastra Setari">
+                    <figcaption>Setarile generale controleaza limba, dimensiunea textului si comportamentul de baza.</figcaption>
                 </figure>
-                <p>
-                    Deschide <strong>SetÄƒri</strong> din bara de sus. Pentru limba romÃ¢nÄƒ, alege <strong>ro</strong>
-                    la <strong>Limba</strong> È™i salveazÄƒ. DupÄƒ salvare, butonul <strong>Ajutor</strong> va deschide
-                    acest ghid Ã®n romÃ¢nÄƒ. DacÄƒ ghidul romÃ¢nesc lipseÈ™te din pachet, aplicaÈ›ia va deschide automat
-                    ghidul Ã®n englezÄƒ.
-                </p>
-                <p>
-                    DacÄƒ textul este prea mic pe monitor, creÈ™te <strong>Dimensiune Text InterfaÈ›Äƒ</strong>. Pentru
-                    laptopuri mici, foloseÈ™te <strong>Normal</strong> sau <strong>Mare</strong>; pentru monitoare
-                    mari, <strong>Mare</strong> sau <strong>Foarte Mare</strong> este mai confortabil.
-                </p>
             </section>
 
             <section id="ai-settings">
-                <h2>SetÄƒri AI</h2>
-                <figure>
-                    <img src="assets/screenshots/ai-settings-dialog.png" alt="Fereastra SetÄƒri AI Ã®n limba romÃ¢nÄƒ">
-                    <figcaption>Profilurile AI controleazÄƒ modelul folosit pentru curÄƒÈ›are, segmentare, traducere È™i blocuri de vorbire.</figcaption>
-                </figure>
+                <h2>Setari AI</h2>
                 <p>
-                    Un profil AI este o conexiune cÄƒtre un model de chat. CreeazÄƒ cel puÈ›in un profil, completeazÄƒ
-                    adresa, cheia API dacÄƒ este necesarÄƒ È™i numele modelului, apoi apasÄƒ <strong>ConecteazÄƒ</strong>.
-                    DupÄƒ un test reuÈ™it, seteazÄƒ profilul ca implicit pentru operaÈ›iile pe care vrei sÄƒ le rulezi.
+                    Alege furnizorul AI pentru etapele text. Poti folosi OpenAI online sau LM Studio local. Pentru
+                    proiecte lungi, foloseste modele cu fereastra context mare si pastreaza limite de raspuns suficiente.
+                    Pentru modelele OpenAI online ai nevoie de o cheie API obtinuta din contul tau OpenAI.
                 </p>
-                <ol>
-                    <li>ApasÄƒ <strong>AdaugÄƒ Profil</strong> È™i scrie un nume uÈ™or de recunoscut.</li>
-                    <li>Alege tipul backend-ului. Pentru API compatibil OpenAI, foloseÈ™te adresa furnizatÄƒ de serviciu.</li>
-                    <li>CompleteazÄƒ modelul, de exemplu un model GPT modern pentru texte lungi sau un model local compatibil.</li>
-                    <li>LasÄƒ temperatura micÄƒ, aproximativ <code>0.2</code>, pentru rezultate stabile.</li>
-                    <li>FoloseÈ™te o fereastrÄƒ de context mare pentru cÄƒrÈ›i lungi È™i segmente mari.</li>
-                    <li>ApasÄƒ <strong>ConecteazÄƒ</strong>, verificÄƒ lista de modele È™i apoi <strong>SalveazÄƒ SetÄƒrile AI</strong>.</li>
-                </ol>
-                <div class="note">
-                    Recomandare practicÄƒ: pentru curÄƒÈ›are È™i segmentare deterministÄƒ nu ai nevoie de AI. Pentru
-                    segmentare asistatÄƒ, traducere, personaje È™i blocuri de vorbire, foloseÈ™te un profil AI stabil,
-                    cu timeout suficient de mare pentru texte lungi.
-                </div>
+                <figure>
+                    <img src="assets/screenshots/ai-settings-dialog.png" alt="Fereastra Setari AI">
+                    <figcaption>Setarile AI definesc furnizorul, adresa API, modelul si parametrii de generare text.</figcaption>
+                </figure>
+                <h3>Profiluri recomandate OpenAI</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Etapa</th>
+                            <th>Model recomandat</th>
+                            <th>Setari utile</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Curatare text</td>
+                            <td><code>gpt-5.4-nano</code></td>
+                            <td>Temperatura 0.1, context 32k, raspuns 16k.</td>
+                        </tr>
+                        <tr>
+                            <td>Segmentare text</td>
+                            <td><code>gpt-5.4-mini</code></td>
+                            <td>Temperatura 0.0, context 32k, raspuns 16k.</td>
+                        </tr>
+                        <tr>
+                            <td>Traducere AI</td>
+                            <td><code>gpt-5.5</code></td>
+                            <td>Temperatura 0.3, context 64k sau mai mult, raspuns 32k.</td>
+                        </tr>
+                        <tr>
+                            <td>Personaje</td>
+                            <td><code>gpt-5.4</code></td>
+                            <td>Temperatura 0.1, context 64k, raspuns 24k.</td>
+                        </tr>
+                        <tr>
+                            <td>Blocuri de vorbire</td>
+                            <td><code>gpt-5.4</code></td>
+                            <td>Temperatura 0.0, context 64k, raspuns 32k.</td>
+                        </tr>
+                    </tbody>
+                </table>
+                <h3>Profiluri recomandate LM Studio</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Etapa</th>
+                            <th>Model recomandat</th>
+                            <th>Setari utile</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Curatare text</td>
+                            <td><code>mistralai/mistral-small-3.2</code></td>
+                            <td>Fallback: <code>openai/gpt-oss-20b</code>. Temperatura 0.1.</td>
+                        </tr>
+                        <tr>
+                            <td>Segmentare text</td>
+                            <td><code>qwen/qwen3-30b-a3b-2507</code></td>
+                            <td>Temperatura 0.0, context cat mai mare.</td>
+                        </tr>
+                        <tr>
+                            <td>Traducere AI</td>
+                            <td><code>google/gemma-3-27b</code></td>
+                            <td>Temperatura 0.3; foloseste bucati mai mici daca memoria GPU este limitata.</td>
+                        </tr>
+                        <tr>
+                            <td>Personaje</td>
+                            <td><code>qwen/qwen3-30b-a3b-2507</code></td>
+                            <td>Temperatura 0.1; verifica manual numele si rolurile.</td>
+                        </tr>
+                        <tr>
+                            <td>Blocuri de vorbire</td>
+                            <td><code>qwen/qwen3-30b-a3b-2507</code></td>
+                            <td>Temperatura 0.0; verifica vorbitorii inainte de audio.</td>
+                        </tr>
+                    </tbody>
+                </table>
+                <p class="source-note">
+                    Pastreaza cheia API OpenAI privata si introdu-o numai in fereastra Setari AI din AudioMancer.
+                </p>
             </section>
 
             <section id="tts-settings">
-                <h2>SetÄƒri TTS</h2>
+                <h2>Setari TTS</h2>
+                <p>
+                    Setarile TTS configureaza conexiunea cu VoiceWeaver. Introdu adresa calculatorului unde ruleaza
+                    VoiceWeaver, portul API si optiunile implicite pentru vocile folosite in proiect.
+                </p>
                 <figure>
-                    <img src="assets/screenshots/tts-settings-dialog.png" alt="Fereastra SetÄƒri TTS Ã®n limba romÃ¢nÄƒ">
-                    <figcaption>SetÄƒrile TTS verificÄƒ runtime-ul VoiceWeaver È™i opÈ›iunile de generare audio.</figcaption>
+                    <img src="assets/screenshots/tts-settings-dialog.png" alt="Fereastra Setari TTS">
+                    <figcaption>Setarile TTS trebuie sa indice catre serviciul VoiceWeaver accesibil local sau in retea.</figcaption>
                 </figure>
-                <p>
-                    TTS Ã®nseamnÄƒ text-to-speech. AudioMancer foloseÈ™te runtime-ul VoiceWeaver pentru generarea
-                    vocilor Qwen3 TTS. CompleteazÄƒ <strong>URL BazÄƒ</strong>, apoi apasÄƒ <strong>TesteazÄƒ Conexiunea</strong>.
-                    SalveazÄƒ numai dupÄƒ ce aplicaÈ›ia confirmÄƒ cÄƒ modelele necesare sunt disponibile.
-                </p>
-                <p>
-                    Limba audiobook-ului si modul de narare nu se mai modifica aici. Ele se aleg pe pagina Acasa,
-                    inainte de importul sursei, apoi se blocheaza pentru proiect. Setarile TTS raman pentru conexiunea
-                    la runtime, descoperirea modelelor, limitele de text si timeout-uri.
-                </p>
-                <p>
-                    <strong>Limita Text Previzualizare</strong> controleazÄƒ cÃ¢t text se trimite pentru un sample audio.
-                    Valoarea recomandatÄƒ este <code>512</code> caractere: destul pentru a auzi vocea, dar nu atÃ¢t de
-                    mult Ã®ncÃ¢t previzualizarea sÄƒ dureze prea mult.
-                </p>
             </section>
 
             <section id="project">
-                <h2>CreeazÄƒ sau deschide un proiect</h2>
+                <h2>Proiecte</h2>
                 <p>
-                    Un proiect conÈ›ine cartea importatÄƒ, textul curÄƒÈ›at, segmentele, vocile, fiÈ™ierele audio generate
-                    È™i setÄƒrile locale ale cÄƒrÈ›ii. FoloseÈ™te <strong>Proiect Nou</strong> pentru o carte nouÄƒ È™i
-                    <strong>Deschide Proiect</strong> pentru a continua lucrul.
+                    Creeaza sau deschide un proiect din pagina Acasa / Proiect. Fiecare proiect contine textul sursa,
+                    fisierele generate, aprobari si exporturi. Pentru carti lungi, foloseste un dosar dedicat pentru
+                    fiecare proiect.
                 </p>
                 <p>
-                    Pentru un proiect nou, selecteaza mai intai fisierul sursa, apoi foloseste partea dreapta din
-                    sumarul proiectului pentru <strong>Limba traducerii</strong> si <strong>Stil iesire audio</strong>.
-                    Apasa <strong>Start Project</strong> si confirma avertismentul. Fisierul sursa si aceste optiuni
-                    devin fixe pentru proiect; dupa aceea poti exporta proiectul ca ZIP.
-                </p>
-                <p>
-                    DupÄƒ ce alegi fiÈ™ierul sursÄƒ, AudioMancer Ã®l blocheazÄƒ pentru proiect. DacÄƒ vrei altÄƒ carte,
-                    creeazÄƒ un proiect nou. AceastÄƒ regulÄƒ previne amestecarea fiÈ™ierelor audio cu alt text.
+                    Pagina Acasa / Proiect arata starea de finalizare pentru fiecare faza. Dupa ce o faza este gata,
+                    poti exporta documentele aferente: text curatat, segmente, traduceri, personaje si Blocuri de
+                    vorbire. Butonul <strong>Export Project ZIP</strong> salveaza o copie completa a proiectului.
                 </p>
             </section>
 
             <section id="cleanup">
-                <h2>CurÄƒÈ›are text</h2>
+                <h2>Curatare text</h2>
+                <p>
+                    Curatarea elimina artefacte de OCR, spatii gresite si structuri care incurca etapele urmatoare.
+                    Poti folosi curatare locala sau AI, apoi verifici rezultatul inainte de aprobare.
+                </p>
+                <ul>
+                    <li>Extrage textul din documente acceptate.</li>
+                    <li>Ruleaza curatare determinista sau curatare asistata AI.</li>
+                    <li>Editeaza direct textul curatat pentru corectii manuale, imbunatatiri sau repararea OCR.</li>
+                    <li>Aproba textul curatat numai dupa verificare; aprobarea deblocheaza Segmentare text.</li>
+                    <li>Intrerupe operatia si reia mai tarziu din starea salvata.</li>
+                </ul>
                 <figure>
-                    <img src="assets/screenshots/text-cleanup.png" alt="Pagina CurÄƒÈ›are Text Ã®n limba romÃ¢nÄƒ">
-                    <figcaption>CurÄƒÈ›area transformÄƒ fiÈ™ierul importat Ã®ntr-un text pregÄƒtit pentru segmentare.</figcaption>
+                    <img src="assets/screenshots/text-cleanup.png" alt="Pagina Curatare text">
+                    <figcaption>Curata textul si aproba rezultatul inainte de segmentare.</figcaption>
                 </figure>
-                <p>
-                    CurÄƒÈ›area deterministÄƒ aplicÄƒ reguli locale, fÄƒrÄƒ sÄƒ trimitÄƒ text cÄƒtre AI. Este rapidÄƒ È™i
-                    potrivitÄƒ pentru fiÈ™iere TXT, PDF-uri bine extrase sau documente simple. CurÄƒÈ›area asistatÄƒ de AI
-                    poate corecta probleme mai complicate, dar dureazÄƒ mai mult È™i depinde de profilul AI.
-                </p>
-                <p>
-                    VerificÄƒ textul curÄƒÈ›at Ã®nainte de urmÄƒtorul pas. DacÄƒ vezi anteturi, subsoluri, numere de paginÄƒ
-                    sau text rupt, corecteazÄƒ acum. PaÈ™ii urmÄƒtori folosesc aceastÄƒ versiune ca sursÄƒ.
-                </p>
             </section>
 
             <section id="chunking">
                 <h2>Segmentare text</h2>
+                <p>
+                    Segmentarea imparte cartea in bucati mai usor de procesat. Bucatile aprobate sunt folosite pentru
+                    traducere, descoperire personaje si blocuri de vorbire.
+                </p>
+                <ul>
+                    <li>Genereaza segmente determinist sau cu asistenta AI.</li>
+                    <li>Alege strategia AI: <strong>Paragraph</strong> pentru ferestre stabile de paragrafe, <strong>Meaning</strong> pentru unitati semantice sau <strong>Scene</strong> pentru limite apropiate de scene.</li>
+                    <li>Inspecteaza fiecare segment generat.</li>
+                    <li>Editeaza rezultatul generat cand textul sau impartirea trebuie corectate manual.</li>
+                    <li>Aproba segmentele pentru a debloca traducerea, personajele si Blocurile de vorbire.</li>
+                    <li>Intrerupe segmentarea si reia mai tarziu din starea salvata.</li>
+                </ul>
                 <figure>
-                    <img src="assets/screenshots/text-chunking.png" alt="Pagina Segmentare Text Ã®n limba romÃ¢nÄƒ">
-                    <figcaption>Segmentarea Ã®mparte cartea Ã®n bucÄƒÈ›i care pot fi traduse, analizate È™i generate audio.</figcaption>
+                    <img src="assets/screenshots/text-chunking.png" alt="Pagina Segmentare text">
+                    <figcaption>Verifica marimea si ordinea segmentelor inainte de a continua.</figcaption>
                 </figure>
-                <p>
-                    Segmentarea deterministÄƒ foloseÈ™te reguli locale: paragrafe, lungime È™i indicii de capitole.
-                    Este predictibilÄƒ È™i bunÄƒ pentru texte curate. Segmentarea asistatÄƒ de AI Ã®ncearcÄƒ sÄƒ pÄƒstreze
-                    scenele È™i sensul textului, fiind utilÄƒ pentru romane sau dialoguri complexe.
-                </p>
-                <p>
-                    Lista de segmente Ã®È›i aratÄƒ ordinea cÄƒrÈ›ii. SelecteazÄƒ un segment pentru a vedea textul lui. DacÄƒ
-                    refaci segmentarea, traducerea, vocile È™i audio-ul de dupÄƒ acest pas vor fi resetate.
-                </p>
             </section>
 
             <section id="translation">
                 <h2>Traducere AI</h2>
+                <p>
+                    Traducerea AI este optionala si este gandita ca <strong>traducere literara</strong>: pastreaza tonul,
+                    dialogul, vocea personajelor, ritmul narativ si sensul, nu doar cuvintele. Foloseste-o daca vrei sa
+                    produci audiobook-ul intr-o alta limba. Verifica manual segmentele traduse, mai ales numele,
+                    dialogul si formulele regionale.
+                </p>
+                <ul>
+                    <li>Limbile tinta acceptate sunt engleza, romana, japoneza, coreeana, chineza, germana, franceza, rusa, portugheza, spaniola si italiana.</li>
+                    <li>Genereaza traducerea pe segmente, cu jurnal AI optional daca este activat in setari.</li>
+                    <li>Inspecteaza fiecare segment tradus impreuna cu sursa.</li>
+                    <li>Editeaza manual textul tradus inainte de aprobare.</li>
+                    <li>Aproba segmente individuale dupa verificare.</li>
+                    <li>Reporneste traducerea cand schimbi profilul AI sau vrei o noua varianta literara.</li>
+                    <li>Intrerupe traducerea si reia mai tarziu; starea segmentelor este salvata in proiect.</li>
+                </ul>
                 <figure>
-                    <img src="assets/screenshots/ai-translation.png" alt="Pagina Traducere AI Ã®n limba romÃ¢nÄƒ">
-                    <figcaption>Traducerea este aprobatÄƒ segment cu segment Ã®nainte de paÈ™ii audio.</figcaption>
+                    <img src="assets/screenshots/ai-translation.png" alt="Pagina Traducere AI">
+                    <figcaption>Traducerea aprobata devine textul folosit de etapele urmatoare.</figcaption>
                 </figure>
-                <p>
-                    Limba tinta este limba blocata la pornirea proiectului. Pagina arata limba originala si limba tinta
-                    ca indicatori, fara selector editabil. Alege profilul AI, porneste traducerea, citeste fiecare
-                    segment tradus, retradu ce este necesar si aproba textul pentru pasii audio.
-                </p>
-                <p>
-                    Daca limba originala detectata este aceeasi cu limba tinta blocata, AudioMancer creeaza automat o
-                    traducere pass-through: textul tradus este identic cu sursa, fara apel AI de rescriere, si starea
-                    este marcata completata pentru verificare.
-                </p>
-                <p>
-                    Pentru limba romÃ¢nÄƒ, AudioMancer poate trimite textul romÃ¢nesc cÄƒtre TTS fÄƒrÄƒ sÄƒ forÈ›eze un cÃ¢mp
-                    explicit de limbÄƒ atunci cÃ¢nd modelul TTS nu declarÄƒ suport direct pentru romÃ¢nÄƒ.
-                </p>
             </section>
 
             <section id="characters">
                 <h2>Personaje</h2>
-                <figure>
-                    <img src="assets/screenshots/characters.png" alt="Pagina Personaje Ã®n limba romÃ¢nÄƒ">
-                    <figcaption>Pagina Personaje identificÄƒ vorbitorii È™i descrierile folosite pentru voci.</figcaption>
-                </figure>
                 <p>
-                    Descoperirea personajelor foloseÈ™te AI pentru a extrage personaje, roluri È™i indicii de voce din
-                    text. VerificÄƒ numele È™i descrierile. DacÄƒ un personaj important lipseÈ™te sau are o descriere
-                    greÈ™itÄƒ, corecteazÄƒ Ã®nainte de generarea vocilor.
+                    Pagina Personaje identifica naratorul si personajele din text. Verifica lista si corecteaza numele,
+                    aliasurile sau descrierile inainte de alocarea vocilor.
                 </p>
+                <ul>
+                    <li>Descopera naratorul si personajele din segmente aprobate sau traduceri aprobate.</li>
+                    <li>Revizuieste nume, aliasuri, indicii de varsta/gen, rol, stil de vorbire si dovezi din text.</li>
+                    <li>Editeaza personajele cand modelul AI combina, omite sau eticheteaza gresit un vorbitor.</li>
+                    <li>Adauga manual personaje lipsa sau sterge rezultate false.</li>
+                    <li>Regeneraza definitii de voce dedicate cand descrierea nu este suficient de buna.</li>
+                    <li>Aproba lista de personaje inainte de lucrul cu vocile.</li>
+                    <li>Intrerupe descoperirea personajelor si reia mai tarziu.</li>
+                </ul>
+                <figure>
+                    <img src="assets/screenshots/characters.png" alt="Pagina Personaje">
+                    <figcaption>Lista de personaje pregateste vocile pentru narator si dialog.</figcaption>
+                </figure>
             </section>
 
             <section id="narrator">
                 <h2>Voce narator</h2>
+                <p>
+                    Alege vocea principala pentru narator. Testeaza mostra audio si pastreaza vocea consistenta pentru
+                    toate capitolele aceluiasi proiect.
+                </p>
+                <div class="warning">
+                    Vocea naratorului este o voce dedicata proiectului. Verifica promptul si mostra, deoarece aceasta
+                    voce devine vocea principala pentru naratiune si pentru proiectele cu acelasi narator.
+                </div>
+                <ul>
+                    <li>Inspecteaza profilurile de narator disponibile si selectia curenta.</li>
+                    <li>Editeaza promptul naratorului, textul de previzualizare si descrierea vocii.</li>
+                    <li>Genereaza o mostra VoiceWeaver pentru limba audio a proiectului.</li>
+                    <li>Reda si opreste mostra direct in pagina.</li>
+                    <li>Selecteaza mostra finala folosita in etapele urmatoare.</li>
+                    <li>Regenereaza mostra daca vocea nu se potriveste cartii.</li>
+                    <li>Intrerupe generarea mostrei si continua mai tarziu.</li>
+                </ul>
                 <figure>
-                    <img src="assets/screenshots/narator-voice.png" alt="Pagina Voce Narator Ã®n limba romÃ¢nÄƒ">
-                    <figcaption>PoÈ›i crea mai multe profiluri de narator È™i poÈ›i pÄƒstra sample-urile generate.</figcaption>
+                    <img src="assets/screenshots/narator-voice.png" alt="Pagina Voce narator">
+                    <figcaption>Vocea naratorului este folosita pentru textul narativ si blocurile fara personaj.</figcaption>
                 </figure>
-                <p>
-                    Alege un preset sau creeazÄƒ un profil personalizat. Promptul de designer descrie cum trebuie sÄƒ
-                    sune vocea: vÃ¢rstÄƒ, ton, ritm, atmosferÄƒ È™i claritate. GenereazÄƒ un sample, ascultÄƒ-l, apoi
-                    selecteazÄƒ profilul care se potriveÈ™te cÄƒrÈ›ii.
-                </p>
-                <p>
-                    Sample-urile sunt pÄƒstrate pe profil. PoÈ›i reveni la un profil mai vechi È™i Ã®l poÈ›i asculta fÄƒrÄƒ
-                    regenerare, atÃ¢t timp cÃ¢t fiÈ™ierul audio existÄƒ Ã®n proiect.
-                </p>
             </section>
 
             <section id="character-voices">
                 <h2>Voci personaje</h2>
+                <p>
+                    Aloca voci personajelor. Pentru proiectele cu un singur narator, pastreaza personajele pe vocea
+                    naratorului. Pentru proiectele cu mai multe voci, verifica fiecare mostra inainte de generare.
+                </p>
+                <div class="warning">
+                    Vocile personajelor sunt create dedicat pentru proiectul curent si lista curenta de personaje.
+                    Verifica fiecare prompt si mostra pentru consistenta dialogului.
+                </div>
+                <ul>
+                    <li>Selecteaza fiecare tinta de voce din lista de personaje.</li>
+                    <li>Revizuieste promptul primit din Descoperire personaje.</li>
+                    <li>Editeaza promptul si textul de previzualizare inainte de generarea mostrei.</li>
+                    <li>Genereaza, reda, opreste si regenereaza mostre VoiceWeaver pentru fiecare personaj.</li>
+                    <li>Aproba sau continua revizuirea alocarilor de voci.</li>
+                    <li>Reutilizeaza automat vocea naratorului in modul cu acelasi narator.</li>
+                    <li>Intrerupe generarea mostrelor si continua mai tarziu.</li>
+                </ul>
                 <figure>
-                    <img src="assets/screenshots/character-voices.png" alt="Pagina Voci Personaje Ã®n limba romÃ¢nÄƒ">
-                    <figcaption>Fiecare personaj poate primi o voce sau poate folosi vocea naratorului.</figcaption>
+                    <img src="assets/screenshots/character-voices.png" alt="Pagina Voci personaje">
+                    <figcaption>Alocarile de voci controleaza cum sunt generate replicile in VoiceWeaver.</figcaption>
                 </figure>
-                <p>
-                    DacÄƒ ai ales modul narator plus personaje, aceastÄƒ paginÄƒ pregÄƒteÈ™te vocile pentru fiecare
-                    vorbitor. GenereazÄƒ sample-uri numai pentru personajele importante la Ã®nceput. Pentru personaje
-                    secundare, poÈ›i folosi profiluri mai simple sau aceeaÈ™i voce.
-                </p>
-                <p>
-                    In modul acelasi narator, pagina ramane disponibila pentru verificarea metadatelor de personaje,
-                    dar este sincronizata cu naratorul: nu se genereaza sample-uri separate pe personaje, iar vocea
-                    naratorului este reutilizata.
-                </p>
             </section>
 
             <section id="speech-blocks">
                 <h2>Blocuri de vorbire</h2>
+                <p>
+                    Blocurile de vorbire transforma segmentele aprobate in unitati pregatite pentru audio. Verifica
+                    vorbitorul, textul, pauzele si indicatiile inainte de a aproba blocurile.
+                </p>
+                <ul>
+                    <li>Genereaza Blocuri de vorbire pentru fiecare segment aprobat.</li>
+                    <li>Inspecteaza vorbitorul, tipul blocului, textul, durata pauzelor, indicatiile si metadatele.</li>
+                    <li>Editeaza blocurile selectate cand textul sau atribuirea vorbitorului trebuie corectate.</li>
+                    <li>Insereaza sau sterge blocuri pentru a repara dialogul, pauzele sau fluxul narativ.</li>
+                    <li>Reimparte segmentele selectate cand structura nu este utilizabila.</li>
+                    <li>Aproba blocuri individuale sau foloseste aprobare globala dupa verificare.</li>
+                    <li>Reseteaza Blocurile de vorbire cand se schimba textul, traducerea, personajele sau modul de voce.</li>
+                    <li>Intrerupe generarea si reia mai tarziu fara pierderea blocurilor aprobate.</li>
+                </ul>
                 <figure>
-                    <img src="assets/screenshots/speech-blocks.png" alt="Pagina Blocuri de Vorbire Ã®n limba romÃ¢nÄƒ">
-                    <figcaption>Blocurile de vorbire stabilesc cine vorbeÈ™te È™i ce text va deveni audio.</figcaption>
+                    <img src="assets/screenshots/speech-blocks.png" alt="Pagina Blocuri de vorbire">
+                    <figcaption>Blocurile aprobate devin intrarea pentru generarea audio.</figcaption>
                 </figure>
-                <p>
-                    AudioMancer Ã®mparte fiecare segment Ã®n blocuri de naraÈ›iune, dialog È™i operaÈ›ii speciale. PoÈ›i
-                    edita textul, poÈ›i aproba blocuri È™i poÈ›i introduce blocuri noi dacÄƒ extracÈ›ia iniÈ›ialÄƒ a ratat
-                    un pasaj.
-                </p>
-                <p>
-                    Segmentarea urmeaza modul de narare blocat. Proiectele cu narator plus personaje folosesc promptul
-                    AI pentru dialog si vorbitori. Proiectele cu acelasi narator folosesc un prompt AI separat care
-                    creeaza segmente continue de fraza, actiune sau paragraf sub bugetul TTS, pastrand ghilimelele,
-                    guillemets, liniile de dialog, punctuatia si paragrafele in textul audio.
-                </p>
-                <p>
-                    Blocurile <strong>pauzÄƒ</strong>, <strong>indicaÈ›ie</strong> È™i <strong>zgomot de fundal</strong>
-                    sunt metadate. Pauza este folositÄƒ la asamblarea audio ca tÄƒcere. IndicaÈ›iile È™i zgomotele de
-                    fundal sunt pÄƒstrate pentru fluxuri viitoare, dar nu genereazÄƒ voce Ã®n aceastÄƒ versiune.
-                </p>
             </section>
 
             <section id="audio-blocks">
                 <h2>Blocuri audio</h2>
-                <figure>
-                    <img src="assets/screenshots/audio-blocks.png" alt="Pagina Blocuri Audio Ã®n limba romÃ¢nÄƒ">
-                    <figcaption>GenereazÄƒ, ascultÄƒ È™i aprobÄƒ sunetul pentru fiecare bloc de vorbire.</figcaption>
-                </figure>
                 <p>
-                    AceastÄƒ paginÄƒ genereazÄƒ fiÈ™iere audio pentru blocurile aprobate. AscultÄƒ fiecare bloc. DacÄƒ
-                    pronunÈ›ia, vocea sau ritmul nu sunt bune, regenereazÄƒ blocul Ã®nainte de aprobare. Blocurile
-                    marcate ca pauzÄƒ nu trimit text cÄƒtre TTS; durata lor este folositÄƒ mai tÃ¢rziu ca tÄƒcere.
+                    Pagina Blocuri audio trimite blocurile aprobate catre VoiceWeaver si salveaza fisiere WAV. Daca
+                    textul, vocea sau parametrii se schimba, AudioMancer marcheaza fisierele vechi ca neactualizate.
                 </p>
+                <ul>
+                    <li>Genereaza WAV pentru Blocurile de vorbire aprobate si vorbite.</li>
+                    <li>Nu trimite la TTS blocurile doar-metadate: pauza, indicatie si background-noise.</li>
+                    <li>Imparte intern textul prea lung si reuneste partile valide intr-un singur bloc audio.</li>
+                    <li>Previzualizeaza audio generat cu controale Play/Stop.</li>
+                    <li>Regenereaza blocuri selectate dupa corectii de text, prompt sau voce.</li>
+                    <li>Aproba audio numai dupa ascultare.</li>
+                    <li>Reseteaza blocurile audio cand intrarile anterioare devin neactualizate.</li>
+                    <li>Intrerupe generarea si reia mai tarziu din starea salvata.</li>
+                </ul>
+                <figure>
+                    <img src="assets/screenshots/audio-blocks.png" alt="Pagina Blocuri audio">
+                    <figcaption>Genereaza si verifica fiecare bloc audio inainte de asamblarea finala.</figcaption>
+                </figure>
             </section>
 
             <section id="assembly">
                 <h2>Asamblare audio</h2>
+                <p>
+                    Asamblarea audio combina blocurile WAV aprobate in fisiere finale lungi. Poti asculta fisierele
+                    generate direct in pagina, poti derula cu bara de progres si poti folosi butoanele de salt rapid.
+                </p>
+                <ul>
+                    <li>Apasa <strong>Play</strong> pentru a porni fisierul selectat; butonul devine <strong>Stop</strong> in timpul redarii.</li>
+                    <li>Foloseste <strong>-10s</strong> si <strong>+10s</strong> pentru derulare rapida.</li>
+                    <li>Trage de bara de progres pentru a sari la o pozitie anume.</li>
+                    <li>Dublu-click pe un fisier generat opreste redarea curenta si porneste acel fisier de la inceput.</li>
+                    <li>Alege modul de iesire: pe segment, parti limitate ca durata sau audiobook intreg.</li>
+                    <li>Configureaza pauza intre blocuri si pauza intre segmente.</li>
+                    <li>Genereaza fisiere WAV finale in dosarul <code>audiobook/</code> al proiectului.</li>
+                    <li>Reseteaza si regenereaza asamblarea cand setarile sau blocurile audio aprobate se schimba.</li>
+                    <li>Intrerupe asamblarea si reia mai tarziu cand starea salvata inca se potriveste intrarilor curente.</li>
+                </ul>
                 <figure>
-                    <img src="assets/screenshots/audio-assembly.png" alt="Pagina Asamblare Audio Ã®n limba romÃ¢nÄƒ">
-                    <figcaption>Asamblarea produce fiÈ™ierele WAV finale din blocurile audio aprobate.</figcaption>
+                    <img src="assets/screenshots/audio-assembly.png" alt="Pagina Asamblare audio">
+                    <figcaption>Bara de progres arata pozitia curenta si permite selectie rapida in fisiere lungi.</figcaption>
                 </figure>
-                <p>
-                    Alege modul de ieÈ™ire: cÃ¢te un fiÈ™ier pe segment, fiÈ™iere limitate ca duratÄƒ sau un audiobook
-                    complet. Formatul curent este WAV. PoÈ›i seta pauza dintre blocuri È™i pauza dintre segmente sau
-                    fiÈ™iere. OperaÈ›ia poate dura mult pentru cÄƒrÈ›i mari.
-                </p>
-                <p>
-                    DacÄƒ Ã®ntrerupi asamblarea, o poÈ›i continua mai tÃ¢rziu cÃ¢nd intrÄƒrile È™i setÄƒrile nu s-au schimbat.
-                    FiÈ™ierele finale sunt scrise Ã®n dosarul <code>audiobook</code> din proiect.
-                </p>
-                <p>
-                    Selecteaza un fisier generat pentru previzualizare. Bara de redare arata pozitia curenta,
-                    poate fi trasa pentru cautare in fisiere audio lungi, iar butoanele -10s / +10s sar rapid
-                    inapoi sau inainte in timpul verificarii. Dublu-clic pe un fisier generat opreste
-                    previzualizarea Audio Assembly curenta si porneste fisierul selectat de la inceput.
-                </p>
             </section>
 
             <section id="export">
-                <h2>Export È™i rezultate</h2>
+                <h2>Export</h2>
                 <p>
-                    Pagina AcasÄƒ / Proiect include exporturi pentru datele importante ale proiectului. Exporturile
-                    text sunt utile pentru verificare, corecturÄƒ sau arhivare. FiÈ™ierele audio finale sunt create de
-                    Asamblare Audio Ã®n dosarul proiectului.
+                    Exportul copiaza rezultatele proiectului intr-un dosar de livrare. Verifica inainte ca toate etapele
+                    necesare sa fie aprobate si ca fisierele audio finale se pot reda corect.
+                </p>
+                <p>
+                    Exporturile de documente devin disponibile numai dupa ce faza corespunzatoare a produs date aprobate.
+                    Foloseste lista de status de pe pagina Acasa / Proiect pentru a vedea ce este complet, in asteptare
+                    sau in revizuire.
                 </p>
             </section>
 
             <section id="troubleshooting">
                 <h2>Probleme frecvente</h2>
-                <h3>Butoanele sunt dezactivate</h3>
-                <p>
-                    De obicei lipseÈ™te un pas anterior. VerificÄƒ pagina AcasÄƒ / Proiect È™i completeazÄƒ paÈ™ii din
-                    sidebar Ã®n ordine. Pentru Audio Blocks, trebuie sÄƒ ai blocuri de vorbire aprobate È™i voci pregÄƒtite.
-                </p>
-                <h3>Nu se aude audio</h3>
-                <p>
-                    VerificÄƒ volumul sistemului, difuzorul selectat È™i dacÄƒ fiÈ™ierul audio existÄƒ Ã®n proiect. ÃŽncearcÄƒ
-                    sÄƒ redai fiÈ™ierul WAV cu playerul sistemului.
-                </p>
-                <h3>Traducerea sau segmentarea AI dureazÄƒ mult</h3>
-                <p>
-                    MÄƒreÈ™te timeout-ul profilului AI È™i foloseÈ™te un model cu fereastrÄƒ de context mai mare. Modelele
-                    locale pot fi mai lente decÃ¢t serviciile cloud.
-                </p>
-                <h3>Ajutorul Ã®n romÃ¢nÄƒ nu se deschide</h3>
-                <p>
-                    VerificÄƒ dacÄƒ pachetul conÈ›ine <code>help/ro/index.html</code>. DacÄƒ lipseÈ™te, AudioMancer va
-                    Ã®ncerca automat <code>help/en/index.html</code>.
-                </p>
+                <ul>
+                    <li><strong>Nu se genereaza audio:</strong> verifica daca VoiceWeaver ruleaza si daca adresa din Setari TTS este accesibila.</li>
+                    <li><strong>Modelul AI nu raspunde:</strong> verifica cheia OpenAI sau serverul LM Studio si modelul incarcat.</li>
+                    <li><strong>Textul este impartit gresit:</strong> revino la Segmentare text si ajusteaza bucata afectata.</li>
+                    <li><strong>Vocea este gresita:</strong> verifica alocarile din Voce narator si Voci personaje, apoi regenereaza blocurile afectate.</li>
+                    <li><strong>Fisierul audio final este lung:</strong> foloseste bara de progres, dublu-click pe fisier si salturile de 10 secunde.</li>
+                </ul>
             </section>
 
             <section id="glossary">
                 <h2>Glosar</h2>
-                <dl>
-                    <dt>Proiect</dt>
-                    <dd>Dosarul care conÈ›ine cartea, setÄƒrile È™i toate fiÈ™ierele generate.</dd>
-                    <dt>Segment</dt>
-                    <dd>O bucatÄƒ mai mare de text, de obicei o scenÄƒ sau un grup de paragrafe.</dd>
-                    <dt>Bloc de vorbire</dt>
-                    <dd>O unitate micÄƒ de text atribuitÄƒ naratorului, unui personaj sau unei operaÈ›ii speciale.</dd>
-                    <dt>Bloc audio</dt>
-                    <dd>FiÈ™ierul audio generat pentru un bloc de vorbire.</dd>
-                    <dt>Asamblare audio</dt>
-                    <dd>Pasul final care uneÈ™te blocurile audio Ã®n fiÈ™iere WAV de audiobook.</dd>
-                </dl>
+                <ul>
+                    <li><strong>Segment:</strong> bucata de text curatat folosita de etapele AI.</li>
+                    <li><strong>Bloc de vorbire:</strong> unitate text cu vorbitor, tip si instructiuni pentru audio.</li>
+                    <li><strong>Bloc audio:</strong> fisier WAV generat pentru un bloc de vorbire.</li>
+                    <li><strong>VoiceWeaver:</strong> serviciul TTS folosit de AudioMancer pentru generarea audio.</li>
+                    <li><strong>Asamblare:</strong> combinarea blocurilor audio in fisiere finale de audiobook.</li>
+                </ul>
             </section>
         </main>
     </div>
 </body>
 </html>
-

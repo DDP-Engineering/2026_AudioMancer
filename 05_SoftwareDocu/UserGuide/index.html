@@ -1,4 +1,4 @@
-﻿<!doctype html>
+<!doctype html>
 <!--
 Copyright (c) 2026 DDP Engineering
 This software is licensed under the GNU Affero General Public License v3.0
@@ -9,19 +9,20 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>AudioMancer User Guide v0.29.0</title>
+    <title>AudioMancer User Guide v1.0.0</title>
     <link rel="stylesheet" href="assets/styles/help.css">
 </head>
 <body>
     <div class="layout">
         <nav class="toc" aria-label="Table of contents">
             <h1>AudioMancer Help</h1>
-            <p>Version 0.29.0<br>Offline user guide for Windows and Ubuntu.</p>
+            <p>Version 1.0.0<br>Offline user guide for Windows and Ubuntu.</p>
             <a href="#welcome">Welcome</a>
+            <a href="#requirements">What You Need</a>
             <a href="#install">Install And Start</a>
             <a href="#settings">Settings</a>
             <a href="#ai-settings">AI Settings</a>
-            <a href="#tts-settings">TTS Settings</a>
+            <a href="#tts-settings">TTS / VoiceWeaver</a>
             <a href="#project">Create Or Open A Project</a>
             <a href="#cleanup">Text Cleanup</a>
             <a href="#chunking">Text Chunking</a>
@@ -41,30 +42,61 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
             <section id="welcome">
                 <h2>Welcome</h2>
                 <div class="version-box">
-                    <p><strong>Help version:</strong> 0.29.0</p>
-                    <p><strong>Application version:</strong> 0.29.0</p>
+                    <p><strong>Help version:</strong> 1.0.0</p>
+                    <p><strong>Application version:</strong> 1.0.0</p>
                     <p><strong>Creator:</strong> Eng. Dipl. Dan Dumitru Pasare</p>
                     <p><strong>Contact:</strong> pasaredan1979@gmail.com</p>
                 </div>
                 <p>
-                    AudioMancer helps turn a written book or story into audiobook files. It guides you through the
-                    work one page at a time: import the text, clean it, split it into chunks, prepare voices, generate
-                    audio, and assemble the final audiobook.
+                    AudioMancer helps turn a written book or story into audiobook WAV files. It guides you through
+                    the work one page at a time: import the source, clean the text, split it into chunks, optionally
+                    translate it, prepare narrator and character voices, generate speech audio, and assemble the final
+                    audiobook files.
                 </p>
                 <p>
-                    This guide is written for book readers and home users. You do not need to understand programming.
-                    Work through the left sidebar from top to bottom. When a page has a <strong>Generate</strong>,
-                    <strong>Start</strong>, <strong>Approve</strong>, or <strong>Save</strong> button, use it only
-                    after you have reviewed the visible text or audio.
+                    Work through the left sidebar from top to bottom. Review visible text and audio before you press
+                    approval buttons. Earlier workflow changes can invalidate later audio, so AudioMancer resets or
+                    blocks stale downstream data when needed.
                 </p>
+                <div class="warning">
+                    Current AudioMancer audio generation requires VoiceWeaver. OpenAI or LM Studio profiles are used
+                    for text workflows only; they do not generate the narrator, character, or Audio Blocks WAV files.
+                </div>
                 <div class="note">
-                    AudioMancer stores each book as one project folder. Keep the project folder together and avoid
-                    moving generated files while the application is open.
+                    All workflow generation operations can be interrupted and resumed later from the saved project
+                    state. Return to the same page and run the operation again to continue or regenerate as needed.
                 </div>
                 <figure>
                     <img src="assets/screenshots/home-project.png" alt="AudioMancer Home Project page">
-                    <figcaption>The Home / Project page shows the current project, workflow progress, and export tools.</figcaption>
+                    <figcaption>The Home / Project page shows source selection, locked project options, workflow progress, and export tools.</figcaption>
                 </figure>
+            </section>
+
+            <section id="requirements">
+                <h2>What You Need</h2>
+                <ul>
+                    <li><strong>AudioMancer:</strong> the desktop application and this offline help bundle.</li>
+                    <li><strong>VoiceWeaver:</strong> required for audio generation. Install it on the same computer or on another computer reachable on the same local network.</li>
+                    <li><strong>AI text model:</strong> optional for deterministic-only cleanup/chunking, but required for AI cleanup, AI chunking, translation, character discovery, and Speech Blocks.</li>
+                    <li><strong>Project storage:</strong> enough disk space for source files, intermediate WAV files, logs, reports, and final audiobook outputs.</li>
+                </ul>
+                <p>
+                    VoiceWeaver must be running before narrator samples, character samples, or Audio Blocks can be
+                    generated. If VoiceWeaver runs on a different computer, use that computer's LAN IP address in
+                    TTS Settings, for example <code>http://192.168.1.25:8000</code> or the endpoint required by your
+                    VoiceWeaver installation.
+                </p>
+                <p>
+                    Translation targets supported by AudioMancer are English, Romanian, Japanese, Korean, Chinese,
+                    German, French, Russian, Portuguese, Spanish, and Italian. The audio language follows the project
+                    language selected on the Home page and requires VoiceWeaver voices/models that support that
+                    language.
+                </p>
+                <div class="warning">
+                    AudioMancer creates dedicated voice definitions and samples for the selected narrator and, when
+                    enabled, for each character. These voices are prepared specifically for the current project instead
+                    of being generic one-click presets.
+                </div>
             </section>
 
             <section id="install">
@@ -91,8 +123,8 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                 </div>
                 <div class="warning">
                     Do not run AudioMancer from inside the zip file. Extract the full folder first and keep all files
-                    together. The application expects its settings, licenses, help files, and runtime files to stay
-                    beside the executable.
+                    together. The application expects settings, licenses, help files, and runtime files to stay beside
+                    the executable.
                 </div>
             </section>
 
@@ -100,93 +132,96 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                 <h2>Settings</h2>
                 <p>
                     Open <strong>Settings</strong> from the top toolbar before starting a long project. This dialog
-                    controls the application language, the size of interface text, and simple user preferences.
+                    controls the interface language, interface text size, and the optional completion beep.
                 </p>
                 <ol>
-                    <li>Choose the interface language you prefer.</li>
+                    <li>Choose the interface language.</li>
                     <li>Choose a text size that is comfortable for long review sessions.</li>
-                    <li>Save the settings, then reopen dialogs if you want to confirm the new text size.</li>
+                    <li>Enable or disable the completion beep.</li>
+                    <li>Save the settings. Dialogs and pages update to the selected language and text size.</li>
                 </ol>
-                <p>
-                    Recommended value for most users: keep the normal text size unless you are using a high-resolution
-                    screen or reading from a distance. If the interface feels crowded, try one step smaller; if you
-                    need easier reading, try one step larger.
-                </p>
                 <figure>
                     <img src="assets/screenshots/settings-dialog.png" alt="Settings dialog">
-                    <figcaption>The Settings dialog controls the basic application experience.</figcaption>
+                    <figcaption>The Settings dialog controls language, text size, and completion beep behavior.</figcaption>
                 </figure>
             </section>
 
             <section id="ai-settings">
                 <h2>AI Settings</h2>
                 <p>
-                    AI Settings stores profiles for AI-assisted cleanup, chunking, translation, character discovery,
-                    and Speech Blocks. A profile tells AudioMancer which AI server, model, and request settings to use.
+                    AI Settings stores chat-model profiles for AI-assisted cleanup, chunking, translation, character
+                    discovery, and Speech Blocks. These profiles do not generate audio. Audio generation is handled by
+                    VoiceWeaver through TTS Settings.
                 </p>
-                <h3>Create A ChatGPT/OpenAI-Compatible Profile</h3>
+                <h3>Create A Profile</h3>
                 <ol>
                     <li>Open <strong>AI Settings</strong>.</li>
-                    <li>Create a new profile and give it a clear name, such as <code>OpenAI GPT-5.4 Mini</code>.</li>
-                    <li>Use an OpenAI-compatible chat endpoint. For OpenAI API accounts, use the endpoint format expected by the dialog.</li>
-                    <li>Enter the model name exactly as the provider documents it.</li>
-                    <li>Enter your API key only in the local settings field. Do not paste keys into project text or prompts.</li>
-                    <li>Use <strong>Connect</strong> or the available test action to verify the profile.</li>
-                    <li>Select the profile as the default for cleanup, chunking, translation, character extraction, and Speech Blocks.</li>
+                    <li>Create a profile with a clear name, such as <code>Translation_gpt-5.5</code> or <code>SpeechBlocks_LMStudio_Qwen3</code>.</li>
+                    <li>Set <strong>Backend Kind</strong> to an OpenAI-compatible backend.</li>
+                    <li>For OpenAI online models, use <code>https://api.openai.com/v1</code> and enter an API key acquired from your OpenAI account.</li>
+                    <li>For LM Studio, start the local server and use <code>http://localhost:1234/v1</code>, or the LAN address if LM Studio is on another computer.</li>
+                    <li>Enter the model name exactly as the provider or LM Studio shows it.</li>
+                    <li>Use <strong>Connect</strong> to verify the profile, then set default profiles for each operation.</li>
                     <li>Click <strong>Save AI Settings</strong>.</li>
                 </ol>
-                <h3>Recommended AI Models</h3>
-                <p>
-                    Model availability changes. As of 2026-04-25, OpenAI's official model documentation lists
-                    <code>gpt-5.4</code> as the high-capability choice for complex reasoning and professional
-                    workflows, and smaller variants such as <code>gpt-5.4-mini</code> or <code>gpt-5-mini</code> as
-                    lower-cost choices for well-defined tasks. For AudioMancer, start with a mini model for normal
-                    cleanup, chunking, and translation. Use the strongest available model when character discovery,
-                    scene-aware chunking, or difficult translation quality matters more than cost.
-                </p>
-                <h3>Recommended Request Settings</h3>
-                <ul>
-                    <li><strong>Temperature:</strong> low to medium. Use about <code>0.2</code> for cleanup and translation, and about <code>0.3</code> to <code>0.5</code> for character discovery.</li>
-                    <li><strong>Timeout:</strong> use a generous timeout for long books. If operations often fail, increase the timeout before lowering quality.</li>
-                    <li><strong>Default cleanup profile:</strong> choose your reliable, lower-cost model.</li>
-                    <li><strong>Default chunking profile:</strong> choose the model that best follows structure instructions.</li>
-                    <li><strong>Default translation profile:</strong> choose the best multilingual model you can afford for the target language.</li>
-                    <li><strong>Default Speech Blocks profile:</strong> choose a model that follows JSON and speaker instructions reliably.</li>
-                </ul>
+                <h3>Recommended OpenAI Online Profiles</h3>
+                <table>
+                    <thead>
+                        <tr><th>Operation</th><th>Recommended model</th><th>Temperature</th><th>Context</th><th>Max output</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>AI Cleanup</td><td><code>gpt-5.4-nano</code></td><td>0.0-0.1</td><td>400000</td><td>32768</td></tr>
+                        <tr><td>AI Chunking</td><td><code>gpt-5.4-mini</code></td><td>0.1</td><td>400000</td><td>32768</td></tr>
+                        <tr><td>AI Translation</td><td><code>gpt-5.5</code></td><td>0.2</td><td>1000000</td><td>64000</td></tr>
+                        <tr><td>Character Discovery</td><td><code>gpt-5.4</code></td><td>0.1</td><td>1000000</td><td>64000</td></tr>
+                        <tr><td>Speech Blocks</td><td><code>gpt-5.4</code></td><td>0.0-0.1</td><td>1000000</td><td>64000</td></tr>
+                    </tbody>
+                </table>
+                <h3>Recommended LM Studio Local Profiles</h3>
+                <table>
+                    <thead>
+                        <tr><th>Operation</th><th>Recommended model</th><th>Fallback</th><th>Temperature</th><th>Context</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>AI Cleanup</td><td><code>mistralai/mistral-small-3.2</code></td><td><code>openai/gpt-oss-20b</code></td><td>0.0-0.05</td><td>32768</td></tr>
+                        <tr><td>AI Chunking</td><td><code>qwen/qwen3-30b-a3b-2507</code></td><td><code>mistralai/mistral-small-3.2</code></td><td>0.05</td><td>65536</td></tr>
+                        <tr><td>AI Translation</td><td><code>google/gemma-3-27b</code></td><td><code>qwen/qwen3-30b-a3b-2507</code></td><td>0.15-0.2</td><td>32768</td></tr>
+                        <tr><td>Character Discovery</td><td><code>qwen/qwen3-30b-a3b-2507</code></td><td><code>mistralai/mistral-small-3.2</code></td><td>0.05</td><td>65536</td></tr>
+                        <tr><td>Speech Blocks</td><td><code>qwen/qwen3-30b-a3b-2507</code></td><td><code>mistralai/mistral-small-3.2</code></td><td>0.0-0.05</td><td>65536</td></tr>
+                    </tbody>
+                </table>
                 <div class="note">
-                    If you are unsure, create one reliable profile first and use it everywhere. Add specialized
-                    profiles later only after you understand where quality or cost needs improvement.
+                    OpenAI online profiles require an API key from an OpenAI account. Keep the key private and enter it
+                    only in the AudioMancer AI Settings window.
                 </div>
                 <figure>
                     <img src="assets/screenshots/ai-settings-dialog.png" alt="AI Settings dialog">
-                    <figcaption>AI Settings stores model profiles and default choices for AI-assisted pages.</figcaption>
+                    <figcaption>AI Settings stores text-model profiles and default choices for AI-assisted pages.</figcaption>
                 </figure>
             </section>
 
             <section id="tts-settings">
-                <h2>TTS Settings</h2>
+                <h2>TTS / VoiceWeaver Settings</h2>
                 <p>
-                    TTS Settings controls the local voice generation runtime. AudioMancer uses this runtime for
-                    narrator samples, character samples, and final Audio Blocks.
+                    TTS Settings controls the VoiceWeaver runtime used for narrator samples, character samples, and
+                    final Audio Blocks. Current AudioMancer audio generation works only through VoiceWeaver.
                 </p>
                 <ol>
-                    <li>Start your VoiceWeaver-compatible runtime before generating samples.</li>
+                    <li>Install and start VoiceWeaver on this computer or on another computer in the same network.</li>
                     <li>Open <strong>TTS Settings</strong>.</li>
-                    <li>Set the runtime base URL and API key if your runtime requires one.</li>
-                    <li>Use the connection test to confirm AudioMancer can reach the runtime.</li>
-                    <li>Review runtime text limits, timeouts, and retry settings.</li>
+                    <li>Enter the VoiceWeaver runtime base URL.</li>
+                    <li>Use <strong>Test Connection</strong> so AudioMancer can discover available models and limits.</li>
+                    <li>Adjust preview and generation timeouts if your runtime is slow.</li>
                     <li>Save the runtime settings.</li>
                 </ol>
                 <p>
-                    The audiobook language and narration mode are no longer edited here. They are locked on the Home
-                    page when the project starts, so TTS Settings stays focused on the runtime connection, model
-                    discovery, text limits, and generation timeouts. Recommended value for most home users: keep the
-                    default timeouts first. Increase them only when large samples or long speech blocks fail because
-                    the runtime needs more time.
+                    The audiobook language and narration mode are selected on the Home page and then locked for the
+                    project. TTS Settings stays focused on runtime connection, discovered models, text limits, and
+                    generation timeouts.
                 </p>
                 <figure>
                     <img src="assets/screenshots/tts-settings-dialog.png" alt="TTS Settings dialog">
-                    <figcaption>TTS Settings controls the local text-to-speech runtime and generation timeouts.</figcaption>
+                    <figcaption>TTS Settings verifies VoiceWeaver and stores the runtime connection used for audio generation.</figcaption>
                 </figure>
             </section>
 
@@ -197,91 +232,80 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                     <li>Choose a simple project name, such as the book title.</li>
                     <li>Click <strong>Select Source File</strong> on the Home page.</li>
                     <li>Select the book or story file. Supported formats include TXT, PDF, RTF, DOCX, ODT, MD, and EPUB.</li>
-                    <li>Use the right side of Project Summary to choose <strong>Translation language</strong> and <strong>Audio output style</strong>.</li>
-                    <li>Click <strong>Start Project</strong> and confirm the warning. The source file and these options cannot be changed later in this project.</li>
+                    <li>Choose <strong>Translation language</strong> and <strong>Audio output style</strong>.</li>
+                    <li>Click <strong>Start Project</strong>. The source, target language, voice language, and narration mode are locked for this project.</li>
                 </ol>
                 <p>
-                    Use <strong>Open Project</strong> to return to an existing AudioMancer project folder. The Home
-                    page shows which workflow stages are finished and which are still waiting. <strong>Export Project ZIP</strong>
-                    becomes available after the project is started.
+                    Use <strong>Open Project</strong> to return to an existing project folder. The Home page combines
+                    the current stage with operation summaries so finished and waiting workflow steps are visible.
+                </p>
+                <p>
+                    The Home page also shows completion status for each phase. When a phase is complete, its export
+                    action becomes available: cleaned text, chunks, AI translation, characters, and Speech Blocks can
+                    be exported as documents, and <strong>Export Project ZIP</strong> creates a complete project
+                    snapshot.
                 </p>
             </section>
 
             <section id="cleanup">
                 <h2>Text Cleanup</h2>
                 <p>
-                    Text Cleanup extracts readable text from your source file and prepares it for audiobook work.
-                    This step matters because every later page depends on the cleaned text.
+                    Text Cleanup extracts readable text from the source file and prepares it for audiobook work.
+                    Deterministic cleanup uses local rules and is the safest first pass. AI-assisted cleanup can help
+                    with broken OCR, page artifacts, and poor paragraph formatting, but you must review the result.
                 </p>
-                <h3>Deterministic Cleanup</h3>
-                <p>
-                    Deterministic cleanup uses fixed local rules. It does not ask an AI model to rewrite your book.
-                    It is best for predictable cleanup such as normalizing line endings, reducing extra blank lines,
-                    and keeping the extracted text stable. Run this first for most books.
-                </p>
-                <h3>AI-Assisted Cleanup</h3>
-                <p>
-                    AI-assisted cleanup sends text chunks to the selected AI profile. Use it when the extracted text
-                    has broken paragraphs, bad OCR-style formatting, or page artifacts that simple rules cannot fix.
-                    Review the result carefully because AI cleanup can sometimes change wording.
-                </p>
+                <ul>
+                    <li>Extract source text from supported documents.</li>
+                    <li>Run deterministic cleanup or AI-assisted cleanup.</li>
+                    <li>Edit the cleaned text directly to manually improve wording, fix OCR errors, or correct formatting.</li>
+                    <li>Approve the cleaned text only after review; approved text unlocks Text Chunking.</li>
+                    <li>Interrupt cleanup and resume it later from the same project state.</li>
+                </ul>
                 <figure>
                     <img src="assets/screenshots/text-cleanup.png" alt="Text Cleanup page">
-                    <figcaption>Text Cleanup shows extracted text and cleanup controls.</figcaption>
+                    <figcaption>Text Cleanup shows extraction and cleanup controls plus review text.</figcaption>
                 </figure>
             </section>
 
             <section id="chunking">
                 <h2>Text Chunking</h2>
                 <p>
-                    Text Chunking splits the cleaned book into smaller chunks. Chunks make long books easier to
-                    review, translate, and generate as audio.
-                </p>
-                <h3>Deterministic Chunking</h3>
-                <p>
-                    Deterministic chunking splits text by local rules such as paragraph boundaries and size limits.
-                    It is fast, repeatable, and does not use AI. Use it when the source text is clean and you only need
-                    practical chunks for generation.
-                </p>
-                <h3>AI-Assisted Chunking</h3>
-                <p>
-                    AI-assisted chunking asks the selected AI profile to choose better chunk boundaries. This is useful
-                    for scenes, dialogue-heavy text, or chapters where a simple size split would cut in the middle of
-                    a thought. It costs more time and AI tokens but can improve review and audio flow.
+                    Text Chunking splits the cleaned book into manageable chunks. Deterministic chunking is fast and
+                    repeatable. AI-assisted chunking can choose more natural scene or meaning boundaries for complex
+                    prose, but it costs model time and tokens.
                 </p>
                 <ul>
-                    <li><strong>Scene strategy:</strong> good for fiction and chapter-like story flow.</li>
-                    <li><strong>Meaning strategy:</strong> good when the text should stay grouped by topic.</li>
-                    <li><strong>Review:</strong> always inspect the chunk list before continuing.</li>
+                    <li>Generate chunks deterministically or with AI assistance.</li>
+                    <li>Choose AI chunking strategy: <strong>Paragraph</strong> for stable paragraph windows, <strong>Meaning</strong> for semantic units, or <strong>Scene</strong> for scene-like boundaries.</li>
+                    <li>Inspect generated chunks one by one.</li>
+                    <li>Edit generated chunk output before approval when the split or text needs manual correction.</li>
+                    <li>Approve chunks to unlock translation, character discovery, and Speech Blocks.</li>
+                    <li>Interrupt chunking and resume it later from saved state.</li>
                 </ul>
                 <figure>
                     <img src="assets/screenshots/text-chunking.png" alt="Text Chunking page">
-                    <figcaption>The chunk list is the foundation for later Speech Blocks and final audio files.</figcaption>
+                    <figcaption>The chunk list is the foundation for translation, Speech Blocks, and final audio.</figcaption>
                 </figure>
             </section>
 
             <section id="translation">
                 <h2>AI Translation</h2>
                 <p>
-                    AI Translation is optional. Use it when you want the audiobook in another language. The target
-                    language is the locked project language selected on the Home page, so this page shows original and
-                    target language indicators instead of an editable selector. Start translation, review each
-                    translated chunk, and approve the chunks you want to use.
+                    AI Translation is optional and is designed for <strong>literary translation</strong>: preserving
+                    tone, dialogue, character voice, narrative rhythm, and meaning rather than producing a mechanical
+                    word-for-word rewrite. Use it when the audiobook should be produced in another language. The target
+                    language is locked on the Home page and shown here as a read-only indicator. If source and target
+                    language match, AudioMancer creates a pass-through translation without calling the AI model.
                 </p>
-                <p>
-                    Translation uses the selected AI Translation profile. The app stores translated chunks separately,
-                    so the original cleaned/chunked text remains available. Approving a translation means you accept it
-                    for the following voice workflow.
-                </p>
-                <p>
-                    If the detected original language already matches the locked target language, AudioMancer creates a
-                    pass-through translation state. The translated text is the source text, marked complete and ready
-                    for approval/review without sending it to the AI model for rewriting.
-                </p>
-                <div class="note">
-                    Romanian is available as a target language in AudioMancer. For Qwen3 TTS, Romanian speech uses an
-                    unspecified TTS language setting so the runtime can infer pronunciation from the text.
-                </div>
+                <ul>
+                    <li>Supported translation targets: English, Romanian, Japanese, Korean, Chinese, German, French, Russian, Portuguese, Spanish, and Italian.</li>
+                    <li>Generate translation per chunk, with transaction logging available when enabled in settings.</li>
+                    <li>Inspect every translated chunk beside its source context.</li>
+                    <li>Edit translated chunk text manually before approval.</li>
+                    <li>Approve individual chunks or continue reviewing until all chunks are approved.</li>
+                    <li>Restart translation after changing profile/settings or when you want a fresh literary pass.</li>
+                    <li>Interrupt translation and resume later; completed chunk state is stored in the project.</li>
+                </ul>
                 <figure>
                     <img src="assets/screenshots/ai-translation.png" alt="AI Translation page">
                     <figcaption>Translated chunks must be reviewed and approved before downstream pages use them.</figcaption>
@@ -291,127 +315,130 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
             <section id="characters">
                 <h2>Characters</h2>
                 <p>
-                    The Characters page identifies people or speaking roles in the book. The result helps
-                    AudioMancer prepare voice prompts for dialogue.
-                </p>
-                <p>
-                    Character discovery uses AI because names, aliases, and personality traits are difficult to detect
-                    with simple rules. Review the result and correct obvious mistakes before generating voices. Good
-                    character descriptions usually produce better voice prompts later.
+                    The Characters page uses AI to identify speaking roles, aliases, profile notes, evidence, and
+                    Qwen-oriented voice definition prompts. Review the result. Add, edit, delete, or regenerate voice
+                    definitions before moving to character voice samples.
                 </p>
                 <ul>
-                    <li>Run character discovery after chunking or translation.</li>
-                    <li>Review names, aliases, and descriptions.</li>
-                    <li>Edit, add, or delete character entries when the AI result needs correction.</li>
-                    <li>Approve the set only when the main speaking roles are correct.</li>
+                    <li>Discover narrator and character profiles from approved chunks or translated chunks.</li>
+                    <li>Review names, aliases, gender/age hints, role notes, speaking style, and source evidence.</li>
+                    <li>Edit discovered characters when the model merges, misses, or mislabels a speaker.</li>
+                    <li>Add missing characters manually or delete false positives.</li>
+                    <li>Regenerate dedicated voice-definition text for characters when the description is weak.</li>
+                    <li>Approve the character list before narrator and character voice work continues.</li>
+                    <li>Interrupt discovery and resume later from saved state.</li>
                 </ul>
                 <figure>
                     <img src="assets/screenshots/characters.png" alt="Characters page">
-                    <figcaption>Character profiles help the later Character Voices page create better voice samples.</figcaption>
+                    <figcaption>Character profiles and evidence guide downstream voice generation.</figcaption>
                 </figure>
             </section>
 
             <section id="narrator">
                 <h2>Narator Voice</h2>
                 <p>
-                    The Narator Voice page prepares the main storytelling voice. You can use a preset narrator or
-                    create a custom profile with a voice designer prompt.
+                    The Narator Voice page prepares the main storytelling voice. Select a built-in or project-local
+                    profile, edit the prompt when needed, generate a VoiceWeaver sample, preview it, then select the
+                    narrator profile for the project.
                 </p>
-                <ol>
-                    <li>Select or create a narrator profile.</li>
-                    <li>Edit the voice designer prompt if needed. Describe age, tone, clarity, pacing, emotion, and story style.</li>
-                    <li>Keep the preview text short and representative of the book.</li>
-                    <li>Generate a sample, then listen with <strong>Preview</strong>.</li>
-                    <li>Select the narrator you want for the project.</li>
-                </ol>
-                <p>
-                    Samples are preserved per profile. If you create several narrator profiles, you can switch between
-                    them and preview existing samples without regenerating every time.
-                </p>
+                <div class="warning">
+                    The narrator voice is a dedicated project voice. Review the prompt and sample carefully because it
+                    becomes the main voice for narration and same-narrator projects.
+                </div>
+                <ul>
+                    <li>Inspect available narrator profiles and the selected project narrator.</li>
+                    <li>Edit narrator prompt, preview text, and voice description before generation.</li>
+                    <li>Generate a VoiceWeaver sample for the chosen voice language.</li>
+                    <li>Play and stop narrator samples inside the page.</li>
+                    <li>Select the final narrator sample used downstream by Speech Blocks and Audio Blocks.</li>
+                    <li>Regenerate samples if the voice does not fit the book.</li>
+                    <li>Interrupt sample generation and resume the workflow later.</li>
+                </ul>
                 <figure>
                     <img src="assets/screenshots/narator-voice.png" alt="Narator Voice page">
-                    <figcaption>Narrator samples are stored per profile so you can switch and preview them later.</figcaption>
+                    <figcaption>Narrator profiles keep prompts, preview text, samples, and selected state.</figcaption>
                 </figure>
             </section>
 
             <section id="character-voices">
                 <h2>Character Voices</h2>
                 <p>
-                    Character Voices prepares voice samples for characters discovered earlier. You can generate a
-                    different voice per character or copy the narrator voice when a separate character voice is not
-                    needed.
+                    Character Voices prepares samples for discovered characters. In narrator-plus-character projects,
+                    each target can have its own prompt and VoiceWeaver sample. In same-narrator projects, this page
+                    is read-only for generation and reuses the selected narrator sample.
                 </p>
-                <p>
-                    For each character, review the voice prompt, generate a sample, listen to it, and approve the
-                    target. Character voice samples are used later when dialogue Speech Blocks are converted into
-                    audio.
-                </p>
-                <p>
-                    In same-narrator projects this page becomes a read-only synced workflow page. Character metadata
-                    can still be reviewed, but the narrator sample is reused and no separate per-character samples are
-                    generated.
-                </p>
+                <div class="warning">
+                    Character voices are created dedicated for the current project and character list. Review each
+                    prompt and sample so dialogue stays consistent across the audiobook.
+                </div>
+                <ul>
+                    <li>Select each character voice target from the project character list.</li>
+                    <li>Review the character handoff prompt created during Character Discovery.</li>
+                    <li>Edit voice prompt and preview text before sample generation.</li>
+                    <li>Generate, play, stop, and regenerate VoiceWeaver samples per character.</li>
+                    <li>Approve or keep reviewing character voice assignments before Speech Blocks and Audio Blocks.</li>
+                    <li>Reuse narrator voice automatically in same-narrator mode.</li>
+                    <li>Interrupt sample generation and continue later from saved target state.</li>
+                </ul>
                 <figure>
                     <img src="assets/screenshots/character-voices.png" alt="Character Voices page">
-                    <figcaption>Generate and preview character samples before moving to Speech Blocks.</figcaption>
+                    <figcaption>Character voice samples are generated only when the project uses separate character voices.</figcaption>
                 </figure>
             </section>
 
             <section id="speech-blocks">
                 <h2>Speech Blocks</h2>
                 <p>
-                    Speech Blocks split each text chunk into audiobook instructions. A block can be narration,
-                    dialogue, pause, indication, or background noise metadata.
+                    Speech Blocks split text chunks into audiobook instructions: narration, dialogue, pause,
+                    indication, or background-noise metadata. Narrator-plus-character projects use speaker-aware AI
+                    splitting. Same-narrator projects use a narrator-only AI splitter designed to keep text within the
+                    VoiceWeaver TTS budget.
                 </p>
                 <p>
-                    The splitter follows the locked narration mode. Narrator + character projects use the dialogue and
-                    speaker AI splitter. Same-narrator projects use a narrator-only AI splitter that creates continuous
-                    phrase, action, and paragraph segments under the TTS text budget, while preserving quotes,
-                    guillemets, dashes, punctuation, and paragraph breaks in the audio text.
+                    Review each block. Use edit, insert, delete, re-split, approve, and approve-all controls to make
+                    the block list match the intended audiobook.
                 </p>
                 <ul>
-                    <li>Generate Speech Blocks after narrator and character voices are ready.</li>
-                    <li>Review the selected chunk and the generated block list.</li>
-                    <li>Use <strong>Edit</strong> and <strong>Save</strong> to correct speaker, block type, or text.</li>
-                    <li>Use <strong>Insert Speech Block</strong> to add missing narration, dialogue, pause, or indication.</li>
-                    <li>Use <strong>Delete Speech Block</strong> when a block is wrong or duplicated.</li>
-                    <li>Approve blocks after they are correct.</li>
+                    <li>Generate Speech Blocks per approved text chunk.</li>
+                    <li>Inspect speaker, block type, text, pause duration, indication, and metadata.</li>
+                    <li>Edit selected blocks manually when attribution or text needs correction.</li>
+                    <li>Insert or delete blocks to repair dialogue, pauses, or narration flow.</li>
+                    <li>Re-split selected chunks when the structure is not usable.</li>
+                    <li>Approve individual blocks or use approve-all after review.</li>
+                    <li>Reset Speech Blocks when upstream text, translation, characters, or voice mode changes.</li>
+                    <li>Interrupt generation and resume later without losing approved block state.</li>
                 </ul>
-                <p>
-                    Narration and dialogue blocks become generated speech. Pause, indication, and background-noise
-                    blocks are metadata. They are still important because they control timing or preserve future
-                    creative instructions.
-                </p>
-                <div class="note">
-                    Pause blocks are not spoken by the voice model. They are stored as metadata and become silence
-                    during Audio Assembly. If no pause duration is found, AudioMancer uses 1000 ms.
-                </div>
                 <figure>
                     <img src="assets/screenshots/speech-blocks.png" alt="Speech Blocks page">
-                    <figcaption>Speech Blocks are where you fix what should be spoken, paused, or marked as an indication.</figcaption>
+                    <figcaption>Speech Blocks define what will be spoken, paused, or preserved as metadata.</figcaption>
                 </figure>
             </section>
 
             <section id="audio-blocks">
                 <h2>Audio Blocks</h2>
                 <p>
-                    Audio Blocks generates the actual WAV audio for approved narration and dialogue Speech Blocks.
-                    Pause, indication, and background-noise blocks are metadata-only and do not call the voice model.
+                    Audio Blocks sends approved spoken Speech Blocks to VoiceWeaver and stores generated WAV files
+                    under <code>audio_blocks/</code>. Pause, indication, and background-noise blocks are metadata-only
+                    and do not call the voice model. Long blocks may be split internally and stitched back together.
                 </p>
-                <ol>
-                    <li>Click <strong>Generate Audio Blocks</strong>.</li>
-                    <li>Wait for the operation to finish, or cancel and resume later.</li>
-                    <li>Preview generated audio.</li>
-                    <li>Approve the audio blocks that are correct.</li>
-                    <li>Regenerate selected audio if the result needs another try.</li>
-                </ol>
                 <p>
-                    Generated audio is stored in the project folder. If you change earlier Speech Blocks or voices,
-                    AudioMancer resets or invalidates affected audio so stale files are not reused by mistake.
+                    Generate, preview, regenerate selected blocks when needed, and approve audio only after listening.
+                    AudioMancer tracks fingerprints so stale generated audio is not reused after text, voice, language,
+                    sample, model, or split-plan changes.
                 </p>
+                <ul>
+                    <li>Generate WAV audio for approved spoken Speech Blocks.</li>
+                    <li>Skip TTS calls for metadata-only pause, indication, and background-noise blocks.</li>
+                    <li>Split over-budget text internally and stitch valid generated parts into one block output.</li>
+                    <li>Preview generated block audio with Play/Stop controls.</li>
+                    <li>Regenerate selected blocks after prompt, voice, or text corrections.</li>
+                    <li>Approve generated audio after listening.</li>
+                    <li>Reset stale Audio Blocks when upstream inputs change.</li>
+                    <li>Interrupt generation and resume later from saved block state.</li>
+                </ul>
                 <figure>
                     <img src="assets/screenshots/audio-blocks.png" alt="Audio Blocks page">
-                    <figcaption>Audio Blocks is the review stage before the final audiobook is assembled.</figcaption>
+                    <figcaption>Audio Blocks is the review stage before final audiobook assembly.</figcaption>
                 </figure>
             </section>
 
@@ -419,93 +446,75 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                 <h2>Audio Assembly</h2>
                 <p>
                     Audio Assembly combines approved Audio Blocks into final WAV audiobook files under the project
-                    folder's <code>audiobook</code> subfolder.
+                    <code>audiobook/</code> folder. Output modes are one file per text chunk, duration-limited parts,
+                    or one whole-book file.
+                </p>
+                <p>
+                    Pause Speech Blocks become exact silence. Automatic inter-block and inter-chunk silence can be
+                    configured. Long operations can be interrupted and continued later when inputs and settings still
+                    match the saved state.
+                </p>
+                <p>
+                    Select a generated file to preview it. The inline playback bar shows current position and total
+                    duration, supports drag-to-seek, and provides <strong>-10s</strong> / <strong>+10s</strong> quick
+                    jumps. Double-click a generated file to stop current Audio Assembly playback and restart the
+                    clicked file from the beginning.
                 </p>
                 <ul>
-                    <li><strong>Per text chunk:</strong> one output file per original chunk.</li>
-                    <li><strong>Time limit:</strong> split output into parts, such as files no longer than 30 minutes when possible.</li>
-                    <li><strong>Whole audiobook:</strong> one large WAV file for the full book.</li>
+                    <li>Choose output mode: per chunk, duration-limited parts, or whole audiobook.</li>
+                    <li>Configure inter-block and inter-chunk silence.</li>
+                    <li>Generate final WAV deliverables into the project <code>audiobook/</code> folder.</li>
+                    <li>Review generated files from the page list.</li>
+                    <li>Use Play/Stop, double-click playback, seek bar dragging, and 10-second jumps for long files.</li>
+                    <li>Reset and regenerate assembly when output settings or approved Audio Blocks change.</li>
+                    <li>Interrupt assembly and resume later when saved state still matches the current inputs.</li>
                 </ul>
-                <p>
-                    Use silence-gap controls to add short pauses between generated speech blocks or between output
-                    files. Pause Speech Blocks become exact silence in the final files. Long assembly operations can
-                    be interrupted and continued later when the saved state is still valid.
-                </p>
-                <p>
-                    Select a generated file to preview it. The playback bar shows the current position, can be
-                    dragged to seek within long audio files, and the -10s / +10s buttons jump quickly backward or
-                    forward during review. Double-click a generated file to stop any current Audio Assembly preview
-                    and start the clicked file from the beginning.
-                </p>
                 <figure>
                     <img src="assets/screenshots/audio-assembly.png" alt="Audio Assembly page">
-                    <figcaption>Audio Assembly creates the final audiobook deliverables.</figcaption>
+                    <figcaption>Audio Assembly creates the final audiobook deliverables and includes long-file review controls.</figcaption>
                 </figure>
             </section>
 
             <section id="export">
                 <h2>Export And Results</h2>
                 <p>
-                    The Home page can export intermediate text results and create a project ZIP snapshot. Final
-                    audiobook WAV files are saved inside the project folder under <code>audiobook</code>.
+                    The Home page can export cleaned text, chunks, AI translations, characters, and Speech Blocks as
+                    text files. <strong>Export Project ZIP</strong> creates a full project snapshot. Final audiobook
+                    WAV files are saved inside the project folder under <code>audiobook/</code>.
                 </p>
-                <ul>
-                    <li>Use text exports when you want cleaned text, chunks, translations, characters, or Speech Blocks.</li>
-                    <li>Use <strong>Export Project ZIP</strong> to archive the whole project folder.</li>
-                    <li>Use your normal file manager to copy the final WAV files from <code>audiobook</code>.</li>
-                </ul>
+                <p>
+                    Export buttons become available only after the matching phase has produced approved data. Use the
+                    Home page status list to see which phases are complete, pending, or waiting for review.
+                </p>
             </section>
 
             <section id="troubleshooting">
                 <h2>Troubleshooting</h2>
                 <h3>Buttons are disabled</h3>
-                <p>
-                    Most pages depend on earlier pages. Follow the sidebar from top to bottom and approve required
-                    results before continuing.
-                </p>
+                <p>Most pages depend on earlier pages. Follow the sidebar from top to bottom and approve required results before continuing.</p>
                 <h3>No audio is generated</h3>
-                <p>
-                    Check TTS Settings and make sure the VoiceWeaver runtime is running and connected. Also confirm
-                    the relevant Speech Blocks are approved.
-                </p>
+                <p>Start VoiceWeaver, verify the base URL in TTS Settings, run Test Connection, and confirm that the required VoiceWeaver models are available.</p>
+                <h3>AI text operations fail or return bad JSON</h3>
+                <p>Use lower temperature, a larger timeout, a larger context window, or a stronger JSON-following model. Local LM Studio models can be slower than hosted OpenAI models.</p>
                 <h3>The app says data is stale</h3>
-                <p>
-                    When you change earlier workflow data, later generated audio may no longer match. Reset or
-                    regenerate the affected downstream pages. Cleanup, chunking, translation, and character-discovery
-                    resets keep existing Narator Voice profiles and narrator samples, but they still invalidate
-                    character voices, Speech Blocks, Audio Blocks, and assembled audiobook files.
-                </p>
-                <h3>A long operation was cancelled</h3>
-                <p>
-                    Many AI and audio operations can continue later. Reopen the project and use the same page's
-                    generate button to resume when supported.
-                </p>
-                <h3>Ubuntu display errors</h3>
-                <p>
-                    On a minimal Ubuntu desktop, install the standard Qt desktop libraries if AudioMancer reports
-                    missing system display dependencies.
-                </p>
+                <p>Reset or regenerate downstream pages after changing earlier text, voice, language, sample, or model inputs.</p>
+                <h3>Long operation was cancelled</h3>
+                <p>Many workflows can resume. Reopen the same page and press the generation/start button again when the page offers continuation.</p>
             </section>
 
             <section id="glossary">
                 <h2>Glossary</h2>
                 <ul>
                     <li><strong>Project:</strong> one folder that stores the source book, generated files, settings, and final audio.</li>
+                    <li><strong>AI profile:</strong> a chat-model configuration for text workflows.</li>
+                    <li><strong>VoiceWeaver:</strong> the required runtime for current AudioMancer audio generation.</li>
                     <li><strong>Chunk:</strong> a section of the book used for review and generation.</li>
-                    <li><strong>Narrator:</strong> the main storytelling voice.</li>
-                    <li><strong>Character:</strong> a speaking role found in the book.</li>
                     <li><strong>Speech Block:</strong> one instruction for narration, dialogue, pause, or metadata.</li>
-                    <li><strong>Audio Block:</strong> generated audio or metadata for one approved Speech Block.</li>
-                    <li><strong>Audio Assembly:</strong> the final step that combines blocks into audiobook WAV files.</li>
+                    <li><strong>Audio Block:</strong> generated WAV audio or metadata for one approved Speech Block.</li>
+                    <li><strong>Audio Assembly:</strong> the final step that combines Audio Blocks into audiobook WAV files.</li>
                 </ul>
-                <p class="source-note">
-                    AI model recommendations were checked against official OpenAI model documentation on 2026-04-25.
-                    Because hosted model names and prices change, verify the provider documentation before a release.
-                </p>
             </section>
         </main>
     </div>
 </body>
 </html>
-
-

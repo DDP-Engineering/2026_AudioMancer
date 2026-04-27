@@ -121,6 +121,25 @@ code {
     font-size: 0.95em;
 }
 
+table {
+    width: 100%;
+    margin: 0 0 18px;
+    border-collapse: collapse;
+    font-size: 15px;
+}
+
+th,
+td {
+    padding: 8px 10px;
+    border: 1px solid var(--line);
+    vertical-align: top;
+}
+
+th {
+    background: #eef2f6;
+    text-align: left;
+}
+
 .note,
 .warning {
     margin: 18px 0;
