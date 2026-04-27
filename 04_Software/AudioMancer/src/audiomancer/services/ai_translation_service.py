@@ -13,7 +13,7 @@
          executes resumable translation over canonical chunking output.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-07
-@version 0.6.0
+@version 0.7.0
 """
 
 # IMPORTS
@@ -33,6 +33,7 @@ from audiomancer.services import (
 )
 from audiomancer.services.logging_service import get_component_logger, trace_function
 from audiomancer.services.operation_runtime_service import (
+    NARRATOR_PROFILE_PRESERVED_OPERATION_KINDS,
     build_operation_output_path,
     progress_percent,
     raise_if_cancelled,
@@ -724,19 +725,20 @@ def approve_all(
 @trace_function(_AI_TRANSLATION_LOGGER)
 def reset_translation(project_root: str | Path) -> None:
     """
-    @brief      Remove translation and downstream persisted runtime artifacts.
+    @brief      Remove translation and downstream persisted runtime artifacts while preserving narrator profiles.
     @param[in]  project_root Active project root path.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-07
-    @version    0.2.0
+    @version    0.3.0
     """
     reset_operation_data(
         project_root,
         "translation",
         include_current=True,
         keep_input_snapshots=False,
+        preserve_operation_kinds=NARRATOR_PROFILE_PRESERVED_OPERATION_KINDS,
     )
 
 

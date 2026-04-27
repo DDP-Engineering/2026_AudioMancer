@@ -14,7 +14,7 @@
          Chunking page.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-24
-@version 0.5.0
+@version 0.6.0
 """
 
 # IMPORTS
@@ -145,7 +145,7 @@ def save_chunk_text_edit(
     @exception  ValueError Raised when the chunk artifact or selected chunk is unavailable.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-24
-    @version    0.1.0
+    @version    0.2.0
     """
     chunk_artifact_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.CHUNK_ARTIFACT_FILE_NAME
     if not chunk_artifact_path.is_file():
@@ -164,6 +164,7 @@ def save_chunk_text_edit(
         "chunking",
         include_current=False,
         keep_input_snapshots=False,
+        preserve_operation_kinds=operation_runtime_service.NARRATOR_PROFILE_PRESERVED_OPERATION_KINDS,
     )
     updated_manifest = build_manifest_after_chunk_edit(manifest)
     project_workspace_service.save_manifest(updated_manifest, project_root)
@@ -178,18 +179,17 @@ def build_manifest_after_chunk_edit(manifest: dict[str, object]) -> dict[str, ob
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-24
-    @version    0.1.0
+    @version    0.2.0
     """
     updated_manifest = dict(manifest)
     operations = text_cleanup_state_service.normalized_manifest_operations(updated_manifest)
     default_operations = text_cleanup_state_service.normalized_manifest_operations({})
+    preserved_operation_kinds = operation_runtime_service.NARRATOR_PROFILE_PRESERVED_OPERATION_KINDS
     for selected_kind in operation_runtime_service.downstream_operation_kinds("chunking", include_current=False):
-        if selected_kind in default_operations:
+        if selected_kind in default_operations and selected_kind not in preserved_operation_kinds:
             operations[selected_kind] = default_operations[selected_kind]
     updated_manifest["operations"] = operations
     updated_manifest["current_stage"] = "translation_ready"
-    updated_manifest["narrator_profile_name"] = None
-    updated_manifest["narrator_language"] = None
     return updated_manifest
 
 

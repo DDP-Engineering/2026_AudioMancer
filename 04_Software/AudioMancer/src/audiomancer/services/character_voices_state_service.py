@@ -14,7 +14,7 @@
          voices targets, and cached VoiceWeaver runtime discovery data.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-20
-@version 1.4.0
+@version 1.4.1
 """
 
 # IMPORTS
@@ -53,7 +53,7 @@ def build_character_voices_state(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-20
-    @version    1.2.0
+    @version    1.3.0
     """
     if project_root is None or manifest is None:
         return {
@@ -94,10 +94,6 @@ def build_character_voices_state(
     assignment_mode = narrator_definition_service.load_tts_plan(project_root, discovered_models)[
         "voice_assignment_mode"
     ]
-
-    voice_targets = character_voices_service.sync_voice_plan(
-        project_root, character_profiles, selected_narrator_profile
-    )
     language_entries, selected_voice_language, original_language, translated_language, translation_ready = (
         _voice_language_state(project_root, manifest, language)
     )
@@ -113,6 +109,12 @@ def build_character_voices_state(
         )
     )
     character_voices_service.save_selected_voice_language(project_root, selected_voice_language)
+    voice_targets = character_voices_service.sync_voice_plan(
+        project_root,
+        character_profiles,
+        selected_narrator_profile,
+        selected_voice_language,
+    )
     if assignment_mode == "same_narrator":
         character_targets = [
             target

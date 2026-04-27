@@ -14,7 +14,7 @@
          artifact data.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-24
-@version 0.4.0
+@version 0.5.0
 """
 
 # IMPORTS
@@ -273,7 +273,7 @@ def test_save_cleaned_text_edit_persists_text_and_resets_downstream(tmp_path) ->
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-24
-    @version    0.1.0
+    @version    0.2.0
     """
     project_root, manifest = project_workspace_service.create_project(
         "CleanupEditProject",
@@ -285,12 +285,16 @@ def test_save_cleaned_text_edit_persists_text_and_resets_downstream(tmp_path) ->
     chunking_root = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH
     chunking_root.mkdir(exist_ok=True)
     (chunking_root / config.CHUNK_ARTIFACT_FILE_NAME).write_text("[]\n", encoding="utf-8")
+    (project_root / config.NARRATOR_PROFILE_FILE_NAME).write_text("[]\n", encoding="utf-8")
     manifest["current_stage"] = "text_chunking_ready"
+    manifest["narrator_profile_name"] = "Warm Narrator"
+    manifest["narrator_language"] = "fr"
     manifest["operations"]["cleanup"]["status"] = "completed"
     manifest["operations"]["cleanup"]["output_paths"] = [
         f"{config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH}/{config.CLEANED_TEXT_FILE_NAME}"
     ]
     manifest["operations"]["chunking"]["status"] = "completed"
+    manifest["operations"]["narrator_definition"]["status"] = "completed"
     project_workspace_service.save_manifest(manifest, project_root)
 
     updated_manifest = text_cleanup_state_service.save_cleaned_text_edit(
@@ -303,7 +307,11 @@ def test_save_cleaned_text_edit_persists_text_and_resets_downstream(tmp_path) ->
     assert updated_manifest["current_stage"] == "text_cleanup_ready"
     assert updated_manifest["operations"]["cleanup"]["status"] == "completed"
     assert updated_manifest["operations"]["chunking"]["status"] == "not_started"
+    assert updated_manifest["operations"]["narrator_definition"]["status"] == "completed"
+    assert updated_manifest["narrator_profile_name"] == "Warm Narrator"
+    assert updated_manifest["narrator_language"] == "fr"
     assert not (chunking_root / config.CHUNK_ARTIFACT_FILE_NAME).exists()
+    assert (project_root / config.NARRATOR_PROFILE_FILE_NAME).is_file()
     metadata_payload = json.loads((cleanup_root / config.CLEANED_TEXT_METADATA_FILE_NAME).read_text(encoding="utf-8"))
     assert metadata_payload["cleanup_mode"] == "manual_edit"
     assert metadata_payload["paragraphs"][0]["text"] == "Edited clean text"
@@ -386,6 +394,59 @@ def test_build_manifest_after_character_discovery_reset_returns_translation_read
     assert reset_manifest["operations"]["character_discovery"]["status"] == "not_started"
     assert reset_manifest["narrator_profile_name"] is None
     assert reset_manifest["narrator_language"] is None
+
+
+def test_build_manifest_after_character_discovery_reset_can_preserve_narrator_definition() -> None:
+    """
+    @brief      Verify character-discovery reset can keep narrator manifest state while clearing dependents.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-27
+    @version    0.1.0
+    """
+    manifest = {
+        "current_stage": "speech_blocks_ready",
+        "narrator_profile_name": "Warm Narrator",
+        "narrator_language": "fr",
+        "operations": {
+            "translation": {
+                "folder_relative_path": config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH,
+                "status": "completed",
+            },
+            "character_discovery": {
+                "folder_relative_path": config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH,
+                "status": "completed",
+            },
+            "narrator_definition": {
+                "folder_relative_path": config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH,
+                "status": "completed",
+            },
+            "character_voices": {
+                "folder_relative_path": config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH,
+                "status": "completed",
+            },
+            "speech_blocks": {
+                "folder_relative_path": config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH,
+                "status": "completed",
+            },
+        },
+    }
+
+    reset_manifest = text_cleanup_state_service.build_manifest_after_operation_reset(
+        manifest,
+        "character_discovery",
+        preserve_operation_kinds=operation_runtime_service.NARRATOR_PROFILE_PRESERVED_OPERATION_KINDS,
+    )
+
+    assert reset_manifest["current_stage"] == "translation_ready"
+    assert reset_manifest["operations"]["translation"]["status"] == "completed"
+    assert reset_manifest["operations"]["character_discovery"]["status"] == "not_started"
+    assert reset_manifest["operations"]["narrator_definition"]["status"] == "completed"
+    assert reset_manifest["operations"]["character_voices"]["status"] == "not_started"
+    assert reset_manifest["operations"]["speech_blocks"]["status"] == "not_started"
+    assert reset_manifest["narrator_profile_name"] == "Warm Narrator"
+    assert reset_manifest["narrator_language"] == "fr"
 
 
 # END OF FILE

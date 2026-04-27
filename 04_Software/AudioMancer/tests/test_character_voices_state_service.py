@@ -13,7 +13,7 @@
          selection rules, same-narrator shaping, and missing-sample warnings.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-20
-@version 1.1.1
+@version 1.2.0
 """
 
 # IMPORTS
@@ -23,6 +23,7 @@ import json
 from audiomancer import config
 from audiomancer.services import (
     character_discovery_service,
+    character_voices_service,
     character_voices_state_service,
     narrator_definition_service,
     project_workspace_service,
@@ -70,6 +71,7 @@ def test_state_contains_narrator_first_and_approved_translated_language(tmp_path
             "tts_runtime_discovered_models": _minimum_qwen_models(),
         },
         inspected_target_id="character_alice",
+        initialize_defaults=True,
     )
 
     assert [target["target_kind"] for target in state["targets"][:2]] == ["narrator", "character"]
@@ -79,6 +81,45 @@ def test_state_contains_narrator_first_and_approved_translated_language(tmp_path
     assert state["targets"][0]["can_edit_prompt"] is False
     assert state["targets"][1]["preview_text"]
     assert state["targets"][1]["preview_text"] == state["preview_text"]
+
+
+def test_state_initializes_character_preview_text_from_locked_voice_language(tmp_path) -> None:
+    """
+    @brief      Verify first Character Voices access seeds character previews with the project voice language.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-27
+    @version    0.1.0
+    """
+    project_root, manifest = _create_project_with_narrator_and_character(
+        tmp_path,
+        "CharacterVoicesFrenchPreview",
+    )
+    manifest["target_language"] = "fr"
+    manifest["selected_voice_language"] = "fr"
+    manifest["project_options_locked"] = True
+    project_workspace_service.save_manifest(manifest, project_root)
+
+    state = character_voices_state_service.build_character_voices_state(
+        project_root,
+        project_workspace_service.load_manifest(project_root),
+        "en",
+        {
+            "tts_runtime_probe_succeeded": True,
+            "tts_runtime_discovered_models": _minimum_qwen_models(),
+        },
+        inspected_target_id="character_alice",
+        initialize_defaults=True,
+    )
+
+    expected_preview_text = character_voices_service.preview_text_for_language("fr")
+    persisted_target = character_voices_service.voice_target_by_id(project_root, "character_alice")
+    assert state["selected_voice_language"] == "fr"
+    assert state["preview_text"] == expected_preview_text
+    assert persisted_target is not None
+    assert persisted_target["preview_text"] == expected_preview_text
 
 
 def test_state_same_narrator_mode_disables_character_edit_and_generate(tmp_path) -> None:
@@ -106,6 +147,7 @@ def test_state_same_narrator_mode_disables_character_edit_and_generate(tmp_path)
             "tts_runtime_discovered_models": _minimum_qwen_models(),
         },
         inspected_target_id="character_alice",
+        initialize_defaults=True,
     )
 
     assert state["can_edit_prompt"] is False
@@ -139,6 +181,7 @@ def test_state_missing_narrator_sample_surfaces_warning(tmp_path) -> None:
             "tts_runtime_probe_succeeded": True,
             "tts_runtime_discovered_models": _minimum_qwen_models(),
         },
+        initialize_defaults=True,
     )
 
     assert state["missing_narrator_sample"] is True

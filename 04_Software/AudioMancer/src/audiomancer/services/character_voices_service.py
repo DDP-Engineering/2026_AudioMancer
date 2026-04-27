@@ -14,7 +14,7 @@
          for the Character Voices workflow.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-20
-@version 1.4.0
+@version 1.5.0
 """
 
 # IMPORTS
@@ -23,6 +23,7 @@ from copy import deepcopy
 from datetime import UTC, datetime
 import json
 from pathlib import Path
+import re
 
 from audiomancer import config
 from audiomancer.services import narrator_definition_service, project_workspace_service, voiceweaver_runtime_service
@@ -165,18 +166,21 @@ def sync_voice_plan(
     project_root: str | Path,
     character_profiles: list[dict[str, object]],
     narrator_profile: dict[str, object] | None,
+    voice_language: object = narrator_definition_service.DEFAULT_NARRATOR_LANGUAGE,
 ) -> list[dict[str, object]]:
     """
     @brief      Synchronize persisted character-voices targets against the current narrator and character state.
     @param[in]  project_root Active project root folder.
     @param[in]  character_profiles Persisted character profile payload list.
     @param[in]  narrator_profile Explicitly selected narrator profile payload or `None`.
+    @param[in]  voice_language Selected audiobook voice language used for default preview text.
     @return     Persisted normalized character-voices target list.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-20
-    @version    1.1.1
+    @version    1.2.0
     """
+    normalized_voice_language = narrator_definition_service.narrator_language_code(voice_language)
     existing_targets_by_id = {
         str(target.get("target_id", "")).strip(): dict(target) for target in load_voice_plan(project_root)
     }
@@ -217,12 +221,13 @@ def sync_voice_plan(
                     "source_profile_id": None,
                     "display_name": str(character_profile.get("canonical_name", "")).strip() or target_id,
                     "character_id": normalized_character_id,
-                    "prompt_text": (str(existing_target.get("prompt_text", "")).strip() or default_prompt_text),
-                    "default_prompt_text": default_prompt_text,
-                    "preview_text": (
-                        str(existing_target.get("preview_text", "")).strip()
-                        or preview_text_for_language(narrator_definition_service.DEFAULT_NARRATOR_LANGUAGE)
+                    "prompt_text": _synchronized_character_prompt_text(
+                        existing_target,
+                        character_profile,
+                        default_prompt_text,
                     ),
+                    "default_prompt_text": default_prompt_text,
+                    "preview_text": _synchronized_character_preview_text(existing_target, normalized_voice_language),
                     "editable": True,
                     "sample_mode": SAMPLE_MODE_VOICE_DESIGNER,
                     "updated_at": existing_target.get("updated_at"),
@@ -401,14 +406,14 @@ def build_character_default_prompt(character_profile: dict[str, object]) -> str:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-20
-    @version    1.1.0
+    @version    1.2.0
     """
     stored_voice_definition_prompt = str(character_profile.get("voice_definition_prompt", "")).strip()
     if stored_voice_definition_prompt:
-        return stored_voice_definition_prompt
+        return _ensure_character_prompt_gender_instruction(stored_voice_definition_prompt, character_profile)
     character_name = str(character_profile.get("canonical_name", "Character")).strip() or "Character"
     descriptor_parts = [
-        _prefixed_text("Gender hint", character_profile.get("gender_hint")),
+        _character_voice_gender_instruction(character_profile),
         _prefixed_text("Age band", character_profile.get("age_band")),
         _prefixed_text("Role", character_profile.get("role_summary")),
         _prefixed_text("Description", character_profile.get("description")),
@@ -427,7 +432,8 @@ def build_character_default_prompt(character_profile: dict[str, object]) -> str:
         ).strip()
     return (
         f"Create a consistent spoken voice for {character_name} with clear diction, stable identity, "
-        "and delivery suitable for repeated dialogue narration."
+        "and delivery suitable for repeated dialogue narration. "
+        f"{_character_voice_gender_instruction(character_profile)}"
     )
 
 
@@ -881,6 +887,121 @@ def _normalize_voice_target(target_payload: dict[str, object]) -> dict[str, obje
         ),
         "updated_at": None if target_payload.get("updated_at") in (None, "") else str(target_payload.get("updated_at")),
     }
+
+
+def _synchronized_character_preview_text(existing_target: dict[str, object], voice_language: str) -> str:
+    """
+    @brief      Resolve character preview text while preserving operator edits.
+    @param[in]  existing_target Existing persisted target payload.
+    @param[in]  voice_language Selected audiobook voice language code.
+    @return     Existing edited preview text or the selected-language default.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-27
+    @version    0.1.0
+    """
+    localized_preview_text = preview_text_for_language(voice_language)
+    existing_preview_text = str(existing_target.get("preview_text", "")).strip()
+    if not existing_preview_text:
+        return localized_preview_text
+    if _is_unmodified_default_preview_text(existing_preview_text, localized_preview_text) and not (
+        _optional_string(existing_target.get("sample_audio_path"))
+        or isinstance(existing_target.get("sample_metadata"), dict)
+    ):
+        return localized_preview_text
+    return existing_preview_text
+
+
+def _synchronized_character_prompt_text(
+    existing_target: dict[str, object],
+    character_profile: dict[str, object],
+    default_prompt_text: str,
+) -> str:
+    """
+    @brief      Resolve character prompt text while enforcing explicit sex/gender guidance.
+    @param[in]  existing_target Existing persisted target payload.
+    @param[in]  character_profile Current persisted character profile payload.
+    @param[in]  default_prompt_text Current derived default prompt text.
+    @return     Prompt text safe to send to VoiceWeaver voice design.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-27
+    @version    0.1.0
+    """
+    existing_prompt_text = str(existing_target.get("prompt_text", "")).strip()
+    existing_default_prompt_text = str(existing_target.get("default_prompt_text", "")).strip()
+    if not existing_prompt_text:
+        return default_prompt_text
+    if existing_default_prompt_text and existing_prompt_text == existing_default_prompt_text:
+        return default_prompt_text
+    return _ensure_character_prompt_gender_instruction(existing_prompt_text, character_profile)
+
+
+def _ensure_character_prompt_gender_instruction(prompt_text: str, character_profile: dict[str, object]) -> str:
+    """
+    @brief      Add explicit sex/gender guidance to one voice prompt when missing.
+    @param[in]  prompt_text Candidate voice-designer prompt.
+    @param[in]  character_profile Character profile used for gender evidence.
+    @return     Prompt text containing one explicit sex/gender instruction.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-27
+    @version    0.1.0
+    """
+    normalized_prompt = str(prompt_text).strip()
+    if _prompt_has_explicit_gender_instruction(normalized_prompt):
+        return normalized_prompt
+    gender_instruction = _character_voice_gender_instruction(character_profile)
+    if not normalized_prompt:
+        return gender_instruction
+    return f"{normalized_prompt} {gender_instruction}".strip()
+
+
+def _character_voice_gender_instruction(character_profile: dict[str, object]) -> str:
+    """
+    @brief      Build the mandatory sex/gender instruction for one character voice prompt.
+    @param[in]  character_profile Character profile used for gender evidence.
+    @return     Explicit sex/gender instruction sentence.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-27
+    @version    0.1.0
+    """
+    gender_hint = str(character_profile.get("gender_hint", "")).strip()
+    if gender_hint:
+        return (
+            f"Sex/Gender: {gender_hint}. Match this explicitly in the vocal identity and do not replace it "
+            "with a different default."
+        )
+    return (
+        "Sex/Gender: not specified in the source. Use a neutral or androgynous vocal identity and do not "
+        "default to a male voice."
+    )
+
+
+def _prompt_has_explicit_gender_instruction(prompt_text: str) -> bool:
+    """
+    @brief      Return whether a prompt already carries explicit sex/gender guidance.
+    @param[in]  prompt_text Candidate voice-designer prompt.
+    @return     True when a gender or sex instruction is already present.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-27
+    @version    0.1.0
+    """
+    normalized_prompt = str(prompt_text).casefold()
+    return bool(
+        re.search(r"\b(sex/gender|gender hint|gender)\s*:", normalized_prompt)
+        or re.search(r"\b(female|male|woman|man|girl|boy|androgynous)\b", normalized_prompt)
+    )
+
+
+def _is_unmodified_default_preview_text(preview_text: str, localized_preview_text: str) -> bool:
+    """
+    @brief      Return whether preview text is one of the built-in defaults for another language.
+    @param[in]  preview_text Candidate persisted preview text.
+    @param[in]  localized_preview_text Current selected-language default preview text.
+    @return     True when the candidate can be safely localized.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-27
+    @version    0.1.0
+    """
+    return preview_text != localized_preview_text and preview_text in DEFAULT_PREVIEW_TEXT_BY_LANGUAGE.values()
 
 
 def _update_target_sample_metadata(

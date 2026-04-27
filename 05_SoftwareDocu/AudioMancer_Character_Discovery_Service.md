@@ -103,15 +103,19 @@ High-level runtime flow:
    dirty.
 10. The page also exposes editable voice-definition fields plus one final
     `voice_definition_prompt`; `Regenerate Voice Definition` rebuilds both
-    from the current literary character facts without leaving edit mode.
+    from the current literary character facts without leaving edit mode. The
+    final prompt always includes explicit `Sex/Gender:` guidance, using the
+    stored `gender_hint` when available and a neutral non-male-default
+    instruction when the source does not specify sex or gender.
 11. Saving a manual add or edit, or deleting a character, preserves the current
     `characters_profile.json` list and character-discovery state, then clears
-    downstream narrator, character-voice, speech-block, audio-block, and
-    audio-assembly runtime artifacts and resets their manifest summaries. The
-    project returns to `character_discovery_ready`.
-12. Reset clears character-discovery artifacts plus downstream narrator,
-   character-voice, speech-block, audio-block, and audio-assembly runtime
-   artifacts, resets manifest state through
+    downstream character-voice, speech-block, audio-block, and audio-assembly
+    runtime artifacts and resets their manifest summaries. Existing Narator
+    Voice profiles, selected narrator state, and narrator sample files are
+    preserved. The project returns to `character_discovery_ready`.
+12. Reset clears character-discovery artifacts plus downstream character-voice,
+   speech-block, audio-block, and audio-assembly runtime artifacts while
+   preserving existing narrator-definition data, resets manifest state through
    `build_manifest_after_operation_reset(...)`, and returns the project to
    `translation_ready`.
 
@@ -190,7 +194,7 @@ Voice-definition rules:
 
 - the six `voice_*` brief fields form the editable Qwen-oriented voice brief
 - `voice_definition_prompt` is the final handoff prompt later consumed by
-  `Character Voices`
+  `Character Voices` and includes explicit `Sex/Gender:` guidance
 - `voice_definition_source_signature` fingerprints the raw literary fields
   used to derive the voice brief
 - when literary fields change without updating the voice-definition block, the
@@ -242,12 +246,13 @@ Operation-state invariants:
 - resume checkpoints are reused only when the chunk fingerprint, total window
   count, and AI profile id still match
 - completed discovery disables the page start action until reset
-- reset preserves upstream translation artifacts and clears downstream narrator
-  data
+- reset preserves upstream translation artifacts and existing narrator profiles
+  or samples, then clears dependent character voice, speech, audio block, and
+  assembly data
 - manual add, edit, or delete operations update the persisted operation-state
   `metadata.character_count` when a state file already exists, then clear
-  downstream narrator, character voice, speech, audio block, and assembly
-  outputs
+  dependent character voice, speech, audio block, and assembly outputs without
+  deleting existing narrator profiles or selected narrator samples
 
 Relevant config values in `src/audiomancer/config.py`:
 
@@ -271,7 +276,8 @@ Downstream:
 
 - `CharactersPage` displays the discovered profiles and evidence, including
   right-click Find and Find Next actions on the selected evidence preview
-- narrator-definition work depends on the discovery output still being present
+- narrator-definition profiles and samples are preserved when discovery is reset
+  or character profiles are manually changed
 - projects with partially reviewed translation output remain at
   `translation_ready` until the translation chunk set is fully approved
 - reset logic returns the project to `translation_ready`

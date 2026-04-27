@@ -38,8 +38,9 @@ Do not translate character names or evidence excerpts during synthesis.
 If the payload does not support spoken dialogue, return empty strings and empty lists for the profile fields.
 Escape any inner quotes and embedded newlines correctly inside JSON string values.
 The voice-definition fields must be written for later Qwen3-TTS voice design, not as plot summary.
+`gender_hint` must carry an explicit sex/gender cue when supported by the text, such as female, male, nonbinary, or unknown.
 Keep them concise, positive, and non-contradictory.
 Do not imitate celebrities, actors, or copyrighted character voices.
-`voice_definition_prompt` must be one short English paragraph that cleanly describes the target voice identity and delivery.
+`voice_definition_prompt` must be one short English paragraph that cleanly describes the target voice identity and delivery, and it must include one explicit `Sex/Gender:` sentence.
 
 {character_payload}

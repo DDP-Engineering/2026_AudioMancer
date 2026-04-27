@@ -14,7 +14,7 @@
          discovery workflow.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-08
-@version 0.4.0
+@version 0.5.0
 """
 
 # IMPORTS
@@ -307,7 +307,7 @@ def test_manual_add_update_delete_and_reset(tmp_path) -> None:
     assert not (discovery_root / config.CHARACTER_PROFILE_FILE_NAME).exists()
     assert not (discovery_root / config.CHARACTER_DISCOVERY_REPORT_FILE_NAME).exists()
     assert not (discovery_root / config.CHARACTER_DISCOVERY_STATE_FILE_NAME).exists()
-    assert not (narrator_root / config.NARRATOR_PROFILE_FILE_NAME).exists()
+    assert (narrator_root / config.NARRATOR_PROFILE_FILE_NAME).is_file()
     assert (discovery_root / config.CHUNK_ARTIFACT_FILE_NAME).is_file()
 
 
@@ -339,6 +339,7 @@ def test_regenerate_character_voice_definition_builds_voice_brief_and_prompt() -
     assert "restrained authority" in regenerated_profile["voice_timbre_and_range"]
     assert "measured and precise" in regenerated_profile["voice_pacing_and_rhythm"]
     assert regenerated_profile["voice_definition_prompt"].startswith("Create a consistent spoken voice for Elizabeth.")
+    assert "Sex/Gender: female." in regenerated_profile["voice_definition_prompt"]
     assert regenerated_profile["voice_definition_source_signature"]
     assert regenerated_profile["voice_definition_stale"] is False
 

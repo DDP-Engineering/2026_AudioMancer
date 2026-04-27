@@ -13,7 +13,7 @@
          persists reset behavior through the main window shell.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-22
-@version 0.4.0
+@version 0.5.0
 """
 
 # IMPORTS
@@ -65,10 +65,14 @@ def test_ai_translation_ui_controller_start_request_uses_modal_runner(monkeypatc
 def test_ai_translation_ui_controller_reset_clears_translation_state(monkeypatch, qtbot, tmp_path) -> None:
     project_root, _manifest = _create_project(tmp_path, "TranslationResetControllerProject")
     (project_root / config.TRANSLATED_CHUNKS_FILE_NAME).write_text("[]\n", encoding="utf-8")
+    (project_root / config.NARRATOR_PROFILE_FILE_NAME).write_text("[]\n", encoding="utf-8")
     (project_root / config.CHARACTER_PROFILE_FILE_NAME).write_text("[]\n", encoding="utf-8")
     (project_root / config.SPEECH_BLOCKS_OUTPUT_FILE_NAME).write_text("[]\n", encoding="utf-8")
     window = _build_window(qtbot, project_root)
     assert window._current_manifest is not None
+    window._current_manifest["narrator_profile_name"] = "Warm Narrator"
+    window._current_manifest["narrator_language"] = "fr"
+    window._current_manifest["operations"]["narrator_definition"]["status"] = "completed"
     window._current_manifest["operations"]["character_discovery"]["status"] = "completed"
     window._current_manifest["operations"]["speech_blocks"]["status"] = "completed"
     monkeypatch.setattr(
@@ -81,11 +85,15 @@ def test_ai_translation_ui_controller_reset_clears_translation_state(monkeypatch
 
     assert window._current_manifest is not None
     assert window._current_manifest["operations"]["translation"]["status"] == "not_started"
+    assert window._current_manifest["operations"]["narrator_definition"]["status"] == "completed"
     assert window._current_manifest["operations"]["character_discovery"]["status"] == "not_started"
     assert window._current_manifest["operations"]["speech_blocks"]["status"] == "not_started"
     assert not (project_root / config.TRANSLATED_CHUNKS_FILE_NAME).exists()
+    assert (project_root / config.NARRATOR_PROFILE_FILE_NAME).is_file()
     assert not (project_root / config.CHARACTER_PROFILE_FILE_NAME).exists()
     assert not (project_root / config.SPEECH_BLOCKS_OUTPUT_FILE_NAME).exists()
+    assert window._current_manifest["narrator_profile_name"] == "Warm Narrator"
+    assert window._current_manifest["narrator_language"] == "fr"
 
 
 def test_sync_manifest_after_translation_advances_only_after_full_approval(qtbot, tmp_path) -> None:
@@ -169,9 +177,13 @@ def test_sync_manifest_after_translation_resets_downstream_when_approval_is_lost
         encoding="utf-8",
     )
     (project_root / config.CHARACTER_PROFILE_FILE_NAME).write_text("[]\n", encoding="utf-8")
+    (project_root / config.NARRATOR_PROFILE_FILE_NAME).write_text("[]\n", encoding="utf-8")
     (project_root / config.SPEECH_BLOCKS_OUTPUT_FILE_NAME).write_text("[]\n", encoding="utf-8")
     window = _build_window(qtbot, project_root)
     assert window._current_manifest is not None
+    window._current_manifest["narrator_profile_name"] = "Warm Narrator"
+    window._current_manifest["narrator_language"] = "fr"
+    window._current_manifest["operations"]["narrator_definition"]["status"] = "completed"
     window._current_manifest["operations"]["character_discovery"]["status"] = "completed"
     window._current_manifest["operations"]["speech_blocks"]["status"] = "completed"
 
@@ -186,10 +198,14 @@ def test_sync_manifest_after_translation_resets_downstream_when_approval_is_lost
     )
 
     assert window._current_manifest["current_stage"] == "translation_ready"
+    assert window._current_manifest["operations"]["narrator_definition"]["status"] == "completed"
     assert window._current_manifest["operations"]["character_discovery"]["status"] == "not_started"
     assert window._current_manifest["operations"]["speech_blocks"]["status"] == "not_started"
+    assert (project_root / config.NARRATOR_PROFILE_FILE_NAME).is_file()
     assert not (project_root / config.CHARACTER_PROFILE_FILE_NAME).exists()
     assert not (project_root / config.SPEECH_BLOCKS_OUTPUT_FILE_NAME).exists()
+    assert window._current_manifest["narrator_profile_name"] == "Warm Narrator"
+    assert window._current_manifest["narrator_language"] == "fr"
 
 
 def _create_project(tmp_path, name: str):

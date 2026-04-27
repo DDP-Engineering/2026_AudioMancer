@@ -13,7 +13,7 @@
          selected-chunk retranslation, and modal progress lifecycle.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-22
-@version 0.7.0
+@version 0.8.0
 """
 
 # IMPORTS
@@ -147,13 +147,13 @@ def handle_retranslate_selected_requested(
 
 def handle_reset_translation_requested(window: "MainWindow") -> None:
     """
-    @brief      Confirm and reset all persisted translation runtime data.
+    @brief      Confirm and reset translation runtime data while preserving narrator profiles.
     @param[in]  window Active main window instance.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-22
-    @version    0.3.0
+    @version    0.4.0
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._current_project_root is None or window._current_manifest is None:
@@ -171,6 +171,7 @@ def handle_reset_translation_requested(window: "MainWindow") -> None:
     updated_manifest = text_cleanup_state_service.build_manifest_after_operation_reset(
         window._current_manifest,
         "translation",
+        preserve_operation_kinds=operation_runtime_service.NARRATOR_PROFILE_PRESERVED_OPERATION_KINDS,
     )
     project_workspace_service.save_manifest(updated_manifest, window._current_project_root)
     window.show_project_state(
@@ -229,7 +230,7 @@ def handle_approve_selected_requested(window: "MainWindow", chunk_id: str) -> No
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-07
-    @version    0.2.0
+    @version    0.3.0
     """
     if window._current_project_root is None or window._current_manifest is None:
         return
@@ -386,16 +387,16 @@ def _sync_manifest_after_translation(window: "MainWindow", report: dict[str, obj
             "translation",
             include_current=False,
             keep_input_snapshots=False,
+            preserve_operation_kinds=operation_runtime_service.NARRATOR_PROFILE_PRESERVED_OPERATION_KINDS,
         )
         default_operations = text_cleanup_state_service.normalized_manifest_operations({})
+        preserved_operation_kinds = operation_runtime_service.NARRATOR_PROFILE_PRESERVED_OPERATION_KINDS
         for selected_kind in operation_runtime_service.downstream_operation_kinds(
             "translation",
             include_current=False,
         ):
-            if selected_kind in default_operations:
+            if selected_kind in default_operations and selected_kind not in preserved_operation_kinds:
                 operations[selected_kind] = default_operations[selected_kind]
-        updated_manifest["narrator_profile_name"] = None
-        updated_manifest["narrator_language"] = None
     operations["translation"] = project_workspace_service.project_manifest_operation_summary(
         "translation",
         operation_state,

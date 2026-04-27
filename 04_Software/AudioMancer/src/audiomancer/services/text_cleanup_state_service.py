@@ -14,11 +14,12 @@
          including manual cleaned-text edits.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-24
-@version 0.9.0
+@version 0.10.0
 """
 
 # IMPORTS
 
+from collections.abc import Iterable
 from pathlib import Path
 
 from audiomancer import config
@@ -141,7 +142,7 @@ def save_cleaned_text_edit(project_root: Path, manifest: dict[str, object], clea
     @exception  ValueError Raised when the cleaned text artifact does not exist yet.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-24
-    @version    0.2.0
+    @version    0.3.0
     """
     cleaned_text_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.CLEANED_TEXT_FILE_NAME
     if not cleaned_text_path.is_file():
@@ -153,6 +154,7 @@ def save_cleaned_text_edit(project_root: Path, manifest: dict[str, object], clea
         "cleanup",
         include_current=False,
         keep_input_snapshots=False,
+        preserve_operation_kinds=operation_runtime_service.NARRATOR_PROFILE_PRESERVED_OPERATION_KINDS,
     )
     updated_manifest = build_manifest_after_cleanup_edit(manifest)
     project_workspace_service.save_manifest(updated_manifest, project_root)
@@ -167,18 +169,17 @@ def build_manifest_after_cleanup_edit(manifest: dict[str, object]) -> dict[str, 
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-24
-    @version    0.1.0
+    @version    0.2.0
     """
     updated_manifest = dict(manifest)
     operations = normalized_manifest_operations(updated_manifest)
     default_operations = normalized_manifest_operations({})
+    preserved_operation_kinds = operation_runtime_service.NARRATOR_PROFILE_PRESERVED_OPERATION_KINDS
     for selected_kind in operation_runtime_service.downstream_operation_kinds("cleanup", include_current=False):
-        if selected_kind in default_operations:
+        if selected_kind in default_operations and selected_kind not in preserved_operation_kinds:
             operations[selected_kind] = default_operations[selected_kind]
     updated_manifest["operations"] = operations
     updated_manifest["current_stage"] = "text_cleanup_ready"
-    updated_manifest["narrator_profile_name"] = None
-    updated_manifest["narrator_language"] = None
     return updated_manifest
 
 
@@ -451,36 +452,42 @@ def build_manifest_after_extraction_reset(
 def build_manifest_after_operation_reset(
     manifest: dict[str, object],
     operation_kind: str,
+    preserve_operation_kinds: Iterable[str] | None = None,
 ) -> dict[str, object]:
     """
     @brief      Build one manifest payload after resetting one operation and its downstream state.
     @param[in]  manifest Current manifest payload before reset.
     @param[in]  operation_kind Operation-kind token that triggered the reset.
+    @param[in]  preserve_operation_kinds Optional operation kinds excluded from reset.
     @return     Reset manifest payload ready for persistence.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.2.0
+    @version    0.3.0
     """
     updated_manifest = dict(manifest)
     operations = normalized_manifest_operations(updated_manifest)
     default_operations = normalized_manifest_operations({})
+    preserved_operation_kinds = {
+        str(selected_kind).strip() for selected_kind in (preserve_operation_kinds or ()) if str(selected_kind).strip()
+    }
     if operation_kind == "extraction":
         updated_manifest["extracted_text_relative_path"] = None
         updated_manifest["extraction_report_relative_path"] = None
         updated_manifest["extraction_warning_count"] = 0
         updated_manifest["current_stage"] = "source_selected"
         for selected_kind in operations:
-            operations[selected_kind] = default_operations[selected_kind]
+            if selected_kind not in preserved_operation_kinds:
+                operations[selected_kind] = default_operations[selected_kind]
     else:
         updated_manifest["current_stage"] = _stage_after_operation_reset(operation_kind)
         for selected_kind in operation_runtime_service.downstream_operation_kinds(
             operation_kind,
             include_current=True,
         ):
-            if selected_kind in default_operations:
+            if selected_kind in default_operations and selected_kind not in preserved_operation_kinds:
                 operations[selected_kind] = default_operations[selected_kind]
-    if updated_manifest["current_stage"] not in {
+    if "narrator_definition" not in preserved_operation_kinds and updated_manifest["current_stage"] not in {
         "narrator_definition_ready",
         "character_voices_ready",
         "speech_blocks_ready",

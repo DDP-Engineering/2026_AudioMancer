@@ -14,11 +14,12 @@
          operations.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-22
-@version 0.6.0
+@version 0.7.0
 """
 
 # IMPORTS
 
+from collections.abc import Iterable
 import json
 import math
 from pathlib import Path
@@ -40,6 +41,9 @@ _OPERATION_ORDER = (
     "audio_blocks",
     "audio_assembly",
 )
+
+# @brief Downstream reset operation kinds preserved when upstream text/character data is regenerated.
+NARRATOR_PROFILE_PRESERVED_OPERATION_KINDS = frozenset(("narrator_definition",))
 
 # @brief Root-level runtime artifact files owned by each resettable operation.
 _OPERATION_ARTIFACT_FILE_NAMES = {
@@ -344,6 +348,7 @@ def reset_operation_data(
     operation_kind: str,
     include_current: bool = True,
     keep_input_snapshots: bool = False,
+    preserve_operation_kinds: Iterable[str] | None = None,
 ) -> None:
     """
     @brief      Clear one workflow step and optional downstream root-level runtime artifacts.
@@ -351,19 +356,23 @@ def reset_operation_data(
     @param[in]  operation_kind Selected workflow operation token.
     @param[in]  include_current True to clear the selected operation folder too.
     @param[in]  keep_input_snapshots Ignored; input snapshots are no longer created.
+    @param[in]  preserve_operation_kinds Optional operation kinds excluded from clearing.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.2.0
+    @version    0.3.0
     """
     _ = keep_input_snapshots
+    preserved_operation_kinds = _normalized_operation_kind_set(preserve_operation_kinds)
     operation_kinds = downstream_operation_kinds(
         operation_kind,
         include_current=include_current,
     )
     root_path = Path(project_root)
     for selected_kind in operation_kinds:
+        if selected_kind in preserved_operation_kinds:
+            continue
         for file_name in _OPERATION_ARTIFACT_FILE_NAMES.get(selected_kind, ()):
             artifact_path = root_path / file_name
             if artifact_path.is_file():
@@ -383,6 +392,21 @@ def reset_operation_data(
                 for child in audiobook_root.rglob("*"):
                     if child.is_file():
                         child.unlink()
+
+
+def _normalized_operation_kind_set(operation_kinds: Iterable[str] | None) -> frozenset[str]:
+    """
+    @brief      Normalize optional operation-kind preservation input.
+    @param[in]  operation_kinds Optional operation-kind iterable.
+    @return     Clean operation-kind set.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-27
+    @version    0.1.0
+    """
+    if operation_kinds is None:
+        return frozenset()
+    return frozenset(str(operation_kind).strip() for operation_kind in operation_kinds if str(operation_kind).strip())
 
 
 def raise_if_cancelled(cancel_requested) -> None:

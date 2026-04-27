@@ -15,7 +15,7 @@
          Chunking page.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-24
-@version 0.5.1
+@version 0.6.0
 """
 
 # IMPORTS
@@ -542,7 +542,7 @@ def _reset_chunking_and_downstream(window: "MainWindow") -> None:
     @return     None.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.1.0
+    @version    0.2.0
     """
     assert window._current_project_root is not None
     assert window._current_manifest is not None
@@ -551,10 +551,12 @@ def _reset_chunking_and_downstream(window: "MainWindow") -> None:
         "chunking",
         include_current=True,
         keep_input_snapshots=False,
+        preserve_operation_kinds=operation_runtime_service.NARRATOR_PROFILE_PRESERVED_OPERATION_KINDS,
     )
     reset_manifest = text_cleanup_state_service.build_manifest_after_operation_reset(
         window._current_manifest,
         "chunking",
+        preserve_operation_kinds=operation_runtime_service.NARRATOR_PROFILE_PRESERVED_OPERATION_KINDS,
     )
     project_workspace_service.save_manifest(reset_manifest, window._current_project_root)
     window._current_manifest = project_workspace_service.load_manifest(window._current_project_root)

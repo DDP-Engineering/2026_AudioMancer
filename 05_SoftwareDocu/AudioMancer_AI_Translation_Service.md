@@ -25,8 +25,9 @@ the `AI Translation` UI.
   calls
 - persist translated chunk records, operation state, report data, and AI logs
 - support selected-chunk edit, retranslate, approve, approve-all, and reset
-- reset downstream character, narrator, speech, audio, and audiobook artifacts
-  whenever translation is reset or becomes unapproved after editing
+- reset downstream character, character-voice, speech, audio, and audiobook
+  artifacts whenever translation is reset or becomes unapproved after editing,
+  while preserving existing Narator Voice profiles and selected narrator samples
 - shape page state with original-language and target-language indicators
 
 It does not own source import, chunking, character discovery, voice generation,
@@ -119,14 +120,15 @@ Translated chunk records include:
 Invariants:
 
 - target language comes from `project.json.target_language`
-- reset clears translation artifacts and all downstream runtime artifacts, but
-  does not unlock or change target language
+- reset clears translation artifacts and dependent downstream runtime artifacts,
+  but preserves Narator Voice profiles, selected narrator state, selected
+  narrator sample files, and the locked target language
 - same-language pass-through uses source text as translated text and avoids AI
   rewriting
 - approval is required before downstream character and voice workflows consume
   translated text
-- manual translation edits clear the edited chunk approval and reset downstream
-  runtime data
+- manual translation edits clear the edited chunk approval and reset dependent
+  downstream runtime data without deleting existing narrator profiles or samples
 
 ## 7. Workflow Integration
 
@@ -138,8 +140,9 @@ Upstream:
 
 Downstream:
 
-- Characters, Narator Voice, Character Voices, Speech Blocks, Audio Blocks, and
-  Audio Assembly consume either canonical text or approved translation state
+- Characters, Character Voices, Speech Blocks, Audio Blocks, and Audio Assembly
+  consume either canonical text or approved translation state; Narator Voice
+  profiles are preserved across translation resets and approval-loss resets
 - workflow stage advances to `character_discovery_ready` only after translation
   review is complete
 - unapproved translation state keeps the workflow at `translation_ready`

@@ -465,7 +465,9 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                 <h3>The app says data is stale</h3>
                 <p>
                     When you change earlier workflow data, later generated audio may no longer match. Reset or
-                    regenerate the affected downstream pages.
+                    regenerate the affected downstream pages. Cleanup, chunking, translation, and character-discovery
+                    resets keep existing Narator Voice profiles and narrator samples, but they still invalidate
+                    character voices, Speech Blocks, Audio Blocks, and assembled audiobook files.
                 </p>
                 <h3>A long operation was cancelled</h3>
                 <p>

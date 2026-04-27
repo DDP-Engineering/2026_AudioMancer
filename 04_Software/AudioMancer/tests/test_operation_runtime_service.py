@@ -13,7 +13,7 @@
          extraction, cleanup, and future workflow operations.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-22
-@version 0.4.0
+@version 0.5.0
 """
 
 # IMPORTS
@@ -71,6 +71,41 @@ def test_reset_operation_data_clears_known_root_artifacts_only(tmp_path) -> None
     assert (project_root / config.CLEANUP_REPORT_FILE_NAME).exists() is False
     assert (project_root / config.CHUNK_ARTIFACT_FILE_NAME).exists() is False
     assert (project_root / config.TRANSLATED_CHUNKS_FILE_NAME).exists() is False
+
+
+def test_reset_operation_data_preserves_requested_narrator_artifacts(tmp_path) -> None:
+    """
+    @brief      Verify upstream resets can preserve narrator-definition artifacts while clearing dependents.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-27
+    @version    0.1.0
+    """
+    project_root, _manifest = project_workspace_service.create_project("PreserveNarratorRuntime", tmp_path)
+    (project_root / config.NARRATOR_PROFILE_FILE_NAME).write_text("[]\n", encoding="utf-8")
+    (project_root / config.NARRATOR_SELECTION_FILE_NAME).write_text("{}\n", encoding="utf-8")
+    (project_root / config.SELECTED_NARRATOR_AUDIO_FILE_NAME).write_bytes(b"RIFF")
+    (project_root / config.SELECTED_NARRATOR_METADATA_FILE_NAME).write_text("{}\n", encoding="utf-8")
+    (project_root / config.CHARACTER_PROFILE_FILE_NAME).write_text("[]\n", encoding="utf-8")
+    (project_root / config.CHARACTER_VOICES_TARGETS_FILE_NAME).write_text("[]\n", encoding="utf-8")
+    (project_root / config.SPEECH_BLOCKS_OUTPUT_FILE_NAME).write_text("[]\n", encoding="utf-8")
+
+    operation_runtime_service.reset_operation_data(
+        project_root,
+        "character_discovery",
+        include_current=True,
+        preserve_operation_kinds=operation_runtime_service.NARRATOR_PROFILE_PRESERVED_OPERATION_KINDS,
+    )
+
+    assert (project_root / config.NARRATOR_PROFILE_FILE_NAME).is_file()
+    assert (project_root / config.NARRATOR_SELECTION_FILE_NAME).is_file()
+    assert (project_root / config.SELECTED_NARRATOR_AUDIO_FILE_NAME).is_file()
+    assert (project_root / config.SELECTED_NARRATOR_METADATA_FILE_NAME).is_file()
+    assert not (project_root / config.CHARACTER_PROFILE_FILE_NAME).exists()
+    assert not (project_root / config.CHARACTER_VOICES_TARGETS_FILE_NAME).exists()
+    assert not (project_root / config.SPEECH_BLOCKS_OUTPUT_FILE_NAME).exists()
 
 
 def test_resolve_operation_path_uses_project_root_without_creating_folders(tmp_path) -> None:

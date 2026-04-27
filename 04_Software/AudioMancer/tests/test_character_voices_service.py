@@ -13,7 +13,7 @@
          persistence, and narrator-copy sample sync behavior.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-20
-@version 1.3.0
+@version 1.4.0
 """
 
 # IMPORTS
@@ -46,7 +46,7 @@ def test_build_character_default_prompt_uses_character_profile_fields() -> None:
     )
 
     assert "Elizabeth" in prompt_text
-    assert "Gender hint: female." in prompt_text
+    assert "Sex/Gender: female." in prompt_text
     assert "Speaking style: measured and precise." in prompt_text
     assert "Voice notes: warm tone with restrained authority." in prompt_text
     assert "stable identity" in prompt_text
@@ -54,16 +54,17 @@ def test_build_character_default_prompt_uses_character_profile_fields() -> None:
 
 def test_build_character_default_prompt_prefers_character_owned_voice_definition_prompt() -> None:
     """
-    @brief      Verify Character Voices prompt defaults prefer the character-owned voice-definition prompt.
+    @brief      Verify Character Voices prompt defaults preserve character-owned prompts and add sex/gender.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    1.0.0
+    @version    1.1.0
     """
     prompt_text = character_voices_service.build_character_default_prompt(
         {
             "canonical_name": "Elizabeth",
+            "gender_hint": "female",
             "role_summary": "noblewoman",
             "voice_definition_prompt": (
                 "Create a consistent spoken voice for Elizabeth. Warm mezzo tone with restrained authority."
@@ -71,7 +72,30 @@ def test_build_character_default_prompt_prefers_character_owned_voice_definition
         }
     )
 
-    assert prompt_text == ("Create a consistent spoken voice for Elizabeth. Warm mezzo tone with restrained authority.")
+    assert prompt_text.startswith(
+        "Create a consistent spoken voice for Elizabeth. Warm mezzo tone with restrained authority."
+    )
+    assert "Sex/Gender: female." in prompt_text
+
+
+def test_build_character_default_prompt_prevents_male_default_when_gender_is_unknown() -> None:
+    """
+    @brief      Verify every character prompt carries explicit non-male-default guidance.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-27
+    @version    0.1.0
+    """
+    prompt_text = character_voices_service.build_character_default_prompt(
+        {
+            "canonical_name": "Ayla",
+            "voice_definition_prompt": "Give Ayla a steady adult voice with medium pitch and clear articulation.",
+        }
+    )
+
+    assert "Sex/Gender: not specified in the source." in prompt_text
+    assert "do not default to a male voice" in prompt_text
 
 
 def test_selected_voice_language_persists(tmp_path) -> None:
@@ -138,6 +162,52 @@ def test_save_target_prompt_persists_preview_text(tmp_path) -> None:
         character_voices_service.voice_target_by_id(project_root, target_id)["preview_text"]
         == "First line.\nSecond line."
     )
+
+
+def test_sync_voice_plan_refreshes_unedited_prompt_with_explicit_gender(tmp_path) -> None:
+    """
+    @brief      Verify target sync backfills sex/gender guidance into existing unedited prompts.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-27
+    @version    0.1.0
+    """
+    project_root, _manifest = _create_project_with_selected_narrator(tmp_path, "CharacterVoicesGenderSync")
+    old_prompt = "Give Ayla a steady adult voice with medium pitch and clear articulation."
+    character_voices_service.save_voice_targets(
+        project_root,
+        [
+            {
+                "target_id": "character_ayla",
+                "target_kind": character_voices_service.TARGET_KIND_CHARACTER,
+                "display_name": "Ayla",
+                "character_id": "ayla",
+                "prompt_text": old_prompt,
+                "default_prompt_text": old_prompt,
+                "preview_text": "Preview.",
+                "editable": True,
+            }
+        ],
+    )
+
+    targets = character_voices_service.sync_voice_plan(
+        project_root,
+        [
+            {
+                "character_id": "ayla",
+                "canonical_name": "Ayla",
+                "gender_hint": "female",
+                "voice_definition_prompt": old_prompt,
+            }
+        ],
+        None,
+    )
+
+    assert targets[0]["prompt_text"].startswith(old_prompt)
+    assert "Sex/Gender: female." in str(targets[0]["prompt_text"])
+    assert targets[0]["default_prompt_text"] == targets[0]["prompt_text"]
 
 
 def test_same_narrator_sync_copies_selected_narrator_sample_to_each_character(tmp_path) -> None:

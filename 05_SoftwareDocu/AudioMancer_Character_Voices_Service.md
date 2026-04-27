@@ -69,7 +69,9 @@ High-level flow:
    discovered character one stable `character_<character_id>` target row.
 4. Character default prompts first use `character.voice_definition_prompt`;
    older projects fall back to the deterministic builder from stored character
-   facts.
+   facts. Target synchronization enforces one explicit `Sex/Gender:` sentence
+   in each character prompt, using `gender_hint` when available and a neutral
+   non-male-default instruction when it is not.
 5. In `same_narrator` mode, narrator-derived character samples are copied into
    each character slot during state build and per-character editing/generation
    stays disabled.
@@ -149,7 +151,8 @@ Target rules:
 - `default_prompt_text` prefers the character-owned `voice_definition_prompt`
   and falls back to the legacy deterministic builder only when that prompt is
   missing
-- character `prompt_text` is preserved until reset
+- character `prompt_text` is preserved until reset, except that synchronization
+  backfills mandatory sex/gender guidance when an existing prompt lacks it
 - character `preview_text` is preserved until explicitly edited and saved, or
   reset to the localized default when the selected voice language changes on
   `Narator Voice`

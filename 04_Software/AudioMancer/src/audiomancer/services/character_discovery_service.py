@@ -14,7 +14,7 @@
          workflow artifacts, and maintains resumable AI operation state.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-22
-@version 0.6.1
+@version 0.7.0
 """
 
 # IMPORTS
@@ -34,6 +34,7 @@ from audiomancer.services import (
 )
 from audiomancer.services.logging_service import get_component_logger, trace_function
 from audiomancer.services.operation_runtime_service import (
+    NARRATOR_PROFILE_PRESERVED_OPERATION_KINDS,
     OperationCancelledError,
     build_operation_output_path,
     progress_percent,
@@ -157,7 +158,7 @@ def build_character_voice_definition_prompt(character_profile: dict[str, object]
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-20
-    @version    1.2.0
+    @version    1.3.0
     """
     normalized_profile = _normalized_character_profile_core(character_profile)
     derived_voice_fields = _derived_voice_definition_fields(normalized_profile)
@@ -167,6 +168,7 @@ def build_character_voice_definition_prompt(character_profile: dict[str, object]
         )
     character_name = str(normalized_profile.get("canonical_name", "Character")).strip() or "Character"
     descriptor_parts = [
+        ("Sex/Gender", _character_voice_gender_instruction(normalized_profile)),
         ("Persona", _sentence_fragment(normalized_profile.get("voice_persona_summary"))),
         ("Timbre", _sentence_fragment(normalized_profile.get("voice_timbre_and_range"))),
         ("Pace", _sentence_fragment(normalized_profile.get("voice_pacing_and_rhythm"))),
@@ -179,7 +181,8 @@ def build_character_voice_definition_prompt(character_profile: dict[str, object]
         return (f"Create a consistent spoken voice for {character_name}. " + " ".join(cleaned_descriptors)).strip()
     return (
         f"Create a consistent spoken voice for {character_name} with clear diction, stable identity, "
-        "natural emotional control, and delivery suitable for repeated dialogue narration."
+        "natural emotional control, and delivery suitable for repeated dialogue narration. "
+        f"Sex/Gender: {_character_voice_gender_instruction(normalized_profile)}"
     )
 
 
@@ -829,19 +832,20 @@ def delete_character_profile(
 @trace_function(_CHARACTER_DISCOVERY_LOGGER)
 def reset_character_discovery(project_root: str | Path) -> None:
     """
-    @brief      Clear character-discovery artifacts plus downstream narrator data.
+    @brief      Clear character-discovery artifacts and dependent runtime data while preserving narrator profiles.
     @param[in]  project_root Active project root folder.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-08
-    @version    0.1.0
+    @version    0.2.0
     """
     reset_operation_data(
         project_root,
         "character_discovery",
         include_current=True,
         keep_input_snapshots=False,
+        preserve_operation_kinds=NARRATOR_PROFILE_PRESERVED_OPERATION_KINDS,
     )
 
 
@@ -1935,9 +1939,11 @@ def _normalize_character_profile(profile_payload: dict[str, object]) -> Characte
         normalized_profile[field_name] = (
             str(normalized_profile.get(field_name, "")).strip() or derived_voice_fields[field_name]
         )
-    normalized_profile[CHARACTER_VOICE_PROMPT_FIELD] = str(
-        normalized_profile.get(CHARACTER_VOICE_PROMPT_FIELD, "")
-    ).strip() or build_character_voice_definition_prompt(normalized_profile)
+    normalized_voice_prompt = str(normalized_profile.get(CHARACTER_VOICE_PROMPT_FIELD, "")).strip()
+    normalized_profile[CHARACTER_VOICE_PROMPT_FIELD] = _ensure_character_voice_prompt_gender_instruction(
+        normalized_voice_prompt or build_character_voice_definition_prompt(normalized_profile),
+        normalized_profile,
+    )
     current_signature = voice_definition_source_signature(normalized_profile)
     stored_signature = str(normalized_profile.get(CHARACTER_VOICE_SIGNATURE_FIELD, "")).strip()
     normalized_profile["voice_definition_stale"] = bool(stored_signature and stored_signature != current_signature)
@@ -2084,6 +2090,58 @@ def _voice_definition_block_changed(
     return any(
         str(left_profile.get(field_name, "")).strip() != str(right_profile.get(field_name, "")).strip()
         for field_name in comparable_fields
+    )
+
+
+def _character_voice_gender_instruction(profile_payload: dict[str, object]) -> str:
+    """
+    @brief      Build explicit sex/gender guidance for one character voice prompt.
+    @param[in]  profile_payload Character profile payload.
+    @return     Sex/gender instruction text without the field label.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-27
+    @version    0.1.0
+    """
+    gender_hint = str(profile_payload.get("gender_hint", "")).strip()
+    if gender_hint:
+        return (
+            f"{gender_hint}. Match this explicitly in the vocal identity and do not replace it with a different "
+            "default."
+        )
+    return (
+        "not specified in the source. Use a neutral or androgynous vocal identity and do not default to a male voice."
+    )
+
+
+def _ensure_character_voice_prompt_gender_instruction(prompt_text: str, profile_payload: dict[str, object]) -> str:
+    """
+    @brief      Add explicit sex/gender guidance to one character voice-definition prompt.
+    @param[in]  prompt_text Candidate voice-definition prompt.
+    @param[in]  profile_payload Character profile payload.
+    @return     Prompt text containing explicit sex/gender guidance.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-27
+    @version    0.1.0
+    """
+    normalized_prompt = str(prompt_text).strip()
+    if _prompt_has_explicit_gender_instruction(normalized_prompt):
+        return normalized_prompt
+    return f"{normalized_prompt} Sex/Gender: {_character_voice_gender_instruction(profile_payload)}".strip()
+
+
+def _prompt_has_explicit_gender_instruction(prompt_text: str) -> bool:
+    """
+    @brief      Return whether a prompt already carries explicit sex/gender guidance.
+    @param[in]  prompt_text Candidate voice-definition prompt.
+    @return     True when explicit sex or gender guidance is already present.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-27
+    @version    0.1.0
+    """
+    normalized_prompt = str(prompt_text).casefold()
+    return bool(
+        re.search(r"\b(sex/gender|gender hint|gender)\s*:", normalized_prompt)
+        or re.search(r"\b(female|male|woman|man|girl|boy|androgynous)\b", normalized_prompt)
     )
 
 

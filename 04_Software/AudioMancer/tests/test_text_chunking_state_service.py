@@ -13,7 +13,7 @@
          states and manual selected-chunk edits correctly.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-24
-@version 0.3.0
+@version 0.4.0
 """
 
 # IMPORTS
@@ -125,7 +125,7 @@ def test_save_chunk_text_edit_persists_text_and_resets_downstream(tmp_path) -> N
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-24
-    @version    0.1.0
+    @version    0.2.0
     """
     project_root, manifest = project_workspace_service.create_project(
         "ChunkEditProject",
@@ -150,10 +150,14 @@ def test_save_chunk_text_edit_persists_text_and_resets_downstream(tmp_path) -> N
     )
     translation_root = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH
     translation_root.mkdir(exist_ok=True)
-    (translation_root / "artifact.txt").write_text("stale", encoding="utf-8")
+    (translation_root / config.TRANSLATED_CHUNKS_FILE_NAME).write_text("[]\n", encoding="utf-8")
+    (project_root / config.NARRATOR_PROFILE_FILE_NAME).write_text("[]\n", encoding="utf-8")
     manifest["current_stage"] = "character_discovery_ready"
+    manifest["narrator_profile_name"] = "Warm Narrator"
+    manifest["narrator_language"] = "fr"
     manifest["operations"]["chunking"]["status"] = "completed"
     manifest["operations"]["translation"]["status"] = "completed"
+    manifest["operations"]["narrator_definition"]["status"] = "completed"
     project_workspace_service.save_manifest(manifest, project_root)
 
     updated_manifest = text_chunking_state_service.save_chunk_text_edit(
@@ -168,7 +172,11 @@ def test_save_chunk_text_edit_persists_text_and_resets_downstream(tmp_path) -> N
     assert updated_manifest["current_stage"] == "translation_ready"
     assert updated_manifest["operations"]["chunking"]["status"] == "completed"
     assert updated_manifest["operations"]["translation"]["status"] == "not_started"
-    assert not (translation_root / "artifact.txt").exists()
+    assert updated_manifest["operations"]["narrator_definition"]["status"] == "completed"
+    assert updated_manifest["narrator_profile_name"] == "Warm Narrator"
+    assert updated_manifest["narrator_language"] == "fr"
+    assert not (translation_root / config.TRANSLATED_CHUNKS_FILE_NAME).exists()
+    assert (project_root / config.NARRATOR_PROFILE_FILE_NAME).is_file()
 
 
 # END OF FILE

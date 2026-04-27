@@ -13,7 +13,7 @@
          start and reset behavior for the Characters page controller.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-08
-@version 0.4.0
+@version 0.5.0
 """
 
 # IMPORTS
@@ -106,13 +106,15 @@ def test_character_ui_controller_save_new_character_persists_and_selects(monkeyp
     saved_profiles = character_discovery_service.load_character_profiles(project_root)
     assert any(profile["canonical_name"] == "Bob" for profile in saved_profiles)
     assert window._characters_page.current_character_id() is not None
-    assert not (project_root / config.NARRATOR_PROFILE_FILE_NAME).exists()
+    assert (project_root / config.NARRATOR_PROFILE_FILE_NAME).is_file()
     assert not (project_root / config.CHARACTER_VOICES_TARGETS_FILE_NAME).exists()
     assert not (project_root / config.SPEECH_BLOCKS_OUTPUT_FILE_NAME).exists()
-    assert window._current_manifest["operations"]["narrator_definition"]["status"] == "not_started"
+    assert window._current_manifest["operations"]["narrator_definition"]["status"] == "completed"
     assert window._current_manifest["operations"]["character_voices"]["status"] == "not_started"
     assert window._current_manifest["operations"]["speech_blocks"]["status"] == "not_started"
     assert window._current_manifest["current_stage"] == "character_discovery_ready"
+    assert window._current_manifest["narrator_profile_name"] == "Narrator"
+    assert window._current_manifest["narrator_language"] == "en"
 
 
 def test_character_ui_controller_delete_flow_confirms_and_removes(monkeypatch, qtbot, tmp_path) -> None:
@@ -128,10 +130,12 @@ def test_character_ui_controller_delete_flow_confirms_and_removes(monkeypatch, q
     characters_ui_controller.handle_delete_character_requested(window, "alice")
 
     assert character_discovery_service.load_character_profiles(project_root) == []
-    assert not (project_root / config.NARRATOR_PROFILE_FILE_NAME).exists()
+    assert (project_root / config.NARRATOR_PROFILE_FILE_NAME).is_file()
     assert not (project_root / config.CHARACTER_VOICES_TARGETS_FILE_NAME).exists()
-    assert window._current_manifest["operations"]["narrator_definition"]["status"] == "not_started"
+    assert window._current_manifest["operations"]["narrator_definition"]["status"] == "completed"
     assert window._current_manifest["operations"]["character_voices"]["status"] == "not_started"
+    assert window._current_manifest["narrator_profile_name"] == "Narrator"
+    assert window._current_manifest["narrator_language"] == "en"
 
 
 def test_character_ui_controller_selection_change_cancel_restores_current_row(monkeypatch, qtbot, tmp_path) -> None:

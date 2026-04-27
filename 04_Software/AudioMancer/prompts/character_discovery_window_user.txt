@@ -51,13 +51,14 @@ Set evidence `confidence` to `high`, `medium`, or `low`; use `high` only when th
 Use each chunk id exactly as provided.
 Keep each source_excerpt short and escape any inner quotes correctly for JSON.
 Write the voice-definition fields for later Qwen3-TTS voice design:
+- `gender_hint`: write an explicit sex/gender cue when supported by the text, such as female, male, nonbinary, or unknown
 - `voice_persona_summary`: concise persona or background cues that affect voice identity
 - `voice_timbre_and_range`: acoustic qualities, age or gender hints, texture, weight, or range
 - `voice_pacing_and_rhythm`: pacing, pause behavior, rhythmic flow, or speaking momentum
 - `voice_emotional_baseline`: the default emotional posture the voice should return to
 - `voice_articulation_and_pronunciation`: diction, pronunciation, or accent guidance
 - `voice_delivery_constraints`: consistency rules and things to avoid
-- `voice_definition_prompt`: one short English paragraph that combines the voice-design guidance cleanly for Qwen3-TTS
+- `voice_definition_prompt`: one short English paragraph that combines the voice-design guidance cleanly for Qwen3-TTS and includes one explicit `Sex/Gender:` sentence
 Keep the voice-definition content positive, concise, and grounded in evidence. Leave unsupported fields empty instead of guessing.
 
 {units_block}

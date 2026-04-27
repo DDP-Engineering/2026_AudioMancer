@@ -8,6 +8,26 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
 
 All notable changes to this project will be documented in this file.
 
+## [0.33.5] - 2026-04-27
+
+### Changed
+
+- changed Character Voices state building so first page access synchronizes
+  character preview text with the locked project voice language
+- changed character voice prompt generation so every character prompt carries
+  explicit sex/gender guidance, including neutral guidance when the source does
+  not specify a character's sex or gender
+- changed Character Discovery voice-definition prompts and profile
+  normalization to preserve explicit sex/gender instructions for downstream
+  voice generation
+- changed cleanup, chunking, translation, and character-discovery resets to
+  preserve existing Narator Voice profiles, selected narrator state, and
+  selected narrator samples while still invalidating dependent character voice,
+  speech, audio, and audiobook artifacts
+- updated tests and documentation for localized preview text, explicit
+  sex/gender voice prompts, and narrator-preserving upstream reruns
+- package version updated to `0.33.5`
+
 ## [0.33.4] - 2026-04-27
 
 ### Changed

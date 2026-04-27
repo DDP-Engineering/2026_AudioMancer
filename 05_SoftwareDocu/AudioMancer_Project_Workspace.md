@@ -108,10 +108,10 @@ High-level flow:
    `text_chunking_ready` while keeping cleanup detail files at the project
    root.
 11. After a selected chunk is manually edited and saved from `Text Chunking`,
-   `MainWindow` keeps `chunks_text.json`, resets downstream
-   downstream runtime artifacts from translation onward, and returns the project to
-   `translation_ready` without changing the cleaned-text reference or chunk
-   list scroll positions.
+   `MainWindow` keeps `chunks_text.json`, resets dependent runtime artifacts
+   from translation onward, preserves existing Narator Voice profiles and
+   selected narrator samples, and returns the project to `translation_ready`
+   without changing the cleaned-text reference or chunk list scroll positions.
 12. `MainWindow` stores the active project root and manifest, updates the home
    summary, updates workflow progress, and enables the workflow pages.
 
@@ -217,6 +217,14 @@ Voice workflow metadata is also lazy. Project activation and Home-page refreshes
 do not create `audio_profiles.json`, `narator.json`, or `characters_voice.json`.
 Opening the Narator Voice page initializes only narrator metadata; opening the
 Character Voices page initializes the character-voice target metadata.
+
+Upstream text and character reruns preserve narrator-definition data. Cleanup
+reruns, selected cleaned-text edits, chunking reruns, selected chunk edits,
+translation resets or approval-loss resets, and character-discovery resets keep
+`audio_profiles.json`, `narator.json`, `narator.wav`, and `narator_sample.json`
+when those files already exist. Character voice targets, Speech Blocks, Audio
+Blocks, and assembled audiobook outputs are still invalidated because they
+depend on the regenerated text or character set.
 
 Required folder contract:
 
