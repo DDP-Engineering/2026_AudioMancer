@@ -13,13 +13,14 @@
          pages are created without workflow functionality.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-20
-@version 1.6.2
+@version 1.7.0
 """
 
 # IMPORTS
 
 import json
 
+from PySide6.QtCore import QUrl
 from PySide6.QtWidgets import (
     QLabel,
     QMessageBox,
@@ -117,6 +118,66 @@ def test_main_window_opens_project_from_child_folder(monkeypatch, qtbot, tmp_pat
     assert window._current_manifest is not None
     assert window._current_manifest["display_name"] == "Book5_CAL_CAL"
     assert window._home_page._path_label.text() == f"Path: {project_root}"
+
+
+def test_main_window_clears_audio_players_when_switching_projects(qtbot, tmp_path, default_settings_payload) -> None:
+    """
+    @brief      Verify project activation releases stale playback sources and UI state.
+    @param[in]  qtbot Qt test helper fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @param[in]  default_settings_payload Fixture supplying default test settings.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-28
+    @version    0.1.0
+    """
+    first_root, first_manifest = project_workspace_service.create_project("PlaybackSwitchOne", tmp_path)
+    second_root, second_manifest = project_workspace_service.create_project("PlaybackSwitchTwo", tmp_path)
+    first_audio_path = first_root / "preview.wav"
+    first_audio_path.write_bytes(b"RIFF")
+
+    window = MainWindow(settings_payload=dict(default_settings_payload))
+    qtbot.addWidget(window)
+    window._activate_project(first_root, first_manifest)
+    media_url = QUrl.fromLocalFile(str(first_audio_path))
+    for player in (
+        window._narator_voice_audio_player,
+        window._character_voices_audio_player,
+        window._audio_blocks_audio_player,
+        window._audio_assembly_audio_player,
+    ):
+        player.setSource(media_url)
+    window._narator_voice_page.set_preview_active(True)
+    window._character_voices_page.set_preview_active(True)
+    window._audio_blocks_playback_mode = "audiobook"
+    window._audio_blocks_playback_block_ids = ["block-1"]
+    window._audio_blocks_playback_index = 0
+    window._audio_blocks_page.set_audiobook_playback_active(True)
+    window._audio_assembly_playback_output_key = "part-0001"
+    window._audio_assembly_playback_starting = True
+    window._audio_assembly_page.set_playback_active(True)
+    window._audio_assembly_page.set_playback_progress(250, 1000)
+
+    window._activate_project(second_root, second_manifest)
+
+    assert window._current_project_root == second_root
+    assert window._narator_voice_audio_player.source().isEmpty()
+    assert window._character_voices_audio_player.source().isEmpty()
+    assert window._audio_blocks_audio_player.source().isEmpty()
+    assert window._audio_assembly_audio_player.source().isEmpty()
+    assert window._narator_voice_page._preview_active is False
+    assert window._character_voices_page._preview_active is False
+    assert window._audio_blocks_playback_mode is None
+    assert window._audio_blocks_playback_block_ids == []
+    assert window._audio_blocks_playback_index == -1
+    assert window._audio_blocks_page._selected_playback_active is False
+    assert window._audio_blocks_page._audiobook_playback_active is False
+    assert window._audio_assembly_playback_output_key is None
+    assert window._audio_assembly_playback_starting is False
+    assert window._audio_assembly_page._playback_active is False
+    assert window._audio_assembly_page._playback_position_ms == 0
+    assert window._audio_assembly_page._playback_duration_ms == 0
 
 
 def test_main_window_imports_source_and_locks_selection(monkeypatch, qtbot, tmp_path, default_settings_payload) -> None:

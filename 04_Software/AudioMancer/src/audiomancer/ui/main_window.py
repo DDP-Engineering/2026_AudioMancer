@@ -14,14 +14,14 @@
          so the window remains a thin coordinator.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 1.38.0
+@version 1.39.0
 """
 
 # IMPORTS
 
 from pathlib import Path
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QUrl
 from PySide6.QtGui import QCloseEvent, QIcon
 from PySide6.QtMultimedia import QAudioOutput, QMediaPlayer
 from PySide6.QtWidgets import (
@@ -1163,9 +1163,48 @@ class MainWindow(QMainWindow):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-06
-        @version    0.3.0
+        @version    0.3.1
         """
         home_ui_controller.activate_project(self, project_root, manifest)
+
+    def stop_all_audio_playback(self) -> None:
+        """
+        @brief      Stop every project-local preview/player and clear loaded media sources.
+        @details    Project switches must release old project media files and reset
+                    playback UI state before the next manifest is displayed.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-28
+        @version    0.1.0
+        """
+        for attr_name in (
+            "_narator_voice_audio_player",
+            "_character_voices_audio_player",
+            "_audio_blocks_audio_player",
+            "_audio_assembly_audio_player",
+        ):
+            player = getattr(self, attr_name, None)
+            if player is not None:
+                player.stop()
+                player.setSource(QUrl())
+
+        if hasattr(self, "_narator_voice_page"):
+            self._narator_voice_page.set_preview_active(False)
+        if hasattr(self, "_character_voices_page"):
+            self._character_voices_page.set_preview_active(False)
+        if hasattr(self, "_audio_blocks_page"):
+            self._audio_blocks_page.set_selected_playback_active(False)
+            self._audio_blocks_page.set_audiobook_playback_active(False)
+        if hasattr(self, "_audio_assembly_page"):
+            self._audio_assembly_page.set_playback_active(False)
+            self._audio_assembly_page.set_playback_progress(0, 0)
+
+        self._audio_blocks_playback_mode = None
+        self._audio_blocks_playback_block_ids = []
+        self._audio_blocks_playback_index = -1
+        self._audio_assembly_playback_output_key = None
+        self._audio_assembly_playback_starting = False
 
     def _ensure_page_default_metadata(self, page_id: str) -> None:
         """
@@ -1201,11 +1240,9 @@ class MainWindow(QMainWindow):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-06
-        @version    0.1.0
+        @version    0.1.1
         """
-        self._narator_voice_audio_player.stop()
-        self._character_voices_audio_player.stop()
-        self._audio_blocks_audio_player.stop()
+        self.stop_all_audio_playback()
         super().closeEvent(event)
 
 

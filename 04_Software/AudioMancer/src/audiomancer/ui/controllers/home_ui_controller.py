@@ -13,7 +13,7 @@
          and source import workflows owned by the Home page.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-06
-@version 0.9.3
+@version 0.9.4
 """
 
 # IMPORTS
@@ -582,8 +582,9 @@ def activate_project(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.2.0
+    @version    0.2.1
     """
+    window.stop_all_audio_playback()
     window.set_project_active(True)
     window._current_page_id = "home"
     home_page = window._page_registry.get("home")

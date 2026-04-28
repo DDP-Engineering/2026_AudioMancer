@@ -25,6 +25,8 @@ Each delivery zip contains a portable application folder with:
   `start-audiomancer.sh`
 - `README_RELEASE.txt`
 - `help/en/` and `help/ro/` with the offline HTML user guides and screenshot assets
+- `prompts/` with the external AI prompt templates required by AI-assisted
+  cleanup, chunking, translation, character discovery, and Speech Blocks
 - `settings.json`
 - the four license files required by the app root
 

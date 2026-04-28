@@ -50,6 +50,7 @@ $specPath = Join-Path $scriptRoot 'audiomancer_windows.spec'
 $pyprojectPath = Join-Path $appRoot 'pyproject.toml'
 $englishUserGuidePath = Join-Path $repoRoot '05_SoftwareDocu\UserGuide'
 $romanianUserGuidePath = Join-Path $repoRoot '05_SoftwareDocu\UserGuide_ro'
+$promptTemplatePath = Join-Path $appRoot 'prompts'
 
 if (-not (Test-Path $pyprojectPath)) {
     throw "Could not locate pyproject.toml at $pyprojectPath"
@@ -134,12 +135,16 @@ Invoke-Step -Name 'Assemble delivery staging folder' -Action {
     if (-not (Test-Path $romanianUserGuidePath)) {
         throw "Required Romanian user guide folder is missing: $romanianUserGuidePath"
     }
+    if (-not (Test-Path $promptTemplatePath)) {
+        throw "Required prompt-template folder is missing: $promptTemplatePath"
+    }
     $helpRootPath = Join-Path $stagingPath 'help'
     $helpEnglishPath = Join-Path $helpRootPath 'en'
     $helpRomanianPath = Join-Path $helpRootPath 'ro'
     New-Item -ItemType Directory -Path $helpRootPath -Force | Out-Null
     Copy-Item -LiteralPath $englishUserGuidePath -Destination $helpEnglishPath -Recurse -Force
     Copy-Item -LiteralPath $romanianUserGuidePath -Destination $helpRomanianPath -Recurse -Force
+    Copy-Item -LiteralPath $promptTemplatePath -Destination (Join-Path $stagingPath 'prompts') -Recurse -Force
 
     $startScriptPath = Join-Path $stagingPath 'Start-AudioMancer.cmd'
     @(
@@ -164,6 +169,7 @@ Invoke-Step -Name 'Assemble delivery staging folder' -Action {
         '- Keep the files together; the executable depends on bundled runtime files.'
         ''
         'Configuration and licenses are included next to the executable.'
+        'Prompt templates are included in prompts\.'
         'Offline help is included in help\en\index.html and help\ro\index.html.'
     ) | Set-Content -LiteralPath $releaseNotesPath -Encoding ASCII
 }

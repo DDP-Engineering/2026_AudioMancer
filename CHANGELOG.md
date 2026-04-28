@@ -26,6 +26,16 @@ All notable changes to this project will be documented in this file.
   requirements
 - package version updated to `1.0.0`
 
+### Fixed
+
+- fixed project switching after local audio playback so narrator, character,
+  Audio Blocks, and Audio Assembly media players release stale sources and reset
+  playback UI state before the next project is activated
+- fixed Audio Assembly shutdown cleanup so the final-audiobook player is stopped
+  and its media source is cleared when the main window closes
+- fixed delivery packaging so external AI prompt templates are included in the
+  portable Windows and Ubuntu archives under `prompts/`
+
 ## [0.34.1] - 2026-04-27
 
 ### Changed

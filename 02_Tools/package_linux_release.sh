@@ -64,6 +64,18 @@ copy_user_guide() {
     cp -a "${romanian_source_path}" "${help_root}/ro"
 }
 
+copy_prompt_templates() {
+    local target_dir="$1"
+    local prompt_source_path="${APP_ROOT}/prompts"
+
+    if [[ ! -d "${prompt_source_path}" ]]; then
+        echo "Required prompt-template folder is missing: ${prompt_source_path}" >&2
+        exit 1
+    fi
+
+    cp -a "${prompt_source_path}" "${target_dir}/prompts"
+}
+
 create_zip_archive() {
     local source_dir="$1"
     local archive_path="$2"
@@ -141,6 +153,7 @@ invoke_step "Assemble delivery staging folder" mkdir -p "${STAGING_PATH}"
 cp -a "${DIST_BUNDLE_PATH}/." "${STAGING_PATH}/"
 copy_required_root_files "${STAGING_PATH}"
 copy_user_guide "${STAGING_PATH}"
+copy_prompt_templates "${STAGING_PATH}"
 
 cat >"${STAGING_PATH}/start-audiomancer.sh" <<'SH'
 #!/usr/bin/env bash
@@ -166,6 +179,7 @@ Install:
   the app reports missing system display dependencies.
 
 Configuration and licenses are included next to the executable.
+Prompt templates are included in prompts/.
 Offline help is included in help/en/index.html and help/ro/index.html.
 EOF
 
