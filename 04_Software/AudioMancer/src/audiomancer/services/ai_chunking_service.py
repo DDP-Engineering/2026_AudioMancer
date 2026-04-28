@@ -15,7 +15,7 @@
          window-based operation state plus AI transaction logging.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-11
-@version 0.4.0
+@version 0.5.0
 """
 
 # IMPORTS
@@ -56,6 +56,7 @@ ChunkingReportPayload = dict[str, object]
 # @brief Persisted AI chunking operation-state payload type.
 OperationStatePayload = dict[str, object]
 TokenUsagePayload = dict[str, object]
+BudgetMetadataPayload = dict[str, int]
 
 
 # PUBLIC API
@@ -84,7 +85,7 @@ def chunk_text(
     @exception  OperationCancelledError Raised when the operator cancels the run.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-11
-    @version    0.3.0
+    @version    0.4.0
     """
     resolved_project_root = Path(project_root)
     source_document = manifest.get("source_document")
@@ -131,8 +132,13 @@ def chunk_text(
     )
 
     prompt_template_service.validate_required_prompts(["text_chunking_system", "text_chunking_user"])
+    system_prompt = prompt_template_service.render_prompt(
+        "text_chunking_system",
+        {"strategy": semantic_strategy},
+    )
+    budget_metadata = _build_budget_metadata(ai_profile_payload, semantic_strategy, system_prompt)
     input_fingerprint = _compute_input_fingerprint(input_text)
-    windows = _build_windows(paragraph_records, semantic_strategy)
+    windows = _build_windows(paragraph_records, semantic_strategy, budget_metadata)
     total_windows = len(windows)
     if total_windows == 0:
         raise ValueError("Cleaned text does not contain any paragraphs for AI chunking.")
@@ -145,8 +151,11 @@ def chunk_text(
         input_fingerprint,
         profile_id,
         semantic_strategy,
+        budget_metadata,
     )
-    token_usage = _restore_token_usage(existing_state)
+    token_usage = (
+        _restore_token_usage(existing_state) if start_window_index > 0 else token_usage_service.empty_token_usage()
+    )
     if start_window_index == 0:
         output_path.write_text("[]\n", encoding="utf-8")
 
@@ -176,6 +185,7 @@ def chunk_text(
         input_fingerprint=input_fingerprint,
         log_relative_path=log_relative_path,
         token_usage=token_usage,
+        budget_metadata=budget_metadata,
     )
     _emit_progress(
         progress_callback,
@@ -185,10 +195,6 @@ def chunk_text(
         token_usage=token_usage,
     )
 
-    system_prompt = prompt_template_service.render_prompt(
-        "text_chunking_system",
-        {"strategy": semantic_strategy},
-    )
     for window_index in range(start_window_index, total_windows):
         raise_if_cancelled(cancel_requested)
         window_payload = windows[window_index]
@@ -254,6 +260,7 @@ def chunk_text(
             input_fingerprint=input_fingerprint,
             log_relative_path=log_relative_path,
             token_usage=token_usage,
+            budget_metadata=budget_metadata,
         )
         _emit_progress(
             progress_callback,
@@ -283,6 +290,7 @@ def chunk_text(
         "semantic_strategy": semantic_strategy,
         "log_relative_path": log_relative_path,
         "token_usage": token_usage,
+        "budget_metadata": budget_metadata,
     }
     report_path.write_text(
         json.dumps(report_payload, indent=2, ensure_ascii=False) + "\n",
@@ -307,6 +315,7 @@ def chunk_text(
         log_relative_path=log_relative_path,
         resume_checkpoint=None,
         token_usage=token_usage,
+        budget_metadata=budget_metadata,
     )
     state_path.write_text(
         json.dumps(completed_state, indent=2, ensure_ascii=False) + "\n",
@@ -386,24 +395,35 @@ def _compute_input_fingerprint(input_text: str) -> str:
 def _build_windows(
     paragraph_records: list[dict[str, object]],
     semantic_strategy: str,
+    budget_metadata: BudgetMetadataPayload,
 ) -> list[dict[str, int]]:
     """
-    @brief      Build the windows.
+    @brief      Build context-budgeted AI request windows.
     @param[in]  paragraph_records Value for `paragraph_records`.
     @param[in]  semantic_strategy Value for `semantic_strategy`.
+    @param[in]  budget_metadata Context-budget metadata for the selected profile.
     @return     Derived helper result.
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.2.0
+    @date       2026-04-28
+    @version    0.3.0
     """
-    window_size = config.AI_CHUNKING_WINDOW_SIZE_BY_STRATEGY.get(
-        semantic_strategy,
-        config.AI_CHUNKING_WINDOW_SIZE_BY_STRATEGY[config.DEFAULT_AI_CHUNKING_STRATEGY],
-    )
+    _ = semantic_strategy
+    text_budget = int(budget_metadata["text_budget_tokens"])
+    paragraph_cap = int(budget_metadata["strategy_paragraph_cap"])
     windows: list[dict[str, int]] = []
     start_index = 0
     while start_index < len(paragraph_records):
-        end_index = min(len(paragraph_records) - 1, start_index + window_size - 1)
+        end_index = start_index - 1
+        current_window_tokens = 0
+        current_paragraph_count = 0
+        while end_index + 1 < len(paragraph_records) and current_paragraph_count < paragraph_cap:
+            candidate_record = paragraph_records[end_index + 1]
+            candidate_tokens = _estimate_text_tokens(_build_units_block([candidate_record]))
+            if current_paragraph_count > 0 and current_window_tokens + candidate_tokens > text_budget:
+                break
+            current_window_tokens += candidate_tokens
+            current_paragraph_count += 1
+            end_index += 1
         windows.append(
             {
                 "start_index": start_index,
@@ -412,6 +432,86 @@ def _build_windows(
         )
         start_index = end_index + 1
     return windows
+
+
+def _build_budget_metadata(
+    ai_profile_payload: dict[str, object],
+    semantic_strategy: str,
+    system_prompt: str,
+) -> BudgetMetadataPayload:
+    """
+    @brief      Build context-window budget metadata for AI chunking.
+    @param[in]  ai_profile_payload Selected validated AI profile payload.
+    @param[in]  semantic_strategy Selected semantic strategy token.
+    @param[in]  system_prompt Rendered system prompt.
+    @return     Context-budget metadata used for request-window construction.
+    @exception  ValueError Raised when context and output settings leave too little input room.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-28
+    @version    0.1.0
+    """
+    context_window = max(
+        1,
+        int(ai_profile_payload.get("context_window", config.DEFAULT_LLM_CONTEXT_WINDOW)),
+    )
+    max_output_tokens = max(
+        1,
+        int(
+            ai_profile_payload.get(
+                "max_output_tokens",
+                config.DEFAULT_LLM_MAX_OUTPUT_TOKENS,
+            )
+        ),
+    )
+    prompt_user_shell = prompt_template_service.render_prompt(
+        "text_chunking_user",
+        {
+            "strategy": semantic_strategy,
+            "units_block": "",
+        },
+    )
+    prompt_budget_tokens = _estimate_text_tokens(f"{system_prompt}\n\n{prompt_user_shell}")
+    safety_margin_tokens = max(
+        config.DEFAULT_AI_CHUNKING_MIN_SAFETY_MARGIN_TOKENS,
+        int(context_window * config.DEFAULT_AI_CHUNKING_SAFETY_MARGIN_CONTEXT_FRACTION),
+    )
+    available_text_budget = context_window - max_output_tokens - prompt_budget_tokens - safety_margin_tokens
+    text_budget_tokens = min(
+        int(context_window * config.DEFAULT_AI_CHUNKING_TEXT_CONTEXT_FRACTION),
+        available_text_budget,
+    )
+    min_text_budget = config.DEFAULT_AI_CHUNKING_MIN_TEXT_BUDGET_TOKENS
+    if text_budget_tokens < min_text_budget:
+        raise ValueError(
+            "AI-assisted chunking cannot run because the selected AI profile context window "
+            "and max output tokens leave too little room for chunking input "
+            f"({text_budget_tokens} estimated tokens available, {min_text_budget} required)."
+        )
+    strategy_paragraph_cap = config.AI_CHUNKING_WINDOW_SIZE_BY_STRATEGY.get(
+        semantic_strategy,
+        config.AI_CHUNKING_WINDOW_SIZE_BY_STRATEGY[config.DEFAULT_AI_CHUNKING_STRATEGY],
+    )
+    return {
+        "context_window": context_window,
+        "max_output_tokens": max_output_tokens,
+        "prompt_budget_tokens": prompt_budget_tokens,
+        "text_budget_tokens": text_budget_tokens,
+        "safety_margin_tokens": safety_margin_tokens,
+        "strategy_paragraph_cap": strategy_paragraph_cap,
+    }
+
+
+def _estimate_text_tokens(text: str) -> int:
+    """
+    @brief      Estimate token usage for local budget checks.
+    @param[in]  text Value for `text`.
+    @return     Estimated token count.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-28
+    @version    0.1.0
+    """
+    return max(1, len(text) // 4)
 
 
 def _build_paragraph_records(cleaned_text: str, project_root: str | Path | None = None) -> list[dict[str, object]]:
@@ -435,6 +535,7 @@ def _restore_resume_state(
     input_fingerprint: str,
     profile_id: str,
     semantic_strategy: str,
+    budget_metadata: BudgetMetadataPayload,
 ) -> tuple[int, list[str], str | None]:
     """
     @brief      Restore the resume state.
@@ -443,10 +544,11 @@ def _restore_resume_state(
     @param[in]  input_fingerprint Value for `input_fingerprint`.
     @param[in]  profile_id Profile identifier.
     @param[in]  semantic_strategy Value for `semantic_strategy`.
+    @param[in]  budget_metadata Current context-budget metadata.
     @return     Derived helper result.
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.2.0
+    @date       2026-04-28
+    @version    0.3.0
     """
     if str(existing_state.get("status", "")) not in {"running", "failed"}:
         return 0, [], None
@@ -460,6 +562,8 @@ def _restore_resume_state(
     if str(resume_checkpoint.get("semantic_strategy", "")) != semantic_strategy:
         return 0, [], None
     if int(existing_state.get("progress_total", 0)) != total_windows:
+        return 0, [], None
+    if dict(resume_checkpoint.get("budget_metadata") or {}) != dict(budget_metadata):
         return 0, [], None
     start_window_index = int(resume_checkpoint.get("completed_window_count", 0))
     committed_break_ids = [
@@ -656,6 +760,7 @@ def _write_running_state(
     input_fingerprint: str,
     log_relative_path: str,
     token_usage: TokenUsagePayload,
+    budget_metadata: BudgetMetadataPayload,
 ) -> None:
     """
     @brief      Write the running state.
@@ -675,10 +780,11 @@ def _write_running_state(
     @param[in]  input_fingerprint Value for `input_fingerprint`.
     @param[in]  log_relative_path Path for `log_relative_path`.
     @param[in]  token_usage Value for `token_usage`.
+    @param[in]  budget_metadata Context-budget metadata.
     @return     None.
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
+    @date       2026-04-28
+    @version    0.2.0
     """
     chunks = _build_chunks_from_break_ids(
         paragraph_records,
@@ -711,7 +817,9 @@ def _write_running_state(
             "total_window_count": progress_total,
             "committed_break_ids": list(committed_break_ids),
             "log_relative_path": log_relative_path,
+            "budget_metadata": dict(budget_metadata),
         },
+        budget_metadata=budget_metadata,
     )
     state_path.write_text(
         json.dumps(state_payload, indent=2, ensure_ascii=False) + "\n",
@@ -738,6 +846,7 @@ def _build_operation_state(
     log_relative_path: str,
     resume_checkpoint: dict[str, object] | None,
     token_usage: TokenUsagePayload,
+    budget_metadata: BudgetMetadataPayload,
 ) -> OperationStatePayload:
     """
     @brief      Build the operation state.
@@ -759,10 +868,11 @@ def _build_operation_state(
     @param[in]  log_relative_path Path for `log_relative_path`.
     @param[in]  resume_checkpoint Value for `resume_checkpoint`.
     @param[in]  token_usage Value for `token_usage`.
+    @param[in]  budget_metadata Context-budget metadata.
     @return     Derived helper result.
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
+    @date       2026-04-28
+    @version    0.2.0
     """
     artifact_paths = [log_relative_path]
     if report_path is not None and report_path.is_file():
@@ -791,6 +901,7 @@ def _build_operation_state(
             "log_relative_path": log_relative_path,
             "committed_break_ids": list(committed_break_ids),
             "token_usage": token_usage_service.coerce_token_usage(token_usage),
+            "budget_metadata": dict(budget_metadata),
         },
         "resume_checkpoint": None if resume_checkpoint is None else dict(resume_checkpoint),
     }

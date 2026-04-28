@@ -15,7 +15,7 @@
          resumable window-based progress plus AI transaction logs.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-07
-@version 0.4.0
+@version 0.5.0
 """
 
 # IMPORTS
@@ -114,6 +114,7 @@ CleanupReportPayload = dict[str, object]
 # @brief Persisted AI cleanup operation-state payload type.
 OperationStatePayload = dict[str, object]
 TokenUsagePayload = dict[str, object]
+BudgetMetadataPayload = dict[str, int]
 
 
 # PUBLIC API
@@ -139,7 +140,7 @@ def clean_text(
     @exception  ValueError Raised on missing profile data or unusable cleanup output.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-07
-    @version    0.4.0
+    @version    0.5.0
     """
     resolved_project_root = Path(project_root)
     source_document = manifest.get("source_document")
@@ -187,19 +188,26 @@ def clean_text(
     if not units:
         raise ValueError("Extracted text does not contain any cleanup units.")
 
+    language_hint = _language_hint_for_text(input_text)
+    script_hint = cleanup_text_analysis_service.classify_text_script(input_text)
+    system_prompt = prompt_template_service.render_prompt("text_cleanup_system", {})
+    budget_metadata = _build_budget_metadata(ai_profile_payload, language_hint, script_hint, system_prompt)
     existing_state = _load_operation_state(state_path) or {}
     started_at = str(existing_state.get("started_at") or _utc_now_iso())
     input_fingerprint = _compute_input_fingerprint(input_text)
-    windows = _build_windows(units, _usable_input_budget(ai_profile_payload))
+    windows = _build_windows(units, budget_metadata)
     total_windows = len(windows)
     start_window_index, classifications, log_relative_path = _restore_resume_state(
         existing_state,
         total_windows,
         input_fingerprint,
         profile_id,
+        budget_metadata,
     )
     warning_details = _restore_warning_details(existing_state)
-    token_usage = _restore_token_usage(existing_state)
+    token_usage = (
+        _restore_token_usage(existing_state) if start_window_index > 0 else token_usage_service.empty_token_usage()
+    )
     if not log_relative_path:
         log_path = _build_ai_log_path(resolved_project_root, started_at)
         log_relative_path = relative_to_project(resolved_project_root, log_path)
@@ -223,6 +231,7 @@ def clean_text(
         classifications,
         warning_details,
         token_usage,
+        budget_metadata,
     )
     _emit_progress(
         progress_callback,
@@ -232,9 +241,6 @@ def clean_text(
         token_usage=token_usage,
     )
 
-    language_hint = _language_hint_for_text(input_text)
-    script_hint = cleanup_text_analysis_service.classify_text_script(input_text)
-    system_prompt = prompt_template_service.render_prompt("text_cleanup_system", {})
     for window_index in range(start_window_index, total_windows):
         raise_if_cancelled(cancel_requested)
         window_units = units[windows[window_index]["start_index"] : windows[window_index]["end_index"] + 1]
@@ -287,6 +293,7 @@ def clean_text(
             classifications,
             warning_details,
             token_usage,
+            budget_metadata,
         )
         _emit_progress(
             progress_callback,
@@ -343,6 +350,7 @@ def clean_text(
         "ai_log_relative_path": log_relative_path,
         "window_count": total_windows,
         "token_usage": token_usage,
+        "budget_metadata": budget_metadata,
     }
     report_path.write_text(
         json.dumps(report_payload, indent=2, ensure_ascii=False) + "\n",
@@ -369,6 +377,7 @@ def clean_text(
         paragraph_count=len(cleaned_paragraphs),
         chapter_count=chapter_count,
         token_usage=token_usage,
+        budget_metadata=budget_metadata,
     )
     state_path.write_text(
         json.dumps(completed_state, indent=2, ensure_ascii=False) + "\n",
@@ -481,17 +490,19 @@ def _normalize_unit_paragraph_text(unit_text: str) -> str:
 
 def _build_windows(
     units: list[dict[str, object]],
-    usable_input_budget: int,
+    budget_metadata: BudgetMetadataPayload,
 ) -> list[dict[str, int]]:
     """
-    @brief      Build the windows.
+    @brief      Build context-budgeted AI cleanup request windows.
     @param[in]  units Value for `units`.
-    @param[in]  usable_input_budget Value for `usable_input_budget`.
+    @param[in]  budget_metadata Context-budget metadata for the selected profile.
     @return     Derived helper result.
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
+    @date       2026-04-28
+    @version    0.2.0
     """
+    text_budget = int(budget_metadata["text_budget_tokens"])
+    max_window_units = int(budget_metadata["max_window_units"])
     windows: list[dict[str, int]] = []
     start_index = 0
     while start_index < len(units):
@@ -499,13 +510,12 @@ def _build_windows(
         current_unit_count = 0
         end_index = start_index - 1
         while end_index + 1 < len(units):
-            next_unit = units[end_index + 1]
-            next_tokens = int(next_unit["estimated_tokens"])
-            if next_tokens > usable_input_budget:
+            next_tokens = _estimate_text_tokens(_build_units_block(units, end_index + 1, end_index + 1))
+            if next_tokens > text_budget:
                 raise ValueError("One AI cleanup unit exceeds the configured usable input budget.")
-            if current_unit_count >= config.DEFAULT_AI_CLEANUP_MAX_WINDOW_UNITS and end_index >= start_index:
+            if current_unit_count >= max_window_units and end_index >= start_index:
                 break
-            if current_budget + next_tokens > usable_input_budget and end_index >= start_index:
+            if current_budget + next_tokens > text_budget and end_index >= start_index:
                 break
             current_budget += next_tokens
             end_index += 1
@@ -515,11 +525,78 @@ def _build_windows(
     return windows
 
 
+def _build_budget_metadata(
+    ai_profile_payload: dict[str, object],
+    language_hint: str,
+    script_hint: str,
+    system_prompt: str,
+) -> BudgetMetadataPayload:
+    """
+    @brief      Build context-window budget metadata for AI cleanup.
+    @param[in]  ai_profile_payload Selected validated AI profile payload.
+    @param[in]  language_hint Detected source-language hint.
+    @param[in]  script_hint Detected dominant-script hint.
+    @param[in]  system_prompt Rendered system prompt.
+    @return     Context-budget metadata used for request-window construction.
+    @exception  ValueError Raised when context and output settings leave too little input room.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-28
+    @version    0.1.0
+    """
+    context_window = max(
+        1,
+        int(ai_profile_payload.get("context_window", config.DEFAULT_LLM_CONTEXT_WINDOW)),
+    )
+    max_output_tokens = max(
+        1,
+        int(
+            ai_profile_payload.get(
+                "max_output_tokens",
+                config.DEFAULT_LLM_MAX_OUTPUT_TOKENS,
+            )
+        ),
+    )
+    prompt_user_shell = _render_cleanup_user_prompt(
+        {
+            "source_language_hint": language_hint,
+            "dominant_script_hint": script_hint,
+            "units_block": "(none)",
+            "unit_count": 0,
+        }
+    )
+    prompt_budget_tokens = _estimate_text_tokens(f"{system_prompt}\n\n{prompt_user_shell}")
+    safety_margin_tokens = max(
+        config.DEFAULT_AI_CLEANUP_MIN_SAFETY_MARGIN_TOKENS,
+        int(context_window * config.DEFAULT_AI_CLEANUP_SAFETY_MARGIN_CONTEXT_FRACTION),
+    )
+    available_text_budget = context_window - max_output_tokens - prompt_budget_tokens - safety_margin_tokens
+    text_budget_tokens = min(
+        int(context_window * config.DEFAULT_AI_CLEANUP_TEXT_CONTEXT_FRACTION),
+        available_text_budget,
+    )
+    min_text_budget = config.DEFAULT_AI_CLEANUP_MIN_TEXT_BUDGET_TOKENS
+    if text_budget_tokens < min_text_budget:
+        raise ValueError(
+            "AI-assisted cleanup cannot run because the selected AI profile context window "
+            "and max output tokens leave too little room for cleanup input "
+            f"({text_budget_tokens} estimated tokens available, {min_text_budget} required)."
+        )
+    return {
+        "context_window": context_window,
+        "max_output_tokens": max_output_tokens,
+        "prompt_budget_tokens": prompt_budget_tokens,
+        "text_budget_tokens": text_budget_tokens,
+        "safety_margin_tokens": safety_margin_tokens,
+        "max_window_units": config.DEFAULT_AI_CLEANUP_MAX_WINDOW_UNITS,
+    }
+
+
 def _restore_resume_state(
     existing_state: dict[str, object],
     total_windows: int,
     input_fingerprint: str,
     profile_id: str,
+    budget_metadata: BudgetMetadataPayload,
 ) -> tuple[int, dict[str, str], str | None]:
     """
     @brief      Restore the resume state.
@@ -527,10 +604,11 @@ def _restore_resume_state(
     @param[in]  total_windows Total number of windows.
     @param[in]  input_fingerprint Value for `input_fingerprint`.
     @param[in]  profile_id Profile identifier.
+    @param[in]  budget_metadata Current context-budget metadata.
     @return     Derived helper result.
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
+    @date       2026-04-28
+    @version    0.2.0
     """
     resume_checkpoint = dict(existing_state.get("resume_checkpoint") or {})
     log_relative_path = existing_state.get("metadata", {}).get("ai_log_relative_path")
@@ -539,6 +617,7 @@ def _restore_resume_state(
         or str(resume_checkpoint.get("input_fingerprint", "")) != input_fingerprint
         or str(resume_checkpoint.get("profile_id", "")) != profile_id
         or int(resume_checkpoint.get("total_window_count", 0)) != total_windows
+        or dict(resume_checkpoint.get("budget_metadata") or {}) != dict(budget_metadata)
     ):
         return 0, {}, log_relative_path if isinstance(log_relative_path, str) else None
     completed_window_count = int(resume_checkpoint.get("completed_window_count", 0))
@@ -876,6 +955,7 @@ def _write_running_state(
     classifications: dict[str, str],
     warning_details: list[dict[str, object]],
     token_usage: TokenUsagePayload,
+    budget_metadata: BudgetMetadataPayload,
 ) -> None:
     """
     @brief      Write the running state.
@@ -892,10 +972,11 @@ def _write_running_state(
     @param[in]  classifications Value for `classifications`.
     @param[in]  warning_details Value for `warning_details`.
     @param[in]  token_usage Value for `token_usage`.
+    @param[in]  budget_metadata Context-budget metadata.
     @return     None.
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
+    @date       2026-04-28
+    @version    0.2.0
     """
     running_state = _build_operation_state(
         project_root,
@@ -918,6 +999,7 @@ def _write_running_state(
         paragraph_count=None,
         chapter_count=None,
         token_usage=token_usage,
+        budget_metadata=budget_metadata,
     )
     state_path.write_text(
         json.dumps(running_state, indent=2, ensure_ascii=False) + "\n",
@@ -946,6 +1028,7 @@ def _build_operation_state(
     paragraph_count: int | None,
     chapter_count: int | None,
     token_usage: TokenUsagePayload,
+    budget_metadata: BudgetMetadataPayload,
 ) -> OperationStatePayload:
     """
     @brief      Build the operation state.
@@ -968,10 +1051,11 @@ def _build_operation_state(
     @param[in]  paragraph_count Value for `paragraph_count`.
     @param[in]  chapter_count Value for `chapter_count`.
     @param[in]  token_usage Value for `token_usage`.
+    @param[in]  budget_metadata Context-budget metadata.
     @return     Derived helper result.
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
+    @date       2026-04-28
+    @version    0.2.0
     """
     artifact_paths: list[str] = [log_relative_path]
     if report_path is not None and report_path.is_file():
@@ -1001,6 +1085,7 @@ def _build_operation_state(
             "ai_profile_id": profile_id,
             "ai_log_relative_path": log_relative_path,
             "token_usage": token_usage_service.coerce_token_usage(token_usage),
+            "budget_metadata": dict(budget_metadata),
         },
         "resume_checkpoint": {
             "completed_window_count": progress_current,
@@ -1008,6 +1093,7 @@ def _build_operation_state(
             "profile_id": profile_id,
             "input_fingerprint": input_fingerprint,
             "classifications": None if classifications is None else dict(classifications),
+            "budget_metadata": dict(budget_metadata),
         }
         if status != "completed"
         else None,
@@ -1044,25 +1130,6 @@ def _build_ai_log_path(project_root: Path, started_at: str) -> Path:
         "cleanup",
         config.ai_transaction_log_file_name("cleanup", started_fragment),
     )
-
-
-def _usable_input_budget(profile_payload: dict[str, object]) -> int:
-    """
-    @brief      Execute the usable input budget helper.
-    @param[in]  profile_payload Profile payload.
-    @return     Helper result.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
-    """
-    context_window = int(profile_payload.get("context_window", config.DEFAULT_LLM_CONTEXT_WINDOW))
-    max_output_tokens = int(
-        profile_payload.get(
-            "max_output_tokens",
-            config.DEFAULT_LLM_MAX_OUTPUT_TOKENS,
-        )
-    )
-    return max(512, context_window - max_output_tokens - 1024)
 
 
 def _estimate_text_tokens(text: str) -> int:

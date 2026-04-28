@@ -14,7 +14,7 @@
          discovery workflow.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-08
-@version 0.5.0
+@version 0.6.0
 """
 
 # IMPORTS
@@ -106,6 +106,9 @@ def test_start_discovery_persists_outputs_and_report(monkeypatch, tmp_path) -> N
     assert state is not None
     assert state["status"] == "completed"
     assert state["output_paths"] == [config.CHARACTER_PROFILE_FILE_NAME]
+    assert report["budget_metadata"]["context_window"] == 4096
+    assert report["budget_metadata"]["max_output_tokens"] == 512
+    assert state["metadata"]["budget_metadata"] == report["budget_metadata"]
     assert report["token_usage"]["total_tokens"] == 135
 
 
@@ -113,6 +116,20 @@ def test_start_discovery_resumes_from_saved_synthesis_checkpoint(monkeypatch, tm
     project_root, manifest = _create_character_project(tmp_path, "CharacterDiscoveryResume")
     source_chunks = character_discovery_service.load_input_chunks(project_root)
     fingerprint = character_discovery_service._build_input_fingerprint(source_chunks)
+    monkeypatch.setattr(
+        character_discovery_service.prompt_template_service,
+        "validate_required_prompts",
+        lambda _prompt_names: None,
+    )
+    monkeypatch.setattr(
+        character_discovery_service.prompt_template_service,
+        "render_prompt",
+        lambda prompt_name, payload: f"{prompt_name}:{sorted(payload.keys())}",
+    )
+    budget_metadata = character_discovery_service._build_budget_metadata(  # noqa: SLF001
+        _profile_payload("profile-1"),
+        "character_discovery_system:[]",
+    )
     resume_candidate = {
         "character_id": "alice",
         "canonical_name": "Alice",
@@ -157,12 +174,14 @@ def test_start_discovery_resumes_from_saved_synthesis_checkpoint(monkeypatch, tm
                 "metadata": {
                     "ai_profile_id": "profile-1",
                     "input_fingerprint": fingerprint,
+                    "budget_metadata": budget_metadata,
                 },
                 "resume_checkpoint": {
                     "input_fingerprint": fingerprint,
                     "profile_id": "profile-1",
                     "completed_window_count": 1,
                     "total_window_count": 1,
+                    "budget_metadata": budget_metadata,
                     "raw_candidates": [resume_candidate],
                     "merged_candidates": [resume_candidate],
                     "rejected_candidates": [],
@@ -175,16 +194,6 @@ def test_start_discovery_resumes_from_saved_synthesis_checkpoint(monkeypatch, tm
         )
         + "\n",
         encoding="utf-8",
-    )
-    monkeypatch.setattr(
-        character_discovery_service.prompt_template_service,
-        "validate_required_prompts",
-        lambda _prompt_names: None,
-    )
-    monkeypatch.setattr(
-        character_discovery_service.prompt_template_service,
-        "render_prompt",
-        lambda prompt_name, payload: f"{prompt_name}:{sorted(payload.keys())}",
     )
     call_count = {"value": 0}
 
@@ -592,6 +601,140 @@ def test_validate_manual_character_name_rejects_duplicates_and_invalid_names() -
         )
 
 
+def test_budgeted_chunk_windows_use_eight_chunks_as_cap() -> None:
+    source_chunks = [_chunk_payload(f"chunk-{index:04d}", index, "Short dialogue text.") for index in range(1, 11)]
+    windows = character_discovery_service._build_chunk_windows(  # noqa: SLF001
+        source_chunks,
+        window_size=8,
+        overlap=1,
+        budget_metadata={"text_budget_tokens": 10000},
+    )
+
+    assert [len(window) for window in windows] == [8, 3]
+
+
+def test_budgeted_chunk_windows_shrink_for_small_text_budget() -> None:
+    source_chunks = [_chunk_payload(f"chunk-{index:04d}", index, '"Hello," said Alice. ' * 30) for index in range(1, 5)]
+    windows = character_discovery_service._build_chunk_windows(  # noqa: SLF001
+        source_chunks,
+        window_size=8,
+        overlap=1,
+        budget_metadata={"text_budget_tokens": 260},
+    )
+
+    assert len(windows) > 1
+    assert all(len(window) < 8 for window in windows)
+
+
+def test_budgeted_chunk_windows_reject_oversized_single_chunk() -> None:
+    source_chunks = [_chunk_payload("chunk-0001", 1, "Oversized text. " * 200)]
+
+    with pytest.raises(ValueError, match="exceeds the available request input budget"):
+        character_discovery_service._build_chunk_windows(  # noqa: SLF001
+            source_chunks,
+            window_size=8,
+            overlap=1,
+            budget_metadata={"text_budget_tokens": 50},
+        )
+
+
+def test_character_discovery_rejects_profile_with_too_little_context(monkeypatch, tmp_path) -> None:
+    project_root, manifest = _create_character_project(tmp_path, "CharacterDiscoveryTinyBudget")
+    monkeypatch.setattr(
+        character_discovery_service.prompt_template_service,
+        "validate_required_prompts",
+        lambda _prompt_names: None,
+    )
+    monkeypatch.setattr(
+        character_discovery_service.prompt_template_service,
+        "render_prompt",
+        lambda prompt_name, payload: f"{prompt_name}:{sorted(payload.keys())}",
+    )
+    profile_payload = {
+        **_profile_payload("profile-1"),
+        "context_window": 1024,
+        "max_output_tokens": 900,
+    }
+
+    with pytest.raises(ValueError, match="too little room for discovery input"):
+        character_discovery_service.start_or_continue_discovery(
+            project_root,
+            manifest,
+            profile_payload,
+            progress_callback=lambda *_args: None,
+            cancel_requested=lambda: False,
+        )
+
+
+def test_resume_state_rejects_changed_budget_metadata() -> None:
+    current_budget = {
+        "context_window": 4096,
+        "max_output_tokens": 512,
+        "prompt_budget_tokens": 20,
+        "text_budget_tokens": 2000,
+        "safety_margin_tokens": 409,
+        "max_window_chunks": 8,
+        "window_overlap": 1,
+        "synthesis_prompt_budget_tokens": 20,
+        "synthesis_payload_budget_tokens": 2000,
+        "synthesis_max_evidence_items": 20,
+    }
+    previous_budget = {**current_budget, "max_output_tokens": 1024}
+
+    restored = character_discovery_service._restore_resume_state(  # noqa: SLF001
+        {
+            "status": "running",
+            "mode": character_discovery_service.CHARACTER_DISCOVERY_MODE_AI_ASSISTED,
+            "resume_checkpoint": {
+                "input_fingerprint": "abc",
+                "profile_id": "profile-1",
+                "total_window_count": 2,
+                "completed_window_count": 1,
+                "budget_metadata": previous_budget,
+            },
+        },
+        input_fingerprint="abc",
+        profile_id="profile-1",
+        total_windows=2,
+        budget_metadata=current_budget,
+    )
+
+    assert restored == (0, [], [], [], [], None)
+
+
+def test_synthesis_candidate_payload_is_trimmed_to_budget_metadata() -> None:
+    candidate = {
+        "character_id": "alice",
+        "canonical_name": "Alice",
+        "aliases": ["Al"],
+        "role_summary": "Lead speaker",
+        "confidence": "high",
+        "identity_merge_count": 1,
+        "evidence": [
+            {
+                "chunk_id": f"chunk-{index:04d}",
+                "sequence_index": index,
+                "dialogue_span_id": "dialogue-001",
+                "source_excerpt": '"A long line of dialogue that should be compacted."',
+                "reason": "Direct dialogue evidence.",
+                "confidence": "high",
+            }
+            for index in range(1, 40)
+        ],
+    }
+
+    payload = character_discovery_service._budgeted_synthesis_candidate_payload(  # noqa: SLF001
+        candidate,
+        {
+            "synthesis_payload_budget_tokens": 600,
+            "synthesis_max_evidence_items": 12,
+        },
+    )
+
+    assert len(payload["evidence"]) <= 12
+    assert payload["evidence"][0]["chunk_id"] == "chunk-0001"
+
+
 def _create_character_project(tmp_path, project_name: str):
     project_root, manifest = project_workspace_service.create_project(project_name, tmp_path)
     manifest["source_document"] = {
@@ -641,6 +784,17 @@ def _create_character_project(tmp_path, project_name: str):
         encoding="utf-8",
     )
     return project_root, manifest
+
+
+def _chunk_payload(chunk_id: str, sequence_index: int, text: str) -> dict[str, object]:
+    return {
+        "chunk_id": chunk_id,
+        "sequence_index": sequence_index,
+        "chapter_label": None,
+        "input_source": character_discovery_service.CHARACTER_DISCOVERY_INPUT_SOURCE_CHUNKS,
+        "text": text,
+        "dialogue_spans": [],
+    }
 
 
 def _profile_payload(profile_id: str) -> dict[str, object]:

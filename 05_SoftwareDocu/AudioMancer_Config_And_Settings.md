@@ -116,6 +116,15 @@ as an AudioMancer selection even though outbound TTS requests omit the
 VoiceWeaver `language` field for `ro`.
 `DEFAULT_TTS_PREVIEW_TEXT_CHARACTER_LIMIT` caps narrator sample preview text,
 with a default of 512 characters.
+AI cleanup, chunking, translation, character-discovery, and Speech Blocks
+request-window budgets are derived from the selected profile context window,
+max output tokens, estimated prompt budget, and configured safety margins. AI
+cleanup keeps a maximum cleanup-unit cap per request, AI chunking strategy
+defaults act as paragraph caps, AI translation uses the computed text budget to
+split oversized source chunks, character discovery uses its fixed chunk-window
+size as a maximum cap while guarding final synthesis payload size, and Speech
+Blocks uses the computed text budget to split oversized source chunks before
+AI-owned block generation.
 `DEFAULT_AUDIO_ASSEMBLY_*` constants define the WAV-only Audio Assembly
 defaults for output mode, max duration, output format, and silence gaps.
 - AI cleanup and chunking profile defaults

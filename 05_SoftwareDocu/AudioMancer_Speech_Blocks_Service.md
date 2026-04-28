@@ -25,7 +25,10 @@ narrator-only phrase/action/paragraph segments under the TTS text budget.
 - choose canonical chunking text or approved translated text as the source
 - choose the dialogue/speaker prompt or narrator-only segmentation prompt from
   `project.json.voice_assignment_mode`
-- send one AI request per chunk using the selected AI profile
+- size AI request input from the selected AI profile context window, max output
+  tokens, prompt budget, and conservative safety margin
+- split oversized source chunks into ordered AI request segments without
+  changing the public chunk identity
 - include the resolved TTS token budget and conservative word guidance in
   narrator-only requests
 - normalize model output into the new persisted speech-block schema only, with
@@ -106,9 +109,11 @@ High-level flow:
 3. The controller confirms that the operator wants to start or continue one AI
    run and warns about time plus token usage.
 4. `speech_blocks_service.start_or_continue_generation(...)` validates the
-   selected prompt files, restores resumable state when the saved checkpoint
-   still matches the current source snapshot, AI profile, and mode, and
-   processes one chunk per model request.
+   selected prompt files, builds request budget metadata from the selected AI
+   profile and prompt shell, restores resumable state when the saved checkpoint
+   still matches the current source snapshot, AI profile, mode, and budget
+   metadata, and processes each chunk through one or more budgeted model
+   requests.
 5. Each response is normalized into new speech-block payloads, including exact
    source spans, AI baseline values, editable current values, warning flags,
    approval fields, chunk-local sequence indexes, and `CCCC-BBBBBB` IDs.
@@ -120,8 +125,9 @@ High-level flow:
    fallback splits add `tts_hard_split`; operation rows such as `pause`,
    `background_noise`, and `indication` are never split.
 6. The current `speech_blocks_report.json`, `speech_blocks_state.json`, and
-   transaction log metadata are rewritten after every chunk so cancellation can
-   resume from the next chunk.
+   transaction log metadata are rewritten after every chunk with the budget
+   metadata so cancellation can resume from the next chunk when those settings
+   still match.
 7. Finished full generation disables `Generate Speech Blocks`, enables
    `Reset Speech Blocks`, resets downstream Audio Blocks plus Audio Assembly
    data, and leaves Speech Blocks in review until all blocks are approved.
@@ -220,7 +226,10 @@ Persisted speech-block payloads use:
 
 Current invariants:
 
-- one AI request is issued per source chunk
+- each source chunk is processed through one or more AI requests sized to the
+  computed context budget
+- oversized source chunks are split before AI dispatch, preferring paragraph,
+  sentence, and word boundaries before hard character spans
 - `sequence_index` is 1-based and local within the source chunk
 - `speech_block_id` is always `CCCC-BBBBBB`
 - `CCCC` is derived from the numeric chunk id
@@ -278,8 +287,11 @@ Report and operation-state metadata include:
 - `warning_count`
 - `warnings`
 - normalized `token_usage`
+- `budget_metadata`, with `context_window`, `max_output_tokens`,
+  `prompt_budget_tokens`, `text_budget_tokens`, and `safety_margin_tokens`
 - one resume checkpoint with `next_chunk_index`,
-  `source_snapshot_fingerprint`, `source_language`, and `ai_profile_id`
+  `source_snapshot_fingerprint`, `source_language`, `ai_profile_id`, and
+  `budget_metadata`
 
 ## 7. Workflow Integration
 

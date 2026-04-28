@@ -13,7 +13,7 @@
          file support used by the current AudioMancer implementation scaffold.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 1.30.0
+@version 1.35.0
 """
 
 # IMPORTS
@@ -206,6 +206,18 @@ SPEECH_BLOCKS_STATE_FILE_NAME = "speech_blocks_state.json"
 # @brief Default pause duration used when a pause Speech Block has no valid duration.
 DEFAULT_SPEECH_BLOCK_PAUSE_DURATION_MS = 1000
 
+# @brief Minimum estimated source-text token budget required for one AI Speech Blocks request.
+DEFAULT_SPEECH_BLOCKS_MIN_TEXT_BUDGET_TOKENS = 512
+
+# @brief Minimum estimated token safety margin reserved in each AI Speech Blocks request.
+DEFAULT_SPEECH_BLOCKS_MIN_SAFETY_MARGIN_TOKENS = 256
+
+# @brief Fraction of the context window reserved as safety margin for AI Speech Blocks.
+DEFAULT_SPEECH_BLOCKS_SAFETY_MARGIN_CONTEXT_FRACTION = 0.10
+
+# @brief Maximum context-window fraction used for AI Speech Blocks source text.
+DEFAULT_SPEECH_BLOCKS_TEXT_CONTEXT_FRACTION = 0.60
+
 # @brief File name used for persisted Audio Blocks output.
 AUDIO_BLOCKS_OUTPUT_FILE_NAME = "audio_blocks.json"
 
@@ -345,30 +357,66 @@ DEFAULT_TTS_WORDS_PER_AUDIO_SECOND = 2.5
 # @brief Default maximum cleanup-unit count sent in one AI cleanup request window.
 DEFAULT_AI_CLEANUP_MAX_WINDOW_UNITS = 24
 
+# @brief Minimum estimated text-token budget required for one AI cleanup request.
+DEFAULT_AI_CLEANUP_MIN_TEXT_BUDGET_TOKENS = 512
+
+# @brief Minimum estimated token safety margin reserved in each AI cleanup request.
+DEFAULT_AI_CLEANUP_MIN_SAFETY_MARGIN_TOKENS = 256
+
+# @brief Fraction of the context window reserved as safety margin for AI cleanup.
+DEFAULT_AI_CLEANUP_SAFETY_MARGIN_CONTEXT_FRACTION = 0.10
+
+# @brief Maximum context-window fraction used for AI cleanup unit text.
+DEFAULT_AI_CLEANUP_TEXT_CONTEXT_FRACTION = 0.60
+
 # @brief Default semantic AI chunking strategy.
 DEFAULT_AI_CHUNKING_STRATEGY = "paragraph"
 
 # @brief Supported semantic AI chunking strategies.
 AI_CHUNKING_STRATEGY_OPTIONS = ("paragraph", "meaning", "scene")
 
-# @brief Default paragraph count per AI chunk-boundary request for paragraph strategy.
-DEFAULT_AI_CHUNKING_PARAGRAPH_WINDOW_SIZE = 18
+# @brief Default paragraph cap per AI chunk-boundary request for paragraph strategy.
+DEFAULT_AI_CHUNKING_PARAGRAPH_WINDOW_SIZE = 64
 
-# @brief Default paragraph count per AI chunk-boundary request for meaning strategy.
-DEFAULT_AI_CHUNKING_MEANING_WINDOW_SIZE = 14
+# @brief Default paragraph cap per AI chunk-boundary request for meaning strategy.
+DEFAULT_AI_CHUNKING_MEANING_WINDOW_SIZE = 96
 
-# @brief Default paragraph count per AI chunk-boundary request for scene strategy.
-DEFAULT_AI_CHUNKING_SCENE_WINDOW_SIZE = 10
+# @brief Default paragraph cap per AI chunk-boundary request for scene strategy.
+DEFAULT_AI_CHUNKING_SCENE_WINDOW_SIZE = 128
 
-# @brief Strategy-specific paragraph windows used by AI chunking requests.
+# @brief Strategy-specific paragraph caps used by AI chunking requests.
 AI_CHUNKING_WINDOW_SIZE_BY_STRATEGY = {
     "paragraph": DEFAULT_AI_CHUNKING_PARAGRAPH_WINDOW_SIZE,
     "meaning": DEFAULT_AI_CHUNKING_MEANING_WINDOW_SIZE,
     "scene": DEFAULT_AI_CHUNKING_SCENE_WINDOW_SIZE,
 }
 
+# @brief Minimum estimated text-token budget required for one AI chunking request.
+DEFAULT_AI_CHUNKING_MIN_TEXT_BUDGET_TOKENS = 512
+
+# @brief Minimum estimated token safety margin reserved in each AI chunking request.
+DEFAULT_AI_CHUNKING_MIN_SAFETY_MARGIN_TOKENS = 256
+
+# @brief Fraction of the context window reserved as safety margin for AI chunking.
+DEFAULT_AI_CHUNKING_SAFETY_MARGIN_CONTEXT_FRACTION = 0.10
+
+# @brief Maximum context-window fraction used for AI chunking paragraph text.
+DEFAULT_AI_CHUNKING_TEXT_CONTEXT_FRACTION = 0.60
+
 # @brief Default target language for AI translation.
 DEFAULT_TRANSLATION_TARGET_LANGUAGE = "en"
+
+# @brief Minimum estimated source-text token budget required for one AI translation request.
+DEFAULT_AI_TRANSLATION_MIN_TEXT_BUDGET_TOKENS = 512
+
+# @brief Minimum estimated token safety margin reserved in each AI translation request.
+DEFAULT_AI_TRANSLATION_MIN_SAFETY_MARGIN_TOKENS = 256
+
+# @brief Fraction of the context window reserved as safety margin for AI translation.
+DEFAULT_AI_TRANSLATION_SAFETY_MARGIN_CONTEXT_FRACTION = 0.10
+
+# @brief Maximum context-window fraction used for AI translation source text.
+DEFAULT_AI_TRANSLATION_TEXT_CONTEXT_FRACTION = 0.60
 
 # @brief Supported target languages for the AI translation page.
 TRANSLATION_LANGUAGE_OPTIONS = (
@@ -390,6 +438,21 @@ DEFAULT_CHARACTER_DISCOVERY_WINDOW_SIZE = 8
 
 # @brief Default chunk-window overlap used for AI character discovery.
 DEFAULT_CHARACTER_DISCOVERY_WINDOW_OVERLAP = 1
+
+# @brief Minimum estimated source-text token budget required for one AI character-discovery request.
+DEFAULT_CHARACTER_DISCOVERY_MIN_TEXT_BUDGET_TOKENS = 512
+
+# @brief Minimum estimated token safety margin reserved in each AI character-discovery request.
+DEFAULT_CHARACTER_DISCOVERY_MIN_SAFETY_MARGIN_TOKENS = 256
+
+# @brief Fraction of the context window reserved as safety margin for AI character discovery.
+DEFAULT_CHARACTER_DISCOVERY_SAFETY_MARGIN_CONTEXT_FRACTION = 0.10
+
+# @brief Maximum context-window fraction used for AI character-discovery input text.
+DEFAULT_CHARACTER_DISCOVERY_TEXT_CONTEXT_FRACTION = 0.60
+
+# @brief Default maximum evidence item count retained in one character synthesis payload.
+DEFAULT_CHARACTER_DISCOVERY_SYNTHESIS_MAX_EVIDENCE_ITEMS = 20
 
 
 # Export Defaults

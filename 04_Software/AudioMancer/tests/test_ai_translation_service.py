@@ -13,12 +13,14 @@
          review-state updates, and approval helpers.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-07
-@version 0.4.0
+@version 0.5.0
 """
 
 # IMPORTS
 
 import json
+
+import pytest
 
 from audiomancer import config
 from audiomancer.services import ai_translation_service, project_workspace_service
@@ -64,7 +66,11 @@ def test_ai_translation_service_creates_translation_artifacts(monkeypatch, tmp_p
     assert report["translated_chunk_count"] == 2
     assert report["translation_stage_status"] == ai_translation_service.TRANSLATION_STAGE_TRANSLATED
     assert report["token_usage"]["total_tokens"] == 250
-    assert ai_translation_service.load_operation_state(project_root)["status"] == "translated"
+    assert report["budget_metadata"]["context_window"] == 4096
+    assert report["budget_metadata"]["max_output_tokens"] == 512
+    operation_state = ai_translation_service.load_operation_state(project_root)
+    assert operation_state["status"] == "translated"
+    assert operation_state["metadata"]["budget_metadata"] == report["budget_metadata"]
 
 
 def test_ai_translation_service_approve_and_edit_update_review_state(tmp_path) -> None:
@@ -217,6 +223,73 @@ def test_ai_translation_service_initializes_empty_operation_metadata(tmp_path) -
     assert translated_chunks[0]["translated_text"] == ""
     assert operation_state["status"] == "not_started"
     assert operation_state["metadata"]["total_chunk_count"] == 2
+
+
+def test_ai_translation_budget_metadata_reserves_max_output_tokens(monkeypatch) -> None:
+    """
+    @brief      Verify larger translation output budgets reduce available source-text budget.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-28
+    @version    0.1.0
+    """
+    monkeypatch.setattr(
+        ai_translation_service.prompt_template_service,
+        "render_prompt",
+        lambda _name, variables: f"prompt {variables}",
+    )
+
+    small_output_budget = ai_translation_service._build_budget_metadata(
+        {
+            **_profile_payload(),
+            "context_window": 8192,
+            "max_output_tokens": 512,
+        },
+        "ro",
+        "system",
+    )
+    large_output_budget = ai_translation_service._build_budget_metadata(
+        {
+            **_profile_payload(),
+            "context_window": 8192,
+            "max_output_tokens": 4096,
+        },
+        "ro",
+        "system",
+    )
+
+    assert large_output_budget["max_output_tokens"] == 4096
+    assert large_output_budget["text_budget_tokens"] < small_output_budget["text_budget_tokens"]
+
+
+def test_ai_translation_rejects_profiles_with_no_input_budget(monkeypatch) -> None:
+    """
+    @brief      Verify excessive output-token settings fail before translation starts.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-28
+    @version    0.1.0
+    """
+    monkeypatch.setattr(
+        ai_translation_service.prompt_template_service,
+        "render_prompt",
+        lambda _name, variables: f"prompt {variables}",
+    )
+
+    with pytest.raises(ValueError, match="too little room"):
+        ai_translation_service._build_budget_metadata(
+            {
+                **_profile_payload(),
+                "context_window": 1024,
+                "max_output_tokens": 900,
+            },
+            "ro",
+            "system",
+        )
 
 
 def _create_chunked_project(tmp_path, name: str):

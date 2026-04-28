@@ -24,7 +24,7 @@ manifest.
 
 - resolve the discovery input from `chunks_text.json`
 - use root-level cleanup and chunking artifacts as the discovery source
-- split chunk input into overlapping AI analysis windows
+- split chunk input into overlapping, budget-aware AI analysis windows
 - call the configured AI profile for window extraction and profile synthesis
 - detect language-agnostic dialogue spans from quotation and dash-style direct
   speech markers
@@ -81,14 +81,17 @@ High-level runtime flow:
 3. On first start only, the controller shows one informational popup about
    long-running AI work.
 4. `character_discovery_service.start_or_continue_discovery(...)` resolves
-   canonical chunking output as the discovery input and restores resumable state
-   when fingerprints and profile ids still match.
+   canonical chunking output as the discovery input, derives request budgets
+   from the selected profile context window and max output tokens, and restores
+   resumable state when fingerprints, profile ids, window counts, and budget
+   metadata still match.
 5. The service detects direct-dialogue spans in each chunk using punctuation
-   structure rather than English-only speech verbs, analyzes chunk windows,
-   normalizes candidate evidence against known chunk ids and optional
-   `dialogue_span_id` values, merges character candidates by canonical or alias
-   identity, filters to speaking characters, records rejected candidates, and
-   runs one synthesis pass per merged character.
+   structure rather than English-only speech verbs, analyzes budgeted chunk
+   windows using eight chunks as a maximum cap, normalizes candidate evidence
+   against known chunk ids and optional `dialogue_span_id` values, merges
+   character candidates by canonical or alias identity, filters to speaking
+   characters, records rejected candidates, trims synthesis evidence payloads
+   when needed, and runs one synthesis pass per merged character.
 6. The service writes `characters_profile.json`, `characters_report.json`,
    `characters_state.json`, and one `log_ai_characters_<timestamp>.log`
    transaction log at the project root.
@@ -232,6 +235,7 @@ Report fields currently include:
 - `character_profile_id_last_used`
 - `window_size`
 - `window_overlap`
+- `budget_metadata`
 - `warning_count`
 - `warnings`
 - `generated_at`
@@ -244,7 +248,7 @@ Operation-state invariants:
   `characters_profile.json` or `characters_report.json`
 - `mode` is `ai_assisted`
 - resume checkpoints are reused only when the chunk fingerprint, total window
-  count, and AI profile id still match
+  count, AI profile id, and context-budget metadata still match
 - completed discovery disables the page start action until reset
 - reset preserves upstream translation artifacts and existing narrator profiles
   or samples, then clears dependent character voice, speech, audio block, and
@@ -260,6 +264,11 @@ Relevant config values in `src/audiomancer/config.py`:
 - `CHARACTER_DISCOVERY_REPORT_FILE_NAME`
 - `DEFAULT_CHARACTER_DISCOVERY_WINDOW_SIZE`
 - `DEFAULT_CHARACTER_DISCOVERY_WINDOW_OVERLAP`
+- `DEFAULT_CHARACTER_DISCOVERY_MIN_TEXT_BUDGET_TOKENS`
+- `DEFAULT_CHARACTER_DISCOVERY_MIN_SAFETY_MARGIN_TOKENS`
+- `DEFAULT_CHARACTER_DISCOVERY_SAFETY_MARGIN_CONTEXT_FRACTION`
+- `DEFAULT_CHARACTER_DISCOVERY_TEXT_CONTEXT_FRACTION`
+- `DEFAULT_CHARACTER_DISCOVERY_SYNTHESIS_MAX_EVIDENCE_ITEMS`
 - `AI_TRANSACTION_LOG_FILE_PREFIX`
 
 ## 7. Workflow Integration

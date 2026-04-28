@@ -14,7 +14,7 @@
          persists resumable state, and creates one AI transaction log file.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-11
-@version 0.2.0
+@version 0.3.0
 """
 
 # IMPORTS
@@ -88,6 +88,9 @@ def test_ai_cleanup_writes_cleanup_artifacts_and_log(
     assert report_payload["cleanup_mode"] == "ai_assisted"
     assert report_payload["cleaned_text_metadata_relative_path"] == config.CLEANED_TEXT_METADATA_FILE_NAME
     assert report_payload["ai_profile_id"] == "profile_1"
+    assert report_payload["budget_metadata"]["context_window"] == 4096
+    assert report_payload["budget_metadata"]["max_output_tokens"] == 512
+    assert report_payload["budget_metadata"]["max_window_units"] == config.DEFAULT_AI_CLEANUP_MAX_WINDOW_UNITS
     assert "Story paragraph one." in (cleanup_root / config.CLEANED_TEXT_FILE_NAME).read_text(encoding="utf-8")
     assert any(path.name.startswith(config.AI_TRANSACTION_LOG_FILE_PREFIX) for path in cleanup_root.glob("*.log"))
 
@@ -95,6 +98,7 @@ def test_ai_cleanup_writes_cleanup_artifacts_and_log(
     metadata_payload = json.loads((cleanup_root / config.CLEANED_TEXT_METADATA_FILE_NAME).read_text(encoding="utf-8"))
     assert state_payload["mode"] == "ai_assisted"
     assert state_payload["status"] == "completed"
+    assert state_payload["metadata"]["budget_metadata"] == report_payload["budget_metadata"]
     assert metadata_payload["cleanup_mode"] == "ai_assisted"
     assert metadata_payload["paragraphs"][0]["source_page_start"] is None
 
@@ -404,6 +408,103 @@ def test_ai_cleanup_splits_long_input_into_multiple_windows(
     assert report_payload["token_usage"]["total_tokens"] == 120
     assert call_contexts[0]["window_index"] == 1
     assert call_contexts[1]["window_index"] == 2
+
+
+def test_ai_cleanup_rejects_profiles_with_no_input_budget(mock_prompt_environment) -> None:
+    """Verify excessive output-token settings fail before AI cleanup starts."""
+    with pytest.raises(ValueError, match="too little room"):
+        ai_cleanup_service._build_budget_metadata(
+            {
+                "context_window": 1024,
+                "max_output_tokens": 900,
+            },
+            "en",
+            "latin",
+            "cleanup",
+        )
+
+
+def test_ai_cleanup_small_context_limits_unit_windows() -> None:
+    """Verify cleanup windows shrink when the text budget is small."""
+    units = [
+        {
+            "unit_id": f"unit-{index:04d}",
+            "text": "x" * 500,
+            "estimated_tokens": 157,
+        }
+        for index in range(1, 9)
+    ]
+
+    windows = ai_cleanup_service._build_windows(
+        units,
+        {
+            "context_window": 2048,
+            "max_output_tokens": 512,
+            "prompt_budget_tokens": 20,
+            "text_budget_tokens": 512,
+            "safety_margin_tokens": 256,
+            "max_window_units": config.DEFAULT_AI_CLEANUP_MAX_WINDOW_UNITS,
+        },
+    )
+
+    assert len(windows) > 1
+    assert windows[0]["end_index"] < len(units) - 1
+
+
+def test_ai_cleanup_restarts_resume_when_budget_metadata_changes(
+    mock_extracted_project, mock_prompt_environment, monkeypatch
+) -> None:
+    """Verify cleanup resume is rejected when the selected profile budget changes."""
+    project_root, manifest = mock_extracted_project
+    extracted_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.EXTRACTED_TEXT_FILE_NAME
+    extracted_path.write_text(
+        "\n\n".join(f"Paragraph {index} keeps enough words." for index in range(1, 41)) + "\n",
+        encoding="utf-8",
+    )
+    responses = iter(
+        [
+            {
+                "payload": {
+                    "results": [{"unit_id": f"unit-{unit_index:04d}", "label": "story"} for unit_index in range(1, 25)]
+                },
+                "usage": {"input_tokens": 10, "output_tokens": 2, "total_tokens": 12, "usage_available": True},
+            },
+            RuntimeError("stop"),
+        ]
+    )
+
+    def _first_chat_json(*_args, **_kwargs):
+        response = next(responses)
+        if isinstance(response, Exception):
+            raise response
+        return response
+
+    monkeypatch.setattr(ai_cleanup_service.llm_provider_service, "chat_json", _first_chat_json)
+    with pytest.raises(RuntimeError, match="stop"):
+        ai_cleanup_service.clean_text(project_root, manifest, _MOCK_PROFILE)
+
+    captured_prompts: list[str] = []
+
+    def _second_chat_json(_profile, _system_prompt, user_prompt, **_kwargs):
+        captured_prompts.append(user_prompt)
+        return {
+            "payload": {
+                "results": [{"unit_id": f"unit-{unit_index:04d}", "label": "story"} for unit_index in range(1, 41)]
+            },
+            "usage": {"input_tokens": 10, "output_tokens": 2, "total_tokens": 12, "usage_available": True},
+        }
+
+    second_profile = {
+        **_MOCK_PROFILE,
+        "context_window": 8192,
+    }
+    monkeypatch.setattr(ai_cleanup_service.llm_provider_service, "chat_json", _second_chat_json)
+
+    ai_cleanup_service.clean_text(project_root, manifest, second_profile)
+
+    assert captured_prompts
+    assert "unit_id: unit-0001" in captured_prompts[0]
+    assert "unit_id: unit-0025" not in captured_prompts[0]
 
 
 # END OF FILE

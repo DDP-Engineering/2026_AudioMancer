@@ -13,7 +13,7 @@
          executes resumable translation over canonical chunking output.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-07
-@version 0.7.0
+@version 0.8.0
 """
 
 # IMPORTS
@@ -67,6 +67,7 @@ TRANSLATED_CHUNK_STATUS_APPROVED = "approved"
 # @brief Mapping from translation language codes to display labels.
 _TRANSLATION_LANGUAGE_LABELS = dict(config.TRANSLATION_LANGUAGE_OPTIONS)
 TokenUsagePayload = dict[str, object]
+BudgetMetadataPayload = dict[str, int]
 
 
 # PUBLIC API
@@ -193,6 +194,7 @@ def ensure_translation_records(
             else []
         ),
         token_usage=_restore_persisted_token_usage(existing_report, existing_operation_state),
+        budget_metadata=_restore_persisted_budget_metadata(existing_report, existing_operation_state),
     )
     _persist_translation_state(
         project_root,
@@ -291,7 +293,7 @@ def start_or_continue_translation(
     @exception  ValueError When inputs are invalid or the model returns empty text.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-07
-    @version    0.3.0
+    @version    0.4.0
     """
     project_root = Path(project_root)
     profile_id = str(ai_profile_payload.get("id", "")).strip()
@@ -317,6 +319,7 @@ def start_or_continue_translation(
         "text_translation_system",
         {"target_language": _language_label(target_language)},
     )
+    budget_metadata = _build_budget_metadata(ai_profile_payload, target_language, system_prompt)
     _write_running_state(
         project_root,
         source_chunks,
@@ -326,6 +329,7 @@ def start_or_continue_translation(
         profile_id,
         log_path,
         token_usage,
+        budget_metadata,
     )
     _emit_progress(
         progress_callback,
@@ -349,6 +353,7 @@ def start_or_continue_translation(
             len(translated_chunks),
             log_path,
             token_usage,
+            budget_metadata,
             progress_callback=progress_callback,
             translated_chunk_count=_translated_count(translated_chunks),
             cancel_requested=cancel_requested,
@@ -368,6 +373,7 @@ def start_or_continue_translation(
             profile_id,
             warnings=list(report.get("warnings", [])),
             token_usage=token_usage,
+            budget_metadata=budget_metadata,
         )
         _write_running_state(
             project_root,
@@ -378,6 +384,7 @@ def start_or_continue_translation(
             profile_id,
             log_path,
             token_usage,
+            budget_metadata,
         )
         _persist_translation_state(
             project_root, source_chunks, translated_chunks, report, operation_state=load_operation_state(project_root)
@@ -397,6 +404,7 @@ def start_or_continue_translation(
         warnings=list(report.get("warnings", [])),
         updated_at=completed_at,
         token_usage=token_usage,
+        budget_metadata=budget_metadata,
     )
     operation_state = _build_operation_state(
         project_root,
@@ -411,6 +419,7 @@ def start_or_continue_translation(
         log_path=log_path,
         resume_checkpoint=None,
         token_usage=token_usage,
+        budget_metadata=budget_metadata,
     )
     _persist_translation_state(project_root, source_chunks, translated_chunks, report, operation_state=operation_state)
     _emit_progress(
@@ -446,7 +455,7 @@ def retranslate_chunk(
     @exception  ValueError When the selected chunk is unknown or translation is empty.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-07
-    @version    0.3.0
+    @version    0.4.0
     """
     project_root = Path(project_root)
     profile_id = str(ai_profile_payload.get("id", "")).strip()
@@ -462,6 +471,7 @@ def retranslate_chunk(
         "text_translation_system",
         {"target_language": _language_label(target_language)},
     )
+    budget_metadata = _build_budget_metadata(ai_profile_payload, target_language, system_prompt)
     selected["translated_text"] = ""
     selected["approved"] = False
     selected["approved_at"] = None
@@ -478,6 +488,7 @@ def retranslate_chunk(
         profile_id,
         log_path,
         token_usage,
+        budget_metadata,
     )
     translated_text, token_usage = _translate_text_in_budgeted_segments(
         project_root,
@@ -490,6 +501,7 @@ def retranslate_chunk(
         len(translated_chunks),
         log_path,
         token_usage,
+        budget_metadata,
         progress_callback=progress_callback,
         translated_chunk_count=max(0, _translated_count(translated_chunks)),
         cancel_requested=cancel_requested,
@@ -509,6 +521,7 @@ def retranslate_chunk(
         profile_id,
         warnings=list(report.get("warnings", [])),
         token_usage=token_usage,
+        budget_metadata=budget_metadata,
     )
     operation_state = _build_operation_state(
         project_root,
@@ -523,6 +536,7 @@ def retranslate_chunk(
         log_path=log_path,
         resume_checkpoint=None,
         token_usage=token_usage,
+        budget_metadata=budget_metadata,
     )
     _persist_translation_state(project_root, source_chunks, translated_chunks, report, operation_state=operation_state)
     _emit_progress(
@@ -589,6 +603,7 @@ def update_translated_text(
             report,
             load_operation_state(project_root),
         ),
+        budget_metadata=_restore_persisted_budget_metadata(report, load_operation_state(project_root)),
     )
     _persist_translation_state(
         project_root,
@@ -647,6 +662,7 @@ def approve_chunk(
             report,
             load_operation_state(project_root),
         ),
+        budget_metadata=_restore_persisted_budget_metadata(report, load_operation_state(project_root)),
     )
     _persist_translation_state(
         project_root,
@@ -702,6 +718,7 @@ def approve_all(
             report,
             load_operation_state(project_root),
         ),
+        budget_metadata=_restore_persisted_budget_metadata(report, load_operation_state(project_root)),
     )
     _persist_translation_state(
         project_root,
@@ -857,6 +874,7 @@ def _rebuild_report(
     warnings: list[str] | None = None,
     updated_at: str | None = None,
     token_usage: TokenUsagePayload | None = None,
+    budget_metadata: BudgetMetadataPayload | None = None,
 ) -> dict[str, object]:
     """
     @brief      Recompute the translation report from the current chunk records.
@@ -865,11 +883,12 @@ def _rebuild_report(
     @param[in]  profile_id Active translation profile identifier or `None`.
     @param[in]  warnings Optional warning list to persist in the report.
     @param[in]  updated_at Optional report timestamp override.
+    @param[in]  budget_metadata Optional context-budget metadata.
     @return     Rebuilt translation report payload.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-07
-    @version    0.3.0
+    @date       2026-04-28
+    @version    0.4.0
     """
     translated_count = _translated_count(translated_chunks)
     approved_count = sum(1 for chunk in translated_chunks if bool(chunk.get("approved", False)))
@@ -882,7 +901,7 @@ def _rebuild_report(
         stage_status = TRANSLATION_STAGE_TRANSLATED
     else:
         stage_status = TRANSLATION_STAGE_IN_PROGRESS
-    return {
+    report = {
         "target_language": target_language,
         "translation_profile_id_last_used": profile_id,
         "translation_stage_status": stage_status,
@@ -893,6 +912,9 @@ def _rebuild_report(
         "warnings": list(warnings or []),
         "token_usage": token_usage_service.coerce_token_usage(token_usage),
     }
+    if budget_metadata is not None:
+        report["budget_metadata"] = dict(budget_metadata)
+    return report
 
 
 def _operation_status_from_report(report: dict[str, object]) -> str:
@@ -936,8 +958,8 @@ def _refresh_operation_state(
     @return     Refreshed operation state payload.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-26
-    @version    0.1.0
+    @date       2026-04-28
+    @version    0.2.0
     """
     state = dict(existing_operation_state or {})
     metadata = state.get("metadata", {})
@@ -956,6 +978,7 @@ def _refresh_operation_state(
     mode = state.get("mode")
     if mode in (None, "") and (profile_id not in (None, "") or int(report.get("translated_chunk_count", 0)) > 0):
         mode = "ai_assisted"
+    budget_metadata = _restore_persisted_budget_metadata(report, existing_operation_state)
     refreshed_metadata = {
         "target_language": target_language,
         "translation_profile_id": profile_id,
@@ -967,6 +990,8 @@ def _refresh_operation_state(
         "source_chunk_count": len(source_chunks),
         "token_usage": token_usage_service.coerce_token_usage(token_usage),
     }
+    if budget_metadata:
+        refreshed_metadata["budget_metadata"] = budget_metadata
     if log_relative_path not in (None, ""):
         refreshed_metadata["log_relative_path"] = str(log_relative_path)
     resume_checkpoint = None
@@ -976,6 +1001,8 @@ def _refresh_operation_state(
             "translated_chunk_count": report["translated_chunk_count"],
             "total_chunk_count": report["total_chunk_count"],
         }
+        if budget_metadata:
+            resume_checkpoint["budget_metadata"] = budget_metadata
     return {
         "folder_relative_path": config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH,
         "status": status,
@@ -1067,6 +1094,7 @@ def _write_running_state(
     profile_id: str,
     log_path: Path,
     token_usage: TokenUsagePayload,
+    budget_metadata: BudgetMetadataPayload,
 ) -> None:
     """
     @brief      Persist the translation operation in the running state.
@@ -1077,17 +1105,19 @@ def _write_running_state(
     @param[in]  target_language Active target language code.
     @param[in]  profile_id Active translation profile identifier.
     @param[in]  log_path Operation-local AI transaction log path.
+    @param[in]  budget_metadata Context-budget metadata.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-07
-    @version    0.2.0
+    @date       2026-04-28
+    @version    0.3.0
     """
     report = _rebuild_report(
         translated_chunks,
         target_language,
         profile_id,
         token_usage=token_usage,
+        budget_metadata=budget_metadata,
     )
     operation_state = _build_operation_state(
         project_root,
@@ -1105,7 +1135,9 @@ def _write_running_state(
             "next_untranslated_chunk_id": _next_untranslated_chunk_id(translated_chunks),
             "translated_chunk_count": report["translated_chunk_count"],
             "total_chunk_count": report["total_chunk_count"],
+            "budget_metadata": dict(budget_metadata),
         },
+        budget_metadata=budget_metadata,
     )
     _persist_translation_state(
         project_root,
@@ -1129,6 +1161,7 @@ def _build_operation_state(
     log_path: Path,
     token_usage: TokenUsagePayload,
     resume_checkpoint: dict[str, object] | None,
+    budget_metadata: BudgetMetadataPayload | None = None,
 ) -> dict[str, object]:
     """
     @brief      Build the persisted translation operation state payload.
@@ -1143,11 +1176,12 @@ def _build_operation_state(
     @param[in]  target_language Active target language code.
     @param[in]  log_path Operation-local AI transaction log path.
     @param[in]  resume_checkpoint Resume checkpoint payload or `None`.
+    @param[in]  budget_metadata Optional context-budget metadata.
     @return     Persisted operation state payload.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-07
-    @version    0.2.0
+    @date       2026-04-28
+    @version    0.3.0
     """
     input_path = _translation_input_snapshot_path(project_root)
     output_path = build_operation_output_path(
@@ -1160,6 +1194,20 @@ def _build_operation_state(
         "translation",
         config.TRANSLATION_REPORT_FILE_NAME,
     )
+    metadata = {
+        "target_language": target_language,
+        "translation_profile_id": profile_id,
+        "translated_chunk_count": report["translated_chunk_count"],
+        "approved_chunk_count": report["approved_chunk_count"],
+        "total_chunk_count": report["total_chunk_count"],
+        "warnings": list(report.get("warnings", [])),
+        "translated_chunks": translated_chunks,
+        "source_chunk_count": len(source_chunks),
+        "log_relative_path": relative_to_project(project_root, log_path),
+        "token_usage": token_usage_service.coerce_token_usage(token_usage),
+    }
+    if budget_metadata is not None:
+        metadata["budget_metadata"] = dict(budget_metadata)
     return {
         "folder_relative_path": config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH,
         "status": status,
@@ -1176,18 +1224,7 @@ def _build_operation_state(
         "completed_at": completed_at,
         "updated_at": report["updated_at"],
         "warning_count": len(list(report.get("warnings", []))),
-        "metadata": {
-            "target_language": target_language,
-            "translation_profile_id": profile_id,
-            "translated_chunk_count": report["translated_chunk_count"],
-            "approved_chunk_count": report["approved_chunk_count"],
-            "total_chunk_count": report["total_chunk_count"],
-            "warnings": list(report.get("warnings", [])),
-            "translated_chunks": translated_chunks,
-            "source_chunk_count": len(source_chunks),
-            "log_relative_path": relative_to_project(project_root, log_path),
-            "token_usage": token_usage_service.coerce_token_usage(token_usage),
-        },
+        "metadata": metadata,
         "resume_checkpoint": None if resume_checkpoint is None else dict(resume_checkpoint),
     }
 
@@ -1295,6 +1332,50 @@ def _restore_persisted_token_usage(
     )
 
 
+def _restore_persisted_budget_metadata(
+    report: dict[str, object] | None,
+    operation_state: dict[str, object] | None,
+) -> BudgetMetadataPayload | None:
+    """
+    @brief      Restore persisted translation budget metadata from report or state.
+    @param[in]  report Translation report payload.
+    @param[in]  operation_state Translation operation-state payload.
+    @return     Budget metadata payload or `None`.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-28
+    @version    0.1.0
+    """
+    candidates: list[object] = []
+    if isinstance(report, dict):
+        candidates.append(report.get("budget_metadata"))
+    if isinstance(operation_state, dict):
+        metadata = operation_state.get("metadata", {})
+        if isinstance(metadata, dict):
+            candidates.append(metadata.get("budget_metadata"))
+        resume_checkpoint = operation_state.get("resume_checkpoint", {})
+        if isinstance(resume_checkpoint, dict):
+            candidates.append(resume_checkpoint.get("budget_metadata"))
+    for candidate in candidates:
+        if not isinstance(candidate, dict):
+            continue
+        restored = {
+            str(key): int(value)
+            for key, value in candidate.items()
+            if str(key).strip() and isinstance(value, (int, float))
+        }
+        required_keys = {
+            "context_window",
+            "max_output_tokens",
+            "prompt_budget_tokens",
+            "text_budget_tokens",
+            "safety_margin_tokens",
+        }
+        if required_keys.issubset(restored):
+            return restored
+    return None
+
+
 def _translate_text_in_budgeted_segments(
     project_root: Path,
     manifest: dict[str, object],
@@ -1306,6 +1387,7 @@ def _translate_text_in_budgeted_segments(
     total_chunks: int,
     log_path: Path,
     token_usage: TokenUsagePayload,
+    budget_metadata: BudgetMetadataPayload,
     progress_callback=None,
     translated_chunk_count: int = 0,
     cancel_requested=None,
@@ -1321,17 +1403,18 @@ def _translate_text_in_budgeted_segments(
     @param[in]  chunk_sequence_index Sequence index of the translated chunk.
     @param[in]  total_chunks Total number of source chunks.
     @param[in]  log_path Operation-local AI transaction log path.
+    @param[in]  budget_metadata Context-budget metadata for source segmentation.
     @param[in]  cancel_requested Optional cancellation callback.
     @return     Concatenated translated text plus updated cumulative token usage.
     @exception  ValueError When any translated segment is empty.
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-07
-    @version    0.2.0
+    @date       2026-04-28
+    @version    0.3.0
     """
-    usable_input_budget = _usable_input_budget(ai_profile_payload)
+    text_budget = int(budget_metadata["text_budget_tokens"])
     translated_segments: list[str] = []
     for segment_index, source_segment in enumerate(
-        _split_translation_source_text(source_text, usable_input_budget),
+        _split_translation_source_text(source_text, text_budget),
         start=1,
     ):
         raise_if_cancelled(cancel_requested)
@@ -1409,22 +1492,28 @@ def _emit_progress(
         )
 
 
-def _usable_input_budget(ai_profile_payload: dict[str, object]) -> int:
+def _build_budget_metadata(
+    ai_profile_payload: dict[str, object],
+    target_language: str,
+    system_prompt: str,
+) -> BudgetMetadataPayload:
     """
-    @brief      Compute the safe input budget for one translation request.
+    @brief      Build context-window budget metadata for AI translation.
     @param[in]  ai_profile_payload Enabled AI profile payload.
-    @return     Safe estimated input-token budget.
-    @exception  None
+    @param[in]  target_language Requested target language code.
+    @param[in]  system_prompt Rendered translation system prompt.
+    @return     Context-budget metadata used for source segmentation.
+    @exception  ValueError Raised when context and output settings leave too little input room.
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-07
+    @date       2026-04-28
     @version    0.1.0
     """
     context_window = max(
-        1024,
+        1,
         int(ai_profile_payload.get("context_window", config.DEFAULT_LLM_CONTEXT_WINDOW)),
     )
     max_output_tokens = max(
-        256,
+        1,
         int(
             ai_profile_payload.get(
                 "max_output_tokens",
@@ -1432,7 +1521,37 @@ def _usable_input_budget(ai_profile_payload: dict[str, object]) -> int:
             )
         ),
     )
-    return max(512, context_window - max_output_tokens - 768)
+    user_prompt_shell = prompt_template_service.render_prompt(
+        "text_translation_user",
+        {
+            "target_language": _language_label(target_language),
+            "source_text": "(none)",
+        },
+    )
+    prompt_budget_tokens = _estimate_text_tokens(f"{system_prompt}\n\n{user_prompt_shell}")
+    safety_margin_tokens = max(
+        config.DEFAULT_AI_TRANSLATION_MIN_SAFETY_MARGIN_TOKENS,
+        int(context_window * config.DEFAULT_AI_TRANSLATION_SAFETY_MARGIN_CONTEXT_FRACTION),
+    )
+    available_text_budget = context_window - max_output_tokens - prompt_budget_tokens - safety_margin_tokens
+    text_budget_tokens = min(
+        int(context_window * config.DEFAULT_AI_TRANSLATION_TEXT_CONTEXT_FRACTION),
+        available_text_budget,
+    )
+    min_text_budget = config.DEFAULT_AI_TRANSLATION_MIN_TEXT_BUDGET_TOKENS
+    if text_budget_tokens < min_text_budget:
+        raise ValueError(
+            "AI translation cannot run because the selected AI profile context window "
+            "and max output tokens leave too little room for translation input "
+            f"({text_budget_tokens} estimated tokens available, {min_text_budget} required)."
+        )
+    return {
+        "context_window": context_window,
+        "max_output_tokens": max_output_tokens,
+        "prompt_budget_tokens": prompt_budget_tokens,
+        "text_budget_tokens": text_budget_tokens,
+        "safety_margin_tokens": safety_margin_tokens,
+    }
 
 
 def _split_translation_source_text(source_text: str, usable_input_budget: int) -> list[str]:

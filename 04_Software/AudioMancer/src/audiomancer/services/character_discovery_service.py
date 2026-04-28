@@ -14,7 +14,7 @@
          workflow artifacts, and maintains resumable AI operation state.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-22
-@version 0.7.0
+@version 0.8.0
 """
 
 # IMPORTS
@@ -89,6 +89,7 @@ CharacterDiscoveryReportPayload = dict[str, object]
 # @brief Persisted character-discovery operation-state payload type.
 OperationStatePayload = dict[str, object]
 TokenUsagePayload = dict[str, object]
+BudgetMetadataPayload = dict[str, int]
 
 CHARACTER_VOICE_BRIEF_FIELDS = (
     "voice_persona_summary",
@@ -293,7 +294,7 @@ def start_or_continue_discovery(
     @exception  OperationCancelledError Raised when the operator cancels the run.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-08
-    @version    0.2.0
+    @version    0.3.0
     """
     resolved_project_root = Path(project_root)
     source_chunks, input_source = _resolve_discovery_input_chunks(resolved_project_root)
@@ -313,6 +314,11 @@ def start_or_continue_discovery(
             "character_profile_synthesis_user",
         ]
     )
+    system_prompt = prompt_template_service.render_prompt(
+        "character_discovery_system",
+        {},
+    )
+    budget_metadata = _build_budget_metadata(ai_profile_payload, system_prompt)
     input_paths = _persist_input_snapshots(
         resolved_project_root,
         source_chunks,
@@ -340,6 +346,7 @@ def start_or_continue_discovery(
         source_chunks,
         config.DEFAULT_CHARACTER_DISCOVERY_WINDOW_SIZE,
         config.DEFAULT_CHARACTER_DISCOVERY_WINDOW_OVERLAP,
+        budget_metadata,
     )
     if not windows:
         raise ValueError("Character discovery requires at least one chunk window.")
@@ -358,8 +365,13 @@ def start_or_continue_discovery(
         input_fingerprint,
         profile_id,
         len(windows),
+        budget_metadata,
     )
-    token_usage = _restore_token_usage(existing_state)
+    token_usage = (
+        _restore_token_usage(existing_state)
+        if start_window_index > 0 or raw_candidates or merged_candidates or synthesized_profiles
+        else token_usage_service.empty_token_usage()
+    )
     log_path = _resolve_log_path(resolved_project_root, started_at, log_relative_path)
     chunk_map = {
         str(chunk.get("chunk_id", "")): dict(chunk) for chunk in source_chunks if str(chunk.get("chunk_id", "")).strip()
@@ -388,12 +400,14 @@ def start_or_continue_discovery(
         input_fingerprint=input_fingerprint,
         log_path=log_path,
         token_usage=token_usage,
+        budget_metadata=budget_metadata,
         resume_checkpoint={
             "input_fingerprint": input_fingerprint,
             "input_source": input_source,
             "profile_id": profile_id,
             "completed_window_count": start_window_index,
             "total_window_count": len(windows),
+            "budget_metadata": dict(budget_metadata),
             "raw_candidates": list(raw_candidates),
             "merged_candidates": list(merged_candidates),
             "rejected_candidates": list(rejected_candidates),
@@ -414,10 +428,6 @@ def start_or_continue_discovery(
         token_usage=token_usage,
     )
 
-    system_prompt = prompt_template_service.render_prompt(
-        "character_discovery_system",
-        {},
-    )
     for window_index in range(start_window_index, len(windows)):
         raise_if_cancelled(cancel_requested)
         window_records = windows[window_index]
@@ -477,12 +487,14 @@ def start_or_continue_discovery(
             input_fingerprint=input_fingerprint,
             log_path=log_path,
             token_usage=token_usage,
+            budget_metadata=budget_metadata,
             resume_checkpoint={
                 "input_fingerprint": input_fingerprint,
                 "input_source": input_source,
                 "profile_id": profile_id,
                 "completed_window_count": window_index + 1,
                 "total_window_count": len(windows),
+                "budget_metadata": dict(budget_metadata),
                 "raw_candidates": list(raw_candidates),
                 "merged_candidates": [],
                 "rejected_candidates": [],
@@ -524,12 +536,14 @@ def start_or_continue_discovery(
         input_fingerprint=input_fingerprint,
         log_path=log_path,
         token_usage=token_usage,
+        budget_metadata=budget_metadata,
         resume_checkpoint={
             "input_fingerprint": input_fingerprint,
             "input_source": input_source,
             "profile_id": profile_id,
             "completed_window_count": len(windows),
             "total_window_count": len(windows),
+            "budget_metadata": dict(budget_metadata),
             "raw_candidates": list(raw_candidates),
             "merged_candidates": list(merged_candidates),
             "rejected_candidates": list(rejected_candidates),
@@ -540,7 +554,10 @@ def start_or_continue_discovery(
     )
     for profile_index in range(len(synthesized_profiles), len(merged_candidates)):
         raise_if_cancelled(cancel_requested)
-        candidate = dict(merged_candidates[profile_index])
+        candidate = _budgeted_synthesis_candidate_payload(
+            dict(merged_candidates[profile_index]),
+            budget_metadata,
+        )
         user_prompt = prompt_template_service.render_prompt(
             "character_profile_synthesis_user",
             {
@@ -598,12 +615,14 @@ def start_or_continue_discovery(
             input_fingerprint=input_fingerprint,
             log_path=log_path,
             token_usage=token_usage,
+            budget_metadata=budget_metadata,
             resume_checkpoint={
                 "input_fingerprint": input_fingerprint,
                 "input_source": input_source,
                 "profile_id": profile_id,
                 "completed_window_count": len(windows),
                 "total_window_count": len(windows),
+                "budget_metadata": dict(budget_metadata),
                 "raw_candidates": list(raw_candidates),
                 "merged_candidates": list(merged_candidates),
                 "rejected_candidates": list(rejected_candidates),
@@ -634,6 +653,7 @@ def start_or_continue_discovery(
         "character_profile_id_last_used": profile_id,
         "window_size": config.DEFAULT_CHARACTER_DISCOVERY_WINDOW_SIZE,
         "window_overlap": config.DEFAULT_CHARACTER_DISCOVERY_WINDOW_OVERLAP,
+        "budget_metadata": dict(budget_metadata),
         "warning_count": 0,
         "warnings": [],
         "generated_at": _utc_now_iso(),
@@ -669,6 +689,7 @@ def start_or_continue_discovery(
         input_fingerprint=input_fingerprint,
         log_path=log_path,
         token_usage=token_usage,
+        budget_metadata=budget_metadata,
         resume_checkpoint=None,
     )
     _emit_progress(
@@ -1184,29 +1205,171 @@ def _build_chunk_windows(
     source_chunks: list[dict[str, object]],
     window_size: int,
     overlap: int,
+    budget_metadata: BudgetMetadataPayload,
 ) -> list[list[dict[str, object]]]:
     """
-    @brief      Build the chunk windows.
+    @brief      Build context-budgeted chunk windows.
     @param[in]  source_chunks Value for `source_chunks`.
-    @param[in]  window_size Value for `window_size`.
-    @param[in]  overlap Value for `overlap`.
+    @param[in]  window_size Maximum chunk count allowed in one request.
+    @param[in]  overlap Requested chunk overlap between adjacent windows.
+    @param[in]  budget_metadata Context-budget metadata for the selected profile.
     @return     Derived helper result.
+    @exception  ValueError Raised when one source chunk cannot fit inside the request budget.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.1.0
+    @version    0.2.0
     """
     if not source_chunks:
         return []
-    step = max(1, window_size - overlap)
+    max_window_chunks = max(1, int(window_size))
+    window_overlap = max(0, min(int(overlap), max_window_chunks - 1))
+    text_budget_tokens = int(budget_metadata["text_budget_tokens"])
     windows: list[list[dict[str, object]]] = []
-    for start_index in range(0, len(source_chunks), step):
-        window = source_chunks[start_index : start_index + window_size]
-        if not window:
-            continue
-        windows.append(window)
-        if start_index + window_size >= len(source_chunks):
+    start_index = 0
+    while start_index < len(source_chunks):
+        end_index = start_index - 1
+        current_window_tokens = 0
+        current_window_count = 0
+        while end_index + 1 < len(source_chunks) and current_window_count < max_window_chunks:
+            candidate_chunk = source_chunks[end_index + 1]
+            candidate_tokens = _estimate_text_tokens(_build_units_block([candidate_chunk]))
+            if candidate_tokens > text_budget_tokens:
+                chunk_id = str(candidate_chunk.get("chunk_id", "")).strip() or f"#{end_index + 2}"
+                raise ValueError(
+                    "AI-assisted character discovery cannot run because source chunk "
+                    f"{chunk_id} exceeds the available request input budget "
+                    f"({candidate_tokens} estimated tokens, {text_budget_tokens} available). "
+                    "Use a larger context window, reduce max output tokens, or re-run chunking with smaller chunks."
+                )
+            if current_window_count > 0 and current_window_tokens + candidate_tokens > text_budget_tokens:
+                break
+            current_window_tokens += candidate_tokens
+            current_window_count += 1
+            end_index += 1
+        windows.append(source_chunks[start_index : end_index + 1])
+        next_start_index = end_index + 1
+        if next_start_index >= len(source_chunks):
             break
+        start_index = max(start_index + 1, next_start_index - window_overlap)
     return windows
+
+
+def _build_budget_metadata(
+    ai_profile_payload: dict[str, object],
+    system_prompt: str,
+) -> BudgetMetadataPayload:
+    """
+    @brief      Build context-window budget metadata for AI character discovery.
+    @param[in]  ai_profile_payload Selected validated AI profile payload.
+    @param[in]  system_prompt Rendered character-discovery system prompt.
+    @return     Context-budget metadata used for windowing and synthesis guards.
+    @exception  ValueError Raised when context and output settings leave too little input room.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-28
+    @version    0.1.0
+    """
+    context_window = max(
+        1,
+        int(ai_profile_payload.get("context_window", config.DEFAULT_LLM_CONTEXT_WINDOW)),
+    )
+    max_output_tokens = max(
+        1,
+        int(
+            ai_profile_payload.get(
+                "max_output_tokens",
+                config.DEFAULT_LLM_MAX_OUTPUT_TOKENS,
+            )
+        ),
+    )
+    discovery_prompt_shell = prompt_template_service.render_prompt(
+        "character_discovery_window_user",
+        {"units_block": ""},
+    )
+    synthesis_prompt_shell = prompt_template_service.render_prompt(
+        "character_profile_synthesis_user",
+        {"character_payload": ""},
+    )
+    prompt_budget_tokens = _estimate_text_tokens(f"{system_prompt}\n\n{discovery_prompt_shell}")
+    synthesis_prompt_budget_tokens = _estimate_text_tokens(f"{system_prompt}\n\n{synthesis_prompt_shell}")
+    safety_margin_tokens = max(
+        config.DEFAULT_CHARACTER_DISCOVERY_MIN_SAFETY_MARGIN_TOKENS,
+        int(context_window * config.DEFAULT_CHARACTER_DISCOVERY_SAFETY_MARGIN_CONTEXT_FRACTION),
+    )
+    text_budget_tokens = _available_character_discovery_budget(
+        context_window,
+        max_output_tokens,
+        prompt_budget_tokens,
+        safety_margin_tokens,
+    )
+    synthesis_payload_budget_tokens = _available_character_discovery_budget(
+        context_window,
+        max_output_tokens,
+        synthesis_prompt_budget_tokens,
+        safety_margin_tokens,
+    )
+    min_text_budget = config.DEFAULT_CHARACTER_DISCOVERY_MIN_TEXT_BUDGET_TOKENS
+    if text_budget_tokens < min_text_budget:
+        raise ValueError(
+            "AI-assisted character discovery cannot run because the selected AI profile context window "
+            "and max output tokens leave too little room for discovery input "
+            f"({text_budget_tokens} estimated tokens available, {min_text_budget} required)."
+        )
+    if synthesis_payload_budget_tokens < min_text_budget:
+        raise ValueError(
+            "AI-assisted character discovery cannot run because the selected AI profile context window "
+            "and max output tokens leave too little room for character synthesis input "
+            f"({synthesis_payload_budget_tokens} estimated tokens available, {min_text_budget} required)."
+        )
+    return {
+        "context_window": context_window,
+        "max_output_tokens": max_output_tokens,
+        "prompt_budget_tokens": prompt_budget_tokens,
+        "text_budget_tokens": text_budget_tokens,
+        "safety_margin_tokens": safety_margin_tokens,
+        "max_window_chunks": config.DEFAULT_CHARACTER_DISCOVERY_WINDOW_SIZE,
+        "window_overlap": config.DEFAULT_CHARACTER_DISCOVERY_WINDOW_OVERLAP,
+        "synthesis_prompt_budget_tokens": synthesis_prompt_budget_tokens,
+        "synthesis_payload_budget_tokens": synthesis_payload_budget_tokens,
+        "synthesis_max_evidence_items": config.DEFAULT_CHARACTER_DISCOVERY_SYNTHESIS_MAX_EVIDENCE_ITEMS,
+    }
+
+
+def _available_character_discovery_budget(
+    context_window: int,
+    max_output_tokens: int,
+    prompt_budget_tokens: int,
+    safety_margin_tokens: int,
+) -> int:
+    """
+    @brief      Compute the usable input budget for one character-discovery AI request.
+    @param[in]  context_window Selected profile context window.
+    @param[in]  max_output_tokens Selected profile maximum output token budget.
+    @param[in]  prompt_budget_tokens Estimated prompt-shell token budget.
+    @param[in]  safety_margin_tokens Reserved safety margin.
+    @return     Usable input-token budget.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-28
+    @version    0.1.0
+    """
+    available_text_budget = context_window - max_output_tokens - prompt_budget_tokens - safety_margin_tokens
+    return min(
+        int(context_window * config.DEFAULT_CHARACTER_DISCOVERY_TEXT_CONTEXT_FRACTION),
+        available_text_budget,
+    )
+
+
+def _estimate_text_tokens(text: str) -> int:
+    """
+    @brief      Estimate token usage for local budget checks.
+    @param[in]  text Value for `text`.
+    @return     Estimated token count.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-28
+    @version    0.1.0
+    """
+    return max(1, len(text) // 4)
 
 
 def _build_units_block(window_records: list[dict[str, object]]) -> str:
@@ -1240,6 +1403,7 @@ def _restore_resume_state(
     input_fingerprint: str,
     profile_id: str,
     total_windows: int,
+    budget_metadata: BudgetMetadataPayload,
 ) -> tuple[
     int,
     list[dict[str, object]],
@@ -1254,10 +1418,11 @@ def _restore_resume_state(
     @param[in]  input_fingerprint Value for `input_fingerprint`.
     @param[in]  profile_id Profile identifier.
     @param[in]  total_windows Total number of windows.
+    @param[in]  budget_metadata Current context-budget metadata.
     @return     Derived helper result.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.2.0
+    @version    0.3.0
     """
     if str(existing_state.get("status", "")) not in {"running", "failed"}:
         return 0, [], [], [], [], None
@@ -1269,6 +1434,8 @@ def _restore_resume_state(
     if str(resume_checkpoint.get("profile_id", "")) != profile_id:
         return 0, [], [], [], [], None
     if int(resume_checkpoint.get("total_window_count", 0)) != total_windows:
+        return 0, [], [], [], [], None
+    if dict(resume_checkpoint.get("budget_metadata") or {}) != dict(budget_metadata):
         return 0, [], [], [], [], None
     return (
         min(int(resume_checkpoint.get("completed_window_count", 0)), total_windows),
@@ -1367,6 +1534,7 @@ def _write_operation_state(
     input_fingerprint: str,
     log_path: Path,
     token_usage: TokenUsagePayload,
+    budget_metadata: BudgetMetadataPayload,
     resume_checkpoint: dict[str, object] | None,
 ) -> None:
     """
@@ -1392,11 +1560,12 @@ def _write_operation_state(
     @param[in]  input_fingerprint Value for `input_fingerprint`.
     @param[in]  log_path Operation log file path.
     @param[in]  token_usage Value for `token_usage`.
+    @param[in]  budget_metadata Context-budget metadata used by discovery requests.
     @param[in]  resume_checkpoint Value for `resume_checkpoint`.
     @return     None.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.2.0
+    @version    0.3.0
     """
     artifact_paths = [relative_to_project(project_root, log_path)]
     if report_path is not None and report_path.is_file():
@@ -1434,6 +1603,7 @@ def _write_operation_state(
             "input_fingerprint": input_fingerprint,
             "log_relative_path": relative_to_project(project_root, log_path),
             "token_usage": token_usage_service.coerce_token_usage(token_usage),
+            "budget_metadata": dict(budget_metadata),
         },
         "resume_checkpoint": (None if resume_checkpoint is None else dict(resume_checkpoint)),
     }
@@ -1825,6 +1995,111 @@ def _dedupe_evidence(
         seen.add(key)
         deduped.append(dict(item))
     return deduped
+
+
+def _budgeted_synthesis_candidate_payload(
+    candidate: dict[str, object],
+    budget_metadata: BudgetMetadataPayload,
+) -> dict[str, object]:
+    """
+    @brief      Trim one merged candidate payload so synthesis input stays inside the selected profile budget.
+    @param[in]  candidate Merged character candidate payload.
+    @param[in]  budget_metadata Context-budget metadata for the selected profile.
+    @return     Candidate payload safe to serialize into the synthesis prompt.
+    @exception  ValueError Raised when even the minimum candidate payload exceeds the synthesis budget.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-28
+    @version    0.1.0
+    """
+    evidence_items = _rank_synthesis_evidence(_restore_evidence(candidate.get("evidence", [])))
+    max_evidence_items = max(1, int(budget_metadata["synthesis_max_evidence_items"]))
+    payload = _synthesis_candidate_payload(candidate, evidence_items[:max_evidence_items])
+    payload_budget_tokens = int(budget_metadata["synthesis_payload_budget_tokens"])
+    if _estimate_text_tokens(json.dumps(payload, ensure_ascii=False)) <= payload_budget_tokens:
+        return payload
+    for evidence_count in range(min(max_evidence_items, len(evidence_items)) - 1, 0, -1):
+        payload = _synthesis_candidate_payload(candidate, evidence_items[:evidence_count])
+        if _estimate_text_tokens(json.dumps(payload, ensure_ascii=False)) <= payload_budget_tokens:
+            return payload
+    payload = _synthesis_candidate_payload(candidate, [])
+    if _estimate_text_tokens(json.dumps(payload, ensure_ascii=False)) <= payload_budget_tokens:
+        return payload
+    character_name = str(candidate.get("canonical_name", "")).strip() or "Unknown character"
+    raise ValueError(
+        "AI-assisted character discovery cannot synthesize a profile for "
+        f"{character_name!r} because the merged candidate payload exceeds the available synthesis budget "
+        f"({payload_budget_tokens} estimated tokens)."
+    )
+
+
+def _synthesis_candidate_payload(
+    candidate: dict[str, object],
+    evidence_items: list[dict[str, object]],
+) -> dict[str, object]:
+    """
+    @brief      Build the compact candidate payload sent to final character-profile synthesis.
+    @param[in]  candidate Merged candidate payload.
+    @param[in]  evidence_items Selected evidence payloads.
+    @return     Compact synthesis input payload.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-28
+    @version    0.1.0
+    """
+    return {
+        "character_id": str(candidate.get("character_id", "")).strip(),
+        "canonical_name": str(candidate.get("canonical_name", "")).strip(),
+        "aliases": _normalize_string_list(candidate.get("aliases", [])),
+        "role_summary": str(candidate.get("role_summary", "")).strip(),
+        "confidence": str(candidate.get("confidence", "")).strip(),
+        "identity_merge_count": int(candidate.get("identity_merge_count", 1)),
+        "evidence": [_compact_synthesis_evidence(item) for item in evidence_items],
+    }
+
+
+def _rank_synthesis_evidence(evidence_items: list[dict[str, object]]) -> list[dict[str, object]]:
+    """
+    @brief      Rank evidence items for a compact synthesis payload.
+    @param[in]  evidence_items Full merged evidence payload list.
+    @return     Ordered evidence list, preferring direct dialogue and early source order.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-28
+    @version    0.1.0
+    """
+    confidence_rank = {
+        EVIDENCE_CONFIDENCE_HIGH: 0,
+        EVIDENCE_CONFIDENCE_MEDIUM: 1,
+        EVIDENCE_CONFIDENCE_LOW: 2,
+    }
+    return sorted(
+        evidence_items,
+        key=lambda item: (
+            confidence_rank.get(str(item.get("confidence", "")).casefold(), 3),
+            int(item.get("sequence_index", 0)),
+            str(item.get("chunk_id", "")),
+        ),
+    )
+
+
+def _compact_synthesis_evidence(evidence_item: dict[str, object]) -> dict[str, object]:
+    """
+    @brief      Build one compact evidence item for synthesis input.
+    @param[in]  evidence_item Normalized evidence item.
+    @return     Compact evidence payload.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-28
+    @version    0.1.0
+    """
+    return {
+        "chunk_id": str(evidence_item.get("chunk_id", "")).strip(),
+        "sequence_index": int(evidence_item.get("sequence_index", 0)),
+        "dialogue_span_id": str(evidence_item.get("dialogue_span_id", "")).strip(),
+        "source_excerpt": _excerpt_text(str(evidence_item.get("source_excerpt", "")).strip()),
+        "reason": _excerpt_text(str(evidence_item.get("reason", "")).strip(), limit=120),
+        "confidence": str(evidence_item.get("confidence", "")).strip(),
+    }
 
 
 def _build_profile_from_synthesis(

@@ -13,7 +13,7 @@
          persists resumable state, and rebuilds chunk spans from AI boundaries.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-07
-@version 0.2.0
+@version 0.3.0
 """
 
 # IMPORTS
@@ -26,17 +26,17 @@ from audiomancer import config
 from audiomancer.services import ai_chunking_service, operation_runtime_service, project_workspace_service
 
 
-def test_ai_chunking_windows_use_configured_strategy_sizes(monkeypatch) -> None:
+def test_ai_chunking_windows_use_configured_strategy_caps(monkeypatch) -> None:
     """
-    @brief      Verify AI chunking window sizes are read from shared configuration.
+    @brief      Verify AI chunking paragraph caps are read from shared configuration.
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
+    @date       2026-04-28
+    @version    0.2.0
     """
-    paragraph_records = [{"unit_id": f"paragraph-{index:04d}"} for index in range(1, 6)]
+    paragraph_records = [{"unit_id": f"paragraph-{index:04d}", "text": "Short paragraph."} for index in range(1, 6)]
     monkeypatch.setattr(
         config,
         "AI_CHUNKING_WINDOW_SIZE_BY_STRATEGY",
@@ -47,12 +47,147 @@ def test_ai_chunking_windows_use_configured_strategy_sizes(monkeypatch) -> None:
         },
     )
 
-    windows = ai_chunking_service._build_windows(paragraph_records, "meaning")
+    windows = ai_chunking_service._build_windows(
+        paragraph_records,
+        "meaning",
+        {
+            "context_window": 4096,
+            "max_output_tokens": 512,
+            "prompt_budget_tokens": 20,
+            "text_budget_tokens": 2000,
+            "safety_margin_tokens": 409,
+            "strategy_paragraph_cap": config.AI_CHUNKING_WINDOW_SIZE_BY_STRATEGY["meaning"],
+        },
+    )
 
     assert windows == [
         {"start_index": 0, "end_index": 1},
         {"start_index": 2, "end_index": 3},
         {"start_index": 4, "end_index": 4},
+    ]
+
+
+def test_ai_chunking_large_context_allows_larger_scene_windows(tmp_path, monkeypatch) -> None:
+    """
+    @brief      Verify large AI contexts can feed more than the old scene paragraph window.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-28
+    @version    0.1.0
+    """
+    prompt_root = tmp_path / "prompts"
+    prompt_root.mkdir()
+    (prompt_root / "text_chunking_user.txt").write_text("{strategy}\n{units_block}", encoding="utf-8")
+    monkeypatch.setattr(config, "APP_PROMPTS_PATH", prompt_root)
+    paragraph_records = [
+        {"unit_id": f"paragraph-{index:04d}", "text": "Short scene paragraph."} for index in range(1, 21)
+    ]
+    budget_metadata = ai_chunking_service._build_budget_metadata(
+        {
+            "context_window": 16384,
+            "max_output_tokens": 512,
+        },
+        "scene",
+        "scene",
+    )
+
+    windows = ai_chunking_service._build_windows(paragraph_records, "scene", budget_metadata)
+
+    assert windows == [{"start_index": 0, "end_index": 19}]
+    assert windows[0]["end_index"] > 9
+
+
+def test_ai_chunking_small_context_limits_paragraph_windows(tmp_path, monkeypatch) -> None:
+    """
+    @brief      Verify small AI contexts reduce the paragraph count per AI request.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-28
+    @version    0.1.0
+    """
+    prompt_root = tmp_path / "prompts"
+    prompt_root.mkdir()
+    (prompt_root / "text_chunking_user.txt").write_text("{strategy}\n{units_block}", encoding="utf-8")
+    monkeypatch.setattr(config, "APP_PROMPTS_PATH", prompt_root)
+    paragraph_records = [{"unit_id": f"paragraph-{index:04d}", "text": "x" * 500} for index in range(1, 13)]
+    budget_metadata = ai_chunking_service._build_budget_metadata(
+        {
+            "context_window": 2048,
+            "max_output_tokens": 512,
+        },
+        "scene",
+        "scene",
+    )
+
+    windows = ai_chunking_service._build_windows(paragraph_records, "scene", budget_metadata)
+
+    assert len(windows) > 1
+    assert windows[0]["end_index"] < len(paragraph_records) - 1
+
+
+def test_ai_chunking_rejects_profiles_with_no_input_budget(tmp_path, monkeypatch) -> None:
+    """
+    @brief      Verify excessive output-token settings fail before AI chunking starts.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-28
+    @version    0.1.0
+    """
+    prompt_root = tmp_path / "prompts"
+    prompt_root.mkdir()
+    (prompt_root / "text_chunking_user.txt").write_text("{strategy}\n{units_block}", encoding="utf-8")
+    monkeypatch.setattr(config, "APP_PROMPTS_PATH", prompt_root)
+
+    with pytest.raises(ValueError, match="too little room"):
+        ai_chunking_service._build_budget_metadata(
+            {
+                "context_window": 1024,
+                "max_output_tokens": 900,
+            },
+            "scene",
+            "scene",
+        )
+
+
+def test_ai_chunking_keeps_oversized_paragraphs_whole() -> None:
+    """
+    @brief      Verify budgeted windows never split a single oversized paragraph.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-28
+    @version    0.1.0
+    """
+    paragraph_records = [
+        {"unit_id": "paragraph-0001", "text": "x" * 3000},
+        {"unit_id": "paragraph-0002", "text": "Short follow-up."},
+    ]
+
+    windows = ai_chunking_service._build_windows(
+        paragraph_records,
+        "scene",
+        {
+            "context_window": 2048,
+            "max_output_tokens": 512,
+            "prompt_budget_tokens": 20,
+            "text_budget_tokens": 512,
+            "safety_margin_tokens": 256,
+            "strategy_paragraph_cap": 64,
+        },
+    )
+
+    assert windows == [
+        {"start_index": 0, "end_index": 0},
+        {"start_index": 1, "end_index": 1},
     ]
 
 
@@ -126,6 +261,11 @@ def test_ai_chunking_writes_chunking_artifacts_and_log(tmp_path, monkeypatch) ->
     assert any(path.name.startswith(config.AI_TRANSACTION_LOG_FILE_PREFIX) for path in chunking_root.glob("*.log"))
     assert report_payload["chunking_mode"] == "ai_assisted"
     assert report_payload["semantic_strategy"] == "meaning"
+    assert report_payload["budget_metadata"]["context_window"] == 4096
+    assert report_payload["budget_metadata"]["max_output_tokens"] == 512
+    assert report_payload["budget_metadata"]["strategy_paragraph_cap"] == 48
+    state_payload = json.loads((chunking_root / config.CHUNKING_STATE_FILE_NAME).read_text(encoding="utf-8"))
+    assert state_payload["metadata"]["budget_metadata"] == report_payload["budget_metadata"]
     chunks = json.loads((chunking_root / config.CHUNK_ARTIFACT_FILE_NAME).read_text(encoding="utf-8"))
     assert len(chunks) == 2
     assert chunks[0]["chunking_mode"] == "ai_assisted"
@@ -310,7 +450,7 @@ def test_ai_chunking_resumes_from_saved_window_checkpoint(tmp_path, monkeypatch)
     project_root, manifest = project_workspace_service.create_project("AiChunkingResumeProject", tmp_path)
     cleaned_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.CLEANED_TEXT_FILE_NAME
     cleaned_path.parent.mkdir(parents=True, exist_ok=True)
-    cleaned_text = "\n\n".join(f"Paragraph {index}." for index in range(1, 21)) + "\n"
+    cleaned_text = "\n\n".join(f"Paragraph {index}." for index in range(1, 41)) + "\n"
     cleaned_path.write_text(cleaned_text, encoding="utf-8")
     manifest["source_document"] = {
         "original_name": "story.txt",
@@ -374,7 +514,7 @@ def test_ai_chunking_resumes_from_saved_window_checkpoint(tmp_path, monkeypatch)
         ai_chunking_service.llm_provider_service,
         "chat_json",
         lambda *_args, **_kwargs: {
-            "payload": {"break_after_unit_ids": ["paragraph-0019"]},
+            "payload": {"break_after_unit_ids": ["paragraph-0039"]},
             "usage": {
                 "input_tokens": 30,
                 "output_tokens": 5,
@@ -407,6 +547,92 @@ def test_ai_chunking_resumes_from_saved_window_checkpoint(tmp_path, monkeypatch)
     completed_state = json.loads((project_root / config.CHUNKING_STATE_FILE_NAME).read_text(encoding="utf-8"))
     assert completed_state["status"] == "completed"
     assert completed_state["progress_current"] == 2
+
+
+def test_ai_chunking_restarts_resume_when_budget_metadata_changes(tmp_path, monkeypatch) -> None:
+    """
+    @brief      Verify resume is rejected when the selected profile budget changes.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-28
+    @version    0.1.0
+    """
+    prompt_root = tmp_path / "prompts"
+    prompt_root.mkdir()
+    (prompt_root / "text_chunking_system.txt").write_text("{strategy}", encoding="utf-8")
+    (prompt_root / "text_chunking_user.txt").write_text("{strategy}\n{units_block}", encoding="utf-8")
+    monkeypatch.setattr(config, "APP_PROMPTS_PATH", prompt_root)
+
+    project_root, manifest = project_workspace_service.create_project("AiChunkingBudgetRestartProject", tmp_path)
+    cleaned_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.CLEANED_TEXT_FILE_NAME
+    cleaned_path.parent.mkdir(parents=True, exist_ok=True)
+    cleaned_path.write_text("\n\n".join(f"Paragraph {index}." for index in range(1, 41)) + "\n", encoding="utf-8")
+    manifest["source_document"] = {
+        "original_name": "story.txt",
+        "stored_relative_path": "story.txt",
+        "file_type": "txt",
+        "imported_at": "2026-04-07T12:00:00+00:00",
+        "size_bytes": 10,
+    }
+    manifest["operations"]["cleanup"]["status"] = "completed"
+    manifest["operations"]["cleanup"]["output_paths"] = [
+        f"{config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH}/{config.CLEANED_TEXT_FILE_NAME}"
+    ]
+    first_profile = {
+        "id": "profile_1",
+        "label": "Chunking Profile",
+        "backend_kind": "lmstudio",
+        "base_url": "http://127.0.0.1:1234",
+        "api_key": "",
+        "model_name": "qwen3-8b",
+        "context_window": 4096,
+        "max_output_tokens": 512,
+        "request_timeout_seconds": 30,
+        "temperature": 0.2,
+    }
+    responses = iter(
+        [
+            {"break_after_unit_ids": ["paragraph-0002"]},
+            operation_runtime_service.OperationCancelledError("stop"),
+        ]
+    )
+
+    def _first_chat_json(*_args, **_kwargs):
+        response = next(responses)
+        if isinstance(response, Exception):
+            raise response
+        return {
+            "payload": response,
+            "usage": {"input_tokens": 10, "output_tokens": 2, "total_tokens": 12, "usage_available": True},
+        }
+
+    monkeypatch.setattr(ai_chunking_service.llm_provider_service, "chat_json", _first_chat_json)
+    with pytest.raises(operation_runtime_service.OperationCancelledError):
+        ai_chunking_service.chunk_text(project_root, manifest, first_profile, "paragraph")
+
+    captured_prompts: list[str] = []
+
+    def _second_chat_json(_profile, _system_prompt, user_prompt, **_kwargs):
+        captured_prompts.append(user_prompt)
+        return {
+            "payload": {"break_after_unit_ids": ["paragraph-0039"]},
+            "usage": {"input_tokens": 10, "output_tokens": 2, "total_tokens": 12, "usage_available": True},
+        }
+
+    second_profile = {
+        **first_profile,
+        "context_window": 8192,
+    }
+    monkeypatch.setattr(ai_chunking_service.llm_provider_service, "chat_json", _second_chat_json)
+
+    ai_chunking_service.chunk_text(project_root, manifest, second_profile, "paragraph")
+
+    assert captured_prompts
+    assert "paragraph-0001" in captured_prompts[0]
+    assert "paragraph-0037" not in captured_prompts[0]
 
 
 # END OF FILE

@@ -15,7 +15,7 @@
          based operation state plus AI transaction logging.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 0.7.3
+@version 0.8.0
 """
 
 # IMPORTS
@@ -81,6 +81,8 @@ _NARRATOR_DISPLAY_NAME = "Narrator"
 SpeechBlockPayload = dict[str, object]
 SpeechBlocksReportPayload = dict[str, object]
 OperationStatePayload = dict[str, object]
+TokenUsagePayload = dict[str, object]
+BudgetMetadataPayload = dict[str, int]
 
 
 # PUBLIC API
@@ -266,7 +268,7 @@ def start_or_continue_generation(
     @exception  OperationCancelledError Raised when the operator cancels the run.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.2.0
+    @version    0.3.0
     """
     resolved_project_root = Path(project_root)
     profile_id = str(ai_profile_payload.get("id", "")).strip()
@@ -285,21 +287,36 @@ def start_or_continue_generation(
     tts_budget = _resolve_narrator_only_budget(settings_payload)
 
     speaker_catalog = _speaker_catalog(character_discovery_service.load_character_profiles(resolved_project_root))
+    system_prompt = prompt_template_service.render_prompt(prompt_names[0], {})
+    budget_metadata = _build_budget_metadata(
+        ai_profile_payload,
+        system_prompt,
+        prompt_names[1],
+        source_language,
+        speaker_catalog,
+        voice_assignment_mode,
+        tts_budget,
+    )
     input_fingerprint = _build_source_fingerprint(source_chunks, source_language, source_kind)
     existing_state = load_operation_state(resolved_project_root) or {}
     existing_report = load_speech_blocks_report(resolved_project_root)
     started_at = _resolve_started_at(existing_state)
     log_path = _resolve_log_path(resolved_project_root, started_at)
-    token_usage = token_usage_service.restore_token_usage(
-        None if existing_report is None else existing_report.get("token_usage"),
-        _metadata_token_usage(existing_state),
-    )
     existing_blocks, warning_records, start_chunk_index = _restore_resume_state(
         resolved_project_root,
         existing_state,
         input_fingerprint,
         profile_id,
         source_language,
+        budget_metadata,
+    )
+    token_usage = (
+        token_usage_service.restore_token_usage(
+            None if existing_report is None else existing_report.get("token_usage"),
+            _metadata_token_usage(existing_state),
+        )
+        if start_chunk_index > 0 or existing_blocks
+        else token_usage_service.empty_token_usage()
     )
 
     _persist_state(
@@ -315,6 +332,7 @@ def start_or_continue_generation(
             start_chunk_index,
             warning_records,
             token_usage,
+            budget_metadata,
         ),
         _build_operation_state(
             resolved_project_root,
@@ -331,6 +349,7 @@ def start_or_continue_generation(
             log_path=log_path,
             token_usage=token_usage,
             next_chunk_index=start_chunk_index,
+            budget_metadata=budget_metadata,
         ),
     )
     _emit_progress(
@@ -341,49 +360,34 @@ def start_or_continue_generation(
         token_usage,
     )
 
-    system_prompt = prompt_template_service.render_prompt(prompt_names[0], {})
     all_blocks = list(existing_blocks)
     warning_entries = list(warning_records)
     for chunk_index in range(start_chunk_index, len(source_chunks)):
         raise_if_cancelled(cancel_requested)
         source_chunk = dict(source_chunks[chunk_index])
-        user_prompt = _chunk_user_prompt(
+        chunk_blocks, chunk_warnings, chunk_token_usage = _generate_budgeted_chunk_blocks(
+            ai_profile_payload,
+            system_prompt,
             source_chunk,
             source_language,
             speaker_catalog,
             voice_assignment_mode,
             tts_budget,
             prompt_names[1],
+            budget_metadata,
+            log_path,
+            {
+                "operation_kind": "speech_blocks",
+                "stage_label": "speech_blocks_chunk",
+                "profile_id": profile_id,
+                "chunk_index": chunk_index + 1,
+                "chunk_total": len(source_chunks),
+                "chunk_id": str(source_chunk.get("chunk_id", "")),
+            },
+            cancel_requested,
+            "Speech Blocks generation cancelled while waiting for the model response.",
         )
-        try:
-            response_result = llm_provider_service.chat_json(
-                ai_profile_payload,
-                system_prompt,
-                user_prompt,
-                log_path=log_path,
-                log_context={
-                    "operation_kind": "speech_blocks",
-                    "stage_label": "speech_blocks_chunk",
-                    "profile_id": profile_id,
-                    "chunk_index": chunk_index + 1,
-                    "chunk_total": len(source_chunks),
-                    "chunk_id": str(source_chunk.get("chunk_id", "")),
-                },
-                cancel_requested=cancel_requested,
-            )
-        except OperationCancelledError as error:
-            raise OperationCancelledError(
-                "Speech Blocks generation cancelled while waiting for the model response."
-            ) from error
-        token_usage = token_usage_service.merge_token_usage(token_usage, response_result.get("usage"))
-        chunk_blocks, chunk_warnings = _normalize_chunk_blocks(
-            source_chunk,
-            dict(response_result.get("payload", {})),
-            speaker_catalog,
-            source_language,
-            voice_assignment_mode=voice_assignment_mode,
-            tts_budget=tts_budget,
-        )
+        token_usage = token_usage_service.merge_token_usage(token_usage, chunk_token_usage)
         all_blocks.extend(chunk_blocks)
         warning_entries.extend(chunk_warnings)
         report = _rebuild_report(
@@ -395,6 +399,7 @@ def start_or_continue_generation(
             chunk_index + 1,
             warning_entries,
             token_usage,
+            budget_metadata,
         )
         _persist_state(
             resolved_project_root,
@@ -416,6 +421,7 @@ def start_or_continue_generation(
                 log_path=log_path,
                 token_usage=token_usage,
                 next_chunk_index=chunk_index + 1,
+                budget_metadata=budget_metadata,
             ),
         )
         _emit_progress(
@@ -436,6 +442,7 @@ def start_or_continue_generation(
         len(source_chunks),
         warning_entries,
         token_usage,
+        budget_metadata,
         updated_at=completed_at,
     )
     _persist_state(
@@ -458,6 +465,7 @@ def start_or_continue_generation(
             log_path=log_path,
             token_usage=token_usage,
             next_chunk_index=None,
+            budget_metadata=budget_metadata,
         ),
     )
     _emit_progress(
@@ -734,7 +742,7 @@ def reset_speech_block_to_ai_baseline(
     @exception  ValueError Raised when the block is unknown.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-24
-    @version    0.2.0
+    @version    0.3.0
     """
     resolved_project_root = Path(project_root)
     speech_blocks = load_speech_blocks(resolved_project_root)
@@ -778,7 +786,7 @@ def regenerate_chunk_speech_blocks(
     @exception  OperationCancelledError Raised when the operator cancels the run.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-24
-    @version    0.2.0
+    @version    0.3.0
     """
     resolved_project_root = Path(project_root)
     profile_id = str(ai_profile_payload.get("id", "")).strip()
@@ -810,47 +818,42 @@ def regenerate_chunk_speech_blocks(
     log_path = _resolve_log_path(resolved_project_root, started_at)
     speaker_catalog = _speaker_catalog(character_discovery_service.load_character_profiles(resolved_project_root))
     system_prompt = prompt_template_service.render_prompt(prompt_names[0], {})
+    budget_metadata = _build_budget_metadata(
+        ai_profile_payload,
+        system_prompt,
+        prompt_names[1],
+        source_language,
+        speaker_catalog,
+        voice_assignment_mode,
+        tts_budget,
+    )
     raise_if_cancelled(cancel_requested)
-    user_prompt = _chunk_user_prompt(
-        selected_chunk,
+    new_blocks, _chunk_warnings, chunk_token_usage = _generate_budgeted_chunk_blocks(
+        ai_profile_payload,
+        system_prompt,
+        dict(selected_chunk),
         source_language,
         speaker_catalog,
         voice_assignment_mode,
         tts_budget,
         prompt_names[1],
+        budget_metadata,
+        log_path,
+        {
+            "operation_kind": "speech_blocks",
+            "stage_label": "speech_blocks_chunk_resplit",
+            "profile_id": profile_id,
+            "chunk_id": str(selected_chunk.get("chunk_id", "")),
+        },
+        cancel_requested,
+        "Speech Blocks re-splitting cancelled while waiting for the model response.",
     )
-    try:
-        response_result = llm_provider_service.chat_json(
-            ai_profile_payload,
-            system_prompt,
-            user_prompt,
-            log_path=log_path,
-            log_context={
-                "operation_kind": "speech_blocks",
-                "stage_label": "speech_blocks_chunk_resplit",
-                "profile_id": profile_id,
-                "chunk_id": str(selected_chunk.get("chunk_id", "")),
-            },
-            cancel_requested=cancel_requested,
-        )
-    except OperationCancelledError as error:
-        raise OperationCancelledError(
-            "Speech Blocks re-splitting cancelled while waiting for the model response."
-        ) from error
-    token_usage = token_usage_service.merge_token_usage(token_usage, response_result.get("usage"))
+    token_usage = token_usage_service.merge_token_usage(token_usage, chunk_token_usage)
     existing_blocks = [
         block
         for block in load_speech_blocks(resolved_project_root)
         if str(block.get("chunk_id", "")).strip() != chunk_id
     ]
-    new_blocks, _chunk_warnings = _normalize_chunk_blocks(
-        dict(selected_chunk),
-        dict(response_result.get("payload", {})),
-        speaker_catalog,
-        source_language,
-        voice_assignment_mode=voice_assignment_mode,
-        tts_budget=tts_budget,
-    )
     all_blocks = _renumber_speech_blocks(source_chunks, [*existing_blocks, *new_blocks])
     input_fingerprint = _build_source_fingerprint(source_chunks, source_language, source_kind)
     completed_at = _utc_now_iso()
@@ -863,6 +866,7 @@ def regenerate_chunk_speech_blocks(
         len({str(block.get("chunk_id", "")).strip() for block in all_blocks}),
         [],
         token_usage,
+        budget_metadata,
         updated_at=completed_at,
     )
     _persist_state(
@@ -885,6 +889,7 @@ def regenerate_chunk_speech_blocks(
             log_path=log_path,
             token_usage=token_usage,
             next_chunk_index=None,
+            budget_metadata=budget_metadata,
         ),
     )
     _emit_progress(progress_callback, 1, 1, "Selected chunk Speech Blocks re-split completed.", token_usage)
@@ -1010,6 +1015,292 @@ def _chunk_user_prompt(
             "tts_budget_source": str(budget_payload.get("model_budget_source", "")),
         },
     )
+
+
+def _build_budget_metadata(
+    ai_profile_payload: dict[str, object],
+    system_prompt: str,
+    prompt_name: str,
+    source_language: str,
+    speaker_catalog: dict[str, dict[str, object]],
+    voice_assignment_mode: str,
+    tts_budget: dict[str, object] | None,
+) -> BudgetMetadataPayload:
+    """
+    @brief      Build context-window budget metadata for AI Speech Blocks requests.
+    @param[in]  ai_profile_payload Selected validated AI profile payload.
+    @param[in]  system_prompt Rendered Speech Blocks system prompt.
+    @param[in]  prompt_name Active Speech Blocks user prompt template name.
+    @param[in]  source_language Active source language code.
+    @param[in]  speaker_catalog Allowed speaker catalog.
+    @param[in]  voice_assignment_mode Active project voice-assignment mode.
+    @param[in]  tts_budget Optional narrator-only TTS budget metadata.
+    @return     Context-budget metadata used for source chunk segmentation.
+    @exception  ValueError Raised when context and output settings leave too little input room.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-28
+    @version    0.1.0
+    """
+    context_window = max(1, int(ai_profile_payload.get("context_window", config.DEFAULT_LLM_CONTEXT_WINDOW)))
+    max_output_tokens = max(
+        1,
+        int(ai_profile_payload.get("max_output_tokens", config.DEFAULT_LLM_MAX_OUTPUT_TOKENS)),
+    )
+    prompt_shell = _chunk_user_prompt(
+        {"chunk_id": "", "text": ""},
+        source_language,
+        speaker_catalog,
+        voice_assignment_mode,
+        tts_budget,
+        prompt_name,
+    )
+    prompt_budget_tokens = _estimate_text_tokens(f"{system_prompt}\n\n{prompt_shell}")
+    safety_margin_tokens = max(
+        config.DEFAULT_SPEECH_BLOCKS_MIN_SAFETY_MARGIN_TOKENS,
+        int(context_window * config.DEFAULT_SPEECH_BLOCKS_SAFETY_MARGIN_CONTEXT_FRACTION),
+    )
+    available_text_budget = context_window - max_output_tokens - prompt_budget_tokens - safety_margin_tokens
+    text_budget_tokens = min(
+        int(context_window * config.DEFAULT_SPEECH_BLOCKS_TEXT_CONTEXT_FRACTION),
+        available_text_budget,
+    )
+    min_text_budget = config.DEFAULT_SPEECH_BLOCKS_MIN_TEXT_BUDGET_TOKENS
+    if text_budget_tokens < min_text_budget:
+        raise ValueError(
+            "AI-assisted Speech Blocks generation cannot run because the selected AI profile context window "
+            "and max output tokens leave too little room for source chunk input "
+            f"({text_budget_tokens} estimated tokens available, {min_text_budget} required)."
+        )
+    return {
+        "context_window": context_window,
+        "max_output_tokens": max_output_tokens,
+        "prompt_budget_tokens": prompt_budget_tokens,
+        "text_budget_tokens": text_budget_tokens,
+        "safety_margin_tokens": safety_margin_tokens,
+    }
+
+
+def _generate_budgeted_chunk_blocks(
+    ai_profile_payload: dict[str, object],
+    system_prompt: str,
+    source_chunk: dict[str, object],
+    source_language: str,
+    speaker_catalog: dict[str, dict[str, object]],
+    voice_assignment_mode: str,
+    tts_budget: dict[str, object] | None,
+    prompt_name: str,
+    budget_metadata: BudgetMetadataPayload,
+    log_path: Path,
+    log_context: dict[str, object],
+    cancel_requested,
+    cancellation_message: str,
+) -> tuple[list[SpeechBlockPayload], list[dict[str, object]], TokenUsagePayload]:
+    """
+    @brief      Generate one source chunk through budgeted AI request segments.
+    @param[in]  ai_profile_payload Selected validated AI profile payload.
+    @param[in]  system_prompt Rendered Speech Blocks system prompt.
+    @param[in]  source_chunk Full source chunk payload.
+    @param[in]  source_language Active source language code.
+    @param[in]  speaker_catalog Allowed speaker catalog.
+    @param[in]  voice_assignment_mode Active project voice-assignment mode.
+    @param[in]  tts_budget Optional narrator-only TTS budget metadata.
+    @param[in]  prompt_name Active Speech Blocks user prompt template name.
+    @param[in]  budget_metadata Context-budget metadata.
+    @param[in]  log_path Operation-local AI transaction log path.
+    @param[in]  log_context Base AI transaction log context.
+    @param[in]  cancel_requested Optional zero-argument cancellation callback.
+    @param[in]  cancellation_message Message used when the request is cancelled.
+    @return     Generated Speech Blocks, warning entries, and provider token usage for this chunk.
+    @exception  OperationCancelledError Raised when the operator cancels the run.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-28
+    @version    0.1.0
+    """
+    chunk_segments = _budgeted_source_chunk_segments(source_chunk, budget_metadata)
+    combined_blocks: list[SpeechBlockPayload] = []
+    combined_warnings: list[dict[str, object]] = []
+    chunk_token_usage = token_usage_service.empty_token_usage()
+    for segment_index, segment_chunk in enumerate(chunk_segments, start=1):
+        user_prompt = _chunk_user_prompt(
+            segment_chunk,
+            source_language,
+            speaker_catalog,
+            voice_assignment_mode,
+            tts_budget,
+            prompt_name,
+        )
+        try:
+            response_result = llm_provider_service.chat_json(
+                ai_profile_payload,
+                system_prompt,
+                user_prompt,
+                log_path=log_path,
+                log_context={
+                    **dict(log_context),
+                    "segment_index": segment_index,
+                    "segment_total": len(chunk_segments),
+                },
+                cancel_requested=cancel_requested,
+            )
+        except OperationCancelledError as error:
+            raise OperationCancelledError(cancellation_message) from error
+        chunk_token_usage = token_usage_service.merge_token_usage(chunk_token_usage, response_result.get("usage"))
+        segment_blocks, segment_warnings = _normalize_chunk_blocks(
+            segment_chunk,
+            dict(response_result.get("payload", {})),
+            speaker_catalog,
+            source_language,
+            voice_assignment_mode=voice_assignment_mode,
+            tts_budget=tts_budget,
+        )
+        combined_blocks.extend(segment_blocks)
+        combined_warnings.extend(segment_warnings)
+    return (
+        _renumber_single_chunk_blocks(str(source_chunk.get("chunk_id", "")).strip(), combined_blocks),
+        combined_warnings,
+        chunk_token_usage,
+    )
+
+
+def _budgeted_source_chunk_segments(
+    source_chunk: dict[str, object],
+    budget_metadata: BudgetMetadataPayload,
+) -> list[dict[str, object]]:
+    """
+    @brief      Split one source chunk into AI-context-budgeted request segment payloads.
+    @param[in]  source_chunk Full source chunk payload.
+    @param[in]  budget_metadata Context-budget metadata.
+    @return     Ordered source chunk segment payloads using the original chunk id.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-28
+    @version    0.1.0
+    """
+    text_budget_tokens = int(budget_metadata["text_budget_tokens"])
+    source_text = str(source_chunk.get("text", ""))
+    text_segments = _split_text_for_ai_context_budget(source_text, text_budget_tokens)
+    if not text_segments:
+        return [dict(source_chunk)]
+    return [{**dict(source_chunk), "text": text_segment} for text_segment in text_segments]
+
+
+def _split_text_for_ai_context_budget(text: str, text_budget_tokens: int, boundary_index: int = 0) -> list[str]:
+    """
+    @brief      Split source text into ordered spans that fit the AI input text budget.
+    @param[in]  text Source text span.
+    @param[in]  text_budget_tokens Maximum estimated input tokens for chunk text.
+    @param[in]  boundary_index Preferred boundary level index.
+    @return     Ordered text spans.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-28
+    @version    0.1.0
+    """
+    source_text = str(text)
+    if not source_text:
+        return []
+    if _estimate_text_tokens(source_text) <= text_budget_tokens:
+        return [source_text]
+    splitters = (_ai_paragraph_spans, _ai_sentence_spans, _ai_word_spans)
+    if boundary_index >= len(splitters):
+        return _hard_split_text_for_ai_context_budget(source_text, text_budget_tokens)
+    spans = splitters[boundary_index](source_text)
+    if len(spans) <= 1:
+        return _split_text_for_ai_context_budget(source_text, text_budget_tokens, boundary_index + 1)
+    split_parts: list[str] = []
+    current_part = ""
+    for span in spans:
+        span_parts = (
+            [span]
+            if _estimate_text_tokens(span) <= text_budget_tokens
+            else _split_text_for_ai_context_budget(span, text_budget_tokens, boundary_index + 1)
+        )
+        for span_part in span_parts:
+            candidate_part = f"{current_part}{span_part}" if current_part else span_part
+            if current_part and _estimate_text_tokens(candidate_part) > text_budget_tokens:
+                split_parts.append(current_part)
+                current_part = span_part
+            else:
+                current_part = candidate_part
+    if current_part:
+        split_parts.append(current_part)
+    return split_parts
+
+
+def _ai_paragraph_spans(text: str) -> list[str]:
+    """
+    @brief      Split text into paragraph spans while preserving separators.
+    @param[in]  text Source text span.
+    @return     Ordered paragraph spans.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-28
+    @version    0.1.0
+    """
+    return [match.group(0) for match in re.finditer(r".+?(?:\n\s*\n+|$)", str(text), flags=re.DOTALL) if match.group(0)]
+
+
+def _ai_sentence_spans(text: str) -> list[str]:
+    """
+    @brief      Split text into sentence spans while preserving trailing whitespace.
+    @param[in]  text Source text span.
+    @return     Ordered sentence spans.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-28
+    @version    0.1.0
+    """
+    source_text = str(text)
+    sentence_end_pattern = r"[.!?;:。！？；：؟؛…]+[\"'”’»)\]]*(?:\s+|$)"
+    spans: list[str] = []
+    cursor = 0
+    for match in re.finditer(sentence_end_pattern, source_text):
+        spans.append(source_text[cursor : match.end()])
+        cursor = match.end()
+    if cursor < len(source_text):
+        spans.append(source_text[cursor:])
+    return [span for span in spans if span]
+
+
+def _ai_word_spans(text: str) -> list[str]:
+    """
+    @brief      Split text into whitespace-preserving word spans.
+    @param[in]  text Source text span.
+    @return     Ordered word spans.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-28
+    @version    0.1.0
+    """
+    return [match.group(0) for match in re.finditer(r"\S+\s*", str(text)) if match.group(0)]
+
+
+def _hard_split_text_for_ai_context_budget(text: str, text_budget_tokens: int) -> list[str]:
+    """
+    @brief      Split text by characters when no semantic boundary fits the AI input budget.
+    @param[in]  text Source text span.
+    @param[in]  text_budget_tokens Maximum estimated input tokens for chunk text.
+    @return     Ordered text spans.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-28
+    @version    0.1.0
+    """
+    max_characters = max(1, int(text_budget_tokens) * 4)
+    return [str(text)[index : index + max_characters] for index in range(0, len(str(text)), max_characters)]
+
+
+def _estimate_text_tokens(text: str) -> int:
+    """
+    @brief      Estimate token usage for local budget checks.
+    @param[in]  text Value for `text`.
+    @return     Estimated token count.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-28
+    @version    0.1.0
+    """
+    return max(1, len(text) // 4)
 
 
 def _normalize_chunk_blocks(
@@ -1924,6 +2215,7 @@ def _rebuild_report(
     processed_chunk_count: int,
     warning_records: list[dict[str, object]],
     token_usage: dict[str, object],
+    budget_metadata: BudgetMetadataPayload | None = None,
     updated_at: str | None = None,
 ) -> SpeechBlocksReportPayload:
     """
@@ -1936,12 +2228,13 @@ def _rebuild_report(
     @param[in]  processed_chunk_count Number of processed chunks.
     @param[in]  warning_records Current warning entry list.
     @param[in]  token_usage Current cumulative token-usage payload.
+    @param[in]  budget_metadata Optional context-budget metadata.
     @param[in]  updated_at Optional report timestamp override.
     @return     Rebuilt Speech Blocks report payload.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.2.0
+    @version    0.3.0
     """
     _ = warning_records
     approved_block_count = _approved_block_count(speech_blocks)
@@ -1957,7 +2250,7 @@ def _rebuild_report(
         stage_status = SPEECH_BLOCKS_STAGE_IN_PROGRESS
     else:
         stage_status = SPEECH_BLOCKS_STAGE_NOT_STARTED
-    return {
+    report_payload: SpeechBlocksReportPayload = {
         "source_language": source_language,
         "source_kind": source_kind,
         "ai_profile_id": profile_id,
@@ -1972,6 +2265,9 @@ def _rebuild_report(
         "updated_at": updated_at or _utc_now_iso(),
         "token_usage": token_usage_service.coerce_token_usage(token_usage),
     }
+    if budget_metadata is not None:
+        report_payload["budget_metadata"] = dict(budget_metadata)
+    return report_payload
 
 
 def _approved_block_count(speech_blocks: list[SpeechBlockPayload]) -> int:
@@ -2027,6 +2323,7 @@ def _build_operation_state(
     log_path: Path,
     token_usage: dict[str, object],
     next_chunk_index: int | None,
+    budget_metadata: BudgetMetadataPayload | None = None,
 ) -> OperationStatePayload:
     """
     @brief      Build one persisted Speech Blocks operation-state payload.
@@ -2044,11 +2341,12 @@ def _build_operation_state(
     @param[in]  log_path Operation-local AI transaction log path.
     @param[in]  token_usage Current cumulative token-usage payload.
     @param[in]  next_chunk_index Next chunk index to process or `None`.
+    @param[in]  budget_metadata Optional context-budget metadata.
     @return     Persisted operation-state payload.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.2.0
+    @version    0.3.0
     """
     _ = warning_records
     input_path = _source_chunks_input_path(project_root, source_kind)
@@ -2056,6 +2354,40 @@ def _build_operation_state(
     report_path = build_operation_output_path(project_root, "speech_blocks", config.SPEECH_BLOCKS_REPORT_FILE_NAME)
     processed_chunk_count = len({str(block.get("chunk_id", "")).strip() for block in speech_blocks})
     warning_entries = _warning_records_from_blocks(speech_blocks)
+    metadata_payload: dict[str, object] = {
+        "source_language": source_language,
+        "source_kind": source_kind,
+        "ai_profile_id": profile_id,
+        "processed_chunk_count": processed_chunk_count,
+        "total_chunk_count": len(source_chunks),
+        "speech_block_count": len(speech_blocks),
+        "approved_block_count": _approved_block_count(speech_blocks),
+        "total_block_count": len(speech_blocks),
+        "warnings": warning_entries,
+        "source_snapshot_fingerprint": input_fingerprint,
+        "source_chunks": [
+            {
+                "chunk_id": str(chunk.get("chunk_id", "")),
+                "sequence_index": int(chunk.get("sequence_index", 0)),
+                "text": str(chunk.get("text", "")),
+            }
+            for chunk in source_chunks
+        ],
+        "log_relative_path": relative_to_project(project_root, log_path),
+        "token_usage": token_usage_service.coerce_token_usage(token_usage),
+    }
+    if budget_metadata is not None:
+        metadata_payload["budget_metadata"] = dict(budget_metadata)
+    resume_checkpoint = None
+    if next_chunk_index is not None:
+        resume_checkpoint = {
+            "next_chunk_index": next_chunk_index,
+            "source_snapshot_fingerprint": input_fingerprint,
+            "source_language": source_language,
+            "ai_profile_id": profile_id,
+        }
+        if budget_metadata is not None:
+            resume_checkpoint["budget_metadata"] = dict(budget_metadata)
     return {
         "folder_relative_path": config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH,
         "status": status,
@@ -2072,38 +2404,8 @@ def _build_operation_state(
         "completed_at": completed_at,
         "updated_at": _utc_now_iso(),
         "warning_count": len(warning_entries),
-        "metadata": {
-            "source_language": source_language,
-            "source_kind": source_kind,
-            "ai_profile_id": profile_id,
-            "processed_chunk_count": processed_chunk_count,
-            "total_chunk_count": len(source_chunks),
-            "speech_block_count": len(speech_blocks),
-            "approved_block_count": _approved_block_count(speech_blocks),
-            "total_block_count": len(speech_blocks),
-            "warnings": warning_entries,
-            "source_snapshot_fingerprint": input_fingerprint,
-            "source_chunks": [
-                {
-                    "chunk_id": str(chunk.get("chunk_id", "")),
-                    "sequence_index": int(chunk.get("sequence_index", 0)),
-                    "text": str(chunk.get("text", "")),
-                }
-                for chunk in source_chunks
-            ],
-            "log_relative_path": relative_to_project(project_root, log_path),
-            "token_usage": token_usage_service.coerce_token_usage(token_usage),
-        },
-        "resume_checkpoint": (
-            None
-            if next_chunk_index is None
-            else {
-                "next_chunk_index": next_chunk_index,
-                "source_snapshot_fingerprint": input_fingerprint,
-                "source_language": source_language,
-                "ai_profile_id": profile_id,
-            }
-        ),
+        "metadata": metadata_payload,
+        "resume_checkpoint": resume_checkpoint,
     }
 
 
@@ -2166,6 +2468,7 @@ def _persist_report_update(
     source_kind = str(report.get("source_kind", metadata.get("source_kind", ""))).strip()
     profile_id = str(report.get("ai_profile_id", metadata.get("ai_profile_id", ""))).strip()
     token_usage = token_usage_service.restore_token_usage(report.get("token_usage"), metadata.get("token_usage"))
+    budget_metadata = _restore_persisted_budget_metadata(report, operation_state)
     input_fingerprint = str(metadata.get("source_snapshot_fingerprint", "")).strip()
     if not input_fingerprint and source_chunks and source_language and source_kind:
         input_fingerprint = _build_source_fingerprint(source_chunks, source_language, source_kind)
@@ -2185,6 +2488,7 @@ def _persist_report_update(
         len({str(block.get("chunk_id", "")).strip() for block in renumbered_blocks}),
         [],
         token_usage,
+        budget_metadata,
     )
     status = (
         "completed"
@@ -2211,6 +2515,7 @@ def _persist_report_update(
             log_path=log_path,
             token_usage=token_usage,
             next_chunk_index=None,
+            budget_metadata=budget_metadata,
         ),
     )
     return updated_report
@@ -2250,6 +2555,32 @@ def _renumber_speech_blocks(
         renumbered_block["sequence_index"] = sequence_index
         renumbered_block.pop("chunk_sequence_index", None)
         renumbered_block["speech_block_id"] = _speech_block_id(chunk_id, sequence_index)
+        renumbered_blocks.append(renumbered_block)
+    return renumbered_blocks
+
+
+def _renumber_single_chunk_blocks(
+    chunk_id: str,
+    speech_blocks: list[SpeechBlockPayload],
+) -> list[SpeechBlockPayload]:
+    """
+    @brief      Recompute block order for one chunk while preserving current list order.
+    @param[in]  chunk_id Source chunk identifier.
+    @param[in]  speech_blocks Current Speech Blocks payload list for the chunk.
+    @return     Renumbered Speech Blocks payload list.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-28
+    @version    0.1.0
+    """
+    normalized_chunk_id = str(chunk_id).strip()
+    renumbered_blocks: list[SpeechBlockPayload] = []
+    for sequence_index, block in enumerate(speech_blocks, start=1):
+        renumbered_block = dict(block)
+        renumbered_block["sequence_index"] = sequence_index
+        renumbered_block.pop("chunk_sequence_index", None)
+        renumbered_block["chunk_id"] = normalized_chunk_id
+        renumbered_block["speech_block_id"] = _speech_block_id(normalized_chunk_id, sequence_index)
         renumbered_blocks.append(renumbered_block)
     return renumbered_blocks
 
@@ -2395,6 +2726,7 @@ def _restore_resume_state(
     input_fingerprint: str,
     profile_id: str,
     source_language: str,
+    budget_metadata: BudgetMetadataPayload,
 ) -> tuple[list[SpeechBlockPayload], list[dict[str, object]], int]:
     """
     @brief      Restore resumable Speech Blocks state when the persisted checkpoint is still valid.
@@ -2403,11 +2735,12 @@ def _restore_resume_state(
     @param[in]  input_fingerprint Current source snapshot fingerprint.
     @param[in]  profile_id Active AI profile identifier.
     @param[in]  source_language Active source language code.
+    @param[in]  budget_metadata Current context-budget metadata.
     @return     Existing blocks, warning entries, and the next chunk index.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.1.0
+    @version    0.2.0
     """
     if not isinstance(existing_state, dict):
         return [], [], 0
@@ -2422,6 +2755,8 @@ def _restore_resume_state(
     if str(metadata.get("ai_profile_id", "")).strip() != profile_id:
         return [], [], 0
     if str(metadata.get("source_language", "")).strip() != source_language:
+        return [], [], 0
+    if dict(resume_checkpoint.get("budget_metadata") or {}) != dict(budget_metadata):
         return [], [], 0
     next_chunk_index = int(resume_checkpoint.get("next_chunk_index", 0))
     warnings = metadata.get("warnings", [])
@@ -2523,6 +2858,32 @@ def _metadata_token_usage(existing_state: dict[str, object]) -> dict[str, object
         return None
     payload = metadata.get("token_usage")
     return payload if isinstance(payload, dict) else None
+
+
+def _restore_persisted_budget_metadata(
+    report: dict[str, object] | None,
+    operation_state: dict[str, object] | None,
+) -> BudgetMetadataPayload | None:
+    """
+    @brief      Restore optional Speech Blocks context-budget metadata from persisted artifacts.
+    @param[in]  report Persisted Speech Blocks report payload.
+    @param[in]  operation_state Persisted Speech Blocks operation-state payload.
+    @return     Restored budget metadata or `None`.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-28
+    @version    0.1.0
+    """
+    if isinstance(report, dict):
+        report_budget = report.get("budget_metadata")
+        if isinstance(report_budget, dict):
+            return {str(key): int(value) for key, value in report_budget.items()}
+    metadata = operation_state.get("metadata", {}) if isinstance(operation_state, dict) else {}
+    if isinstance(metadata, dict):
+        state_budget = metadata.get("budget_metadata")
+        if isinstance(state_budget, dict):
+            return {str(key): int(value) for key, value in state_budget.items()}
+    return None
 
 
 def _emit_progress(

@@ -8,6 +8,34 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
 
 All notable changes to this project will be documented in this file.
 
+## [1.1.0] - 2026-04-28
+
+### Changed
+
+- changed AI-assisted cleanup to persist context-budget metadata and validate
+  resume checkpoints against the selected model context window, max output
+  tokens, prompt budget, and conservative safety margin
+- changed AI-assisted chunking to size paragraph request windows from the
+  selected model context window, max output tokens, prompt budget, and
+  conservative safety margin instead of fixed paragraph counts, with larger
+  strategy-specific paragraph caps and budget-aware resume validation
+- changed AI translation source segmentation to use the selected model context
+  window, max output tokens, prompt budget, and conservative safety margin,
+  while persisting budget metadata in translation report and state files
+- changed AI-assisted character discovery to use budget-aware chunk windows,
+  persist budget metadata in report and state files, validate resume
+  checkpoints against model budget settings, and trim synthesis evidence
+  payloads before final character-profile generation
+- changed AI-assisted Speech Blocks generation and selected-chunk re-splitting
+  to size model requests from the selected profile context window, max output
+  tokens, prompt budget, and conservative safety margin, split oversized source
+  chunks before AI dispatch, persist budget metadata in Speech Blocks report and
+  state files, and validate resume checkpoints against that metadata
+- reduced the first-pass AI character-discovery JSON schema so the window
+  extraction step returns compact speaking-character candidates and evidence,
+  leaving rich voice-profile synthesis to the final per-character pass
+- package version updated to `1.1.0`
+
 ## [1.0.0] - 2026-04-27
 
 ### Changed

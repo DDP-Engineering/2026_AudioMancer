@@ -15,7 +15,7 @@
          chunk-based generation, and narrator-only segmentation.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-24
-@version 0.7.5
+@version 0.8.0
 """
 
 # IMPORTS
@@ -219,6 +219,149 @@ def test_start_or_continue_generation_creates_artifacts_and_normalizes_blocks(mo
     assert report["token_usage"]["total_tokens"] == 45
     assert report["approved_block_count"] == 0
     assert report["total_block_count"] == 4
+    assert report["budget_metadata"]["context_window"] == 4096
+    assert report["budget_metadata"]["max_output_tokens"] == 512
+    state = speech_blocks_service.load_operation_state(project_root)
+    assert state is not None
+    assert state["metadata"]["budget_metadata"] == report["budget_metadata"]
+
+
+def test_start_generation_splits_oversized_chunk_by_ai_context_budget(monkeypatch, tmp_path) -> None:
+    """
+    @brief      Verify long chunks are split into multiple AI requests using the selected profile context budget.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-28
+    @version    0.1.0
+    """
+    project_root, manifest = _create_chunked_project(tmp_path, "SpeechBlocksBudgetSplit")
+    manifest["original_language"] = "en"
+    project_workspace_service.save_manifest(manifest, project_root)
+    character_voices_service.save_selected_voice_language(project_root, "en")
+    long_chunk_text = " ".join(f"Sentence {index}." for index in range(1, 700))
+    _write_source_chunks(project_root, [{"chunk_id": "chunk-0001", "sequence_index": 1, "text": long_chunk_text}])
+    monkeypatch.setattr(speech_blocks_service.prompt_template_service, "validate_required_prompts", lambda _names: None)
+
+    def _fake_render_prompt(_name, variables):
+        if "chunk_text" not in variables:
+            return "system prompt"
+        return f"Chunk id: {variables['chunk_id']}\nChunk text:\n{variables['chunk_text']}"
+
+    monkeypatch.setattr(speech_blocks_service.prompt_template_service, "render_prompt", _fake_render_prompt)
+    requested_segments: list[str] = []
+
+    def _fake_chat_json(_profile, _system_prompt, user_prompt, **_kwargs):
+        segment_text = str(user_prompt).split("Chunk text:\n", maxsplit=1)[1]
+        requested_segments.append(segment_text)
+        return {
+            "payload": {
+                "speech_blocks": [
+                    {
+                        "speaker_id": "narrator",
+                        "content_kind": "narration",
+                        "source_text": segment_text,
+                        "text": segment_text.strip(),
+                        "warning_flags": [],
+                    }
+                ]
+            },
+            "usage": {"input_tokens": 10, "output_tokens": 5, "total_tokens": 15, "usage_available": True},
+        }
+
+    monkeypatch.setattr(speech_blocks_service.llm_provider_service, "chat_json", _fake_chat_json)
+    profile_payload = {**_profile_payload(), "context_window": 2048, "max_output_tokens": 512}
+
+    report = speech_blocks_service.start_or_continue_generation(project_root, manifest, profile_payload)
+
+    assert len(requested_segments) > 1
+    assert "".join(requested_segments) == long_chunk_text
+    speech_blocks = speech_blocks_service.load_speech_blocks(project_root)
+    assert [block["speech_block_id"] for block in speech_blocks] == [
+        f"0001-{index:06d}" for index in range(1, len(speech_blocks) + 1)
+    ]
+    assert report["budget_metadata"]["text_budget_tokens"] < speech_blocks_service._estimate_text_tokens(  # noqa: SLF001
+        long_chunk_text
+    )
+
+
+def test_start_generation_rejects_profile_with_too_little_ai_context(monkeypatch, tmp_path) -> None:
+    """
+    @brief      Verify Speech Blocks fails early when context and output budgets leave too little source input room.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-28
+    @version    0.1.0
+    """
+    project_root, manifest = _create_chunked_project(tmp_path, "SpeechBlocksTinyBudget")
+    manifest["original_language"] = "en"
+    project_workspace_service.save_manifest(manifest, project_root)
+    character_voices_service.save_selected_voice_language(project_root, "en")
+    monkeypatch.setattr(speech_blocks_service.prompt_template_service, "validate_required_prompts", lambda _names: None)
+    monkeypatch.setattr(
+        speech_blocks_service.prompt_template_service,
+        "render_prompt",
+        lambda _name, variables: f"prompt {variables}",
+    )
+    profile_payload = {**_profile_payload(), "context_window": 1024, "max_output_tokens": 900}
+
+    with pytest.raises(ValueError, match="too little room for source chunk input"):
+        speech_blocks_service.start_or_continue_generation(project_root, manifest, profile_payload)
+
+
+def test_speech_blocks_resume_rejects_changed_budget_metadata(tmp_path) -> None:
+    """
+    @brief      Verify Speech Blocks resume requires matching context-budget metadata.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-28
+    @version    0.1.0
+    """
+    project_root, manifest = _create_chunked_project(tmp_path, "SpeechBlocksBudgetResume")
+    source_resolution = speech_blocks_service.resolve_source_chunks(project_root, manifest)
+    source_chunks = list(source_resolution["source_chunks"])
+    input_fingerprint = speech_blocks_service._build_source_fingerprint(source_chunks, "en", "original")  # noqa: SLF001
+    current_budget = {
+        "context_window": 4096,
+        "max_output_tokens": 512,
+        "prompt_budget_tokens": 40,
+        "text_budget_tokens": 2000,
+        "safety_margin_tokens": 409,
+    }
+    previous_budget = {**current_budget, "max_output_tokens": 1024}
+
+    restored = speech_blocks_service._restore_resume_state(  # noqa: SLF001
+        project_root,
+        {
+            "status": "running",
+            "metadata": {
+                "source_snapshot_fingerprint": input_fingerprint,
+                "ai_profile_id": "profile-1",
+                "source_language": "en",
+                "warnings": [],
+            },
+            "resume_checkpoint": {
+                "next_chunk_index": 1,
+                "source_snapshot_fingerprint": input_fingerprint,
+                "source_language": "en",
+                "ai_profile_id": "profile-1",
+                "budget_metadata": previous_budget,
+            },
+        },
+        input_fingerprint,
+        "profile-1",
+        "en",
+        current_budget,
+    )
+
+    assert restored == ([], [], 0)
 
 
 def test_load_speech_blocks_rejects_legacy_global_sequence_schema(tmp_path) -> None:
@@ -970,6 +1113,12 @@ def test_start_or_continue_generation_resumes_from_next_chunk(monkeypatch, tmp_p
     manifest["original_language"] = "en"
     project_workspace_service.save_manifest(manifest, project_root)
     character_voices_service.save_selected_voice_language(project_root, "en")
+    monkeypatch.setattr(speech_blocks_service.prompt_template_service, "validate_required_prompts", lambda _names: None)
+    monkeypatch.setattr(
+        speech_blocks_service.prompt_template_service,
+        "render_prompt",
+        lambda _name, variables: f"prompt {variables}",
+    )
     source_resolution = speech_blocks_service.resolve_source_chunks(project_root, manifest)
     existing_blocks = [
         {
@@ -987,6 +1136,15 @@ def test_start_or_continue_generation_resumes_from_next_chunk(monkeypatch, tmp_p
         }
     ]
     fingerprint = speech_blocks_service._build_source_fingerprint(source_resolution["source_chunks"], "en", "original")  # noqa: SLF001
+    budget_metadata = speech_blocks_service._build_budget_metadata(  # noqa: SLF001
+        _profile_payload(),
+        "prompt {}",
+        "speech_blocks_user",
+        "en",
+        speech_blocks_service._speaker_catalog([]),  # noqa: SLF001
+        config.DEFAULT_TTS_VOICE_ASSIGNMENT_MODE,
+        speech_blocks_service._resolve_narrator_only_budget(None),  # noqa: SLF001
+    )
     report = speech_blocks_service._rebuild_report(  # noqa: SLF001
         existing_blocks,
         "en",
@@ -996,6 +1154,7 @@ def test_start_or_continue_generation_resumes_from_next_chunk(monkeypatch, tmp_p
         1,
         [],
         {"input_tokens": 5, "output_tokens": 2, "total_tokens": 7, "usage_available": True},
+        budget_metadata,
     )
     speech_blocks_service._persist_state(  # noqa: SLF001
         project_root,
@@ -1017,13 +1176,8 @@ def test_start_or_continue_generation_resumes_from_next_chunk(monkeypatch, tmp_p
             log_path=project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / "log_ai_transactions_resume.log",
             token_usage={"input_tokens": 5, "output_tokens": 2, "total_tokens": 7, "usage_available": True},
             next_chunk_index=1,
+            budget_metadata=budget_metadata,
         ),
-    )
-    monkeypatch.setattr(speech_blocks_service.prompt_template_service, "validate_required_prompts", lambda _names: None)
-    monkeypatch.setattr(
-        speech_blocks_service.prompt_template_service,
-        "render_prompt",
-        lambda _name, variables: f"prompt {variables}",
     )
     calls: list[str] = []
     monkeypatch.setattr(
@@ -1523,6 +1677,39 @@ def _create_chunked_project(tmp_path, name: str):
         encoding="utf-8",
     )
     return project_root, project_workspace_service.load_manifest(project_root)
+
+
+def _write_source_chunks(project_root, source_chunks: list[dict[str, object]]) -> None:
+    """
+    @brief      Overwrite the test chunking artifact with custom source chunks.
+    @param[in]  project_root Active project root folder.
+    @param[in]  source_chunks Source chunk payload list.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-28
+    @version    0.1.0
+    """
+    chunk_payload = []
+    for chunk in source_chunks:
+        sequence_index = int(chunk.get("sequence_index", len(chunk_payload) + 1))
+        chunk_payload.append(
+            {
+                "chunk_id": str(chunk.get("chunk_id", f"chunk-{sequence_index:04d}")),
+                "sequence_index": sequence_index,
+                "chapter_label": "Chapter I",
+                "text": str(chunk.get("text", "")),
+                "source_start_line": sequence_index,
+                "source_end_line": sequence_index,
+                "chunking_mode": "deterministic",
+                "semantic_strategy": None,
+                "scene_note": None,
+            }
+        )
+    (project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.CHUNK_ARTIFACT_FILE_NAME).write_text(
+        json.dumps(chunk_payload, indent=2) + "\n",
+        encoding="utf-8",
+    )
 
 
 def _seed_review_speech_blocks(project_root) -> None:

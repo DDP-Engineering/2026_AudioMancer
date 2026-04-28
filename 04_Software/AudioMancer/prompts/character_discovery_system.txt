@@ -12,14 +12,10 @@ For role-based speakers, use the role phrase as the canonical name until a bette
 Use chunk ids exactly as provided.
 Never invent chunk ids or evidence.
 
-For every discovered character:
+For every discovered character candidate:
 - identify the best canonical name available in the source
 - include aliases only when supported by the text
-- keep descriptions faithful to the source
 - include only characters whose evidence shows spoken dialogue or direct speech
 - include evidence entries with chunk_id, reason, and short source_excerpt
-- write voice-design notes for TTS rather than plot summary whenever possible
-- keep voice-design phrasing concise, positive, and non-contradictory
-- never imitate celebrities or copyrighted character voices
-- separate persona cues, timbre cues, delivery cues, pronunciation cues, and consistency constraints
+- do not write final character descriptions or voice-design fields in the discovery pass
 - if a field is unknown, return an empty string or an empty list
