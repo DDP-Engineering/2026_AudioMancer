@@ -76,6 +76,20 @@ copy_prompt_templates() {
     cp -a "${prompt_source_path}" "${target_dir}/prompts"
 }
 
+copy_app_icons() {
+    local target_dir="$1"
+    local icon_source_path="${APP_ROOT}/src/audiomancer/assets/icons/audiomancer_icon.png"
+    local icon_target_dir="${target_dir}/assets/icons"
+
+    if [[ ! -f "${icon_source_path}" ]]; then
+        echo "Required app icon is missing: ${icon_source_path}" >&2
+        exit 1
+    fi
+
+    mkdir -p "${icon_target_dir}"
+    cp -- "${icon_source_path}" "${icon_target_dir}/audiomancer_icon.png"
+}
+
 create_zip_archive() {
     local source_dir="$1"
     local archive_path="$2"
@@ -138,6 +152,7 @@ invoke_step "Build Ubuntu bundle with PyInstaller" \
         --name AudioMancer \
         --windowed \
         --paths "${APP_ROOT}/src" \
+        --add-data "${APP_ROOT}/src/audiomancer/assets/icons:audiomancer/assets/icons" \
         --distpath "${DIST_PATH}" \
         --workpath "${BUILD_PATH}" \
         --specpath "${STAGING_ROOT}" \
@@ -154,6 +169,7 @@ cp -a "${DIST_BUNDLE_PATH}/." "${STAGING_PATH}/"
 copy_required_root_files "${STAGING_PATH}"
 copy_user_guide "${STAGING_PATH}"
 copy_prompt_templates "${STAGING_PATH}"
+copy_app_icons "${STAGING_PATH}"
 
 cat >"${STAGING_PATH}/start-audiomancer.sh" <<'SH'
 #!/usr/bin/env bash
@@ -163,6 +179,17 @@ exec "./AudioMancer" "$@"
 SH
 chmod +x "${STAGING_PATH}/start-audiomancer.sh"
 
+cat >"${STAGING_PATH}/AudioMancer.desktop" <<'DESKTOP'
+[Desktop Entry]
+Type=Application
+Name=AudioMancer
+Comment=AudioMancer audiobook production application
+Exec=./start-audiomancer.sh
+Icon=./assets/icons/audiomancer_icon.png
+Terminal=false
+Categories=AudioVideo;Audio;Utility;
+DESKTOP
+
 cat >"${STAGING_PATH}/README_RELEASE.txt" <<EOF
 AudioMancer Ubuntu x64 v${APP_VERSION}
 
@@ -171,6 +198,8 @@ This folder is a portable AudioMancer release.
 Start:
 - Run ./AudioMancer, or
 - Run ./start-audiomancer.sh.
+- On Linux desktops that support portable launchers, use AudioMancer.desktop
+  after marking it trusted/executable if required by the desktop environment.
 
 Install:
 - Extract the full zip folder before starting the app.
@@ -180,6 +209,7 @@ Install:
 
 Configuration and licenses are included next to the executable.
 Prompt templates are included in prompts/.
+The app icon is included in assets/icons/.
 Offline help is included in help/en/index.html and help/ro/index.html.
 EOF
 

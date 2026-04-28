@@ -34,6 +34,8 @@ All notable changes to this project will be documented in this file.
 - reduced the first-pass AI character-discovery JSON schema so the window
   extraction step returns compact speaking-character candidates and evidence,
   leaving rich voice-profile synthesis to the final per-character pass
+- fixed delivery packaging so Windows embeds and bundles the AudioMancer icon,
+  while Ubuntu archives include the icon asset plus a portable desktop launcher
 - package version updated to `1.1.0`
 
 ## [1.0.0] - 2026-04-27

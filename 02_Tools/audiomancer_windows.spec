@@ -11,12 +11,14 @@ SPEC_ROOT = Path.cwd()
 SOURCE_ROOT = SPEC_ROOT / "src"
 TOOLS_ROOT = SPEC_ROOT.parents[1] / "02_Tools"
 ENTRYPOINT_PATH = TOOLS_ROOT / "audiomancer_windows_entry.py"
+ICON_PATH = SOURCE_ROOT / "audiomancer" / "assets" / "icons" / "audiomancer.ico"
+ICON_ASSET_ROOT = SOURCE_ROOT / "audiomancer" / "assets" / "icons"
 
 analysis = Analysis(
     [str(ENTRYPOINT_PATH)],
     pathex=[str(SOURCE_ROOT)],
     binaries=[],
-    datas=[],
+    datas=[(str(ICON_ASSET_ROOT), "audiomancer/assets/icons")],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},
@@ -39,6 +41,7 @@ exe = EXE(
     strip=False,
     upx=True,
     console=False,
+    icon=str(ICON_PATH),
 )
 
 coll = COLLECT(
