@@ -16,12 +16,11 @@
          `80_audio_blocks` workflow artifacts.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-23
-@version 0.8.1
+@version 0.8.3
 """
 
 # IMPORTS
 
-from datetime import UTC, datetime
 import hashlib
 import io
 import json
@@ -41,11 +40,21 @@ from audiomancer.services import (
 from audiomancer.services.logging_service import get_component_logger, trace_function
 from audiomancer.services.operation_runtime_service import (
     build_operation_output_path,
-    progress_percent,
+    load_operation_state_payload,
+    load_optional_json_artifact,
     raise_if_cancelled,
     relative_to_project,
     resolve_operation_path,
+    write_operation_json_artifact,
 )
+from audiomancer.services.operation_runtime_service import (
+    emit_progress_update as _emit_progress,
+)
+from audiomancer.services.operation_runtime_service import (
+    optional_string as _optional_string,
+)
+from audiomancer.services.persistence_service import write_json_atomic
+from audiomancer.services.time_service import utc_now_iso as _utc_now_iso
 
 # CONSTANTS
 
@@ -84,12 +93,9 @@ def load_operation_state(project_root: str | Path) -> OperationStatePayload | No
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-23
-    @version    0.1.0
+    @version    0.2.0
     """
-    state_path = resolve_operation_path(project_root, "audio_blocks", config.AUDIO_BLOCKS_STATE_FILE_NAME)
-    if not state_path.is_file():
-        return None
-    return dict(json.loads(state_path.read_text(encoding="utf-8")))
+    return load_operation_state_payload(project_root, "audio_blocks", config.AUDIO_BLOCKS_STATE_FILE_NAME)
 
 
 @trace_function(_AUDIO_BLOCKS_LOGGER)
@@ -101,12 +107,13 @@ def load_audio_blocks_report(project_root: str | Path) -> AudioBlocksReportPaylo
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-23
-    @version    0.1.0
+    @version    0.2.0
     """
     report_path = resolve_operation_path(project_root, "audio_blocks", config.AUDIO_BLOCKS_REPORT_FILE_NAME)
-    if not report_path.is_file():
+    payload = load_optional_json_artifact(report_path)
+    if payload is None:
         return None
-    return dict(json.loads(report_path.read_text(encoding="utf-8")))
+    return dict(payload)
 
 
 @trace_function(_AUDIO_BLOCKS_LOGGER)
@@ -118,12 +125,10 @@ def load_audio_blocks(project_root: str | Path) -> list[AudioBlockPayload]:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-23
-    @version    0.2.0
+    @version    0.3.0
     """
     output_path = resolve_operation_path(project_root, "audio_blocks", config.AUDIO_BLOCKS_OUTPUT_FILE_NAME)
-    if not output_path.is_file():
-        return []
-    payload = json.loads(output_path.read_text(encoding="utf-8"))
+    payload = load_optional_json_artifact(output_path)
     if not isinstance(payload, list):
         return []
     return speech_blocks_service.sort_speech_blocks(
@@ -140,16 +145,14 @@ def load_voice_clone_profiles(project_root: str | Path) -> list[VoiceCloneProfil
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-23
-    @version    0.4.0
+    @version    0.5.0
     """
     clone_path = resolve_operation_path(
         project_root,
         "audio_blocks",
         config.AUDIO_BLOCKS_VOICE_CLONE_PROFILES_FILE_NAME,
     )
-    if not clone_path.is_file():
-        return []
-    payload = json.loads(clone_path.read_text(encoding="utf-8"))
+    payload = load_optional_json_artifact(clone_path)
     if not isinstance(payload, list):
         return []
     return [_normalize_voice_clone_profile(item) for item in payload if isinstance(item, dict)]
@@ -1511,7 +1514,7 @@ def _generate_audio_block(
     @exception  OperationCancelledError Raised when cancellation is requested.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-24
-    @version    0.4.1
+    @version    0.4.2
     """
     base_url = str(runtime_settings.get("base_url", "")).strip()
     runtime_api_key = str(runtime_settings.get("runtime_api_key", ""))
@@ -1610,7 +1613,7 @@ def _generate_audio_block(
         "generation_fingerprint": _build_audio_block_fingerprint(audio_block, generation_context),
         "split_plan_fingerprint": _split_plan_fingerprint(split_plan),
     }
-    metadata_path.write_text(json.dumps(metadata_payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    write_json_atomic(metadata_path, metadata_payload)
     return {
         **dict(audio_block),
         "audio_relative_path": relative_to_project(project_root, audio_path),
@@ -1640,7 +1643,7 @@ def _plan_audio_block_splits(text: str, generation_context: dict[str, object]) -
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-24
-    @version    0.1.0
+    @version    0.1.1
     """
     normalized_text = _normalize_split_text(text)
     if not normalized_text:
@@ -1976,10 +1979,7 @@ def _remap_audio_block_artifacts(
                 if new_metadata_path.is_file():
                     new_metadata_path.unlink()
                 old_metadata_path.unlink()
-            new_metadata_path.write_text(
-                json.dumps(metadata_payload, indent=2, ensure_ascii=False) + "\n",
-                encoding="utf-8",
-            )
+            write_json_atomic(new_metadata_path, metadata_payload)
             remapped_block["metadata_relative_path"] = relative_to_project(project_root, new_metadata_path)
     return remapped_block
 
@@ -2625,28 +2625,22 @@ def _persist_state(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-23
-    @version    0.1.0
+    @version    0.2.0
     """
     _ = speech_blocks
-    build_operation_output_path(project_root, "audio_blocks", config.AUDIO_BLOCKS_OUTPUT_FILE_NAME).write_text(
-        json.dumps(audio_blocks, indent=2, ensure_ascii=False) + "\n",
-        encoding="utf-8",
-    )
-    build_operation_output_path(
+    write_operation_json_artifact(project_root, "audio_blocks", config.AUDIO_BLOCKS_OUTPUT_FILE_NAME, audio_blocks)
+    write_operation_json_artifact(
         project_root,
         "audio_blocks",
         config.AUDIO_BLOCKS_VOICE_CLONE_PROFILES_FILE_NAME,
-    ).write_text(
-        json.dumps(clone_profiles, indent=2, ensure_ascii=False) + "\n",
-        encoding="utf-8",
+        clone_profiles,
     )
-    build_operation_output_path(project_root, "audio_blocks", config.AUDIO_BLOCKS_REPORT_FILE_NAME).write_text(
-        json.dumps(report, indent=2, ensure_ascii=False) + "\n",
-        encoding="utf-8",
-    )
-    build_operation_output_path(project_root, "audio_blocks", config.AUDIO_BLOCKS_STATE_FILE_NAME).write_text(
-        json.dumps(operation_state, indent=2, ensure_ascii=False) + "\n",
-        encoding="utf-8",
+    write_operation_json_artifact(project_root, "audio_blocks", config.AUDIO_BLOCKS_REPORT_FILE_NAME, report)
+    write_operation_json_artifact(
+        project_root,
+        "audio_blocks",
+        config.AUDIO_BLOCKS_STATE_FILE_NAME,
+        operation_state,
     )
 
 
@@ -3058,23 +3052,6 @@ def _active_model_id_from_status(status_payload: dict[str, object]) -> str | Non
     return resolved_model_id or None
 
 
-def _emit_progress(progress_callback, current: int, total: int, message: str) -> None:
-    """
-    @brief      Emit one Audio Blocks progress update.
-    @param[in]  progress_callback Optional progress callback.
-    @param[in]  current Completed generated-block count.
-    @param[in]  total Total speech-block count.
-    @param[in]  message Operator-facing progress text.
-    @return     None.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-23
-    @version    0.1.0
-    """
-    if callable(progress_callback):
-        progress_callback(current, total, progress_percent(current, total), message, None)
-
-
 def _resolve_started_at(existing_state: dict[str, object]) -> str:
     """
     @brief      Resolve the stable operation start timestamp for one Audio Blocks run.
@@ -3191,22 +3168,6 @@ def _normalize_warning_flags(value: object) -> list[str]:
     return normalized_flags
 
 
-def _optional_string(value: object) -> str | None:
-    """
-    @brief      Normalize one optional string payload field.
-    @param[in]  value Candidate optional value.
-    @return     Normalized string or `None`.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-23
-    @version    0.1.0
-    """
-    if value in (None, ""):
-        return None
-    normalized_value = str(value).strip()
-    return normalized_value or None
-
-
 def _optional_int(value: object, fallback: int) -> int:
     """
     @brief      Normalize one optional integer payload field.
@@ -3246,18 +3207,6 @@ def _first_model(
             if str(dict(model_entry).get("model_id", "")).strip() == normalized_preferred_id:
                 return dict(model_entry)
     return dict(model_entries[0])
-
-
-def _utc_now_iso() -> str:
-    """
-    @brief      Build one current UTC timestamp in stable ISO-8601 format.
-    @return     UTC timestamp string without microseconds.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-23
-    @version    0.1.0
-    """
-    return datetime.now(UTC).replace(microsecond=0).isoformat()
 
 
 # END OF FILE

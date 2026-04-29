@@ -14,12 +14,12 @@
          generation through root-level state and report artifacts.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-25
-@version 0.4.0
+@version 0.4.1
 """
 
 # IMPORTS
 
-from datetime import UTC, datetime
+from functools import partial
 import hashlib
 import json
 from pathlib import Path
@@ -35,15 +35,18 @@ from audiomancer.services import (
 from audiomancer.services.logging_service import get_component_logger, trace_function
 from audiomancer.services.operation_runtime_service import (
     build_operation_output_path,
-    progress_percent,
+    emit_progress_update,
+    load_operation_state_payload,
     raise_if_cancelled,
     relative_to_project,
     resolve_operation_path,
 )
+from audiomancer.services.time_service import utc_now_iso as _utc_now_iso
 
 # CONSTANTS
 
 _AUDIO_ASSEMBLY_LOGGER = get_component_logger("audio_assembly")
+_emit_progress = partial(emit_progress_update, include_token_usage=False)
 
 AUDIO_ASSEMBLY_STAGE_NOT_STARTED = "not_started"
 AUDIO_ASSEMBLY_STAGE_IN_PROGRESS = "in_progress"
@@ -166,12 +169,9 @@ def load_operation_state(project_root: str | Path) -> AudioAssemblyState | None:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.1.0
+    @version    0.2.0
     """
-    state_path = resolve_operation_path(project_root, "audio_assembly", config.AUDIO_ASSEMBLY_STATE_FILE_NAME)
-    if not state_path.is_file():
-        return None
-    return dict(json.loads(state_path.read_text(encoding="utf-8")))
+    return load_operation_state_payload(project_root, "audio_assembly", config.AUDIO_ASSEMBLY_STATE_FILE_NAME)
 
 
 @trace_function(_AUDIO_ASSEMBLY_LOGGER)
@@ -1173,32 +1173,6 @@ def _resolve_started_at(existing_state: dict[str, object]) -> str:
     """
     started_at = str(existing_state.get("started_at", "") or "").strip() if isinstance(existing_state, dict) else ""
     return started_at or _utc_now_iso()
-
-
-def _utc_now_iso() -> str:
-    return datetime.now(UTC).replace(microsecond=0).isoformat()
-
-
-def _emit_progress(progress_callback, progress_current: int, progress_total: int, message: str) -> None:
-    """
-    @brief      Emit one normalized progress update when a callback is available.
-    @param[in]  progress_callback Optional progress callback.
-    @param[in]  progress_current Current completed unit count.
-    @param[in]  progress_total Total planned unit count.
-    @param[in]  message Operator-facing progress message.
-    @return     None.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
-    """
-    if callable(progress_callback):
-        progress_callback(
-            progress_current,
-            progress_total,
-            progress_percent(progress_current, progress_total),
-            message,
-        )
 
 
 # END OF FILE

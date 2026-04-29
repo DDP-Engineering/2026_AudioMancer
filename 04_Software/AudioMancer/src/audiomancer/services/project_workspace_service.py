@@ -13,12 +13,12 @@
          using one minimal root-level `project.json` manifest contract.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-20
-@version    2.0.2
+@version    2.0.5
 """
 
 # IMPORTS
 
-from datetime import UTC, datetime
+from functools import partial
 import json
 from pathlib import Path
 from uuid import uuid4
@@ -26,16 +26,31 @@ from uuid import uuid4
 from audiomancer import config
 from audiomancer.services.logging_service import get_component_logger, trace_function
 from audiomancer.services.operation_runtime_service import (
+    load_project_json_artifact as _load_json_artifact,
+)
+from audiomancer.services.operation_runtime_service import (
+    optional_string as _shared_optional_string,
+)
+from audiomancer.services.operation_runtime_service import (
+    project_artifact_exists as _artifact_exists,
+)
+from audiomancer.services.operation_runtime_service import (
     project_relative_path_exists,
     resolve_project_relative_path,
     validate_project_relative_path,
 )
+from audiomancer.services.operation_runtime_service import (
+    project_text_artifact_has_content as _text_artifact_has_content,
+)
 from audiomancer.services.persistence_service import write_json_atomic
+from audiomancer.services.time_service import utc_now_iso as _utc_now_iso
 
 # CONSTANTS
 
 # @brief Component logger used by project workspace lifecycle helpers.
 _PROJECT_WORKSPACE_LOGGER = get_component_logger("project_workspace")
+# @brief Manifest optional strings preserve existing whitespace semantics.
+_optional_string = partial(_shared_optional_string, strip=False)
 # @brief Canonical project-manifest payload type persisted in `project.json`.
 ProjectManifestPayload = dict[str, object]
 # @brief Normalized project-open result payload returned by open helpers.
@@ -334,18 +349,6 @@ def repair_project(
 
 
 # HELPER FUNCTIONS
-
-
-def _utc_now_iso() -> str:
-    """
-    @brief      Build one current UTC timestamp in stable ISO-8601 format.
-    @return     UTC timestamp string without microseconds.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.2.0
-    """
-    return datetime.now(UTC).replace(microsecond=0).isoformat()
 
 
 @trace_function(_PROJECT_WORKSPACE_LOGGER)
@@ -1143,58 +1146,6 @@ def _record_field_change(changes: list[str], field_name: str, old_value: object,
     changes.append(f"{field_name}: {old_value} -> {new_value}")
 
 
-def _load_json_artifact(project_root: Path, file_name: str) -> object | None:
-    """
-    @brief      Load one optional root-level JSON artifact.
-    @param[in]  project_root Active project root folder.
-    @param[in]  file_name Artifact file name.
-    @return     Parsed JSON payload or `None`.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
-    """
-    path = project_root / file_name
-    if not path.is_file():
-        return None
-    try:
-        return json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
-        return None
-
-
-def _artifact_exists(project_root: Path, file_name: str) -> bool:
-    """
-    @brief      Return whether one root-level artifact exists.
-    @param[in]  project_root Active project root folder.
-    @param[in]  file_name Artifact file name.
-    @return     True when the artifact exists.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
-    """
-    return (project_root / file_name).exists()
-
-
-def _text_artifact_has_content(project_root: Path, file_name: str) -> bool:
-    """
-    @brief      Return whether one text artifact exists with non-empty content.
-    @param[in]  project_root Active project root folder.
-    @param[in]  file_name Artifact file name.
-    @return     True when the artifact is usable.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
-    """
-    path = project_root / file_name
-    try:
-        return path.is_file() and bool(path.read_text(encoding="utf-8").strip())
-    except OSError:
-        return False
-
-
 def _status_is_completed(payload: object) -> bool:
     """
     @brief      Return whether a parsed payload has `status == completed`.
@@ -1492,38 +1443,6 @@ def _first_unsupported_legacy_directory(project_root: Path) -> str | None:
     return None
 
 
-def _repair_stage_for_folder(folder_name: str, payload: dict[str, object]) -> str:
-    """
-    @brief      Resolve the stage token to keep after one folder-based repair.
-    @param[in]  folder_name Corrupted step folder name.
-    @param[in]  payload Parsed manifest payload.
-    @return     Conservatively trusted stage token that remains valid after repair.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.4.0
-    """
-    current_stage = str(payload.get("current_stage", config.DEFAULT_WORKFLOW_STAGE)).strip()
-    stage_before_folder = {
-        config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH: "project_created",
-        config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH: "source_selected",
-        config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH: "text_cleanup_ready",
-        config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH: "text_chunking_ready",
-        config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH: "translation_ready",
-        config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH: "character_discovery_ready",
-        config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH: "narrator_definition_ready",
-        config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH: "character_voices_ready",
-        config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH: "speech_blocks_ready",
-        config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH: "audio_blocks_ready",
-    }.get(folder_name)
-    if stage_before_folder is None:
-        return _derive_trustworthy_stage(payload)
-
-    if current_stage not in config.PROJECT_WORKFLOW_STAGES:
-        current_stage = _derive_trustworthy_stage(payload)
-    return min(current_stage, stage_before_folder, key=_stage_rank)
-
-
 def _is_invalid_current_stage(payload: dict[str, object]) -> bool:
     """
     @brief      Determine whether the manifest current stage is repairable metadata.
@@ -1558,20 +1477,6 @@ def _derive_consistent_stage(
     """
     _ = project_root
     return _derive_trustworthy_stage(payload)
-
-
-def _folders_to_reset_from(corrupted_step: str) -> tuple[str, ...]:
-    """
-    @brief      Build the ordered folder list to recreate from one corrupted step.
-    @param[in]  corrupted_step Corrupted step folder name.
-    @return     Tuple of affected folder names in reset order.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.4.0
-    """
-    _ = corrupted_step
-    return ()
 
 
 def _build_repaired_manifest(
@@ -1658,21 +1563,6 @@ def _stage_rank(stage_token: str) -> int:
     if stage_token not in config.PROJECT_WORKFLOW_STAGES:
         return -1
     return config.PROJECT_WORKFLOW_STAGES.index(stage_token)
-
-
-def _optional_string(value: object) -> str | None:
-    """
-    @brief      Normalize one optional string manifest field.
-    @param[in]  value Raw decoded JSON value.
-    @return     Normalized string or `None`.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.1.0
-    """
-    if value in (None, ""):
-        return None
-    return str(value)
 
 
 def _normalize_target_language(value: object) -> str:
@@ -2016,20 +1906,6 @@ def _allowed_operations_for_stage(current_stage: str) -> set[str]:
             "audio_assembly",
         }
     return set()
-
-
-def _folder_name_for_operation(operation_kind: str) -> str:
-    """
-    @brief      Map one operation token to its project folder name.
-    @param[in]  operation_kind Stable operation-kind token.
-    @return     Matching project-relative folder name.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.3.0
-    """
-    _ = operation_kind
-    return config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH
 
 
 # END OF FILE

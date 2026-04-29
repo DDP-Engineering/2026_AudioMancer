@@ -13,18 +13,18 @@
          workspace, and returns normalized source metadata for `project.json`.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-06
-@version 0.2.1
+@version 0.2.2
 """
 
 # IMPORTS
 
-from datetime import UTC, datetime
 from pathlib import Path
 import shutil
 
 from audiomancer import config
 from audiomancer.services.logging_service import get_component_logger, trace_function
 from audiomancer.services.operation_runtime_service import resolve_project_relative_path
+from audiomancer.services.time_service import utc_now_iso as _utc_now_iso
 
 # CONSTANTS
 
@@ -117,18 +117,6 @@ def _delete_previous_source_file(
         pass
     if previous_path.is_file():
         previous_path.unlink()
-
-
-def _utc_now_iso() -> str:
-    """
-    @brief      Build one current UTC timestamp in stable ISO-8601 format.
-    @return     UTC timestamp string without microseconds.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.1.0
-    """
-    return datetime.now(UTC).replace(microsecond=0).isoformat()
 
 
 def _build_unique_destination(destination_dir: Path, file_name: str) -> Path:

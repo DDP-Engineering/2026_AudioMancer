@@ -14,19 +14,20 @@
          for the Character Voices workflow.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-20
-@version 1.5.0
+@version 1.5.2
 """
 
 # IMPORTS
 
 from copy import deepcopy
-from datetime import UTC, datetime
 import json
 from pathlib import Path
 import re
 
 from audiomancer import config
 from audiomancer.services import narrator_definition_service, project_workspace_service, voiceweaver_runtime_service
+from audiomancer.services.operation_runtime_service import optional_string as _optional_string
+from audiomancer.services.time_service import utc_now_iso as _utc_now_iso
 
 # CONSTANTS
 
@@ -1150,21 +1151,6 @@ def _first_model(model_entries: list[dict[str, object]]) -> dict[str, object] | 
     return None if not model_entries else deepcopy(model_entries[0])
 
 
-def _optional_string(value: object) -> str | None:
-    """
-    @brief      Resolve the optional string.
-    @param[in]  value Candidate value.
-    @return     Helper result.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
-    """
-    if value in (None, ""):
-        return None
-    normalized_value = str(value).strip()
-    return normalized_value or None
-
-
 def _prefixed_text(prefix: str, value: object) -> str:
     """
     @brief      Execute the prefixed text helper.
@@ -1190,17 +1176,6 @@ def _write_json(path: Path, payload: object) -> None:
     @version    0.1.0
     """
     path.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
-
-
-def _utc_now_iso() -> str:
-    """
-    @brief      Execute the utc now iso helper.
-    @return     Helper result.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
-    """
-    return datetime.now(UTC).replace(microsecond=0).isoformat()
 
 
 # END OF FILE

@@ -14,11 +14,12 @@
          by the TTS Settings dialog and Narrator workflow.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-23
-@version 0.10.0
+@version 0.10.1
 """
 
 # IMPORTS
 
+from functools import partial
 import json
 import time
 from typing import Any
@@ -27,10 +28,12 @@ from urllib import error, parse, request
 from audiomancer import config
 from audiomancer.services.logging_service import get_component_logger, trace_function
 from audiomancer.services.operation_runtime_service import raise_if_cancelled
+from audiomancer.services.url_service import join_endpoint_url
 
 # CONSTANTS
 
 _VOICEWEAVER_RUNTIME_LOGGER = get_component_logger("voiceweaver_runtime")
+_endpoint_url = partial(join_endpoint_url, collapse_duplicate_version=True)
 
 VoiceWeaverModelPayload = dict[str, object]
 VoiceWeaverCapabilityMatrix = dict[str, object]
@@ -52,29 +55,6 @@ def _build_request_headers(runtime_api_key: str) -> dict[str, str]:
     if normalized_api_key:
         headers["Authorization"] = f"Bearer {normalized_api_key}"
     return headers
-
-
-def _endpoint_url(base_url: str, endpoint: str) -> str:
-    """
-    @brief      Join one REST endpoint to one runtime base URL.
-    @param[in]  base_url Operator-configured runtime base URL.
-    @param[in]  endpoint Absolute endpoint path beginning with `/`.
-    @return     Fully qualified endpoint URL.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-22
-    @version    0.2.0
-    """
-    parsed_url = parse.urlparse(str(base_url or "").strip())
-    normalized_path = parsed_url.path.rstrip("/")
-    endpoint_path = endpoint.rstrip("/")
-    if normalized_path.endswith(endpoint_path):
-        resolved_path = normalized_path
-    elif normalized_path.endswith("/v1") and endpoint_path.startswith("/v1/"):
-        resolved_path = f"{normalized_path}{endpoint_path[3:]}"
-    else:
-        resolved_path = f"{normalized_path}{endpoint_path}" if normalized_path else endpoint_path
-    return parse.urlunparse(parsed_url._replace(path=resolved_path))
 
 
 def _read_json(url: str, headers: dict[str, str], timeout_seconds: int) -> dict[str, Any]:

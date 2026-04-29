@@ -14,24 +14,27 @@
          settings file to the application root.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-22
-@version 0.7.2
+@version 0.7.3
 """
 
 # IMPORTS
 
 import copy
+from functools import partial
 import json
 from typing import Any
 from urllib import parse
 
 from .. import config
 from .logging_service import get_component_logger, trace_function
+from .operation_runtime_service import optional_string as _shared_optional_string
 from .persistence_service import write_json_atomic
 
 # CONSTANTS
 
 # @brief Component logger used by settings load, validation, and save helpers.
 _SETTINGS_LOGGER = get_component_logger("settings")
+_optional_string = partial(_shared_optional_string, strip=False)
 # @brief Default field scaffold applied to each persisted LLM profile payload.
 _LLM_PROFILE_DEFAULTS = {
     "id": "",
@@ -78,21 +81,6 @@ def _optional_profile_id(value: object) -> str | None:
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-05
     @version    0.1.1
-    """
-    if value in (None, ""):
-        return None
-    return str(value)
-
-
-def _optional_string(value: object) -> str | None:
-    """
-    @brief      Normalize one optional persisted string field.
-    @param[in]  value Candidate persisted string value.
-    @return     Normalized string or None.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-16
-    @version    0.1.0
     """
     if value in (None, ""):
         return None

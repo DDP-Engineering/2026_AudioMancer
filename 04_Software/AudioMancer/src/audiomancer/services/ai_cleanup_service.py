@@ -15,12 +15,11 @@
          resumable window-based progress plus AI transaction logs.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-07
-@version 0.5.0
+@version 0.5.1
 """
 
 # IMPORTS
 
-from datetime import UTC, datetime
 import hashlib
 import json
 from pathlib import Path
@@ -37,11 +36,15 @@ from audiomancer.services import (
 from audiomancer.services.logging_service import get_component_logger, trace_function
 from audiomancer.services.operation_runtime_service import (
     build_operation_output_path,
-    progress_percent,
+    load_operation_state_file,
+    load_operation_state_payload,
     raise_if_cancelled,
     relative_to_project,
-    resolve_operation_path,
 )
+from audiomancer.services.operation_runtime_service import (
+    emit_progress_update as _emit_progress,
+)
+from audiomancer.services.time_service import utc_now_iso as _utc_now_iso
 
 # CONSTANTS
 
@@ -140,7 +143,7 @@ def clean_text(
     @exception  ValueError Raised on missing profile data or unusable cleanup output.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-07
-    @version    0.5.0
+    @version    0.5.1
     """
     resolved_project_root = Path(project_root)
     source_document = manifest.get("source_document")
@@ -192,7 +195,7 @@ def clean_text(
     script_hint = cleanup_text_analysis_service.classify_text_script(input_text)
     system_prompt = prompt_template_service.render_prompt("text_cleanup_system", {})
     budget_metadata = _build_budget_metadata(ai_profile_payload, language_hint, script_hint, system_prompt)
-    existing_state = _load_operation_state(state_path) or {}
+    existing_state = load_operation_state_file(state_path) or {}
     started_at = str(existing_state.get("started_at") or _utc_now_iso())
     input_fingerprint = _compute_input_fingerprint(input_text)
     windows = _build_windows(units, budget_metadata)
@@ -402,41 +405,12 @@ def load_operation_state(project_root: str | Path) -> OperationStatePayload | No
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.1.0
+    @version    0.2.0
     """
-    return _load_operation_state(resolve_operation_path(project_root, "cleanup", config.CLEANUP_STATE_FILE_NAME))
+    return load_operation_state_payload(project_root, "cleanup", config.CLEANUP_STATE_FILE_NAME)
 
 
 # LOCAL HELPERS
-
-
-def _emit_progress(
-    progress_callback,
-    progress_current: int,
-    progress_total: int,
-    message: str,
-    token_usage: TokenUsagePayload | None = None,
-) -> None:
-    """
-    @brief      Emit the progress.
-    @param[in]  progress_callback Optional progress callback.
-    @param[in]  progress_current Value for `progress_current`.
-    @param[in]  progress_total Value for `progress_total`.
-    @param[in]  message Operator-facing message text.
-    @param[in]  token_usage Value for `token_usage`.
-    @return     None.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.2.0
-    """
-    if callable(progress_callback):
-        progress_callback(
-            progress_current,
-            progress_total,
-            progress_percent(progress_current, progress_total),
-            message,
-            token_usage,
-        )
 
 
 def _build_cleanup_units(text: str) -> list[dict[str, object]]:
@@ -1100,20 +1074,6 @@ def _build_operation_state(
     }
 
 
-def _load_operation_state(state_path: Path) -> OperationStatePayload | None:
-    """
-    @brief      Load the operation state.
-    @param[in]  state_path Operation-state file path.
-    @return     Derived helper result.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
-    """
-    if not state_path.is_file():
-        return None
-    return dict(json.loads(state_path.read_text(encoding="utf-8")))
-
-
 def _build_ai_log_path(project_root: Path, started_at: str) -> Path:
     """
     @brief      Build the ai log path.
@@ -1666,17 +1626,6 @@ def _looks_like_separator_line(text: str) -> bool:
     """
     normalized = text.strip()
     return bool(normalized) and bool(_SEPARATOR_PATTERN.fullmatch(normalized))
-
-
-def _utc_now_iso() -> str:
-    """
-    @brief      Execute the utc now iso helper.
-    @return     Helper result.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
-    """
-    return datetime.now(UTC).replace(microsecond=0).isoformat()
 
 
 # END OF FILE

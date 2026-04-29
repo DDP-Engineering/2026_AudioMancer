@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-  # noqa: UP009
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -12,7 +13,7 @@
          cleanup provider requests.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-22
-@version 0.6.0
+@version 0.7.1
 """
 
 # IMPORTS
@@ -27,6 +28,15 @@ from audiomancer.services.operation_runtime_service import OperationCancelledErr
 
 
 class _FakeResponse:
+    """
+    @brief Minimal context-manager response used by provider HTTP tests.
+    @details Stores one response body and exposes the subset of the urllib
+             response contract needed by the LLM provider service.
+    @author Eng. Dan Dumitru Pasare
+    @date 2026-04-29
+    @version 0.1.0
+    """
+
     def __init__(self, body: str) -> None:
         self._body = body
 
@@ -39,6 +49,14 @@ class _FakeResponse:
         _ = tb
 
     def read(self) -> bytes:
+        """
+        @brief      Return the configured fake response body as UTF-8 bytes.
+        @return     Encoded fake response body.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-29
+        @version    0.1.0
+        """
         return self._body.encode("utf-8")
 
 
@@ -93,6 +111,16 @@ def test_chat_json_retries_transient_failure(monkeypatch) -> None:
     call_counter = {"count": 0}
 
     def _fake_urlopen(*_args, **_kwargs):
+        """
+        @brief      Simulate one transient provider failure followed by success.
+        @param[in]  _args Ignored positional request arguments.
+        @param[in]  _kwargs Ignored keyword request arguments.
+        @return     Fake successful provider response.
+        @exception  URLError Raised on the first request attempt.
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-29
+        @version    0.1.0
+        """
         call_counter["count"] += 1
         if call_counter["count"] == 1:
             raise error.URLError("temporary failure")
@@ -181,6 +209,16 @@ def test_chat_json_retries_with_max_completion_tokens_when_required(
     request_bodies: list[str] = []
 
     def _fake_urlopen(http_request, **_kwargs):
+        """
+        @brief      Simulate one max-token compatibility failure followed by success.
+        @param[in]  http_request Provider HTTP request.
+        @param[in]  _kwargs Ignored keyword request arguments.
+        @return     Fake successful provider response.
+        @exception  HTTPError Raised on the first incompatible request.
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-29
+        @version    0.1.0
+        """
         body_text = http_request.data.decode("utf-8")
         request_bodies.append(body_text)
         if len(request_bodies) == 1:
@@ -274,6 +312,16 @@ def test_chat_json_repairs_non_json_output_with_followup_request(
     request_bodies: list[str] = []
 
     def _fake_urlopen(http_request, **_kwargs):
+        """
+        @brief      Simulate malformed content followed by a repair response.
+        @param[in]  http_request Provider HTTP request.
+        @param[in]  _kwargs Ignored keyword request arguments.
+        @return     Fake provider response for initial or repair request.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-29
+        @version    0.1.0
+        """
         request_bodies.append(http_request.data.decode("utf-8"))
         if len(request_bodies) == 1:
             return _FakeResponse(
@@ -370,6 +418,16 @@ def test_chat_json_logs_raw_message_content_on_parse_failure(
     response_counter = {"count": 0}
 
     def _fake_urlopen(*_args, **_kwargs):
+        """
+        @brief      Simulate provider responses that remain invalid JSON.
+        @param[in]  _args Ignored positional request arguments.
+        @param[in]  _kwargs Ignored keyword request arguments.
+        @return     Fake invalid provider response.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-29
+        @version    0.1.0
+        """
         response_counter["count"] += 1
         if response_counter["count"] == 1:
             return _FakeResponse(json.dumps({"choices": [{"message": {"content": "not valid json"}}]}))
@@ -400,6 +458,59 @@ def test_chat_json_logs_raw_message_content_on_parse_failure(
         raise AssertionError("Expected JSON parse failure to be raised.")
 
 
+def test_chat_json_redacts_sensitive_values_from_transaction_log(monkeypatch, tmp_path) -> None:
+    """
+    @brief      Verify sensitive transaction-log context fields are redacted before persistence.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-29
+    @version    0.1.0
+    """
+    secret_value = "redaction-test-api-key"
+    authorization_value = "Bearer redaction-test-token"
+    monkeypatch.setattr(
+        llm_provider_service.request,
+        "urlopen",
+        lambda *_args, **_kwargs: _FakeResponse(
+            json.dumps({"choices": [{"message": {"content": '{"results":[{"unit_id":"unit-0001"}]}'}}]})
+        ),
+    )
+    log_path = tmp_path / "transactions.log"
+
+    llm_provider_service.chat_json(
+        {
+            "id": "profile_1",
+            "backend_kind": "openai_compatible",
+            "base_url": "https://api.openai.com/v1",
+            "model_name": "gpt-5.4-mini",
+            "api_key": secret_value,
+            "request_timeout_seconds": 30,
+            "temperature": 0.1,
+            "max_output_tokens": 256,
+        },
+        "system",
+        "user",
+        log_path=log_path,
+        log_context={
+            "api_key": secret_value,
+            "headers": {"Authorization": authorization_value},
+            "nested": [{"runtime_api_key": secret_value}],
+        },
+    )
+
+    log_text = log_path.read_text(encoding="utf-8")
+    log_entries = [json.loads(line) for line in log_text.splitlines()]
+
+    assert secret_value not in log_text
+    assert authorization_value not in log_text
+    assert all(entry["api_key"] == "[REDACTED]" for entry in log_entries)
+    assert all(entry["headers"]["Authorization"] == "[REDACTED]" for entry in log_entries)
+    assert all(entry["nested"][0]["runtime_api_key"] == "[REDACTED]" for entry in log_entries)
+
+
 def test_chat_json_does_not_retry_permanent_http_failure(monkeypatch) -> None:
     """
     @brief      Verify permanent provider HTTP failures are surfaced without retry loops.
@@ -413,6 +524,16 @@ def test_chat_json_does_not_retry_permanent_http_failure(monkeypatch) -> None:
     call_counter = {"count": 0}
 
     def _fake_urlopen(http_request, **_kwargs):
+        """
+        @brief      Simulate a permanent unauthorized provider failure.
+        @param[in]  http_request Provider HTTP request.
+        @param[in]  _kwargs Ignored keyword request arguments.
+        @return     None.
+        @exception  HTTPError Always raised with a 401 status.
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-29
+        @version    0.1.0
+        """
         call_counter["count"] += 1
         raise error.HTTPError(
             http_request.full_url,

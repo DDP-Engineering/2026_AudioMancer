@@ -14,12 +14,12 @@
          maintains resumable extraction state in `00_extraction`.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-06
-@version 0.4.2
+@version 0.4.3
 """
 
 # IMPORTS
 
-from datetime import UTC, datetime
+from functools import partial
 from html.parser import HTMLParser
 import json
 from pathlib import Path
@@ -35,15 +35,19 @@ from striprtf.striprtf import rtf_to_text
 from audiomancer import config
 from audiomancer.services.logging_service import get_component_logger, trace_function
 from audiomancer.services.operation_runtime_service import (
-    progress_percent,
+    emit_progress_update,
+    load_operation_state_file,
     raise_if_cancelled,
     reset_operation_data,
+    resolve_project_relative_path,
 )
+from audiomancer.services.time_service import utc_now_iso as _utc_now_iso
 
 # CONSTANTS
 
 # @brief Component logger used by deterministic text extraction.
 _EXTRACTION_LOGGER = get_component_logger("text_extraction")
+_emit_progress = partial(emit_progress_update, include_token_usage=False)
 # @brief Persisted extraction operation-state payload type.
 OperationStatePayload = dict[str, object]
 # @brief Persisted extraction report payload type.
@@ -172,7 +176,7 @@ def extract_text(
     @exception  OperationCancelledError Raised when the operator cancels the run.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.3.2
+    @version    0.3.3
     """
     resolved_project_root = Path(project_root)
     source_document = _source_document_from_manifest(manifest)
@@ -187,7 +191,7 @@ def extract_text(
     state_path = extraction_dir / _EXTRACTION_STATE_NAME
 
     file_type = str(source_document["file_type"])
-    resume_state = _load_operation_state(state_path)
+    resume_state = load_operation_state_file(state_path)
     warnings = _warnings_from_state(resume_state)
     _emit_status(progress_callback, _preparation_message_for_file_type(file_type))
     if _supports_incremental_resume(file_type) and _can_resume_from_state(
@@ -281,10 +285,10 @@ def load_operation_state(project_root: str | Path) -> OperationStatePayload | No
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.1.0
+    @version    0.2.0
     """
     state_path = Path(project_root) / _EXTRACTION_FOLDER_NAME / _EXTRACTION_STATE_NAME
-    return _load_operation_state(state_path)
+    return load_operation_state_file(state_path)
 
 
 @trace_function(_EXTRACTION_LOGGER)
@@ -346,7 +350,7 @@ def _start_fresh_extraction(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.3.2
+    @version    0.3.3
     """
     if output_path.exists():
         output_path.unlink()
@@ -406,9 +410,9 @@ def _resume_extraction(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.3.2
+    @version    0.3.3
     """
-    existing_state = _load_operation_state(state_path) or {}
+    existing_state = load_operation_state_file(state_path) or {}
     resume_checkpoint = dict(existing_state.get("resume_checkpoint") or {})
     next_unit_index = int(resume_checkpoint.get("next_unit_index", 0))
     started_at = str(existing_state.get("started_at") or _utc_now_iso())
@@ -842,21 +846,6 @@ def _can_resume_from_state(
     return len(list(state_payload.get("output_paths", []))) == 0
 
 
-def _load_operation_state(state_path: Path) -> OperationStatePayload | None:
-    """
-    @brief      Load one optional extraction operation-state payload.
-    @param[in]  state_path Absolute extraction state file path.
-    @return     Operation-state payload or `None`.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.1.0
-    """
-    if not state_path.is_file():
-        return None
-    return dict(json.loads(state_path.read_text(encoding="utf-8")))
-
-
 def _source_path_from_manifest(project_root: Path, source_document: dict[str, object]) -> Path:
     """
     @brief      Resolve the root-level imported source file for extraction.
@@ -866,10 +855,10 @@ def _source_path_from_manifest(project_root: Path, source_document: dict[str, ob
     @exception  FileNotFoundError Raised when the root-level source file is missing.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.3.0
+    @version    0.4.0
     """
     source_relative_path = str(source_document["stored_relative_path"])
-    source_path = project_root / source_relative_path
+    source_path = resolve_project_relative_path(project_root, source_relative_path)
     if not source_path.is_file():
         raise FileNotFoundError(f"Imported source file is missing: {source_path}")
 
@@ -911,28 +900,6 @@ def _warnings_from_state(state_payload: OperationStatePayload | None) -> list[st
     if not isinstance(warnings, list):
         return []
     return [str(item) for item in warnings]
-
-
-def _emit_progress(progress_callback, progress_current: int, progress_total: int, message: str) -> None:
-    """
-    @brief      Emit one optional extraction progress snapshot.
-    @param[in]  progress_callback Optional progress callback.
-    @param[in]  progress_current Completed unit count.
-    @param[in]  progress_total Total unit count.
-    @param[in]  message Operator-facing progress status message.
-    @return     None.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.1.0
-    """
-    if callable(progress_callback):
-        progress_callback(
-            progress_current,
-            progress_total,
-            progress_percent(progress_current, progress_total),
-            message,
-        )
 
 
 def _emit_status(progress_callback, message: str) -> None:
@@ -1008,18 +975,6 @@ def _relative_to_project(project_root: Path, artifact_path: Path) -> str:
     @version    0.1.0
     """
     return artifact_path.relative_to(project_root).as_posix()
-
-
-def _utc_now_iso() -> str:
-    """
-    @brief      Build one timezone-aware UTC timestamp string.
-    @return     ISO 8601 UTC timestamp.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.1.0
-    """
-    return datetime.now(UTC).isoformat()
 
 
 # END OF FILE

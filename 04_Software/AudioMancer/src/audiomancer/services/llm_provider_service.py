@@ -16,12 +16,11 @@
          UI-driven cancellation responsive during provider waits.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-22
-@version 0.6.0
+@version 0.7.0
 """
 
 # IMPORTS
 
-from datetime import UTC, datetime
 import json
 from pathlib import Path
 import threading
@@ -32,11 +31,30 @@ from audiomancer import config
 from audiomancer.services import token_usage_service
 from audiomancer.services.logging_service import get_component_logger, trace_function
 from audiomancer.services.operation_runtime_service import OperationCancelledError
+from audiomancer.services.time_service import utc_now_iso
 
 # CONSTANTS
 
 # @brief Component logger used by OpenAI-compatible provider requests.
 _LLM_PROVIDER_LOGGER = get_component_logger("llm_provider")
+
+# @brief Placeholder used in AI transaction logs for sensitive fields.
+_REDACTED_LOG_VALUE = "[REDACTED]"
+
+# @brief Exact field names that must never be persisted to transaction logs.
+_SENSITIVE_LOG_FIELD_NAMES = frozenset(
+    {
+        "api_key",
+        "authorization",
+        "password",
+        "secret",
+        "token",
+        "access_token",
+        "refresh_token",
+        "tts_runtime_api_key",
+        "runtime_api_key",
+    }
+)
 
 
 # PUBLIC API
@@ -301,7 +319,7 @@ def _build_chat_endpoint(base_url: str) -> str:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-22
-    @version    0.2.0
+    @version    0.2.1
     """
     normalized_base = base_url.rstrip("/")
     parsed_url = parse.urlparse(normalized_base)
@@ -658,18 +676,58 @@ def _append_ai_log(log_path: str | Path | None, payload: dict[str, object]) -> N
     @return     None.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-22
-    @version    0.2.0
+    @version    0.3.0
     """
     if log_path is None:
         return
     resolved_log_path = Path(log_path)
     resolved_log_path.parent.mkdir(parents=True, exist_ok=True)
-    log_payload = {
-        "timestamp": datetime.now(UTC).replace(microsecond=0).isoformat(),
-        **payload,
-    }
+    log_payload = _redact_ai_log_value(
+        {
+            "timestamp": utc_now_iso(),
+            **payload,
+        }
+    )
     with resolved_log_path.open("a", encoding="utf-8") as log_handle:
         log_handle.write(json.dumps(log_payload, ensure_ascii=False) + "\n")
+
+
+def _redact_ai_log_value(value: object) -> object:
+    """
+    @brief      Redact sensitive values from one AI transaction log payload.
+    @param[in]  value Payload value to inspect recursively.
+    @return     Value with sensitive fields replaced by a fixed placeholder.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-29
+    @version    0.1.0
+    """
+    if isinstance(value, dict):
+        redacted_payload: dict[str, object] = {}
+        for key, item_value in value.items():
+            key_text = str(key)
+            if _is_sensitive_log_field(key_text):
+                redacted_payload[key_text] = _REDACTED_LOG_VALUE
+            else:
+                redacted_payload[key_text] = _redact_ai_log_value(item_value)
+        return redacted_payload
+    if isinstance(value, list):
+        return [_redact_ai_log_value(item_value) for item_value in value]
+    return value
+
+
+def _is_sensitive_log_field(field_name: str) -> bool:
+    """
+    @brief      Determine whether one transaction-log field name is sensitive.
+    @param[in]  field_name Candidate field name.
+    @return     True when the field value must be redacted before persistence.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-29
+    @version    0.1.0
+    """
+    normalized_name = field_name.strip().casefold().replace("-", "_")
+    return normalized_name in _SENSITIVE_LOG_FIELD_NAMES or normalized_name.endswith("_api_key")
 
 
 # END OF FILE

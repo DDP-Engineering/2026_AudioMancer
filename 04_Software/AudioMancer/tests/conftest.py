@@ -13,15 +13,62 @@
          setup to reduce boilerplate across test files.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 1.2.1
+@version 1.3.0
 """
 
 # IMPORTS
+
+from pathlib import Path
 
 import pytest
 
 from audiomancer import config
 from audiomancer.services import project_workspace_service
+
+# CONSTANTS
+
+# @brief Filename fragments that identify UI-facing test modules.
+_UI_TEST_FILE_TOKENS = (
+    "_page.py",
+    "_ui_controller.py",
+    "app_entrypoint",
+    "main_window",
+    "operation_runner_controller",
+    "ui_state",
+)
+
+
+def pytest_collection_modifyitems(config, items) -> None:
+    """
+    @brief      Add service/ui tier markers to collected tests.
+    @param[in]  config Pytest configuration object.
+    @param[in]  items Collected pytest items.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-29
+    @version    0.1.0
+    """
+    _ = config
+    for item in items:
+        marker_name = "ui" if _is_ui_test_item(item) else "service"
+        item.add_marker(getattr(pytest.mark, marker_name))
+
+
+def _is_ui_test_item(item) -> bool:
+    """
+    @brief      Determine whether one collected test belongs to the UI tier.
+    @param[in]  item Collected pytest item.
+    @return     True when the item uses Qt fixtures or a UI-facing test module.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-29
+    @version    0.1.0
+    """
+    if "qtbot" in getattr(item, "fixturenames", ()):
+        return True
+    file_name = Path(str(item.fspath)).name
+    return any(token in file_name for token in _UI_TEST_FILE_TOKENS)
 
 
 @pytest.fixture

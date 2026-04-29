@@ -13,7 +13,7 @@
          validation, project-root resolution, and open validation behavior.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-20
-@version 1.1.1
+@version 1.1.2
 """
 
 # IMPORTS
@@ -390,7 +390,7 @@ def test_open_project_rejects_source_document_symlink_escape(tmp_path) -> None:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-29
-    @version    0.1.0
+    @version    0.2.0
     """
     project_root, manifest = project_workspace_service.create_project("SymlinkSource", tmp_path)
     outside_source = tmp_path / "outside.txt"
@@ -408,7 +408,7 @@ def test_open_project_rejects_source_document_symlink_escape(tmp_path) -> None:
         "size_bytes": outside_source.stat().st_size,
     }
     manifest["current_stage"] = "source_selected"
-    project_workspace_service.save_manifest(manifest, project_root)
+    _write_json(project_root / config.PROJECT_MANIFEST_FILE_NAME, manifest)
 
     with pytest.raises(ValueError, match="source_document.stored_relative_path"):
         project_workspace_service.open_project(project_root)

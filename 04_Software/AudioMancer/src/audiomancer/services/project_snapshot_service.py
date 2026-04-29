@@ -13,24 +13,27 @@
          without registering the archive as a project runtime artifact.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-25
-@version 0.2.0
+@version 0.3.0
 """
 
 # IMPORTS
 
 from collections.abc import Iterator
 from datetime import datetime
+from functools import partial
 import os
 from pathlib import Path
 import re
 import zipfile
 
+from audiomancer import config
 from audiomancer.services import operation_runtime_service
 
 # CONSTANTS
 
 # @brief Default archive extension used by project snapshots.
 SNAPSHOT_EXTENSION = ".zip"
+_emit_progress = partial(operation_runtime_service.emit_progress_update, include_token_usage=False)
 
 
 # PUBLIC API
@@ -87,15 +90,9 @@ def is_path_inside_project(project_root: str | Path, snapshot_path: str | Path) 
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.1.0
+    @version    0.2.0
     """
-    resolved_root = Path(project_root).resolve()
-    resolved_snapshot_path = Path(snapshot_path).resolve()
-    try:
-        resolved_snapshot_path.relative_to(resolved_root)
-    except ValueError:
-        return False
-    return True
+    return operation_runtime_service.is_path_inside_project(project_root, snapshot_path)
 
 
 def create_project_snapshot(
@@ -170,13 +167,13 @@ def create_project_snapshot(
 
 def _iter_project_files(project_root: Path) -> Iterator[Path]:
     """
-    @brief      Yield regular project files without following symlink directories.
+    @brief      Yield regular project files while excluding symlinks and AI transaction logs.
     @param[in]  project_root Resolved active project root.
     @return     Iterator over regular non-symlink files in stable path order.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.1.0
+    @version    0.2.0
     """
     for current_root, directory_names, file_names in os.walk(project_root, followlinks=False):
         directory_names[:] = sorted(
@@ -186,27 +183,24 @@ def _iter_project_files(project_root: Path) -> Iterator[Path]:
         )
         for file_name in sorted(file_names):
             file_path = Path(current_root) / file_name
-            if file_path.is_file() and not file_path.is_symlink():
+            if file_path.is_file() and not file_path.is_symlink() and not _is_ai_transaction_log(file_path):
                 yield file_path
 
 
-def _emit_progress(progress_callback, current: int, total: int, message: str) -> None:
+def _is_ai_transaction_log(file_path: Path) -> bool:
     """
-    @brief      Emit one optional snapshot progress update.
-    @param[in]  progress_callback Optional UI progress callback.
-    @param[in]  current Completed file count.
-    @param[in]  total Total file count.
-    @param[in]  message Operator-facing progress message.
-    @return     None.
+    @brief      Determine whether one project file is an AI transaction log.
+    @param[in]  file_path Candidate project file path.
+    @return     True when the file follows the configured AI log naming pattern.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
+    @date       2026-04-29
     @version    0.1.0
     """
-    if progress_callback is None:
-        return
-    percent = 100 if total <= 0 else min(100, int((max(current, 0) / total) * 100))
-    progress_callback(current, total, percent, message)
+    file_name = file_path.name
+    return file_name.startswith(config.AI_TRANSACTION_LOG_FILE_PREFIX) and file_name.endswith(
+        config.AI_TRANSACTION_LOG_FILE_EXTENSION
+    )
 
 
 def _raise_if_cancelled(cancel_requested) -> None:

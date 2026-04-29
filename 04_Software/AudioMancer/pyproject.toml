@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "audiomancer"
-version = "1.1.0"
+version = "1.1.1"
 description = "AudioMancer desktop audiobook production application scaffold."
 readme = "README.MD"
 requires-python = ">=3.12,<3.13"
@@ -41,6 +41,10 @@ where = ["src"]
 [tool.pytest.ini_options]
 pythonpath = ["src"]
 testpaths = ["tests"]
+markers = [
+    "service: fast non-Qt service and logic tests",
+    "ui: Qt widget, controller, and main-window tests",
+]
 
 [tool.ruff]
 line-length = 120

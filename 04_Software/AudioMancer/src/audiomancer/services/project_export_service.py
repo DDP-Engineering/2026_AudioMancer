@@ -13,14 +13,13 @@
          project artifacts without modifying the active project workspace.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-25
-@version 0.3.2
+@version 0.3.4
 """
 
 # IMPORTS
 
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass
-from datetime import UTC, datetime
 import json
 from pathlib import Path
 import re
@@ -34,6 +33,8 @@ from audiomancer.services import (
     speech_blocks_service,
     token_usage_service,
 )
+from audiomancer.services.operation_runtime_service import is_path_inside_project as _is_path_inside_project
+from audiomancer.services.time_service import utc_now_iso
 
 # CONSTANTS
 
@@ -129,7 +130,7 @@ def build_export_states(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.1.0
+    @version    0.1.1
     """
     return [_build_export_state(project_root, manifest, export_kind) for export_kind in EXPORT_KIND_OPTIONS]
 
@@ -179,15 +180,9 @@ def is_path_inside_project(project_root: str | Path, export_path: str | Path) ->
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.1.0
+    @version    0.2.0
     """
-    resolved_root = Path(project_root).resolve()
-    resolved_export_path = Path(export_path).resolve()
-    try:
-        resolved_export_path.relative_to(resolved_root)
-    except ValueError:
-        return False
-    return True
+    return _is_path_inside_project(project_root, export_path)
 
 
 def render_export(
@@ -667,7 +662,7 @@ def _header_fields(manifest: dict[str, object], export_type_label: str) -> list[
         ("Original Source Filename", source_name),
         ("Original Extension", Path(source_name).suffix or "-"),
         ("Export Type", export_type_label),
-        ("Export Timestamp", datetime.now(UTC).replace(microsecond=0).isoformat()),
+        ("Export Timestamp", utc_now_iso()),
     ]
 
 

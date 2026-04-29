@@ -14,12 +14,12 @@
          operation state for interrupted deterministic chunking runs.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-11
-@version 0.3.0
+@version 0.3.1
 """
 
 # IMPORTS
 
-from datetime import UTC, datetime
+from functools import partial
 import json
 from pathlib import Path
 import re
@@ -29,16 +29,20 @@ from audiomancer.services import cleanup_metadata_service
 from audiomancer.services.logging_service import get_component_logger, trace_function
 from audiomancer.services.operation_runtime_service import (
     build_operation_output_path,
-    progress_percent,
+    emit_progress_update,
+    load_operation_state_file,
+    load_operation_state_payload,
     raise_if_cancelled,
     relative_to_project,
     resolve_operation_path,
 )
+from audiomancer.services.time_service import utc_now_iso as _utc_now_iso
 
 # CONSTANTS
 
 # @brief Component logger used by the deterministic chunking workflow.
 _CHUNKING_LOGGER = get_component_logger("deterministic_chunking")
+_emit_progress = partial(emit_progress_update, include_token_usage=False)
 
 # @brief Supported chapter-heading detection patterns used to carry chapter metadata across chunks.
 _CHAPTER_PATTERNS = (
@@ -115,7 +119,7 @@ def chunk_text(
         config.CHUNKING_STATE_FILE_NAME,
     )
 
-    existing_state = _load_operation_state(state_path) or {}
+    existing_state = load_operation_state_file(state_path) or {}
     progress_total = len(paragraph_records)
     started_at = str(existing_state.get("started_at") or _utc_now_iso())
     resume_checkpoint = dict(existing_state.get("resume_checkpoint") or {})
@@ -229,9 +233,9 @@ def load_operation_state(project_root: str | Path) -> OperationStatePayload | No
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-07
-    @version    0.1.0
+    @version    0.2.1
     """
-    return _load_operation_state(resolve_operation_path(project_root, "chunking", config.CHUNKING_STATE_FILE_NAME))
+    return load_operation_state_payload(project_root, "chunking", config.CHUNKING_STATE_FILE_NAME)
 
 
 @trace_function(_CHUNKING_LOGGER)
@@ -275,27 +279,6 @@ def load_chunks(project_root: str | Path) -> list[ChunkPayload]:
 
 
 # LOCAL HELPERS
-
-
-def _emit_progress(progress_callback, progress_current: int, progress_total: int, message: str) -> None:
-    """
-    @brief      Emit the progress.
-    @param[in]  progress_callback Optional progress callback.
-    @param[in]  progress_current Value for `progress_current`.
-    @param[in]  progress_total Value for `progress_total`.
-    @param[in]  message Operator-facing message text.
-    @return     None.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.2.0
-    """
-    if callable(progress_callback):
-        progress_callback(
-            progress_current,
-            progress_total,
-            progress_percent(progress_current, progress_total),
-            message,
-        )
 
 
 def _build_paragraph_records(cleaned_text: str, project_root: str | Path | None = None) -> list[dict[str, object]]:
@@ -568,31 +551,6 @@ def _detect_chapter_label(paragraph_text: str) -> str | None:
         if pattern.fullmatch(normalized):
             return normalized
     return None
-
-
-def _load_operation_state(state_path: Path) -> OperationStatePayload | None:
-    """
-    @brief      Load the operation state.
-    @param[in]  state_path Operation-state file path.
-    @return     Derived helper result.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
-    """
-    if not state_path.is_file():
-        return None
-    return dict(json.loads(state_path.read_text(encoding="utf-8")))
-
-
-def _utc_now_iso() -> str:
-    """
-    @brief      Execute the utc now iso helper.
-    @return     Helper result.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
-    """
-    return datetime.now(UTC).replace(microsecond=0).isoformat()
 
 
 # END OF FILE

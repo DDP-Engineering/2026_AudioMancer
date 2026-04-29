@@ -10,6 +10,27 @@ All notable changes to this project will be documented in this file.
 
 ## [1.1.1] - 2026-04-29
 
+### Changed
+
+- centralized repeated service helpers for operation progress callbacks, UTC
+  timestamp formatting, optional runtime string normalization, operation-state
+  JSON loading, project-relative path containment, and endpoint URL joining
+  into shared operation, time, and URL utilities
+- changed workflow services to reuse the shared helpers across AI chunking,
+  cleanup, translation, extraction, workspace repair, export/snapshot, speech,
+  audio, narrator, character, and VoiceWeaver runtime paths
+- added focused coverage for the shared operation runtime and URL helpers,
+  including four-argument progress callbacks, exact operation-state file
+  loading, path-escape rejection, and duplicate endpoint/version handling
+- added focused test coverage for committed settings secret hygiene, atomic
+  JSON persistence routing for manifests/settings/operation artifacts, AI log
+  redaction, AI-log snapshot exclusion, and project-open symlink escape
+  rejection
+- added automatic `service` and `ui` pytest markers so the application test
+  suite can be run in faster tiers after full-suite timeouts
+- removed obsolete flat-layout workspace repair helpers that had no service or
+  test callers and still carried migration-era folder assumptions
+
 ### Fixed
 
 - fixed critical JSON persistence so `project.json`, `settings.json`, and
@@ -24,8 +45,14 @@ All notable changes to this project will be documented in this file.
   cleanup, and ignores the close event if the worker remains active
 - fixed project switching controls so `New Project` and `Open Project` stay
   disabled while a threaded operation is running
+- fixed the committed settings scaffold so AI and TTS runtime secret fields are
+  blank example values instead of operator-specific credentials
+- fixed AI transaction logging to redact sensitive context fields recursively
+  before writing operation-local log files
+- fixed project ZIP snapshots to exclude project-local AI transaction logs
 - added focused pytest-qt coverage and updated operation-runner documentation
   for active-worker shutdown behavior
+- package version updated to `1.1.1`
 
 ## [1.1.0] - 2026-04-28
 

@@ -14,7 +14,7 @@
          the AI Settings page.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-22
-@version 0.3.0
+@version 0.3.1
 """
 
 # IMPORTS
@@ -25,6 +25,7 @@ from urllib import error, parse, request
 
 from .. import config
 from .logging_service import get_component_logger, trace_function
+from .url_service import join_endpoint_url, remove_trailing_endpoint
 
 # CONSTANTS
 
@@ -38,27 +39,6 @@ ModelDescriptorPayload = dict[str, str]
 ProviderProbeResultPayload = dict[str, object]
 
 
-def _ensure_trailing_endpoint(base_url: str, endpoint: str) -> str:
-    """
-    @brief      Append one endpoint path to a base URL safely.
-    @param[in]  base_url Operator-configured backend base URL.
-    @param[in]  endpoint Relative endpoint path beginning with `/`.
-    @return     Fully joined URL string.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-22
-    @version    0.2.0
-    """
-    parsed_url = parse.urlparse(str(base_url or "").strip())
-    normalized_path = parsed_url.path.rstrip("/")
-    endpoint_path = endpoint.rstrip("/")
-    if normalized_path.endswith(endpoint_path):
-        resolved_path = normalized_path
-    else:
-        resolved_path = f"{normalized_path}{endpoint_path}" if normalized_path else endpoint_path
-    return parse.urlunparse(parsed_url._replace(path=resolved_path))
-
-
 def _resolve_ollama_tags_url(base_url: str) -> str:
     """
     @brief      Resolve the Ollama model-tags endpoint from a base URL.
@@ -67,14 +47,9 @@ def _resolve_ollama_tags_url(base_url: str) -> str:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-05
-    @version    0.1.0
+    @version    0.2.0
     """
-    parsed_url = parse.urlparse(base_url)
-    normalized_path = parsed_url.path.rstrip("/")
-    if normalized_path.endswith("/v1"):
-        normalized_path = normalized_path[:-3]
-    rebuilt_url = parsed_url._replace(path=normalized_path)
-    return _ensure_trailing_endpoint(parse.urlunparse(rebuilt_url), "/api/tags")
+    return join_endpoint_url(remove_trailing_endpoint(base_url, "/v1"), "/api/tags")
 
 
 def _build_request_headers(profile_payload: dict[str, object]) -> dict[str, str]:
@@ -207,7 +182,7 @@ def _probe_openai_compatible_models(
     @date       2026-04-05
     @version    0.1.0
     """
-    models_url = _ensure_trailing_endpoint(
+    models_url = join_endpoint_url(
         str(profile_payload.get("base_url", "")),
         "/models",
     )

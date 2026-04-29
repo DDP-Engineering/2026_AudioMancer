@@ -13,7 +13,7 @@
          persists resumable state, and rebuilds chunk spans from AI boundaries.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-07
-@version 0.3.0
+@version 0.3.1
 """
 
 # IMPORTS
@@ -263,7 +263,7 @@ def test_ai_chunking_writes_chunking_artifacts_and_log(tmp_path, monkeypatch) ->
     assert report_payload["semantic_strategy"] == "meaning"
     assert report_payload["budget_metadata"]["context_window"] == 4096
     assert report_payload["budget_metadata"]["max_output_tokens"] == 512
-    assert report_payload["budget_metadata"]["strategy_paragraph_cap"] == 48
+    assert report_payload["budget_metadata"]["strategy_paragraph_cap"] == config.DEFAULT_AI_CHUNKING_MEANING_WINDOW_SIZE
     state_payload = json.loads((chunking_root / config.CHUNKING_STATE_FILE_NAME).read_text(encoding="utf-8"))
     assert state_payload["metadata"]["budget_metadata"] == report_payload["budget_metadata"]
     chunks = json.loads((chunking_root / config.CHUNK_ARTIFACT_FILE_NAME).read_text(encoding="utf-8"))
@@ -399,6 +399,17 @@ def test_ai_chunking_uses_cleanup_metadata_paragraph_ids(tmp_path, monkeypatch) 
     captured_prompt = {"text": ""}
 
     def _chat_json(_profile, _system_prompt, user_prompt, **_kwargs):
+        """
+        @brief      Capture the generated AI chunking prompt and return one boundary.
+        @param[in]  _profile Ignored profile payload.
+        @param[in]  _system_prompt Ignored system prompt.
+        @param[in]  user_prompt Rendered user prompt.
+        @return     Fake provider payload with one chunk boundary and token usage.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-29
+        @version    0.1.0
+        """
         captured_prompt["text"] = user_prompt
         return {
             "payload": {"break_after_unit_ids": ["paragraph-0042"]},
@@ -439,8 +450,16 @@ def test_ai_chunking_resumes_from_saved_window_checkpoint(tmp_path, monkeypatch)
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-07
-    @version    0.1.0
+    @version    0.1.1
     """
+    monkeypatch.setattr(
+        config,
+        "AI_CHUNKING_WINDOW_SIZE_BY_STRATEGY",
+        {
+            **config.AI_CHUNKING_WINDOW_SIZE_BY_STRATEGY,
+            "paragraph": 20,
+        },
+    )
     prompt_root = tmp_path / "prompts"
     prompt_root.mkdir()
     (prompt_root / "text_chunking_system.txt").write_text("{strategy}", encoding="utf-8")
@@ -472,6 +491,16 @@ def test_ai_chunking_resumes_from_saved_window_checkpoint(tmp_path, monkeypatch)
     )
 
     def _chat_json(*_args, **_kwargs):
+        """
+        @brief      Return queued chunking responses for resume coverage.
+        @param[in]  _args Ignored positional provider arguments.
+        @param[in]  _kwargs Ignored keyword provider arguments.
+        @return     Fake provider payload with chunking boundaries and token usage.
+        @exception  OperationCancelledError Raised by queued cancellation response.
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-29
+        @version    0.1.0
+        """
         response = next(responses)
         if isinstance(response, Exception):
             raise response
@@ -558,8 +587,16 @@ def test_ai_chunking_restarts_resume_when_budget_metadata_changes(tmp_path, monk
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-28
-    @version    0.1.0
+    @version    0.1.1
     """
+    monkeypatch.setattr(
+        config,
+        "AI_CHUNKING_WINDOW_SIZE_BY_STRATEGY",
+        {
+            **config.AI_CHUNKING_WINDOW_SIZE_BY_STRATEGY,
+            "paragraph": 20,
+        },
+    )
     prompt_root = tmp_path / "prompts"
     prompt_root.mkdir()
     (prompt_root / "text_chunking_system.txt").write_text("{strategy}", encoding="utf-8")
@@ -601,6 +638,16 @@ def test_ai_chunking_restarts_resume_when_budget_metadata_changes(tmp_path, monk
     )
 
     def _first_chat_json(*_args, **_kwargs):
+        """
+        @brief      Return the first queued chunking response before cancellation.
+        @param[in]  _args Ignored positional provider arguments.
+        @param[in]  _kwargs Ignored keyword provider arguments.
+        @return     Fake provider payload with one chunking boundary.
+        @exception  OperationCancelledError Raised by queued cancellation response.
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-29
+        @version    0.1.0
+        """
         response = next(responses)
         if isinstance(response, Exception):
             raise response

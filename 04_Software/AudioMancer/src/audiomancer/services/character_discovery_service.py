@@ -14,12 +14,11 @@
          workflow artifacts, and maintains resumable AI operation state.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-22
-@version 0.8.0
+@version 0.8.2
 """
 
 # IMPORTS
 
-from datetime import UTC, datetime
 import hashlib
 import json
 from pathlib import Path
@@ -37,12 +36,18 @@ from audiomancer.services.operation_runtime_service import (
     NARRATOR_PROFILE_PRESERVED_OPERATION_KINDS,
     OperationCancelledError,
     build_operation_output_path,
-    progress_percent,
+    load_operation_state_payload,
+    load_optional_json_artifact,
     raise_if_cancelled,
     relative_to_project,
     reset_operation_data,
     resolve_operation_path,
 )
+from audiomancer.services.operation_runtime_service import (
+    emit_progress_update as _emit_progress,
+)
+from audiomancer.services.persistence_service import write_json_atomic
+from audiomancer.services.time_service import utc_now_iso as _utc_now_iso
 
 # CONSTANTS
 
@@ -115,16 +120,13 @@ def load_operation_state(project_root: str | Path) -> OperationStatePayload | No
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-22
-    @version    0.3.0
+    @version    0.4.0
     """
-    state_path = resolve_operation_path(
+    return load_operation_state_payload(
         project_root,
         "character_discovery",
         config.CHARACTER_DISCOVERY_STATE_FILE_NAME,
     )
-    if not state_path.is_file():
-        return None
-    return dict(json.loads(state_path.read_text(encoding="utf-8")))
 
 
 @trace_function(_CHARACTER_DISCOVERY_LOGGER)
@@ -136,16 +138,14 @@ def load_character_profiles(project_root: str | Path) -> list[CharacterProfilePa
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-22
-    @version    0.4.0
+    @version    0.5.0
     """
     output_path = resolve_operation_path(
         project_root,
         "character_discovery",
         config.CHARACTER_PROFILE_FILE_NAME,
     )
-    if not output_path.is_file():
-        return []
-    payload = json.loads(output_path.read_text(encoding="utf-8"))
+    payload = load_optional_json_artifact(output_path)
     if not isinstance(payload, list):
         return []
     return [_normalize_character_profile(item) for item in payload if isinstance(item, dict)]
@@ -245,16 +245,17 @@ def load_character_discovery_report(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-22
-    @version    0.2.0
+    @version    0.3.0
     """
     report_path = resolve_operation_path(
         project_root,
         "character_discovery",
         config.CHARACTER_DISCOVERY_REPORT_FILE_NAME,
     )
-    if not report_path.is_file():
+    payload = load_optional_json_artifact(report_path)
+    if payload is None:
         return None
-    return dict(json.loads(report_path.read_text(encoding="utf-8")))
+    return dict(payload)
 
 
 @trace_function(_CHARACTER_DISCOVERY_LOGGER)
@@ -742,7 +743,7 @@ def validate_manual_character_name(
     @exception  ValueError Raised when the name is invalid or already exists.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-08
-    @version    0.1.0
+    @version    0.1.1
     """
     normalized_name = str(candidate_name or "").strip()
     if not normalized_name or not any(char.isalnum() for char in normalized_name):
@@ -991,10 +992,7 @@ def _sync_character_count_metadata(project_root: Path, character_count: int) -> 
         "character_discovery",
         config.CHARACTER_DISCOVERY_STATE_FILE_NAME,
     )
-    state_path.write_text(
-        json.dumps(state_payload, indent=2, ensure_ascii=False) + "\n",
-        encoding="utf-8",
-    )
+    write_json_atomic(state_path, state_payload)
 
 
 def _persist_input_snapshots(
@@ -1422,7 +1420,7 @@ def _restore_resume_state(
     @return     Derived helper result.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.3.0
+    @version    0.3.1
     """
     if str(existing_state.get("status", "")) not in {"running", "failed"}:
         return 0, [], [], [], [], None
@@ -1607,10 +1605,7 @@ def _write_operation_state(
         },
         "resume_checkpoint": (None if resume_checkpoint is None else dict(resume_checkpoint)),
     }
-    state_path.write_text(
-        json.dumps(state_payload, indent=2, ensure_ascii=False) + "\n",
-        encoding="utf-8",
-    )
+    write_json_atomic(state_path, state_payload)
 
 
 def _normalize_window_candidates(
@@ -2717,46 +2712,6 @@ def _excerpt_text(text: str, limit: int = 180) -> str:
     if len(normalized) <= limit:
         return normalized
     return normalized[: limit - 3].rstrip() + "..."
-
-
-def _emit_progress(
-    progress_callback,
-    progress_current: int,
-    progress_total: int,
-    message: str,
-    token_usage: TokenUsagePayload | None = None,
-) -> None:
-    """
-    @brief      Emit the progress.
-    @param[in]  progress_callback Optional progress callback.
-    @param[in]  progress_current Value for `progress_current`.
-    @param[in]  progress_total Value for `progress_total`.
-    @param[in]  message Operator-facing message text.
-    @param[in]  token_usage Value for `token_usage`.
-    @return     None.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
-    """
-    if callable(progress_callback):
-        progress_callback(
-            progress_current,
-            progress_total,
-            progress_percent(progress_current, progress_total),
-            message,
-            token_usage,
-        )
-
-
-def _utc_now_iso() -> str:
-    """
-    @brief      Execute the utc now iso helper.
-    @return     Helper result.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
-    """
-    return datetime.now(UTC).replace(microsecond=0).isoformat()
 
 
 # END OF FILE

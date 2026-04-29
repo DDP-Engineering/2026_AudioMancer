@@ -10,16 +10,17 @@
 @file operation_runtime_service.py
 @brief Shared runtime helpers for cancelable workflow operations.
 @details Centralizes root-level artifact path building, downstream reset
-         behavior, and progress helpers shared by long-running workflow
-         operations.
+         behavior, timestamp helpers, JSON artifact IO, and progress helpers
+         shared by long-running workflow operations.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-22
-@version 0.8.1
+@version 0.10.0
 """
 
 # IMPORTS
 
 from collections.abc import Iterable
+import json
 import math
 from pathlib import Path, PureWindowsPath
 
@@ -326,6 +327,138 @@ def ensure_default_operation_state(project_root: str | Path, operation_kind: str
     return state_path
 
 
+def load_operation_state_payload(
+    project_root: str | Path,
+    operation_kind: str,
+    state_file_name: str,
+) -> dict[str, object] | None:
+    """
+    @brief      Load one optional operation-state payload from a root-level artifact file.
+    @param[in]  project_root Active project root folder.
+    @param[in]  operation_kind Stable workflow operation token.
+    @param[in]  state_file_name Operation-state artifact file name.
+    @return     Persisted operation-state payload or `None`.
+    @exception  OSError Raised when the state file cannot be read.
+    @exception  json.JSONDecodeError Raised when the state file is not valid JSON.
+    @exception  TypeError Raised when the state payload is not dictionary-compatible.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-29
+    @version    0.1.0
+    """
+    state_path = resolve_operation_path(project_root, operation_kind, state_file_name)
+    if not state_path.is_file():
+        return None
+    return dict(json.loads(state_path.read_text(encoding="utf-8")))
+
+
+def load_operation_state_file(state_path: str | Path) -> dict[str, object] | None:
+    """
+    @brief      Load one optional operation-state payload from an exact path.
+    @param[in]  state_path Candidate operation-state file path.
+    @return     Persisted operation-state payload or `None`.
+    @exception  OSError Raised when the state file cannot be read.
+    @exception  json.JSONDecodeError Raised when the state file is not valid JSON.
+    @exception  TypeError Raised when the state payload is not dictionary-compatible.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-29
+    @version    0.1.0
+    """
+    payload = load_optional_json_artifact(state_path)
+    if payload is None:
+        return None
+    return dict(payload)
+
+
+def load_optional_json_artifact(artifact_path: str | Path) -> object | None:
+    """
+    @brief      Load one optional JSON artifact from an exact path.
+    @param[in]  artifact_path Candidate JSON artifact path.
+    @return     Parsed JSON payload or `None` when the artifact is missing.
+    @exception  OSError Raised when the artifact cannot be read.
+    @exception  json.JSONDecodeError Raised when the artifact is not valid JSON.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-29
+    @version    0.1.0
+    """
+    resolved_path = Path(artifact_path)
+    if not resolved_path.is_file():
+        return None
+    return json.loads(resolved_path.read_text(encoding="utf-8"))
+
+
+def load_project_json_artifact(project_root: str | Path, file_name: str) -> object | None:
+    """
+    @brief      Load one optional root-level project JSON artifact.
+    @param[in]  project_root Active project root folder.
+    @param[in]  file_name Root-level artifact file name.
+    @return     Parsed JSON payload or `None` for missing, unreadable, or malformed artifacts.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-29
+    @version    0.1.0
+    """
+    try:
+        return load_optional_json_artifact(Path(project_root) / file_name)
+    except (OSError, json.JSONDecodeError):
+        return None
+
+
+def project_artifact_exists(project_root: str | Path, file_name: str) -> bool:
+    """
+    @brief      Return whether one root-level project artifact exists.
+    @param[in]  project_root Active project root folder.
+    @param[in]  file_name Root-level artifact file name.
+    @return     True when the artifact exists.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-29
+    @version    0.1.0
+    """
+    return (Path(project_root) / file_name).exists()
+
+
+def project_text_artifact_has_content(project_root: str | Path, file_name: str) -> bool:
+    """
+    @brief      Return whether one root-level text artifact exists with non-empty content.
+    @param[in]  project_root Active project root folder.
+    @param[in]  file_name Root-level artifact file name.
+    @return     True when the text artifact is present and non-empty.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-29
+    @version    0.1.0
+    """
+    path = Path(project_root) / file_name
+    try:
+        return path.is_file() and bool(path.read_text(encoding="utf-8").strip())
+    except OSError:
+        return False
+
+
+def write_operation_json_artifact(
+    project_root: str | Path,
+    operation_kind: str,
+    file_name: str,
+    payload: object,
+) -> Path:
+    """
+    @brief      Persist one operation JSON artifact through the shared atomic writer.
+    @param[in]  project_root Active project root folder.
+    @param[in]  operation_kind Stable workflow operation token.
+    @param[in]  file_name Operation artifact file name.
+    @param[in]  payload JSON-serializable artifact payload.
+    @return     Final artifact path.
+    @exception  TypeError Raised when the payload is not JSON-serializable.
+    @exception  OSError Raised when the artifact cannot be written.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-29
+    @version    0.1.0
+    """
+    output_path = build_operation_output_path(project_root, operation_kind, file_name)
+    write_json_atomic(output_path, payload)
+    return output_path
+
+
 def relative_to_project(project_root: str | Path, artifact_path: str | Path) -> str:
     """
     @brief      Convert one project-local path into a manifest-relative string.
@@ -343,6 +476,26 @@ def relative_to_project(project_root: str | Path, artifact_path: str | Path) -> 
         return resolved_artifact_path.relative_to(resolved_project_root).as_posix()
     except ValueError as exc:
         raise ValueError("Artifact path is outside the active project.") from exc
+
+
+def is_path_inside_project(project_root: str | Path, candidate_path: str | Path) -> bool:
+    """
+    @brief      Return whether one candidate path is equal to or below the project root.
+    @param[in]  project_root Active project root folder.
+    @param[in]  candidate_path Candidate filesystem path.
+    @return     True when the resolved candidate path is inside the project root.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-29
+    @version    0.1.0
+    """
+    resolved_project_root = Path(project_root).resolve()
+    resolved_candidate_path = Path(candidate_path).resolve()
+    try:
+        resolved_candidate_path.relative_to(resolved_project_root)
+    except ValueError:
+        return False
+    return True
 
 
 def validate_project_relative_path(relative_path: str | Path) -> str:
@@ -427,6 +580,83 @@ def progress_percent(progress_current: int, progress_total: int) -> int:
         return 0
     resolved_percent = math.floor((max(progress_current, 0) / progress_total) * 100)
     return max(0, min(resolved_percent, 100))
+
+
+def emit_progress_update(
+    progress_callback,
+    progress_current: int,
+    progress_total: int,
+    message: str,
+    token_usage: dict[str, object] | None = None,
+    *,
+    include_token_usage: bool = True,
+) -> None:
+    """
+    @brief      Emit one standardized workflow progress callback payload.
+    @param[in]  progress_callback Optional progress callback.
+    @param[in]  progress_current Completed work-unit count.
+    @param[in]  progress_total Total work-unit count.
+    @param[in]  message Operator-facing progress text.
+    @param[in]  token_usage Optional token-usage payload.
+    @param[in]  include_token_usage True when the callback accepts a token-usage argument.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-29
+    @version    0.2.0
+    """
+    if callable(progress_callback):
+        percent_value = progress_percent(progress_current, progress_total)
+        if include_token_usage:
+            progress_callback(progress_current, progress_total, percent_value, message, token_usage)
+        else:
+            progress_callback(progress_current, progress_total, percent_value, message)
+
+
+def optional_string(value: object, *, strip: bool = True) -> str | None:
+    """
+    @brief      Normalize one optional persisted string value.
+    @param[in]  value Candidate optional value.
+    @param[in]  strip True to trim leading and trailing whitespace.
+    @return     Normalized string or `None`.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-29
+    @version    0.1.0
+    """
+    if value in (None, ""):
+        return None
+    normalized_value = str(value)
+    if strip:
+        normalized_value = normalized_value.strip()
+    return normalized_value or None
+
+
+def is_missing_runtime_value(value: object) -> bool:
+    """
+    @brief      Return whether one persisted runtime value is missing or null-like.
+    @param[in]  value Candidate runtime value.
+    @return     True when the value represents a missing runtime field.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-29
+    @version    0.1.0
+    """
+    return str(value).strip().casefold() in {"", "none", "null"}
+
+
+def valid_runtime_value(value: object) -> str:
+    """
+    @brief      Return one persisted runtime value unless it is null-like.
+    @param[in]  value Candidate runtime value.
+    @return     String value or an empty string for null-like values.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-29
+    @version    0.1.0
+    """
+    text = str(value).strip() if value is not None else ""
+    return "" if is_missing_runtime_value(text) else text
 
 
 def reset_operation_data(

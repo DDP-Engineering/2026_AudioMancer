@@ -13,7 +13,7 @@
          extension helpers, and failure cleanup behavior.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-25
-@version 0.2.0
+@version 0.3.1
 """
 
 # IMPORTS
@@ -38,7 +38,7 @@ def test_project_snapshot_service_creates_zip_with_top_level_project_folder(tmp_
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.1.0
+    @version    0.2.0
     """
     project_root, _manifest = _build_snapshot_project(tmp_path)
     snapshot_path = tmp_path / "exports" / "snapshot.zip"
@@ -47,7 +47,7 @@ def test_project_snapshot_service_creates_zip_with_top_level_project_folder(tmp_
 
     assert Path(str(result["snapshot_path"])) == snapshot_path
     assert result["archive_root"] == project_root.name
-    assert result["file_count"] >= 6
+    assert result["file_count"] >= 5
     with zipfile.ZipFile(snapshot_path) as zip_file:
         names = set(zip_file.namelist())
 
@@ -55,7 +55,7 @@ def test_project_snapshot_service_creates_zip_with_top_level_project_folder(tmp_
     assert f"{project_root.name}/{config.CLEANED_TEXT_FILE_NAME}" in names
     assert f"{project_root.name}/audio_blocks/0001_000001_Narator.wav" in names
     assert f"{project_root.name}/reports/details.json" in names
-    assert f"{project_root.name}/log_ai_cleanup_20260425.log" in names
+    assert f"{project_root.name}/log_ai_cleanup_20260425.log" not in names
 
 
 def test_project_snapshot_service_preserves_utf8_filenames_and_content(tmp_path) -> None:
@@ -215,6 +215,14 @@ def test_project_snapshot_service_cancellation_removes_temporary_zip(tmp_path) -
     calls = {"count": 0}
 
     def _cancel_after_first_file() -> bool:
+        """
+        @brief      Request cancellation after snapshot creation has started.
+        @return     True after the first archive loop cancellation check.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-04-29
+        @version    0.1.0
+        """
         calls["count"] += 1
         return calls["count"] > 2
 

@@ -14,17 +14,17 @@
          provenance without changing the operator-editable text file.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-26
-@version 0.1.0
+@version 0.1.1
 """
 
 # IMPORTS
 
-from datetime import UTC, datetime
 import json
 from pathlib import Path
 
 from audiomancer import config
 from audiomancer.services.operation_runtime_service import relative_to_project, resolve_operation_path
+from audiomancer.services.time_service import utc_now_iso as _utc_now_iso
 
 # CONSTANTS
 
@@ -303,18 +303,6 @@ def _positive_int(value: object, fallback: int) -> int:
     """
     resolved_value = _optional_positive_int(value)
     return fallback if resolved_value is None else resolved_value
-
-
-def _utc_now_iso() -> str:
-    """
-    @brief      Build one current UTC timestamp in stable ISO-8601 format.
-    @return     UTC timestamp string without microseconds.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-26
-    @version    0.1.0
-    """
-    return datetime.now(UTC).replace(microsecond=0).isoformat()
 
 
 # END OF FILE
