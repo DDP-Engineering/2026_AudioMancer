@@ -13,7 +13,7 @@
          executes resumable translation over canonical chunking output.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-07
-@version 0.8.1
+@version 0.9.0
 """
 
 # IMPORTS
@@ -24,6 +24,7 @@ import re
 
 from audiomancer import config
 from audiomancer.services import (
+    ai_budget_service,
     deterministic_chunking_service,
     llm_provider_service,
     project_workspace_service,
@@ -34,6 +35,7 @@ from audiomancer.services.logging_service import get_component_logger, trace_fun
 from audiomancer.services.operation_runtime_service import (
     NARRATOR_PROFILE_PRESERVED_OPERATION_KINDS,
     build_operation_output_path,
+    build_operation_state_payload,
     raise_if_cancelled,
     relative_to_project,
     reset_operation_data,
@@ -1210,25 +1212,24 @@ def _build_operation_state(
     }
     if budget_metadata is not None:
         metadata["budget_metadata"] = dict(budget_metadata)
-    return {
-        "folder_relative_path": config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH,
-        "status": status,
-        "input_paths": [relative_to_project(project_root, input_path)],
-        "output_paths": [relative_to_project(project_root, output_path)],
-        "artifact_paths": [
+    return build_operation_state_payload(
+        status=status,
+        input_paths=[relative_to_project(project_root, input_path)],
+        output_paths=[relative_to_project(project_root, output_path)],
+        artifact_paths=[
             relative_to_project(project_root, report_path),
             relative_to_project(project_root, log_path),
         ],
-        "progress_current": report["translated_chunk_count"],
-        "progress_total": report["total_chunk_count"],
-        "mode": "ai_assisted",
-        "started_at": started_at,
-        "completed_at": completed_at,
-        "updated_at": report["updated_at"],
-        "warning_count": len(list(report.get("warnings", []))),
-        "metadata": metadata,
-        "resume_checkpoint": None if resume_checkpoint is None else dict(resume_checkpoint),
-    }
+        progress_current=int(report["translated_chunk_count"]),
+        progress_total=int(report["total_chunk_count"]),
+        mode="ai_assisted",
+        started_at=started_at,
+        completed_at=completed_at,
+        warning_count=len(list(report.get("warnings", []))),
+        metadata=metadata,
+        resume_checkpoint=resume_checkpoint,
+        updated_at=str(report["updated_at"]),
+    )
 
 
 def _next_untranslated_chunk_id(translated_chunks: list[dict[str, object]]) -> str | None:
@@ -1481,19 +1482,6 @@ def _build_budget_metadata(
     @date       2026-04-28
     @version    0.1.0
     """
-    context_window = max(
-        1,
-        int(ai_profile_payload.get("context_window", config.DEFAULT_LLM_CONTEXT_WINDOW)),
-    )
-    max_output_tokens = max(
-        1,
-        int(
-            ai_profile_payload.get(
-                "max_output_tokens",
-                config.DEFAULT_LLM_MAX_OUTPUT_TOKENS,
-            )
-        ),
-    )
     user_prompt_shell = prompt_template_service.render_prompt(
         "text_translation_user",
         {
@@ -1501,30 +1489,16 @@ def _build_budget_metadata(
             "source_text": "(none)",
         },
     )
-    prompt_budget_tokens = _estimate_text_tokens(f"{system_prompt}\n\n{user_prompt_shell}")
-    safety_margin_tokens = max(
+    return ai_budget_service.context_budget_metadata(
+        ai_profile_payload,
+        f"{system_prompt}\n\n{user_prompt_shell}",
         config.DEFAULT_AI_TRANSLATION_MIN_SAFETY_MARGIN_TOKENS,
-        int(context_window * config.DEFAULT_AI_TRANSLATION_SAFETY_MARGIN_CONTEXT_FRACTION),
+        config.DEFAULT_AI_TRANSLATION_SAFETY_MARGIN_CONTEXT_FRACTION,
+        config.DEFAULT_AI_TRANSLATION_TEXT_CONTEXT_FRACTION,
+        config.DEFAULT_AI_TRANSLATION_MIN_TEXT_BUDGET_TOKENS,
+        "AI translation cannot run because the selected AI profile context window "
+        "and max output tokens leave too little room for translation input",
     )
-    available_text_budget = context_window - max_output_tokens - prompt_budget_tokens - safety_margin_tokens
-    text_budget_tokens = min(
-        int(context_window * config.DEFAULT_AI_TRANSLATION_TEXT_CONTEXT_FRACTION),
-        available_text_budget,
-    )
-    min_text_budget = config.DEFAULT_AI_TRANSLATION_MIN_TEXT_BUDGET_TOKENS
-    if text_budget_tokens < min_text_budget:
-        raise ValueError(
-            "AI translation cannot run because the selected AI profile context window "
-            "and max output tokens leave too little room for translation input "
-            f"({text_budget_tokens} estimated tokens available, {min_text_budget} required)."
-        )
-    return {
-        "context_window": context_window,
-        "max_output_tokens": max_output_tokens,
-        "prompt_budget_tokens": prompt_budget_tokens,
-        "text_budget_tokens": text_budget_tokens,
-        "safety_margin_tokens": safety_margin_tokens,
-    }
 
 
 def _split_translation_source_text(source_text: str, usable_input_budget: int) -> list[str]:
@@ -1654,7 +1628,7 @@ def _estimate_text_tokens(text: str) -> int:
     @date       2026-04-07
     @version    0.1.0
     """
-    return max(1, len(text) // 4)
+    return ai_budget_service.estimate_text_tokens(text)
 
 
 def _language_label(language_code: str) -> str:

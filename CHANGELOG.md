@@ -8,6 +8,34 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
 
 All notable changes to this project will be documented in this file.
 
+## [1.1.2] - 2026-04-29
+
+### Changed
+
+- extracted shared AI budget, operation-state, token-note, workflow-controller,
+  Speech Blocks normalization, Speech Blocks report-state, Speech Blocks text
+  splitting, and Audio Blocks artifact helpers from the large workflow services
+- changed AI cleanup, chunking, translation, character discovery, Speech Blocks,
+  Audio Blocks, Audio Assembly, and workflow controllers to use the shared
+  helpers instead of parallel local implementations
+- removed unused narrator-definition state helpers and unused narrator/character
+  voice runtime-probe wrapper functions
+- changed release packaging to write stable `AudioMancer_Windows_x64.zip` and
+  `AudioMancer_Linux_x64.zip` archives instead of versioned archive filenames
+- package version updated to `1.1.2`
+
+### Fixed
+
+- fixed runtime artifact path handling so persisted project-relative paths are
+  resolved through the project-root containment helper before read, delete,
+  rename, or open operations
+- fixed packaged resource lookup so source-tree, installed, and PyInstaller
+  layouts resolve settings, prompts, help, version, and license resources from
+  the correct runtime root
+- fixed narrator voice-language state shaping after cleanup so available
+  language entries and selected narration language follow the original project
+  language unless an approved translation is available
+
 ## [1.1.1] - 2026-04-29
 
 ### Changed

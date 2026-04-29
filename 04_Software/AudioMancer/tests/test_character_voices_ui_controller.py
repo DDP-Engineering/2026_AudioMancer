@@ -13,7 +13,7 @@
          page-entry warnings for the Character Voices workflow.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-20
-@version 1.4.0
+@version 1.5.0
 """
 
 # IMPORTS
@@ -213,8 +213,8 @@ def test_character_voices_ui_controller_generate_stops_preview_before_deleting_s
     call_order: list[str] = []
     monkeypatch.setattr(character_voices_ui_controller, "_confirm_generate_sample", lambda *_args, **_kwargs: True)
     monkeypatch.setattr(
-        character_voices_ui_controller,
-        "_probe_runtime_and_persist_cache",
+        character_voices_ui_controller.tts_runtime_ui_support,
+        "probe_runtime_and_persist_cache_from_settings",
         lambda *_args, **_kwargs: {
             "success": True,
             "discovered_models": [],

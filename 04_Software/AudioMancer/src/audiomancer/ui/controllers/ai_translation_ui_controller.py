@@ -13,7 +13,7 @@
          selected-chunk retranslation, and modal progress lifecycle.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-22
-@version 0.8.0
+@version 0.9.0
 """
 
 # IMPORTS
@@ -31,7 +31,7 @@ from audiomancer.services import (
     text_cleanup_state_service,
     ui_state_service,
 )
-from audiomancer.ui.controllers import misc_ui_controller, operation_runner_controller
+from audiomancer.ui.controllers import misc_ui_controller, workflow_controller_service
 
 if TYPE_CHECKING:
     from audiomancer.ui.main_window import MainWindow
@@ -284,12 +284,12 @@ def _start_operation(window: "MainWindow", operation_name: str, initial_message:
     @date       2026-04-07
     @version    0.2.0
     """
-    operation_runner_controller.start_threaded_operation(
+    workflow_controller_service.start_operation(
         window,
-        "translation",
-        operation_name,
-        initial_message,
-        worker_callable,
+        operation_kind="translation",
+        operation_name=operation_name,
+        initial_message=initial_message,
+        worker_callable=worker_callable,
         set_busy=lambda is_busy: window._ai_translation_page.set_busy(is_busy),
         success_handler=lambda result_payload: _handle_translation_success(window, result_payload),
         failure_handler=lambda error: _handle_translation_failure(window, error),
@@ -420,21 +420,10 @@ def _sync_manifest_from_disk(window: "MainWindow") -> None:
     @date       2026-04-11
     @version    0.2.0
     """
-    if window._current_project_root is None or window._current_manifest is None:
-        return
-    updated_manifest = dict(window._current_manifest)
-    operations = text_cleanup_state_service.normalized_manifest_operations(updated_manifest)
-    operation_state = ai_translation_service.load_operation_state(window._current_project_root)
-    if operation_state is not None:
-        operations["translation"] = project_workspace_service.project_manifest_operation_summary(
-            "translation",
-            operation_state,
-        )
-    updated_manifest["operations"] = operations
-    project_workspace_service.save_manifest(updated_manifest, window._current_project_root)
-    window.show_project_state(
-        window._current_project_root,
-        project_workspace_service.load_manifest(window._current_project_root),
+    workflow_controller_service.sync_manifest_operation_from_disk(
+        window,
+        "translation",
+        ai_translation_service.load_operation_state,
     )
 
 
@@ -449,17 +438,7 @@ def _resolve_ai_profile(settings_payload: dict[str, object] | None, profile_id: 
     @date       2026-04-07
     @version    0.1.0
     """
-    if not isinstance(settings_payload, dict) or not profile_id:
-        return None
-    raw_profiles = settings_payload.get("llm_profiles", [])
-    if not isinstance(raw_profiles, list):
-        return None
-    for profile in raw_profiles:
-        if not isinstance(profile, dict) or not bool(profile.get("enabled", True)):
-            continue
-        if str(profile.get("id", "")).strip() == str(profile_id).strip():
-            return dict(profile)
-    return None
+    return workflow_controller_service.resolve_enabled_ai_profile(settings_payload, profile_id)
 
 
 def _has_chunking_output(project_root: str | None) -> bool:
@@ -548,8 +527,7 @@ def _cancel_active_operation(window: "MainWindow") -> None:
     @date       2026-04-07
     @version    0.1.0
     """
-    if window._active_operation_kind is not None:
-        window._operation_cancel_requested = True
+    workflow_controller_service.cancel_active_operation(window)
 
 
 def _is_cancel_requested(window: "MainWindow") -> bool:
@@ -562,7 +540,7 @@ def _is_cancel_requested(window: "MainWindow") -> bool:
     @date       2026-04-07
     @version    0.1.1
     """
-    return window._operation_cancel_requested
+    return workflow_controller_service.is_cancel_requested(window)
 
 
 # END OF FILE

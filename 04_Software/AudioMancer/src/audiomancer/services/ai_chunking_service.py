@@ -15,7 +15,7 @@
          window-based operation state plus AI transaction logging.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-11
-@version 0.5.1
+@version 0.6.0
 """
 
 # IMPORTS
@@ -26,6 +26,7 @@ from pathlib import Path
 
 from audiomancer import config
 from audiomancer.services import (
+    ai_budget_service,
     deterministic_chunking_service,
     llm_provider_service,
     prompt_template_service,
@@ -35,6 +36,7 @@ from audiomancer.services.logging_service import get_component_logger, trace_fun
 from audiomancer.services.operation_runtime_service import (
     OperationCancelledError,
     build_operation_output_path,
+    build_operation_state_payload,
     load_operation_state_payload,
     raise_if_cancelled,
     relative_to_project,
@@ -420,19 +422,6 @@ def _build_budget_metadata(
     @date       2026-04-28
     @version    0.1.0
     """
-    context_window = max(
-        1,
-        int(ai_profile_payload.get("context_window", config.DEFAULT_LLM_CONTEXT_WINDOW)),
-    )
-    max_output_tokens = max(
-        1,
-        int(
-            ai_profile_payload.get(
-                "max_output_tokens",
-                config.DEFAULT_LLM_MAX_OUTPUT_TOKENS,
-            )
-        ),
-    )
     prompt_user_shell = prompt_template_service.render_prompt(
         "text_chunking_user",
         {
@@ -440,33 +429,22 @@ def _build_budget_metadata(
             "units_block": "",
         },
     )
-    prompt_budget_tokens = _estimate_text_tokens(f"{system_prompt}\n\n{prompt_user_shell}")
-    safety_margin_tokens = max(
+    budget_metadata = ai_budget_service.context_budget_metadata(
+        ai_profile_payload,
+        f"{system_prompt}\n\n{prompt_user_shell}",
         config.DEFAULT_AI_CHUNKING_MIN_SAFETY_MARGIN_TOKENS,
-        int(context_window * config.DEFAULT_AI_CHUNKING_SAFETY_MARGIN_CONTEXT_FRACTION),
+        config.DEFAULT_AI_CHUNKING_SAFETY_MARGIN_CONTEXT_FRACTION,
+        config.DEFAULT_AI_CHUNKING_TEXT_CONTEXT_FRACTION,
+        config.DEFAULT_AI_CHUNKING_MIN_TEXT_BUDGET_TOKENS,
+        "AI-assisted chunking cannot run because the selected AI profile context window "
+        "and max output tokens leave too little room for chunking input",
     )
-    available_text_budget = context_window - max_output_tokens - prompt_budget_tokens - safety_margin_tokens
-    text_budget_tokens = min(
-        int(context_window * config.DEFAULT_AI_CHUNKING_TEXT_CONTEXT_FRACTION),
-        available_text_budget,
-    )
-    min_text_budget = config.DEFAULT_AI_CHUNKING_MIN_TEXT_BUDGET_TOKENS
-    if text_budget_tokens < min_text_budget:
-        raise ValueError(
-            "AI-assisted chunking cannot run because the selected AI profile context window "
-            "and max output tokens leave too little room for chunking input "
-            f"({text_budget_tokens} estimated tokens available, {min_text_budget} required)."
-        )
     strategy_paragraph_cap = config.AI_CHUNKING_WINDOW_SIZE_BY_STRATEGY.get(
         semantic_strategy,
         config.AI_CHUNKING_WINDOW_SIZE_BY_STRATEGY[config.DEFAULT_AI_CHUNKING_STRATEGY],
     )
     return {
-        "context_window": context_window,
-        "max_output_tokens": max_output_tokens,
-        "prompt_budget_tokens": prompt_budget_tokens,
-        "text_budget_tokens": text_budget_tokens,
-        "safety_margin_tokens": safety_margin_tokens,
+        **budget_metadata,
         "strategy_paragraph_cap": strategy_paragraph_cap,
     }
 
@@ -481,7 +459,7 @@ def _estimate_text_tokens(text: str) -> int:
     @date       2026-04-28
     @version    0.1.0
     """
-    return max(1, len(text) // 4)
+    return ai_budget_service.estimate_text_tokens(text)
 
 
 def _build_paragraph_records(cleaned_text: str, project_root: str | Path | None = None) -> list[dict[str, object]]:
@@ -847,20 +825,18 @@ def _build_operation_state(
     artifact_paths = [log_relative_path]
     if report_path is not None and report_path.is_file():
         artifact_paths.insert(0, relative_to_project(project_root, report_path))
-    return {
-        "folder_relative_path": config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH,
-        "status": status,
-        "input_paths": [relative_to_project(project_root, input_snapshot_path)],
-        "output_paths": ([relative_to_project(project_root, output_path)] if output_path.is_file() else []),
-        "artifact_paths": artifact_paths,
-        "progress_current": progress_current,
-        "progress_total": progress_total,
-        "mode": "ai_assisted",
-        "started_at": started_at,
-        "completed_at": completed_at,
-        "updated_at": _utc_now_iso(),
-        "warning_count": len(warnings),
-        "metadata": {
+    return build_operation_state_payload(
+        status=status,
+        input_paths=[relative_to_project(project_root, input_snapshot_path)],
+        output_paths=([relative_to_project(project_root, output_path)] if output_path.is_file() else []),
+        artifact_paths=artifact_paths,
+        progress_current=progress_current,
+        progress_total=progress_total,
+        mode="ai_assisted",
+        started_at=started_at,
+        completed_at=completed_at,
+        warning_count=len(warnings),
+        metadata={
             "warnings": list(warnings),
             "chunk_count": 0 if chunks is None else len(chunks),
             "detected_chapter_count": 0 if chunks is None else _chapter_count_from_chunks(chunks),
@@ -873,8 +849,8 @@ def _build_operation_state(
             "token_usage": token_usage_service.coerce_token_usage(token_usage),
             "budget_metadata": dict(budget_metadata),
         },
-        "resume_checkpoint": None if resume_checkpoint is None else dict(resume_checkpoint),
-    }
+        resume_checkpoint=resume_checkpoint,
+    )
 
 
 def _chapter_count_from_chunks(chunks: list[ChunkPayload]) -> int:

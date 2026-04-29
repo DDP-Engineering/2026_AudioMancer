@@ -14,7 +14,7 @@
          normalization.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-23
-@version 1.7.1
+@version 1.8.0
 """
 
 # IMPORTS
@@ -707,6 +707,129 @@ def test_audio_blocks_service_split_resume_rejects_invalid_part_checkpoint(tmp_p
         )
         == []
     )
+
+
+@pytest.mark.parametrize("path_kind", ["parent_traversal", "absolute", "unc_like"])
+def test_audio_blocks_service_split_resume_rejects_escaping_part_checkpoint(tmp_path, path_kind: str) -> None:
+    """
+    @brief      Verify split resume refuses persisted part paths outside the project root.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @param[in]  path_kind Escaping path form under test.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-29
+    @version    0.1.0
+    """
+    project_root, _manifest = _create_audio_blocks_project(tmp_path, "AudioBlocksEscapingSplitCheckpoint")
+    outside_path = tmp_path / "outside_part.wav"
+    outside_path.write_bytes(_wav_bytes("outside-part"))
+    audio_block = audio_blocks_service._initialize_audio_blocks(  # noqa: SLF001
+        speech_blocks_service.load_speech_blocks(project_root)
+    )[0]
+    split_plan = {"parts": ["Part one.", "Part two."], "strategy": "sentence"}
+    audio_block["generated_part_relative_paths"] = [
+        _escaping_artifact_path(path_kind, "outside_part.wav", outside_path)
+    ]
+    audio_block["split_plan_fingerprint"] = audio_blocks_service._split_plan_fingerprint(split_plan)  # noqa: SLF001
+
+    assert (
+        audio_blocks_service._existing_part_paths(  # noqa: SLF001
+            project_root,
+            audio_block,
+            split_plan,
+            force_restart=False,
+        )
+        == []
+    )
+    assert outside_path.is_file()
+
+
+def test_audio_blocks_service_deletes_only_project_relative_artifacts(tmp_path) -> None:
+    """
+    @brief      Verify stale persisted artifact paths cannot delete files outside the project root.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-29
+    @version    0.1.0
+    """
+    project_root, _manifest = _create_audio_blocks_project(tmp_path, "AudioBlocksEscapingDelete")
+    outside_audio_path = tmp_path / "outside.wav"
+    outside_metadata_path = tmp_path / "outside.json"
+    outside_part_path = tmp_path / "outside_part.wav"
+    outside_audio_path.write_bytes(_wav_bytes("outside-audio"))
+    outside_metadata_path.write_text("{}\n", encoding="utf-8")
+    outside_part_path.write_bytes(_wav_bytes("outside-part"))
+    audio_block = {
+        "audio_relative_path": "../outside.wav",
+        "metadata_relative_path": str(outside_metadata_path.resolve()),
+        "generated_part_relative_paths": ["//server/share/outside_part.wav"],
+    }
+
+    audio_blocks_service._delete_audio_block_artifacts(project_root, audio_block)  # noqa: SLF001
+
+    assert outside_audio_path.is_file()
+    assert outside_metadata_path.is_file()
+    assert outside_part_path.is_file()
+
+
+def test_audio_blocks_service_remap_ignores_escaping_old_artifacts(tmp_path) -> None:
+    """
+    @brief      Verify remapping cannot rename or read artifacts outside the project root.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-29
+    @version    0.1.0
+    """
+    project_root, _manifest = _create_audio_blocks_project(tmp_path, "AudioBlocksEscapingRemap")
+    outside_audio_path = tmp_path / "outside_remap.wav"
+    outside_metadata_path = tmp_path / "outside_remap.json"
+    outside_audio_path.write_bytes(_wav_bytes("outside-remap"))
+    outside_metadata_path.write_text('{"speech_block_id": "old"}\n', encoding="utf-8")
+    old_block = audio_blocks_service._initialize_audio_blocks(  # noqa: SLF001
+        speech_blocks_service.load_speech_blocks(project_root)
+    )[0]
+    new_block = dict(old_block)
+    new_block["sequence_index"] = 2
+    old_block.update(
+        {
+            "audio_relative_path": "../outside_remap.wav",
+            "metadata_relative_path": str(outside_metadata_path.resolve()),
+            "generated": True,
+            "metadata_only": False,
+        }
+    )
+
+    remapped_block = audio_blocks_service._remap_audio_block_artifacts(project_root, old_block, new_block)  # noqa: SLF001
+
+    assert outside_audio_path.is_file()
+    assert outside_metadata_path.is_file()
+    assert remapped_block["audio_relative_path"] == "../outside_remap.wav"
+
+
+def _escaping_artifact_path(path_kind: str, traversal_file_name: str, absolute_path) -> str:
+    """
+    @brief      Build one escaping persisted artifact path for traversal tests.
+    @param[in]  path_kind Escaping path form under test.
+    @param[in]  traversal_file_name Sibling file name used by parent traversal and UNC-like cases.
+    @param[in]  absolute_path Absolute path used by the drive-qualified case.
+    @return     Escaping path string.
+    @exception  AssertionError Raised when the test path kind is unknown.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-29
+    @version    0.1.0
+    """
+    if path_kind == "parent_traversal":
+        return f"../{traversal_file_name}"
+    if path_kind == "absolute":
+        return str(absolute_path.resolve())
+    if path_kind == "unc_like":
+        return f"//server/share/{traversal_file_name}"
+    raise AssertionError(f"Unknown path kind: {path_kind}")
 
 
 def test_audio_blocks_service_reset_empty_generated_subfolders_are_not_persisted_data(tmp_path) -> None:

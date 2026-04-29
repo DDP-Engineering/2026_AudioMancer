@@ -13,13 +13,15 @@
          settings scaffold exist with the expected baseline contract.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-20
-@version 0.8.9
+@version 0.9.0
 """
 
 # IMPORTS
 
+import importlib
 import json
 from pathlib import Path
+import sys
 
 from audiomancer import config
 from audiomancer.services import settings_service
@@ -90,6 +92,65 @@ def test_settings_json_scaffold_matches_service_defaults() -> None:
     assert isinstance(loaded_payload, dict)
     assert payload == loaded_payload
     assert settings_path == config.APP_SETTINGS_PATH
+
+
+def test_config_resolves_frozen_packaged_runtime_resources(monkeypatch, tmp_path) -> None:
+    """
+    @brief      Verify PyInstaller resource lookup resolves files staged beside the executable.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-29
+    @version    0.1.0
+    """
+    from audiomancer.services import prompt_template_service
+    from audiomancer.ui.controllers import misc_ui_controller
+
+    bundle_root = tmp_path / "AudioMancer"
+    internal_root = bundle_root / "_internal"
+    prompt_root = bundle_root / "prompts"
+    help_root = bundle_root / "help" / "en"
+    bundle_root.mkdir()
+    internal_root.mkdir()
+    prompt_root.mkdir()
+    help_root.mkdir(parents=True)
+    (bundle_root / "settings.json").write_text("{}\n", encoding="utf-8")
+    (bundle_root / "LICENSE.txt").write_text("Main license\n", encoding="utf-8")
+    (bundle_root / "LICENSE_NC.txt").write_text("NC license\n", encoding="utf-8")
+    (bundle_root / "LICENSE_ro.txt").write_text("Licenta\n", encoding="utf-8")
+    (bundle_root / "LICENSE_NC_ro.txt").write_text("Licenta NC\n", encoding="utf-8")
+    (bundle_root / "pyproject.toml").write_text('[project]\nversion = "9.8.7"\n', encoding="utf-8")
+    (prompt_root / "sample.txt").write_text("Packaged prompt", encoding="utf-8")
+    (help_root / "index.html").write_text("<html></html>\n", encoding="utf-8")
+
+    try:
+        with monkeypatch.context() as frozen_patch:
+            frozen_patch.setattr(sys, "frozen", True, raising=False)
+            frozen_patch.setattr(sys, "_MEIPASS", str(internal_root), raising=False)
+            frozen_patch.setattr(sys, "executable", str(bundle_root / "AudioMancer.exe"))
+            importlib.reload(config)
+            importlib.reload(prompt_template_service)
+            importlib.reload(misc_ui_controller)
+
+            assert bundle_root.resolve() == config.APP_ROOT
+            assert bundle_root.resolve() / "settings.json" == config.APP_SETTINGS_PATH
+            assert bundle_root.resolve() / "prompts" == config.APP_PROMPTS_PATH
+            assert settings_service.load_settings()["language"] == config.DEFAULT_LANGUAGE
+            assert prompt_template_service.load_prompt("sample") == "Packaged prompt"
+            assert misc_ui_controller.resolve_help_index_path("en") == (
+                bundle_root.resolve() / "help" / "en" / "index.html"
+            )
+            assert misc_ui_controller.resolve_license_paths("ro") == (
+                bundle_root.resolve() / "LICENSE_ro.txt",
+                bundle_root.resolve() / "LICENSE_NC_ro.txt",
+            )
+            assert misc_ui_controller.current_application_version() == "9.8.7"
+    finally:
+        importlib.reload(config)
+        importlib.reload(prompt_template_service)
+        importlib.reload(misc_ui_controller)
 
 
 def test_config_translation_languages_include_qwen3_tts_languages_with_chinese() -> None:

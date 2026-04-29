@@ -14,7 +14,7 @@
          Chunking page.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-24
-@version 0.6.0
+@version 0.7.0
 """
 
 # IMPORTS
@@ -24,12 +24,12 @@ from pathlib import Path
 
 from audiomancer import config
 from audiomancer.services import (
+    ai_state_note_service,
     deterministic_chunking_service,
     home_presenter_service,
     operation_runtime_service,
     project_workspace_service,
     text_cleanup_state_service,
-    token_usage_service,
     ui_state_service,
 )
 
@@ -350,7 +350,7 @@ def _selected_ai_strategy(settings_payload: dict[str, object] | None) -> str:
     @return     Helper result.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.1.0
+    @version    0.2.0
     """
     if not isinstance(settings_payload, dict):
         return config.DEFAULT_AI_CHUNKING_STRATEGY
@@ -380,26 +380,7 @@ def _build_token_usage_notes(
     @date       2026-04-21
     @version    0.1.0
     """
-    metadata = {}
-    if isinstance(operation_state, dict):
-        metadata = operation_state.get("metadata", {})
-    token_usage = token_usage_service.restore_token_usage(
-        None if not isinstance(report_payload, dict) else report_payload.get("token_usage"),
-        metadata.get("token_usage") if isinstance(metadata, dict) else None,
-    )
-    if bool(token_usage.get("usage_available", False)):
-        return [
-            ui_state_service.translate("ai.note_token_usage_summary", language).format(
-                input_tokens=format(int(token_usage["input_tokens"]), ","),
-                output_tokens=format(int(token_usage["output_tokens"]), ","),
-                total_tokens=format(int(token_usage["total_tokens"]), ","),
-            )
-        ]
-    if (isinstance(report_payload, dict) and "token_usage" in report_payload) or (
-        isinstance(metadata, dict) and "token_usage" in metadata
-    ):
-        return [ui_state_service.translate("ai.note_token_usage_unavailable", language)]
-    return []
+    return ai_state_note_service.build_token_usage_notes(report_payload, operation_state, language)
 
 
 # END OF FILE

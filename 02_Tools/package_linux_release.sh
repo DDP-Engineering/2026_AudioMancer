@@ -128,7 +128,7 @@ if [[ -z "${APP_VERSION}" ]]; then
     exit 1
 fi
 
-ARTIFACT_BASE_NAME="AudioMancer_Ubuntu_x64_v${APP_VERSION}"
+ARTIFACT_BASE_NAME="AudioMancer_Linux_x64"
 ARCHIVE_PATH="${DELIVERY_ROOT}/${ARTIFACT_BASE_NAME}.zip"
 STAGING_ROOT="${SCRIPT_DIR}/.packaging_tmp"
 STAGING_PATH="${STAGING_ROOT}/${ARTIFACT_BASE_NAME}"
@@ -213,7 +213,7 @@ The app icon is included in assets/icons/.
 Offline help is included in help/en/index.html and help/ro/index.html.
 EOF
 
-invoke_step "Create versioned delivery archive" create_zip_archive "${STAGING_PATH}" "${ARCHIVE_PATH}"
+invoke_step "Create delivery archive" create_zip_archive "${STAGING_PATH}" "${ARCHIVE_PATH}"
 
 invoke_step "Clean build artifacts" remove_path_if_exists "${BUILD_PATH}"
 remove_path_if_exists "${DIST_PATH}"

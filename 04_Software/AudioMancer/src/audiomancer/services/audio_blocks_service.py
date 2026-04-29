@@ -16,21 +16,19 @@
          `80_audio_blocks` workflow artifacts.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-23
-@version 0.8.3
+@version 0.10.0
 """
 
 # IMPORTS
 
 import hashlib
-import io
 import json
 from pathlib import Path
 import re
-import unicodedata
-import wave
 
 from audiomancer import config
 from audiomancer.services import (
+    audio_blocks_artifact_service,
     character_voices_service,
     narrator_definition_service,
     operation_runtime_service,
@@ -40,6 +38,7 @@ from audiomancer.services import (
 from audiomancer.services.logging_service import get_component_logger, trace_function
 from audiomancer.services.operation_runtime_service import (
     build_operation_output_path,
+    build_operation_state_payload,
     load_operation_state_payload,
     load_optional_json_artifact,
     raise_if_cancelled,
@@ -52,6 +51,9 @@ from audiomancer.services.operation_runtime_service import (
 )
 from audiomancer.services.operation_runtime_service import (
     optional_string as _optional_string,
+)
+from audiomancer.services.operation_runtime_service import (
+    try_resolve_project_relative_path as _safe_project_artifact_path,
 )
 from audiomancer.services.persistence_service import write_json_atomic
 from audiomancer.services.time_service import utc_now_iso as _utc_now_iso
@@ -74,6 +76,14 @@ _WORDS_PER_AUDIO_SECOND = 2.5
 _AUDIO_BLOCK_FINGERPRINT_VERSION = 1
 _SPECIAL_BLOCK_STATUS_IMPLEMENTED = "implemented"
 _SPECIAL_BLOCK_STATUS_NOT_IMPLEMENTED = "not_implemented"
+_audio_artifact_file_stem = audio_blocks_artifact_service.audio_artifact_file_stem
+_audio_artifact_paths = audio_blocks_artifact_service.audio_artifact_paths
+_audio_part_artifact_path = audio_blocks_artifact_service.audio_part_artifact_path
+_generated_audio_root = audio_blocks_artifact_service.generated_audio_root
+_is_valid_wav_path = audio_blocks_artifact_service.is_valid_wav_path
+_stitch_wav_parts = audio_blocks_artifact_service.stitch_wav_parts
+_validate_wav_bytes = audio_blocks_artifact_service.validate_wav_bytes
+normalize_speaker_name = audio_blocks_artifact_service.normalize_speaker_name
 
 AudioBlockPayload = dict[str, object]
 AudioBlocksReportPayload = dict[str, object]
@@ -1747,7 +1757,7 @@ def _existing_part_paths(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-24
-    @version    0.2.1
+    @version    0.2.2
     """
     if force_restart or len(split_plan["parts"]) <= 1:
         return []
@@ -1762,7 +1772,9 @@ def _existing_part_paths(
     existing_paths: list[Path] = []
     for part_index, relative_path in enumerate(existing_relative_paths):
         expected_path = _audio_part_artifact_path(project_root, audio_block, part_index)
-        resolved_path = project_root / str(relative_path)
+        resolved_path = _safe_project_artifact_path(project_root, relative_path)
+        if resolved_path is None:
+            return []
         if resolved_path != expected_path or not resolved_path.is_file() or not _is_valid_wav_path(resolved_path):
             return []
         existing_paths.append(resolved_path)
@@ -1791,69 +1803,6 @@ def _split_plan_fingerprint(split_plan: dict[str, object]) -> str:
     ).hexdigest()
 
 
-def _validate_wav_bytes(audio_bytes: bytes) -> None:
-    """
-    @brief      Validate downloaded Audio Blocks WAV bytes before persistence.
-    @param[in]  audio_bytes Candidate WAV payload.
-    @return     None.
-    @exception  RuntimeError Raised when the payload is not a readable non-empty WAV.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-27
-    @version    0.1.0
-    """
-    try:
-        with wave.open(io.BytesIO(audio_bytes), "rb") as audio_file:
-            if audio_file.getnchannels() <= 0 or audio_file.getsampwidth() <= 0:
-                raise RuntimeError
-            if audio_file.getframerate() <= 0 or audio_file.getnframes() <= 0:
-                raise RuntimeError
-    except (EOFError, OSError, RuntimeError, wave.Error) as exc:
-        raise RuntimeError("VoiceWeaver returned invalid WAV audio for Audio Blocks generation.") from exc
-
-
-def _is_valid_wav_path(audio_path: Path) -> bool:
-    """
-    @brief      Return whether one existing split-part file is a readable non-empty WAV.
-    @param[in]  audio_path Candidate WAV path.
-    @return     True when the path can be reused as a split checkpoint.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-27
-    @version    0.1.0
-    """
-    try:
-        with wave.open(str(audio_path), "rb") as audio_file:
-            return (
-                audio_file.getnchannels() > 0
-                and audio_file.getsampwidth() > 0
-                and audio_file.getframerate() > 0
-                and audio_file.getnframes() > 0
-            )
-    except (EOFError, OSError, wave.Error):
-        return False
-
-
-def _audio_part_artifact_path(project_root: Path, audio_block: AudioBlockPayload, part_index: int) -> Path:
-    """
-    @brief      Resolve one deterministic split-part WAV artifact path.
-    @param[in]  project_root Active project root folder.
-    @param[in]  audio_block Current Audio Blocks entry.
-    @param[in]  part_index Zero-based split-part index.
-    @return     Absolute split-part WAV path.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.2.1
-    """
-    file_stem = _audio_artifact_file_stem(
-        str(audio_block.get("chunk_id", "")).strip(),
-        int(audio_block.get("sequence_index", 0)),
-        str(audio_block.get("normalized_speaker_name", "")),
-    )
-    file_stem = f"{file_stem}_part{part_index + 1:03d}"
-    return _generated_audio_root(project_root) / "parts" / f"{file_stem}.wav"
-
-
 def _delete_audio_block_artifacts(project_root: Path, audio_block: AudioBlockPayload) -> None:
     """
     @brief      Delete previous generated artifacts for one block before a forced regeneration.
@@ -1863,19 +1812,20 @@ def _delete_audio_block_artifacts(project_root: Path, audio_block: AudioBlockPay
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-24
-    @version    0.1.0
+    @version    0.1.1
     """
     for field_name in ("audio_relative_path", "metadata_relative_path"):
-        relative_path = _optional_string(audio_block.get(field_name))
-        if not relative_path:
+        artifact_path = _safe_project_artifact_path(project_root, audio_block.get(field_name))
+        if artifact_path is None:
             continue
-        artifact_path = project_root / relative_path
         if artifact_path.is_file():
             artifact_path.unlink()
     part_paths = audio_block.get("generated_part_relative_paths")
     if isinstance(part_paths, list):
         for relative_path in part_paths:
-            artifact_path = project_root / str(relative_path)
+            artifact_path = _safe_project_artifact_path(project_root, relative_path)
+            if artifact_path is None:
+                continue
             if artifact_path.is_file():
                 artifact_path.unlink()
 
@@ -1920,7 +1870,7 @@ def _remap_audio_block_artifacts(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-24
-    @version    0.1.0
+    @version    0.1.1
     """
     remapped_block = dict(old_block)
     remapped_block.update(
@@ -1950,15 +1900,17 @@ def _remap_audio_block_artifacts(
         str(new_block.get("normalized_speaker_name", "")),
     )
     if old_audio_relative_path:
-        old_audio_path = project_root / old_audio_relative_path
-        if old_audio_path.is_file() and old_audio_path != new_audio_path:
+        old_audio_path = _safe_project_artifact_path(project_root, old_audio_relative_path)
+        if old_audio_path is not None and old_audio_path.is_file() and old_audio_path != new_audio_path:
             new_audio_path.parent.mkdir(parents=True, exist_ok=True)
             if new_audio_path.is_file():
                 new_audio_path.unlink()
             old_audio_path.rename(new_audio_path)
             remapped_block["audio_relative_path"] = relative_to_project(project_root, new_audio_path)
     if old_metadata_relative_path:
-        old_metadata_path = project_root / old_metadata_relative_path
+        old_metadata_path = _safe_project_artifact_path(project_root, old_metadata_relative_path)
+        if old_metadata_path is None:
+            return remapped_block
         if old_metadata_path.is_file():
             metadata_payload = json.loads(old_metadata_path.read_text(encoding="utf-8"))
             if not isinstance(metadata_payload, dict):
@@ -1982,34 +1934,6 @@ def _remap_audio_block_artifacts(
             write_json_atomic(new_metadata_path, metadata_payload)
             remapped_block["metadata_relative_path"] = relative_to_project(project_root, new_metadata_path)
     return remapped_block
-
-
-def _stitch_wav_parts(part_paths: list[Path], output_path: Path) -> None:
-    """
-    @brief      Concatenate compatible WAV part files into one final WAV.
-    @param[in]  part_paths Ordered WAV part paths.
-    @param[in]  output_path Final stitched WAV path.
-    @return     None.
-    @exception  RuntimeError Raised when part files have incompatible WAV parameters.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.1.0
-    """
-    if not part_paths:
-        raise RuntimeError("Cannot stitch split Audio Block because no generated part WAV files exist.")
-    expected_params = None
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    with wave.open(str(output_path), "wb") as output_wav:
-        for part_path in part_paths:
-            with wave.open(str(part_path), "rb") as part_wav:
-                part_params = part_wav.getparams()
-                comparable_params = part_params[:3], part_params[4:]
-                if expected_params is None:
-                    expected_params = comparable_params
-                    output_wav.setparams(part_params)
-                elif comparable_params != expected_params:
-                    raise RuntimeError("VoiceWeaver returned split WAV parts with incompatible audio parameters.")
-                output_wav.writeframes(part_wav.readframes(part_wav.getnframes()))
 
 
 def _build_audio_block_fingerprint(
@@ -2568,20 +2492,18 @@ def _build_operation_state(
     generated_root = _generated_audio_root(project_root)
     if generated_root.is_dir():
         artifact_paths.extend(relative_to_project(project_root, path) for path in sorted(generated_root.rglob("*")))
-    return {
-        "folder_relative_path": config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH,
-        "status": status,
-        "input_paths": [relative_to_project(project_root, input_path)],
-        "output_paths": [relative_to_project(project_root, output_path)],
-        "artifact_paths": artifact_paths,
-        "progress_current": _generated_count(audio_blocks),
-        "progress_total": len(speech_blocks),
-        "mode": _MODE,
-        "started_at": started_at,
-        "completed_at": completed_at,
-        "updated_at": _utc_now_iso(),
-        "warning_count": 0,
-        "metadata": {
+    return build_operation_state_payload(
+        status=status,
+        input_paths=[relative_to_project(project_root, input_path)],
+        output_paths=[relative_to_project(project_root, output_path)],
+        artifact_paths=artifact_paths,
+        progress_current=_generated_count(audio_blocks),
+        progress_total=len(speech_blocks),
+        mode=_MODE,
+        started_at=started_at,
+        completed_at=completed_at,
+        warning_count=0,
+        metadata={
             "voice_language": voice_language,
             "input_fingerprint": input_fingerprint,
             "speech_block_count": len(speech_blocks),
@@ -2597,12 +2519,12 @@ def _build_operation_state(
             "model_token_budget": _first_present(audio_blocks, "model_token_budget"),
             "model_audio_seconds_budget": _first_present(audio_blocks, "model_audio_seconds_budget"),
         },
-        "resume_checkpoint": {
+        resume_checkpoint={
             "next_profile_index": max(next_profile_index, 0),
             "next_speech_block_index": max(next_speech_block_index, 0),
             "next_split_part_index": max(next_split_part_index, 0),
         },
-    }
+    )
 
 
 def _persist_state(
@@ -2655,78 +2577,6 @@ def _speech_blocks_snapshot_path(project_root: Path) -> Path:
     @version    0.1.0
     """
     return project_root / config.SPEECH_BLOCKS_OUTPUT_FILE_NAME
-
-
-def _generated_audio_root(project_root: Path) -> Path:
-    """
-    @brief      Resolve the generated-audio artifact root for Audio Blocks.
-    @param[in]  project_root Active project root folder.
-    @return     Absolute generated-audio folder path.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-23
-    @version    0.1.0
-    """
-    return project_root / config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME
-
-
-def _audio_artifact_paths(
-    project_root: Path,
-    chunk_id: str,
-    sequence_index: int,
-    normalized_speaker_name: str,
-) -> tuple[Path, Path]:
-    """
-    @brief      Resolve one stable WAV and JSON metadata path pair for a speech block.
-    @param[in]  project_root Active project root folder.
-    @param[in]  chunk_id Stable source chunk identifier.
-    @param[in]  sequence_index Stable chunk-local speech-block sequence index.
-    @param[in]  normalized_speaker_name Stable normalized speaker-name token.
-    @return     Tuple of WAV path and metadata JSON path.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.3.0
-    """
-    file_stem = _audio_artifact_file_stem(chunk_id, sequence_index, normalized_speaker_name)
-    generated_root = _generated_audio_root(project_root)
-    return generated_root / f"{file_stem}.wav", generated_root / f"{file_stem}.json"
-
-
-def _audio_artifact_file_stem(chunk_id: str, sequence_index: int, normalized_speaker_name: str) -> str:
-    """
-    @brief      Build the compact Audio Blocks artifact file stem.
-    @param[in]  chunk_id Stable source chunk identifier.
-    @param[in]  sequence_index Stable chunk-local speech-block sequence index.
-    @param[in]  normalized_speaker_name Stable normalized speaker-name token.
-    @return     File stem in `<chunk_no_4digits>_<block_no_6digits>_<character_normalized_name>` format.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.2.0
-    """
-    chunk_sort_key = speech_blocks_service.speech_block_book_sort_key({"chunk_id": chunk_id, "sequence_index": 0})
-    safe_chunk = f"{chunk_sort_key[0]:04d}"
-    safe_sequence = f"{max(int(sequence_index), 0):06d}"
-    safe_name = str(normalized_speaker_name or "").strip() or "speaker"
-    return f"{safe_chunk}_{safe_sequence}_{safe_name}"
-
-
-def normalize_speaker_name(value: str) -> str:
-    """
-    @brief      Build one filesystem-stable normalized speaker name token.
-    @param[in]  value Raw speaker display name.
-    @return     ASCII-safe normalized speaker token.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-23
-    @version    0.2.0
-    """
-    normalized_value = str(value or "").replace("\u00c3\u02c6\u00cb\u0153", "\u0218").replace("\u00c8\u02dc", "\u0218")
-    normalized_value = unicodedata.normalize("NFKD", normalized_value)
-    ascii_value = normalized_value.encode("ascii", "ignore").decode("ascii")
-    cleaned_value = re.sub(r"[^A-Za-z0-9]+", "_", ascii_value).strip("_").lower()
-    return cleaned_value or "speaker"
 
 
 def _voice_target_id_for_block(

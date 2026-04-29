@@ -14,7 +14,7 @@
          generation through root-level state and report artifacts.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-25
-@version 0.4.1
+@version 0.5.0
 """
 
 # IMPORTS
@@ -35,11 +35,15 @@ from audiomancer.services import (
 from audiomancer.services.logging_service import get_component_logger, trace_function
 from audiomancer.services.operation_runtime_service import (
     build_operation_output_path,
+    build_operation_state_payload,
     emit_progress_update,
     load_operation_state_payload,
     raise_if_cancelled,
     relative_to_project,
     resolve_operation_path,
+)
+from audiomancer.services.operation_runtime_service import (
+    try_resolve_project_relative_path as _safe_project_artifact_path,
 )
 from audiomancer.services.time_service import utc_now_iso as _utc_now_iso
 
@@ -814,34 +818,32 @@ def _build_operation_state(
     state_path = build_operation_output_path(project_root, "audio_assembly", config.AUDIO_ASSEMBLY_STATE_FILE_NAME)
     output_paths = [str(output.get("audio_relative_path", "")) for output in report.get("outputs", [])]
     output_paths = [path for path in output_paths if path]
-    return {
-        "folder_relative_path": config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH,
-        "status": str(report.get("operation_status", "not_started")),
-        "input_paths": [config.AUDIO_BLOCKS_OUTPUT_FILE_NAME],
-        "output_paths": output_paths,
-        "artifact_paths": [
+    return build_operation_state_payload(
+        status=str(report.get("operation_status", "not_started")),
+        input_paths=[config.AUDIO_BLOCKS_OUTPUT_FILE_NAME],
+        output_paths=output_paths,
+        artifact_paths=[
             relative_to_project(project_root, report_path),
             relative_to_project(project_root, state_path),
             *output_paths,
         ],
-        "progress_current": int(report.get("generated_output_count", 0)),
-        "progress_total": len(output_plan),
-        "mode": _MODE,
-        "started_at": report.get("started_at"),
-        "completed_at": report.get("completed_at"),
-        "updated_at": _utc_now_iso(),
-        "warning_count": int(report.get("warning_count", 0)),
-        "metadata": {
+        progress_current=int(report.get("generated_output_count", 0)),
+        progress_total=len(output_plan),
+        mode=_MODE,
+        started_at=report.get("started_at"),
+        completed_at=report.get("completed_at"),
+        warning_count=int(report.get("warning_count", 0)),
+        metadata={
             "input_fingerprint": str(report.get("input_fingerprint", "")),
             "output_mode": str(dict(report.get("settings", {})).get("output_mode", "")),
             "output_format": OUTPUT_FORMAT_WAV,
             "total_duration_seconds": float(report.get("total_duration_seconds", 0.0)),
             "completed_output_keys": [str(output.get("output_key", "")) for output in report.get("outputs", [])],
         },
-        "resume_checkpoint": {
+        resume_checkpoint={
             "next_output_index": max(int(next_output_index), 0),
         },
-    }
+    )
 
 
 def _persist_state(project_root: Path, report: AudioAssemblyReport, operation_state: AudioAssemblyState) -> None:
@@ -880,15 +882,15 @@ def _completed_records_for_resume(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.1.0
+    @version    0.1.1
     """
     metadata = existing_state.get("metadata", {}) if isinstance(existing_state, dict) else {}
     if not isinstance(metadata, dict) or str(metadata.get("input_fingerprint", "")) != input_fingerprint:
         return []
     records = []
     for output in load_generated_outputs(project_root):
-        audio_path = project_root / str(output.get("audio_relative_path", ""))
-        if audio_path.is_file():
+        audio_path = _safe_project_artifact_path(project_root, output.get("audio_relative_path"))
+        if audio_path is not None and audio_path.is_file():
             records.append(output)
     return records
 
@@ -922,12 +924,9 @@ def _audio_path(project_root: Path, audio_block: dict[str, object]) -> Path | No
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.1.0
+    @version    0.1.1
     """
-    relative_path = str(audio_block.get("audio_relative_path", "") or "").strip()
-    if not relative_path:
-        return None
-    return project_root / relative_path
+    return _safe_project_artifact_path(project_root, audio_block.get("audio_relative_path"))
 
 
 def _is_assembly_block(audio_block: dict[str, object]) -> bool:
@@ -990,13 +989,14 @@ def _enrich_block_duration(project_root: Path, block: dict[str, object]) -> dict
     @exception  wave.Error Raised when the source file is not a readable WAV.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.2.0
+    @version    0.2.1
     """
     enriched = dict(block)
     if _is_pause_block(enriched):
         enriched["duration_seconds"] = _pause_duration_ms(enriched) / 1000.0
         return enriched
-    enriched["duration_seconds"] = _wav_duration_seconds(project_root / str(block.get("audio_relative_path", "")))
+    audio_path = _audio_path(project_root, block)
+    enriched["duration_seconds"] = 0.0 if audio_path is None else _wav_duration_seconds(audio_path)
     return enriched
 
 
@@ -1014,7 +1014,7 @@ def _reference_wav_params(
     @exception  RuntimeError Raised when no source WAV exists for the output.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.1.0
+    @version    0.1.1
     """
     for block in blocks:
         source_path = _audio_path(project_root, block)
@@ -1022,7 +1022,7 @@ def _reference_wav_params(
             continue
         with wave.open(str(source_path), "rb") as source_wav:
             return source_wav.getparams()
-    fallback_path = project_root / fallback_relative_path if fallback_relative_path.strip() else None
+    fallback_path = _safe_project_artifact_path(project_root, fallback_relative_path)
     if fallback_path is not None and fallback_path.is_file():
         with wave.open(str(fallback_path), "rb") as source_wav:
             return source_wav.getparams()

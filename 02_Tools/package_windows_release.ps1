@@ -63,7 +63,7 @@ if (-not $versionMatch.Success) {
 }
 
 $appVersion = $versionMatch.Groups[1].Value
-$artifactBaseName = "AudioMancer_Windows_x64_v$appVersion"
+$artifactBaseName = 'AudioMancer_Windows_x64'
 $archivePath = Join-Path $deliveryRoot "$artifactBaseName.zip"
 $stagingRoot = Join-Path $scriptRoot '.packaging_tmp'
 $stagingPath = Join-Path $stagingRoot $artifactBaseName
@@ -72,6 +72,7 @@ $distPath = Join-Path $appRoot 'dist'
 $distBundlePath = Join-Path $distPath 'AudioMancer'
 
 $requiredRootFiles = @(
+    'pyproject.toml',
     'settings.json',
     'LICENSE.txt',
     'LICENSE_NC.txt',
@@ -174,7 +175,7 @@ Invoke-Step -Name 'Assemble delivery staging folder' -Action {
     ) | Set-Content -LiteralPath $releaseNotesPath -Encoding ASCII
 }
 
-Invoke-Step -Name 'Create versioned delivery archive' -Action {
+Invoke-Step -Name 'Create delivery archive' -Action {
     New-ZipArchiveFromDirectory -SourceDirectory $stagingPath -DestinationArchive $archivePath
 }
 

@@ -14,7 +14,7 @@
          operation state for interrupted deterministic chunking runs.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-11
-@version 0.3.1
+@version 0.4.0
 """
 
 # IMPORTS
@@ -29,6 +29,7 @@ from audiomancer.services import cleanup_metadata_service
 from audiomancer.services.logging_service import get_component_logger, trace_function
 from audiomancer.services.operation_runtime_service import (
     build_operation_output_path,
+    build_operation_state_payload,
     emit_progress_update,
     load_operation_state_file,
     load_operation_state_payload,
@@ -459,27 +460,25 @@ def _build_operation_state(
     artifact_paths: list[str] = []
     if report_path is not None and report_path.is_file():
         artifact_paths.append(relative_to_project(project_root, report_path))
-    return {
-        "folder_relative_path": config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH,
-        "status": status,
-        "input_paths": [relative_to_project(project_root, input_snapshot_path)],
-        "output_paths": ([relative_to_project(project_root, output_path)] if output_path.is_file() else []),
-        "artifact_paths": artifact_paths,
-        "progress_current": progress_current,
-        "progress_total": progress_total,
-        "mode": "deterministic",
-        "started_at": started_at,
-        "completed_at": completed_at,
-        "updated_at": _utc_now_iso(),
-        "warning_count": len(warnings),
-        "metadata": {
+    return build_operation_state_payload(
+        status=status,
+        input_paths=[relative_to_project(project_root, input_snapshot_path)],
+        output_paths=([relative_to_project(project_root, output_path)] if output_path.is_file() else []),
+        artifact_paths=artifact_paths,
+        progress_current=progress_current,
+        progress_total=progress_total,
+        mode="deterministic",
+        started_at=started_at,
+        completed_at=completed_at,
+        warning_count=len(warnings),
+        metadata={
             "warnings": list(warnings),
             "chunk_count": chunk_count,
             "detected_chapter_count": chapter_count,
             "chunks": None if chunks is None else list(chunks),
         },
-        "resume_checkpoint": None if resume_checkpoint is None else dict(resume_checkpoint),
-    }
+        resume_checkpoint=resume_checkpoint,
+    )
 
 
 def _build_chunking_warnings(chapter_count: int) -> list[str]:

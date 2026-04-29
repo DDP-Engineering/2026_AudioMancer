@@ -14,7 +14,7 @@
          including manual cleaned-text edits.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-24
-@version 0.10.0
+@version 0.11.0
 """
 
 # IMPORTS
@@ -24,13 +24,13 @@ from pathlib import Path
 
 from audiomancer import config
 from audiomancer.services import (
+    ai_state_note_service,
     cleanup_metadata_service,
     deterministic_cleanup_service,
     home_presenter_service,
     operation_runtime_service,
     project_workspace_service,
     text_extraction_service,
-    token_usage_service,
     ui_state_service,
 )
 
@@ -373,28 +373,9 @@ def _build_token_usage_notes(
     @return     Derived helper result.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.1.0
+    @version    0.2.0
     """
-    metadata = {}
-    if isinstance(operation_state, dict):
-        metadata = operation_state.get("metadata", {})
-    token_usage = token_usage_service.restore_token_usage(
-        None if not isinstance(report_payload, dict) else report_payload.get("token_usage"),
-        metadata.get("token_usage") if isinstance(metadata, dict) else None,
-    )
-    if bool(token_usage.get("usage_available", False)):
-        return [
-            ui_state_service.translate("ai.note_token_usage_summary", language).format(
-                input_tokens=format(int(token_usage["input_tokens"]), ","),
-                output_tokens=format(int(token_usage["output_tokens"]), ","),
-                total_tokens=format(int(token_usage["total_tokens"]), ","),
-            )
-        ]
-    if (isinstance(report_payload, dict) and "token_usage" in report_payload) or (
-        isinstance(metadata, dict) and "token_usage" in metadata
-    ):
-        return [ui_state_service.translate("ai.note_token_usage_unavailable", language)]
-    return []
+    return ai_state_note_service.build_token_usage_notes(report_payload, operation_state, language)
 
 
 def normalized_manifest_operations(

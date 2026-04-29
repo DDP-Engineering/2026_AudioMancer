@@ -14,7 +14,7 @@
          and settings.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-08
-@version 0.4.0
+@version 0.5.0
 """
 
 # IMPORTS
@@ -22,10 +22,10 @@
 from pathlib import Path
 
 from audiomancer.services import (
+    ai_state_note_service,
     character_discovery_service,
     deterministic_chunking_service,
     home_presenter_service,
-    token_usage_service,
     ui_state_service,
 )
 
@@ -250,28 +250,9 @@ def _build_token_usage_notes(
     @return     Derived helper result.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.1.0
+    @version    0.2.0
     """
-    metadata = {}
-    if isinstance(operation_state, dict):
-        metadata = operation_state.get("metadata", {})
-    token_usage = token_usage_service.restore_token_usage(
-        None if not isinstance(report, dict) else report.get("token_usage"),
-        metadata.get("token_usage") if isinstance(metadata, dict) else None,
-    )
-    if bool(token_usage.get("usage_available", False)):
-        return [
-            ui_state_service.translate("ai.note_token_usage_summary", language).format(
-                input_tokens=format(int(token_usage["input_tokens"]), ","),
-                output_tokens=format(int(token_usage["output_tokens"]), ","),
-                total_tokens=format(int(token_usage["total_tokens"]), ","),
-            )
-        ]
-    if (isinstance(report, dict) and "token_usage" in report) or (
-        isinstance(metadata, dict) and "token_usage" in metadata
-    ):
-        return [ui_state_service.translate("ai.note_token_usage_unavailable", language)]
-    return []
+    return ai_state_note_service.build_token_usage_notes(report, operation_state, language)
 
 
 def _character_discovery_stage_status(

@@ -331,7 +331,9 @@ Windows packaging automation is stored under:
 - `../../02_Tools/audiomancer_windows.spec`
 - `../../02_Tools/package_linux_release.sh`
 
-The Windows release script builds a portable `PyInstaller` bundle, stages the
-app together with `settings.json` and the four license files, writes a
-versioned delivery archive into `../../07_Delivery/`, and removes temporary
-build artifacts after a successful zip.
+The release scripts build portable `PyInstaller` bundles, stage the app
+together with `settings.json`, help, prompts, and the four license files, write
+stable platform archives into `../../07_Delivery/`, and remove temporary build
+artifacts after a successful zip. The archive filenames stay fixed as
+`AudioMancer_Windows_x64.zip` and `AudioMancer_Linux_x64.zip`; the application
+version is kept inside the package metadata and release notes.

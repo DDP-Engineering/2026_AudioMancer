@@ -13,13 +13,13 @@
          dialogs, the common modal progress popup, and title-bar helpers.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-06
-@version 0.8.1
+@version 0.8.2
 """
 
 # IMPORTS
 
+from importlib import metadata
 from pathlib import Path
-import sys
 import tomllib
 from typing import TYPE_CHECKING
 
@@ -216,16 +216,19 @@ def current_application_version() -> str:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.1.0
+    @version    0.1.1
     """
-    if not PYPROJECT_PATH.is_file():
+    if PYPROJECT_PATH.is_file():
+        payload = tomllib.loads(PYPROJECT_PATH.read_text(encoding="utf-8"))
+        project_payload = payload.get("project", {})
+        if isinstance(project_payload, dict):
+            version = str(project_payload.get("version", "") or "").strip()
+            if version:
+                return version
+    try:
+        return metadata.version(config.PACKAGE_NAME)
+    except metadata.PackageNotFoundError:
         return "unknown"
-    payload = tomllib.loads(PYPROJECT_PATH.read_text(encoding="utf-8"))
-    project_payload = payload.get("project", {})
-    if not isinstance(project_payload, dict):
-        return "unknown"
-    version = str(project_payload.get("version", "") or "").strip()
-    return version or "unknown"
 
 
 def create_progress_dialog(
@@ -413,16 +416,14 @@ def _candidate_help_index_paths(language: str | None) -> list[Path]:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.2.0
+    @version    0.2.1
     """
-    executable_folder = Path(sys.executable).resolve().parent
     resolved_language = language if language in config.APP_HELP_INDEX_RELATIVE_PATHS else config.DEFAULT_LANGUAGE
     packaged_relative_path = config.APP_HELP_INDEX_RELATIVE_PATHS[resolved_language]
     source_index_path = config.APP_HELP_SOURCE_INDEX_PATHS[resolved_language]
     return [
-        executable_folder / packaged_relative_path,
-        Path.cwd().resolve() / packaged_relative_path,
         config.APP_ROOT / packaged_relative_path,
+        Path.cwd().resolve() / packaged_relative_path,
         source_index_path,
     ]
 

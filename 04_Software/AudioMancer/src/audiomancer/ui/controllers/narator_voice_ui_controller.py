@@ -14,7 +14,7 @@
          project-local narrator profile editing.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-18
-@version 3.11.0
+@version 3.12.0
 """
 
 # IMPORTS
@@ -862,18 +862,6 @@ def _emit_sample_progress(progress_callback, percent: int, message: str) -> None
     """
     if progress_callback is not None:
         progress_callback(0, 100, percent, message)
-
-
-def _probe_runtime_and_persist_cache(window: "MainWindow") -> dict[str, object]:
-    """
-    @brief      Execute the probe runtime and persist cache helper.
-    @param[in]  window Value for `window`.
-    @return     Helper result.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-22
-    @version    0.2.0
-    """
-    return tts_runtime_ui_support.probe_runtime_and_persist_cache(window)
 
 
 def _preview_timeout_seconds(window: "MainWindow") -> int:

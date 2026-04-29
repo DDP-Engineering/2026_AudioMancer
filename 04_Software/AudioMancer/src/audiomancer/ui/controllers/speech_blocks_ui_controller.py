@@ -14,7 +14,7 @@
          Speech Blocks workflow.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 0.4.1
+@version 0.5.0
 """
 
 # IMPORTS
@@ -32,7 +32,7 @@ from audiomancer.services import (
     text_cleanup_state_service,
     ui_state_service,
 )
-from audiomancer.ui.controllers import misc_ui_controller, operation_runner_controller
+from audiomancer.ui.controllers import misc_ui_controller, workflow_controller_service
 
 if TYPE_CHECKING:
     from audiomancer.ui.main_window import MainWindow
@@ -440,12 +440,12 @@ def _start_operation(
     @date       2026-04-21
     @version    0.3.0
     """
-    operation_runner_controller.start_threaded_operation(
+    workflow_controller_service.start_operation(
         window,
-        "speech_blocks",
-        operation_name,
-        initial_message,
-        worker_callable,
+        operation_kind="speech_blocks",
+        operation_name=operation_name,
+        initial_message=initial_message,
+        worker_callable=worker_callable,
         set_busy=lambda is_busy: window._speech_blocks_page.set_busy(is_busy),
         success_handler=lambda result_payload: _handle_speech_blocks_success(
             window,
@@ -571,21 +571,10 @@ def _sync_manifest_from_disk(window: "MainWindow") -> None:
     @date       2026-04-21
     @version    0.1.0
     """
-    if window._current_project_root is None or window._current_manifest is None:
-        return
-    updated_manifest = dict(window._current_manifest)
-    operations = text_cleanup_state_service.normalized_manifest_operations(updated_manifest)
-    operation_state = speech_blocks_service.load_operation_state(window._current_project_root)
-    if operation_state is not None:
-        operations["speech_blocks"] = project_workspace_service.project_manifest_operation_summary(
-            "speech_blocks",
-            operation_state,
-        )
-    updated_manifest["operations"] = operations
-    project_workspace_service.save_manifest(updated_manifest, window._current_project_root)
-    window.show_project_state(
-        window._current_project_root,
-        project_workspace_service.load_manifest(window._current_project_root),
+    workflow_controller_service.sync_manifest_operation_from_disk(
+        window,
+        "speech_blocks",
+        speech_blocks_service.load_operation_state,
     )
 
 
@@ -600,17 +589,7 @@ def _resolve_ai_profile(settings_payload: dict[str, object] | None, profile_id: 
     @date       2026-04-21
     @version    0.1.0
     """
-    if not isinstance(settings_payload, dict) or not profile_id:
-        return None
-    raw_profiles = settings_payload.get("llm_profiles", [])
-    if not isinstance(raw_profiles, list):
-        return None
-    for profile in raw_profiles:
-        if not isinstance(profile, dict) or not bool(profile.get("enabled", True)):
-            continue
-        if str(profile.get("id", "")).strip() == str(profile_id).strip():
-            return dict(profile)
-    return None
+    return workflow_controller_service.resolve_enabled_ai_profile(settings_payload, profile_id)
 
 
 def _reset_speech_blocks_and_downstream(window: "MainWindow") -> None:
@@ -771,8 +750,7 @@ def _cancel_active_operation(window: "MainWindow") -> None:
     @date       2026-04-21
     @version    0.1.0
     """
-    if window._active_operation_kind is not None:
-        window._operation_cancel_requested = True
+    workflow_controller_service.cancel_active_operation(window)
 
 
 def _is_cancel_requested(window: "MainWindow") -> bool:
@@ -785,7 +763,7 @@ def _is_cancel_requested(window: "MainWindow") -> bool:
     @date       2026-04-21
     @version    0.1.1
     """
-    return bool(window._operation_cancel_requested)
+    return workflow_controller_service.is_cancel_requested(window)
 
 
 def _speech_blocks_manifest_operation_summary(

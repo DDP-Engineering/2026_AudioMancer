@@ -13,7 +13,7 @@
          extraction, cleanup, and future workflow operations.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-22
-@version 0.7.1
+@version 0.8.0
 """
 
 # IMPORTS
@@ -140,6 +140,49 @@ def test_utc_now_iso_uses_utc_without_microseconds() -> None:
     assert "." not in timestamp
 
 
+def test_build_operation_state_payload_uses_shared_envelope() -> None:
+    """
+    @brief      Verify shared operation-state envelope normalizes workflow-specific payloads.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-29
+    @version    0.1.0
+    """
+    payload = operation_runtime_service.build_operation_state_payload(
+        status="running",
+        input_paths=["input.txt"],
+        output_paths=["output.json"],
+        artifact_paths=["report.json"],
+        progress_current=1,
+        progress_total=3,
+        mode="ai_assisted",
+        started_at="2026-04-29T12:00:00+00:00",
+        completed_at=None,
+        warning_count=2,
+        metadata={"warnings": ["one", "two"]},
+        resume_checkpoint={"next_index": 1},
+        updated_at="2026-04-29T12:01:00+00:00",
+    )
+
+    assert payload == {
+        "folder_relative_path": config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH,
+        "status": "running",
+        "input_paths": ["input.txt"],
+        "output_paths": ["output.json"],
+        "artifact_paths": ["report.json"],
+        "progress_current": 1,
+        "progress_total": 3,
+        "mode": "ai_assisted",
+        "started_at": "2026-04-29T12:00:00+00:00",
+        "completed_at": None,
+        "updated_at": "2026-04-29T12:01:00+00:00",
+        "warning_count": 2,
+        "metadata": {"warnings": ["one", "two"]},
+        "resume_checkpoint": {"next_index": 1},
+    }
+
+
 def test_operation_json_artifact_round_trips_via_shared_io(tmp_path) -> None:
     """
     @brief      Verify shared operation JSON helpers write and reload root-level artifacts.
@@ -237,7 +280,7 @@ def test_project_relative_path_resolver_rejects_escapes(tmp_path) -> None:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-29
-    @version    0.1.0
+    @version    0.1.1
     """
     project_root, _manifest = project_workspace_service.create_project("PathRuntime", tmp_path)
     artifact_path = project_root / "safe.txt"
@@ -246,6 +289,25 @@ def test_project_relative_path_resolver_rejects_escapes(tmp_path) -> None:
     assert operation_runtime_service.is_path_inside_project(project_root, artifact_path) is True
     assert operation_runtime_service.is_path_inside_project(project_root, tmp_path / "outside.txt") is False
     assert operation_runtime_service.resolve_project_relative_path(project_root, "safe.txt") == artifact_path.resolve()
+    assert (
+        operation_runtime_service.try_resolve_project_relative_path(project_root, "safe.txt") == artifact_path.resolve()
+    )
+    assert operation_runtime_service.try_resolve_project_relative_path(project_root, "") is None
+    assert operation_runtime_service.try_resolve_project_relative_path(project_root, "../escape.txt") is None
+    assert (
+        operation_runtime_service.try_resolve_project_relative_path(
+            project_root,
+            str((tmp_path / "outside.txt").resolve()),
+        )
+        is None
+    )
+    assert (
+        operation_runtime_service.try_resolve_project_relative_path(
+            project_root,
+            "//server/share/outside.txt",
+        )
+        is None
+    )
     assert operation_runtime_service.project_relative_path_exists(project_root, "safe.txt") is True
     assert operation_runtime_service.project_relative_path_exists(project_root, "../escape.txt") is False
 

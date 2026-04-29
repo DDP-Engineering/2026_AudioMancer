@@ -13,7 +13,7 @@
          stale-input protection, and generated-output reset behavior.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-25
-@version 0.4.0
+@version 0.5.0
 """
 
 # IMPORTS
@@ -207,6 +207,121 @@ def test_audio_assembly_service_rejects_unapproved_audio_blocks(tmp_path) -> Non
 
     with pytest.raises(ValueError, match="Approve every generated Audio Block"):
         audio_assembly_service.start_or_continue_composition(project_root, manifest)
+
+
+@pytest.mark.parametrize("path_kind", ["parent_traversal", "absolute", "unc_like"])
+def test_audio_assembly_service_rejects_escaping_audio_block_path(tmp_path, path_kind: str) -> None:
+    """
+    @brief      Verify persisted Audio Block paths cannot make composition read outside the project root.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @param[in]  path_kind Escaping path form under test.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-29
+    @version    0.1.0
+    """
+    project_root, manifest = _create_project_with_audio_blocks(tmp_path)
+    outside_path = tmp_path / "outside.wav"
+    _write_wav(outside_path, 2400)
+    payload_path = project_root / config.AUDIO_BLOCKS_OUTPUT_FILE_NAME
+    payload = json.loads(payload_path.read_text(encoding="utf-8"))
+    payload[0]["audio_relative_path"] = _escaping_artifact_path(path_kind, "outside.wav", outside_path)
+    payload_path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="Every approved Audio Block"):
+        audio_assembly_service.start_or_continue_composition(project_root, manifest)
+
+    assert outside_path.is_file()
+
+
+@pytest.mark.parametrize("path_kind", ["parent_traversal", "absolute", "unc_like"])
+def test_audio_assembly_service_resume_ignores_escaping_output_record(tmp_path, path_kind: str) -> None:
+    """
+    @brief      Verify resume does not reuse completed output records pointing outside the project root.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @param[in]  path_kind Escaping path form under test.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-29
+    @version    0.1.0
+    """
+    project_root, _manifest = _create_project_with_audio_blocks(tmp_path)
+    outside_path = tmp_path / "outside_resume.wav"
+    _write_wav(outside_path, 2400)
+    escaping_path = _escaping_artifact_path(path_kind, "outside_resume.wav", outside_path)
+    report = {
+        "outputs": [
+            {
+                "output_key": "part-0001",
+                "file_name": "part-0001.wav",
+                "audio_relative_path": escaping_path,
+                "block_count": 1,
+                "chunk_ids": ["chunk-0001"],
+                "duration_seconds": 0.1,
+                "generated": True,
+                "generated_at": "2026-04-29T00:00:00+00:00",
+                "output_format": audio_assembly_service.OUTPUT_FORMAT_WAV,
+            }
+        ]
+    }
+    operation_state = {"metadata": {"input_fingerprint": "fingerprint"}}
+    audio_assembly_service._persist_state(project_root, report, operation_state)  # noqa: SLF001
+
+    assert (
+        audio_assembly_service._completed_records_for_resume(  # noqa: SLF001
+            project_root,
+            operation_state,
+            "fingerprint",
+        )
+        == []
+    )
+    assert outside_path.is_file()
+
+
+@pytest.mark.parametrize("path_kind", ["parent_traversal", "absolute", "unc_like"])
+def test_audio_assembly_service_reference_fallback_rejects_escaping_path(tmp_path, path_kind: str) -> None:
+    """
+    @brief      Verify pause-only fallback WAV lookup cannot read outside the project root.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @param[in]  path_kind Escaping path form under test.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-29
+    @version    0.1.0
+    """
+    project_root, _manifest = _create_project_with_audio_blocks(tmp_path)
+    outside_path = tmp_path / "outside_fallback.wav"
+    _write_wav(outside_path, 2400)
+    escaping_path = _escaping_artifact_path(path_kind, "outside_fallback.wav", outside_path)
+
+    with pytest.raises(RuntimeError, match="without at least one source WAV"):
+        audio_assembly_service._reference_wav_params(project_root, [], escaping_path)  # noqa: SLF001
+
+    assert outside_path.is_file()
+
+
+def _escaping_artifact_path(path_kind: str, traversal_file_name: str, absolute_path) -> str:
+    """
+    @brief      Build one escaping persisted artifact path for traversal tests.
+    @param[in]  path_kind Escaping path form under test.
+    @param[in]  traversal_file_name Sibling file name used by parent traversal and UNC-like cases.
+    @param[in]  absolute_path Absolute path used by the drive-qualified case.
+    @return     Escaping path string.
+    @exception  AssertionError Raised when the test path kind is unknown.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-29
+    @version    0.1.0
+    """
+    if path_kind == "parent_traversal":
+        return f"../{traversal_file_name}"
+    if path_kind == "absolute":
+        return str(absolute_path.resolve())
+    if path_kind == "unc_like":
+        return f"//server/share/{traversal_file_name}"
+    raise AssertionError(f"Unknown path kind: {path_kind}")
 
 
 def test_audio_assembly_service_requires_reset_when_settings_change(tmp_path) -> None:

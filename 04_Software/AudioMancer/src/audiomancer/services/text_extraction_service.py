@@ -14,7 +14,7 @@
          maintains resumable extraction state in `00_extraction`.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-06
-@version 0.4.3
+@version 0.5.0
 """
 
 # IMPORTS
@@ -35,6 +35,7 @@ from striprtf.striprtf import rtf_to_text
 from audiomancer import config
 from audiomancer.services.logging_service import get_component_logger, trace_function
 from audiomancer.services.operation_runtime_service import (
+    build_operation_state_payload,
     emit_progress_update,
     load_operation_state_file,
     raise_if_cancelled,
@@ -634,22 +635,21 @@ def _build_operation_state(
     @date       2026-04-06
     @version    0.1.0
     """
-    return {
-        "folder_relative_path": _EXTRACTION_FOLDER_NAME,
-        "status": status,
-        "input_paths": list(input_paths),
-        "output_paths": list(output_paths),
-        "artifact_paths": list(artifact_paths),
-        "progress_current": progress_current,
-        "progress_total": progress_total,
-        "mode": "deterministic",
-        "started_at": started_at,
-        "completed_at": completed_at,
-        "updated_at": _utc_now_iso(),
-        "warning_count": warning_count,
-        "metadata": dict(metadata),
-        "resume_checkpoint": None if resume_checkpoint is None else dict(resume_checkpoint),
-    }
+    return build_operation_state_payload(
+        status=status,
+        input_paths=input_paths,
+        output_paths=output_paths,
+        artifact_paths=artifact_paths,
+        progress_current=progress_current,
+        progress_total=progress_total,
+        mode="deterministic",
+        started_at=started_at,
+        completed_at=completed_at,
+        warning_count=warning_count,
+        metadata=metadata,
+        resume_checkpoint=resume_checkpoint,
+        folder_relative_path=_EXTRACTION_FOLDER_NAME,
+    )
 
 
 def _build_progress_units(source_path: Path, file_type: str) -> ExtractionUnitsPayload:

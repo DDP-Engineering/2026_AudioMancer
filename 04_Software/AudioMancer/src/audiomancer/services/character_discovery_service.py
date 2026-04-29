@@ -14,7 +14,7 @@
          workflow artifacts, and maintains resumable AI operation state.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-22
-@version 0.8.2
+@version 0.9.0
 """
 
 # IMPORTS
@@ -26,6 +26,7 @@ import re
 
 from audiomancer import config
 from audiomancer.services import (
+    ai_budget_service,
     deterministic_chunking_service,
     llm_provider_service,
     prompt_template_service,
@@ -36,6 +37,7 @@ from audiomancer.services.operation_runtime_service import (
     NARRATOR_PROFILE_PRESERVED_OPERATION_KINDS,
     OperationCancelledError,
     build_operation_output_path,
+    build_operation_state_payload,
     load_operation_state_payload,
     load_optional_json_artifact,
     raise_if_cancelled,
@@ -833,7 +835,7 @@ def delete_character_profile(
     @exception  ValueError Raised when the character id is unknown.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-08
-    @version    0.1.0
+    @version    0.1.1
     """
     resolved_project_root = Path(project_root)
     selected_character_id = str(character_id).strip()
@@ -1266,19 +1268,6 @@ def _build_budget_metadata(
     @date       2026-04-28
     @version    0.1.0
     """
-    context_window = max(
-        1,
-        int(ai_profile_payload.get("context_window", config.DEFAULT_LLM_CONTEXT_WINDOW)),
-    )
-    max_output_tokens = max(
-        1,
-        int(
-            ai_profile_payload.get(
-                "max_output_tokens",
-                config.DEFAULT_LLM_MAX_OUTPUT_TOKENS,
-            )
-        ),
-    )
     discovery_prompt_shell = prompt_template_service.render_prompt(
         "character_discovery_window_user",
         {"units_block": ""},
@@ -1287,31 +1276,28 @@ def _build_budget_metadata(
         "character_profile_synthesis_user",
         {"character_payload": ""},
     )
-    prompt_budget_tokens = _estimate_text_tokens(f"{system_prompt}\n\n{discovery_prompt_shell}")
-    synthesis_prompt_budget_tokens = _estimate_text_tokens(f"{system_prompt}\n\n{synthesis_prompt_shell}")
-    safety_margin_tokens = max(
+    discovery_budget_metadata = ai_budget_service.context_budget_metadata(
+        ai_profile_payload,
+        f"{system_prompt}\n\n{discovery_prompt_shell}",
         config.DEFAULT_CHARACTER_DISCOVERY_MIN_SAFETY_MARGIN_TOKENS,
-        int(context_window * config.DEFAULT_CHARACTER_DISCOVERY_SAFETY_MARGIN_CONTEXT_FRACTION),
+        config.DEFAULT_CHARACTER_DISCOVERY_SAFETY_MARGIN_CONTEXT_FRACTION,
+        config.DEFAULT_CHARACTER_DISCOVERY_TEXT_CONTEXT_FRACTION,
+        config.DEFAULT_CHARACTER_DISCOVERY_MIN_TEXT_BUDGET_TOKENS,
+        "AI-assisted character discovery cannot run because the selected AI profile context window "
+        "and max output tokens leave too little room for discovery input",
     )
-    text_budget_tokens = _available_character_discovery_budget(
-        context_window,
-        max_output_tokens,
-        prompt_budget_tokens,
-        safety_margin_tokens,
-    )
-    synthesis_payload_budget_tokens = _available_character_discovery_budget(
+    context_window = int(discovery_budget_metadata["context_window"])
+    max_output_tokens = int(discovery_budget_metadata["max_output_tokens"])
+    safety_margin_tokens = int(discovery_budget_metadata["safety_margin_tokens"])
+    synthesis_prompt_budget_tokens = _estimate_text_tokens(f"{system_prompt}\n\n{synthesis_prompt_shell}")
+    synthesis_payload_budget_tokens = ai_budget_service.available_text_budget(
         context_window,
         max_output_tokens,
         synthesis_prompt_budget_tokens,
         safety_margin_tokens,
+        config.DEFAULT_CHARACTER_DISCOVERY_TEXT_CONTEXT_FRACTION,
     )
     min_text_budget = config.DEFAULT_CHARACTER_DISCOVERY_MIN_TEXT_BUDGET_TOKENS
-    if text_budget_tokens < min_text_budget:
-        raise ValueError(
-            "AI-assisted character discovery cannot run because the selected AI profile context window "
-            "and max output tokens leave too little room for discovery input "
-            f"({text_budget_tokens} estimated tokens available, {min_text_budget} required)."
-        )
     if synthesis_payload_budget_tokens < min_text_budget:
         raise ValueError(
             "AI-assisted character discovery cannot run because the selected AI profile context window "
@@ -1319,42 +1305,13 @@ def _build_budget_metadata(
             f"({synthesis_payload_budget_tokens} estimated tokens available, {min_text_budget} required)."
         )
     return {
-        "context_window": context_window,
-        "max_output_tokens": max_output_tokens,
-        "prompt_budget_tokens": prompt_budget_tokens,
-        "text_budget_tokens": text_budget_tokens,
-        "safety_margin_tokens": safety_margin_tokens,
+        **discovery_budget_metadata,
         "max_window_chunks": config.DEFAULT_CHARACTER_DISCOVERY_WINDOW_SIZE,
         "window_overlap": config.DEFAULT_CHARACTER_DISCOVERY_WINDOW_OVERLAP,
         "synthesis_prompt_budget_tokens": synthesis_prompt_budget_tokens,
         "synthesis_payload_budget_tokens": synthesis_payload_budget_tokens,
         "synthesis_max_evidence_items": config.DEFAULT_CHARACTER_DISCOVERY_SYNTHESIS_MAX_EVIDENCE_ITEMS,
     }
-
-
-def _available_character_discovery_budget(
-    context_window: int,
-    max_output_tokens: int,
-    prompt_budget_tokens: int,
-    safety_margin_tokens: int,
-) -> int:
-    """
-    @brief      Compute the usable input budget for one character-discovery AI request.
-    @param[in]  context_window Selected profile context window.
-    @param[in]  max_output_tokens Selected profile maximum output token budget.
-    @param[in]  prompt_budget_tokens Estimated prompt-shell token budget.
-    @param[in]  safety_margin_tokens Reserved safety margin.
-    @return     Usable input-token budget.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-28
-    @version    0.1.0
-    """
-    available_text_budget = context_window - max_output_tokens - prompt_budget_tokens - safety_margin_tokens
-    return min(
-        int(context_window * config.DEFAULT_CHARACTER_DISCOVERY_TEXT_CONTEXT_FRACTION),
-        available_text_budget,
-    )
 
 
 def _estimate_text_tokens(text: str) -> int:
@@ -1365,9 +1322,9 @@ def _estimate_text_tokens(text: str) -> int:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-28
-    @version    0.1.0
+    @version    0.1.1
     """
-    return max(1, len(text) // 4)
+    return ai_budget_service.estimate_text_tokens(text)
 
 
 def _build_units_block(window_records: list[dict[str, object]]) -> str:
@@ -1568,26 +1525,24 @@ def _write_operation_state(
     artifact_paths = [relative_to_project(project_root, log_path)]
     if report_path is not None and report_path.is_file():
         artifact_paths.insert(0, relative_to_project(project_root, report_path))
-    state_payload: OperationStatePayload = {
-        "folder_relative_path": config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH,
-        "status": status,
-        "input_paths": [
+    state_payload: OperationStatePayload = build_operation_state_payload(
+        status=status,
+        input_paths=[
             relative_to_project(project_root, input_path) for input_path in input_paths if input_path.is_file()
         ],
-        "output_paths": (
+        output_paths=(
             [relative_to_project(project_root, output_path)]
             if output_path is not None and output_path.is_file()
             else []
         ),
-        "artifact_paths": artifact_paths,
-        "progress_current": progress_current,
-        "progress_total": progress_total,
-        "mode": CHARACTER_DISCOVERY_MODE_AI_ASSISTED,
-        "started_at": started_at,
-        "completed_at": completed_at,
-        "updated_at": _utc_now_iso(),
-        "warning_count": len(warnings),
-        "metadata": {
+        artifact_paths=artifact_paths,
+        progress_current=progress_current,
+        progress_total=progress_total,
+        mode=CHARACTER_DISCOVERY_MODE_AI_ASSISTED,
+        started_at=started_at,
+        completed_at=completed_at,
+        warning_count=len(warnings),
+        metadata={
             "ai_profile_id": profile_id,
             "source_chunk_count": source_chunk_count,
             "character_count": character_count,
@@ -1603,8 +1558,8 @@ def _write_operation_state(
             "token_usage": token_usage_service.coerce_token_usage(token_usage),
             "budget_metadata": dict(budget_metadata),
         },
-        "resume_checkpoint": (None if resume_checkpoint is None else dict(resume_checkpoint)),
-    }
+        resume_checkpoint=resume_checkpoint,
+    )
     write_json_atomic(state_path, state_payload)
 
 

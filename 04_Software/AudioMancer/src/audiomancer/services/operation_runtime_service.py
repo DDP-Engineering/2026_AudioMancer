@@ -14,7 +14,7 @@
          shared by long-running workflow operations.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-22
-@version 0.10.0
+@version 0.11.0
 """
 
 # IMPORTS
@@ -26,6 +26,7 @@ from pathlib import Path, PureWindowsPath
 
 from audiomancer import config
 from audiomancer.services.persistence_service import write_json_atomic
+from audiomancer.services.time_service import utc_now_iso
 
 # CONSTANTS
 
@@ -253,6 +254,62 @@ def default_operation_state(operation_kind: str) -> dict[str, object]:
         "warning_count": 0,
         "metadata": _default_operation_metadata(operation_kind),
         "resume_checkpoint": None,
+    }
+
+
+def build_operation_state_payload(
+    status: str,
+    input_paths: list[str],
+    output_paths: list[str],
+    artifact_paths: list[str],
+    progress_current: int,
+    progress_total: int,
+    mode: str,
+    started_at: str | None,
+    completed_at: str | None,
+    warning_count: int,
+    metadata: dict[str, object],
+    resume_checkpoint: dict[str, object] | None,
+    folder_relative_path: str = config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH,
+    updated_at: str | None = None,
+) -> dict[str, object]:
+    """
+    @brief      Build the shared operation-state envelope.
+    @param[in]  status Persisted operation status token.
+    @param[in]  input_paths Project-relative input artifact paths.
+    @param[in]  output_paths Project-relative output artifact paths.
+    @param[in]  artifact_paths Project-relative report, log, and sidecar artifact paths.
+    @param[in]  progress_current Completed progress count.
+    @param[in]  progress_total Total progress count.
+    @param[in]  mode Operation execution mode token.
+    @param[in]  started_at Optional operation start timestamp.
+    @param[in]  completed_at Optional operation completion timestamp.
+    @param[in]  warning_count Persisted warning count.
+    @param[in]  metadata Workflow-specific metadata payload.
+    @param[in]  resume_checkpoint Optional workflow-specific resume checkpoint.
+    @param[in]  folder_relative_path Project-relative operation folder token.
+    @param[in]  updated_at Optional state update timestamp override.
+    @return     JSON-ready operation-state payload.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-29
+    @version    0.1.0
+    """
+    return {
+        "folder_relative_path": str(folder_relative_path),
+        "status": str(status),
+        "input_paths": list(input_paths),
+        "output_paths": list(output_paths),
+        "artifact_paths": list(artifact_paths),
+        "progress_current": int(progress_current),
+        "progress_total": int(progress_total),
+        "mode": str(mode),
+        "started_at": started_at,
+        "completed_at": completed_at,
+        "updated_at": updated_at or utc_now_iso(),
+        "warning_count": int(warning_count),
+        "metadata": dict(metadata),
+        "resume_checkpoint": None if resume_checkpoint is None else dict(resume_checkpoint),
     }
 
 
@@ -546,6 +603,26 @@ def resolve_project_relative_path(project_root: str | Path, relative_path: str |
     except ValueError as exc:
         raise ValueError("Project-relative path resolves outside the active project.") from exc
     return resolved_candidate
+
+
+def try_resolve_project_relative_path(project_root: str | Path, relative_path: object) -> Path | None:
+    """
+    @brief      Resolve a persisted project-relative path and return `None` when unsafe.
+    @param[in]  project_root Active project root folder.
+    @param[in]  relative_path Candidate persisted project-relative path.
+    @return     Resolved project-local path or `None` for missing or invalid input.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-29
+    @version    0.1.0
+    """
+    normalized_relative_path = optional_string(relative_path)
+    if not normalized_relative_path:
+        return None
+    try:
+        return resolve_project_relative_path(project_root, normalized_relative_path)
+    except (OSError, ValueError):
+        return None
 
 
 def project_relative_path_exists(project_root: str | Path, relative_path: str | Path) -> bool:

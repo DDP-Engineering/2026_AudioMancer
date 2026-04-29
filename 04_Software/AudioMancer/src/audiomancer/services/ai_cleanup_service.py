@@ -15,7 +15,7 @@
          resumable window-based progress plus AI transaction logs.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-07
-@version 0.5.1
+@version 0.6.0
 """
 
 # IMPORTS
@@ -27,6 +27,7 @@ import re
 
 from audiomancer import config
 from audiomancer.services import (
+    ai_budget_service,
     cleanup_metadata_service,
     cleanup_text_analysis_service,
     llm_provider_service,
@@ -36,6 +37,7 @@ from audiomancer.services import (
 from audiomancer.services.logging_service import get_component_logger, trace_function
 from audiomancer.services.operation_runtime_service import (
     build_operation_output_path,
+    build_operation_state_payload,
     load_operation_state_file,
     load_operation_state_payload,
     raise_if_cancelled,
@@ -517,19 +519,6 @@ def _build_budget_metadata(
     @date       2026-04-28
     @version    0.1.0
     """
-    context_window = max(
-        1,
-        int(ai_profile_payload.get("context_window", config.DEFAULT_LLM_CONTEXT_WINDOW)),
-    )
-    max_output_tokens = max(
-        1,
-        int(
-            ai_profile_payload.get(
-                "max_output_tokens",
-                config.DEFAULT_LLM_MAX_OUTPUT_TOKENS,
-            )
-        ),
-    )
     prompt_user_shell = _render_cleanup_user_prompt(
         {
             "source_language_hint": language_hint,
@@ -538,31 +527,17 @@ def _build_budget_metadata(
             "unit_count": 0,
         }
     )
-    prompt_budget_tokens = _estimate_text_tokens(f"{system_prompt}\n\n{prompt_user_shell}")
-    safety_margin_tokens = max(
+    budget_metadata = ai_budget_service.context_budget_metadata(
+        ai_profile_payload,
+        f"{system_prompt}\n\n{prompt_user_shell}",
         config.DEFAULT_AI_CLEANUP_MIN_SAFETY_MARGIN_TOKENS,
-        int(context_window * config.DEFAULT_AI_CLEANUP_SAFETY_MARGIN_CONTEXT_FRACTION),
+        config.DEFAULT_AI_CLEANUP_SAFETY_MARGIN_CONTEXT_FRACTION,
+        config.DEFAULT_AI_CLEANUP_TEXT_CONTEXT_FRACTION,
+        config.DEFAULT_AI_CLEANUP_MIN_TEXT_BUDGET_TOKENS,
+        "AI-assisted cleanup cannot run because the selected AI profile context window "
+        "and max output tokens leave too little room for cleanup input",
     )
-    available_text_budget = context_window - max_output_tokens - prompt_budget_tokens - safety_margin_tokens
-    text_budget_tokens = min(
-        int(context_window * config.DEFAULT_AI_CLEANUP_TEXT_CONTEXT_FRACTION),
-        available_text_budget,
-    )
-    min_text_budget = config.DEFAULT_AI_CLEANUP_MIN_TEXT_BUDGET_TOKENS
-    if text_budget_tokens < min_text_budget:
-        raise ValueError(
-            "AI-assisted cleanup cannot run because the selected AI profile context window "
-            "and max output tokens leave too little room for cleanup input "
-            f"({text_budget_tokens} estimated tokens available, {min_text_budget} required)."
-        )
-    return {
-        "context_window": context_window,
-        "max_output_tokens": max_output_tokens,
-        "prompt_budget_tokens": prompt_budget_tokens,
-        "text_budget_tokens": text_budget_tokens,
-        "safety_margin_tokens": safety_margin_tokens,
-        "max_window_units": config.DEFAULT_AI_CLEANUP_MAX_WINDOW_UNITS,
-    }
+    return {**budget_metadata, "max_window_units": config.DEFAULT_AI_CLEANUP_MAX_WINDOW_UNITS}
 
 
 def _restore_resume_state(
@@ -1037,20 +1012,18 @@ def _build_operation_state(
     output_paths = [relative_to_project(project_root, output_path)] if output_path.is_file() else []
     if metadata_path is not None and metadata_path.is_file():
         output_paths.append(relative_to_project(project_root, metadata_path))
-    return {
-        "folder_relative_path": config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH,
-        "status": status,
-        "input_paths": [relative_to_project(project_root, input_snapshot_path)],
-        "output_paths": output_paths,
-        "artifact_paths": artifact_paths,
-        "progress_current": progress_current,
-        "progress_total": progress_total,
-        "mode": "ai_assisted",
-        "started_at": started_at,
-        "completed_at": completed_at,
-        "updated_at": _utc_now_iso(),
-        "warning_count": len(warnings),
-        "metadata": {
+    return build_operation_state_payload(
+        status=status,
+        input_paths=[relative_to_project(project_root, input_snapshot_path)],
+        output_paths=output_paths,
+        artifact_paths=artifact_paths,
+        progress_current=progress_current,
+        progress_total=progress_total,
+        mode="ai_assisted",
+        started_at=started_at,
+        completed_at=completed_at,
+        warning_count=len(warnings),
+        metadata={
             "warnings": list(warnings),
             "warning_details": [dict(item) for item in warning_details],
             "detected_language": detected_language,
@@ -1061,7 +1034,7 @@ def _build_operation_state(
             "token_usage": token_usage_service.coerce_token_usage(token_usage),
             "budget_metadata": dict(budget_metadata),
         },
-        "resume_checkpoint": {
+        resume_checkpoint={
             "completed_window_count": progress_current,
             "total_window_count": progress_total,
             "profile_id": profile_id,
@@ -1071,7 +1044,7 @@ def _build_operation_state(
         }
         if status != "completed"
         else None,
-    }
+    )
 
 
 def _build_ai_log_path(project_root: Path, started_at: str) -> Path:
@@ -1101,7 +1074,7 @@ def _estimate_text_tokens(text: str) -> int:
     @date       2026-04-21
     @version    0.1.0
     """
-    return max(1, len(text) // 4)
+    return ai_budget_service.estimate_text_tokens(text)
 
 
 def _compute_input_fingerprint(text: str) -> str:

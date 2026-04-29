@@ -45,7 +45,7 @@ The Windows packaging flow is:
 2. builds the Windows bundle with `PyInstaller`
 3. stages the packaged app together with `settings.json`, the four license
    files, `Start-AudioMancer.cmd`, and `README_RELEASE.txt`
-4. creates a versioned zip in `07_Delivery/`
+4. creates the stable Windows zip in `07_Delivery/`
 5. removes temporary build and staging artifacts after success
 
 Run it from PowerShell on Windows:
@@ -57,7 +57,7 @@ Run it from PowerShell on Windows:
 The Windows output archive is:
 
 ```text
-07_Delivery/AudioMancer_Windows_x64_v<version>.zip
+07_Delivery/AudioMancer_Windows_x64.zip
 ```
 
 The Ubuntu packaging flow is:
@@ -66,7 +66,7 @@ The Ubuntu packaging flow is:
 2. builds the Ubuntu bundle with `PyInstaller`
 3. stages the packaged app together with `settings.json`, the four license
    files, `start-audiomancer.sh`, and `README_RELEASE.txt`
-4. creates a versioned zip in `07_Delivery/`
+4. creates the stable Linux zip in `07_Delivery/`
 5. removes temporary build and staging artifacts after success
 
 Run it from Bash on Ubuntu:
@@ -75,14 +75,16 @@ Run it from Bash on Ubuntu:
 bash 02_Tools/package_linux_release.sh
 ```
 
-The Ubuntu output archive is:
+The Linux output archive is:
 
 ```text
-07_Delivery/AudioMancer_Ubuntu_x64_v<version>.zip
+07_Delivery/AudioMancer_Linux_x64.zip
 ```
 
-For both archives, `<version>` is read from
-`04_Software/AudioMancer/pyproject.toml`.
+Both archive filenames are intentionally stable so Git stores one delivery
+artifact per platform instead of one new filename per application version. The
+application version is still read from `04_Software/AudioMancer/pyproject.toml`
+and written inside the packaged release notes and application metadata.
 
 Release archives are portable application folders. Users should extract the
 full archive before starting the executable and keep the extracted files

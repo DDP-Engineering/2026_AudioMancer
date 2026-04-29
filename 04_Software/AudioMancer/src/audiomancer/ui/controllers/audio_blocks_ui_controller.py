@@ -14,7 +14,7 @@
          targeted downstream invalidation when upstream voice inputs change.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-23
-@version 0.2.4
+@version 0.3.0
 """
 
 # IMPORTS
@@ -34,7 +34,14 @@ from audiomancer.services import (
     text_cleanup_state_service,
     ui_state_service,
 )
-from audiomancer.ui.controllers import misc_ui_controller, operation_runner_controller, tts_runtime_ui_support
+from audiomancer.ui.controllers import (
+    misc_ui_controller,
+    operation_runner_controller,
+    tts_runtime_ui_support,
+    workflow_controller_service,
+)
+
+_ = operation_runner_controller
 
 if TYPE_CHECKING:
     from audiomancer.ui.main_window import MainWindow
@@ -299,7 +306,7 @@ def handle_playback_state_changed(window: "MainWindow") -> None:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-24
-    @version    0.1.0
+    @version    0.2.0
     """
     if window._audio_blocks_audio_player.playbackState() != QMediaPlayer.PlaybackState.StoppedState:
         return
@@ -398,12 +405,12 @@ def _start_operation(
     @version    0.3.0
     """
     _stop_audio_blocks_playback(window)
-    operation_runner_controller.start_threaded_operation(
+    workflow_controller_service.start_operation(
         window,
-        "audio_blocks",
-        operation_name,
-        initial_message,
-        worker_callable,
+        operation_kind="audio_blocks",
+        operation_name=operation_name,
+        initial_message=initial_message,
+        worker_callable=worker_callable,
         set_busy=lambda is_busy: window._audio_blocks_page.set_busy(is_busy),
         success_handler=lambda result_payload: _handle_audio_blocks_success(
             window,
@@ -541,21 +548,10 @@ def _sync_manifest_from_disk(window: "MainWindow") -> None:
     @date       2026-04-23
     @version    0.1.0
     """
-    if window._current_project_root is None or window._current_manifest is None:
-        return
-    updated_manifest = dict(window._current_manifest)
-    operations = text_cleanup_state_service.normalized_manifest_operations(updated_manifest)
-    operation_state = audio_blocks_service.load_operation_state(window._current_project_root)
-    if operation_state is not None:
-        operations["audio_blocks"] = project_workspace_service.project_manifest_operation_summary(
-            "audio_blocks",
-            operation_state,
-        )
-    updated_manifest["operations"] = operations
-    project_workspace_service.save_manifest(updated_manifest, window._current_project_root)
-    window.show_project_state(
-        window._current_project_root,
-        project_workspace_service.load_manifest(window._current_project_root),
+    workflow_controller_service.sync_manifest_operation_from_disk(
+        window,
+        "audio_blocks",
+        audio_blocks_service.load_operation_state,
     )
 
 
@@ -643,8 +639,7 @@ def _cancel_active_operation(window: "MainWindow") -> None:
     @date       2026-04-23
     @version    0.1.0
     """
-    if window._active_operation_kind is not None:
-        window._operation_cancel_requested = True
+    workflow_controller_service.cancel_active_operation(window)
 
 
 def _is_cancel_requested(window: "MainWindow") -> bool:
@@ -657,7 +652,7 @@ def _is_cancel_requested(window: "MainWindow") -> bool:
     @date       2026-04-23
     @version    0.1.1
     """
-    return bool(window._operation_cancel_requested)
+    return workflow_controller_service.is_cancel_requested(window)
 
 
 def _confirm_generation(window: "MainWindow", language: str) -> bool:
@@ -915,6 +910,11 @@ def _restore_audio_blocks_selection(window: "MainWindow", speech_block_id: str |
     normalized_block_id = str(speech_block_id or "").strip()
     if normalized_block_id:
         window._audio_blocks_page.select_block_id(normalized_block_id)
+        if window._audio_blocks_page.selected_block_id() != normalized_block_id and hasattr(
+            window._audio_blocks_page,
+            "_current_block_id",
+        ):
+            window._audio_blocks_page._current_block_id = normalized_block_id  # noqa: SLF001
 
 
 def _stop_other_audio_previews(window: "MainWindow") -> None:

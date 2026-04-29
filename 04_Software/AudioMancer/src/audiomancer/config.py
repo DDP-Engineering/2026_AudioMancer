@@ -13,23 +13,168 @@
          file support used by the current AudioMancer implementation scaffold.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 1.35.0
+@version 1.36.0
 """
 
 # IMPORTS
 
 from pathlib import Path
+import sys
 
 # CONSTANTS
-# Application Identity And Root Paths
+# Application Identity
 # @brief Operator-facing desktop application name.
 APP_NAME = "AudioMancer"
 
 # @brief Internal Python package name.
 PACKAGE_NAME = "audiomancer"
 
-# @brief Application subtree root resolved from the installed source layout.
-APP_ROOT = Path(__file__).resolve().parents[2]
+
+# PUBLIC API
+
+
+def resolve_app_runtime_root() -> Path:
+    """
+    @brief      Resolve the root folder that owns runtime resource files.
+    @return     Runtime resource root for source, installed, or PyInstaller layouts.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-29
+    @version    0.1.0
+    """
+    package_root = Path(__file__).resolve().parent
+    if bool(getattr(sys, "frozen", False)):
+        return _resolve_frozen_runtime_root()
+    source_root = _source_tree_root_from_package(package_root)
+    if source_root is not None:
+        return source_root
+    installed_resource_root = _installed_resource_root_from_package(package_root)
+    if installed_resource_root is not None:
+        return installed_resource_root
+    return package_root
+
+
+# LOCAL HELPERS
+
+
+def _resolve_frozen_runtime_root() -> Path:
+    """
+    @brief      Resolve runtime resources in a PyInstaller execution layout.
+    @return     Folder containing packaged runtime resources.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-29
+    @version    0.1.0
+    """
+    executable_root = Path(sys.executable).resolve().parent
+    meipass_root = _optional_meipass_root()
+    for candidate_root in _unique_paths([executable_root, meipass_root]):
+        if _has_runtime_resource_markers(candidate_root):
+            return candidate_root
+    return executable_root
+
+
+def _optional_meipass_root() -> Path | None:
+    """
+    @brief      Resolve the optional PyInstaller extraction folder.
+    @return     `_MEIPASS` path when provided by the bootloader, otherwise `None`.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-29
+    @version    0.1.0
+    """
+    meipass_value = str(getattr(sys, "_MEIPASS", "") or "").strip()
+    if not meipass_value:
+        return None
+    return Path(meipass_value).resolve()
+
+
+def _source_tree_root_from_package(package_root: Path) -> Path | None:
+    """
+    @brief      Resolve the application root when running from a source tree.
+    @param[in]  package_root Imported Python package folder.
+    @return     Source application root or `None` when not in a source checkout.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-29
+    @version    0.1.0
+    """
+    for candidate_root in package_root.parents:
+        if (candidate_root / "pyproject.toml").is_file() and (candidate_root / "src" / PACKAGE_NAME).is_dir():
+            return candidate_root
+    return None
+
+
+def _installed_resource_root_from_package(package_root: Path) -> Path | None:
+    """
+    @brief      Resolve package-adjacent resources for installed wheel layouts.
+    @param[in]  package_root Imported Python package folder.
+    @return     Installed resource root or `None` when no marker files are present.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-29
+    @version    0.1.0
+    """
+    for candidate_root in _unique_paths([package_root, package_root.parent]):
+        if _has_runtime_resource_markers(candidate_root):
+            return candidate_root
+    return None
+
+
+def _has_runtime_resource_markers(candidate_root: Path | None) -> bool:
+    """
+    @brief      Return whether one folder looks like an AudioMancer runtime root.
+    @param[in]  candidate_root Candidate resource folder.
+    @return     True when expected resource markers are present.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-29
+    @version    0.1.0
+    """
+    if candidate_root is None:
+        return False
+    return (
+        (candidate_root / "settings.json").is_file()
+        or (candidate_root / "prompts").is_dir()
+        or (candidate_root / "help").is_dir()
+        or (candidate_root / "LICENSE.txt").is_file()
+    )
+
+
+def _unique_paths(paths: list[Path | None]) -> list[Path]:
+    """
+    @brief      Return unique existing path objects while preserving order.
+    @param[in]  paths Candidate paths.
+    @return     De-duplicated path list.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-29
+    @version    0.1.0
+    """
+    unique_values: list[Path] = []
+    seen_values: set[str] = set()
+    for path in paths:
+        if path is None:
+            continue
+        resolved_path = Path(path).resolve()
+        path_key = str(resolved_path).casefold()
+        if path_key in seen_values:
+            continue
+        unique_values.append(resolved_path)
+        seen_values.add(path_key)
+    return unique_values
+
+
+# CONSTANTS
+# Application Root Paths
+# @brief Imported Python package root.
+APP_PACKAGE_ROOT = Path(__file__).resolve().parent
+
+# @brief Source-tree root when available; falls back to the runtime root outside source checkouts.
+APP_SOURCE_ROOT = _source_tree_root_from_package(APP_PACKAGE_ROOT) or resolve_app_runtime_root()
+
+# @brief Application runtime root containing settings, prompts, help, and license resources.
+APP_ROOT = resolve_app_runtime_root()
 
 # @brief Absolute path to the app-level settings file.
 APP_SETTINGS_PATH = APP_ROOT / "settings.json"
@@ -51,12 +196,12 @@ APP_HELP_INDEX_RELATIVE_PATH = Path("help") / "en" / "index.html"
 
 # @brief Source-tree user-guide HTML entry points used during development.
 APP_HELP_SOURCE_INDEX_PATHS = {
-    "en": APP_ROOT.parents[1] / "05_SoftwareDocu" / "UserGuide" / "index.html",
-    "ro": APP_ROOT.parents[1] / "05_SoftwareDocu" / "UserGuide_ro" / "index.html",
+    "en": APP_SOURCE_ROOT.parents[1] / "05_SoftwareDocu" / "UserGuide" / "index.html",
+    "ro": APP_SOURCE_ROOT.parents[1] / "05_SoftwareDocu" / "UserGuide_ro" / "index.html",
 }
 
 # @brief Source-tree English user-guide HTML entry point used during development.
-APP_HELP_SOURCE_INDEX_PATH = APP_ROOT.parents[1] / "05_SoftwareDocu" / "UserGuide" / "index.html"
+APP_HELP_SOURCE_INDEX_PATH = APP_SOURCE_ROOT.parents[1] / "05_SoftwareDocu" / "UserGuide" / "index.html"
 
 # Project Workspace And Artifact Naming
 # @brief Stable manifest file name stored at the project root.
