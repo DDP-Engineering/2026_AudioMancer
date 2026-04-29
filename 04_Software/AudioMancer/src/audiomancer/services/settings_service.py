@@ -14,7 +14,7 @@
          settings file to the application root.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-22
-@version 0.7.1
+@version 0.7.2
 """
 
 # IMPORTS
@@ -26,6 +26,7 @@ from urllib import parse
 
 from .. import config
 from .logging_service import get_component_logger, trace_function
+from .persistence_service import write_json_atomic
 
 # CONSTANTS
 
@@ -154,14 +155,11 @@ def _write_settings_file(settings_payload: dict[str, Any]) -> None:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-04
-    @version    0.1.0
+    @version    0.1.1
     """
     settings_path = config.APP_SETTINGS_PATH
     settings_path.parent.mkdir(parents=True, exist_ok=True)
-    settings_path.write_text(
-        json.dumps(settings_payload, indent=2, ensure_ascii=False) + "\n",
-        encoding="utf-8",
-    )
+    write_json_atomic(settings_path, settings_payload)
 
 
 def _validate_llm_profile(

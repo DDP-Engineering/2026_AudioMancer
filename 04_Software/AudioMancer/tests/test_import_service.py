@@ -13,7 +13,7 @@
          collision-safe storage naming under one project workspace.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-06
-@version 0.2.0
+@version 0.2.1
 """
 
 # IMPORTS
@@ -151,6 +151,34 @@ def test_import_source_replaces_previous_project_source_file(tmp_path) -> None:
     assert payload["stored_relative_path"] == "new_story.txt"
     assert old_project_source.exists() is False
     assert (project_root / "new_story.txt").read_text(encoding="utf-8") == "new"
+
+
+def test_import_source_rejects_previous_source_traversal_path(tmp_path) -> None:
+    """
+    @brief      Verify replacement cleanup rejects previous source paths outside the project.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-29
+    @version    0.1.0
+    """
+    project_root = tmp_path / "project"
+    project_root.mkdir()
+    outside_source = tmp_path / "outside.txt"
+    outside_source.write_text("outside", encoding="utf-8")
+    source_path = tmp_path / "new_story.txt"
+    source_path.write_text("new", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="Project-relative path"):
+        import_service.import_source(
+            project_root,
+            source_path,
+            {"stored_relative_path": "../outside.txt"},
+        )
+
+    assert outside_source.read_text(encoding="utf-8") == "outside"
+    assert not (project_root / "new_story.txt").exists()
 
 
 # END OF FILE

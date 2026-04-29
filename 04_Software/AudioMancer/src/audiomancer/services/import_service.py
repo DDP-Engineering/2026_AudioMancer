@@ -13,7 +13,7 @@
          workspace, and returns normalized source metadata for `project.json`.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-06
-@version 0.2.0
+@version 0.2.1
 """
 
 # IMPORTS
@@ -24,6 +24,7 @@ import shutil
 
 from audiomancer import config
 from audiomancer.services.logging_service import get_component_logger, trace_function
+from audiomancer.services.operation_runtime_service import resolve_project_relative_path
 
 # CONSTANTS
 
@@ -101,17 +102,14 @@ def _delete_previous_source_file(
     @exception  ValueError Raised when the previous path resolves outside the project.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-26
-    @version    0.1.0
+    @version    0.2.0
     """
     if not isinstance(previous_source_document, dict):
         return
     stored_relative_path = str(previous_source_document.get("stored_relative_path") or "").strip()
     if not stored_relative_path:
         return
-    resolved_project_root = project_root.resolve()
-    previous_path = (resolved_project_root / stored_relative_path).resolve()
-    if previous_path != resolved_project_root and resolved_project_root not in previous_path.parents:
-        raise ValueError("Previous source file path is outside the active project.")
+    previous_path = resolve_project_relative_path(project_root, stored_relative_path)
     try:
         if previous_path == selected_source.resolve():
             return

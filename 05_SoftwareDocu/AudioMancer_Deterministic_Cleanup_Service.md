@@ -103,6 +103,9 @@ Inputs:
 - active project root folder
 - current `project.json` manifest with populated `source_document`
 - extracted text referenced by `extracted_text_relative_path`
+- the extracted-text reference must be a safe project-relative path; absolute
+  paths, parent traversal, and symlink escapes are rejected before the file is
+  read
 - optional progress callback and cancellation callback
 
 Outputs:

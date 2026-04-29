@@ -15,6 +15,7 @@ Implementation-focused software documentation and component notes.
 - `AudioMancer_App_Shell.md` documents the desktop application shell, Home workflow progress presenter, project navigation, settings dialogs, and page-hosting responsibilities.
 - `AudioMancer_Config_And_Settings.md` documents the adapted configuration and settings scaffold.
 - `AudioMancer_Settings_Service.md` documents the shared settings lifecycle implementation.
+- `AudioMancer_Persistence_Service.md` documents the shared atomic text and JSON write helpers used by critical project, settings, and operation state persistence paths.
 - `AudioMancer_Logging_Service.md` documents the shared runtime logging implementation.
 - `AudioMancer_Project_Workspace.md` documents the new/open project workspace layer, locked Home-page project options, source import flow, and current `project.json` contract.
 - `AudioMancer_Project_Export_Service.md` documents the Home-page export readiness and TXT/Markdown projection layer for cleaned text, chunks, translations, character dossiers, and Speech Blocks.

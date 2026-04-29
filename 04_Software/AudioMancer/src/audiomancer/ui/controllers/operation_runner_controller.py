@@ -14,16 +14,18 @@
          operation finalization callbacks.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-24
-@version 0.3.0
+@version 0.4.0
 """
 
 # IMPORTS
 
 from pathlib import Path
 from threading import Event
+import time
 from typing import TYPE_CHECKING
 
-from PySide6.QtCore import QObject, QThread, Signal, Slot
+from PySide6.QtCore import QEventLoop, QObject, QThread, Signal, Slot
+from PySide6.QtWidgets import QApplication
 
 from audiomancer.services import home_presenter_service, operation_runtime_service, ui_state_service
 from audiomancer.ui.controllers import misc_ui_controller
@@ -270,7 +272,7 @@ def start_threaded_operation(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-24
-    @version    0.3.0
+    @version    0.3.1
     """
     if window._active_operation_kind is not None:
         return
@@ -299,6 +301,7 @@ def start_threaded_operation(
     home_page = getattr(window, "_home_page", None)
     if home_page is not None:
         home_page.set_operation_busy(True)
+    _set_project_switching_enabled(window, False)
     window._active_operation_kind = operation_kind
     window._active_operation_name = operation_name
     window._operation_cancel_requested = False
@@ -336,13 +339,38 @@ def request_operation_cancel(window: "MainWindow") -> None:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-24
-    @version    0.1.1
+    @version    0.1.2
     """
     if window._active_operation_kind is None:
         return
     window._operation_cancel_requested = True
     if window._operation_cancel_event is not None:
         window._operation_cancel_event.set()
+
+
+def cancel_active_operation_for_shutdown(
+    window: "MainWindow",
+    wait_timeout_ms: int = 3000,
+) -> bool:
+    """
+    @brief      Request cancellation and wait briefly before allowing the shell to close.
+    @param[in]  window Active main window.
+    @param[in]  wait_timeout_ms Maximum milliseconds to process shutdown events.
+    @return     True when no worker remains active and closing may continue.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-29
+    @version    0.1.0
+    """
+    if window._active_operation_kind is None:
+        return True
+
+    operation_thread = window._active_operation_thread
+    request_operation_cancel(window)
+    if operation_thread is None:
+        return window._active_operation_kind is None
+
+    return _wait_for_threaded_operation_shutdown(window, operation_thread, wait_timeout_ms)
 
 
 # LOCAL HELPERS
@@ -434,12 +462,13 @@ def _clear_threaded_operation(window: "MainWindow", set_busy) -> None:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-24
-    @version    0.1.1
+    @version    0.1.2
     """
     set_busy(False)
     home_page = getattr(window, "_home_page", None)
     if home_page is not None:
         home_page.set_operation_busy(False)
+    _set_project_switching_enabled(window, True)
     misc_ui_controller.clear_progress_dialog(window)
     window._active_operation_kind = None
     window._active_operation_name = None
@@ -467,6 +496,56 @@ def _refresh_home_active_operation_status(window: "MainWindow") -> None:
     statuses = home_presenter_service.build_stage_statuses(window._current_manifest, language)
     home_presenter_service.apply_active_operation_status(statuses, window._active_operation_kind)
     home_page.set_stage_statuses(statuses)
+
+
+def _wait_for_threaded_operation_shutdown(
+    window: "MainWindow",
+    operation_thread: QThread,
+    wait_timeout_ms: int,
+) -> bool:
+    """
+    @brief      Process Qt events while a cancelled worker thread performs cleanup.
+    @param[in]  window Active main window.
+    @param[in]  operation_thread Thread instance active at shutdown request time.
+    @param[in]  wait_timeout_ms Maximum wait budget in milliseconds.
+    @return     True when the operation stopped before the timeout.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-29
+    @version    0.1.0
+    """
+    deadline = time.monotonic() + max(0, wait_timeout_ms) / 1000
+    event_flags = QEventLoop.ProcessEventsFlag.AllEvents
+    while True:
+        application = QApplication.instance()
+        if application is not None:
+            application.processEvents(event_flags, 25)
+
+        active_thread = window._active_operation_thread
+        if active_thread is None:
+            return True
+        if time.monotonic() >= deadline:
+            return False
+
+        remaining_ms = int(max(1, min(25, (deadline - time.monotonic()) * 1000)))
+        operation_thread.wait(remaining_ms)
+
+
+def _set_project_switching_enabled(window: "MainWindow", is_enabled: bool) -> None:
+    """
+    @brief      Enable or disable project-switching toolbar actions.
+    @param[in]  window Active main window.
+    @param[in]  is_enabled True when New/Open Project actions may be used.
+    @return     None.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-29
+    @version    0.1.0
+    """
+    for action_name in ("_action_new_project", "_action_open_project"):
+        action = getattr(window, action_name, None)
+        if action is not None:
+            action.setEnabled(is_enabled)
 
 
 # END OF FILE

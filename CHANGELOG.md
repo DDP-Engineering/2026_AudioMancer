@@ -8,6 +8,25 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
 
 All notable changes to this project will be documented in this file.
 
+## [1.1.1] - 2026-04-29
+
+### Fixed
+
+- fixed critical JSON persistence so `project.json`, `settings.json`, and
+  first-use operation state files are written through same-directory temporary
+  files and atomically replaced, preventing partial writes from corrupting the
+  previous valid payload
+- fixed project-relative path validation so manifest, source replacement,
+  cleanup input, completion-healing, and artifact-reference paths reject
+  absolute paths, `..` traversal, and symlink escapes before files are trusted
+- fixed main-window shutdown while long-running workflow operations are active
+  so close now requests cooperative cancellation, waits briefly for threaded
+  cleanup, and ignores the close event if the worker remains active
+- fixed project switching controls so `New Project` and `Open Project` stay
+  disabled while a threaded operation is running
+- added focused pytest-qt coverage and updated operation-runner documentation
+  for active-worker shutdown behavior
+
 ## [1.1.0] - 2026-04-28
 
 ### Changed

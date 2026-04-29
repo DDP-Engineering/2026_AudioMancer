@@ -30,6 +30,8 @@ application shell.
 - resolve and validate the selected project root
 - validate and copy one supported source file into the active project root
 - persist structured source metadata and allow replacement until project start
+- reject manifest and replacement-source paths that are absolute, contain parent
+  traversal, or resolve through symlinks outside the active project root
 - reject unsupported legacy numbered workflow-folder layouts during open
 - validate required manifest fields during open
 - detect recoverable stage metadata corruption during open
@@ -246,6 +248,9 @@ Current validation invariants:
 - once locked, `selected_voice_language` is kept equal to `target_language`
 - `current_stage` must match one of the configured workflow stage tokens
 - `source_document`, when present, must contain one valid structured payload
+- project-relative manifest paths must remain inside the active project root;
+  absolute paths, `..` traversal, and symlink escapes fail validation before
+  source or artifact evidence is trusted
 - opening a project expects a selected project root with `project.json`
 - legacy numbered workflow folders cause validation to fail with an unsupported
   legacy layout error
@@ -332,6 +337,8 @@ Covered behaviors:
 - copied source metadata persistence, collision-safe file naming, and pre-start
   source replacement cleanup
 - manifest defaults for extraction fields and operation-state entries
+- rejection of tampered manifest paths and traversal artifact references during
+  project-open completion healing
 - main-window activation and workflow progress updates after create/open
 - main-window source import, replacement, and project-start lock behavior
 - main-window metadata repair confirmation flow during open

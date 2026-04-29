@@ -14,17 +14,17 @@
          operations.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-22
-@version 0.7.1
+@version 0.8.1
 """
 
 # IMPORTS
 
 from collections.abc import Iterable
-import json
 import math
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 
 from audiomancer import config
+from audiomancer.services.persistence_service import write_json_atomic
 
 # CONSTANTS
 
@@ -313,7 +313,7 @@ def ensure_default_operation_state(project_root: str | Path, operation_kind: str
     @exception  ValueError Raised when the operation kind is unsupported.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-26
-    @version    0.1.0
+    @version    0.1.1
     """
     if operation_kind not in _OPERATION_ORDER:
         raise ValueError(f"Unsupported operation kind: {operation_kind}")
@@ -322,10 +322,7 @@ def ensure_default_operation_state(project_root: str | Path, operation_kind: str
         return None
     state_path = build_operation_output_path(project_root, operation_kind, state_file_name)
     if not state_path.is_file():
-        state_path.write_text(
-            json.dumps(default_operation_state(operation_kind), indent=2, ensure_ascii=False) + "\n",
-            encoding="utf-8",
-        )
+        write_json_atomic(state_path, default_operation_state(operation_kind))
     return state_path
 
 
@@ -338,9 +335,81 @@ def relative_to_project(project_root: str | Path, artifact_path: str | Path) -> 
     @exception  ValueError Raised when the path is outside the project root.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
+    @version    0.2.0
+    """
+    resolved_project_root = Path(project_root).resolve()
+    resolved_artifact_path = Path(artifact_path).resolve()
+    try:
+        return resolved_artifact_path.relative_to(resolved_project_root).as_posix()
+    except ValueError as exc:
+        raise ValueError("Artifact path is outside the active project.") from exc
+
+
+def validate_project_relative_path(relative_path: str | Path) -> str:
+    """
+    @brief      Normalize one manifest project-relative path and reject unsafe forms.
+    @param[in]  relative_path Candidate project-relative path value.
+    @return     POSIX-style project-relative path.
+    @exception  ValueError Raised when the path is empty, absolute, or contains parent traversal.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-29
     @version    0.1.0
     """
-    return Path(artifact_path).relative_to(Path(project_root)).as_posix()
+    normalized_text = str(relative_path).strip()
+    if not normalized_text:
+        raise ValueError("Project-relative path is empty.")
+    candidate = Path(normalized_text)
+    windows_candidate = PureWindowsPath(normalized_text)
+    if (
+        candidate.is_absolute()
+        or candidate.drive
+        or candidate.root
+        or windows_candidate.is_absolute()
+        or windows_candidate.drive
+        or windows_candidate.root
+    ):
+        raise ValueError("Project-relative path must not be absolute.")
+    if ".." in candidate.parts or ".." in windows_candidate.parts:
+        raise ValueError("Project-relative path must not contain parent traversal.")
+    return normalized_text.replace("\\", "/")
+
+
+def resolve_project_relative_path(project_root: str | Path, relative_path: str | Path) -> Path:
+    """
+    @brief      Resolve one trusted project-relative path under the active project root.
+    @param[in]  project_root Active project root folder.
+    @param[in]  relative_path Candidate project-relative path value.
+    @return     Resolved absolute path below the project root.
+    @exception  ValueError Raised when the path escapes the active project.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-29
+    @version    0.1.0
+    """
+    safe_relative_path = validate_project_relative_path(relative_path)
+    resolved_project_root = Path(project_root).resolve()
+    resolved_candidate = (resolved_project_root / safe_relative_path).resolve(strict=False)
+    try:
+        resolved_candidate.relative_to(resolved_project_root)
+    except ValueError as exc:
+        raise ValueError("Project-relative path resolves outside the active project.") from exc
+    return resolved_candidate
+
+
+def project_relative_path_exists(project_root: str | Path, relative_path: str | Path) -> bool:
+    """
+    @brief      Return whether one safe project-relative path exists below the project root.
+    @param[in]  project_root Active project root folder.
+    @param[in]  relative_path Candidate project-relative path value.
+    @return     True when the resolved path stays below the project root and exists.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-29
+    @version    0.1.0
+    """
+    try:
+        return resolve_project_relative_path(project_root, relative_path).exists()
+    except (OSError, ValueError):
+        return False
 
 
 def progress_percent(progress_current: int, progress_total: int) -> int:

@@ -15,7 +15,7 @@
          structure, and persists cleanup artifacts with resumable state.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-06
-@version 0.4.0
+@version 0.4.1
 """
 
 # IMPORTS
@@ -35,6 +35,7 @@ from audiomancer.services.operation_runtime_service import (
     raise_if_cancelled,
     relative_to_project,
     resolve_operation_path,
+    resolve_project_relative_path,
 )
 
 # CONSTANTS
@@ -94,7 +95,7 @@ def clean_text(
     @exception  OperationCancelledError Raised when the operator cancels the run.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.3.0
+    @version    0.3.1
     """
     resolved_project_root = Path(project_root)
     source_document = manifest.get("source_document")
@@ -105,7 +106,7 @@ def clean_text(
     if not isinstance(extracted_relative_path, str) or not extracted_relative_path.strip():
         raise FileNotFoundError("Deterministic cleanup requires extracted text first.")
 
-    extracted_path = resolved_project_root / extracted_relative_path
+    extracted_path = resolve_project_relative_path(resolved_project_root, extracted_relative_path)
     if not extracted_path.is_file():
         raise FileNotFoundError(f"Extracted text is missing: {extracted_path}")
 

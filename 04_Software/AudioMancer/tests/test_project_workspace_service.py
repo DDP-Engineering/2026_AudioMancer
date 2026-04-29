@@ -13,7 +13,7 @@
          validation, project-root resolution, and open validation behavior.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-20
-@version 1.1.0
+@version 1.1.1
 """
 
 # IMPORTS
@@ -355,6 +355,63 @@ def test_validate_project_manifest_accepts_structured_source_document() -> None:
     assert validated["source_document"] == manifest["source_document"]
     assert validated["current_stage"] == "source_selected"
     assert validated["voice_assignment_mode"] == config.DEFAULT_TTS_VOICE_ASSIGNMENT_MODE
+
+
+@pytest.mark.parametrize("stored_relative_path", ["source/../../outside.txt", "/outside.txt"])
+def test_validate_project_manifest_rejects_unsafe_source_document_paths(stored_relative_path: str) -> None:
+    """
+    @brief      Verify manifest validation rejects traversal and absolute source paths.
+    @param[in]  stored_relative_path Candidate unsafe source-document path.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-29
+    @version    0.1.0
+    """
+    manifest = project_workspace_service.build_project_manifest("UnsafeSource")
+    manifest["source_document"] = {
+        "original_name": "story.txt",
+        "stored_relative_path": stored_relative_path,
+        "file_type": "txt",
+        "imported_at": "2026-04-29T12:00:00+00:00",
+        "size_bytes": 128,
+    }
+    manifest["current_stage"] = "source_selected"
+
+    with pytest.raises(ValueError, match="source_document.stored_relative_path"):
+        project_workspace_service.validate_project_manifest(manifest)
+
+
+def test_open_project_rejects_source_document_symlink_escape(tmp_path) -> None:
+    """
+    @brief      Verify project-open validation rejects source symlinks resolving outside the project.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-29
+    @version    0.1.0
+    """
+    project_root, manifest = project_workspace_service.create_project("SymlinkSource", tmp_path)
+    outside_source = tmp_path / "outside.txt"
+    outside_source.write_text("outside", encoding="utf-8")
+    linked_source = project_root / "linked_source.txt"
+    try:
+        linked_source.symlink_to(outside_source)
+    except (NotImplementedError, OSError) as exc:
+        pytest.skip(f"Filesystem does not allow file symlink creation: {exc}")
+    manifest["source_document"] = {
+        "original_name": "outside.txt",
+        "stored_relative_path": "linked_source.txt",
+        "file_type": "txt",
+        "imported_at": "2026-04-29T12:00:00+00:00",
+        "size_bytes": outside_source.stat().st_size,
+    }
+    manifest["current_stage"] = "source_selected"
+    project_workspace_service.save_manifest(manifest, project_root)
+
+    with pytest.raises(ValueError, match="source_document.stored_relative_path"):
+        project_workspace_service.open_project(project_root)
 
 
 def test_validate_project_manifest_normalizes_voice_assignment_mode() -> None:
@@ -700,6 +757,61 @@ def test_open_project_does_not_require_repair_when_only_stale_state_warning_rema
 
     assert open_result["status"] == "ok"
     assert open_result["manifest"]["operations"]["audio_blocks"]["status"] == "completed"
+
+
+def test_open_project_does_not_heal_audio_blocks_with_traversal_audio_path(tmp_path) -> None:
+    """
+    @brief      Verify traversal audio paths cannot prove Audio Blocks completion.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-29
+    @version    0.1.0
+    """
+    project_root, manifest = project_workspace_service.create_project("AudioTraversal", tmp_path)
+    audio_root = project_root / config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME
+    audio_root.mkdir()
+    outside_audio_path = tmp_path / "outside.wav"
+    outside_audio_path.write_bytes(b"RIFF")
+    traversal_audio_path = str(Path(config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME) / ".." / ".." / "outside.wav")
+    _write_json(
+        project_root / config.AUDIO_BLOCKS_STATE_FILE_NAME,
+        {
+            **_operation_state("in_progress", 1, 1),
+            "output_paths": [config.AUDIO_BLOCKS_OUTPUT_FILE_NAME],
+            "artifact_paths": [traversal_audio_path],
+        },
+    )
+    _write_json(
+        project_root / config.AUDIO_BLOCKS_REPORT_FILE_NAME,
+        {
+            "audio_blocks_stage_status": "completed",
+            "generated_block_count": 1,
+            "approved_block_count": 1,
+            "total_block_count": 1,
+            "warning_count": 0,
+            "updated_at": "2026-04-29T12:00:00+00:00",
+        },
+    )
+    _write_json(
+        project_root / config.AUDIO_BLOCKS_OUTPUT_FILE_NAME,
+        [
+            {
+                "speech_block_id": "sb-1",
+                "audio_relative_path": traversal_audio_path,
+                "generated": True,
+                "approved": True,
+            }
+        ],
+    )
+    manifest["operations"]["audio_blocks"]["status"] = "in_progress"
+    project_workspace_service.save_manifest(manifest, project_root)
+
+    open_result = project_workspace_service.open_project(project_root)
+
+    assert open_result["status"] == "ok"
+    assert open_result["manifest"]["operations"]["audio_blocks"]["status"] == "in_progress"
 
 
 def test_open_project_advances_current_stage_from_contiguous_completed_artifacts(tmp_path) -> None:

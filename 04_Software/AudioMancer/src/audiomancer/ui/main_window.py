@@ -14,7 +14,7 @@
          so the window remains a thin coordinator.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 1.39.0
+@version 1.40.0
 """
 
 # IMPORTS
@@ -61,6 +61,7 @@ from audiomancer.ui.controllers import (
     home_ui_controller,
     misc_ui_controller,
     narator_voice_ui_controller,
+    operation_runner_controller,
     settings_ui_controller,
     speech_blocks_ui_controller,
     text_chunking_ui_controller,
@@ -147,7 +148,7 @@ class MainWindow(QMainWindow):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-06
-        @version    0.19.0
+        @version    0.19.1
         """
         super().__init__(parent)
         self.setWindowTitle(misc_ui_controller.build_window_title())
@@ -166,6 +167,7 @@ class MainWindow(QMainWindow):
         self._active_operation_worker = None
         self._active_operation_ui_bridge = None
         self._operation_cancel_event = None
+        self._operation_shutdown_wait_timeout_ms = 3000
         self._narator_voice_preview_generation = 0
         self._narator_voice_inspected_profile_id: str | None = None
         self._character_voices_inspected_target_id: str | None = None
@@ -1240,8 +1242,14 @@ class MainWindow(QMainWindow):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-06
-        @version    0.1.1
+        @version    0.2.0
         """
+        if not operation_runner_controller.cancel_active_operation_for_shutdown(
+            self,
+            self._operation_shutdown_wait_timeout_ms,
+        ):
+            event.ignore()
+            return
         self.stop_all_audio_playback()
         super().closeEvent(event)
 

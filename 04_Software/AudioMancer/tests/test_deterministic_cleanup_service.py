@@ -13,7 +13,7 @@
          resumable cancellation state for deterministic text cleanup.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-06
-@version 0.2.0
+@version 0.2.1
 """
 
 # IMPORTS
@@ -71,6 +71,27 @@ def test_cleanup_writes_runtime_artifacts_and_preserves_structure(tmp_path) -> N
     assert report_payload["paragraph_count"] == 2
     assert report_payload["page_break_repair_count"] == 1
     assert report_payload["removed_line_count"] >= 3
+
+
+def test_cleanup_rejects_traversal_extracted_text_path(tmp_path) -> None:
+    """
+    @brief      Verify cleanup input loading rejects extracted-text paths outside the project.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-29
+    @version    0.1.0
+    """
+    project_root, manifest = _build_cleanup_project(tmp_path, "CleanupTraversal")
+    outside_text = tmp_path / "outside.txt"
+    outside_text.write_text("outside project", encoding="utf-8")
+    manifest["extracted_text_relative_path"] = "../outside.txt"
+
+    with pytest.raises(ValueError, match="Project-relative path"):
+        deterministic_cleanup_service.clean_text(project_root, manifest)
+
+    assert not (project_root / config.CLEANED_TEXT_FILE_NAME).exists()
 
 
 def test_cleanup_repairs_uppercase_name_fragment_after_page_break(tmp_path) -> None:

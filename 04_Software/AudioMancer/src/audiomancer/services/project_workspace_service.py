@@ -13,7 +13,7 @@
          using one minimal root-level `project.json` manifest contract.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-20
-@version    2.0.0
+@version    2.0.2
 """
 
 # IMPORTS
@@ -25,6 +25,12 @@ from uuid import uuid4
 
 from audiomancer import config
 from audiomancer.services.logging_service import get_component_logger, trace_function
+from audiomancer.services.operation_runtime_service import (
+    project_relative_path_exists,
+    resolve_project_relative_path,
+    validate_project_relative_path,
+)
+from audiomancer.services.persistence_service import write_json_atomic
 
 # CONSTANTS
 
@@ -150,15 +156,14 @@ def save_manifest(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.2.0
+    @version    0.3.1
     """
     normalized_manifest = validate_project_manifest(manifest)
     normalized_manifest["updated_at"] = _utc_now_iso()
-    manifest_path = Path(project_root) / config.PROJECT_MANIFEST_FILE_NAME
-    manifest_path.write_text(
-        json.dumps(normalized_manifest, indent=2, ensure_ascii=False) + "\n",
-        encoding="utf-8",
-    )
+    resolved_project_root = Path(project_root)
+    _validate_project_scoped_manifest_paths(normalized_manifest, resolved_project_root)
+    manifest_path = resolved_project_root / config.PROJECT_MANIFEST_FILE_NAME
+    write_json_atomic(manifest_path, normalized_manifest)
 
 
 @trace_function(_PROJECT_WORKSPACE_LOGGER)
@@ -228,7 +233,7 @@ def validate_project(project_root: str | Path) -> ProjectOpenResult:
     @exception  ValueError Raised when required manifest fields are invalid.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.5.0
+    @version    0.6.0
     """
     resolved_root = Path(project_root)
     manifest_path = resolved_root / config.PROJECT_MANIFEST_FILE_NAME
@@ -237,6 +242,7 @@ def validate_project(project_root: str | Path) -> ProjectOpenResult:
 
     payload = json.loads(manifest_path.read_text(encoding="utf-8"))
     _validate_manifest_identity_fields(payload)
+    _validate_project_scoped_manifest_paths(payload, resolved_root)
     legacy_folder = _first_unsupported_legacy_directory(resolved_root)
     if legacy_folder is not None:
         raise ValueError(
@@ -263,10 +269,13 @@ def load_manifest(project_root: str | Path) -> ProjectManifestPayload:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.1.1
+    @version    0.2.0
     """
-    manifest_path = Path(project_root) / config.PROJECT_MANIFEST_FILE_NAME
+    resolved_project_root = Path(project_root)
+    manifest_path = resolved_project_root / config.PROJECT_MANIFEST_FILE_NAME
     payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+    _validate_manifest_identity_fields(payload)
+    _validate_project_scoped_manifest_paths(payload, resolved_project_root)
     return validate_project_manifest(payload)
 
 
@@ -545,6 +554,66 @@ def _build_project_manifest_healing_result(
         "warnings": warnings,
         "normalized_manifest": normalized_manifest,
     }
+
+
+def _validate_project_scoped_manifest_paths(payload: dict[str, object], project_root: Path) -> None:
+    """
+    @brief      Reject manifest paths that cannot be safely scoped to the active project.
+    @param[in]  payload Parsed project manifest payload.
+    @param[in]  project_root Active project root folder.
+    @return     None.
+    @exception  ValueError Raised when a manifest path escapes the project root.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-29
+    @version    0.1.0
+    """
+    source_document = payload.get("source_document")
+    if isinstance(source_document, dict):
+        stored_relative_path = _optional_string(source_document.get("stored_relative_path"))
+        if stored_relative_path is not None:
+            _resolve_manifest_path(project_root, stored_relative_path, "source_document.stored_relative_path")
+    for field_name in ("extracted_text_relative_path", "extraction_report_relative_path"):
+        relative_path = _optional_string(payload.get(field_name))
+        if relative_path is not None:
+            _resolve_manifest_path(project_root, relative_path, field_name)
+    operations = payload.get("operations")
+    if not isinstance(operations, dict):
+        return
+    for operation_kind, operation_payload in operations.items():
+        if not isinstance(operation_payload, dict):
+            continue
+        folder_relative_path = _optional_string(operation_payload.get("folder_relative_path"))
+        if folder_relative_path is not None:
+            _resolve_manifest_path(
+                project_root,
+                folder_relative_path,
+                f"operations.{operation_kind}.folder_relative_path",
+            )
+        for field_name in ("input_paths", "output_paths", "artifact_paths"):
+            for index, relative_path in enumerate(_operation_path_list(operation_payload, field_name)):
+                _resolve_manifest_path(
+                    project_root,
+                    relative_path,
+                    f"operations.{operation_kind}.{field_name}[{index}]",
+                )
+
+
+def _resolve_manifest_path(project_root: Path, relative_path: str, field_name: str) -> Path:
+    """
+    @brief      Resolve one manifest path or raise a field-specific validation error.
+    @param[in]  project_root Active project root folder.
+    @param[in]  relative_path Candidate project-relative path.
+    @param[in]  field_name Manifest field name used for diagnostics.
+    @return     Resolved project-local path.
+    @exception  ValueError Raised when the path escapes the project root.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-29
+    @version    0.1.0
+    """
+    try:
+        return resolve_project_relative_path(project_root, relative_path)
+    except ValueError as exc:
+        raise ValueError(f"Project manifest field '{field_name}' is not a safe project-relative path.") from exc
 
 
 def _verified_source_stage(manifest: dict[str, object], project_root: Path) -> str:
@@ -1338,13 +1407,9 @@ def _project_relative_path_exists(project_root: Path, relative_path: str) -> boo
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.1.0
+    @version    0.2.0
     """
-    candidate = Path(relative_path)
-    if candidate.is_absolute():
-        return False
-    normalized_relative = str(candidate).lstrip("./\\")
-    return (project_root / normalized_relative).exists()
+    return project_relative_path_exists(project_root, relative_path)
 
 
 def _first_optional_string(*payloads_and_fields: object) -> str | None:
@@ -1732,7 +1797,7 @@ def _normalize_source_document(value: object) -> dict[str, object] | None:
     @exception  ValueError Raised when the payload is invalid.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.1.0
+    @version    0.2.0
     """
     if value in (None, ""):
         return None
@@ -1749,6 +1814,10 @@ def _normalize_source_document(value: object) -> dict[str, object] | None:
         raise ValueError("Project manifest field 'source_document.original_name' is invalid.")
     if not isinstance(stored_relative_path, str) or not stored_relative_path.strip():
         raise ValueError("Project manifest field 'source_document.stored_relative_path' is invalid.")
+    try:
+        normalized_stored_relative_path = validate_project_relative_path(stored_relative_path)
+    except ValueError as exc:
+        raise ValueError("Project manifest field 'source_document.stored_relative_path' is invalid.") from exc
     if not isinstance(file_type, str) or file_type not in config.SUPPORTED_SOURCE_SUFFIXES.values():
         raise ValueError("Project manifest field 'source_document.file_type' is invalid.")
     if not isinstance(imported_at, str) or not imported_at.strip():
@@ -1758,7 +1827,7 @@ def _normalize_source_document(value: object) -> dict[str, object] | None:
 
     return {
         "original_name": original_name,
-        "stored_relative_path": stored_relative_path,
+        "stored_relative_path": normalized_stored_relative_path,
         "file_type": file_type,
         "imported_at": imported_at,
         "size_bytes": size_bytes,
