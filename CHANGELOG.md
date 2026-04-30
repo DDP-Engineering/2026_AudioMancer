@@ -8,6 +8,17 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
 
 All notable changes to this project will be documented in this file.
 
+## [1.1.6] - 2026-04-30
+
+### Changed
+
+- changed interrupted AI-assisted Speech Blocks resume to continue remaining
+  chunks with the currently selected AI profile/model instead of forcing the
+  original checkpoint profile or matching context-budget metadata
+- updated Speech Blocks resume documentation and focused coverage for
+  current-model continuation
+- package version updated to `1.1.6`
+
 ## [1.1.5] - 2026-04-30
 
 ### Changed

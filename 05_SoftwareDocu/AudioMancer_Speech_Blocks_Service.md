@@ -111,9 +111,9 @@ High-level flow:
 4. `speech_blocks_service.start_or_continue_generation(...)` validates the
    selected prompt files, builds request budget metadata from the selected AI
    profile and prompt shell, restores resumable state when the saved checkpoint
-   still matches the current source snapshot, AI profile, mode, and budget
-   metadata, and processes each chunk through one or more budgeted model
-   requests.
+   still matches the current source snapshot and source language, and processes each
+   remaining chunk through one or more budgeted model requests with the
+   currently selected AI profile/model.
 5. Each response is normalized into new speech-block payloads, including exact
    source spans, AI baseline values, editable current values, warning flags,
    approval fields, chunk-local sequence indexes, and `CCCC-BBBBBB` IDs.
@@ -125,9 +125,9 @@ High-level flow:
    fallback splits add `tts_hard_split`; operation rows such as `pause`,
    `background_noise`, and `indication` are never split.
 6. The current `speech_blocks_report.json`, `speech_blocks_state.json`, and
-   transaction log metadata are rewritten after every chunk with the budget
-   metadata so cancellation can resume from the next chunk when those settings
-   still match.
+   transaction log metadata are rewritten after every chunk with the current
+   budget metadata so cancellation can resume from the next chunk even when the
+   operator selects a different AI profile/model before continuing.
 7. Finished full generation disables `Generate Speech Blocks`, enables
    `Reset Speech Blocks`, resets downstream Audio Blocks plus Audio Assembly
    data, and leaves Speech Blocks in review until all blocks are approved.
@@ -291,7 +291,8 @@ Report and operation-state metadata include:
   `prompt_budget_tokens`, `text_budget_tokens`, and `safety_margin_tokens`
 - one resume checkpoint with `next_chunk_index`,
   `source_snapshot_fingerprint`, `source_language`, `ai_profile_id`, and
-  `budget_metadata`
+  `budget_metadata`; resume compatibility uses the source snapshot and language,
+  while the stored profile and budget describe the last saved run settings
 
 ## 7. Workflow Integration
 

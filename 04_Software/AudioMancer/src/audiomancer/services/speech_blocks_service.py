@@ -347,9 +347,7 @@ def start_or_continue_generation(
         resolved_project_root,
         existing_state,
         input_fingerprint,
-        profile_id,
         source_language,
-        budget_metadata,
     )
     token_usage = (
         token_usage_service.restore_token_usage(
@@ -1554,23 +1552,19 @@ def _restore_resume_state(
     project_root: Path,
     existing_state: dict[str, object],
     input_fingerprint: str,
-    profile_id: str,
     source_language: str,
-    budget_metadata: BudgetMetadataPayload,
 ) -> tuple[list[SpeechBlockPayload], list[dict[str, object]], int]:
     """
     @brief      Restore resumable Speech Blocks state when the persisted checkpoint is still valid.
     @param[in]  project_root Active project root folder.
     @param[in]  existing_state Existing operation-state payload.
     @param[in]  input_fingerprint Current source snapshot fingerprint.
-    @param[in]  profile_id Active AI profile identifier.
     @param[in]  source_language Active source language code.
-    @param[in]  budget_metadata Current context-budget metadata.
     @return     Existing blocks, warning entries, and the next chunk index.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.2.0
+    @version    0.3.0
     """
     if not isinstance(existing_state, dict):
         return [], [], 0
@@ -1582,11 +1576,7 @@ def _restore_resume_state(
         return [], [], 0
     if str(metadata.get("source_snapshot_fingerprint", "")).strip() != input_fingerprint:
         return [], [], 0
-    if str(metadata.get("ai_profile_id", "")).strip() != profile_id:
-        return [], [], 0
     if str(metadata.get("source_language", "")).strip() != source_language:
-        return [], [], 0
-    if dict(resume_checkpoint.get("budget_metadata") or {}) != dict(budget_metadata):
         return [], [], 0
     next_chunk_index = int(resume_checkpoint.get("next_chunk_index", 0))
     warnings = metadata.get("warnings", [])

@@ -15,7 +15,7 @@
          chunk-based generation, and narrator-only segmentation.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-24
-@version 0.8.0
+@version 0.8.1
 """
 
 # IMPORTS
@@ -314,28 +314,27 @@ def test_start_generation_rejects_profile_with_too_little_ai_context(monkeypatch
         speech_blocks_service.start_or_continue_generation(project_root, manifest, profile_payload)
 
 
-def test_speech_blocks_resume_rejects_changed_budget_metadata(tmp_path) -> None:
+def test_speech_blocks_resume_accepts_changed_profile_and_budget_metadata(tmp_path) -> None:
     """
-    @brief      Verify Speech Blocks resume requires matching context-budget metadata.
+    @brief      Verify Speech Blocks resume accepts a new profile and context-budget metadata.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-28
-    @version    0.1.0
+    @date       2026-04-30
+    @version    0.2.0
     """
     project_root, manifest = _create_chunked_project(tmp_path, "SpeechBlocksBudgetResume")
     source_resolution = speech_blocks_service.resolve_source_chunks(project_root, manifest)
     source_chunks = list(source_resolution["source_chunks"])
     input_fingerprint = speech_blocks_service._build_source_fingerprint(source_chunks, "en", "original")  # noqa: SLF001
-    current_budget = {
+    previous_budget = {
         "context_window": 4096,
-        "max_output_tokens": 512,
+        "max_output_tokens": 1024,
         "prompt_budget_tokens": 40,
         "text_budget_tokens": 2000,
         "safety_margin_tokens": 409,
     }
-    previous_budget = {**current_budget, "max_output_tokens": 1024}
 
     restored = speech_blocks_service._restore_resume_state(  # noqa: SLF001
         project_root,
@@ -356,12 +355,10 @@ def test_speech_blocks_resume_rejects_changed_budget_metadata(tmp_path) -> None:
             },
         },
         input_fingerprint,
-        "profile-1",
         "en",
-        current_budget,
     )
 
-    assert restored == ([], [], 0)
+    assert restored == ([], [], 1)
 
 
 def test_load_speech_blocks_rejects_legacy_global_sequence_schema(tmp_path) -> None:
@@ -1098,16 +1095,16 @@ def test_normalize_block_text_only_strips_wrapping_dialogue_quotes() -> None:
     )
 
 
-def test_start_or_continue_generation_resumes_from_next_chunk(monkeypatch, tmp_path) -> None:
+def test_start_or_continue_generation_resumes_with_current_selected_profile(monkeypatch, tmp_path) -> None:
     """
-    @brief      Verify Speech Blocks resume continues from the next incomplete chunk.
+    @brief      Verify Speech Blocks resume continues from the next chunk using the current selected profile.
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
+    @date       2026-04-30
+    @version    0.2.0
     """
     project_root, manifest = _create_chunked_project(tmp_path, "SpeechBlocksResume")
     manifest["original_language"] = "en"
@@ -1179,39 +1176,41 @@ def test_start_or_continue_generation_resumes_from_next_chunk(monkeypatch, tmp_p
             budget_metadata=budget_metadata,
         ),
     )
-    calls: list[str] = []
-    monkeypatch.setattr(
-        speech_blocks_service.llm_provider_service,
-        "chat_json",
-        lambda *_args, **_kwargs: (
-            calls.append("called")
-            or {
-                "payload": {
-                    "speech_blocks": [
-                        {
-                            "speaker_id": "narrator",
-                            "content_kind": "narration",
-                            "source_text": "Maria smiled. ",
-                            "text": "Maria smiled.",
-                            "warning_flags": [],
-                        },
-                        {
-                            "speaker_id": "narrator",
-                            "content_kind": "dialogue",
-                            "source_text": '"Welcome."',
-                            "text": '"Welcome."',
-                            "warning_flags": [],
-                        },
-                    ]
-                },
-                "usage": {"input_tokens": 10, "output_tokens": 5, "total_tokens": 15, "usage_available": True},
-            }
-        ),
-    )
+    calls: list[dict[str, object]] = []
 
-    report = speech_blocks_service.start_or_continue_generation(project_root, manifest, _profile_payload())
+    def _fake_chat_json(profile, *_args, **_kwargs):
+        calls.append(dict(profile))
+        return {
+            "payload": {
+                "speech_blocks": [
+                    {
+                        "speaker_id": "narrator",
+                        "content_kind": "narration",
+                        "source_text": "Maria smiled. ",
+                        "text": "Maria smiled.",
+                        "warning_flags": [],
+                    },
+                    {
+                        "speaker_id": "narrator",
+                        "content_kind": "dialogue",
+                        "source_text": '"Welcome."',
+                        "text": '"Welcome."',
+                        "warning_flags": [],
+                    },
+                ]
+            },
+            "usage": {"input_tokens": 10, "output_tokens": 5, "total_tokens": 15, "usage_available": True},
+        }
+
+    monkeypatch.setattr(speech_blocks_service.llm_provider_service, "chat_json", _fake_chat_json)
+    selected_profile = {**_profile_payload(), "id": "profile-2", "model_name": "qwen3-14b", "temperature": 0.7}
+
+    report = speech_blocks_service.start_or_continue_generation(project_root, manifest, selected_profile)
 
     assert len(calls) == 1
+    assert calls[0]["id"] == "profile-2"
+    assert calls[0]["model_name"] == "qwen3-14b"
+    assert report["ai_profile_id"] == "profile-2"
     speech_blocks = speech_blocks_service.load_speech_blocks(project_root)
     assert len(speech_blocks) == 3
     assert speech_blocks[0]["chunk_id"] == "chunk-0001"
