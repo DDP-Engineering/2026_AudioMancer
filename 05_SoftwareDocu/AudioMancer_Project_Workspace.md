@@ -207,6 +207,13 @@ checkpoints, translated chunks, warning details, and similar workflow
 internals are stored only in root-level state files, reports, and canonical
 output artifacts.
 
+AI-assisted chunking checkpoints store the completed paragraph-unit count plus
+the last completed unit id, so an interrupted run can continue with a different
+currently selected AI profile without reprocessing completed text. The chunking
+state and report persist the selected profile id, model name, context window,
+max output tokens, temperature, current budget metadata, and ordered profile
+settings history when resumed segments use different model settings.
+
 Default operation-state files are lazy page metadata. Opening a workflow page
 may create a `not_started` state file with empty `input_paths`, `output_paths`,
 `artifact_paths`, operation-specific default `metadata`, and

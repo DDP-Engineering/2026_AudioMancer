@@ -15,7 +15,7 @@
          Chunking page.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-24
-@version 0.6.0
+@version 0.7.0
 """
 
 # IMPORTS
@@ -107,7 +107,7 @@ def handle_ai_chunking_requested(window: "MainWindow", profile_id: str, strategy
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-07
-    @version    0.1.0
+    @version    0.2.0
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._active_operation_kind is not None:
@@ -138,15 +138,10 @@ def handle_ai_chunking_requested(window: "MainWindow", profile_id: str, strategy
     )
     chunking_status = str(chunking_operation.get("status", "not_started"))
     chunking_mode = str(chunking_operation.get("mode") or "")
-    resume_profile_id = _resume_ai_profile_id(window, chunking_operation)
     resume_strategy = _resume_ai_strategy(window, chunking_operation)
     selected_profile = _resolve_ai_profile(
         window._settings_payload,
-        (
-            resume_profile_id
-            if chunking_status in {"running", "failed"} and chunking_mode == "ai_assisted"
-            else profile_id
-        ),
+        profile_id,
     )
     if selected_profile is None:
         QMessageBox.warning(

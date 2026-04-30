@@ -15,7 +15,7 @@
          window-based operation state plus AI transaction logging.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-11
-@version 0.6.0
+@version 0.7.0
 """
 
 # IMPORTS
@@ -61,6 +61,7 @@ ChunkingReportPayload = dict[str, object]
 OperationStatePayload = dict[str, object]
 TokenUsagePayload = dict[str, object]
 BudgetMetadataPayload = dict[str, int]
+ProfileRuntimeMetadataPayload = dict[str, object]
 
 
 # PUBLIC API
@@ -89,7 +90,7 @@ def chunk_text(
     @exception  OperationCancelledError Raised when the operator cancels the run.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-11
-    @version    0.4.0
+    @version    0.5.0
     """
     resolved_project_root = Path(project_root)
     source_document = manifest.get("source_document")
@@ -141,26 +142,33 @@ def chunk_text(
         {"strategy": semantic_strategy},
     )
     budget_metadata = _build_budget_metadata(ai_profile_payload, semantic_strategy, system_prompt)
+    profile_runtime_metadata = _build_profile_runtime_metadata(ai_profile_payload)
     input_fingerprint = _compute_input_fingerprint(input_text)
-    windows = _build_windows(paragraph_records, semantic_strategy, budget_metadata)
-    total_windows = len(windows)
-    if total_windows == 0:
+    all_windows = _build_windows(paragraph_records, semantic_strategy, budget_metadata)
+    if not all_windows:
         raise ValueError("Cleaned text does not contain any paragraphs for AI chunking.")
 
     existing_state = load_operation_state(resolved_project_root) or {}
     started_at = str(existing_state.get("started_at") or _utc_now_iso())
-    start_window_index, committed_break_ids, log_relative_path = _restore_resume_state(
+    completed_window_count, completed_unit_count, committed_break_ids, log_relative_path = _restore_resume_state(
         existing_state,
-        total_windows,
+        len(all_windows),
         input_fingerprint,
-        profile_id,
         semantic_strategy,
+        paragraph_records,
+        all_windows,
         budget_metadata,
     )
+    windows = _build_windows_from_index(paragraph_records, completed_unit_count, semantic_strategy, budget_metadata)
+    total_windows = completed_window_count + len(windows)
     token_usage = (
-        _restore_token_usage(existing_state) if start_window_index > 0 else token_usage_service.empty_token_usage()
+        _restore_token_usage(existing_state) if completed_unit_count > 0 else token_usage_service.empty_token_usage()
     )
-    if start_window_index == 0:
+    profile_usage_history = _merge_profile_usage_history(
+        _restore_profile_usage_history(existing_state),
+        profile_runtime_metadata,
+    )
+    if completed_unit_count == 0:
         output_path.write_text("[]\n", encoding="utf-8")
 
     if not log_relative_path:
@@ -179,10 +187,10 @@ def chunk_text(
         output_path=output_path,
         report_path=None,
         started_at=started_at,
-        progress_current=start_window_index,
+        progress_current=completed_window_count,
         progress_total=total_windows,
         warnings=[],
-        paragraph_records=paragraph_records,
+        paragraph_records=paragraph_records[:completed_unit_count],
         committed_break_ids=committed_break_ids,
         profile_id=profile_id,
         semantic_strategy=semantic_strategy,
@@ -190,18 +198,23 @@ def chunk_text(
         log_relative_path=log_relative_path,
         token_usage=token_usage,
         budget_metadata=budget_metadata,
+        profile_runtime_metadata=profile_runtime_metadata,
+        profile_usage_history=profile_usage_history,
+        completed_unit_count=completed_unit_count,
     )
     _emit_progress(
         progress_callback,
-        progress_current=start_window_index,
+        progress_current=completed_window_count,
         progress_total=total_windows,
-        message="Resuming AI-assisted chunking..." if start_window_index > 0 else "AI-assisted chunking in progress...",
+        message=(
+            "Resuming AI-assisted chunking..." if completed_unit_count > 0 else "AI-assisted chunking in progress..."
+        ),
         token_usage=token_usage,
     )
 
-    for window_index in range(start_window_index, total_windows):
+    for relative_window_index, window_payload in enumerate(windows):
+        progress_window_index = completed_window_count + relative_window_index
         raise_if_cancelled(cancel_requested)
-        window_payload = windows[window_index]
         window_records = paragraph_records[int(window_payload["start_index"]) : int(window_payload["end_index"]) + 1]
         user_prompt = prompt_template_service.render_prompt(
             "text_chunking_user",
@@ -221,7 +234,7 @@ def chunk_text(
                     "stage_label": "ai_chunking",
                     "profile_id": profile_id,
                     "semantic_strategy": semantic_strategy,
-                    "window_index": window_index + 1,
+                    "window_index": progress_window_index + 1,
                     "window_total": total_windows,
                 },
                 cancel_requested=cancel_requested,
@@ -254,7 +267,7 @@ def chunk_text(
             output_path=output_path,
             report_path=None,
             started_at=started_at,
-            progress_current=window_index + 1,
+            progress_current=progress_window_index + 1,
             progress_total=total_windows,
             warnings=[],
             paragraph_records=processed_records,
@@ -265,10 +278,13 @@ def chunk_text(
             log_relative_path=log_relative_path,
             token_usage=token_usage,
             budget_metadata=budget_metadata,
+            profile_runtime_metadata=profile_runtime_metadata,
+            profile_usage_history=profile_usage_history,
+            completed_unit_count=int(window_payload["end_index"]) + 1,
         )
         _emit_progress(
             progress_callback,
-            progress_current=window_index + 1,
+            progress_current=progress_window_index + 1,
             progress_total=total_windows,
             message="AI-assisted chunking in progress...",
             token_usage=token_usage,
@@ -291,10 +307,12 @@ def chunk_text(
         "detected_chapter_count": chapter_count,
         "chunking_mode": "ai_assisted",
         "ai_profile_id": profile_id,
+        **profile_runtime_metadata,
         "semantic_strategy": semantic_strategy,
         "log_relative_path": log_relative_path,
         "token_usage": token_usage,
         "budget_metadata": budget_metadata,
+        "profile_usage_history": profile_usage_history,
     }
     report_path.write_text(
         json.dumps(report_payload, indent=2, ensure_ascii=False) + "\n",
@@ -320,6 +338,9 @@ def chunk_text(
         resume_checkpoint=None,
         token_usage=token_usage,
         budget_metadata=budget_metadata,
+        profile_runtime_metadata=profile_runtime_metadata,
+        profile_usage_history=profile_usage_history,
+        completed_unit_count=len(paragraph_records),
     )
     state_path.write_text(
         json.dumps(completed_state, indent=2, ensure_ascii=False) + "\n",
@@ -406,6 +427,40 @@ def _build_windows(
     return windows
 
 
+def _build_windows_from_index(
+    paragraph_records: list[dict[str, object]],
+    start_index: int,
+    semantic_strategy: str,
+    budget_metadata: BudgetMetadataPayload,
+) -> list[dict[str, int]]:
+    """
+    @brief      Build context-budgeted AI request windows from one absolute paragraph index.
+    @param[in]  paragraph_records Value for `paragraph_records`.
+    @param[in]  start_index First absolute paragraph index still needing AI processing.
+    @param[in]  semantic_strategy Value for `semantic_strategy`.
+    @param[in]  budget_metadata Context-budget metadata for the selected profile.
+    @return     Absolute-index window payloads for the remaining text.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-30
+    @version    0.1.0
+    """
+    resolved_start_index = max(0, min(int(start_index), len(paragraph_records)))
+    if resolved_start_index >= len(paragraph_records):
+        return []
+    relative_windows = _build_windows(
+        paragraph_records[resolved_start_index:],
+        semantic_strategy,
+        budget_metadata,
+    )
+    return [
+        {
+            "start_index": int(window["start_index"]) + resolved_start_index,
+            "end_index": int(window["end_index"]) + resolved_start_index,
+        }
+        for window in relative_windows
+    ]
+
+
 def _build_budget_metadata(
     ai_profile_payload: dict[str, object],
     semantic_strategy: str,
@@ -449,6 +504,24 @@ def _build_budget_metadata(
     }
 
 
+def _build_profile_runtime_metadata(ai_profile_payload: dict[str, object]) -> ProfileRuntimeMetadataPayload:
+    """
+    @brief      Build persisted runtime metadata for the selected AI profile.
+    @param[in]  ai_profile_payload Selected validated AI profile payload.
+    @return     JSON-ready profile settings relevant to AI chunking behavior.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-30
+    @version    0.1.0
+    """
+    return {
+        "model_name": str(ai_profile_payload.get("model_name", "")).strip(),
+        "context_window": int(ai_profile_payload.get("context_window", 0) or 0),
+        "max_output_tokens": int(ai_profile_payload.get("max_output_tokens", 0) or 0),
+        "temperature": float(ai_profile_payload.get("temperature", 0.0) or 0.0),
+    }
+
+
 def _estimate_text_tokens(text: str) -> int:
     """
     @brief      Estimate token usage for local budget checks.
@@ -481,48 +554,100 @@ def _restore_resume_state(
     existing_state: dict[str, object],
     total_windows: int,
     input_fingerprint: str,
-    profile_id: str,
     semantic_strategy: str,
+    paragraph_records: list[dict[str, object]],
+    windows: list[dict[str, int]],
     budget_metadata: BudgetMetadataPayload,
-) -> tuple[int, list[str], str | None]:
+) -> tuple[int, int, list[str], str | None]:
     """
     @brief      Restore the resume state.
     @param[in]  existing_state Value for `existing_state`.
     @param[in]  total_windows Total number of windows.
     @param[in]  input_fingerprint Value for `input_fingerprint`.
-    @param[in]  profile_id Profile identifier.
     @param[in]  semantic_strategy Value for `semantic_strategy`.
+    @param[in]  paragraph_records Value for `paragraph_records`.
+    @param[in]  windows Current full-document request windows.
     @param[in]  budget_metadata Current context-budget metadata.
     @return     Derived helper result.
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-28
-    @version    0.3.0
+    @date       2026-04-30
+    @version    0.4.0
     """
     if str(existing_state.get("status", "")) not in {"running", "failed"}:
-        return 0, [], None
+        return 0, 0, [], None
     if str(existing_state.get("mode", "")) != "ai_assisted":
-        return 0, [], None
+        return 0, 0, [], None
     resume_checkpoint = dict(existing_state.get("resume_checkpoint") or {})
     if str(resume_checkpoint.get("input_fingerprint", "")) != input_fingerprint:
-        return 0, [], None
-    if str(resume_checkpoint.get("profile_id", "")) != profile_id:
-        return 0, [], None
+        return 0, 0, [], None
     if str(resume_checkpoint.get("semantic_strategy", "")) != semantic_strategy:
-        return 0, [], None
-    if int(existing_state.get("progress_total", 0)) != total_windows:
-        return 0, [], None
-    if dict(resume_checkpoint.get("budget_metadata") or {}) != dict(budget_metadata):
-        return 0, [], None
-    start_window_index = int(resume_checkpoint.get("completed_window_count", 0))
+        return 0, 0, [], None
+    completed_window_count = max(0, int(resume_checkpoint.get("completed_window_count", 0)))
+    completed_unit_count = _restore_completed_unit_count(
+        resume_checkpoint,
+        existing_state,
+        paragraph_records,
+        windows,
+        total_windows,
+        budget_metadata,
+    )
+    if completed_unit_count <= 0:
+        completed_window_count = 0
     committed_break_ids = [
         str(item) for item in list(resume_checkpoint.get("committed_break_ids", [])) if str(item).strip()
     ]
     log_relative_path = resume_checkpoint.get("log_relative_path")
     return (
-        min(start_window_index, total_windows),
+        min(completed_window_count, total_windows),
+        completed_unit_count,
         committed_break_ids,
         (None if log_relative_path in (None, "") else str(log_relative_path)),
     )
+
+
+def _restore_completed_unit_count(
+    resume_checkpoint: dict[str, object],
+    existing_state: dict[str, object],
+    paragraph_records: list[dict[str, object]],
+    windows: list[dict[str, int]],
+    total_windows: int,
+    budget_metadata: BudgetMetadataPayload,
+) -> int:
+    """
+    @brief      Restore the count of paragraphs already processed by previous AI windows.
+    @param[in]  resume_checkpoint Persisted AI chunking checkpoint payload.
+    @param[in]  existing_state Persisted operation-state payload.
+    @param[in]  paragraph_records Current paragraph records.
+    @param[in]  windows Current full-document request windows.
+    @param[in]  total_windows Current full-document window count.
+    @param[in]  budget_metadata Current context-budget metadata.
+    @return     Completed paragraph count, or zero when the checkpoint cannot be trusted.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-30
+    @version    0.1.0
+    """
+    raw_completed_unit_count = resume_checkpoint.get("completed_unit_count")
+    if raw_completed_unit_count not in (None, ""):
+        return max(0, min(int(raw_completed_unit_count), len(paragraph_records)))
+
+    completed_last_unit_id = str(resume_checkpoint.get("completed_last_unit_id", "")).strip()
+    if completed_last_unit_id:
+        for index, paragraph_record in enumerate(paragraph_records, start=1):
+            if str(paragraph_record.get("unit_id", "")) == completed_last_unit_id:
+                return index
+        return 0
+
+    if int(existing_state.get("progress_total", 0)) != total_windows:
+        return 0
+    if dict(resume_checkpoint.get("budget_metadata") or {}) != dict(budget_metadata):
+        return 0
+    completed_window_count = max(0, int(resume_checkpoint.get("completed_window_count", 0)))
+    if completed_window_count <= 0:
+        return 0
+    if completed_window_count > len(windows):
+        return 0
+    return int(windows[completed_window_count - 1]["end_index"]) + 1
 
 
 def _restore_token_usage(existing_state: dict[str, object]) -> TokenUsagePayload:
@@ -538,6 +663,49 @@ def _restore_token_usage(existing_state: dict[str, object]) -> TokenUsagePayload
     if not isinstance(metadata, dict):
         return token_usage_service.empty_token_usage()
     return token_usage_service.restore_token_usage(metadata.get("token_usage"))
+
+
+def _restore_profile_usage_history(existing_state: dict[str, object]) -> list[ProfileRuntimeMetadataPayload]:
+    """
+    @brief      Restore persisted AI profile runtime settings used by earlier chunking segments.
+    @param[in]  existing_state Persisted operation-state payload.
+    @return     Ordered profile runtime metadata entries.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-30
+    @version    0.1.0
+    """
+    metadata = existing_state.get("metadata", {})
+    if not isinstance(metadata, dict):
+        return []
+    raw_history = metadata.get("profile_usage_history", [])
+    if not isinstance(raw_history, list):
+        return []
+    profile_usage_history: list[ProfileRuntimeMetadataPayload] = []
+    for item in raw_history:
+        if isinstance(item, dict):
+            profile_usage_history.append(dict(item))
+    return profile_usage_history
+
+
+def _merge_profile_usage_history(
+    existing_history: list[ProfileRuntimeMetadataPayload],
+    profile_runtime_metadata: ProfileRuntimeMetadataPayload,
+) -> list[ProfileRuntimeMetadataPayload]:
+    """
+    @brief      Append the current profile runtime settings when not already represented.
+    @param[in]  existing_history Existing ordered profile runtime metadata entries.
+    @param[in]  profile_runtime_metadata Current selected profile runtime metadata.
+    @return     Ordered profile runtime metadata history.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-30
+    @version    0.1.0
+    """
+    resolved_history = [dict(item) for item in existing_history]
+    if dict(profile_runtime_metadata) not in resolved_history:
+        resolved_history.append(dict(profile_runtime_metadata))
+    return resolved_history
 
 
 def _build_units_block(paragraph_records: list[dict[str, object]]) -> str:
@@ -709,6 +877,9 @@ def _write_running_state(
     log_relative_path: str,
     token_usage: TokenUsagePayload,
     budget_metadata: BudgetMetadataPayload,
+    profile_runtime_metadata: ProfileRuntimeMetadataPayload,
+    profile_usage_history: list[ProfileRuntimeMetadataPayload],
+    completed_unit_count: int,
 ) -> None:
     """
     @brief      Write the running state.
@@ -729,10 +900,13 @@ def _write_running_state(
     @param[in]  log_relative_path Path for `log_relative_path`.
     @param[in]  token_usage Value for `token_usage`.
     @param[in]  budget_metadata Context-budget metadata.
+    @param[in]  profile_runtime_metadata Runtime metadata for the current AI profile.
+    @param[in]  profile_usage_history Runtime metadata entries used across resumed segments.
+    @param[in]  completed_unit_count Number of paragraph units processed by completed AI windows.
     @return     None.
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-28
-    @version    0.2.0
+    @date       2026-04-30
+    @version    0.3.0
     """
     chunks = _build_chunks_from_break_ids(
         paragraph_records,
@@ -763,11 +937,18 @@ def _write_running_state(
             "semantic_strategy": semantic_strategy,
             "completed_window_count": progress_current,
             "total_window_count": progress_total,
+            "completed_unit_count": int(completed_unit_count),
+            "completed_last_unit_id": (
+                str(paragraph_records[-1].get("unit_id", "")) if paragraph_records and completed_unit_count > 0 else ""
+            ),
             "committed_break_ids": list(committed_break_ids),
             "log_relative_path": log_relative_path,
             "budget_metadata": dict(budget_metadata),
         },
         budget_metadata=budget_metadata,
+        profile_runtime_metadata=profile_runtime_metadata,
+        profile_usage_history=profile_usage_history,
+        completed_unit_count=completed_unit_count,
     )
     state_path.write_text(
         json.dumps(state_payload, indent=2, ensure_ascii=False) + "\n",
@@ -795,6 +976,9 @@ def _build_operation_state(
     resume_checkpoint: dict[str, object] | None,
     token_usage: TokenUsagePayload,
     budget_metadata: BudgetMetadataPayload,
+    profile_runtime_metadata: ProfileRuntimeMetadataPayload,
+    profile_usage_history: list[ProfileRuntimeMetadataPayload],
+    completed_unit_count: int,
 ) -> OperationStatePayload:
     """
     @brief      Build the operation state.
@@ -817,10 +1001,13 @@ def _build_operation_state(
     @param[in]  resume_checkpoint Value for `resume_checkpoint`.
     @param[in]  token_usage Value for `token_usage`.
     @param[in]  budget_metadata Context-budget metadata.
+    @param[in]  profile_runtime_metadata Runtime metadata for the current AI profile.
+    @param[in]  profile_usage_history Runtime metadata entries used across resumed segments.
+    @param[in]  completed_unit_count Number of paragraph units processed by completed AI windows.
     @return     Derived helper result.
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-28
-    @version    0.2.0
+    @date       2026-04-30
+    @version    0.3.0
     """
     artifact_paths = [log_relative_path]
     if report_path is not None and report_path.is_file():
@@ -842,12 +1029,15 @@ def _build_operation_state(
             "detected_chapter_count": 0 if chunks is None else _chapter_count_from_chunks(chunks),
             "chunks": None if chunks is None else list(chunks),
             "ai_profile_id": profile_id,
+            **profile_runtime_metadata,
             "semantic_strategy": semantic_strategy,
             "input_fingerprint": input_fingerprint,
             "log_relative_path": log_relative_path,
             "committed_break_ids": list(committed_break_ids),
+            "completed_unit_count": int(completed_unit_count),
             "token_usage": token_usage_service.coerce_token_usage(token_usage),
             "budget_metadata": dict(budget_metadata),
+            "profile_usage_history": [dict(item) for item in profile_usage_history],
         },
         resume_checkpoint=resume_checkpoint,
     )

@@ -13,7 +13,7 @@
          persists resumable state, and rebuilds chunk spans from AI boundaries.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-07
-@version 0.3.1
+@version 0.4.0
 """
 
 # IMPORTS
@@ -578,16 +578,16 @@ def test_ai_chunking_resumes_from_saved_window_checkpoint(tmp_path, monkeypatch)
     assert completed_state["progress_current"] == 2
 
 
-def test_ai_chunking_restarts_resume_when_budget_metadata_changes(tmp_path, monkeypatch) -> None:
+def test_ai_chunking_continues_resume_when_budget_metadata_changes(tmp_path, monkeypatch) -> None:
     """
-    @brief      Verify resume is rejected when the selected profile budget changes.
+    @brief      Verify resume continues from the next paragraph when the selected profile budget changes.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-28
-    @version    0.1.1
+    @date       2026-04-30
+    @version    0.2.0
     """
     monkeypatch.setattr(
         config,
@@ -671,15 +671,28 @@ def test_ai_chunking_restarts_resume_when_budget_metadata_changes(tmp_path, monk
 
     second_profile = {
         **first_profile,
+        "id": "profile_2",
+        "model_name": "qwen3-14b",
         "context_window": 8192,
+        "max_output_tokens": 768,
+        "temperature": 0.4,
     }
     monkeypatch.setattr(ai_chunking_service.llm_provider_service, "chat_json", _second_chat_json)
 
-    ai_chunking_service.chunk_text(project_root, manifest, second_profile, "paragraph")
+    report_payload = ai_chunking_service.chunk_text(project_root, manifest, second_profile, "paragraph")
 
     assert captured_prompts
-    assert "paragraph-0001" in captured_prompts[0]
-    assert "paragraph-0037" not in captured_prompts[0]
+    assert "paragraph-0001" not in captured_prompts[0]
+    assert "paragraph-0021" in captured_prompts[0]
+    assert report_payload["ai_profile_id"] == "profile_2"
+    assert report_payload["model_name"] == "qwen3-14b"
+    assert report_payload["context_window"] == 8192
+    assert report_payload["max_output_tokens"] == 768
+    assert report_payload["temperature"] == 0.4
+    assert len(report_payload["profile_usage_history"]) == 2
+    completed_state = json.loads((project_root / config.CHUNKING_STATE_FILE_NAME).read_text(encoding="utf-8"))
+    assert completed_state["metadata"]["completed_unit_count"] == 40
+    assert completed_state["metadata"]["model_name"] == "qwen3-14b"
 
 
 # END OF FILE

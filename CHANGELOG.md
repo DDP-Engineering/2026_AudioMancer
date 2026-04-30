@@ -8,6 +8,21 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
 
 All notable changes to this project will be documented in this file.
 
+## [1.1.4] - 2026-04-30
+
+### Changed
+
+- changed interrupted AI-assisted chunking resume to continue remaining
+  paragraph units with the currently selected AI profile instead of forcing the
+  original checkpoint profile
+- changed AI chunking checkpoints to persist completed paragraph-unit progress
+  so remaining request windows can be rebuilt safely when model context window
+  or output-token settings change
+- changed AI chunking state and reports to persist concrete model settings and
+  model-settings history, including model name, context window, max output
+  tokens, and temperature
+- package version updated to `1.1.4`
+
 ## [1.1.3] - 2026-04-30
 
 ### Changed

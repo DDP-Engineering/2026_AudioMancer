@@ -14,7 +14,7 @@
          correctly.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-24
-@version 0.3.2
+@version 0.4.0
 """
 
 # IMPORTS
@@ -437,6 +437,112 @@ def test_text_chunking_ui_controller_ai_chunk_resume_skips_confirmation(
 
     assert confirm_calls == []
     assert len(start_calls) == 1
+
+
+def test_text_chunking_ui_controller_ai_chunk_resume_uses_selected_profile(
+    monkeypatch,
+    qtbot,
+    tmp_path,
+) -> None:
+    """
+    @brief      Verify interrupted AI chunking resumes with the currently selected AI profile.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  qtbot Qt test helper fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-30
+    @version    0.1.0
+    """
+    project_root, manifest = project_workspace_service.create_project(
+        "ControllerAiChunkSelectedProfileResumeProject",
+        tmp_path,
+    )
+    manifest["source_document"] = {
+        "original_name": "story.txt",
+        "stored_relative_path": "story.txt",
+        "file_type": "txt",
+        "imported_at": "2026-04-30T12:00:00+00:00",
+        "size_bytes": 10,
+    }
+    manifest["operations"]["cleanup"]["status"] = "completed"
+    manifest["operations"]["cleanup"]["output_paths"] = [config.CLEANED_TEXT_FILE_NAME]
+    manifest["operations"]["chunking"] = {
+        "folder_relative_path": "20_chunking",
+        "status": "running",
+        "mode": "ai_assisted",
+        "metadata": {
+            "ai_profile_id": "profile_1",
+            "semantic_strategy": "scene",
+        },
+    }
+    (project_root / config.CLEANED_TEXT_FILE_NAME).write_text("Paragraph one.\n", encoding="utf-8")
+    project_workspace_service.save_manifest(manifest, project_root)
+
+    window = MainWindow(
+        settings_payload={
+            "language": "en",
+            "ui_text_scale": "normal",
+            "play_completion_beep": False,
+            "llm_profiles": [
+                {
+                    "id": "profile_1",
+                    "label": "Original Chunking Profile",
+                    "backend_kind": "lmstudio",
+                    "base_url": "http://127.0.0.1:1234",
+                    "api_key": "",
+                    "model_name": "qwen3-8b",
+                    "context_window": 4096,
+                    "max_output_tokens": 512,
+                    "request_timeout_seconds": 30,
+                    "temperature": 0.2,
+                    "supports_structured_output": False,
+                    "enabled": True,
+                },
+                {
+                    "id": "profile_2",
+                    "label": "Selected Chunking Profile",
+                    "backend_kind": "lmstudio",
+                    "base_url": "http://127.0.0.1:1234",
+                    "api_key": "",
+                    "model_name": "qwen3-14b",
+                    "context_window": 8192,
+                    "max_output_tokens": 768,
+                    "request_timeout_seconds": 30,
+                    "temperature": 0.4,
+                    "supports_structured_output": False,
+                    "enabled": True,
+                },
+            ],
+            "default_ai_cleanup_profile_id": None,
+            "default_ai_chunking_profile_id": "profile_2",
+            "default_ai_chunking_strategy": "scene",
+            "default_character_extraction_profile_id": None,
+        }
+    )
+    qtbot.addWidget(window)
+    window._activate_project(project_root, project_workspace_service.load_manifest(project_root))
+
+    captured_profiles = []
+    monkeypatch.setattr(
+        text_chunking_ui_controller.ai_chunking_service,
+        "chunk_text",
+        lambda _project_root, _manifest, ai_profile, _strategy, **_kwargs: (
+            captured_profiles.append(ai_profile) or {"chunking_mode": "ai_assisted"}
+        ),
+    )
+
+    def _start_operation(_window, **kwargs):
+        kwargs["worker_callable"](project_root, project_workspace_service.load_manifest(project_root))
+
+    monkeypatch.setattr(text_chunking_ui_controller, "start_operation", _start_operation)
+
+    text_chunking_ui_controller.handle_ai_chunking_requested(window, "profile_2", "scene")
+
+    assert len(captured_profiles) == 1
+    assert captured_profiles[0]["id"] == "profile_2"
+    assert captured_profiles[0]["model_name"] == "qwen3-14b"
 
 
 def test_text_chunking_ui_controller_save_chunk_updates_project_state(
