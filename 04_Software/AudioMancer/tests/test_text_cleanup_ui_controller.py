@@ -259,7 +259,7 @@ def test_text_cleanup_ui_controller_ai_cleanup_resume_skips_confirmations(
     default_settings_payload,
 ) -> None:
     """
-    @brief      Verify interrupted AI cleanup resumes without start or rerun confirmations.
+    @brief      Verify interrupted AI cleanup resumes with the currently selected profile.
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @param[in]  qtbot Qt test helper fixture.
     @param[in]  tmp_path Pytest temporary directory fixture.
@@ -267,8 +267,8 @@ def test_text_cleanup_ui_controller_ai_cleanup_resume_skips_confirmations(
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.1.0
+    @date       2026-04-30
+    @version    0.2.0
     """
     project_root, manifest = project_workspace_service.create_project(
         "ControllerAiCleanupResumeProject",
@@ -287,34 +287,40 @@ def test_text_cleanup_ui_controller_ai_cleanup_resume_skips_confirmations(
             "folder_relative_path": "10_cleanup",
             "status": "running",
             "mode": "ai_assisted",
-            "metadata": {"ai_profile_id": "profile_1"},
+            "metadata": {"ai_profile_id": "profile_1", "model_settings": {"model_name": "qwen3-8b"}},
         }
     }
     project_workspace_service.save_manifest(manifest, project_root)
 
     settings_payload = dict(default_settings_payload)
-    settings_payload["llm_profiles"] = [
-        {
-            "id": "profile_1",
-            "label": "Cleanup Profile",
-            "backend_kind": "lmstudio",
-            "base_url": "http://127.0.0.1:1234",
-            "api_key": "",
-            "model_name": "qwen3-8b",
-            "context_window": 4096,
-            "max_output_tokens": 512,
-            "request_timeout_seconds": 30,
-            "temperature": 0.2,
-            "supports_structured_output": False,
-            "enabled": True,
-            "discovered_model_name": "",
-            "discovered_context_window": None,
-            "discovery_succeeded": False,
-            "discovery_message": "",
-            "user_overrode_model_name": False,
-            "user_overrode_context_window": False,
-        }
-    ]
+    base_profile = {
+        "id": "profile_1",
+        "label": "Cleanup Profile",
+        "backend_kind": "lmstudio",
+        "base_url": "http://127.0.0.1:1234",
+        "api_key": "",
+        "model_name": "qwen3-8b",
+        "context_window": 4096,
+        "max_output_tokens": 512,
+        "request_timeout_seconds": 30,
+        "temperature": 0.2,
+        "supports_structured_output": False,
+        "enabled": True,
+        "discovered_model_name": "",
+        "discovered_context_window": None,
+        "discovery_succeeded": False,
+        "discovery_message": "",
+        "user_overrode_model_name": False,
+        "user_overrode_context_window": False,
+    }
+    selected_profile = {
+        **base_profile,
+        "id": "profile_2",
+        "label": "Selected Cleanup Profile",
+        "model_name": "qwen3-14b",
+        "temperature": 0.7,
+    }
+    settings_payload["llm_profiles"] = [base_profile, selected_profile]
     settings_payload["default_ai_cleanup_profile_id"] = "profile_1"
 
     window = MainWindow(settings_payload=settings_payload)
@@ -332,16 +338,23 @@ def test_text_cleanup_ui_controller_ai_cleanup_resume_skips_confirmations(
     monkeypatch.setattr(
         text_cleanup_ui_controller, "start_operation", lambda _window, **kwargs: start_calls.append(kwargs)
     )
+    cleaned_profiles: list[dict[str, object]] = []
     monkeypatch.setattr(
         text_cleanup_ui_controller.ai_cleanup_service,
-        "load_operation_state",
-        lambda _project_root: {"metadata": {"ai_profile_id": "profile_1"}},
+        "clean_text",
+        lambda _project_root, _manifest, profile, **_kwargs: (
+            cleaned_profiles.append(dict(profile)) or {"cleanup_mode": "ai_assisted"}
+        ),
     )
 
-    text_cleanup_ui_controller.handle_ai_cleanup_requested(window, "profile_1")
+    text_cleanup_ui_controller.handle_ai_cleanup_requested(window, "profile_2")
 
     assert confirm_calls == []
     assert len(start_calls) == 1
+    worker_callable = start_calls[0]["worker_callable"]
+    worker_callable(project_root, project_workspace_service.load_manifest(project_root))
+    assert cleaned_profiles[0]["id"] == "profile_2"
+    assert cleaned_profiles[0]["model_name"] == "qwen3-14b"
 
 
 def test_text_cleanup_ui_controller_save_cleaned_text_updates_project_state(

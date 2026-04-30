@@ -88,6 +88,20 @@ def test_ai_cleanup_writes_cleanup_artifacts_and_log(
     assert report_payload["cleanup_mode"] == "ai_assisted"
     assert report_payload["cleaned_text_metadata_relative_path"] == config.CLEANED_TEXT_METADATA_FILE_NAME
     assert report_payload["ai_profile_id"] == "profile_1"
+    assert report_payload["model_settings"]["model_name"] == "qwen3-8b"
+    assert report_payload["model_settings"]["temperature"] == 0.2
+    assert report_payload["model_settings"]["context_window"] == 4096
+    assert report_payload["model_settings_history"] == [
+        {
+            "profile_id": "profile_1",
+            "backend_kind": "lmstudio",
+            "base_url": "http://127.0.0.1:1234",
+            "model_name": "qwen3-8b",
+            "temperature": 0.2,
+            "context_window": 4096,
+            "max_output_tokens": 512,
+        }
+    ]
     assert report_payload["budget_metadata"]["context_window"] == 4096
     assert report_payload["budget_metadata"]["max_output_tokens"] == 512
     assert report_payload["budget_metadata"]["max_window_units"] == config.DEFAULT_AI_CLEANUP_MAX_WINDOW_UNITS
@@ -98,6 +112,7 @@ def test_ai_cleanup_writes_cleanup_artifacts_and_log(
     metadata_payload = json.loads((cleanup_root / config.CLEANED_TEXT_METADATA_FILE_NAME).read_text(encoding="utf-8"))
     assert state_payload["mode"] == "ai_assisted"
     assert state_payload["status"] == "completed"
+    assert state_payload["metadata"]["model_settings"] == report_payload["model_settings"]
     assert state_payload["metadata"]["budget_metadata"] == report_payload["budget_metadata"]
     assert metadata_payload["cleanup_mode"] == "ai_assisted"
     assert metadata_payload["paragraphs"][0]["source_page_start"] is None
@@ -451,10 +466,10 @@ def test_ai_cleanup_small_context_limits_unit_windows() -> None:
     assert windows[0]["end_index"] < len(units) - 1
 
 
-def test_ai_cleanup_restarts_resume_when_budget_metadata_changes(
+def test_ai_cleanup_resumes_with_new_model_settings(
     mock_extracted_project, mock_prompt_environment, monkeypatch
 ) -> None:
-    """Verify cleanup resume is rejected when the selected profile budget changes."""
+    """Verify cleanup resumes unfinished units with the newly selected model settings."""
     project_root, manifest = mock_extracted_project
     extracted_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.EXTRACTED_TEXT_FILE_NAME
     extracted_path.write_text(
@@ -496,15 +511,86 @@ def test_ai_cleanup_restarts_resume_when_budget_metadata_changes(
 
     second_profile = {
         **_MOCK_PROFILE,
+        "id": "profile_2",
+        "model_name": "qwen3-14b",
         "context_window": 8192,
+        "temperature": 0.7,
     }
     monkeypatch.setattr(ai_cleanup_service.llm_provider_service, "chat_json", _second_chat_json)
 
-    ai_cleanup_service.clean_text(project_root, manifest, second_profile)
+    report_payload = ai_cleanup_service.clean_text(project_root, manifest, second_profile)
+    state_payload = json.loads(
+        (project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.CLEANUP_STATE_FILE_NAME).read_text(
+            encoding="utf-8"
+        )
+    )
+
+    assert captured_prompts
+    assert "unit_id: unit-0001" not in captured_prompts[0]
+    assert "unit_id: unit-0025" in captured_prompts[0]
+    assert report_payload["ai_profile_id"] == "profile_2"
+    assert report_payload["model_settings"]["model_name"] == "qwen3-14b"
+    assert report_payload["model_settings"]["temperature"] == 0.7
+    assert report_payload["model_settings"]["context_window"] == 8192
+    assert len(report_payload["model_settings_history"]) == 2
+    assert state_payload["metadata"]["model_settings"]["model_name"] == "qwen3-14b"
+    assert state_payload["resume_checkpoint"] is None
+
+
+def test_ai_cleanup_restarts_when_extracted_text_changes(
+    mock_extracted_project, mock_prompt_environment, monkeypatch
+) -> None:
+    """Verify stale checkpoints are ignored when the extracted input changes."""
+    project_root, manifest = mock_extracted_project
+    extracted_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.EXTRACTED_TEXT_FILE_NAME
+    extracted_path.write_text(
+        "\n\n".join(f"Original paragraph {index} keeps words." for index in range(1, 30)) + "\n",
+        encoding="utf-8",
+    )
+    responses = iter(
+        [
+            {
+                "payload": {
+                    "results": [{"unit_id": f"unit-{unit_index:04d}", "label": "story"} for unit_index in range(1, 25)]
+                },
+                "usage": {"input_tokens": 10, "output_tokens": 2, "total_tokens": 12, "usage_available": True},
+            },
+            RuntimeError("stop"),
+        ]
+    )
+
+    def _first_chat_json(*_args, **_kwargs):
+        response = next(responses)
+        if isinstance(response, Exception):
+            raise response
+        return response
+
+    monkeypatch.setattr(ai_cleanup_service.llm_provider_service, "chat_json", _first_chat_json)
+    with pytest.raises(RuntimeError, match="stop"):
+        ai_cleanup_service.clean_text(project_root, manifest, _MOCK_PROFILE)
+
+    extracted_path.write_text("Replacement paragraph one.\n\nReplacement paragraph two.\n", encoding="utf-8")
+    captured_prompts: list[str] = []
+
+    def _second_chat_json(_profile, _system_prompt, user_prompt, **_kwargs):
+        captured_prompts.append(user_prompt)
+        return {
+            "payload": {
+                "results": [
+                    {"unit_id": "unit-0001", "label": "story"},
+                    {"unit_id": "unit-0002", "label": "story"},
+                ]
+            },
+            "usage": {"input_tokens": 10, "output_tokens": 2, "total_tokens": 12, "usage_available": True},
+        }
+
+    monkeypatch.setattr(ai_cleanup_service.llm_provider_service, "chat_json", _second_chat_json)
+
+    report_payload = ai_cleanup_service.clean_text(project_root, manifest, _MOCK_PROFILE)
 
     assert captured_prompts
     assert "unit_id: unit-0001" in captured_prompts[0]
-    assert "unit_id: unit-0025" not in captured_prompts[0]
+    assert len(report_payload["model_settings_history"]) == 1
 
 
 # END OF FILE

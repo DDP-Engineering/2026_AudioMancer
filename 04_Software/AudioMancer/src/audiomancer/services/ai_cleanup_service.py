@@ -15,7 +15,7 @@
          resumable window-based progress plus AI transaction logs.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-07
-@version 0.6.0
+@version 0.7.0
 """
 
 # IMPORTS
@@ -198,20 +198,22 @@ def clean_text(
     system_prompt = prompt_template_service.render_prompt("text_cleanup_system", {})
     budget_metadata = _build_budget_metadata(ai_profile_payload, language_hint, script_hint, system_prompt)
     existing_state = load_operation_state_file(state_path) or {}
-    started_at = str(existing_state.get("started_at") or _utc_now_iso())
     input_fingerprint = _compute_input_fingerprint(input_text)
     windows = _build_windows(units, budget_metadata)
     total_windows = len(windows)
-    start_window_index, classifications, log_relative_path = _restore_resume_state(
+    model_settings = _build_model_settings(ai_profile_payload, budget_metadata)
+    classifications, log_relative_path, resume_is_compatible = _restore_resume_state(
         existing_state,
-        total_windows,
         input_fingerprint,
-        profile_id,
-        budget_metadata,
     )
-    warning_details = _restore_warning_details(existing_state)
-    token_usage = (
-        _restore_token_usage(existing_state) if start_window_index > 0 else token_usage_service.empty_token_usage()
+    started_at = str(existing_state.get("started_at") or _utc_now_iso()) if resume_is_compatible else _utc_now_iso()
+    start_window_index = _first_incomplete_window_index(windows, classifications)
+    warning_details = _restore_warning_details(existing_state) if resume_is_compatible else []
+    token_usage = _restore_token_usage(existing_state) if classifications else token_usage_service.empty_token_usage()
+    model_settings_history = _updated_model_settings_history(
+        existing_state if resume_is_compatible else {},
+        model_settings,
+        profile_id,
     )
     if not log_relative_path:
         log_path = _build_ai_log_path(resolved_project_root, started_at)
@@ -237,6 +239,8 @@ def clean_text(
         warning_details,
         token_usage,
         budget_metadata,
+        model_settings,
+        model_settings_history,
     )
     _emit_progress(
         progress_callback,
@@ -299,6 +303,8 @@ def clean_text(
             warning_details,
             token_usage,
             budget_metadata,
+            model_settings,
+            model_settings_history,
         )
         _emit_progress(
             progress_callback,
@@ -352,6 +358,8 @@ def clean_text(
         "weak_boundary_count": int(metadata_payload.get("weak_boundary_count", 0)),
         "cleanup_mode": "ai_assisted",
         "ai_profile_id": profile_id,
+        "model_settings": model_settings,
+        "model_settings_history": model_settings_history,
         "ai_log_relative_path": log_relative_path,
         "window_count": total_windows,
         "token_usage": token_usage,
@@ -383,6 +391,8 @@ def clean_text(
         chapter_count=chapter_count,
         token_usage=token_usage,
         budget_metadata=budget_metadata,
+        model_settings=model_settings,
+        model_settings_history=model_settings_history,
     )
     state_path.write_text(
         json.dumps(completed_state, indent=2, ensure_ascii=False) + "\n",
@@ -540,44 +550,108 @@ def _build_budget_metadata(
     return {**budget_metadata, "max_window_units": config.DEFAULT_AI_CLEANUP_MAX_WINDOW_UNITS}
 
 
+def _build_model_settings(
+    ai_profile_payload: dict[str, object],
+    budget_metadata: BudgetMetadataPayload,
+) -> dict[str, object]:
+    """
+    @brief      Build the concrete AI model settings stored with cleanup state.
+    @param[in]  ai_profile_payload Selected validated AI profile payload.
+    @param[in]  budget_metadata Context-budget metadata derived from the profile.
+    @return     JSON-ready model settings payload.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-30
+    @version    0.1.0
+    """
+    return {
+        "backend_kind": str(ai_profile_payload.get("backend_kind", "")).strip(),
+        "base_url": str(ai_profile_payload.get("base_url", "")).strip(),
+        "model_name": str(ai_profile_payload.get("model_name", "")).strip(),
+        "temperature": ai_profile_payload.get("temperature"),
+        "context_window": int(budget_metadata.get("context_window", 0)),
+        "max_output_tokens": int(budget_metadata.get("max_output_tokens", 0)),
+    }
+
+
+def _updated_model_settings_history(
+    existing_state: dict[str, object],
+    model_settings: dict[str, object],
+    profile_id: str,
+) -> list[dict[str, object]]:
+    """
+    @brief      Return model-settings history with the current settings appended once.
+    @param[in]  existing_state Existing cleanup operation state.
+    @param[in]  model_settings Current selected model settings.
+    @param[in]  profile_id Current selected profile identifier.
+    @return     Ordered model-settings history.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-30
+    @version    0.1.0
+    """
+    metadata = existing_state.get("metadata", {})
+    existing_history = []
+    if isinstance(metadata, dict):
+        raw_history = metadata.get("model_settings_history", [])
+        if isinstance(raw_history, list):
+            existing_history = [dict(item) for item in raw_history if isinstance(item, dict)]
+    current_item = {"profile_id": profile_id, **dict(model_settings)}
+    if not existing_history or existing_history[-1] != current_item:
+        existing_history.append(current_item)
+    return existing_history
+
+
 def _restore_resume_state(
     existing_state: dict[str, object],
-    total_windows: int,
     input_fingerprint: str,
-    profile_id: str,
-    budget_metadata: BudgetMetadataPayload,
-) -> tuple[int, dict[str, str], str | None]:
+) -> tuple[dict[str, str], str | None, bool]:
     """
     @brief      Restore the resume state.
     @param[in]  existing_state Value for `existing_state`.
-    @param[in]  total_windows Total number of windows.
     @param[in]  input_fingerprint Value for `input_fingerprint`.
-    @param[in]  profile_id Profile identifier.
-    @param[in]  budget_metadata Current context-budget metadata.
-    @return     Derived helper result.
+    @return     Stored classifications, existing log path, and compatibility flag.
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-28
-    @version    0.2.0
+    @date       2026-04-30
+    @version    0.3.0
     """
     resume_checkpoint = dict(existing_state.get("resume_checkpoint") or {})
     log_relative_path = existing_state.get("metadata", {}).get("ai_log_relative_path")
     if (
         existing_state.get("mode") != "ai_assisted"
         or str(resume_checkpoint.get("input_fingerprint", "")) != input_fingerprint
-        or str(resume_checkpoint.get("profile_id", "")) != profile_id
-        or int(resume_checkpoint.get("total_window_count", 0)) != total_windows
-        or dict(resume_checkpoint.get("budget_metadata") or {}) != dict(budget_metadata)
     ):
-        return 0, {}, log_relative_path if isinstance(log_relative_path, str) else None
-    completed_window_count = int(resume_checkpoint.get("completed_window_count", 0))
+        return {}, None, False
     stored_classifications = resume_checkpoint.get("classifications", {})
     if not isinstance(stored_classifications, dict):
-        return completed_window_count, {}, log_relative_path if isinstance(log_relative_path, str) else None
+        return {}, log_relative_path if isinstance(log_relative_path, str) else None, True
     return (
-        completed_window_count,
         {str(unit_id): str(label) for unit_id, label in stored_classifications.items() if str(unit_id).strip()},
         log_relative_path if isinstance(log_relative_path, str) else None,
+        True,
     )
+
+
+def _first_incomplete_window_index(
+    windows: list[dict[str, int]],
+    classifications: dict[str, str],
+) -> int:
+    """
+    @brief      Find the first request window containing an unclassified unit.
+    @param[in]  windows Current context-budgeted cleanup windows.
+    @param[in]  classifications Stored classifications by unit id.
+    @return     Zero-based window index.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-30
+    @version    0.1.0
+    """
+    if not classifications:
+        return 0
+    for window_index, window_payload in enumerate(windows):
+        start_index = int(window_payload["start_index"])
+        end_index = int(window_payload["end_index"])
+        for unit_index in range(start_index, end_index + 1):
+            if f"unit-{unit_index + 1:04d}" not in classifications:
+                return window_index
+    return len(windows)
 
 
 def _restore_warning_details(existing_state: dict[str, object]) -> list[dict[str, object]]:
@@ -905,6 +979,8 @@ def _write_running_state(
     warning_details: list[dict[str, object]],
     token_usage: TokenUsagePayload,
     budget_metadata: BudgetMetadataPayload,
+    model_settings: dict[str, object],
+    model_settings_history: list[dict[str, object]],
 ) -> None:
     """
     @brief      Write the running state.
@@ -922,10 +998,12 @@ def _write_running_state(
     @param[in]  warning_details Value for `warning_details`.
     @param[in]  token_usage Value for `token_usage`.
     @param[in]  budget_metadata Context-budget metadata.
+    @param[in]  model_settings Current selected model settings.
+    @param[in]  model_settings_history Ordered selected-model settings history.
     @return     None.
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-28
-    @version    0.2.0
+    @date       2026-04-30
+    @version    0.3.0
     """
     running_state = _build_operation_state(
         project_root,
@@ -949,6 +1027,8 @@ def _write_running_state(
         chapter_count=None,
         token_usage=token_usage,
         budget_metadata=budget_metadata,
+        model_settings=model_settings,
+        model_settings_history=model_settings_history,
     )
     state_path.write_text(
         json.dumps(running_state, indent=2, ensure_ascii=False) + "\n",
@@ -978,6 +1058,8 @@ def _build_operation_state(
     chapter_count: int | None,
     token_usage: TokenUsagePayload,
     budget_metadata: BudgetMetadataPayload,
+    model_settings: dict[str, object],
+    model_settings_history: list[dict[str, object]],
 ) -> OperationStatePayload:
     """
     @brief      Build the operation state.
@@ -1001,10 +1083,12 @@ def _build_operation_state(
     @param[in]  chapter_count Value for `chapter_count`.
     @param[in]  token_usage Value for `token_usage`.
     @param[in]  budget_metadata Context-budget metadata.
+    @param[in]  model_settings Current selected model settings.
+    @param[in]  model_settings_history Ordered selected-model settings history.
     @return     Derived helper result.
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-28
-    @version    0.2.0
+    @date       2026-04-30
+    @version    0.3.0
     """
     artifact_paths: list[str] = [log_relative_path]
     if report_path is not None and report_path.is_file():
@@ -1030,6 +1114,8 @@ def _build_operation_state(
             "paragraph_count": paragraph_count,
             "detected_chapter_count": chapter_count,
             "ai_profile_id": profile_id,
+            "model_settings": dict(model_settings),
+            "model_settings_history": [dict(item) for item in model_settings_history],
             "ai_log_relative_path": log_relative_path,
             "token_usage": token_usage_service.coerce_token_usage(token_usage),
             "budget_metadata": dict(budget_metadata),
@@ -1037,10 +1123,9 @@ def _build_operation_state(
         resume_checkpoint={
             "completed_window_count": progress_current,
             "total_window_count": progress_total,
-            "profile_id": profile_id,
             "input_fingerprint": input_fingerprint,
             "classifications": None if classifications is None else dict(classifications),
-            "budget_metadata": dict(budget_metadata),
+            "model_settings": dict(model_settings),
         }
         if status != "completed"
         else None,

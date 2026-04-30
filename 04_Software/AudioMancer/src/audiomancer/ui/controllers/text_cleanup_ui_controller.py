@@ -15,7 +15,7 @@
          synchronization for the Text Cleanup page.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-24
-@version 0.7.0
+@version 0.8.0
 """
 
 # IMPORTS
@@ -167,8 +167,8 @@ def handle_ai_cleanup_requested(window: "MainWindow", profile_id: str) -> None:
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-11
-    @version    0.3.0
+    @date       2026-04-30
+    @version    0.4.0
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._active_operation_kind is not None:
@@ -197,10 +197,9 @@ def handle_ai_cleanup_requested(window: "MainWindow", profile_id: str) -> None:
     )
     cleanup_status = str(cleanup_operation.get("status", "not_started"))
     cleanup_mode = str(cleanup_operation.get("mode") or "")
-    resume_profile_id = _resume_ai_profile_id(window, cleanup_operation)
     selected_profile = _resolve_ai_profile(
         window._settings_payload,
-        resume_profile_id if cleanup_status in {"running", "failed"} and cleanup_mode == "ai_assisted" else profile_id,
+        profile_id,
     )
     if selected_profile is None:
         QMessageBox.warning(
@@ -736,34 +735,6 @@ def _resolve_ai_profile(
             continue
         if str(profile.get("id", "")).strip() == str(profile_id).strip():
             return dict(profile)
-    return None
-
-
-def _resume_ai_profile_id(
-    window: "MainWindow",
-    cleanup_operation: dict[str, object],
-) -> str | None:
-    """
-    @brief      Execute the resume ai profile id helper.
-    @param[in]  window Value for `window`.
-    @param[in]  cleanup_operation Value for `cleanup_operation`.
-    @return     Helper result.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
-    """
-    metadata = cleanup_operation.get("metadata")
-    if isinstance(metadata, dict):
-        profile_id = metadata.get("ai_profile_id")
-        if profile_id not in (None, ""):
-            return str(profile_id)
-    state_payload = ai_cleanup_service.load_operation_state(window._current_project_root or "")
-    if isinstance(state_payload, dict):
-        state_metadata = state_payload.get("metadata")
-        if isinstance(state_metadata, dict):
-            profile_id = state_metadata.get("ai_profile_id")
-            if profile_id not in (None, ""):
-                return str(profile_id)
     return None
 
 

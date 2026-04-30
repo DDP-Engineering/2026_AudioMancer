@@ -30,7 +30,8 @@ The software subtrees currently live under:
 `04_Software/AudioMancer/` contains the Python 3.12/PySide6 application. The
 current app supports project creation with locked audiobook language and
 narration mode, source import, extraction, deterministic and AI cleanup,
-deterministic and AI chunking, locked-target AI translation, character
+resumable AI cleanup with current model settings, deterministic and AI
+chunking, locked-target AI translation, character
 discovery, narrator and character voice preparation, mode-aware Speech Blocks,
 Audio Blocks, WAV Audio Assembly deliverables, Home-page TXT/Markdown exports
 for completed text artifacts, and external full-project ZIP snapshots.

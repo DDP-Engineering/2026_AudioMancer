@@ -23,7 +23,8 @@ per-run AI transaction log.
 - start AI-assisted cleanup from the selected profile
 - confirm that AI cleanup can take longer before the run starts
 - confirm destructive reruns when cleanup is already completed
-- resume interrupted AI cleanup without the destructive rerun confirmation
+- resume interrupted AI cleanup with the currently selected model settings,
+  without the destructive rerun confirmation
 - load prompts from the application-root `prompts/` folder
 - call OpenAI-compatible `/v1/chat/completions` endpoints with the configured
   model, timeout, temperature, and max-token settings, while retrying with
@@ -68,7 +69,7 @@ High-level flow:
 
 1. `TextCleanupPage` emits `ai_clean_requested(profile_id)`.
 2. `text_cleanup_ui_controller` validates the active project, extracted-text
-   prerequisite, and selected or resumable AI profile.
+   prerequisite, and currently selected AI profile.
 3. The controller shows the AI-length warning popup and, when needed, the
    destructive cleanup-rerun confirmation.
 4. The shared modal progress dialog starts through the existing blocking
@@ -76,8 +77,8 @@ High-level flow:
 5. `ai_cleanup_service` loads prompt files, splits extracted text into
    paragraph-like units, windows them to fit the selected profile budget,
    computes source-language and dominant-script hints, adds previous and next
-   unit context for each classified unit, and resumes from `resume_checkpoint`
-   when possible.
+   unit context for each classified unit, and resumes from stored unit
+   classifications when the extracted-text fingerprint still matches.
 6. `llm_provider_service` sends one chat-completion request per window,
    retries one compatibility-adjusted request when a provider rejects
    `max_tokens`, attempts one follow-up JSON-repair request when the returned
@@ -149,6 +150,8 @@ Current AI cleanup report fields extend the shared cleanup report with:
 
 - `cleanup_mode`
 - `ai_profile_id`
+- `model_settings`
+- `model_settings_history`
 - `ai_log_relative_path`
 
 Current AI cleanup operation-state invariants:
@@ -157,8 +160,12 @@ Current AI cleanup operation-state invariants:
   workflow folder
 - `mode` is `ai_assisted`
 - `resume_checkpoint` stores `completed_window_count`,
-  `total_window_count`, `profile_id`, `input_fingerprint`, and accumulated
-  unit classifications
+  `total_window_count`, `input_fingerprint`, concrete `model_settings`, and
+  accumulated unit classifications
+- resume identity is based on the extracted-text fingerprint and stored unit
+  classifications, not the earlier profile id; if the operator selects another
+  enabled model/profile before resuming, the remaining units use that selected
+  model's name, temperature, context window, and output-token budget
 - `metadata.ai_log_relative_path` points to the per-run AI transaction log
 
 Current AI transaction log behavior:

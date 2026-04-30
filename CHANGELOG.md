@@ -8,6 +8,20 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
 
 All notable changes to this project will be documented in this file.
 
+## [1.1.3] - 2026-04-30
+
+### Changed
+
+- changed interrupted AI-assisted cleanup resume to use the currently selected
+  model settings for remaining cleanup units instead of forcing the original
+  checkpoint profile
+- changed AI cleanup state and reports to persist concrete model settings and
+  model-settings history, including model name, temperature, context window,
+  max output tokens, backend, and base URL
+- changed stale AI cleanup checkpoints with a changed extracted-text
+  fingerprint to start a clean run instead of carrying old resume history
+- package version updated to `1.1.3`
+
 ## [1.1.2] - 2026-04-29
 
 ### Changed

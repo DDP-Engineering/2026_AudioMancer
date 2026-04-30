@@ -22,7 +22,7 @@ Implementation-focused software documentation and component notes.
 - `AudioMancer_Project_Snapshot_Service.md` documents the Home-page full-project ZIP snapshot export, external destination guard, temporary archive replacement, and long-operation blocking behavior.
 - `AudioMancer_Text_Extraction_Service.md` documents the deterministic extraction workflow, artifacts, and rerun/reset behavior used by the Text Cleanup page.
 - `AudioMancer_Deterministic_Cleanup_Service.md` documents the deterministic cleanup workflow, cleanup artifacts, and resumable cleanup behavior used by the Text Cleanup page.
-- `AudioMancer_AI_Cleanup_Service.md` documents the AI-assisted cleanup workflow, prompt/provider dependencies, and project-local AI transaction logging used by the Text Cleanup page.
+- `AudioMancer_AI_Cleanup_Service.md` documents the AI-assisted cleanup workflow, current-model resume behavior, prompt/provider dependencies, and project-local AI transaction logging used by the Text Cleanup page.
 - `AudioMancer_AI_Translation_Service.md` documents the locked-target AI Translation workflow, same-language pass-through behavior, per-chunk review records, and page-state integration.
 - `AudioMancer_LLM_Provider_Service.md` documents the shared OpenAI-compatible provider layer, JSON-repair behavior, transaction logging, and normalized token-usage contract used by all AI workflows.
 - `AudioMancer_OpenAI_Online_Model_Recommendations.md` documents recommended online OpenAI model profiles and AI Settings parameters for cleanup, chunking, translation, character discovery, and Speech Blocks.
