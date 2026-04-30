@@ -13,7 +13,7 @@
          start and reset behavior for the Characters page controller.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-08
-@version 0.5.0
+@version 0.6.0
 """
 
 # IMPORTS
@@ -53,6 +53,29 @@ def test_character_ui_controller_first_run_shows_info_popup(monkeypatch, qtbot, 
 
     assert popup_calls
     assert len(start_calls) == 1
+
+
+def test_character_ui_controller_resume_uses_current_selected_profile(monkeypatch, qtbot, tmp_path) -> None:
+    project_root, _manifest = _create_project(tmp_path, "CharacterControllerResumeCurrentProfile")
+    window = _build_window(qtbot, project_root)
+    start_calls = []
+    used_profiles = []
+    monkeypatch.setattr(
+        characters_ui_controller,
+        "_start_operation",
+        lambda _window, **kwargs: start_calls.append(kwargs),
+    )
+    monkeypatch.setattr(
+        characters_ui_controller.character_discovery_service,
+        "start_or_continue_discovery",
+        lambda _project_root, _manifest, profile_payload, **_kwargs: used_profiles.append(dict(profile_payload)),
+    )
+
+    characters_ui_controller.handle_start_discovery_requested(window, "profile-2")
+    start_calls[0]["worker_callable"](project_root, window._current_manifest)
+
+    assert used_profiles[0]["id"] == "profile-2"
+    assert used_profiles[0]["model_name"] == "qwen3-14b"
 
 
 def test_character_ui_controller_add_flow_enters_draft_mode(monkeypatch, qtbot, tmp_path) -> None:
@@ -303,7 +326,21 @@ def _build_window(qtbot, project_root):
                 "temperature": 0.2,
                 "supports_structured_output": False,
                 "enabled": True,
-            }
+            },
+            {
+                "id": "profile-2",
+                "label": "Profile Two",
+                "backend_kind": "lmstudio",
+                "base_url": "http://127.0.0.1:1234",
+                "api_key": "",
+                "model_name": "qwen3-14b",
+                "context_window": 8192,
+                "max_output_tokens": 1024,
+                "request_timeout_seconds": 30,
+                "temperature": 0.4,
+                "supports_structured_output": False,
+                "enabled": True,
+            },
         ],
         "default_character_extraction_profile_id": "profile-1",
     }

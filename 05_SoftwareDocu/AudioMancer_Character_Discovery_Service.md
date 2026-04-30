@@ -233,9 +233,11 @@ Report fields currently include:
 - `review_status_summary`
 - `character_discovery_mode`
 - `character_profile_id_last_used`
+- `model_settings`
 - `window_size`
 - `window_overlap`
 - `budget_metadata`
+- `model_settings_history`
 - `warning_count`
 - `warnings`
 - `generated_at`
@@ -247,8 +249,14 @@ Operation-state invariants:
   character-discovery metadata counters; it does not create
   `characters_profile.json` or `characters_report.json`
 - `mode` is `ai_assisted`
-- resume checkpoints are reused only when the chunk fingerprint, total window
-  count, AI profile id, and context-budget metadata still match
+- resume checkpoints are reused when the chunk fingerprint still matches; the
+  remaining discovery or synthesis work uses the currently selected enabled AI
+  profile and records the current model name, context window, max output tokens,
+  and temperature in `model_settings` plus `model_settings_history`
+- discovery-window checkpoints store `next_discovery_start_chunk_index` so
+  remaining windows can be rebuilt from the current profile budget after a
+  cancellation; older checkpoints derive that boundary from the saved window
+  budget when possible
 - completed discovery disables the page start action until reset
 - reset preserves upstream translation artifacts and existing narrator profiles
   or samples, then clears dependent character voice, speech, audio block, and

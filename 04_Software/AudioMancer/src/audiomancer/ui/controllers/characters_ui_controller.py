@@ -14,7 +14,7 @@
          for the Characters page.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-11
-@version 0.10.0
+@version 0.11.0
 """
 
 # IMPORTS
@@ -46,7 +46,7 @@ def handle_start_discovery_requested(window: "MainWindow", profile_id: str) -> N
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-08
-    @version    0.2.0
+    @version    0.3.0
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if not _resolve_unsaved_changes(window):
@@ -67,8 +67,7 @@ def handle_start_discovery_requested(window: "MainWindow", profile_id: str) -> N
             ui_state_service.translate("project.error_missing_chunk_artifact", current_language),
         )
         return
-    effective_profile_id = _effective_profile_id(window, profile_id)
-    profile_payload = _resolve_ai_profile(window._settings_payload, effective_profile_id)
+    profile_payload = _resolve_ai_profile(window._settings_payload, profile_id)
     if profile_payload is None:
         QMessageBox.warning(
             window,
@@ -811,29 +810,6 @@ def _resolve_ai_profile(
     @version    0.1.0
     """
     return workflow_controller_service.resolve_enabled_ai_profile(settings_payload, selected_profile_id)
-
-
-def _effective_profile_id(window: "MainWindow", selected_profile_id: str) -> str:
-    """
-    @brief      Prefer the persisted resume profile when discovery already started.
-    @param[in]  window Main application window.
-    @param[in]  selected_profile_id Newly selected profile identifier.
-    @return     Effective profile identifier for the next discovery run.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-08
-    @version    0.1.0
-    """
-    if window._current_project_root is None:
-        return selected_profile_id
-    operation_state = character_discovery_service.load_operation_state(window._current_project_root)
-    if isinstance(operation_state, dict):
-        metadata = operation_state.get("metadata", {})
-        if isinstance(metadata, dict):
-            persisted_profile_id = str(metadata.get("ai_profile_id", "")).strip()
-            if persisted_profile_id:
-                return persisted_profile_id
-    return selected_profile_id
 
 
 def _has_chunking_output(project_root: str | None) -> bool:

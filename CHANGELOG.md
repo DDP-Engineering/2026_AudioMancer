@@ -8,6 +8,21 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
 
 All notable changes to this project will be documented in this file.
 
+## [1.1.5] - 2026-04-30
+
+### Changed
+
+- changed interrupted AI-assisted Character Discovery resume to continue
+  remaining discovery or synthesis work with the currently selected AI profile
+  instead of forcing the original checkpoint profile
+- changed Character Discovery checkpoints to persist the next source-chunk
+  boundary so remaining request windows can be rebuilt safely when the selected
+  model context window or output-token settings change
+- changed Character Discovery state and reports to persist concrete model
+  settings and model-settings history, including model name, context window,
+  max output tokens, and temperature
+- package version updated to `1.1.5`
+
 ## [1.1.4] - 2026-04-30
 
 ### Changed

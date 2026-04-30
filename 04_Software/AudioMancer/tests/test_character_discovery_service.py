@@ -14,7 +14,7 @@
          discovery workflow.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-08
-@version 0.6.0
+@version 0.7.0
 """
 
 # IMPORTS
@@ -109,6 +109,21 @@ def test_start_discovery_persists_outputs_and_report(monkeypatch, tmp_path) -> N
     assert report["budget_metadata"]["context_window"] == 4096
     assert report["budget_metadata"]["max_output_tokens"] == 512
     assert state["metadata"]["budget_metadata"] == report["budget_metadata"]
+    assert report["model_settings"] == {
+        "model_name": "qwen3-8b",
+        "context_window": 4096,
+        "max_output_tokens": 512,
+        "temperature": 0.2,
+    }
+    assert report["model_settings_history"] == [
+        {
+            "profile_id": "profile-1",
+            "model_name": "qwen3-8b",
+            "context_window": 4096,
+            "max_output_tokens": 512,
+            "temperature": 0.2,
+        }
+    ]
     assert report["token_usage"]["total_tokens"] == 135
 
 
@@ -195,10 +210,10 @@ def test_start_discovery_resumes_from_saved_synthesis_checkpoint(monkeypatch, tm
         + "\n",
         encoding="utf-8",
     )
-    call_count = {"value": 0}
+    call_profiles = []
 
-    def _fake_chat_json(*_args, **_kwargs):
-        call_count["value"] += 1
+    def _fake_chat_json(ai_profile_payload, *_args, **_kwargs):
+        call_profiles.append(dict(ai_profile_payload))
         return {
             "payload": {
                 "canonical_name": "Alice",
@@ -222,15 +237,41 @@ def test_start_discovery_resumes_from_saved_synthesis_checkpoint(monkeypatch, tm
     report = character_discovery_service.start_or_continue_discovery(
         project_root,
         manifest,
-        _profile_payload("profile-1"),
+        {
+            **_profile_payload("profile-2"),
+            "model_name": "qwen3-14b",
+            "context_window": 8192,
+            "max_output_tokens": 1024,
+            "temperature": 0.4,
+        },
         progress_callback=lambda *_args: None,
         cancel_requested=lambda: False,
     )
 
-    assert call_count["value"] == 1
+    assert len(call_profiles) == 1
+    assert call_profiles[0]["id"] == "profile-2"
+    assert call_profiles[0]["model_name"] == "qwen3-14b"
     assert report["character_count"] == 1
+    assert report["character_profile_id_last_used"] == "profile-2"
+    assert report["model_settings"] == {
+        "model_name": "qwen3-14b",
+        "context_window": 8192,
+        "max_output_tokens": 1024,
+        "temperature": 0.4,
+    }
+    assert report["model_settings_history"][-1] == {
+        "profile_id": "profile-2",
+        "model_name": "qwen3-14b",
+        "context_window": 8192,
+        "max_output_tokens": 1024,
+        "temperature": 0.4,
+    }
     assert report["input_source"] == character_discovery_service.CHARACTER_DISCOVERY_INPUT_SOURCE_CHUNKS
     assert report["token_usage"]["total_tokens"] == 90
+    state = character_discovery_service.load_operation_state(project_root)
+    assert state is not None
+    assert state["metadata"]["model_settings"] == report["model_settings"]
+    assert state["metadata"]["model_settings_history"] == report["model_settings_history"]
     assert (
         character_discovery_service.load_character_profiles(project_root)[0]["description"]
         == "Resumed profile synthesis."
@@ -666,7 +707,7 @@ def test_character_discovery_rejects_profile_with_too_little_context(monkeypatch
         )
 
 
-def test_resume_state_rejects_changed_budget_metadata() -> None:
+def test_resume_state_accepts_changed_profile_and_budget_metadata() -> None:
     current_budget = {
         "context_window": 4096,
         "max_output_tokens": 512,
@@ -680,6 +721,15 @@ def test_resume_state_rejects_changed_budget_metadata() -> None:
         "synthesis_max_evidence_items": 20,
     }
     previous_budget = {**current_budget, "max_output_tokens": 1024}
+    source_chunks = [
+        _chunk_payload("chunk-0001", 1, '"Hello," said Alice.'),
+        _chunk_payload("chunk-0002", 2, '"Hi," said Bob.'),
+    ]
+    resume_candidate = {
+        "character_id": "alice",
+        "canonical_name": "Alice",
+        "evidence": [{"chunk_id": "chunk-0001", "sequence_index": 1}],
+    }
 
     restored = character_discovery_service._restore_resume_state(  # noqa: SLF001
         {
@@ -690,16 +740,19 @@ def test_resume_state_rejects_changed_budget_metadata() -> None:
                 "profile_id": "profile-1",
                 "total_window_count": 2,
                 "completed_window_count": 1,
+                "next_discovery_start_chunk_index": 1,
                 "budget_metadata": previous_budget,
+                "raw_candidates": [resume_candidate],
             },
         },
         input_fingerprint="abc",
-        profile_id="profile-1",
-        total_windows=2,
+        source_chunks=source_chunks,
         budget_metadata=current_budget,
     )
 
-    assert restored == (0, [], [], [], [], None)
+    assert restored[0] == 1
+    assert restored[1] == 1
+    assert restored[2] == [resume_candidate]
 
 
 def test_synthesis_candidate_payload_is_trimmed_to_budget_metadata() -> None:
