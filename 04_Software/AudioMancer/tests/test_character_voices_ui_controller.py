@@ -13,7 +13,7 @@
          page-entry warnings for the Character Voices workflow.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-20
-@version 1.5.0
+@version 1.6.0
 """
 
 # IMPORTS
@@ -320,6 +320,188 @@ def test_character_voices_ui_controller_generate_stops_preview_before_deleting_s
     assert call_order[:2] == ["stop", "delete"]
 
 
+def test_character_voices_ui_controller_batch_regenerates_all_current_character_samples(
+    monkeypatch, qtbot, tmp_path
+) -> None:
+    """
+    @brief      Verify batch generation regenerates every current character target.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  qtbot Qt test helper fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-01
+    @version    0.1.0
+    """
+    project_root = _create_project_with_character_and_selected_narrator(tmp_path, "CharacterVoicesControllerBatch")
+    character_discovery_service.add_character_profile(project_root, "Bob")
+    selected_narrator_id = narrator_definition_service.load_selected_profile_state(project_root)["selected_profile_id"]
+    selected_narrator = narrator_definition_service.profile_by_id(project_root, selected_narrator_id)
+    assert selected_narrator is not None
+    character_voices_service.sync_voice_plan(
+        project_root,
+        character_discovery_service.load_character_profiles(project_root),
+        selected_narrator,
+    )
+    bob_target = character_voices_service.voice_target_by_id(project_root, "character_bob")
+    assert bob_target is not None
+    character_voices_service.store_target_sample(
+        project_root,
+        bob_target,
+        "en",
+        "Preview text.",
+        {
+            "generation_mode": "definition",
+            "source_model_id": "qwen-designer",
+        },
+        "Character sample ready.",
+        b"RIFF-bob",
+    )
+    window = _build_window(qtbot, project_root)
+    window._current_page_id = "character_voices"
+    window._settings_payload["tts_runtime_probe_succeeded"] = True
+    window._settings_payload["tts_runtime_discovered_models"] = [
+        {
+            "model_id": "qwen-base",
+            "backend_name": "qwen3-tts-base",
+            "status": "healthy",
+            "supported_generation_modes": ["base", "clone"],
+            "supported_presets": [],
+        },
+        {
+            "model_id": "qwen-designer",
+            "backend_name": "qwen3-tts-voice-designer",
+            "status": "healthy",
+            "supported_generation_modes": ["definition", "voice_designer"],
+            "supported_presets": [],
+        },
+        {
+            "model_id": "qwen-custom",
+            "backend_name": "qwen3-tts-customvoice",
+            "status": "healthy",
+            "supported_generation_modes": ["custom_voice"],
+            "supported_presets": ["vivian"],
+        },
+    ]
+    window._refresh_character_voices_page_state(
+        project_root,
+        project_workspace_service.load_manifest(project_root),
+        "en",
+    )
+    generated_target_ids: list[str] = []
+    operation_kinds: list[str] = []
+    monkeypatch.setattr(
+        character_voices_ui_controller.QMessageBox,
+        "question",
+        lambda *_args, **_kwargs: QMessageBox.StandardButton.Yes,
+    )
+    monkeypatch.setattr(
+        character_voices_ui_controller,
+        "_stop_preview_playback",
+        lambda *_args, **_kwargs: None,
+    )
+    monkeypatch.setattr(
+        character_voices_ui_controller.audio_blocks_ui_controller,
+        "invalidate_audio_blocks_after_upstream_change",
+        lambda *_args, **_kwargs: None,
+    )
+    monkeypatch.setattr(
+        character_voices_ui_controller.misc_ui_controller,
+        "show_message",
+        lambda *_args, **_kwargs: None,
+    )
+
+    def _fake_generate_and_store_sample(
+        _project_root,
+        _settings_payload,
+        _progress_messages,
+        target_payload,
+        _voice_language,
+        _preview_text,
+        _progress_callback,
+        _cancel_requested,
+    ) -> None:
+        """
+        @brief      Capture the generated target id without contacting VoiceWeaver.
+        @param[in]  _project_root Unused project root.
+        @param[in]  _settings_payload Unused settings payload.
+        @param[in]  _progress_messages Unused progress messages.
+        @param[in]  target_payload Target payload supplied by the batch worker.
+        @param[in]  _voice_language Unused voice language.
+        @param[in]  _preview_text Unused preview text.
+        @param[in]  _progress_callback Unused progress callback.
+        @param[in]  _cancel_requested Unused cancellation callback.
+        @return     None.
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-01
+        @version    0.1.0
+        """
+        generated_target_ids.append(str(target_payload.get("target_id", "")))
+
+    monkeypatch.setattr(
+        character_voices_ui_controller,
+        "_generate_and_store_sample",
+        _fake_generate_and_store_sample,
+    )
+
+    def _start_threaded_operation(
+        window,
+        operation_kind,
+        operation_name,
+        initial_message,
+        worker_callable,
+        set_busy,
+        success_handler,
+        failure_handler,
+        cancel_handler,
+        cancellable=True,
+    ):
+        """
+        @brief      Run one threaded-operation worker synchronously for the test.
+        @param[in]  window Main window under test.
+        @param[in]  operation_kind Operation kind identifier.
+        @param[in]  operation_name Operator-facing operation name.
+        @param[in]  initial_message Initial progress message.
+        @param[in]  worker_callable Worker function supplied by the controller.
+        @param[in]  set_busy Busy-state callback.
+        @param[in]  success_handler Success callback supplied by the controller.
+        @param[in]  failure_handler Failure callback supplied by the controller.
+        @param[in]  cancel_handler Cancellation callback supplied by the controller.
+        @param[in]  cancellable True when the operation is cancellable.
+        @return     None.
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-01
+        @version    0.1.0
+        """
+        _ = operation_name
+        _ = initial_message
+        _ = set_busy
+        _ = failure_handler
+        _ = cancel_handler
+        _ = cancellable
+        operation_kinds.append(operation_kind)
+        success_handler(
+            worker_callable(
+                window._current_project_root,
+                dict(window._current_manifest),
+                progress_callback=lambda *_args, **_kwargs: None,
+                cancel_requested=lambda: False,
+            )
+        )
+
+    monkeypatch.setattr(
+        character_voices_ui_controller.operation_runner_controller,
+        "start_threaded_operation",
+        _start_threaded_operation,
+    )
+
+    character_voices_ui_controller.handle_generate_missing_samples_requested(window)
+
+    assert operation_kinds == ["character_voices_generate_all_samples"]
+    assert generated_target_ids == ["character_alice", "character_bob"]
+
+
 def test_character_voices_progress_messages_hide_model_id(monkeypatch, qtbot, tmp_path) -> None:
     """
     @brief      Verify Character Voices generation progress text does not disclose the concrete runtime model id.
@@ -546,11 +728,17 @@ def _build_window(qtbot, project_root):
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-20
-    @version    0.1.1
+    @version    0.2.0
     """
     window = MainWindow(settings_payload=_default_settings_payload())
     qtbot.addWidget(window)
     window._activate_project(project_root, project_workspace_service.load_manifest(project_root))
+    window._current_page_id = "character_voices"
+    window._refresh_character_voices_page_state(
+        project_root,
+        project_workspace_service.load_manifest(project_root),
+        "en",
+    )
     return window
 
 

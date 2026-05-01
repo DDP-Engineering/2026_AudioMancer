@@ -10,11 +10,12 @@ Implementation-focused software documentation and component notes.
 
 ## Current Documents
 
-- `UserGuide/` contains the English end-user help bundle for AudioMancer, including the offline HTML guide and real UI screenshots used by packaged Windows and Ubuntu releases.
-- `UserGuide_ro/` contains the Romanian end-user help bundle, including the offline HTML guide and Romanian UI screenshots used when the application language is set to Romanian.
+- `UserGuide/` contains the English end-user help bundle for AudioMancer 1.3.0, including the offline HTML guide, resizable-pane minimum-width notes, and real UI screenshots used by packaged Windows and Ubuntu releases.
+- `UserGuide_ro/` contains the Romanian end-user help bundle for AudioMancer 1.3.0, including the offline HTML guide, resizable-pane minimum-width notes, and Romanian UI screenshots used when the application language is set to Romanian.
 - `AudioMancer_App_Shell.md` documents the desktop application shell, Home workflow progress presenter, project navigation, settings dialogs, and page-hosting responsibilities.
 - `AudioMancer_Config_And_Settings.md` documents the adapted configuration and settings scaffold.
 - `AudioMancer_Settings_Service.md` documents the shared settings lifecycle implementation.
+- `AudioMancer_UI_State_Service.md` documents the shared runtime UI string catalog, language application, and text-size scaling behavior.
 - `AudioMancer_Persistence_Service.md` documents the shared atomic text and JSON write helpers used by critical project, settings, and operation state persistence paths.
 - `AudioMancer_Logging_Service.md` documents the shared runtime logging implementation.
 - `AudioMancer_Project_Workspace.md` documents the new/open project workspace layer, locked Home-page project options, source import flow, and current `project.json` contract.
@@ -29,7 +30,7 @@ Implementation-focused software documentation and component notes.
 - `AudioMancer_LMStudio_Local_Model_Recommendations.md` documents recommended local LM Studio model profiles and AI Settings parameters for cleanup, chunking, translation, character discovery, and Speech Blocks on a 16 GB VRAM workstation.
 - `AudioMancer_Character_Discovery_Service.md` documents the AI-assisted character-discovery workflow, persisted artifacts, Qwen-oriented character voice-definition fields plus final prompt, page/controller integration, and resumable discovery behavior used by the Characters page.
 - `AudioMancer_Narrator_Definition_Service.md` documents the seeded and runtime-synced Qwen3 narrator preset workflow, legacy prompt-seed profile migration, explicit narrator selection, locked voice-language display, per-profile sample artifacts, destructive edit behavior, and Narator Voice page integration.
-- `AudioMancer_Character_Voices_Service.md` documents the Character Voices target contract, character-owned prompt handoff from `Characters` with legacy fallback, read-only selected voice-language display, same-narrator read-only reuse behavior, and root-level page/controller integration.
+- `AudioMancer_Character_Voices_Service.md` documents the Character Voices target contract, character-owned prompt handoff from `Characters` with legacy fallback, read-only selected voice-language display, same-narrator read-only reuse behavior, full-current-target batch generation, and root-level page/controller integration.
 - `AudioMancer_Speech_Blocks_Service.md` documents the Speech Blocks source-resolution rules, mode-aware AI-first per-chunk generation flow, quoted/guillemet/dash dialogue validation, narrator-only TTS-budget segmentation, manual insert/delete behavior, metadata-only operation blocks, root-level persisted artifacts, resumable state contract, and page/controller integration.
 - `AudioMancer_Audio_Blocks_Service.md` documents the Audio Blocks reusable clone-prompt workflow, block-level generation fingerprints, metadata-only pause/background/indication handling, root-level persisted artifact contract, approval rules, generated `audio_blocks/` media folder, and upstream invalidation behavior.
 - `AudioMancer_Audio_Assembly_Service.md` documents the final WAV audiobook composition workflow, pause-to-silence handling, per-project assembly settings, resumable state/report artifacts, generated `audiobook/` deliverables, playback seek/progress controls, and reset page integration.

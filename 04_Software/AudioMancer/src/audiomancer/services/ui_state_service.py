@@ -13,7 +13,7 @@
          application through one centralized string catalog and scale mapping.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 0.34.0
+@version 0.35.0
 """
 
 # ruff: noqa: E501
@@ -454,6 +454,7 @@ _UI_STRINGS = {
         "status.character_voices_prompt_reset": "Voice prompt reset.",
         "status.character_voices_prompt_saved": "Voice prompt saved.",
         "status.character_voices_sample_generated": "Character sample generated.",
+        "status.character_voices_missing_samples_generated": "Character samples regenerated.",
         "character_voices.title": "Character Voices",
         "character_voices.list_group": "Voice Targets",
         "character_voices.setup_group": "Voice Target",
@@ -474,6 +475,7 @@ _UI_STRINGS = {
         "character_voices.edit_prompt": "Edit Voice Prompt",
         "character_voices.save_prompt": "Save Voice Prompt",
         "character_voices.generate_sample": "Generate Sample",
+        "character_voices.generate_missing_samples": "Generate Character Samples",
         "character_voices.preview": "Preview",
         "character_voices.stop_preview": "Stop Preview",
         "character_voices.sample_present": "Sample present",
@@ -531,8 +533,8 @@ _UI_STRINGS = {
         "speech_blocks.content_background_noise": "Background Noise",
         "speech_blocks.content_pause": "Pause",
         "speech_blocks.content_indication": "Indication",
-        "speech_blocks.insert_block": "Insert Speech Block",
-        "speech_blocks.delete_block": "Delete Speech Block",
+        "speech_blocks.insert_block": "Insert",
+        "speech_blocks.delete_block": "Delete",
         "speech_blocks.resplit_selected": "Re-Split Selected Chunk",
         "speech_blocks.reset_block": "Reset",
         "speech_blocks.edit_block": "Edit",
@@ -609,6 +611,8 @@ _UI_STRINGS = {
         "dialog.character_voices_generate_sample_title": "Generate Character Sample",
         "dialog.character_voices_generate_sample_message": "AudioMancer will contact the configured TTS runtime and requires the connection to be tested first in TTS Settings. Continue?",
         "dialog.character_voices_generate_sample_message_replace": "Continuing will delete the current sample and AudioMancer will contact the configured TTS runtime. The connection must be tested first in TTS Settings. Continue?",
+        "dialog.character_voices_generate_missing_samples_title": "Generate Character Samples",
+        "dialog.character_voices_generate_missing_samples_message": "AudioMancer will regenerate samples for all {sample_count} current character target(s). Existing character samples will be replaced. The configured TTS runtime must be available. Continue?",
         "dialog.character_voices_missing_narrator_sample_title": "Narator Voice Sample Required",
         "dialog.character_voices_missing_narrator_sample_message": (
             "The selected narator voice profile does not have a generated sample yet. Open the Narator Voice page and "
@@ -618,6 +622,8 @@ _UI_STRINGS = {
         "progress.character_voices_sample_load_model": "Loading voice generation model...",
         "progress.character_voices_sample_generate": "Generating character sample...",
         "progress.character_voices_sample_download": "Downloading character sample...",
+        "progress.character_voices_batch_prepare": "Preparing character sample batch...",
+        "progress.character_voices_batch_target": "Generating sample {current}/{total}: {target_name}",
         "placeholder.character_voices.title": "Character Voices",
         "placeholder.character_voices.note": "Character voice preparation is implemented on this page.",
         "placeholder.speech_blocks.title": "Speech Blocks",
@@ -1277,6 +1283,7 @@ _UI_STRINGS = {
         "status.character_voices_prompt_reset": "Promptul vocal a fost resetat.",
         "status.character_voices_prompt_saved": "Promptul vocal a fost salvat.",
         "status.character_voices_sample_generated": "Sample-ul personajului a fost generat.",
+        "status.character_voices_missing_samples_generated": "Sample-urile personajelor au fost regenerate.",
         "character_voices.title": "Voci Personaje",
         "character_voices.list_group": "Tintele Vocii",
         "character_voices.setup_group": "Tinta Vocala",
@@ -1297,6 +1304,7 @@ _UI_STRINGS = {
         "character_voices.edit_prompt": "Editeaza Promptul Vocal",
         "character_voices.save_prompt": "Salveaza Promptul Vocal",
         "character_voices.generate_sample": "Genereaza Sample",
+        "character_voices.generate_missing_samples": "Genereaza Sample-uri Personaje",
         "character_voices.preview": "Previzualizare",
         "character_voices.stop_preview": "Opreste Previzualizarea",
         "character_voices.sample_present": "Sample prezent",
@@ -1355,8 +1363,8 @@ _UI_STRINGS = {
         "speech_blocks.content_background_noise": "Zgomot de Fundal",
         "speech_blocks.content_pause": "Pauza",
         "speech_blocks.content_indication": "Indicatie",
-        "speech_blocks.insert_block": "Insereaza Bloc Vorbire",
-        "speech_blocks.delete_block": "Sterge Bloc Vorbire",
+        "speech_blocks.insert_block": "Insereaza",
+        "speech_blocks.delete_block": "Sterge",
         "speech_blocks.resplit_selected": "Resegmenteaza Segmentul Selectat",
         "speech_blocks.reset_block": "Reseteaza",
         "speech_blocks.edit_block": "Editeaza",
@@ -1440,6 +1448,8 @@ _UI_STRINGS = {
         "dialog.character_voices_generate_sample_title": "Genereaza Sample Personaj",
         "dialog.character_voices_generate_sample_message": "AudioMancer va contacta runtime-ul TTS configurat si necesita testarea conexiunii mai intai in Setari TTS. Continui?",
         "dialog.character_voices_generate_sample_message_replace": "Continuarea va sterge sample-ul curent si AudioMancer va contacta runtime-ul TTS configurat. Conexiunea trebuie testata mai intai in Setari TTS. Continui?",
+        "dialog.character_voices_generate_missing_samples_title": "Genereaza Sample-uri Personaje",
+        "dialog.character_voices_generate_missing_samples_message": "AudioMancer va regenera sample-uri pentru toate cele {sample_count} tinta/tinte curente de personaj. Sample-urile existente ale personajelor vor fi inlocuite. Runtime-ul TTS configurat trebuie sa fie disponibil. Continui?",
         "dialog.character_voices_missing_narrator_sample_title": "Este Necesar Sample-ul Naratorului",
         "dialog.character_voices_missing_narrator_sample_message": (
             "Profilul de voce narator selectat nu are inca un sample generat. Deschide pagina Voce Narator si "
@@ -1449,6 +1459,8 @@ _UI_STRINGS = {
         "progress.character_voices_sample_load_model": "Se incarca modelul pentru generarea vocii...",
         "progress.character_voices_sample_generate": "Se genereaza sample-ul personajului...",
         "progress.character_voices_sample_download": "Se descarca sample-ul personajului...",
+        "progress.character_voices_batch_prepare": "Se pregateste generarea sample-urilor pentru personaje...",
+        "progress.character_voices_batch_target": "Se genereaza sample-ul {current}/{total}: {target_name}",
         "placeholder.character_voices.title": "Voci Personaje",
         "placeholder.character_voices.note": "Pregatirea vocilor personajelor este implementata in aceasta pagina.",
         "placeholder.speech_blocks.title": "Blocuri Vorbire",

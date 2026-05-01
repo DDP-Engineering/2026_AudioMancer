@@ -14,7 +14,7 @@
          with local text search.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-24
-@version 0.4.1
+@version 0.4.2
 """
 
 # IMPORTS
@@ -64,7 +64,7 @@ class TextChunkingPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-24
-        @version    0.4.1
+        @version    0.4.2
         """
         super().__init__(parent)
         self._chunks: list[dict[str, object]] = []
@@ -109,7 +109,8 @@ class TextChunkingPage(QWidget):
 
         layout.addLayout(header_row)
 
-        top_splitter = QSplitter(self)
+        self._preview_splitter = QSplitter(self)
+        self._preview_splitter.setChildrenCollapsible(False)
 
         left_container = QWidget(self)
         left_layout = QVBoxLayout(left_container)
@@ -132,7 +133,7 @@ class TextChunkingPage(QWidget):
         self._chunk_list.currentRowChanged.connect(self._show_selected_chunk)
         chunk_list_layout.addWidget(self._chunk_list)
         left_layout.addWidget(chunk_list_group, 3)
-        top_splitter.addWidget(left_container)
+        self._preview_splitter.addWidget(left_container)
 
         chunk_preview_group = QGroupBox("Selected Chunk", self)
         chunk_preview_layout = QVBoxLayout(chunk_preview_group)
@@ -150,11 +151,11 @@ class TextChunkingPage(QWidget):
         self._save_chunk_button.clicked.connect(self._emit_save_chunk_requested)
         chunk_action_row.addWidget(self._save_chunk_button)
         chunk_preview_layout.addLayout(chunk_action_row)
-        top_splitter.addWidget(chunk_preview_group)
+        self._preview_splitter.addWidget(chunk_preview_group)
 
-        top_splitter.setStretchFactor(0, 3)
-        top_splitter.setStretchFactor(1, 2)
-        layout.addWidget(top_splitter, 7)
+        self._preview_splitter.setStretchFactor(0, 3)
+        self._preview_splitter.setStretchFactor(1, 2)
+        layout.addWidget(self._preview_splitter, 7)
 
         notes_group = QGroupBox("Chunking Notes", self)
         notes_layout = QVBoxLayout(notes_group)
@@ -170,8 +171,10 @@ class TextChunkingPage(QWidget):
         layout.addWidget(notes_group, 0)
         self._cleaned_group = cleaned_group
         self._chunk_list_group = chunk_list_group
+        self._left_preview_container = left_container
         self._chunk_preview_group = chunk_preview_group
         self._notes_group = notes_group
+        self._apply_preview_splitter_minimums()
         self.set_project_active(False)
         self.set_processing_state(
             cleaned_text=None,
@@ -180,6 +183,19 @@ class TextChunkingPage(QWidget):
             can_chunk=False,
             can_ai_chunk=False,
         )
+
+    def resizeEvent(self, event) -> None:  # noqa: N802
+        """
+        @brief      Keep chunking preview splitter panes from shrinking below one third of the preview width.
+        @param[in]  event Qt resize event.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-01
+        @version    0.1.0
+        """
+        super().resizeEvent(event)
+        self._apply_preview_splitter_minimums()
 
     def set_project_active(self, is_active: bool) -> None:
         """
@@ -374,6 +390,25 @@ class TextChunkingPage(QWidget):
         chunk_selected = 0 <= self._chunk_list.currentRow() < len(self._chunks)
         self._edit_chunk_button.setEnabled(enabled and chunk_selected and not self._editing_chunk)
         self._save_chunk_button.setEnabled(enabled and chunk_selected and self._editing_chunk)
+
+    def _apply_preview_splitter_minimums(self) -> None:
+        """
+        @brief      Set each chunking preview pane minimum width to one third of the preview splitter width.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-01
+        @version    0.1.0
+        """
+        required_attributes = ("_preview_splitter", "_left_preview_container", "_chunk_preview_group")
+        if not all(hasattr(self, attribute_name) for attribute_name in required_attributes):
+            return
+        splitter_width = self._preview_splitter.width()
+        if splitter_width <= 0:
+            return
+        minimum_preview_width = splitter_width // 3
+        self._left_preview_container.setMinimumWidth(minimum_preview_width)
+        self._chunk_preview_group.setMinimumWidth(minimum_preview_width)
 
     def _show_selected_chunk(self, row: int) -> None:
         """

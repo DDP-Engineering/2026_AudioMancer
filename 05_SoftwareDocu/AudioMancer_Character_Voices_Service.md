@@ -25,6 +25,7 @@ locked on the Home page before the later `Speech Blocks`,
   language changes
 - persist per-character generated samples and sample metadata in
   `narrator_and_characters` mode
+- regenerate all current per-character samples as one confirmed batch operation
 - mirror the selected narrator into the page as one preview-only target
 - auto-copy narrator samples into all character sample slots when
   `voice_assignment_mode == "same_narrator"`
@@ -53,8 +54,8 @@ The workflow is split across:
   for the target list, voice-language indicator, prompt editor, preview-text
   editor, and bottom status area
 - `04_Software/AudioMancer/src/audiomancer/ui/controllers/character_voices_ui_controller.py`
-  for destructive edit confirmation, VoiceWeaver generation, preview playback,
-  and stage synchronization
+  for destructive edit confirmation, single and batch VoiceWeaver generation,
+  preview playback, and stage synchronization
 
 High-level flow:
 
@@ -80,7 +81,11 @@ High-level flow:
 7. `Generate Sample` verifies the fixed Qwen3 capability set, waits for model
    load completion when needed, and stores one WAV plus metadata for the
    selected character target.
-8. When every character target plus the selected narrator sample exists, the
+8. `Generate Character Samples` confirms once, selects every current character
+   target, then regenerates samples sequentially in the shared modal progress
+   dialog. Existing character samples are replaced by the same per-target
+   storage path used by single-sample generation.
+9. When every character target plus the selected narrator sample exists, the
    controller keeps `project.json.current_stage = "character_voices_ready"`.
 
 ## 4. Dependencies
@@ -111,8 +116,8 @@ Inputs:
 - translation approval report from `translation_report.json`
 - cached VoiceWeaver discovery fields from `settings.json`
 - Character Voices page actions:
-  reset prompt, edit prompt, save prompt, generate sample, preview, and stop
-  preview
+  reset prompt, edit prompt, save prompt, generate one sample, regenerate all
+  current character samples, preview, and stop preview
 
 Outputs:
 
@@ -213,6 +218,8 @@ Current rules:
 - narrator is visible on the page but remains preview-only
 - character editing and generation are enabled only in
   `narrator_and_characters` mode
+- batch sample generation processes every current character target and replaces
+  any existing character sample for those targets
 - `same_narrator` mode disables prompt editing and generation but keeps
   preview available by copying narrator-derived samples into every character
   target slot

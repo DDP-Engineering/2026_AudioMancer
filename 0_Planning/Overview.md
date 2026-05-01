@@ -38,6 +38,7 @@ It should allow an operator to:
 - discover and manage speaking characters and character traits
 - translate chunks when needed
 - prepare narration-relevant metadata for character voice selection, real voice use, and later generation stages
+- batch-regenerate current character voice samples when the operator wants a fresh voice pass
 - review, correct, and approve intermediate results
 - preserve all important artifacts inside a deterministic project structure
 - reopen a project and continue work without losing state
@@ -55,6 +56,8 @@ The final application should follow these principles:
 - explicit artifacts and reports for every major processing stage
 - safe resume and recovery for long-running operations
 - operator review before downstream use of generated data
+- readable review panes that keep practical minimum widths when the operator
+  drags splitters on dense workflow pages
 - modular implementation without unnecessary abstraction
 
 ## 4. Intended Workflow

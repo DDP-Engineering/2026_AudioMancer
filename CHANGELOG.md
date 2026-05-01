@@ -8,6 +8,39 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
 
 All notable changes to this project will be documented in this file.
 
+## [1.3.0] - 2026-05-01
+
+### Changed
+
+- changed Character Voices to add a header-level `Generate Character Samples`
+  action that confirms once, shows the shared modal progress dialog, and
+  regenerates samples for all current character targets
+- changed Character Voices batch generation to keep the batch action available
+  whenever discovered character targets exist, independent of current
+  VoiceWeaver connection status or existing sample state
+- changed dense workflow splitters to preserve readable review panes across
+  Text Cleanup, Text Chunking, Characters, Narator Voice, Character Voices,
+  Speech Blocks, and Audio Blocks
+- updated English and Romanian help plus component documentation for the
+  Character Voices batch-sample workflow
+- package version updated to `1.3.0`
+
+## [1.2.0] - 2026-05-01
+
+### Changed
+
+- changed resizable workflow page splitters to keep review panes readable with
+  non-collapsible minimum widths: Text Cleanup, Text Chunking, Characters,
+  Speech Blocks, and Audio Blocks keep one-third pane minimums, while Narator
+  Voice and Character Voices keep one-quarter minimums for their left lists
+  and one-third minimums for their editor panes
+- changed Speech Blocks action layout so the chunk-list frame encloses only
+  the list, with compact Insert/Delete/Edit and Save/Reset/Approve controls to
+  the right and more room for selected speech-block text review
+- updated English and Romanian help to document the resizable-pane behavior and
+  the current application version
+- package version updated to `1.2.0`
+
 ## [1.1.6] - 2026-04-30
 
 ### Changed

@@ -13,7 +13,7 @@
          sample-dependent button enablement, and bottom status rendering.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-18
-@version 3.3.6
+@version 3.3.9
 """
 
 # IMPORTS
@@ -41,6 +41,26 @@ def test_narator_voice_page_uses_single_line_profile_name_and_no_summary_label(q
     assert hasattr(page, "_summary_label") is False
 
 
+def test_narator_voice_page_main_splitter_keeps_configured_minimum_widths(qtbot) -> None:
+    """
+    @brief      Verify Narator Voice main panes keep configured minimum splitter widths.
+    @param[in]  qtbot Qt test helper fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-01
+    @version    0.2.0
+    """
+    page = NaratorVoicePage()
+    qtbot.addWidget(page)
+    page._main_splitter.resize(900, 600)
+    page._apply_main_splitter_minimums()
+
+    assert page._main_splitter.childrenCollapsible() is False
+    assert page._profiles_group.minimumWidth() == 225
+    assert page._editor_container.minimumWidth() == 300
+
+
 def test_narator_voice_page_prompt_and_preview_editors_expose_scrollbars_and_limit(qtbot) -> None:
     """
     @brief      Verify narrator prompt and preview editors use scrollbars and enforce preview text length.
@@ -49,7 +69,7 @@ def test_narator_voice_page_prompt_and_preview_editors_expose_scrollbars_and_lim
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.3.0
+    @version    0.3.1
     """
     page = NaratorVoicePage()
     qtbot.addWidget(page)
@@ -90,14 +110,14 @@ def test_narator_voice_page_prompt_and_preview_editors_expose_scrollbars_and_lim
 
     assert page._designer_prompt.verticalScrollBarPolicy() == Qt.ScrollBarPolicy.ScrollBarAlwaysOn
     assert page._preview_text_edit.verticalScrollBarPolicy() == Qt.ScrollBarPolicy.ScrollBarAlwaysOn
-    assert page._designer_prompt.minimumHeight() == 76
-    assert page._designer_prompt.maximumHeight() == 104
-    assert page._designer_group.maximumHeight() == 164
-    assert page._preview_text_edit.minimumHeight() == 48
-    assert page._preview_text_edit.maximumHeight() == 68
-    assert page._preview_group.maximumHeight() == 136
-    assert page._status_group.minimumHeight() == 112
-    assert page._status_group.maximumHeight() == 132
+    assert page._designer_prompt.minimumHeight() == 52
+    assert page._designer_prompt.maximumHeight() == 72
+    assert page._designer_group.maximumHeight() == 132
+    assert page._preview_text_edit.minimumHeight() == 88
+    assert page._preview_text_edit.maximumHeight() == 116
+    assert page._preview_group.maximumHeight() == 184
+    assert page._status_group.minimumHeight() == 96
+    assert page._status_group.maximumHeight() == 112
     assert page._preview_text_edit.toPlainText() == "abcde"
 
     page.begin_edit_mode()
@@ -170,7 +190,7 @@ def test_narator_voice_page_preview_toggle_updates_label_and_select_enablement(q
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-17
-    @version    1.1.0
+    @version    1.1.1
     """
     page = NaratorVoicePage()
     qtbot.addWidget(page)
@@ -211,7 +231,7 @@ def test_narator_voice_page_preview_toggle_updates_label_and_select_enablement(q
 
     assert page._select_profile_button.isEnabled() is True
     page.set_preview_active(True)
-    assert page._preview_toggle_button.text() == "Stop Preview"
+    assert page._preview_toggle_button.text() == "Stop play"
 
 
 def test_narator_voice_page_status_panel_and_language_labels_render_state(qtbot) -> None:

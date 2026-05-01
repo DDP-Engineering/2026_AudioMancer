@@ -1,0 +1,169 @@
+<!--
+Copyright (c) 2026 DDP Engineering
+This software is licensed under the GNU Affero General Public License v3.0
+(AGPL-3.0) with additional Non-Commercial restriction.
+See the LICENSE.txt and LICENSE_NC.txt files for full license details.
+-->
+
+# AudioMancer UI State Service
+
+## 1. Purpose
+
+Provides the shared runtime UI-state helpers for the `AudioMancer` desktop
+application.
+
+It centralizes operator-facing UI strings, language lookup, and application
+text-size scaling so pages and controllers do not keep separate translation or
+font-size logic.
+
+## 2. Responsibilities
+
+- store the English and Romanian runtime UI string catalog
+- resolve one translated string or one full language catalog on demand
+- fall back to the configured default language for unknown language codes
+- resolve the current UI language from persisted settings payloads
+- apply text-size presets to the running Qt application
+- apply the selected language to the main-window shell when supported
+- log invalid language and text-scale repair decisions
+
+It does not own settings persistence, help-file content, workflow state, or
+page-specific layout behavior.
+
+## 3. Implementation Overview
+
+The component is implemented in:
+
+- `04_Software/AudioMancer/src/audiomancer/services/ui_state_service.py`
+
+Main public functions:
+
+- `translate(key, language)`
+- `get_ui_strings(language)`
+- `current_language_from_settings(settings_payload)`
+- `apply_text_scale(application, ui_text_scale)`
+- `apply_language(main_window, language)`
+- `apply_ui_settings(application, main_window, settings_payload)`
+
+Runtime flow:
+
+1. Settings are loaded by the application settings layer.
+2. `apply_ui_settings(...)` applies the configured text scale and language.
+3. `apply_text_scale(...)` captures the base application font size once, maps
+   the selected scale key to a factor, and updates the running application plus
+   top-level widgets.
+4. `apply_language(...)` resolves the requested language and calls
+   `main_window.apply_language(...)` when the main window exposes that hook.
+5. Pages and controllers use stable catalog keys through `translate(...)` or a
+   language catalog copied by `get_ui_strings(...)`.
+
+## 4. Dependencies
+
+Internal dependencies:
+
+- `04_Software/AudioMancer/src/audiomancer/config.py`
+- `04_Software/AudioMancer/src/audiomancer/services/logging_service.py`
+- Qt main-window and page classes that consume translated labels
+
+External dependencies:
+
+- `PySide6.QtGui.QFont`
+- `PySide6.QtWidgets.QApplication`
+- `PySide6.QtWidgets.QWidget`
+
+## 5. Inputs And Outputs
+
+Inputs:
+
+- stable string keys such as `toolbar.settings` and `speech_blocks.insert_block`
+- language codes such as `en` and `ro`
+- persisted settings payloads with `language` and `ui_text_scale`
+- a running `QApplication`
+- a main window that may expose `apply_language(language)`
+
+Outputs:
+
+- translated strings or copied language catalogs
+- updated application and top-level widget fonts
+- language updates delegated to the main window
+- warning and info records through the `ui_state` component logger
+
+The component does not write project files or settings files.
+
+## 6. Data Contracts
+
+The central string catalog is `_UI_STRINGS`, keyed first by language code and
+then by stable UI identifier. Existing code should use stable keys instead of
+hard-coded labels for operator-facing runtime text.
+
+Supported text-scale keys are defined by `_UI_SCALE_FACTORS`:
+
+- `very_small`
+- `small`
+- `normal`
+- `large`
+- `very_large`
+
+Unknown language codes fall back to `config.DEFAULT_LANGUAGE`. Unknown string
+keys fall back to the default-language value and finally to the key itself.
+Unknown text-scale values fall back to `config.DEFAULT_UI_TEXT_SCALE`.
+
+## 7. Workflow Integration
+
+The service sits between settings persistence and visible UI widgets.
+
+The main application uses it after loading settings so the shell, toolbar,
+sidebar, dialogs, pages, and status messages use the selected language and text
+scale. Page classes and controllers consume the catalog while building labels,
+buttons, group titles, notes, confirmation text, and status messages.
+Current Character Voices entries cover both single-sample generation and the
+confirmed batch action that regenerates all current character samples.
+
+Because all operator-facing labels are centralized here, UI text changes must
+update both English and Romanian catalog entries in the same implementation
+change.
+
+## 8. Usage
+
+Typical string lookup:
+
+```python
+label = translate("toolbar.settings", "en")
+```
+
+Typical startup application:
+
+```python
+apply_ui_settings(application, main_window, settings_payload)
+```
+
+Typical page-level language refresh:
+
+```python
+strings = get_ui_strings(language)
+button.setText(strings["speech_blocks.save_block"])
+```
+
+## 9. Validation And Tests
+
+Focused tests:
+
+- `04_Software/AudioMancer/tests/test_ui_state_service.py`
+
+Minimum validation after changing this component:
+
+```powershell
+uv run python -m py_compile src/audiomancer/services/ui_state_service.py tests/test_ui_state_service.py
+uv run ruff check src/audiomancer/services/ui_state_service.py tests/test_ui_state_service.py --fix
+uv run ruff format src/audiomancer/services/ui_state_service.py tests/test_ui_state_service.py
+uv run pytest tests/test_ui_state_service.py
+```
+
+When catalog keys used by pages change, also run the focused page tests that
+consume those keys.
+
+## 10. Limitations And Future Work
+
+The catalog is a Python dictionary, so missing-key coverage depends on focused
+tests and exercised UI paths. The service does not load external translation
+files and does not perform pluralization, locale-specific formatting, or
+right-to-left layout handling.

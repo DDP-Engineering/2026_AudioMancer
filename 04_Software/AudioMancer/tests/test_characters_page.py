@@ -12,7 +12,7 @@
          signaling, and evidence preview behavior for discovered characters.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-08
-@version 0.5.0
+@version 0.5.1
 """
 
 # IMPORTS
@@ -46,6 +46,16 @@ def test_characters_page_edit_mode_enables_save_after_change(qtbot) -> None:
     assert page.is_edit_mode() is True
     assert page.is_dirty() is True
     assert page._save_character_button.isEnabled() is True
+
+
+def test_characters_page_main_splitter_keeps_one_third_minimum_width(qtbot) -> None:
+    page = _build_page(qtbot)
+    page._main_splitter.resize(900, 600)
+    page._apply_main_splitter_minimums()
+
+    assert page._main_splitter.childrenCollapsible() is False
+    assert page._left_splitter.minimumWidth() == 300
+    assert page._evidence_group.minimumWidth() == 300
 
 
 def test_characters_page_save_without_changes_exits_edit_mode(qtbot) -> None:

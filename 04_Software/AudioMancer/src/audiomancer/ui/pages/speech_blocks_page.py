@@ -14,7 +14,7 @@
          controls for the Speech Blocks workflow.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-24
-@version 0.3.4
+@version 0.3.7
 """
 
 # IMPORTS
@@ -65,7 +65,7 @@ class SpeechBlocksPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-24
-        @version    0.3.0
+        @version    0.3.3
         """
         super().__init__(parent)
         self._current_language = "en"
@@ -107,25 +107,46 @@ class SpeechBlocksPage(QWidget):
         header_row.addWidget(self._approve_all_button)
         layout.addLayout(header_row)
 
+        body_content_layout = QVBoxLayout()
+        chunk_row = QHBoxLayout()
         self._chunk_group = QGroupBox("Chunk List", self)
-        chunk_layout = QHBoxLayout(self._chunk_group)
+        chunk_layout = QVBoxLayout(self._chunk_group)
         self._chunk_list = QListWidget(self)
         self._chunk_list.currentRowChanged.connect(self._show_selected_chunk)
-        chunk_layout.addWidget(self._chunk_list, 1)
-        chunk_actions_layout = QVBoxLayout()
-        self._insert_block_button = QPushButton("Insert Speech Block")
+        chunk_layout.addWidget(self._chunk_list)
+        chunk_actions_left_layout = QVBoxLayout()
+        chunk_actions_right_layout = QVBoxLayout()
+        self._insert_block_button = QPushButton("Insert")
         self._insert_block_button.clicked.connect(self._emit_insert_block)
-        chunk_actions_layout.addWidget(self._insert_block_button)
-        self._delete_block_button = QPushButton("Delete Speech Block")
+        chunk_actions_left_layout.addWidget(self._insert_block_button)
+        self._delete_block_button = QPushButton("Delete")
         self._delete_block_button.clicked.connect(self._emit_delete_block)
-        chunk_actions_layout.addWidget(self._delete_block_button)
-        chunk_actions_layout.addStretch(1)
-        chunk_layout.addLayout(chunk_actions_layout)
+        chunk_actions_left_layout.addWidget(self._delete_block_button)
+        self._edit_button = QPushButton("Edit")
+        self._edit_button.clicked.connect(self._begin_editing)
+        chunk_actions_left_layout.addWidget(self._edit_button)
+        self._save_button = QPushButton("Save")
+        self._save_button.clicked.connect(self._emit_save_block)
+        chunk_actions_right_layout.addWidget(self._save_button)
+        self._reset_block_button = QPushButton("Reset")
+        self._reset_block_button.clicked.connect(self._emit_reset_block)
+        chunk_actions_right_layout.addWidget(self._reset_block_button)
+        self._approve_block_button = QPushButton("Approve")
+        self._approve_block_button.clicked.connect(self._emit_approve_block)
+        chunk_actions_right_layout.addWidget(self._approve_block_button)
+        chunk_actions_left_layout.addStretch(1)
+        chunk_actions_right_layout.addStretch(1)
+        chunk_actions_grid_layout = QHBoxLayout()
+        chunk_actions_grid_layout.addLayout(chunk_actions_left_layout)
+        chunk_actions_grid_layout.addLayout(chunk_actions_right_layout)
+        chunk_row.addWidget(self._chunk_group, 1)
+        chunk_row.addLayout(chunk_actions_grid_layout)
         self._chunk_group.setMinimumHeight(94)
         self._chunk_group.setMaximumHeight(130)
-        layout.addWidget(self._chunk_group)
+        body_content_layout.addLayout(chunk_row)
 
-        lower_splitter = QSplitter(self)
+        self._lower_splitter = QSplitter(self)
+        self._lower_splitter.setChildrenCollapsible(False)
         self._source_group = QGroupBox("Selected Chunk", self)
         source_layout = QVBoxLayout(self._source_group)
         self._source_text_edit = QPlainTextEdit(self)
@@ -134,7 +155,7 @@ class SpeechBlocksPage(QWidget):
         self._resplit_button = QPushButton("Re-Split Selected Chunk")
         self._resplit_button.clicked.connect(self._emit_resplit_selected)
         source_layout.addWidget(self._resplit_button)
-        lower_splitter.addWidget(self._source_group)
+        self._lower_splitter.addWidget(self._source_group)
 
         self._blocks_group = QGroupBox("Speech Blocks", self)
         blocks_layout = QVBoxLayout(self._blocks_group)
@@ -154,25 +175,13 @@ class SpeechBlocksPage(QWidget):
         meta_row.addWidget(self._warning_label, 2)
         blocks_layout.addLayout(meta_row)
         self._speech_block_text_edit = QPlainTextEdit(self)
-        blocks_layout.addWidget(self._speech_block_text_edit, 3)
-        action_row = QHBoxLayout()
-        self._reset_block_button = QPushButton("Reset")
-        self._reset_block_button.clicked.connect(self._emit_reset_block)
-        action_row.addWidget(self._reset_block_button)
-        self._edit_button = QPushButton("Edit")
-        self._edit_button.clicked.connect(self._begin_editing)
-        action_row.addWidget(self._edit_button)
-        self._save_button = QPushButton("Save")
-        self._save_button.clicked.connect(self._emit_save_block)
-        action_row.addWidget(self._save_button)
-        self._approve_block_button = QPushButton("Approve")
-        self._approve_block_button.clicked.connect(self._emit_approve_block)
-        action_row.addWidget(self._approve_block_button)
-        blocks_layout.addLayout(action_row)
-        lower_splitter.addWidget(self._blocks_group)
-        lower_splitter.setStretchFactor(0, 1)
-        lower_splitter.setStretchFactor(1, 1)
-        layout.addWidget(lower_splitter, 1)
+        blocks_layout.addWidget(self._speech_block_text_edit, 5)
+        self._lower_splitter.addWidget(self._blocks_group)
+        self._lower_splitter.setStretchFactor(0, 1)
+        self._lower_splitter.setStretchFactor(1, 1)
+        body_content_layout.addWidget(self._lower_splitter, 1)
+        layout.addLayout(body_content_layout, 1)
+        self._apply_lower_splitter_minimums()
 
         self._notes_group = QGroupBox("Speech Blocks Notes", self)
         notes_layout = QVBoxLayout(self._notes_group)
@@ -195,6 +204,19 @@ class SpeechBlocksPage(QWidget):
             0,
             0,
         )
+
+    def resizeEvent(self, event) -> None:  # noqa: N802
+        """
+        @brief      Keep Speech Blocks lower splitter panes from shrinking below one third of its width.
+        @param[in]  event Qt resize event.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-01
+        @version    0.1.0
+        """
+        super().resizeEvent(event)
+        self._apply_lower_splitter_minimums()
 
     def set_project_active(self, is_active: bool) -> None:
         """
@@ -560,6 +582,25 @@ class SpeechBlocksPage(QWidget):
         self._edit_button.setEnabled(can_edit_selected and not self._editing)
         self._save_button.setEnabled(can_edit_selected and self._editing)
         self._approve_block_button.setEnabled(can_approve_selected and not self._editing)
+
+    def _apply_lower_splitter_minimums(self) -> None:
+        """
+        @brief      Set each Speech Blocks lower pane minimum width to one third of the lower splitter width.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-01
+        @version    0.1.0
+        """
+        required_attributes = ("_lower_splitter", "_source_group", "_blocks_group")
+        if not all(hasattr(self, attribute_name) for attribute_name in required_attributes):
+            return
+        splitter_width = self._lower_splitter.width()
+        if splitter_width <= 0:
+            return
+        minimum_pane_width = splitter_width // 3
+        self._source_group.setMinimumWidth(minimum_pane_width)
+        self._blocks_group.setMinimumWidth(minimum_pane_width)
 
     def _emit_generate_requested(self) -> None:
         """

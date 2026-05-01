@@ -14,7 +14,7 @@
          playback, and page-entry narrator-sample warnings.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 1.7.0
+@version 1.8.0
 """
 
 # IMPORTS
@@ -332,6 +332,116 @@ def handle_generate_sample_requested(window: "MainWindow", target_id: str) -> No
     )
 
 
+def handle_generate_missing_samples_requested(window: "MainWindow") -> None:
+    """
+    @brief      Regenerate samples for all current character targets.
+    @param[in]  window Main application window.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-01
+    @version    0.1.0
+    """
+    current_language = ui_state_service.current_language_from_settings(window._settings_payload)
+    if window._active_operation_kind is not None:
+        return
+    if window._current_project_root is None or window._current_manifest is None:
+        QMessageBox.warning(
+            window,
+            ui_state_service.translate("dialog.project_error_title", current_language),
+            ui_state_service.translate("project.error_no_active_project", current_language),
+        )
+        return
+    target_payloads = _current_character_target_payloads(window)
+    if not target_payloads:
+        return
+    if not _confirm_generate_missing_samples(window, current_language, len(target_payloads)):
+        return
+    if not audio_blocks_ui_controller.confirm_audio_blocks_invalidation(window, current_language):
+        return
+    _stop_preview_playback(window)
+    settings_payload = dict(window._settings_payload)
+    voice_language = window._character_voices_page.current_voice_language()
+    progress_messages = {
+        "prepare": ui_state_service.translate("progress.character_voices_sample_prepare", current_language),
+        "load_model": ui_state_service.translate("progress.character_voices_sample_load_model", current_language),
+        "generate": ui_state_service.translate("progress.character_voices_sample_generate", current_language),
+        "download": ui_state_service.translate("progress.character_voices_sample_download", current_language),
+        "batch_prepare": ui_state_service.translate("progress.character_voices_batch_prepare", current_language),
+        "batch_target": ui_state_service.translate("progress.character_voices_batch_target", current_language),
+        "qwen_capabilities_missing": ui_state_service.translate(
+            "character_voices.error_qwen_capabilities_missing",
+            current_language,
+        ),
+        "generation_missing_audio": ui_state_service.translate(
+            "character_voices.error_generation_missing_audio",
+            current_language,
+        ),
+    }
+    operation_runner_controller.start_threaded_operation(
+        window,
+        "character_voices_generate_all_samples",
+        ui_state_service.translate("character_voices.generate_missing_samples", current_language),
+        progress_messages["batch_prepare"],
+        worker_callable=lambda project_root, manifest, progress_callback=None, cancel_requested=None: (
+            _generate_and_store_character_samples(
+                project_root,
+                settings_payload,
+                progress_messages,
+                target_payloads,
+                voice_language,
+                progress_callback,
+                cancel_requested,
+            )
+        ),
+        set_busy=lambda is_busy: window._character_voices_page.set_busy(is_busy),
+        success_handler=lambda result_payload: _handle_generate_missing_samples_success(
+            window,
+            result_payload,
+            target_payloads,
+            current_language,
+        ),
+        failure_handler=lambda error: _handle_generate_sample_failure(window, error, current_language),
+        cancel_handler=lambda message: _handle_generate_sample_cancelled(window, message, current_language),
+        cancellable=True,
+    )
+
+
+def _handle_generate_missing_samples_success(
+    window: "MainWindow",
+    result_payload: object,
+    target_payloads: list[dict[str, object]],
+    current_language: str,
+) -> None:
+    """
+    @brief      Refresh Character Voices UI state after successful batch character sample generation.
+    @param[in]  window Main application window.
+    @param[in]  result_payload Worker result payload.
+    @param[in]  target_payloads Batch target payloads.
+    @param[in]  current_language Current UI language code.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-01
+    @version    0.1.0
+    """
+    _ = result_payload
+    window._settings_payload = settings_service.load_settings()
+    if target_payloads:
+        window._character_voices_inspected_target_id = str(target_payloads[-1].get("target_id", "")).strip() or None
+    if window._current_project_root is not None:
+        window.show_project_state(
+            window._current_project_root,
+            project_workspace_service.load_manifest(window._current_project_root),
+        )
+    _sync_manifest_stage(window)
+    audio_blocks_ui_controller.invalidate_audio_blocks_after_upstream_change(window)
+    misc_ui_controller.show_message(
+        window,
+        ui_state_service.translate("status.character_voices_missing_samples_generated", current_language),
+    )
+
+
 def _handle_generate_sample_success(
     window: "MainWindow",
     result_payload: object,
@@ -623,6 +733,132 @@ def _generate_and_store_sample(
     )
 
 
+def _generate_and_store_character_samples(
+    project_root,
+    settings_payload: dict[str, object],
+    progress_messages: dict[str, str],
+    target_payloads: list[dict[str, object]],
+    voice_language: str,
+    progress_callback,
+    cancel_requested,
+) -> dict[str, object]:
+    """
+    @brief      Generate samples sequentially for all current character voice targets.
+    @param[in]  project_root Active project root.
+    @param[in]  settings_payload Persisted settings snapshot.
+    @param[in]  progress_messages Worker-safe progress and error messages.
+    @param[in]  target_payloads Character target payloads to generate.
+    @param[in]  voice_language Selected character-voices voice language.
+    @param[in]  progress_callback Optional threaded-runner progress callback.
+    @param[in]  cancel_requested Optional cooperative cancellation callback.
+    @return     Batch result summary.
+    @exception  OperationCancelledError Raised when cancellation is requested between targets.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-01
+    @version    0.1.0
+    """
+    total_count = len(target_payloads)
+    if total_count == 0:
+        return {"generated_count": 0}
+    _emit_sample_progress(progress_callback, 0, progress_messages["batch_prepare"])
+    generated_count = 0
+    for target_index, target_payload in enumerate(target_payloads, start=1):
+        if cancel_requested is not None and cancel_requested():
+            raise operation_runtime_service.OperationCancelledError("Character sample batch cancelled.")
+        target_name = (
+            str(target_payload.get("display_name", "")).strip() or str(target_payload.get("target_id", "")).strip()
+        )
+        batch_message = progress_messages["batch_target"].format(
+            current=target_index,
+            total=total_count,
+            target_name=target_name,
+        )
+        preview_text = character_voices_service.effective_target_preview_text(target_payload, voice_language)
+        if not preview_text:
+            raise RuntimeError(progress_messages["generation_missing_audio"])
+
+        def _emit_current_target_progress(
+            _current,
+            _total,
+            percent,
+            message,
+            current_target_index=target_index,
+            current_batch_message=batch_message,
+        ) -> None:
+            """
+            @brief      Forward one target-local progress update into the batch progress range.
+            @param[in]  _current Unused target-local current value.
+            @param[in]  _total Unused target-local total value.
+            @param[in]  percent Target-local percentage.
+            @param[in]  message Target-local progress message.
+            @param[in]  current_target_index Bound one-based target index.
+            @param[in]  current_batch_message Bound batch target message.
+            @return     None.
+            @author     Eng. Dan Dumitru Pasare
+            @date       2026-05-01
+            @version    0.1.0
+            """
+            _emit_batch_sample_progress(
+                progress_callback,
+                current_target_index,
+                total_count,
+                percent,
+                current_batch_message,
+                message,
+            )
+
+        _generate_and_store_sample(
+            project_root,
+            settings_payload,
+            progress_messages,
+            target_payload,
+            voice_language,
+            preview_text,
+            _emit_current_target_progress,
+            cancel_requested,
+        )
+        generated_count += 1
+        _emit_batch_sample_progress(
+            progress_callback,
+            target_index,
+            total_count,
+            100,
+            batch_message,
+            progress_messages["download"],
+        )
+    return {"generated_count": generated_count}
+
+
+def _emit_batch_sample_progress(
+    progress_callback,
+    target_index: int,
+    total_count: int,
+    target_percent: int,
+    batch_message: str,
+    detail_message: str,
+) -> None:
+    """
+    @brief      Emit one aggregate batch progress update for a per-target sample step.
+    @param[in]  progress_callback Optional threaded-runner progress callback.
+    @param[in]  target_index One-based target index currently being processed.
+    @param[in]  total_count Total target count.
+    @param[in]  target_percent Current target-local percent.
+    @param[in]  batch_message Batch target status text.
+    @param[in]  detail_message Current per-target stage text.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-01
+    @version    0.1.0
+    """
+    if progress_callback is None or total_count <= 0:
+        return
+    bounded_percent = max(0, min(int(target_percent), 100))
+    aggregate_percent = int((((target_index - 1) * 100) + bounded_percent) / total_count)
+    message = f"{batch_message}\n{detail_message}" if detail_message else batch_message
+    progress_callback(target_index, total_count, aggregate_percent, message)
+
+
 def _update_generation_progress(
     progress_callback,
     status_payload: dict[str, object],
@@ -855,6 +1091,47 @@ def _confirm_generate_sample(window: "MainWindow", language: str, target_id: str
         )
         == QMessageBox.StandardButton.Yes
     )
+
+
+def _confirm_generate_missing_samples(window: "MainWindow", language: str, sample_count: int) -> bool:
+    """
+    @brief      Confirm batch generation for character targets with missing samples.
+    @param[in]  window Main application window.
+    @param[in]  language Runtime UI language code.
+    @param[in]  sample_count Number of samples that will be generated.
+    @return     True when the operator confirms the batch run.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-01
+    @version    0.1.0
+    """
+    return (
+        QMessageBox.question(
+            window,
+            ui_state_service.translate("dialog.character_voices_generate_missing_samples_title", language),
+            ui_state_service.translate("dialog.character_voices_generate_missing_samples_message", language).format(
+                sample_count=sample_count
+            ),
+        )
+        == QMessageBox.StandardButton.Yes
+    )
+
+
+def _current_character_target_payloads(window: "MainWindow") -> list[dict[str, object]]:
+    """
+    @brief      Build the batch target list for all current character targets.
+    @param[in]  window Main application window.
+    @return     Ordered list of target payloads requiring sample generation.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-01
+    @version    0.1.0
+    """
+    return [
+        dict(target_payload)
+        for target_payload in window._character_voices_page._targets  # noqa: SLF001
+        if str(target_payload.get("target_kind", "")).strip() == character_voices_service.TARGET_KIND_CHARACTER
+    ]
 
 
 # END OF FILE

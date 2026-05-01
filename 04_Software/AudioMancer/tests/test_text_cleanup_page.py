@@ -13,7 +13,7 @@
          preview editing and search state updates for the cleanup page.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-24
-@version 0.6.0
+@version 0.6.1
 """
 
 # IMPORTS
@@ -101,6 +101,26 @@ def test_text_cleanup_page_updates_previews_and_notes(qtbot) -> None:
     assert page._cleaned_text_edit.toPlainText() == "Clean paragraph"
     assert page._notes_edit.toPlainText() == "Warning A\nWarning B"
     assert page._notes_group.maximumHeight() == 112
+
+
+def test_text_cleanup_page_preview_splitter_keeps_one_third_minimum_width(qtbot) -> None:
+    """
+    @brief      Verify extracted and cleaned preview panes keep one-third minimum splitter widths.
+    @param[in]  qtbot Qt test helper fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-01
+    @version    0.1.0
+    """
+    page = TextCleanupPage()
+    qtbot.addWidget(page)
+    page._preview_splitter.resize(900, 400)
+    page._apply_preview_splitter_minimums()
+
+    assert page._preview_splitter.childrenCollapsible() is False
+    assert page._extracted_group.minimumWidth() == 300
+    assert page._cleaned_group.minimumWidth() == 300
 
 
 def test_text_cleanup_page_allows_cleaned_text_edit_and_save(qtbot) -> None:

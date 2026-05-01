@@ -10,6 +10,11 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
 This folder contains the current Python application implementation for
 `AudioMancer`. It includes a project-aware main-window shell copied from
 `DDP_Audiomancer` and adapted to the local package.
+Current package version is `1.3.0`; Text Cleanup, Text Chunking, Characters,
+Narator Voice, Character Voices, Speech Blocks, and Audio Blocks now keep
+minimum splitter widths on their main review panes so operator text remains
+readable during resizing. Character Voices also exposes a batch generation
+button that regenerates all current per-character samples.
 
 ## Structure
 
@@ -62,7 +67,7 @@ This folder contains the current Python application implementation for
 - `src/audiomancer/ui/controllers/` now also includes a dedicated Text Chunking page controller for deterministic chunking actions and rerun/reset handling.
 - `src/audiomancer/ui/controllers/characters_ui_controller.py` provides the Character Discovery page controller for start, resume, reset, guarded manual add/edit/save/delete actions, and explicit unsaved-change handling.
 - `src/audiomancer/ui/controllers/narator_voice_ui_controller.py` provides the Narator Voice page controller for inspected-vs-selected profile handling, destructive edit confirmation, locked voice-language display, Qwen3-backed VoiceWeaver sample generation with one configurable preview timeout, load-then-poll runtime sequencing before generation, explicit narrator selection, and local WAV preview playback.
-- `src/audiomancer/ui/controllers/character_voices_ui_controller.py` provides the Character Voices page controller for target inspection, destructive character prompt edits, Qwen3-backed character sample generation, and local narrator-or-character preview playback.
+- `src/audiomancer/ui/controllers/character_voices_ui_controller.py` provides the Character Voices page controller for target inspection, destructive character prompt edits, Qwen3-backed single and full-current-target batch character generation, and local narrator-or-character preview playback.
 - `src/audiomancer/ui/controllers/tts_runtime_ui_support.py` provides shared runtime-probe, timeout, and status-cache helpers reused by the Narator Voice and Character Voices controllers.
 - `src/audiomancer/ui/controllers/speech_blocks_ui_controller.py` provides the Speech Blocks page controller for prerequisite validation, confirmation popups, explicit resets, approve-all, selected-block edits/resets, selected-chunk re-splitting, modal progress handling, cancellation, downstream Audio Blocks reconciliation, and manifest synchronization.
 - `src/audiomancer/ui/controllers/audio_blocks_ui_controller.py` provides the Audio Blocks page controller for VoiceWeaver runtime probing, generation confirmations, modal progress handling, per-block approvals, rerun or reset behavior, manifest synchronization, and upstream invalidation resets.

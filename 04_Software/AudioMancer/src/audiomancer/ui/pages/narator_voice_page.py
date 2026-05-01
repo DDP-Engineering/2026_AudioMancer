@@ -14,7 +14,7 @@
          preview controls for the fixed Qwen3-backed narrator workflow.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-17
-@version 3.7.0
+@version 3.7.2
 """
 
 # IMPORTS
@@ -69,7 +69,7 @@ class NaratorVoicePage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-17
-        @version    1.5.0
+        @version    1.5.1
         """
         super().__init__(parent)
         self._project_active = False
@@ -125,6 +125,7 @@ class NaratorVoicePage(QWidget):
         layout.addLayout(header_layout)
 
         self._main_splitter = QSplitter(self)
+        self._main_splitter.setChildrenCollapsible(False)
 
         self._profiles_group = QGroupBox("Narator Voice Profiles", self)
         profiles_layout = QVBoxLayout(self._profiles_group)
@@ -133,7 +134,8 @@ class NaratorVoicePage(QWidget):
         profiles_layout.addWidget(self._profile_list)
         self._main_splitter.addWidget(self._profiles_group)
 
-        editor_container = QWidget(self)
+        self._editor_container = QWidget(self)
+        editor_container = self._editor_container
         editor_layout = QVBoxLayout(editor_container)
         editor_layout.setContentsMargins(0, 0, 0, 0)
         editor_layout.setSpacing(10)
@@ -202,6 +204,7 @@ class NaratorVoicePage(QWidget):
         self._main_splitter.setStretchFactor(1, 40)
         self._main_splitter.setSizes([360, 860])
         layout.addWidget(self._main_splitter, 1)
+        self._apply_main_splitter_minimums()
 
         self._status_group = QGroupBox("Narator Voice Status", self)
         status_layout = QVBoxLayout(self._status_group)
@@ -213,6 +216,19 @@ class NaratorVoicePage(QWidget):
         layout.addWidget(self._status_group, 0)
 
         self.set_project_active(False)
+
+    def resizeEvent(self, event) -> None:  # noqa: N802
+        """
+        @brief      Keep Narator Voice main splitter panes from shrinking below one third of the content width.
+        @param[in]  event Qt resize event.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-01
+        @version    0.1.0
+        """
+        super().resizeEvent(event)
+        self._apply_main_splitter_minimums()
 
     def set_project_active(self, is_active: bool) -> None:
         """
@@ -531,6 +547,24 @@ class NaratorVoicePage(QWidget):
         self._designer_prompt.setReadOnly(not editor_enabled)
         self._preview_text_edit.setReadOnly(not editor_enabled)
 
+    def _apply_main_splitter_minimums(self) -> None:
+        """
+        @brief      Set Narator Voice main pane minimum widths from the main splitter width.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-01
+        @version    0.2.0
+        """
+        required_attributes = ("_main_splitter", "_profiles_group", "_editor_container")
+        if not all(hasattr(self, attribute_name) for attribute_name in required_attributes):
+            return
+        splitter_width = self._main_splitter.width()
+        if splitter_width <= 0:
+            return
+        self._profiles_group.setMinimumWidth(splitter_width // 4)
+        self._editor_container.setMinimumWidth(splitter_width // 3)
+
     def _preview_label_key(self) -> str:
         """
         @brief      Resolve the preview label key.
@@ -557,19 +591,11 @@ class NaratorVoicePage(QWidget):
         for header_key, grouped_profiles in (
             (
                 "narator_voice.presets_group_header",
-                [
-                    profile
-                    for profile in self._profiles
-                    if str(profile.get("profile_kind", "")).strip() == "preset"
-                ],
+                [profile for profile in self._profiles if str(profile.get("profile_kind", "")).strip() == "preset"],
             ),
             (
                 "narator_voice.custom_profiles_group_header",
-                [
-                    profile
-                    for profile in self._profiles
-                    if str(profile.get("profile_kind", "")).strip() != "preset"
-                ],
+                [profile for profile in self._profiles if str(profile.get("profile_kind", "")).strip() != "preset"],
             ),
         ):
             if not grouped_profiles:

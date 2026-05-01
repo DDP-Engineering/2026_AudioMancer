@@ -13,7 +13,7 @@
          bottom status rendering for the Character Voices page.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-20
-@version 1.3.2
+@version 1.4.0
 """
 
 # IMPORTS
@@ -75,6 +75,26 @@ def test_character_voices_page_narrator_target_is_preview_only(qtbot) -> None:
     assert hasattr(page, "_target_kind_edit") is False
 
 
+def test_character_voices_page_main_splitter_keeps_configured_minimum_widths(qtbot) -> None:
+    """
+    @brief      Verify Character Voices main panes keep configured minimum splitter widths.
+    @param[in]  qtbot Qt test helper fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-01
+    @version    0.2.0
+    """
+    page = CharacterVoicesPage()
+    qtbot.addWidget(page)
+    page._main_splitter.resize(900, 600)
+    page._apply_main_splitter_minimums()
+
+    assert page._main_splitter.childrenCollapsible() is False
+    assert page._targets_group.minimumWidth() == 225
+    assert page._editor_container.minimumWidth() == 300
+
+
 def test_character_voices_page_edit_mode_disables_list_and_enables_save_after_changes(qtbot) -> None:
     """
     @brief      Verify edit mode disables the target list and enables Save after prompt changes.
@@ -126,6 +146,69 @@ def test_character_voices_page_edit_mode_disables_list_and_enables_save_after_ch
     assert page._prompt_edit.isReadOnly() is False
     assert page._preview_text_edit.isReadOnly() is False
     assert page._save_prompt_button.isEnabled() is True
+
+
+def test_character_voices_page_batch_button_enables_for_current_character_targets(qtbot) -> None:
+    """
+    @brief      Verify the batch generation button enables when current character targets exist.
+    @param[in]  qtbot Qt test helper fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-01
+    @version    0.1.0
+    """
+    page = CharacterVoicesPage()
+    qtbot.addWidget(page)
+    page.apply_language("en")
+    page.set_project_active(True)
+    page.set_character_voices_state(
+        targets=[
+            {
+                "target_id": "character_alice",
+                "target_kind": "character",
+                "display_name": "Alice",
+                "sample_status_label": "Sample missing",
+                "has_sample": False,
+                "can_generate_sample": False,
+            },
+            {
+                "target_id": "character_bob",
+                "target_kind": "character",
+                "display_name": "Bob",
+                "sample_status_label": "Sample present",
+                "has_sample": True,
+                "can_generate_sample": False,
+            },
+        ],
+        notes=["Ready."],
+        current_target_id="character_alice",
+        selected_voice_language="en",
+        language_entries=[("English", "en")],
+        original_language="English",
+        translated_language="Not translated",
+        assignment_mode_label="Narrator + character voices",
+        target_name="Alice",
+        target_kind_label="Character",
+        prompt_text="Original prompt.",
+        preview_text="Line one.",
+        is_editable=True,
+        can_reset_prompt=True,
+        can_edit_prompt=True,
+        can_generate_sample=True,
+        preview_available=False,
+        status_lines=["Total targets: 2"],
+        missing_narrator_sample=False,
+    )
+    emitted: list[bool] = []
+    page.generate_missing_samples_requested.connect(lambda: emitted.append(True))
+
+    assert page._generate_missing_samples_button.text() == "Generate Character Samples"
+    assert page._generate_missing_samples_button.isEnabled() is True
+
+    page._generate_missing_samples_button.click()
+
+    assert emitted == [True]
 
 
 def test_character_voices_page_editor_payload_includes_preview_text(qtbot) -> None:

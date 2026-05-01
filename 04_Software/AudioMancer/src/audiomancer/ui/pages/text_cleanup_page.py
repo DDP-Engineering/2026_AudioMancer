@@ -14,7 +14,7 @@
          text-processing slice, including local preview text search.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-24
-@version 0.8.0
+@version 0.8.1
 """
 
 # IMPORTS
@@ -64,7 +64,7 @@ class TextCleanupPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-24
-        @version    0.7.0
+        @version    0.7.1
         """
         super().__init__(parent)
         self._project_active = False
@@ -110,7 +110,8 @@ class TextCleanupPage(QWidget):
 
         layout.addLayout(header_row)
 
-        splitter = QSplitter(self)
+        self._preview_splitter = QSplitter(self)
+        self._preview_splitter.setChildrenCollapsible(False)
 
         extracted_group = QGroupBox("Extracted Text Preview", self)
         extracted_layout = QVBoxLayout(extracted_group)
@@ -135,11 +136,11 @@ class TextCleanupPage(QWidget):
         cleaned_action_row.addWidget(self._save_cleaned_button)
         cleaned_layout.addLayout(cleaned_action_row)
 
-        splitter.addWidget(extracted_group)
-        splitter.addWidget(cleaned_group)
-        splitter.setStretchFactor(0, 1)
-        splitter.setStretchFactor(1, 1)
-        layout.addWidget(splitter, 6)
+        self._preview_splitter.addWidget(extracted_group)
+        self._preview_splitter.addWidget(cleaned_group)
+        self._preview_splitter.setStretchFactor(0, 1)
+        self._preview_splitter.setStretchFactor(1, 1)
+        layout.addWidget(self._preview_splitter, 6)
 
         notes_group = QGroupBox("Cleanup Notes", self)
         notes_layout = QVBoxLayout(notes_group)
@@ -153,6 +154,7 @@ class TextCleanupPage(QWidget):
         self._extracted_group = extracted_group
         self._cleaned_group = cleaned_group
         self._notes_group = notes_group
+        self._apply_preview_splitter_minimums()
 
         self.set_project_active(False)
         self.set_processing_state(
@@ -163,6 +165,19 @@ class TextCleanupPage(QWidget):
             can_clean=False,
             can_ai_clean=False,
         )
+
+    def resizeEvent(self, event) -> None:  # noqa: N802
+        """
+        @brief      Keep text-preview splitter panes from shrinking below one third of the preview width.
+        @param[in]  event Qt resize event.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-01
+        @version    0.1.0
+        """
+        super().resizeEvent(event)
+        self._apply_preview_splitter_minimums()
 
     def set_project_active(self, is_active: bool) -> None:
         """
@@ -337,6 +352,25 @@ class TextCleanupPage(QWidget):
         self._save_cleaned_button.setEnabled(
             self._project_active and self._has_cleaned_text and not self._busy and self._editing_cleaned_text
         )
+
+    def _apply_preview_splitter_minimums(self) -> None:
+        """
+        @brief      Set each cleanup preview pane minimum width to one third of the preview splitter width.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-01
+        @version    0.1.0
+        """
+        required_attributes = ("_preview_splitter", "_extracted_group", "_cleaned_group")
+        if not all(hasattr(self, attribute_name) for attribute_name in required_attributes):
+            return
+        splitter_width = self._preview_splitter.width()
+        if splitter_width <= 0:
+            return
+        minimum_preview_width = splitter_width // 3
+        self._extracted_group.setMinimumWidth(minimum_preview_width)
+        self._cleaned_group.setMinimumWidth(minimum_preview_width)
 
     def apply_language(self, language: str) -> None:
         """

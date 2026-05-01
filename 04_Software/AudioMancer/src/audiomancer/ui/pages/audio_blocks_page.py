@@ -13,7 +13,7 @@
          review controls for the Audio Blocks workflow.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-23
-@version 0.3.3
+@version 0.3.4
 """
 
 # IMPORTS
@@ -61,7 +61,7 @@ class AudioBlocksPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-23
-        @version    0.3.0
+        @version    0.3.1
         """
         super().__init__(parent)
         self._current_language = "en"
@@ -100,24 +100,25 @@ class AudioBlocksPage(QWidget):
         self._progress_bar.setFormat("%p%")
         layout.addWidget(self._progress_bar)
 
-        main_splitter = QSplitter(self)
+        self._main_splitter = QSplitter(self)
+        self._main_splitter.setChildrenCollapsible(False)
 
         self._source_group = QGroupBox("Source Text", self)
         source_layout = QVBoxLayout(self._source_group)
         self._source_text_edit = QPlainTextEdit(self)
         self._source_text_edit.setReadOnly(True)
         source_layout.addWidget(self._source_text_edit)
-        main_splitter.addWidget(self._source_group)
+        self._main_splitter.addWidget(self._source_group)
 
-        right_splitter = QSplitter(self)
-        right_splitter.setOrientation(Qt.Orientation.Vertical)
+        self._right_splitter = QSplitter(self)
+        self._right_splitter.setOrientation(Qt.Orientation.Vertical)
 
         self._blocks_group = QGroupBox("Speech Blocks", self)
         blocks_layout = QVBoxLayout(self._blocks_group)
         self._speech_block_list = QListWidget(self)
         self._speech_block_list.currentRowChanged.connect(self._show_selected_block)
         blocks_layout.addWidget(self._speech_block_list)
-        right_splitter.addWidget(self._blocks_group)
+        self._right_splitter.addWidget(self._blocks_group)
 
         self._detail_group = QGroupBox("Selected Block", self)
         detail_layout = QVBoxLayout(self._detail_group)
@@ -142,14 +143,15 @@ class AudioBlocksPage(QWidget):
         self._approve_button.clicked.connect(self._emit_approve_selected)
         action_row.addWidget(self._approve_button)
         detail_layout.addLayout(action_row)
-        right_splitter.addWidget(self._detail_group)
-        right_splitter.setStretchFactor(0, 4)
-        right_splitter.setStretchFactor(1, 5)
-        main_splitter.addWidget(right_splitter)
-        main_splitter.setStretchFactor(0, 4)
-        main_splitter.setStretchFactor(1, 4)
-        main_splitter.setSizes([480, 620])
-        layout.addWidget(main_splitter, 1)
+        self._right_splitter.addWidget(self._detail_group)
+        self._right_splitter.setStretchFactor(0, 4)
+        self._right_splitter.setStretchFactor(1, 5)
+        self._main_splitter.addWidget(self._right_splitter)
+        self._main_splitter.setStretchFactor(0, 4)
+        self._main_splitter.setStretchFactor(1, 4)
+        self._main_splitter.setSizes([480, 620])
+        layout.addWidget(self._main_splitter, 1)
+        self._apply_main_splitter_minimums()
 
         self._status_group = QGroupBox("Audio Blocks Status", self)
         status_layout = QVBoxLayout(self._status_group)
@@ -180,6 +182,19 @@ class AudioBlocksPage(QWidget):
             can_regenerate_selected=False,
             can_approve_selected=False,
         )
+
+    def resizeEvent(self, event) -> None:  # noqa: N802
+        """
+        @brief      Keep Audio Blocks main splitter panes from shrinking below one third of the content width.
+        @param[in]  event Qt resize event.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-01
+        @version    0.1.0
+        """
+        super().resizeEvent(event)
+        self._apply_main_splitter_minimums()
 
     def set_project_active(self, is_active: bool) -> None:
         """
@@ -429,6 +444,25 @@ class AudioBlocksPage(QWidget):
             and not bool(selected_block.get("approved", False))
         )
         self._speech_block_list.setEnabled(self._project_active and not self._busy)
+
+    def _apply_main_splitter_minimums(self) -> None:
+        """
+        @brief      Set each Audio Blocks main pane minimum width to one third of the main splitter width.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-01
+        @version    0.1.0
+        """
+        required_attributes = ("_main_splitter", "_source_group", "_right_splitter")
+        if not all(hasattr(self, attribute_name) for attribute_name in required_attributes):
+            return
+        splitter_width = self._main_splitter.width()
+        if splitter_width <= 0:
+            return
+        minimum_pane_width = splitter_width // 3
+        self._source_group.setMinimumWidth(minimum_pane_width)
+        self._right_splitter.setMinimumWidth(minimum_pane_width)
 
     def _selected_playback_label_key(self) -> str:
         """

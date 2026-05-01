@@ -13,7 +13,7 @@
          selected chunk preview editing and search behavior.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-24
-@version 0.3.1
+@version 0.3.2
 """
 
 # IMPORTS
@@ -95,6 +95,26 @@ def test_text_chunking_page_keeps_selectors_readable_while_busy(qtbot) -> None:
     assert page._ai_chunk_button.isEnabled() is False
     assert page._profile_combo.isEnabled() is True
     assert page._strategy_combo.isEnabled() is True
+
+
+def test_text_chunking_page_preview_splitter_keeps_one_third_minimum_width(qtbot) -> None:
+    """
+    @brief      Verify chunking preview panes keep one-third minimum splitter widths.
+    @param[in]  qtbot Qt test helper fixture.
+    @return     None.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-01
+    @version    0.1.0
+    """
+    page = TextChunkingPage()
+    qtbot.addWidget(page)
+    page._preview_splitter.resize(900, 400)
+    page._apply_preview_splitter_minimums()
+
+    assert page._preview_splitter.childrenCollapsible() is False
+    assert page._left_preview_container.minimumWidth() == 300
+    assert page._chunk_preview_group.minimumWidth() == 300
 
 
 def test_text_chunking_page_enables_ai_button_when_profiles_exist(qtbot) -> None:

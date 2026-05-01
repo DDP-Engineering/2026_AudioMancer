@@ -14,7 +14,7 @@
          sample preview controls for the Character Voices workflow.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-20
-@version 1.4.0
+@version 1.5.0
 """
 
 # IMPORTS
@@ -51,6 +51,7 @@ class CharacterVoicesPage(QWidget):
     edit_prompt_requested = Signal(str)
     save_prompt_requested = Signal(dict)
     generate_sample_requested = Signal(str)
+    generate_missing_samples_requested = Signal()
     preview_toggle_requested = Signal()
 
     def __init__(self, parent=None) -> None:
@@ -61,7 +62,7 @@ class CharacterVoicesPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-20
-        @version    1.0.1
+        @version    1.0.2
         """
         super().__init__(parent)
         self._project_active = False
@@ -77,6 +78,7 @@ class CharacterVoicesPage(QWidget):
         self._can_reset_prompt = False
         self._can_edit_prompt = False
         self._can_generate_sample = False
+        self._can_generate_missing_samples = False
         self._preview_available = False
         self._current_target_is_editable = False
         self._original_payload: dict[str, object] | None = None
@@ -87,6 +89,9 @@ class CharacterVoicesPage(QWidget):
         self._title_label = QLabel("<h2>Character Voices</h2>")
         title_row.addWidget(self._title_label)
         title_row.addStretch(1)
+        self._generate_missing_samples_button = QPushButton("Generate Character Samples", self)
+        self._generate_missing_samples_button.clicked.connect(self.generate_missing_samples_requested.emit)
+        title_row.addWidget(self._generate_missing_samples_button)
         header_layout.addLayout(title_row)
 
         indicator_row = QHBoxLayout()
@@ -115,6 +120,7 @@ class CharacterVoicesPage(QWidget):
         layout.addLayout(header_layout)
 
         self._main_splitter = QSplitter(self)
+        self._main_splitter.setChildrenCollapsible(False)
 
         self._targets_group = QGroupBox("Voice Targets", self)
         targets_layout = QVBoxLayout(self._targets_group)
@@ -123,7 +129,8 @@ class CharacterVoicesPage(QWidget):
         targets_layout.addWidget(self._target_list)
         self._main_splitter.addWidget(self._targets_group)
 
-        editor_container = QWidget(self)
+        self._editor_container = QWidget(self)
+        editor_container = self._editor_container
         editor_layout = QVBoxLayout(editor_container)
         editor_layout.setContentsMargins(0, 0, 0, 0)
         editor_layout.setSpacing(10)
@@ -169,6 +176,7 @@ class CharacterVoicesPage(QWidget):
         self._main_splitter.setStretchFactor(1, 40)
         self._main_splitter.setSizes([360, 860])
         layout.addWidget(self._main_splitter, 1)
+        self._apply_main_splitter_minimums()
 
         self._status_group = QGroupBox("Character Voices Status", self)
         status_layout = QVBoxLayout(self._status_group)
@@ -180,6 +188,19 @@ class CharacterVoicesPage(QWidget):
         layout.addWidget(self._status_group, 0)
 
         self.set_project_active(False)
+
+    def resizeEvent(self, event) -> None:  # noqa: N802
+        """
+        @brief      Keep Character Voices main splitter panes from shrinking below one third of the content width.
+        @param[in]  event Qt resize event.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-01
+        @version    0.1.0
+        """
+        super().resizeEvent(event)
+        self._apply_main_splitter_minimums()
 
     def set_project_active(self, is_active: bool) -> None:
         """
@@ -267,7 +288,7 @@ class CharacterVoicesPage(QWidget):
             @exception  None
             @author     Eng. Dan Dumitru Pasare
             @date       2026-04-20
-        @version    1.4.0
+        @version    1.5.1
         """
         _ = notes
         _ = missing_narrator_sample
@@ -278,6 +299,7 @@ class CharacterVoicesPage(QWidget):
         self._can_reset_prompt = can_reset_prompt
         self._can_edit_prompt = can_edit_prompt
         self._can_generate_sample = can_generate_sample
+        self._can_generate_missing_samples = _has_character_targets(self._targets)
         self._preview_available = preview_available
         self._edit_mode = False
         self._dirty = False
@@ -409,10 +431,13 @@ class CharacterVoicesPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-20
-        @version    1.0.0
+        @version    1.1.0
         """
         self._ui_language = language
         self._title_label.setText(f"<h2>{ui_state_service.translate('character_voices.title', language)}</h2>")
+        self._generate_missing_samples_button.setText(
+            ui_state_service.translate("character_voices.generate_missing_samples", language)
+        )
         self._targets_group.setTitle(ui_state_service.translate("character_voices.list_group", language))
         self._prompt_group.setTitle(ui_state_service.translate("character_voices.prompt_group", language))
         self._preview_group.setTitle(ui_state_service.translate("character_voices.preview_group", language))
@@ -434,7 +459,7 @@ class CharacterVoicesPage(QWidget):
         @return     None.
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-21
-        @version    0.2.0
+        @version    0.3.0
         """
         list_enabled = self._project_active and not self._busy and not self._preview_active and not self._edit_mode
         editor_enabled = (
@@ -469,12 +494,37 @@ class CharacterVoicesPage(QWidget):
             and not self._edit_mode
             and self._can_generate_sample
         )
+        self._generate_missing_samples_button.setEnabled(
+            self._project_active
+            and not self._busy
+            and not self._preview_active
+            and not self._edit_mode
+            and self._can_generate_missing_samples
+        )
         self._preview_toggle_button.setEnabled(
             self._project_active and self._preview_available and (not self._busy or self._preview_active)
         )
         self._preview_toggle_button.setText(ui_state_service.translate(self._preview_label_key(), self._ui_language))
         self._prompt_edit.setReadOnly(not editor_enabled)
         self._preview_text_edit.setReadOnly(not editor_enabled)
+
+    def _apply_main_splitter_minimums(self) -> None:
+        """
+        @brief      Set Character Voices main pane minimum widths from the main splitter width.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-01
+        @version    0.2.0
+        """
+        required_attributes = ("_main_splitter", "_targets_group", "_editor_container")
+        if not all(hasattr(self, attribute_name) for attribute_name in required_attributes):
+            return
+        splitter_width = self._main_splitter.width()
+        if splitter_width <= 0:
+            return
+        self._targets_group.setMinimumWidth(splitter_width // 4)
+        self._editor_container.setMinimumWidth(splitter_width // 3)
 
     def _preview_label_key(self) -> str:
         """
@@ -687,6 +737,19 @@ def _format_target_list_item(target_payload: dict[str, object]) -> str:
     if not sample_label:
         sample_label = "Sample present" if bool(target_payload.get("has_sample", False)) else "Sample missing"
     return f"{str(target_payload.get('display_name', '')).strip()} | {sample_label}"
+
+
+def _has_character_targets(targets: list[dict[str, object]]) -> bool:
+    """
+    @brief      Return whether a batch character-sample generation run has character targets available.
+    @param[in]  targets Current Character Voices target payload list.
+    @return     True when at least one current character target exists.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-01
+    @version    0.1.0
+    """
+    return any(str(target.get("target_kind", "")).strip() == "character" for target in targets)
 
 
 # END OF FILE

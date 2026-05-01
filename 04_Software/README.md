@@ -17,4 +17,7 @@ Implementation sources and runnable software artifacts.
   application Help action opens the offline user guide for the selected UI
   language, maintained under
   `../05_SoftwareDocu/UserGuide/` and `../05_SoftwareDocu/UserGuide_ro/`, and
-  bundled into release archives as `help/en/` plus `help/ro/`.
+  bundled into release archives as `help/en/` plus `help/ro/`. Current package
+  version `1.3.0` includes protected minimum splitter widths on the dense review
+  pages so text and review panes remain readable while resized, plus a
+  Character Voices batch action for regenerating all current character samples.

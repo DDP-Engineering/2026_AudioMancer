@@ -13,7 +13,7 @@
          bounded approval navigation, and selected-row action enablement.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-23
-@version 0.5.1
+@version 0.5.2
 """
 
 # IMPORTS
@@ -106,6 +106,26 @@ def test_audio_blocks_page_renders_source_list_markers_and_selected_details(qtbo
     assert page._approve_button.isEnabled() is True
     assert page._selected_playback_button.isEnabled() is True
     assert page._audiobook_playback_button.isEnabled() is True
+
+
+def test_audio_blocks_page_main_splitter_keeps_one_third_minimum_width(qtbot) -> None:
+    """
+    @brief      Verify Audio Blocks main panes keep one-third minimum splitter widths.
+    @param[in]  qtbot Qt test helper fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-01
+    @version    0.1.0
+    """
+    page = AudioBlocksPage()
+    qtbot.addWidget(page)
+    page._main_splitter.resize(900, 600)
+    page._apply_main_splitter_minimums()
+
+    assert page._main_splitter.childrenCollapsible() is False
+    assert page._source_group.minimumWidth() == 300
+    assert page._right_splitter.minimumWidth() == 300
 
 
 def test_audio_blocks_page_applies_translated_labels_and_tracks_selected_row_actions(qtbot) -> None:

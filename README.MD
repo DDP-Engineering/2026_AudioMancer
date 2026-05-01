@@ -35,6 +35,11 @@ chunking, locked-target AI translation, character
 discovery, narrator and character voice preparation, mode-aware Speech Blocks,
 Audio Blocks, WAV Audio Assembly deliverables, Home-page TXT/Markdown exports
 for completed text artifacts, and external full-project ZIP snapshots.
+Current package version is `1.3.0`; dense review pages now keep minimum
+splitter widths so important extracted text, chunk text, character evidence,
+voice editors, Speech Blocks, and Audio Blocks stay readable while panes are
+resized. Character Voices also supports a confirmed batch action that
+regenerates samples for all current character targets.
 
 Focused implementation documentation is maintained in `05_SoftwareDocu/`.
 The end-user help bundles are maintained in `05_SoftwareDocu/UserGuide/` and

@@ -14,7 +14,7 @@
          manually added speaking characters.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-08
-@version 0.5.0
+@version 0.5.1
 """
 
 # IMPORTS
@@ -74,7 +74,7 @@ class CharactersPage(QWidget):
             @exception  None
             @author     Eng. Dan Dumitru Pasare
             @date       2026-04-08
-        @version    0.5.0
+        @version    0.5.1
         """
         super().__init__(parent)
         self._project_active = False
@@ -123,6 +123,7 @@ class CharactersPage(QWidget):
         layout.addWidget(self._summary_label)
 
         self._main_splitter = QSplitter(self)
+        self._main_splitter.setChildrenCollapsible(False)
         self._left_splitter = QSplitter(self)
         self._left_splitter.setOrientation(Qt.Orientation.Vertical)
 
@@ -325,6 +326,7 @@ class CharactersPage(QWidget):
         self._main_splitter.setStretchFactor(1, 3)
         self._main_splitter.setSizes([900, 300])
         layout.addWidget(self._main_splitter, 1)
+        self._apply_main_splitter_minimums()
 
         self.set_project_active(False)
         self.set_ai_profiles([], None)
@@ -344,6 +346,19 @@ class CharactersPage(QWidget):
             edit_mode=False,
             dirty=False,
         )
+
+    def resizeEvent(self, event) -> None:  # noqa: N802
+        """
+        @brief      Keep Characters page main splitter panes from shrinking below one third of the content width.
+        @param[in]  event Qt resize event.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-01
+        @version    0.1.0
+        """
+        super().resizeEvent(event)
+        self._apply_main_splitter_minimums()
 
     def set_project_active(self, is_active: bool) -> None:
         """
@@ -901,6 +916,25 @@ class CharactersPage(QWidget):
             widget.setEnabled(editor_enabled)
             if hasattr(widget, "setReadOnly"):
                 widget.setReadOnly(not editor_enabled)
+
+    def _apply_main_splitter_minimums(self) -> None:
+        """
+        @brief      Set each Characters page main pane minimum width to one third of the main splitter width.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-01
+        @version    0.1.0
+        """
+        required_attributes = ("_main_splitter", "_left_splitter", "_evidence_group")
+        if not all(hasattr(self, attribute_name) for attribute_name in required_attributes):
+            return
+        splitter_width = self._main_splitter.width()
+        if splitter_width <= 0:
+            return
+        minimum_pane_width = splitter_width // 3
+        self._left_splitter.setMinimumWidth(minimum_pane_width)
+        self._evidence_group.setMinimumWidth(minimum_pane_width)
 
     def _refresh_voice_definition_status_label(self, profile: dict[str, object] | None = None) -> None:
         """
