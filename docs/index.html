@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AudioMancer</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #202124;
+      --muted: #5f6368;
+      --line: #d8dee4;
+      --accent: #146c94;
+      --accent-dark: #0f4f6c;
+      --surface: #ffffff;
+      --page: #f6f8fa;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      line-height: 1.5;
+      color: var(--ink);
+      background: var(--page);
+    }
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--line);
+    }
+    .wrap {
+      width: min(920px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 40px 0;
+    }
+    h1 {
+      margin: 0 0 12px;
+      font-size: 44px;
+      line-height: 1.1;
+      letter-spacing: 0;
+    }
+    h2 {
+      margin: 0 0 12px;
+      font-size: 24px;
+      letter-spacing: 0;
+    }
+    p { margin: 0 0 16px; }
+    .lead {
+      max-width: 680px;
+      color: var(--muted);
+      font-size: 18px;
+    }
+    .download {
+      display: inline-block;
+      margin-top: 12px;
+      padding: 12px 18px;
+      border-radius: 6px;
+      background: var(--accent);
+      color: #ffffff;
+      text-decoration: none;
+      font-weight: 700;
+    }
+    .download:hover { background: var(--accent-dark); }
+    main .wrap {
+      display: grid;
+      gap: 24px;
+    }
+    section {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 24px;
+    }
+    ol, ul { margin: 0; padding-left: 22px; }
+    li + li { margin-top: 8px; }
+    code {
+      font-family: Consolas, Monaco, monospace;
+      background: #eef1f4;
+      padding: 2px 5px;
+      border-radius: 4px;
+    }
+    footer {
+      color: var(--muted);
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="wrap">
+      <h1>AudioMancer</h1>
+      <p class="lead">Desktop audiobook production application, distributed as a portable Windows x64 executable package.</p>
+      <a class="download" href="https://github.com/DDP-Engineering/2026_AudioMancer/releases/latest/download/AudioMancer_Windows_x64.zip">Download Windows x64 ZIP</a>
+    </div>
+  </header>
+  <main>
+    <div class="wrap">
+      <section>
+        <h2>Install</h2>
+        <ol>
+          <li>Download <code>AudioMancer_Windows_x64.zip</code>.</li>
+          <li>Extract the full ZIP folder before starting the app.</li>
+          <li>Run <code>AudioMancer.exe</code> or <code>Start-AudioMancer.cmd</code>.</li>
+        </ol>
+      </section>
+      <section>
+        <h2>Package Contents</h2>
+        <ul>
+          <li>Portable AudioMancer executable and bundled runtime files.</li>
+          <li>Offline English and Romanian help.</li>
+          <li>Prompt templates, settings, and license files required by the app.</li>
+        </ul>
+      </section>
+      <section>
+        <h2>Release Notes</h2>
+        <p>Release downloads are hosted on the GitHub Releases page. The executable delivery archive is published separately from the application source code.</p>
+      </section>
+      <footer>
+        <p>Copyright &copy; 2026 DDP Engineering. See the license files included in each release archive.</p>
+      </footer>
+    </div>
+  </main>
+</body>
+</html>
