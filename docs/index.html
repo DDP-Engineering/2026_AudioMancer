@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>AudioMancer</title>
+  <title>AudioMancer Windows Download</title>
   <style>
     :root {
       color-scheme: light;
@@ -28,7 +28,7 @@
       border-bottom: 1px solid var(--line);
     }
     .wrap {
-      width: min(920px, calc(100% - 32px));
+      width: min(980px, calc(100% - 32px));
       margin: 0 auto;
       padding: 40px 0;
     }
@@ -45,13 +45,18 @@
     }
     p { margin: 0 0 16px; }
     .lead {
-      max-width: 680px;
+      max-width: 760px;
       color: var(--muted);
       font-size: 18px;
     }
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 12px;
+    }
     .download {
       display: inline-block;
-      margin-top: 12px;
       padding: 12px 18px;
       border-radius: 6px;
       background: var(--accent);
@@ -60,6 +65,15 @@
       font-weight: 700;
     }
     .download:hover { background: var(--accent-dark); }
+    .secondary {
+      background: #ffffff;
+      color: var(--accent);
+      border: 1px solid var(--accent);
+    }
+    .secondary:hover {
+      background: #eef7fb;
+      color: var(--accent-dark);
+    }
     main .wrap {
       display: grid;
       gap: 24px;
@@ -72,15 +86,33 @@
     }
     ol, ul { margin: 0; padding-left: 22px; }
     li + li { margin-top: 8px; }
-    code {
+    code, pre {
       font-family: Consolas, Monaco, monospace;
       background: #eef1f4;
-      padding: 2px 5px;
       border-radius: 4px;
+    }
+    code { padding: 2px 5px; }
+    pre {
+      overflow-x: auto;
+      padding: 14px;
+      margin: 12px 0 0;
+      font-size: 13px;
+    }
+    .asset-list {
+      columns: 2;
+      padding-left: 22px;
+    }
+    .hash {
+      word-break: break-all;
+      color: var(--muted);
     }
     footer {
       color: var(--muted);
       font-size: 14px;
+    }
+    @media (max-width: 720px) {
+      h1 { font-size: 34px; }
+      .asset-list { columns: 1; }
     }
   </style>
 </head>
@@ -88,31 +120,65 @@
   <header>
     <div class="wrap">
       <h1>AudioMancer</h1>
-      <p class="lead">Desktop audiobook production application, distributed as a portable Windows x64 executable package.</p>
-      <a class="download" href="https://github.com/DDP-Engineering/2026_AudioMancer/releases/latest/download/AudioMancer_Windows_x64.zip">Download Windows x64 ZIP</a>
+      <p class="lead">Windows-only executable delivery for AudioMancer plus its required VoiceWeaver companion runtime.</p>
+      <div class="actions">
+        <a class="download" href="https://github.com/DDP-Engineering/2026_AudioMancer/releases/latest/download/AudioMancer_Windows_x64.zip">Download AudioMancer ZIP</a>
+        <a class="download secondary" href="https://github.com/DDP-Engineering/2026_AudioMancer/releases/tag/v1.4.0">Open Full Release</a>
+        <a class="download secondary" href="https://github.com/DDP-Engineering/2026_AudioMancer/releases/latest/download/SHA256SUMS.txt">Download Hashes</a>
+      </div>
     </div>
   </header>
   <main>
     <div class="wrap">
       <section>
+        <h2>Required Downloads</h2>
+        <p>Download AudioMancer and every VoiceWeaver part from the release page. VoiceWeaver is split because the complete Windows runtime package is larger than a single GitHub release asset.</p>
+        <ul class="asset-list">
+          <li><code>AudioMancer_Windows_x64.zip</code></li>
+          <li><code>SHA256SUMS.txt</code></li>
+          <li><code>VoiceWeaver...part001</code></li>
+          <li><code>VoiceWeaver...part002</code></li>
+          <li><code>VoiceWeaver...part003</code></li>
+          <li><code>VoiceWeaver...part004</code></li>
+          <li><code>VoiceWeaver...part005</code></li>
+          <li><code>VoiceWeaver...part006</code></li>
+          <li><code>VoiceWeaver...part007</code></li>
+          <li><code>VoiceWeaver...part008</code></li>
+          <li><code>VoiceWeaver...part009</code></li>
+          <li><code>VoiceWeaver...part010</code></li>
+        </ul>
+      </section>
+      <section>
         <h2>Install</h2>
         <ol>
           <li>Download <code>AudioMancer_Windows_x64.zip</code>.</li>
-          <li>Extract the full ZIP folder before starting the app.</li>
+          <li>Download all 10 VoiceWeaver <code>.partNNN</code> files into the same folder.</li>
+          <li>Reassemble the VoiceWeaver ZIP using PowerShell.</li>
+          <li>Verify the SHA256 hashes.</li>
+          <li>Extract both ZIP archives before starting the applications.</li>
           <li>Run <code>AudioMancer.exe</code> or <code>Start-AudioMancer.cmd</code>.</li>
         </ol>
       </section>
       <section>
-        <h2>Package Contents</h2>
-        <ul>
-          <li>Portable AudioMancer executable and bundled runtime files.</li>
-          <li>Offline English and Romanian help.</li>
-          <li>Prompt templates, settings, and license files required by the app.</li>
-        </ul>
+        <h2>Reassemble VoiceWeaver</h2>
+        <p>Run this from the folder containing all 10 VoiceWeaver parts:</p>
+        <pre>$parts = Get-ChildItem "VoiceWeaver-v1.2.2-windows-x64-cuda-models-3.zip.part*" | Sort-Object Name
+$out = [IO.File]::Create("VoiceWeaver-v1.2.2-windows-x64-cuda-models-3.zip")
+foreach ($part in $parts) {
+    $in = [IO.File]::OpenRead($part.FullName)
+    $in.CopyTo($out)
+    $in.Dispose()
+}
+$out.Dispose()
+Get-FileHash -Algorithm SHA256 .\VoiceWeaver-v1.2.2-windows-x64-cuda-models-3.zip</pre>
       </section>
       <section>
-        <h2>Release Notes</h2>
-        <p>Release downloads are hosted on the GitHub Releases page. The executable delivery archive is published separately from the application source code.</p>
+        <h2>Hashes</h2>
+        <p>AudioMancer ZIP SHA256:</p>
+        <p class="hash"><code>337b5fac0a26f502cf9bacc15cc51cbf874cd3d0ec17fbfd5e781e61ac9335e6</code></p>
+        <p>VoiceWeaver reassembled ZIP SHA256:</p>
+        <p class="hash"><code>e957082578d5f844b98b1234fb9e1f69d48fec11f80d1acdd6b65432dd2d90b9</code></p>
+        <p>Per-part hashes are listed in <a href="https://github.com/DDP-Engineering/2026_AudioMancer/releases/latest/download/SHA256SUMS.txt">SHA256SUMS.txt</a>.</p>
       </section>
       <footer>
         <p>Copyright &copy; 2026 DDP Engineering. See the license files included in each release archive.</p>
