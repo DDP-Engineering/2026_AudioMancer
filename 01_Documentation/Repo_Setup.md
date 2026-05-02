@@ -38,6 +38,8 @@ Before syncing the project environment, make sure these are available:
 - `Python 3.12`
 - `git`
 - internet access for the first dependency installation
+- `GitHub CLI` (`gh`) when creating GitHub releases, uploading delivery
+  archives, or managing repository publishing from the command line
 
 ## 1. Clone The Repository
 
@@ -148,7 +150,52 @@ Restart the shell after installation, or load the shell profile if needed.
 If `uv` is installed with `pip --user`, make sure the user scripts directory is
 available on `PATH` before continuing.
 
-## 3. Go To The Application Folder
+## 3. Install GitHub CLI For Publishing
+
+GitHub CLI is only required for repository publishing and release management.
+Normal local development, testing, and packaging do not require it.
+
+Use `gh` when you need to:
+
+- authenticate this machine with GitHub
+- create or manage GitHub releases
+- upload large executable delivery archives as release assets
+- manage repository settings and automation from the command line
+
+Do not commit executable delivery archives directly into the Git repository.
+GitHub release assets are the preferred location for packaged binaries such as
+`07_Delivery/AudioMancer_Windows_x64.zip`.
+
+### Windows PowerShell
+
+```powershell
+winget install --id GitHub.cli
+gh auth login
+gh auth status
+```
+
+### Windows CMD
+
+```cmd
+winget install --id GitHub.cli
+gh auth login
+gh auth status
+```
+
+### Linux Bash
+
+Install through the approved package source for the target distribution, then
+authenticate:
+
+```bash
+gh auth login
+gh auth status
+```
+
+For restricted or corporate environments, use the package source already
+approved for the organization.
+
+## 4. Go To The Application Folder
 
 ### Windows PowerShell
 
@@ -168,7 +215,7 @@ cd 04_Software\AudioMancer
 cd 04_Software/AudioMancer
 ```
 
-## 4. Create And Sync The Environment
+## 5. Create And Sync The Environment
 
 The current project setup uses the application `pyproject.toml` and installs the
 runtime and development tools together through the `dev` extra.
@@ -201,7 +248,7 @@ This installs the currently declared dependencies, including:
 - `PyInstaller`
 - `ruff`
 
-## 5. Run The Application
+## 6. Run The Application
 
 ### Windows PowerShell
 
@@ -241,7 +288,7 @@ uv run python -m audiomancer
 uv run python -m audiomancer
 ```
 
-## 6. Run Tests
+## 7. Run Tests
 
 ### Windows PowerShell
 
@@ -261,7 +308,7 @@ uv run pytest
 uv run pytest
 ```
 
-## 7. Useful Validation Commands
+## 8. Useful Validation Commands
 
 ### Windows PowerShell
 
@@ -295,5 +342,7 @@ uv run ruff format src/audiomancer/app.py tests/test_app_entrypoint.py
 - Windows packaging scripts and spec files live directly under `02_Tools/`.
 - `07_Delivery/` is used for packaged release artifacts.
 - Windows release packaging is implemented with `PyInstaller`.
+- GitHub CLI is used for publishing workflows such as release creation and
+  uploading packaged executable archives to GitHub releases.
 - Linux packaging has a reserved helper script under `02_Tools/`, but it is not
   fully implemented yet.
