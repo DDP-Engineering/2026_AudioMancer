@@ -27,6 +27,14 @@ from audiomancer.services import ai_translation_service, project_workspace_servi
 
 
 def test_ai_translation_service_creates_translation_artifacts(monkeypatch, tmp_path) -> None:
+    """
+    @brief      Validate ai translation service creates translation artifacts.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-02
+    @version    0.1.0
+    """
     project_root, manifest = _create_chunked_project(tmp_path, "TranslationArtifactsProject")
     monkeypatch.setattr(
         ai_translation_service.prompt_template_service,
@@ -74,6 +82,14 @@ def test_ai_translation_service_creates_translation_artifacts(monkeypatch, tmp_p
 
 
 def test_ai_translation_service_approve_and_edit_update_review_state(tmp_path) -> None:
+    """
+    @brief      Validate ai translation service approve and edit update review state.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-02
+    @version    0.1.0
+    """
     project_root, _manifest = _create_chunked_project(tmp_path, "TranslationReviewProject")
     source_chunks, translated_chunks, _report = ai_translation_service.ensure_translation_records(
         project_root,
@@ -121,6 +137,14 @@ def test_ai_translation_service_approve_and_edit_update_review_state(tmp_path) -
 
 
 def test_ai_translation_service_resume_preserves_completed_chunks(monkeypatch, tmp_path) -> None:
+    """
+    @brief      Validate ai translation service resume preserves completed chunks.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-02
+    @version    0.1.0
+    """
     project_root, manifest = _create_chunked_project(tmp_path, "TranslationResumeProject")
     source_chunks, translated_chunks, _report = ai_translation_service.ensure_translation_records(
         project_root,
@@ -293,6 +317,14 @@ def test_ai_translation_rejects_profiles_with_no_input_budget(monkeypatch) -> No
 
 
 def _create_chunked_project(tmp_path, name: str):
+    """
+    @brief      Provide the create chunked project test helper.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-02
+    @version    0.1.0
+    """
     project_root, manifest = project_workspace_service.create_project(name, tmp_path)
     manifest["source_document"] = {
         "original_name": "story.txt",
@@ -341,6 +373,14 @@ def _create_chunked_project(tmp_path, name: str):
 
 
 def _profile_payload() -> dict[str, object]:
+    """
+    @brief      Provide the profile payload test helper.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-02
+    @version    0.1.0
+    """
     return {
         "id": "profile-1",
         "label": "Translation Profile",

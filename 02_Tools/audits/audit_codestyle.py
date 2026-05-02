@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -24,7 +25,14 @@ import ast
 from pathlib import Path
 import sys
 
-from audit_common import AuditIssue, main_guard, parse_changed_only, print_report, python_files, repository_root
+from audit_common import (
+    AuditIssue,
+    main_guard,
+    parse_changed_only,
+    print_report,
+    python_files,
+    repository_root,
+)
 
 # CONSTANTS
 
@@ -57,12 +65,22 @@ def audit_file(path: Path, root: Path) -> list[AuditIssue]:
     lines = text.splitlines()
     issues: list[AuditIssue] = []
     if not lines or lines[0] != EXPECTED_SHEBANG:
-        issues.append(AuditIssue(path, 1, "PY-PROLOGUE", "Missing required Python shebang."))
+        issues.append(
+            AuditIssue(path, 1, "PY-PROLOGUE", "Missing required Python shebang.")
+        )
     if len(lines) < 2 or not lines[1].startswith(EXPECTED_ENCODING_PREFIX):
-        issues.append(AuditIssue(path, 2, "PY-PROLOGUE", "Missing required UTF-8 encoding declaration."))
+        issues.append(
+            AuditIssue(
+                path, 2, "PY-PROLOGUE", "Missing required UTF-8 encoding declaration."
+            )
+        )
     for marker in REQUIRED_SECTION_MARKERS:
         if marker not in text:
-            issues.append(AuditIssue(path, None, "PY-SECTION", f"Missing section marker `{marker}`."))
+            issues.append(
+                AuditIssue(
+                    path, None, "PY-SECTION", f"Missing section marker `{marker}`."
+                )
+            )
     try:
         tree = ast.parse(text)
     except SyntaxError as exc:
@@ -70,7 +88,11 @@ def audit_file(path: Path, root: Path) -> list[AuditIssue]:
     module_doc = ast.get_docstring(tree, clean=False) or ""
     for tag in REQUIRED_MODULE_TAGS:
         if tag not in module_doc:
-            issues.append(AuditIssue(path, None, "PY-MODULE-DOC", f"Missing module doc tag `{tag}`."))
+            issues.append(
+                AuditIssue(
+                    path, None, "PY-MODULE-DOC", f"Missing module doc tag `{tag}`."
+                )
+            )
     issues.extend(_audit_callable_docs(path, tree))
     return issues
 
@@ -117,15 +139,31 @@ def _audit_callable_docs(path: Path, tree: ast.AST) -> list[AuditIssue]:
             continue
         doc = ast.get_docstring(node, clean=False)
         if doc is None:
-            issues.append(AuditIssue(path, node.lineno, "PY-CALLABLE-DOC", f"`{node.name}` is missing a docstring."))
+            issues.append(
+                AuditIssue(
+                    path,
+                    node.lineno,
+                    "PY-CALLABLE-DOC",
+                    f"`{node.name}` is missing a docstring.",
+                )
+            )
             continue
         for tag in REQUIRED_CALLABLE_TAGS:
             if tag not in doc:
-                issues.append(AuditIssue(path, node.lineno, "PY-CALLABLE-DOC", f"`{node.name}` is missing `{tag}`."))
+                issues.append(
+                    AuditIssue(
+                        path,
+                        node.lineno,
+                        "PY-CALLABLE-DOC",
+                        f"`{node.name}` is missing `{tag}`.",
+                    )
+                )
     return issues
 
 
-def _is_trivial_private_helper(node: ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef) -> bool:
+def _is_trivial_private_helper(
+    node: ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef,
+) -> bool:
     """
     @brief      Determine whether a private helper is simple enough to omit docs.
     @param[in]  node Parsed callable or class node.

@@ -142,6 +142,14 @@ def test_main_window_refreshes_only_current_workflow_page(
     calls = {"audio_blocks": 0, "audio_assembly": 0}
 
     def _audio_blocks_state(*_args, **_kwargs):
+        """
+        @brief      Provide the audio blocks state test helper.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-02
+        @version    0.1.0
+        """
         calls["audio_blocks"] += 1
         return {
             "full_source_text": "",
@@ -165,6 +173,14 @@ def test_main_window_refreshes_only_current_workflow_page(
         }
 
     def _audio_assembly_state(*_args, **_kwargs):
+        """
+        @brief      Provide the audio assembly state test helper.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-02
+        @version    0.1.0
+        """
         calls["audio_assembly"] += 1
         return {
             "settings": {},

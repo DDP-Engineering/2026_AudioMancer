@@ -16,7 +16,7 @@
          `80_audio_blocks` workflow artifacts.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-23
-@version 0.10.0
+@version 0.10.1
 """
 
 # IMPORTS
@@ -1524,7 +1524,7 @@ def _generate_audio_block(
     @exception  OperationCancelledError Raised when cancellation is requested.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-24
-    @version    0.4.2
+    @version    0.4.3
     """
     base_url = str(runtime_settings.get("base_url", "")).strip()
     runtime_api_key = str(runtime_settings.get("runtime_api_key", ""))
@@ -1544,9 +1544,23 @@ def _generate_audio_block(
     if force_restart:
         _delete_audio_block_artifacts(project_root, audio_block)
     runtime_result_summary = ""
+    _AUDIO_BLOCKS_LOGGER.info(
+        "Generating audio block chunk_id=%s sequence_index=%s parts=%s force_restart=%s",
+        str(audio_block.get("chunk_id", "")).strip(),
+        int(audio_block.get("sequence_index", 0)),
+        len(split_plan["parts"]),
+        force_restart,
+    )
     for part_index in range(len(part_paths), len(split_plan["parts"])):
         part_text = str(split_plan["parts"][part_index])
         raise_if_cancelled(cancel_requested)
+        _AUDIO_BLOCKS_LOGGER.debug(
+            "Generating audio block part chunk_id=%s sequence_index=%s part=%s/%s",
+            str(audio_block.get("chunk_id", "")).strip(),
+            int(audio_block.get("sequence_index", 0)),
+            part_index + 1,
+            len(split_plan["parts"]),
+        )
         voiceweaver_runtime_service.generate_voice_clone_from_prompt(
             base_url,
             runtime_api_key,
@@ -1624,6 +1638,13 @@ def _generate_audio_block(
         "split_plan_fingerprint": _split_plan_fingerprint(split_plan),
     }
     write_json_atomic(metadata_path, metadata_payload)
+    _AUDIO_BLOCKS_LOGGER.info(
+        "Generated audio block chunk_id=%s sequence_index=%s audio_path=%s metadata_path=%s",
+        str(audio_block.get("chunk_id", "")).strip(),
+        int(audio_block.get("sequence_index", 0)),
+        relative_to_project(project_root, audio_path),
+        relative_to_project(project_root, metadata_path),
+    )
     return {
         **dict(audio_block),
         "audio_relative_path": relative_to_project(project_root, audio_path),

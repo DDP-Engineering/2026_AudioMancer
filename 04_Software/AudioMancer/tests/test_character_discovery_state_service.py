@@ -26,6 +26,14 @@ from audiomancer.services import character_discovery_state_service, project_work
 
 
 def test_profile_state_prefers_default_character_profile() -> None:
+    """
+    @brief      Validate profile state prefers default character profile.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-02
+    @version    0.1.0
+    """
     profile_state = character_discovery_state_service.build_character_discovery_profile_state(
         {
             "llm_profiles": [
@@ -44,6 +52,14 @@ def test_profile_state_prefers_default_character_profile() -> None:
 
 
 def test_build_character_state_exposes_manual_maintenance_flags(tmp_path) -> None:
+    """
+    @brief      Validate build character state exposes manual maintenance flags.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-02
+    @version    0.1.0
+    """
     project_root, manifest = _create_project(tmp_path, "CharacterDiscoveryState")
 
     state = character_discovery_state_service.build_character_discovery_state(
@@ -70,6 +86,14 @@ def test_build_character_state_exposes_manual_maintenance_flags(tmp_path) -> Non
 
 
 def test_build_character_state_requires_ai_profile_to_start(tmp_path) -> None:
+    """
+    @brief      Validate build character state requires ai profile to start.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-02
+    @version    0.1.0
+    """
     project_root, manifest = project_workspace_service.create_project(
         "CharacterDiscoveryNoProfile",
         tmp_path,
@@ -121,6 +145,14 @@ def test_build_character_state_requires_ai_profile_to_start(tmp_path) -> None:
 
 
 def _create_project(tmp_path, name: str):
+    """
+    @brief      Provide the create project test helper.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-02
+    @version    0.1.0
+    """
     project_root, manifest = project_workspace_service.create_project(name, tmp_path)
     manifest["source_document"] = {
         "original_name": "story.txt",

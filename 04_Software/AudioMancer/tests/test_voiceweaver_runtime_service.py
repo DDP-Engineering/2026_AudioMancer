@@ -36,6 +36,14 @@ def test_probe_runtime_normalizes_models_and_capabilities(monkeypatch) -> None:
     """
 
     def _fake_read_json(url, headers, timeout_seconds):
+        """
+        @brief      Provide the fake read json test helper.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-02
+        @version    0.1.0
+        """
         assert timeout_seconds == config.DEFAULT_TTS_CONNECT_TIMEOUT_SECONDS
         if url == "http://127.0.0.1:8059/v1/health":
             return {"service": "VoiceWeaver", "status": "ok"}
@@ -102,6 +110,14 @@ def test_probe_runtime_maps_auth_failures(monkeypatch) -> None:
     """
 
     def _fake_read_json(*_args, **_kwargs):
+        """
+        @brief      Provide the fake read json test helper.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-02
+        @version    0.1.0
+        """
         raise error.HTTPError(url="", code=401, msg="Unauthorized", hdrs=None, fp=None)
 
     monkeypatch.setattr(voiceweaver_runtime_service, "_read_json", _fake_read_json)
@@ -124,6 +140,14 @@ def test_probe_runtime_rejects_invalid_models_payload(monkeypatch) -> None:
     """
 
     def _fake_read_json(url, headers, timeout_seconds):
+        """
+        @brief      Provide the fake read json test helper.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-02
+        @version    0.1.0
+        """
         _ = headers
         _ = timeout_seconds
         if url.endswith("/v1/health"):
@@ -190,6 +214,14 @@ def test_voiceweaver_runtime_service_generation_payloads_use_current_contract(mo
     observed_calls: list[tuple[str, str, dict[str, object] | None, int]] = []
 
     def _fake_post_json_endpoint(base_url, runtime_api_key, endpoint, payload, timeout_seconds):
+        """
+        @brief      Provide the fake post json endpoint test helper.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-02
+        @version    0.1.0
+        """
         observed_calls.append((str(base_url), str(endpoint), payload, int(timeout_seconds)))
         _ = runtime_api_key
         return {"status": "completed"}
@@ -266,6 +298,14 @@ def test_voiceweaver_runtime_service_clone_prompt_wrappers_use_documented_contra
         file_bytes,
         file_content_type="audio/wav",
     ):
+        """
+        @brief      Provide the fake send multipart request test helper.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-02
+        @version    0.1.0
+        """
         observed_multipart_calls.append(
             (
                 str(method),
@@ -282,6 +322,14 @@ def test_voiceweaver_runtime_service_clone_prompt_wrappers_use_documented_contra
         return {"status": "running"}
 
     def _fake_post_json_endpoint(base_url, runtime_api_key, endpoint, payload, timeout_seconds):
+        """
+        @brief      Provide the fake post json endpoint test helper.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-02
+        @version    0.1.0
+        """
         _ = runtime_api_key
         observed_json_calls.append((str(base_url), str(endpoint), dict(payload or {}), int(timeout_seconds)))
         return {"status": "running"}
@@ -360,6 +408,14 @@ def test_voiceweaver_runtime_service_direct_clone_omits_romanian_language(monkey
         file_bytes,
         file_content_type="audio/wav",
     ):
+        """
+        @brief      Provide the fake send multipart request test helper.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-02
+        @version    0.1.0
+        """
         _ = method
         _ = url
         _ = headers
@@ -401,10 +457,26 @@ def test_voiceweaver_runtime_service_endpoint_wrappers_cover_extended_rest_surfa
     observed_no_content_requests: list[tuple[str, str, str, int]] = []
 
     def _fake_request_json_endpoint(base_url, runtime_api_key, endpoint, timeout_seconds):
+        """
+        @brief      Provide the fake request json endpoint test helper.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-02
+        @version    0.1.0
+        """
         observed_json_requests.append((str(base_url), str(runtime_api_key), str(endpoint), int(timeout_seconds)))
         return {"endpoint": endpoint}
 
     def _fake_post_json_endpoint(base_url, runtime_api_key, endpoint, payload, timeout_seconds):
+        """
+        @brief      Provide the fake post json endpoint test helper.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-02
+        @version    0.1.0
+        """
         observed_json_requests.append((str(base_url), str(runtime_api_key), str(endpoint), int(timeout_seconds)))
         _ = payload
         if endpoint == "/v1/models/unload":
@@ -412,6 +484,14 @@ def test_voiceweaver_runtime_service_endpoint_wrappers_cover_extended_rest_surfa
         return {"endpoint": endpoint}
 
     def _fake_request_without_json_response(base_url, runtime_api_key, endpoint, method, timeout_seconds):
+        """
+        @brief      Provide the fake request without json response test helper.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-02
+        @version    0.1.0
+        """
         observed_no_content_requests.append(
             (str(base_url), str(runtime_api_key), f"{method} {endpoint}", int(timeout_seconds))
         )
@@ -481,6 +561,14 @@ def test_wait_for_terminal_operation_stops_before_status_read_when_cancelled(mon
     status_reads = {"count": 0}
 
     def _fake_read_status(*_args, **_kwargs):
+        """
+        @brief      Provide the fake read status test helper.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-02
+        @version    0.1.0
+        """
         status_reads["count"] = int(status_reads["count"]) + 1
         return {"operation": {"status": "running"}}
 

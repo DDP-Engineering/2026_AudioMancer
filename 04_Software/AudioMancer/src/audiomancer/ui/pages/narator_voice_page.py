@@ -14,7 +14,7 @@
          preview controls for the fixed Qwen3-backed narrator workflow.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-17
-@version 3.7.2
+@version 3.7.3
 """
 
 # IMPORTS
@@ -69,7 +69,7 @@ class NaratorVoicePage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-17
-        @version    1.5.1
+        @version    1.5.2
         """
         super().__init__(parent)
         self._project_active = False
@@ -154,25 +154,21 @@ class NaratorVoicePage(QWidget):
         editor_layout.addWidget(self._setup_group, 0)
 
         self._designer_group = QGroupBox("Voice Designer Prompt", self)
-        self._designer_group.setMaximumHeight(132)
         designer_layout = QVBoxLayout(self._designer_group)
         self._designer_prompt = QPlainTextEdit(self)
         self._designer_prompt.setMinimumHeight(52)
-        self._designer_prompt.setMaximumHeight(72)
         self._designer_prompt.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOn)
         self._designer_prompt.textChanged.connect(self._handle_editor_changed)
-        designer_layout.addWidget(self._designer_prompt)
-        editor_layout.addWidget(self._designer_group, 0)
+        designer_layout.addWidget(self._designer_prompt, 1)
+        editor_layout.addWidget(self._designer_group, 1)
 
         self._preview_group = QGroupBox("Preview Text", self)
-        self._preview_group.setMaximumHeight(184)
         preview_layout = QVBoxLayout(self._preview_group)
         self._preview_text_edit = QPlainTextEdit(self)
         self._preview_text_edit.setMinimumHeight(88)
-        self._preview_text_edit.setMaximumHeight(116)
         self._preview_text_edit.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOn)
         self._preview_text_edit.textChanged.connect(self._handle_preview_text_changed)
-        preview_layout.addWidget(self._preview_text_edit)
+        preview_layout.addWidget(self._preview_text_edit, 1)
         self._preview_budget_label = QLabel("Preview budget: 0/0 safe words", self)
         preview_layout.addWidget(self._preview_budget_label)
         actions_row = QHBoxLayout()
@@ -196,8 +192,7 @@ class NaratorVoicePage(QWidget):
         actions_row.addWidget(self._preview_toggle_button)
         actions_row.addStretch(1)
         preview_layout.addLayout(actions_row)
-        editor_layout.addWidget(self._preview_group, 0)
-        editor_layout.addStretch(1)
+        editor_layout.addWidget(self._preview_group, 2)
 
         self._main_splitter.addWidget(editor_container)
         self._main_splitter.setStretchFactor(0, 18)

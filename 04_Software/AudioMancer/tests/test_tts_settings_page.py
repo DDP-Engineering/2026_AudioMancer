@@ -159,6 +159,14 @@ def test_tts_settings_page_keeps_runtime_limits_available_without_project(qtbot)
 
 
 def _minimum_qwen_models() -> list[dict[str, object]]:
+    """
+    @brief      Provide the minimum qwen models test helper.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-02
+    @version    0.1.0
+    """
     return [
         {
             "model_id": "qwen-base",

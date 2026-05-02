@@ -246,6 +246,14 @@ def test_start_generation_splits_oversized_chunk_by_ai_context_budget(monkeypatc
     monkeypatch.setattr(speech_blocks_service.prompt_template_service, "validate_required_prompts", lambda _names: None)
 
     def _fake_render_prompt(_name, variables):
+        """
+        @brief      Provide the fake render prompt test helper.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-02
+        @version    0.1.0
+        """
         if "chunk_text" not in variables:
             return "system prompt"
         return f"Chunk id: {variables['chunk_id']}\nChunk text:\n{variables['chunk_text']}"
@@ -254,6 +262,14 @@ def test_start_generation_splits_oversized_chunk_by_ai_context_budget(monkeypatc
     requested_segments: list[str] = []
 
     def _fake_chat_json(_profile, _system_prompt, user_prompt, **_kwargs):
+        """
+        @brief      Provide the fake chat json test helper.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-02
+        @version    0.1.0
+        """
         segment_text = str(user_prompt).split("Chunk text:\n", maxsplit=1)[1]
         requested_segments.append(segment_text)
         return {
@@ -1179,6 +1195,14 @@ def test_start_or_continue_generation_resumes_with_current_selected_profile(monk
     calls: list[dict[str, object]] = []
 
     def _fake_chat_json(profile, *_args, **_kwargs):
+        """
+        @brief      Provide the fake chat json test helper.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-02
+        @version    0.1.0
+        """
         calls.append(dict(profile))
         return {
             "payload": {
@@ -1356,6 +1380,14 @@ def test_start_generation_uses_narrator_only_prompt_for_same_narrator(monkeypatc
     )
 
     def _render_prompt(name, variables):
+        """
+        @brief      Provide the render prompt test helper.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-02
+        @version    0.1.0
+        """
         rendered_prompts.append((name, dict(variables)))
         return f"prompt {name}"
 

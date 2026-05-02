@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -23,7 +24,14 @@ from __future__ import annotations
 from pathlib import Path
 import sys
 
-from audit_common import AuditIssue, changed_files, main_guard, parse_changed_only, print_report, repository_root
+from audit_common import (
+    AuditIssue,
+    changed_files,
+    main_guard,
+    parse_changed_only,
+    print_report,
+    repository_root,
+)
 
 # CONSTANTS
 
@@ -79,11 +87,15 @@ def _implementation_paths(root: Path, changed_only: bool) -> list[Path]:
     if changed_only:
         candidates = changed_files(root, ".py")
     else:
-        candidates = [path.relative_to(root) for path in (root / IMPLEMENTATION_ROOT).rglob("*.py")]
+        candidates = [
+            path.relative_to(root)
+            for path in (root / IMPLEMENTATION_ROOT).rglob("*.py")
+        ]
     return [
         path
         for path in candidates
-        if path.parts[: len(IMPLEMENTATION_ROOT.parts)] == IMPLEMENTATION_ROOT.parts and "tests" not in path.parts
+        if path.parts[: len(IMPLEMENTATION_ROOT.parts)] == IMPLEMENTATION_ROOT.parts
+        and "tests" not in path.parts
     ]
 
 
@@ -103,9 +115,19 @@ def _audit_broad_docs(root: Path, implementation_paths: list[Path]) -> list[Audi
     for doc_path in BROAD_DOCUMENTATION_PATHS:
         absolute_doc_path = root / doc_path
         if not absolute_doc_path.is_file():
-            issues.append(AuditIssue(doc_path, None, "DOC-MISSING", "Expected broad project documentation is absent."))
+            issues.append(
+                AuditIssue(
+                    doc_path,
+                    None,
+                    "DOC-MISSING",
+                    "Expected broad project documentation is absent.",
+                )
+            )
             continue
-        if newest_source_time is not None and absolute_doc_path.stat().st_mtime < newest_source_time:
+        if (
+            newest_source_time is not None
+            and absolute_doc_path.stat().st_mtime < newest_source_time
+        ):
             issues.append(
                 AuditIssue(
                     doc_path,
@@ -117,7 +139,9 @@ def _audit_broad_docs(root: Path, implementation_paths: list[Path]) -> list[Audi
     return issues
 
 
-def _audit_service_component_docs(root: Path, implementation_paths: list[Path]) -> list[AuditIssue]:
+def _audit_service_component_docs(
+    root: Path, implementation_paths: list[Path]
+) -> list[AuditIssue]:
     """
     @brief      Check service implementation files for likely component documentation.
     @param[in]  root Repository root path.
@@ -133,7 +157,10 @@ def _audit_service_component_docs(root: Path, implementation_paths: list[Path]) 
         if source_path.parts[: len(SERVICE_ROOT.parts)] != SERVICE_ROOT.parts:
             continue
         doc_candidates = _component_doc_candidates(source_path)
-        existing_doc = next((candidate for candidate in doc_candidates if (root / candidate).is_file()), None)
+        existing_doc = next(
+            (candidate for candidate in doc_candidates if (root / candidate).is_file()),
+            None,
+        )
         if existing_doc is None:
             issues.append(
                 AuditIssue(
@@ -166,7 +193,9 @@ def _audit_how_to_tests(root: Path) -> list[AuditIssue]:
     @date       2026-04-25
     @version    0.1.0
     """
-    how_to_docs = list(root.glob("**/HowToTest*.md")) + list(root.glob("**/HOW_TO_TEST*.md"))
+    how_to_docs = list(root.glob("**/HowToTest*.md")) + list(
+        root.glob("**/HOW_TO_TEST*.md")
+    )
     if how_to_docs:
         return []
     return [
@@ -209,7 +238,9 @@ def _newest_mtime(root: Path, paths: list[Path]) -> float | None:
     @date       2026-04-25
     @version    0.1.0
     """
-    mtimes = [(root / path).stat().st_mtime for path in paths if (root / path).is_file()]
+    mtimes = [
+        (root / path).stat().st_mtime for path in paths if (root / path).is_file()
+    ]
     return max(mtimes) if mtimes else None
 
 

@@ -149,3 +149,6 @@ def active_model_id_from_status(status_payload: dict[str, object]) -> str | None
     @version    0.1.0
     """
     return voiceweaver_runtime_service._resolve_active_model_id(status_payload.get("active_model"))  # noqa: SLF001
+
+
+# END OF FILE

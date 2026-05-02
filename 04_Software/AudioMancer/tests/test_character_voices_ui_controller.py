@@ -743,6 +743,14 @@ def _build_window(qtbot, project_root):
 
 
 def _default_settings_payload() -> dict[str, object]:
+    """
+    @brief      Provide the default settings payload test helper.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-02
+    @version    0.1.0
+    """
     return {
         "language": "en",
         "ui_text_scale": "normal",

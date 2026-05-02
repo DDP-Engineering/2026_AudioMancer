@@ -251,6 +251,14 @@ def test_same_narrator_sync_copies_selected_narrator_sample_to_each_character(tm
 
 
 def _create_project_with_selected_narrator(tmp_path, name: str):
+    """
+    @brief      Provide the create project with selected narrator test helper.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-02
+    @version    0.1.0
+    """
     project_root, manifest = project_workspace_service.create_project(name, tmp_path)
     manifest["source_document"] = {
         "original_name": "story.txt",

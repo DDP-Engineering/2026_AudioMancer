@@ -14,7 +14,7 @@
          metadata records whether that sample is selected.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-20
-@version 3.12.2
+@version 3.12.3
 """
 
 # IMPORTS
@@ -26,10 +26,13 @@ from uuid import uuid4
 
 from audiomancer import config
 from audiomancer.services import project_workspace_service, voiceweaver_runtime_service
+from audiomancer.services.logging_service import get_component_logger
 from audiomancer.services.operation_runtime_service import optional_string as _optional_string
 from audiomancer.services.time_service import utc_now_iso as _utc_now_iso
 
 # CONSTANTS
+
+_NARRATOR_DEFINITION_LOGGER = get_component_logger("narrator_definition")
 
 NARRATOR_PROFILE_KIND_PRESET = "preset"
 NARRATOR_PROFILE_KIND_CUSTOM = "custom"
@@ -988,12 +991,13 @@ def sample_runtime_available(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-17
-    @version    1.1.0
+    @version    1.1.1
     """
     if not isinstance(sample_metadata, dict):
         return False
     source_model_id = str(sample_metadata.get("source_model_id", "") or "").strip()
     if not source_model_id:
+        _NARRATOR_DEFINITION_LOGGER.debug("Narrator sample runtime unavailable: missing source_model_id.")
         return False
     capability_matrix = voiceweaver_runtime_service.build_capability_matrix(discovered_models)
     healthy_models = [
@@ -1003,6 +1007,10 @@ def sample_runtime_available(
     ]
     referenced_model = _model_by_id(healthy_models, source_model_id)
     if referenced_model is None:
+        _NARRATOR_DEFINITION_LOGGER.debug(
+            "Narrator sample runtime unavailable: source_model_id=%s not discovered.",
+            source_model_id,
+        )
         return False
     speaker_id = str(sample_metadata.get("speaker_id", "")).strip()
     if not speaker_id:
@@ -1037,7 +1045,7 @@ def sync_runtime_qwen_presets(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-20
-    @version    1.1.0
+    @version    1.1.1
     """
     runtime_presets = _runtime_qwen_preset_profiles(discovered_models or [])
     if not runtime_presets:
@@ -1050,9 +1058,15 @@ def sync_runtime_qwen_presets(
         profile_id = str(preset_profile.get("profile_id", "")).strip()
         if profile_id and profile_id not in existing_profile_ids:
             appended_profiles.append(preset_profile)
+            _NARRATOR_DEFINITION_LOGGER.info("Added runtime Qwen narrator preset profile_id=%s", profile_id)
     appended_profiles = _restore_missing_seeded_profiles(appended_profiles)
     appended_profiles = _repair_selected_profile_flags(appended_profiles)
     _write_json(_profiles_path(project_root), appended_profiles)
+    _NARRATOR_DEFINITION_LOGGER.info(
+        "Synchronized runtime Qwen narrator presets: runtime_presets=%s total_profiles=%s",
+        len(runtime_presets),
+        len(appended_profiles),
+    )
     return appended_profiles
 
 

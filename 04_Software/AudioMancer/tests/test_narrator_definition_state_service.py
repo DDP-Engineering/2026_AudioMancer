@@ -312,6 +312,14 @@ def test_narrator_state_service_legacy_customvoice_seed_profile_is_deletable_and
 
 
 def _create_project(tmp_path, name: str):
+    """
+    @brief      Provide the create project test helper.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-02
+    @version    0.1.0
+    """
     project_root, manifest = project_workspace_service.create_project(name, tmp_path)
     manifest["source_document"] = {
         "original_name": "story.txt",
@@ -326,6 +334,14 @@ def _create_project(tmp_path, name: str):
 
 
 def _minimum_qwen_models() -> list[dict[str, object]]:
+    """
+    @brief      Provide the minimum qwen models test helper.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-02
+    @version    0.1.0
+    """
     return [
         {
             "model_id": "qwen-base",
@@ -352,6 +368,14 @@ def _minimum_qwen_models() -> list[dict[str, object]]:
 
 
 def _runtime_qwen_models_with_extended_presets() -> list[dict[str, object]]:
+    """
+    @brief      Provide the runtime qwen models with extended presets test helper.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-02
+    @version    0.1.0
+    """
     models = _minimum_qwen_models()
     models[2]["supported_presets"] = ["vivian", "serena", "anna", "aiden", "uncle_fu"]
     return models

@@ -8,6 +8,24 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
 
 All notable changes to this project will be documented in this file.
 
+## [1.4.0] - 2026-05-02
+
+### Changed
+
+- changed the Windows application icon assets to use transparent edges and
+  improved visual centering in generated Windows deliveries
+- changed Narator Voice editor layout so the Voice Designer Prompt and Preview
+  Text panels expand vertically when the application window is resized or
+  maximized, with more available height assigned to Preview Text
+- expanded service logging coverage for AI provider requests, Audio Blocks
+  generation, narrator preset synchronization, character sample
+  synchronization, project exports, and ZIP snapshots
+- normalized Doxygen/code-style coverage across the Python repository,
+  including audit tools, Audio Assembly helpers, and test helpers
+- updated English and Romanian help to document the current application
+  version and Narator Voice resizing behavior
+- package version updated to `1.4.0`
+
 ## [1.3.0] - 2026-05-01
 
 ### Changed

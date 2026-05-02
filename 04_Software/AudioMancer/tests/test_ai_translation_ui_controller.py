@@ -27,6 +27,14 @@ from audiomancer.ui.main_window import MainWindow
 
 
 def test_ai_translation_ui_controller_start_request_uses_modal_runner(monkeypatch, qtbot, tmp_path) -> None:
+    """
+    @brief      Validate ai translation ui controller start request uses modal runner.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-02
+    @version    0.1.0
+    """
     project_root, manifest = _create_project(tmp_path, "TranslationControllerProject")
     window = _build_window(qtbot, project_root)
     monkeypatch.setattr(
@@ -63,6 +71,14 @@ def test_ai_translation_ui_controller_start_request_uses_modal_runner(monkeypatc
 
 
 def test_ai_translation_ui_controller_reset_clears_translation_state(monkeypatch, qtbot, tmp_path) -> None:
+    """
+    @brief      Validate ai translation ui controller reset clears translation state.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-02
+    @version    0.1.0
+    """
     project_root, _manifest = _create_project(tmp_path, "TranslationResetControllerProject")
     (project_root / config.TRANSLATED_CHUNKS_FILE_NAME).write_text("[]\n", encoding="utf-8")
     (project_root / config.NARRATOR_PROFILE_FILE_NAME).write_text("[]\n", encoding="utf-8")
@@ -209,6 +225,14 @@ def test_sync_manifest_after_translation_resets_downstream_when_approval_is_lost
 
 
 def _create_project(tmp_path, name: str):
+    """
+    @brief      Provide the create project test helper.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-02
+    @version    0.1.0
+    """
     project_root, manifest = project_workspace_service.create_project(name, tmp_path)
     manifest["source_document"] = {
         "original_name": "story.txt",
@@ -249,6 +273,14 @@ def _create_project(tmp_path, name: str):
 
 
 def _build_window(qtbot, project_root):
+    """
+    @brief      Provide the build window test helper.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-02
+    @version    0.1.0
+    """
     settings_payload = {
         "language": "en",
         "ui_text_scale": "normal",

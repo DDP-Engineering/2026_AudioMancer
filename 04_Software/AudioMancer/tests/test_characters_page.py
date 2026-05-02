@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-  # noqa: UP009
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -25,6 +26,14 @@ from audiomancer.ui.pages.characters_page import CharactersPage
 
 
 def test_characters_page_fields_are_read_only_by_default(qtbot) -> None:
+    """
+    @brief      Validate characters page fields are read only by default.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-02
+    @version    0.1.0
+    """
     page = _build_page(qtbot)
 
     assert page._edit_character_button.isEnabled() is True
@@ -34,6 +43,14 @@ def test_characters_page_fields_are_read_only_by_default(qtbot) -> None:
 
 
 def test_characters_page_edit_mode_enables_save_after_change(qtbot) -> None:
+    """
+    @brief      Validate characters page edit mode enables save after change.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-02
+    @version    0.1.0
+    """
     page = _build_page(qtbot)
 
     page.begin_edit_mode()
@@ -49,6 +66,14 @@ def test_characters_page_edit_mode_enables_save_after_change(qtbot) -> None:
 
 
 def test_characters_page_main_splitter_keeps_one_third_minimum_width(qtbot) -> None:
+    """
+    @brief      Validate characters page main splitter keeps one third minimum width.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-02
+    @version    0.1.0
+    """
     page = _build_page(qtbot)
     page._main_splitter.resize(900, 600)
     page._apply_main_splitter_minimums()
@@ -59,6 +84,14 @@ def test_characters_page_main_splitter_keeps_one_third_minimum_width(qtbot) -> N
 
 
 def test_characters_page_save_without_changes_exits_edit_mode(qtbot) -> None:
+    """
+    @brief      Validate characters page save without changes exits edit mode.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-02
+    @version    0.1.0
+    """
     page = _build_page(qtbot)
     requested_payloads = []
     page.save_character_requested.connect(lambda payload: requested_payloads.append(payload))
@@ -72,6 +105,14 @@ def test_characters_page_save_without_changes_exits_edit_mode(qtbot) -> None:
 
 
 def test_characters_page_add_mode_creates_draft_row_and_manual_evidence(qtbot) -> None:
+    """
+    @brief      Validate characters page add mode creates draft row and manual evidence.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-02
+    @version    0.1.0
+    """
     page = _build_page(qtbot)
 
     page.begin_add_mode(_manual_draft_payload())
@@ -85,6 +126,14 @@ def test_characters_page_add_mode_creates_draft_row_and_manual_evidence(qtbot) -
 
 
 def test_characters_page_selection_change_emits_requested_character_id(qtbot) -> None:
+    """
+    @brief      Validate characters page selection change emits requested character id.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-02
+    @version    0.1.0
+    """
     page = _build_page(qtbot, profiles=[_profile_payload(), _second_profile_payload()])
     requested = []
     page.selection_change_requested.connect(lambda payload: requested.append(payload))
@@ -98,6 +147,14 @@ def test_characters_page_selection_change_emits_requested_character_id(qtbot) ->
 
 
 def test_characters_page_marks_voice_definition_stale_when_facts_change(qtbot) -> None:
+    """
+    @brief      Validate characters page marks voice definition stale when facts change.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-02
+    @version    0.1.0
+    """
     page = _build_page(qtbot)
 
     page.begin_edit_mode()
@@ -108,6 +165,14 @@ def test_characters_page_marks_voice_definition_stale_when_facts_change(qtbot) -
 
 
 def test_characters_page_regenerate_voice_definition_emits_current_draft(qtbot) -> None:
+    """
+    @brief      Validate characters page regenerate voice definition emits current draft.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-02
+    @version    0.1.0
+    """
     page = _build_page(qtbot)
     requested_payloads = []
     page.regenerate_voice_definition_requested.connect(lambda payload: requested_payloads.append(payload))
@@ -122,6 +187,14 @@ def test_characters_page_regenerate_voice_definition_emits_current_draft(qtbot) 
 
 
 def test_characters_page_evidence_preview_supports_find_next_wraparound(qtbot) -> None:
+    """
+    @brief      Validate characters page evidence preview supports find next wraparound.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-02
+    @version    0.1.0
+    """
     page = _build_page(qtbot)
     page._evidence_preview.setPlainText("Alice speaks.\nBob answers.\nAlice replies.")
 
@@ -138,6 +211,14 @@ def test_characters_page_evidence_preview_supports_find_next_wraparound(qtbot) -
 
 
 def _build_page(qtbot, profiles=None) -> CharactersPage:
+    """
+    @brief      Provide the build page test helper.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-02
+    @version    0.1.0
+    """
     page = CharactersPage()
     qtbot.addWidget(page)
     page.set_project_active(True)
@@ -165,6 +246,14 @@ def _build_page(qtbot, profiles=None) -> CharactersPage:
 
 
 def _profile_payload() -> dict[str, object]:
+    """
+    @brief      Provide the profile payload test helper.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-02
+    @version    0.1.0
+    """
     return character_discovery_service.regenerate_character_voice_definition(
         {
             "character_id": "alice",
@@ -195,6 +284,14 @@ def _profile_payload() -> dict[str, object]:
 
 
 def _second_profile_payload() -> dict[str, object]:
+    """
+    @brief      Provide the second profile payload test helper.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-02
+    @version    0.1.0
+    """
     payload = dict(_profile_payload())
     payload["character_id"] = "bob"
     payload["canonical_name"] = "Bob"
@@ -203,6 +300,14 @@ def _second_profile_payload() -> dict[str, object]:
 
 
 def _manual_draft_payload() -> dict[str, object]:
+    """
+    @brief      Provide the manual draft payload test helper.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-02
+    @version    0.1.0
+    """
     return character_discovery_service.regenerate_character_voice_definition(
         {
             "character_id": "draft_manual_bob",

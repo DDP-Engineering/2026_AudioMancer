@@ -232,6 +232,14 @@ def test_build_speech_blocks_state_does_not_resolve_missing_chunks(monkeypatch, 
     project_workspace_service.save_manifest(manifest, project_root)
 
     def fail_resolve(*_args, **_kwargs):
+        """
+        @brief      Provide the fail resolve test helper.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-02
+        @version    0.1.0
+        """
         raise AssertionError("resolve_source_chunks should not be called before chunking output exists")
 
     monkeypatch.setattr(speech_blocks_state_service.speech_blocks_service, "resolve_source_chunks", fail_resolve)
@@ -275,6 +283,14 @@ def test_build_speech_blocks_state_does_not_resolve_unapproved_translation(monke
     )
 
     def fail_resolve(*_args, **_kwargs):
+        """
+        @brief      Provide the fail resolve test helper.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-02
+        @version    0.1.0
+        """
         raise AssertionError("resolve_source_chunks should not be called before translated chunks are approved")
 
     monkeypatch.setattr(speech_blocks_state_service.speech_blocks_service, "resolve_source_chunks", fail_resolve)

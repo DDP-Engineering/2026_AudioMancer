@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -71,7 +72,9 @@ def repository_root(start: Path | None = None) -> Path:
     for candidate in (current, *current.parents):
         if (candidate / REPO_MARKER_FILE).is_file():
             return candidate
-    raise RuntimeError(f"Could not locate repository root containing {REPO_MARKER_FILE}.")
+    raise RuntimeError(
+        f"Could not locate repository root containing {REPO_MARKER_FILE}."
+    )
 
 
 def repo_relative(path: Path, root: Path) -> Path:
@@ -137,12 +140,18 @@ def python_files(root: Path, changed_only: bool = False) -> list[Path]:
     @version    0.1.0
     """
     if changed_only:
-        return [path for path in changed_files(root, PYTHON_SUFFIX) if (root / path).is_file()]
+        return [
+            path
+            for path in changed_files(root, PYTHON_SUFFIX)
+            if (root / path).is_file()
+        ]
     search_roots = [root / "04_Software" / "AudioMancer", root / "02_Tools"]
     files: list[Path] = []
     for search_root in search_roots:
         if search_root.is_dir():
-            files.extend(repo_relative(path, root) for path in search_root.rglob("*.py"))
+            files.extend(
+                repo_relative(path, root) for path in search_root.rglob("*.py")
+            )
     return sorted(files)
 
 

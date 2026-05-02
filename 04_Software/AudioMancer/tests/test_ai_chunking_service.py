@@ -663,6 +663,14 @@ def test_ai_chunking_continues_resume_when_budget_metadata_changes(tmp_path, mon
     captured_prompts: list[str] = []
 
     def _second_chat_json(_profile, _system_prompt, user_prompt, **_kwargs):
+        """
+        @brief      Provide the second chat json test helper.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-02
+        @version    0.1.0
+        """
         captured_prompts.append(user_prompt)
         return {
             "payload": {"break_after_unit_ids": ["paragraph-0039"]},

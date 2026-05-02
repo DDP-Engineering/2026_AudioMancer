@@ -194,6 +194,14 @@ def _create_project_with_narrator_and_character(
     voice_assignment_mode: str = "narrator_and_characters",
     store_narrator_sample: bool = True,
 ):
+    """
+    @brief      Provide the create project with narrator and character test helper.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-02
+    @version    0.1.0
+    """
     project_root, manifest = project_workspace_service.create_project(name, tmp_path)
     manifest["source_document"] = {
         "original_name": "story.txt",
@@ -241,6 +249,14 @@ def _create_project_with_narrator_and_character(
 
 
 def _minimum_qwen_models() -> list[dict[str, object]]:
+    """
+    @brief      Provide the minimum qwen models test helper.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-02
+    @version    0.1.0
+    """
     return [
         {
             "model_id": "qwen-base",

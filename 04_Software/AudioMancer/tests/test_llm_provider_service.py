@@ -38,12 +38,36 @@ class _FakeResponse:
     """
 
     def __init__(self, body: str) -> None:
+        """
+        @brief      Provide the init test helper.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-02
+        @version    0.1.0
+        """
         self._body = body
 
     def __enter__(self):
+        """
+        @brief      Provide the enter test helper.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-02
+        @version    0.1.0
+        """
         return self
 
     def __exit__(self, exc_type, exc, tb) -> None:
+        """
+        @brief      Provide the exit test helper.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-02
+        @version    0.1.0
+        """
         _ = exc_type
         _ = exc
         _ = tb
@@ -160,6 +184,14 @@ def test_chat_json_can_cancel_while_waiting_for_model_response(monkeypatch) -> N
     """
 
     def _slow_request(_profile_payload, _request_payload):
+        """
+        @brief      Provide the slow request test helper.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-02
+        @version    0.1.0
+        """
         time.sleep(0.3)
         return (
             {"choices": [{"message": {"content": ('{"results":[{"unit_id":"unit-0001","label":"story"}]}')}}]},

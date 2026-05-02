@@ -13,7 +13,7 @@
          project artifacts without modifying the active project workspace.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-25
-@version 0.3.4
+@version 0.3.5
 """
 
 # IMPORTS
@@ -33,10 +33,13 @@ from audiomancer.services import (
     speech_blocks_service,
     token_usage_service,
 )
+from audiomancer.services.logging_service import get_component_logger
 from audiomancer.services.operation_runtime_service import is_path_inside_project as _is_path_inside_project
 from audiomancer.services.time_service import utc_now_iso
 
 # CONSTANTS
+
+_PROJECT_EXPORT_LOGGER = get_component_logger("project_export")
 
 # @brief Export kind for the cleaned-text artifact.
 EXPORT_KIND_CLEANED_TEXT = "cleaned_text"
@@ -201,12 +204,14 @@ def render_export(
     @exception  ValueError Raised when the export is unavailable or unsupported.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.1.0
+    @version    0.1.1
     """
+    _PROJECT_EXPORT_LOGGER.info("Rendering project export kind=%s format=%s", export_kind, export_format)
     _validate_export_kind(export_kind)
     _validate_export_format(export_format)
     state = _build_export_state(project_root, manifest, export_kind)
     if not bool(state.get("can_export", False)):
+        _PROJECT_EXPORT_LOGGER.warning("Project export unavailable kind=%s status=%s", export_kind, state.get("status"))
         raise ValueError("The requested export is not available yet.")
     document = _build_export_document(Path(project_root), manifest, export_kind)
     if export_format == EXPORT_FORMAT_MARKDOWN:

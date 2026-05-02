@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-  # noqa: UP009
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -378,6 +379,14 @@ def test_narator_voice_generate_sample_reprobes_runtime_and_stores_audio(monkeyp
         cancel_handler,
         cancellable=True,
     ):
+        """
+        @brief      Provide the start threaded operation test helper.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-02
+        @version    0.1.0
+        """
         _ = operation_kind
         _ = operation_name
         _ = initial_message
@@ -484,6 +493,14 @@ def test_narator_voice_progress_messages_hide_model_id(monkeypatch, qtbot, tmp_p
 
 
 def _create_project(tmp_path, name: str):
+    """
+    @brief      Provide the create project test helper.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-02
+    @version    0.1.0
+    """
     project_root, manifest = project_workspace_service.create_project(name, tmp_path)
     manifest["source_document"] = {
         "original_name": "story.txt",
@@ -498,6 +515,14 @@ def _create_project(tmp_path, name: str):
 
 
 def _build_window(qtbot, project_root, settings_payload=None):
+    """
+    @brief      Provide the build window test helper.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-02
+    @version    0.1.0
+    """
     window = MainWindow(settings_payload=_default_settings_payload() if settings_payload is None else settings_payload)
     qtbot.addWidget(window)
     window._activate_project(project_root, project_workspace_service.load_manifest(project_root))
@@ -505,6 +530,14 @@ def _build_window(qtbot, project_root, settings_payload=None):
 
 
 def _default_settings_payload() -> dict[str, object]:
+    """
+    @brief      Provide the default settings payload test helper.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-02
+    @version    0.1.0
+    """
     return {
         "language": "en",
         "ui_text_scale": "normal",
@@ -528,6 +561,14 @@ def _default_settings_payload() -> dict[str, object]:
 
 
 def _minimum_qwen_models() -> list[dict[str, object]]:
+    """
+    @brief      Provide the minimum qwen models test helper.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-02
+    @version    0.1.0
+    """
     return [
         {
             "model_id": "qwen-base",

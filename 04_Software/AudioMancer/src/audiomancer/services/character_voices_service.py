@@ -14,7 +14,7 @@
          for the Character Voices workflow.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-20
-@version 1.5.2
+@version 1.5.3
 """
 
 # IMPORTS
@@ -26,10 +26,13 @@ import re
 
 from audiomancer import config
 from audiomancer.services import narrator_definition_service, project_workspace_service, voiceweaver_runtime_service
+from audiomancer.services.logging_service import get_component_logger
 from audiomancer.services.operation_runtime_service import optional_string as _optional_string
 from audiomancer.services.time_service import utc_now_iso as _utc_now_iso
 
 # CONSTANTS
+
+_CHARACTER_VOICES_LOGGER = get_component_logger("character_voices")
 
 TARGET_KIND_NARRATOR = "narrator"
 TARGET_KIND_CHARACTER = "character"
@@ -612,7 +615,7 @@ def sync_same_narrator_samples(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-20
-    @version    1.1.0
+    @version    1.1.1
     """
     ensure_character_voices_files(project_root)
     if not load_voice_plan(project_root):
@@ -622,6 +625,7 @@ def sync_same_narrator_samples(
     )
     narrator_metadata = narrator_definition_service.load_selected_narrator_sample_metadata(project_root)
     if not narrator_audio_path.is_file() or narrator_metadata is None:
+        removed_samples = 0
         for target_payload in character_targets:
             target_id = str(target_payload.get("target_id", "")).strip()
             sample_metadata = load_target_sample_metadata(project_root, target_id)
@@ -630,6 +634,12 @@ def sync_same_narrator_samples(
                 and sample_metadata.get("sample_source") == SAMPLE_SOURCE_COPIED_NARRATOR
             ):
                 delete_target_sample(project_root, target_id)
+                removed_samples += 1
+        if removed_samples:
+            _CHARACTER_VOICES_LOGGER.info(
+                "Removed copied narrator character samples because selected narrator sample is unavailable: count=%s",
+                removed_samples,
+            )
         return
     narrator_audio_bytes = narrator_audio_path.read_bytes()
     narrator_language = narrator_definition_service.narrator_language_code(
@@ -640,6 +650,7 @@ def sync_same_narrator_samples(
     narrator_source_model_id = str(narrator_metadata.get("source_model_id", "")).strip() or None
     narrator_runtime_summary = str(narrator_metadata.get("runtime_result_summary", "")).strip()
     narrator_generated_at = str(narrator_metadata.get("generated_at", "")).strip() or _utc_now_iso()
+    copied_samples = 0
     for target_payload in character_targets:
         target_id = str(target_payload.get("target_id", "")).strip()
         audio_path, _metadata_path = target_sample_paths(project_root, target_id)
@@ -665,6 +676,12 @@ def sync_same_narrator_samples(
             relative_path=str(audio_path.relative_to(Path(project_root))),
             metadata_payload=metadata_payload,
         )
+        copied_samples += 1
+    _CHARACTER_VOICES_LOGGER.info(
+        "Synchronized copied narrator character samples: count=%s language=%s",
+        copied_samples,
+        narrator_language,
+    )
 
 
 def sample_runtime_available(

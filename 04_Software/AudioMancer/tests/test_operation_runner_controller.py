@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-  # noqa: UP009
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -90,6 +91,14 @@ def test_threaded_operation_success_reports_progress_and_cleans_up(monkeypatch, 
     results: list[object] = []
 
     def worker(project_root, manifest, progress_callback=None, cancel_requested=None):
+        """
+        @brief      Provide the worker test helper.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-02
+        @version    0.1.0
+        """
         assert QThread.currentThread() != window.thread()
         assert project_root == tmp_path
         assert manifest == {"project": "test"}
@@ -135,6 +144,14 @@ def test_threaded_operation_failure_calls_failure_handler_and_cleans_up(monkeypa
     failures: list[str] = []
 
     def worker(project_root, manifest, progress_callback=None, cancel_requested=None):
+        """
+        @brief      Provide the worker test helper.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-02
+        @version    0.1.0
+        """
         assert QThread.currentThread() != window.thread()
         _ = project_root
         _ = manifest
@@ -179,6 +196,14 @@ def test_threaded_operation_cancel_sets_event_and_calls_cancel_handler(monkeypat
     cancellations: list[str] = []
 
     def worker(project_root, manifest, progress_callback=None, cancel_requested=None):
+        """
+        @brief      Provide the worker test helper.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-02
+        @version    0.1.0
+        """
         assert QThread.currentThread() != window.thread()
         _ = project_root
         _ = manifest
@@ -285,6 +310,14 @@ def _patch_progress_dialog(monkeypatch) -> list[tuple]:
     misc_ui_controller = operation_runner_controller.misc_ui_controller
 
     def create_progress_dialog(window, operation_name, initial_message, cancel_callback, cancellable=True):
+        """
+        @brief      Provide the create progress dialog test helper.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-02
+        @version    0.1.0
+        """
         assert QThread.currentThread() == window.thread()
         _ = operation_name
         _ = cancel_callback
@@ -293,6 +326,14 @@ def _patch_progress_dialog(monkeypatch) -> list[tuple]:
         events.append(("create", initial_message))
 
     def update_progress_dialog(window, percent, message, token_usage=None):
+        """
+        @brief      Provide the update progress dialog test helper.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-02
+        @version    0.1.0
+        """
         assert QThread.currentThread() == window.thread()
         _ = token_usage
         if window._operation_progress_dialog is not None:  # noqa: SLF001
@@ -300,16 +341,40 @@ def _patch_progress_dialog(monkeypatch) -> list[tuple]:
         events.append(("update", percent, message))
 
     def finish_progress_dialog(window):
+        """
+        @brief      Provide the finish progress dialog test helper.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-02
+        @version    0.1.0
+        """
         assert QThread.currentThread() == window.thread()
         _ = window
         events.append(("finish",))
 
     def fail_progress_dialog(window, message):
+        """
+        @brief      Provide the fail progress dialog test helper.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-02
+        @version    0.1.0
+        """
         assert QThread.currentThread() == window.thread()
         _ = window
         events.append(("fail", message))
 
     def clear_progress_dialog(window):
+        """
+        @brief      Provide the clear progress dialog test helper.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-02
+        @version    0.1.0
+        """
         assert QThread.currentThread() == window.thread()
         window._operation_progress_dialog = None  # noqa: SLF001
         events.append(("clear",))

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -24,7 +25,14 @@ import ast
 from pathlib import Path
 import sys
 
-from audit_common import AuditIssue, main_guard, parse_changed_only, print_report, python_files, repository_root
+from audit_common import (
+    AuditIssue,
+    main_guard,
+    parse_changed_only,
+    print_report,
+    python_files,
+    repository_root,
+)
 
 # CONSTANTS
 
@@ -153,7 +161,9 @@ def _audit_node(
         issues: list[AuditIssue] = []
         for method in node.body:
             if isinstance(method, ast.FunctionDef | ast.AsyncFunctionDef):
-                issues.extend(_audit_function(path, method, module_has_logging, owner=node.name))
+                issues.extend(
+                    _audit_function(path, method, module_has_logging, owner=node.name)
+                )
         return issues
     return _audit_function(path, node, module_has_logging, owner=None)
 
@@ -200,7 +210,10 @@ def _is_service_source(path: Path) -> bool:
     @date       2026-04-25
     @version    0.1.0
     """
-    return path.parts[: len(SERVICE_ROOT.parts)] == SERVICE_ROOT.parts and path.name not in EXCLUDED_MODULES
+    return (
+        path.parts[: len(SERVICE_ROOT.parts)] == SERVICE_ROOT.parts
+        and path.name not in EXCLUDED_MODULES
+    )
 
 
 def _skip_function(node: ast.FunctionDef | ast.AsyncFunctionDef) -> bool:
@@ -217,7 +230,10 @@ def _skip_function(node: ast.FunctionDef | ast.AsyncFunctionDef) -> bool:
         return True
     if node.name.startswith("_") and len(node.body) <= 4:
         return True
-    return node.name.startswith(("get_", "is_", "has_", "normalize_", "format_")) and len(node.body) <= 6
+    return (
+        node.name.startswith(("get_", "is_", "has_", "normalize_", "format_"))
+        and len(node.body) <= 6
+    )
 
 
 def _principal_reason(node: ast.FunctionDef | ast.AsyncFunctionDef) -> str | None:
@@ -231,13 +247,20 @@ def _principal_reason(node: ast.FunctionDef | ast.AsyncFunctionDef) -> str | Non
     @version    0.1.0
     """
     lowered_name = node.name.lower()
-    if node.name.startswith("_") and not node.name.startswith(PRIVATE_PRINCIPAL_PREFIXES):
+    if node.name.startswith("_") and not node.name.startswith(
+        PRIVATE_PRINCIPAL_PREFIXES
+    ):
         return None
-    if _executable_statement_count(node) <= 8 and node.name not in PUBLIC_PRINCIPAL_EXACT_NAMES:
+    if (
+        _executable_statement_count(node) <= 8
+        and node.name not in PUBLIC_PRINCIPAL_EXACT_NAMES
+    ):
         return None
     if node.name in PUBLIC_PRINCIPAL_EXACT_NAMES:
         return "public workflow/state operation"
-    if not node.name.startswith("_") and any(part in lowered_name for part in WORKFLOW_NAME_PARTS):
+    if not node.name.startswith("_") and any(
+        part in lowered_name for part in WORKFLOW_NAME_PARTS
+    ):
         return "public workflow/state operation"
     if _has_exception_handler(node):
         return "exception handling"
@@ -312,7 +335,9 @@ def _has_exception_handler(node: ast.FunctionDef | ast.AsyncFunctionDef) -> bool
     @date       2026-04-25
     @version    0.1.0
     """
-    return any(isinstance(child, ast.Try) and child.handlers for child in ast.walk(node))
+    return any(
+        isinstance(child, ast.Try) and child.handlers for child in ast.walk(node)
+    )
 
 
 def main() -> int:

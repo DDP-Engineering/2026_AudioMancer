@@ -29,6 +29,14 @@ from audiomancer.ui.main_window import MainWindow
 
 
 def test_character_ui_controller_first_run_shows_info_popup(monkeypatch, qtbot, tmp_path) -> None:
+    """
+    @brief      Validate character ui controller first run shows info popup.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-02
+    @version    0.1.0
+    """
     project_root, _manifest = _create_project(tmp_path, "CharacterControllerFirstRun")
     window = _build_window(qtbot, project_root)
     popup_calls = []
@@ -56,6 +64,14 @@ def test_character_ui_controller_first_run_shows_info_popup(monkeypatch, qtbot, 
 
 
 def test_character_ui_controller_resume_uses_current_selected_profile(monkeypatch, qtbot, tmp_path) -> None:
+    """
+    @brief      Validate character ui controller resume uses current selected profile.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-02
+    @version    0.1.0
+    """
     project_root, _manifest = _create_project(tmp_path, "CharacterControllerResumeCurrentProfile")
     window = _build_window(qtbot, project_root)
     start_calls = []
@@ -79,6 +95,14 @@ def test_character_ui_controller_resume_uses_current_selected_profile(monkeypatc
 
 
 def test_character_ui_controller_add_flow_enters_draft_mode(monkeypatch, qtbot, tmp_path) -> None:
+    """
+    @brief      Validate character ui controller add flow enters draft mode.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-02
+    @version    0.1.0
+    """
     project_root, _manifest = _create_project(tmp_path, "CharacterControllerAdd")
     window = _build_window(qtbot, project_root)
     monkeypatch.setattr(
@@ -95,6 +119,14 @@ def test_character_ui_controller_add_flow_enters_draft_mode(monkeypatch, qtbot, 
 
 
 def test_character_ui_controller_add_rejects_duplicate_name(monkeypatch, qtbot, tmp_path) -> None:
+    """
+    @brief      Validate character ui controller add rejects duplicate name.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-02
+    @version    0.1.0
+    """
     project_root, _manifest = _create_project(tmp_path, "CharacterControllerDuplicate")
     window = _build_window(qtbot, project_root)
     warning_calls = []
@@ -116,6 +148,14 @@ def test_character_ui_controller_add_rejects_duplicate_name(monkeypatch, qtbot, 
 
 
 def test_character_ui_controller_save_new_character_persists_and_selects(monkeypatch, qtbot, tmp_path) -> None:
+    """
+    @brief      Validate character ui controller save new character persists and selects.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-02
+    @version    0.1.0
+    """
     project_root, _manifest = _create_project(tmp_path, "CharacterControllerSave")
     window = _build_window(qtbot, project_root)
     _write_downstream_artifacts(project_root, window)
@@ -141,6 +181,14 @@ def test_character_ui_controller_save_new_character_persists_and_selects(monkeyp
 
 
 def test_character_ui_controller_delete_flow_confirms_and_removes(monkeypatch, qtbot, tmp_path) -> None:
+    """
+    @brief      Validate character ui controller delete flow confirms and removes.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-02
+    @version    0.1.0
+    """
     project_root, _manifest = _create_project(tmp_path, "CharacterControllerDelete")
     window = _build_window(qtbot, project_root)
     _write_downstream_artifacts(project_root, window)
@@ -162,6 +210,14 @@ def test_character_ui_controller_delete_flow_confirms_and_removes(monkeypatch, q
 
 
 def test_character_ui_controller_selection_change_cancel_restores_current_row(monkeypatch, qtbot, tmp_path) -> None:
+    """
+    @brief      Validate character ui controller selection change cancel restores current row.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-02
+    @version    0.1.0
+    """
     project_root, _manifest = _create_project(tmp_path, "CharacterControllerSelection")
     window = _build_window(qtbot, project_root)
     second_profile = dict(_saved_profile_payload())
@@ -187,6 +243,14 @@ def test_character_ui_controller_selection_change_cancel_restores_current_row(mo
 
 
 def test_character_ui_controller_regenerates_voice_definition_for_active_draft(monkeypatch, qtbot, tmp_path) -> None:
+    """
+    @brief      Validate character ui controller regenerates voice definition for active draft.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-02
+    @version    0.1.0
+    """
     project_root, _manifest = _create_project(tmp_path, "CharacterControllerVoiceDefinition")
     window = _build_window(qtbot, project_root)
     message_calls = []
@@ -210,6 +274,14 @@ def test_character_ui_controller_regenerates_voice_definition_for_active_draft(m
 
 
 def _create_project(tmp_path, name: str):
+    """
+    @brief      Provide the create project test helper.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-02
+    @version    0.1.0
+    """
     project_root, manifest = project_workspace_service.create_project(name, tmp_path)
     manifest["source_document"] = {
         "original_name": "story.txt",
@@ -308,6 +380,14 @@ def _create_project(tmp_path, name: str):
 
 
 def _build_window(qtbot, project_root):
+    """
+    @brief      Provide the build window test helper.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-02
+    @version    0.1.0
+    """
     settings_payload = {
         "language": "en",
         "ui_text_scale": "normal",
@@ -373,6 +453,14 @@ def _write_downstream_artifacts(project_root, window: MainWindow) -> None:
 
 
 def _saved_profile_payload() -> dict[str, object]:
+    """
+    @brief      Provide the saved profile payload test helper.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-02
+    @version    0.1.0
+    """
     return character_discovery_service.regenerate_character_voice_definition(
         {
             "character_id": "alice",
@@ -403,6 +491,14 @@ def _saved_profile_payload() -> dict[str, object]:
 
 
 def _manual_draft_payload(name: str) -> dict[str, object]:
+    """
+    @brief      Provide the manual draft payload test helper.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-02
+    @version    0.1.0
+    """
     return character_discovery_service.regenerate_character_voice_definition(
         {
             "character_id": "draft_bob",

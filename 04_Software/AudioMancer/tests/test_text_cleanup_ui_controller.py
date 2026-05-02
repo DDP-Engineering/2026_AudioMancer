@@ -77,6 +77,14 @@ def test_text_cleanup_ui_controller_start_operation_clears_dialog(
         cancel_handler,
         cancellable=True,
     ):
+        """
+        @brief      Provide the start threaded operation test helper.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-02
+        @version    0.1.0
+        """
         _ = operation_name
         _ = initial_message
         _ = failure_handler
@@ -100,6 +108,14 @@ def test_text_cleanup_ui_controller_start_operation_clears_dialog(
     )
 
     def _worker_callable(_project_root, _manifest, progress_callback=None, cancel_requested=None):
+        """
+        @brief      Provide the worker callable test helper.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-02
+        @version    0.1.0
+        """
         progress_callback(1, 1, 100, "Completed.")
         assert cancel_requested() is False
         return {"status": "ok"}

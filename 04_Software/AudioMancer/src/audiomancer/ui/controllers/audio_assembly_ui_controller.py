@@ -589,22 +589,59 @@ def _stage_rank(stage: str) -> int:
 
 
 def _output_duration_ms(output_record: dict[str, object] | None) -> int:
+    """
+    @brief      Resolve one audio assembly output duration to milliseconds.
+    @param[in]  output_record Optional generated-output record.
+    @return     Non-negative duration in milliseconds.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-02
+    @version    0.1.0
+    """
     if not isinstance(output_record, dict):
         return 0
     return max(0, int(float(output_record.get("duration_seconds", 0.0) or 0.0) * 1000))
 
 
 def _media_position_ms(player) -> int:
+    """
+    @brief      Read the current Qt media-player position in milliseconds.
+    @param[in]  player Media player object or compatible test double.
+    @return     Non-negative playback position in milliseconds.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-02
+    @version    0.1.0
+    """
     position = getattr(player, "position", None)
     return max(0, int(position())) if callable(position) else 0
 
 
 def _media_duration_ms(player) -> int:
+    """
+    @brief      Read the current Qt media-player duration in milliseconds.
+    @param[in]  player Media player object or compatible test double.
+    @return     Non-negative media duration in milliseconds.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-02
+    @version    0.1.0
+    """
     duration = getattr(player, "duration", None)
     return max(0, int(duration())) if callable(duration) else 0
 
 
 def _clamped_position_ms(position_ms: int, duration_ms: int) -> int:
+    """
+    @brief      Clamp one playback position to the available media duration.
+    @param[in]  position_ms Candidate playback position in milliseconds.
+    @param[in]  duration_ms Media duration in milliseconds.
+    @return     Playback position constrained to the media duration.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-02
+    @version    0.1.0
+    """
     resolved_duration = max(0, int(duration_ms))
     if resolved_duration <= 0:
         return 0

@@ -564,12 +564,31 @@ def _format_output_item(output: dict[str, object], language: str) -> str:
 
 
 def _selected_output_duration_ms(outputs: list[dict[str, object]], selected_index: int) -> int:
+    """
+    @brief      Resolve the selected output duration to milliseconds.
+    @param[in]  outputs Generated output records.
+    @param[in]  selected_index Current selected output index.
+    @return     Non-negative selected output duration in milliseconds.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-02
+    @version    0.1.0
+    """
     if selected_index < 0 or selected_index >= len(outputs):
         return 0
     return max(0, int(float(outputs[selected_index].get("duration_seconds", 0.0) or 0.0) * 1000))
 
 
 def _format_playback_time(position_ms: int) -> str:
+    """
+    @brief      Format one playback position for display.
+    @param[in]  position_ms Playback position in milliseconds.
+    @return     Display time in `MM:SS` or `HH:MM:SS` format.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-02
+    @version    0.1.0
+    """
     total_seconds = max(0, int(position_ms) // 1000)
     hours = total_seconds // 3600
     minutes = (total_seconds % 3600) // 60

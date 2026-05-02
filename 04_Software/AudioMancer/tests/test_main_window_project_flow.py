@@ -727,6 +727,14 @@ def test_main_window_closes_progress_dialog_after_synchronous_completion(
     success_payloads = []
 
     def _worker_callable(_project_root, _manifest, progress_callback=None, cancel_requested=None):
+        """
+        @brief      Provide the worker callable test helper.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-02
+        @version    0.1.0
+        """
         progress_callback(0, 1, 0, "Starting...")
         assert cancel_requested() is False
         progress_callback(1, 1, 100, "Completed.")
@@ -780,6 +788,14 @@ def test_main_window_runs_deterministic_cleanup_and_updates_preview(
     (extraction_root / "output_raw_text.txt").write_text("Chapter I\n\nParagraph one.", encoding="utf-8")
 
     def _fake_clean_text(*_args, progress_callback=None, cancel_requested=None, **_kwargs):
+        """
+        @brief      Provide the fake clean text test helper.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-02
+        @version    0.1.0
+        """
         progress_callback(1, 1, 100, "Deterministic cleanup completed.")
         cleanup_root = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH
         cleanup_root.mkdir(exist_ok=True)
@@ -894,6 +910,14 @@ def test_main_window_runs_deterministic_chunking_and_updates_preview(
     (cleanup_root / config.CLEANED_TEXT_FILE_NAME).write_text("Chapter I\n\nParagraph one.\n", encoding="utf-8")
 
     def _fake_chunk_text(*_args, progress_callback=None, cancel_requested=None, **_kwargs):
+        """
+        @brief      Provide the fake chunk text test helper.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-02
+        @version    0.1.0
+        """
         progress_callback(1, 1, 100, "Deterministic chunking completed.")
         chunk_root = project_root
         chunk_root.mkdir(exist_ok=True)

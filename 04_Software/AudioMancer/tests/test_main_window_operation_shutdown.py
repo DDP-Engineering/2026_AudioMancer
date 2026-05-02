@@ -54,6 +54,14 @@ def test_main_window_close_ignores_event_while_operation_thread_is_active(
     success_payloads: list[object] = []
 
     def _blocking_worker(_project_root, _manifest, progress_callback=None, cancel_requested=None):
+        """
+        @brief      Provide the blocking worker test helper.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-02
+        @version    0.1.0
+        """
         _ = progress_callback
         _ = cancel_requested
         worker_started.set()

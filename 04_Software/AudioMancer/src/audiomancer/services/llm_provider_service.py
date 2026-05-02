@@ -16,7 +16,7 @@
          UI-driven cancellation responsive during provider waits.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-22
-@version 0.7.0
+@version 0.7.1
 """
 
 # IMPORTS
@@ -215,8 +215,12 @@ def _request_chat_completion_with_cancellation(
     @return     Helper result.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.1.0
+    @version    0.1.1
     """
+    _LLM_PROVIDER_LOGGER.debug(
+        "Starting cancellable AI provider request base_url=%s",
+        str(profile_payload.get("base_url", "")).strip(),
+    )
     result_holder: dict[str, object] = {}
     error_holder: dict[str, Exception] = {}
 
@@ -234,6 +238,7 @@ def _request_chat_completion_with_cancellation(
                 request_payload,
             )
         except Exception as error_object:  # pragma: no cover - exercised via caller.
+            _LLM_PROVIDER_LOGGER.warning("AI provider request worker failed: %s", error_object)
             error_holder["error"] = error_object
 
     request_thread = threading.Thread(
@@ -244,6 +249,7 @@ def _request_chat_completion_with_cancellation(
     request_thread.start()
     while request_thread.is_alive():
         if callable(cancel_requested) and bool(cancel_requested()):
+            _LLM_PROVIDER_LOGGER.info("AI provider request cancelled while waiting for model response.")
             raise OperationCancelledError("AI-assisted cleanup cancelled while waiting for the model response.")
         request_thread.join(timeout=0.05)
         time.sleep(0.01)
@@ -268,7 +274,7 @@ def _request_chat_completion(
     @exception  ValueError Raised when the provider returns an invalid JSON payload.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-11
-    @version    0.3.0
+    @version    0.3.1
     """
     endpoint = _build_chat_endpoint(str(profile_payload.get("base_url", "")))
     api_key = str(profile_payload.get("api_key", "")).strip()
@@ -292,6 +298,11 @@ def _request_chat_completion(
         method="POST",
     )
     try:
+        _LLM_PROVIDER_LOGGER.debug(
+            "Sending AI provider request endpoint=%s timeout_seconds=%s",
+            endpoint,
+            timeout_seconds,
+        )
         with request.urlopen(http_request, timeout=timeout_seconds) as response:
             raw_body = response.read().decode("utf-8")
     except error.HTTPError as http_error:
@@ -299,11 +310,17 @@ def _request_chat_completion(
         if _supports_max_completion_tokens_retry(http_error.code, error_body):
             compatibility_payload = _build_max_completion_tokens_payload(request_payload)
             if compatibility_payload != request_payload:
+                _LLM_PROVIDER_LOGGER.info(
+                    "Retrying AI provider request with max_completion_tokens compatibility payload."
+                )
                 return _request_chat_completion(profile_payload, compatibility_payload)
         if http_error.code in {408, 409, 429} or http_error.code >= 500:
+            _LLM_PROVIDER_LOGGER.warning("Transient AI provider HTTP failure: status=%s", http_error.code)
             raise RuntimeError(f"Transient AI provider failure: HTTP {http_error.code}: {error_body}") from http_error
+        _LLM_PROVIDER_LOGGER.warning("AI provider HTTP request failed: status=%s", http_error.code)
         raise RuntimeError(f"AI provider request failed with HTTP {http_error.code}: {error_body}") from http_error
     except error.URLError as url_error:
+        _LLM_PROVIDER_LOGGER.warning("AI provider URL request failed: %s", getattr(url_error, "reason", url_error))
         raise RuntimeError(f"AI provider request failed: {getattr(url_error, 'reason', url_error)}") from url_error
     payload = json.loads(raw_body)
     if not isinstance(payload, dict):

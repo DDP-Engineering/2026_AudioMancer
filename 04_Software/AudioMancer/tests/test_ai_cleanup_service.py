@@ -47,7 +47,14 @@ _MOCK_PROFILE = {
 def test_ai_cleanup_writes_cleanup_artifacts_and_log(
     mock_extracted_project, mock_prompt_environment, monkeypatch
 ) -> None:
-    """Verify AI-assisted cleanup writes output, report, state, and AI log artifacts."""
+    """
+    @brief      Validate ai cleanup writes cleanup artifacts and log.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-02
+    @version    0.1.0
+    """
     project_root, manifest = mock_extracted_project
 
     extracted_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.EXTRACTED_TEXT_FILE_NAME
@@ -163,7 +170,14 @@ def test_ai_cleanup_text_transformations(
     mock_prompt_environment,
     monkeypatch,
 ) -> None:
-    """Verify various AI cleanup text join/heal permutations via parametrization."""
+    """
+    @brief      Validate ai cleanup text transformations.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-02
+    @version    0.1.0
+    """
     project_root, manifest = mock_extracted_project
     extracted_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.EXTRACTED_TEXT_FILE_NAME
     extracted_path.write_text(source_text, encoding="utf-8")
@@ -189,7 +203,14 @@ def test_ai_cleanup_text_transformations(
 def test_ai_cleanup_corrects_invalid_tail_labels_and_persists_warnings(
     mock_extracted_project, mock_prompt_environment, monkeypatch
 ) -> None:
-    """Verify AI-assisted cleanup corrects page-number drift near one late window tail and persists warnings."""
+    """
+    @brief      Validate ai cleanup corrects invalid tail labels and persists warnings.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-02
+    @version    0.1.0
+    """
     project_root, manifest = mock_extracted_project
     extracted_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.EXTRACTED_TEXT_FILE_NAME
     extracted_path.write_text(
@@ -246,7 +267,14 @@ def test_ai_cleanup_corrects_invalid_tail_labels_and_persists_warnings(
 def test_ai_cleanup_accepts_artifact_action_confidence_schema(
     mock_extracted_project, mock_prompt_environment, monkeypatch
 ) -> None:
-    """Verify AI cleanup accepts the artifact/action/confidence response schema."""
+    """
+    @brief      Validate ai cleanup accepts artifact action confidence schema.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-02
+    @version    0.1.0
+    """
     project_root, manifest = mock_extracted_project
     extracted_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.EXTRACTED_TEXT_FILE_NAME
     extracted_path.write_text(
@@ -308,7 +336,14 @@ def test_ai_cleanup_accepts_artifact_action_confidence_schema(
 def test_ai_cleanup_preserves_low_confidence_removals(
     mock_extracted_project, mock_prompt_environment, monkeypatch
 ) -> None:
-    """Verify low-confidence removable classifications are preserved for review."""
+    """
+    @brief      Validate ai cleanup preserves low confidence removals.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-02
+    @version    0.1.0
+    """
     project_root, manifest = mock_extracted_project
     extracted_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.EXTRACTED_TEXT_FILE_NAME
     extracted_path.write_text("A short but meaningful line.\n", encoding="utf-8")
@@ -347,7 +382,14 @@ def test_ai_cleanup_preserves_low_confidence_removals(
 def test_ai_cleanup_prompt_includes_language_script_and_neighbor_context(
     mock_extracted_project, mock_prompt_environment, monkeypatch
 ) -> None:
-    """Verify the AI cleanup user prompt exposes language, script, and neighbor context."""
+    """
+    @brief      Validate ai cleanup prompt includes language script and neighbor context.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-02
+    @version    0.1.0
+    """
     project_root, manifest = mock_extracted_project
     (mock_prompt_environment / "text_cleanup_user.txt").write_text(
         "Language: {source_language_hint}\nScript: {dominant_script_hint}\nCount: {unit_count}\n{units_block}",
@@ -358,6 +400,14 @@ def test_ai_cleanup_prompt_includes_language_script_and_neighbor_context(
     captured_user_prompts: list[str] = []
 
     def _fake_chat_json(_profile, _system_prompt, user_prompt, **_kwargs):
+        """
+        @brief      Provide the fake chat json test helper.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-02
+        @version    0.1.0
+        """
         captured_user_prompts.append(user_prompt)
         return {
             "payload": {
@@ -387,7 +437,14 @@ def test_ai_cleanup_prompt_includes_language_script_and_neighbor_context(
 def test_ai_cleanup_splits_long_input_into_multiple_windows(
     mock_extracted_project, mock_prompt_environment, monkeypatch
 ) -> None:
-    """Verify AI-assisted cleanup splits long extracted input into multiple request windows."""
+    """
+    @brief      Validate ai cleanup splits long input into multiple windows.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-02
+    @version    0.1.0
+    """
     project_root, manifest = mock_extracted_project
     extracted_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.EXTRACTED_TEXT_FILE_NAME
     extracted_text = "\n\n".join(f"Paragraph {index} keeps enough words." for index in range(1, 31)) + "\n"
@@ -396,6 +453,14 @@ def test_ai_cleanup_splits_long_input_into_multiple_windows(
     call_contexts: list[dict[str, object]] = []
 
     def _fake_chat_json(_profile, _system_prompt, _user_prompt, **kwargs):
+        """
+        @brief      Provide the fake chat json test helper.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-02
+        @version    0.1.0
+        """
         log_context = kwargs.get("log_context", {})
         call_contexts.append(dict(log_context))
         window_index = int(log_context.get("window_index", 1))
@@ -426,7 +491,14 @@ def test_ai_cleanup_splits_long_input_into_multiple_windows(
 
 
 def test_ai_cleanup_rejects_profiles_with_no_input_budget(mock_prompt_environment) -> None:
-    """Verify excessive output-token settings fail before AI cleanup starts."""
+    """
+    @brief      Validate ai cleanup rejects profiles with no input budget.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-02
+    @version    0.1.0
+    """
     with pytest.raises(ValueError, match="too little room"):
         ai_cleanup_service._build_budget_metadata(
             {
@@ -440,7 +512,14 @@ def test_ai_cleanup_rejects_profiles_with_no_input_budget(mock_prompt_environmen
 
 
 def test_ai_cleanup_small_context_limits_unit_windows() -> None:
-    """Verify cleanup windows shrink when the text budget is small."""
+    """
+    @brief      Validate ai cleanup small context limits unit windows.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-02
+    @version    0.1.0
+    """
     units = [
         {
             "unit_id": f"unit-{index:04d}",
@@ -469,7 +548,14 @@ def test_ai_cleanup_small_context_limits_unit_windows() -> None:
 def test_ai_cleanup_resumes_with_new_model_settings(
     mock_extracted_project, mock_prompt_environment, monkeypatch
 ) -> None:
-    """Verify cleanup resumes unfinished units with the newly selected model settings."""
+    """
+    @brief      Validate ai cleanup resumes with new model settings.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-02
+    @version    0.1.0
+    """
     project_root, manifest = mock_extracted_project
     extracted_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.EXTRACTED_TEXT_FILE_NAME
     extracted_path.write_text(
@@ -489,6 +575,14 @@ def test_ai_cleanup_resumes_with_new_model_settings(
     )
 
     def _first_chat_json(*_args, **_kwargs):
+        """
+        @brief      Provide the first chat json test helper.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-02
+        @version    0.1.0
+        """
         response = next(responses)
         if isinstance(response, Exception):
             raise response
@@ -501,6 +595,14 @@ def test_ai_cleanup_resumes_with_new_model_settings(
     captured_prompts: list[str] = []
 
     def _second_chat_json(_profile, _system_prompt, user_prompt, **_kwargs):
+        """
+        @brief      Provide the second chat json test helper.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-02
+        @version    0.1.0
+        """
         captured_prompts.append(user_prompt)
         return {
             "payload": {
@@ -540,7 +642,14 @@ def test_ai_cleanup_resumes_with_new_model_settings(
 def test_ai_cleanup_restarts_when_extracted_text_changes(
     mock_extracted_project, mock_prompt_environment, monkeypatch
 ) -> None:
-    """Verify stale checkpoints are ignored when the extracted input changes."""
+    """
+    @brief      Validate ai cleanup restarts when extracted text changes.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-02
+    @version    0.1.0
+    """
     project_root, manifest = mock_extracted_project
     extracted_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.EXTRACTED_TEXT_FILE_NAME
     extracted_path.write_text(
@@ -560,6 +669,14 @@ def test_ai_cleanup_restarts_when_extracted_text_changes(
     )
 
     def _first_chat_json(*_args, **_kwargs):
+        """
+        @brief      Provide the first chat json test helper.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-02
+        @version    0.1.0
+        """
         response = next(responses)
         if isinstance(response, Exception):
             raise response
@@ -573,6 +690,14 @@ def test_ai_cleanup_restarts_when_extracted_text_changes(
     captured_prompts: list[str] = []
 
     def _second_chat_json(_profile, _system_prompt, user_prompt, **_kwargs):
+        """
+        @brief      Provide the second chat json test helper.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-02
+        @version    0.1.0
+        """
         captured_prompts.append(user_prompt)
         return {
             "payload": {

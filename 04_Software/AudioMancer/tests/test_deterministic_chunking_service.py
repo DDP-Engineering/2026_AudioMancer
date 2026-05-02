@@ -227,6 +227,14 @@ def test_chunking_persists_resumable_state_after_cancellation(tmp_path) -> None:
     should_cancel = {"value": False}
 
     def _progress_callback(*_args) -> None:
+        """
+        @brief      Provide the progress callback test helper.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-02
+        @version    0.1.0
+        """
         should_cancel["value"] = True
 
     with pytest.raises(operation_runtime_service.OperationCancelledError):

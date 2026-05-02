@@ -28,6 +28,14 @@ from audiomancer.services import character_discovery_service, project_workspace_
 
 
 def test_start_discovery_persists_outputs_and_report(monkeypatch, tmp_path) -> None:
+    """
+    @brief      Validate start discovery persists outputs and report.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-02
+    @version    0.1.0
+    """
     project_root, manifest = _create_character_project(tmp_path, "CharacterDiscoveryService")
     monkeypatch.setattr(
         character_discovery_service.prompt_template_service,
@@ -128,6 +136,14 @@ def test_start_discovery_persists_outputs_and_report(monkeypatch, tmp_path) -> N
 
 
 def test_start_discovery_resumes_from_saved_synthesis_checkpoint(monkeypatch, tmp_path) -> None:
+    """
+    @brief      Validate start discovery resumes from saved synthesis checkpoint.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-02
+    @version    0.1.0
+    """
     project_root, manifest = _create_character_project(tmp_path, "CharacterDiscoveryResume")
     source_chunks = character_discovery_service.load_input_chunks(project_root)
     fingerprint = character_discovery_service._build_input_fingerprint(source_chunks)
@@ -213,6 +229,14 @@ def test_start_discovery_resumes_from_saved_synthesis_checkpoint(monkeypatch, tm
     call_profiles = []
 
     def _fake_chat_json(ai_profile_payload, *_args, **_kwargs):
+        """
+        @brief      Provide the fake chat json test helper.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-02
+        @version    0.1.0
+        """
         call_profiles.append(dict(ai_profile_payload))
         return {
             "payload": {
@@ -279,6 +303,14 @@ def test_start_discovery_resumes_from_saved_synthesis_checkpoint(monkeypatch, tm
 
 
 def test_manual_add_update_delete_and_reset(tmp_path) -> None:
+    """
+    @brief      Validate manual add update delete and reset.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-02
+    @version    0.1.0
+    """
     project_root, _manifest = _create_character_project(tmp_path, "CharacterDiscoveryManual")
     discovery_root = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH
     (discovery_root / config.CHARACTER_PROFILE_FILE_NAME).write_text(
@@ -623,6 +655,14 @@ def test_update_character_profile_marks_voice_definition_stale_when_facts_change
 
 
 def test_validate_manual_character_name_rejects_duplicates_and_invalid_names() -> None:
+    """
+    @brief      Validate validate manual character name rejects duplicates and invalid names.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-02
+    @version    0.1.0
+    """
     existing_profiles = [_saved_profile_payload()]
 
     with pytest.raises(ValueError, match="duplicate_name"):
@@ -643,6 +683,14 @@ def test_validate_manual_character_name_rejects_duplicates_and_invalid_names() -
 
 
 def test_budgeted_chunk_windows_use_eight_chunks_as_cap() -> None:
+    """
+    @brief      Validate budgeted chunk windows use eight chunks as cap.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-02
+    @version    0.1.0
+    """
     source_chunks = [_chunk_payload(f"chunk-{index:04d}", index, "Short dialogue text.") for index in range(1, 11)]
     windows = character_discovery_service._build_chunk_windows(  # noqa: SLF001
         source_chunks,
@@ -655,6 +703,14 @@ def test_budgeted_chunk_windows_use_eight_chunks_as_cap() -> None:
 
 
 def test_budgeted_chunk_windows_shrink_for_small_text_budget() -> None:
+    """
+    @brief      Validate budgeted chunk windows shrink for small text budget.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-02
+    @version    0.1.0
+    """
     source_chunks = [_chunk_payload(f"chunk-{index:04d}", index, '"Hello," said Alice. ' * 30) for index in range(1, 5)]
     windows = character_discovery_service._build_chunk_windows(  # noqa: SLF001
         source_chunks,
@@ -668,6 +724,14 @@ def test_budgeted_chunk_windows_shrink_for_small_text_budget() -> None:
 
 
 def test_budgeted_chunk_windows_reject_oversized_single_chunk() -> None:
+    """
+    @brief      Validate budgeted chunk windows reject oversized single chunk.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-02
+    @version    0.1.0
+    """
     source_chunks = [_chunk_payload("chunk-0001", 1, "Oversized text. " * 200)]
 
     with pytest.raises(ValueError, match="exceeds the available request input budget"):
@@ -680,6 +744,14 @@ def test_budgeted_chunk_windows_reject_oversized_single_chunk() -> None:
 
 
 def test_character_discovery_rejects_profile_with_too_little_context(monkeypatch, tmp_path) -> None:
+    """
+    @brief      Validate character discovery rejects profile with too little context.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-02
+    @version    0.1.0
+    """
     project_root, manifest = _create_character_project(tmp_path, "CharacterDiscoveryTinyBudget")
     monkeypatch.setattr(
         character_discovery_service.prompt_template_service,
@@ -708,6 +780,14 @@ def test_character_discovery_rejects_profile_with_too_little_context(monkeypatch
 
 
 def test_resume_state_accepts_changed_profile_and_budget_metadata() -> None:
+    """
+    @brief      Validate resume state accepts changed profile and budget metadata.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-02
+    @version    0.1.0
+    """
     current_budget = {
         "context_window": 4096,
         "max_output_tokens": 512,
@@ -756,6 +836,14 @@ def test_resume_state_accepts_changed_profile_and_budget_metadata() -> None:
 
 
 def test_synthesis_candidate_payload_is_trimmed_to_budget_metadata() -> None:
+    """
+    @brief      Validate synthesis candidate payload is trimmed to budget metadata.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-02
+    @version    0.1.0
+    """
     candidate = {
         "character_id": "alice",
         "canonical_name": "Alice",
@@ -789,6 +877,14 @@ def test_synthesis_candidate_payload_is_trimmed_to_budget_metadata() -> None:
 
 
 def _create_character_project(tmp_path, project_name: str):
+    """
+    @brief      Provide the create character project test helper.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-02
+    @version    0.1.0
+    """
     project_root, manifest = project_workspace_service.create_project(project_name, tmp_path)
     manifest["source_document"] = {
         "original_name": "story.txt",
@@ -840,6 +936,14 @@ def _create_character_project(tmp_path, project_name: str):
 
 
 def _chunk_payload(chunk_id: str, sequence_index: int, text: str) -> dict[str, object]:
+    """
+    @brief      Provide the chunk payload test helper.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-02
+    @version    0.1.0
+    """
     return {
         "chunk_id": chunk_id,
         "sequence_index": sequence_index,
@@ -851,6 +955,14 @@ def _chunk_payload(chunk_id: str, sequence_index: int, text: str) -> dict[str, o
 
 
 def _profile_payload(profile_id: str) -> dict[str, object]:
+    """
+    @brief      Provide the profile payload test helper.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-02
+    @version    0.1.0
+    """
     return {
         "id": profile_id,
         "label": "Profile One",
@@ -868,6 +980,14 @@ def _profile_payload(profile_id: str) -> dict[str, object]:
 
 
 def _saved_profile_payload() -> dict[str, object]:
+    """
+    @brief      Provide the saved profile payload test helper.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-02
+    @version    0.1.0
+    """
     return {
         "character_id": "alice",
         "canonical_name": "Alice",

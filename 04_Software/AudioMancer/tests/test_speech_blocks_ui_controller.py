@@ -375,6 +375,14 @@ def test_speech_blocks_sync_manifest_completes_only_after_full_approval(tmp_path
     window = SimpleNamespace(_current_project_root=project_root, _current_manifest=manifest)
 
     def _show_project_state(_project_root, loaded_manifest):
+        """
+        @brief      Provide the show project state test helper.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-02
+        @version    0.1.0
+        """
         window._current_manifest = loaded_manifest
 
     window.show_project_state = _show_project_state
@@ -460,6 +468,14 @@ def _build_window(qtbot, project_root):
 
 
 def _settings_payload() -> dict[str, object]:
+    """
+    @brief      Provide the settings payload test helper.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-02
+    @version    0.1.0
+    """
     return {
         "language": "en",
         "ui_text_scale": "normal",

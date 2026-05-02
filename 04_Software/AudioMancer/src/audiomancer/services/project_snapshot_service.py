@@ -13,7 +13,7 @@
          without registering the archive as a project runtime artifact.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-25
-@version 0.3.0
+@version 0.3.1
 """
 
 # IMPORTS
@@ -28,11 +28,13 @@ import zipfile
 
 from audiomancer import config
 from audiomancer.services import operation_runtime_service
+from audiomancer.services.logging_service import get_component_logger
 
 # CONSTANTS
 
 # @brief Default archive extension used by project snapshots.
 SNAPSHOT_EXTENSION = ".zip"
+_PROJECT_SNAPSHOT_LOGGER = get_component_logger("project_snapshot")
 _emit_progress = partial(operation_runtime_service.emit_progress_update, include_token_usage=False)
 
 
@@ -113,7 +115,7 @@ def create_project_snapshot(
     @exception  OSError Raised when ZIP creation or replacement fails.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.2.0
+    @version    0.2.1
     """
     resolved_project_root = Path(project_root).resolve()
     if not resolved_project_root.is_dir():
@@ -129,6 +131,12 @@ def create_project_snapshot(
     project_files = list(_iter_project_files(resolved_project_root))
     total_files = len(project_files)
     file_count = 0
+    _PROJECT_SNAPSHOT_LOGGER.info(
+        "Creating project ZIP snapshot project_root=%s snapshot_path=%s file_count=%s",
+        resolved_project_root,
+        final_path,
+        total_files,
+    )
 
     if temporary_path.exists():
         temporary_path.unlink()
@@ -151,9 +159,12 @@ def create_project_snapshot(
         _raise_if_cancelled(cancel_requested)
         os.replace(temporary_path, final_path)
     except Exception:
+        _PROJECT_SNAPSHOT_LOGGER.exception("Project ZIP snapshot failed snapshot_path=%s", final_path)
         if temporary_path.exists():
             temporary_path.unlink()
         raise
+
+    _PROJECT_SNAPSHOT_LOGGER.info("Created project ZIP snapshot snapshot_path=%s file_count=%s", final_path, file_count)
 
     return {
         "snapshot_path": str(final_path),
