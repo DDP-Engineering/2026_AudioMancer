@@ -3,166 +3,642 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>AudioMancer Windows Download</title>
+  <title>AudioMancer - Audiobook Production Desktop App</title>
+  <meta name="description" content="AudioMancer is a Windows desktop application for preparing audiobook projects, text workflows, voice planning, and local voice generation with VoiceWeaver.">
   <style>
     :root {
       color-scheme: light;
-      --ink: #202124;
-      --muted: #5f6368;
-      --line: #d8dee4;
-      --accent: #146c94;
-      --accent-dark: #0f4f6c;
+      --page: #f5f7f8;
       --surface: #ffffff;
-      --page: #f6f8fa;
+      --ink: #172027;
+      --muted: #5f6f7a;
+      --line: #d7e0e5;
+      --accent: #176b87;
+      --accent-dark: #0f4d62;
+      --accent-soft: #e4f2f6;
+      --gold: #b47a2c;
+      --shadow: 0 18px 45px rgba(21, 36, 45, 0.12);
     }
-    * { box-sizing: border-box; }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
     body {
       margin: 0;
       font-family: Arial, Helvetica, sans-serif;
-      line-height: 1.5;
+      line-height: 1.55;
       color: var(--ink);
       background: var(--page);
     }
-    header {
-      background: var(--surface);
-      border-bottom: 1px solid var(--line);
+
+    a {
+      color: var(--accent);
     }
-    .wrap {
-      width: min(980px, calc(100% - 32px));
+
+    .shell {
+      width: min(1120px, calc(100% - 32px));
       margin: 0 auto;
-      padding: 40px 0;
     }
-    h1 {
-      margin: 0 0 12px;
-      font-size: 44px;
-      line-height: 1.1;
+
+    .topbar {
+      background: rgba(255, 255, 255, 0.94);
+      border-bottom: 1px solid var(--line);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      backdrop-filter: blur(14px);
+    }
+
+    .topbar .shell {
+      min-height: 68px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-weight: 800;
+      color: var(--ink);
+      text-decoration: none;
       letter-spacing: 0;
     }
-    h2 {
-      margin: 0 0 12px;
-      font-size: 24px;
-      letter-spacing: 0;
-    }
-    p { margin: 0 0 16px; }
-    .lead {
-      max-width: 760px;
-      color: var(--muted);
+
+    .mark {
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      display: grid;
+      place-items: center;
+      color: #ffffff;
+      background: linear-gradient(135deg, var(--accent), #273f4f);
+      box-shadow: 0 10px 26px rgba(23, 107, 135, 0.24);
       font-size: 18px;
     }
+
+    nav {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      font-size: 14px;
+    }
+
+    nav a {
+      color: var(--muted);
+      text-decoration: none;
+      font-weight: 700;
+    }
+
+    nav a:hover {
+      color: var(--accent);
+    }
+
+    .hero {
+      background:
+        radial-gradient(circle at 82% 18%, rgba(23, 107, 135, 0.14), transparent 30%),
+        linear-gradient(180deg, #ffffff 0%, #eef5f7 100%);
+      border-bottom: 1px solid var(--line);
+    }
+
+    .hero .shell {
+      min-height: 620px;
+      display: grid;
+      grid-template-columns: minmax(0, 1.02fr) minmax(320px, 0.98fr);
+      gap: 56px;
+      align-items: center;
+      padding: 72px 0 64px;
+    }
+
+    h1 {
+      margin: 0 0 18px;
+      max-width: 680px;
+      font-size: clamp(42px, 6vw, 76px);
+      line-height: 0.98;
+      letter-spacing: 0;
+    }
+
+    .hero-copy {
+      margin: 0 0 26px;
+      max-width: 640px;
+      color: var(--muted);
+      font-size: 20px;
+    }
+
     .actions {
       display: flex;
       flex-wrap: wrap;
       gap: 12px;
-      margin-top: 12px;
+      margin: 26px 0 24px;
     }
-    .download {
-      display: inline-block;
-      padding: 12px 18px;
+
+    .button {
+      min-height: 46px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
       border-radius: 6px;
-      background: var(--accent);
-      color: #ffffff;
+      padding: 12px 18px;
       text-decoration: none;
+      font-weight: 800;
+      font-size: 15px;
+      border: 1px solid transparent;
+    }
+
+    .button.primary {
+      color: #ffffff;
+      background: var(--accent);
+      box-shadow: 0 12px 24px rgba(23, 107, 135, 0.22);
+    }
+
+    .button.primary:hover {
+      background: var(--accent-dark);
+    }
+
+    .button.secondary {
+      color: var(--accent);
+      background: #ffffff;
+      border-color: var(--line);
+    }
+
+    .button.secondary:hover {
+      border-color: var(--accent);
+    }
+
+    .meta-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px 18px;
+      color: var(--muted);
+      font-size: 14px;
       font-weight: 700;
     }
-    .download:hover { background: var(--accent-dark); }
-    .secondary {
-      background: #ffffff;
-      color: var(--accent);
-      border: 1px solid var(--accent);
+
+    .product-panel {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 22px;
+      box-shadow: var(--shadow);
     }
-    .secondary:hover {
-      background: #eef7fb;
-      color: var(--accent-dark);
+
+    .panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--line);
     }
-    main .wrap {
+
+    .panel-title {
+      margin: 0;
+      font-size: 16px;
+      font-weight: 800;
+    }
+
+    .status {
+      color: #276749;
+      background: #e6f4ea;
+      border-radius: 999px;
+      padding: 5px 10px;
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .workflow {
       display: grid;
-      gap: 24px;
+      gap: 12px;
+      margin-top: 18px;
     }
+
+    .workflow-item {
+      display: grid;
+      grid-template-columns: 36px 1fr;
+      gap: 12px;
+      align-items: start;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fbfcfd;
+    }
+
+    .workflow-index {
+      width: 36px;
+      height: 36px;
+      display: grid;
+      place-items: center;
+      border-radius: 8px;
+      color: #ffffff;
+      background: var(--accent);
+      font-weight: 800;
+    }
+
+    .workflow-item h3 {
+      margin: 0 0 3px;
+      font-size: 15px;
+    }
+
+    .workflow-item p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
     section {
+      padding: 76px 0;
+    }
+
+    section + section {
+      border-top: 1px solid var(--line);
+    }
+
+    .section-head {
+      max-width: 760px;
+      margin-bottom: 30px;
+    }
+
+    h2 {
+      margin: 0 0 12px;
+      font-size: clamp(30px, 4vw, 46px);
+      line-height: 1.08;
+      letter-spacing: 0;
+    }
+
+    .section-head p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 18px;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 18px;
+    }
+
+    .feature {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 22px;
+    }
+
+    .feature-icon {
+      width: 38px;
+      height: 38px;
+      display: grid;
+      place-items: center;
+      border-radius: 8px;
+      margin-bottom: 16px;
+      color: var(--accent);
+      background: var(--accent-soft);
+      font-weight: 900;
+      font-size: 18px;
+    }
+
+    .feature h3 {
+      margin: 0 0 8px;
+      font-size: 18px;
+    }
+
+    .feature p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 15px;
+    }
+
+    .band {
+      background: #ffffff;
+    }
+
+    .split {
+      display: grid;
+      grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+      gap: 36px;
+      align-items: start;
+    }
+
+    .download-box {
       background: var(--surface);
       border: 1px solid var(--line);
       border-radius: 8px;
       padding: 24px;
+      box-shadow: 0 14px 34px rgba(21, 36, 45, 0.08);
     }
-    ol, ul { margin: 0; padding-left: 22px; }
-    li + li { margin-top: 8px; }
-    code, pre {
-      font-family: Consolas, Monaco, monospace;
-      background: #eef1f4;
-      border-radius: 4px;
+
+    .download-box h3 {
+      margin: 0 0 10px;
+      font-size: 22px;
     }
-    code { padding: 2px 5px; }
-    pre {
-      overflow-x: auto;
-      padding: 14px;
-      margin: 12px 0 0;
-      font-size: 13px;
+
+    .download-box p {
+      margin: 0 0 16px;
+      color: var(--muted);
     }
-    .asset-list {
-      columns: 2;
+
+    ol,
+    ul {
+      margin: 0;
       padding-left: 22px;
     }
+
+    li + li {
+      margin-top: 9px;
+    }
+
+    code,
+    pre {
+      font-family: Consolas, Monaco, monospace;
+      background: #eef2f4;
+      border-radius: 5px;
+    }
+
+    code {
+      padding: 2px 5px;
+    }
+
+    pre {
+      margin: 14px 0 0;
+      padding: 14px;
+      overflow-x: auto;
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
     .hash {
       word-break: break-all;
       color: var(--muted);
     }
+
+    .asset-list {
+      columns: 2;
+      margin-top: 12px;
+    }
+
+    .notice {
+      border-left: 4px solid var(--gold);
+      background: #fff8ed;
+      padding: 14px 16px;
+      color: #684716;
+      border-radius: 6px;
+      margin-top: 18px;
+    }
+
     footer {
+      padding: 34px 0;
+      border-top: 1px solid var(--line);
       color: var(--muted);
+      background: #ffffff;
       font-size: 14px;
     }
-    @media (max-width: 720px) {
-      h1 { font-size: 34px; }
-      .asset-list { columns: 1; }
+
+    @media (max-width: 860px) {
+      .topbar .shell,
+      nav,
+      .hero .shell,
+      .split,
+      .grid-3 {
+        grid-template-columns: 1fr;
+      }
+
+      .topbar .shell {
+        align-items: flex-start;
+        padding: 14px 0;
+      }
+
+      nav {
+        display: none;
+      }
+
+      .hero .shell {
+        min-height: auto;
+        padding: 52px 0;
+      }
+
+      .asset-list {
+        columns: 1;
+      }
     }
   </style>
 </head>
 <body>
-  <header>
-    <div class="wrap">
-      <h1>AudioMancer</h1>
-      <p class="lead">Windows-only executable delivery for AudioMancer plus its required VoiceWeaver companion runtime.</p>
-      <div class="actions">
-        <a class="download" href="https://github.com/DDP-Engineering/2026_AudioMancer/releases/latest/download/AudioMancer_Windows_x64.zip">Download AudioMancer ZIP</a>
-        <a class="download secondary" href="https://github.com/DDP-Engineering/2026_AudioMancer/releases/tag/v1.4.0">Open Full Release</a>
-        <a class="download secondary" href="https://github.com/DDP-Engineering/2026_AudioMancer/releases/latest/download/SHA256SUMS.txt">Download Hashes</a>
-      </div>
+  <header class="topbar">
+    <div class="shell">
+      <a class="brand" href="#top" aria-label="AudioMancer home">
+        <span class="mark">A</span>
+        <span>AudioMancer</span>
+      </a>
+      <nav aria-label="Page navigation">
+        <a href="#workflow">Workflow</a>
+        <a href="#features">Features</a>
+        <a href="#voiceweaver">VoiceWeaver</a>
+        <a href="#download">Download</a>
+      </nav>
     </div>
   </header>
-  <main>
-    <div class="wrap">
-      <section>
-        <h2>Required Downloads</h2>
-        <p>Download AudioMancer and every VoiceWeaver part from the release page. VoiceWeaver is split because the complete Windows runtime package is larger than a single GitHub release asset.</p>
-        <ul class="asset-list">
-          <li><code>AudioMancer_Windows_x64.zip</code></li>
-          <li><code>SHA256SUMS.txt</code></li>
-          <li><code>VoiceWeaver...part001</code></li>
-          <li><code>VoiceWeaver...part002</code></li>
-          <li><code>VoiceWeaver...part003</code></li>
-          <li><code>VoiceWeaver...part004</code></li>
-          <li><code>VoiceWeaver...part005</code></li>
-          <li><code>VoiceWeaver...part006</code></li>
-          <li><code>VoiceWeaver...part007</code></li>
-          <li><code>VoiceWeaver...part008</code></li>
-          <li><code>VoiceWeaver...part009</code></li>
-          <li><code>VoiceWeaver...part010</code></li>
-        </ul>
-      </section>
-      <section>
-        <h2>Install</h2>
-        <ol>
-          <li>Download <code>AudioMancer_Windows_x64.zip</code>.</li>
-          <li>Download all 10 VoiceWeaver <code>.partNNN</code> files into the same folder.</li>
-          <li>Reassemble the VoiceWeaver ZIP using PowerShell.</li>
-          <li>Verify the SHA256 hashes.</li>
-          <li>Extract both ZIP archives before starting the applications.</li>
-          <li>Run <code>AudioMancer.exe</code> or <code>Start-AudioMancer.cmd</code>.</li>
-        </ol>
-      </section>
-      <section>
-        <h2>Reassemble VoiceWeaver</h2>
-        <p>Run this from the folder containing all 10 VoiceWeaver parts:</p>
-        <pre>$parts = Get-ChildItem "VoiceWeaver-v1.2.2-windows-x64-cuda-models-3.zip.part*" | Sort-Object Name
+
+  <main id="top">
+    <section class="hero">
+      <div class="shell">
+        <div>
+          <h1>Audiobook production from source text to voice-ready delivery.</h1>
+          <p class="hero-copy">
+            AudioMancer is a Windows desktop application for building audiobook projects, preparing long-form text,
+            organizing narrator and character voices, and producing structured audio-ready work with a local VoiceWeaver runtime.
+          </p>
+          <div class="actions">
+            <a class="button primary" href="https://github.com/DDP-Engineering/2026_AudioMancer/releases/tag/v1.4.0">Open Windows Release</a>
+            <a class="button secondary" href="#download">Installation Steps</a>
+          </div>
+          <div class="meta-row">
+            <span>Windows x64 delivery</span>
+            <span>Portable ZIP packages</span>
+            <span>Hashes included</span>
+          </div>
+        </div>
+
+        <aside class="product-panel" aria-label="AudioMancer workflow preview">
+          <div class="panel-header">
+            <p class="panel-title">Production Workflow</p>
+            <span class="status">Windows release</span>
+          </div>
+          <div class="workflow">
+            <div class="workflow-item">
+              <div class="workflow-index">1</div>
+              <div>
+                <h3>Import and clean source text</h3>
+                <p>Bring in source material, extract text, clean it, and keep project artifacts organized.</p>
+              </div>
+            </div>
+            <div class="workflow-item">
+              <div class="workflow-index">2</div>
+              <div>
+                <h3>Chunk and translate</h3>
+                <p>Prepare structured chunks and locked-target translation workflows for long-form narration.</p>
+              </div>
+            </div>
+            <div class="workflow-item">
+              <div class="workflow-index">3</div>
+              <div>
+                <h3>Plan voices and speech blocks</h3>
+                <p>Discover characters, prepare voice targets, and manage narrator-aware speech blocks.</p>
+              </div>
+            </div>
+            <div class="workflow-item">
+              <div class="workflow-index">4</div>
+              <div>
+                <h3>Generate with VoiceWeaver</h3>
+                <p>Use the companion runtime for local voice generation and audio assembly workflows.</p>
+              </div>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <section id="workflow">
+      <div class="shell">
+        <div class="section-head">
+          <h2>Built for long audiobook projects.</h2>
+          <p>
+            AudioMancer keeps project setup, text processing, voice preparation, and delivery artifacts in one desktop workflow.
+          </p>
+        </div>
+        <div class="grid-3">
+          <article class="feature">
+            <div class="feature-icon">T</div>
+            <h3>Text pipeline</h3>
+            <p>Import source files, extract text, clean content, chunk chapters, and export completed text artifacts.</p>
+          </article>
+          <article class="feature">
+            <div class="feature-icon">V</div>
+            <h3>Voice planning</h3>
+            <p>Prepare narrator and character voices, review evidence, and keep voice assignments visible during production.</p>
+          </article>
+          <article class="feature">
+            <div class="feature-icon">A</div>
+            <h3>Audio assembly</h3>
+            <p>Organize Speech Blocks, Audio Blocks, and WAV assembly outputs for audiobook delivery work.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section id="features" class="band">
+      <div class="shell">
+        <div class="section-head">
+          <h2>What the application supports.</h2>
+          <p>
+            The Windows package includes the desktop app, offline help, prompt templates, settings, and required license files.
+          </p>
+        </div>
+        <div class="grid-3">
+          <article class="feature">
+            <div class="feature-icon">P</div>
+            <h3>Project structure</h3>
+            <p>Create projects with locked audiobook language and narration mode so production choices remain consistent.</p>
+          </article>
+          <article class="feature">
+            <div class="feature-icon">C</div>
+            <h3>AI-assisted preparation</h3>
+            <p>Use external prompt templates for cleanup, chunking, translation, character discovery, and speech block work.</p>
+          </article>
+          <article class="feature">
+            <div class="feature-icon">H</div>
+            <h3>Offline help</h3>
+            <p>English and Romanian HTML help bundles are included in the delivery archive for local use.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section id="voiceweaver">
+      <div class="shell split">
+        <div class="section-head">
+          <h2>VoiceWeaver is required for local voice generation.</h2>
+          <p>
+            AudioMancer uses VoiceWeaver as the companion runtime for voice generation. Users should download AudioMancer and
+            all VoiceWeaver package parts from the same release.
+          </p>
+          <div class="notice">
+            The current public delivery is Windows-only. Linux packages are not published at this time.
+          </div>
+        </div>
+        <div class="download-box">
+          <h3>VoiceWeaver package parts</h3>
+          <p>
+            The VoiceWeaver Windows archive is split into 10 files because the complete runtime package is too large for a
+            single release asset.
+          </p>
+          <ul class="asset-list">
+            <li><code>part001</code></li>
+            <li><code>part002</code></li>
+            <li><code>part003</code></li>
+            <li><code>part004</code></li>
+            <li><code>part005</code></li>
+            <li><code>part006</code></li>
+            <li><code>part007</code></li>
+            <li><code>part008</code></li>
+            <li><code>part009</code></li>
+            <li><code>part010</code></li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section id="download" class="band">
+      <div class="shell split">
+        <div>
+          <div class="section-head">
+            <h2>Download and install.</h2>
+            <p>
+              Download the AudioMancer ZIP, all VoiceWeaver parts, and the checksum manifest from the GitHub Release page.
+            </p>
+          </div>
+          <div class="actions">
+            <a class="button primary" href="https://github.com/DDP-Engineering/2026_AudioMancer/releases/tag/v1.4.0">Open Release Page</a>
+            <a class="button secondary" href="https://github.com/DDP-Engineering/2026_AudioMancer/releases/latest/download/SHA256SUMS.txt">Download SHA256SUMS.txt</a>
+          </div>
+        </div>
+        <div class="download-box">
+          <h3>Windows installation steps</h3>
+          <ol>
+            <li>Download <code>AudioMancer_Windows_x64.zip</code>.</li>
+            <li>Download all 10 VoiceWeaver <code>.partNNN</code> files into the same folder.</li>
+            <li>Reassemble the VoiceWeaver ZIP with PowerShell.</li>
+            <li>Verify the SHA256 hashes with <code>SHA256SUMS.txt</code>.</li>
+            <li>Extract both ZIP archives before starting the applications.</li>
+            <li>Start AudioMancer with <code>AudioMancer.exe</code> or <code>Start-AudioMancer.cmd</code>.</li>
+          </ol>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="shell split">
+        <div>
+          <div class="section-head">
+            <h2>Verify the delivery.</h2>
+            <p>
+              Use the checksum manifest to verify the AudioMancer ZIP, each VoiceWeaver part, and the reassembled VoiceWeaver ZIP.
+            </p>
+          </div>
+          <p>AudioMancer ZIP SHA256:</p>
+          <p class="hash"><code>337b5fac0a26f502cf9bacc15cc51cbf874cd3d0ec17fbfd5e781e61ac9335e6</code></p>
+          <p>VoiceWeaver reassembled ZIP SHA256:</p>
+          <p class="hash"><code>e957082578d5f844b98b1234fb9e1f69d48fec11f80d1acdd6b65432dd2d90b9</code></p>
+        </div>
+        <div class="download-box">
+          <h3>Reassemble VoiceWeaver</h3>
+          <pre>$parts = Get-ChildItem "VoiceWeaver-v1.2.2-windows-x64-cuda-models-3.zip.part*" | Sort-Object Name
 $out = [IO.File]::Create("VoiceWeaver-v1.2.2-windows-x64-cuda-models-3.zip")
 foreach ($part in $parts) {
     $in = [IO.File]::OpenRead($part.FullName)
@@ -171,19 +647,15 @@ foreach ($part in $parts) {
 }
 $out.Dispose()
 Get-FileHash -Algorithm SHA256 .\VoiceWeaver-v1.2.2-windows-x64-cuda-models-3.zip</pre>
-      </section>
-      <section>
-        <h2>Hashes</h2>
-        <p>AudioMancer ZIP SHA256:</p>
-        <p class="hash"><code>337b5fac0a26f502cf9bacc15cc51cbf874cd3d0ec17fbfd5e781e61ac9335e6</code></p>
-        <p>VoiceWeaver reassembled ZIP SHA256:</p>
-        <p class="hash"><code>e957082578d5f844b98b1234fb9e1f69d48fec11f80d1acdd6b65432dd2d90b9</code></p>
-        <p>Per-part hashes are listed in <a href="https://github.com/DDP-Engineering/2026_AudioMancer/releases/latest/download/SHA256SUMS.txt">SHA256SUMS.txt</a>.</p>
-      </section>
-      <footer>
-        <p>Copyright &copy; 2026 DDP Engineering. See the license files included in each release archive.</p>
-      </footer>
-    </div>
+        </div>
+      </div>
+    </section>
   </main>
+
+  <footer>
+    <div class="shell">
+      <p>Copyright &copy; 2026 DDP Engineering. See the license files included in each release archive.</p>
+    </div>
+  </footer>
 </body>
 </html>
