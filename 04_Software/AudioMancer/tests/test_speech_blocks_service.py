@@ -15,7 +15,7 @@
          chunk-based generation, and narrator-only segmentation.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-24
-@version 0.8.1
+@version 0.9.0
 """
 
 # IMPORTS
@@ -418,13 +418,13 @@ def test_load_speech_blocks_rejects_legacy_global_sequence_schema(tmp_path) -> N
 
 def test_insert_speech_block_renumbers_selected_chunk_only(tmp_path) -> None:
     """
-    @brief      Verify manual insertion before a selected block renumbers only that chunk.
+    @brief      Verify manual insertion before a selected block resequences only that chunk.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.1.0
+    @version    0.2.0
     """
     project_root, _manifest = _create_chunked_project(tmp_path, "SpeechBlocksInsert")
     _seed_review_speech_blocks(project_root)
@@ -432,10 +432,10 @@ def test_insert_speech_block_renumbers_selected_chunk_only(tmp_path) -> None:
     _report, inserted_id = speech_blocks_service.insert_speech_block(project_root, "chunk-0001", "0001-000001")
 
     speech_blocks = speech_blocks_service.load_speech_blocks(project_root)
-    assert inserted_id == "0001-000001"
+    assert inserted_id == "0001-000002"
     assert [block["speech_block_id"] for block in speech_blocks] == [
-        "0001-000001",
         "0001-000002",
+        "0001-000001",
         "0002-000001",
     ]
     assert speech_blocks[0]["speaker_id"] == "narrator"
@@ -473,19 +473,19 @@ def test_insert_speech_block_into_empty_chunk_creates_unapproved_narration(tmp_p
 
 def test_delete_speech_block_renumbers_remaining_chunk_blocks(tmp_path) -> None:
     """
-    @brief      Verify manual deletion removes the selected block and closes sequence gaps.
+    @brief      Verify manual deletion removes the selected block and resequences remaining blocks.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.1.0
+    @version    0.2.0
     """
     project_root, _manifest = _create_chunked_project(tmp_path, "SpeechBlocksDelete")
     _seed_review_speech_blocks(project_root)
-    speech_blocks_service.insert_speech_block(project_root, "chunk-0001", "0001-000001")
+    _report, inserted_id = speech_blocks_service.insert_speech_block(project_root, "chunk-0001", "0001-000001")
 
-    speech_blocks_service.delete_speech_block(project_root, "0001-000001")
+    speech_blocks_service.delete_speech_block(project_root, inserted_id)
 
     speech_blocks = speech_blocks_service.load_speech_blocks(project_root)
     assert [block["speech_block_id"] for block in speech_blocks] == ["0001-000001", "0002-000001"]

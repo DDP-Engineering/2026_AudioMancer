@@ -13,7 +13,7 @@
          selected chunk preview editing and search behavior.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-24
-@version 0.3.2
+@version 0.4.0
 """
 
 # IMPORTS
@@ -61,6 +61,8 @@ def test_text_chunking_page_renders_chunks_and_selected_preview(qtbot) -> None:
     assert page._chunk_list.count() == 1
     assert page._chunk_list.currentRow() == 0
     assert page._chunk_text_edit.toPlainText() == "Paragraph text"
+    assert page._insert_chunk_button.isEnabled() is True
+    assert page._delete_chunk_button.isEnabled() is False
     assert page._edit_chunk_button.isEnabled() is True
     assert "Chunk artifact contains 1 chunks." in page._notes_edit.toPlainText()
     assert page.current_ai_strategy() == "paragraph"
@@ -189,6 +191,48 @@ def test_text_chunking_page_allows_selected_chunk_edit_and_save(qtbot) -> None:
     assert page._chunk_list.item(0).text() == "chunk-0001 | Edited paragraph"
     assert page._edit_chunk_button.isEnabled() is True
     assert page._save_chunk_button.isEnabled() is False
+
+
+def test_text_chunking_page_emits_insert_and_delete_requests(qtbot) -> None:
+    """
+    @brief      Verify selected chunk insert and delete buttons emit chunk ids.
+    @param[in]  qtbot Qt test helper fixture.
+    @return     None.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-04
+    @version    0.1.0
+    """
+    page = TextChunkingPage()
+    qtbot.addWidget(page)
+    page.set_project_active(True)
+    page.set_processing_state(
+        cleaned_text="clean text",
+        chunks=[
+            {
+                "chunk_id": "chunk-0001",
+                "sequence_index": 1,
+                "text": "Paragraph one",
+            },
+            {
+                "chunk_id": "chunk-0002",
+                "sequence_index": 2,
+                "text": "Paragraph two",
+            },
+        ],
+        notes=["ready"],
+        can_chunk=True,
+    )
+    inserted_ids: list[str] = []
+    deleted_ids: list[str] = []
+    page.insert_chunk_requested.connect(inserted_ids.append)
+    page.delete_chunk_requested.connect(deleted_ids.append)
+
+    page._insert_chunk_button.click()
+    page._delete_chunk_button.click()
+
+    assert inserted_ids == ["chunk-0001"]
+    assert deleted_ids == ["chunk-0001"]
 
 
 def test_text_chunking_page_installs_preview_find_context_menus(qtbot) -> None:

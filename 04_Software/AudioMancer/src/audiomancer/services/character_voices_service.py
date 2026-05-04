@@ -14,7 +14,7 @@
          for the Character Voices workflow.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-20
-@version 1.5.3
+@version 1.6.0
 """
 
 # IMPORTS
@@ -263,6 +263,66 @@ def voice_target_by_id(project_root: str | Path, target_id: str | None) -> dict[
         ),
         None,
     )
+
+
+def mark_character_voice_target_stale(project_root: str | Path, character_id: str) -> str:
+    """
+    @brief      Mark one character voice target stale and clear generated sample metadata.
+    @param[in]  project_root Active project root folder.
+    @param[in]  character_id Character identifier whose voice definition changed.
+    @return     Stable character voice target identifier.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-04
+    @version    0.1.1
+    """
+    target_id = character_target_id(str(character_id).strip())
+    if not _targets_path(project_root).is_file():
+        return target_id
+    if not voice_target_by_id(project_root, target_id):
+        return target_id
+    delete_target_sample(project_root, target_id)
+    updated_targets: list[dict[str, object]] = []
+    for target_payload in load_voice_plan(project_root):
+        if str(target_payload.get("target_id", "")).strip() == target_id:
+            updated_targets.append(
+                {
+                    **dict(target_payload),
+                    "stale": True,
+                    "updated_at": _utc_now_iso(),
+                }
+            )
+            continue
+        updated_targets.append(target_payload)
+    save_voice_targets(project_root, updated_targets)
+    return target_id
+
+
+def remove_character_voice_target(project_root: str | Path, character_id: str) -> str:
+    """
+    @brief      Remove one deleted character voice target and its generated sample.
+    @param[in]  project_root Active project root folder.
+    @param[in]  character_id Deleted character identifier.
+    @return     Stable character voice target identifier.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-04
+    @version    0.1.1
+    """
+    target_id = character_target_id(str(character_id).strip())
+    if not _targets_path(project_root).is_file():
+        return target_id
+    if voice_target_by_id(project_root, target_id):
+        delete_target_sample(project_root, target_id)
+    save_voice_targets(
+        project_root,
+        [
+            target_payload
+            for target_payload in load_voice_plan(project_root)
+            if str(target_payload.get("target_id", "")).strip() != target_id
+        ],
+    )
+    return target_id
 
 
 def reset_target_prompt(project_root: str | Path, target_id: str, default_prompt_text: str) -> dict[str, object]:
@@ -903,6 +963,7 @@ def _normalize_voice_target(target_payload: dict[str, object]) -> dict[str, obje
             if isinstance(target_payload.get("sample_metadata"), dict)
             else None
         ),
+        "stale": bool(target_payload.get("stale", False)),
         "updated_at": None if target_payload.get("updated_at") in (None, "") else str(target_payload.get("updated_at")),
     }
 
@@ -1037,7 +1098,7 @@ def _update_target_sample_metadata(
     @return     None.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.1.0
+    @version    0.1.1
     """
     normalized_target_id = str(target_id or "").strip()
     voice_targets = load_voice_plan(project_root)
@@ -1053,6 +1114,7 @@ def _update_target_sample_metadata(
                 **dict(target_payload),
                 "sample_audio_path": relative_path,
                 "sample_metadata": None if metadata_payload is None else dict(metadata_payload),
+                "stale": bool(target_payload.get("stale", False)) if metadata_payload is None else False,
             }
         )
     if not target_found and metadata_payload is not None:

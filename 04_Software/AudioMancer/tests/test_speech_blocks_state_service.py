@@ -13,7 +13,7 @@
          and operator note rendering for resumable and warning-bearing state.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 0.3.1
+@version 0.4.0
 """
 
 # IMPORTS
@@ -147,6 +147,29 @@ def test_build_speech_blocks_state_loads_persisted_blocks_and_summary(tmp_path) 
         + "\n",
         encoding="utf-8",
     )
+    (speech_blocks_root / config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME).mkdir(parents=True, exist_ok=True)
+    (speech_blocks_root / config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME / "0001_000001_narrator.wav").write_bytes(
+        b"RIFF"
+    )
+    (speech_blocks_root / config.AUDIO_BLOCKS_OUTPUT_FILE_NAME).write_text(
+        json.dumps(
+            [
+                {
+                    "speech_block_id": "0001-000001",
+                    "sequence_index": 1,
+                    "chunk_id": "chunk-0001",
+                    "speaker_id": "narrator",
+                    "speaker_display_name": "Narrator",
+                    "audio_relative_path": "audio_blocks/0001_000001_narrator.wav",
+                    "generated": True,
+                    "approved": False,
+                }
+            ],
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
 
     state = speech_blocks_state_service.build_speech_blocks_state(
         project_root,
@@ -163,6 +186,9 @@ def test_build_speech_blocks_state_loads_persisted_blocks_and_summary(tmp_path) 
     assert state["processed_chunk_count"] == 1
     assert state["total_chunk_count"] == 2
     assert state["speech_blocks"][0]["speech_block_id"] == "0001-000001"
+    assert state["speech_blocks"][0]["audio_generated"] is True
+    assert state["speech_blocks"][0]["audio_can_play"] is True
+    assert state["speech_blocks"][0]["audio_metadata_only"] is False
     assert any("Generated 1 speech blocks from 1/2 chunks." in note for note in state["notes"])
     assert any("Input tokens: 30 | Output tokens: 10 | Total: 40" in note for note in state["notes"])
 

@@ -13,7 +13,7 @@
          changes used by the settings-backed runtime UI behavior.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-05
-@version 0.1.0
+@version 0.2.0
 """
 
 # IMPORTS
@@ -35,6 +35,46 @@ def test_translate_returns_expected_english_and_romanian_strings() -> None:
     assert ui_state_service.translate("toolbar.settings", "en") == "Settings"
     assert ui_state_service.translate("toolbar.settings", "ro") == "Setari"
     assert ui_state_service.translate("sidebar.text_chunking", "ro") == "Segmentare Text"
+
+
+def test_v2_selective_impact_strings_cover_supported_languages() -> None:
+    """
+    @brief      Verify v2 selective-impact labels and confirmations exist in EN and RO.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-04
+    @version    0.1.0
+    """
+    required_keys = (
+        "dialog.confirm_chunk_insert_title",
+        "dialog.confirm_chunk_delete_title",
+        "project.confirm_chunk_edit",
+        "project.confirm_chunk_insert",
+        "project.confirm_chunk_delete",
+        "dialog.character_add_confirm_title",
+        "dialog.character_add_confirm_message",
+        "dialog.character_edit_title",
+        "dialog.character_edit_message",
+        "dialog.character_delete_title",
+        "dialog.character_delete_message",
+        "project.confirm_speech_block_audio_reset",
+        "project.confirm_speech_block_sequence_change",
+        "audio_blocks.unapprove_selected",
+        "audio_blocks.reset_selected",
+        "project.confirm_audio_block_regeneration",
+        "project.confirm_audio_block_reset",
+        "project.confirm_audio_block_approval_change",
+        "project.confirm_single_voice_target_invalidation",
+        "project.confirm_narrator_voice_invalidation",
+        "project.confirm_global_voice_settings_invalidation",
+        "project.confirm_audio_assembly_settings_change",
+        "status.audio_assembly_settings_saved_reset",
+    )
+
+    for language in ("en", "ro"):
+        for key in required_keys:
+            assert ui_state_service.translate(key, language) != key
 
 
 def test_apply_text_scale_updates_application_font(qtbot) -> None:

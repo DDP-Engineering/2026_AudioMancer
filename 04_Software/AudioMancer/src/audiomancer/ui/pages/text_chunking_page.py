@@ -14,7 +14,7 @@
          with local text search.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-24
-@version 0.4.2
+@version 0.5.0
 """
 
 # IMPORTS
@@ -49,12 +49,14 @@ class TextChunkingPage(QWidget):
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-24
-    @version    0.3.1
+    @version    0.4.0
     """
 
     chunk_requested = Signal()
     ai_chunk_requested = Signal(str, str)
     save_chunk_requested = Signal(str, str)
+    insert_chunk_requested = Signal(str)
+    delete_chunk_requested = Signal(str)
 
     def __init__(self, parent=None) -> None:
         """
@@ -64,7 +66,7 @@ class TextChunkingPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-24
-        @version    0.4.2
+        @version    0.5.0
         """
         super().__init__(parent)
         self._chunks: list[dict[str, object]] = []
@@ -144,6 +146,12 @@ class TextChunkingPage(QWidget):
         chunk_preview_layout.addWidget(self._chunk_text_edit)
         chunk_action_row = QHBoxLayout()
         chunk_action_row.addStretch(1)
+        self._insert_chunk_button = QPushButton("Insert")
+        self._insert_chunk_button.clicked.connect(self._emit_insert_chunk_requested)
+        chunk_action_row.addWidget(self._insert_chunk_button)
+        self._delete_chunk_button = QPushButton("Delete")
+        self._delete_chunk_button.clicked.connect(self._emit_delete_chunk_requested)
+        chunk_action_row.addWidget(self._delete_chunk_button)
         self._edit_chunk_button = QPushButton("Edit")
         self._edit_chunk_button.clicked.connect(self._begin_chunk_edit)
         chunk_action_row.addWidget(self._edit_chunk_button)
@@ -377,7 +385,7 @@ class TextChunkingPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-07
-        @version    0.1.0
+        @version    0.2.0
         """
         enabled = self._project_active and not self._busy
         self._chunk_button.setEnabled(enabled and self._can_chunk)
@@ -388,6 +396,10 @@ class TextChunkingPage(QWidget):
         self._strategy_combo.setEnabled(self._project_active and (self._can_chunk or self._can_ai_chunk))
         self._ai_chunk_button.setEnabled(enabled and self._can_ai_chunk and self.current_ai_profile_id() is not None)
         chunk_selected = 0 <= self._chunk_list.currentRow() < len(self._chunks)
+        self._insert_chunk_button.setEnabled(enabled and chunk_selected and not self._editing_chunk)
+        self._delete_chunk_button.setEnabled(
+            enabled and chunk_selected and len(self._chunks) > 1 and not self._editing_chunk
+        )
         self._edit_chunk_button.setEnabled(enabled and chunk_selected and not self._editing_chunk)
         self._save_chunk_button.setEnabled(enabled and chunk_selected and self._editing_chunk)
 
@@ -452,7 +464,7 @@ class TextChunkingPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-05
-        @version    0.2.0
+        @version    0.3.0
         """
         self._language = language
         self._title_label.setText(f"<h2>{ui_state_service.translate('text_chunking.title', language)}</h2>")
@@ -463,6 +475,8 @@ class TextChunkingPage(QWidget):
         self._cleaned_group.setTitle(ui_state_service.translate("text_chunking.cleaned_group", language))
         self._chunk_list_group.setTitle(ui_state_service.translate("text_chunking.chunk_list_group", language))
         self._chunk_preview_group.setTitle(ui_state_service.translate("text_chunking.selected_group", language))
+        self._insert_chunk_button.setText(ui_state_service.translate("text_chunking.insert_chunk", language))
+        self._delete_chunk_button.setText(ui_state_service.translate("text_chunking.delete_chunk", language))
         self._edit_chunk_button.setText(ui_state_service.translate("text_chunking.edit_chunk", language))
         self._save_chunk_button.setText(ui_state_service.translate("text_chunking.save_chunk", language))
         self._notes_group.setTitle(ui_state_service.translate("text_chunking.notes_group", language))
@@ -604,6 +618,34 @@ class TextChunkingPage(QWidget):
         self._chunk_text_edit.setReadOnly(False)
         self._chunk_text_edit.setFocus()
         self._apply_button_state()
+
+    def _emit_insert_chunk_requested(self) -> None:
+        """
+        @brief      Emit one request to insert a new chunk after the selection.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-04
+        @version    0.1.0
+        """
+        row = self._chunk_list.currentRow()
+        if row < 0 or row >= len(self._chunks) or self._editing_chunk:
+            return
+        self.insert_chunk_requested.emit(str(self._chunks[row].get("chunk_id", "")))
+
+    def _emit_delete_chunk_requested(self) -> None:
+        """
+        @brief      Emit one request to delete the selected chunk.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-04
+        @version    0.1.0
+        """
+        row = self._chunk_list.currentRow()
+        if row < 0 or row >= len(self._chunks) or self._editing_chunk or len(self._chunks) <= 1:
+            return
+        self.delete_chunk_requested.emit(str(self._chunks[row].get("chunk_id", "")))
 
     def _emit_save_chunk_requested(self) -> None:
         """

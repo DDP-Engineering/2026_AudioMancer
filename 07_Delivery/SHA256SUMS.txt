@@ -1,0 +1,16 @@
+# AudioMancer public delivery SHA256 checksums
+# Windows-only release for now.
+# VoiceWeaver original ZIP is listed for post-reassembly verification; published GitHub assets are the .partNNN files.
+
+337b5fac0a26f502cf9bacc15cc51cbf874cd3d0ec17fbfd5e781e61ac9335e6  AudioMancer_Windows_x64.zip
+e957082578d5f844b98b1234fb9e1f69d48fec11f80d1acdd6b65432dd2d90b9  VoiceWeaver-v1.2.2-windows-x64-cuda-models-3.zip
+70c571a8155bf2ed10e6943b116b91c1f1e383f3c534115c5aa9cdabe8d6c3f8  VoiceWeaver-v1.2.2-windows-x64-cuda-models-3.zip.part001
+82750de38fab01d853ac6cac096a91f01f18cab5f859a250f7ab36bcb714c810  VoiceWeaver-v1.2.2-windows-x64-cuda-models-3.zip.part002
+84b0a0a6260bfaf777f0887cdb55c184bb535ef7aa6982905c5e9bb4a7628650  VoiceWeaver-v1.2.2-windows-x64-cuda-models-3.zip.part003
+6bb025b531fa4f714c9382d1b652a860d6b9ff7c017fe95ac86a7bd2fd80895d  VoiceWeaver-v1.2.2-windows-x64-cuda-models-3.zip.part004
+173c5e56216dc2e1a9ad695d77a678965406d7dd722a07f61aa7a33e92319d31  VoiceWeaver-v1.2.2-windows-x64-cuda-models-3.zip.part005
+73ea13efc90509edc34e71c1995d814a1ee6d915646a37bd81d97caad7650c37  VoiceWeaver-v1.2.2-windows-x64-cuda-models-3.zip.part006
+4b9192142fc4f516570e14778dd12723d6d44ab58100c54acbb8a7957a6a9197  VoiceWeaver-v1.2.2-windows-x64-cuda-models-3.zip.part007
+602d723c50d568ef4288d2b4890f13eecfebf05a90cdc6cd41aaf56c00b06c38  VoiceWeaver-v1.2.2-windows-x64-cuda-models-3.zip.part008
+f514c20e3729a5503fbed65369118510815758723a507262700d287b3f6bd27b  VoiceWeaver-v1.2.2-windows-x64-cuda-models-3.zip.part009
+e8cb718a8ecc0d59d179c00fcfba535942a01619666b8efa7b15ad31a5ee911b  VoiceWeaver-v1.2.2-windows-x64-cuda-models-3.zip.part010

@@ -14,7 +14,7 @@
          so the window remains a thin coordinator.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 1.40.1
+@version 1.43.0
 """
 
 # IMPORTS
@@ -119,7 +119,7 @@ class MainWindow(QMainWindow):
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.12.1
+    @version    0.13.0
     """
 
     PAGE_ORDER = (
@@ -721,7 +721,7 @@ class MainWindow(QMainWindow):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-07
-        @version    0.17.1
+        @version    0.19.0
         """
         current_language = ui_state_service.current_language_from_settings(self._settings_payload)
         home_page = HomeProjectPage(self)
@@ -790,6 +790,12 @@ class MainWindow(QMainWindow):
                 chunk_id,
                 chunk_text,
             )
+        )
+        self._text_chunking_page.insert_chunk_requested.connect(
+            lambda chunk_id: text_chunking_ui_controller.handle_insert_chunk_requested(self, chunk_id)
+        )
+        self._text_chunking_page.delete_chunk_requested.connect(
+            lambda chunk_id: text_chunking_ui_controller.handle_delete_chunk_requested(self, chunk_id)
         )
         self._ai_translation_page = AiTranslationPage(self)
         self._ai_translation_page.start_translation_requested.connect(
@@ -1002,6 +1008,18 @@ class MainWindow(QMainWindow):
         self._speech_blocks_page.approve_block_requested.connect(
             lambda speech_block_id: speech_blocks_ui_controller.handle_approve_block_requested(self, speech_block_id)
         )
+        self._speech_blocks_page.generate_audio_selected_requested.connect(
+            lambda speech_block_id: audio_blocks_ui_controller.handle_regenerate_selected_requested(
+                self,
+                speech_block_id,
+            )
+        )
+        self._speech_blocks_page.selected_audio_playback_toggle_requested.connect(
+            lambda speech_block_id: audio_blocks_ui_controller.handle_selected_playback_toggle_requested(
+                self,
+                speech_block_id,
+            )
+        )
         self._audio_blocks_page = AudioBlocksPage(self)
         self._audio_blocks_page.start_generation_requested.connect(
             lambda: audio_blocks_ui_controller.handle_start_generation_requested(self)
@@ -1023,6 +1041,18 @@ class MainWindow(QMainWindow):
         )
         self._audio_blocks_page.approve_selected_requested.connect(
             lambda speech_block_id: audio_blocks_ui_controller.handle_approve_selected_requested(
+                self,
+                speech_block_id,
+            )
+        )
+        self._audio_blocks_page.unapprove_selected_requested.connect(
+            lambda speech_block_id: audio_blocks_ui_controller.handle_unapprove_selected_requested(
+                self,
+                speech_block_id,
+            )
+        )
+        self._audio_blocks_page.reset_selected_requested.connect(
+            lambda speech_block_id: audio_blocks_ui_controller.handle_reset_selected_requested(
                 self,
                 speech_block_id,
             )
@@ -1181,7 +1211,7 @@ class MainWindow(QMainWindow):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-28
-        @version    0.1.0
+        @version    0.2.0
         """
         for attr_name in (
             "_narator_voice_audio_player",
@@ -1201,6 +1231,8 @@ class MainWindow(QMainWindow):
         if hasattr(self, "_audio_blocks_page"):
             self._audio_blocks_page.set_selected_playback_active(False)
             self._audio_blocks_page.set_audiobook_playback_active(False)
+        if hasattr(self, "_speech_blocks_page"):
+            self._speech_blocks_page.set_selected_audio_playback_active(False)
         if hasattr(self, "_audio_assembly_page"):
             self._audio_assembly_page.set_playback_active(False)
             self._audio_assembly_page.set_playback_progress(0, 0)

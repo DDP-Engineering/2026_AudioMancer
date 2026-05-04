@@ -14,7 +14,7 @@
          for the Characters page.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-11
-@version 0.11.0
+@version 0.12.0
 """
 
 # IMPORTS
@@ -24,12 +24,17 @@ from typing import TYPE_CHECKING
 from PySide6.QtWidgets import QInputDialog, QMessageBox
 
 from audiomancer.services import (
+    audio_blocks_service,
     character_discovery_service,
+    character_voices_service,
     deterministic_chunking_service,
+    narrator_definition_service,
     operation_runtime_service,
     project_workspace_service,
+    speech_blocks_service,
     text_cleanup_state_service,
     ui_state_service,
+    workflow_impact_service,
 )
 from audiomancer.ui.controllers import misc_ui_controller, workflow_controller_service
 
@@ -46,7 +51,7 @@ def handle_start_discovery_requested(window: "MainWindow", profile_id: str) -> N
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-08
-    @version    0.3.0
+    @version    0.4.0
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if not _resolve_unsaved_changes(window):
@@ -212,6 +217,8 @@ def handle_save_character_requested(
         return False
     saved_character_id: str
     if window._characters_page.is_add_mode():
+        if not _confirm_add_character(window, current_language):
+            return False
         existing_ids = {str(profile.get("character_id", "")).strip() for profile in existing_profiles}
         created_profiles = character_discovery_service.add_character_profile(
             window._current_project_root,
@@ -237,17 +244,25 @@ def handle_save_character_requested(
             persisted_payload,
         )
         saved_character_id = str(created_profile["character_id"])
+        _sync_manifest_after_character_add(window)
         status_key = "status.character_added"
     else:
+        if not _confirm_edit_character(window, current_language):
+            return False
+        previous_profile = _character_profile_by_id(
+            existing_profiles,
+            str(profile_payload.get("character_id", "")).strip(),
+        )
         persisted_payload = dict(profile_payload)
         persisted_payload["canonical_name"] = normalized_name
-        character_discovery_service.update_character_profile(
+        updated_profiles = character_discovery_service.update_character_profile(
             window._current_project_root,
             persisted_payload,
         )
         saved_character_id = str(persisted_payload.get("character_id", ""))
+        updated_profile = _character_profile_by_id(updated_profiles, saved_character_id)
+        _sync_manifest_after_character_edit(window, previous_profile, updated_profile)
         status_key = "status.character_saved"
-    _sync_manifest_after_manual_change(window)
     window.show_project_state(
         window._current_project_root,
         project_workspace_service.load_manifest(window._current_project_root),
@@ -294,7 +309,7 @@ def handle_delete_character_requested(window: "MainWindow", character_id: str) -
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-08
-    @version    0.2.0
+    @version    0.3.0
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._current_project_root is None:
@@ -316,7 +331,7 @@ def handle_delete_character_requested(window: "MainWindow", character_id: str) -
         window._current_project_root,
         character_id,
     )
-    _sync_manifest_after_manual_change(window)
+    _sync_manifest_after_character_delete(window, character_id)
     window.show_project_state(
         window._current_project_root,
         project_workspace_service.load_manifest(window._current_project_root),
@@ -515,44 +530,220 @@ def _sync_manifest_after_discovery(
     )
 
 
-def _sync_manifest_after_manual_change(window: "MainWindow") -> None:
+def _sync_manifest_after_character_add(window: "MainWindow") -> None:
     """
-    @brief      Refresh manifest operation state after manual character maintenance.
+    @brief      Refresh character metadata after adding one manual character.
     @param[in]  window Main application window.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-11
-    @version    0.4.0
+    @date       2026-05-04
+    @version    0.1.0
     """
     if window._current_project_root is None or window._current_manifest is None:
         return
-    operation_runtime_service.reset_operation_data(
-        window._current_project_root,
-        "character_discovery",
-        include_current=False,
-        keep_input_snapshots=False,
-        preserve_operation_kinds=operation_runtime_service.NARRATOR_PROFILE_PRESERVED_OPERATION_KINDS,
+    _sync_character_voice_plan(window._current_project_root)
+    _save_refreshed_manual_manifest(
+        window,
+        current_stage=str(window._current_manifest.get("current_stage", "character_discovery_ready")),
     )
+
+
+def _sync_manifest_after_character_edit(
+    window: "MainWindow",
+    previous_profile: dict[str, object] | None,
+    updated_profile: dict[str, object] | None,
+) -> None:
+    """
+    @brief      Refresh selective downstream state after editing one character.
+    @param[in]  window Main application window.
+    @param[in]  previous_profile Previously persisted profile payload.
+    @param[in]  updated_profile Updated persisted profile payload.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-04
+    @version    0.1.0
+    """
+    if (
+        window._current_project_root is None
+        or window._current_manifest is None
+        or not isinstance(updated_profile, dict)
+    ):
+        return
+    project_root = window._current_project_root
+    character_id = str(updated_profile.get("character_id", "")).strip()
+    display_name = str(updated_profile.get("canonical_name", "")).strip()
+    voice_target_ids: tuple[str, ...] = ()
+    if _voice_definition_source_changed(previous_profile, updated_profile):
+        voice_target_ids = (character_voices_service.mark_character_voice_target_stale(project_root, character_id),)
+    _speech_report, affected_speech_block_ids = speech_blocks_service.mark_speech_blocks_for_character_review(
+        project_root,
+        character_id,
+        display_name=display_name,
+    )
+    _audio_report, artifact_summary = audio_blocks_service.remove_audio_blocks_for_speech_blocks(
+        project_root,
+        affected_speech_block_ids,
+        voice_target_ids=voice_target_ids,
+    )
+    reset_assembly = bool(affected_speech_block_ids or voice_target_ids or artifact_summary.deleted_count)
+    if reset_assembly:
+        workflow_impact_service.reset_audio_assembly_outputs(project_root)
+    current_stage = (
+        "character_discovery_ready" if reset_assembly else str(window._current_manifest.get("current_stage"))
+    )
+    _save_refreshed_manual_manifest(window, current_stage=current_stage, reset_audio_assembly=reset_assembly)
+
+
+def _sync_manifest_after_character_delete(window: "MainWindow", character_id: str) -> None:
+    """
+    @brief      Refresh selective downstream state after deleting one character.
+    @param[in]  window Main application window.
+    @param[in]  character_id Deleted character identifier.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-04
+    @version    0.1.0
+    """
+    if window._current_project_root is None or window._current_manifest is None:
+        return
+    project_root = window._current_project_root
+    voice_target_id = character_voices_service.remove_character_voice_target(project_root, character_id)
+    _speech_report, affected_speech_block_ids = speech_blocks_service.fallback_character_speech_blocks_to_narrator(
+        project_root,
+        character_id,
+    )
+    _audio_report, artifact_summary = audio_blocks_service.remove_audio_blocks_for_speech_blocks(
+        project_root,
+        affected_speech_block_ids,
+        voice_target_ids=(voice_target_id,),
+    )
+    reset_assembly = bool(affected_speech_block_ids or voice_target_id or artifact_summary.deleted_count)
+    if reset_assembly:
+        workflow_impact_service.reset_audio_assembly_outputs(project_root)
+    current_stage = (
+        "character_discovery_ready" if reset_assembly else str(window._current_manifest.get("current_stage"))
+    )
+    _save_refreshed_manual_manifest(window, current_stage=current_stage, reset_audio_assembly=reset_assembly)
+
+
+def _save_refreshed_manual_manifest(
+    window: "MainWindow",
+    current_stage: str,
+    reset_audio_assembly: bool = False,
+) -> None:
+    """
+    @brief      Save manifest summaries after selective manual character maintenance.
+    @param[in]  window Main application window.
+    @param[in]  current_stage Stage token to persist.
+    @param[in]  reset_audio_assembly True to mark Audio Assembly not started.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-04
+    @version    0.1.0
+    """
+    if window._current_project_root is None or window._current_manifest is None:
+        return
     updated_manifest = dict(window._current_manifest)
     operations = text_cleanup_state_service.normalized_manifest_operations(updated_manifest)
     default_operations = text_cleanup_state_service.normalized_manifest_operations({})
-    preserved_operation_kinds = operation_runtime_service.NARRATOR_PROFILE_PRESERVED_OPERATION_KINDS
-    for selected_kind in operation_runtime_service.downstream_operation_kinds(
-        "character_discovery",
-        include_current=False,
-    ):
-        if selected_kind in default_operations and selected_kind not in preserved_operation_kinds:
-            operations[selected_kind] = default_operations[selected_kind]
     operation_state = character_discovery_service.load_operation_state(window._current_project_root)
     if operation_state is not None:
         operations["character_discovery"] = project_workspace_service.project_manifest_operation_summary(
             "character_discovery",
             operation_state,
         )
+    speech_state = speech_blocks_service.load_operation_state(window._current_project_root)
+    if speech_state is not None:
+        operations["speech_blocks"] = project_workspace_service.project_manifest_operation_summary(
+            "speech_blocks",
+            speech_state,
+        )
+    audio_state = audio_blocks_service.load_operation_state(window._current_project_root)
+    if audio_state is not None:
+        operations["audio_blocks"] = project_workspace_service.project_manifest_operation_summary(
+            "audio_blocks",
+            audio_state,
+        )
+    if reset_audio_assembly:
+        operations["audio_assembly"] = default_operations["audio_assembly"]
     updated_manifest["operations"] = operations
-    updated_manifest["current_stage"] = "character_discovery_ready"
+    updated_manifest["current_stage"] = current_stage or "character_discovery_ready"
     project_workspace_service.save_manifest(updated_manifest, window._current_project_root)
+
+
+def _sync_character_voice_plan(project_root: str) -> None:
+    """
+    @brief      Synchronize Character Voices targets from current narrator and character state.
+    @param[in]  project_root Active project root.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-04
+    @version    0.1.0
+    """
+    profiles = narrator_definition_service.load_profiles(project_root)
+    selected_state = narrator_definition_service.load_selected_profile_state(project_root)
+    selected_profile_id = str(selected_state.get("selected_profile_id", "") or "").strip()
+    narrator_profile = next(
+        (profile for profile in profiles if str(profile.get("profile_id", "")).strip() == selected_profile_id),
+        None,
+    )
+    character_voices_service.sync_voice_plan(
+        project_root,
+        character_discovery_service.load_character_profiles(project_root),
+        narrator_profile,
+        character_voices_service.load_selected_voice_language(project_root),
+    )
+
+
+def _voice_definition_source_changed(
+    previous_profile: dict[str, object] | None,
+    updated_profile: dict[str, object] | None,
+) -> bool:
+    """
+    @brief      Return whether character facts that drive the voice target changed.
+    @param[in]  previous_profile Previous profile payload.
+    @param[in]  updated_profile Updated profile payload.
+    @return     True when the voice-definition source signature changed.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-04
+    @version    0.1.0
+    """
+    if not isinstance(previous_profile, dict) or not isinstance(updated_profile, dict):
+        return False
+    return character_discovery_service.voice_definition_source_signature(
+        previous_profile
+    ) != character_discovery_service.voice_definition_source_signature(updated_profile)
+
+
+def _character_profile_by_id(
+    profiles: list[dict[str, object]],
+    character_id: str,
+) -> dict[str, object] | None:
+    """
+    @brief      Resolve one character profile by stable identifier.
+    @param[in]  profiles Candidate profile payload list.
+    @param[in]  character_id Stable character identifier.
+    @return     Matching profile payload or `None`.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-04
+    @version    0.1.0
+    """
+    normalized_character_id = str(character_id).strip()
+    return next(
+        (
+            dict(profile)
+            for profile in profiles
+            if str(profile.get("character_id", "")).strip() == normalized_character_id
+        ),
+        None,
+    )
 
 
 def _sync_manifest_from_disk(window: "MainWindow") -> None:
@@ -649,6 +840,48 @@ def _prompt_unsaved_changes(window: "MainWindow", language: str) -> str:
     return "cancel"
 
 
+def _confirm_add_character(window: "MainWindow", language: str) -> bool:
+    """
+    @brief      Ask the operator to confirm adding a manual character.
+    @param[in]  window Main application window.
+    @param[in]  language Runtime UI language code.
+    @return     `True` when the add was confirmed.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-04
+    @version    0.1.0
+    """
+    decision = QMessageBox.question(
+        window,
+        ui_state_service.translate("dialog.character_add_confirm_title", language),
+        ui_state_service.translate("dialog.character_add_confirm_message", language),
+        QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+        QMessageBox.StandardButton.No,
+    )
+    return decision == QMessageBox.StandardButton.Yes
+
+
+def _confirm_edit_character(window: "MainWindow", language: str) -> bool:
+    """
+    @brief      Ask the operator to confirm editing a persisted character.
+    @param[in]  window Main application window.
+    @param[in]  language Runtime UI language code.
+    @return     `True` when the edit was confirmed.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-04
+    @version    0.1.0
+    """
+    decision = QMessageBox.question(
+        window,
+        ui_state_service.translate("dialog.character_edit_title", language),
+        ui_state_service.translate("dialog.character_edit_message", language),
+        QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+        QMessageBox.StandardButton.No,
+    )
+    return decision == QMessageBox.StandardButton.Yes
+
+
 def _confirm_delete_character(window: "MainWindow", language: str) -> bool:
     """
     @brief      Ask the operator to confirm deletion of the selected character.
@@ -658,16 +891,16 @@ def _confirm_delete_character(window: "MainWindow", language: str) -> bool:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-08
-    @version    0.1.0
+    @version    0.2.0
     """
-    return (
-        QMessageBox.question(
-            window,
-            ui_state_service.translate("dialog.character_delete_title", language),
-            ui_state_service.translate("dialog.character_delete_message", language),
-        )
-        == QMessageBox.StandardButton.Yes
+    decision = QMessageBox.question(
+        window,
+        ui_state_service.translate("dialog.character_delete_title", language),
+        ui_state_service.translate("dialog.character_delete_message", language),
+        QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+        QMessageBox.StandardButton.No,
     )
+    return decision == QMessageBox.StandardButton.Yes
 
 
 def _show_name_validation_error(

@@ -13,7 +13,7 @@
          manifest advancement after approval of all generated audio blocks.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-23
-@version 0.3.1
+@version 0.5.0
 """
 
 # IMPORTS
@@ -163,6 +163,102 @@ def test_audio_blocks_ui_controller_approve_all_advances_manifest_after_full_app
     assert all(bool(block["approved"]) for block in output_payload)
 
 
+def test_audio_blocks_ui_controller_approval_resets_only_audio_assembly(
+    monkeypatch, qtbot, tmp_path, default_settings_payload
+) -> None:
+    """
+    @brief      Verify Audio Block approval preserves generated audio and clears only Audio Assembly outputs.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  qtbot Qt test helper fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @param[in]  default_settings_payload Fixture supplying valid baseline settings.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-04
+    @version    0.2.0
+    """
+    project_root = _create_project(tmp_path, "AudioBlocksControllerApproveAssemblyReset")
+    _seed_audio_blocks_run(project_root, approved=False)
+    _seed_audio_assembly_run(project_root)
+    window = _build_window(qtbot, project_root, default_settings_payload)
+    monkeypatch.setattr(audio_blocks_ui_controller.misc_ui_controller, "show_message", lambda *args, **kwargs: None)
+    monkeypatch.setattr(
+        audio_blocks_ui_controller.QMessageBox,
+        "question",
+        lambda *_args, **_kwargs: QMessageBox.StandardButton.Yes,
+    )
+
+    audio_blocks_ui_controller.handle_approve_selected_requested(window, "0001-000001")
+
+    updated_manifest = project_workspace_service.load_manifest(project_root)
+    output_payload = json.loads(
+        (project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.AUDIO_BLOCKS_OUTPUT_FILE_NAME).read_text(
+            encoding="utf-8"
+        )
+    )
+    narrator_audio_path = (
+        project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / "audio_blocks/0001_000001_narrator.wav"
+    )
+    alice_audio_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / "audio_blocks/0001_000002_alice.wav"
+    assert output_payload[0]["approved"] is True
+    assert output_payload[1]["approved"] is False
+    assert narrator_audio_path.exists()
+    assert alice_audio_path.exists()
+    assert not (project_root / config.AUDIOBOOK_OUTPUT_FOLDER_NAME / "audiobook.wav").exists()
+    assert updated_manifest["operations"]["audio_assembly"]["status"] == "not_started"
+
+
+def test_audio_blocks_ui_controller_reset_selected_preserves_unrelated_audio_and_speech_blocks(
+    monkeypatch, qtbot, tmp_path, default_settings_payload
+) -> None:
+    """
+    @brief      Verify selected Audio Block reset deletes only that block and downstream assembly data.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  qtbot Qt test helper fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @param[in]  default_settings_payload Fixture supplying valid baseline settings.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-04
+    @version    0.1.0
+    """
+    project_root = _create_project(tmp_path, "AudioBlocksControllerResetSelected")
+    _seed_audio_blocks_run(project_root, approved=True)
+    _seed_audio_assembly_run(project_root)
+    speech_blocks_path = (
+        project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.SPEECH_BLOCKS_OUTPUT_FILE_NAME
+    )
+    window = _build_window(qtbot, project_root, default_settings_payload)
+    monkeypatch.setattr(audio_blocks_ui_controller.misc_ui_controller, "show_message", lambda *args, **kwargs: None)
+    monkeypatch.setattr(
+        audio_blocks_ui_controller.QMessageBox,
+        "question",
+        lambda *_args, **_kwargs: QMessageBox.StandardButton.Yes,
+    )
+
+    audio_blocks_ui_controller.handle_reset_selected_requested(window, "0001-000002")
+
+    output_payload = json.loads(
+        (project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.AUDIO_BLOCKS_OUTPUT_FILE_NAME).read_text(
+            encoding="utf-8"
+        )
+    )
+    updated_manifest = project_workspace_service.load_manifest(project_root)
+    narrator_audio_path = (
+        project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / "audio_blocks/0001_000001_narrator.wav"
+    )
+    alice_audio_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / "audio_blocks/0001_000002_alice.wav"
+    assert [block["speech_block_id"] for block in output_payload] == ["0001-000001"]
+    assert speech_blocks_path.exists()
+    assert narrator_audio_path.exists()
+    assert not alice_audio_path.exists()
+    assert not (project_root / config.AUDIOBOOK_OUTPUT_FOLDER_NAME / "audiobook.wav").exists()
+    assert updated_manifest["current_stage"] == "speech_blocks_ready"
+    assert updated_manifest["operations"]["audio_assembly"]["status"] == "not_started"
+
+
 def test_audio_blocks_ui_controller_preserves_selected_block_after_regeneration_refresh(
     monkeypatch, qtbot, tmp_path, default_settings_payload
 ) -> None:
@@ -256,6 +352,7 @@ def test_audio_blocks_ui_controller_preserves_selected_block_after_selected_play
     _seed_audio_blocks_run(project_root, approved=False)
     window = _build_window(qtbot, project_root, default_settings_payload)
     window._audio_blocks_page.select_block_id("0001-000001")
+    window._speech_blocks_page.set_selected_audio_playback_active(True)
     window._audio_blocks_playback_mode = "selected"
     window._audio_blocks_playback_block_ids = ["0001-000002"]
     window._audio_blocks_playback_index = 0
@@ -263,6 +360,57 @@ def test_audio_blocks_ui_controller_preserves_selected_block_after_selected_play
     audio_blocks_ui_controller.handle_selected_playback_toggle_requested(window, "0001-000002")
 
     assert window._audio_blocks_page.selected_block_id() == "0001-000002"
+    assert window._speech_blocks_page._selected_audio_playback_active is False
+
+    audio_blocks_ui_controller.handle_selected_playback_toggle_requested(window, "0001-000001")
+
+    assert window._speech_blocks_page._selected_audio_playback_active is True
+
+
+def test_audio_blocks_ui_controller_voice_target_invalidation_preserves_unrelated_audio(
+    qtbot, tmp_path, default_settings_payload
+) -> None:
+    """
+    @brief      Verify voice-target invalidation resets only matching Audio Blocks plus Audio Assembly.
+    @param[in]  qtbot Qt test helper fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @param[in]  default_settings_payload Fixture supplying valid baseline settings.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-04
+    @version    0.1.0
+    """
+    project_root = _create_project(tmp_path, "AudioBlocksControllerVoiceTargetInvalidation")
+    _seed_audio_blocks_run(project_root, approved=True)
+    manifest = project_workspace_service.load_manifest(project_root)
+    manifest["current_stage"] = "audio_assembly_ready"
+    manifest["operations"]["audio_assembly"]["status"] = "completed"
+    project_workspace_service.save_manifest(manifest, project_root)
+    assembly_report_path = (
+        project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.AUDIO_ASSEMBLY_REPORT_FILE_NAME
+    )
+    assembly_report_path.write_text("{}\n", encoding="utf-8")
+    speech_blocks_path = (
+        project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.SPEECH_BLOCKS_OUTPUT_FILE_NAME
+    )
+    window = _build_window(qtbot, project_root, default_settings_payload)
+
+    audio_blocks_ui_controller.invalidate_audio_blocks_for_voice_targets(window, ("character_alice",))
+
+    output_payload = json.loads(
+        (project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.AUDIO_BLOCKS_OUTPUT_FILE_NAME).read_text(
+            encoding="utf-8"
+        )
+    )
+    updated_manifest = project_workspace_service.load_manifest(project_root)
+    assert [block["speech_block_id"] for block in output_payload] == ["0001-000001"]
+    assert speech_blocks_path.exists()
+    assert (project_root / config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME / "0001_000001_narrator.wav").exists()
+    assert not (project_root / config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME / "0001_000002_alice.wav").exists()
+    assert not assembly_report_path.exists()
+    assert updated_manifest["current_stage"] == "speech_blocks_ready"
+    assert updated_manifest["operations"]["audio_assembly"]["status"] == "not_started"
 
 
 def _create_project(tmp_path, name: str):
@@ -487,6 +635,43 @@ def _seed_audio_blocks_run(project_root, approved: bool) -> None:
         + "\n",
         encoding="utf-8",
     )
+
+
+def _seed_audio_assembly_run(project_root) -> None:
+    """
+    @brief      Write one generated Audio Assembly run fixture.
+    @param[in]  project_root Active project root folder.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-04
+    @version    0.1.0
+    """
+    audiobook_root = project_root / config.AUDIOBOOK_OUTPUT_FOLDER_NAME
+    audiobook_root.mkdir(parents=True, exist_ok=True)
+    (audiobook_root / "audiobook.wav").write_bytes(b"RIFF-ASSEMBLY")
+    (project_root / config.AUDIO_ASSEMBLY_REPORT_FILE_NAME).write_text("{}\n", encoding="utf-8")
+    (project_root / config.AUDIO_ASSEMBLY_STATE_FILE_NAME).write_text(
+        json.dumps(
+            {
+                "status": "completed",
+                "output_paths": [f"{config.AUDIOBOOK_OUTPUT_FOLDER_NAME}/audiobook.wav"],
+                "artifact_paths": [
+                    config.AUDIO_ASSEMBLY_REPORT_FILE_NAME,
+                    config.AUDIO_ASSEMBLY_STATE_FILE_NAME,
+                ],
+                "progress_current": 1,
+                "progress_total": 1,
+            },
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    manifest = project_workspace_service.load_manifest(project_root)
+    manifest["current_stage"] = "audio_assembly_ready"
+    manifest["operations"]["audio_assembly"]["status"] = "completed"
+    project_workspace_service.save_manifest(manifest, project_root)
 
 
 def _minimum_qwen_models() -> list[dict[str, object]]:

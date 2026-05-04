@@ -13,7 +13,7 @@
          application through one centralized string catalog and scale mapping.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 0.35.0
+@version 0.39.0
 """
 
 # ruff: noqa: E501
@@ -75,6 +75,9 @@ _UI_STRINGS = {
         "dialog.confirm_cleanup_rerun_title": "Confirm Cleanup Rerun",
         "dialog.confirm_chunking_rerun_title": "Confirm Chunking Rerun",
         "dialog.confirm_ai_chunking_rerun_title": "Confirm AI Chunking Rerun",
+        "dialog.confirm_chunk_edit_title": "Confirm Chunk Edit",
+        "dialog.confirm_chunk_insert_title": "Confirm Chunk Insert",
+        "dialog.confirm_chunk_delete_title": "Confirm Chunk Delete",
         "dialog.confirm_ai_cleanup_title": "Start AI-Assisted Cleanup",
         "dialog.confirm_ai_cleanup_rerun_title": "Confirm AI Cleanup Rerun",
         "dialog.confirm_project_options_title": "Lock Project Options",
@@ -110,6 +113,8 @@ _UI_STRINGS = {
         "status.text_chunked": "Text chunked.",
         "status.text_ai_chunked": "Text chunked with AI.",
         "status.chunk_saved": "Chunk saved.",
+        "status.chunk_inserted": "Chunk inserted.",
+        "status.chunk_deleted": "Chunk deleted.",
         "status.text_translated": "Text translated.",
         "status.translation_reset": "Translation reset.",
         "status.characters_discovered": "Character discovery completed.",
@@ -126,6 +131,8 @@ _UI_STRINGS = {
         "status.audio_blocks_reset": "Audio Blocks reset.",
         "status.audio_blocks_approved_all": "All generated audio blocks approved.",
         "status.audio_block_approved": "Audio block approved.",
+        "status.audio_block_unapproved": "Audio block unapproved.",
+        "status.audio_block_reset": "Selected audio block reset.",
         "status.audio_block_regenerated": "Audio block regenerated.",
         "status.character_discovery_reset": "Character discovery reset.",
         "status.character_added": "Character added.",
@@ -258,6 +265,8 @@ _UI_STRINGS = {
         "text_chunking.cleaned_group": "Cleaned Text Reference",
         "text_chunking.chunk_list_group": "Chunk List",
         "text_chunking.selected_group": "Selected Chunk",
+        "text_chunking.insert_chunk": "Insert",
+        "text_chunking.delete_chunk": "Delete",
         "text_chunking.edit_chunk": "Edit",
         "text_chunking.save_chunk": "Save",
         "text_chunking.find": "Find",
@@ -540,6 +549,7 @@ _UI_STRINGS = {
         "speech_blocks.edit_block": "Edit",
         "speech_blocks.save_block": "Save",
         "speech_blocks.approve_block": "Approve",
+        "speech_blocks.generate_audio_selected": "Generate Audio",
         "speech_blocks.warning_indicator": "Warning: {warning_flags}",
         "audio_blocks.title": "Audio Blocks",
         "audio_blocks.start_generation": "Start Audio Generation",
@@ -555,6 +565,8 @@ _UI_STRINGS = {
         "audio_blocks.play_selected": "Play",
         "audio_blocks.stop_playback": "Stop",
         "audio_blocks.approve_selected": "Approve",
+        "audio_blocks.unapprove_selected": "Unapprove",
+        "audio_blocks.reset_selected": "Reset Selected",
         "audio_blocks.error_missing_audio": "The selected Audio Block has no generated audio file to play.",
         "audio_blocks.note_no_project": "Create or open a project before generating Audio Blocks.",
         "audio_blocks.note_no_source": "Import one source document before generating Audio Blocks.",
@@ -787,6 +799,9 @@ _UI_STRINGS = {
         "project.confirm_cleanup_rerun": "Continuing will delete the current cleanup data, clear chunking and all following operation folders, and reset workflow progress after extraction. Continue?",
         "project.confirm_chunking_rerun": "Continuing will delete the current chunking data, clear translation and all following operation folders, and reset workflow progress after cleanup. Continue?",
         "project.confirm_ai_chunking_rerun": "Continuing will delete the current chunking data, clear translation and all following operation folders, and reset workflow progress after cleanup before starting new AI-assisted chunking. Continue?",
+        "project.confirm_chunk_edit": "Saving this chunk edit will reset Translation for this chunk, remove Speech Blocks and Audio Blocks for this chunk, and reset Audio Assembly. Unaffected chunks are preserved. Continue?",
+        "project.confirm_chunk_insert": "Inserting a chunk will add an untranslated record, update chunk sequence metadata, and reset Audio Assembly. Existing chunk ids and unaffected downstream data are preserved. Continue?",
+        "project.confirm_chunk_delete": "Deleting this chunk will remove its Translation, Speech Blocks, Audio Blocks, and generated audio, then reset Audio Assembly. Unaffected chunks are preserved. Continue?",
         "project.confirm_speech_blocks": "Speech Blocks generation can take time because it sends one AI request per chunk and consumes AI tokens. A successful run will reset Audio Blocks and Audio Assembly. Continue?",
         "project.confirm_speech_blocks_rerun": "Continuing will delete the current Speech Blocks data, clear Audio Blocks and Audio Assembly, and reset workflow progress after Character Voices before starting a new Speech Blocks run. Continue?",
         "project.confirm_speech_blocks_resplit": (
@@ -794,13 +809,17 @@ _UI_STRINGS = {
             "AI operations can take a long time and may consume paid tokens. Continue?"
         ),
         "project.confirm_delete_speech_block": (
-            "Continuing will delete the selected Speech Block, renumber the chunk, and reset generated Audio Blocks "
-            "for that chunk. Continue?"
+            "Continuing will delete the selected Speech Block, remove only its generated Audio Block data, renumber "
+            "the chunk sequence, and reset Audio Assembly. Continue?"
         ),
         "project.confirm_speech_block_audio_reset": (
-            "This Speech Block change affects generated Audio Blocks for the current chunk. Continuing will delete "
-            "that chunk's generated WAV files, reset its audio metadata, and reset downstream Audio Assembly data. "
+            "This Speech Block change affects generated audio for the selected block. Continuing will delete only "
+            "that block's generated WAV files, reset its audio metadata, and reset downstream Audio Assembly data. "
             "Continue?"
+        ),
+        "project.confirm_speech_block_sequence_change": (
+            "Continuing will preserve existing Audio Blocks, update the Speech Blocks sequence, and reset Audio "
+            "Assembly because the final playback order changes. Continue?"
         ),
         "project.confirm_audio_blocks": (
             "Audio generation can take a long time because it prepares reusable voice prompts and then "
@@ -817,6 +836,32 @@ _UI_STRINGS = {
         "project.confirm_audio_blocks_invalidation": (
             "This change affects the current Audio Blocks inputs. Continuing will reset generated audio blocks, "
             "their approvals, and downstream Audio Assembly data. Continue?"
+        ),
+        "project.confirm_audio_block_regeneration": (
+            "Continuing will regenerate only the selected Audio Block, clear its approval, and reset downstream "
+            "Audio Assembly outputs. Other Audio Blocks and upstream workflow data will be preserved. Continue?"
+        ),
+        "project.confirm_audio_block_reset": (
+            "Continuing will delete only the selected Audio Block record, generated WAV, and metadata, then reset "
+            "downstream Audio Assembly outputs. The source Speech Block and unrelated Audio Blocks will be preserved. "
+            "Continue?"
+        ),
+        "project.confirm_audio_block_approval_change": (
+            "Changing Audio Block approval affects Audio Assembly eligibility. Continuing will preserve generated "
+            "Audio Blocks and reset downstream Audio Assembly outputs. Continue?"
+        ),
+        "project.confirm_single_voice_target_invalidation": (
+            "This voice-target change preserves Speech Blocks and resets only Audio Blocks that use this voice. "
+            "Reusable prompts for the voice and Audio Assembly data will also be reset. Continue?"
+        ),
+        "project.confirm_narrator_voice_invalidation": (
+            "This narrator voice change preserves Speech Blocks and resets only Audio Blocks that use the Narrator "
+            "voice. In same-narrator projects, all spoken Audio Blocks are affected. Audio Assembly data will also "
+            "be reset. Continue?"
+        ),
+        "project.confirm_global_voice_settings_invalidation": (
+            "This global voice setting change preserves Speech Blocks but resets all generated Audio Blocks, reusable "
+            "voice prompts, and Audio Assembly data. Continue?"
         ),
         "project.confirm_translation_reset": (
             "Continuing will delete the current translation data plus downstream character, voice, speech, audio, "
@@ -844,11 +889,18 @@ _UI_STRINGS = {
         "dialog.confirm_speech_blocks_rerun_title": "Confirm Speech Blocks Rerun",
         "dialog.confirm_speech_blocks_resplit_title": "Confirm Selected Chunk Re-Split",
         "dialog.confirm_delete_speech_block_title": "Delete Speech Block",
-        "dialog.confirm_speech_block_audio_reset_title": "Confirm Chunk Audio Reset",
+        "dialog.confirm_speech_block_audio_reset_title": "Confirm Speech Block Audio Reset",
+        "dialog.confirm_speech_block_sequence_change_title": "Confirm Speech Block Sequence Change",
         "dialog.confirm_audio_blocks_title": "Start Audio Generation",
         "dialog.confirm_audio_blocks_rerun_title": "Confirm Audio Generation Rerun",
         "dialog.confirm_audio_blocks_reset_title": "Confirm Audio Generation Reset",
         "dialog.confirm_audio_blocks_invalidation_title": "Confirm Audio Blocks Reset",
+        "dialog.confirm_audio_block_regeneration_title": "Confirm Selected Audio Regeneration",
+        "dialog.confirm_audio_block_reset_title": "Confirm Selected Audio Reset",
+        "dialog.confirm_audio_block_approval_title": "Confirm Audio Approval Change",
+        "dialog.confirm_single_voice_target_invalidation_title": "Confirm Voice Target Audio Reset",
+        "dialog.confirm_narrator_voice_invalidation_title": "Confirm Narrator Audio Reset",
+        "dialog.confirm_global_voice_settings_invalidation_title": "Confirm Global Voice Audio Reset",
         "dialog.confirm_audio_assembly_title": "Start Audio Assembly",
         "dialog.confirm_audio_assembly_reset_title": "Confirm Audio Assembly Reset",
         "project.confirm_audio_assembly": (
@@ -858,13 +910,32 @@ _UI_STRINGS = {
         "project.confirm_audio_assembly_reset": (
             "Continuing will delete generated audiobook files and Audio Assembly progress. Continue?"
         ),
+        "project.confirm_audio_assembly_settings_change": (
+            "Changing Audio Assembly settings will reset only existing audiobook outputs, assembly state, and the "
+            "assembly report. Approved Audio Blocks and upstream data will be preserved. Continue?"
+        ),
         "status.audio_assembly_generated": "Audio Assembly completed.",
         "status.audio_assembly_reset": "Audio Assembly data was reset.",
+        "status.audio_assembly_settings_saved_reset": "Audio Assembly settings saved and existing assembly output reset.",
+        "dialog.confirm_audio_assembly_settings_change_title": "Confirm Assembly Settings Change",
         "dialog.character_discovery_info_title": "Character Discovery Information",
         "dialog.character_add_title": "Add Character",
         "dialog.character_add_prompt": "Enter the canonical name for the new character.",
+        "dialog.character_add_confirm_title": "Confirm Character Add",
+        "dialog.character_add_confirm_message": (
+            "Add this character and synchronize the Character Voices target list? "
+            "Existing Speech Blocks, Audio Blocks, and assembly outputs will be preserved."
+        ),
+        "dialog.character_edit_title": "Confirm Character Edit",
+        "dialog.character_edit_message": (
+            "Save this character edit? Assigned Speech Blocks will become unapproved, "
+            "only their Audio Blocks will be reset, and Audio Assembly will be reset."
+        ),
         "dialog.character_delete_title": "Delete Character",
-        "dialog.character_delete_message": "Delete the selected character from the current discovery result?",
+        "dialog.character_delete_message": (
+            "Delete the selected character? Assigned Speech Blocks will be reassigned to Narrator and unapproved, "
+            "only affected Audio Blocks will be reset, and Audio Assembly will be reset."
+        ),
         "dialog.character_unsaved_title": "Unsaved Character Changes",
         "dialog.character_unsaved_message": "The current character has unsaved changes. Save them before continuing?",
         "project.repair_step_prefix": "The project is corrupted at step",
@@ -903,6 +974,9 @@ _UI_STRINGS = {
         "dialog.confirm_cleanup_rerun_title": "Confirma Reluarea Curatarii",
         "dialog.confirm_chunking_rerun_title": "Confirma Reluarea Segmentarii",
         "dialog.confirm_ai_chunking_rerun_title": "Confirma Reluarea Segmentarii AI",
+        "dialog.confirm_chunk_edit_title": "Confirma Editarea Segmentului",
+        "dialog.confirm_chunk_insert_title": "Confirma Inserarea Segmentului",
+        "dialog.confirm_chunk_delete_title": "Confirma Stergerea Segmentului",
         "dialog.confirm_ai_cleanup_title": "Porneste Curatarea Asistata de AI",
         "dialog.confirm_ai_cleanup_rerun_title": "Confirma Reluarea Curatarii AI",
         "dialog.confirm_project_options_title": "Blocheaza Optiunile Proiectului",
@@ -938,6 +1012,8 @@ _UI_STRINGS = {
         "status.text_chunked": "Textul a fost segmentat.",
         "status.text_ai_chunked": "Textul a fost segmentat cu AI.",
         "status.chunk_saved": "Segmentul a fost salvat.",
+        "status.chunk_inserted": "Segmentul a fost inserat.",
+        "status.chunk_deleted": "Segmentul a fost sters.",
         "status.text_translated": "Textul a fost tradus.",
         "status.translation_reset": "Traducerea a fost resetata.",
         "status.characters_discovered": "Descoperirea personajelor a fost finalizata.",
@@ -954,6 +1030,8 @@ _UI_STRINGS = {
         "status.audio_blocks_reset": "Blocurile audio au fost resetate.",
         "status.audio_blocks_approved_all": "Toate blocurile audio generate au fost aprobate.",
         "status.audio_block_approved": "Blocul audio a fost aprobat.",
+        "status.audio_block_unapproved": "Blocul audio a fost dezaprobat.",
+        "status.audio_block_reset": "Blocul audio selectat a fost resetat.",
         "status.audio_block_regenerated": "Blocul audio a fost regenerat.",
         "status.character_discovery_reset": "Descoperirea personajelor a fost resetata.",
         "status.character_added": "Personajul a fost adaugat.",
@@ -1086,6 +1164,8 @@ _UI_STRINGS = {
         "text_chunking.cleaned_group": "Referinta Text Curatat",
         "text_chunking.chunk_list_group": "Lista Segmentelor",
         "text_chunking.selected_group": "Segment Selectat",
+        "text_chunking.insert_chunk": "Insereaza",
+        "text_chunking.delete_chunk": "Sterge",
         "text_chunking.edit_chunk": "Editeaza",
         "text_chunking.save_chunk": "Salveaza",
         "text_chunking.find": "Cauta",
@@ -1370,6 +1450,7 @@ _UI_STRINGS = {
         "speech_blocks.edit_block": "Editeaza",
         "speech_blocks.save_block": "Salveaza",
         "speech_blocks.approve_block": "Aproba",
+        "speech_blocks.generate_audio_selected": "Genereaza Audio",
         "speech_blocks.warning_indicator": "Avertisment: {warning_flags}",
         "audio_blocks.title": "Blocuri Audio",
         "audio_blocks.start_generation": "Porneste Generarea Audio",
@@ -1385,6 +1466,8 @@ _UI_STRINGS = {
         "audio_blocks.play_selected": "Reda",
         "audio_blocks.stop_playback": "Opreste",
         "audio_blocks.approve_selected": "Aproba",
+        "audio_blocks.unapprove_selected": "Dezaproba",
+        "audio_blocks.reset_selected": "Reseteaza Selectat",
         "audio_blocks.error_missing_audio": "Blocul Audio selectat nu are un fisier audio generat pentru redare.",
         "audio_blocks.note_no_project": "Creeaza sau deschide un proiect inainte de a genera Blocuri Audio.",
         "audio_blocks.note_no_source": "Importa un document sursa inainte de a genera Blocuri Audio.",
@@ -1623,6 +1706,9 @@ _UI_STRINGS = {
         "project.confirm_cleanup_rerun": "Continuarea va sterge datele curente de curatare, va goli segmentarea si toate folderele operatiilor urmatoare si va reseta progresul fluxului dupa extragere. Continui?",
         "project.confirm_chunking_rerun": "Continuarea va sterge datele curente de segmentare, va goli traducerea si toate folderele operatiilor urmatoare si va reseta progresul fluxului dupa curatare. Continui?",
         "project.confirm_ai_chunking_rerun": "Continuarea va sterge datele curente de segmentare, va goli traducerea si toate folderele operatiilor urmatoare si va reseta progresul fluxului dupa curatare inainte de a porni o noua segmentare asistata de AI. Continui?",
+        "project.confirm_chunk_edit": "Salvarea editarii acestui segment va reseta Traducerea pentru acest segment, va elimina Blocurile de Vorbire si Blocurile Audio pentru acest segment si va reseta Asamblarea Audio. Segmentele neafectate sunt pastrate. Continui?",
+        "project.confirm_chunk_insert": "Inserarea unui segment va adauga o inregistrare netradusa, va actualiza metadatele de secventa si va reseta Asamblarea Audio. ID-urile existente si datele downstream neafectate sunt pastrate. Continui?",
+        "project.confirm_chunk_delete": "Stergerea acestui segment va elimina Traducerea, Blocurile de Vorbire, Blocurile Audio si fisierele audio generate pentru el, apoi va reseta Asamblarea Audio. Segmentele neafectate sunt pastrate. Continui?",
         "project.confirm_speech_blocks": "Generarea blocurilor de vorbire poate dura deoarece trimite cate o cerere AI pentru fiecare segment si consuma tokeni AI. O rulare reusita va reseta Blocurile Audio si Asamblarea Audio. Continui?",
         "project.confirm_speech_blocks_rerun": "Continuarea va sterge datele curente pentru blocurile de vorbire, va goli Blocurile Audio si Asamblarea Audio si va reseta progresul fluxului dupa Vocile Personajelor inainte de a porni o noua rulare. Continui?",
         "project.confirm_speech_blocks_resplit": (
@@ -1630,13 +1716,17 @@ _UI_STRINGS = {
             "Operatiile AI pot dura mult si pot consuma tokeni platiti. Continui?"
         ),
         "project.confirm_delete_speech_block": (
-            "Continuarea va sterge blocul de vorbire selectat, va renumerota segmentul si va reseta Blocurile Audio "
-            "generate pentru acel segment. Continui?"
+            "Continuarea va sterge blocul de vorbire selectat, va elimina doar datele Blocului Audio generat pentru "
+            "el, va renumerota secventa segmentului si va reseta Asamblarea Audio. Continui?"
         ),
         "project.confirm_speech_block_audio_reset": (
-            "Aceasta schimbare a blocului de vorbire afecteaza Blocurile Audio generate pentru segmentul curent. "
-            "Continuarea va sterge fisierele WAV generate pentru acel segment, va reseta metadatele audio ale "
-            "segmentului si va reseta datele din aval pentru Asamblarea Audio. Continui?"
+            "Aceasta schimbare a blocului de vorbire afecteaza audio generat pentru blocul selectat. Continuarea "
+            "va sterge doar fisierele WAV generate pentru acel bloc, va reseta metadatele sale audio si va reseta "
+            "datele din aval pentru Asamblarea Audio. Continui?"
+        ),
+        "project.confirm_speech_block_sequence_change": (
+            "Continuarea va pastra Blocurile Audio existente, va actualiza secventa Blocurilor de Vorbire si va "
+            "reseta Asamblarea Audio deoarece ordinea finala de redare se schimba. Continui?"
         ),
         "project.confirm_audio_blocks": (
             "Generarea audio poate dura mult deoarece pregateste prompturi vocale reutilizabile si apoi "
@@ -1653,6 +1743,34 @@ _UI_STRINGS = {
         "project.confirm_audio_blocks_invalidation": (
             "Aceasta schimbare afecteaza intrarile curente pentru Blocurile Audio. Continuarea va reseta blocurile "
             "audio generate, aprobarile lor si datele din aval pentru Asamblarea Audio. Continui?"
+        ),
+        "project.confirm_audio_block_regeneration": (
+            "Continuarea va regenera doar Blocul Audio selectat, ii va elimina aprobarea si va reseta iesirile "
+            "Asamblarii Audio din aval. Celelalte Blocuri Audio si datele workflow din amonte vor fi pastrate. "
+            "Continui?"
+        ),
+        "project.confirm_audio_block_reset": (
+            "Continuarea va sterge doar inregistrarea Blocului Audio selectat, WAV-ul generat si metadatele, apoi "
+            "va reseta iesirile Asamblarii Audio din aval. Blocul de Vorbire sursa si Blocurile Audio neafectate "
+            "vor fi pastrate. Continui?"
+        ),
+        "project.confirm_audio_block_approval_change": (
+            "Schimbarea aprobarii Blocului Audio afecteaza eligibilitatea Asamblarii Audio. Continuarea va pastra "
+            "Blocurile Audio generate si va reseta iesirile Asamblarii Audio din aval. Continui?"
+        ),
+        "project.confirm_single_voice_target_invalidation": (
+            "Aceasta schimbare de tinta vocala pastreaza Blocurile de Vorbire si reseteaza doar Blocurile Audio "
+            "care folosesc aceasta voce. Prompturile reutilizabile pentru voce si datele Asamblarii Audio vor fi "
+            "resetate. Continui?"
+        ),
+        "project.confirm_narrator_voice_invalidation": (
+            "Aceasta schimbare a vocii Naratorului pastreaza Blocurile de Vorbire si reseteaza doar Blocurile Audio "
+            "care folosesc vocea Naratorului. In proiectele cu acelasi narator, toate Blocurile Audio vorbite sunt "
+            "afectate. Datele Asamblarii Audio vor fi resetate. Continui?"
+        ),
+        "project.confirm_global_voice_settings_invalidation": (
+            "Aceasta schimbare globala de voce pastreaza Blocurile de Vorbire, dar reseteaza toate Blocurile Audio "
+            "generate, prompturile vocale reutilizabile si datele Asamblarii Audio. Continui?"
         ),
         "project.confirm_translation_reset": (
             "Continuarea va sterge datele curente de traducere plus iesirile downstream pentru personaje, voci, "
@@ -1682,11 +1800,18 @@ _UI_STRINGS = {
         "dialog.confirm_speech_blocks_rerun_title": "Confirma Rerularea Blocurilor de Vorbire",
         "dialog.confirm_speech_blocks_resplit_title": "Confirma Resegmentarea Segmentului Selectat",
         "dialog.confirm_delete_speech_block_title": "Sterge Bloc Vorbire",
-        "dialog.confirm_speech_block_audio_reset_title": "Confirma Resetarea Audio a Segmentului",
+        "dialog.confirm_speech_block_audio_reset_title": "Confirma Resetarea Audio a Blocului de Vorbire",
+        "dialog.confirm_speech_block_sequence_change_title": "Confirma Schimbarea Secventei Blocurilor de Vorbire",
         "dialog.confirm_audio_blocks_title": "Porneste Generarea Audio",
         "dialog.confirm_audio_blocks_rerun_title": "Confirma Rerularea Generarii Audio",
         "dialog.confirm_audio_blocks_reset_title": "Confirma Resetarea Generarii Audio",
         "dialog.confirm_audio_blocks_invalidation_title": "Confirma Resetarea Blocurilor Audio",
+        "dialog.confirm_audio_block_regeneration_title": "Confirma Regenerarea Audio Selectata",
+        "dialog.confirm_audio_block_reset_title": "Confirma Resetarea Audio Selectata",
+        "dialog.confirm_audio_block_approval_title": "Confirma Schimbarea Aprobarii Audio",
+        "dialog.confirm_single_voice_target_invalidation_title": "Confirma Resetarea Audio a Tintei Vocale",
+        "dialog.confirm_narrator_voice_invalidation_title": "Confirma Resetarea Audio a Naratorului",
+        "dialog.confirm_global_voice_settings_invalidation_title": "Confirma Resetarea Audio Globala",
         "dialog.confirm_audio_assembly_title": "Porneste Asamblarea Audio",
         "dialog.confirm_audio_assembly_reset_title": "Confirma Resetarea Asamblarii Audio",
         "project.confirm_audio_assembly": (
@@ -1696,13 +1821,34 @@ _UI_STRINGS = {
         "project.confirm_audio_assembly_reset": (
             "Continuarea va sterge fisierele audiobook generate si progresul Asamblarii Audio. Continui?"
         ),
+        "project.confirm_audio_assembly_settings_change": (
+            "Schimbarea setarilor Asamblarii Audio va reseta doar iesirile audiobook existente, starea asamblarii "
+            "si raportul de asamblare. Blocurile Audio aprobate si datele din amonte vor fi pastrate. Continui?"
+        ),
         "status.audio_assembly_generated": "Asamblarea Audio s-a finalizat.",
         "status.audio_assembly_reset": "Datele Asamblarii Audio au fost resetate.",
+        "status.audio_assembly_settings_saved_reset": (
+            "Setarile Asamblarii Audio au fost salvate si iesirea de asamblare existenta a fost resetata."
+        ),
+        "dialog.confirm_audio_assembly_settings_change_title": "Confirma Schimbarea Setarilor Asamblarii",
         "dialog.character_discovery_info_title": "Informatii Descoperire Personaje",
         "dialog.character_add_title": "Adauga Personaj",
         "dialog.character_add_prompt": "Introdu numele canonic pentru noul personaj.",
+        "dialog.character_add_confirm_title": "Confirma adaugarea personajului",
+        "dialog.character_add_confirm_message": (
+            "Adaugi acest personaj si sincronizezi lista de tinte Character Voices? "
+            "Speech Blocks, Audio Blocks si iesirile Audio Assembly existente vor fi pastrate."
+        ),
+        "dialog.character_edit_title": "Confirma editarea personajului",
+        "dialog.character_edit_message": (
+            "Salvezi editarea acestui personaj? Speech Blocks atribuite lui vor deveni neaprobate, "
+            "doar Audio Blocks aferente vor fi resetate, iar Audio Assembly va fi resetat."
+        ),
         "dialog.character_delete_title": "Sterge Personajul",
-        "dialog.character_delete_message": "Stergi personajul selectat din rezultatul curent al descoperirii?",
+        "dialog.character_delete_message": (
+            "Stergi personajul selectat? Speech Blocks atribuite lui vor fi mutate pe Narator si neaprobate, "
+            "doar Audio Blocks afectate vor fi resetate, iar Audio Assembly va fi resetat."
+        ),
         "dialog.character_unsaved_title": "Modificari Nesalvate Ale Personajului",
         "dialog.character_unsaved_message": "Personajul curent are modificari nesalvate. Vrei sa le salvezi inainte de a continua?",
         "project.repair_step_prefix": "Proiectul este corupt la pasul",

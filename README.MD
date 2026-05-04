@@ -35,11 +35,33 @@ chunking, locked-target AI translation, character
 discovery, narrator and character voice preparation, mode-aware Speech Blocks,
 Audio Blocks, WAV Audio Assembly deliverables, Home-page TXT/Markdown exports
 for completed text artifacts, and external full-project ZIP snapshots.
-Current package version is `1.3.0`; dense review pages now keep minimum
+Manual Text Chunking edits, inserts, and deletes now use the v2 selective
+impact path to preserve unaffected Translation, Speech Blocks, and Audio
+Blocks work while resetting only affected chunks plus Audio Assembly.
+Manual Character Discovery add/edit/delete actions now also use the v2
+selective impact path: character add preserves generated downstream work,
+character edit unapproves only assigned Speech Blocks and resets only affected
+Audio Blocks, and character delete moves assigned Speech Blocks to Narrator
+instead of deleting them.
+Narrator and Character Voices changes now preserve Speech Blocks and reset only
+Audio Blocks that use the affected voice target, while global voice-language or
+runtime-model changes reset all generated Audio Blocks and Audio Assembly.
+Manual Speech Blocks insert/delete/edit/reset/approval actions now preserve
+stable Speech Block IDs, reset only affected Audio Blocks when audio input
+changes, and reset Audio Assembly whenever final order, approval, or audio
+inputs change. Speech Blocks review also exposes selected-block audio regeneration
+plus Play/Stop preview controls mirrored from Audio Blocks.
+Audio Blocks selected reset, selected regeneration, approval, and unapproval
+now preserve unrelated generated audio and reset only Audio Assembly outputs.
+Audio Assembly settings changes and reruns now preserve upstream Audio Blocks
+while replacing only assembly outputs/state/report.
+Current package version is `2.0.0`; dense review pages now keep minimum
 splitter widths so important extracted text, chunk text, character evidence,
 voice editors, Speech Blocks, and Audio Blocks stay readable while panes are
-resized. Character Voices also supports a confirmed batch action that
-regenerates samples for all current character targets.
+resized. The Speech Blocks selected audio shortcut uses the shorter
+`Generate Audio` label for large-font layouts, and Character Voices also
+supports a confirmed batch action that regenerates samples for all current
+character targets.
 
 Focused implementation documentation is maintained in `05_SoftwareDocu/`.
 The end-user help bundles are maintained in `05_SoftwareDocu/UserGuide/` and

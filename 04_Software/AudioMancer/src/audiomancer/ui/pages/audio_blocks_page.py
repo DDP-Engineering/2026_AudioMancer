@@ -13,7 +13,7 @@
          review controls for the Audio Blocks workflow.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-23
-@version 0.3.4
+@version 0.4.0
 """
 
 # IMPORTS
@@ -51,6 +51,8 @@ class AudioBlocksPage(QWidget):
     audiobook_playback_toggle_requested = Signal()
     regenerate_selected_requested = Signal(str)
     approve_selected_requested = Signal(str)
+    unapprove_selected_requested = Signal(str)
+    reset_selected_requested = Signal(str)
     selected_playback_toggle_requested = Signal(str)
 
     def __init__(self, parent=None) -> None:
@@ -61,7 +63,7 @@ class AudioBlocksPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-23
-        @version    0.3.1
+        @version    0.4.0
         """
         super().__init__(parent)
         self._current_language = "en"
@@ -142,6 +144,12 @@ class AudioBlocksPage(QWidget):
         self._approve_button = QPushButton("Approve")
         self._approve_button.clicked.connect(self._emit_approve_selected)
         action_row.addWidget(self._approve_button)
+        self._unapprove_button = QPushButton("Unapprove")
+        self._unapprove_button.clicked.connect(self._emit_unapprove_selected)
+        action_row.addWidget(self._unapprove_button)
+        self._reset_selected_button = QPushButton("Reset Selected")
+        self._reset_selected_button.clicked.connect(self._emit_reset_selected)
+        action_row.addWidget(self._reset_selected_button)
         detail_layout.addLayout(action_row)
         self._right_splitter.addWidget(self._detail_group)
         self._right_splitter.setStretchFactor(0, 4)
@@ -191,7 +199,7 @@ class AudioBlocksPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-05-01
-        @version    0.1.0
+        @version    0.2.0
         """
         super().resizeEvent(event)
         self._apply_main_splitter_minimums()
@@ -400,6 +408,8 @@ class AudioBlocksPage(QWidget):
             ui_state_service.translate(self._selected_playback_label_key(), language)
         )
         self._approve_button.setText(ui_state_service.translate("audio_blocks.approve_selected", language))
+        self._unapprove_button.setText(ui_state_service.translate("audio_blocks.unapprove_selected", language))
+        self._reset_selected_button.setText(ui_state_service.translate("audio_blocks.reset_selected", language))
         self._status_group.setTitle(ui_state_service.translate("audio_blocks.status_group", language))
         current_row = self._speech_block_list.currentRow()
         if current_row >= 0:
@@ -412,7 +422,7 @@ class AudioBlocksPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-23
-        @version    0.1.0
+        @version    0.2.0
         """
         selected_block = self._current_display_block()
         self._start_button.setEnabled(self._project_active and not self._busy and self._can_start_or_continue)
@@ -442,6 +452,19 @@ class AudioBlocksPage(QWidget):
             and selected_block is not None
             and bool(selected_block.get("generated", False))
             and not bool(selected_block.get("approved", False))
+        )
+        self._unapprove_button.setEnabled(
+            self._project_active
+            and not self._busy
+            and selected_block is not None
+            and bool(selected_block.get("generated", False))
+            and bool(selected_block.get("approved", False))
+        )
+        self._reset_selected_button.setEnabled(
+            self._project_active
+            and not self._busy
+            and selected_block is not None
+            and bool(selected_block.get("generated", False))
         )
         self._speech_block_list.setEnabled(self._project_active and not self._busy)
 
@@ -568,6 +591,32 @@ class AudioBlocksPage(QWidget):
         speech_block_id = self.selected_block_id()
         if speech_block_id is not None:
             self.approve_selected_requested.emit(speech_block_id)
+
+    def _emit_unapprove_selected(self) -> None:
+        """
+        @brief      Emit the unapprove-selected signal for the active speech block.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-04
+        @version    0.1.0
+        """
+        speech_block_id = self.selected_block_id()
+        if speech_block_id is not None:
+            self.unapprove_selected_requested.emit(speech_block_id)
+
+    def _emit_reset_selected(self) -> None:
+        """
+        @brief      Emit the reset-selected signal for the active speech block.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-04
+        @version    0.1.0
+        """
+        speech_block_id = self.selected_block_id()
+        if speech_block_id is not None:
+            self.reset_selected_requested.emit(speech_block_id)
 
     def _emit_selected_playback_toggle(self) -> None:
         """

@@ -14,7 +14,7 @@
          project-local narrator profile editing.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-18
-@version 3.12.0
+@version 3.13.0
 """
 
 # IMPORTS
@@ -29,7 +29,6 @@ from audiomancer import config
 from audiomancer.services import (
     character_voices_service,
     narrator_definition_service,
-    operation_runtime_service,
     project_workspace_service,
     text_cleanup_state_service,
     tts_budget_service,
@@ -58,13 +57,15 @@ def handle_selection_change_requested(window: "MainWindow", target_profile_id: o
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-17
-    @version    1.1.0
+    @version    1.4.0
     """
     profile_id = None if target_profile_id in (None, "") else str(target_profile_id)
     window._narator_voice_inspected_profile_id = profile_id
-    window.show_project_state(
+    current_language = ui_state_service.current_language_from_settings(window._settings_payload)
+    window._refresh_narator_voice_page_state(  # noqa: SLF001
         window._current_project_root,
         window._current_manifest,
+        current_language,
     )
 
 
@@ -97,6 +98,12 @@ def handle_voice_language_change_requested(window: "MainWindow", voice_language:
         )
         return
     if not _confirm_voice_language_change(window, current_language):
+        window.show_project_state(
+            window._current_project_root,
+            project_workspace_service.load_manifest(window._current_project_root),
+        )
+        return
+    if not audio_blocks_ui_controller.confirm_global_voice_settings_invalidation(window, current_language):
         window.show_project_state(
             window._current_project_root,
             project_workspace_service.load_manifest(window._current_project_root),
@@ -143,7 +150,7 @@ def handle_create_profile_requested(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-18
-    @version    1.4.0
+    @version    1.5.0
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._current_project_root is None:
@@ -189,13 +196,15 @@ def handle_edit_profile_requested(window: "MainWindow", profile_id: str) -> None
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-17
-    @version    1.1.0
+    @version    1.2.0
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._current_project_root is None:
         return
-    if _selected_profile_id(window) == profile_id and not audio_blocks_ui_controller.confirm_audio_blocks_invalidation(
-        window, current_language
+    selected_profile_id = _selected_profile_id(window)
+    if selected_profile_id == profile_id and not audio_blocks_ui_controller.confirm_narrator_voice_invalidation(
+        window,
+        current_language,
     ):
         return
     if not _confirm_profile_edit(window, current_language):
@@ -218,8 +227,18 @@ def handle_edit_profile_requested(window: "MainWindow", profile_id: str) -> None
         str(selected_state.get("selected_profile_id", "") or "").strip() or None,
         str(selected_state.get("selected_language", "") or "").strip(),
     )
-    if _selected_profile_id(window) in (None, "", profile_id):
-        audio_blocks_ui_controller.invalidate_audio_blocks_after_upstream_change(window)
+    if selected_profile_id == profile_id:
+        audio_blocks_ui_controller.invalidate_audio_blocks_for_voice_targets(
+            window,
+            (character_voices_service.TARGET_ID_NARRATOR,),
+        )
+    window._narator_voice_inspected_profile_id = profile_id
+    window._current_manifest = project_workspace_service.load_manifest(window._current_project_root)
+    window._refresh_narator_voice_page_state(  # noqa: SLF001
+        window._current_project_root,
+        window._current_manifest,
+        current_language,
+    )
     window._narator_voice_page.begin_edit_mode()
 
 
@@ -235,11 +254,12 @@ def handle_save_profile_requested(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-17
-    @version    1.4.0
+    @version    1.5.0
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._current_project_root is None:
         return
+    selected_profile_id = _selected_profile_id(window)
     existing_profiles = narrator_definition_service.load_profiles(window._current_project_root)
     try:
         normalized_name = narrator_definition_service.validate_profile_name(
@@ -262,6 +282,11 @@ def handle_save_profile_requested(
         window._current_project_root,
         project_workspace_service.load_manifest(window._current_project_root),
     )
+    if selected_profile_id == str(updated_profile.get("profile_id", "")).strip():
+        audio_blocks_ui_controller.invalidate_audio_blocks_for_voice_targets(
+            window,
+            (character_voices_service.TARGET_ID_NARRATOR,),
+        )
     misc_ui_controller.show_message(
         window,
         ui_state_service.translate("status.narator_voice_profile_saved", current_language),
@@ -277,13 +302,15 @@ def handle_delete_profile_requested(window: "MainWindow", profile_id: str) -> No
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-17
-    @version    1.1.0
+    @version    1.2.0
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._current_project_root is None:
         return
-    if _selected_profile_id(window) == profile_id and not audio_blocks_ui_controller.confirm_audio_blocks_invalidation(
-        window, current_language
+    selected_profile_id = _selected_profile_id(window)
+    if selected_profile_id == profile_id and not audio_blocks_ui_controller.confirm_narrator_voice_invalidation(
+        window,
+        current_language,
     ):
         return
     if not _confirm_delete_profile(window, current_language):
@@ -307,8 +334,11 @@ def handle_delete_profile_requested(window: "MainWindow", profile_id: str) -> No
         window._narator_voice_inspected_profile_id,
         str(selected_state.get("selected_language", "") or "").strip(),
     )
-    if _selected_profile_id(window) in (None, "", profile_id):
-        audio_blocks_ui_controller.invalidate_audio_blocks_after_upstream_change(window)
+    if selected_profile_id == profile_id:
+        audio_blocks_ui_controller.invalidate_audio_blocks_for_voice_targets(
+            window,
+            (character_voices_service.TARGET_ID_NARRATOR,),
+        )
     misc_ui_controller.show_message(
         window,
         ui_state_service.translate("status.narator_voice_profile_deleted", current_language),
@@ -339,7 +369,7 @@ def handle_select_profile_requested(window: "MainWindow", profile_id: str) -> No
             ui_state_service.translate("narator_voice.error_missing_sample", current_language),
         )
         return
-    if not audio_blocks_ui_controller.confirm_audio_blocks_invalidation(window, current_language):
+    if not audio_blocks_ui_controller.confirm_narrator_voice_invalidation(window, current_language):
         return
     selected_language = (
         str(window._narator_voice_page._current_language).strip()
@@ -355,7 +385,10 @@ def handle_select_profile_requested(window: "MainWindow", profile_id: str) -> No
     narrator_definition_service.copy_selected_narrator_sample(window._current_project_root, profile_id)
     window._narator_voice_inspected_profile_id = profile_id
     _sync_manifest_summary(window, profile_id, selected_language)
-    audio_blocks_ui_controller.invalidate_audio_blocks_after_upstream_change(window)
+    audio_blocks_ui_controller.invalidate_audio_blocks_for_voice_targets(
+        window,
+        (character_voices_service.TARGET_ID_NARRATOR,),
+    )
     misc_ui_controller.show_message(
         window,
         ui_state_service.translate("status.narator_voice_profile_selected", current_language),
@@ -371,7 +404,7 @@ def handle_generate_sample_requested(window: "MainWindow", profile_id: str) -> N
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-17
-    @version    1.4.0
+    @version    1.5.0
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._active_operation_kind is not None:
@@ -391,7 +424,7 @@ def handle_generate_sample_requested(window: "MainWindow", profile_id: str) -> N
     if not _confirm_generate_sample(window, current_language, profile_id):
         return
     invalidate_audio_blocks = _selected_profile_id(window) == profile_id and (
-        audio_blocks_ui_controller.confirm_audio_blocks_invalidation(window, current_language)
+        audio_blocks_ui_controller.confirm_narrator_voice_invalidation(window, current_language)
     )
     if _selected_profile_id(window) == profile_id and not invalidate_audio_blocks:
         return
@@ -474,7 +507,7 @@ def _handle_generate_sample_success(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-24
-    @version    0.1.0
+    @version    0.3.0
     """
     _ = result_payload
     window._settings_payload = settings_service.load_settings()
@@ -485,7 +518,10 @@ def _handle_generate_sample_success(
             project_workspace_service.load_manifest(window._current_project_root),
         )
     if invalidate_audio_blocks:
-        audio_blocks_ui_controller.invalidate_audio_blocks_after_upstream_change(window)
+        audio_blocks_ui_controller.invalidate_audio_blocks_for_voice_targets(
+            window,
+            (character_voices_service.TARGET_ID_NARRATOR,),
+        )
     misc_ui_controller.show_message(
         window,
         ui_state_service.translate("status.narator_voice_sample_generated", current_language),
@@ -502,7 +538,7 @@ def _handle_generate_sample_failure(window: "MainWindow", error: Exception, curr
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-24
-    @version    0.1.0
+    @version    0.2.0
     """
     window._settings_payload = settings_service.load_settings()
     if window._current_project_root is not None:
@@ -960,16 +996,11 @@ def _reset_voice_language_downstream(window: "MainWindow") -> None:
     """
     if window._current_project_root is None or window._current_manifest is None:
         return
-    operation_runtime_service.reset_operation_data(
-        window._current_project_root,
-        "speech_blocks",
-        include_current=True,
-        keep_input_snapshots=False,
-    )
+    audio_blocks_ui_controller.invalidate_all_audio_blocks_after_voice_settings_change(window)
     updated_manifest = project_workspace_service.load_manifest(window._current_project_root)
     operations = text_cleanup_state_service.normalized_manifest_operations(updated_manifest)
     default_operations = text_cleanup_state_service.normalized_manifest_operations({})
-    for operation_kind in ("character_voices", "speech_blocks", "audio_blocks", "audio_assembly"):
+    for operation_kind in ("character_voices",):
         operations[operation_kind] = default_operations[operation_kind]
     updated_manifest["operations"] = operations
     updated_manifest["narrator_profile_name"] = None

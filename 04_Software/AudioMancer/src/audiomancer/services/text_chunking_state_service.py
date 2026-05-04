@@ -14,7 +14,7 @@
          Chunking page.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-24
-@version 0.7.0
+@version 0.8.1
 """
 
 # IMPORTS
@@ -25,13 +25,25 @@ from pathlib import Path
 from audiomancer import config
 from audiomancer.services import (
     ai_state_note_service,
+    ai_translation_service,
+    audio_blocks_service,
+    character_discovery_service,
     deterministic_chunking_service,
     home_presenter_service,
     operation_runtime_service,
     project_workspace_service,
+    speech_blocks_service,
     text_cleanup_state_service,
     ui_state_service,
+    workflow_impact_service,
 )
+from audiomancer.services.logging_service import get_component_logger
+from audiomancer.services.time_service import utc_now_iso
+
+# CONSTANTS
+
+# @brief Component logger used for Text Chunking state mutations.
+_TEXT_CHUNKING_STATE_LOGGER = get_component_logger("deterministic_chunking")
 
 # PUBLIC API
 
@@ -136,7 +148,7 @@ def save_chunk_text_edit(
     chunk_text: str,
 ) -> dict[str, object]:
     """
-    @brief      Persist one selected chunk text edit and reset downstream workflow state.
+    @brief      Persist one selected chunk text edit and selectively reset downstream state.
     @param[in]  project_root Active project root folder.
     @param[in]  manifest Current project manifest payload.
     @param[in]  chunk_id Stable chunk identifier to update.
@@ -145,7 +157,7 @@ def save_chunk_text_edit(
     @exception  ValueError Raised when the chunk artifact or selected chunk is unavailable.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-24
-    @version    0.2.0
+    @version    0.3.1
     """
     chunk_artifact_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.CHUNK_ARTIFACT_FILE_NAME
     if not chunk_artifact_path.is_file():
@@ -157,18 +169,94 @@ def save_chunk_text_edit(
     )
     if selected_index < 0:
         raise ValueError("The selected chunk is no longer available.")
-    chunks[selected_index]["text"] = chunk_text
-    chunk_artifact_path.write_text(json.dumps(chunks, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
-    operation_runtime_service.reset_operation_data(
-        project_root,
-        "chunking",
-        include_current=False,
-        keep_input_snapshots=False,
-        preserve_operation_kinds=operation_runtime_service.NARRATOR_PROFILE_PRESERVED_OPERATION_KINDS,
+    if str(chunks[selected_index].get("text", "")) == chunk_text:
+        _TEXT_CHUNKING_STATE_LOGGER.info(
+            "Skipped manual chunk text edit because the selected chunk was unchanged: chunk_id=%s",
+            chunk_id,
+        )
+        return dict(manifest)
+    _TEXT_CHUNKING_STATE_LOGGER.info(
+        "Applying manual chunk text edit: chunk_id=%s chunk_count=%s",
+        chunk_id,
+        len(chunks),
     )
-    updated_manifest = build_manifest_after_chunk_edit(manifest)
-    project_workspace_service.save_manifest(updated_manifest, project_root)
-    return updated_manifest
+    chunks[selected_index]["text"] = chunk_text
+    resequenced_chunks = workflow_impact_service.resequence_records(chunks, start_index=1)
+    return _persist_manual_chunk_change(
+        project_root,
+        manifest,
+        resequenced_chunks,
+        affected_chunk_ids=(chunk_id,),
+        reason="manual_chunk_edit",
+    )
+
+
+def insert_chunk_after_selected(
+    project_root: Path,
+    manifest: dict[str, object],
+    selected_chunk_id: str,
+) -> dict[str, object]:
+    """
+    @brief      Insert one empty chunk after the selected persisted chunk.
+    @param[in]  project_root Active project root folder.
+    @param[in]  manifest Current project manifest payload.
+    @param[in]  selected_chunk_id Stable chunk identifier used as the insertion anchor.
+    @return     Updated manifest payload.
+    @exception  ValueError Raised when the selected chunk is unavailable.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-04
+    @version    0.1.0
+    """
+    chunks = deterministic_chunking_service.load_chunks(project_root)
+    selected_index = next(
+        (index for index, chunk in enumerate(chunks) if str(chunk.get("chunk_id", "")) == selected_chunk_id),
+        -1,
+    )
+    if selected_index < 0:
+        raise ValueError("The selected chunk is no longer available.")
+    inserted_chunk = _build_inserted_chunk_payload(chunks[selected_index], _next_chunk_id(chunks))
+    updated_chunks = [dict(chunk) for chunk in chunks]
+    updated_chunks.insert(selected_index + 1, inserted_chunk)
+    resequenced_chunks = workflow_impact_service.resequence_records(updated_chunks, start_index=1)
+    return _persist_manual_chunk_change(
+        project_root,
+        manifest,
+        resequenced_chunks,
+        affected_chunk_ids=(str(inserted_chunk["chunk_id"]),),
+        reason="manual_chunk_insert",
+    )
+
+
+def delete_selected_chunk(
+    project_root: Path,
+    manifest: dict[str, object],
+    chunk_id: str,
+) -> dict[str, object]:
+    """
+    @brief      Delete one selected chunk and selectively reset dependent records.
+    @param[in]  project_root Active project root folder.
+    @param[in]  manifest Current project manifest payload.
+    @param[in]  chunk_id Stable chunk identifier to delete.
+    @return     Updated manifest payload.
+    @exception  ValueError Raised when the selected chunk is unavailable.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-04
+    @version    0.1.0
+    """
+    chunks = deterministic_chunking_service.load_chunks(project_root)
+    if not any(str(chunk.get("chunk_id", "")) == chunk_id for chunk in chunks):
+        raise ValueError("The selected chunk is no longer available.")
+    updated_chunks = [dict(chunk) for chunk in chunks if str(chunk.get("chunk_id", "")) != chunk_id]
+    if not updated_chunks:
+        raise ValueError("At least one chunk must remain in the project.")
+    resequenced_chunks = workflow_impact_service.resequence_records(updated_chunks, start_index=1)
+    return _persist_manual_chunk_change(
+        project_root,
+        manifest,
+        resequenced_chunks,
+        affected_chunk_ids=(chunk_id,),
+        reason="manual_chunk_delete",
+    )
 
 
 def build_manifest_after_chunk_edit(manifest: dict[str, object]) -> dict[str, object]:
@@ -191,6 +279,273 @@ def build_manifest_after_chunk_edit(manifest: dict[str, object]) -> dict[str, ob
     updated_manifest["operations"] = operations
     updated_manifest["current_stage"] = "translation_ready"
     return updated_manifest
+
+
+def _persist_manual_chunk_change(
+    project_root: Path,
+    manifest: dict[str, object],
+    chunks: list[dict[str, object]],
+    affected_chunk_ids: tuple[str, ...],
+    reason: str,
+) -> dict[str, object]:
+    """
+    @brief      Persist a manual chunk-list change and apply selective v2 impact.
+    @param[in]  project_root Active project root folder.
+    @param[in]  manifest Current project manifest payload.
+    @param[in]  chunks Full updated chunk payload list.
+    @param[in]  affected_chunk_ids Exact chunk ids changed by the operation.
+    @param[in]  reason Stable impact reason token.
+    @return     Updated manifest payload.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-04
+    @version    0.1.1
+    """
+    _write_chunk_artifact(project_root, chunks)
+    target_language = _manifest_target_language(manifest)
+    profile_id = _persisted_translation_profile_id(project_root)
+    ai_translation_service.sync_translation_after_chunk_change(
+        project_root,
+        target_language,
+        profile_id,
+        affected_chunk_ids,
+    )
+    character_discovery_service.drop_character_evidence_for_chunks(project_root, affected_chunk_ids)
+    _audio_report, audio_artifact_summary = audio_blocks_service.remove_audio_blocks_for_chunks(
+        project_root,
+        affected_chunk_ids,
+    )
+    speech_blocks_service.remove_speech_blocks_for_chunks(project_root, affected_chunk_ids)
+    workflow_impact_service.reset_audio_assembly_outputs(project_root)
+    impact_summary = workflow_impact_service.build_selective_invalidation_summary(
+        "chunking",
+        reason=reason,
+        affected_chunk_ids=affected_chunk_ids,
+        reset_operation_kinds=("speech_blocks", "audio_blocks", "audio_assembly"),
+        audio_assembly_reset=True,
+        artifact_deletion=audio_artifact_summary,
+    )
+    _write_manual_chunking_metadata(project_root, chunks, impact_summary)
+    updated_manifest = _build_manifest_after_selective_chunk_change(project_root, manifest)
+    project_workspace_service.save_manifest(updated_manifest, project_root)
+    return updated_manifest
+
+
+def _write_chunk_artifact(project_root: Path, chunks: list[dict[str, object]]) -> None:
+    """
+    @brief      Persist the canonical chunk artifact.
+    @param[in]  project_root Active project root folder.
+    @param[in]  chunks Full chunk payload list.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-04
+    @version    0.1.0
+    """
+    chunk_artifact_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.CHUNK_ARTIFACT_FILE_NAME
+    chunk_artifact_path.parent.mkdir(parents=True, exist_ok=True)
+    chunk_artifact_path.write_text(json.dumps(chunks, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+
+
+def _write_manual_chunking_metadata(
+    project_root: Path,
+    chunks: list[dict[str, object]],
+    impact_summary: workflow_impact_service.WorkflowImpactSummary,
+) -> None:
+    """
+    @brief      Refresh chunking report and state after a manual v2 chunk edit.
+    @param[in]  project_root Active project root folder.
+    @param[in]  chunks Current chunk payload list.
+    @param[in]  impact_summary Selective impact summary to persist.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-04
+    @version    0.1.0
+    """
+    now = utc_now_iso()
+    existing_report = deterministic_chunking_service.load_chunking_report(project_root) or {}
+    existing_state = deterministic_chunking_service.load_operation_state(project_root) or {}
+    chapter_count = len({str(chunk.get("chapter_label", "")).strip() for chunk in chunks if chunk.get("chapter_label")})
+    warnings = (
+        list(existing_report.get("warnings", [])) if isinstance(existing_report.get("warnings", []), list) else []
+    )
+    report = {
+        **dict(existing_report),
+        "chunked_at": existing_report.get("chunked_at") or now,
+        "updated_at": now,
+        "warnings": warnings,
+        "chunk_count": len(chunks),
+        "detected_chapter_count": chapter_count,
+        "manual_adjusted": True,
+        "last_workflow_impact": workflow_impact_service.build_impact_metadata(impact_summary),
+    }
+    if not report.get("chunking_mode"):
+        report["chunking_mode"] = "manual"
+    report_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.CHUNKING_REPORT_FILE_NAME
+    report_path.parent.mkdir(parents=True, exist_ok=True)
+    report_path.write_text(json.dumps(report, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    metadata = dict(existing_state.get("metadata", {})) if isinstance(existing_state.get("metadata"), dict) else {}
+    metadata.update(
+        {
+            "chunk_count": len(chunks),
+            "detected_chapter_count": chapter_count,
+            "manual_adjusted": True,
+            "last_workflow_impact": workflow_impact_service.build_impact_metadata(impact_summary),
+        }
+    )
+    state = operation_runtime_service.build_operation_state_payload(
+        status="completed",
+        input_paths=list(existing_state.get("input_paths", [])) if isinstance(existing_state, dict) else [],
+        output_paths=[config.CHUNK_ARTIFACT_FILE_NAME],
+        artifact_paths=[config.CHUNKING_REPORT_FILE_NAME],
+        progress_current=len(chunks),
+        progress_total=len(chunks),
+        mode=str(existing_state.get("mode") or report.get("chunking_mode") or "manual"),
+        started_at=None if existing_state.get("started_at") in (None, "") else str(existing_state.get("started_at")),
+        completed_at=now,
+        warning_count=len(warnings),
+        metadata=metadata,
+        resume_checkpoint=None,
+        updated_at=now,
+    )
+    state_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.CHUNKING_STATE_FILE_NAME
+    state_path.parent.mkdir(parents=True, exist_ok=True)
+    state_path.write_text(json.dumps(state, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    _TEXT_CHUNKING_STATE_LOGGER.info(
+        "Refreshed manual chunking metadata: chunk_count=%s affected_chunks=%s reason=%s",
+        len(chunks),
+        len(impact_summary.affected_chunk_ids),
+        impact_summary.reason,
+    )
+
+
+def _build_manifest_after_selective_chunk_change(
+    project_root: Path,
+    manifest: dict[str, object],
+) -> dict[str, object]:
+    """
+    @brief      Refresh manifest summaries after selective chunk invalidation.
+    @param[in]  project_root Active project root folder.
+    @param[in]  manifest Current project manifest payload.
+    @return     Updated manifest payload.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-04
+    @version    0.1.0
+    """
+    updated_manifest = dict(manifest)
+    operations = text_cleanup_state_service.normalized_manifest_operations(updated_manifest)
+    default_operations = text_cleanup_state_service.normalized_manifest_operations({})
+    operations["chunking"] = project_workspace_service.project_manifest_operation_summary(
+        "chunking",
+        deterministic_chunking_service.load_operation_state(project_root),
+    )
+    operations["translation"] = project_workspace_service.project_manifest_operation_summary(
+        "translation",
+        ai_translation_service.load_operation_state(project_root),
+    )
+    operations["character_discovery"] = project_workspace_service.project_manifest_operation_summary(
+        "character_discovery",
+        character_discovery_service.load_operation_state(project_root),
+    )
+    operations["speech_blocks"] = project_workspace_service.project_manifest_operation_summary(
+        "speech_blocks",
+        speech_blocks_service.load_operation_state(project_root),
+    )
+    operations["audio_blocks"] = project_workspace_service.project_manifest_operation_summary(
+        "audio_blocks",
+        audio_blocks_service.load_operation_state(project_root),
+    )
+    operations["audio_assembly"] = default_operations["audio_assembly"]
+    updated_manifest["operations"] = operations
+    updated_manifest["current_stage"] = "translation_ready"
+    return updated_manifest
+
+
+def _build_inserted_chunk_payload(source_chunk: dict[str, object], chunk_id: str) -> dict[str, object]:
+    """
+    @brief      Build the default payload for a manually inserted empty chunk.
+    @param[in]  source_chunk Selected anchor chunk payload.
+    @param[in]  chunk_id New stable chunk identifier.
+    @return     Inserted chunk payload.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-04
+    @version    0.1.0
+    """
+    return {
+        **dict(source_chunk),
+        "chunk_id": chunk_id,
+        "text": "",
+        "source_start_line": source_chunk.get("source_end_line", source_chunk.get("source_start_line", 0)),
+        "source_end_line": source_chunk.get("source_end_line", source_chunk.get("source_start_line", 0)),
+        "source_page_start": source_chunk.get("source_page_end", source_chunk.get("source_page_start")),
+        "source_page_end": source_chunk.get("source_page_end", source_chunk.get("source_page_start")),
+        "cleanup_boundary_confidence": None,
+        "cleanup_joined_across_page_break": False,
+        "cleanup_warning_flags": [],
+        "chunking_mode": "manual",
+        "scene_note": "Inserted manually by the operator.",
+    }
+
+
+def _next_chunk_id(chunks: list[dict[str, object]]) -> str:
+    """
+    @brief      Return the next unused stable chunk id.
+    @param[in]  chunks Current chunk payload list.
+    @return     Next `chunk-####` identifier.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-04
+    @version    0.1.0
+    """
+    max_number = 0
+    for chunk in chunks:
+        chunk_id = str(chunk.get("chunk_id", "")).strip()
+        if not chunk_id.startswith("chunk-"):
+            continue
+        try:
+            max_number = max(max_number, int(chunk_id.removeprefix("chunk-")))
+        except ValueError:
+            continue
+    return f"chunk-{max_number + 1:04d}"
+
+
+def _manifest_target_language(manifest: dict[str, object]) -> str:
+    """
+    @brief      Resolve the active translation target language from the manifest.
+    @param[in]  manifest Current project manifest payload.
+    @return     Supported target language code.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-04
+    @version    0.1.0
+    """
+    target_language = str(manifest.get("target_language", config.DEFAULT_TRANSLATION_TARGET_LANGUAGE)).strip()
+    if target_language in dict(config.TRANSLATION_LANGUAGE_OPTIONS):
+        return target_language
+    return config.DEFAULT_TRANSLATION_TARGET_LANGUAGE
+
+
+def _persisted_translation_profile_id(project_root: Path) -> str | None:
+    """
+    @brief      Resolve the last used translation profile id from persisted artifacts.
+    @param[in]  project_root Active project root folder.
+    @return     Profile id or `None`.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-04
+    @version    0.1.0
+    """
+    report = ai_translation_service.load_translation_report(project_root)
+    if isinstance(report, dict) and report.get("translation_profile_id_last_used") not in (None, ""):
+        return str(report.get("translation_profile_id_last_used"))
+    operation_state = ai_translation_service.load_operation_state(project_root)
+    metadata = operation_state.get("metadata", {}) if isinstance(operation_state, dict) else {}
+    if isinstance(metadata, dict) and metadata.get("translation_profile_id") not in (None, ""):
+        return str(metadata.get("translation_profile_id"))
+    return None
 
 
 def build_text_chunking_notes(

@@ -14,7 +14,7 @@
          correctly.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-24
-@version 0.4.0
+@version 0.4.1
 """
 
 # IMPORTS
@@ -159,7 +159,7 @@ def test_text_chunking_ui_controller_chunk_request_uses_controller_start(
     @exception  None.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-07
-    @version    0.1.0
+    @version    0.2.0
     """
     project_root, manifest = project_workspace_service.create_project(
         "ControllerChunkDispatchProject",
@@ -628,6 +628,11 @@ def test_text_chunking_ui_controller_save_chunk_updates_project_state(
         text_chunking_ui_controller.misc_ui_controller,
         "show_message",
         lambda _window, message: status_messages.append(message),
+    )
+    monkeypatch.setattr(
+        text_chunking_ui_controller,
+        "confirm_chunk_edit",
+        lambda _window, _language: True,
     )
     restored_scroll_states: list[dict[str, int]] = []
     monkeypatch.setattr(

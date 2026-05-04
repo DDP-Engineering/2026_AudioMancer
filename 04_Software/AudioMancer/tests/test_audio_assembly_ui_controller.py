@@ -107,6 +107,56 @@ def test_audio_assembly_ui_controller_reset_clears_artifacts_and_manifest_summar
     assert manifest["operations"]["audio_assembly"]["status"] == "not_started"
 
 
+def test_audio_assembly_ui_controller_settings_change_resets_only_assembly_outputs(monkeypatch, tmp_path) -> None:
+    """
+    @brief      Verify changed assembly settings preserve Audio Blocks and reset only assembly artifacts.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-04
+    @version    0.1.0
+    """
+    window = _controller_window(tmp_path)
+    audio_block_path = window._current_project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / "audio_blocks.wav"
+    audio_block_path.parent.mkdir(parents=True, exist_ok=True)
+    audio_block_path.write_bytes(b"RIFF-AUDIO-BLOCK")
+    _write_audio_assembly_report(window._current_project_root)
+    (window._current_project_root / config.AUDIO_ASSEMBLY_STATE_FILE_NAME).write_text(
+        json.dumps({"status": "completed", "progress_current": 1, "progress_total": 1}, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    window._current_manifest["current_stage"] = "audio_assembly_ready"
+    window._current_manifest["operations"]["audio_assembly"]["status"] = "completed"
+    project_workspace_service.save_manifest(window._current_manifest, window._current_project_root)
+    monkeypatch.setattr(
+        QMessageBox,
+        "question",
+        lambda *_args, **_kwargs: QMessageBox.StandardButton.Yes,
+    )
+    monkeypatch.setattr(audio_assembly_ui_controller.misc_ui_controller, "show_message", lambda *args, **kwargs: None)
+
+    audio_assembly_ui_controller.handle_settings_changed(
+        window,
+        {
+            "output_mode": "time_limit",
+            "max_duration_minutes": 30,
+            "output_format": "wav",
+            "inter_block_silence_ms": 250,
+            "inter_chunk_silence_ms": 750,
+        },
+    )
+
+    manifest = project_workspace_service.load_manifest(window._current_project_root)
+    assert audio_block_path.exists()
+    assert not (window._current_project_root / config.AUDIOBOOK_OUTPUT_FOLDER_NAME / "part-0001.wav").exists()
+    assert not (window._current_project_root / config.AUDIO_ASSEMBLY_REPORT_FILE_NAME).exists()
+    assert manifest["audio_assembly_settings"]["output_mode"] == "time_limit"
+    assert manifest["operations"]["audio_assembly"]["status"] == "not_started"
+    assert manifest["current_stage"] == "audio_blocks_ready"
+
+
 def test_audio_assembly_ui_controller_stops_active_playback_when_selected_output_changes(tmp_path) -> None:
     """
     @brief      Verify Stop halts active playback even when another output row is selected.

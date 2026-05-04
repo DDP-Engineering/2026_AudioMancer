@@ -14,7 +14,7 @@
          playback, and page-entry narrator-sample warnings.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 1.8.0
+@version 1.9.0
 """
 
 # IMPORTS
@@ -31,7 +31,6 @@ from audiomancer.services import (
     narrator_definition_service,
     operation_runtime_service,
     project_workspace_service,
-    text_cleanup_state_service,
     ui_state_service,
     voiceweaver_runtime_service,
 )
@@ -104,7 +103,7 @@ def handle_voice_language_change_requested(window: "MainWindow", voice_language:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    1.3.1
+    @version    1.4.0
     """
     if window._current_project_root is None or window._current_manifest is None:
         return
@@ -113,7 +112,7 @@ def handle_voice_language_change_requested(window: "MainWindow", voice_language:
     requested_voice_language = narrator_definition_service.narrator_language_code(voice_language)
     if (
         previous_voice_language != requested_voice_language
-        and not audio_blocks_ui_controller.confirm_audio_blocks_invalidation(window, current_language)
+        and not audio_blocks_ui_controller.confirm_global_voice_settings_invalidation(window, current_language)
     ):
         return
     persisted_voice_language = character_voices_service.save_selected_voice_language(
@@ -121,7 +120,7 @@ def handle_voice_language_change_requested(window: "MainWindow", voice_language:
         voice_language,
     )
     if previous_voice_language != persisted_voice_language:
-        _reset_speech_blocks_and_downstream(window)
+        audio_blocks_ui_controller.invalidate_all_audio_blocks_after_voice_settings_change(window)
         window.show_project_state(
             window._current_project_root,
             project_workspace_service.load_manifest(window._current_project_root),
@@ -143,7 +142,7 @@ def handle_reset_prompt_requested(window: "MainWindow", target_id: str) -> None:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-20
-    @version    1.1.0
+    @version    1.2.0
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._current_project_root is None or window._current_manifest is None:
@@ -151,7 +150,7 @@ def handle_reset_prompt_requested(window: "MainWindow", target_id: str) -> None:
     target_payload = character_voices_service.voice_target_by_id(window._current_project_root, target_id)
     if target_payload is None:
         return
-    if not audio_blocks_ui_controller.confirm_audio_blocks_invalidation(window, current_language):
+    if not audio_blocks_ui_controller.confirm_single_voice_target_invalidation(window, current_language):
         return
     _stop_preview_playback(window)
     character_voices_service.reset_target_prompt(
@@ -162,7 +161,7 @@ def handle_reset_prompt_requested(window: "MainWindow", target_id: str) -> None:
     window._character_voices_inspected_target_id = target_id
     window.show_project_state(window._current_project_root, window._current_manifest)
     _sync_manifest_stage(window)
-    audio_blocks_ui_controller.invalidate_audio_blocks_after_upstream_change(window)
+    audio_blocks_ui_controller.invalidate_audio_blocks_for_voice_targets(window, (target_id,))
     misc_ui_controller.show_message(
         window,
         ui_state_service.translate("status.character_voices_prompt_reset", current_language),
@@ -178,12 +177,12 @@ def handle_edit_prompt_requested(window: "MainWindow", target_id: str) -> None:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-20
-    @version    1.3.1
+    @version    1.4.0
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._current_project_root is None:
         return
-    if not audio_blocks_ui_controller.confirm_audio_blocks_invalidation(window, current_language):
+    if not audio_blocks_ui_controller.confirm_single_voice_target_invalidation(window, current_language):
         return
     if not _confirm_prompt_edit(window, current_language):
         return
@@ -194,7 +193,7 @@ def handle_edit_prompt_requested(window: "MainWindow", target_id: str) -> None:
         return
     window._character_voices_inspected_target_id = target_id
     _sync_manifest_stage(window)
-    audio_blocks_ui_controller.invalidate_audio_blocks_after_upstream_change(window)
+    audio_blocks_ui_controller.invalidate_audio_blocks_for_voice_targets(window, (target_id,))
     window.show_project_state(
         window._current_project_root,
         project_workspace_service.load_manifest(window._current_project_root),
@@ -211,7 +210,7 @@ def handle_save_prompt_requested(window: "MainWindow", target_payload: dict[str,
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-20
-    @version    1.2.0
+    @version    1.3.0
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._current_project_root is None or window._current_manifest is None:
@@ -240,6 +239,10 @@ def handle_save_prompt_requested(window: "MainWindow", target_payload: dict[str,
     window._character_voices_inspected_target_id = str(updated_target.get("target_id", "")).strip()
     window.show_project_state(window._current_project_root, window._current_manifest)
     _sync_manifest_stage(window)
+    audio_blocks_ui_controller.invalidate_audio_blocks_for_voice_targets(
+        window,
+        (str(updated_target.get("target_id", "")).strip(),),
+    )
     misc_ui_controller.show_message(
         window,
         ui_state_service.translate("status.character_voices_prompt_saved", current_language),
@@ -255,7 +258,7 @@ def handle_generate_sample_requested(window: "MainWindow", target_id: str) -> No
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-20
-    @version    1.2.0
+    @version    1.3.0
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._active_operation_kind is not None:
@@ -272,7 +275,7 @@ def handle_generate_sample_requested(window: "MainWindow", target_id: str) -> No
         return
     if not _confirm_generate_sample(window, current_language, target_id):
         return
-    if not audio_blocks_ui_controller.confirm_audio_blocks_invalidation(window, current_language):
+    if not audio_blocks_ui_controller.confirm_single_voice_target_invalidation(window, current_language):
         return
     editor_payload = window._character_voices_page.current_editor_payload()
     voice_language = window._character_voices_page.current_voice_language()
@@ -340,7 +343,7 @@ def handle_generate_missing_samples_requested(window: "MainWindow") -> None:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-01
-    @version    0.1.0
+    @version    0.2.0
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._active_operation_kind is not None:
@@ -357,7 +360,7 @@ def handle_generate_missing_samples_requested(window: "MainWindow") -> None:
         return
     if not _confirm_generate_missing_samples(window, current_language, len(target_payloads)):
         return
-    if not audio_blocks_ui_controller.confirm_audio_blocks_invalidation(window, current_language):
+    if not audio_blocks_ui_controller.confirm_single_voice_target_invalidation(window, current_language):
         return
     _stop_preview_playback(window)
     settings_payload = dict(window._settings_payload)
@@ -423,7 +426,7 @@ def _handle_generate_missing_samples_success(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-01
-    @version    0.1.0
+    @version    0.2.0
     """
     _ = result_payload
     window._settings_payload = settings_service.load_settings()
@@ -435,7 +438,10 @@ def _handle_generate_missing_samples_success(
             project_workspace_service.load_manifest(window._current_project_root),
         )
     _sync_manifest_stage(window)
-    audio_blocks_ui_controller.invalidate_audio_blocks_after_upstream_change(window)
+    audio_blocks_ui_controller.invalidate_audio_blocks_for_voice_targets(
+        window,
+        tuple(str(target_payload.get("target_id", "")).strip() for target_payload in target_payloads),
+    )
     misc_ui_controller.show_message(
         window,
         ui_state_service.translate("status.character_voices_missing_samples_generated", current_language),
@@ -458,7 +464,7 @@ def _handle_generate_sample_success(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-24
-    @version    0.1.0
+    @version    0.2.0
     """
     _ = result_payload
     window._settings_payload = settings_service.load_settings()
@@ -469,7 +475,7 @@ def _handle_generate_sample_success(
             project_workspace_service.load_manifest(window._current_project_root),
         )
     _sync_manifest_stage(window)
-    audio_blocks_ui_controller.invalidate_audio_blocks_after_upstream_change(window)
+    audio_blocks_ui_controller.invalidate_audio_blocks_for_voice_targets(window, (target_id,))
     misc_ui_controller.show_message(
         window,
         ui_state_service.translate("status.character_voices_sample_generated", current_language),
@@ -993,40 +999,6 @@ def _sync_manifest_stage(window: "MainWindow") -> None:
         window._current_project_root,
         project_workspace_service.load_manifest(window._current_project_root),
     )
-
-
-def _reset_speech_blocks_and_downstream(window: "MainWindow") -> None:
-    """
-    @brief      Reset Speech Blocks and downstream workflow data after a Character Voices language change.
-    @param[in]  window Main application window.
-    @return     None.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.1
-    """
-    if window._current_project_root is None or window._current_manifest is None:
-        return
-    operation_runtime_service.reset_operation_data(
-        window._current_project_root,
-        "speech_blocks",
-        include_current=True,
-        keep_input_snapshots=False,
-    )
-    updated_manifest = project_workspace_service.load_manifest(window._current_project_root)
-    operations = text_cleanup_state_service.normalized_manifest_operations(updated_manifest)
-    default_operations = text_cleanup_state_service.normalized_manifest_operations({})
-    for operation_kind in ("speech_blocks", "audio_blocks", "audio_assembly"):
-        operations[operation_kind] = default_operations[operation_kind]
-    updated_manifest["operations"] = operations
-    if str(
-        updated_manifest.get("current_stage", "")
-    ).strip() in config.PROJECT_WORKFLOW_STAGES and config.PROJECT_WORKFLOW_STAGES.index(
-        str(updated_manifest.get("current_stage", "")).strip()
-    ) > config.PROJECT_WORKFLOW_STAGES.index("character_voices_ready"):
-        updated_manifest["current_stage"] = "character_voices_ready"
-    project_workspace_service.save_manifest(updated_manifest, window._current_project_root)
-    window._current_manifest = project_workspace_service.load_manifest(window._current_project_root)
 
 
 def _stop_preview_playback(window: "MainWindow") -> None:

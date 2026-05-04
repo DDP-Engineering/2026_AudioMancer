@@ -18,6 +18,9 @@ Implementation sources and runnable software artifacts.
   language, maintained under
   `../05_SoftwareDocu/UserGuide/` and `../05_SoftwareDocu/UserGuide_ro/`, and
   bundled into release archives as `help/en/` plus `help/ro/`. Current package
-  version `1.3.0` includes protected minimum splitter widths on the dense review
-  pages so text and review panes remain readable while resized, plus a
-  Character Voices batch action for regenerating all current character samples.
+  version `2.0.0` includes protected minimum splitter widths on the dense review
+  pages, the Character Voices batch sample action, and the v2 selective
+  downstream-preservation model for manual chunk, character, voice, speech,
+  audio-block, and assembly operations. Speech Blocks review can also trigger
+  selected-block audio regeneration and Play/Stop preview through the existing
+  Audio Blocks workflow, using the compact `Generate Audio` label on that page.

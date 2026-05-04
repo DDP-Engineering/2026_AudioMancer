@@ -13,7 +13,7 @@
          executes resumable translation over canonical chunking output.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-07
-@version 0.9.0
+@version 0.10.0
 """
 
 # IMPORTS
@@ -158,12 +158,71 @@ def ensure_translation_records(
     @exception  ValueError When chunking output is missing.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-07
-    @version    0.2.0
+    @version    0.3.0
     """
     project_root = Path(project_root)
     source_chunks = deterministic_chunking_service.load_chunks(project_root)
     if not source_chunks:
         raise ValueError("Run text chunking before starting AI translation.")
+    return _sync_translation_records(project_root, source_chunks, target_language, profile_id)
+
+
+@trace_function(_AI_TRANSLATION_LOGGER)
+def sync_translation_after_chunk_change(
+    project_root: str | Path,
+    target_language: str,
+    profile_id: str | None,
+    invalidated_chunk_ids: list[str] | tuple[str, ...] | set[str],
+) -> tuple[list[dict[str, object]], list[dict[str, object]], dict[str, object]]:
+    """
+    @brief      Synchronize Translation after a selective Text Chunking change.
+    @details    Existing translated/approved records are preserved by stable
+                `chunk_id` unless the source chunk id is explicitly invalidated
+                or its source text no longer matches the current chunk.
+    @param[in]  project_root Active project root path.
+    @param[in]  target_language Active target language code.
+    @param[in]  profile_id Active translation profile identifier or `None`.
+    @param[in]  invalidated_chunk_ids Chunk ids changed by edit, insert, or delete.
+    @return     Source chunks, translated chunk records, and translation report.
+    @exception  ValueError When chunking output is missing.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-04
+    @version    0.1.0
+    """
+    resolved_project_root = Path(project_root)
+    source_chunks = deterministic_chunking_service.load_chunks(resolved_project_root)
+    if not source_chunks:
+        raise ValueError("Run text chunking before synchronizing AI translation.")
+    return _sync_translation_records(
+        resolved_project_root,
+        source_chunks,
+        target_language,
+        profile_id,
+        invalidated_chunk_ids=invalidated_chunk_ids,
+    )
+
+
+def _sync_translation_records(
+    project_root: Path,
+    source_chunks: list[dict[str, object]],
+    target_language: str,
+    profile_id: str | None,
+    invalidated_chunk_ids: list[str] | tuple[str, ...] | set[str] | None = None,
+) -> tuple[list[dict[str, object]], list[dict[str, object]], dict[str, object]]:
+    """
+    @brief      Synchronize translated records against source chunks.
+    @param[in]  project_root Active project root path.
+    @param[in]  source_chunks Current source chunk payloads.
+    @param[in]  target_language Active target language code.
+    @param[in]  profile_id Active translation profile identifier or `None`.
+    @param[in]  invalidated_chunk_ids Source chunk ids that must become untranslated.
+    @return     Source chunks, translated chunk records, and translation report.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-04
+    @version    0.1.0
+    """
+    invalidated_ids = {str(chunk_id).strip() for chunk_id in invalidated_chunk_ids or [] if str(chunk_id).strip()}
     existing_by_id = {
         str(chunk.get("chunk_id", "")): dict(chunk)
         for chunk in load_translated_chunks(project_root)
@@ -174,7 +233,11 @@ def ensure_translation_records(
     for source_chunk in sorted(source_chunks, key=lambda item: int(item.get("sequence_index", 0))):
         chunk_id = str(source_chunk.get("chunk_id", "")).strip()
         existing_chunk = existing_by_id.get(chunk_id)
-        if existing_chunk is None:
+        if (
+            existing_chunk is None
+            or chunk_id in invalidated_ids
+            or str(existing_chunk.get("source_text", "")) != str(source_chunk.get("text", ""))
+        ):
             translated_chunks.append(_build_default_translated_chunk(source_chunk, target_language, profile_id))
             synchronized = True
             continue
@@ -184,7 +247,7 @@ def ensure_translation_records(
         if profile_id not in (None, ""):
             existing_chunk["translation_profile_id"] = profile_id
         translated_chunks.append(_normalize_translated_chunk(existing_chunk, target_language))
-    if len(existing_by_id) != len(translated_chunks):
+    if len(existing_by_id) != len(translated_chunks) or invalidated_ids:
         synchronized = True
     existing_operation_state = load_operation_state(project_root)
     existing_report = load_translation_report(project_root)

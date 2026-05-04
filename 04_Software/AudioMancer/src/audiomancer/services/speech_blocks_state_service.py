@@ -14,7 +14,7 @@
          current operation state, and enabled AI profile settings.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 0.5.0
+@version 0.6.0
 """
 
 # IMPORTS
@@ -25,6 +25,7 @@ from audiomancer import config
 from audiomancer.services import (
     ai_state_note_service,
     ai_translation_service,
+    audio_blocks_service,
     character_voices_service,
     deterministic_chunking_service,
     home_presenter_service,
@@ -90,7 +91,7 @@ def build_speech_blocks_state(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.3.0
+    @version    0.4.0
     """
     if project_root is None or manifest is None:
         return {
@@ -114,7 +115,7 @@ def build_speech_blocks_state(
 
     report = speech_blocks_service.load_speech_blocks_report(project_root)
     operation_state = speech_blocks_service.load_operation_state(project_root)
-    speech_blocks = speech_blocks_service.load_speech_blocks(project_root)
+    speech_blocks = _merge_audio_preview_state(project_root, speech_blocks_service.load_speech_blocks(project_root))
     selected_profile_id = _persisted_profile_id(report, operation_state)
     profile_state = build_speech_blocks_profile_state(settings_payload, selected_profile_id)
 
@@ -272,6 +273,73 @@ def _build_token_usage_notes(
     @version    0.1.0
     """
     return ai_state_note_service.build_token_usage_notes(report, operation_state, language)
+
+
+def _merge_audio_preview_state(project_root: Path, speech_blocks: list[dict[str, object]]) -> list[dict[str, object]]:
+    """
+    @brief      Add selected-audio preview fields to Speech Blocks page payloads.
+    @param[in]  project_root Active project root.
+    @param[in]  speech_blocks Persisted Speech Blocks payload list.
+    @return     Speech Blocks payloads with audio preview state flags.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-04
+    @version    0.1.0
+    """
+    audio_blocks_by_id = {
+        str(audio_block.get("speech_block_id", "")).strip(): audio_block
+        for audio_block in audio_blocks_service.load_audio_blocks(project_root)
+    }
+    merged_blocks: list[dict[str, object]] = []
+    for speech_block in speech_blocks:
+        merged_block = dict(speech_block)
+        audio_block = audio_blocks_by_id.get(str(merged_block.get("speech_block_id", "")).strip(), {})
+        merged_block["audio_generated"] = bool(audio_block.get("generated", False))
+        merged_block["audio_approved"] = bool(audio_block.get("approved", False))
+        merged_block["audio_metadata_only"] = _is_metadata_only_speech_block(merged_block, audio_block)
+        merged_block["audio_can_play"] = _audio_path_for_block(project_root, audio_block) is not None
+        merged_blocks.append(merged_block)
+    return merged_blocks
+
+
+def _is_metadata_only_speech_block(speech_block: dict[str, object], audio_block: dict[str, object]) -> bool:
+    """
+    @brief      Return whether one Speech Block is represented only by metadata in Audio Blocks.
+    @param[in]  speech_block Speech Blocks payload.
+    @param[in]  audio_block Matching Audio Blocks payload when available.
+    @return     True when no generated WAV should exist for the block.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-04
+    @version    0.1.0
+    """
+    if bool(audio_block.get("metadata_only", False)):
+        return True
+    return str(speech_block.get("content_kind", "")).strip() in {
+        speech_blocks_service.CONTENT_KIND_BACKGROUND_NOISE,
+        speech_blocks_service.CONTENT_KIND_PAUSE,
+        speech_blocks_service.CONTENT_KIND_INDICATION,
+    }
+
+
+def _audio_path_for_block(project_root: Path, audio_block: dict[str, object]) -> Path | None:
+    """
+    @brief      Resolve an existing generated audio path for one Audio Blocks payload.
+    @param[in]  project_root Active project root.
+    @param[in]  audio_block Candidate Audio Blocks payload.
+    @return     Existing audio file path or `None`.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-04
+    @version    0.1.0
+    """
+    if not bool(audio_block.get("generated", False)):
+        return None
+    relative_path = str(audio_block.get("audio_relative_path", "")).strip()
+    if not relative_path:
+        return None
+    audio_path = project_root / relative_path
+    return audio_path if audio_path.is_file() else None
 
 
 def _speech_blocks_stage_status(report: dict[str, object] | None, operation_state: dict[str, object] | None) -> str:

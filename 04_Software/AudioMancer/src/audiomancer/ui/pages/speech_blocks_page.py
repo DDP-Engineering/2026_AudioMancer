@@ -14,7 +14,7 @@
          controls for the Speech Blocks workflow.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-24
-@version 0.3.7
+@version 0.4.0
 """
 
 # IMPORTS
@@ -43,7 +43,7 @@ class SpeechBlocksPage(QWidget):
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-24
-    @version    0.3.4
+    @version    0.4.0
     """
 
     generate_requested = Signal(str)
@@ -56,6 +56,8 @@ class SpeechBlocksPage(QWidget):
     save_block_requested = Signal(str, str, str, str)
     reset_block_requested = Signal(str)
     approve_block_requested = Signal(str)
+    generate_audio_selected_requested = Signal(str)
+    selected_audio_playback_toggle_requested = Signal(str)
 
     def __init__(self, parent=None) -> None:
         """
@@ -65,7 +67,7 @@ class SpeechBlocksPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-24
-        @version    0.3.3
+        @version    0.4.0
         """
         super().__init__(parent)
         self._current_language = "en"
@@ -85,6 +87,7 @@ class SpeechBlocksPage(QWidget):
         self._can_resplit_selected = False
         self._current_chunk_id: str | None = None
         self._current_block_id: str | None = None
+        self._selected_audio_playback_active = False
 
         layout = QVBoxLayout(self)
         header_row = QHBoxLayout()
@@ -125,6 +128,9 @@ class SpeechBlocksPage(QWidget):
         self._edit_button = QPushButton("Edit")
         self._edit_button.clicked.connect(self._begin_editing)
         chunk_actions_left_layout.addWidget(self._edit_button)
+        self._generate_audio_button = QPushButton("Generate Audio")
+        self._generate_audio_button.clicked.connect(self._emit_generate_audio_selected)
+        chunk_actions_left_layout.addWidget(self._generate_audio_button)
         self._save_button = QPushButton("Save")
         self._save_button.clicked.connect(self._emit_save_block)
         chunk_actions_right_layout.addWidget(self._save_button)
@@ -134,6 +140,9 @@ class SpeechBlocksPage(QWidget):
         self._approve_block_button = QPushButton("Approve")
         self._approve_block_button.clicked.connect(self._emit_approve_block)
         chunk_actions_right_layout.addWidget(self._approve_block_button)
+        self._selected_audio_playback_button = QPushButton("Play")
+        self._selected_audio_playback_button.clicked.connect(self._emit_selected_audio_playback_toggle)
+        chunk_actions_right_layout.addWidget(self._selected_audio_playback_button)
         chunk_actions_left_layout.addStretch(1)
         chunk_actions_right_layout.addStretch(1)
         chunk_actions_grid_layout = QHBoxLayout()
@@ -353,6 +362,19 @@ class SpeechBlocksPage(QWidget):
         self._busy = is_busy
         self._apply_control_state()
 
+    def set_selected_audio_playback_active(self, is_active: bool) -> None:
+        """
+        @brief      Reflect selected Audio Block playback state on the Speech Blocks page.
+        @param[in]  is_active True while selected-block audio playback is active.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-04
+        @version    0.1.0
+        """
+        self._selected_audio_playback_active = bool(is_active)
+        self._apply_control_state()
+
     def current_profile_id(self) -> str | None:
         """
         @brief      Return the currently selected Speech Blocks profile id.
@@ -474,7 +496,7 @@ class SpeechBlocksPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-24
-        @version    0.3.0
+        @version    0.4.0
         """
         self._current_language = language
         self._title_label.setText(f"<h2>{ui_state_service.translate('speech_blocks.title', language)}</h2>")
@@ -494,6 +516,12 @@ class SpeechBlocksPage(QWidget):
         self._edit_button.setText(ui_state_service.translate("speech_blocks.edit_block", language))
         self._save_button.setText(ui_state_service.translate("speech_blocks.save_block", language))
         self._approve_block_button.setText(ui_state_service.translate("speech_blocks.approve_block", language))
+        self._generate_audio_button.setText(
+            ui_state_service.translate("speech_blocks.generate_audio_selected", language)
+        )
+        self._selected_audio_playback_button.setText(
+            ui_state_service.translate(self._selected_audio_playback_label_key(), language)
+        )
         self._notes_group.setTitle(ui_state_service.translate("speech_blocks.notes_group", language))
         if self._profile_combo.count() > 0 and self._profile_combo.itemData(0) in (None, ""):
             self._profile_combo.setItemText(0, ui_state_service.translate("ai_settings.none", language))
@@ -538,7 +566,7 @@ class SpeechBlocksPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-24
-        @version    0.3.2
+        @version    0.4.0
         """
         selected_block = self._current_display_block()
         generated_all_chunks = (
@@ -555,6 +583,20 @@ class SpeechBlocksPage(QWidget):
         )
         can_edit_selected = self._project_active and not self._busy and selected_block is not None
         can_approve_selected = can_edit_selected and not bool(selected_block.get("approved", False))
+        can_generate_audio_selected = (
+            can_edit_selected
+            and not self._editing
+            and bool(selected_block.get("approved", False))
+            and not bool(selected_block.get("audio_metadata_only", False))
+        )
+        can_stop_selected_audio = self._project_active and self._selected_audio_playback_active
+        can_play_selected_audio = (
+            self._project_active
+            and not self._busy
+            and selected_block is not None
+            and bool(selected_block.get("audio_can_play", False))
+            and not self._editing
+        )
         can_insert_block = (
             self._project_active and not self._busy and bool(self._speech_blocks) and self._current_chunk_id is not None
         )
@@ -580,8 +622,13 @@ class SpeechBlocksPage(QWidget):
         self._speech_block_text_edit.setReadOnly(not (can_edit_selected and self._editing))
         self._reset_block_button.setEnabled(can_edit_selected and not self._editing)
         self._edit_button.setEnabled(can_edit_selected and not self._editing)
+        self._generate_audio_button.setEnabled(can_generate_audio_selected)
         self._save_button.setEnabled(can_edit_selected and self._editing)
         self._approve_block_button.setEnabled(can_approve_selected and not self._editing)
+        self._selected_audio_playback_button.setText(
+            ui_state_service.translate(self._selected_audio_playback_label_key(), self._current_language)
+        )
+        self._selected_audio_playback_button.setEnabled(can_stop_selected_audio or can_play_selected_audio)
 
     def _apply_lower_splitter_minimums(self) -> None:
         """
@@ -614,6 +661,32 @@ class SpeechBlocksPage(QWidget):
         profile_id = self.current_profile_id()
         if profile_id is not None:
             self.generate_requested.emit(profile_id)
+
+    def _emit_generate_audio_selected(self) -> None:
+        """
+        @brief      Emit selected Speech Block audio generation request.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-04
+        @version    0.1.0
+        """
+        block_id = self.selected_block_id()
+        if block_id is not None:
+            self.generate_audio_selected_requested.emit(block_id)
+
+    def _emit_selected_audio_playback_toggle(self) -> None:
+        """
+        @brief      Emit selected Speech Block audio playback toggle request.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-04
+        @version    0.1.0
+        """
+        block_id = self.selected_block_id()
+        if block_id is not None:
+            self.selected_audio_playback_toggle_requested.emit(block_id)
 
     def _emit_resplit_selected(self) -> None:
         """
@@ -861,6 +934,17 @@ class SpeechBlocksPage(QWidget):
         scroll_bar = self._source_text_edit.verticalScrollBar()
         bounded_position = max(scroll_bar.minimum(), min(scroll_position, scroll_bar.maximum()))
         scroll_bar.setValue(bounded_position)
+
+    def _selected_audio_playback_label_key(self) -> str:
+        """
+        @brief      Return the selected audio playback button label key.
+        @return     Runtime UI translation key.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-04
+        @version    0.1.0
+        """
+        return "audio_blocks.stop_playback" if self._selected_audio_playback_active else "audio_blocks.play_selected"
 
 
 def _block_count_by_chunk(speech_blocks: list[dict[str, object]]) -> dict[str, int]:

@@ -13,7 +13,7 @@
          states and manual selected-chunk edits correctly.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-24
-@version 0.4.0
+@version 0.5.0
 """
 
 # IMPORTS
@@ -117,15 +117,15 @@ def test_build_text_chunking_notes_shows_persisted_token_usage_summary() -> None
     assert any("Input tokens: 120 | Output tokens: 30 | Total: 150" in note for note in notes)
 
 
-def test_save_chunk_text_edit_persists_text_and_resets_downstream(tmp_path) -> None:
+def test_save_chunk_text_edit_persists_text_and_selectively_resets_downstream(tmp_path) -> None:
     """
-    @brief      Verify selected chunk edits persist and reset only downstream workflow state.
+    @brief      Verify selected chunk edits persist and preserve unrelated downstream data.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-24
-    @version    0.2.0
+    @version    0.3.0
     """
     project_root, manifest = project_workspace_service.create_project(
         "ChunkEditProject",
@@ -150,7 +150,27 @@ def test_save_chunk_text_edit_persists_text_and_resets_downstream(tmp_path) -> N
     )
     translation_root = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH
     translation_root.mkdir(exist_ok=True)
-    (translation_root / config.TRANSLATED_CHUNKS_FILE_NAME).write_text("[]\n", encoding="utf-8")
+    (translation_root / config.TRANSLATED_CHUNKS_FILE_NAME).write_text(
+        json.dumps(
+            [
+                {
+                    "chunk_id": "chunk-0001",
+                    "sequence_index": 1,
+                    "source_text": "Original chunk",
+                    "translated_text": "Translated chunk",
+                    "approved": True,
+                    "translated_at": "2026-04-24T12:00:00+00:00",
+                    "approved_at": "2026-04-24T12:00:00+00:00",
+                    "translation_profile_id": "profile-1",
+                    "target_language": "ro",
+                    "status": "approved",
+                }
+            ],
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
     (project_root / config.NARRATOR_PROFILE_FILE_NAME).write_text("[]\n", encoding="utf-8")
     manifest["current_stage"] = "character_discovery_ready"
     manifest["narrator_profile_name"] = "Warm Narrator"
@@ -175,8 +195,141 @@ def test_save_chunk_text_edit_persists_text_and_resets_downstream(tmp_path) -> N
     assert updated_manifest["operations"]["narrator_definition"]["status"] == "completed"
     assert updated_manifest["narrator_profile_name"] == "Warm Narrator"
     assert updated_manifest["narrator_language"] == "fr"
-    assert not (translation_root / config.TRANSLATED_CHUNKS_FILE_NAME).exists()
+    translated_chunks = json.loads((translation_root / config.TRANSLATED_CHUNKS_FILE_NAME).read_text(encoding="utf-8"))
+    assert translated_chunks[0]["source_text"] == "Edited chunk"
+    assert translated_chunks[0]["translated_text"] == ""
+    assert translated_chunks[0]["approved"] is False
     assert (project_root / config.NARRATOR_PROFILE_FILE_NAME).is_file()
+
+
+def test_insert_chunk_preserves_existing_chunk_ids_and_translation(tmp_path) -> None:
+    """
+    @brief      Verify manual chunk insertion preserves existing ids and translations.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-04
+    @version    0.1.0
+    """
+    project_root, manifest = project_workspace_service.create_project("ChunkInsertProject", tmp_path)
+    _write_chunks(project_root, ("First chunk", "Second chunk"))
+    _write_translations(
+        project_root,
+        (("chunk-0001", "First chunk", "Primul"), ("chunk-0002", "Second chunk", "Al doilea")),
+    )
+    manifest["current_stage"] = "audio_blocks_ready"
+    manifest["operations"]["chunking"]["status"] = "completed"
+    manifest["operations"]["translation"]["status"] = "completed"
+    project_workspace_service.save_manifest(manifest, project_root)
+
+    updated_manifest = text_chunking_state_service.insert_chunk_after_selected(
+        project_root,
+        manifest,
+        "chunk-0001",
+    )
+
+    chunks = json.loads((project_root / config.CHUNK_ARTIFACT_FILE_NAME).read_text(encoding="utf-8"))
+    assert [chunk["chunk_id"] for chunk in chunks] == ["chunk-0001", "chunk-0003", "chunk-0002"]
+    assert [chunk["sequence_index"] for chunk in chunks] == [1, 2, 3]
+    translated_chunks = json.loads((project_root / config.TRANSLATED_CHUNKS_FILE_NAME).read_text(encoding="utf-8"))
+    assert [chunk["chunk_id"] for chunk in translated_chunks] == ["chunk-0001", "chunk-0003", "chunk-0002"]
+    assert translated_chunks[0]["translated_text"] == "Primul"
+    assert translated_chunks[1]["translated_text"] == ""
+    assert translated_chunks[1]["approved"] is False
+    assert translated_chunks[2]["translated_text"] == "Al doilea"
+    assert updated_manifest["current_stage"] == "translation_ready"
+
+
+def test_delete_chunk_removes_only_selected_translation_record(tmp_path) -> None:
+    """
+    @brief      Verify manual chunk deletion removes only selected downstream Translation data.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-04
+    @version    0.1.0
+    """
+    project_root, manifest = project_workspace_service.create_project("ChunkDeleteProject", tmp_path)
+    _write_chunks(project_root, ("First chunk", "Second chunk"))
+    _write_translations(
+        project_root,
+        (("chunk-0001", "First chunk", "Primul"), ("chunk-0002", "Second chunk", "Al doilea")),
+    )
+
+    text_chunking_state_service.delete_selected_chunk(project_root, manifest, "chunk-0001")
+
+    chunks = json.loads((project_root / config.CHUNK_ARTIFACT_FILE_NAME).read_text(encoding="utf-8"))
+    assert [chunk["chunk_id"] for chunk in chunks] == ["chunk-0002"]
+    assert chunks[0]["sequence_index"] == 1
+    translated_chunks = json.loads((project_root / config.TRANSLATED_CHUNKS_FILE_NAME).read_text(encoding="utf-8"))
+    assert [chunk["chunk_id"] for chunk in translated_chunks] == ["chunk-0002"]
+    assert translated_chunks[0]["translated_text"] == "Al doilea"
+    assert translated_chunks[0]["sequence_index"] == 1
+
+
+def _write_chunks(project_root, texts: tuple[str, ...]) -> None:
+    """
+    @brief      Write deterministic chunk fixture records.
+    @param[in]  project_root Project root folder.
+    @param[in]  texts Ordered chunk text values.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-04
+    @version    0.1.0
+    """
+    chunks = [
+        {
+            "chunk_id": f"chunk-{index:04d}",
+            "sequence_index": index,
+            "text": text,
+            "chapter_label": None,
+            "source_start_line": index,
+            "source_end_line": index,
+            "chunking_mode": "deterministic",
+            "semantic_strategy": None,
+            "scene_note": None,
+        }
+        for index, text in enumerate(texts, start=1)
+    ]
+    (project_root / config.CHUNK_ARTIFACT_FILE_NAME).write_text(
+        json.dumps(chunks, indent=2) + "\n",
+        encoding="utf-8",
+    )
+
+
+def _write_translations(project_root, records: tuple[tuple[str, str, str], ...]) -> None:
+    """
+    @brief      Write approved translation fixture records.
+    @param[in]  project_root Project root folder.
+    @param[in]  records Ordered chunk id, source text, and translated text tuples.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-04
+    @version    0.1.0
+    """
+    translated_chunks = [
+        {
+            "chunk_id": chunk_id,
+            "sequence_index": index,
+            "source_text": source_text,
+            "translated_text": translated_text,
+            "approved": True,
+            "translated_at": "2026-05-04T12:00:00+00:00",
+            "approved_at": "2026-05-04T12:00:00+00:00",
+            "translation_profile_id": "profile-1",
+            "target_language": "ro",
+            "status": "approved",
+        }
+        for index, (chunk_id, source_text, translated_text) in enumerate(records, start=1)
+    ]
+    (project_root / config.TRANSLATED_CHUNKS_FILE_NAME).write_text(
+        json.dumps(translated_chunks, indent=2) + "\n",
+        encoding="utf-8",
+    )
 
 
 # END OF FILE

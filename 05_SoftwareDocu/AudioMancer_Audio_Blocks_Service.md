@@ -34,8 +34,8 @@ narrator sample and reusable narrator clone prompt.
   generated artifacts after each meaningful step
 - support responsive cancellation and restart-safe continuation from the saved
   checkpoint, including checkpoints inside split Audio Blocks
-- support per-block approval, per-block regeneration, and approve-all updates
-  without regenerating missing audio
+- support per-block approval, unapproval, selective reset, per-block
+  regeneration, and approve-all updates without regenerating missing audio
 - allow incremental generation when only some Speech Blocks are approved; the
   remaining unapproved Speech Blocks stay pending until they are approved and
   generation is run again
@@ -70,8 +70,8 @@ The workflow is split across:
   status window
 - `04_Software/AudioMancer/src/audiomancer/ui/controllers/audio_blocks_ui_controller.py`
   for runtime probing, confirmations, modal progress lifecycle, approval
-  actions, local generated-WAV playback, reset behavior, manifest
-  synchronization, and upstream invalidation
+  actions, selected-block reset/unapproval, local generated-WAV playback, reset
+  behavior, manifest synchronization, and upstream invalidation
 - `04_Software/AudioMancer/src/audiomancer/services/voiceweaver_runtime_service.py`
   for the documented `create_voice_clone_prompt(...)` and
   `generate_voice_clone_from_prompt(...)` runtime wrappers used by the service
@@ -113,16 +113,22 @@ High-level flow:
 8. After each generated block, and after each completed split part, the service rewrites
    `audio_blocks.json`, `audio_blocks_report.json`, `voice_clone_profiles.json`,
    and `audio_blocks_state.json`.
-9. Operators can later approve one block, approve all generated blocks, or
-   regenerate one selected block, which clears only that block approval.
+9. Operators can later approve one block, unapprove one block, approve all
+   generated blocks, reset one selected block, or regenerate one selected block,
+   which clears only that block approval.
 10. If only a subset of Speech Blocks was approved, the operation state remains
     `in_progress`, generated blocks are kept, and the operator can approve more
     Speech Blocks and continue later.
-11. Speech Blocks edits, resets, approvals, inserts, deletes, and selected-chunk
+11. Audio Blocks approval changes preserve generated WAV files and reset only
+    Audio Assembly outputs because final assembly eligibility changes. Selected
+    Audio Block reset deletes only the selected record and its generated
+    WAV/metadata files. Selected regeneration replaces only that block, clears
+    its approval, preserves unrelated Audio Blocks, and resets Audio Assembly.
+12. Speech Blocks edits, resets, approvals, inserts, deletes, and selected-chunk
     re-splits reset generated Audio Blocks data only for the affected source
     chunk, deleting that chunk's WAV/metadata files while preserving other
     chunks.
-12. The controller advances `project.json.current_stage` to
+13. The controller advances `project.json.current_stage` to
     `audio_blocks_ready` only when every speech block has generated audio and is
     approved.
 
@@ -259,6 +265,10 @@ Current invariants:
   insertion; the downstream default is `1000 ms`
 - all approvals are explicit; generation never auto-approves audio
 - `approve_all_audio_blocks(...)` updates only already generated blocks
+- `unapprove_audio_block(...)` clears only `approved` and `approved_at`; it does
+  not delete the generated WAV or metadata file
+- `remove_audio_blocks_for_speech_blocks(...)` is used by selected reset to
+  remove only exact `speech_block_id` matches and their generated artifacts
 - `audio_blocks_stage_status` becomes `completed` only when generated and
   approved counts both match the total speech-block count
 - mismatched operation input fingerprints require an explicit reset and are
@@ -305,7 +315,11 @@ Downstream integrations:
 - `project.json.current_stage = "audio_blocks_ready"` only after full approval
 - `Audio Assembly`, which consumes approved generated Audio Blocks as the final
   WAV composition source
-- resets from the page clear audio-block and audio-assembly runtime artifacts
+- full reset from the page clears Audio Blocks and Audio Assembly runtime
+  artifacts
+- selected approval/unapproval, selected reset, selected regeneration, and
+  generation success reset only Audio Assembly outputs/state/report while
+  preserving upstream Speech Blocks, voice targets, and unrelated Audio Blocks
 
 Current invalidation points:
 
@@ -314,6 +328,8 @@ Current invalidation points:
 - Narator Voice selected voice-language change, Character Voices prompt reset,
   prompt edit start, and target sample regeneration
 - Speech Blocks rerun or reset through its own controller
+- selected Audio Blocks reset or regeneration
+- Audio Blocks approval or unapproval when Audio Assembly outputs already exist
 
 ## 8. Usage
 
@@ -329,6 +345,8 @@ report = audio_blocks_service.start_or_continue_generation(
 )
 
 audio_blocks_service.approve_audio_block(project_root, speech_block_id)
+audio_blocks_service.unapprove_audio_block(project_root, speech_block_id)
+audio_blocks_service.remove_audio_blocks_for_speech_blocks(project_root, (speech_block_id,))
 audio_blocks_service.regenerate_audio_block(
     project_root,
     manifest,
@@ -348,6 +366,9 @@ Operator path:
 - play one selected block or use `Play Audiobook` to review generated blocks in
   sequence from the selected row
 - approve one block or all generated blocks
+- unapprove or reset one selected block when review finds a problem
+- regenerate one selected block when the source Speech Block and voice target
+  are still valid but the generated audio should be replaced
 - after selected-block approval, the page advances the speech-block list to
   the next row when one exists and keeps the final row selected at the end
 - if interrupted, press `Start Audio Generation` again to continue from the

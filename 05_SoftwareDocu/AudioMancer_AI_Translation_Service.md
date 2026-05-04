@@ -26,8 +26,10 @@ the `AI Translation` UI.
 - persist translated chunk records, operation state, report data, and AI logs
 - support selected-chunk edit, retranslate, approve, approve-all, and reset
 - reset downstream character, character-voice, speech, audio, and audiobook
-  artifacts whenever translation is reset or becomes unapproved after editing,
-  while preserving existing Narator Voice profiles and selected narrator samples
+  artifacts when translation is fully reset, while preserving existing Narator
+  Voice profiles and selected narrator samples
+- mark a manually edited translated chunk unapproved when its text changes; the
+  current controller still treats approval loss as a broad downstream reset
 - shape page state with original-language and target-language indicators
 
 It does not own source import, chunking, character discovery, voice generation,
@@ -127,8 +129,10 @@ Invariants:
   rewriting
 - approval is required before downstream character and voice workflows consume
   translated text
-- manual translation edits clear the edited chunk approval and reset dependent
-  downstream runtime data without deleting existing narrator profiles or samples
+- manual translation edits clear the edited chunk approval when text changes
+- in the current implementation, any translation approval-loss state still
+  clears dependent downstream runtime data broadly through the AI Translation
+  controller; this is the remaining broad reset documented for the v2 release
 
 ## 7. Workflow Integration
 
@@ -146,6 +150,9 @@ Downstream:
 - workflow stage advances to `character_discovery_ready` only after translation
   review is complete
 - unapproved translation state keeps the workflow at `translation_ready`
+- unlike manual chunk, character, voice, speech, audio-block, and assembly
+  operations, translation approval loss has not yet been migrated to
+  chunk-scoped v2 invalidation
 
 ## 8. Usage
 

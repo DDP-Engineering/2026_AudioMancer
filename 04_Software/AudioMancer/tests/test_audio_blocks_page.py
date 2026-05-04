@@ -104,6 +104,8 @@ def test_audio_blocks_page_renders_source_list_markers_and_selected_details(qtbo
     assert page._status_group.minimumHeight() == 96
     assert page._status_group.maximumHeight() == 112
     assert page._approve_button.isEnabled() is True
+    assert page._unapprove_button.isEnabled() is False
+    assert page._reset_selected_button.isEnabled() is True
     assert page._selected_playback_button.isEnabled() is True
     assert page._audiobook_playback_button.isEnabled() is True
 
@@ -189,21 +191,28 @@ def test_audio_blocks_page_applies_translated_labels_and_tracks_selected_row_act
     assert "Blocuri Audio" in page._title_label.text()
     assert page._start_button.text() == "Porneste Generarea Audio"
     assert page._audiobook_playback_button.text() == "Reda Audiobook"
+    assert page._unapprove_button.text() == "Dezaproba"
+    assert page._reset_selected_button.text() == "Reseteaza Selectat"
     assert page._blocks_group.title() == "Blocuri Vorbire"
     assert page._status_group.title() == "Stare Blocuri Audio"
     assert page._approve_button.isEnabled() is False
+    assert page._unapprove_button.isEnabled() is True
 
     page._speech_block_list.setCurrentRow(1)
 
     assert page.selected_block_id() == "0001-000002"
     assert page._approve_button.isEnabled() is True
+    assert page._unapprove_button.isEnabled() is False
     assert page._regenerate_button.isEnabled() is True
+    assert page._reset_selected_button.isEnabled() is True
     assert page._approval_status_label.text() == "Stare: In asteptare"
 
     page.set_busy(True)
 
     assert page._start_button.isEnabled() is False
     assert page._approve_button.isEnabled() is False
+    assert page._unapprove_button.isEnabled() is False
+    assert page._reset_selected_button.isEnabled() is False
     assert page._speech_block_list.isEnabled() is False
 
 

@@ -7,6 +7,8 @@
 
 from pathlib import Path
 
+# Resolve paths from the app root because PyInstaller is invoked from
+# 04_Software/AudioMancer by the packaging script.
 SPEC_ROOT = Path.cwd()
 SOURCE_ROOT = SPEC_ROOT / "src"
 TOOLS_ROOT = SPEC_ROOT.parents[1] / "02_Tools"
@@ -14,6 +16,8 @@ ENTRYPOINT_PATH = TOOLS_ROOT / "audiomancer_windows_entry.py"
 ICON_PATH = SOURCE_ROOT / "audiomancer" / "assets" / "icons" / "audiomancer.ico"
 ICON_ASSET_ROOT = SOURCE_ROOT / "audiomancer" / "assets" / "icons"
 
+# Keep the analysis narrow: only the launcher entrypoint and icon assets are
+# specified here; runtime files are staged by package_windows_release.ps1.
 analysis = Analysis(
     [str(ENTRYPOINT_PATH)],
     pathex=[str(SOURCE_ROOT)],
@@ -30,6 +34,8 @@ analysis = Analysis(
 
 pyz = PYZ(analysis.pure)
 
+# Build a GUI executable. console=False keeps normal users out of a terminal
+# window when they start the packaged desktop app.
 exe = EXE(
     pyz,
     analysis.scripts,
@@ -44,6 +50,8 @@ exe = EXE(
     icon=str(ICON_PATH),
 )
 
+# COLLECT creates the portable application folder that the release script later
+# copies into a clean staging directory with licenses, settings, help, and docs.
 coll = COLLECT(
     exe,
     analysis.binaries,

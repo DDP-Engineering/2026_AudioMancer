@@ -6,6 +6,8 @@
 
 set -euo pipefail
 
+# Run each release step with a visible label so packaging failures identify the
+# stage that failed in the terminal output.
 invoke_step() {
     local name="$1"
     shift
@@ -14,6 +16,7 @@ invoke_step() {
     "$@"
 }
 
+# Delete temporary packaging paths without failing when they are absent.
 remove_path_if_exists() {
     local path="$1"
 
@@ -22,6 +25,7 @@ remove_path_if_exists() {
     fi
 }
 
+# Copy the runtime files expected beside the executable in the portable bundle.
 copy_required_root_files() {
     local target_dir="$1"
     local required_files=(
@@ -44,6 +48,7 @@ copy_required_root_files() {
     done
 }
 
+# Ship both offline help bundles under the language folders used by the app.
 copy_user_guide() {
     local target_dir="$1"
     local english_source_path="${REPO_ROOT}/05_SoftwareDocu/UserGuide"
@@ -64,6 +69,7 @@ copy_user_guide() {
     cp -a "${romanian_source_path}" "${help_root}/ro"
 }
 
+# Keep prompt templates available in the extracted release folder.
 copy_prompt_templates() {
     local target_dir="$1"
     local prompt_source_path="${APP_ROOT}/prompts"
@@ -76,6 +82,7 @@ copy_prompt_templates() {
     cp -a "${prompt_source_path}" "${target_dir}/prompts"
 }
 
+# Linux desktop launchers need an icon path outside the PyInstaller internals.
 copy_app_icons() {
     local target_dir="$1"
     local icon_source_path="${APP_ROOT}/src/audiomancer/assets/icons/audiomancer_icon.png"
@@ -90,6 +97,7 @@ copy_app_icons() {
     cp -- "${icon_source_path}" "${icon_target_dir}/audiomancer_icon.png"
 }
 
+# Use Python's zipfile module to avoid depending on a system zip executable.
 create_zip_archive() {
     local source_dir="$1"
     local archive_path="$2"
@@ -100,6 +108,7 @@ import sys
 import zipfile
 from pathlib import Path
 
+# Preserve the top-level portable folder inside the archive.
 source_dir = Path(sys.argv[1]).resolve()
 archive_path = Path(sys.argv[2]).resolve()
 base_parent = source_dir.parent
@@ -110,6 +119,8 @@ with zipfile.ZipFile(archive_path, "w", zipfile.ZIP_DEFLATED) as archive:
 PY
 }
 
+# Resolve repository paths from the script location so the script can be run
+# from any current working directory.
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 APP_ROOT="${REPO_ROOT}/04_Software/AudioMancer"
@@ -122,6 +133,8 @@ if [[ ! -f "${PYPROJECT_PATH}" ]]; then
     exit 1
 fi
 
+# The archive filename is stable, but release notes still include the app
+# version read from pyproject.toml.
 APP_VERSION="$(sed -nE 's/^version = "([^"]+)"/\1/p' "${PYPROJECT_PATH}" | head -n 1)"
 if [[ -z "${APP_VERSION}" ]]; then
     echo "Could not read project version from ${PYPROJECT_PATH}" >&2
@@ -140,6 +153,7 @@ invoke_step "Prepare packaging workspace" mkdir -p "${DELIVERY_ROOT}" "${STAGING
 remove_path_if_exists "${STAGING_PATH}"
 
 pushd "${APP_ROOT}" >/dev/null
+# PyInstaller runs inside the uv-managed app environment.
 invoke_step "Sync uv environment" uv sync --extra dev
 
 invoke_step "Clean previous PyInstaller output" remove_path_if_exists "${BUILD_PATH}"
@@ -165,12 +179,14 @@ if [[ ! -d "${DIST_BUNDLE_PATH}" ]]; then
 fi
 
 invoke_step "Assemble delivery staging folder" mkdir -p "${STAGING_PATH}"
+# Start from PyInstaller output, then add project-controlled runtime assets.
 cp -a "${DIST_BUNDLE_PATH}/." "${STAGING_PATH}/"
 copy_required_root_files "${STAGING_PATH}"
 copy_user_guide "${STAGING_PATH}"
 copy_prompt_templates "${STAGING_PATH}"
 copy_app_icons "${STAGING_PATH}"
 
+# Keep a simple shell launcher for users who prefer a stable start file.
 cat >"${STAGING_PATH}/start-audiomancer.sh" <<'SH'
 #!/usr/bin/env bash
 set -euo pipefail
@@ -179,6 +195,7 @@ exec "./AudioMancer" "$@"
 SH
 chmod +x "${STAGING_PATH}/start-audiomancer.sh"
 
+# Provide a portable desktop-entry template for Linux file managers.
 cat >"${STAGING_PATH}/AudioMancer.desktop" <<'DESKTOP'
 [Desktop Entry]
 Type=Application
@@ -190,6 +207,7 @@ Terminal=false
 Categories=AudioVideo;Audio;Utility;
 DESKTOP
 
+# Plain-text release notes remain readable in the extracted portable folder.
 cat >"${STAGING_PATH}/README_RELEASE.txt" <<EOF
 AudioMancer Ubuntu x64 v${APP_VERSION}
 
@@ -216,6 +234,7 @@ EOF
 invoke_step "Create delivery archive" create_zip_archive "${STAGING_PATH}" "${ARCHIVE_PATH}"
 
 invoke_step "Clean build artifacts" remove_path_if_exists "${BUILD_PATH}"
+# Do not leave PyInstaller or staging folders in the working tree.
 remove_path_if_exists "${DIST_PATH}"
 remove_path_if_exists "${STAGING_PATH}"
 remove_path_if_exists "${STAGING_ROOT}/AudioMancer.spec"

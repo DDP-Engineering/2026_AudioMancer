@@ -14,7 +14,7 @@
          synchronization for the Audio Assembly workflow.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-25
-@version 0.4.0
+@version 0.5.0
 """
 
 # IMPORTS
@@ -31,6 +31,7 @@ from audiomancer.services import (
     project_workspace_service,
     text_cleanup_state_service,
     ui_state_service,
+    workflow_impact_service,
 )
 from audiomancer.ui.controllers import misc_ui_controller, operation_runner_controller
 
@@ -47,16 +48,12 @@ def handle_settings_changed(window: "MainWindow", settings: dict[str, object]) -
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.1.0
+    @version    0.2.0
     """
     if window._current_project_root is None or window._current_manifest is None:
         return
-    window._current_manifest = audio_assembly_service.save_audio_assembly_settings(
-        window._current_project_root,
-        window._current_manifest,
-        settings,
-    )
-    window.show_project_state(window._current_project_root, window._current_manifest)
+    current_language = ui_state_service.current_language_from_settings(window._settings_payload)
+    _save_audio_assembly_settings(window, settings, current_language)
 
 
 def handle_generate_requested(window: "MainWindow", settings: dict[str, object]) -> None:
@@ -68,7 +65,7 @@ def handle_generate_requested(window: "MainWindow", settings: dict[str, object])
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.1.0
+    @version    0.2.0
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._active_operation_kind is not None:
@@ -80,11 +77,8 @@ def handle_generate_requested(window: "MainWindow", settings: dict[str, object])
             ui_state_service.translate("project.error_no_active_project", current_language),
         )
         return
-    window._current_manifest = audio_assembly_service.save_audio_assembly_settings(
-        window._current_project_root,
-        window._current_manifest,
-        settings,
-    )
+    if not _save_audio_assembly_settings(window, settings, current_language):
+        return
     if not _confirm_audio_assembly(window, current_language):
         window.show_project_state(window._current_project_root, window._current_manifest)
         return
@@ -117,7 +111,7 @@ def handle_reset_requested(window: "MainWindow") -> None:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.1.0
+    @version    0.2.0
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._current_project_root is None or window._current_manifest is None:
@@ -125,8 +119,8 @@ def handle_reset_requested(window: "MainWindow") -> None:
     if not _confirm_audio_assembly_reset(window, current_language):
         return
     _stop_audio_assembly_playback(window)
-    audio_assembly_service.reset_audio_assembly(window._current_project_root)
-    _sync_manifest_after_audio_assembly_update(window)
+    workflow_impact_service.reset_audio_assembly_outputs(window._current_project_root)
+    _sync_manifest_after_audio_assembly_reset(window)
     misc_ui_controller.show_message(
         window,
         ui_state_service.translate("status.audio_assembly_reset", current_language),
@@ -388,6 +382,32 @@ def _sync_manifest_after_audio_assembly_update(window: "MainWindow") -> None:
     )
 
 
+def _sync_manifest_after_audio_assembly_reset(window: "MainWindow") -> None:
+    """
+    @brief      Synchronize manifest summary after Audio Assembly outputs are reset.
+    @param[in]  window Active main window instance.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-04
+    @version    0.1.0
+    """
+    if window._current_project_root is None or window._current_manifest is None:
+        return
+    updated_manifest = dict(window._current_manifest)
+    operations = text_cleanup_state_service.normalized_manifest_operations(updated_manifest)
+    default_operations = text_cleanup_state_service.normalized_manifest_operations({})
+    operations["audio_assembly"] = default_operations["audio_assembly"]
+    updated_manifest["operations"] = operations
+    if _stage_rank(str(updated_manifest.get("current_stage", "")).strip()) > _stage_rank("audio_blocks_ready"):
+        updated_manifest["current_stage"] = "audio_blocks_ready"
+    project_workspace_service.save_manifest(updated_manifest, window._current_project_root)
+    window.show_project_state(
+        window._current_project_root,
+        project_workspace_service.load_manifest(window._current_project_root),
+    )
+
+
 def _sync_manifest_from_disk(window: "MainWindow") -> None:
     """
     @brief      Reload persisted Audio Assembly state into the manifest summary.
@@ -416,6 +436,50 @@ def _sync_manifest_from_disk(window: "MainWindow") -> None:
     )
 
 
+def _save_audio_assembly_settings(window: "MainWindow", settings: dict[str, object], language: str) -> bool:
+    """
+    @brief      Persist Audio Assembly settings and reset assembly outputs when changed settings stale them.
+    @param[in]  window Active main window instance.
+    @param[in]  settings Candidate Audio Assembly settings.
+    @param[in]  language Current UI language code.
+    @return     True when settings were saved or unchanged.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-04
+    @version    0.1.0
+    """
+    if window._current_project_root is None or window._current_manifest is None:
+        return False
+    current_settings = audio_assembly_service.normalize_audio_assembly_settings(
+        window._current_manifest.get("audio_assembly_settings")
+    )
+    candidate_settings = audio_assembly_service.normalize_audio_assembly_settings(settings)
+    settings_changed = current_settings != candidate_settings
+    if (
+        settings_changed
+        and audio_assembly_service.has_persisted_audio_assembly(window._current_project_root)
+        and not _confirm_audio_assembly_settings_change(window, language)
+    ):
+        window.show_project_state(window._current_project_root, window._current_manifest)
+        return False
+    window._current_manifest = audio_assembly_service.save_audio_assembly_settings(
+        window._current_project_root,
+        window._current_manifest,
+        candidate_settings,
+    )
+    if settings_changed and audio_assembly_service.has_persisted_audio_assembly(window._current_project_root):
+        _stop_audio_assembly_playback(window)
+        workflow_impact_service.reset_audio_assembly_outputs(window._current_project_root)
+        _sync_manifest_after_audio_assembly_reset(window)
+        misc_ui_controller.show_message(
+            window,
+            ui_state_service.translate("status.audio_assembly_settings_saved_reset", language),
+        )
+        return True
+    window.show_project_state(window._current_project_root, window._current_manifest)
+    return True
+
+
 def _confirm_audio_assembly(window: "MainWindow", language: str) -> bool:
     return (
         QMessageBox.question(
@@ -435,6 +499,29 @@ def _confirm_audio_assembly_reset(window: "MainWindow", language: str) -> bool:
             window,
             ui_state_service.translate("dialog.confirm_audio_assembly_reset_title", language),
             ui_state_service.translate("project.confirm_audio_assembly_reset", language),
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        == QMessageBox.StandardButton.Yes
+    )
+
+
+def _confirm_audio_assembly_settings_change(window: "MainWindow", language: str) -> bool:
+    """
+    @brief      Confirm that changed assembly settings should clear existing assembly outputs.
+    @param[in]  window Active main window instance.
+    @param[in]  language Current UI language code.
+    @return     True when settings may be saved and assembly outputs reset.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-04
+    @version    0.1.0
+    """
+    return (
+        QMessageBox.question(
+            window,
+            ui_state_service.translate("dialog.confirm_audio_assembly_settings_change_title", language),
+            ui_state_service.translate("project.confirm_audio_assembly_settings_change", language),
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.No,
         )

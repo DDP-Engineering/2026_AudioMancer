@@ -16,7 +16,7 @@
          `80_audio_blocks` workflow artifacts.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-23
-@version 0.10.1
+@version 0.15.0
 """
 
 # IMPORTS
@@ -34,6 +34,7 @@ from audiomancer.services import (
     operation_runtime_service,
     speech_blocks_service,
     voiceweaver_runtime_service,
+    workflow_impact_service,
 )
 from audiomancer.services.logging_service import get_component_logger, trace_function
 from audiomancer.services.operation_runtime_service import (
@@ -220,6 +221,37 @@ def has_persisted_audio_for_chunk(project_root: str | Path, chunk_id: str) -> bo
         return False
     for block in load_audio_blocks(project_root):
         if str(block.get("chunk_id", "")).strip() != normalized_chunk_id:
+            continue
+        if any(
+            (
+                bool(block.get("generated", False)),
+                bool(block.get("approved", False)),
+                bool(_optional_string(block.get("audio_relative_path"))),
+                bool(_optional_string(block.get("metadata_relative_path"))),
+                bool(block.get("generated_part_relative_paths")),
+            )
+        ):
+            return True
+    return False
+
+
+@trace_function(_AUDIO_BLOCKS_LOGGER)
+def has_persisted_audio_for_speech_block(project_root: str | Path, speech_block_id: str) -> bool:
+    """
+    @brief      Return whether one Speech Block has generated Audio Blocks data.
+    @param[in]  project_root Active project root folder.
+    @param[in]  speech_block_id Speech Block identifier to inspect.
+    @return     `True` when the selected Speech Block has audio records or files.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-04
+    @version    0.1.0
+    """
+    normalized_speech_block_id = str(speech_block_id).strip()
+    if not normalized_speech_block_id:
+        return False
+    for block in load_audio_blocks(project_root):
+        if str(block.get("speech_block_id", "")).strip() != normalized_speech_block_id:
             continue
         if any(
             (
@@ -682,6 +714,38 @@ def approve_audio_block(project_root: str | Path, speech_block_id: str) -> Audio
 
 
 @trace_function(_AUDIO_BLOCKS_LOGGER)
+def unapprove_audio_block(project_root: str | Path, speech_block_id: str) -> AudioBlocksReportPayload:
+    """
+    @brief      Mark one generated Audio Blocks entry unapproved while preserving its WAV and metadata files.
+    @param[in]  project_root Active project root folder.
+    @param[in]  speech_block_id Target speech-block identifier.
+    @return     Updated Audio Blocks report payload.
+    @exception  ValueError Raised when the block is missing or has no generated audio.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-04
+    @version    0.1.0
+    """
+    resolved_project_root = Path(project_root)
+    audio_blocks = load_audio_blocks(resolved_project_root)
+    if not audio_blocks:
+        raise ValueError("Audio Blocks have not been generated yet.")
+    normalized_block_id = str(speech_block_id).strip()
+    updated = False
+    for block in audio_blocks:
+        if str(block.get("speech_block_id", "")).strip() != normalized_block_id:
+            continue
+        if not bool(block.get("generated", False)):
+            raise ValueError("Generate the selected audio block before changing its approval.")
+        block["approved"] = False
+        block["approved_at"] = None
+        updated = True
+        break
+    if not updated:
+        raise ValueError("The selected audio block was not found.")
+    return _persist_report_update(resolved_project_root, audio_blocks)
+
+
+@trace_function(_AUDIO_BLOCKS_LOGGER)
 def approve_all_audio_blocks(project_root: str | Path) -> AudioBlocksReportPayload:
     """
     @brief      Approve every generated Audio Blocks entry without generating missing ones.
@@ -817,6 +881,92 @@ def reset_audio_for_speech_chunk(project_root: str | Path, changed_chunk_id: str
 
 
 @trace_function(_AUDIO_BLOCKS_LOGGER)
+def remove_audio_blocks_for_chunks(
+    project_root: str | Path,
+    chunk_ids: list[str] | tuple[str, ...] | set[str],
+) -> tuple[AudioBlocksReportPayload | None, workflow_impact_service.ArtifactDeletionSummary]:
+    """
+    @brief      Remove Audio Blocks and generated files for selected source chunks.
+    @param[in]  project_root Active project root folder.
+    @param[in]  chunk_ids Source chunk identifiers whose audio must be reset.
+    @return     Updated report, if Audio Blocks existed, plus artifact deletion summary.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-04
+    @version    0.1.0
+    """
+    normalized_chunk_ids = {str(chunk_id).strip() for chunk_id in chunk_ids if str(chunk_id).strip()}
+    if not normalized_chunk_ids:
+        return load_audio_blocks_report(project_root), workflow_impact_service.ArtifactDeletionSummary()
+    resolved_project_root = Path(project_root)
+    audio_blocks = load_audio_blocks(resolved_project_root)
+    if not audio_blocks:
+        return load_audio_blocks_report(resolved_project_root), workflow_impact_service.ArtifactDeletionSummary()
+    artifact_summary = workflow_impact_service.delete_audio_block_artifacts(
+        resolved_project_root,
+        audio_blocks,
+        chunk_ids=normalized_chunk_ids,
+    )
+    preserved_blocks = [
+        block for block in audio_blocks if str(block.get("chunk_id", "")).strip() not in normalized_chunk_ids
+    ]
+    return _persist_report_update(resolved_project_root, preserved_blocks), artifact_summary
+
+
+@trace_function(_AUDIO_BLOCKS_LOGGER)
+def remove_audio_blocks_for_speech_blocks(
+    project_root: str | Path,
+    speech_block_ids: list[str] | tuple[str, ...] | set[str],
+    voice_target_ids: list[str] | tuple[str, ...] | set[str] | None = None,
+) -> tuple[AudioBlocksReportPayload | None, workflow_impact_service.ArtifactDeletionSummary]:
+    """
+    @brief      Remove Audio Blocks and generated files for selected Speech Blocks or voice targets.
+    @param[in]  project_root Active project root folder.
+    @param[in]  speech_block_ids Speech Block identifiers whose audio must reset.
+    @param[in]  voice_target_ids Optional voice target identifiers whose audio must reset.
+    @return     Updated report, if Audio Blocks existed, plus artifact deletion summary.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-04
+    @version    0.2.0
+    """
+    normalized_speech_block_ids = {
+        str(speech_block_id).strip() for speech_block_id in speech_block_ids if str(speech_block_id).strip()
+    }
+    normalized_voice_target_ids = {
+        str(voice_target_id).strip() for voice_target_id in (voice_target_ids or ()) if str(voice_target_id).strip()
+    }
+    if not normalized_speech_block_ids and not normalized_voice_target_ids:
+        return load_audio_blocks_report(project_root), workflow_impact_service.ArtifactDeletionSummary()
+    resolved_project_root = Path(project_root)
+    audio_blocks = load_audio_blocks(resolved_project_root)
+    clone_profiles = load_voice_clone_profiles(resolved_project_root)
+    preserved_clone_profiles = [
+        profile
+        for profile in clone_profiles
+        if str(profile.get("voice_target_id", "")).strip() not in normalized_voice_target_ids
+    ]
+    if not audio_blocks:
+        return (
+            _persist_report_update(resolved_project_root, [], preserved_clone_profiles),
+            workflow_impact_service.ArtifactDeletionSummary(),
+        )
+    artifact_summary = workflow_impact_service.delete_audio_block_artifacts(
+        resolved_project_root,
+        audio_blocks,
+        speech_block_ids=normalized_speech_block_ids,
+        voice_target_ids=normalized_voice_target_ids,
+    )
+    preserved_blocks = [
+        block
+        for block in audio_blocks
+        if str(block.get("speech_block_id", "")).strip() not in normalized_speech_block_ids
+        and str(block.get("voice_target_id", "")).strip() not in normalized_voice_target_ids
+    ]
+    return _persist_report_update(resolved_project_root, preserved_blocks, preserved_clone_profiles), artifact_summary
+
+
+@trace_function(_AUDIO_BLOCKS_LOGGER)
 def regenerate_audio_block(
     project_root: str | Path,
     manifest: dict[str, object],
@@ -935,13 +1085,13 @@ def regenerate_audio_block(
 @trace_function(_AUDIO_BLOCKS_LOGGER)
 def reset_audio_blocks(project_root: str | Path) -> None:
     """
-    @brief      Delete Audio Blocks and downstream Audio Assembly runtime artifacts.
+    @brief      Delete Audio Blocks runtime artifacts.
     @param[in]  project_root Active project root folder.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-23
-    @version    0.1.0
+    @version    0.1.1
     """
     operation_runtime_service.reset_operation_data(
         project_root,

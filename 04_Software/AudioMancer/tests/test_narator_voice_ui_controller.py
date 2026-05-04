@@ -499,7 +499,7 @@ def _create_project(tmp_path, name: str):
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-02
-    @version    0.1.0
+    @version    0.2.0
     """
     project_root, manifest = project_workspace_service.create_project(name, tmp_path)
     manifest["source_document"] = {
@@ -526,6 +526,11 @@ def _build_window(qtbot, project_root, settings_payload=None):
     window = MainWindow(settings_payload=_default_settings_payload() if settings_payload is None else settings_payload)
     qtbot.addWidget(window)
     window._activate_project(project_root, project_workspace_service.load_manifest(project_root))
+    window._refresh_narator_voice_page_state(  # noqa: SLF001
+        project_root,
+        project_workspace_service.load_manifest(project_root),
+        str(window._settings_payload.get("language", "en")),
+    )
     return window
 
 

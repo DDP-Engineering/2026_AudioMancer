@@ -14,7 +14,7 @@
          preservation, translated labels, and generation button enablement.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-24
-@version 0.5.4
+@version 0.6.0
 """
 
 # IMPORTS
@@ -85,6 +85,72 @@ def test_speech_blocks_page_renders_chunks_and_read_only_block_details(qtbot) ->
     assert page.selected_block_id() == "0001-000001"
     assert page._speaker_combo.currentData() == "alice"
     assert page._speech_block_text_edit.toPlainText() == "Hello there."
+
+
+def test_speech_blocks_page_selected_audio_controls_emit_and_track_playback(qtbot) -> None:
+    """
+    @brief      Verify selected Speech Block audio controls mirror Audio Blocks selected actions.
+    @param[in]  qtbot Qt test helper fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-04
+    @version    0.1.0
+    """
+    page = SpeechBlocksPage()
+    qtbot.addWidget(page)
+    page.set_project_active(True)
+    page.set_ai_profiles([("Profile One", "profile-1")], "profile-1")
+    page.set_speech_blocks_state(
+        source_chunks=[{"chunk_id": "chunk-0001", "sequence_index": 1, "text": "Narration."}],
+        speech_blocks=[
+            {
+                "speech_block_id": "0001-000001",
+                "sequence_index": 1,
+                "chunk_id": "chunk-0001",
+                "source_language": "en",
+                "speaker_kind": "narrator",
+                "speaker_id": "narrator",
+                "speaker_display_name": "Narrator",
+                "content_kind": speech_blocks_service.CONTENT_KIND_NARRATION,
+                "text": "Narration.",
+                "warning_flags": [],
+                "approved": True,
+                "audio_can_play": True,
+                "audio_metadata_only": False,
+            }
+        ],
+        notes=["Ready."],
+        selected_profile_id="profile-1",
+        stage_status="completed",
+        selected_source_language="en",
+        processed_chunk_count=1,
+        total_chunk_count=1,
+        speaker_catalog=[{"speaker_id": "narrator", "display_name": "Narrator", "speaker_kind": "narrator"}],
+        content_kind_options=[(speech_blocks_service.CONTENT_KIND_NARRATION, "Narration")],
+        can_reset=True,
+    )
+
+    assert page._generate_audio_button.isEnabled() is True
+    assert page._generate_audio_button.text() == "Generate Audio"
+    assert page._selected_audio_playback_button.isEnabled() is True
+    assert page._selected_audio_playback_button.text() == "Play"
+
+    with qtbot.waitSignal(page.generate_audio_selected_requested) as generation_signal:
+        page._generate_audio_button.click()
+    with qtbot.waitSignal(page.selected_audio_playback_toggle_requested) as playback_signal:
+        page._selected_audio_playback_button.click()
+
+    assert generation_signal.args == ["0001-000001"]
+    assert playback_signal.args == ["0001-000001"]
+
+    page.set_selected_audio_playback_active(True)
+
+    assert page._selected_audio_playback_button.text() == "Stop"
+
+    page.set_selected_audio_playback_active(False)
+
+    assert page._selected_audio_playback_button.text() == "Play"
 
 
 def test_speech_blocks_page_same_narrator_edit_shows_only_disabled_narrator(qtbot) -> None:

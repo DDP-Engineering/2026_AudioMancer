@@ -55,17 +55,22 @@ narrator-only phrase/action/paragraph segments under the TTS text budget.
   and `Indication`
 - support selected-block edit, save, and reset-to-AI-baseline operations
 - support manual selected-chunk Speech Block insertion and deletion, with
-  chunk-local ID renumbering from the changed point onward
+  chunk-local sequence updates while preserving stable Speech Block IDs
 - clear warning indicators as soon as an operator starts editing a block
+  without changing approval state or downstream audio inputs
 - approve all speech blocks and report approval counts
 - regenerate one selected chunk and rebuild only that chunk's local sequence
-  indexes plus block IDs
+  indexes plus fresh replacement block IDs
 - reset Speech Blocks plus downstream Audio Blocks and Audio Assembly artifacts
+- reset only exact affected Audio Blocks by stable `speech_block_id` after
+  selected-block text, speaker, content-kind, reset, or delete changes
+- reset only Audio Assembly after Speech Block insert, approval, or order
+  changes that do not alter existing Audio Blocks
 - persist resumable chunk-based operation state, report data, and AI
   transaction logs
 - build page state, notes, speaker catalogs, content-kind labels, generated-run
-  button state, reset state, and AI-profile selector entries for the
-  `Speech Blocks` page
+  button state, reset state, selected-audio preview availability, and
+  AI-profile selector entries for the `Speech Blocks` page
 - coordinate confirmation popups, modal progress, cancellation, reset,
   re-splitting, downstream audio reconciliation, and manifest updates through
   the page controller
@@ -74,7 +79,8 @@ It does not:
 
 - preserve compatibility with old `speech-block-0001` style artifacts
 - migrate old Speech Blocks or Audio Blocks artifacts
-- generate audio segments from speech blocks
+- own audio generation; selected-block audio preview actions are delegated to
+  the Audio Blocks controller and service
 - send `Pause`, `Background Noise`, or `Indication` blocks to VoiceWeaver
 - own character discovery, narrator selection, or voice sample generation
 
@@ -88,11 +94,11 @@ The workflow is split across:
   handling
 - `04_Software/AudioMancer/src/audiomancer/services/speech_blocks_state_service.py`
   for page-state shaping, AI-profile selection, speaker/content selectors,
-  approval counts, and operator notes
+  approval counts, selected-audio preview flags, and operator notes
 - `04_Software/AudioMancer/src/audiomancer/ui/pages/speech_blocks_page.py`
   for the top chunk list, selected chunk preview, speech block list, selected
   block editor, manual insert/delete buttons, approval button, reset button,
-  and selected-chunk re-split action
+  selected-audio generate/play controls, and selected-chunk re-split action
 - `04_Software/AudioMancer/src/audiomancer/ui/controllers/speech_blocks_ui_controller.py`
   for prerequisite validation, confirmation popups, modal progress,
   cancellation, explicit reset, approve-all, selected-block edit/reset/save,
@@ -131,18 +137,25 @@ High-level flow:
 7. Finished full generation disables `Generate Speech Blocks`, enables
    `Reset Speech Blocks`, resets downstream Audio Blocks plus Audio Assembly
    data, and leaves Speech Blocks in review until all blocks are approved.
-8. `Approve All Speech Blocks` marks every block approved and advances the
-   manifest and Home-page operation summary to completed `speech_blocks_ready`.
-9. Editing, resetting, or approving one block asks for confirmation when the
-   current chunk already has generated audio, then deletes only that chunk's
-   generated Audio Blocks WAV/metadata artifacts and resets Audio Assembly.
-10. Inserting or deleting a block rewrites `speech_blocks.json`, renumbers only
-    the selected chunk, leaves inserted blocks unapproved, and resets generated
-    Audio Blocks data for that chunk.
+8. `Approve All Speech Blocks` marks every block approved, advances the
+   manifest and Home-page operation summary to completed `speech_blocks_ready`,
+   and resets Audio Assembly without deleting generated Audio Blocks.
+9. Editing, resetting, or deleting one block asks for confirmation when that
+   exact Speech Block already has generated audio, then deletes only that
+   block's generated Audio Blocks WAV/metadata artifacts and resets Audio
+   Assembly.
+10. Inserting a block rewrites `speech_blocks.json`, updates only the selected
+    chunk sequence, leaves the inserted block unapproved, preserves existing
+    generated Audio Blocks, and resets Audio Assembly because playback order
+    changed.
 11. Re-splitting one chunk replaces only that chunk's Speech Blocks, rebuilds
     that chunk's local sequence indexes and block IDs, marks new blocks
     unapproved, rolls Speech Blocks back from complete, and asks Audio Blocks to
     delete/remap only the affected downstream records.
+12. The Speech Blocks page mirrors Audio Blocks selected-row audio controls:
+    `Generate Audio` asks the Audio Blocks controller to generate only the
+    selected approved spoken block, and `Play`/`Stop` reuses the selected Audio
+    Block local WAV player when a generated file exists.
 
 ## 4. Dependencies
 
@@ -199,6 +212,9 @@ Outputs:
 - updated manifest stage `speech_blocks_ready` only after approval is complete
 - reset downstream Audio Blocks and Audio Assembly artifacts after full
   generation or Speech Blocks reset
+- selective removal of affected Audio Blocks and generated files for exact
+  `speech_block_id` values after local Speech Block audio-input changes
+- assembly-only reset after local order or approval changes
 
 ## 6. Data Contracts
 
@@ -233,9 +249,13 @@ Current invariants:
 - `sequence_index` is 1-based and local within the source chunk
 - `speech_block_id` is always `CCCC-BBBBBB`
 - `CCCC` is derived from the numeric chunk id
-- `BBBBBB` is the chunk-local `sequence_index`
+- `BBBBBB` is allocated from the chunk-local Speech Block id space and is not
+  rewritten only because `sequence_index` changes
 - canonical book order is source chunk order, then chunk-local
   `sequence_index`
+- manual insert/delete updates `sequence_index` but preserves existing
+  `speech_block_id` values for unchanged blocks
+- inserted blocks get the next unused chunk-local `speech_block_id`
 - AI output is the primary Speech Block list; deterministic helpers validate
   and annotate the model result but do not force quote-based boundaries
 - `speaker_id` must be `narrator` or one discovered `character_id`
@@ -264,11 +284,16 @@ Current invariants:
 - manual insert creates an unapproved narrator narration block with empty text
 - manual delete removes only the selected block and leaves the source chunk in
   the chunk list even when no Speech Blocks remain for that chunk
-- warning flags are cleared when the operator starts editing a block
+- warning flags are cleared when the operator starts editing a block, without
+  unapproving the block
 - resetting one edited block restores only the AI baseline source span, speaker,
   content kind, and text while preserving the current warning-cleared state
-- selected-block edits, resets, approvals, inserts, deletes, and selected-chunk
-  re-splits reset generated Audio Blocks data for the affected chunk only
+- selected-block text, speaker, content-kind, reset, and delete changes reset
+  generated Audio Blocks data for the affected `speech_block_id` only
+- selected-block approval and manual insert preserve generated Audio Blocks and
+  reset only Audio Assembly
+- selected-chunk re-splits reset generated Audio Blocks data for the affected
+  chunk because the Speech Blocks in that chunk are replaced
 - generation creates unapproved blocks
 - Speech Blocks is complete only when every block is approved; generated but
   unapproved full output is persisted as `review_pending` in `project.json`
@@ -315,6 +340,8 @@ Downstream integrations:
 - `Reset Speech Blocks` clears speech-block, audio-block, and audio-assembly
   runtime artifacts
 - selected-block edits invalidate affected downstream Audio Blocks data
+- selected-block audio generation and playback shortcuts delegate to Audio
+  Blocks without changing Speech Blocks artifacts
 - selected-chunk re-splitting asks Audio Blocks to delete audio for the
   re-split chunk, preserve earlier chunk audio, remap later records to rebuilt
   IDs, rename order-based artifacts when needed, and rebuild report/state
@@ -392,6 +419,10 @@ Operator path:
 - after selected-block approval, the page advances the visible Speech Blocks
   list to the next row when one exists and keeps the final row selected at the
   end
+- press `Generate Audio` on an approved selected Speech Block to generate or
+  replace only that block's Audio Block from the Speech Blocks page
+- press `Play` or `Stop` on a selected Speech Block with generated audio to
+  preview the exact Audio Block without leaving Speech Blocks review
 - press `Re-Split Selected Chunk` when only the selected chunk needs a new AI
   split
 - press `Approve All Speech Blocks` after review
@@ -437,6 +468,8 @@ uv run ruff format <changed_python_files>
   splits remain editable instead of being automatically replaced
 - speaker attribution uses only the discovered-character catalog plus narrator
 - prosody and detailed delivery hints are not stored
-- `Pause` and `Background Noise` are metadata-only placeholders until
-  downstream audio assembly defines how to represent them in final output
-- `Audio Assembly` remains the next downstream placeholder stage
+- `Pause` blocks are metadata-only in Speech Blocks and are rendered as silence
+  by Audio Assembly; invalid or missing durations fall back to `1000 ms`
+- `Background Noise` and `Indication` remain metadata-only markers skipped by
+  generated speech audio until a richer sound-design layer is implemented
+- Audio Assembly is implemented as the next downstream WAV composition stage

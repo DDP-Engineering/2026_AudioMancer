@@ -14,7 +14,7 @@
          normalization.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-16
-@version 0.3.0
+@version 0.4.0
 """
 
 # IMPORTS
@@ -27,7 +27,7 @@ from audiomancer.services import (
     ui_state_service,
     voiceweaver_runtime_service,
 )
-from audiomancer.ui.controllers import misc_ui_controller, settings_ui_controller
+from audiomancer.ui.controllers import audio_blocks_ui_controller, misc_ui_controller, settings_ui_controller
 
 
 def show_tts_settings_dialog(window) -> None:
@@ -64,9 +64,21 @@ def save_tts_settings_from_dialog(window) -> None:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-16
-    @version    0.3.0
+    @version    0.4.0
     """
     merged_settings = window._tts_settings_page.build_settings(window._settings_payload)
+    current_language = ui_state_service.current_language_from_settings(window._settings_payload)
+    previous_active_model_id = str(window._settings_payload.get("tts_runtime_active_model_id", "")).strip()
+    requested_active_model_id = str(merged_settings.get("tts_runtime_active_model_id", "")).strip()
+    global_voice_model_changed = bool(previous_active_model_id and requested_active_model_id) and (
+        previous_active_model_id != requested_active_model_id
+    )
+    if (
+        window._current_project_root is not None
+        and global_voice_model_changed
+        and not audio_blocks_ui_controller.confirm_global_voice_settings_invalidation(window, current_language)
+    ):
+        return
     settings_service.save_settings(merged_settings)
     window._settings_payload = settings_service.load_settings()
     if window._current_project_root is not None:
@@ -84,6 +96,8 @@ def save_tts_settings_from_dialog(window) -> None:
             project_plan_payload,
             discovered_models,
         )
+        if global_voice_model_changed:
+            audio_blocks_ui_controller.invalidate_all_audio_blocks_after_voice_settings_change(window)
     settings_ui_controller.apply_current_ui_settings(window)
     window.show_project_state(window._current_project_root, window._current_manifest)
     window._tts_settings_dialog.close()
@@ -91,7 +105,7 @@ def save_tts_settings_from_dialog(window) -> None:
         window,
         ui_state_service.translate(
             "status.saved_tts_settings",
-            ui_state_service.current_language_from_settings(window._settings_payload),
+            current_language,
         ),
     )
 

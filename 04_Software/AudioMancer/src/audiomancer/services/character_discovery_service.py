@@ -14,7 +14,7 @@
          workflow artifacts, and maintains resumable AI operation state.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-22
-@version 0.10.0
+@version 0.11.0
 """
 
 # IMPORTS
@@ -919,6 +919,56 @@ def reset_character_discovery(project_root: str | Path) -> None:
         keep_input_snapshots=False,
         preserve_operation_kinds=NARRATOR_PROFILE_PRESERVED_OPERATION_KINDS,
     )
+
+
+@trace_function(_CHARACTER_DISCOVERY_LOGGER)
+def drop_character_evidence_for_chunks(
+    project_root: str | Path,
+    chunk_ids: list[str] | tuple[str, ...] | set[str],
+) -> int:
+    """
+    @brief      Remove chunk-scoped Character Discovery evidence for selected chunks.
+    @details    Character profiles are preserved. Manual evidence entries remain
+                untouched because they are not anchored to generated chunks.
+    @param[in]  project_root Active project root folder.
+    @param[in]  chunk_ids Source chunk identifiers whose evidence is stale.
+    @return     Number of evidence records removed.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-04
+    @version    0.1.0
+    """
+    normalized_chunk_ids = {str(chunk_id).strip() for chunk_id in chunk_ids if str(chunk_id).strip()}
+    if not normalized_chunk_ids:
+        return 0
+    resolved_project_root = Path(project_root)
+    profiles = load_character_profiles(resolved_project_root)
+    if not profiles:
+        return 0
+    removed_count = 0
+    updated_profiles: list[CharacterProfilePayload] = []
+    for profile in profiles:
+        evidence_items = _restore_evidence(profile.get("evidence", []))
+        preserved_evidence = [
+            evidence
+            for evidence in evidence_items
+            if str(evidence.get("chunk_id", "")).strip() not in normalized_chunk_ids
+            or str(evidence.get("chunk_id", "")).strip() == MANUAL_CHARACTER_EVIDENCE_CHUNK_ID
+        ]
+        removed_count += len(evidence_items) - len(preserved_evidence)
+        updated_profile = dict(profile)
+        updated_profile["evidence"] = preserved_evidence
+        updated_profile["has_dialogue_evidence"] = any(
+            _evidence_has_direct_dialogue(item)
+            for item in preserved_evidence
+            if str(item.get("chunk_id", "")).strip() != MANUAL_CHARACTER_EVIDENCE_CHUNK_ID
+        )
+        if len(preserved_evidence) != len(evidence_items):
+            updated_profile["updated_at"] = _utc_now_iso()
+        updated_profiles.append(updated_profile)
+    if removed_count:
+        _write_character_profiles(resolved_project_root, updated_profiles)
+    return removed_count
 
 
 # LOCAL HELPERS

@@ -14,7 +14,7 @@
          normalization.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-23
-@version 1.8.0
+@version 1.9.0
 """
 
 # IMPORTS
@@ -855,6 +855,112 @@ def test_audio_blocks_service_reset_empty_generated_subfolders_are_not_persisted
     assert audio_blocks_service.has_persisted_audio_blocks(project_root) is False
 
 
+def test_audio_blocks_service_removes_audio_and_clone_profiles_for_voice_target(tmp_path) -> None:
+    """
+    @brief      Verify voice-target invalidation deletes only matching Audio Blocks and clone prompts.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-04
+    @version    0.1.0
+    """
+    project_root, _manifest = _create_audio_blocks_project(tmp_path, "AudioBlocksVoiceTargetInvalidation")
+    _seed_generated_audio_blocks(project_root)
+    audio_blocks = audio_blocks_service.load_audio_blocks(project_root)
+    character_block = next(block for block in audio_blocks if str(block["speaker_id"]) == "alice")
+    narrator_block = next(block for block in audio_blocks if str(block["speaker_id"]) == "narrator")
+    character_audio_path = project_root / str(character_block["audio_relative_path"])
+    narrator_audio_path = project_root / str(narrator_block["audio_relative_path"])
+    character_target_id = str(character_block["voice_target_id"])
+    clone_profiles_path = (
+        project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.AUDIO_BLOCKS_VOICE_CLONE_PROFILES_FILE_NAME
+    )
+    clone_profiles = json.loads(clone_profiles_path.read_text(encoding="utf-8"))
+    clone_profiles.append(
+        {
+            "voice_target_id": character_target_id,
+            "display_name": "Alice",
+            "source_sample_relative_path": "voice_samples/alice.wav",
+            "source_sample_fingerprint": "old-alice",
+            "source_model_id": "qwen-custom",
+            "voice_language": "en",
+            "sample_text": "Alice preview line.",
+            "voice_clone_prompt": {"format": "qwen_voice_clone_prompt_v1", "speaker": "alice"},
+            "prompt_format": "qwen_voice_clone_prompt_v1",
+            "generated_at": "2026-04-23T12:09:00+00:00",
+            "clone_model_id": "old-model",
+        }
+    )
+    clone_profiles_path.write_text(json.dumps(clone_profiles, indent=2) + "\n", encoding="utf-8")
+
+    report, deletion_summary = audio_blocks_service.remove_audio_blocks_for_speech_blocks(
+        project_root,
+        (),
+        voice_target_ids=(character_target_id,),
+    )
+
+    preserved_blocks = audio_blocks_service.load_audio_blocks(project_root)
+    preserved_profiles = audio_blocks_service.load_voice_clone_profiles(project_root)
+    assert [block["speech_block_id"] for block in preserved_blocks] == [narrator_block["speech_block_id"]]
+    assert [profile["voice_target_id"] for profile in preserved_profiles] == ["narrator"]
+    assert report is not None
+    assert report["generated_block_count"] == 1
+    assert deletion_summary.deleted_count >= 2
+    assert not character_audio_path.exists()
+    assert narrator_audio_path.exists()
+
+
+def test_audio_blocks_service_detects_persisted_audio_for_exact_speech_block(tmp_path) -> None:
+    """
+    @brief      Verify exact Speech Block audio detection does not match sibling blocks.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-04
+    @version    0.1.0
+    """
+    project_root, _manifest = _create_audio_blocks_project(tmp_path, "AudioBlocksExactSpeechBlockDetection")
+    _seed_generated_audio_blocks(project_root)
+
+    assert audio_blocks_service.has_persisted_audio_for_speech_block(project_root, "0001-000001")
+    assert audio_blocks_service.has_persisted_audio_for_speech_block(project_root, "0001-000002")
+    assert not audio_blocks_service.has_persisted_audio_for_speech_block(project_root, "9999-999999")
+
+
+def test_audio_blocks_service_removes_audio_for_exact_speech_block_only(tmp_path) -> None:
+    """
+    @brief      Verify Speech Block invalidation deletes only the matching Audio Block artifacts.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-04
+    @version    0.1.0
+    """
+    project_root, _manifest = _create_audio_blocks_project(tmp_path, "AudioBlocksExactSpeechBlockInvalidation")
+    _seed_generated_audio_blocks(project_root)
+    audio_blocks = audio_blocks_service.load_audio_blocks(project_root)
+    first_block = audio_blocks[0]
+    second_block = audio_blocks[1]
+    first_audio_path = project_root / str(first_block["audio_relative_path"])
+    second_audio_path = project_root / str(second_block["audio_relative_path"])
+
+    report, deletion_summary = audio_blocks_service.remove_audio_blocks_for_speech_blocks(
+        project_root,
+        (str(first_block["speech_block_id"]),),
+    )
+
+    preserved_blocks = audio_blocks_service.load_audio_blocks(project_root)
+    assert [block["speech_block_id"] for block in preserved_blocks] == [second_block["speech_block_id"]]
+    assert report is not None
+    assert report["generated_block_count"] == 1
+    assert deletion_summary.deleted_count >= 2
+    assert not first_audio_path.exists()
+    assert second_audio_path.exists()
+
+
 def test_audio_blocks_service_approve_and_regenerate_selected_block(monkeypatch, tmp_path) -> None:
     """
     @brief      Verify approving and re-generating one Audio Blocks entry updates only the targeted record.
@@ -864,7 +970,7 @@ def test_audio_blocks_service_approve_and_regenerate_selected_block(monkeypatch,
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-23
-    @version    0.3.0
+    @version    0.4.0
     """
     project_root, manifest = _create_audio_blocks_project(tmp_path, "AudioBlocksServiceApprove")
     _seed_generated_audio_blocks(project_root)
@@ -874,6 +980,15 @@ def test_audio_blocks_service_approve_and_regenerate_selected_block(monkeypatch,
     updated_blocks = audio_blocks_service.load_audio_blocks(project_root)
     assert updated_blocks[0]["approved"] is True
     assert updated_blocks[1]["approved"] is False
+    approved_audio_path = project_root / str(updated_blocks[0]["audio_relative_path"])
+    approved_audio_bytes = approved_audio_path.read_bytes()
+
+    unapprove_report = audio_blocks_service.unapprove_audio_block(project_root, "0001-000001")
+    unapproved_blocks = audio_blocks_service.load_audio_blocks(project_root)
+    assert unapprove_report["approved_block_count"] == 0
+    assert unapproved_blocks[0]["approved"] is False
+    assert unapproved_blocks[0]["approved_at"] is None
+    assert approved_audio_path.read_bytes() == approved_audio_bytes
 
     wait_payloads = [
         {

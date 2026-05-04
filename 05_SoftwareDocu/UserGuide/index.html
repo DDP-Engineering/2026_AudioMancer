@@ -9,14 +9,14 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>AudioMancer User Guide v1.4.0</title>
+    <title>AudioMancer User Guide v2.0.0</title>
     <link rel="stylesheet" href="assets/styles/help.css">
 </head>
 <body>
     <div class="layout">
         <nav class="toc" aria-label="Table of contents">
             <h1>AudioMancer Help</h1>
-            <p>Version 1.4.0<br>Offline user guide for Windows and Ubuntu.</p>
+            <p>Version 2.0.0<br>Offline user guide for Windows and Ubuntu.</p>
             <a href="#welcome">Welcome</a>
             <a href="#requirements">What You Need</a>
             <a href="#install">Install And Start</a>
@@ -42,8 +42,8 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
             <section id="welcome">
                 <h2>Welcome</h2>
                 <div class="version-box">
-                    <p><strong>Help version:</strong> 1.4.0</p>
-                    <p><strong>Application version:</strong> 1.4.0</p>
+                    <p><strong>Help version:</strong> 2.0.0</p>
+                    <p><strong>Application version:</strong> 2.0.0</p>
                     <p><strong>Creator:</strong> Eng. Dipl. Dan Dumitru Pasare</p>
                     <p><strong>Contact:</strong> pasaredan1979@gmail.com</p>
                 </div>
@@ -55,13 +55,15 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                 </p>
                 <p>
                     Work through the left sidebar from top to bottom. Review visible text and audio before you press
-                    approval buttons. Earlier workflow changes can invalidate later audio, so AudioMancer resets or
-                    blocks stale downstream data when needed.
+                    approval buttons. Version 2.0 preserves expensive downstream work when it can: local chunk,
+                    translation, character, voice, Speech Block, and Audio Block edits reset only the affected
+                    downstream records, while full upstream regeneration still clears dependent workflow data.
                 </p>
                 <p>
-                    In version 1.4.0, the Windows icon uses transparent edges for cleaner display, and the Narator Voice
-                    editor grows vertically when the application window is maximized. Resizable review panes keep
-                    minimum widths so important text remains readable while dragging splitters.
+                    In version 2.0.0, Text Chunking can insert or delete selected chunks, Speech Blocks can preview
+                    selected block audio directly from the page, and selective reset rules keep unrelated translated
+                    chunks, voices, Speech Blocks, and Audio Blocks intact. Resizable review panes keep minimum widths
+                    so important text remains readable while dragging splitters.
                 </p>
                 <div class="warning">
                     Current AudioMancer audio generation requires VoiceWeaver. OpenAI or LM Studio profiles are used
@@ -285,6 +287,9 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                     <li>Choose AI chunking strategy: <strong>Paragraph</strong> for stable paragraph windows, <strong>Meaning</strong> for semantic units, or <strong>Scene</strong> for scene-like boundaries.</li>
                     <li>Inspect generated chunks one by one.</li>
                     <li>Edit generated chunk output before approval when the split or text needs manual correction.</li>
+                    <li>Use <strong>Insert</strong> to add a new empty chunk after the selected chunk, then save the text you want in that new chunk.</li>
+                    <li>Use <strong>Delete</strong> to remove the selected chunk when it should not continue downstream.</li>
+                    <li>Confirm manual edits, inserts, and deletes only after checking the impact message. AudioMancer preserves unaffected translations, Speech Blocks, and Audio Blocks where possible, but resets Audio Assembly because the final ordered content changed.</li>
                     <li>Approve chunks to unlock translation, character discovery, and Speech Blocks.</li>
                     <li>Drag the divider between the reference/list area and the selected chunk preview; each side keeps at least one third of the page width.</li>
                     <li>Interrupt chunking and resume it later from saved state.</li>
@@ -324,13 +329,14 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                 <p>
                     The Characters page uses AI to identify speaking roles, aliases, profile notes, evidence, and
                     Qwen-oriented voice definition prompts. Review the result. Add, edit, delete, or regenerate voice
-                    definitions before moving to character voice samples.
+                    definitions before moving to character voice samples. Character edits keep unrelated work intact,
+                    but affected Speech Blocks return to review and their generated audio is reset.
                 </p>
                 <ul>
                     <li>Discover narrator and character profiles from approved chunks or translated chunks.</li>
                     <li>Review names, aliases, gender/age hints, role notes, speaking style, and source evidence.</li>
-                    <li>Edit discovered characters when the model merges, misses, or mislabels a speaker.</li>
-                    <li>Add missing characters manually or delete false positives.</li>
+                    <li>Edit discovered characters when the model merges, misses, or mislabels a speaker. Assigned Speech Blocks become unapproved so speaker attribution can be reviewed.</li>
+                    <li>Add missing characters manually or delete false positives. Deleting a character changes affected Speech Blocks back to Narrator, marks them unapproved, and resets only their Audio Blocks.</li>
                     <li>Regenerate dedicated voice-definition text for characters when the description is weak.</li>
                     <li>Approve the character list before narrator and character voice work continues.</li>
                     <li>Drag the divider between the character workspace and evidence; each side keeps at least one third of the page width.</li>
@@ -387,6 +393,7 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                     <li>Edit voice prompt and preview text before sample generation.</li>
                     <li>Use <strong>Generate Character Samples</strong> to regenerate samples for all current character targets.</li>
                     <li>Generate, play, stop, and regenerate VoiceWeaver samples per character.</li>
+                    <li>Changing one character voice resets only Audio Blocks that use that voice target. Narrator voice changes reset narrator-voice audio only.</li>
                     <li>Approve or keep reviewing character voice assignments before Speech Blocks and Audio Blocks.</li>
                     <li>Reuse narrator voice automatically in same-narrator mode.</li>
                     <li>Drag the divider between the target list and editor; the list keeps at least one quarter of the page width and the editor keeps at least one third.</li>
@@ -407,8 +414,8 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                     VoiceWeaver TTS budget.
                 </p>
                 <p>
-                    Review each block. Use edit, insert, delete, re-split, approve, and approve-all controls to make
-                    the block list match the intended audiobook.
+                    Review each block. Use edit, insert, delete, re-split, approve, approve-all, Generate Audio, and
+                    Play/Stop controls to make the block list match the intended audiobook.
                 </p>
                 <ul>
                     <li>Generate Speech Blocks per approved text chunk.</li>
@@ -417,6 +424,8 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                     <li>Insert or delete blocks to repair dialogue, pauses, or narration flow.</li>
                     <li>Re-split selected chunks when the structure is not usable.</li>
                     <li>Approve individual blocks or use approve-all after review.</li>
+                    <li>Use <strong>Generate Audio</strong> and <strong>Play/Stop</strong> on a selected approved block to preview exactly how the current Speech Block will sound without leaving the page.</li>
+                    <li>Editing, inserting, deleting, re-splitting, changing speaker, or unapproving one Speech Block resets only that block's Audio Block and resets Audio Assembly.</li>
                     <li>Reset Speech Blocks when upstream text, translation, characters, or voice mode changes.</li>
                     <li>Drag the divider between Selected Chunk and Speech Blocks; each lower pane keeps at least one third of the page width.</li>
                     <li>Interrupt generation and resume later without losing approved block state.</li>
@@ -444,7 +453,7 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                     <li>Skip TTS calls for metadata-only pause, indication, and background-noise blocks.</li>
                     <li>Split over-budget text internally and stitch valid generated parts into one block output.</li>
                     <li>Preview generated block audio with Play/Stop controls.</li>
-                    <li>Regenerate selected blocks after prompt, voice, or text corrections.</li>
+                    <li>Regenerate selected blocks after prompt, voice, or text corrections. A single selected regeneration does not touch unrelated Audio Blocks.</li>
                     <li>Approve generated audio after listening.</li>
                     <li>Reset stale Audio Blocks when upstream inputs change.</li>
                     <li>Drag the divider between Source Text and the block review area; each side keeps at least one third of the page width.</li>

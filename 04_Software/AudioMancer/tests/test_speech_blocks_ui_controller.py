@@ -13,7 +13,7 @@
          the Speech Blocks workflow.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 0.4.2
+@version 0.5.0
 """
 
 # IMPORTS
@@ -78,11 +78,11 @@ def test_speech_blocks_ui_controller_edit_start_does_not_refresh_page(monkeypatc
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-24
-    @version    0.1.0
+    @version    0.2.0
     """
     project_root = tmp_path / "SpeechBlocksEditStart"
     project_root.mkdir()
-    update_calls = []
+    clear_calls = []
     window = SimpleNamespace(
         _current_project_root=project_root,
         _current_manifest={"current_stage": "character_voices_ready"},
@@ -102,13 +102,13 @@ def test_speech_blocks_ui_controller_edit_start_does_not_refresh_page(monkeypatc
     )
     monkeypatch.setattr(
         speech_blocks_ui_controller.speech_blocks_service,
-        "update_speech_block",
-        lambda *args: update_calls.append(args),
+        "clear_speech_block_warning_flags",
+        lambda *args: clear_calls.append(args),
     )
 
     speech_blocks_ui_controller.handle_edit_started(window, "0001-000001")
 
-    assert update_calls == [(project_root, "0001-000001", "alice", "dialogue", "Hello.")]
+    assert clear_calls == [(project_root, "0001-000001")]
 
 
 def test_speech_blocks_ui_controller_save_restores_chunk_text_scroll(monkeypatch, tmp_path) -> None:
@@ -120,7 +120,7 @@ def test_speech_blocks_ui_controller_save_restores_chunk_text_scroll(monkeypatch
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.2.0
+    @version    0.3.0
     """
     project_root = tmp_path / "SpeechBlocksSaveScroll"
     project_root.mkdir()
@@ -137,18 +137,23 @@ def test_speech_blocks_ui_controller_save_restores_chunk_text_scroll(monkeypatch
     monkeypatch.setattr(speech_blocks_ui_controller.speech_blocks_service, "update_speech_block", lambda *args: {})
     monkeypatch.setattr(
         speech_blocks_ui_controller,
-        "_chunk_id_for_speech_block",
-        lambda *_args: "chunk-0001",
+        "_speech_block_by_id",
+        lambda *_args: {
+            "speech_block_id": "0001-000001",
+            "speaker_id": "narrator",
+            "content_kind": "narration",
+            "text": "Original text.",
+        },
     )
     monkeypatch.setattr(
         speech_blocks_ui_controller,
-        "_confirm_chunk_audio_reset_if_needed",
+        "_confirm_speech_block_audio_reset_if_needed",
         lambda *_args: True,
     )
     monkeypatch.setattr(speech_blocks_ui_controller, "_sync_manifest_after_speech_blocks_update", lambda _window: None)
     monkeypatch.setattr(
         speech_blocks_ui_controller,
-        "_reset_audio_blocks_after_speech_chunk_change",
+        "_reset_audio_block_after_speech_block_change",
         lambda *_args: None,
     )
     monkeypatch.setattr(speech_blocks_ui_controller.misc_ui_controller, "show_message", lambda *args, **kwargs: None)
@@ -166,14 +171,14 @@ def test_speech_blocks_ui_controller_save_restores_chunk_text_scroll(monkeypatch
 
 def test_speech_blocks_ui_controller_insert_resets_downstream_and_selects_new_block(monkeypatch, tmp_path) -> None:
     """
-    @brief      Verify insert delegates to service, resets chunk audio state, and selects edit mode.
+    @brief      Verify insert delegates to service, resets assembly state, and selects edit mode.
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.2.0
+    @version    0.3.0
     """
     project_root = tmp_path / "SpeechBlocksInsertController"
     project_root.mkdir()
@@ -201,33 +206,33 @@ def test_speech_blocks_ui_controller_insert_resets_downstream_and_selects_new_bl
     )
     monkeypatch.setattr(
         speech_blocks_ui_controller,
-        "_confirm_chunk_audio_reset_if_needed",
+        "_confirm_speech_block_sequence_change",
         lambda *_args: True,
     )
     monkeypatch.setattr(
         speech_blocks_ui_controller,
-        "_reset_audio_blocks_after_speech_chunk_change",
-        lambda _window, chunk_id: reset_calls.append(f"reset:{chunk_id}"),
+        "_reset_audio_assembly_after_speech_blocks_change",
+        lambda _window: reset_calls.append("assembly"),
     )
     monkeypatch.setattr(speech_blocks_ui_controller.misc_ui_controller, "show_message", lambda *args, **kwargs: None)
 
     speech_blocks_ui_controller.handle_insert_block_requested(window, "chunk-0001", "0001-000001")
 
     assert service_calls == [(project_root, "chunk-0001", "0001-000001")]
-    assert reset_calls == ["sync", "reset:chunk-0001"]
+    assert reset_calls == ["sync", "assembly"]
     assert page_calls == [("select", "0001-000002"), ("edit", "")]
 
 
 def test_speech_blocks_ui_controller_delete_confirms_and_resets_downstream(monkeypatch, tmp_path) -> None:
     """
-    @brief      Verify delete asks confirmation, delegates to service, and resets chunk audio state.
+    @brief      Verify delete asks confirmation, delegates to service, and resets only the selected block audio state.
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.2.0
+    @version    0.3.0
     """
     project_root = tmp_path / "SpeechBlocksDeleteController"
     project_root.mkdir()
@@ -250,8 +255,48 @@ def test_speech_blocks_ui_controller_delete_confirms_and_resets_downstream(monke
     )
     monkeypatch.setattr(
         speech_blocks_ui_controller,
-        "_chunk_id_for_speech_block",
-        lambda *_args: "chunk-0001",
+        "_sync_manifest_after_speech_blocks_update",
+        lambda _window: reset_calls.append("sync"),
+    )
+    monkeypatch.setattr(
+        speech_blocks_ui_controller,
+        "_reset_audio_block_after_speech_block_change",
+        lambda _window, speech_block_id: reset_calls.append(f"reset:{speech_block_id}"),
+    )
+    monkeypatch.setattr(speech_blocks_ui_controller.misc_ui_controller, "show_message", lambda *args, **kwargs: None)
+
+    speech_blocks_ui_controller.handle_delete_block_requested(window, "0001-000001")
+
+    assert service_calls == [(project_root, "0001-000001")]
+    assert reset_calls == ["sync", "reset:0001-000001"]
+
+
+def test_speech_blocks_ui_controller_approve_preserves_audio_blocks_and_resets_assembly(monkeypatch, tmp_path) -> None:
+    """
+    @brief      Verify approving one Speech Block does not delete Audio Blocks data.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-04
+    @version    0.1.0
+    """
+    project_root = tmp_path / "SpeechBlocksApproveController"
+    project_root.mkdir()
+    page_calls: list[str] = []
+    window = SimpleNamespace(
+        _settings_payload={"language": "en"},
+        _current_project_root=project_root,
+        _current_manifest={"current_stage": "audio_blocks_ready"},
+        _speech_blocks_page=SimpleNamespace(advance_to_next_block=lambda: page_calls.append("advance")),
+    )
+    service_calls = []
+    reset_calls = []
+    monkeypatch.setattr(
+        speech_blocks_ui_controller.speech_blocks_service,
+        "approve_speech_block",
+        lambda *args: service_calls.append(args) or {},
     )
     monkeypatch.setattr(
         speech_blocks_ui_controller,
@@ -260,20 +305,21 @@ def test_speech_blocks_ui_controller_delete_confirms_and_resets_downstream(monke
     )
     monkeypatch.setattr(
         speech_blocks_ui_controller,
-        "_confirm_chunk_audio_reset_if_needed",
-        lambda *_args: True,
+        "_reset_audio_assembly_after_speech_blocks_change",
+        lambda _window: reset_calls.append("assembly"),
     )
     monkeypatch.setattr(
         speech_blocks_ui_controller,
-        "_reset_audio_blocks_after_speech_chunk_change",
-        lambda _window, chunk_id: reset_calls.append(f"reset:{chunk_id}"),
+        "_reset_audio_block_after_speech_block_change",
+        lambda *_args: (_ for _ in ()).throw(AssertionError("unexpected audio reset")),
     )
     monkeypatch.setattr(speech_blocks_ui_controller.misc_ui_controller, "show_message", lambda *args, **kwargs: None)
 
-    speech_blocks_ui_controller.handle_delete_block_requested(window, "0001-000001")
+    speech_blocks_ui_controller.handle_approve_block_requested(window, "0001-000001")
 
     assert service_calls == [(project_root, "0001-000001")]
-    assert reset_calls == ["sync", "reset:chunk-0001"]
+    assert reset_calls == ["sync", "assembly"]
+    assert page_calls == ["advance"]
 
 
 def test_speech_blocks_ui_controller_explicit_reset_clears_speech_blocks_and_downstream(

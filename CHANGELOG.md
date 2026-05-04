@@ -8,6 +8,39 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
 
 All notable changes to this project will be documented in this file.
 
+## [2.0.0] - 2026-05-04
+
+### Added
+
+- added selected-block `Generate Audio` and `Play`/`Stop` preview controls
+  on the Speech Blocks page, reusing the existing Audio Blocks selected-row
+  generation and playback workflow
+- added Speech Blocks page-state audio preview flags sourced from
+  `audio_blocks.json` so unavailable and metadata-only rows stay disabled
+- added `AudioMancer_Speech_Blocks_State_Service.md` for the Speech Blocks
+  state helper, selected-audio preview flags, and page integration
+
+### Changed
+
+- changed the package release version to `2.0.0`
+- documented the v2 selective downstream-preservation model across README
+  files, software component docs, and manual QA notes
+- changed manual Text Chunking, Character Discovery, Character Voices/Narator
+  Voice, Speech Blocks, Audio Blocks, and Audio Assembly documentation to
+  describe stable identity preservation and chunk/block/voice-target scoped
+  invalidation
+- clarified that source-wide Text Extraction, Text Cleanup, full Text Chunking
+  regeneration, Speech Blocks full regeneration/reset, Audio Blocks full
+  regeneration/reset, and AI Translation approval-loss reset paths remain broad
+  resets where currently implemented
+- added English/Romanian runtime string coverage verification for v2
+  selective-impact labels, dialog titles, confirmation messages, and statuses
+- added `HowToTest.md` with the v2 regression matrix, validation commands, and
+  manual QA scenarios for preserving expensive downstream work
+- normalized remaining changed-file Doxygen helper coverage for the v2 test
+  helpers
+- package version updated to `2.0.0`
+
 ## [1.4.0] - 2026-05-02
 
 ### Changed

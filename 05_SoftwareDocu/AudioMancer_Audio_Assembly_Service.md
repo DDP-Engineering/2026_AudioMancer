@@ -16,7 +16,8 @@ deliverables under the project-root `audiobook/` folder.
 
 ## 2. Responsibilities
 
-- persist per-project Audio Assembly options in `project.json`
+- persist per-project Audio Assembly options in `project.json` and reset only
+  assembly outputs when changed settings make existing outputs stale
 - validate that all Audio Blocks are approved and reference compatible WAV files
 - compose output files for per-chunk, time-limited, or whole-book delivery
 - add configurable silence gaps between blocks and between chunks or output files
@@ -29,9 +30,9 @@ deliverables under the project-root `audiobook/` folder.
 - reset generated audiobook files, report data, and operation state
 - build page state, status notes, progress values, and generated-output records
   for the `Audio Assembly` page
-- coordinate confirmation popups, modal progress, generated-output playback,
-  double-click restart, seek controls, and manifest synchronization through the
-  page controller
+- coordinate confirmation popups, settings-change reset confirmation, modal
+  progress, generated-output playback, double-click restart, seek controls, and
+  manifest synchronization through the page controller
 
 It does not regenerate TTS, approve Audio Blocks, encode MP3, trim silence,
 normalize volume, edit pitch, write chapter metadata, or embed cover art.
@@ -58,7 +59,10 @@ High-level flow:
 1. The page emits the selected settings when the operator changes output mode,
    duration limit, output format, or silence-gap controls.
 2. The controller persists normalized settings under
-   `project.json.audio_assembly_settings`.
+   `project.json.audio_assembly_settings`. If generated assembly output already
+   exists and the normalized settings changed, the controller asks for
+   confirmation and resets only `audiobook/`, `audio_assembly_report.json`, and
+   `audio_assembly_state.json`.
 3. Pressing `Generate Audio` shows a long-operation confirmation and starts the
    shared threaded operation runner with operation kind `audio_assembly`.
 4. `audio_assembly_service.start_or_continue_composition(...)` loads approved
@@ -76,6 +80,9 @@ High-level flow:
 9. The controller refreshes `project.json.operations["audio_assembly"]` and
    advances `project.json.current_stage` to `audio_assembly_ready` when the
    report status is completed.
+10. Reset and settings-change paths set only the compact
+    `operations["audio_assembly"]` summary back to `not_started`, lowering the
+    stage no further than `audio_blocks_ready`.
 
 ## 4. Dependencies
 
@@ -162,6 +169,9 @@ Current invariants:
 - persisted resume requires the current input/settings fingerprint to match the
   fingerprint stored in `audio_assembly_state.json`
 - mismatched fingerprints require explicit reset
+- reset, settings-change reset, and upstream Audio Blocks impact delete only
+  assembly state, report, and generated audiobook output files; approved Audio
+  Blocks and voice data remain untouched
 
 ## 7. Workflow Integration
 
@@ -182,8 +192,12 @@ Current invalidation points:
 
 - Audio Blocks reset or regeneration clears Audio Assembly state, report, and
   generated audiobook files
-- settings or input changes detected at composition time require reset before
-  continuation
+- Audio Blocks approval/unapproval clears Audio Assembly only, because assembly
+  eligibility changed while generated Audio Blocks remain valid
+- Audio Assembly settings changes are confirmed in the controller and clear
+  only Audio Assembly outputs/state/report
+- settings or input changes detected at composition time still require reset
+  before continuation when stale state reaches the service directly
 
 ## 8. Usage
 
@@ -215,7 +229,9 @@ Operator path:
 - complete and approve all generated Audio Blocks
 - open `Audio Assembly`
 - choose `Per text chunk`, `Time limit`, or `Whole audiobook`
-- adjust duration and silence-gap settings as needed
+- adjust duration and silence-gap settings as needed; changing settings after
+  output exists asks for confirmation and resets only the existing Audio
+  Assembly output
 - press `Generate Audio` and confirm the long-running operation
 - if interrupted, press `Generate Audio` again to continue completed-output
   resume when the inputs and settings still match

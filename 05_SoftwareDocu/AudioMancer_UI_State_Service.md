@@ -95,6 +95,11 @@ The central string catalog is `_UI_STRINGS`, keyed first by language code and
 then by stable UI identifier. Existing code should use stable keys instead of
 hard-coded labels for operator-facing runtime text.
 
+Speech Blocks selected-audio preview uses the page-specific
+`speech_blocks.generate_audio_selected` key so its compact `Generate Audio`
+label can remain shorter than the Audio Blocks page's `Re-Generate Audio`
+button at larger UI font sizes.
+
 Supported text-scale keys are defined by `_UI_SCALE_FACTORS`:
 
 - `very_small`
@@ -115,8 +120,14 @@ The main application uses it after loading settings so the shell, toolbar,
 sidebar, dialogs, pages, and status messages use the selected language and text
 scale. Page classes and controllers consume the catalog while building labels,
 buttons, group titles, notes, confirmation text, and status messages.
-Current Character Voices entries cover both single-sample generation and the
-confirmed batch action that regenerates all current character samples.
+Current v2 entries cover Text Chunking insert/delete confirmations, selective
+Character Discovery add/edit/delete confirmations, voice-target and narrator
+audio invalidation confirmations, Speech Blocks selected-block and sequence
+impact confirmations, Audio Blocks selected reset/regeneration and
+approval-change confirmations, Audio Assembly settings-change confirmation, and
+the related result/status messages. Current Character Voices entries cover both
+single-sample generation and the confirmed batch action that regenerates all
+current character samples.
 
 Because all operator-facing labels are centralized here, UI text changes must
 update both English and Romanian catalog entries in the same implementation
@@ -148,6 +159,10 @@ button.setText(strings["speech_blocks.save_block"])
 Focused tests:
 
 - `04_Software/AudioMancer/tests/test_ui_state_service.py`
+
+The v2 translation-catalog test verifies that the English and Romanian catalogs
+contain the selective-impact labels, dialog titles, confirmation messages, and
+status messages introduced by the preservation workflow.
 
 Minimum validation after changing this component:
 

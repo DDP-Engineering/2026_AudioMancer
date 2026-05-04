@@ -15,7 +15,7 @@
          Chunking page.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-24
-@version 0.7.0
+@version 0.8.0
 """
 
 # IMPORTS
@@ -197,10 +197,13 @@ def handle_save_chunk_requested(window: "MainWindow", chunk_id: str, chunk_text:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-24
-    @version    0.1.0
+    @version    0.2.0
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._current_project_root is None or window._current_manifest is None:
+        return
+    if not confirm_chunk_edit(window, current_language):
+        window.show_project_state(window._current_project_root, window._current_manifest)
         return
     preview_scroll_state = window._text_chunking_page.preview_scroll_state()
     try:
@@ -225,6 +228,85 @@ def handle_save_chunk_requested(window: "MainWindow", chunk_id: str, chunk_text:
     misc_ui_controller.show_message(
         window,
         ui_state_service.translate("status.chunk_saved", current_language),
+    )
+
+
+def handle_insert_chunk_requested(window: "MainWindow", chunk_id: str) -> None:
+    """
+    @brief      Insert a new chunk after the selected chunk after confirmation.
+    @param[in]  window Active main window shell.
+    @param[in]  chunk_id Selected chunk identifier.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-04
+    @version    0.1.0
+    """
+    current_language = ui_state_service.current_language_from_settings(window._settings_payload)
+    if window._current_project_root is None or window._current_manifest is None:
+        return
+    if not confirm_chunk_insert(window, current_language):
+        return
+    preview_scroll_state = window._text_chunking_page.preview_scroll_state()
+    try:
+        updated_manifest = text_chunking_state_service.insert_chunk_after_selected(
+            window._current_project_root,
+            window._current_manifest,
+            chunk_id,
+        )
+    except ValueError as error:
+        QMessageBox.warning(
+            window,
+            ui_state_service.translate("dialog.project_error_title", current_language),
+            str(error),
+        )
+        return
+    window.show_project_state(window._current_project_root, updated_manifest)
+    preview_scroll_state["chunk_list_row"] = int(preview_scroll_state.get("chunk_list_row", 0)) + 1
+    window._text_chunking_page.restore_preview_scroll_state(preview_scroll_state)
+    misc_ui_controller.show_message(
+        window,
+        ui_state_service.translate("status.chunk_inserted", current_language),
+    )
+
+
+def handle_delete_chunk_requested(window: "MainWindow", chunk_id: str) -> None:
+    """
+    @brief      Delete the selected chunk after confirmation.
+    @param[in]  window Active main window shell.
+    @param[in]  chunk_id Selected chunk identifier.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-04
+    @version    0.1.0
+    """
+    current_language = ui_state_service.current_language_from_settings(window._settings_payload)
+    if window._current_project_root is None or window._current_manifest is None:
+        return
+    if not confirm_chunk_delete(window, current_language):
+        return
+    preview_scroll_state = window._text_chunking_page.preview_scroll_state()
+    try:
+        updated_manifest = text_chunking_state_service.delete_selected_chunk(
+            window._current_project_root,
+            window._current_manifest,
+            chunk_id,
+        )
+    except ValueError as error:
+        QMessageBox.warning(
+            window,
+            ui_state_service.translate("dialog.project_error_title", current_language),
+            str(error),
+        )
+        return
+    window.show_project_state(window._current_project_root, updated_manifest)
+    row = max(0, int(preview_scroll_state.get("chunk_list_row", 0)) - 1)
+    preview_scroll_state["chunk_list_row"] = row
+    window._text_chunking_page.restore_preview_scroll_state(preview_scroll_state)
+    misc_ui_controller.show_message(
+        window,
+        ui_state_service.translate("status.chunk_deleted", current_language),
     )
 
 
@@ -524,6 +606,69 @@ def confirm_ai_chunking_rerun(window: "MainWindow", language: str) -> bool:
         window,
         ui_state_service.translate("dialog.confirm_ai_chunking_rerun_title", language),
         ui_state_service.translate("project.confirm_ai_chunking_rerun", language),
+        QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+        QMessageBox.StandardButton.No,
+    )
+    return decision == QMessageBox.StandardButton.Yes
+
+
+def confirm_chunk_edit(window: "MainWindow", language: str) -> bool:
+    """
+    @brief      Ask whether to save a chunk edit with selective downstream impact.
+    @param[in]  window Active main window shell.
+    @param[in]  language Current UI language code.
+    @return     True when the operator accepts the edit.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-04
+    @version    0.1.0
+    """
+    decision = QMessageBox.question(
+        window,
+        ui_state_service.translate("dialog.confirm_chunk_edit_title", language),
+        ui_state_service.translate("project.confirm_chunk_edit", language),
+        QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+        QMessageBox.StandardButton.No,
+    )
+    return decision == QMessageBox.StandardButton.Yes
+
+
+def confirm_chunk_insert(window: "MainWindow", language: str) -> bool:
+    """
+    @brief      Ask whether to insert a chunk with selective downstream impact.
+    @param[in]  window Active main window shell.
+    @param[in]  language Current UI language code.
+    @return     True when the operator accepts the insert.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-04
+    @version    0.1.0
+    """
+    decision = QMessageBox.question(
+        window,
+        ui_state_service.translate("dialog.confirm_chunk_insert_title", language),
+        ui_state_service.translate("project.confirm_chunk_insert", language),
+        QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+        QMessageBox.StandardButton.No,
+    )
+    return decision == QMessageBox.StandardButton.Yes
+
+
+def confirm_chunk_delete(window: "MainWindow", language: str) -> bool:
+    """
+    @brief      Ask whether to delete a chunk with selective downstream impact.
+    @param[in]  window Active main window shell.
+    @param[in]  language Current UI language code.
+    @return     True when the operator accepts the delete.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-04
+    @version    0.1.0
+    """
+    decision = QMessageBox.question(
+        window,
+        ui_state_service.translate("dialog.confirm_chunk_delete_title", language),
+        ui_state_service.translate("project.confirm_chunk_delete", language),
         QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
         QMessageBox.StandardButton.No,
     )

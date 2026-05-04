@@ -32,6 +32,9 @@ locked on the Home page before the later `Speech Blocks`,
 - keep `same_narrator` projects read-only for per-character voice generation
 - build page state for target ordering, enablement, notes, and status lines
 - keep the manifest stage aligned with Character Voices readiness
+- apply v2 downstream impact when one voice target changes by preserving Speech
+  Blocks, deleting only matching Audio Blocks and reusable clone-prompt
+  metadata, and resetting Audio Assembly
 
 It does not:
 
@@ -76,15 +79,17 @@ High-level flow:
 5. In `same_narrator` mode, narrator-derived character samples are copied into
    each character slot during state build and per-character editing/generation
    stays disabled.
-6. `Edit Voice Prompt` deletes the stored character sample and enters explicit
-   edit mode after confirmation.
+6. `Edit Voice Prompt` confirms v2 downstream impact, deletes the stored
+   character sample, removes generated Audio Blocks for that target only, resets
+   Audio Assembly, and enters explicit edit mode.
 7. `Generate Sample` verifies the fixed Qwen3 capability set, waits for model
    load completion when needed, and stores one WAV plus metadata for the
    selected character target.
 8. `Generate Character Samples` confirms once, selects every current character
    target, then regenerates samples sequentially in the shared modal progress
    dialog. Existing character samples are replaced by the same per-target
-   storage path used by single-sample generation.
+   storage path used by single-sample generation, and generated Audio Blocks
+   tied to those targets are reset while unrelated targets are preserved.
 9. When every character target plus the selected narrator sample exists, the
    controller keeps `project.json.current_stage = "character_voices_ready"`.
 
@@ -205,7 +210,7 @@ Downstream integrations:
 - `Speech Blocks`, which reads the selected project voice language and is
   invalidated when that language changes
 - `Audio Blocks` workflow data
-- placeholder `Audio Assembly` workflow data
+- `Audio Assembly` workflow data
 
 Current rules:
 
@@ -220,6 +225,9 @@ Current rules:
   `narrator_and_characters` mode
 - batch sample generation processes every current character target and replaces
   any existing character sample for those targets
+- prompt reset, prompt edit, single sample regeneration, and batch character
+  sample regeneration preserve Speech Blocks and reset only Audio Blocks whose
+  `voice_target_id` matches the affected character targets
 - `same_narrator` mode disables prompt editing and generation but keeps
   preview available by copying narrator-derived samples into every character
   target slot
@@ -288,12 +296,12 @@ uv run ruff format <changed_python_files>
 
 ## 10. Limitations And Future Work
 
-- long-form audio creation is still out of scope here
+- long-form audio creation is handled by Audio Blocks and Audio Assembly
 - narrator prompt editing remains on the `Narator Voice` page only
 - older projects without `voice_definition_prompt` still rely on the legacy
   fallback builder until Character Discovery is rerun or the character is
   edited and saved
 - per-character preview text still starts from a deterministic localized
   sample text instead of automatically using real dialogue excerpts
-- `Audio Assembly` is still a placeholder stage and does not yet consume the
-  generated Audio Blocks output
+- Character Voices does not regenerate Speech Blocks; it only invalidates the
+  downstream generated audio tied to changed voice targets

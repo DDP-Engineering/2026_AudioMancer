@@ -14,7 +14,7 @@
          targeted downstream invalidation when upstream voice inputs change.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-23
-@version 0.3.0
+@version 0.6.0
 """
 
 # IMPORTS
@@ -28,11 +28,13 @@ from PySide6.QtWidgets import QMessageBox
 
 from audiomancer import config
 from audiomancer.services import (
+    audio_assembly_service,
     audio_blocks_service,
     project_workspace_service,
     speech_blocks_service,
     text_cleanup_state_service,
     ui_state_service,
+    workflow_impact_service,
 )
 from audiomancer.ui.controllers import (
     misc_ui_controller,
@@ -55,7 +57,7 @@ def handle_start_generation_requested(window: "MainWindow") -> None:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-23
-        @version    0.2.0
+    @version    0.3.0
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._active_operation_kind is not None:
@@ -109,7 +111,7 @@ def handle_reset_generation_requested(window: "MainWindow") -> None:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-23
-    @version    0.2.0
+    @version    0.3.0
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._current_project_root is None or window._current_manifest is None:
@@ -135,13 +137,15 @@ def handle_approve_all_requested(window: "MainWindow") -> None:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-23
-    @version    0.2.0
+    @version    0.3.0
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._current_project_root is None or window._current_manifest is None:
         return
+    if not _confirm_audio_approval_change(window, current_language):
+        return
     audio_blocks_service.approve_all_audio_blocks(window._current_project_root)
-    _sync_manifest_after_audio_blocks_update(window)
+    _reset_audio_assembly_after_audio_blocks_change(window)
     misc_ui_controller.show_message(
         window,
         ui_state_service.translate("status.audio_blocks_approved_all", current_language),
@@ -157,10 +161,12 @@ def handle_approve_selected_requested(window: "MainWindow", speech_block_id: str
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-23
-    @version    0.2.0
+    @version    0.3.0
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._current_project_root is None or window._current_manifest is None:
+        return
+    if not _confirm_audio_approval_change(window, current_language):
         return
     try:
         audio_blocks_service.approve_audio_block(window._current_project_root, speech_block_id)
@@ -171,11 +177,72 @@ def handle_approve_selected_requested(window: "MainWindow", speech_block_id: str
             str(error),
         )
         return
-    _sync_manifest_after_audio_blocks_update(window)
+    _reset_audio_assembly_after_audio_blocks_change(window)
     window._audio_blocks_page.advance_to_next_block()
     misc_ui_controller.show_message(
         window,
         ui_state_service.translate("status.audio_block_approved", current_language),
+    )
+
+
+def handle_unapprove_selected_requested(window: "MainWindow", speech_block_id: str) -> None:
+    """
+    @brief      Mark one generated Audio Blocks entry unapproved and reset Audio Assembly outputs.
+    @param[in]  window Active main window instance.
+    @param[in]  speech_block_id Selected speech-block identifier.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-04
+    @version    0.1.0
+    """
+    current_language = ui_state_service.current_language_from_settings(window._settings_payload)
+    if window._current_project_root is None or window._current_manifest is None:
+        return
+    if not _confirm_audio_approval_change(window, current_language):
+        return
+    try:
+        audio_blocks_service.unapprove_audio_block(window._current_project_root, speech_block_id)
+    except ValueError as error:
+        QMessageBox.warning(
+            window,
+            ui_state_service.translate("dialog.project_error_title", current_language),
+            str(error),
+        )
+        return
+    _reset_audio_assembly_after_audio_blocks_change(window)
+    window._audio_blocks_page.select_block_id(str(speech_block_id).strip())
+    misc_ui_controller.show_message(
+        window,
+        ui_state_service.translate("status.audio_block_unapproved", current_language),
+    )
+
+
+def handle_reset_selected_requested(window: "MainWindow", speech_block_id: str) -> None:
+    """
+    @brief      Delete one generated Audio Blocks entry and reset Audio Assembly outputs.
+    @param[in]  window Active main window instance.
+    @param[in]  speech_block_id Selected speech-block identifier.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-04
+    @version    0.1.0
+    """
+    current_language = ui_state_service.current_language_from_settings(window._settings_payload)
+    if window._current_project_root is None or window._current_manifest is None:
+        return
+    if not _confirm_selected_audio_block_reset(window, current_language):
+        return
+    audio_blocks_service.remove_audio_blocks_for_speech_blocks(
+        window._current_project_root,
+        (str(speech_block_id).strip(),),
+    )
+    _reset_audio_assembly_after_audio_blocks_change(window)
+    window._audio_blocks_page.select_block_id(str(speech_block_id).strip())
+    misc_ui_controller.show_message(
+        window,
+        ui_state_service.translate("status.audio_block_reset", current_language),
     )
 
 
@@ -188,12 +255,14 @@ def handle_regenerate_selected_requested(window: "MainWindow", speech_block_id: 
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-23
-    @version    0.1.1
+    @version    0.2.0
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._active_operation_kind is not None:
         return
     if window._current_project_root is None or window._current_manifest is None:
+        return
+    if not _confirm_selected_audio_block_regeneration(window, current_language):
         return
     probe_result = tts_runtime_ui_support.probe_runtime_and_persist_cache(window)
     if not bool(probe_result.get("success", False)):
@@ -257,6 +326,7 @@ def handle_selected_playback_toggle_requested(window: "MainWindow", speech_block
     window._audio_blocks_page.select_block_id(str(speech_block_id))
     window._audio_blocks_audio_player.setSource(QUrl.fromLocalFile(str(audio_path)))
     window._audio_blocks_page.set_selected_playback_active(True)
+    _set_speech_blocks_selected_audio_playback_active(window, True)
     window._audio_blocks_audio_player.play()
 
 
@@ -268,7 +338,7 @@ def handle_audiobook_playback_toggle_requested(window: "MainWindow") -> None:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-24
-    @version    0.2.0
+    @version    0.3.0
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._audio_blocks_playback_mode == "audiobook":
@@ -313,6 +383,7 @@ def handle_playback_state_changed(window: "MainWindow") -> None:
     if window._audio_blocks_playback_mode is None:
         window._audio_blocks_page.set_selected_playback_active(False)
         window._audio_blocks_page.set_audiobook_playback_active(False)
+        _set_speech_blocks_selected_audio_playback_active(window, False)
 
 
 def handle_media_status_changed(window: "MainWindow", media_status: QMediaPlayer.MediaStatus) -> None:
@@ -345,19 +416,137 @@ def confirm_audio_blocks_invalidation(window: "MainWindow", language: str) -> bo
     @date       2026-04-23
     @version    0.1.0
     """
+    return _confirm_persisted_audio_blocks_invalidation(
+        window,
+        language,
+        "dialog.confirm_audio_blocks_invalidation_title",
+        "project.confirm_audio_blocks_invalidation",
+    )
+
+
+def confirm_single_voice_target_invalidation(window: "MainWindow", language: str) -> bool:
+    """
+    @brief      Ask whether one character voice-target change may reset matching generated audio.
+    @param[in]  window Active main window instance.
+    @param[in]  language Current UI language code.
+    @return     True when the upstream mutation may continue.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-04
+    @version    0.1.0
+    """
+    return _confirm_persisted_audio_blocks_invalidation(
+        window,
+        language,
+        "dialog.confirm_single_voice_target_invalidation_title",
+        "project.confirm_single_voice_target_invalidation",
+    )
+
+
+def confirm_narrator_voice_invalidation(window: "MainWindow", language: str) -> bool:
+    """
+    @brief      Ask whether a narrator-voice change may reset matching generated audio.
+    @param[in]  window Active main window instance.
+    @param[in]  language Current UI language code.
+    @return     True when the upstream mutation may continue.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-04
+    @version    0.1.0
+    """
+    return _confirm_persisted_audio_blocks_invalidation(
+        window,
+        language,
+        "dialog.confirm_narrator_voice_invalidation_title",
+        "project.confirm_narrator_voice_invalidation",
+    )
+
+
+def confirm_global_voice_settings_invalidation(window: "MainWindow", language: str) -> bool:
+    """
+    @brief      Ask whether a global voice setting change may reset all generated audio.
+    @param[in]  window Active main window instance.
+    @param[in]  language Current UI language code.
+    @return     True when the upstream mutation may continue.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-04
+    @version    0.1.0
+    """
+    return _confirm_persisted_audio_blocks_invalidation(
+        window,
+        language,
+        "dialog.confirm_global_voice_settings_invalidation_title",
+        "project.confirm_global_voice_settings_invalidation",
+    )
+
+
+def invalidate_audio_blocks_for_voice_targets(
+    window: "MainWindow",
+    voice_target_ids: list[str] | tuple[str, ...] | set[str],
+) -> None:
+    """
+    @brief      Reset only Audio Blocks that use selected voice targets and reset Audio Assembly.
+    @param[in]  window Active main window instance.
+    @param[in]  voice_target_ids Voice target identifiers whose generated audio is stale.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-04
+    @version    0.1.0
+    """
+    if window._current_project_root is None or window._current_manifest is None:
+        return
+    normalized_voice_target_ids = {
+        str(voice_target_id).strip() for voice_target_id in voice_target_ids if str(voice_target_id).strip()
+    }
+    if not normalized_voice_target_ids:
+        return
+    existing_blocks = audio_blocks_service.load_audio_blocks(window._current_project_root)
+    existing_clone_profiles = audio_blocks_service.load_voice_clone_profiles(window._current_project_root)
+    has_affected_audio_input = any(
+        str(block.get("voice_target_id", "")).strip() in normalized_voice_target_ids for block in existing_blocks
+    ) or any(
+        str(profile.get("voice_target_id", "")).strip() in normalized_voice_target_ids
+        for profile in existing_clone_profiles
+    )
+    if not has_affected_audio_input:
+        return
+
+    _stop_audio_blocks_and_assembly_playback(window)
+    audio_blocks_service.remove_audio_blocks_for_speech_blocks(
+        window._current_project_root,
+        (),
+        voice_target_ids=normalized_voice_target_ids,
+    )
+    workflow_impact_service.reset_audio_assembly_outputs(window._current_project_root)
+    _sync_manifest_after_selective_audio_invalidation(window)
+    window.show_project_state(
+        window._current_project_root,
+        project_workspace_service.load_manifest(window._current_project_root),
+    )
+
+
+def invalidate_all_audio_blocks_after_voice_settings_change(window: "MainWindow") -> None:
+    """
+    @brief      Reset all generated Audio Blocks and Audio Assembly after a global voice setting change.
+    @param[in]  window Active main window instance.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-04
+    @version    0.1.0
+    """
     if window._current_project_root is None:
-        return True
-    if not audio_blocks_service.has_persisted_audio_blocks(window._current_project_root):
-        return True
-    return (
-        QMessageBox.question(
-            window,
-            ui_state_service.translate("dialog.confirm_audio_blocks_invalidation_title", language),
-            ui_state_service.translate("project.confirm_audio_blocks_invalidation", language),
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            QMessageBox.StandardButton.No,
-        )
-        == QMessageBox.StandardButton.Yes
+        return
+    if window._current_manifest is None or not audio_blocks_service.has_persisted_audio_blocks(
+        window._current_project_root
+    ):
+        return
+    _reset_audio_blocks_and_downstream(window)
+    window.show_project_state(
+        window._current_project_root,
+        project_workspace_service.load_manifest(window._current_project_root),
     )
 
 
@@ -402,7 +591,7 @@ def _start_operation(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-23
-    @version    0.3.0
+    @version    0.4.0
     """
     _stop_audio_blocks_playback(window)
     workflow_controller_service.start_operation(
@@ -411,7 +600,7 @@ def _start_operation(
         operation_name=operation_name,
         initial_message=initial_message,
         worker_callable=worker_callable,
-        set_busy=lambda is_busy: window._audio_blocks_page.set_busy(is_busy),
+        set_busy=lambda is_busy: _set_audio_blocks_busy(window, is_busy),
         success_handler=lambda result_payload: _handle_audio_blocks_success(
             window,
             result_payload,
@@ -439,10 +628,10 @@ def _handle_audio_blocks_success(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-24
-    @version    0.1.0
+    @version    0.3.0
     """
     _ = result_payload
-    _sync_manifest_after_audio_blocks_update(window)
+    _reset_audio_assembly_after_audio_blocks_change(window)
     _restore_audio_blocks_selection(window, preserved_block_id)
     misc_ui_controller.show_message(
         window,
@@ -563,19 +752,13 @@ def _reset_audio_blocks_and_downstream(window: "MainWindow") -> None:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-23
-    @version    0.1.0
+    @version    0.2.0
     """
     assert window._current_project_root is not None
     assert window._current_manifest is not None
-    _stop_audio_blocks_playback(window)
-    audio_assembly_player = getattr(window, "_audio_assembly_audio_player", None)
-    if audio_assembly_player is not None:
-        audio_assembly_player.stop()
-    if hasattr(window, "_audio_assembly_page"):
-        window._audio_assembly_page.set_playback_active(False)
-    if hasattr(window, "_audio_assembly_playback_output_key"):
-        window._audio_assembly_playback_output_key = None
+    _stop_audio_blocks_and_assembly_playback(window)
     audio_blocks_service.reset_audio_blocks(window._current_project_root)
+    workflow_impact_service.reset_audio_assembly_outputs(window._current_project_root)
     updated_manifest = dict(window._current_manifest)
     operations = text_cleanup_state_service.normalized_manifest_operations(updated_manifest)
     default_operations = text_cleanup_state_service.normalized_manifest_operations({})
@@ -586,6 +769,205 @@ def _reset_audio_blocks_and_downstream(window: "MainWindow") -> None:
         updated_manifest["current_stage"] = "speech_blocks_ready"
     project_workspace_service.save_manifest(updated_manifest, window._current_project_root)
     window._current_manifest = project_workspace_service.load_manifest(window._current_project_root)
+
+
+def _reset_audio_assembly_after_audio_blocks_change(window: "MainWindow") -> None:
+    """
+    @brief      Clear only Audio Assembly outputs after an Audio Blocks state change.
+    @param[in]  window Active main window instance.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-04
+    @version    0.1.0
+    """
+    if window._current_project_root is None or window._current_manifest is None:
+        return
+    _stop_audio_blocks_and_assembly_playback(window)
+    workflow_impact_service.reset_audio_assembly_outputs(window._current_project_root)
+    _sync_manifest_after_selective_audio_invalidation(window)
+    window.show_project_state(
+        window._current_project_root,
+        project_workspace_service.load_manifest(window._current_project_root),
+    )
+
+
+def _sync_manifest_after_selective_audio_invalidation(window: "MainWindow") -> None:
+    """
+    @brief      Refresh manifest summaries after voice-target Audio Blocks invalidation.
+    @param[in]  window Active main window instance.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-04
+    @version    0.1.0
+    """
+    assert window._current_project_root is not None
+    assert window._current_manifest is not None
+    updated_manifest = dict(window._current_manifest)
+    operations = text_cleanup_state_service.normalized_manifest_operations(updated_manifest)
+    default_operations = text_cleanup_state_service.normalized_manifest_operations({})
+    operation_state = audio_blocks_service.load_operation_state(window._current_project_root)
+    if operation_state is None:
+        operations["audio_blocks"] = default_operations["audio_blocks"]
+    else:
+        operations["audio_blocks"] = project_workspace_service.project_manifest_operation_summary(
+            "audio_blocks",
+            operation_state,
+        )
+    operations["audio_assembly"] = default_operations["audio_assembly"]
+    updated_manifest["operations"] = operations
+    report = audio_blocks_service.load_audio_blocks_report(window._current_project_root)
+    if (
+        isinstance(report, dict)
+        and str(report.get("audio_blocks_stage_status", "")).strip()
+        == audio_blocks_service.AUDIO_BLOCKS_STAGE_COMPLETED
+    ):
+        updated_manifest["current_stage"] = "audio_blocks_ready"
+    elif _stage_rank(str(updated_manifest.get("current_stage", "")).strip()) > _stage_rank("speech_blocks_ready"):
+        updated_manifest["current_stage"] = "speech_blocks_ready"
+    project_workspace_service.save_manifest(updated_manifest, window._current_project_root)
+    window._current_manifest = project_workspace_service.load_manifest(window._current_project_root)
+
+
+def _stop_audio_blocks_and_assembly_playback(window: "MainWindow") -> None:
+    """
+    @brief      Stop Audio Blocks and Audio Assembly playback before deleting audio artifacts.
+    @param[in]  window Active main window instance.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-04
+    @version    0.1.0
+    """
+    _stop_audio_blocks_playback(window)
+    audio_assembly_player = getattr(window, "_audio_assembly_audio_player", None)
+    if audio_assembly_player is not None:
+        audio_assembly_player.stop()
+    if hasattr(window, "_audio_assembly_page"):
+        window._audio_assembly_page.set_playback_active(False)
+    if hasattr(window, "_audio_assembly_playback_output_key"):
+        window._audio_assembly_playback_output_key = None
+
+
+def _confirm_persisted_audio_blocks_invalidation(
+    window: "MainWindow",
+    language: str,
+    title_key: str,
+    message_key: str,
+) -> bool:
+    """
+    @brief      Ask one localized confirmation only when Audio Blocks data exists.
+    @param[in]  window Active main window instance.
+    @param[in]  language Current UI language code.
+    @param[in]  title_key UI title translation key.
+    @param[in]  message_key UI message translation key.
+    @return     True when no persisted audio exists or the operator confirms.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-04
+    @version    0.1.0
+    """
+    if window._current_project_root is None:
+        return True
+    if not audio_blocks_service.has_persisted_audio_blocks(window._current_project_root):
+        return True
+    return (
+        QMessageBox.question(
+            window,
+            ui_state_service.translate(title_key, language),
+            ui_state_service.translate(message_key, language),
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        == QMessageBox.StandardButton.Yes
+    )
+
+
+def _confirm_audio_approval_change(window: "MainWindow", language: str) -> bool:
+    """
+    @brief      Confirm approval changes when existing Audio Assembly outputs will be reset.
+    @param[in]  window Active main window instance.
+    @param[in]  language Current UI language code.
+    @return     True when the approval change may continue.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-04
+    @version    0.1.0
+    """
+    if window._current_project_root is None:
+        return True
+    if not audio_assembly_service.has_persisted_audio_assembly(window._current_project_root):
+        return True
+    return _confirm_question(
+        window,
+        language,
+        "dialog.confirm_audio_block_approval_title",
+        "project.confirm_audio_block_approval_change",
+    )
+
+
+def _confirm_selected_audio_block_regeneration(window: "MainWindow", language: str) -> bool:
+    """
+    @brief      Confirm replacement of one selected Audio Block and downstream assembly reset.
+    @param[in]  window Active main window instance.
+    @param[in]  language Current UI language code.
+    @return     True when regeneration may continue.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-04
+    @version    0.1.0
+    """
+    return _confirm_question(
+        window,
+        language,
+        "dialog.confirm_audio_block_regeneration_title",
+        "project.confirm_audio_block_regeneration",
+    )
+
+
+def _confirm_selected_audio_block_reset(window: "MainWindow", language: str) -> bool:
+    """
+    @brief      Confirm deletion of one selected Audio Block and downstream assembly reset.
+    @param[in]  window Active main window instance.
+    @param[in]  language Current UI language code.
+    @return     True when selected reset may continue.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-04
+    @version    0.1.0
+    """
+    return _confirm_question(
+        window,
+        language,
+        "dialog.confirm_audio_block_reset_title",
+        "project.confirm_audio_block_reset",
+    )
+
+
+def _confirm_question(window: "MainWindow", language: str, title_key: str, message_key: str) -> bool:
+    """
+    @brief      Ask one localized yes/no confirmation.
+    @param[in]  window Active main window instance.
+    @param[in]  language Current UI language code.
+    @param[in]  title_key Translation key for the dialog title.
+    @param[in]  message_key Translation key for the dialog body.
+    @return     True when the operator confirms.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-04
+    @version    0.1.0
+    """
+    return (
+        QMessageBox.question(
+            window,
+            ui_state_service.translate(title_key, language),
+            ui_state_service.translate(message_key, language),
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        == QMessageBox.StandardButton.Yes
+    )
 
 
 def _runtime_settings(window: "MainWindow", probe_result: dict[str, object]) -> dict[str, object]:
@@ -893,7 +1275,39 @@ def _stop_audio_blocks_playback(window: "MainWindow", preserved_block_id: str | 
     window._audio_blocks_audio_player.setSource(QUrl())
     window._audio_blocks_page.set_selected_playback_active(False)
     window._audio_blocks_page.set_audiobook_playback_active(False)
+    _set_speech_blocks_selected_audio_playback_active(window, False)
     _restore_audio_blocks_selection(window, preserved_block_id)
+
+
+def _set_audio_blocks_busy(window: "MainWindow", is_busy: bool) -> None:
+    """
+    @brief      Mirror Audio Blocks operation busy state on pages that expose audio controls.
+    @param[in]  window Active main window instance.
+    @param[in]  is_busy True while an Audio Blocks operation is running.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-04
+    @version    0.1.0
+    """
+    window._audio_blocks_page.set_busy(is_busy)
+    if hasattr(window, "_speech_blocks_page"):
+        window._speech_blocks_page.set_busy(is_busy)
+
+
+def _set_speech_blocks_selected_audio_playback_active(window: "MainWindow", is_active: bool) -> None:
+    """
+    @brief      Mirror selected Audio Block playback state on the Speech Blocks page when present.
+    @param[in]  window Active main window instance.
+    @param[in]  is_active True while selected-block playback is active.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-04
+    @version    0.1.0
+    """
+    if hasattr(window, "_speech_blocks_page"):
+        window._speech_blocks_page.set_selected_audio_playback_active(is_active)
 
 
 def _restore_audio_blocks_selection(window: "MainWindow", speech_block_id: str | None) -> None:

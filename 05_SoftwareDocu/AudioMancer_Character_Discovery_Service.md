@@ -110,12 +110,17 @@ High-level runtime flow:
     final prompt always includes explicit `Sex/Gender:` guidance, using the
     stored `gender_hint` when available and a neutral non-male-default
     instruction when the source does not specify sex or gender.
-11. Saving a manual add or edit, or deleting a character, preserves the current
-    `characters_profile.json` list and character-discovery state, then clears
-    downstream character-voice, speech-block, audio-block, and audio-assembly
-    runtime artifacts and resets their manifest summaries. Existing Narator
-    Voice profiles, selected narrator state, and narrator sample files are
-    preserved. The project returns to `character_discovery_ready`.
+11. Saving a manual add, edit, or delete uses the v2 selective impact path.
+    Manual add synchronizes Character Voices targets and preserves existing
+    Speech Blocks, Audio Blocks, and Audio Assembly outputs. Manual edit keeps
+    unrelated characters and blocks, marks only assigned Speech Blocks
+    unapproved, refreshes their speaker display name when needed, resets only
+    affected Audio Blocks, and resets Audio Assembly. Manual delete does not
+    delete Speech Blocks; assigned blocks fall back to Narrator, become
+    unapproved, lose only their generated Audio Blocks, and reset Audio
+    Assembly. Existing Narator Voice profiles, selected narrator state, and
+    narrator sample files are preserved. The project returns to
+    `character_discovery_ready`.
 12. Reset clears character-discovery artifacts plus downstream character-voice,
    speech-block, audio-block, and audio-assembly runtime artifacts while
    preserving existing narrator-definition data, resets manifest state through
@@ -262,9 +267,15 @@ Operation-state invariants:
   or samples, then clears dependent character voice, speech, audio block, and
   assembly data
 - manual add, edit, or delete operations update the persisted operation-state
-  `metadata.character_count` when a state file already exists, then clear
-  dependent character voice, speech, audio block, and assembly outputs without
-  deleting existing narrator profiles or selected narrator samples
+  `metadata.character_count` when a state file already exists
+- manual add preserves downstream Speech Blocks, Audio Blocks, and Audio
+  Assembly while adding or refreshing the matching Character Voices target
+- manual edit unapproves only Speech Blocks assigned to the edited character,
+  marks the matching voice target stale when voice-definition source fields
+  change, resets only affected Audio Blocks, and resets Audio Assembly
+- manual delete removes the matching Character Voices target, moves assigned
+  Speech Blocks to Narrator without deleting them, unapproves those blocks,
+  resets only their Audio Blocks, and resets Audio Assembly
 
 Relevant config values in `src/audiomancer/config.py`:
 
@@ -295,6 +306,8 @@ Downstream:
   right-click Find and Find Next actions on the selected evidence preview
 - narrator-definition profiles and samples are preserved when discovery is reset
   or character profiles are manually changed
+- manual character maintenance preserves unrelated characters, Speech Blocks,
+  Audio Blocks, and voice targets
 - projects with partially reviewed translation output remain at
   `translation_ready` until the translation chunk set is fully approved
 - reset logic returns the project to `translation_ready`
