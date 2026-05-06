@@ -153,6 +153,10 @@ save_settings(updated_settings_payload)
 
 ## 9. Validation And Tests
 
+Documentation audit status:
+
+- reviewed against the current implementation on 2026-05-06
+
 Automated tests:
 
 - `tests/test_settings_service.py`

@@ -13,7 +13,7 @@
          bottom status rendering for the Character Voices page.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-20
-@version 1.4.0
+@version 1.4.1
 """
 
 # IMPORTS
@@ -73,26 +73,6 @@ def test_character_voices_page_narrator_target_is_preview_only(qtbot) -> None:
     assert page._preview_toggle_button.isEnabled() is True
     assert hasattr(page, "_target_name_edit") is False
     assert hasattr(page, "_target_kind_edit") is False
-
-
-def test_character_voices_page_main_splitter_keeps_configured_minimum_widths(qtbot) -> None:
-    """
-    @brief      Verify Character Voices main panes keep configured minimum splitter widths.
-    @param[in]  qtbot Qt test helper fixture.
-    @return     None.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-01
-    @version    0.2.0
-    """
-    page = CharacterVoicesPage()
-    qtbot.addWidget(page)
-    page._main_splitter.resize(900, 600)
-    page._apply_main_splitter_minimums()
-
-    assert page._main_splitter.childrenCollapsible() is False
-    assert page._targets_group.minimumWidth() == 225
-    assert page._editor_container.minimumWidth() == 300
 
 
 def test_character_voices_page_edit_mode_disables_list_and_enables_save_after_changes(qtbot) -> None:

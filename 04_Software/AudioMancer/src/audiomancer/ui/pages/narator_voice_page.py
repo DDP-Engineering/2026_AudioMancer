@@ -14,7 +14,7 @@
          preview controls for the fixed Qwen3-backed narrator workflow.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-17
-@version 3.7.3
+@version 3.9.1
 """
 
 # IMPORTS
@@ -24,13 +24,11 @@ from copy import deepcopy
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
     QComboBox,
-    QFormLayout,
     QGroupBox,
     QHBoxLayout,
     QLabel,
     QLineEdit,
     QListWidget,
-    QListWidgetItem,
     QPlainTextEdit,
     QPushButton,
     QSplitter,
@@ -48,7 +46,7 @@ class NaratorVoicePage(QWidget):
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-17
-    @version    1.3.0
+    @version    1.4.0
     """
 
     create_profile_requested = Signal(dict)
@@ -69,7 +67,7 @@ class NaratorVoicePage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-17
-        @version    1.5.2
+        @version    1.6.0
         """
         super().__init__(parent)
         self._project_active = False
@@ -129,9 +127,15 @@ class NaratorVoicePage(QWidget):
 
         self._profiles_group = QGroupBox("Narator Voice Profiles", self)
         profiles_layout = QVBoxLayout(self._profiles_group)
+        profiles_action_row = QHBoxLayout()
+        self._select_profile_button = QPushButton("Select", self._profiles_group)
+        self._select_profile_button.clicked.connect(self._emit_select_profile)
+        profiles_action_row.addStretch(1)
+        profiles_action_row.addWidget(self._select_profile_button)
+        profiles_layout.addLayout(profiles_action_row)
         self._profile_list = QListWidget(self)
         self._profile_list.currentRowChanged.connect(self._handle_profile_selection_changed)
-        profiles_layout.addWidget(self._profile_list)
+        profiles_layout.addWidget(self._profile_list, 1)
         self._main_splitter.addWidget(self._profiles_group)
 
         self._editor_container = QWidget(self)
@@ -140,23 +144,14 @@ class NaratorVoicePage(QWidget):
         editor_layout.setContentsMargins(0, 0, 0, 0)
         editor_layout.setSpacing(10)
 
-        self._setup_group = QGroupBox("Profile Setup", self)
-        setup_layout = QFormLayout(self._setup_group)
-        self._profile_name_label = QLabel("Profile Name", self)
         self._profile_name_edit = QLineEdit(self)
         self._profile_name_edit.textChanged.connect(self._handle_editor_changed)
-        profile_name_row = QHBoxLayout()
-        profile_name_row.addWidget(self._profile_name_edit, 1)
-        self._select_profile_button = QPushButton("Select", self)
-        self._select_profile_button.clicked.connect(self._emit_select_profile)
-        profile_name_row.addWidget(self._select_profile_button)
-        setup_layout.addRow(self._profile_name_label, profile_name_row)
-        editor_layout.addWidget(self._setup_group, 0)
+        self._profile_name_edit.hide()
 
         self._designer_group = QGroupBox("Voice Designer Prompt", self)
         designer_layout = QVBoxLayout(self._designer_group)
         self._designer_prompt = QPlainTextEdit(self)
-        self._designer_prompt.setMinimumHeight(52)
+        self._designer_prompt.setMinimumHeight(112)
         self._designer_prompt.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOn)
         self._designer_prompt.textChanged.connect(self._handle_editor_changed)
         designer_layout.addWidget(self._designer_prompt, 1)
@@ -165,7 +160,7 @@ class NaratorVoicePage(QWidget):
         self._preview_group = QGroupBox("Preview Text", self)
         preview_layout = QVBoxLayout(self._preview_group)
         self._preview_text_edit = QPlainTextEdit(self)
-        self._preview_text_edit.setMinimumHeight(88)
+        self._preview_text_edit.setMinimumHeight(112)
         self._preview_text_edit.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOn)
         self._preview_text_edit.textChanged.connect(self._handle_preview_text_changed)
         preview_layout.addWidget(self._preview_text_edit, 1)
@@ -192,12 +187,12 @@ class NaratorVoicePage(QWidget):
         actions_row.addWidget(self._preview_toggle_button)
         actions_row.addStretch(1)
         preview_layout.addLayout(actions_row)
-        editor_layout.addWidget(self._preview_group, 2)
+        editor_layout.addWidget(self._preview_group, 1)
 
         self._main_splitter.addWidget(editor_container)
-        self._main_splitter.setStretchFactor(0, 18)
-        self._main_splitter.setStretchFactor(1, 40)
-        self._main_splitter.setSizes([360, 860])
+        self._main_splitter.setStretchFactor(0, 12)
+        self._main_splitter.setStretchFactor(1, 48)
+        self._main_splitter.setSizes([260, 960])
         layout.addWidget(self._main_splitter, 1)
         self._apply_main_splitter_minimums()
 
@@ -220,7 +215,7 @@ class NaratorVoicePage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-05-01
-        @version    0.1.0
+        @version    0.2.0
         """
         super().resizeEvent(event)
         self._apply_main_splitter_minimums()
@@ -304,7 +299,7 @@ class NaratorVoicePage(QWidget):
         @param[in]  prompt_text Narrator-definition prompt text.
         @param[in]  preview_text Stored preview text for the inspected profile.
         @param[in]  is_editable True when the inspected profile may be edited.
-        @param[in]  is_preset True when the inspected profile is one seeded preset.
+        @param[in]  is_preset Compatibility flag from the page-state payload; currently always false.
         @param[in]  can_edit True when edit mode may start.
         @param[in]  can_delete True when delete may run.
         @param[in]  can_generate True when sample generation may start.
@@ -317,7 +312,7 @@ class NaratorVoicePage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-17
-        @version    1.2.0
+        @version    1.4.0
         """
         _ = notes
         _ = is_preset
@@ -466,13 +461,11 @@ class NaratorVoicePage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-17
-        @version    1.2.0
+        @version    1.3.0
         """
         self._ui_language = language
         self._title_label.setText(f"<h2>{ui_state_service.translate('narator_voice.title', language)}</h2>")
         self._profiles_group.setTitle(ui_state_service.translate("narator_voice.profiles_group", language))
-        self._setup_group.setTitle(ui_state_service.translate("narator_voice.setup_group", language))
-        self._profile_name_label.setText(ui_state_service.translate("narator_voice.profile_name", language))
         self._designer_group.setTitle(ui_state_service.translate("narator_voice.designer_group", language))
         self._preview_group.setTitle(ui_state_service.translate("narator_voice.preview_group", language))
         self._original_language_group.setTitle(self._language_indicator_title("narator_voice.original_language"))
@@ -549,7 +542,7 @@ class NaratorVoicePage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-05-01
-        @version    0.2.0
+        @version    0.3.0
         """
         required_attributes = ("_main_splitter", "_profiles_group", "_editor_container")
         if not all(hasattr(self, attribute_name) for attribute_name in required_attributes):
@@ -557,7 +550,7 @@ class NaratorVoicePage(QWidget):
         splitter_width = self._main_splitter.width()
         if splitter_width <= 0:
             return
-        self._profiles_group.setMinimumWidth(splitter_width // 4)
+        self._profiles_group.setMinimumWidth(splitter_width // 5)
         self._editor_container.setMinimumWidth(splitter_width // 3)
 
     def _preview_label_key(self) -> str:
@@ -583,28 +576,12 @@ class NaratorVoicePage(QWidget):
         self._profile_list.clear()
         self._profile_row_ids = []
         selected_row = -1
-        for header_key, grouped_profiles in (
-            (
-                "narator_voice.presets_group_header",
-                [profile for profile in self._profiles if str(profile.get("profile_kind", "")).strip() == "preset"],
-            ),
-            (
-                "narator_voice.custom_profiles_group_header",
-                [profile for profile in self._profiles if str(profile.get("profile_kind", "")).strip() != "preset"],
-            ),
-        ):
-            if not grouped_profiles:
-                continue
-            header_item = QListWidgetItem(ui_state_service.translate(header_key, self._ui_language))
-            header_item.setFlags(header_item.flags() & ~Qt.ItemFlag.ItemIsSelectable & ~Qt.ItemFlag.ItemIsEnabled)
-            self._profile_list.addItem(header_item)
-            self._profile_row_ids.append(None)
-            for profile in grouped_profiles:
-                profile_id = str(profile.get("profile_id", "")).strip()
-                self._profile_list.addItem(_format_profile_list_item(profile))
-                self._profile_row_ids.append(profile_id)
-                if profile_id == str(selected_profile_id or "").strip():
-                    selected_row = len(self._profile_row_ids) - 1
+        for profile in self._profiles:
+            profile_id = str(profile.get("profile_id", "")).strip()
+            self._profile_list.addItem(_format_profile_list_item(profile))
+            self._profile_row_ids.append(profile_id)
+            if profile_id == str(selected_profile_id or "").strip():
+                selected_row = len(self._profile_row_ids) - 1
         if selected_row >= 0:
             self._profile_list.setCurrentRow(selected_row)
         self._profile_list.blockSignals(False)
@@ -877,16 +854,13 @@ def _format_profile_list_item(profile: dict[str, object]) -> str:
     @return     Derived helper result.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.1.0
+    @version    0.2.0
     """
-    kind_label = str(profile.get("profile_kind_label", "")).strip() or (
-        "Preset" if str(profile.get("profile_kind", "")).strip() == "preset" else "Custom"
-    )
     display_name = _display_profile_name(str(profile.get("display_name", "")))
     if bool(profile.get("is_selected", False)):
         selected_label = str(profile.get("selected_label", "")).strip() or "Selected"
-        return f"{display_name} | {kind_label} | {selected_label}"
-    return f"{display_name} | {kind_label}"
+        return f"{display_name} | {selected_label}"
+    return display_name
 
 
 def _display_profile_name(display_name: str) -> str:
@@ -899,8 +873,6 @@ def _display_profile_name(display_name: str) -> str:
     @version    0.1.0
     """
     normalized_name = str(display_name).strip()
-    if normalized_name.startswith("CustomVoice | "):
-        return normalized_name.removeprefix("CustomVoice | ").strip()
     return normalized_name
 
 

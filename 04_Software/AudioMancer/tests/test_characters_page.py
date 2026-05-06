@@ -13,7 +13,7 @@
          signaling, and evidence preview behavior for discovered characters.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-08
-@version 0.5.1
+@version 0.6.1
 """
 
 # IMPORTS
@@ -39,7 +39,7 @@ def test_characters_page_fields_are_read_only_by_default(qtbot) -> None:
     assert page._edit_character_button.isEnabled() is True
     assert page._save_character_button.isEnabled() is False
     assert page._canonical_name_edit.isReadOnly() is True
-    assert page._description_edit.isReadOnly() is True
+    assert page._voice_definition_prompt_edit.isReadOnly() is True
 
 
 def test_characters_page_edit_mode_enables_save_after_change(qtbot) -> None:
@@ -58,29 +58,11 @@ def test_characters_page_edit_mode_enables_save_after_change(qtbot) -> None:
     assert page._canonical_name_edit.isReadOnly() is False
     assert page._save_character_button.isEnabled() is True
 
-    page._description_edit.setPlainText("Updated description")
+    page._voice_definition_prompt_edit.setPlainText("Updated voice prompt")
 
     assert page.is_edit_mode() is True
     assert page.is_dirty() is True
     assert page._save_character_button.isEnabled() is True
-
-
-def test_characters_page_main_splitter_keeps_one_third_minimum_width(qtbot) -> None:
-    """
-    @brief      Validate characters page main splitter keeps one third minimum width.
-    @return     None.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-02
-    @version    0.1.0
-    """
-    page = _build_page(qtbot)
-    page._main_splitter.resize(900, 600)
-    page._apply_main_splitter_minimums()
-
-    assert page._main_splitter.childrenCollapsible() is False
-    assert page._left_splitter.minimumWidth() == 300
-    assert page._evidence_group.minimumWidth() == 300
 
 
 def test_characters_page_save_without_changes_exits_edit_mode(qtbot) -> None:
@@ -139,51 +121,11 @@ def test_characters_page_selection_change_emits_requested_character_id(qtbot) ->
     page.selection_change_requested.connect(lambda payload: requested.append(payload))
 
     page.begin_edit_mode()
-    page._description_edit.setPlainText("Updated description")
+    page._voice_definition_prompt_edit.setPlainText("Updated voice prompt")
     page._character_list.setCurrentRow(1)
 
     assert requested == ["bob"]
     assert page.current_character_id() == "alice"
-
-
-def test_characters_page_marks_voice_definition_stale_when_facts_change(qtbot) -> None:
-    """
-    @brief      Validate characters page marks voice definition stale when facts change.
-    @return     None.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-02
-    @version    0.1.0
-    """
-    page = _build_page(qtbot)
-
-    page.begin_edit_mode()
-    page._description_edit.setPlainText("Updated literary description")
-
-    assert page.current_draft_payload()["voice_definition_stale"] is True
-    assert "stale" in page._voice_definition_status_label.text().casefold()
-
-
-def test_characters_page_regenerate_voice_definition_emits_current_draft(qtbot) -> None:
-    """
-    @brief      Validate characters page regenerate voice definition emits current draft.
-    @return     None.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-02
-    @version    0.1.0
-    """
-    page = _build_page(qtbot)
-    requested_payloads = []
-    page.regenerate_voice_definition_requested.connect(lambda payload: requested_payloads.append(payload))
-
-    page.begin_edit_mode()
-    page._description_edit.setPlainText("Updated literary description")
-    page._emit_regenerate_voice_definition()
-
-    assert len(requested_payloads) == 1
-    assert requested_payloads[0]["description"] == "Updated literary description"
-    assert "voice_definition_prompt" in requested_payloads[0]
 
 
 def test_characters_page_evidence_preview_supports_find_next_wraparound(qtbot) -> None:
@@ -260,15 +202,7 @@ def _profile_payload() -> dict[str, object]:
             "canonical_name": "Alice",
             "aliases": ["Al"],
             "gender_hint": "",
-            "age_band": "",
-            "role_summary": "Lead speaker",
-            "description": "Original description",
-            "temperament": "",
-            "social_status": "",
-            "speaking_style": "",
-            "accent_or_dialect_hints": "",
-            "voice_notes": "",
-            "relationship_hints": ["Knows Bob."],
+            "voice_definition_prompt": "Create a consistent spoken voice for Alice.",
             "confidence": "high",
             "evidence": [
                 {
@@ -295,7 +229,7 @@ def _second_profile_payload() -> dict[str, object]:
     payload = dict(_profile_payload())
     payload["character_id"] = "bob"
     payload["canonical_name"] = "Bob"
-    payload["role_summary"] = "Supporting speaker"
+    payload["voice_definition_prompt"] = "Create a consistent spoken voice for Bob."
     return payload
 
 
@@ -314,15 +248,7 @@ def _manual_draft_payload() -> dict[str, object]:
             "canonical_name": "Manual Bob",
             "aliases": [],
             "gender_hint": "",
-            "age_band": "",
-            "role_summary": "",
-            "description": "",
-            "temperament": "",
-            "social_status": "",
-            "speaking_style": "",
-            "accent_or_dialect_hints": "",
-            "voice_notes": "",
-            "relationship_hints": [],
+            "voice_definition_prompt": "Create a consistent spoken voice for Manual Bob.",
             "confidence": "",
             "evidence": [
                 {

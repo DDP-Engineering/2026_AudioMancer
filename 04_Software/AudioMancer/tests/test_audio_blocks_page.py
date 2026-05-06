@@ -13,7 +13,7 @@
          bounded approval navigation, and selected-row action enablement.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-23
-@version 0.5.2
+@version 0.6.1
 """
 
 # IMPORTS
@@ -29,7 +29,7 @@ def test_audio_blocks_page_renders_source_list_markers_and_selected_details(qtbo
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-23
-    @version    0.2.0
+    @version    0.3.0
     """
     page = AudioBlocksPage()
     qtbot.addWidget(page)
@@ -88,6 +88,7 @@ def test_audio_blocks_page_renders_source_list_markers_and_selected_details(qtbo
         can_approve_all=True,
         can_regenerate_selected=True,
         can_approve_selected=True,
+        selected_text_character_limit=180,
     )
 
     assert page._source_text_edit.toPlainText() == 'Narration one.\n\n"Alice spoke."'
@@ -104,30 +105,10 @@ def test_audio_blocks_page_renders_source_list_markers_and_selected_details(qtbo
     assert page._status_group.minimumHeight() == 96
     assert page._status_group.maximumHeight() == 112
     assert page._approve_button.isEnabled() is True
-    assert page._unapprove_button.isEnabled() is False
-    assert page._reset_selected_button.isEnabled() is True
+    assert page._approve_button.text() == "Approve"
+    assert page._character_count_edit.text() == "12 / 180"
     assert page._selected_playback_button.isEnabled() is True
     assert page._audiobook_playback_button.isEnabled() is True
-
-
-def test_audio_blocks_page_main_splitter_keeps_one_third_minimum_width(qtbot) -> None:
-    """
-    @brief      Verify Audio Blocks main panes keep one-third minimum splitter widths.
-    @param[in]  qtbot Qt test helper fixture.
-    @return     None.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-01
-    @version    0.1.0
-    """
-    page = AudioBlocksPage()
-    qtbot.addWidget(page)
-    page._main_splitter.resize(900, 600)
-    page._apply_main_splitter_minimums()
-
-    assert page._main_splitter.childrenCollapsible() is False
-    assert page._source_group.minimumWidth() == 300
-    assert page._right_splitter.minimumWidth() == 300
 
 
 def test_audio_blocks_page_applies_translated_labels_and_tracks_selected_row_actions(qtbot) -> None:
@@ -138,7 +119,7 @@ def test_audio_blocks_page_applies_translated_labels_and_tracks_selected_row_act
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-23
-    @version    0.2.0
+    @version    0.3.0
     """
     page = AudioBlocksPage()
     qtbot.addWidget(page)
@@ -186,33 +167,31 @@ def test_audio_blocks_page_applies_translated_labels_and_tracks_selected_row_act
         can_approve_all=True,
         can_regenerate_selected=True,
         can_approve_selected=False,
+        selected_text_character_limit=120,
     )
 
     assert "Blocuri Audio" in page._title_label.text()
     assert page._start_button.text() == "Porneste Generarea Audio"
     assert page._audiobook_playback_button.text() == "Reda Audiobook"
-    assert page._unapprove_button.text() == "Dezaproba"
-    assert page._reset_selected_button.text() == "Reseteaza Selectat"
     assert page._blocks_group.title() == "Blocuri Vorbire"
     assert page._status_group.title() == "Stare Blocuri Audio"
-    assert page._approve_button.isEnabled() is False
-    assert page._unapprove_button.isEnabled() is True
+    assert page._approve_button.text() == "Dezaproba"
+    assert page._approve_button.isEnabled() is True
+    assert page._character_count_edit.text() == "11 / 120"
 
     page._speech_block_list.setCurrentRow(1)
 
     assert page.selected_block_id() == "0001-000002"
+    assert page._approve_button.text() == "Aproba"
     assert page._approve_button.isEnabled() is True
-    assert page._unapprove_button.isEnabled() is False
     assert page._regenerate_button.isEnabled() is True
-    assert page._reset_selected_button.isEnabled() is True
     assert page._approval_status_label.text() == "Stare: In asteptare"
+    assert page._character_count_edit.text() == "11 / 120"
 
     page.set_busy(True)
 
     assert page._start_button.isEnabled() is False
     assert page._approve_button.isEnabled() is False
-    assert page._unapprove_button.isEnabled() is False
-    assert page._reset_selected_button.isEnabled() is False
     assert page._speech_block_list.isEnabled() is False
 
 

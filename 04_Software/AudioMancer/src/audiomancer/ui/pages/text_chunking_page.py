@@ -14,7 +14,7 @@
          with local text search.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-24
-@version 0.5.0
+@version 0.5.1
 """
 
 # IMPORTS
@@ -49,7 +49,7 @@ class TextChunkingPage(QWidget):
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-24
-    @version    0.4.0
+    @version    0.4.1
     """
 
     chunk_requested = Signal()
@@ -610,14 +610,34 @@ class TextChunkingPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-24
-        @version    0.1.0
+        @version    0.2.0
         """
         if not (0 <= self._chunk_list.currentRow() < len(self._chunks)):
+            return
+        if not self._confirm_chunk_edit():
             return
         self._editing_chunk = True
         self._chunk_text_edit.setReadOnly(False)
         self._chunk_text_edit.setFocus()
         self._apply_button_state()
+
+    def _confirm_chunk_edit(self) -> bool:
+        """
+        @brief      Confirm downstream impact before entering selected-chunk edit mode.
+        @return     True when the operator confirms the edit impact.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-05
+        @version    0.1.0
+        """
+        decision = QMessageBox.question(
+            self,
+            ui_state_service.translate("dialog.confirm_chunk_edit_title", self._current_language()),
+            ui_state_service.translate("project.confirm_chunk_edit", self._current_language()),
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        return decision == QMessageBox.StandardButton.Yes
 
     def _emit_insert_chunk_requested(self) -> None:
         """

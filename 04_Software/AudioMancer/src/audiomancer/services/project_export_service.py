@@ -13,7 +13,7 @@
          project artifacts without modifying the active project workspace.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-25
-@version 0.3.5
+@version 0.3.6
 """
 
 # IMPORTS
@@ -721,30 +721,18 @@ def _operation_is_completed(manifest: dict[str, object], operation_kind: str) ->
 
 def _render_character_dossiers(characters: list[dict[str, object]]) -> str:
     """
-    @brief      Render character profiles into readable dossiers.
+    @brief      Render compact character profiles into readable dossiers.
     @param[in]  characters Normalized character profile payloads.
     @return     Character dossier text.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.1.0
+    @version    0.2.0
     """
     dossiers: list[str] = []
     fields = [
         ("Name", "canonical_name"),
         ("Gender Hint", "gender_hint"),
-        ("Age Band", "age_band"),
-        ("Role", "role_summary"),
-        ("Description", "description"),
-        ("Temperament", "temperament"),
-        ("Speaking Style", "speaking_style"),
-        ("Voice Notes", "voice_notes"),
-        ("Voice Persona", "voice_persona_summary"),
-        ("Voice Timbre And Range", "voice_timbre_and_range"),
-        ("Voice Pacing And Rhythm", "voice_pacing_and_rhythm"),
-        ("Voice Emotional Baseline", "voice_emotional_baseline"),
-        ("Voice Articulation And Pronunciation", "voice_articulation_and_pronunciation"),
-        ("Voice Delivery Constraints", "voice_delivery_constraints"),
         ("Voice Definition Prompt", "voice_definition_prompt"),
     ]
     for character in characters:

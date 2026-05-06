@@ -144,6 +144,10 @@ export_path.write_text(content, encoding="utf-8")
 
 ## 9. Validation And Tests
 
+Documentation audit status:
+
+- reviewed against the current implementation on 2026-05-06
+
 Automated coverage:
 
 - `tests/test_project_export_service.py` checks readiness, UTF-8 Romanian text

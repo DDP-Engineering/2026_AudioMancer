@@ -14,7 +14,7 @@
          discovery workflow.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-08
-@version 0.7.0
+@version 0.8.0
 """
 
 # IMPORTS
@@ -55,7 +55,6 @@ def test_start_discovery_persists_outputs_and_report(monkeypatch, tmp_path) -> N
                         {
                             "canonical_name": "Alice",
                             "aliases": ["Al"],
-                            "role_summary": "Lead speaker",
                             "evidence": [
                                 {
                                     "chunk_id": "chunk-0001",
@@ -71,14 +70,10 @@ def test_start_discovery_persists_outputs_and_report(monkeypatch, tmp_path) -> N
                 "payload": {
                     "canonical_name": "Alice",
                     "aliases": ["Al"],
-                    "role_summary": "Lead speaker",
-                    "description": "Confident young woman.",
-                    "voice_persona_summary": "Young adult woman with composed presence.",
-                    "voice_timbre_and_range": "Warm mezzo voice with gentle authority.",
+                    "gender_hint": "female",
                     "voice_definition_prompt": (
                         "Create a consistent spoken voice for Alice. Warm mezzo voice with gentle authority."
                     ),
-                    "relationship_hints": ["Knows Bob."],
                     "confidence": "high",
                 },
                 "usage": {"input_tokens": 40, "output_tokens": 20, "total_tokens": 60, "usage_available": True},
@@ -104,7 +99,7 @@ def test_start_discovery_persists_outputs_and_report(monkeypatch, tmp_path) -> N
     profiles = character_discovery_service.load_character_profiles(project_root)
     assert len(profiles) == 1
     assert profiles[0]["canonical_name"] == "Alice"
-    assert profiles[0]["voice_persona_summary"] == "Young adult woman with composed presence."
+    assert profiles[0]["gender_hint"] == "female"
     assert "gentle authority" in profiles[0]["voice_definition_prompt"]
     assert profiles[0]["evidence"][0]["chunk_id"] == "chunk-0001"
     assert character_discovery_service.load_input_chunks(project_root)[0]["chunk_id"] == "chunk-0001"
@@ -166,15 +161,6 @@ def test_start_discovery_resumes_from_saved_synthesis_checkpoint(monkeypatch, tm
         "canonical_name": "Alice",
         "aliases": ["Al"],
         "gender_hint": "",
-        "age_band": "",
-        "role_summary": "Lead speaker",
-        "description": "",
-        "temperament": "",
-        "social_status": "",
-        "speaking_style": "",
-        "accent_or_dialect_hints": "",
-        "voice_notes": "",
-        "relationship_hints": [],
         "confidence": "",
         "evidence": [
             {
@@ -241,7 +227,10 @@ def test_start_discovery_resumes_from_saved_synthesis_checkpoint(monkeypatch, tm
         return {
             "payload": {
                 "canonical_name": "Alice",
-                "description": "Resumed profile synthesis.",
+                "gender_hint": "female",
+                "voice_definition_prompt": (
+                    "Create a consistent spoken voice for Alice. Clear and calm. Sex/Gender: female."
+                ),
                 "confidence": "high",
             },
             "usage": {
@@ -296,10 +285,9 @@ def test_start_discovery_resumes_from_saved_synthesis_checkpoint(monkeypatch, tm
     assert state is not None
     assert state["metadata"]["model_settings"] == report["model_settings"]
     assert state["metadata"]["model_settings_history"] == report["model_settings_history"]
-    assert (
-        character_discovery_service.load_character_profiles(project_root)[0]["description"]
-        == "Resumed profile synthesis."
-    )
+    resumed_profile = character_discovery_service.load_character_profiles(project_root)[0]
+    assert resumed_profile["gender_hint"] == "female"
+    assert "Clear and calm" in resumed_profile["voice_definition_prompt"]
 
 
 def test_manual_add_update_delete_and_reset(tmp_path) -> None:
@@ -356,15 +344,7 @@ def test_manual_add_update_delete_and_reset(tmp_path) -> None:
             "canonical_name": "Bob",
             "aliases": ["Bobby"],
             "gender_hint": "",
-            "age_band": "",
-            "role_summary": "Manual role",
-            "description": "Manual description",
-            "temperament": "",
-            "social_status": "",
-            "speaking_style": "",
-            "accent_or_dialect_hints": "",
-            "voice_notes": "",
-            "relationship_hints": [],
+            "voice_definition_prompt": "Create a consistent spoken voice for Bob. Sex/Gender: unknown.",
             "confidence": "",
             "evidence": [dict(item) for item in bob_profile["evidence"]],
             "updated_at": None,
@@ -373,7 +353,7 @@ def test_manual_add_update_delete_and_reset(tmp_path) -> None:
     updated_bob = next(
         profile for profile in updated_profiles if str(profile.get("character_id")) == str(bob_profile["character_id"])
     )
-    assert updated_bob["role_summary"] == "Manual role"
+    assert "Bob" in updated_bob["voice_definition_prompt"]
     assert updated_bob["review_status"] == character_discovery_service.CHARACTER_REVIEW_STATUS_MANUAL
 
     remaining_profiles = character_discovery_service.delete_character_profile(
@@ -393,37 +373,28 @@ def test_manual_add_update_delete_and_reset(tmp_path) -> None:
     assert (discovery_root / config.CHUNK_ARTIFACT_FILE_NAME).is_file()
 
 
-def test_regenerate_character_voice_definition_builds_voice_brief_and_prompt() -> None:
+def test_regenerate_character_voice_definition_preserves_compact_voice_prompt() -> None:
     """
-    @brief      Verify local regeneration produces structured voice-definition fields and one final prompt.
+    @brief      Verify local regeneration preserves the compact final voice-definition prompt.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    1.0.0
+    @version    2.0.0
     """
     regenerated_profile = character_discovery_service.regenerate_character_voice_definition(
         {
             "character_id": "elizabeth",
             "canonical_name": "Elizabeth",
             "gender_hint": "female",
-            "age_band": "adult",
-            "role_summary": "noblewoman",
-            "description": "careful and observant",
-            "temperament": "calm",
-            "social_status": "upper class",
-            "speaking_style": "measured and precise",
-            "accent_or_dialect_hints": "light southern English influence",
-            "voice_notes": "warm tone with restrained authority",
+            "voice_definition_prompt": (
+                "Create a consistent spoken voice for Elizabeth. Warm tone with restrained authority."
+            ),
         }
     )
 
-    assert "restrained authority" in regenerated_profile["voice_timbre_and_range"]
-    assert "measured and precise" in regenerated_profile["voice_pacing_and_rhythm"]
     assert regenerated_profile["voice_definition_prompt"].startswith("Create a consistent spoken voice for Elizabeth.")
     assert "Sex/Gender: female." in regenerated_profile["voice_definition_prompt"]
-    assert regenerated_profile["voice_definition_source_signature"]
-    assert regenerated_profile["voice_definition_stale"] is False
 
 
 def test_merge_character_candidates_keeps_role_speaker_candidate() -> None:
@@ -440,7 +411,6 @@ def test_merge_character_candidates_keeps_role_speaker_candidate() -> None:
             {
                 "canonical_name": "His Agent",
                 "aliases": ["agent"],
-                "role_summary": "Role-identified speaking character referred to as his agent",
                 "evidence": [
                     {
                         "chunk_id": "chunk-0001",
@@ -619,39 +589,6 @@ def test_merge_character_candidates_reports_rejected_non_dialogue_candidates() -
             "identity_merge_count": 1,
         }
     ]
-
-
-def test_update_character_profile_marks_voice_definition_stale_when_facts_change(tmp_path) -> None:
-    """
-    @brief      Verify changing raw character facts without refreshing the voice-definition block marks the profile
-                stale.
-    @param[in]  tmp_path Pytest temporary directory fixture.
-    @return     None.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    1.0.0
-    """
-    project_root, _manifest = _create_character_project(tmp_path, "CharacterDiscoveryVoiceStale")
-    discovery_root = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH
-    persisted_profile = character_discovery_service.regenerate_character_voice_definition(_saved_profile_payload())
-    (discovery_root / config.CHARACTER_PROFILE_FILE_NAME).write_text(
-        json.dumps([persisted_profile], indent=2) + "\n",
-        encoding="utf-8",
-    )
-
-    updated_profiles = character_discovery_service.update_character_profile(
-        project_root,
-        {
-            **dict(persisted_profile),
-            "description": "Updated literary facts without regenerating the voice definition.",
-        },
-    )
-
-    updated_profile = updated_profiles[0]
-    assert updated_profile["description"] == "Updated literary facts without regenerating the voice definition."
-    assert updated_profile["voice_definition_stale"] is True
-    assert character_discovery_service.load_character_profiles(project_root)[0]["voice_definition_stale"] is True
 
 
 def test_validate_manual_character_name_rejects_duplicates_and_invalid_names() -> None:
@@ -848,7 +785,6 @@ def test_synthesis_candidate_payload_is_trimmed_to_budget_metadata() -> None:
         "character_id": "alice",
         "canonical_name": "Alice",
         "aliases": ["Al"],
-        "role_summary": "Lead speaker",
         "confidence": "high",
         "identity_merge_count": 1,
         "evidence": [
@@ -993,15 +929,7 @@ def _saved_profile_payload() -> dict[str, object]:
         "canonical_name": "Alice",
         "aliases": ["Al"],
         "gender_hint": "",
-        "age_band": "",
-        "role_summary": "Lead speaker",
-        "description": "Original profile.",
-        "temperament": "",
-        "social_status": "",
-        "speaking_style": "",
-        "accent_or_dialect_hints": "",
-        "voice_notes": "",
-        "relationship_hints": [],
+        "voice_definition_prompt": "Create a consistent spoken voice for Alice.",
         "confidence": "high",
         "evidence": [
             {

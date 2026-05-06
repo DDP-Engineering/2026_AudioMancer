@@ -44,9 +44,11 @@ def test_v2_selective_impact_strings_cover_supported_languages() -> None:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-04
-    @version    0.1.0
+    @version    0.2.0
     """
     required_keys = (
+        "dialog.confirm_cleaned_text_edit_title",
+        "project.confirm_cleaned_text_edit",
         "dialog.confirm_chunk_insert_title",
         "dialog.confirm_chunk_delete_title",
         "project.confirm_chunk_edit",
@@ -61,9 +63,7 @@ def test_v2_selective_impact_strings_cover_supported_languages() -> None:
         "project.confirm_speech_block_audio_reset",
         "project.confirm_speech_block_sequence_change",
         "audio_blocks.unapprove_selected",
-        "audio_blocks.reset_selected",
         "project.confirm_audio_block_regeneration",
-        "project.confirm_audio_block_reset",
         "project.confirm_audio_block_approval_change",
         "project.confirm_single_voice_target_invalidation",
         "project.confirm_narrator_voice_invalidation",

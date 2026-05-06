@@ -14,7 +14,7 @@
          for the Character Voices workflow.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-20
-@version 1.6.0
+@version 1.7.0
 """
 
 # IMPORTS
@@ -182,7 +182,7 @@ def sync_voice_plan(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-20
-    @version    1.2.0
+    @version    2.0.0
     """
     normalized_voice_language = narrator_definition_service.narrator_language_code(voice_language)
     existing_targets_by_id = {
@@ -356,7 +356,7 @@ def save_target_prompt(
     @exception  ValueError Raised when the prompt is empty or the target is not editable.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-20
-    @version    1.2.0
+    @version    2.0.0
     """
     return _update_target_prompt(
         project_root,
@@ -476,24 +476,6 @@ def build_character_default_prompt(character_profile: dict[str, object]) -> str:
     if stored_voice_definition_prompt:
         return _ensure_character_prompt_gender_instruction(stored_voice_definition_prompt, character_profile)
     character_name = str(character_profile.get("canonical_name", "Character")).strip() or "Character"
-    descriptor_parts = [
-        _character_voice_gender_instruction(character_profile),
-        _prefixed_text("Age band", character_profile.get("age_band")),
-        _prefixed_text("Role", character_profile.get("role_summary")),
-        _prefixed_text("Description", character_profile.get("description")),
-        _prefixed_text("Temperament", character_profile.get("temperament")),
-        _prefixed_text("Social status", character_profile.get("social_status")),
-        _prefixed_text("Speaking style", character_profile.get("speaking_style")),
-        _prefixed_text("Accent or dialect", character_profile.get("accent_or_dialect_hints")),
-        _prefixed_text("Voice notes", character_profile.get("voice_notes")),
-    ]
-    cleaned_descriptors = [part for part in descriptor_parts if part]
-    if cleaned_descriptors:
-        return (
-            f"Create a consistent spoken voice for {character_name}. "
-            + " ".join(cleaned_descriptors)
-            + " Keep the delivery suitable for repeated dialogue narration, with clear diction and stable identity."
-        ).strip()
     return (
         f"Create a consistent spoken voice for {character_name} with clear diction, stable identity, "
         "and delivery suitable for repeated dialogue narration. "
@@ -1228,20 +1210,6 @@ def _first_model(model_entries: list[dict[str, object]]) -> dict[str, object] | 
     @version    0.1.0
     """
     return None if not model_entries else deepcopy(model_entries[0])
-
-
-def _prefixed_text(prefix: str, value: object) -> str:
-    """
-    @brief      Execute the prefixed text helper.
-    @param[in]  prefix Value for `prefix`.
-    @param[in]  value Candidate value.
-    @return     Helper result.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
-    """
-    normalized_value = str(value or "").strip()
-    return "" if not normalized_value else f"{prefix}: {normalized_value}."
 
 
 def _write_json(path: Path, payload: object) -> None:

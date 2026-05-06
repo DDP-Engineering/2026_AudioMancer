@@ -13,7 +13,7 @@
          derivation for the TTS Settings and Narrator runtime-awareness flow.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-22
-@version 0.4.1
+@version 0.5.0
 """
 
 # IMPORTS
@@ -51,33 +51,24 @@ def test_probe_runtime_normalizes_models_and_capabilities(monkeypatch) -> None:
             return {
                 "models": [
                     {
-                        "model_id": "custom_model",
-                        "backend_name": "qwen",
-                        "status": "healthy",
-                        "supported_generation_modes": ["custom_voice"],
-                        "supported_languages": ["en", "ro"],
-                        "supported_presets": ["vivian", "serena"],
-                        "default_model_parameters": {"temperature": 0.8, "top_k": 42},
-                    },
-                    {
                         "model_id": "definition_model",
                         "backend_name": "qwen",
                         "status": "healthy",
                         "supported_generation_modes": ["voice_designer"],
-                        "supported_presets": [],
+                        "supported_languages": ["en", "ro"],
+                        "default_model_parameters": {"temperature": 0.8, "top_k": 42},
                     },
                     {
                         "model_id": "clone_model",
                         "backend_name": "qwen",
                         "status": "healthy",
                         "supported_generation_modes": ["base"],
-                        "supported_presets": [],
                     },
                 ]
             }
         if url == "http://127.0.0.1:8059/v1/status":
             return {
-                "active_model": {"model_id": "custom_model"},
+                "active_model": {"model_id": "definition_model"},
                 "device_diagnostics": {"status_message": "CUDA active.", "device_mode": "cuda"},
             }
         raise AssertionError(url)
@@ -87,14 +78,12 @@ def test_probe_runtime_normalizes_models_and_capabilities(monkeypatch) -> None:
     result = voiceweaver_runtime_service.probe_runtime("http://127.0.0.1:8059")
 
     assert result["success"] is True
-    assert result["discovered_model_count"] == 3
-    assert result["active_model_id"] == "custom_model"
-    assert result["capability_matrix"]["preset_voice_available"] is True
+    assert result["discovered_model_count"] == 2
+    assert result["active_model_id"] == "definition_model"
+    assert result["capability_matrix"]["preset_voice_available"] is False
     assert result["capability_matrix"]["generate_and_clone_available"] is True
-    assert result["discovered_models"][0]["speaker_count"] == 2
-    assert result["discovered_models"][0]["supported_generation_modes"] == ["custom_voice"]
-    assert result["discovered_models"][1]["supported_generation_modes"] == ["definition"]
-    assert result["discovered_models"][2]["supported_generation_modes"] == ["clone"]
+    assert result["discovered_models"][0]["supported_generation_modes"] == ["definition"]
+    assert result["discovered_models"][1]["supported_generation_modes"] == ["clone"]
     assert result["discovered_models"][0]["default_model_parameters"] == {"temperature": 0.8, "top_k": 42}
 
 
@@ -178,20 +167,17 @@ def test_build_capability_matrix_ignores_unhealthy_models() -> None:
             {
                 "model_id": "custom_bad",
                 "status": "unhealthy",
-                "supported_generation_modes": ["custom_voice"],
-                "supported_presets": ["vivian"],
+                "supported_generation_modes": ["definition"],
             },
             {
                 "model_id": "definition_good",
                 "status": "healthy",
                 "supported_generation_modes": ["definition"],
-                "supported_presets": [],
             },
             {
                 "model_id": "clone_good",
                 "status": "healthy",
                 "supported_generation_modes": ["clone"],
-                "supported_presets": [],
             },
         ]
     )
@@ -209,7 +195,7 @@ def test_voiceweaver_runtime_service_generation_payloads_use_current_contract(mo
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-18
-    @version    1.1.0
+    @version    1.2.0
     """
     observed_calls: list[tuple[str, str, dict[str, object] | None, int]] = []
 
@@ -228,16 +214,6 @@ def test_voiceweaver_runtime_service_generation_payloads_use_current_contract(mo
 
     monkeypatch.setattr(voiceweaver_runtime_service, "_post_json_endpoint", _fake_post_json_endpoint)
 
-    voiceweaver_runtime_service.generate_custom_voice(
-        "http://127.0.0.1:8059",
-        "",
-        "vivian",
-        "en",
-        "Hello",
-        "Speak warmly.",
-        {"temperature": 0.8},
-        timeout_seconds=45,
-    )
     voiceweaver_runtime_service.generate_voice_design(
         "http://127.0.0.1:8059",
         "",
@@ -249,18 +225,6 @@ def test_voiceweaver_runtime_service_generation_payloads_use_current_contract(mo
     )
 
     assert observed_calls == [
-        (
-            "http://127.0.0.1:8059",
-            "/v1/voice/custom",
-            {
-                "speaker": "vivian",
-                "language": "en",
-                "text": "Hello",
-                "instruct": "Speak warmly.",
-                "model_parameters": {"temperature": 0.8},
-            },
-            45,
-        ),
         (
             "http://127.0.0.1:8059",
             "/v1/voice/design",

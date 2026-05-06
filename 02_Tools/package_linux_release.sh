@@ -29,7 +29,6 @@ remove_path_if_exists() {
 copy_required_root_files() {
     local target_dir="$1"
     local required_files=(
-        "settings.json"
         "LICENSE.txt"
         "LICENSE_NC.txt"
         "LICENSE_ro.txt"
@@ -46,6 +45,50 @@ copy_required_root_files() {
 
         cp -- "${source_path}" "${target_dir}/${file_name}"
     done
+}
+
+# Copy settings into a delivery package without operator-local secrets or
+# connection-discovery cache. The source settings.json in the app root is not
+# modified.
+copy_clean_settings_file() {
+    local source_path="$1"
+    local target_path="$2"
+
+    if [[ ! -f "${source_path}" ]]; then
+        echo "Required packaging file is missing: ${source_path}" >&2
+        exit 1
+    fi
+
+    python3 - "${source_path}" "${target_path}" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+source_path = Path(sys.argv[1])
+target_path = Path(sys.argv[2])
+settings_payload = json.loads(source_path.read_text(encoding="utf-8"))
+
+for profile in settings_payload.get("llm_profiles", []):
+    if not isinstance(profile, dict):
+        continue
+    profile["api_key"] = ""
+    if profile.get("backend_kind") == "lmstudio":
+        profile["base_url"] = "http://127.0.0.1:1234/v1"
+    profile["discovered_model_name"] = ""
+    profile["discovered_context_window"] = None
+    profile["discovery_succeeded"] = False
+    profile["discovery_message"] = ""
+
+settings_payload["tts_runtime_base_url"] = "http://127.0.0.1:8059"
+settings_payload["tts_runtime_api_key"] = ""
+settings_payload["tts_runtime_probe_succeeded"] = False
+settings_payload["tts_runtime_probe_message"] = ""
+settings_payload["tts_runtime_discovered_models"] = []
+settings_payload["tts_runtime_active_model_id"] = None
+settings_payload["tts_runtime_device_diagnostics"] = {}
+
+target_path.write_text(json.dumps(settings_payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+PY
 }
 
 # Ship both offline help bundles under the language folders used by the app.
@@ -182,6 +225,7 @@ invoke_step "Assemble delivery staging folder" mkdir -p "${STAGING_PATH}"
 # Start from PyInstaller output, then add project-controlled runtime assets.
 cp -a "${DIST_BUNDLE_PATH}/." "${STAGING_PATH}/"
 copy_required_root_files "${STAGING_PATH}"
+copy_clean_settings_file "${APP_ROOT}/settings.json" "${STAGING_PATH}/settings.json"
 copy_user_guide "${STAGING_PATH}"
 copy_prompt_templates "${STAGING_PATH}"
 copy_app_icons "${STAGING_PATH}"
@@ -226,6 +270,7 @@ Install:
   the app reports missing system display dependencies.
 
 Configuration and licenses are included next to the executable.
+The packaged settings.json is cleaned of operator API keys and runtime discovery cache.
 Prompt templates are included in prompts/.
 The app icon is included in assets/icons/.
 Offline help is included in help/en/index.html and help/ro/index.html.

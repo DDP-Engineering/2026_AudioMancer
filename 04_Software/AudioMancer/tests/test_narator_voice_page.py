@@ -13,7 +13,7 @@
          sample-dependent button enablement, and bottom status rendering.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-18
-@version 3.3.9
+@version 3.4.1
 """
 
 # IMPORTS
@@ -24,41 +24,25 @@ from PySide6.QtWidgets import QLineEdit
 from audiomancer.ui.pages.narator_voice_page import NaratorVoicePage
 
 
-def test_narator_voice_page_uses_single_line_profile_name_and_no_summary_label(qtbot) -> None:
+def test_narator_voice_page_places_select_button_in_profiles_group(qtbot) -> None:
     """
-    @brief      Verify the profile-name editor is single-line and the old subtitle label is gone.
+    @brief      Verify profile selection is handled from the profile list panel.
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-17
-    @version    1.1.0
+    @version    1.2.0
     """
     page = NaratorVoicePage()
     qtbot.addWidget(page)
 
     assert isinstance(page._profile_name_edit, QLineEdit)
+    assert page._profile_name_edit.isHidden() is True
+    assert page._select_profile_button.parentWidget() is page._profiles_group
+    assert hasattr(page, "_setup_group") is False
+    assert hasattr(page, "_profile_name_label") is False
     assert hasattr(page, "_summary_label") is False
-
-
-def test_narator_voice_page_main_splitter_keeps_configured_minimum_widths(qtbot) -> None:
-    """
-    @brief      Verify Narator Voice main panes keep configured minimum splitter widths.
-    @param[in]  qtbot Qt test helper fixture.
-    @return     None.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-01
-    @version    0.2.0
-    """
-    page = NaratorVoicePage()
-    qtbot.addWidget(page)
-    page._main_splitter.resize(900, 600)
-    page._apply_main_splitter_minimums()
-
-    assert page._main_splitter.childrenCollapsible() is False
-    assert page._profiles_group.minimumWidth() == 225
-    assert page._editor_container.minimumWidth() == 300
 
 
 def test_narator_voice_page_prompt_and_preview_editors_expose_scrollbars_and_limit(qtbot) -> None:
@@ -69,7 +53,7 @@ def test_narator_voice_page_prompt_and_preview_editors_expose_scrollbars_and_lim
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.3.1
+    @version    0.5.0
     """
     page = NaratorVoicePage()
     qtbot.addWidget(page)
@@ -109,13 +93,14 @@ def test_narator_voice_page_prompt_and_preview_editors_expose_scrollbars_and_lim
     )
 
     assert page._designer_prompt.verticalScrollBarPolicy() == Qt.ScrollBarPolicy.ScrollBarAlwaysOn
+    assert page._profile_list.item(0).text() == "Custom One"
     assert page._preview_text_edit.verticalScrollBarPolicy() == Qt.ScrollBarPolicy.ScrollBarAlwaysOn
-    assert page._designer_prompt.minimumHeight() == 52
-    assert page._designer_prompt.maximumHeight() == 72
-    assert page._designer_group.maximumHeight() == 132
-    assert page._preview_text_edit.minimumHeight() == 88
-    assert page._preview_text_edit.maximumHeight() == 116
-    assert page._preview_group.maximumHeight() == 184
+    assert page._designer_prompt.minimumHeight() == page._preview_text_edit.minimumHeight()
+    assert page._designer_prompt.minimumHeight() == 112
+    assert page._designer_prompt.maximumHeight() > 1000
+    assert page._designer_group.maximumHeight() > 1000
+    assert page._preview_text_edit.maximumHeight() > 1000
+    assert page._preview_group.maximumHeight() > 1000
     assert page._status_group.minimumHeight() == 96
     assert page._status_group.maximumHeight() == 112
     assert page._preview_text_edit.toPlainText() == "abcde"

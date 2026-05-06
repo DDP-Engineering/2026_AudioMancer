@@ -217,8 +217,9 @@ Operator path:
 
 - open Text Chunking after cleanup
 - select one chunk
-- edit and save selected text, insert a new chunk after it, or delete it
-- confirm the downstream impact message
+- confirm the downstream impact message before editing selected text, inserting
+  a new chunk after it, or deleting it
+- save selected text edits after the editor is already unlocked
 - continue downstream review only for the affected chunks
 
 ## 9. Validation And Tests

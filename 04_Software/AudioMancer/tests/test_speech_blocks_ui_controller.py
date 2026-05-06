@@ -322,6 +322,65 @@ def test_speech_blocks_ui_controller_approve_preserves_audio_blocks_and_resets_a
     assert page_calls == ["advance"]
 
 
+def test_speech_blocks_ui_controller_approval_toggle_unapproves_without_advancing(monkeypatch, tmp_path) -> None:
+    """
+    @brief      Verify pressing approval on an approved Speech Block unapproves it and keeps the row selected.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-05
+    @version    0.1.0
+    """
+    project_root = tmp_path / "SpeechBlocksUnapproveController"
+    project_root.mkdir()
+    page_calls: list[str] = []
+    window = SimpleNamespace(
+        _settings_payload={"language": "en"},
+        _current_project_root=project_root,
+        _current_manifest={"current_stage": "speech_blocks_ready"},
+        _speech_blocks_page=SimpleNamespace(
+            advance_to_next_block=lambda: page_calls.append("advance"),
+            select_speech_block=lambda block_id: page_calls.append(f"select:{block_id}"),
+        ),
+    )
+    service_calls = []
+    reset_calls = []
+    monkeypatch.setattr(
+        speech_blocks_ui_controller,
+        "_speech_block_by_id",
+        lambda *_args: {"speech_block_id": "0001-000001", "approved": True},
+    )
+    monkeypatch.setattr(
+        speech_blocks_ui_controller.speech_blocks_service,
+        "unapprove_speech_block",
+        lambda *args: service_calls.append(args) or {},
+    )
+    monkeypatch.setattr(
+        speech_blocks_ui_controller.speech_blocks_service,
+        "approve_speech_block",
+        lambda *_args: (_ for _ in ()).throw(AssertionError("unexpected approve")),
+    )
+    monkeypatch.setattr(
+        speech_blocks_ui_controller,
+        "_sync_manifest_after_speech_blocks_update",
+        lambda _window: reset_calls.append("sync"),
+    )
+    monkeypatch.setattr(
+        speech_blocks_ui_controller,
+        "_reset_audio_assembly_after_speech_blocks_change",
+        lambda _window: reset_calls.append("assembly"),
+    )
+    monkeypatch.setattr(speech_blocks_ui_controller.misc_ui_controller, "show_message", lambda *args, **kwargs: None)
+
+    speech_blocks_ui_controller.handle_approve_block_requested(window, "0001-000001")
+
+    assert service_calls == [(project_root, "0001-000001")]
+    assert reset_calls == ["sync", "assembly"]
+    assert page_calls == ["select:0001-000001"]
+
+
 def test_speech_blocks_ui_controller_explicit_reset_clears_speech_blocks_and_downstream(
     monkeypatch, qtbot, tmp_path
 ) -> None:

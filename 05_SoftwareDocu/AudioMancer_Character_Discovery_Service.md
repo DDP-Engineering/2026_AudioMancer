@@ -13,12 +13,11 @@ Provides the Character Discovery workflow used by the `Characters` page in
 `AudioMancer`.
 
 It analyzes canonical chunking output as the authoritative source for character
-identity and dialogue evidence. It produces one persisted set of
-speaking-character profiles, synthesizes one structured
-Qwen-oriented voice-definition brief plus one final
-`voice_definition_prompt` per character, exposes resumable operation state,
-and keeps the page state and UI controller aligned with the project
-manifest.
+identity and dialogue evidence. It produces one persisted set of compact
+speaking-character profiles with identity, aliases, sex or gender guidance,
+evidence, confidence, and one final `voice_definition_prompt` per character.
+It exposes resumable operation state and keeps the page state and UI
+controller aligned with the project manifest.
 
 ## 2. Responsibilities
 
@@ -31,15 +30,14 @@ manifest.
 - normalize, score, merge, filter, and persist discovered speaking characters
 - retain rejected non-speaking or weak-evidence candidates in the report for
   diagnostics
-- derive and persist one structured voice-definition brief plus one final
-  voice-definition prompt for each character profile
+- derive and persist one final voice-definition prompt for each character
+  profile
 - persist `characters_state.json`, `characters_report.json`, one
   `characters_profile.json` output, and one per-run AI transaction log
 - expose Character Discovery page state, notes, and default AI-profile
   selection
 - handle page-level start, resume, reset, guarded manual add or edit or save
-  or delete behavior, explicit `Regenerate Voice Definition`, and
-  unsaved-change prompts
+  or delete behavior, and unsaved-change prompts
 
 It does not own chunk creation, translation approval, narrator-definition
 editing, or AI profile persistence.
@@ -104,12 +102,11 @@ High-level runtime flow:
    `Save Character`, while selection changes and destructive actions are
    guarded by one `Save / Discard / Cancel` prompt when the current draft is
    dirty.
-10. The page also exposes editable voice-definition fields plus one final
-    `voice_definition_prompt`; `Regenerate Voice Definition` rebuilds both
-    from the current literary character facts without leaving edit mode. The
-    final prompt always includes explicit `Sex/Gender:` guidance, using the
-    stored `gender_hint` when available and a neutral non-male-default
-    instruction when the source does not specify sex or gender.
+10. The page exposes compact editable character identity fields plus one final
+    `voice_definition_prompt`. The final prompt always includes explicit
+    `Sex/Gender:` guidance, using the stored `gender_hint` when available and
+    a neutral non-male-default instruction when the source does not specify sex
+    or gender.
 11. Saving a manual add, edit, or delete uses the v2 selective impact path.
     Manual add synchronizes Character Voices targets and preserves existing
     Speech Blocks, Audio Blocks, and Audio Assembly outputs. Manual edit keeps
@@ -165,23 +162,7 @@ Persisted character profile fields:
 - `canonical_name`
 - `aliases`
 - `gender_hint`
-- `age_band`
-- `role_summary`
-- `description`
-- `temperament`
-- `social_status`
-- `speaking_style`
-- `accent_or_dialect_hints`
-- `voice_notes`
-- `voice_persona_summary`
-- `voice_timbre_and_range`
-- `voice_pacing_and_rhythm`
-- `voice_emotional_baseline`
-- `voice_articulation_and_pronunciation`
-- `voice_delivery_constraints`
 - `voice_definition_prompt`
-- `voice_definition_source_signature`
-- `relationship_hints`
 - `confidence`
 - `review_status`
 - `evidence`
@@ -194,21 +175,12 @@ Translation page:
 - `manual`: added by the operator from the Characters page
 - `edited`: originally discovered and then edited by the operator
 
-Runtime-only page shaping also uses:
-
-- `voice_definition_stale`
-
 Voice-definition rules:
 
-- the six `voice_*` brief fields form the editable Qwen-oriented voice brief
 - `voice_definition_prompt` is the final handoff prompt later consumed by
   `Character Voices` and includes explicit `Sex/Gender:` guidance
-- `voice_definition_source_signature` fingerprints the raw literary fields
-  used to derive the voice brief
-- when literary fields change without updating the voice-definition block, the
-  loaded profile is marked `voice_definition_stale = true`
-- manual edits to the voice brief or final prompt are preserved until the
-  operator explicitly regenerates them
+- manual edits to the final prompt are preserved as the current character
+  voice-design source
 
 Evidence items currently store:
 
@@ -345,7 +317,6 @@ Page integration points:
 - `CharactersPage.save_character_requested(dict)`
 - `CharactersPage.delete_character_requested(str)`
 - `CharactersPage.selection_change_requested(str | None)`
-- `CharactersPage.regenerate_voice_definition_requested(dict)`
 
 Required conditions:
 
@@ -373,8 +344,7 @@ Covered behaviors:
 - manual add or save or delete persistence
 - duplicate and invalid manual-name validation
 - explicit edit-mode enablement and save-button activation
-- deterministic voice-definition brief and prompt regeneration
-- stale voice-definition detection when literary facts change
+- compact voice-definition prompt normalization
 - guarded selection changes with unsaved drafts
 - reset behavior and stage rollback
 - profile-selector default resolution

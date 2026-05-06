@@ -13,13 +13,14 @@
          selected chunk preview editing and search behavior.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-24
-@version 0.4.0
+@version 0.4.2
 """
 
 # IMPORTS
 
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QTextCursor
+from PySide6.QtWidgets import QMessageBox
 
 from audiomancer.ui.pages.text_chunking_page import TextChunkingPage
 
@@ -99,26 +100,6 @@ def test_text_chunking_page_keeps_selectors_readable_while_busy(qtbot) -> None:
     assert page._strategy_combo.isEnabled() is True
 
 
-def test_text_chunking_page_preview_splitter_keeps_one_third_minimum_width(qtbot) -> None:
-    """
-    @brief      Verify chunking preview panes keep one-third minimum splitter widths.
-    @param[in]  qtbot Qt test helper fixture.
-    @return     None.
-    @exception  None.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-01
-    @version    0.1.0
-    """
-    page = TextChunkingPage()
-    qtbot.addWidget(page)
-    page._preview_splitter.resize(900, 400)
-    page._apply_preview_splitter_minimums()
-
-    assert page._preview_splitter.childrenCollapsible() is False
-    assert page._left_preview_container.minimumWidth() == 300
-    assert page._chunk_preview_group.minimumWidth() == 300
-
-
 def test_text_chunking_page_enables_ai_button_when_profiles_exist(qtbot) -> None:
     """
     @brief      Verify AI-assisted chunking is enabled only when a profile is selected and AI chunking is allowed.
@@ -145,16 +126,21 @@ def test_text_chunking_page_enables_ai_button_when_profiles_exist(qtbot) -> None
     assert page._ai_chunk_button.isEnabled() is True
 
 
-def test_text_chunking_page_allows_selected_chunk_edit_and_save(qtbot) -> None:
+def test_text_chunking_page_allows_selected_chunk_edit_and_save(monkeypatch, qtbot) -> None:
     """
     @brief      Verify selected chunk text can be edited and saved through the page signal.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-24
-    @version    0.1.0
+    @version    0.2.0
     """
+    monkeypatch.setattr(
+        "audiomancer.ui.pages.text_chunking_page.QMessageBox.question",
+        lambda *_args, **_kwargs: QMessageBox.StandardButton.Yes,
+    )
     page = TextChunkingPage()
     qtbot.addWidget(page)
     page.set_project_active(True)
@@ -189,6 +175,44 @@ def test_text_chunking_page_allows_selected_chunk_edit_and_save(qtbot) -> None:
     assert saved_payloads == [("chunk-0001", "Edited paragraph")]
     assert page._chunk_text_edit.isReadOnly() is True
     assert page._chunk_list.item(0).text() == "chunk-0001 | Edited paragraph"
+    assert page._edit_chunk_button.isEnabled() is True
+    assert page._save_chunk_button.isEnabled() is False
+
+
+def test_text_chunking_page_cancelled_edit_confirmation_keeps_read_only(monkeypatch, qtbot) -> None:
+    """
+    @brief      Verify declining selected chunk edit impact keeps the editor locked.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  qtbot Qt test helper fixture.
+    @return     None.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-05
+    @version    0.1.0
+    """
+    monkeypatch.setattr(
+        "audiomancer.ui.pages.text_chunking_page.QMessageBox.question",
+        lambda *_args, **_kwargs: QMessageBox.StandardButton.No,
+    )
+    page = TextChunkingPage()
+    qtbot.addWidget(page)
+    page.set_project_active(True)
+    page.set_processing_state(
+        cleaned_text="clean text",
+        chunks=[
+            {
+                "chunk_id": "chunk-0001",
+                "sequence_index": 1,
+                "text": "Paragraph text",
+            }
+        ],
+        notes=["ready"],
+        can_chunk=True,
+    )
+
+    page._edit_chunk_button.click()
+
+    assert page._chunk_text_edit.isReadOnly() is True
     assert page._edit_chunk_button.isEnabled() is True
     assert page._save_chunk_button.isEnabled() is False
 

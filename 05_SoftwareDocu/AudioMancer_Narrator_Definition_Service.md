@@ -18,16 +18,7 @@ Voice page.
 
 ## 2. Responsibilities
 
-- seed one fixed built-in Qwen3 preset catalog (`vivian`, `serena`, `anna`)
-  for new or repaired projects
-- restore missing built-in Qwen3 presets automatically when one project is
-  loaded
-- sync additional Qwen3 CustomVoice presets reported by the current runtime
-  into the stored project profile catalog without marking them as protected
-  built-ins
-- migrate legacy `qwen3_tts_customvoice_seed` prompt-seed entries into
-  editable custom narrator profiles so they remain generatable and deletable
-- persist built-in presets and custom user profiles in root-level
+- persist only operator-created custom user profiles in root-level
   `audio_profiles.json`
 - persist the explicitly selected narrator profile and narrator language
   runtime code
@@ -83,21 +74,16 @@ High-level flow:
 4. Each profile is enriched with `is_selected`, `has_sample`,
    `runtime_available`, `can_generate`, `can_select`, and an operator-facing
    availability note.
-4.1. When the cached runtime reports additional Qwen3 CustomVoice presets,
-     those presets are added to the project profile catalog as runtime preset
-     entries and remain non-protected.
-4.2. When one project still contains legacy `qwen3_tts_customvoice_seed`
-     prompt-seed presets without a speaker id, those entries are repaired into
-     editable custom narrator profiles during profile load.
 5. `Edit Profile` shows a destructive confirmation, deletes the current
    per-profile sample, clears explicit selection when necessary, and only then
    unlocks the page editor.
-6. `Generate Sample` re-probes runtime readiness, requires the fixed minimum
-   Qwen3 capability set (`base`, `voice_designer`, `custom_voice`), waits for
-   model-load completion before submitting generation, stores or replaces only
-   the current profile's `audio_narator_<profile>.wav`, keeps other profile
-   samples intact, uses the saved TTS preview timeout, and marks the generated
-   sample metadata as selected when the regenerated profile is already selected.
+6. `Generate Sample` re-probes runtime readiness, requires the fixed Qwen3 TTS
+   Base and Voice Designer capability set (`base`, `voice_designer`), waits for
+   model-load completion before submitting Voice Designer generation, stores or
+   replaces only the current profile's `audio_narator_<profile>.wav`, keeps
+   other profile samples intact, uses the saved TTS preview timeout, and marks
+   the generated sample metadata as selected when the regenerated profile is
+   already selected.
 7. The legacy voice-language change handler is a no-op for locked projects;
    the normal workflow changes language only by creating a new project.
 8. `Select` persists `narator.json`, updates the compact manifest summary,
@@ -173,15 +159,8 @@ Narrator profile payloads currently use:
 
 Profile rules:
 
-- built-in seeded presets use
-  `profile_kind = "preset"` and `profile_origin = "qwen_builtin_preset"`
-- runtime-synced Qwen presets use
-  `profile_kind = "preset"` and `profile_origin = "qwen_runtime_preset"`
 - user-created profiles use
   `profile_kind = "custom"` and `profile_origin = "custom_user"`
-- migrated legacy prompt-seed presets use
-  `profile_kind = "custom"` and
-  `profile_origin = "legacy_customvoice_seed"`
 - no narrator profile is selected by default for a new project
 - stored profile `language` values use VoiceWeaver language codes such as `en`
   and `ro`; legacy labels are normalized on load
@@ -205,7 +184,6 @@ Per-profile sample metadata uses:
 - `profile_kind`
 - `profile_origin`
 - `source_model_id`
-- `speaker_id`
 - `generation_mode`
 - `language`
 - `prompt_text`
@@ -244,15 +222,15 @@ Current runtime-aware rules:
 - switching the inspected profile in the page list rebuilds the Narator Voice page
   state, so operator actions always reflect the currently highlighted profile
 - `Generate Sample` is enabled only when the current runtime exposes the fixed
-  minimum Qwen3 capability set and the profile resolves to either
-  `voice/design` or `voice/custom`
+  minimum Qwen3 TTS Base and Voice Designer capability set and the profile
+  resolves to `voice/design`
 - the voice-language control on Narator Voice is a read-only locked project
   indicator
 - changing the selected voice language is not part of the normal workflow after
   Home-page project locking
   state because those artifacts depend on the selected output language
-- only the three fixed seeded Qwen presets are protected from deletion;
-  runtime-synced presets and migrated legacy prompt-seed profiles are not
+- narrator profiles are operator-created and deletable unless another workflow
+  state disables editing
 - runtime requests use VoiceWeaver language codes even when operator-facing
   labels such as `English` or `Romanian` are shown in the UI or manifest,
   except Romanian TTS requests intentionally omit the outbound `language`
@@ -295,7 +273,7 @@ Operator path:
 
 - open one project
 - run `TTS Settings -> Test Connection`
-- inspect the seeded Qwen3 presets or create additional custom profiles
+- create one custom narrator profile
 - review the locked voice language chosen on the Home page
 - optionally edit one profile after confirming the destructive sample reset
 - generate one sample for a narrator profile
@@ -303,6 +281,10 @@ Operator path:
 - press `Select` to make that profile the explicit narrator for the project
 
 ## 9. Validation And Tests
+
+Documentation audit status:
+
+- reviewed against the current implementation on 2026-05-06
 
 Focused automated coverage includes:
 

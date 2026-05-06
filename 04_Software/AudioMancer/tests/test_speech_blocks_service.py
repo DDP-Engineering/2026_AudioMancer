@@ -203,8 +203,6 @@ def test_start_or_continue_generation_creates_artifacts_and_normalizes_blocks(mo
     assert [block["approved"] for block in speech_blocks] == [False, False, False, False]
     assert speech_blocks[0]["text"] == "Narration."
     assert speech_blocks[0]["source_text"] == "Narration. "
-    assert speech_blocks[0]["ai_text"] == "Narration."
-    assert speech_blocks[0]["ai_source_text"] == "Narration. "
     assert speech_blocks[1]["speaker_id"] == "maria"
     assert speech_blocks[1]["text"] == "Hello there."
     assert speech_blocks[1]["source_text"] == '"Hello there."'
@@ -641,9 +639,9 @@ def test_review_update_replaces_null_like_started_at(tmp_path) -> None:
     assert all("None" not in str(path) for path in updated_state["artifact_paths"])
 
 
-def test_approve_all_edit_and_reset_preserve_warning_cleared_state(tmp_path) -> None:
+def test_approve_all_and_edit_preserve_warning_cleared_state(tmp_path) -> None:
     """
-    @brief      Verify approval plus selected-block edit/reset warning state semantics.
+    @brief      Verify approval plus selected-block edit warning state semantics.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
@@ -676,14 +674,6 @@ def test_approve_all_edit_and_reset_preserve_warning_cleared_state(tmp_path) -> 
     assert edited_blocks[0]["speaker_display_name"] == "Background Noise"
     assert edited_blocks[0]["text"] == "Wind against the shutters."
 
-    reset_report = speech_blocks_service.reset_speech_block_to_ai_baseline(project_root, "0001-000001")
-    reset_blocks = speech_blocks_service.load_speech_blocks(project_root)
-    assert reset_report["warning_count"] == 0
-    assert reset_blocks[0]["warning_flags"] == []
-    assert reset_blocks[0]["approved"] is False
-    assert reset_blocks[0]["content_kind"] == speech_blocks_service.CONTENT_KIND_DIALOGUE
-    assert reset_blocks[0]["text"] == "Hello."
-
 
 def test_approve_selected_speech_block_only_marks_target_block(tmp_path) -> None:
     """
@@ -699,6 +689,32 @@ def test_approve_selected_speech_block_only_marks_target_block(tmp_path) -> None
     _seed_review_speech_blocks(project_root)
 
     report = speech_blocks_service.approve_speech_block(project_root, "0001-000001")
+    speech_blocks = speech_blocks_service.load_speech_blocks(project_root)
+
+    assert report["approved_block_count"] == 1
+    assert report["total_block_count"] == 2
+    assert report["speech_blocks_stage_status"] == speech_blocks_service.SPEECH_BLOCKS_STAGE_IN_PROGRESS
+    assert speech_blocks[0]["approved"] is True
+    assert speech_blocks[0]["approved_at"] is not None
+    assert speech_blocks[1]["approved"] is False
+    assert speech_blocks[1]["approved_at"] is None
+
+
+def test_unapprove_selected_speech_block_only_clears_target_block(tmp_path) -> None:
+    """
+    @brief      Verify selected Speech Block unapproval does not clear sibling approvals.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-05
+    @version    0.1.0
+    """
+    project_root, _manifest = _create_chunked_project(tmp_path, "SpeechBlocksSelectedUnapproval")
+    _seed_review_speech_blocks(project_root)
+    speech_blocks_service.approve_all_speech_blocks(project_root)
+
+    report = speech_blocks_service.unapprove_speech_block(project_root, "0002-000001")
     speech_blocks = speech_blocks_service.load_speech_blocks(project_root)
 
     assert report["approved_block_count"] == 1
@@ -1778,12 +1794,6 @@ def _seed_review_speech_blocks(project_root) -> None:
             "content_kind": speech_blocks_service.CONTENT_KIND_DIALOGUE,
             "source_text": '"Hello."',
             "text": "Hello.",
-            "ai_speaker_kind": speech_blocks_service.SPEAKER_KIND_NARRATOR,
-            "ai_speaker_id": "narrator",
-            "ai_speaker_display_name": "Narrator",
-            "ai_content_kind": speech_blocks_service.CONTENT_KIND_DIALOGUE,
-            "ai_source_text": '"Hello."',
-            "ai_text": "Hello.",
             "warning_flags": ["ambiguous_speaker"],
             "approved": False,
             "approved_at": None,
@@ -1799,12 +1809,6 @@ def _seed_review_speech_blocks(project_root) -> None:
             "content_kind": speech_blocks_service.CONTENT_KIND_NARRATION,
             "source_text": "Later narration.",
             "text": "Later narration.",
-            "ai_speaker_kind": speech_blocks_service.SPEAKER_KIND_NARRATOR,
-            "ai_speaker_id": "narrator",
-            "ai_speaker_display_name": "Narrator",
-            "ai_content_kind": speech_blocks_service.CONTENT_KIND_NARRATION,
-            "ai_source_text": "Later narration.",
-            "ai_text": "Later narration.",
             "warning_flags": [],
             "approved": False,
             "approved_at": None,

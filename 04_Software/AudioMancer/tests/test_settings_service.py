@@ -35,7 +35,7 @@ def test_committed_settings_scaffold_matches_valid_settings_schema() -> None:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-04
-    @version    0.1.0
+    @version    0.2.0
     """
     committed_settings = json.loads(config.APP_SETTINGS_PATH.read_text(encoding="utf-8"))
     validated_settings = settings_service.validate_settings(copy.deepcopy(committed_settings))
@@ -331,11 +331,9 @@ def test_validate_settings_normalizes_tts_runtime_discovery_cache() -> None:
     candidate_settings["tts_runtime_probe_succeeded"] = "yes"
     candidate_settings["tts_runtime_discovered_models"] = [
         {
-            "model_id": "custom_model",
+            "model_id": "definition_model",
             "status": "healthy",
-            "supported_generation_modes": ["custom_voice"],
-            "supported_presets": ["vivian"],
-            "speaker_count": "bad",
+            "supported_generation_modes": ["definition"],
         },
         "invalid",
     ]
@@ -346,7 +344,7 @@ def test_validate_settings_normalizes_tts_runtime_discovery_cache() -> None:
 
     assert validated_settings["tts_runtime_probe_succeeded"] is False
     assert len(validated_settings["tts_runtime_discovered_models"]) == 1
-    assert validated_settings["tts_runtime_discovered_models"][0]["speaker_count"] == 0
+    assert "speaker_count" not in validated_settings["tts_runtime_discovered_models"][0]
     assert validated_settings["tts_runtime_active_model_id"] is None
     assert validated_settings["tts_runtime_device_diagnostics"] == {"status_message": "CUDA active."}
 

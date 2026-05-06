@@ -14,7 +14,7 @@
          so the window remains a thin coordinator.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 1.43.0
+@version 1.45.1
 """
 
 # IMPORTS
@@ -342,7 +342,7 @@ class MainWindow(QMainWindow):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-26
-        @version    0.1.0
+        @version    0.2.0
         """
         if self._current_page_id == "text_cleanup":
             self._text_cleanup_page.set_project_active(project_root is not None)
@@ -588,6 +588,7 @@ class MainWindow(QMainWindow):
                 project_root,
                 manifest,
                 current_language,
+                self._settings_payload,
             )
         )
 
@@ -721,7 +722,7 @@ class MainWindow(QMainWindow):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-07
-        @version    0.19.0
+        @version    0.20.0
         """
         current_language = ui_state_service.current_language_from_settings(self._settings_payload)
         home_page = HomeProjectPage(self)
@@ -867,12 +868,6 @@ class MainWindow(QMainWindow):
                 character_id,
             )
         )
-        self._characters_page.regenerate_voice_definition_requested.connect(
-            lambda profile_payload: characters_ui_controller.handle_regenerate_voice_definition_requested(
-                self,
-                profile_payload,
-            )
-        )
         self._narator_voice_page = NaratorVoicePage(self)
         self._narator_voice_page.create_profile_requested.connect(
             lambda profile_payload: narator_voice_ui_controller.handle_create_profile_requested(
@@ -1002,9 +997,6 @@ class MainWindow(QMainWindow):
                 )
             )
         )
-        self._speech_blocks_page.reset_block_requested.connect(
-            lambda speech_block_id: speech_blocks_ui_controller.handle_reset_block_requested(self, speech_block_id)
-        )
         self._speech_blocks_page.approve_block_requested.connect(
             lambda speech_block_id: speech_blocks_ui_controller.handle_approve_block_requested(self, speech_block_id)
         )
@@ -1041,18 +1033,6 @@ class MainWindow(QMainWindow):
         )
         self._audio_blocks_page.approve_selected_requested.connect(
             lambda speech_block_id: audio_blocks_ui_controller.handle_approve_selected_requested(
-                self,
-                speech_block_id,
-            )
-        )
-        self._audio_blocks_page.unapprove_selected_requested.connect(
-            lambda speech_block_id: audio_blocks_ui_controller.handle_unapprove_selected_requested(
-                self,
-                speech_block_id,
-            )
-        )
-        self._audio_blocks_page.reset_selected_requested.connect(
-            lambda speech_block_id: audio_blocks_ui_controller.handle_reset_selected_requested(
                 self,
                 speech_block_id,
             )

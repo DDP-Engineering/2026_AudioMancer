@@ -13,7 +13,7 @@
          page-entry warnings for the Character Voices workflow.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-20
-@version 1.6.0
+@version 1.7.0
 """
 
 # IMPORTS
@@ -367,21 +367,12 @@ def test_character_voices_ui_controller_batch_regenerates_all_current_character_
             "backend_name": "qwen3-tts-base",
             "status": "healthy",
             "supported_generation_modes": ["base", "clone"],
-            "supported_presets": [],
         },
         {
             "model_id": "qwen-designer",
             "backend_name": "qwen3-tts-voice-designer",
             "status": "healthy",
             "supported_generation_modes": ["definition", "voice_designer"],
-            "supported_presets": [],
-        },
-        {
-            "model_id": "qwen-custom",
-            "backend_name": "qwen3-tts-customvoice",
-            "status": "healthy",
-            "supported_generation_modes": ["custom_voice"],
-            "supported_presets": ["vivian"],
         },
     ]
     window._refresh_character_voices_page_state(
@@ -664,7 +655,7 @@ def _create_project_with_character_and_selected_narrator(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-20
-    @version    0.1.1
+    @version    0.2.0
     """
     project_root, manifest = project_workspace_service.create_project(name, tmp_path)
     manifest["source_document"] = {
@@ -678,15 +669,21 @@ def _create_project_with_character_and_selected_narrator(
     manifest["voice_assignment_mode"] = "narrator_and_characters"
     project_workspace_service.save_manifest(manifest, project_root)
 
-    narrator_profile = narrator_definition_service.load_profiles(project_root)[0]
+    narrator_profile = narrator_definition_service.create_custom_profile(
+        project_root,
+        "Test Narrator",
+        "English",
+        "Warm narrator prompt.",
+        "Preview text.",
+    )
     if store_narrator_sample:
         narrator_definition_service.store_profile_sample(
             project_root,
             narrator_profile,
             "Preview text.",
             {
-                "generation_mode": "custom_voice",
-                "source_model_id": "qwen-custom",
+                "generation_mode": "definition",
+                "source_model_id": "qwen-designer",
                 "language": "en",
             },
             "Narator voice sample ready.",
@@ -703,10 +700,8 @@ def _create_project_with_character_and_selected_narrator(
         {
             **dict(alice_profile),
             "canonical_name": "Alice",
-            "role_summary": "young observer",
-            "description": "reserved but curious",
-            "speaking_style": "soft and thoughtful",
-            "voice_notes": "gentle warmth",
+            "gender_hint": "female",
+            "voice_definition_prompt": "A gentle female voice for Alice.",
         },
     )
     selected_narrator = narrator_definition_service.profile_by_id(project_root, narrator_profile["profile_id"])

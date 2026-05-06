@@ -1,4 +1,4 @@
-﻿<!--
+<!--
 Copyright (c) 2026 DDP Engineering
 This software is licensed under the GNU Affero General Public License v3.0
 (AGPL-3.0) with additional Non-Commercial restriction.
@@ -18,9 +18,11 @@ Implementation sources and runnable software artifacts.
   language, maintained under
   `../05_SoftwareDocu/UserGuide/` and `../05_SoftwareDocu/UserGuide_ro/`, and
   bundled into release archives as `help/en/` plus `help/ro/`. Current package
-  version `2.0.0` includes protected minimum splitter widths on the dense review
-  pages, the Character Voices batch sample action, and the v2 selective
+  version `1.0.0` includes protected minimum splitter widths on the dense review
+  pages, the Character Voices batch sample action, and the selective
   downstream-preservation model for manual chunk, character, voice, speech,
   audio-block, and assembly operations. Speech Blocks review can also trigger
   selected-block audio regeneration and Play/Stop preview through the existing
   Audio Blocks workflow, using the compact `Generate Audio` label on that page.
+  Current validation guidance and the full regression baseline are documented
+  in `../HowToTest.md` and `AudioMancer/README.MD`.

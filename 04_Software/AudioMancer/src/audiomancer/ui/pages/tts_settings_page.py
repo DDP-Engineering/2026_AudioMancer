@@ -13,7 +13,7 @@
          build helpers so the main window can coordinate runtime persistence.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-18
-@version 1.3.0
+@version 1.4.0
 """
 
 # IMPORTS
@@ -306,7 +306,7 @@ class TtsSettingsPage(QWidget):
         @return     None.
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-21
-        @version    0.1.0
+        @version    0.2.0
         """
         _ = project_plan_payload
         self._apply_planning_state()
@@ -329,17 +329,12 @@ class TtsSettingsPage(QWidget):
             generation_modes = ", ".join(
                 str(mode).strip() for mode in model.get("supported_generation_modes", []) if str(mode).strip()
             )
-            speaker_count = int(model.get("speaker_count", 0))
             active_suffix = (
                 f" | {ui_state_service.translate('tts_settings.active_model_marker', self._current_language)}"
                 if model_id and model_id == self._active_model_id
                 else ""
             )
-            self._model_list.addItem(
-                f"{model_id} | {status} | {generation_modes or '-'} | "
-                f"{ui_state_service.translate('tts_settings.speaker_count', self._current_language)}: {speaker_count}"
-                f"{active_suffix}"
-            )
+            self._model_list.addItem(f"{model_id} | {status} | {generation_modes or '-'}{active_suffix}")
 
     def _build_runtime_status_text(self) -> str:
         """

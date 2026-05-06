@@ -13,13 +13,14 @@
          preview editing and search state updates for the cleanup page.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-24
-@version 0.6.1
+@version 0.7.1
 """
 
 # IMPORTS
 
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QTextCursor
+from PySide6.QtWidgets import QMessageBox
 
 from audiomancer.ui.pages.text_cleanup_page import TextCleanupPage
 
@@ -103,36 +104,21 @@ def test_text_cleanup_page_updates_previews_and_notes(qtbot) -> None:
     assert page._notes_group.maximumHeight() == 112
 
 
-def test_text_cleanup_page_preview_splitter_keeps_one_third_minimum_width(qtbot) -> None:
-    """
-    @brief      Verify extracted and cleaned preview panes keep one-third minimum splitter widths.
-    @param[in]  qtbot Qt test helper fixture.
-    @return     None.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-01
-    @version    0.1.0
-    """
-    page = TextCleanupPage()
-    qtbot.addWidget(page)
-    page._preview_splitter.resize(900, 400)
-    page._apply_preview_splitter_minimums()
-
-    assert page._preview_splitter.childrenCollapsible() is False
-    assert page._extracted_group.minimumWidth() == 300
-    assert page._cleaned_group.minimumWidth() == 300
-
-
-def test_text_cleanup_page_allows_cleaned_text_edit_and_save(qtbot) -> None:
+def test_text_cleanup_page_allows_cleaned_text_edit_and_save(monkeypatch, qtbot) -> None:
     """
     @brief      Verify cleaned text can be edited only after pressing Edit and saved through the page signal.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-24
-    @version    0.1.0
+    @version    0.2.0
     """
+    monkeypatch.setattr(
+        "audiomancer.ui.pages.text_cleanup_page.QMessageBox.question",
+        lambda *_args, **_kwargs: QMessageBox.StandardButton.Yes,
+    )
     page = TextCleanupPage()
     qtbot.addWidget(page)
     page.set_project_active(True)
@@ -161,6 +147,40 @@ def test_text_cleanup_page_allows_cleaned_text_edit_and_save(qtbot) -> None:
     page._save_cleaned_button.click()
 
     assert saved_payloads == ["Edited clean paragraph"]
+    assert page._cleaned_text_edit.isReadOnly() is True
+    assert page._edit_cleaned_button.isEnabled() is True
+    assert page._save_cleaned_button.isEnabled() is False
+
+
+def test_text_cleanup_page_cancelled_edit_confirmation_keeps_read_only(monkeypatch, qtbot) -> None:
+    """
+    @brief      Verify declining cleaned-text edit impact keeps the editor locked.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  qtbot Qt test helper fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-05
+    @version    0.1.0
+    """
+    monkeypatch.setattr(
+        "audiomancer.ui.pages.text_cleanup_page.QMessageBox.question",
+        lambda *_args, **_kwargs: QMessageBox.StandardButton.No,
+    )
+    page = TextCleanupPage()
+    qtbot.addWidget(page)
+    page.set_project_active(True)
+    page.set_processing_state(
+        extracted_text="Raw paragraph",
+        cleaned_text="Clean paragraph",
+        notes=["Ready"],
+        can_extract=True,
+        can_clean=True,
+        can_ai_clean=True,
+    )
+
+    page._edit_cleaned_button.click()
+
     assert page._cleaned_text_edit.isReadOnly() is True
     assert page._edit_cleaned_button.isEnabled() is True
     assert page._save_cleaned_button.isEnabled() is False

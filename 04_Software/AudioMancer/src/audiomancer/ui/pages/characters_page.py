@@ -10,11 +10,11 @@
 @file characters_page.py
 @brief Character Discovery workflow page for AudioMancer.
 @details Provides AI profile selection, guarded manual character maintenance,
-         explicit edit mode, and source-evidence preview for discovered and
-         manually added speaking characters.
+         explicit edit mode, compact voice-profile editing, and source-evidence
+         preview for discovered and manually added speaking characters.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-08
-@version 0.5.1
+@version 0.6.0
 """
 
 # IMPORTS
@@ -64,7 +64,6 @@ class CharactersPage(QWidget):
     save_character_requested = Signal(dict)
     delete_character_requested = Signal(str)
     selection_change_requested = Signal(object)
-    regenerate_voice_definition_requested = Signal(dict)
 
     def __init__(self, parent=None) -> None:
         """
@@ -74,7 +73,7 @@ class CharactersPage(QWidget):
             @exception  None
             @author     Eng. Dan Dumitru Pasare
             @date       2026-04-08
-        @version    0.5.1
+        @version    0.6.0
         """
         super().__init__(parent)
         self._project_active = False
@@ -126,9 +125,9 @@ class CharactersPage(QWidget):
         self._main_splitter.setChildrenCollapsible(False)
         self._left_splitter = QSplitter(self)
         self._left_splitter.setOrientation(Qt.Orientation.Vertical)
+        self._left_splitter.setChildrenCollapsible(False)
 
         self._list_group = QGroupBox("Character List", self)
-        self._list_group.setMinimumHeight(190)
         list_layout = QHBoxLayout(self._list_group)
         list_layout.setContentsMargins(6, 12, 6, 6)
 
@@ -154,7 +153,6 @@ class CharactersPage(QWidget):
         self._left_splitter.addWidget(self._list_group)
 
         self._editor_group = QGroupBox("Character Profile", self)
-        self._editor_group.setMinimumHeight(340)
         editor_group_layout = QVBoxLayout(self._editor_group)
         editor_group_layout.setContentsMargins(6, 12, 6, 6)
         self._editor_scroll_area = QScrollArea(self._editor_group)
@@ -170,30 +168,14 @@ class CharactersPage(QWidget):
         self._canonical_name_edit = QLineEdit(self)
         self._aliases_edit = QLineEdit(self)
         self._gender_hint_edit = QLineEdit(self)
-        self._age_band_edit = QLineEdit(self)
-        self._role_summary_edit = QPlainTextEdit(self)
-        self._description_edit = QPlainTextEdit(self)
-        self._temperament_edit = QPlainTextEdit(self)
-        self._social_status_edit = QPlainTextEdit(self)
-        self._speaking_style_edit = QPlainTextEdit(self)
-        self._accent_edit = QLineEdit(self)
-        self._voice_notes_edit = QPlainTextEdit(self)
-        self._relationships_edit = QPlainTextEdit(self)
+        self._voice_definition_prompt_edit = QPlainTextEdit(self)
         self._confidence_edit = QLineEdit(self)
 
         self._editor_widgets = [
             self._canonical_name_edit,
             self._aliases_edit,
             self._gender_hint_edit,
-            self._age_band_edit,
-            self._role_summary_edit,
-            self._description_edit,
-            self._temperament_edit,
-            self._social_status_edit,
-            self._speaking_style_edit,
-            self._accent_edit,
-            self._voice_notes_edit,
-            self._relationships_edit,
+            self._voice_definition_prompt_edit,
             self._confidence_edit,
         ]
 
@@ -201,107 +183,25 @@ class CharactersPage(QWidget):
             self._canonical_name_edit,
             self._aliases_edit,
             self._gender_hint_edit,
-            self._age_band_edit,
-            self._accent_edit,
             self._confidence_edit,
         ):
             widget.setMinimumHeight(30)
             widget.textChanged.connect(self._handle_editor_changed)
-        for widget in (
-            self._role_summary_edit,
-            self._description_edit,
-            self._temperament_edit,
-            self._social_status_edit,
-            self._speaking_style_edit,
-            self._voice_notes_edit,
-            self._relationships_edit,
-        ):
-            widget.setMinimumHeight(62)
-            widget.setMaximumHeight(82)
-            widget.textChanged.connect(self._handle_editor_changed)
+        self._voice_definition_prompt_edit.setMinimumHeight(118)
+        self._voice_definition_prompt_edit.setMaximumHeight(180)
+        self._voice_definition_prompt_edit.textChanged.connect(self._handle_editor_changed)
 
         self._canonical_name_label = QLabel("Canonical Name", self)
         self._aliases_label = QLabel("Aliases", self)
         self._gender_hint_label = QLabel("Gender Hint", self)
-        self._age_band_label = QLabel("Age Band", self)
-        self._role_summary_label = QLabel("Role Summary", self)
-        self._description_label = QLabel("Description", self)
-        self._temperament_label = QLabel("Temperament", self)
-        self._social_status_label = QLabel("Social Status", self)
-        self._speaking_style_label = QLabel("Speaking Style", self)
-        self._accent_label = QLabel("Accent / Dialect", self)
-        self._voice_notes_label = QLabel("Voice Notes", self)
-        self._relationships_label = QLabel("Relationship Hints", self)
+        self._voice_definition_prompt_label = QLabel("Voice Definition Prompt", self)
         self._confidence_label = QLabel("Confidence", self)
 
         editor_layout.addRow(self._canonical_name_label, self._canonical_name_edit)
         editor_layout.addRow(self._aliases_label, self._aliases_edit)
         editor_layout.addRow(self._gender_hint_label, self._gender_hint_edit)
-        editor_layout.addRow(self._age_band_label, self._age_band_edit)
-        editor_layout.addRow(self._role_summary_label, self._role_summary_edit)
-        editor_layout.addRow(self._description_label, self._description_edit)
-        editor_layout.addRow(self._temperament_label, self._temperament_edit)
-        editor_layout.addRow(self._social_status_label, self._social_status_edit)
-        editor_layout.addRow(self._speaking_style_label, self._speaking_style_edit)
-        editor_layout.addRow(self._accent_label, self._accent_edit)
-        editor_layout.addRow(self._voice_notes_label, self._voice_notes_edit)
-        editor_layout.addRow(self._relationships_label, self._relationships_edit)
+        editor_layout.addRow(self._voice_definition_prompt_label, self._voice_definition_prompt_edit)
         editor_layout.addRow(self._confidence_label, self._confidence_edit)
-        self._voice_definition_group = QGroupBox("Voice Definition", self._editor_form_widget)
-        voice_definition_layout = QVBoxLayout(self._voice_definition_group)
-        voice_definition_form = QFormLayout()
-        self._voice_persona_summary_edit = QPlainTextEdit(self)
-        self._voice_timbre_and_range_edit = QPlainTextEdit(self)
-        self._voice_pacing_and_rhythm_edit = QPlainTextEdit(self)
-        self._voice_emotional_baseline_edit = QPlainTextEdit(self)
-        self._voice_articulation_and_pronunciation_edit = QPlainTextEdit(self)
-        self._voice_delivery_constraints_edit = QPlainTextEdit(self)
-        self._voice_definition_prompt_edit = QPlainTextEdit(self)
-        self._voice_definition_widgets = [
-            self._voice_persona_summary_edit,
-            self._voice_timbre_and_range_edit,
-            self._voice_pacing_and_rhythm_edit,
-            self._voice_emotional_baseline_edit,
-            self._voice_articulation_and_pronunciation_edit,
-            self._voice_delivery_constraints_edit,
-            self._voice_definition_prompt_edit,
-        ]
-        self._editor_widgets.extend(self._voice_definition_widgets)
-        for widget in self._voice_definition_widgets[:-1]:
-            widget.setMinimumHeight(58)
-            widget.setMaximumHeight(82)
-            widget.textChanged.connect(self._handle_editor_changed)
-        self._voice_definition_prompt_edit.setMinimumHeight(96)
-        self._voice_definition_prompt_edit.setMaximumHeight(130)
-        self._voice_definition_prompt_edit.textChanged.connect(self._handle_editor_changed)
-        self._voice_persona_summary_label = QLabel("Voice Persona Summary", self)
-        self._voice_timbre_and_range_label = QLabel("Timbre / Range", self)
-        self._voice_pacing_and_rhythm_label = QLabel("Pacing / Rhythm", self)
-        self._voice_emotional_baseline_label = QLabel("Emotional Baseline", self)
-        self._voice_articulation_and_pronunciation_label = QLabel("Articulation / Pronunciation", self)
-        self._voice_delivery_constraints_label = QLabel("Delivery Constraints", self)
-        self._voice_definition_prompt_label = QLabel("Voice Definition Prompt", self)
-        voice_definition_form.addRow(self._voice_persona_summary_label, self._voice_persona_summary_edit)
-        voice_definition_form.addRow(self._voice_timbre_and_range_label, self._voice_timbre_and_range_edit)
-        voice_definition_form.addRow(self._voice_pacing_and_rhythm_label, self._voice_pacing_and_rhythm_edit)
-        voice_definition_form.addRow(self._voice_emotional_baseline_label, self._voice_emotional_baseline_edit)
-        voice_definition_form.addRow(
-            self._voice_articulation_and_pronunciation_label,
-            self._voice_articulation_and_pronunciation_edit,
-        )
-        voice_definition_form.addRow(self._voice_delivery_constraints_label, self._voice_delivery_constraints_edit)
-        voice_definition_form.addRow(self._voice_definition_prompt_label, self._voice_definition_prompt_edit)
-        voice_definition_layout.addLayout(voice_definition_form)
-        voice_definition_button_row = QHBoxLayout()
-        self._regenerate_voice_definition_button = QPushButton("Regenerate Voice Definition", self)
-        self._regenerate_voice_definition_button.clicked.connect(self._emit_regenerate_voice_definition)
-        voice_definition_button_row.addWidget(self._regenerate_voice_definition_button)
-        voice_definition_button_row.addStretch(1)
-        voice_definition_layout.addLayout(voice_definition_button_row)
-        self._voice_definition_status_label = QLabel("", self)
-        self._voice_definition_status_label.setWordWrap(True)
-        voice_definition_layout.addWidget(self._voice_definition_status_label)
-        editor_layout.addRow(self._voice_definition_group)
         self._editor_scroll_area.setWidget(self._editor_form_widget)
         editor_group_layout.addWidget(self._editor_scroll_area)
         self._left_splitter.addWidget(self._editor_group)
@@ -349,13 +249,13 @@ class CharactersPage(QWidget):
 
     def resizeEvent(self, event) -> None:  # noqa: N802
         """
-        @brief      Keep Characters page main splitter panes from shrinking below one third of the content width.
+        @brief      Keep Characters page splitter panes from shrinking below one quarter of their available span.
         @param[in]  event Qt resize event.
         @return     None.
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-05-01
-        @version    0.1.0
+        @version    0.3.0
         """
         super().resizeEvent(event)
         self._apply_main_splitter_minimums()
@@ -441,7 +341,7 @@ class CharactersPage(QWidget):
             @exception  None
             @author     Eng. Dan Dumitru Pasare
             @date       2026-04-08
-        @version    0.3.0
+        @version    0.4.0
         """
         del character_count
         del can_save
@@ -704,42 +604,10 @@ class CharactersPage(QWidget):
         self._canonical_name_label.setText(ui_state_service.translate("characters.canonical_name", language))
         self._aliases_label.setText(ui_state_service.translate("characters.aliases", language))
         self._gender_hint_label.setText(ui_state_service.translate("characters.gender_hint", language))
-        self._age_band_label.setText(ui_state_service.translate("characters.age_band", language))
-        self._role_summary_label.setText(ui_state_service.translate("characters.role_summary", language))
-        self._description_label.setText(ui_state_service.translate("characters.description", language))
-        self._temperament_label.setText(ui_state_service.translate("characters.temperament", language))
-        self._social_status_label.setText(ui_state_service.translate("characters.social_status", language))
-        self._speaking_style_label.setText(ui_state_service.translate("characters.speaking_style", language))
-        self._accent_label.setText(ui_state_service.translate("characters.accent", language))
-        self._voice_notes_label.setText(ui_state_service.translate("characters.voice_notes", language))
-        self._relationships_label.setText(ui_state_service.translate("characters.relationship_hints", language))
         self._confidence_label.setText(ui_state_service.translate("characters.confidence", language))
-        self._voice_definition_group.setTitle(ui_state_service.translate("characters.voice_definition_group", language))
-        self._voice_persona_summary_label.setText(
-            ui_state_service.translate("characters.voice_persona_summary", language)
-        )
-        self._voice_timbre_and_range_label.setText(
-            ui_state_service.translate("characters.voice_timbre_and_range", language)
-        )
-        self._voice_pacing_and_rhythm_label.setText(
-            ui_state_service.translate("characters.voice_pacing_and_rhythm", language)
-        )
-        self._voice_emotional_baseline_label.setText(
-            ui_state_service.translate("characters.voice_emotional_baseline", language)
-        )
-        self._voice_articulation_and_pronunciation_label.setText(
-            ui_state_service.translate("characters.voice_articulation_and_pronunciation", language)
-        )
-        self._voice_delivery_constraints_label.setText(
-            ui_state_service.translate("characters.voice_delivery_constraints", language)
-        )
         self._voice_definition_prompt_label.setText(
             ui_state_service.translate("characters.voice_definition_prompt", language)
         )
-        self._regenerate_voice_definition_button.setText(
-            ui_state_service.translate("characters.regenerate_voice_definition", language)
-        )
-        self._refresh_voice_definition_status_label()
         if self._profile_combo.count() == 1 and self._profile_combo.currentData() is None:
             self._profile_combo.setItemText(
                 0,
@@ -909,7 +777,6 @@ class CharactersPage(QWidget):
             and has_selected_character
             and self._mode == CHARACTER_PAGE_MODE_VIEW
         )
-        self._regenerate_voice_definition_button.setEnabled(editor_enabled and has_selected_character)
         self._character_list.setEnabled(self._project_active and not self._busy)
         self._evidence_list.setEnabled(self._project_active and has_selected_character)
         for widget in self._editor_widgets:
@@ -919,51 +786,26 @@ class CharactersPage(QWidget):
 
     def _apply_main_splitter_minimums(self) -> None:
         """
-        @brief      Set each Characters page main pane minimum width to one third of the main splitter width.
+        @brief      Set each Characters page splitter pane minimum to one quarter of its splitter span.
         @return     None.
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-05-01
-        @version    0.1.0
+        @version    0.3.0
         """
-        required_attributes = ("_main_splitter", "_left_splitter", "_evidence_group")
+        required_attributes = ("_main_splitter", "_left_splitter", "_list_group", "_editor_group", "_evidence_group")
         if not all(hasattr(self, attribute_name) for attribute_name in required_attributes):
             return
         splitter_width = self._main_splitter.width()
-        if splitter_width <= 0:
-            return
-        minimum_pane_width = splitter_width // 3
-        self._left_splitter.setMinimumWidth(minimum_pane_width)
-        self._evidence_group.setMinimumWidth(minimum_pane_width)
-
-    def _refresh_voice_definition_status_label(self, profile: dict[str, object] | None = None) -> None:
-        """
-        @brief      Refresh the voice-definition status note for the currently displayed profile.
-        @param[in]  profile Optional profile payload to inspect instead of the active profile.
-        @return     None.
-        @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-20
-        @version    1.0.0
-        """
-        active_profile = _normalize_page_profile(profile or self._active_profile() or {})
-        if not active_profile.get("character_id"):
-            self._voice_definition_status_label.clear()
-            return
-        if bool(active_profile.get("voice_definition_stale", False)):
-            self._voice_definition_status_label.setText(
-                ui_state_service.translate(
-                    "characters.voice_definition_note_stale",
-                    self._ui_language,
-                )
-            )
-            return
-        self._voice_definition_status_label.setText(
-            ui_state_service.translate(
-                "characters.voice_definition_note_current",
-                self._ui_language,
-            )
-        )
+        if splitter_width > 0:
+            minimum_pane_width = splitter_width // 4
+            self._left_splitter.setMinimumWidth(minimum_pane_width)
+            self._evidence_group.setMinimumWidth(minimum_pane_width)
+        splitter_height = self._left_splitter.height()
+        if splitter_height > 0:
+            minimum_pane_height = splitter_height // 4
+            self._list_group.setMinimumHeight(minimum_pane_height)
+            self._editor_group.setMinimumHeight(minimum_pane_height)
 
     def _emit_start_discovery(self) -> None:
         """
@@ -1018,19 +860,6 @@ class CharactersPage(QWidget):
         if self._current_character_id is not None:
             self.delete_character_requested.emit(self._current_character_id)
 
-    def _emit_regenerate_voice_definition(self) -> None:
-        """
-        @brief      Emit one regenerate request for the active editable draft.
-        @return     None.
-        @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-20
-        @version    1.0.0
-        """
-        if self._mode not in {CHARACTER_PAGE_MODE_ADD, CHARACTER_PAGE_MODE_EDIT}:
-            return
-        self.regenerate_voice_definition_requested.emit(self._build_profile_from_editor())
-
     def _handle_character_selection_changed(self, row: int) -> None:
         """
         @brief      Forward list-selection changes through the guarded controller flow.
@@ -1075,7 +904,6 @@ class CharactersPage(QWidget):
         current_item = None if current_row < 0 else self._character_list.item(current_row)
         if current_item is not None and self._draft_profile is not None:
             current_item.setText(_format_profile_item(self._draft_profile))
-        self._refresh_voice_definition_status_label(self._draft_profile)
         self._apply_control_state()
 
     def _load_profile_into_editor(self, profile: dict[str, object]) -> None:
@@ -1086,32 +914,14 @@ class CharactersPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-08
-        @version    0.3.0
+        @version    0.4.0
         """
         self._loading_profile = True
         self._canonical_name_edit.setText(str(profile.get("canonical_name", "")))
         self._aliases_edit.setText(", ".join(list(profile.get("aliases", []))))
         self._gender_hint_edit.setText(str(profile.get("gender_hint", "")))
-        self._age_band_edit.setText(str(profile.get("age_band", "")))
-        self._role_summary_edit.setPlainText(str(profile.get("role_summary", "")))
-        self._description_edit.setPlainText(str(profile.get("description", "")))
-        self._temperament_edit.setPlainText(str(profile.get("temperament", "")))
-        self._social_status_edit.setPlainText(str(profile.get("social_status", "")))
-        self._speaking_style_edit.setPlainText(str(profile.get("speaking_style", "")))
-        self._accent_edit.setText(str(profile.get("accent_or_dialect_hints", "")))
-        self._voice_notes_edit.setPlainText(str(profile.get("voice_notes", "")))
-        self._voice_persona_summary_edit.setPlainText(str(profile.get("voice_persona_summary", "")))
-        self._voice_timbre_and_range_edit.setPlainText(str(profile.get("voice_timbre_and_range", "")))
-        self._voice_pacing_and_rhythm_edit.setPlainText(str(profile.get("voice_pacing_and_rhythm", "")))
-        self._voice_emotional_baseline_edit.setPlainText(str(profile.get("voice_emotional_baseline", "")))
-        self._voice_articulation_and_pronunciation_edit.setPlainText(
-            str(profile.get("voice_articulation_and_pronunciation", ""))
-        )
-        self._voice_delivery_constraints_edit.setPlainText(str(profile.get("voice_delivery_constraints", "")))
         self._voice_definition_prompt_edit.setPlainText(str(profile.get("voice_definition_prompt", "")))
-        self._relationships_edit.setPlainText("\n".join(list(profile.get("relationship_hints", []))))
         self._confidence_edit.setText(str(profile.get("confidence", "")))
-        self._refresh_voice_definition_status_label(profile)
         self._evidence_list.clear()
         for evidence in list(profile.get("evidence", [])):
             self._evidence_list.addItem(f"{evidence.get('chunk_id', '')} | {evidence.get('reason', '')}")
@@ -1128,30 +938,14 @@ class CharactersPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-08
-        @version    0.2.0
+        @version    0.3.0
         """
         self._loading_profile = True
         self._canonical_name_edit.clear()
         self._aliases_edit.clear()
         self._gender_hint_edit.clear()
-        self._age_band_edit.clear()
-        self._role_summary_edit.clear()
-        self._description_edit.clear()
-        self._temperament_edit.clear()
-        self._social_status_edit.clear()
-        self._speaking_style_edit.clear()
-        self._accent_edit.clear()
-        self._voice_notes_edit.clear()
-        self._voice_persona_summary_edit.clear()
-        self._voice_timbre_and_range_edit.clear()
-        self._voice_pacing_and_rhythm_edit.clear()
-        self._voice_emotional_baseline_edit.clear()
-        self._voice_articulation_and_pronunciation_edit.clear()
-        self._voice_delivery_constraints_edit.clear()
         self._voice_definition_prompt_edit.clear()
-        self._relationships_edit.clear()
         self._confidence_edit.clear()
-        self._voice_definition_status_label.clear()
         self._evidence_list.clear()
         self._evidence_preview.clear()
         self._loading_profile = False
@@ -1228,7 +1022,7 @@ class CharactersPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-08
-        @version    0.4.0
+        @version    0.5.0
         """
         base_profile = self._active_profile() or {}
         draft_profile = {
@@ -1236,61 +1030,12 @@ class CharactersPage(QWidget):
             "canonical_name": self._canonical_name_edit.text().strip(),
             "aliases": [item.strip() for item in self._aliases_edit.text().split(",") if item.strip()],
             "gender_hint": self._gender_hint_edit.text().strip(),
-            "age_band": self._age_band_edit.text().strip(),
-            "role_summary": self._role_summary_edit.toPlainText().strip(),
-            "description": self._description_edit.toPlainText().strip(),
-            "temperament": self._temperament_edit.toPlainText().strip(),
-            "social_status": self._social_status_edit.toPlainText().strip(),
-            "speaking_style": self._speaking_style_edit.toPlainText().strip(),
-            "accent_or_dialect_hints": self._accent_edit.text().strip(),
-            "voice_notes": self._voice_notes_edit.toPlainText().strip(),
-            "voice_persona_summary": self._voice_persona_summary_edit.toPlainText().strip(),
-            "voice_timbre_and_range": self._voice_timbre_and_range_edit.toPlainText().strip(),
-            "voice_pacing_and_rhythm": self._voice_pacing_and_rhythm_edit.toPlainText().strip(),
-            "voice_emotional_baseline": self._voice_emotional_baseline_edit.toPlainText().strip(),
-            "voice_articulation_and_pronunciation": (
-                self._voice_articulation_and_pronunciation_edit.toPlainText().strip()
-            ),
-            "voice_delivery_constraints": self._voice_delivery_constraints_edit.toPlainText().strip(),
             "voice_definition_prompt": self._voice_definition_prompt_edit.toPlainText().strip(),
-            "voice_definition_source_signature": str(base_profile.get("voice_definition_source_signature", "")).strip(),
-            "voice_definition_stale": bool(base_profile.get("voice_definition_stale", False)),
-            "relationship_hints": [
-                item.strip() for item in self._relationships_edit.toPlainText().splitlines() if item.strip()
-            ],
             "confidence": self._confidence_edit.text().strip(),
             "evidence": [dict(item) for item in list(base_profile.get("evidence", []))],
             "updated_at": base_profile.get("updated_at"),
         }
-        draft_profile["voice_definition_stale"] = _voice_definition_stale_for_draft(base_profile, draft_profile)
         return draft_profile
-
-    def apply_regenerated_voice_definition(self, profile_payload: dict[str, object]) -> None:
-        """
-        @brief      Apply regenerated voice-definition fields to the active draft without leaving edit mode.
-        @param[in]  profile_payload Updated draft payload with regenerated voice-definition fields.
-        @return     None.
-        @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-20
-        @version    1.0.0
-        """
-        if self._mode not in {CHARACTER_PAGE_MODE_ADD, CHARACTER_PAGE_MODE_EDIT}:
-            return
-        self._draft_profile = _normalize_page_profile(profile_payload)
-        self._load_profile_into_editor(self._draft_profile)
-        if self._mode == CHARACTER_PAGE_MODE_ADD:
-            self._dirty = True
-        else:
-            self._dirty = not _profiles_equal(
-                self._draft_profile,
-                self._original_profile,
-            )
-        current_row = _row_for_character_id(self._profiles, self._current_character_id)
-        current_item = None if current_row < 0 else self._character_list.item(current_row)
-        if current_item is not None:
-            current_item.setText(_format_profile_item(self._draft_profile))
-        self._apply_control_state()
 
     def _current_profile(self) -> dict[str, object] | None:
         """
@@ -1379,12 +1124,10 @@ def _format_profile_item(profile: dict[str, object]) -> str:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-08
-    @version    0.1.0
+    @version    0.2.0
     """
     canonical_name = str(profile.get("canonical_name", "")).strip()
-    role_summary = str(profile.get("role_summary", "")).strip()
-    role_suffix = f" | {role_summary}" if role_summary else ""
-    return f"{canonical_name}{role_suffix}".strip()
+    return canonical_name
 
 
 def _build_summary_text(notes: list[str]) -> str:
@@ -1414,7 +1157,7 @@ def _profiles_equal(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-08
-    @version    0.2.0
+    @version    0.3.0
     """
     if left_profile is None or right_profile is None:
         return left_profile is right_profile
@@ -1422,22 +1165,7 @@ def _profiles_equal(
         "canonical_name",
         "aliases",
         "gender_hint",
-        "age_band",
-        "role_summary",
-        "description",
-        "temperament",
-        "social_status",
-        "speaking_style",
-        "accent_or_dialect_hints",
-        "voice_notes",
-        "voice_persona_summary",
-        "voice_timbre_and_range",
-        "voice_pacing_and_rhythm",
-        "voice_emotional_baseline",
-        "voice_articulation_and_pronunciation",
-        "voice_delivery_constraints",
         "voice_definition_prompt",
-        "relationship_hints",
         "confidence",
         "evidence",
     )
@@ -1454,73 +1182,12 @@ def _normalize_page_profile(profile: dict[str, object]) -> dict[str, object]:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-20
-    @version    1.0.0
+    @version    2.0.0
     """
     normalized_profile = dict(profile)
     normalized_profile.setdefault("aliases", [])
-    normalized_profile.setdefault("relationship_hints", [])
-    normalized_profile.setdefault("voice_persona_summary", "")
-    normalized_profile.setdefault("voice_timbre_and_range", "")
-    normalized_profile.setdefault("voice_pacing_and_rhythm", "")
-    normalized_profile.setdefault("voice_emotional_baseline", "")
-    normalized_profile.setdefault("voice_articulation_and_pronunciation", "")
-    normalized_profile.setdefault("voice_delivery_constraints", "")
     normalized_profile.setdefault("voice_definition_prompt", "")
-    normalized_profile.setdefault("voice_definition_source_signature", "")
-    normalized_profile.setdefault("voice_definition_stale", False)
     return normalized_profile
-
-
-def _voice_definition_stale_for_draft(
-    base_profile: dict[str, object],
-    draft_profile: dict[str, object],
-) -> bool:
-    """
-    @brief      Determine whether the draft voice definition is stale against the edited character facts.
-    @param[in]  base_profile Persisted or regenerated profile used as the draft base.
-    @param[in]  draft_profile Current draft profile from the editor widgets.
-    @return     `True` when the raw character facts changed without updating the voice-definition block.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-20
-    @version    1.0.0
-    """
-    stored_signature = str(base_profile.get("voice_definition_source_signature", "")).strip()
-    if not stored_signature:
-        return False
-    if not _voice_definition_block_equal(base_profile, draft_profile):
-        return False
-    current_signature = character_discovery_service.voice_definition_source_signature(draft_profile)
-    return stored_signature != current_signature
-
-
-def _voice_definition_block_equal(
-    left_profile: dict[str, object],
-    right_profile: dict[str, object],
-) -> bool:
-    """
-    @brief      Compare the editable voice-definition block between two profile payloads.
-    @param[in]  left_profile First profile payload.
-    @param[in]  right_profile Second profile payload.
-    @return     `True` when all voice-definition brief fields and the final prompt match.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-20
-    @version    1.0.0
-    """
-    comparable_fields = (
-        "voice_persona_summary",
-        "voice_timbre_and_range",
-        "voice_pacing_and_rhythm",
-        "voice_emotional_baseline",
-        "voice_articulation_and_pronunciation",
-        "voice_delivery_constraints",
-        "voice_definition_prompt",
-    )
-    return all(
-        str(left_profile.get(field_name, "")).strip() == str(right_profile.get(field_name, "")).strip()
-        for field_name in comparable_fields
-    )
 
 
 # END OF FILE

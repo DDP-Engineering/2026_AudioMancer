@@ -13,7 +13,7 @@
          review controls for the Audio Blocks workflow.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-23
-@version 0.4.0
+@version 0.5.0
 """
 
 # IMPORTS
@@ -23,6 +23,7 @@ from PySide6.QtWidgets import (
     QGroupBox,
     QHBoxLayout,
     QLabel,
+    QLineEdit,
     QListWidget,
     QPlainTextEdit,
     QProgressBar,
@@ -51,8 +52,6 @@ class AudioBlocksPage(QWidget):
     audiobook_playback_toggle_requested = Signal()
     regenerate_selected_requested = Signal(str)
     approve_selected_requested = Signal(str)
-    unapprove_selected_requested = Signal(str)
-    reset_selected_requested = Signal(str)
     selected_playback_toggle_requested = Signal(str)
 
     def __init__(self, parent=None) -> None:
@@ -63,7 +62,7 @@ class AudioBlocksPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-23
-        @version    0.4.0
+        @version    0.5.0
         """
         super().__init__(parent)
         self._current_language = "en"
@@ -74,6 +73,7 @@ class AudioBlocksPage(QWidget):
         self._stage_status = audio_blocks_service.AUDIO_BLOCKS_STAGE_NOT_STARTED
         self._speech_blocks: list[dict[str, object]] = []
         self._current_block_id: str | None = None
+        self._selected_text_character_limit = 0
 
         layout = QVBoxLayout(self)
         header_row = QHBoxLayout()
@@ -114,6 +114,7 @@ class AudioBlocksPage(QWidget):
 
         self._right_splitter = QSplitter(self)
         self._right_splitter.setOrientation(Qt.Orientation.Vertical)
+        self._right_splitter.setChildrenCollapsible(False)
 
         self._blocks_group = QGroupBox("Speech Blocks", self)
         blocks_layout = QVBoxLayout(self._blocks_group)
@@ -144,12 +145,10 @@ class AudioBlocksPage(QWidget):
         self._approve_button = QPushButton("Approve")
         self._approve_button.clicked.connect(self._emit_approve_selected)
         action_row.addWidget(self._approve_button)
-        self._unapprove_button = QPushButton("Unapprove")
-        self._unapprove_button.clicked.connect(self._emit_unapprove_selected)
-        action_row.addWidget(self._unapprove_button)
-        self._reset_selected_button = QPushButton("Reset Selected")
-        self._reset_selected_button.clicked.connect(self._emit_reset_selected)
-        action_row.addWidget(self._reset_selected_button)
+        self._character_count_edit = QLineEdit(self)
+        self._character_count_edit.setReadOnly(True)
+        self._character_count_edit.setMinimumWidth(96)
+        action_row.addWidget(self._character_count_edit)
         detail_layout.addLayout(action_row)
         self._right_splitter.addWidget(self._detail_group)
         self._right_splitter.setStretchFactor(0, 4)
@@ -189,17 +188,18 @@ class AudioBlocksPage(QWidget):
             can_approve_all=False,
             can_regenerate_selected=False,
             can_approve_selected=False,
+            selected_text_character_limit=0,
         )
 
     def resizeEvent(self, event) -> None:  # noqa: N802
         """
-        @brief      Keep Audio Blocks main splitter panes from shrinking below one third of the content width.
+        @brief      Keep Audio Blocks splitter panes from shrinking below their configured minimum spans.
         @param[in]  event Qt resize event.
         @return     None.
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-05-01
-        @version    0.2.0
+        @version    0.3.0
         """
         super().resizeEvent(event)
         self._apply_main_splitter_minimums()
@@ -235,6 +235,7 @@ class AudioBlocksPage(QWidget):
         can_approve_all: bool,
         can_regenerate_selected: bool,
         can_approve_selected: bool,
+        selected_text_character_limit: int = 0,
         **_extra_state,
     ) -> None:
         """
@@ -255,14 +256,16 @@ class AudioBlocksPage(QWidget):
         @param[in]  can_approve_all Controller-resolved approve-all enablement flag.
         @param[in]  can_regenerate_selected Controller-resolved selected regenerate enablement flag.
         @param[in]  can_approve_selected Controller-resolved selected approve enablement flag.
+        @param[in]  selected_text_character_limit Approximate selected speech text limit in characters.
         @return     None.
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-23
-        @version    0.3.0
+        @version    0.4.0
         """
         self._speech_blocks = speech_blocks_service.sort_speech_blocks(speech_blocks)
         self._stage_status = stage_status
+        self._selected_text_character_limit = max(0, int(selected_text_character_limit))
         self._can_start_or_continue = can_start_or_continue
         self._can_reset = can_reset
         self._can_approve_all = can_approve_all
@@ -317,7 +320,7 @@ class AudioBlocksPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-24
-        @version    0.1.0
+        @version    0.2.0
         """
         self._selected_playback_active = is_active
         if is_active:
@@ -407,9 +410,7 @@ class AudioBlocksPage(QWidget):
         self._selected_playback_button.setText(
             ui_state_service.translate(self._selected_playback_label_key(), language)
         )
-        self._approve_button.setText(ui_state_service.translate("audio_blocks.approve_selected", language))
-        self._unapprove_button.setText(ui_state_service.translate("audio_blocks.unapprove_selected", language))
-        self._reset_selected_button.setText(ui_state_service.translate("audio_blocks.reset_selected", language))
+        self._approve_button.setText(ui_state_service.translate(self._approval_button_label_key(), language))
         self._status_group.setTitle(ui_state_service.translate("audio_blocks.status_group", language))
         current_row = self._speech_block_list.currentRow()
         if current_row >= 0:
@@ -422,7 +423,7 @@ class AudioBlocksPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-23
-        @version    0.2.0
+        @version    0.3.0
         """
         selected_block = self._current_display_block()
         self._start_button.setEnabled(self._project_active and not self._busy and self._can_start_or_continue)
@@ -446,21 +447,10 @@ class AudioBlocksPage(QWidget):
         self._selected_playback_button.setText(
             ui_state_service.translate(self._selected_playback_label_key(), self._current_language)
         )
+        self._approve_button.setText(
+            ui_state_service.translate(self._approval_button_label_key(), self._current_language)
+        )
         self._approve_button.setEnabled(
-            self._project_active
-            and not self._busy
-            and selected_block is not None
-            and bool(selected_block.get("generated", False))
-            and not bool(selected_block.get("approved", False))
-        )
-        self._unapprove_button.setEnabled(
-            self._project_active
-            and not self._busy
-            and selected_block is not None
-            and bool(selected_block.get("generated", False))
-            and bool(selected_block.get("approved", False))
-        )
-        self._reset_selected_button.setEnabled(
             self._project_active
             and not self._busy
             and selected_block is not None
@@ -470,22 +460,26 @@ class AudioBlocksPage(QWidget):
 
     def _apply_main_splitter_minimums(self) -> None:
         """
-        @brief      Set each Audio Blocks main pane minimum width to one third of the main splitter width.
+        @brief      Set Audio Blocks splitter pane minimums to one quarter of their splitter spans.
         @return     None.
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-05-01
-        @version    0.1.0
+        @version    0.3.0
         """
-        required_attributes = ("_main_splitter", "_source_group", "_right_splitter")
+        required_attributes = ("_main_splitter", "_source_group", "_right_splitter", "_blocks_group", "_detail_group")
         if not all(hasattr(self, attribute_name) for attribute_name in required_attributes):
             return
         splitter_width = self._main_splitter.width()
-        if splitter_width <= 0:
-            return
-        minimum_pane_width = splitter_width // 3
-        self._source_group.setMinimumWidth(minimum_pane_width)
-        self._right_splitter.setMinimumWidth(minimum_pane_width)
+        if splitter_width > 0:
+            minimum_pane_width = splitter_width // 4
+            self._source_group.setMinimumWidth(minimum_pane_width)
+            self._right_splitter.setMinimumWidth(minimum_pane_width)
+        detail_splitter_height = self._right_splitter.height()
+        if detail_splitter_height > 0:
+            minimum_detail_pane_height = int(detail_splitter_height * 0.3)
+            self._blocks_group.setMinimumHeight(minimum_detail_pane_height)
+            self._detail_group.setMinimumHeight(minimum_detail_pane_height)
 
     def _selected_playback_label_key(self) -> str:
         """
@@ -509,6 +503,20 @@ class AudioBlocksPage(QWidget):
         """
         return "audio_blocks.stop_audiobook" if self._audiobook_playback_active else "audio_blocks.play_audiobook"
 
+    def _approval_button_label_key(self) -> str:
+        """
+        @brief      Resolve the selected-block approval toggle button translation key.
+        @return     Translation key for the current selected-block approval state.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-05
+        @version    0.1.0
+        """
+        selected_block = self._current_display_block()
+        if selected_block is not None and bool(selected_block.get("approved", False)):
+            return "audio_blocks.unapprove_selected"
+        return "audio_blocks.approve_selected"
+
     def _show_selected_block(self, row: int) -> None:
         """
         @brief      Display the selected speech block details in the read-only panel.
@@ -524,6 +532,7 @@ class AudioBlocksPage(QWidget):
             self._speaker_label.clear()
             self._approval_status_label.clear()
             self._block_text_edit.clear()
+            self._update_selected_text_character_count()
             self._apply_control_state()
             return
         selected_block = self._speech_blocks[row]
@@ -544,6 +553,7 @@ class AudioBlocksPage(QWidget):
             )
         )
         self._block_text_edit.setPlainText(str(selected_block.get("text", "")))
+        self._update_selected_text_character_count()
         self._apply_control_state()
 
     def _current_display_block(self) -> dict[str, object] | None:
@@ -592,32 +602,6 @@ class AudioBlocksPage(QWidget):
         if speech_block_id is not None:
             self.approve_selected_requested.emit(speech_block_id)
 
-    def _emit_unapprove_selected(self) -> None:
-        """
-        @brief      Emit the unapprove-selected signal for the active speech block.
-        @return     None.
-        @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-04
-        @version    0.1.0
-        """
-        speech_block_id = self.selected_block_id()
-        if speech_block_id is not None:
-            self.unapprove_selected_requested.emit(speech_block_id)
-
-    def _emit_reset_selected(self) -> None:
-        """
-        @brief      Emit the reset-selected signal for the active speech block.
-        @return     None.
-        @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-04
-        @version    0.1.0
-        """
-        speech_block_id = self.selected_block_id()
-        if speech_block_id is not None:
-            self.reset_selected_requested.emit(speech_block_id)
-
     def _emit_selected_playback_toggle(self) -> None:
         """
         @brief      Emit the selected playback toggle signal for the active speech block.
@@ -630,6 +614,21 @@ class AudioBlocksPage(QWidget):
         speech_block_id = self.selected_block_id()
         if speech_block_id is not None:
             self.selected_playback_toggle_requested.emit(speech_block_id)
+
+    def _update_selected_text_character_count(self) -> None:
+        """
+        @brief      Refresh the selected Speech Block text character counter.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-05
+        @version    0.1.0
+        """
+        selected_length = len(self._block_text_edit.toPlainText())
+        if self._selected_text_character_limit <= 0:
+            self._character_count_edit.setText(f"{selected_length} / -")
+            return
+        self._character_count_edit.setText(f"{selected_length} / {self._selected_text_character_limit}")
 
 
 def _format_audio_block_list_item(audio_block: dict[str, object], language: str) -> str:

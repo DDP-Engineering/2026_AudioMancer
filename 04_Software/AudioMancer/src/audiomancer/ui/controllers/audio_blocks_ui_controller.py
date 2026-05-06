@@ -14,7 +14,7 @@
          targeted downstream invalidation when upstream voice inputs change.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-23
-@version 0.6.0
+@version 0.7.0
 """
 
 # IMPORTS
@@ -154,22 +154,27 @@ def handle_approve_all_requested(window: "MainWindow") -> None:
 
 def handle_approve_selected_requested(window: "MainWindow", speech_block_id: str) -> None:
     """
-    @brief      Approve one generated Audio Blocks entry.
+    @brief      Toggle approval for one generated Audio Blocks entry.
     @param[in]  window Active main window instance.
     @param[in]  speech_block_id Selected speech-block identifier.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-23
-    @version    0.3.0
+    @version    0.4.0
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._current_project_root is None or window._current_manifest is None:
         return
+    audio_block = _audio_block_by_id(window, speech_block_id)
+    was_approved = bool(audio_block.get("approved", False)) if isinstance(audio_block, dict) else False
     if not _confirm_audio_approval_change(window, current_language):
         return
     try:
-        audio_blocks_service.approve_audio_block(window._current_project_root, speech_block_id)
+        if was_approved:
+            audio_blocks_service.unapprove_audio_block(window._current_project_root, speech_block_id)
+        else:
+            audio_blocks_service.approve_audio_block(window._current_project_root, speech_block_id)
     except ValueError as error:
         QMessageBox.warning(
             window,
@@ -178,71 +183,15 @@ def handle_approve_selected_requested(window: "MainWindow", speech_block_id: str
         )
         return
     _reset_audio_assembly_after_audio_blocks_change(window)
-    window._audio_blocks_page.advance_to_next_block()
+    if was_approved:
+        window._audio_blocks_page.select_block_id(str(speech_block_id).strip())
+        message_key = "status.audio_block_unapproved"
+    else:
+        window._audio_blocks_page.advance_to_next_block()
+        message_key = "status.audio_block_approved"
     misc_ui_controller.show_message(
         window,
-        ui_state_service.translate("status.audio_block_approved", current_language),
-    )
-
-
-def handle_unapprove_selected_requested(window: "MainWindow", speech_block_id: str) -> None:
-    """
-    @brief      Mark one generated Audio Blocks entry unapproved and reset Audio Assembly outputs.
-    @param[in]  window Active main window instance.
-    @param[in]  speech_block_id Selected speech-block identifier.
-    @return     None.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-04
-    @version    0.1.0
-    """
-    current_language = ui_state_service.current_language_from_settings(window._settings_payload)
-    if window._current_project_root is None or window._current_manifest is None:
-        return
-    if not _confirm_audio_approval_change(window, current_language):
-        return
-    try:
-        audio_blocks_service.unapprove_audio_block(window._current_project_root, speech_block_id)
-    except ValueError as error:
-        QMessageBox.warning(
-            window,
-            ui_state_service.translate("dialog.project_error_title", current_language),
-            str(error),
-        )
-        return
-    _reset_audio_assembly_after_audio_blocks_change(window)
-    window._audio_blocks_page.select_block_id(str(speech_block_id).strip())
-    misc_ui_controller.show_message(
-        window,
-        ui_state_service.translate("status.audio_block_unapproved", current_language),
-    )
-
-
-def handle_reset_selected_requested(window: "MainWindow", speech_block_id: str) -> None:
-    """
-    @brief      Delete one generated Audio Blocks entry and reset Audio Assembly outputs.
-    @param[in]  window Active main window instance.
-    @param[in]  speech_block_id Selected speech-block identifier.
-    @return     None.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-04
-    @version    0.1.0
-    """
-    current_language = ui_state_service.current_language_from_settings(window._settings_payload)
-    if window._current_project_root is None or window._current_manifest is None:
-        return
-    if not _confirm_selected_audio_block_reset(window, current_language):
-        return
-    audio_blocks_service.remove_audio_blocks_for_speech_blocks(
-        window._current_project_root,
-        (str(speech_block_id).strip(),),
-    )
-    _reset_audio_assembly_after_audio_blocks_change(window)
-    window._audio_blocks_page.select_block_id(str(speech_block_id).strip())
-    misc_ui_controller.show_message(
-        window,
-        ui_state_service.translate("status.audio_block_reset", current_language),
+        ui_state_service.translate(message_key, current_language),
     )
 
 
@@ -923,25 +872,6 @@ def _confirm_selected_audio_block_regeneration(window: "MainWindow", language: s
         language,
         "dialog.confirm_audio_block_regeneration_title",
         "project.confirm_audio_block_regeneration",
-    )
-
-
-def _confirm_selected_audio_block_reset(window: "MainWindow", language: str) -> bool:
-    """
-    @brief      Confirm deletion of one selected Audio Block and downstream assembly reset.
-    @param[in]  window Active main window instance.
-    @param[in]  language Current UI language code.
-    @return     True when selected reset may continue.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-04
-    @version    0.1.0
-    """
-    return _confirm_question(
-        window,
-        language,
-        "dialog.confirm_audio_block_reset_title",
-        "project.confirm_audio_block_reset",
     )
 
 

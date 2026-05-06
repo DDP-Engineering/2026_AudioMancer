@@ -629,11 +629,6 @@ def test_text_chunking_ui_controller_save_chunk_updates_project_state(
         "show_message",
         lambda _window, message: status_messages.append(message),
     )
-    monkeypatch.setattr(
-        text_chunking_ui_controller,
-        "confirm_chunk_edit",
-        lambda _window, _language: True,
-    )
     restored_scroll_states: list[dict[str, int]] = []
     monkeypatch.setattr(
         window._text_chunking_page,

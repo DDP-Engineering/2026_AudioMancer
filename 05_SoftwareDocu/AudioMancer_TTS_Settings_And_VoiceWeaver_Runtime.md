@@ -125,8 +125,6 @@ Normalized discovered-model payloads keep:
 - `status`
 - `supported_generation_modes`
 - `supported_languages`
-- `supported_presets`
-- `speaker_count`
 - `default_model_parameters`
 - `device_mode`
 - `issues`
@@ -134,11 +132,10 @@ Normalized discovered-model payloads keep:
 Current capability rules:
 
 - `minimum_qwen_ready` is true only when at least one healthy Qwen3
-  `base`, `voice_designer`, and `custom_voice` model family is available
+  `base` and `voice_designer` model family is available
 - `missing_qwen_capabilities` lists any missing required Qwen3 families
-- the older generic buckets (`custom_voice_models`, `definition_models`,
-  `clone_models`) are still exposed for compatibility, but the narrator
-  workflow now uses the fixed Qwen3 readiness flags
+- the generic buckets (`definition_models`, `clone_models`) are exposed for
+  runtime-aware UI and generation workflows
 
 Runtime helper coverage in `voiceweaver_runtime_service.py` currently includes:
 
@@ -153,7 +150,6 @@ Runtime helper coverage in `voiceweaver_runtime_service.py` currently includes:
 - `start_model_download(...)`
 - `read_model_download_status(...)`
 - `cancel_model_download(...)`
-- `generate_custom_voice(...)`
 - `generate_voice_design(...)`
 - `wait_for_terminal_operation(...)`
 - `download_generated_voice(...)`

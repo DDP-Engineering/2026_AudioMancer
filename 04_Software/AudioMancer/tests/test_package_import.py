@@ -9,30 +9,46 @@
 """
 @file test_package_import.py
 @brief Focused smoke tests for the AudioMancer package scaffold.
-@details Verifies that the package imports and exposes the expected entrypoint.
+@details Verifies that the package imports and keeps release version metadata aligned.
 @author Eng. Dan Dumitru Pasare
-@date 2026-04-04
-@version 0.1.6
+@date 2026-05-06
+@version 1.0.0
 """
 
 # IMPORTS
 
+from pathlib import Path
+import tomllib
+
 import audiomancer
+
+# CONSTANTS
+
+APP_ROOT = Path(__file__).resolve().parents[1]
+EXPECTED_VERSION = "1.0.0"
 
 # PUBLIC API
 
 
-def test_package_exposes_main() -> None:
+def test_package_exposes_main_and_release_version_metadata() -> None:
     """
-    @brief      Verify the package exports the application entrypoint.
+    @brief      Verify the package exports the entrypoint and aligned release version.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-04
-    @version    0.1.6
+    @date       2026-05-06
+    @version    1.0.0
     """
+    pyproject_payload = tomllib.loads((APP_ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+    lock_payload = tomllib.loads((APP_ROOT / "uv.lock").read_text(encoding="utf-8"))
+    locked_audiomancer_package = next(
+        package for package in lock_payload["package"] if package["name"] == "audiomancer"
+    )
+
     assert callable(audiomancer.main)
-    assert type(audiomancer.__version__) is str
+    assert audiomancer.__version__ == EXPECTED_VERSION
+    assert pyproject_payload["project"]["version"] == EXPECTED_VERSION
+    assert locked_audiomancer_package["version"] == EXPECTED_VERSION
 
 
 # END OF FILE

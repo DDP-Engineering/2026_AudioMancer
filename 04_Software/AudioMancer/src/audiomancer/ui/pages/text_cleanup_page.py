@@ -14,7 +14,7 @@
          text-processing slice, including local preview text search.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-24
-@version 0.8.1
+@version 0.8.2
 """
 
 # IMPORTS
@@ -547,14 +547,34 @@ class TextCleanupPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-24
-        @version    0.1.0
+        @version    0.2.0
         """
         if not self._has_cleaned_text:
+            return
+        if not self._confirm_cleaned_text_edit():
             return
         self._editing_cleaned_text = True
         self._cleaned_text_edit.setReadOnly(False)
         self._cleaned_text_edit.setFocus()
         self._apply_button_state()
+
+    def _confirm_cleaned_text_edit(self) -> bool:
+        """
+        @brief      Confirm downstream impact before entering cleaned-text edit mode.
+        @return     True when the operator confirms the edit impact.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-05
+        @version    0.1.0
+        """
+        result = QMessageBox.question(
+            self,
+            ui_state_service.translate("dialog.confirm_cleaned_text_edit_title", self._current_language()),
+            ui_state_service.translate("project.confirm_cleaned_text_edit", self._current_language()),
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        return result == QMessageBox.StandardButton.Yes
 
     def _emit_save_cleaned_text_requested(self) -> None:
         """

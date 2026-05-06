@@ -13,10 +13,12 @@
          language application.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-25
-@version 0.4.2
+@version 0.4.3
 """
 
 # IMPORTS
+
+from PySide6.QtWidgets import QScrollArea
 
 from audiomancer.services import project_export_service
 from audiomancer.ui.pages.home_page import HomeProjectPage
@@ -49,6 +51,24 @@ def test_home_page_export_panel_widgets_exist(qtbot) -> None:
         assert set(row) == {"format", "button"}
         assert row["format"].count() == 2
         assert row["button"].text() == "Export"
+
+
+def test_home_page_uses_compact_non_scrolled_dashboard(qtbot) -> None:
+    """
+    @brief      Verify the Home page no longer adds a duplicate page title or page-local scroll area.
+    @param[in]  qtbot Qt test helper fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-06
+    @version    0.1.0
+    """
+    page = HomeProjectPage()
+    qtbot.addWidget(page)
+
+    assert hasattr(page, "_title_label") is False
+    assert page.findChild(QScrollArea) is None
+    assert page._stage_rows[0].minimumHeight() == 28
 
 
 def test_home_page_project_snapshot_button_follows_project_and_busy_state(qtbot) -> None:

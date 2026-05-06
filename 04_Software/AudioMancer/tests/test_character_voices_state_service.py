@@ -13,7 +13,7 @@
          selection rules, same-narrator shaping, and missing-sample warnings.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-20
-@version 1.2.0
+@version 1.3.0
 """
 
 # IMPORTS
@@ -91,7 +91,7 @@ def test_state_initializes_character_preview_text_from_locked_voice_language(tmp
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-27
-    @version    0.1.0
+    @version    0.2.0
     """
     project_root, manifest = _create_project_with_narrator_and_character(
         tmp_path,
@@ -200,7 +200,7 @@ def _create_project_with_narrator_and_character(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-02
-    @version    0.1.0
+    @version    0.2.0
     """
     project_root, manifest = project_workspace_service.create_project(name, tmp_path)
     manifest["source_document"] = {
@@ -214,15 +214,21 @@ def _create_project_with_narrator_and_character(
     manifest["voice_assignment_mode"] = voice_assignment_mode
     project_workspace_service.save_manifest(manifest, project_root)
 
-    narrator_profile = narrator_definition_service.load_profiles(project_root)[0]
+    narrator_profile = narrator_definition_service.create_custom_profile(
+        project_root,
+        "Test Narrator",
+        "English",
+        "Warm narrator prompt.",
+        "Preview text.",
+    )
     if store_narrator_sample:
         narrator_definition_service.store_profile_sample(
             project_root,
             narrator_profile,
             "Preview text.",
             {
-                "generation_mode": "custom_voice",
-                "source_model_id": "qwen-custom",
+                "generation_mode": "definition",
+                "source_model_id": "qwen-designer",
                 "language": "en",
             },
             "Narator voice sample ready.",
@@ -239,10 +245,8 @@ def _create_project_with_narrator_and_character(
         {
             **dict(alice_profile),
             "canonical_name": "Alice",
-            "role_summary": "young observer",
-            "description": "reserved but curious",
-            "speaking_style": "soft and thoughtful",
-            "voice_notes": "gentle warmth",
+            "gender_hint": "female",
+            "voice_definition_prompt": "A gentle female voice for Alice.",
         },
     )
     return project_root, project_workspace_service.load_manifest(project_root)
@@ -263,21 +267,12 @@ def _minimum_qwen_models() -> list[dict[str, object]]:
             "backend_name": "qwen3-tts-base",
             "status": "healthy",
             "supported_generation_modes": ["base", "clone"],
-            "supported_presets": [],
         },
         {
             "model_id": "qwen-designer",
             "backend_name": "qwen3-tts-voice-designer",
             "status": "healthy",
             "supported_generation_modes": ["definition", "voice_designer"],
-            "supported_presets": [],
-        },
-        {
-            "model_id": "qwen-custom",
-            "backend_name": "qwen3-tts-customvoice",
-            "status": "healthy",
-            "supported_generation_modes": ["custom_voice"],
-            "supported_presets": ["vivian", "serena", "anna"],
         },
     ]
 

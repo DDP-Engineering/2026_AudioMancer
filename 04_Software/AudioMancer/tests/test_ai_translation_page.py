@@ -14,7 +14,7 @@
          workflow.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-07
-@version 0.3.0
+@version 0.4.1
 """
 
 # IMPORTS

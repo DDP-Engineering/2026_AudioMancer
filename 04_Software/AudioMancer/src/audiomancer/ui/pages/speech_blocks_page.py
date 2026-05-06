@@ -14,7 +14,7 @@
          controls for the Speech Blocks workflow.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-24
-@version 0.4.0
+@version 0.7.0
 """
 
 # IMPORTS
@@ -25,6 +25,7 @@ from PySide6.QtWidgets import (
     QGroupBox,
     QHBoxLayout,
     QLabel,
+    QLineEdit,
     QListWidget,
     QPlainTextEdit,
     QPushButton,
@@ -43,7 +44,7 @@ class SpeechBlocksPage(QWidget):
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-24
-    @version    0.4.0
+    @version    0.6.0
     """
 
     generate_requested = Signal(str)
@@ -54,7 +55,6 @@ class SpeechBlocksPage(QWidget):
     delete_block_requested = Signal(str)
     edit_started = Signal(str)
     save_block_requested = Signal(str, str, str, str)
-    reset_block_requested = Signal(str)
     approve_block_requested = Signal(str)
     generate_audio_selected_requested = Signal(str)
     selected_audio_playback_toggle_requested = Signal(str)
@@ -67,7 +67,7 @@ class SpeechBlocksPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-24
-        @version    0.4.0
+        @version    0.6.0
         """
         super().__init__(parent)
         self._current_language = "en"
@@ -85,6 +85,7 @@ class SpeechBlocksPage(QWidget):
         self._can_reset = False
         self._can_approve_all = False
         self._can_resplit_selected = False
+        self._selected_text_character_limit = 0
         self._current_chunk_id: str | None = None
         self._current_block_id: str | None = None
         self._selected_audio_playback_active = False
@@ -124,22 +125,23 @@ class SpeechBlocksPage(QWidget):
         chunk_actions_left_layout.addWidget(self._insert_block_button)
         self._delete_block_button = QPushButton("Delete")
         self._delete_block_button.clicked.connect(self._emit_delete_block)
-        chunk_actions_left_layout.addWidget(self._delete_block_button)
+        chunk_actions_right_layout.addWidget(self._delete_block_button)
         self._edit_button = QPushButton("Edit")
         self._edit_button.clicked.connect(self._begin_editing)
         chunk_actions_left_layout.addWidget(self._edit_button)
-        self._generate_audio_button = QPushButton("Generate Audio")
-        self._generate_audio_button.clicked.connect(self._emit_generate_audio_selected)
-        chunk_actions_left_layout.addWidget(self._generate_audio_button)
         self._save_button = QPushButton("Save")
         self._save_button.clicked.connect(self._emit_save_block)
         chunk_actions_right_layout.addWidget(self._save_button)
-        self._reset_block_button = QPushButton("Reset")
-        self._reset_block_button.clicked.connect(self._emit_reset_block)
-        chunk_actions_right_layout.addWidget(self._reset_block_button)
         self._approve_block_button = QPushButton("Approve")
         self._approve_block_button.clicked.connect(self._emit_approve_block)
-        chunk_actions_right_layout.addWidget(self._approve_block_button)
+        chunk_actions_left_layout.addWidget(self._approve_block_button)
+        self._character_count_edit = QLineEdit(self)
+        self._character_count_edit.setReadOnly(True)
+        self._character_count_edit.setMinimumWidth(96)
+        chunk_actions_right_layout.addWidget(self._character_count_edit)
+        self._generate_audio_button = QPushButton("Generate Audio")
+        self._generate_audio_button.clicked.connect(self._emit_generate_audio_selected)
+        chunk_actions_left_layout.addWidget(self._generate_audio_button)
         self._selected_audio_playback_button = QPushButton("Play")
         self._selected_audio_playback_button.clicked.connect(self._emit_selected_audio_playback_toggle)
         chunk_actions_right_layout.addWidget(self._selected_audio_playback_button)
@@ -184,6 +186,7 @@ class SpeechBlocksPage(QWidget):
         meta_row.addWidget(self._warning_label, 2)
         blocks_layout.addLayout(meta_row)
         self._speech_block_text_edit = QPlainTextEdit(self)
+        self._speech_block_text_edit.textChanged.connect(self._update_selected_text_character_count)
         blocks_layout.addWidget(self._speech_block_text_edit, 5)
         self._lower_splitter.addWidget(self._blocks_group)
         self._lower_splitter.setStretchFactor(0, 1)
@@ -281,6 +284,7 @@ class SpeechBlocksPage(QWidget):
         can_reset: bool = False,
         can_approve_all: bool = False,
         can_resplit_selected: bool = False,
+        selected_text_character_limit: int = 0,
         **_extra_state,
     ) -> None:
         """
@@ -301,11 +305,12 @@ class SpeechBlocksPage(QWidget):
         @param[in]  can_reset Controller-resolved reset enablement flag.
         @param[in]  can_approve_all Controller-resolved approve-all enablement flag.
         @param[in]  can_resplit_selected Controller-resolved selected re-split enablement flag.
+        @param[in]  selected_text_character_limit Approximate selected speech text limit in characters.
         @return     None.
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-24
-        @version    0.2.4
+        @version    0.3.0
         """
         _ = selected_source_language
         _ = approved_block_count
@@ -321,6 +326,7 @@ class SpeechBlocksPage(QWidget):
         self._can_reset = can_reset
         self._can_approve_all = can_approve_all
         self._can_resplit_selected = can_resplit_selected
+        self._selected_text_character_limit = max(0, int(selected_text_character_limit))
         current_block_id = self._current_block_id
         current_source_scroll_position = self._source_text_edit.verticalScrollBar().value()
         self._editing = False
@@ -428,7 +434,7 @@ class SpeechBlocksPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-25
-        @version    0.2.0
+        @version    0.3.0
         """
         self._restore_source_scroll_position(scroll_position)
         QTimer.singleShot(0, lambda: self._restore_source_scroll_position(scroll_position))
@@ -512,10 +518,9 @@ class SpeechBlocksPage(QWidget):
         self._speaker_label.setText(ui_state_service.translate("speech_blocks.detail_speaker", language))
         self._content_kind_label.setText(ui_state_service.translate("speech_blocks.detail_content_kind", language))
         self._resplit_button.setText(ui_state_service.translate("speech_blocks.resplit_selected", language))
-        self._reset_block_button.setText(ui_state_service.translate("speech_blocks.reset_block", language))
         self._edit_button.setText(ui_state_service.translate("speech_blocks.edit_block", language))
         self._save_button.setText(ui_state_service.translate("speech_blocks.save_block", language))
-        self._approve_block_button.setText(ui_state_service.translate("speech_blocks.approve_block", language))
+        self._approve_block_button.setText(ui_state_service.translate(self._approval_button_label_key(), language))
         self._generate_audio_button.setText(
             ui_state_service.translate("speech_blocks.generate_audio_selected", language)
         )
@@ -566,7 +571,7 @@ class SpeechBlocksPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-24
-        @version    0.4.0
+        @version    0.6.0
         """
         selected_block = self._current_display_block()
         generated_all_chunks = (
@@ -582,7 +587,7 @@ class SpeechBlocksPage(QWidget):
             and not generated_all_chunks
         )
         can_edit_selected = self._project_active and not self._busy and selected_block is not None
-        can_approve_selected = can_edit_selected and not bool(selected_block.get("approved", False))
+        can_toggle_approval_selected = can_edit_selected
         can_generate_audio_selected = (
             can_edit_selected
             and not self._editing
@@ -620,11 +625,13 @@ class SpeechBlocksPage(QWidget):
         )
         self._content_kind_combo.setEnabled(can_edit_selected and self._editing)
         self._speech_block_text_edit.setReadOnly(not (can_edit_selected and self._editing))
-        self._reset_block_button.setEnabled(can_edit_selected and not self._editing)
         self._edit_button.setEnabled(can_edit_selected and not self._editing)
         self._generate_audio_button.setEnabled(can_generate_audio_selected)
         self._save_button.setEnabled(can_edit_selected and self._editing)
-        self._approve_block_button.setEnabled(can_approve_selected and not self._editing)
+        self._approve_block_button.setText(
+            ui_state_service.translate(self._approval_button_label_key(), self._current_language)
+        )
+        self._approve_block_button.setEnabled(can_toggle_approval_selected and not self._editing)
         self._selected_audio_playback_button.setText(
             ui_state_service.translate(self._selected_audio_playback_label_key(), self._current_language)
         )
@@ -777,6 +784,7 @@ class SpeechBlocksPage(QWidget):
         self._set_combo_value(self._speaker_combo, str(selected_block.get("speaker_id", "")))
         self._set_combo_value(self._content_kind_combo, str(selected_block.get("content_kind", "")))
         self._speech_block_text_edit.setPlainText(str(selected_block.get("text", "")))
+        self._update_selected_text_character_count()
         self._warning_label.setText(_format_warning_label(selected_block, self._current_language))
         self._apply_control_state()
 
@@ -787,10 +795,11 @@ class SpeechBlocksPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-24
-        @version    0.1.0
+        @version    0.2.0
         """
         self._current_block_id = None
         self._speech_block_text_edit.clear()
+        self._update_selected_text_character_count()
         self._warning_label.clear()
 
     def _begin_editing(self) -> None:
@@ -831,31 +840,33 @@ class SpeechBlocksPage(QWidget):
         )
         self._apply_control_state()
 
-    def _emit_reset_block(self) -> None:
-        """
-        @brief      Emit the selected-block AI-baseline reset request.
-        @return     None.
-        @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-24
-        @version    0.1.0
-        """
-        block_id = self.selected_block_id()
-        if block_id is not None:
-            self.reset_block_requested.emit(block_id)
-
     def _emit_approve_block(self) -> None:
         """
-        @brief      Emit the selected-block approval request.
+        @brief      Emit the selected-block approval toggle request.
         @return     None.
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-24
-        @version    0.1.0
+        @version    0.2.0
         """
         block_id = self.selected_block_id()
         if block_id is not None:
             self.approve_block_requested.emit(block_id)
+
+    def _update_selected_text_character_count(self) -> None:
+        """
+        @brief      Refresh the selected Speech Block text character counter.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-05
+        @version    0.1.0
+        """
+        selected_length = len(self._speech_block_text_edit.toPlainText())
+        if self._selected_text_character_limit <= 0:
+            self._character_count_edit.setText(f"{selected_length} / -")
+            return
+        self._character_count_edit.setText(f"{selected_length} / {self._selected_text_character_limit}")
 
     def _blocks_for_current_chunk(self) -> list[dict[str, object]]:
         """
@@ -889,6 +900,20 @@ class SpeechBlocksPage(QWidget):
             ),
             None,
         )
+
+    def _approval_button_label_key(self) -> str:
+        """
+        @brief      Return the selected-block approval toggle label key.
+        @return     Translation key for the approval toggle button.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-05
+        @version    0.1.0
+        """
+        selected_block = self._current_display_block()
+        if selected_block is not None and bool(selected_block.get("approved", False)):
+            return "speech_blocks.unapprove_block"
+        return "speech_blocks.approve_block"
 
     def _set_combo_value(self, combo: QComboBox, value: str) -> None:
         """

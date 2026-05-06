@@ -14,7 +14,7 @@
          for the Characters page.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-11
-@version 0.12.0
+@version 0.14.0
 """
 
 # IMPORTS
@@ -180,10 +180,13 @@ def handle_edit_character_requested(window: "MainWindow", character_id: str) -> 
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-08
-    @version    0.2.0
+    @version    0.3.0
     """
     _ = character_id
+    current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._characters_page.current_character_id() is None:
+        return
+    if not _confirm_edit_character(window, current_language):
         return
     window._characters_page.begin_edit_mode()
 
@@ -200,7 +203,7 @@ def handle_save_character_requested(
     @exception  ValueError Propagated from manual-name validation helpers.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-08
-    @version    0.3.0
+    @version    0.4.0
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._current_project_root is None:
@@ -247,8 +250,6 @@ def handle_save_character_requested(
         _sync_manifest_after_character_add(window)
         status_key = "status.character_added"
     else:
-        if not _confirm_edit_character(window, current_language):
-            return False
         previous_profile = _character_profile_by_id(
             existing_profiles,
             str(profile_payload.get("character_id", "")).strip(),
@@ -273,31 +274,6 @@ def handle_save_character_requested(
         ui_state_service.translate(status_key, current_language),
     )
     return True
-
-
-def handle_regenerate_voice_definition_requested(
-    window: "MainWindow",
-    profile_payload: dict[str, object],
-) -> None:
-    """
-    @brief      Rebuild the active character voice-definition brief and prompt from the current draft facts.
-    @param[in]  window Main application window.
-    @param[in]  profile_payload Current draft character payload from the page.
-    @return     None.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-20
-    @version    1.0.0
-    """
-    regenerated_profile = character_discovery_service.regenerate_character_voice_definition(profile_payload)
-    window._characters_page.apply_regenerated_voice_definition(regenerated_profile)
-    misc_ui_controller.show_message(
-        window,
-        ui_state_service.translate(
-            "status.character_voice_definition_regenerated",
-            ui_state_service.current_language_from_settings(window._settings_payload),
-        ),
-    )
 
 
 def handle_delete_character_requested(window: "MainWindow", character_id: str) -> None:
@@ -439,7 +415,7 @@ def _handle_discovery_success(window: "MainWindow", result_payload: object) -> N
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-24
-    @version    0.1.0
+    @version    0.2.0
     """
     assert isinstance(result_payload, dict)
     _sync_manifest_after_discovery(window, result_payload)
@@ -705,20 +681,22 @@ def _voice_definition_source_changed(
     updated_profile: dict[str, object] | None,
 ) -> bool:
     """
-    @brief      Return whether character facts that drive the voice target changed.
+    @brief      Return whether compact character voice-target fields changed.
     @param[in]  previous_profile Previous profile payload.
     @param[in]  updated_profile Updated profile payload.
-    @return     True when the voice-definition source signature changed.
+    @return     True when identity, sex/gender, or voice prompt text changed.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-04
-    @version    0.1.0
+    @version    0.2.0
     """
     if not isinstance(previous_profile, dict) or not isinstance(updated_profile, dict):
         return False
-    return character_discovery_service.voice_definition_source_signature(
-        previous_profile
-    ) != character_discovery_service.voice_definition_source_signature(updated_profile)
+    comparable_fields = ("canonical_name", "gender_hint", "voice_definition_prompt")
+    return any(
+        str(previous_profile.get(field_name, "")).strip() != str(updated_profile.get(field_name, "")).strip()
+        for field_name in comparable_fields
+    )
 
 
 def _character_profile_by_id(
@@ -958,15 +936,7 @@ def _build_manual_draft_profile(
             "canonical_name": canonical_name,
             "aliases": [],
             "gender_hint": "",
-            "age_band": "",
-            "role_summary": "",
-            "description": "",
-            "temperament": "",
-            "social_status": "",
-            "speaking_style": "",
-            "accent_or_dialect_hints": "",
-            "voice_notes": "",
-            "relationship_hints": [],
+            "voice_definition_prompt": "",
             "confidence": "",
             "evidence": [
                 {

@@ -14,7 +14,7 @@
          VoiceWeaver runtime discovery data.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-20
-@version 3.12.0
+@version 3.13.2
 """
 
 # IMPORTS
@@ -94,7 +94,6 @@ def build_narrator_definition_state(
         settings_payload.get("tts_runtime_probe_succeeded", False) if isinstance(settings_payload, dict) else False
     )
     capability_matrix = voice_capability_matrix(discovered_models)
-    narrator_definition_service.sync_runtime_qwen_presets(project_root, discovered_models)
     profiles = narrator_definition_service.load_profiles(project_root)
     tts_plan = narrator_definition_service.load_tts_plan(project_root, discovered_models)
     selected_state = narrator_definition_service.load_selected_profile_state(project_root)
@@ -165,8 +164,7 @@ def build_narrator_definition_state(
         "preview_text_character_limit": preview_text_character_limit,
         "preview_text_safe_word_limit": preview_safe_word_limit,
         "is_editable": bool(current_profile) and bool(current_profile.get("editable", False)),
-        "is_preset": bool(current_profile)
-        and str(current_profile.get("profile_kind", "")) == narrator_definition_service.NARRATOR_PROFILE_KIND_PRESET,
+        "is_preset": False,
         "can_edit": bool(current_profile) and bool(current_profile.get("editable", False)),
         "can_delete": bool(current_profile) and not bool(current_profile.get("protected", False)),
         "can_generate": bool(current_profile) and bool(current_profile.get("can_generate", False)),
@@ -193,7 +191,7 @@ def _preview_text_character_limit(settings_payload: dict[str, object] | None) ->
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.2.0
+    @version    0.4.0
     """
     if not isinstance(settings_payload, dict):
         return config.DEFAULT_TTS_PREVIEW_TEXT_CHARACTER_LIMIT
@@ -259,13 +257,7 @@ def build_narrator_definition_notes(
         notes.append(
             ui_state_service.translate("narator_voice.note_selected_profile", language).format(
                 profile_name=narrator_definition_service.display_profile_name(selected_profile),
-                profile_kind=ui_state_service.translate(
-                    "narator_voice.profile_kind_preset"
-                    if str(selected_profile.get("profile_kind", ""))
-                    == narrator_definition_service.NARRATOR_PROFILE_KIND_PRESET
-                    else "narator_voice.profile_kind_custom",
-                    language,
-                ),
+                profile_kind=ui_state_service.translate("narator_voice.profile_kind_custom", language),
             )
         )
         if not bool(selected_profile.get("has_sample", False)):
@@ -423,18 +415,13 @@ def _build_profile_entry(
 
     return {
         **dict(profile),
-        "profile_kind_label": ui_state_service.translate(
-            "narator_voice.profile_kind_preset"
-            if str(profile.get("profile_kind", "")) == narrator_definition_service.NARRATOR_PROFILE_KIND_PRESET
-            else "narator_voice.profile_kind_custom",
-            language,
-        ),
+        "profile_kind_label": ui_state_service.translate("narator_voice.profile_kind_custom", language),
         "selected_label": ui_state_service.translate("narator_voice.list_selected", language),
         "is_selected": is_selected,
         "has_sample": has_sample,
         "runtime_available": runtime_available,
-        "can_generate": bool(generation_request.get("can_generate", False)),
-        "can_select": has_sample and not is_selected,
+        "can_generate": True,
+        "can_select": not is_selected,
         "availability_note": availability_note,
         "sample_metadata": sample_metadata,
         "generation_request": generation_request,

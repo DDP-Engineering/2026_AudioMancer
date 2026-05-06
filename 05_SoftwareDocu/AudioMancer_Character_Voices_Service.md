@@ -18,8 +18,7 @@ locked on the Home page before the later `Speech Blocks`,
 
 - persist the Character Voices target list as root-level `characters_voice.json`
 - prefer the character-owned `voice_definition_prompt` from `Characters` as
-  the default voice-designer prompt for each character, with one legacy
-  fallback builder for older projects
+  the default voice-designer prompt for each character
 - persist one editable per-character preview text used for sample generation
   and reset that text to the localized default when the selected voice
   language changes
@@ -71,10 +70,9 @@ High-level flow:
    Character Voices data.
 3. Target synchronization keeps narrator first when selected and gives each
    discovered character one stable `character_<character_id>` target row.
-4. Character default prompts first use `character.voice_definition_prompt`;
-   older projects fall back to the deterministic builder from stored character
-   facts. Target synchronization enforces one explicit `Sex/Gender:` sentence
-   in each character prompt, using `gender_hint` when available and a neutral
+4. Character default prompts use `character.voice_definition_prompt`. Target
+   synchronization enforces one explicit `Sex/Gender:` sentence in each
+   character prompt, using `gender_hint` when available and a neutral
    non-male-default instruction when it is not.
 5. In `same_narrator` mode, narrator-derived character samples are copied into
    each character slot during state build and per-character editing/generation
@@ -157,10 +155,8 @@ Target rules:
 - character target ids use `character_<character_id>`
 - narrator target prompt fields are always `None` on disk
 - narrator target preview text is not editable on this page
-- character `default_prompt_text` is regenerated on synchronization
-- `default_prompt_text` prefers the character-owned `voice_definition_prompt`
-  and falls back to the legacy deterministic builder only when that prompt is
-  missing
+- character `default_prompt_text` is regenerated on synchronization from the
+  character-owned `voice_definition_prompt`
 - character `prompt_text` is preserved until reset, except that synchronization
   backfills mandatory sex/gender guidance when an existing prompt lacks it
 - character `preview_text` is preserved until explicitly edited and saved, or
@@ -202,7 +198,7 @@ Upstream integrations:
   from `narator.wav` plus `narator_sample.json`
 - project-local `voice_assignment_mode` from `project.json`
 - character discovery artifacts from `characters_profile.json`, including the
-  structured voice brief and final `voice_definition_prompt`
+  compact sex/gender guidance and final `voice_definition_prompt`
 - translation approval state from `translation_report.json`
 
 Downstream integrations:
@@ -272,6 +268,10 @@ Operator path:
 
 ## 9. Validation And Tests
 
+Documentation audit status:
+
+- reviewed against the current implementation on 2026-05-06
+
 Focused automated coverage exists in:
 
 - `04_Software/AudioMancer/tests/test_character_voices_service.py`
@@ -298,9 +298,8 @@ uv run ruff format <changed_python_files>
 
 - long-form audio creation is handled by Audio Blocks and Audio Assembly
 - narrator prompt editing remains on the `Narator Voice` page only
-- older projects without `voice_definition_prompt` still rely on the legacy
-  fallback builder until Character Discovery is rerun or the character is
-  edited and saved
+- character discovery is expected to provide the current `voice_definition_prompt`
+  for each persisted profile
 - per-character preview text still starts from a deterministic localized
   sample text instead of automatically using real dialogue excerpts
 - Character Voices does not regenerate Speech Blocks; it only invalidates the

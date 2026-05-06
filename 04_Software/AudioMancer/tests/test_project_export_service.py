@@ -162,7 +162,7 @@ def test_project_export_service_renders_character_dossier_labels(tmp_path) -> No
 
     assert "Name: Ștefan" in content
     assert "Gender Hint: male" in content
-    assert "Speaking Style: teatral" in content
+    assert "Speaking Style: teatral" not in content
     assert "Voice Definition Prompt:" in content
 
 
@@ -188,7 +188,7 @@ def test_project_export_service_renders_markdown_character_dossiers_as_tables(tm
     assert "### Ștefan" in content
     assert "| Attribute | Value |" in content
     assert "| **Gender Hint** | male |" in content
-    assert "| **Speaking Style** | teatral |" in content
+    assert "| **Voice Definition Prompt** |" in content
     assert "Name: Ștefan Gender Hint:" not in content
 
 
@@ -353,12 +353,6 @@ def _build_export_project(tmp_path):
                 "character_id": "stefan",
                 "canonical_name": "Ștefan",
                 "gender_hint": "male",
-                "age_band": "adult",
-                "role_summary": "Protagonist",
-                "description": "Vorbește apăsat.",
-                "temperament": "intens",
-                "speaking_style": "teatral",
-                "voice_notes": "bariton",
                 "voice_definition_prompt": "A dramatic Romanian baritone voice.",
             }
         ],

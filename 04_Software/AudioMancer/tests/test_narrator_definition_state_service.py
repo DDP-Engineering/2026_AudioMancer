@@ -13,7 +13,7 @@
          status-line composition for the simplified narrator workflow.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-20
-@version 3.4.0
+@version 3.5.2
 """
 
 # IMPORTS
@@ -86,15 +86,15 @@ def test_narrator_state_service_uses_cleanup_detected_original_language_when_man
     assert state["selected_voice_language"] == "it"
 
 
-def test_narrator_state_service_marks_sampled_custom_profile_selectable(tmp_path) -> None:
+def test_narrator_state_service_marks_unsampled_custom_profile_selectable(tmp_path) -> None:
     """
-    @brief      Verify a sampled inspected profile can be selected when it is not already selected.
+    @brief      Verify an unsampled inspected profile can be selected when it is not already selected.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-17
-    @version    1.1.0
+    @version    1.2.0
     """
     project_root, manifest = _create_project(tmp_path, "NarratorStateCustomProject")
     custom_profile = narrator_definition_service.create_custom_profile(
@@ -104,21 +104,6 @@ def test_narrator_state_service_marks_sampled_custom_profile_selectable(tmp_path
         "Custom prompt.",
         "Preview text.",
     )
-    narrator_definition_service.store_profile_sample(
-        project_root,
-        custom_profile,
-        "Preview text.",
-        {
-            "generation_mode": "definition",
-            "model_id": "qwen-designer",
-            "source_model_id": "qwen-designer",
-            "speaker_id": None,
-            "language": "en",
-        },
-        "Generated custom sample.",
-        b"RIFF-custom",
-    )
-
     state = narrator_definition_state_service.build_narrator_definition_state(
         project_root,
         manifest,
@@ -136,7 +121,41 @@ def test_narrator_state_service_marks_sampled_custom_profile_selectable(tmp_path
     assert state["can_delete"] is True
     assert state["can_generate"] is True
     assert state["can_select"] is True
-    assert state["preview_available"] is True
+    assert state["preview_available"] is False
+
+
+def test_narrator_state_service_keeps_generate_enabled_when_cached_runtime_is_stale(tmp_path) -> None:
+    """
+    @brief      Verify Generate Sample remains clickable even when cached runtime discovery is stale.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-05
+    @version    0.1.0
+    """
+    project_root, manifest = _create_project(tmp_path, "NarratorStateStaleRuntimeProject")
+    custom_profile = narrator_definition_service.create_custom_profile(
+        project_root,
+        "My Narrator",
+        "English",
+        "Prompt.",
+        "Preview text.",
+    )
+
+    state = narrator_definition_state_service.build_narrator_definition_state(
+        project_root,
+        manifest,
+        "en",
+        {
+            "tts_runtime_probe_succeeded": False,
+            "tts_runtime_discovered_models": [],
+        },
+        inspected_profile_id=custom_profile["profile_id"],
+    )
+
+    assert state["current_profile_id"] == custom_profile["profile_id"]
+    assert state["can_generate"] is True
 
 
 def test_narrator_state_service_status_lines_show_counts_and_qwen_readiness(tmp_path) -> None:
@@ -150,19 +169,24 @@ def test_narrator_state_service_status_lines_show_counts_and_qwen_readiness(tmp_
     @version    1.1.0
     """
     project_root, manifest = _create_project(tmp_path, "NarratorStateStatusProject")
-    profiles = narrator_definition_service.load_profiles(project_root)
+    profile = narrator_definition_service.create_custom_profile(
+        project_root,
+        "Status Voice",
+        "English",
+        "Status prompt.",
+        "Preview text.",
+    )
     narrator_definition_service.store_profile_sample(
         project_root,
-        profiles[0],
+        profile,
         "Preview text.",
         {
-            "generation_mode": "custom_voice",
-            "model_id": "qwen-custom",
-            "source_model_id": "qwen-custom",
-            "speaker_id": "vivian",
+            "generation_mode": "definition",
+            "model_id": "qwen-designer",
+            "source_model_id": "qwen-designer",
             "language": "en",
         },
-        "Generated preset sample.",
+        "Generated sample.",
         b"RIFF-preset",
     )
 
@@ -174,45 +198,13 @@ def test_narrator_state_service_status_lines_show_counts_and_qwen_readiness(tmp_
             "tts_runtime_probe_succeeded": True,
             "tts_runtime_discovered_models": _minimum_qwen_models(),
         },
-        inspected_profile_id=profiles[0]["profile_id"],
+        inspected_profile_id=profile["profile_id"],
     )
 
-    assert "Profiles: 3" in state["status_lines"]
+    assert "Profiles: 1" in state["status_lines"]
     assert "Profiles with samples: 1" in state["status_lines"]
     assert "Selected profiles: 0" in state["status_lines"]
     assert "Qwen3 TTS readiness: ready" in state["status_lines"]
-
-
-def test_narrator_state_service_syncs_all_runtime_qwen_presets(tmp_path) -> None:
-    """
-    @brief      Verify narrator state adds all runtime-reported Qwen CustomVoice presets to the project profile list.
-    @param[in]  tmp_path Pytest temporary directory fixture.
-    @return     None.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-18
-    @version    1.0.0
-    """
-    project_root, manifest = _create_project(tmp_path, "NarratorStateRuntimePresetProject")
-
-    state = narrator_definition_state_service.build_narrator_definition_state(
-        project_root,
-        manifest,
-        "en",
-        {
-            "tts_runtime_probe_succeeded": True,
-            "tts_runtime_discovered_models": _runtime_qwen_models_with_extended_presets(),
-        },
-    )
-
-    assert len(state["profiles"]) == 5
-    assert [profile["speaker_id"] for profile in state["profiles"][:5]] == [
-        "vivian",
-        "serena",
-        "anna",
-        "aiden",
-        "uncle_fu",
-    ]
 
 
 def test_narrator_state_service_legacy_default_custom_profile_is_deletable(tmp_path) -> None:
@@ -259,58 +251,6 @@ def test_narrator_state_service_legacy_default_custom_profile_is_deletable(tmp_p
     assert state["can_delete"] is True
 
 
-def test_narrator_state_service_legacy_customvoice_seed_profile_is_deletable_and_generatable(tmp_path) -> None:
-    """
-    @brief      Verify legacy prompt-seed narrator profiles are exposed as
-                deletable custom profiles with sample generation enabled.
-    @param[in]  tmp_path Pytest temporary directory fixture.
-    @return     None.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-20
-    @version    1.0.0
-    """
-    project_root, manifest = _create_project(tmp_path, "NarratorStateLegacySeedProject")
-    profiles_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.NARRATOR_PROFILE_FILE_NAME
-    profiles_path.write_text(
-        json.dumps(
-            [
-                {
-                    "profile_id": "preset_qwen_customvoice_warm_reflective_narrator",
-                    "display_name": "Warm Reflective Narrator",
-                    "language": "en",
-                    "prompt_text": "Warm reflective narrator prompt.",
-                    "profile_kind": "preset",
-                    "profile_origin": "qwen_builtin_preset",
-                    "provider_family": "qwen3_tts_customvoice_seed",
-                    "editable": False,
-                    "protected": True,
-                }
-            ],
-            indent=2,
-        )
-        + "\n",
-        encoding="utf-8",
-    )
-
-    state = narrator_definition_state_service.build_narrator_definition_state(
-        project_root,
-        manifest,
-        "en",
-        {
-            "tts_runtime_probe_succeeded": True,
-            "tts_runtime_discovered_models": _minimum_qwen_models(),
-        },
-        inspected_profile_id="preset_qwen_customvoice_warm_reflective_narrator",
-    )
-
-    assert state["current_profile_id"] == "preset_qwen_customvoice_warm_reflective_narrator"
-    assert state["is_preset"] is False
-    assert state["can_edit"] is True
-    assert state["can_delete"] is True
-    assert state["can_generate"] is True
-
-
 def _create_project(tmp_path, name: str):
     """
     @brief      Provide the create project test helper.
@@ -348,37 +288,14 @@ def _minimum_qwen_models() -> list[dict[str, object]]:
             "backend_name": "qwen3-tts-base",
             "status": "healthy",
             "supported_generation_modes": ["clone"],
-            "supported_presets": [],
         },
         {
             "model_id": "qwen-designer",
             "backend_name": "qwen3-tts-voice-designer",
             "status": "healthy",
             "supported_generation_modes": ["definition"],
-            "supported_presets": [],
-        },
-        {
-            "model_id": "qwen-custom",
-            "backend_name": "qwen3-tts-customvoice",
-            "status": "healthy",
-            "supported_generation_modes": ["custom_voice"],
-            "supported_presets": ["vivian", "serena", "anna"],
         },
     ]
-
-
-def _runtime_qwen_models_with_extended_presets() -> list[dict[str, object]]:
-    """
-    @brief      Provide the runtime qwen models with extended presets test helper.
-    @return     None.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-02
-    @version    0.1.0
-    """
-    models = _minimum_qwen_models()
-    models[2]["supported_presets"] = ["vivian", "serena", "anna", "aiden", "uncle_fu"]
-    return models
 
 
 # END OF FILE

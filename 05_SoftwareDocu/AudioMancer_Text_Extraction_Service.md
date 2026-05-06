@@ -231,3 +231,7 @@ Minimum validation after a change:
   are still out of scope for this service
 - format handlers currently extract plain text only and do not preserve richer
   semantic structure
+
+Documentation audit status: reviewed against the current implementation on
+2026-05-06. Shared operation-runtime behavior is documented separately in
+`AudioMancer_Project_Runtime_Support_Services.md`.

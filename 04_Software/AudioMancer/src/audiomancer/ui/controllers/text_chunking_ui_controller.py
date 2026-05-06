@@ -10,12 +10,12 @@
 @file text_chunking_ui_controller.py
 @brief Text Chunking page UI controller for AudioMancer.
 @details Handles deterministic and AI-assisted chunking workflows, including
-         selected-chunk edits, progress dialog lifecycle, resumable reruns,
+         selected-chunk saves, progress dialog lifecycle, resumable reruns,
          destructive confirmation, and manifest synchronization for the Text
          Chunking page.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-24
-@version 0.8.0
+@version 0.8.1
 """
 
 # IMPORTS
@@ -197,13 +197,10 @@ def handle_save_chunk_requested(window: "MainWindow", chunk_id: str, chunk_text:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-24
-    @version    0.2.0
+    @version    0.3.0
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._current_project_root is None or window._current_manifest is None:
-        return
-    if not confirm_chunk_edit(window, current_language):
-        window.show_project_state(window._current_project_root, window._current_manifest)
         return
     preview_scroll_state = window._text_chunking_page.preview_scroll_state()
     try:
@@ -606,27 +603,6 @@ def confirm_ai_chunking_rerun(window: "MainWindow", language: str) -> bool:
         window,
         ui_state_service.translate("dialog.confirm_ai_chunking_rerun_title", language),
         ui_state_service.translate("project.confirm_ai_chunking_rerun", language),
-        QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-        QMessageBox.StandardButton.No,
-    )
-    return decision == QMessageBox.StandardButton.Yes
-
-
-def confirm_chunk_edit(window: "MainWindow", language: str) -> bool:
-    """
-    @brief      Ask whether to save a chunk edit with selective downstream impact.
-    @param[in]  window Active main window shell.
-    @param[in]  language Current UI language code.
-    @return     True when the operator accepts the edit.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-04
-    @version    0.1.0
-    """
-    decision = QMessageBox.question(
-        window,
-        ui_state_service.translate("dialog.confirm_chunk_edit_title", language),
-        ui_state_service.translate("project.confirm_chunk_edit", language),
         QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
         QMessageBox.StandardButton.No,
     )

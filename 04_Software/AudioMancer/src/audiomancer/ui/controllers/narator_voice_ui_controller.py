@@ -57,7 +57,7 @@ def handle_selection_change_requested(window: "MainWindow", target_profile_id: o
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-17
-    @version    1.4.0
+    @version    1.5.0
     """
     profile_id = None if target_profile_id in (None, "") else str(target_profile_id)
     window._narator_voice_inspected_profile_id = profile_id
@@ -347,27 +347,20 @@ def handle_delete_profile_requested(window: "MainWindow", profile_id: str) -> No
 
 def handle_select_profile_requested(window: "MainWindow", profile_id: str) -> None:
     """
-    @brief      Persist one explicit narrator selection when a stored sample exists.
+    @brief      Persist one explicit narrator selection.
     @param[in]  window Main application window.
     @param[in]  profile_id Requested narrator-profile identifier.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-17
-    @version    1.2.0
+    @version    1.3.0
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._current_project_root is None or window._current_manifest is None:
         return
     profile_payload = narrator_definition_service.profile_by_id(window._current_project_root, profile_id)
     if profile_payload is None:
-        return
-    if not narrator_definition_service.has_profile_sample(window._current_project_root, profile_id):
-        QMessageBox.warning(
-            window,
-            ui_state_service.translate("dialog.project_error_title", current_language),
-            ui_state_service.translate("narator_voice.error_missing_sample", current_language),
-        )
         return
     if not audio_blocks_ui_controller.confirm_narrator_voice_invalidation(window, current_language):
         return
@@ -736,37 +729,20 @@ def _generate_and_store_sample(
         35,
         progress_messages["generate"],
     )
-    if str(generation_request.get("generation_mode", "")) == "custom_voice":
-        voiceweaver_runtime_service.generate_custom_voice(
-            base_url,
-            runtime_api_key,
-            str(generation_request.get("speaker_id", "")),
-            str(generation_request.get("language", narrator_definition_service.DEFAULT_NARRATOR_LANGUAGE)),
-            preview_text,
-            str(profile_payload.get("prompt_text", "")),
-            model_parameters=dict(generation_request.get("model_parameters", {}))
-            if isinstance(generation_request.get("model_parameters"), dict)
-            else None,
-            supported_languages=list(generation_request.get("supported_languages", []))
-            if isinstance(generation_request.get("supported_languages"), list)
-            else None,
-            timeout_seconds=preview_timeout_seconds,
-        )
-    else:
-        voiceweaver_runtime_service.generate_voice_design(
-            base_url,
-            runtime_api_key,
-            str(generation_request.get("language", narrator_definition_service.DEFAULT_NARRATOR_LANGUAGE)),
-            preview_text,
-            str(profile_payload.get("prompt_text", "")),
-            model_parameters=dict(generation_request.get("model_parameters", {}))
-            if isinstance(generation_request.get("model_parameters"), dict)
-            else None,
-            supported_languages=list(generation_request.get("supported_languages", []))
-            if isinstance(generation_request.get("supported_languages"), list)
-            else None,
-            timeout_seconds=preview_timeout_seconds,
-        )
+    voiceweaver_runtime_service.generate_voice_design(
+        base_url,
+        runtime_api_key,
+        str(generation_request.get("language", narrator_definition_service.DEFAULT_NARRATOR_LANGUAGE)),
+        preview_text,
+        str(profile_payload.get("prompt_text", "")),
+        model_parameters=dict(generation_request.get("model_parameters", {}))
+        if isinstance(generation_request.get("model_parameters"), dict)
+        else None,
+        supported_languages=list(generation_request.get("supported_languages", []))
+        if isinstance(generation_request.get("supported_languages"), list)
+        else None,
+        timeout_seconds=preview_timeout_seconds,
+    )
 
     final_status = voiceweaver_runtime_service.wait_for_terminal_operation(
         base_url,
@@ -975,7 +951,7 @@ def _sync_manifest_summary(
                 str(profile_payload.get("profile_id", "")).strip(),
             )
         else:
-            narrator_definition_service.clear_selected_narrator_sample(window._current_project_root)
+            narrator_definition_service.clear_selected_narrator_sample_artifacts(window._current_project_root)
     updated_manifest["current_stage"] = "narrator_definition_ready"
     project_workspace_service.save_manifest(updated_manifest, window._current_project_root)
     window.show_project_state(

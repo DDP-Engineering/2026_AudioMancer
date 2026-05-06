@@ -303,7 +303,7 @@ Covered behaviors:
   resetting all generated Audio Blocks and Audio Assembly
 - Speech Blocks manual insert/delete preserves stable `speech_block_id` values
   while updating sequence indexes
-- Speech Blocks selected-block edit/reset/delete removes only exact matching
+- Speech Blocks selected-block edit/delete removes only exact matching
   Audio Blocks and generated files
 - Speech Blocks approval and insert preserve Audio Blocks and reset Audio
   Assembly only

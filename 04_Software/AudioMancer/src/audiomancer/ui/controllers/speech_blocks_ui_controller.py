@@ -14,7 +14,7 @@
          Speech Blocks workflow.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 0.6.0
+@version 0.8.0
 """
 
 # IMPORTS
@@ -148,20 +148,25 @@ def handle_approve_all_requested(window: "MainWindow") -> None:
 
 def handle_approve_block_requested(window: "MainWindow", speech_block_id: str) -> None:
     """
-    @brief      Approve one selected Speech Block and refresh workflow state.
+    @brief      Toggle approval for one selected Speech Block and refresh workflow state.
     @param[in]  window Active main window instance.
     @param[in]  speech_block_id Selected Speech Block identifier.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-24
-    @version    0.4.0
+    @version    0.5.0
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._current_project_root is None or window._current_manifest is None:
         return
+    selected_block = _speech_block_by_id(window, speech_block_id)
+    was_approved = bool(selected_block.get("approved", False)) if isinstance(selected_block, dict) else False
     try:
-        speech_blocks_service.approve_speech_block(window._current_project_root, speech_block_id)
+        if was_approved:
+            speech_blocks_service.unapprove_speech_block(window._current_project_root, speech_block_id)
+        else:
+            speech_blocks_service.approve_speech_block(window._current_project_root, speech_block_id)
     except ValueError as error:
         QMessageBox.warning(
             window,
@@ -171,10 +176,15 @@ def handle_approve_block_requested(window: "MainWindow", speech_block_id: str) -
         return
     _sync_manifest_after_speech_blocks_update(window)
     _reset_audio_assembly_after_speech_blocks_change(window)
-    window._speech_blocks_page.advance_to_next_block()
+    if was_approved:
+        window._speech_blocks_page.select_speech_block(str(speech_block_id).strip())
+        message_key = "status.speech_block_unapproved"
+    else:
+        window._speech_blocks_page.advance_to_next_block()
+        message_key = "status.speech_block_approved"
     misc_ui_controller.show_message(
         window,
-        ui_state_service.translate("status.speech_block_approved", current_language),
+        ui_state_service.translate(message_key, current_language),
     )
 
 
@@ -339,41 +349,6 @@ def handle_save_block_requested(
     misc_ui_controller.show_message(
         window,
         ui_state_service.translate("status.speech_block_saved", current_language),
-    )
-
-
-def handle_reset_block_requested(window: "MainWindow", speech_block_id: str) -> None:
-    """
-    @brief      Reset one Speech Block to its AI-extracted baseline.
-    @param[in]  window Active main window instance.
-    @param[in]  speech_block_id Selected Speech Block identifier.
-    @return     None.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.4.0
-    """
-    current_language = ui_state_service.current_language_from_settings(window._settings_payload)
-    if window._current_project_root is None or window._current_manifest is None:
-        return
-    if not _confirm_speech_block_audio_reset_if_needed(window, speech_block_id, current_language):
-        return
-    source_scroll_position = window._speech_blocks_page.source_scroll_position()
-    try:
-        speech_blocks_service.reset_speech_block_to_ai_baseline(window._current_project_root, speech_block_id)
-    except ValueError as error:
-        QMessageBox.warning(
-            window,
-            ui_state_service.translate("dialog.project_error_title", current_language),
-            str(error),
-        )
-        return
-    _sync_manifest_after_speech_blocks_update(window)
-    _reset_audio_block_after_speech_block_change(window, speech_block_id)
-    window._speech_blocks_page.restore_source_scroll_position(source_scroll_position)
-    misc_ui_controller.show_message(
-        window,
-        ui_state_service.translate("status.speech_block_reset", current_language),
     )
 
 

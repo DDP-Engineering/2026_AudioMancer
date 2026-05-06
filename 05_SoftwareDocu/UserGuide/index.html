@@ -9,14 +9,14 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>AudioMancer User Guide v2.0.0</title>
+    <title>AudioMancer User Guide v1.0.0</title>
     <link rel="stylesheet" href="assets/styles/help.css">
 </head>
 <body>
     <div class="layout">
         <nav class="toc" aria-label="Table of contents">
             <h1>AudioMancer Help</h1>
-            <p>Version 2.0.0<br>Offline user guide for Windows and Ubuntu.</p>
+            <p>Version 1.0.0<br>Offline user guide for Windows and Ubuntu.</p>
             <a href="#welcome">Welcome</a>
             <a href="#requirements">What You Need</a>
             <a href="#install">Install And Start</a>
@@ -42,8 +42,8 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
             <section id="welcome">
                 <h2>Welcome</h2>
                 <div class="version-box">
-                    <p><strong>Help version:</strong> 2.0.0</p>
-                    <p><strong>Application version:</strong> 2.0.0</p>
+                    <p><strong>Help version:</strong> 1.0.0</p>
+                    <p><strong>Application version:</strong> 1.0.0</p>
                     <p><strong>Creator:</strong> Eng. Dipl. Dan Dumitru Pasare</p>
                     <p><strong>Contact:</strong> pasaredan1979@gmail.com</p>
                 </div>
@@ -55,12 +55,12 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                 </p>
                 <p>
                     Work through the left sidebar from top to bottom. Review visible text and audio before you press
-                    approval buttons. Version 2.0 preserves expensive downstream work when it can: local chunk,
+                    approval buttons. Version 1.0.0 preserves expensive downstream work when it can: local chunk,
                     translation, character, voice, Speech Block, and Audio Block edits reset only the affected
                     downstream records, while full upstream regeneration still clears dependent workflow data.
                 </p>
                 <p>
-                    In version 2.0.0, Text Chunking can insert or delete selected chunks, Speech Blocks can preview
+                    In version 1.0.0, Text Chunking can insert or delete selected chunks, Speech Blocks can preview
                     selected block audio directly from the page, and selective reset rules keep unrelated translated
                     chunks, voices, Speech Blocks, and Audio Blocks intact. Resizable review panes keep minimum widths
                     so important text remains readable while dragging splitters.
@@ -74,8 +74,8 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                     state. Return to the same page and run the operation again to continue or regenerate as needed.
                 </div>
                 <figure>
-                    <img src="assets/screenshots/home-project.png" alt="AudioMancer Home Project page">
-                    <figcaption>The Home / Project page shows source selection, locked project options, workflow progress, and export tools.</figcaption>
+                    <img src="assets/screenshots/home-project.png" alt="AudioMancer Home dashboard">
+                    <figcaption>The Home dashboard shows source selection, locked project options, workflow progress, and export tools in one compact view.</figcaption>
                 </figure>
             </section>
 
@@ -243,14 +243,15 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                     <li>Click <strong>Start Project</strong>. The source, target language, voice language, and narration mode are locked for this project.</li>
                 </ol>
                 <p>
-                    Use <strong>Open Project</strong> to return to an existing project folder. The Home page combines
-                    the current stage with operation summaries so finished and waiting workflow steps are visible.
+                    Use <strong>Open Project</strong> to return to an existing project folder. The compact Home
+                    dashboard combines the current stage with operation summaries so finished and waiting workflow
+                    steps are visible.
                 </p>
                 <p>
-                    The Home page also shows completion status for each phase. When a phase is complete, its export
-                    action becomes available: cleaned text, chunks, AI translation, characters, and Speech Blocks can
-                    be exported as documents, and <strong>Export Project ZIP</strong> creates a complete project
-                    snapshot.
+                    The Home dashboard also shows completion status for each phase. When a phase is complete, its
+                    export action becomes available: cleaned text, chunks, AI translation, characters, and Speech
+                    Blocks can be exported as documents, and <strong>Export Project ZIP</strong> creates a complete
+                    project snapshot.
                 </p>
             </section>
 
@@ -264,7 +265,7 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                 <ul>
                     <li>Extract source text from supported documents.</li>
                     <li>Run deterministic cleanup or AI-assisted cleanup.</li>
-                    <li>Edit the cleaned text directly to manually improve wording, fix OCR errors, or correct formatting.</li>
+                    <li>Edit the cleaned text directly to manually improve wording, fix OCR errors, or correct formatting. Confirm the impact prompt before editing because saved changes can affect downstream workflow data.</li>
                     <li>Approve the cleaned text only after review; approved text unlocks Text Chunking.</li>
                     <li>Drag the divider between extracted and cleaned previews; each preview keeps at least one third of the page width.</li>
                     <li>Interrupt cleanup and resume it later from the same project state.</li>
@@ -286,10 +287,10 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                     <li>Generate chunks deterministically or with AI assistance.</li>
                     <li>Choose AI chunking strategy: <strong>Paragraph</strong> for stable paragraph windows, <strong>Meaning</strong> for semantic units, or <strong>Scene</strong> for scene-like boundaries.</li>
                     <li>Inspect generated chunks one by one.</li>
-                    <li>Edit generated chunk output before approval when the split or text needs manual correction.</li>
+                    <li>Edit generated chunk output before approval when the split or text needs manual correction. Confirm the impact prompt before editing because saved changes can affect downstream workflow data.</li>
                     <li>Use <strong>Insert</strong> to add a new empty chunk after the selected chunk, then save the text you want in that new chunk.</li>
                     <li>Use <strong>Delete</strong> to remove the selected chunk when it should not continue downstream.</li>
-                    <li>Confirm manual edits, inserts, and deletes only after checking the impact message. AudioMancer preserves unaffected translations, Speech Blocks, and Audio Blocks where possible, but resets Audio Assembly because the final ordered content changed.</li>
+                    <li>Confirm manual inserts and deletes only after checking the impact message. AudioMancer preserves unaffected translations, Speech Blocks, and Audio Blocks where possible, but resets Audio Assembly because the final ordered content changed.</li>
                     <li>Approve chunks to unlock translation, character discovery, and Speech Blocks.</li>
                     <li>Drag the divider between the reference/list area and the selected chunk preview; each side keeps at least one third of the page width.</li>
                     <li>Interrupt chunking and resume it later from saved state.</li>
@@ -364,10 +365,10 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                     <li>Edit narrator prompt, preview text, and voice description before generation.</li>
                     <li>Generate a VoiceWeaver sample for the chosen voice language.</li>
                     <li>Play and stop narrator samples inside the page.</li>
-                    <li>Select the final narrator sample used downstream by Speech Blocks and Audio Blocks.</li>
+                    <li>Use the Select button above the profile list to choose the final narrator sample used downstream by Speech Blocks and Audio Blocks.</li>
                     <li>Regenerate samples if the voice does not fit the book.</li>
-                    <li>Maximize the application window to give the Voice Designer Prompt and Preview Text panels more height automatically.</li>
-                    <li>Drag the divider between the profile list and editor; the list keeps at least one quarter of the page width and the editor keeps at least one third.</li>
+                    <li>Maximize the application window to give the Voice Designer Prompt and Preview Text panels equal expanded height automatically.</li>
+                    <li>Drag the divider between the profile list and editor; the compact profile list keeps at least one fifth of the page width and the editor keeps at least one third.</li>
                     <li>Interrupt sample generation and resume the workflow later.</li>
                 </ul>
                 <figure>
@@ -414,18 +415,19 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                     VoiceWeaver TTS budget.
                 </p>
                 <p>
-                    Review each block. Use edit, insert, delete, re-split, approve, approve-all, Generate Audio, and
-                    Play/Stop controls to make the block list match the intended audiobook.
+                    Review each block. Use edit, insert, delete, re-split, approve, approve-all, character-count,
+                    Generate Audio, and Play/Stop controls to make the block list match the intended audiobook.
                 </p>
                 <ul>
                     <li>Generate Speech Blocks per approved text chunk.</li>
                     <li>Inspect speaker, block type, text, pause duration, indication, and metadata.</li>
                     <li>Edit selected blocks manually when attribution or text needs correction.</li>
+                    <li>Use the selected-block character counter to compare current text length against the active TTS model limit.</li>
                     <li>Insert or delete blocks to repair dialogue, pauses, or narration flow.</li>
                     <li>Re-split selected chunks when the structure is not usable.</li>
-                    <li>Approve individual blocks or use approve-all after review.</li>
+                    <li>Approve individual blocks or use approve-all after review. On an approved block, the same selected-block button changes to <strong>Unapprove</strong> and keeps that row selected.</li>
                     <li>Use <strong>Generate Audio</strong> and <strong>Play/Stop</strong> on a selected approved block to preview exactly how the current Speech Block will sound without leaving the page.</li>
-                    <li>Editing, inserting, deleting, re-splitting, changing speaker, or unapproving one Speech Block resets only that block's Audio Block and resets Audio Assembly.</li>
+                    <li>Editing, deleting, re-splitting, or changing speaker resets only the affected Audio Block. Inserting, approving, or unapproving a Speech Block preserves generated Audio Blocks and resets Audio Assembly.</li>
                     <li>Reset Speech Blocks when upstream text, translation, characters, or voice mode changes.</li>
                     <li>Drag the divider between Selected Chunk and Speech Blocks; each lower pane keeps at least one third of the page width.</li>
                     <li>Interrupt generation and resume later without losing approved block state.</li>

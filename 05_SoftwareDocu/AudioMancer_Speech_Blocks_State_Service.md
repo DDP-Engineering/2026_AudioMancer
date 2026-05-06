@@ -154,6 +154,10 @@ speech_blocks_page.set_speech_blocks_state(**speech_blocks_state)
 
 ## 9. Validation And Tests
 
+Documentation audit status:
+
+- reviewed against the current implementation on 2026-05-06
+
 Focused automated coverage:
 
 - `04_Software/AudioMancer/tests/test_speech_blocks_state_service.py`

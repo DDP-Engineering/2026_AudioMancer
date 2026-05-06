@@ -1,4 +1,4 @@
-﻿<!--
+<!--
 Copyright (c) 2026 DDP Engineering
 This software is licensed under the GNU Affero General Public License v3.0
 (AGPL-3.0) with additional Non-Commercial restriction.
@@ -35,11 +35,11 @@ chunking, locked-target AI translation, character
 discovery, narrator and character voice preparation, mode-aware Speech Blocks,
 Audio Blocks, WAV Audio Assembly deliverables, Home-page TXT/Markdown exports
 for completed text artifacts, and external full-project ZIP snapshots.
-Manual Text Chunking edits, inserts, and deletes now use the v2 selective
+Manual Text Chunking edits, inserts, and deletes now use the selective
 impact path to preserve unaffected Translation, Speech Blocks, and Audio
 Blocks work while resetting only affected chunks plus Audio Assembly.
-Manual Character Discovery add/edit/delete actions now also use the v2
-selective impact path: character add preserves generated downstream work,
+Manual Character Discovery add/edit/delete actions now also use the selective
+impact path: character add preserves generated downstream work,
 character edit unapproves only assigned Speech Blocks and resets only affected
 Audio Blocks, and character delete moves assigned Speech Blocks to Narrator
 instead of deleting them.
@@ -55,7 +55,7 @@ Audio Blocks selected reset, selected regeneration, approval, and unapproval
 now preserve unrelated generated audio and reset only Audio Assembly outputs.
 Audio Assembly settings changes and reruns now preserve upstream Audio Blocks
 while replacing only assembly outputs/state/report.
-Current package version is `2.0.0`; dense review pages now keep minimum
+Current package version is `1.0.0`; dense review pages now keep minimum
 splitter widths so important extracted text, chunk text, character evidence,
 voice editors, Speech Blocks, and Audio Blocks stay readable while panes are
 resized. The Speech Blocks selected audio shortcut uses the shorter
@@ -67,4 +67,5 @@ Focused implementation documentation is maintained in `05_SoftwareDocu/`.
 The end-user help bundles are maintained in `05_SoftwareDocu/UserGuide/` and
 `05_SoftwareDocu/UserGuide_ro/`, then packaged as offline HTML.
 Validation commands and targeted test groups are listed in
-`04_Software/AudioMancer/README.MD`.
+`04_Software/AudioMancer/README.MD`; the current full regression baseline is
+also summarized in `HowToTest.md`.

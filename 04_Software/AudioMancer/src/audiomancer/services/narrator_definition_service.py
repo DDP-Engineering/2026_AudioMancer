@@ -14,12 +14,11 @@
          metadata records whether that sample is selected.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-20
-@version 3.12.3
+@version 3.13.1
 """
 
 # IMPORTS
 
-from copy import deepcopy
 import json
 from pathlib import Path
 from uuid import uuid4
@@ -34,19 +33,13 @@ from audiomancer.services.time_service import utc_now_iso as _utc_now_iso
 
 _NARRATOR_DEFINITION_LOGGER = get_component_logger("narrator_definition")
 
-NARRATOR_PROFILE_KIND_PRESET = "preset"
 NARRATOR_PROFILE_KIND_CUSTOM = "custom"
 
-NARRATOR_PROFILE_ORIGIN_QWEN_BUILTIN = "qwen_builtin_preset"
-NARRATOR_PROFILE_ORIGIN_QWEN_RUNTIME = "qwen_runtime_preset"
 NARRATOR_PROFILE_ORIGIN_CUSTOM_USER = "custom_user"
-NARRATOR_PROFILE_ORIGIN_LEGACY_CUSTOMVOICE_SEED = "legacy_customvoice_seed"
 
-NARRATOR_PROVIDER_FAMILY_QWEN_CUSTOMVOICE = "qwen3_tts_customvoice_1_7b"
 NARRATOR_PROVIDER_FAMILY_QWEN_VOICE_DESIGNER = "qwen3_tts_voice_designer_1_7b"
 
 DEFAULT_NARRATOR_LANGUAGE = "en"
-DEFAULT_NARRATOR_PROFILE_ID = "qwen_preset_vivian"
 DEFAULT_PREVIEW_TEXT = (
     "The hall fell silent as the final lantern dimmed, and every step carried the weight of an unspoken decision."
 )
@@ -79,27 +72,6 @@ DEFAULT_PREVIEW_TEXT_BY_LANGUAGE = {
     ),
 }
 _NARRATOR_LANGUAGE_LABELS = dict(config.TRANSLATION_LANGUAGE_OPTIONS)
-
-_BUILTIN_QWEN_PRESET_DEFINITIONS = (
-    {
-        "profile_id": "qwen_preset_vivian",
-        "speaker_id": "vivian",
-        "display_name": "Vivian",
-        "prompt_text": "Clear, warm narrator voice with steady pacing and calm articulation.",
-    },
-    {
-        "profile_id": "qwen_preset_serena",
-        "speaker_id": "serena",
-        "display_name": "Serena",
-        "prompt_text": "Soft but confident narrator voice with elegant phrasing and natural pauses.",
-    },
-    {
-        "profile_id": "qwen_preset_anna",
-        "speaker_id": "anna",
-        "display_name": "Anna",
-        "prompt_text": "Balanced storyteller voice with crisp diction and measured dramatic emphasis.",
-    },
-)
 
 
 def load_tts_plan(
@@ -278,7 +250,7 @@ def load_profiles(project_root: str | Path) -> list[dict[str, object]]:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-20
-    @version    1.7.0
+    @version    1.8.0
     """
     profile_path = _profiles_path(project_root)
     if not profile_path.is_file():
@@ -289,9 +261,6 @@ def load_profiles(project_root: str | Path) -> list[dict[str, object]]:
         if isinstance(payload, list)
         else []
     )
-    if not normalized_profiles:
-        normalized_profiles = _default_seeded_profiles()
-    normalized_profiles = _restore_missing_seeded_profiles(normalized_profiles)
     normalized_profiles = _repair_selected_profile_flags(normalized_profiles)
     _write_json(profile_path, normalized_profiles)
     return normalized_profiles
@@ -325,11 +294,11 @@ def ensure_narrator_definition_files(project_root: str | Path) -> None:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-18
-    @version    1.4.0
+    @version    1.6.0
     """
     profile_path = _profiles_path(project_root)
     if not profile_path.is_file():
-        _write_json(profile_path, _default_seeded_profiles())
+        _write_json(profile_path, [])
 
     selection_path = _selection_path(project_root)
     if not selection_path.is_file():
@@ -623,8 +592,6 @@ def display_profile_name(profile_or_name: object) -> str:
         normalized_name = str(profile_or_name.get("display_name", "")).strip()
     else:
         normalized_name = str(profile_or_name or "").strip()
-    if normalized_name.startswith("CustomVoice | "):
-        return normalized_name.removeprefix("CustomVoice | ").strip()
     return normalized_name
 
 
@@ -642,7 +609,7 @@ def profile_generation_request(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-17
-    @version    1.3.0
+    @version    1.4.0
     """
     _ = tts_plan
     capability_matrix = voiceweaver_runtime_service.build_capability_matrix(discovered_models)
@@ -657,45 +624,6 @@ def profile_generation_request(
             + "."
         )
         return _build_generation_request(False, False, unavailable_reason, language, prompt_text)
-
-    profile_kind = str(profile.get("profile_kind", "")).strip()
-    if profile_kind == NARRATOR_PROFILE_KIND_PRESET:
-        speaker_id = str(profile.get("speaker_id", "")).strip()
-        if not speaker_id:
-            return _build_generation_request(
-                False,
-                False,
-                "This preset profile has no speaker id.",
-                language,
-                prompt_text,
-            )
-        custom_voice_model = _first_model_with_speaker(
-            capability_matrix.get("qwen_custom_voice_models", []),
-            speaker_id,
-        )
-        if custom_voice_model is None:
-            return _build_generation_request(
-                False,
-                False,
-                "The preset speaker is not supported by the discovered Qwen3 CustomVoice model.",
-                language,
-                prompt_text,
-            )
-        resolved_model_id = str(custom_voice_model.get("model_id", "")).strip()
-        return _build_generation_request(
-            True,
-            True,
-            "",
-            language,
-            prompt_text,
-            generation_mode="custom_voice",
-            model_id=resolved_model_id,
-            source_model_id=resolved_model_id,
-            speaker_id=speaker_id,
-            supported_languages=[
-                str(item).strip() for item in custom_voice_model.get("supported_languages", []) if str(item).strip()
-            ],
-        )
 
     voice_designer_model = _first_model(capability_matrix.get("qwen_voice_designer_models", []))
     if voice_designer_model is None:
@@ -929,14 +857,27 @@ def clear_selected_narrator_sample(project_root: str | Path) -> None:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-17
-    @version    1.6.0
+    @version    1.7.0
+    """
+    clear_selected_narrator_sample_artifacts(project_root)
+    clear_narrator_selection(project_root)
+
+
+def clear_selected_narrator_sample_artifacts(project_root: str | Path) -> None:
+    """
+    @brief      Clear selected-sample audio and metadata without clearing the selected profile.
+    @param[in]  project_root Active project root folder.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-05
+    @version    0.1.0
     """
     audio_path, metadata_path = selected_narrator_sample_paths(project_root)
     if audio_path.exists():
         audio_path.unlink()
     if metadata_path.exists():
         metadata_path.unlink()
-    clear_narrator_selection(project_root)
 
 
 def copy_selected_narrator_sample(project_root: str | Path, profile_id: str) -> dict[str, object] | None:
@@ -955,7 +896,7 @@ def copy_selected_narrator_sample(project_root: str | Path, profile_id: str) -> 
     profile_audio_path, _profile_metadata_path = profile_sample_paths(project_root, normalized_profile_id)
     profile_metadata = load_profile_sample_metadata(project_root, profile_id)
     if not profile_audio_path.is_file() or profile_metadata is None:
-        clear_selected_narrator_sample(project_root)
+        clear_selected_narrator_sample_artifacts(project_root)
         return None
     select_narrator_profile(project_root, normalized_profile_id, str(profile_metadata.get("language", "")).strip())
     _delete_legacy_selected_narrator_sample_files(project_root)
@@ -991,7 +932,7 @@ def sample_runtime_available(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-17
-    @version    1.1.1
+    @version    1.2.0
     """
     if not isinstance(sample_metadata, dict):
         return False
@@ -1001,7 +942,6 @@ def sample_runtime_available(
         return False
     capability_matrix = voiceweaver_runtime_service.build_capability_matrix(discovered_models)
     healthy_models = [
-        *capability_matrix.get("custom_voice_models", []),
         *capability_matrix.get("voice_designer_models", []),
         *capability_matrix.get("base_models", []),
     ]
@@ -1012,13 +952,7 @@ def sample_runtime_available(
             source_model_id,
         )
         return False
-    speaker_id = str(sample_metadata.get("speaker_id", "")).strip()
-    if not speaker_id:
-        return True
-    supported_presets = {
-        str(item).strip() for item in referenced_model.get("supported_presets", []) if str(item).strip()
-    }
-    return speaker_id in supported_presets
+    return True
 
 
 def seeded_narrator_profiles() -> list[dict[str, object]]:
@@ -1028,133 +962,9 @@ def seeded_narrator_profiles() -> list[dict[str, object]]:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-17
-    @version    1.0.0
+    @version    1.1.0
     """
-    return [deepcopy(profile) for profile in _default_seeded_profiles()]
-
-
-def sync_runtime_qwen_presets(
-    project_root: str | Path,
-    discovered_models: list[dict[str, object]] | None,
-) -> list[dict[str, object]]:
-    """
-    @brief      Add any runtime-reported Qwen CustomVoice presets missing from the current project profile catalog.
-    @param[in]  project_root Active project root folder.
-    @param[in]  discovered_models Current normalized discovered runtime models.
-    @return     Persisted narrator-profile payload list after preset synchronization.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-20
-    @version    1.1.1
-    """
-    runtime_presets = _runtime_qwen_preset_profiles(discovered_models or [])
-    if not runtime_presets:
-        return load_profiles(project_root)
-
-    profiles = load_profiles(project_root)
-    existing_profile_ids = {str(profile.get("profile_id", "")).strip() for profile in profiles}
-    appended_profiles = list(profiles)
-    for preset_profile in runtime_presets:
-        profile_id = str(preset_profile.get("profile_id", "")).strip()
-        if profile_id and profile_id not in existing_profile_ids:
-            appended_profiles.append(preset_profile)
-            _NARRATOR_DEFINITION_LOGGER.info("Added runtime Qwen narrator preset profile_id=%s", profile_id)
-    appended_profiles = _restore_missing_seeded_profiles(appended_profiles)
-    appended_profiles = _repair_selected_profile_flags(appended_profiles)
-    _write_json(_profiles_path(project_root), appended_profiles)
-    _NARRATOR_DEFINITION_LOGGER.info(
-        "Synchronized runtime Qwen narrator presets: runtime_presets=%s total_profiles=%s",
-        len(runtime_presets),
-        len(appended_profiles),
-    )
-    return appended_profiles
-
-
-def _restore_missing_seeded_profiles(profiles: list[dict[str, object]]) -> list[dict[str, object]]:
-    """
-    @brief      Restore the missing seeded profiles.
-    @param[in]  profiles Value for `profiles`.
-    @return     Derived helper result.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
-    """
-    existing_profiles = [dict(profile) for profile in profiles if isinstance(profile, dict)]
-    existing_profile_ids = {str(profile.get("profile_id", "")).strip() for profile in existing_profiles}
-    restored_profiles = list(existing_profiles)
-    for seeded_profile in _default_seeded_profiles():
-        profile_id = str(seeded_profile.get("profile_id", "")).strip()
-        if profile_id and profile_id not in existing_profile_ids:
-            restored_profiles.append(dict(seeded_profile))
-    builtin_profile_order = {
-        str(profile.get("profile_id", "")).strip(): index for index, profile in enumerate(_default_seeded_profiles())
-    }
-    restored_profiles.sort(
-        key=lambda profile: (
-            0 if str(profile.get("profile_origin", "")).strip() == NARRATOR_PROFILE_ORIGIN_QWEN_BUILTIN else 1,
-            builtin_profile_order.get(str(profile.get("profile_id", "")).strip(), len(builtin_profile_order)),
-            str(profile.get("display_name", "")).strip().lower(),
-        )
-    )
-    return restored_profiles
-
-
-def _runtime_qwen_preset_profiles(discovered_models: list[dict[str, object]]) -> list[dict[str, object]]:
-    """
-    @brief      Execute the runtime qwen preset profiles helper.
-    @param[in]  discovered_models Value for `discovered_models`.
-    @return     Helper result.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
-    """
-    custom_voice_models = voiceweaver_runtime_service.build_capability_matrix(discovered_models).get(
-        "qwen_custom_voice_models",
-        [],
-    )
-    runtime_speaker_ids: list[str] = []
-    for model_entry in custom_voice_models:
-        for supported_preset in model_entry.get("supported_presets", []):
-            normalized_speaker_id = str(supported_preset).strip()
-            if normalized_speaker_id and normalized_speaker_id not in runtime_speaker_ids:
-                runtime_speaker_ids.append(normalized_speaker_id)
-    if not runtime_speaker_ids:
-        return []
-    seeded_prompt_by_speaker = {
-        str(profile.get("speaker_id", "")).strip(): str(profile.get("prompt_text", "")).strip()
-        for profile in _default_seeded_profiles()
-    }
-    return [
-        _normalize_profile(
-            {
-                "profile_id": f"qwen_preset_{speaker_id}",
-                "speaker_id": speaker_id,
-                "display_name": _speaker_display_name(speaker_id),
-                "prompt_text": seeded_prompt_by_speaker.get(
-                    speaker_id,
-                    f"{_speaker_display_name(speaker_id)} preset narrator voice from Qwen3 CustomVoice.",
-                ),
-                "profile_kind": NARRATOR_PROFILE_KIND_PRESET,
-                "profile_origin": NARRATOR_PROFILE_ORIGIN_QWEN_RUNTIME,
-                "provider_family": NARRATOR_PROVIDER_FAMILY_QWEN_CUSTOMVOICE,
-                "editable": True,
-            }
-        )
-        for speaker_id in runtime_speaker_ids
-    ]
-
-
-def _speaker_display_name(speaker_id: str) -> str:
-    """
-    @brief      Execute the speaker display name helper.
-    @param[in]  speaker_id Identifier for `speaker_id`.
-    @return     Helper result.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
-    """
-    normalized_speaker_id = str(speaker_id).strip().replace("_", " ")
-    return " ".join(part.capitalize() for part in normalized_speaker_id.split())
+    return []
 
 
 def _profiles_path(project_root: str | Path) -> Path:
@@ -1226,28 +1036,16 @@ def _normalize_profile(profile: dict[str, object]) -> dict[str, object]:
     @return     Derived helper result.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.1.0
+    @version    0.2.0
     """
-    profile_payload = _migrate_legacy_customvoice_seed_profile(profile)
-    profile_kind = (
-        str(profile_payload.get("profile_kind", NARRATOR_PROFILE_KIND_CUSTOM)).strip() or NARRATOR_PROFILE_KIND_CUSTOM
-    )
-    profile_origin = str(profile_payload.get("profile_origin", "")).strip() or (
-        NARRATOR_PROFILE_ORIGIN_QWEN_BUILTIN
-        if profile_kind == NARRATOR_PROFILE_KIND_PRESET
-        else NARRATOR_PROFILE_ORIGIN_CUSTOM_USER
-    )
-    provider_family = str(profile_payload.get("provider_family", "")).strip() or (
-        NARRATOR_PROVIDER_FAMILY_QWEN_CUSTOMVOICE
-        if profile_kind == NARRATOR_PROFILE_KIND_PRESET
-        else NARRATOR_PROVIDER_FAMILY_QWEN_VOICE_DESIGNER
-    )
+    profile_payload = dict(profile)
+    profile_kind = NARRATOR_PROFILE_KIND_CUSTOM
+    profile_origin = NARRATOR_PROFILE_ORIGIN_CUSTOM_USER
+    provider_family = NARRATOR_PROVIDER_FAMILY_QWEN_VOICE_DESIGNER
     editable_default = True
-    protected_default = _is_protected_builtin_profile(profile_payload, profile_kind, profile_origin)
-    protected_value = bool(profile_payload.get("protected", protected_default)) if protected_default else False
     return {
         "profile_id": str(profile_payload.get("profile_id", "")).strip() or f"profile_{uuid4().hex}",
-        "speaker_id": _optional_string(profile_payload.get("speaker_id")),
+        "speaker_id": None,
         "source_model_id": _optional_string(profile_payload.get("source_model_id")),
         "display_name": display_profile_name(profile_payload.get("display_name", "")) or "Unnamed Narrator",
         "language": narrator_language_code(profile_payload.get("language", DEFAULT_NARRATOR_LANGUAGE)),
@@ -1257,7 +1055,7 @@ def _normalize_profile(profile: dict[str, object]) -> dict[str, object]:
         "profile_origin": profile_origin,
         "provider_family": provider_family,
         "editable": bool(profile_payload.get("editable", editable_default)),
-        "protected": protected_value,
+        "protected": False,
         "is_selected": bool(profile_payload.get("is_selected", False)),
         "sample_audio_path": _optional_string(profile_payload.get("sample_audio_path")),
         "sample_metadata": (
@@ -1269,60 +1067,6 @@ def _normalize_profile(profile: dict[str, object]) -> dict[str, object]:
             None if profile_payload.get("updated_at") in (None, "") else str(profile_payload.get("updated_at"))
         ),
     }
-
-
-def _migrate_legacy_customvoice_seed_profile(profile: dict[str, object]) -> dict[str, object]:
-    """
-    @brief      Execute the migrate legacy customvoice seed profile helper.
-    @param[in]  profile Value for `profile`.
-    @return     Helper result.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
-    """
-    profile_payload = dict(profile)
-    provider_family = str(profile_payload.get("provider_family", "")).strip()
-    profile_kind = str(profile_payload.get("profile_kind", "")).strip()
-    speaker_id = _optional_string(profile_payload.get("speaker_id"))
-    if (
-        provider_family != "qwen3_tts_customvoice_seed"
-        or profile_kind != NARRATOR_PROFILE_KIND_PRESET
-        or speaker_id is not None
-    ):
-        return profile_payload
-    return {
-        **profile_payload,
-        "speaker_id": None,
-        "profile_kind": NARRATOR_PROFILE_KIND_CUSTOM,
-        "profile_origin": NARRATOR_PROFILE_ORIGIN_LEGACY_CUSTOMVOICE_SEED,
-        "provider_family": NARRATOR_PROVIDER_FAMILY_QWEN_VOICE_DESIGNER,
-        "editable": True,
-        "protected": False,
-    }
-
-
-def _is_protected_builtin_profile(
-    profile: dict[str, object],
-    profile_kind: str,
-    profile_origin: str,
-) -> bool:
-    """
-    @brief      Determine whether protected builtin profile.
-    @param[in]  profile Value for `profile`.
-    @param[in]  profile_kind Value for `profile_kind`.
-    @param[in]  profile_origin Value for `profile_origin`.
-    @return     True when the helper condition is satisfied.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
-    """
-    if profile_kind != NARRATOR_PROFILE_KIND_PRESET or profile_origin != NARRATOR_PROFILE_ORIGIN_QWEN_BUILTIN:
-        return False
-    profile_id = str(profile.get("profile_id", "")).strip()
-    return any(
-        str(seed_profile.get("profile_id", "")).strip() == profile_id
-        for seed_profile in _BUILTIN_QWEN_PRESET_DEFINITIONS
-    )
 
 
 def _update_profile_sample_metadata(
@@ -1493,33 +1237,6 @@ def _repair_selected_profile_flags(profiles: list[dict[str, object]]) -> list[di
     ]
 
 
-def _default_seeded_profiles() -> list[dict[str, object]]:
-    """
-    @brief      Execute the default seeded profiles helper.
-    @return     Helper result.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
-    """
-    return [
-        _normalize_profile(
-            {
-                **dict(profile),
-                "language": DEFAULT_NARRATOR_LANGUAGE,
-                "preview_text": DEFAULT_PREVIEW_TEXT,
-                "profile_kind": NARRATOR_PROFILE_KIND_PRESET,
-                "profile_origin": NARRATOR_PROFILE_ORIGIN_QWEN_BUILTIN,
-                "provider_family": NARRATOR_PROVIDER_FAMILY_QWEN_CUSTOMVOICE,
-                "editable": True,
-                "protected": True,
-                "is_selected": False,
-                "updated_at": None,
-            }
-        )
-        for profile in _BUILTIN_QWEN_PRESET_DEFINITIONS
-    ]
-
-
 def _build_generation_request(
     runtime_available: bool,
     can_generate: bool,
@@ -1591,29 +1308,6 @@ def _first_model(model_entries: list[dict[str, object]]) -> dict[str, object] | 
     @version    0.1.0
     """
     return None if not model_entries else dict(model_entries[0])
-
-
-def _first_model_with_speaker(
-    model_entries: list[dict[str, object]],
-    speaker_id: str,
-) -> dict[str, object] | None:
-    """
-    @brief      Return the first model with speaker.
-    @param[in]  model_entries Value for `model_entries`.
-    @param[in]  speaker_id Identifier for `speaker_id`.
-    @return     Resolved helper result.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
-    """
-    normalized_speaker_id = str(speaker_id).strip()
-    for model_entry in model_entries:
-        supported_presets = {
-            str(item).strip() for item in model_entry.get("supported_presets", []) if str(item).strip()
-        }
-        if normalized_speaker_id in supported_presets:
-            return dict(model_entry)
-    return None
 
 
 def _write_json(path: Path, payload: object) -> None:

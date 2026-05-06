@@ -79,7 +79,8 @@ High-level flow:
 6. On success, the shell stores the completed cleanup operation state in
    `project.json` and advances the workflow stage to `text_chunking_ready`.
 7. After cleanup output exists, the operator can press `Edit` under the cleaned
-   text preview, change the text, and press `Save`; the page writes
+   text preview, confirm the downstream impact prompt, change the text, and
+   press `Save`; the page writes
   `clean_text.txt`, regenerates minimal cleaned-text metadata, resets
   downstream workflow data, and preserves the extracted-text preview scroll
   position.

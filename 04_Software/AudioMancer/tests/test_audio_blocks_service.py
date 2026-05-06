@@ -164,7 +164,7 @@ def test_audio_blocks_service_same_narrator_mode_uses_narrator_prompt_for_charac
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.2.0
+    @version    0.3.0
     """
     project_root, manifest = _create_audio_blocks_project(tmp_path, "AudioBlocksServiceSameNarrator")
     narrator_definition_service.save_tts_plan(
@@ -883,7 +883,7 @@ def test_audio_blocks_service_removes_audio_and_clone_profiles_for_voice_target(
             "display_name": "Alice",
             "source_sample_relative_path": "voice_samples/alice.wav",
             "source_sample_fingerprint": "old-alice",
-            "source_model_id": "qwen-custom",
+            "source_model_id": "qwen-designer",
             "voice_language": "en",
             "sample_text": "Alice preview line.",
             "voice_clone_prompt": {"format": "qwen_voice_clone_prompt_v1", "speaker": "alice"},
@@ -1652,14 +1652,20 @@ def _create_audio_blocks_project(tmp_path, name: str):
         json.dumps(speech_blocks_payload, indent=2) + "\n",
         encoding="utf-8",
     )
-    narrator_profile = narrator_definition_service.load_profiles(project_root)[0]
+    narrator_profile = narrator_definition_service.create_custom_profile(
+        project_root,
+        "Test Narrator",
+        "English",
+        "Narrator prompt.",
+        "Narrator preview line.",
+    )
     narrator_definition_service.store_profile_sample(
         project_root,
         narrator_profile,
         "Narrator preview line.",
         {
-            "generation_mode": "custom_voice",
-            "source_model_id": "qwen-custom",
+            "generation_mode": "definition",
+            "source_model_id": "qwen-designer",
             "language": "en",
         },
         "Narrator sample ready.",
@@ -1788,7 +1794,7 @@ def _seed_generated_audio_blocks(project_root) -> None:
                         .as_posix()
                     ),
                     "source_sample_fingerprint": "old-narrator",
-                    "source_model_id": "qwen-custom",
+                    "source_model_id": "qwen-designer",
                     "voice_language": "en",
                     "sample_text": "Narrator preview line.",
                     "voice_clone_prompt": {"format": "qwen_voice_clone_prompt_v1", "speaker": "narrator"},
@@ -1890,7 +1896,6 @@ def _runtime_settings() -> dict[str, object]:
                 "backend_name": "qwen3-tts-base",
                 "status": "healthy",
                 "supported_generation_modes": ["clone"],
-                "supported_presets": [],
                 "default_model_parameters": {"max_new_tokens": 512},
             },
             {
@@ -1898,7 +1903,6 @@ def _runtime_settings() -> dict[str, object]:
                 "backend_name": "qwen3-tts-base",
                 "status": "healthy",
                 "supported_generation_modes": ["clone"],
-                "supported_presets": [],
                 "default_model_parameters": {"max_new_tokens": 512},
             },
         ],

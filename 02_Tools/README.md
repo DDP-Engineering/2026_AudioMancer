@@ -70,8 +70,8 @@ The Ubuntu packaging flow is:
 
 1. syncs the `uv` environment with dev dependencies
 2. builds the Ubuntu bundle with `PyInstaller`
-3. stages the packaged app together with `settings.json`, the four license
-   files, `start-audiomancer.sh`, and `README_RELEASE.txt`
+3. stages the packaged app together with a clean `settings.json`, the four
+   license files, `start-audiomancer.sh`, and `README_RELEASE.txt`
 4. creates the stable Linux zip in `07_Delivery/`
 5. removes temporary build and staging artifacts after success
 
@@ -92,10 +92,11 @@ Both archive filenames are intentionally stable so Git stores one delivery
 artifact per platform instead of one new filename per application version. The
 application version is still read from `04_Software/AudioMancer/pyproject.toml`
 and written inside the packaged release notes and application metadata.
-The Windows package writes a cleaned staging copy of `settings.json`: operator
-API keys, local LM Studio host addresses, VoiceWeaver API key, runtime probe
-status, discovered-model cache, active-model cache, and device diagnostics are
-removed from the archive without modifying the source app-root settings file.
+Both packaging scripts write a cleaned staging copy of `settings.json`:
+operator API keys, local LM Studio host addresses, VoiceWeaver API key, runtime
+probe status, discovered-model cache, active-model cache, and device
+diagnostics are removed from the archive without modifying the source app-root
+settings file.
 
 Release archives are portable application folders. Users should extract the
 full archive before starting the executable and keep the extracted files

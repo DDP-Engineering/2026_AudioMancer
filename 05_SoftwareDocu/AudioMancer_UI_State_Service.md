@@ -156,6 +156,10 @@ button.setText(strings["speech_blocks.save_block"])
 
 ## 9. Validation And Tests
 
+Documentation audit status:
+
+- reviewed against the current implementation on 2026-05-06
+
 Focused tests:
 
 - `04_Software/AudioMancer/tests/test_ui_state_service.py`

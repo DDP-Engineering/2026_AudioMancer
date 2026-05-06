@@ -55,7 +55,7 @@ The initial shell consists of:
   service
 - functional AI Settings connect flow with backend probing, discovered model
   refresh, and popup result feedback
-- a project-aware narrator-definition page with seeded editable Qwen3 preset
+- a project-aware narrator-definition page with operator-created Voice Designer
   profiles, destructive edit confirmations, explicit create/edit/save/delete
   actions, runtime-backed sample generation, read-only project-language
   display, and local WAV preview playback

@@ -160,7 +160,13 @@ Downstream:
 Current in-repo usage:
 
 - `audiomancer.app` logs bootstrap startup, shutdown, and fatal startup errors
-- `audiomancer.ui.main_window` logs initial window construction
+- `audiomancer.ui.main_window` logs shell construction and routed workflow
+  operations
+- principal workflow services such as AI cleanup, AI chunking, AI translation,
+  character discovery, Speech Blocks, Audio Blocks, Audio Assembly,
+  VoiceWeaver runtime, project export/snapshot, source import, prompt
+  templates, AI backend probing, and settings use named component loggers or
+  `trace_function(...)`
 
 ## 8. Usage
 
@@ -225,3 +231,6 @@ Minimum validation after a change:
 - trace logging is synchronous and intentionally simple
 - no redaction policy exists yet for sensitive payload fields beyond compact
   summarization and truncation
+
+Documentation audit status: reviewed against the current implementation on
+2026-05-06.

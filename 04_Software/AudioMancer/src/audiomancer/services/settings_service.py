@@ -14,7 +14,7 @@
          settings file to the application root.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-22
-@version 0.7.3
+@version 0.8.0
 """
 
 # IMPORTS
@@ -64,8 +64,6 @@ _TTS_RUNTIME_MODEL_DEFAULTS = {
     "status": "unhealthy",
     "supported_generation_modes": [],
     "supported_languages": [],
-    "supported_presets": [],
-    "speaker_count": 0,
     "default_model_parameters": None,
     "device_mode": "",
     "issues": None,
@@ -166,7 +164,7 @@ def _validate_llm_profile(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-04
-    @version    0.2.0
+    @version    0.3.0
     """
     if not isinstance(candidate_profile, dict):
         _log_settings_repair(
@@ -526,10 +524,6 @@ def _normalize_tts_runtime_model(candidate_model: object) -> dict[str, object] |
     model_id = str(candidate_model.get("model_id", "")).strip()
     if not model_id:
         return None
-    try:
-        speaker_count = int(candidate_model.get("speaker_count", 0))
-    except (TypeError, ValueError):
-        speaker_count = 0
     issues = candidate_model.get("issues")
     return {
         "model_id": model_id,
@@ -540,8 +534,6 @@ def _normalize_tts_runtime_model(candidate_model: object) -> dict[str, object] |
             candidate_model.get("supported_generation_modes")
         ),
         "supported_languages": _normalize_string_list(candidate_model.get("supported_languages")),
-        "supported_presets": _normalize_string_list(candidate_model.get("supported_presets")),
-        "speaker_count": max(speaker_count, 0),
         "default_model_parameters": (
             dict(candidate_model.get("default_model_parameters"))
             if isinstance(candidate_model.get("default_model_parameters"), dict)

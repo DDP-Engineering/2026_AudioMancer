@@ -13,7 +13,7 @@
          and operator note rendering for resumable and warning-bearing state.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 0.4.0
+@version 0.5.0
 """
 
 # IMPORTS
@@ -21,7 +21,12 @@
 import json
 
 from audiomancer import config
-from audiomancer.services import character_voices_service, project_workspace_service, speech_blocks_state_service
+from audiomancer.services import (
+    character_voices_service,
+    project_workspace_service,
+    speech_blocks_state_service,
+    tts_budget_service,
+)
 
 
 def test_build_speech_blocks_profile_state_prefers_default_enabled_profile() -> None:
@@ -31,7 +36,7 @@ def test_build_speech_blocks_profile_state_prefers_default_enabled_profile() -> 
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.1.0
+    @version    0.2.0
     """
     profile_state = speech_blocks_state_service.build_speech_blocks_profile_state(
         {
@@ -189,6 +194,9 @@ def test_build_speech_blocks_state_loads_persisted_blocks_and_summary(tmp_path) 
     assert state["speech_blocks"][0]["audio_generated"] is True
     assert state["speech_blocks"][0]["audio_can_play"] is True
     assert state["speech_blocks"][0]["audio_metadata_only"] is False
+    assert state["selected_text_character_limit"] == (
+        int(tts_budget_service.resolve_cached_tts_budget([])["safe_word_count"]) * 6
+    )
     assert any("Generated 1 speech blocks from 1/2 chunks." in note for note in state["notes"])
     assert any("Input tokens: 30 | Output tokens: 10 | Total: 40" in note for note in state["notes"])
 

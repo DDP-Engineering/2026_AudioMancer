@@ -10,11 +10,12 @@
 @file character_discovery_service.py
 @brief AI-assisted character discovery helpers for AudioMancer.
 @details Consumes canonical chunking output, discovers speaking characters over
-         overlapping chunk windows, persists the `40_character_discovery`
-         workflow artifacts, and maintains resumable AI operation state.
+         overlapping chunk windows, persists compact voice-ready profiles in the
+         `40_character_discovery` workflow artifacts, and maintains resumable AI
+         operation state.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-22
-@version 0.11.0
+@version 0.12.0
 """
 
 # IMPORTS
@@ -99,16 +100,7 @@ TokenUsagePayload = dict[str, object]
 BudgetMetadataPayload = dict[str, int]
 ModelSettingsPayload = dict[str, object]
 
-CHARACTER_VOICE_BRIEF_FIELDS = (
-    "voice_persona_summary",
-    "voice_timbre_and_range",
-    "voice_pacing_and_rhythm",
-    "voice_emotional_baseline",
-    "voice_articulation_and_pronunciation",
-    "voice_delivery_constraints",
-)
 CHARACTER_VOICE_PROMPT_FIELD = "voice_definition_prompt"
-CHARACTER_VOICE_SIGNATURE_FIELD = "voice_definition_source_signature"
 
 
 # PUBLIC API
@@ -156,33 +148,19 @@ def load_character_profiles(project_root: str | Path) -> list[CharacterProfilePa
 
 def build_character_voice_definition_prompt(character_profile: dict[str, object]) -> str:
     """
-    @brief      Build one Qwen-oriented voice-definition prompt from the stored character voice brief.
-    @param[in]  character_profile Character profile payload with raw facts and voice-brief fields.
+    @brief      Build one Qwen-oriented voice-definition prompt from the compact character profile.
+    @param[in]  character_profile Character profile payload with identity, sex/gender, and voice prompt fields.
     @return     Stable English voice-definition prompt paragraph.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-20
-    @version    1.3.0
+    @version    2.0.0
     """
     normalized_profile = _normalized_character_profile_core(character_profile)
-    derived_voice_fields = _derived_voice_definition_fields(normalized_profile)
-    for field_name in CHARACTER_VOICE_BRIEF_FIELDS:
-        normalized_profile[field_name] = (
-            str(normalized_profile.get(field_name, "")).strip() or derived_voice_fields[field_name]
-        )
+    stored_voice_prompt = str(normalized_profile.get(CHARACTER_VOICE_PROMPT_FIELD, "")).strip()
+    if stored_voice_prompt:
+        return _ensure_character_voice_prompt_gender_instruction(stored_voice_prompt, normalized_profile)
     character_name = str(normalized_profile.get("canonical_name", "Character")).strip() or "Character"
-    descriptor_parts = [
-        ("Sex/Gender", _character_voice_gender_instruction(normalized_profile)),
-        ("Persona", _sentence_fragment(normalized_profile.get("voice_persona_summary"))),
-        ("Timbre", _sentence_fragment(normalized_profile.get("voice_timbre_and_range"))),
-        ("Pace", _sentence_fragment(normalized_profile.get("voice_pacing_and_rhythm"))),
-        ("Emotion", _sentence_fragment(normalized_profile.get("voice_emotional_baseline"))),
-        ("Articulation", _sentence_fragment(normalized_profile.get("voice_articulation_and_pronunciation"))),
-        ("Constraints", _sentence_fragment(normalized_profile.get("voice_delivery_constraints"))),
-    ]
-    cleaned_descriptors = [f"{label}: {value}" for label, value in descriptor_parts if value]
-    if cleaned_descriptors:
-        return (f"Create a consistent spoken voice for {character_name}. " + " ".join(cleaned_descriptors)).strip()
     return (
         f"Create a consistent spoken voice for {character_name} with clear diction, stable identity, "
         "natural emotional control, and delivery suitable for repeated dialogue narration. "
@@ -192,49 +170,18 @@ def build_character_voice_definition_prompt(character_profile: dict[str, object]
 
 def regenerate_character_voice_definition(profile_payload: dict[str, object]) -> CharacterProfilePayload:
     """
-    @brief      Rebuild the structured voice-definition brief and final prompt from the current character facts.
+    @brief      Normalize the compact profile and ensure the final voice prompt contains sex/gender guidance.
     @param[in]  profile_payload Character profile payload.
-    @return     Updated character profile payload with regenerated voice-definition fields.
+    @return     Updated compact character profile payload.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-20
-    @version    1.1.0
+    @version    2.0.0
     """
     normalized_profile = _normalize_character_profile(profile_payload)
-    derived_voice_fields = _derived_voice_definition_fields(normalized_profile)
     updated_profile = dict(normalized_profile)
-    updated_profile.update(derived_voice_fields)
     updated_profile[CHARACTER_VOICE_PROMPT_FIELD] = build_character_voice_definition_prompt(updated_profile)
-    updated_profile[CHARACTER_VOICE_SIGNATURE_FIELD] = voice_definition_source_signature(updated_profile)
-    updated_profile["voice_definition_stale"] = False
     return updated_profile
-
-
-def voice_definition_source_signature(profile_payload: dict[str, object]) -> str:
-    """
-    @brief      Build one stable fingerprint for the raw character facts that drive voice-definition generation.
-    @param[in]  profile_payload Character profile payload.
-    @return     Hex-encoded signature string.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-20
-    @version    1.1.0
-    """
-    signature_payload = {
-        "canonical_name": str(profile_payload.get("canonical_name", "")).strip(),
-        "gender_hint": str(profile_payload.get("gender_hint", "")).strip(),
-        "age_band": str(profile_payload.get("age_band", "")).strip(),
-        "role_summary": str(profile_payload.get("role_summary", "")).strip(),
-        "description": str(profile_payload.get("description", "")).strip(),
-        "temperament": str(profile_payload.get("temperament", "")).strip(),
-        "social_status": str(profile_payload.get("social_status", "")).strip(),
-        "speaking_style": str(profile_payload.get("speaking_style", "")).strip(),
-        "accent_or_dialect_hints": str(profile_payload.get("accent_or_dialect_hints", "")).strip(),
-        "voice_notes": str(profile_payload.get("voice_notes", "")).strip(),
-    }
-    return hashlib.sha1(  # noqa: S324
-        json.dumps(signature_payload, ensure_ascii=False, sort_keys=True).encode("utf-8")
-    ).hexdigest()
 
 
 @trace_function(_CHARACTER_DISCOVERY_LOGGER)
@@ -850,15 +797,6 @@ def update_character_profile(
             if not str(profile_payload.get("review_status", "")).strip():
                 merged_profile["review_status"] = _edited_review_status(existing_normalized_profile)
             merged_profile["updated_at"] = _utc_now_iso()
-            current_signature = voice_definition_source_signature(merged_profile)
-            stored_signature = str(existing_normalized_profile.get(CHARACTER_VOICE_SIGNATURE_FIELD, "")).strip()
-            if _voice_definition_block_changed(existing_normalized_profile, merged_profile) or not stored_signature:
-                merged_profile[CHARACTER_VOICE_SIGNATURE_FIELD] = current_signature
-            else:
-                merged_profile[CHARACTER_VOICE_SIGNATURE_FIELD] = stored_signature
-            merged_profile["voice_definition_stale"] = (
-                str(merged_profile.get(CHARACTER_VOICE_SIGNATURE_FIELD, "")).strip() != current_signature
-            )
             updated_profiles.append(merged_profile)
             found_profile = True
         else:
@@ -1021,15 +959,7 @@ def _build_manual_character_profile(
             "canonical_name": canonical_name,
             "aliases": [],
             "gender_hint": "",
-            "age_band": "",
-            "role_summary": "",
-            "description": "",
-            "temperament": "",
-            "social_status": "",
-            "speaking_style": "",
-            "accent_or_dialect_hints": "",
-            "voice_notes": "",
-            "relationship_hints": [],
+            "voice_definition_prompt": "",
             "confidence": "",
             "review_status": CHARACTER_REVIEW_STATUS_MANUAL,
             "evidence": [
@@ -1822,24 +1752,7 @@ def _normalize_window_candidates(
                 "canonical_name": canonical_name,
                 "aliases": _normalize_string_list(entry.get("aliases", [])),
                 "gender_hint": str(entry.get("gender_hint", "")).strip(),
-                "age_band": str(entry.get("age_band", "")).strip(),
-                "role_summary": str(entry.get("role_summary", "")).strip(),
-                "description": str(entry.get("description", "")).strip(),
-                "temperament": str(entry.get("temperament", "")).strip(),
-                "social_status": str(entry.get("social_status", "")).strip(),
-                "speaking_style": str(entry.get("speaking_style", "")).strip(),
-                "accent_or_dialect_hints": str(entry.get("accent_or_dialect_hints", "")).strip(),
-                "voice_notes": str(entry.get("voice_notes", "")).strip(),
-                "voice_persona_summary": str(entry.get("voice_persona_summary", "")).strip(),
-                "voice_timbre_and_range": str(entry.get("voice_timbre_and_range", "")).strip(),
-                "voice_pacing_and_rhythm": str(entry.get("voice_pacing_and_rhythm", "")).strip(),
-                "voice_emotional_baseline": str(entry.get("voice_emotional_baseline", "")).strip(),
-                "voice_articulation_and_pronunciation": str(
-                    entry.get("voice_articulation_and_pronunciation", "")
-                ).strip(),
-                "voice_delivery_constraints": str(entry.get("voice_delivery_constraints", "")).strip(),
                 "voice_definition_prompt": str(entry.get("voice_definition_prompt", "")).strip(),
-                "relationship_hints": _normalize_string_list(entry.get("relationship_hints", [])),
                 "confidence": str(entry.get("confidence", "")).strip(),
                 "evidence": evidence,
                 "has_dialogue_evidence": any(
@@ -2074,9 +1987,6 @@ def _merge_candidate_identity_group(identity_group: list[dict[str, object]]) -> 
             target = dict(candidate)
             continue
         target["aliases"] = _normalize_string_list(list(target.get("aliases", [])) + list(candidate.get("aliases", [])))
-        target["relationship_hints"] = _normalize_string_list(
-            list(target.get("relationship_hints", [])) + list(candidate.get("relationship_hints", []))
-        )
         target["evidence"] = _dedupe_evidence(
             _restore_evidence(target.get("evidence", [])) + _restore_evidence(candidate.get("evidence", []))
         )
@@ -2085,20 +1995,6 @@ def _merge_candidate_identity_group(identity_group: list[dict[str, object]]) -> 
         )
         for field_name in (
             "gender_hint",
-            "age_band",
-            "role_summary",
-            "description",
-            "temperament",
-            "social_status",
-            "speaking_style",
-            "accent_or_dialect_hints",
-            "voice_notes",
-            "voice_persona_summary",
-            "voice_timbre_and_range",
-            "voice_pacing_and_rhythm",
-            "voice_emotional_baseline",
-            "voice_articulation_and_pronunciation",
-            "voice_delivery_constraints",
             "voice_definition_prompt",
             "confidence",
         ):
@@ -2231,7 +2127,7 @@ def _synthesis_candidate_payload(
         "character_id": str(candidate.get("character_id", "")).strip(),
         "canonical_name": str(candidate.get("canonical_name", "")).strip(),
         "aliases": _normalize_string_list(candidate.get("aliases", [])),
-        "role_summary": str(candidate.get("role_summary", "")).strip(),
+        "gender_hint": str(candidate.get("gender_hint", "")).strip(),
         "confidence": str(candidate.get("confidence", "")).strip(),
         "identity_merge_count": int(candidate.get("identity_merge_count", 1)),
         "evidence": [_compact_synthesis_evidence(item) for item in evidence_items],
@@ -2296,75 +2192,15 @@ def _build_profile_from_synthesis(
     @date       2026-04-21
     @version    0.1.0
     """
-    return _profile_with_synchronized_voice_definition(
+    return regenerate_character_voice_definition(
         {
             "character_id": str(candidate.get("character_id", "")),
-            "canonical_name": str(
-                response_payload.get(
-                    "canonical_name",
-                    candidate.get("canonical_name", ""),
-                )
-            ).strip(),
+            "canonical_name": str(response_payload.get("canonical_name", candidate.get("canonical_name", ""))).strip(),
             "aliases": _normalize_string_list(response_payload.get("aliases", candidate.get("aliases", []))),
             "gender_hint": str(response_payload.get("gender_hint", candidate.get("gender_hint", ""))).strip(),
-            "age_band": str(response_payload.get("age_band", candidate.get("age_band", ""))).strip(),
-            "role_summary": str(
-                response_payload.get(
-                    "role_summary",
-                    candidate.get("role_summary", ""),
-                )
-            ).strip(),
-            "description": str(response_payload.get("description", candidate.get("description", ""))).strip(),
-            "temperament": str(response_payload.get("temperament", candidate.get("temperament", ""))).strip(),
-            "social_status": str(
-                response_payload.get(
-                    "social_status",
-                    candidate.get("social_status", ""),
-                )
-            ).strip(),
-            "speaking_style": str(
-                response_payload.get(
-                    "speaking_style",
-                    candidate.get("speaking_style", ""),
-                )
-            ).strip(),
-            "accent_or_dialect_hints": str(
-                response_payload.get(
-                    "accent_or_dialect_hints",
-                    candidate.get("accent_or_dialect_hints", ""),
-                )
-            ).strip(),
-            "voice_notes": str(response_payload.get("voice_notes", candidate.get("voice_notes", ""))).strip(),
-            "voice_persona_summary": str(
-                response_payload.get("voice_persona_summary", candidate.get("voice_persona_summary", ""))
-            ).strip(),
-            "voice_timbre_and_range": str(
-                response_payload.get("voice_timbre_and_range", candidate.get("voice_timbre_and_range", ""))
-            ).strip(),
-            "voice_pacing_and_rhythm": str(
-                response_payload.get("voice_pacing_and_rhythm", candidate.get("voice_pacing_and_rhythm", ""))
-            ).strip(),
-            "voice_emotional_baseline": str(
-                response_payload.get("voice_emotional_baseline", candidate.get("voice_emotional_baseline", ""))
-            ).strip(),
-            "voice_articulation_and_pronunciation": str(
-                response_payload.get(
-                    "voice_articulation_and_pronunciation",
-                    candidate.get("voice_articulation_and_pronunciation", ""),
-                )
-            ).strip(),
-            "voice_delivery_constraints": str(
-                response_payload.get("voice_delivery_constraints", candidate.get("voice_delivery_constraints", ""))
-            ).strip(),
             "voice_definition_prompt": str(
                 response_payload.get("voice_definition_prompt", candidate.get("voice_definition_prompt", ""))
             ).strip(),
-            "relationship_hints": _normalize_string_list(
-                response_payload.get(
-                    "relationship_hints",
-                    candidate.get("relationship_hints", []),
-                )
-            ),
             "confidence": str(response_payload.get("confidence", candidate.get("confidence", ""))).strip(),
             "review_status": _normalize_review_status(
                 response_payload.get(
@@ -2381,28 +2217,20 @@ def _build_profile_from_synthesis(
 
 def _normalize_character_profile(profile_payload: dict[str, object]) -> CharacterProfilePayload:
     """
-    @brief      Normalize one stored character profile and backfill the voice-definition defaults.
+    @brief      Normalize one compact stored character profile and backfill the voice prompt default.
     @param[in]  profile_payload Raw or partial character profile payload.
     @return     Normalized persisted profile payload.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-20
-    @version    1.1.0
+    @version    2.0.0
     """
     normalized_profile = _normalized_character_profile_core(profile_payload)
-    derived_voice_fields = _derived_voice_definition_fields(normalized_profile)
-    for field_name in CHARACTER_VOICE_BRIEF_FIELDS:
-        normalized_profile[field_name] = (
-            str(normalized_profile.get(field_name, "")).strip() or derived_voice_fields[field_name]
-        )
     normalized_voice_prompt = str(normalized_profile.get(CHARACTER_VOICE_PROMPT_FIELD, "")).strip()
     normalized_profile[CHARACTER_VOICE_PROMPT_FIELD] = _ensure_character_voice_prompt_gender_instruction(
         normalized_voice_prompt or build_character_voice_definition_prompt(normalized_profile),
         normalized_profile,
     )
-    current_signature = voice_definition_source_signature(normalized_profile)
-    stored_signature = str(normalized_profile.get(CHARACTER_VOICE_SIGNATURE_FIELD, "")).strip()
-    normalized_profile["voice_definition_stale"] = bool(stored_signature and stored_signature != current_signature)
     return normalized_profile
 
 
@@ -2457,38 +2285,20 @@ def _review_status_summary(profiles: list[dict[str, object]]) -> dict[str, int]:
 
 def _normalized_character_profile_core(profile_payload: dict[str, object]) -> CharacterProfilePayload:
     """
-    @brief      Normalize one character profile payload without regenerating the final voice-definition prompt.
+    @brief      Normalize one compact character profile payload without regenerating the final voice prompt.
     @param[in]  profile_payload Raw or partial character profile payload.
     @return     Core normalized profile payload.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    1.0.0
+    @version    2.0.0
     """
     normalized_profile: CharacterProfilePayload = {
         "character_id": str(profile_payload.get("character_id", "")).strip(),
         "canonical_name": str(profile_payload.get("canonical_name", "")).strip(),
         "aliases": _normalize_string_list(profile_payload.get("aliases", [])),
         "gender_hint": str(profile_payload.get("gender_hint", "")).strip(),
-        "age_band": str(profile_payload.get("age_band", "")).strip(),
-        "role_summary": str(profile_payload.get("role_summary", "")).strip(),
-        "description": str(profile_payload.get("description", "")).strip(),
-        "temperament": str(profile_payload.get("temperament", "")).strip(),
-        "social_status": str(profile_payload.get("social_status", "")).strip(),
-        "speaking_style": str(profile_payload.get("speaking_style", "")).strip(),
-        "accent_or_dialect_hints": str(profile_payload.get("accent_or_dialect_hints", "")).strip(),
-        "voice_notes": str(profile_payload.get("voice_notes", "")).strip(),
-        "voice_persona_summary": str(profile_payload.get("voice_persona_summary", "")).strip(),
-        "voice_timbre_and_range": str(profile_payload.get("voice_timbre_and_range", "")).strip(),
-        "voice_pacing_and_rhythm": str(profile_payload.get("voice_pacing_and_rhythm", "")).strip(),
-        "voice_emotional_baseline": str(profile_payload.get("voice_emotional_baseline", "")).strip(),
-        "voice_articulation_and_pronunciation": str(
-            profile_payload.get("voice_articulation_and_pronunciation", "")
-        ).strip(),
-        "voice_delivery_constraints": str(profile_payload.get("voice_delivery_constraints", "")).strip(),
         CHARACTER_VOICE_PROMPT_FIELD: str(profile_payload.get(CHARACTER_VOICE_PROMPT_FIELD, "")).strip(),
-        CHARACTER_VOICE_SIGNATURE_FIELD: str(profile_payload.get(CHARACTER_VOICE_SIGNATURE_FIELD, "")).strip(),
-        "relationship_hints": _normalize_string_list(profile_payload.get("relationship_hints", [])),
         "confidence": str(profile_payload.get("confidence", "")).strip(),
         "review_status": _normalize_review_status(profile_payload.get("review_status", "")),
         "evidence": _restore_evidence(profile_payload.get("evidence", [])),
@@ -2496,22 +2306,6 @@ def _normalized_character_profile_core(profile_payload: dict[str, object]) -> Ch
         if profile_payload.get("updated_at") in (None, "")
         else str(profile_payload.get("updated_at")),
     }
-    return normalized_profile
-
-
-def _profile_with_synchronized_voice_definition(profile_payload: dict[str, object]) -> CharacterProfilePayload:
-    """
-    @brief      Execute the profile with synchronized voice definition helper.
-    @param[in]  profile_payload Profile payload.
-    @return     Helper result.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
-    """
-    normalized_profile = _normalize_character_profile(profile_payload)
-    current_signature = voice_definition_source_signature(normalized_profile)
-    normalized_profile[CHARACTER_VOICE_SIGNATURE_FIELD] = current_signature
-    normalized_profile["voice_definition_stale"] = False
     return normalized_profile
 
 
@@ -2524,29 +2318,7 @@ def _persistable_character_profile(profile_payload: dict[str, object]) -> Charac
     @date       2026-04-21
     @version    0.1.0
     """
-    normalized_profile = _normalize_character_profile(profile_payload)
-    normalized_profile.pop("voice_definition_stale", None)
-    return normalized_profile
-
-
-def _voice_definition_block_changed(
-    left_profile: dict[str, object],
-    right_profile: dict[str, object],
-) -> bool:
-    """
-    @brief      Execute the voice definition block changed helper.
-    @param[in]  left_profile Value for `left_profile`.
-    @param[in]  right_profile Value for `right_profile`.
-    @return     Helper result.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
-    """
-    comparable_fields = (*CHARACTER_VOICE_BRIEF_FIELDS, CHARACTER_VOICE_PROMPT_FIELD)
-    return any(
-        str(left_profile.get(field_name, "")).strip() != str(right_profile.get(field_name, "")).strip()
-        for field_name in comparable_fields
-    )
+    return _normalize_character_profile(profile_payload)
 
 
 def _character_voice_gender_instruction(profile_payload: dict[str, object]) -> str:
@@ -2601,107 +2373,6 @@ def _prompt_has_explicit_gender_instruction(prompt_text: str) -> bool:
     )
 
 
-def _derived_voice_definition_fields(profile_payload: dict[str, object]) -> dict[str, str]:
-    """
-    @brief      Execute the derived voice definition fields helper.
-    @param[in]  profile_payload Profile payload.
-    @return     Helper result.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
-    """
-    character_name = str(profile_payload.get("canonical_name", "Character")).strip() or "Character"
-    role_summary = str(profile_payload.get("role_summary", "")).strip()
-    description = str(profile_payload.get("description", "")).strip()
-    temperament = str(profile_payload.get("temperament", "")).strip()
-    social_status = str(profile_payload.get("social_status", "")).strip()
-    speaking_style = str(profile_payload.get("speaking_style", "")).strip()
-    accent_hints = str(profile_payload.get("accent_or_dialect_hints", "")).strip()
-    voice_notes = str(profile_payload.get("voice_notes", "")).strip()
-    gender_hint = str(profile_payload.get("gender_hint", "")).strip()
-    age_band = str(profile_payload.get("age_band", "")).strip()
-
-    persona_components = [
-        _phrase_join([age_band, gender_hint], suffix="voice persona") if age_band or gender_hint else "",
-        role_summary,
-        description,
-        temperament,
-        social_status,
-    ]
-    persona_summary = _compose_sentence(
-        [item for item in persona_components if item],
-        fallback=f"{character_name} should sound grounded, characterful, and easy to distinguish in repeated dialogue.",
-    )
-    timbre_and_range = _compose_sentence(
-        [
-            voice_notes,
-            _phrase_join([age_band, gender_hint], suffix="timbre") if age_band or gender_hint else "",
-        ],
-        fallback=(
-            "Use a natural, human voice with a stable timbre and comfortable range that stays believable over "
-            "many lines."
-        ),
-    )
-    pacing_and_rhythm = _compose_sentence(
-        [
-            speaking_style,
-            "Keep pacing controlled and rhythm easy to follow in dialogue.",
-        ],
-        fallback="Keep the pacing natural and dialogue-friendly, with phrasing that remains clear and steady.",
-    )
-    emotional_baseline = _compose_sentence(
-        [
-            temperament,
-            description,
-            "Let the emotional baseline stay consistent unless the text clearly demands a stronger shift.",
-        ],
-        fallback=(
-            "Maintain a coherent emotional baseline that matches the character and changes naturally with the text."
-        ),
-    )
-    articulation_and_pronunciation = _compose_sentence(
-        [
-            accent_hints,
-            speaking_style,
-            "Keep diction clear and pronunciation consistent.",
-        ],
-        fallback="Keep diction clear, articulation clean, and pronunciation consistent from line to line.",
-    )
-    delivery_constraints = _compose_sentence(
-        [
-            "Avoid celebrity imitation and exaggerated caricature.",
-            "Preserve a stable character identity across repeated dialogue.",
-            "Stay expressive but natural rather than theatrical unless the text clearly calls for it.",
-        ],
-        fallback="Keep the delivery consistent, natural, and repeatable across many lines.",
-    )
-    return {
-        "voice_persona_summary": persona_summary,
-        "voice_timbre_and_range": timbre_and_range,
-        "voice_pacing_and_rhythm": pacing_and_rhythm,
-        "voice_emotional_baseline": emotional_baseline,
-        "voice_articulation_and_pronunciation": articulation_and_pronunciation,
-        "voice_delivery_constraints": delivery_constraints,
-    }
-
-
-def _compose_sentence(parts: list[str], fallback: str) -> str:
-    """
-    @brief      Compose the sentence.
-    @param[in]  parts Value for `parts`.
-    @param[in]  fallback Value for `fallback`.
-    @return     Derived helper result.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
-    """
-    cleaned_parts = [_sentence_fragment(part) for part in parts if _sentence_fragment(part)]
-    if not cleaned_parts:
-        return fallback
-    sentence = " ".join(cleaned_parts).strip()
-    return sentence if sentence.endswith(".") else f"{sentence}."
-
-
 def _sentence_fragment(value: object) -> str:
     """
     @brief      Execute the sentence fragment helper.
@@ -2716,22 +2387,6 @@ def _sentence_fragment(value: object) -> str:
         return ""
     normalized_value = normalized_value.rstrip(".")
     return normalized_value if normalized_value.endswith(".") else f"{normalized_value}."
-
-
-def _phrase_join(parts: list[str], suffix: str) -> str:
-    """
-    @brief      Execute the phrase join helper.
-    @param[in]  parts Value for `parts`.
-    @param[in]  suffix Value for `suffix`.
-    @return     Helper result.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
-    """
-    normalized_parts = [str(part).strip() for part in parts if str(part).strip()]
-    if not normalized_parts:
-        return ""
-    return f"{', '.join(normalized_parts)} {suffix}".strip()
 
 
 def _normalize_identity(value: str) -> str:

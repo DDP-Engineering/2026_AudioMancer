@@ -1,4 +1,4 @@
-﻿<!--
+<!--
 Copyright (c) 2026 DDP Engineering
 This software is licensed under the GNU Affero General Public License v3.0
 (AGPL-3.0) with additional Non-Commercial restriction.
@@ -340,8 +340,9 @@ current broad downstream reset path.
 
 The current v2 direction also makes these implementation-policy decisions:
 
-- committed `settings.json` may contain full runtime settings for the local
-  application baseline
+- committed `settings.json` may contain runtime profile definitions for the
+  local application baseline, but API-key and VoiceWeaver secret fields must
+  stay blank
 - backward compatibility with pre-v2 workflow metadata is not required
 - missing v2 identifiers in Audio Blocks metadata may be treated as stale and
   reset broadly instead of migrated
@@ -350,7 +351,7 @@ The current v2 direction also makes these implementation-policy decisions:
 
 The engineering follow-up list is tracked in
 `0_Planning/08_Implementation_Review_Followups.md`. Before calling v2 complete,
-the validation baseline should be restored so the selective invalidation tests,
+the validation baseline should stay green so the selective invalidation tests,
 main-window workflow tests, and documentation checks all describe the intended
 behavior rather than stale expectations.
 
@@ -384,5 +385,4 @@ Near-term work should prioritize:
   where this directly reduces maintenance risk
 - documenting limitations as future work instead of implying they are already
   implemented
-
 

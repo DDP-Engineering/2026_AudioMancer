@@ -13,12 +13,11 @@
          discovered-model rendering, and runtime limit persistence.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-17
-@version 1.2.0
+@version 1.3.1
 """
 
 # IMPORTS
 
-from audiomancer import config
 from audiomancer.ui.pages.tts_settings_page import TtsSettingsPage
 
 
@@ -31,14 +30,14 @@ def test_tts_settings_page_loads_runtime_limits_without_project_plan(qtbot, defa
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-17
-    @version    1.2.0
+    @version    1.3.0
     """
     page = TtsSettingsPage()
     qtbot.addWidget(page)
 
     settings_payload = dict(default_settings_payload)
     settings_payload["tts_runtime_probe_succeeded"] = True
-    settings_payload["tts_runtime_probe_message"] = "Connection successful. Discovered 3 models."
+    settings_payload["tts_runtime_probe_message"] = "Connection successful. Discovered 2 models."
     settings_payload["tts_runtime_discovered_models"] = _minimum_qwen_models()
     settings_payload["tts_audio_preview_timeout_seconds"] = 75
     settings_payload["tts_audio_generation_timeout_seconds"] = 420
@@ -50,7 +49,7 @@ def test_tts_settings_page_loads_runtime_limits_without_project_plan(qtbot, defa
         True,
     )
 
-    assert page._model_list.count() == 3
+    assert page._model_list.count() == 2
     assert hasattr(page, "_voice_assignment_combo") is False
     assert page._preview_timeout_spin.value() == 75
     assert page._generation_timeout_spin.value() == 420
@@ -99,45 +98,6 @@ def test_tts_settings_page_exposes_simple_connection_status_states(qtbot) -> Non
     assert page._runtime_status_label.text() == "Connection failed"
 
 
-def test_tts_settings_page_removed_old_model_role_controls(qtbot) -> None:
-    """
-    @brief      Verify the old preferred-mechanism and per-role model selectors are no longer present.
-    @param[in]  qtbot Qt test helper fixture.
-    @return     None.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-17
-    @version    1.0.0
-    """
-    page = TtsSettingsPage()
-    qtbot.addWidget(page)
-
-    assert hasattr(page, "_preferred_mechanism_combo") is False
-    assert hasattr(page, "_custom_voice_model_combo") is False
-    assert hasattr(page, "_definition_model_combo") is False
-    assert hasattr(page, "_clone_model_combo") is False
-    assert page._preview_timeout_spin.value() == config.DEFAULT_TTS_AUDIO_PREVIEW_TIMEOUT_SECONDS
-    assert page._generation_timeout_spin.value() == config.DEFAULT_TTS_AUDIO_GENERATION_TIMEOUT_SECONDS
-    assert page._preview_text_limit_spin.value() == config.DEFAULT_TTS_PREVIEW_TEXT_CHARACTER_LIMIT
-    assert page._model_list.maximumHeight() == 148
-
-
-def test_tts_settings_page_omits_redundant_title_label(qtbot) -> None:
-    """
-    @brief      Verify the dialog body does not repeat the window title.
-    @param[in]  qtbot Qt test helper fixture.
-    @return     None.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
-    """
-    page = TtsSettingsPage()
-    qtbot.addWidget(page)
-
-    assert hasattr(page, "_title_label") is False
-
-
 def test_tts_settings_page_keeps_runtime_limits_available_without_project(qtbot) -> None:
     """
     @brief      Verify runtime audio limits remain editable when no project is open.
@@ -173,24 +133,12 @@ def _minimum_qwen_models() -> list[dict[str, object]]:
             "backend_name": "qwen3-tts-base",
             "status": "healthy",
             "supported_generation_modes": ["base", "clone"],
-            "supported_presets": [],
-            "speaker_count": 0,
         },
         {
             "model_id": "qwen-designer",
             "backend_name": "qwen3-tts-voice-designer",
             "status": "healthy",
             "supported_generation_modes": ["definition", "voice_designer"],
-            "supported_presets": [],
-            "speaker_count": 0,
-        },
-        {
-            "model_id": "qwen-custom",
-            "backend_name": "qwen3-tts-customvoice",
-            "status": "healthy",
-            "supported_generation_modes": ["custom_voice"],
-            "supported_presets": ["vivian", "serena", "anna"],
-            "speaker_count": 3,
         },
     ]
 

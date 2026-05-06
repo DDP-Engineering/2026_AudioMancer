@@ -52,7 +52,6 @@ def test_narator_voice_create_profile_does_not_change_selected_narrator(monkeypa
         "show_message",
         lambda *args, **kwargs: None,
     )
-
     narator_voice_ui_controller.handle_create_profile_requested(
         window,
         window._narator_voice_page.current_editor_payload(),
@@ -79,16 +78,21 @@ def test_narator_voice_edit_selected_profile_clears_sample_and_selection(monkeyp
     """
     project_root, _manifest = _create_project(tmp_path, "NarratorControllerEdit")
     window = _build_window(qtbot, project_root)
-    profile = narrator_definition_service.load_profiles(project_root)[0]
+    profile = narrator_definition_service.create_custom_profile(
+        project_root,
+        "Edit Narrator",
+        "English",
+        "Prompt.",
+        "Preview text.",
+    )
     narrator_definition_service.store_profile_sample(
         project_root,
         profile,
         "Preview text.",
         {
-            "generation_mode": "custom_voice",
-            "model_id": "qwen-custom",
-            "source_model_id": "qwen-custom",
-            "speaker_id": "vivian",
+            "generation_mode": "definition",
+            "model_id": "qwen-designer",
+            "source_model_id": "qwen-designer",
             "language": "en",
         },
         "Generated sample.",
@@ -96,7 +100,7 @@ def test_narator_voice_edit_selected_profile_clears_sample_and_selection(monkeyp
     )
     narrator_definition_service.select_narrator_profile(project_root, profile["profile_id"], "en")
     project_manifest = project_workspace_service.load_manifest(project_root)
-    project_manifest["narrator_profile_name"] = "Vivian"
+    project_manifest["narrator_profile_name"] = "Edit Narrator"
     project_manifest["narrator_language"] = "English"
     project_workspace_service.save_manifest(project_manifest, project_root)
     window._activate_project(project_root, project_workspace_service.load_manifest(project_root))
@@ -114,9 +118,7 @@ def test_narator_voice_edit_selected_profile_clears_sample_and_selection(monkeyp
     assert window._narator_voice_page.is_edit_mode() is True
 
 
-def test_narator_voice_ui_controller_select_profile_requires_sample_and_updates_manifest(
-    monkeypatch, qtbot, tmp_path
-) -> None:
+def test_narator_voice_ui_controller_select_profile_with_sample_updates_manifest(monkeypatch, qtbot, tmp_path) -> None:
     """
     @brief      Verify explicit narrator selection persists when a profile sample exists.
     @param[in]  monkeypatch Pytest monkeypatch fixture.
@@ -126,7 +128,7 @@ def test_narator_voice_ui_controller_select_profile_requires_sample_and_updates_
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-17
-    @version    1.1.0
+    @version    1.2.0
     """
     project_root, _manifest = _create_project(tmp_path, "NarratorControllerSelect")
     created_profile = narrator_definition_service.create_custom_profile(
@@ -164,6 +166,11 @@ def test_narator_voice_ui_controller_select_profile_requires_sample_and_updates_
         "show_message",
         lambda *args, **kwargs: None,
     )
+    monkeypatch.setattr(
+        narator_voice_ui_controller.audio_blocks_ui_controller,
+        "confirm_narrator_voice_invalidation",
+        lambda *_args, **_kwargs: True,
+    )
 
     narator_voice_ui_controller.handle_select_profile_requested(window, created_profile["profile_id"])
     selected_audio_path, selected_metadata_path = narrator_definition_service.selected_narrator_sample_paths(
@@ -177,6 +184,62 @@ def test_narator_voice_ui_controller_select_profile_requires_sample_and_updates_
     assert project_workspace_service.load_manifest(project_root)["narrator_profile_name"] == "My Narrator"
     assert selected_audio_path.read_bytes() == b"RIFF-selected"
     assert "selected_profile_id" in selected_metadata_path.read_text(encoding="utf-8")
+
+
+def test_narator_voice_ui_controller_select_profile_without_sample_updates_manifest(
+    monkeypatch, qtbot, tmp_path
+) -> None:
+    """
+    @brief      Verify explicit narrator selection may persist before sample generation.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  qtbot Qt test helper fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-05
+    @version    0.1.0
+    """
+    project_root, _manifest = _create_project(tmp_path, "NarratorControllerSelectUnsampled")
+    created_profile = narrator_definition_service.create_custom_profile(
+        project_root,
+        "Unsampled Narrator",
+        "English",
+        "Prompt.",
+        "Preview text.",
+    )
+    window = _build_window(
+        qtbot,
+        project_root,
+        settings_payload={
+            **_default_settings_payload(),
+            "tts_runtime_probe_succeeded": True,
+            "tts_runtime_discovered_models": _minimum_qwen_models(),
+        },
+    )
+    monkeypatch.setattr(
+        narator_voice_ui_controller.misc_ui_controller,
+        "show_message",
+        lambda *args, **kwargs: None,
+    )
+    monkeypatch.setattr(
+        narator_voice_ui_controller.audio_blocks_ui_controller,
+        "confirm_narrator_voice_invalidation",
+        lambda *_args, **_kwargs: True,
+    )
+
+    narator_voice_ui_controller.handle_select_profile_requested(window, created_profile["profile_id"])
+    selected_audio_path, selected_metadata_path = narrator_definition_service.selected_narrator_sample_paths(
+        project_root
+    )
+
+    assert (
+        narrator_definition_service.load_selected_profile_state(project_root)["selected_profile_id"]
+        == created_profile["profile_id"]
+    )
+    assert project_workspace_service.load_manifest(project_root)["narrator_profile_name"] == "Unsampled Narrator"
+    assert selected_audio_path.exists() is False
+    assert selected_metadata_path.exists() is False
 
 
 def test_narator_voice_ui_controller_selection_change_refreshes_delete_state(qtbot, tmp_path) -> None:
@@ -248,6 +311,13 @@ def test_narator_voice_generate_sample_reprobes_runtime_and_stores_audio(monkeyp
     @version    1.1.0
     """
     project_root, _manifest = _create_project(tmp_path, "NarratorControllerGenerate")
+    profile = narrator_definition_service.create_custom_profile(
+        project_root,
+        "Generated Narrator",
+        "English",
+        "Generated prompt.",
+        "Preview text.",
+    )
     window = _build_window(
         qtbot,
         project_root,
@@ -256,6 +326,7 @@ def test_narator_voice_generate_sample_reprobes_runtime_and_stores_audio(monkeyp
             "tts_runtime_base_url": "http://voiceweaver.local:8059",
         },
     )
+    window._narator_voice_inspected_profile_id = profile["profile_id"]
     persisted_settings = dict(window._settings_payload)
     observed_timeouts: dict[str, object] = {"wait_for_terminal_operation": []}
     monkeypatch.setattr(
@@ -330,9 +401,9 @@ def test_narator_voice_generate_sample_reprobes_runtime_and_stores_audio(monkeyp
     )
     monkeypatch.setattr(
         narator_voice_ui_controller.voiceweaver_runtime_service,
-        "generate_custom_voice",
+        "generate_voice_design",
         lambda *_args, **kwargs: (
-            observed_timeouts.__setitem__("generate_custom_voice", int(kwargs["timeout_seconds"])),
+            observed_timeouts.__setitem__("generate_voice_design", int(kwargs["timeout_seconds"])),
             {"success": True},
         )[1],
     )
@@ -343,14 +414,14 @@ def test_narator_voice_generate_sample_reprobes_runtime_and_stores_audio(monkeyp
             observed_timeouts["wait_for_terminal_operation"].append(int(kwargs["timeout_seconds"])),
             (
                 {
-                    "active_model": {"model_id": "qwen-custom"},
+                    "active_model": {"model_id": "qwen-designer"},
                     "operation": {"status": "completed", "progress_percent": 100, "stage": "completed"},
                     "result": {"available": False, "summary": None},
                     "device_diagnostics": {},
                 }
                 if len(observed_timeouts["wait_for_terminal_operation"]) == 1
                 else {
-                    "active_model": {"model_id": "qwen-custom"},
+                    "active_model": {"model_id": "qwen-designer"},
                     "operation": {"status": "completed", "progress_percent": 100, "stage": "completed"},
                     "result": {"available": True, "summary": "Narator voice sample ready."},
                     "device_diagnostics": {},
@@ -411,11 +482,11 @@ def test_narator_voice_generate_sample_reprobes_runtime_and_stores_audio(monkeyp
 
     narator_voice_ui_controller.handle_generate_sample_requested(
         window,
-        narrator_definition_service.DEFAULT_NARRATOR_PROFILE_ID,
+        window._narator_voice_inspected_profile_id,
     )
     profile_audio_path, profile_metadata_path = narrator_definition_service.profile_sample_paths(
         project_root,
-        narrator_definition_service.DEFAULT_NARRATOR_PROFILE_ID,
+        str(window._narator_voice_inspected_profile_id),
     )
 
     assert profile_audio_path.read_bytes() == b"RIFF-generated"
@@ -423,7 +494,7 @@ def test_narator_voice_generate_sample_reprobes_runtime_and_stores_audio(monkeyp
     assert observed_timeouts == {
         "read_status": 60,
         "load_model": 60,
-        "generate_custom_voice": 60,
+        "generate_voice_design": 60,
         "wait_for_terminal_operation": [60, 60],
         "download_generated_voice": 60,
     }
@@ -580,21 +651,12 @@ def _minimum_qwen_models() -> list[dict[str, object]]:
             "backend_name": "qwen3-tts-base",
             "status": "healthy",
             "supported_generation_modes": ["base", "clone"],
-            "supported_presets": [],
         },
         {
             "model_id": "qwen-designer",
             "backend_name": "qwen3-tts-voice-designer",
             "status": "healthy",
             "supported_generation_modes": ["definition", "voice_designer"],
-            "supported_presets": [],
-        },
-        {
-            "model_id": "qwen-custom",
-            "backend_name": "qwen3-tts-customvoice",
-            "status": "healthy",
-            "supported_generation_modes": ["custom_voice"],
-            "supported_presets": ["vivian", "serena", "anna"],
         },
     ]
 

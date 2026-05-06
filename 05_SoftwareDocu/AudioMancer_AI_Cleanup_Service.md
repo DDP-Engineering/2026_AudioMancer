@@ -92,7 +92,8 @@ High-level flow:
    the shared cleanup artifacts, and stores `mode="ai_assisted"` in the cleanup
    operation state.
 8. On success, the shell advances the workflow stage to `text_chunking_ready`.
-9. Manual edits to the cleaned text save back to `clean_text.txt` and reset
+9. Manual edits to the cleaned text require a downstream impact confirmation
+   before the editor unlocks, then save back to `clean_text.txt` and reset
    downstream workflow state from chunking onward while preserving the
    extracted-text preview scroll position.
 

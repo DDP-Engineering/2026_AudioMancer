@@ -13,7 +13,7 @@
          chunk review, manual edits, approval controls, and progress display.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-07
-@version 0.5.0
+@version 0.6.0
 """
 
 # IMPORTS
@@ -28,6 +28,7 @@ from PySide6.QtWidgets import (
     QPlainTextEdit,
     QProgressBar,
     QPushButton,
+    QSplitter,
     QVBoxLayout,
     QWidget,
 )
@@ -60,7 +61,7 @@ class AiTranslationPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-07
-        @version    0.3.0
+        @version    0.4.0
         """
         super().__init__(parent)
         self._project_active = False
@@ -120,8 +121,8 @@ class AiTranslationPage(QWidget):
         top_row.addWidget(actions_widget, 2)
         layout.addLayout(top_row, 1)
 
-        bottom_row = QHBoxLayout()
-        bottom_row.setSpacing(12)
+        self._chunk_text_splitter = QSplitter(self)
+        self._chunk_text_splitter.setChildrenCollapsible(False)
         self._source_group = QGroupBox("Original Chunk", self)
         source_layout = QVBoxLayout(self._source_group)
         self._source_text_edit = QPlainTextEdit(self)
@@ -133,7 +134,7 @@ class AiTranslationPage(QWidget):
         self._approved_progress_bar.setTextVisible(True)
         self._approved_progress_bar.setFormat("%p%")
         source_layout.addWidget(self._approved_progress_bar)
-        bottom_row.addWidget(self._source_group, 1)
+        self._chunk_text_splitter.addWidget(self._source_group)
 
         self._translated_group = QGroupBox("Translated Chunk", self)
         translated_layout = QVBoxLayout(self._translated_group)
@@ -148,8 +149,12 @@ class AiTranslationPage(QWidget):
         self._approve_selected_button.clicked.connect(self._emit_approve_selected)
         action_row.addWidget(self._approve_selected_button)
         translated_layout.addLayout(action_row)
-        bottom_row.addWidget(self._translated_group, 1)
-        layout.addLayout(bottom_row, 7)
+        self._chunk_text_splitter.addWidget(self._translated_group)
+        self._chunk_text_splitter.setStretchFactor(0, 1)
+        self._chunk_text_splitter.setStretchFactor(1, 1)
+        self._chunk_text_splitter.setSizes([600, 600])
+        layout.addWidget(self._chunk_text_splitter, 7)
+        self._apply_chunk_text_splitter_minimums()
 
         self._notes_group = QGroupBox("Translation Notes", self)
         notes_layout = QVBoxLayout(self._notes_group)
@@ -172,6 +177,19 @@ class AiTranslationPage(QWidget):
             0,
             0,
         )
+
+    def resizeEvent(self, event) -> None:  # noqa: N802
+        """
+        @brief      Keep original and translated chunk panes from shrinking below thirty percent of splitter width.
+        @param[in]  event Qt resize event.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-06
+        @version    0.1.0
+        """
+        super().resizeEvent(event)
+        self._apply_chunk_text_splitter_minimums()
 
     def set_project_active(self, is_active: bool) -> None:
         """
@@ -396,6 +414,25 @@ class AiTranslationPage(QWidget):
         )
         self._translated_text_edit.setReadOnly(not self._project_active or self._busy or selected_chunk is None)
         self._chunk_list.setEnabled(self._project_active)
+
+    def _apply_chunk_text_splitter_minimums(self) -> None:
+        """
+        @brief      Set original and translated chunk pane minimum widths to thirty percent of splitter width.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-06
+        @version    0.1.0
+        """
+        required_attributes = ("_chunk_text_splitter", "_source_group", "_translated_group")
+        if not all(hasattr(self, attribute_name) for attribute_name in required_attributes):
+            return
+        splitter_width = self._chunk_text_splitter.width()
+        if splitter_width <= 0:
+            return
+        minimum_pane_width = int(splitter_width * 0.3)
+        self._source_group.setMinimumWidth(minimum_pane_width)
+        self._translated_group.setMinimumWidth(minimum_pane_width)
 
     def _show_selected_chunk(self, row: int) -> None:
         """

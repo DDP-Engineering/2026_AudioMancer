@@ -14,7 +14,7 @@
          Blocks output, and the resumable runtime operation state.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-23
-@version 0.4.2
+@version 0.5.0
 """
 
 # IMPORTS
@@ -30,6 +30,7 @@ from audiomancer.services import (
     home_presenter_service,
     narrator_definition_service,
     speech_blocks_service,
+    tts_budget_service,
     ui_state_service,
 )
 
@@ -38,20 +39,22 @@ def build_audio_blocks_state(
     project_root: Path | None,
     manifest: dict[str, object] | None,
     language: str,
+    settings_payload: dict[str, object] | None = None,
 ) -> dict[str, object]:
     """
     @brief      Build the Audio Blocks page state from project artifacts.
     @param[in]  project_root Active project root or `None`.
     @param[in]  manifest Active project manifest or `None`.
     @param[in]  language Runtime UI language code.
+    @param[in]  settings_payload Persisted application settings payload.
     @return     Page-state payload consumed by the Audio Blocks page.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-23
-    @version    0.4.1
+    @version    0.5.0
     """
     if project_root is None or manifest is None:
-        return _empty_state(language)
+        return _empty_state(language, settings_payload)
 
     speech_blocks = speech_blocks_service.sort_speech_blocks(speech_blocks_service.load_speech_blocks(project_root))
     audio_blocks = audio_blocks_service.load_audio_blocks(project_root)
@@ -129,9 +132,8 @@ def build_audio_blocks_state(
             bool(block.get("generated", False)) and not bool(block.get("approved", False)) for block in merged_blocks
         ),
         "can_regenerate_selected": current_block is not None,
-        "can_approve_selected": current_block is not None
-        and bool(current_block.get("generated", False))
-        and not bool(current_block.get("approved", False)),
+        "can_approve_selected": current_block is not None and bool(current_block.get("generated", False)),
+        "selected_text_character_limit": _selected_text_character_limit(settings_payload, merged_blocks),
     }
 
 
@@ -229,15 +231,16 @@ def build_audio_blocks_notes(
     return notes
 
 
-def _empty_state(language: str) -> dict[str, object]:
+def _empty_state(language: str, settings_payload: dict[str, object] | None = None) -> dict[str, object]:
     """
     @brief      Build the default Audio Blocks page state when no active project exists.
     @param[in]  language Runtime UI language code.
+    @param[in]  settings_payload Persisted application settings payload.
     @return     Empty default page-state payload.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-23
-    @version    0.2.0
+    @version    0.3.0
     """
     return {
         "full_source_text": "",
@@ -261,6 +264,7 @@ def _empty_state(language: str) -> dict[str, object]:
         "can_approve_all": False,
         "can_regenerate_selected": False,
         "can_approve_selected": False,
+        "selected_text_character_limit": _selected_text_character_limit(settings_payload, []),
     }
 
 
@@ -294,6 +298,30 @@ def _build_full_source_text(
         return "\n\n".join(str(chunk.get("text", "")) for chunk in source_chunks)
     except ValueError:
         return "\n\n".join(str(block.get("text", "")) for block in speech_blocks)
+
+
+def _selected_text_character_limit(
+    settings_payload: dict[str, object] | None,
+    audio_blocks: list[dict[str, object]],
+) -> int:
+    """
+    @brief      Resolve an approximate selected speech text limit in characters.
+    @param[in]  settings_payload Persisted application settings payload.
+    @param[in]  audio_blocks Current merged Audio Blocks payload list.
+    @return     Approximate safe character limit for the active TTS model.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-05
+    @version    0.2.0
+    """
+    _ = audio_blocks
+    discovered_models = []
+    if isinstance(settings_payload, dict):
+        raw_models = settings_payload.get("tts_runtime_discovered_models", [])
+        if isinstance(raw_models, list):
+            discovered_models = [model for model in raw_models if isinstance(model, dict)]
+    budget_payload = tts_budget_service.resolve_cached_tts_budget(discovered_models)
+    return int(budget_payload.get("safe_word_count", 0) or 0) * 6
 
 
 def _merge_audio_block_state(

@@ -13,7 +13,7 @@
          persistence, and narrator-copy sample sync behavior.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-20
-@version 1.4.0
+@version 1.5.0
 """
 
 # IMPORTS
@@ -21,34 +21,24 @@
 from audiomancer.services import character_voices_service, narrator_definition_service, project_workspace_service
 
 
-def test_build_character_default_prompt_uses_character_profile_fields() -> None:
+def test_build_character_default_prompt_uses_compact_character_profile() -> None:
     """
-    @brief      Verify the default character voice prompt includes only the persisted profile facts.
+    @brief      Verify the default character voice prompt uses the compact persisted profile.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-20
-    @version    1.1.0
+    @version    2.0.0
     """
     prompt_text = character_voices_service.build_character_default_prompt(
         {
             "canonical_name": "Elizabeth",
             "gender_hint": "female",
-            "age_band": "adult",
-            "role_summary": "noblewoman",
-            "description": "careful and observant",
-            "temperament": "calm",
-            "social_status": "upper class",
-            "speaking_style": "measured and precise",
-            "accent_or_dialect_hints": "light southern English influence",
-            "voice_notes": "warm tone with restrained authority",
         }
     )
 
     assert "Elizabeth" in prompt_text
     assert "Sex/Gender: female." in prompt_text
-    assert "Speaking style: measured and precise." in prompt_text
-    assert "Voice notes: warm tone with restrained authority." in prompt_text
     assert "stable identity" in prompt_text
 
 
@@ -65,7 +55,6 @@ def test_build_character_default_prompt_prefers_character_owned_voice_definition
         {
             "canonical_name": "Elizabeth",
             "gender_hint": "female",
-            "role_summary": "noblewoman",
             "voice_definition_prompt": (
                 "Create a consistent spoken voice for Elizabeth. Warm mezzo tone with restrained authority."
             ),
@@ -269,14 +258,20 @@ def _create_project_with_selected_narrator(tmp_path, name: str):
     }
     manifest["current_stage"] = "narrator_definition_ready"
     project_workspace_service.save_manifest(manifest, project_root)
-    narrator_profile = narrator_definition_service.load_profiles(project_root)[0]
+    narrator_profile = narrator_definition_service.create_custom_profile(
+        project_root,
+        "Test Narrator",
+        "English",
+        "Narrator prompt.",
+        "Preview text.",
+    )
     narrator_definition_service.store_profile_sample(
         project_root,
         narrator_profile,
         "Preview text.",
         {
-            "generation_mode": "custom_voice",
-            "source_model_id": "qwen-custom",
+            "generation_mode": "definition",
+            "source_model_id": "qwen-designer",
             "language": "en",
         },
         "Narrator sample ready.",

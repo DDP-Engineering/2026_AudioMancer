@@ -15,7 +15,7 @@
          based operation state plus AI transaction logging.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 0.13.0
+@version 0.15.0
 """
 
 # IMPORTS
@@ -840,6 +840,28 @@ def approve_speech_block(project_root: str | Path, speech_block_id: str) -> Spee
 
 
 @trace_function(_SPEECH_BLOCKS_LOGGER)
+def unapprove_speech_block(project_root: str | Path, speech_block_id: str) -> SpeechBlocksReportPayload:
+    """
+    @brief      Clear approval for one generated Speech Block.
+    @param[in]  project_root Active project root folder.
+    @param[in]  speech_block_id Target Speech Block identifier.
+    @return     Updated Speech Blocks report payload.
+    @exception  ValueError Raised when the block is unknown.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-05
+    @version    0.1.0
+    """
+    resolved_project_root = Path(project_root)
+    speech_blocks = load_speech_blocks(resolved_project_root)
+    selected_block = _speech_block_by_id(speech_blocks, speech_block_id)
+    if selected_block is None:
+        raise ValueError("The selected Speech Block was not found.")
+    selected_block["approved"] = False
+    selected_block["approved_at"] = None
+    return _persist_report_update(resolved_project_root, speech_blocks)
+
+
+@trace_function(_SPEECH_BLOCKS_LOGGER)
 def update_speech_block(
     project_root: str | Path,
     speech_block_id: str,
@@ -887,39 +909,6 @@ def update_speech_block(
     selected_block["content_kind"] = normalized_content_kind
     selected_block["text"] = str(text)
     selected_block["warning_flags"] = []
-    selected_block["approved"] = False
-    selected_block["approved_at"] = None
-    return _persist_report_update(resolved_project_root, speech_blocks)
-
-
-@trace_function(_SPEECH_BLOCKS_LOGGER)
-def reset_speech_block_to_ai_baseline(
-    project_root: str | Path,
-    speech_block_id: str,
-) -> SpeechBlocksReportPayload:
-    """
-    @brief      Restore one Speech Block's editable fields from the AI baseline.
-    @param[in]  project_root Active project root folder.
-    @param[in]  speech_block_id Target Speech Block identifier.
-    @return     Updated Speech Blocks report payload.
-    @exception  ValueError Raised when the block is unknown.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.3.0
-    """
-    resolved_project_root = Path(project_root)
-    speech_blocks = load_speech_blocks(resolved_project_root)
-    selected_block = _speech_block_by_id(speech_blocks, speech_block_id)
-    if selected_block is None:
-        raise ValueError("The selected Speech Block was not found.")
-    selected_block["speaker_kind"] = str(selected_block.get("ai_speaker_kind", SPEAKER_KIND_NARRATOR))
-    selected_block["speaker_id"] = str(selected_block.get("ai_speaker_id", _NARRATOR_SPEAKER_ID))
-    selected_block["speaker_display_name"] = str(selected_block.get("ai_speaker_display_name", _NARRATOR_DISPLAY_NAME))
-    selected_block["content_kind"] = _normalize_content_kind(
-        selected_block.get("ai_content_kind", CONTENT_KIND_NARRATION)
-    )
-    selected_block["source_text"] = str(selected_block.get("ai_source_text", selected_block.get("source_text", "")))
-    selected_block["text"] = str(selected_block.get("ai_text", ""))
     selected_block["approved"] = False
     selected_block["approved_at"] = None
     return _persist_report_update(resolved_project_root, speech_blocks)
@@ -1351,19 +1340,6 @@ def _normalize_persisted_speech_block(payload: dict[str, object]) -> SpeechBlock
         speaker_display_name = str(operation_entry["display_name"])
     text = str(payload.get("text", ""))
     source_text = str(payload.get("source_text", text))
-    ai_speaker_kind = str(payload.get("ai_speaker_kind", speaker_kind)).strip() or speaker_kind
-    ai_speaker_id = str(payload.get("ai_speaker_id", speaker_id)).strip() or speaker_id
-    ai_speaker_display_name = str(payload.get("ai_speaker_display_name", speaker_display_name)).strip()
-    if not ai_speaker_display_name:
-        ai_speaker_display_name = speaker_display_name
-    ai_content_kind = _normalize_content_kind(payload.get("ai_content_kind", content_kind))
-    if _is_operation_content_kind(ai_content_kind):
-        operation_entry = _operation_speaker_entry(ai_content_kind)
-        ai_speaker_kind = str(operation_entry["speaker_kind"])
-        ai_speaker_id = str(operation_entry["speaker_id"])
-        ai_speaker_display_name = str(operation_entry["display_name"])
-    ai_source_text = str(payload.get("ai_source_text", source_text))
-    ai_text = str(payload.get("ai_text", text))
     return {
         "speech_block_id": speech_block_id,
         "sequence_index": sequence_index,
@@ -1375,12 +1351,6 @@ def _normalize_persisted_speech_block(payload: dict[str, object]) -> SpeechBlock
         "content_kind": content_kind,
         "source_text": source_text,
         "text": text,
-        "ai_speaker_kind": ai_speaker_kind,
-        "ai_speaker_id": ai_speaker_id,
-        "ai_speaker_display_name": ai_speaker_display_name,
-        "ai_content_kind": ai_content_kind,
-        "ai_source_text": ai_source_text,
-        "ai_text": ai_text,
         "warning_flags": _normalize_warning_flags(payload.get("warning_flags")),
         "approved": bool(payload.get("approved", False)),
         "approved_at": None if payload.get("approved_at") in (None, "") else str(payload.get("approved_at")),
@@ -1405,7 +1375,7 @@ def _persist_state(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.2.0
+    @version    0.3.0
     """
     _ = source_chunks
     write_operation_json_artifact(project_root, "speech_blocks", config.SPEECH_BLOCKS_OUTPUT_FILE_NAME, speech_blocks)
@@ -1659,12 +1629,6 @@ def _manual_inserted_speech_block(chunk_id: str, sequence_index: int, speech_blo
         "content_kind": CONTENT_KIND_NARRATION,
         "source_text": "",
         "text": "",
-        "ai_speaker_kind": SPEAKER_KIND_NARRATOR,
-        "ai_speaker_id": _NARRATOR_SPEAKER_ID,
-        "ai_speaker_display_name": _NARRATOR_DISPLAY_NAME,
-        "ai_content_kind": CONTENT_KIND_NARRATION,
-        "ai_source_text": "",
-        "ai_text": "",
         "warning_flags": [],
         "approved": False,
         "approved_at": None,
@@ -1687,7 +1651,7 @@ def _manual_inserted_block_by_temporary_id(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.1.0
+    @version    0.2.0
     """
     return next(
         (
@@ -1695,9 +1659,10 @@ def _manual_inserted_block_by_temporary_id(
             for block in speech_blocks
             if str(block.get("chunk_id", "")).strip() == chunk_id
             and int(block.get("sequence_index", 0)) == insertion_index
-            and str(block.get("ai_text", "")) == ""
             and str(block.get("text", "")) == ""
-            and str(block.get("ai_speaker_id", "")).strip() == _NARRATOR_SPEAKER_ID
+            and str(block.get("source_text", "")) == ""
+            and str(block.get("speaker_id", "")).strip() == _NARRATOR_SPEAKER_ID
+            and str(block.get("content_kind", "")).strip() == CONTENT_KIND_NARRATION
             and str(block.get("speech_block_id", "")).strip()
             in {temporary_id, _speech_block_id(chunk_id, insertion_index)}
         ),

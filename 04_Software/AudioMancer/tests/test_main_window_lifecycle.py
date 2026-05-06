@@ -597,9 +597,7 @@ def test_main_window_saves_tts_settings_dialog_payload(monkeypatch, qtbot, tmp_p
                 {
                     "model_id": "custom_model",
                     "status": "healthy",
-                    "supported_generation_modes": ["custom_voice"],
-                    "supported_presets": ["vivian"],
-                    "speaker_count": 1,
+                    "supported_generation_modes": ["definition"],
                 }
             ],
             "active_model_id": None,

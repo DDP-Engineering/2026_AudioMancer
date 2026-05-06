@@ -10,8 +10,8 @@ Implementation-focused software documentation and component notes.
 
 ## Current Documents
 
-- `UserGuide/` contains the English end-user help bundle for AudioMancer 2.0.0, including the offline HTML guide, resizable-pane minimum-width notes, and real UI screenshots used by packaged Windows and Ubuntu releases.
-- `UserGuide_ro/` contains the Romanian end-user help bundle for AudioMancer 2.0.0, including the offline HTML guide, resizable-pane minimum-width notes, and Romanian UI screenshots used when the application language is set to Romanian.
+- `UserGuide/` contains the English end-user help bundle for AudioMancer 1.0.0, including the offline HTML guide, resizable-pane minimum-width notes, and real UI screenshots used by packaged Windows and Ubuntu releases.
+- `UserGuide_ro/` contains the Romanian end-user help bundle for AudioMancer 1.0.0, including the offline HTML guide, resizable-pane minimum-width notes, and Romanian UI screenshots used when the application language is set to Romanian.
 - `AudioMancer_App_Shell.md` documents the desktop application shell, Home workflow progress presenter, project navigation, settings dialogs, and page-hosting responsibilities.
 - `AudioMancer_Config_And_Settings.md` documents the adapted configuration and settings scaffold.
 - `AudioMancer_Settings_Service.md` documents the shared settings lifecycle implementation.
@@ -28,16 +28,24 @@ Implementation-focused software documentation and component notes.
 - `AudioMancer_Text_Chunking_State_Service.md` documents the Text Chunking page-state helper, stable chunk identity contract, and manual chunk edit/insert/delete selective downstream preservation behavior.
 - `AudioMancer_AI_Translation_Service.md` documents the locked-target AI Translation workflow, same-language pass-through behavior, per-chunk review records, and page-state integration.
 - `AudioMancer_LLM_Provider_Service.md` documents the shared OpenAI-compatible provider layer, JSON-repair behavior, transaction logging, and normalized token-usage contract used by all AI workflows.
+- `AudioMancer_AI_Runtime_Support_Services.md` documents the grouped AI helper services for backend probing, context budgets, prompt templates, token usage, state notes, URL handling, and UTC timestamps.
 - `AudioMancer_OpenAI_Online_Model_Recommendations.md` documents recommended online OpenAI model profiles and AI Settings parameters for cleanup, chunking, translation, character discovery, and Speech Blocks.
 - `AudioMancer_LMStudio_Local_Model_Recommendations.md` documents recommended local LM Studio model profiles and AI Settings parameters for cleanup, chunking, translation, character discovery, and Speech Blocks on a 16 GB VRAM workstation.
-- `AudioMancer_Character_Discovery_Service.md` documents the AI-assisted character-discovery workflow, persisted artifacts, Qwen-oriented character voice-definition fields plus final prompt, page/controller integration, and resumable discovery behavior used by the Characters page.
-- `AudioMancer_Narrator_Definition_Service.md` documents the seeded and runtime-synced Qwen3 narrator preset workflow, legacy prompt-seed profile migration, explicit narrator selection, locked voice-language display, per-profile sample artifacts, destructive edit behavior, and Narator Voice page integration.
-- `AudioMancer_Character_Voices_Service.md` documents the Character Voices target contract, character-owned prompt handoff from `Characters` with legacy fallback, read-only selected voice-language display, same-narrator read-only reuse behavior, full-current-target batch generation, and root-level page/controller integration.
+- `AudioMancer_Page_State_Support_Services.md` documents grouped page-state and presenter helpers for Home, Text Cleanup, AI Translation, Characters, Character Voices, and Audio Assembly.
+- `AudioMancer_Text_Pipeline_Support_Services.md` documents grouped cleanup metadata, text analysis, deterministic/AI chunking, Speech Blocks report shaping, and text-splitting helpers.
+- `AudioMancer_Project_Runtime_Support_Services.md` documents grouped source-import, shared operation-runtime, and generated-audio artifact helpers.
+- `AudioMancer_Character_Discovery_Service.md` documents the AI-assisted character-discovery workflow, persisted compact voice-ready profiles, final prompt handoff, page/controller integration, and resumable discovery behavior used by the Characters page.
+- `AudioMancer_Narrator_Definition_Service.md` documents the custom Voice Designer narrator-profile workflow, explicit narrator selection, locked voice-language display, per-profile sample artifacts, destructive edit behavior, and Narator Voice page integration.
+- `AudioMancer_Narrator_Definition_State_Service.md` documents the Narator Voice page-state helper, inspected/selected profile state, locked voice-language labels, preview limits, Qwen3 readiness notes, and status lines.
+- `AudioMancer_Character_Voices_Service.md` documents the Character Voices target contract, character-owned prompt handoff from `Characters`, read-only selected voice-language display, same-narrator read-only reuse behavior, full-current-target batch generation, and root-level page/controller integration.
 - `AudioMancer_Speech_Blocks_Service.md` documents the Speech Blocks source-resolution rules, mode-aware AI-first per-chunk generation flow, quoted/guillemet/dash dialogue validation, narrator-only TTS-budget segmentation, manual insert/delete behavior, metadata-only operation blocks, root-level persisted artifacts, resumable state contract, and page/controller integration.
 - `AudioMancer_Speech_Blocks_State_Service.md` documents the Speech Blocks page-state helper, source resolution, localized notes, selector state, and selected-audio preview flags used by the Speech Blocks page.
+- `AudioMancer_Speech_Blocks_Normalization_Service.md` documents shared Speech Blocks normalization helpers for content kinds, operation rows, warning flags, text spans, stable block IDs, and narrator-only TTS budget lookup.
 - `AudioMancer_Audio_Blocks_Service.md` documents the Audio Blocks reusable clone-prompt workflow, block-level generation fingerprints, metadata-only pause/background/indication handling, root-level persisted artifact contract, approval rules, generated `audio_blocks/` media folder, and upstream invalidation behavior.
+- `AudioMancer_Audio_Blocks_State_Service.md` documents the Audio Blocks page-state helper, merged Speech/Audio Blocks rows, localized notes, progress values, approval flags, and selected text character budget.
 - `AudioMancer_Audio_Assembly_Service.md` documents the final WAV audiobook composition workflow, pause-to-silence handling, per-project assembly settings, resumable state/report artifacts, generated `audiobook/` deliverables, playback seek/progress controls, and reset page integration.
 - `AudioMancer_TTS_Settings_And_VoiceWeaver_Runtime.md` documents the simplified TTS Settings dialog, VoiceWeaver runtime integration, fixed Qwen3 readiness classification, generation helpers, and runtime limit settings.
+- `AudioMancer_Voiceweaver_Runtime_Service.md` documents the service-only VoiceWeaver REST wrapper boundary for probing, model operations, generation calls, polling, endpoint normalization, and generated-audio downloads.
 - `AudioMancer_TTS_Budget_Service.md` documents the cached VoiceWeaver TTS budget resolver used by narrator-only Speech Blocks prompting and validation.
 - `AudioMancer_Operation_Runner_Controller.md` documents the shared threaded modal-operation runner used by long-running UI workflows.
 - The app shell document also covers the shared runtime logging bootstrap.
@@ -51,10 +59,11 @@ metadata is not a documentation requirement unless a future implementation task
 explicitly reintroduces migration support.
 
 The application-level settings documentation may describe committed
-`settings.json` runtime profiles because the repository allows the app baseline
-settings file to contain full runtime settings. Tests and documentation should
-therefore focus on the supported settings lifecycle instead of assuming that
-all runtime profile fields must be blank.
+`settings.json` runtime profile definitions because the repository allows the
+app baseline settings file to include runnable profile scaffolding. API-key and
+VoiceWeaver secret fields must remain blank in the committed file; tests and
+documentation should focus on the supported settings lifecycle while preserving
+that secret-free baseline.
 
 Implementation-review follow-ups that are not yet code or documentation
 contracts are tracked in `../0_Planning/08_Implementation_Review_Followups.md`.

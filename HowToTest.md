@@ -41,6 +41,15 @@ Documentation audit:
 python 02_Tools/audits/audit_documentation.py --changed-only
 ```
 
+Full regression baseline:
+
+```powershell
+uv run pytest -q
+```
+
+Current expected result after the focused test-suite cleanup is `586 passed,
+1 skipped`.
+
 ## Regression Matrix
 
 Expected covered behavior:

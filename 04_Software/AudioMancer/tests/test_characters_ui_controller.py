@@ -9,11 +9,11 @@
 """
 @file test_characters_ui_controller.py
 @brief Character Discovery UI controller tests for AudioMancer.
-@details Verifies guarded manual add or save or delete flows plus discovery
-         start and reset behavior for the Characters page controller.
+@details Verifies guarded manual add or edit or save or delete flows plus
+         discovery start and reset behavior for the Characters page controller.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-08
-@version 0.7.0
+@version 0.8.0
 """
 
 # IMPORTS
@@ -153,6 +153,42 @@ def test_character_ui_controller_add_rejects_duplicate_name(monkeypatch, qtbot, 
     assert window._characters_page.is_add_mode() is False
 
 
+def test_character_ui_controller_edit_confirmation_cancel_keeps_view_mode(monkeypatch, qtbot, tmp_path) -> None:
+    """
+    @brief      Validate character edit confirmation cancellation does not enter edit mode.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-05
+    @version    0.1.0
+    """
+    project_root, _manifest = _create_project(tmp_path, "CharacterControllerEditCancel")
+    window = _build_window(qtbot, project_root)
+    monkeypatch.setattr(characters_ui_controller, "_confirm_edit_character", lambda *_args, **_kwargs: False)
+
+    characters_ui_controller.handle_edit_character_requested(window, "alice")
+
+    assert window._characters_page.is_edit_mode() is False
+
+
+def test_character_ui_controller_edit_confirmation_accepts_edit_mode(monkeypatch, qtbot, tmp_path) -> None:
+    """
+    @brief      Validate character edit confirmation opens the selected profile editor.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-05
+    @version    0.1.0
+    """
+    project_root, _manifest = _create_project(tmp_path, "CharacterControllerEditAccept")
+    window = _build_window(qtbot, project_root)
+    monkeypatch.setattr(characters_ui_controller, "_confirm_edit_character", lambda *_args, **_kwargs: True)
+
+    characters_ui_controller.handle_edit_character_requested(window, "alice")
+
+    assert window._characters_page.is_edit_mode() is True
+
+
 def test_character_ui_controller_save_new_character_persists_and_selects(monkeypatch, qtbot, tmp_path) -> None:
     """
     @brief      Validate character ui controller save new character persists and selects.
@@ -241,11 +277,10 @@ def test_character_ui_controller_edit_marks_assigned_blocks_for_review(monkeypat
     project_root, _manifest = _create_project(tmp_path, "CharacterControllerEdit")
     window = _build_window(qtbot, project_root)
     _write_downstream_artifacts(project_root, window)
-    monkeypatch.setattr(characters_ui_controller, "_confirm_edit_character", lambda *_args, **_kwargs: True)
     window._characters_page.begin_edit_mode()
     draft_payload = window._characters_page.current_draft_payload()
     draft_payload["canonical_name"] = "Alice Renamed"
-    draft_payload["description"] = "Changed voice definition source"
+    draft_payload["voice_definition_prompt"] = "Create a consistent spoken voice for Alice Renamed."
 
     characters_ui_controller.handle_save_character_requested(window, draft_payload)
 
@@ -286,7 +321,7 @@ def test_character_ui_controller_selection_change_cancel_restores_current_row(mo
     )
     window.show_project_state(project_root, project_workspace_service.load_manifest(project_root))
     window._characters_page.begin_edit_mode()
-    window._characters_page._description_edit.setPlainText("Changed")
+    window._characters_page._voice_definition_prompt_edit.setPlainText("Changed")
     monkeypatch.setattr(
         characters_ui_controller,
         "_prompt_unsaved_changes",
@@ -297,37 +332,6 @@ def test_character_ui_controller_selection_change_cancel_restores_current_row(mo
 
     assert window._characters_page.current_character_id() == "alice"
     assert window._characters_page._character_list.currentRow() == 0
-
-
-def test_character_ui_controller_regenerates_voice_definition_for_active_draft(monkeypatch, qtbot, tmp_path) -> None:
-    """
-    @brief      Validate character ui controller regenerates voice definition for active draft.
-    @return     None.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-02
-    @version    0.1.0
-    """
-    project_root, _manifest = _create_project(tmp_path, "CharacterControllerVoiceDefinition")
-    window = _build_window(qtbot, project_root)
-    message_calls = []
-    monkeypatch.setattr(
-        characters_ui_controller.misc_ui_controller,
-        "show_message",
-        lambda *_args: message_calls.append(_args),
-    )
-    window._characters_page.begin_edit_mode()
-    window._characters_page._description_edit.setPlainText("Updated literary description")
-
-    characters_ui_controller.handle_regenerate_voice_definition_requested(
-        window,
-        window._characters_page.current_draft_payload(),
-    )
-
-    regenerated_payload = window._characters_page.current_draft_payload()
-    assert regenerated_payload["voice_definition_stale"] is False
-    assert "Updated literary description" in regenerated_payload["voice_persona_summary"]
-    assert message_calls
 
 
 def _create_project(tmp_path, name: str):
@@ -704,15 +708,7 @@ def _saved_profile_payload() -> dict[str, object]:
             "canonical_name": "Alice",
             "aliases": ["Al"],
             "gender_hint": "",
-            "age_band": "",
-            "role_summary": "Lead speaker",
-            "description": "Original description",
-            "temperament": "",
-            "social_status": "",
-            "speaking_style": "",
-            "accent_or_dialect_hints": "",
-            "voice_notes": "",
-            "relationship_hints": ["Knows Bob."],
+            "voice_definition_prompt": "Create a consistent spoken voice for Alice.",
             "confidence": "high",
             "evidence": [
                 {
@@ -742,15 +738,7 @@ def _manual_draft_payload(name: str) -> dict[str, object]:
             "canonical_name": name,
             "aliases": [],
             "gender_hint": "",
-            "age_band": "",
-            "role_summary": "",
-            "description": "",
-            "temperament": "",
-            "social_status": "",
-            "speaking_style": "",
-            "accent_or_dialect_hints": "",
-            "voice_notes": "",
-            "relationship_hints": [],
+            "voice_definition_prompt": f"Create a consistent spoken voice for {name}.",
             "confidence": "",
             "evidence": [
                 {

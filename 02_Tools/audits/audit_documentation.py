@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-  # noqa: UP009
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -14,7 +14,7 @@
          operator documentation files.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-25
-@version 0.1.0
+@version 0.1.1
 """
 
 # IMPORTS
@@ -45,6 +45,33 @@ BROAD_DOCUMENTATION_PATHS = (
 IMPLEMENTATION_ROOT = Path("04_Software/AudioMancer/src/audiomancer")
 SERVICE_ROOT = IMPLEMENTATION_ROOT / "services"
 SOFTWARE_DOC_ROOT = Path("05_SoftwareDocu")
+COMPONENT_DOC_ALIASES = {
+    "ai_backend_service": (SOFTWARE_DOC_ROOT / "AudioMancer_AI_Runtime_Support_Services.md",),
+    "ai_budget_service": (SOFTWARE_DOC_ROOT / "AudioMancer_AI_Runtime_Support_Services.md",),
+    "ai_chunking_service": (SOFTWARE_DOC_ROOT / "AudioMancer_Text_Pipeline_Support_Services.md",),
+    "ai_state_note_service": (SOFTWARE_DOC_ROOT / "AudioMancer_AI_Runtime_Support_Services.md",),
+    "ai_translation_state_service": (SOFTWARE_DOC_ROOT / "AudioMancer_Page_State_Support_Services.md",),
+    "audio_assembly_state_service": (SOFTWARE_DOC_ROOT / "AudioMancer_Page_State_Support_Services.md",),
+    "audio_blocks_artifact_service": (SOFTWARE_DOC_ROOT / "AudioMancer_Project_Runtime_Support_Services.md",),
+    "character_discovery_state_service": (SOFTWARE_DOC_ROOT / "AudioMancer_Page_State_Support_Services.md",),
+    "character_voices_state_service": (SOFTWARE_DOC_ROOT / "AudioMancer_Page_State_Support_Services.md",),
+    "cleanup_metadata_service": (SOFTWARE_DOC_ROOT / "AudioMancer_Text_Pipeline_Support_Services.md",),
+    "cleanup_text_analysis_service": (SOFTWARE_DOC_ROOT / "AudioMancer_Text_Pipeline_Support_Services.md",),
+    "deterministic_chunking_service": (SOFTWARE_DOC_ROOT / "AudioMancer_Text_Pipeline_Support_Services.md",),
+    "home_presenter_service": (SOFTWARE_DOC_ROOT / "AudioMancer_Page_State_Support_Services.md",),
+    "import_service": (SOFTWARE_DOC_ROOT / "AudioMancer_Project_Runtime_Support_Services.md",),
+    "llm_provider_service": (SOFTWARE_DOC_ROOT / "AudioMancer_LLM_Provider_Service.md",),
+    "operation_runtime_service": (SOFTWARE_DOC_ROOT / "AudioMancer_Project_Runtime_Support_Services.md",),
+    "project_workspace_service": (SOFTWARE_DOC_ROOT / "AudioMancer_Project_Workspace.md",),
+    "prompt_template_service": (SOFTWARE_DOC_ROOT / "AudioMancer_AI_Runtime_Support_Services.md",),
+    "speech_blocks_report_state_service": (SOFTWARE_DOC_ROOT / "AudioMancer_Text_Pipeline_Support_Services.md",),
+    "speech_blocks_text_split_service": (SOFTWARE_DOC_ROOT / "AudioMancer_Text_Pipeline_Support_Services.md",),
+    "text_cleanup_state_service": (SOFTWARE_DOC_ROOT / "AudioMancer_Page_State_Support_Services.md",),
+    "time_service": (SOFTWARE_DOC_ROOT / "AudioMancer_AI_Runtime_Support_Services.md",),
+    "token_usage_service": (SOFTWARE_DOC_ROOT / "AudioMancer_AI_Runtime_Support_Services.md",),
+    "ui_state_service": (SOFTWARE_DOC_ROOT / "AudioMancer_UI_State_Service.md",),
+    "url_service": (SOFTWARE_DOC_ROOT / "AudioMancer_AI_Runtime_Support_Services.md",),
+}
 
 
 # PUBLIC API
@@ -58,7 +85,7 @@ def run_audit(changed_only: bool = False) -> int:
     @exception  RuntimeError Raised when repository discovery fails.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.1.0
+    @version    0.1.1
     """
     root = repository_root()
     implementation_paths = _implementation_paths(root, changed_only)
@@ -87,15 +114,11 @@ def _implementation_paths(root: Path, changed_only: bool) -> list[Path]:
     if changed_only:
         candidates = changed_files(root, ".py")
     else:
-        candidates = [
-            path.relative_to(root)
-            for path in (root / IMPLEMENTATION_ROOT).rglob("*.py")
-        ]
+        candidates = [path.relative_to(root) for path in (root / IMPLEMENTATION_ROOT).rglob("*.py")]
     return [
         path
         for path in candidates
-        if path.parts[: len(IMPLEMENTATION_ROOT.parts)] == IMPLEMENTATION_ROOT.parts
-        and "tests" not in path.parts
+        if path.parts[: len(IMPLEMENTATION_ROOT.parts)] == IMPLEMENTATION_ROOT.parts and "tests" not in path.parts
     ]
 
 
@@ -124,10 +147,7 @@ def _audit_broad_docs(root: Path, implementation_paths: list[Path]) -> list[Audi
                 )
             )
             continue
-        if (
-            newest_source_time is not None
-            and absolute_doc_path.stat().st_mtime < newest_source_time
-        ):
+        if newest_source_time is not None and absolute_doc_path.stat().st_mtime < newest_source_time:
             issues.append(
                 AuditIssue(
                     doc_path,
@@ -139,9 +159,7 @@ def _audit_broad_docs(root: Path, implementation_paths: list[Path]) -> list[Audi
     return issues
 
 
-def _audit_service_component_docs(
-    root: Path, implementation_paths: list[Path]
-) -> list[AuditIssue]:
+def _audit_service_component_docs(root: Path, implementation_paths: list[Path]) -> list[AuditIssue]:
     """
     @brief      Check service implementation files for likely component documentation.
     @param[in]  root Repository root path.
@@ -155,6 +173,8 @@ def _audit_service_component_docs(
     issues: list[AuditIssue] = []
     for source_path in implementation_paths:
         if source_path.parts[: len(SERVICE_ROOT.parts)] != SERVICE_ROOT.parts:
+            continue
+        if source_path.name == "__init__.py":
             continue
         doc_candidates = _component_doc_candidates(source_path)
         existing_doc = next(
@@ -193,9 +213,7 @@ def _audit_how_to_tests(root: Path) -> list[AuditIssue]:
     @date       2026-04-25
     @version    0.1.0
     """
-    how_to_docs = list(root.glob("**/HowToTest*.md")) + list(
-        root.glob("**/HOW_TO_TEST*.md")
-    )
+    how_to_docs = list(root.glob("**/HowToTest*.md")) + list(root.glob("**/HOW_TO_TEST*.md"))
     if how_to_docs:
         return []
     return [
@@ -216,12 +234,13 @@ def _component_doc_candidates(source_path: Path) -> list[Path]:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.1.0
+    @version    0.1.1
     """
     stem = source_path.stem
     title = "".join(part.title() for part in stem.split("_"))
     snake_title = "_".join(part.title() for part in stem.split("_"))
     return [
+        *COMPONENT_DOC_ALIASES.get(stem, ()),
         SOFTWARE_DOC_ROOT / f"AudioMancer_{snake_title}.md",
         SOFTWARE_DOC_ROOT / f"AudioMancer_{title}.md",
     ]
@@ -238,9 +257,7 @@ def _newest_mtime(root: Path, paths: list[Path]) -> float | None:
     @date       2026-04-25
     @version    0.1.0
     """
-    mtimes = [
-        (root / path).stat().st_mtime for path in paths if (root / path).is_file()
-    ]
+    mtimes = [(root / path).stat().st_mtime for path in paths if (root / path).is_file()]
     return max(mtimes) if mtimes else None
 
 

@@ -13,7 +13,7 @@
          notes, and ready-for-assembly summaries.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-23
-@version 0.4.3
+@version 0.5.0
 """
 
 # IMPORTS
@@ -27,6 +27,7 @@ from audiomancer.services import (
     operation_runtime_service,
     project_workspace_service,
     speech_blocks_service,
+    tts_budget_service,
 )
 
 
@@ -38,7 +39,7 @@ def test_build_audio_blocks_state_surfaces_progress_current_block_and_full_sourc
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-23
-    @version    0.2.0
+    @version    0.3.0
     """
     project_root, manifest = _create_audio_blocks_project(tmp_path, "AudioBlocksStateRunning")
     audio_root = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH
@@ -62,6 +63,7 @@ def test_build_audio_blocks_state_surfaces_progress_current_block_and_full_sourc
                     "approved": False,
                     "approved_at": None,
                     "generated_at": "2026-04-23T12:01:00+00:00",
+                    "split_audio_seconds_budget": 10.0,
                     "runtime_result_summary": "Narrator ready.",
                     "warning_flags": [],
                 }
@@ -148,6 +150,9 @@ def test_build_audio_blocks_state_surfaces_progress_current_block_and_full_sourc
     assert state["reused_prompt_count"] == 1
     assert state["regenerated_prompt_count"] == 1
     assert state["stage_status"] == "running"
+    assert state["selected_text_character_limit"] == (
+        int(tts_budget_service.resolve_cached_tts_budget([])["safe_word_count"]) * 6
+    )
     assert state["speech_blocks"][0]["generated"] is True
     assert state["speech_blocks"][1]["is_current"] is True
     assert any("Audio generation is in progress at 1/2." in note for note in state["notes"])

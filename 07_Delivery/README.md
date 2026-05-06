@@ -44,7 +44,7 @@ The public executable-only delivery project is:
 
 - GitHub repository: `https://github.com/DDP-Engineering/2026_AudioMancer`
 - GitHub Pages download page: `https://ddp-engineering.github.io/2026_AudioMancer/`
-- Current release page: `https://github.com/DDP-Engineering/2026_AudioMancer/releases/tag/v2.0.0`
+- Current release page: `https://github.com/DDP-Engineering/2026_AudioMancer/releases/tag/v1.0.0`
 
 Publish only when the project owner gives specific, clear instructions to
 publish. Do not publish automatically after packaging, testing, documentation

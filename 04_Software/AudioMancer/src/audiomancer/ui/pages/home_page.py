@@ -13,7 +13,7 @@
          the same first-page structure without implementing import behavior.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-06
-@version 0.10.6
+@version 0.10.7
 """
 
 # IMPORTS
@@ -28,7 +28,6 @@ from PySide6.QtWidgets import (
     QLabel,
     QLineEdit,
     QPushButton,
-    QScrollArea,
     QSizePolicy,
     QSpacerItem,
     QVBoxLayout,
@@ -61,7 +60,7 @@ _EXPORT_KIND_BY_STAGE_TOKEN = {
     "speech_blocks_ready": project_export_service.EXPORT_KIND_SPEECH_BLOCKS,
 }
 # @brief Stable compact height for correlated workflow and export rows.
-_WORKFLOW_ROW_MIN_HEIGHT = 32
+_WORKFLOW_ROW_MIN_HEIGHT = 28
 
 
 # PUBLIC API
@@ -73,7 +72,7 @@ class HomeProjectPage(QWidget):
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-05
-    @version    0.9.1
+    @version    0.9.2
     """
 
     import_requested = Signal()
@@ -89,7 +88,7 @@ class HomeProjectPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-06
-        @version    0.10.3
+        @version    0.10.4
         """
         super().__init__(parent)
         self._project_active = False
@@ -110,27 +109,14 @@ class HomeProjectPage(QWidget):
         self._export_rows: dict[str, dict[str, object]] = {}
 
         root_layout = QVBoxLayout(self)
-        root_layout.setContentsMargins(0, 0, 0, 0)
-        root_layout.setSpacing(0)
-        scroll_area = QScrollArea(self)
-        scroll_area.setWidgetResizable(True)
-        scroll_area.setFrameShape(QScrollArea.Shape.NoFrame)
-        scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
-        scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
-        root_layout.addWidget(scroll_area)
-        content_widget = QWidget(scroll_area)
-        scroll_area.setWidget(content_widget)
-        layout = QVBoxLayout(content_widget)
-        layout.setContentsMargins(8, 6, 8, 6)
-        layout.setSpacing(4)
-        self._title_label = QLabel("<h2>Home / Project</h2>")
-        layout.addWidget(self._title_label)
+        root_layout.setContentsMargins(8, 4, 8, 4)
+        root_layout.setSpacing(3)
 
         summary_group = QGroupBox("Project Summary", self)
         summary_layout = QGridLayout(summary_group)
-        summary_layout.setContentsMargins(10, 8, 10, 8)
-        summary_layout.setHorizontalSpacing(12)
-        summary_layout.setVerticalSpacing(4)
+        summary_layout.setContentsMargins(8, 6, 8, 6)
+        summary_layout.setHorizontalSpacing(10)
+        summary_layout.setVerticalSpacing(3)
         self._name_label = QLabel("Project: none")
         self._path_label = QLabel("Path: none")
         self._path_label.setWordWrap(True)
@@ -154,7 +140,7 @@ class HomeProjectPage(QWidget):
         self._snapshot_button.clicked.connect(self.project_snapshot_requested.emit)
         summary_action_layout = QVBoxLayout()
         summary_action_layout.setContentsMargins(0, 0, 0, 0)
-        summary_action_layout.setSpacing(4)
+        summary_action_layout.setSpacing(3)
         summary_action_layout.addWidget(self._target_language_caption)
         summary_action_layout.addWidget(self._target_language_combo)
         summary_action_layout.addWidget(self._narration_mode_caption)
@@ -170,16 +156,18 @@ class HomeProjectPage(QWidget):
         summary_layout.addWidget(self._source_lock_label_placeholder(), 4, 0)
         summary_layout.setColumnStretch(0, 1)
         summary_layout.setColumnStretch(1, 0)
-        layout.addWidget(summary_group)
+        root_layout.addWidget(summary_group)
 
         lower_layout = QHBoxLayout()
+        lower_layout.setSpacing(6)
         stage_group = QGroupBox("Workflow Progress", self)
         stage_group.setSizePolicy(
             QSizePolicy.Policy.Expanding,
             QSizePolicy.Policy.Expanding,
         )
-        stage_group.setMinimumHeight(260)
         stage_layout = QVBoxLayout(stage_group)
+        stage_layout.setContentsMargins(8, 8, 8, 8)
+        stage_layout.setSpacing(4)
         for _stage_token in _WORKFLOW_STAGE_TOKENS:
             stage_row = QLineEdit(self)
             stage_row.setReadOnly(True)
@@ -198,6 +186,9 @@ class HomeProjectPage(QWidget):
         )
         exports_group.setMinimumWidth(280)
         exports_layout = QGridLayout(exports_group)
+        exports_layout.setContentsMargins(8, 8, 8, 8)
+        exports_layout.setHorizontalSpacing(8)
+        exports_layout.setVerticalSpacing(4)
         exports_layout.setColumnStretch(0, 1)
         exports_layout.setColumnStretch(1, 0)
         for row_index, stage_token in enumerate(_WORKFLOW_STAGE_TOKENS):
@@ -233,7 +224,7 @@ class HomeProjectPage(QWidget):
             2,
         )
         lower_layout.addWidget(exports_group)
-        layout.addLayout(lower_layout, 3)
+        root_layout.addLayout(lower_layout, 1)
         self._summary_group = summary_group
         self._exports_group = exports_group
         self._stage_group = stage_group
@@ -443,10 +434,9 @@ class HomeProjectPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-05
-        @version    0.5.0
+        @version    0.5.1
         """
         self._current_language = language
-        self._title_label.setText(f"<h2>{ui_state_service.translate('home.title', language)}</h2>")
         self._summary_group.setTitle(ui_state_service.translate("home.summary_group", language))
         self._exports_group.setTitle(ui_state_service.translate("home.exports_group", language))
         self._stage_group.setTitle(ui_state_service.translate("home.workflow_group", language))

@@ -9,11 +9,12 @@
 """
 @file test_audio_blocks_ui_controller.py
 @brief Audio Blocks UI controller tests for AudioMancer.
-@details Verifies confirmation gating, destructive rerun reset behavior, and
-         manifest advancement after approval of all generated audio blocks.
+@details Verifies confirmation gating, destructive rerun reset behavior,
+         approval toggling, and manifest advancement after approval of all
+         generated audio blocks.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-23
-@version 0.5.0
+@version 0.6.0
 """
 
 # IMPORTS
@@ -41,7 +42,7 @@ def test_audio_blocks_ui_controller_requires_confirmation_before_starting(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-23
-    @version    0.2.0
+    @version    0.3.0
     """
     project_root = _create_project(tmp_path, "AudioBlocksControllerConfirm")
     window = _build_window(qtbot, project_root, default_settings_payload)
@@ -203,17 +204,18 @@ def test_audio_blocks_ui_controller_approval_resets_only_audio_assembly(
     alice_audio_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / "audio_blocks/0001_000002_alice.wav"
     assert output_payload[0]["approved"] is True
     assert output_payload[1]["approved"] is False
+    assert window._audio_blocks_page.selected_block_id() == "0001-000002"
     assert narrator_audio_path.exists()
     assert alice_audio_path.exists()
     assert not (project_root / config.AUDIOBOOK_OUTPUT_FOLDER_NAME / "audiobook.wav").exists()
     assert updated_manifest["operations"]["audio_assembly"]["status"] == "not_started"
 
 
-def test_audio_blocks_ui_controller_reset_selected_preserves_unrelated_audio_and_speech_blocks(
+def test_audio_blocks_ui_controller_approval_toggle_unapproves_without_advancing(
     monkeypatch, qtbot, tmp_path, default_settings_payload
 ) -> None:
     """
-    @brief      Verify selected Audio Block reset deletes only that block and downstream assembly data.
+    @brief      Verify selected Audio Block approval toggles to unapproved and keeps the same row selected.
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @param[in]  qtbot Qt test helper fixture.
     @param[in]  tmp_path Pytest temporary directory fixture.
@@ -224,13 +226,11 @@ def test_audio_blocks_ui_controller_reset_selected_preserves_unrelated_audio_and
     @date       2026-05-04
     @version    0.1.0
     """
-    project_root = _create_project(tmp_path, "AudioBlocksControllerResetSelected")
+    project_root = _create_project(tmp_path, "AudioBlocksControllerToggleUnapprove")
     _seed_audio_blocks_run(project_root, approved=True)
     _seed_audio_assembly_run(project_root)
-    speech_blocks_path = (
-        project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.SPEECH_BLOCKS_OUTPUT_FILE_NAME
-    )
     window = _build_window(qtbot, project_root, default_settings_payload)
+    window._audio_blocks_page.select_block_id("0001-000002")
     monkeypatch.setattr(audio_blocks_ui_controller.misc_ui_controller, "show_message", lambda *args, **kwargs: None)
     monkeypatch.setattr(
         audio_blocks_ui_controller.QMessageBox,
@@ -238,7 +238,7 @@ def test_audio_blocks_ui_controller_reset_selected_preserves_unrelated_audio_and
         lambda *_args, **_kwargs: QMessageBox.StandardButton.Yes,
     )
 
-    audio_blocks_ui_controller.handle_reset_selected_requested(window, "0001-000002")
+    audio_blocks_ui_controller.handle_approve_selected_requested(window, "0001-000002")
 
     output_payload = json.loads(
         (project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.AUDIO_BLOCKS_OUTPUT_FILE_NAME).read_text(
@@ -250,12 +250,13 @@ def test_audio_blocks_ui_controller_reset_selected_preserves_unrelated_audio_and
         project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / "audio_blocks/0001_000001_narrator.wav"
     )
     alice_audio_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / "audio_blocks/0001_000002_alice.wav"
-    assert [block["speech_block_id"] for block in output_payload] == ["0001-000001"]
-    assert speech_blocks_path.exists()
+    assert [block["speech_block_id"] for block in output_payload] == ["0001-000001", "0001-000002"]
+    assert output_payload[0]["approved"] is True
+    assert output_payload[1]["approved"] is False
     assert narrator_audio_path.exists()
-    assert not alice_audio_path.exists()
+    assert alice_audio_path.exists()
     assert not (project_root / config.AUDIOBOOK_OUTPUT_FOLDER_NAME / "audiobook.wav").exists()
-    assert updated_manifest["current_stage"] == "speech_blocks_ready"
+    assert window._audio_blocks_page.selected_block_id() == "0001-000002"
     assert updated_manifest["operations"]["audio_assembly"]["status"] == "not_started"
 
 
@@ -514,6 +515,7 @@ def _build_window(qtbot, project_root, default_settings_payload):
     window = MainWindow(settings_payload=settings_payload)
     qtbot.addWidget(window)
     window._activate_project(project_root, project_workspace_service.load_manifest(project_root))
+    window.set_current_page("audio_blocks")
     return window
 
 
@@ -689,7 +691,6 @@ def _minimum_qwen_models() -> list[dict[str, object]]:
             "backend_name": "qwen3-tts-base",
             "status": "healthy",
             "supported_generation_modes": ["clone"],
-            "supported_presets": [],
         }
     ]
 

@@ -13,7 +13,7 @@
          text, and identifier normalization outside the orchestration service.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-29
-@version 0.1.0
+@version 0.2.0
 """
 
 # IMPORTS
@@ -364,7 +364,7 @@ def build_speech_block_payload(
     source_text: str | None = None,
 ) -> dict[str, object]:
     """
-    @brief      Build one persisted Speech Blocks payload with AI baseline fields.
+    @brief      Build one persisted Speech Blocks payload with current editable fields.
     @param[in]  chunk_id Source chunk identifier.
     @param[in]  sequence_index Chunk-local block index.
     @param[in]  source_language Active source language code.
@@ -379,7 +379,7 @@ def build_speech_block_payload(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-29
-    @version    0.1.0
+    @version    0.2.0
     """
     normalized_content_kind = normalize_content_kind(content_kind)
     normalized_warning_flags = normalize_warning_flags(warning_flags)
@@ -405,12 +405,6 @@ def build_speech_block_payload(
         "content_kind": normalized_content_kind,
         "source_text": normalized_source_text,
         "text": normalized_text,
-        "ai_speaker_kind": normalized_speaker_kind,
-        "ai_speaker_id": normalized_speaker_id,
-        "ai_speaker_display_name": normalized_speaker_display_name,
-        "ai_content_kind": normalized_content_kind,
-        "ai_source_text": normalized_source_text,
-        "ai_text": normalized_text,
         "warning_flags": normalized_warning_flags,
         "approved": False,
         "approved_at": None,

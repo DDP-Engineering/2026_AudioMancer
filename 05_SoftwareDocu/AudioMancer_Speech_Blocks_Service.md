@@ -35,8 +35,8 @@ narrator-only phrase/action/paragraph segments under the TTS text budget.
   the model owning final block boundaries
 - assign speech block IDs in `CCCC-BBBBBB` format, for example
   `0001-000001`
-- persist AI-extracted baseline source span, speaker, content kind, and text
-  values beside the current editable values
+- persist only current source span, speaker, content kind, and text values for
+  each Speech Block
 - preserve exact `source_text` spans for review traceability
 - validate model source spans for source coverage, source order, and text edits
   without replacing AI block boundaries
@@ -53,17 +53,18 @@ narrator-only phrase/action/paragraph segments under the TTS text budget.
   projects, because the narrator voice plays all speech blocks
 - expose content kinds `Narration`, `Dialogue`, `Background Noise`, `Pause`,
   and `Indication`
-- support selected-block edit, save, and reset-to-AI-baseline operations
+- support selected-block edit and save operations
 - support manual selected-chunk Speech Block insertion and deletion, with
   chunk-local sequence updates while preserving stable Speech Block IDs
 - clear warning indicators as soon as an operator starts editing a block
   without changing approval state or downstream audio inputs
-- approve all speech blocks and report approval counts
+- approve or unapprove the selected speech block, approve all speech blocks,
+  and report approval counts
 - regenerate one selected chunk and rebuild only that chunk's local sequence
   indexes plus fresh replacement block IDs
 - reset Speech Blocks plus downstream Audio Blocks and Audio Assembly artifacts
 - reset only exact affected Audio Blocks by stable `speech_block_id` after
-  selected-block text, speaker, content-kind, reset, or delete changes
+  selected-block text, speaker, content-kind, or delete changes
 - reset only Audio Assembly after Speech Block insert, approval, or order
   changes that do not alter existing Audio Blocks
 - persist resumable chunk-based operation state, report data, and AI
@@ -90,19 +91,20 @@ The workflow is split across:
 
 - `04_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py`
   for source resolution, AI dispatch, normalization, persistence, approval,
-  editing, reset, selected-chunk regeneration, ID rebuilding, and resume
+  editing, selected-chunk regeneration, ID rebuilding, and resume
   handling
 - `04_Software/AudioMancer/src/audiomancer/services/speech_blocks_state_service.py`
   for page-state shaping, AI-profile selection, speaker/content selectors,
   approval counts, selected-audio preview flags, and operator notes
 - `04_Software/AudioMancer/src/audiomancer/ui/pages/speech_blocks_page.py`
   for the top chunk list, selected chunk preview, speech block list, selected
-  block editor, manual insert/delete buttons, approval button, reset button,
-  selected-audio generate/play controls, and selected-chunk re-split action
+  block editor, manual insert/delete buttons, approval toggle button, selected
+  text character counter, selected-audio generate/play controls, and
+  selected-chunk re-split action
 - `04_Software/AudioMancer/src/audiomancer/ui/controllers/speech_blocks_ui_controller.py`
   for prerequisite validation, confirmation popups, modal progress,
-  cancellation, explicit reset, approve-all, selected-block edit/reset/save,
-  selected-chunk re-splitting, downstream Audio Blocks reconciliation, and
+  cancellation, explicit reset, approve-all, selected-block approval toggle,
+  selected-block edit/save, selected-chunk re-splitting, downstream Audio Blocks reconciliation, and
   manifest synchronization
 
 High-level flow:
@@ -121,7 +123,7 @@ High-level flow:
    remaining chunk through one or more budgeted model requests with the
    currently selected AI profile/model.
 5. Each response is normalized into new speech-block payloads, including exact
-   source spans, AI baseline values, editable current values, warning flags,
+   source spans, current editable values, warning flags,
    approval fields, chunk-local sequence indexes, and `CCCC-BBBBBB` IDs.
    Deterministic validation annotates suspicious spans with warning flags such
    as `source_coverage_mismatch`, `source_order_mismatch`, and
@@ -140,7 +142,7 @@ High-level flow:
 8. `Approve All Speech Blocks` marks every block approved, advances the
    manifest and Home-page operation summary to completed `speech_blocks_ready`,
    and resets Audio Assembly without deleting generated Audio Blocks.
-9. Editing, resetting, or deleting one block asks for confirmation when that
+9. Editing or deleting one block asks for confirmation when that
    exact Speech Block already has generated audio, then deletes only that
    block's generated Audio Blocks WAV/metadata artifacts and resets Audio
    Assembly.
@@ -230,12 +232,6 @@ Persisted speech-block payloads use:
 - `content_kind`
 - `source_text`
 - `text`
-- `ai_speaker_kind`
-- `ai_speaker_id`
-- `ai_speaker_display_name`
-- `ai_content_kind`
-- `ai_source_text`
-- `ai_text`
 - `warning_flags`
 - `approved`
 - `approved_at`
@@ -286,12 +282,10 @@ Current invariants:
   the chunk list even when no Speech Blocks remain for that chunk
 - warning flags are cleared when the operator starts editing a block, without
   unapproving the block
-- resetting one edited block restores only the AI baseline source span, speaker,
-  content kind, and text while preserving the current warning-cleared state
-- selected-block text, speaker, content-kind, reset, and delete changes reset
+- selected-block text, speaker, content-kind, and delete changes reset
   generated Audio Blocks data for the affected `speech_block_id` only
-- selected-block approval and manual insert preserve generated Audio Blocks and
-  reset only Audio Assembly
+- selected-block approval, unapproval, and manual insert preserve generated
+  Audio Blocks and reset only Audio Assembly
 - selected-chunk re-splits reset generated Audio Blocks data for the affected
   chunk because the Speech Blocks in that chunk are replaced
 - generation creates unapproved blocks
@@ -389,11 +383,6 @@ report = speech_blocks_service.update_speech_block(
     text,
 )
 
-report = speech_blocks_service.reset_speech_block_to_ai_baseline(
-    project_root,
-    speech_block_id,
-)
-
 report = speech_blocks_service.regenerate_chunk_speech_blocks(
     project_root,
     manifest,
@@ -414,11 +403,14 @@ Operator path:
 - inspect chunks in the top list
 - inspect or edit selected Speech Blocks in the lower-right editor
 - press `Save` after block edits
-- press `Reset` to restore a block to the AI baseline values
-- press `Approve` to approve only the selected Speech Block
+- read the selected-block character counter beside the approval button to
+  compare current text length against the active TTS model budget
+- press `Approve` to approve only the selected Speech Block; on approved rows
+  the same button becomes `Unapprove` and clears approval for that block
 - after selected-block approval, the page advances the visible Speech Blocks
   list to the next row when one exists and keeps the final row selected at the
   end
+- after selected-block unapproval, the page keeps the same Speech Block selected
 - press `Generate Audio` on an approved selected Speech Block to generate or
   replace only that block's Audio Block from the Speech Blocks page
 - press `Play` or `Stop` on a selected Speech Block with generated audio to

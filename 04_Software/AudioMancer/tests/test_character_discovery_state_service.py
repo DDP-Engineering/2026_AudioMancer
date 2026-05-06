@@ -199,16 +199,8 @@ def _create_project(tmp_path, name: str):
                     "character_id": "alice",
                     "canonical_name": "Alice",
                     "aliases": ["Al"],
-                    "gender_hint": "",
-                    "age_band": "",
-                    "role_summary": "Lead speaker",
-                    "description": "Confident.",
-                    "temperament": "",
-                    "social_status": "",
-                    "speaking_style": "",
-                    "accent_or_dialect_hints": "",
-                    "voice_notes": "",
-                    "relationship_hints": [],
+                    "gender_hint": "female",
+                    "voice_definition_prompt": "A confident female voice for Alice.",
                     "confidence": "high",
                     "evidence": [
                         {

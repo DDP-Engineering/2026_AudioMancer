@@ -96,3 +96,6 @@ uv run pytest tests/test_project_snapshot_service.py tests/test_home_page.py tes
 - It is not generated while long-running operations are active.
 - The archive is not added to project metadata and is not treated as a runtime
   artifact.
+
+Documentation audit status: reviewed against the current implementation on
+2026-05-06.

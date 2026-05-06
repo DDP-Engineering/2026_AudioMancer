@@ -10,7 +10,6 @@ Return exactly one JSON object with this shape:
     {
       "canonical_name": "",
       "aliases": [],
-      "role_summary": "",
       "confidence": "",
       "evidence": [
         {
@@ -34,7 +33,6 @@ Prefer `dialogue_span_id` from DIALOGUE_SPANS for each evidence item. Leave it e
 Set evidence `confidence` to `high`, `medium`, or `low`; use `high` only when the evidence is anchored to a dialogue span or direct dialogue punctuation.
 Use each chunk id exactly as provided.
 Keep each source_excerpt short and escape any inner quotes correctly for JSON.
-Keep role_summary brief and only use it to distinguish ambiguous speakers.
 Do not write final descriptions, voice notes, relationship summaries, or TTS voice fields in this discovery pass.
 
 {units_block}

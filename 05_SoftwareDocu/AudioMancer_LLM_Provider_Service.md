@@ -206,3 +206,7 @@ Minimum validation after changes:
 - Usage remains unavailable when the backend omits or partially populates
   token counts.
 - The service only reads the first returned choice.
+
+Documentation audit status: reviewed against the current implementation on
+2026-05-06. The helper `token_usage_service.py` is now documented with grouped
+AI runtime support services because it is shared beyond this provider wrapper.

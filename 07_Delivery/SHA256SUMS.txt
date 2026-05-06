@@ -2,7 +2,7 @@
 # Windows-only release for now.
 # VoiceWeaver original ZIP is listed for post-reassembly verification; published GitHub assets are the .partNNN files.
 
-337b5fac0a26f502cf9bacc15cc51cbf874cd3d0ec17fbfd5e781e61ac9335e6  AudioMancer_Windows_x64.zip
+6b95895d650455183127097cb64068eafc282617d7390eb3442e4f30b163ec42  AudioMancer_Windows_x64.zip
 e957082578d5f844b98b1234fb9e1f69d48fec11f80d1acdd6b65432dd2d90b9  VoiceWeaver-v1.2.2-windows-x64-cuda-models-3.zip
 70c571a8155bf2ed10e6943b116b91c1f1e383f3c534115c5aa9cdabe8d6c3f8  VoiceWeaver-v1.2.2-windows-x64-cuda-models-3.zip.part001
 82750de38fab01d853ac6cac096a91f01f18cab5f859a250f7ab36bcb714c810  VoiceWeaver-v1.2.2-windows-x64-cuda-models-3.zip.part002

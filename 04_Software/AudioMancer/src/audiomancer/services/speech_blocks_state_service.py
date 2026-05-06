@@ -14,7 +14,7 @@
          current operation state, and enabled AI profile settings.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 0.6.0
+@version 0.7.0
 """
 
 # IMPORTS
@@ -31,6 +31,7 @@ from audiomancer.services import (
     home_presenter_service,
     narrator_definition_service,
     speech_blocks_service,
+    tts_budget_service,
     ui_state_service,
 )
 
@@ -91,7 +92,7 @@ def build_speech_blocks_state(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.4.0
+    @version    0.5.0
     """
     if project_root is None or manifest is None:
         return {
@@ -111,6 +112,7 @@ def build_speech_blocks_state(
             "can_reset": False,
             "can_approve_all": False,
             "can_resplit_selected": False,
+            "selected_text_character_limit": _selected_text_character_limit(settings_payload),
         }
 
     report = speech_blocks_service.load_speech_blocks_report(project_root)
@@ -158,7 +160,27 @@ def build_speech_blocks_state(
         "can_reset": bool(speech_blocks),
         "can_approve_all": any(not bool(block.get("approved", False)) for block in speech_blocks),
         "can_resplit_selected": bool(source_chunks),
+        "selected_text_character_limit": _selected_text_character_limit(settings_payload),
     }
+
+
+def _selected_text_character_limit(settings_payload: dict[str, object] | None) -> int:
+    """
+    @brief      Resolve an approximate selected speech text limit in characters.
+    @param[in]  settings_payload Persisted application settings payload.
+    @return     Approximate safe character limit for the active TTS model.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-05
+    @version    0.1.0
+    """
+    discovered_models = []
+    if isinstance(settings_payload, dict):
+        raw_models = settings_payload.get("tts_runtime_discovered_models", [])
+        if isinstance(raw_models, list):
+            discovered_models = [model for model in raw_models if isinstance(model, dict)]
+    budget_payload = tts_budget_service.resolve_cached_tts_budget(discovered_models)
+    return int(budget_payload.get("safe_word_count", 0) or 0) * 6
 
 
 def build_speech_blocks_notes(

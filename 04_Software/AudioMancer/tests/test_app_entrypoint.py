@@ -13,7 +13,7 @@
          Qt application and main window correctly.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-04
-@version 0.1.3
+@version 0.1.4
 """
 
 # IMPORTS
@@ -33,7 +33,7 @@ class _FakeApplication:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-04
-    @version    0.1.0
+    @version    0.1.1
     """
 
     def __init__(self, argv) -> None:
@@ -61,6 +61,18 @@ class _FakeApplication:
         @version    0.1.0
         """
         self.application_name = application_name
+
+    def setWindowIcon(self, _window_icon) -> None:
+        """
+        @brief      Accept the application icon configured by the bootstrap.
+        @param[in]  _window_icon Ignored Qt icon object.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-06
+        @version    0.1.0
+        """
+        return None
 
     def exec(self) -> int:
         """
@@ -119,7 +131,7 @@ def test_main_creates_application_and_shows_window(monkeypatch) -> None:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-04
-    @version    0.1.2
+    @version    0.1.3
     """
     created = {}
 
@@ -241,6 +253,7 @@ def test_main_creates_application_and_shows_window(monkeypatch) -> None:
     monkeypatch.setattr(app_module, "get_component_logger", _get_component_logger)
     monkeypatch.setattr(app_module, "load_settings", _load_settings)
     monkeypatch.setattr(app_module, "QApplication", _create_application)
+    monkeypatch.setattr(app_module, "QIcon", lambda _path: object())
     monkeypatch.setattr(app_module, "MainWindow", _create_window)
 
     exit_code = app_module.main()

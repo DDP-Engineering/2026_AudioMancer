@@ -14,7 +14,7 @@
          by the TTS Settings dialog and Narrator workflow.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-23
-@version 0.10.1
+@version 0.11.0
 """
 
 # IMPORTS
@@ -95,7 +95,7 @@ def _send_json_request(
     @exception  ValueError Raised when the response cannot be decoded as JSON.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-16
-    @version    1.1.0
+    @version    1.2.0
     """
     request_headers = dict(headers)
     request_body = None
@@ -123,7 +123,7 @@ def _add_tts_language_field(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.2.0
+    @version    0.3.0
     """
     normalized_language = str(language).strip()
     normalized_supported_languages = (
@@ -403,7 +403,6 @@ def _normalize_model(candidate_model: object) -> VoiceWeaverModelPayload | None:
     if not model_id:
         return None
     supported_generation_modes = _normalize_generation_modes(candidate_model.get("supported_generation_modes"))
-    supported_presets = _normalize_string_list(candidate_model.get("supported_presets"))
     issues = candidate_model.get("issues")
     return {
         "model_id": model_id,
@@ -411,8 +410,6 @@ def _normalize_model(candidate_model: object) -> VoiceWeaverModelPayload | None:
         "status": str(candidate_model.get("status", "unhealthy")).strip().lower() or "unhealthy",
         "supported_generation_modes": supported_generation_modes,
         "supported_languages": _normalize_string_list(candidate_model.get("supported_languages")),
-        "supported_presets": supported_presets,
-        "speaker_count": len(supported_presets),
         "default_model_parameters": _normalize_model_parameters(candidate_model.get("default_model_parameters")),
         "generation_parameter_ranges": _normalize_generation_parameter_ranges(
             candidate_model.get("generation_parameter_ranges")
@@ -438,12 +435,6 @@ def build_capability_matrix(discovered_models: list[VoiceWeaverModelPayload]) ->
         for model in normalized_models
         if model is not None and str(model.get("status", "")).strip().lower() in {"healthy", "ready"}
     ]
-    custom_voice_models = [
-        model
-        for model in healthy_models
-        if "custom_voice" in _normalize_generation_modes(model.get("supported_generation_modes"))
-        and int(model.get("speaker_count", 0)) > 0
-    ]
     definition_models = [
         model
         for model in healthy_models
@@ -456,7 +447,6 @@ def build_capability_matrix(discovered_models: list[VoiceWeaverModelPayload]) ->
     ]
     voice_designer_models = list(definition_models)
     base_models = list(clone_models)
-    qwen_custom_voice_models = [model for model in custom_voice_models if _is_qwen_model(model)]
     qwen_voice_designer_models = [model for model in voice_designer_models if _is_qwen_model(model)]
     qwen_base_models = [model for model in base_models if _is_qwen_model(model)]
     missing_qwen_capabilities: list[str] = []
@@ -464,20 +454,16 @@ def build_capability_matrix(discovered_models: list[VoiceWeaverModelPayload]) ->
         missing_qwen_capabilities.append("base")
     if not qwen_voice_designer_models:
         missing_qwen_capabilities.append("voice_designer")
-    if not qwen_custom_voice_models:
-        missing_qwen_capabilities.append("custom_voice")
     return {
-        "custom_voice_models": custom_voice_models,
         "definition_models": definition_models,
         "clone_models": clone_models,
         "voice_designer_models": voice_designer_models,
         "base_models": base_models,
-        "qwen_custom_voice_models": qwen_custom_voice_models,
         "qwen_voice_designer_models": qwen_voice_designer_models,
         "qwen_base_models": qwen_base_models,
         "minimum_qwen_ready": not missing_qwen_capabilities,
         "missing_qwen_capabilities": missing_qwen_capabilities,
-        "preset_voice_available": bool(custom_voice_models),
+        "preset_voice_available": False,
         "generate_and_clone_available": bool(definition_models and clone_models),
     }
 
@@ -797,49 +783,6 @@ def cancel_model_download(
     @version    1.0.0
     """
     _request_without_json_response(base_url, runtime_api_key, "/v1/models/download/cancel", "POST", timeout_seconds)
-
-
-def generate_custom_voice(
-    base_url: str,
-    runtime_api_key: str,
-    speaker: str,
-    language: str,
-    text: str,
-    instruct: str = "",
-    model_parameters: dict[str, object] | None = None,
-    supported_languages: list[str] | None = None,
-    timeout_seconds: int = config.DEFAULT_TTS_CONNECT_TIMEOUT_SECONDS,
-) -> dict[str, object]:
-    """
-    @brief      Start one CustomVoice generation request.
-    @param[in]  base_url Operator-configured runtime base URL.
-    @param[in]  runtime_api_key Optional operator-configured bearer token.
-    @param[in]  speaker Preset speaker identifier.
-    @param[in]  language Synthesis language code.
-    @param[in]  text Preview text to synthesize.
-    @param[in]  instruct Optional VoiceWeaver instruct text.
-    @param[in]  model_parameters Optional VoiceWeaver model-parameter overrides.
-    @param[in]  timeout_seconds Request timeout in seconds.
-    @return     Runtime operation payload returned by `/v1/voice/custom`.
-    @exception  RuntimeError Raised when the runtime request fails.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-16
-    @version    1.2.0
-    """
-    payload: dict[str, object] = {
-        "speaker": str(speaker).strip(),
-        "text": str(text).strip(),
-    }
-    _add_tts_language_field(payload, language, supported_languages)
-    if str(instruct).strip():
-        payload["instruct"] = str(instruct).strip()
-    normalized_model_parameters = _normalize_model_parameters(model_parameters)
-    if normalized_model_parameters:
-        payload["model_parameters"] = normalized_model_parameters
-    response_payload = _post_json_endpoint(base_url, runtime_api_key, "/v1/voice/custom", payload, timeout_seconds)
-    if not isinstance(response_payload, dict):
-        raise RuntimeError("VoiceWeaver returned an invalid custom-voice response payload.")
-    return response_payload
 
 
 def generate_voice_design(
