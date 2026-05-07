@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>AudioMancer - Audiobook Production Desktop App</title>
-  <meta name="description" content="AudioMancer is a Windows desktop application for preparing audiobook projects, text workflows, voice planning, and local voice generation with VoiceWeaver.">
+  <title>AudioMancer - Book Translation And Audiobook Desktop App</title>
+  <meta name="description" content="AudioMancer is a Windows desktop app for turning books into translated text, speech blocks, character voices, and audiobook audio. Work can be AI-assisted or done manually.">
   <style>
     :root {
       color-scheme: light;
@@ -437,10 +437,10 @@
         <span>AudioMancer</span>
       </a>
       <nav aria-label="Page navigation">
-        <a href="#workflow">Workflow</a>
-        <a href="#features">Features</a>
+        <a href="#application">Application</a>
+        <a href="#install">Install</a>
         <a href="#voiceweaver">VoiceWeaver</a>
-        <a href="#download">Download</a>
+        <a href="#ai-setup">AI Setup</a>
       </nav>
     </div>
   </header>
@@ -449,54 +449,55 @@
     <section class="hero">
       <div class="shell">
         <div>
-          <h1>Audiobook production from source text to voice-ready delivery.</h1>
+          <h1>Translate books and prepare audiobook voices in one desktop app.</h1>
           <p class="hero-copy">
-            AudioMancer is a Windows desktop application for building audiobook projects, preparing long-form text,
-            organizing narrator and character voices, and producing structured audio-ready work with a local VoiceWeaver runtime.
+            AudioMancer helps you take a book from source text to translated text, narrator and character voices,
+            speech blocks, generated audio, and final WAV audiobook files. Each step can be helped by AI or handled
+            manually by the user.
           </p>
           <div class="actions">
-            <a class="button primary" href="https://github.com/DDP-Engineering/2026_AudioMancer/releases/tag/v1.4.0">Open Windows Release</a>
-            <a class="button secondary" href="#download">Installation Steps</a>
+            <a class="button primary" href="https://github.com/DDP-Engineering/2026_AudioMancer/releases/tag/v1.4.0">Download Windows Release</a>
+            <a class="button secondary" href="#install">Installation Steps</a>
           </div>
           <div class="meta-row">
-            <span>Windows x64 delivery</span>
-            <span>Portable ZIP packages</span>
-            <span>Hashes included</span>
+            <span>Windows tested</span>
+            <span>Portable ZIP install</span>
+            <span>Local or online AI</span>
           </div>
         </div>
 
         <aside class="product-panel" aria-label="AudioMancer workflow preview">
           <div class="panel-header">
-            <p class="panel-title">Production Workflow</p>
+            <p class="panel-title">Simple Workflow</p>
             <span class="status">Windows release</span>
           </div>
           <div class="workflow">
             <div class="workflow-item">
               <div class="workflow-index">1</div>
               <div>
-                <h3>Import and clean source text</h3>
-                <p>Bring in source material, extract text, clean it, and keep project artifacts organized.</p>
+                <h3>Import a book</h3>
+                <p>Start from TXT, PDF, DOCX, EPUB, Markdown, RTF, or ODT files.</p>
               </div>
             </div>
             <div class="workflow-item">
               <div class="workflow-index">2</div>
               <div>
-                <h3>Chunk and translate</h3>
-                <p>Prepare structured chunks and locked-target translation workflows for long-form narration.</p>
+                <h3>Clean, split, and translate</h3>
+                <p>Use AI when you want speed, or edit the text yourself when you want full control.</p>
               </div>
             </div>
             <div class="workflow-item">
               <div class="workflow-index">3</div>
               <div>
-                <h3>Plan voices and speech blocks</h3>
-                <p>Discover characters, prepare voice targets, and manage narrator-aware speech blocks.</p>
+                <h3>Prepare voices and speech</h3>
+                <p>Create narrator and character voices, then review the speech blocks before audio generation.</p>
               </div>
             </div>
             <div class="workflow-item">
               <div class="workflow-index">4</div>
               <div>
-                <h3>Generate with VoiceWeaver</h3>
-                <p>Use the companion runtime for local voice generation and audio assembly workflows.</p>
+                <h3>Create audio</h3>
+                <p>Use VoiceWeaver for local voice generation and assemble the final WAV audiobook files.</p>
               </div>
             </div>
           </div>
@@ -504,29 +505,30 @@
       </div>
     </section>
 
-    <section id="workflow">
+    <section id="application">
       <div class="shell">
         <div class="section-head">
-          <h2>Built for long audiobook projects.</h2>
+          <h2>What AudioMancer does.</h2>
           <p>
-            AudioMancer keeps project setup, text processing, voice preparation, and delivery artifacts in one desktop workflow.
+            AudioMancer is made for long book projects. It keeps the text, translation, characters, voices,
+            speech blocks, generated audio, and final exports together in one project folder.
           </p>
         </div>
         <div class="grid-3">
           <article class="feature">
             <div class="feature-icon">T</div>
-            <h3>Text pipeline</h3>
-            <p>Import source files, extract text, clean content, chunk chapters, and export completed text artifacts.</p>
+            <h3>Book text workflow</h3>
+            <p>Import a book, extract the text, clean it, split it into useful parts, and export reviewed text files.</p>
+          </article>
+          <article class="feature">
+            <div class="feature-icon">L</div>
+            <h3>Translation workflow</h3>
+            <p>Translate a book into the selected project language. The translation can be AI-assisted and then reviewed by you.</p>
           </article>
           <article class="feature">
             <div class="feature-icon">V</div>
-            <h3>Voice planning</h3>
-            <p>Prepare narrator and character voices, review evidence, and keep voice assignments visible during production.</p>
-          </article>
-          <article class="feature">
-            <div class="feature-icon">A</div>
-            <h3>Audio assembly</h3>
-            <p>Organize Speech Blocks, Audio Blocks, and WAV assembly outputs for audiobook delivery work.</p>
+            <h3>Voice workflow</h3>
+            <p>Prepare one narrator voice, or prepare narrator plus character voices for dialogue-heavy books.</p>
           </article>
         </div>
       </div>
@@ -535,72 +537,39 @@
     <section id="features" class="band">
       <div class="shell">
         <div class="section-head">
-          <h2>What the application supports.</h2>
+          <h2>AI help is optional.</h2>
           <p>
-            The Windows package includes the desktop app, offline help, prompt templates, settings, and required license files.
+            AudioMancer is not an all-or-nothing AI tool. You can use AI for the repetitive work, then review and edit the result.
+            You can also do the same steps manually when accuracy or style matters more than speed.
           </p>
         </div>
         <div class="grid-3">
           <article class="feature">
-            <div class="feature-icon">P</div>
-            <h3>Project structure</h3>
-            <p>Create projects with locked audiobook language and narration mode so production choices remain consistent.</p>
+            <div class="feature-icon">A</div>
+            <h3>AI-assisted steps</h3>
+            <p>Use AI for cleanup, chunking, translation, character discovery, and speech block creation.</p>
           </article>
           <article class="feature">
-            <div class="feature-icon">C</div>
-            <h3>AI-assisted preparation</h3>
-            <p>Use external prompt templates for cleanup, chunking, translation, character discovery, and speech block work.</p>
+            <div class="feature-icon">M</div>
+            <h3>Manual review</h3>
+            <p>Edit cleaned text, chunks, translations, characters, voices, and speech blocks before moving forward.</p>
           </article>
           <article class="feature">
-            <div class="feature-icon">H</div>
-            <h3>Offline help</h3>
-            <p>English and Romanian HTML help bundles are included in the delivery archive for local use.</p>
+            <div class="feature-icon">O</div>
+            <h3>Local project files</h3>
+            <p>Projects, logs, generated audio, and final WAV files are stored on your computer.</p>
           </article>
         </div>
       </div>
     </section>
 
-    <section id="voiceweaver">
-      <div class="shell split">
-        <div class="section-head">
-          <h2>VoiceWeaver is required for local voice generation.</h2>
-          <p>
-            AudioMancer uses VoiceWeaver as the companion runtime for voice generation. Users should download AudioMancer and
-            all VoiceWeaver package parts from the same release.
-          </p>
-          <div class="notice">
-            The current public delivery is Windows-only. Linux packages are not published at this time.
-          </div>
-        </div>
-        <div class="download-box">
-          <h3>VoiceWeaver package parts</h3>
-          <p>
-            The VoiceWeaver Windows archive is split into 10 files because the complete runtime package is too large for a
-            single release asset.
-          </p>
-          <ul class="asset-list">
-            <li><code>part001</code></li>
-            <li><code>part002</code></li>
-            <li><code>part003</code></li>
-            <li><code>part004</code></li>
-            <li><code>part005</code></li>
-            <li><code>part006</code></li>
-            <li><code>part007</code></li>
-            <li><code>part008</code></li>
-            <li><code>part009</code></li>
-            <li><code>part010</code></li>
-          </ul>
-        </div>
-      </div>
-    </section>
-
-    <section id="download" class="band">
+    <section id="install">
       <div class="shell split">
         <div>
           <div class="section-head">
-            <h2>Download and install.</h2>
+            <h2>Install AudioMancer on Windows.</h2>
             <p>
-              Download the AudioMancer ZIP, all VoiceWeaver parts, and the checksum manifest from the GitHub Release page.
+              The current public package is tested on Windows. It is portable: download it, extract it, and start the app.
             </p>
           </div>
           <div class="actions">
@@ -609,14 +578,42 @@
           </div>
         </div>
         <div class="download-box">
-          <h3>Windows installation steps</h3>
+          <h3>Windows steps</h3>
           <ol>
+            <li>Open the GitHub Release page.</li>
             <li>Download <code>AudioMancer_Windows_x64.zip</code>.</li>
-            <li>Download all 10 VoiceWeaver <code>.partNNN</code> files into the same folder.</li>
-            <li>Reassemble the VoiceWeaver ZIP with PowerShell.</li>
-            <li>Verify the SHA256 hashes with <code>SHA256SUMS.txt</code>.</li>
-            <li>Extract both ZIP archives before starting the applications.</li>
-            <li>Start AudioMancer with <code>AudioMancer.exe</code> or <code>Start-AudioMancer.cmd</code>.</li>
+            <li>Download <code>SHA256SUMS.txt</code> if you want to verify the file.</li>
+            <li>Extract the ZIP to a normal folder, for example <code>C:\AudioMancer</code>.</li>
+            <li>Start the app with <code>AudioMancer.exe</code> or <code>Start-AudioMancer.cmd</code>.</li>
+            <li>In the app, create a new project and choose the book language, output language, and voice mode.</li>
+          </ol>
+        </div>
+      </div>
+    </section>
+
+    <section id="voiceweaver" class="band">
+      <div class="shell split">
+        <div>
+          <div class="section-head">
+            <h2>Install VoiceWeaver for voice generation.</h2>
+            <p>
+              AudioMancer uses VoiceWeaver as the local voice engine. VoiceWeaver must be running before
+              AudioMancer can generate narrator samples, character samples, or audio blocks.
+            </p>
+          </div>
+          <div class="notice">
+            The planned VoiceWeaver package for this page uses only Qwen3-TTS Base and Qwen3 Voice Design models.
+          </div>
+        </div>
+        <div class="download-box">
+          <h3>VoiceWeaver steps</h3>
+          <ol>
+            <li>Download all VoiceWeaver package parts from the same release.</li>
+            <li>Put all <code>.partNNN</code> files in the same folder.</li>
+            <li>Join the parts into one VoiceWeaver ZIP with the PowerShell command below.</li>
+            <li>Extract the VoiceWeaver ZIP to a folder, for example <code>C:\VoiceWeaver</code>.</li>
+            <li>Start VoiceWeaver with its Windows start file.</li>
+            <li>Check that the local address works: <code>http://127.0.0.1:8059/v1/health</code>.</li>
           </ol>
         </div>
       </div>
@@ -626,27 +623,106 @@
       <div class="shell split">
         <div>
           <div class="section-head">
-            <h2>Verify the delivery.</h2>
+            <h2>Connect AudioMancer to VoiceWeaver.</h2>
             <p>
-              Use the checksum manifest to verify the AudioMancer ZIP, each VoiceWeaver part, and the reassembled VoiceWeaver ZIP.
+              After VoiceWeaver is running, tell AudioMancer where to find it. The default local address is
+              <code>http://127.0.0.1:8059</code>.
             </p>
           </div>
-          <p>AudioMancer ZIP SHA256:</p>
-          <p class="hash"><code>337b5fac0a26f502cf9bacc15cc51cbf874cd3d0ec17fbfd5e781e61ac9335e6</code></p>
-          <p>VoiceWeaver reassembled ZIP SHA256:</p>
-          <p class="hash"><code>e957082578d5f844b98b1234fb9e1f69d48fec11f80d1acdd6b65432dd2d90b9</code></p>
+          <ol>
+            <li>Start VoiceWeaver first.</li>
+            <li>Start AudioMancer.</li>
+            <li>Open <code>TTS Settings</code> from the AudioMancer toolbar.</li>
+            <li>Set <code>Base URL</code> to <code>http://127.0.0.1:8059</code>.</li>
+            <li>Leave <code>API Key</code> empty for normal local use.</li>
+            <li>Press <code>Test Connection</code>.</li>
+            <li>Check that Qwen3-TTS Base and Qwen3 Voice Design are found.</li>
+            <li>Save the TTS settings.</li>
+          </ol>
         </div>
         <div class="download-box">
-          <h3>Reassemble VoiceWeaver</h3>
-          <pre>$parts = Get-ChildItem "VoiceWeaver-v1.2.2-windows-x64-cuda-models-3.zip.part*" | Sort-Object Name
-$out = [IO.File]::Create("VoiceWeaver-v1.2.2-windows-x64-cuda-models-3.zip")
+          <h3>Join the VoiceWeaver parts</h3>
+          <pre>$outputZip = "VoiceWeaver_Windows_x64.zip"
+$parts = Get-ChildItem "VoiceWeaver*.zip.part*" | Sort-Object Name
+$out = [IO.File]::Create($outputZip)
 foreach ($part in $parts) {
     $in = [IO.File]::OpenRead($part.FullName)
     $in.CopyTo($out)
     $in.Dispose()
 }
 $out.Dispose()
-Get-FileHash -Algorithm SHA256 .\VoiceWeaver-v1.2.2-windows-x64-cuda-models-3.zip</pre>
+Get-FileHash -Algorithm SHA256 $outputZip</pre>
+          <div class="notice">
+            Use <code>SHA256SUMS.txt</code> to verify the AudioMancer ZIP, every VoiceWeaver part, and the final joined ZIP.
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="ai-setup" class="band">
+      <div class="shell split">
+        <div>
+          <div class="section-head">
+            <h2>Set up AI models.</h2>
+            <p>
+              AudioMancer can use local AI models on your computer or online AI models from an API provider.
+              The same app workflows can also be reviewed and corrected manually.
+            </p>
+          </div>
+          <div class="notice">
+            AI profiles are used for cleanup, chunking, translation, character discovery, and speech blocks.
+            VoiceWeaver is separate and is used for voice generation.
+          </div>
+        </div>
+        <div class="download-box">
+          <h3>Local AI with LM Studio</h3>
+          <ol>
+            <li>Install LM Studio on Windows.</li>
+            <li>Download and load a chat model in LM Studio.</li>
+            <li>Start the LM Studio local server.</li>
+            <li>In AudioMancer, open <code>AI Settings</code>.</li>
+            <li>Create or edit a profile.</li>
+            <li>Set <code>Backend Kind</code> to <code>lmstudio</code>.</li>
+            <li>Set <code>Base URL</code> to <code>http://localhost:1234/v1</code>.</li>
+            <li>Set <code>Model Name</code> to the model name shown by LM Studio.</li>
+            <li>Press the connection or model refresh button, then save the profile.</li>
+            <li>Select that profile as the default for the workflow steps you want to run locally.</li>
+          </ol>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="shell split">
+        <div class="download-box">
+          <h3>Online AI with an OpenAI-compatible API</h3>
+          <ol>
+            <li>Get an API key from your AI provider.</li>
+            <li>In AudioMancer, open <code>AI Settings</code>.</li>
+            <li>Create or edit a profile.</li>
+            <li>Set <code>Backend Kind</code> to <code>openai_compatible</code>.</li>
+            <li>Set <code>Base URL</code> to the provider URL, for example <code>https://api.openai.com/v1</code>.</li>
+            <li>Paste the API key into <code>API Key</code>.</li>
+            <li>Set the model name, context window, output tokens, timeout, and temperature.</li>
+            <li>Test or refresh the profile, then save it.</li>
+            <li>Select that profile as the default for cleanup, chunking, translation, character discovery, or speech blocks.</li>
+          </ol>
+        </div>
+        <div>
+          <div class="section-head">
+            <h2>Recommended model use.</h2>
+            <p>
+              Use stronger models for translation and character discovery. Use cheaper or smaller models for cleanup and
+              chunking if the result will be reviewed. Keep temperature low for structured steps so the answers are easier to check.
+            </p>
+          </div>
+          <ul>
+            <li><code>Cleanup</code>: fixes extraction and formatting problems.</li>
+            <li><code>Chunking</code>: splits the book into useful pieces.</li>
+            <li><code>Translation</code>: translates the book into the selected language.</li>
+            <li><code>Character Discovery</code>: finds characters and prepares voice notes.</li>
+            <li><code>Speech Blocks</code>: turns reviewed text into narrator and character lines.</li>
+          </ul>
         </div>
       </div>
     </section>
