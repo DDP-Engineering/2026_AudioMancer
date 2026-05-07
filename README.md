@@ -76,7 +76,7 @@ a7ebe2dd594586da8b321aedd41ea8ddd12a4ee68a353c1e48b8dd6c5ee3aa5a
 Expected AudioMancer ZIP SHA256:
 
 ```text
-337b5fac0a26f502cf9bacc15cc51cbf874cd3d0ec17fbfd5e781e61ac9335e6
+6b95895d650455183127097cb64068eafc282617d7390eb3442e4f30b163ec42
 ```
 
 Use `SHA256SUMS.txt` for the complete list of hashes, including every VoiceWeaver part.
