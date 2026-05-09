@@ -15,7 +15,7 @@
          based operation state plus AI transaction logging.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 0.15.0
+@version 0.17.0
 """
 
 # IMPORTS
@@ -156,7 +156,7 @@ def load_speech_blocks_report(project_root: str | Path) -> SpeechBlocksReportPay
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.3.0
+    @version    0.4.0
     """
     report_path = resolve_operation_path(project_root, "speech_blocks", config.SPEECH_BLOCKS_REPORT_FILE_NAME)
     payload = load_optional_json_artifact(report_path)
@@ -346,8 +346,10 @@ def start_or_continue_generation(
     existing_blocks, warning_records, start_chunk_index = _restore_resume_state(
         resolved_project_root,
         existing_state,
+        existing_report,
         input_fingerprint,
         source_language,
+        len(source_chunks),
     )
     token_usage = (
         token_usage_service.restore_token_usage(
@@ -357,6 +359,22 @@ def start_or_continue_generation(
         if start_chunk_index > 0 or existing_blocks
         else token_usage_service.empty_token_usage()
     )
+    if existing_blocks and start_chunk_index >= len(source_chunks):
+        return (
+            dict(existing_report)
+            if isinstance(existing_report, dict)
+            else _rebuild_report(
+                existing_blocks,
+                source_language,
+                source_kind,
+                profile_id,
+                len(source_chunks),
+                len(source_chunks),
+                warning_records,
+                token_usage,
+                budget_metadata,
+            )
+        )
 
     _persist_state(
         resolved_project_root,
@@ -1170,8 +1188,8 @@ def _build_budget_metadata(
     @return     Context-budget metadata used for source chunk segmentation.
     @exception  ValueError Raised when context and output settings leave too little input room.
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-28
-    @version    0.1.0
+    @date       2026-05-08
+    @version    0.2.0
     """
     prompt_shell = _chunk_user_prompt(
         {"chunk_id": "", "text": ""},
@@ -1190,6 +1208,7 @@ def _build_budget_metadata(
         config.DEFAULT_SPEECH_BLOCKS_MIN_TEXT_BUDGET_TOKENS,
         "AI-assisted Speech Blocks generation cannot run because the selected AI profile context window "
         "and max output tokens leave too little room for source chunk input",
+        online_text_context_fraction=config.DEFAULT_ONLINE_AI_TEXT_CONTEXT_FRACTION,
     )
 
 
@@ -1723,40 +1742,109 @@ def _build_source_fingerprint(source_chunks: list[dict[str, object]], source_lan
 def _restore_resume_state(
     project_root: Path,
     existing_state: dict[str, object],
+    existing_report: dict[str, object] | None,
     input_fingerprint: str,
     source_language: str,
+    total_chunk_count: int,
 ) -> tuple[list[SpeechBlockPayload], list[dict[str, object]], int]:
     """
     @brief      Restore resumable Speech Blocks state when the persisted checkpoint is still valid.
     @param[in]  project_root Active project root folder.
     @param[in]  existing_state Existing operation-state payload.
+    @param[in]  existing_report Existing Speech Blocks report payload.
     @param[in]  input_fingerprint Current source snapshot fingerprint.
     @param[in]  source_language Active source language code.
+    @param[in]  total_chunk_count Current source chunk count.
     @return     Existing blocks, warning entries, and the next chunk index.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.3.0
+    @version    0.4.0
     """
     if not isinstance(existing_state, dict):
         return [], [], 0
-    if str(existing_state.get("status", "")).strip() not in {"running", "failed"}:
+    if str(existing_state.get("status", "")).strip() not in {"running", "failed", "review_pending", "completed"}:
         return [], [], 0
     metadata = existing_state.get("metadata", {})
     resume_checkpoint = existing_state.get("resume_checkpoint", {})
-    if not isinstance(metadata, dict) or not isinstance(resume_checkpoint, dict):
+    if not isinstance(metadata, dict):
         return [], [], 0
     if str(metadata.get("source_snapshot_fingerprint", "")).strip() != input_fingerprint:
         return [], [], 0
     if str(metadata.get("source_language", "")).strip() != source_language:
         return [], [], 0
-    next_chunk_index = int(resume_checkpoint.get("next_chunk_index", 0))
-    warnings = metadata.get("warnings", [])
+    next_chunk_index = _restore_next_speech_blocks_chunk_index(
+        existing_state,
+        existing_report,
+        metadata,
+        resume_checkpoint if isinstance(resume_checkpoint, dict) else {},
+        total_chunk_count,
+    )
+    if next_chunk_index <= 0:
+        return [], [], 0
+    warnings = _restore_speech_blocks_warning_records(existing_report, metadata)
     return (
         load_speech_blocks(project_root),
-        [dict(item) for item in warnings if isinstance(item, dict)],
-        max(next_chunk_index, 0),
+        warnings,
+        next_chunk_index,
     )
+
+
+def _restore_next_speech_blocks_chunk_index(
+    existing_state: dict[str, object],
+    existing_report: dict[str, object] | None,
+    metadata: dict[str, object],
+    resume_checkpoint: dict[str, object],
+    total_chunk_count: int,
+) -> int:
+    """
+    @brief      Restore the next Speech Blocks source-chunk index.
+    @param[in]  existing_state Existing operation-state payload.
+    @param[in]  existing_report Existing Speech Blocks report payload.
+    @param[in]  metadata Existing operation metadata payload.
+    @param[in]  resume_checkpoint Existing resumable checkpoint payload.
+    @param[in]  total_chunk_count Current source chunk count.
+    @return     Clamped next source-chunk index.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-08
+    @version    0.1.0
+    """
+    if str(existing_state.get("status", "")).strip() in {"running", "failed"}:
+        raw_checkpoint_index = resume_checkpoint.get("next_chunk_index")
+        if raw_checkpoint_index not in (None, ""):
+            return max(0, min(int(raw_checkpoint_index), total_chunk_count))
+    if isinstance(existing_report, dict):
+        raw_report_count = existing_report.get("processed_chunk_count")
+        if raw_report_count not in (None, ""):
+            return max(0, min(int(raw_report_count), total_chunk_count))
+    raw_metadata_count = metadata.get("processed_chunk_count")
+    if raw_metadata_count not in (None, ""):
+        return max(0, min(int(raw_metadata_count), total_chunk_count))
+    source_chunks = metadata.get("source_chunks")
+    if isinstance(source_chunks, list):
+        return max(0, min(len(source_chunks), total_chunk_count))
+    return 0
+
+
+def _restore_speech_blocks_warning_records(
+    existing_report: dict[str, object] | None,
+    metadata: dict[str, object],
+) -> list[dict[str, object]]:
+    """
+    @brief      Restore persisted Speech Blocks warning records.
+    @param[in]  existing_report Existing Speech Blocks report payload.
+    @param[in]  metadata Existing operation metadata payload.
+    @return     Warning records safe to carry into resumed generation.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-08
+    @version    0.1.0
+    """
+    raw_warnings = (
+        existing_report.get("warnings", []) if isinstance(existing_report, dict) else metadata.get("warnings", [])
+    )
+    return [dict(item) for item in raw_warnings if isinstance(item, dict)]
 
 
 def _resolve_started_at(existing_state: dict[str, object]) -> str:

@@ -14,7 +14,7 @@
          discovery workflow.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-08
-@version 0.8.0
+@version 0.9.0
 """
 
 # IMPORTS
@@ -637,6 +637,43 @@ def test_budgeted_chunk_windows_use_eight_chunks_as_cap() -> None:
     )
 
     assert [len(window) for window in windows] == [8, 3]
+
+
+def test_character_discovery_online_profile_uses_direct_context_fraction_without_chunk_cap(monkeypatch) -> None:
+    """
+    @brief      Validate online character discovery ignores local chunk caps and output-token budget subtraction.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-08
+    @version    0.1.0
+    """
+    monkeypatch.setattr(
+        character_discovery_service.prompt_template_service,
+        "render_prompt",
+        lambda prompt_name, payload: f"{prompt_name}:{payload}",
+    )
+    profile_payload = {
+        "backend_kind": config.ONLINE_AI_BACKEND_KIND,
+        "context_window": 10000,
+        "max_output_tokens": 9900,
+    }
+
+    budget_metadata = character_discovery_service._build_budget_metadata(profile_payload, "system")
+    source_chunks = [
+        {"chunk_id": f"chunk-{index:04d}", "text": "Short character-discovery chunk."} for index in range(1, 12)
+    ]
+
+    assert budget_metadata["text_budget_tokens"] == 3000
+    assert budget_metadata["synthesis_payload_budget_tokens"] == 3000
+    assert budget_metadata["max_window_chunks"] == 0
+    assert character_discovery_service._build_chunk_windows(
+        source_chunks,
+        window_size=budget_metadata["max_window_chunks"],
+        overlap=budget_metadata["window_overlap"],
+        budget_metadata=budget_metadata,
+    ) == [source_chunks]
 
 
 def test_budgeted_chunk_windows_shrink_for_small_text_budget() -> None:

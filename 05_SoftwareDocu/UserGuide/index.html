@@ -421,9 +421,10 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                 <ul>
                     <li>Generate Speech Blocks per approved text chunk.</li>
                     <li>Inspect speaker, block type, text, pause duration, indication, and metadata.</li>
-                    <li>Edit selected blocks manually when attribution or text needs correction.</li>
+                    <li>Edit selected blocks manually when attribution or text needs correction. If the selected block already has generated audio, the impact warning appears when you press <strong>Edit</strong>, before the editor unlocks.</li>
                     <li>Use the selected-block character counter to compare current text length against the active TTS model limit.</li>
-                    <li>Insert or delete blocks to repair dialogue, pauses, or narration flow.</li>
+                    <li>Insert or delete blocks to repair dialogue, pauses, or narration flow. Insert selects the inserted block; delete selects the next remaining block, or the previous row when the deleted block was last.</li>
+                    <li>Edit keeps the active Speech Block selected and preserves the selected chunk plus its text scroll position.</li>
                     <li>Re-split selected chunks when the structure is not usable.</li>
                     <li>Approve individual blocks or use approve-all after review. On an approved block, the same selected-block button changes to <strong>Unapprove</strong> and keeps that row selected.</li>
                     <li>Use <strong>Generate Audio</strong> and <strong>Play/Stop</strong> on a selected approved block to preview exactly how the current Speech Block will sound without leaving the page.</li>
@@ -452,6 +453,7 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                 </p>
                 <ul>
                     <li>Generate WAV audio for approved spoken Speech Blocks.</li>
+                    <li>Use <strong>Start Audio Generation</strong> to continue after adding or deleting Speech Blocks. Existing generated Audio Blocks are skipped even when they are not approved yet; only current approved blocks without audio are generated.</li>
                     <li>Skip TTS calls for metadata-only pause, indication, and background-noise blocks.</li>
                     <li>Split over-budget text internally and stitch valid generated parts into one block output.</li>
                     <li>Preview generated block audio with Play/Stop controls.</li>

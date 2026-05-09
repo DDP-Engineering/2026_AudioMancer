@@ -15,7 +15,7 @@
          window-based operation state plus AI transaction logging.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-11
-@version 0.7.0
+@version 0.8.0
 """
 
 # IMPORTS
@@ -397,8 +397,8 @@ def _build_windows(
     @param[in]  budget_metadata Context-budget metadata for the selected profile.
     @return     Derived helper result.
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-28
-    @version    0.3.0
+    @date       2026-05-08
+    @version    0.4.0
     """
     _ = semantic_strategy
     text_budget = int(budget_metadata["text_budget_tokens"])
@@ -409,7 +409,9 @@ def _build_windows(
         end_index = start_index - 1
         current_window_tokens = 0
         current_paragraph_count = 0
-        while end_index + 1 < len(paragraph_records) and current_paragraph_count < paragraph_cap:
+        while end_index + 1 < len(paragraph_records) and (
+            paragraph_cap <= 0 or current_paragraph_count < paragraph_cap
+        ):
             candidate_record = paragraph_records[end_index + 1]
             candidate_tokens = _estimate_text_tokens(_build_units_block([candidate_record]))
             if current_paragraph_count > 0 and current_window_tokens + candidate_tokens > text_budget:
@@ -474,8 +476,8 @@ def _build_budget_metadata(
     @return     Context-budget metadata used for request-window construction.
     @exception  ValueError Raised when context and output settings leave too little input room.
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-28
-    @version    0.1.0
+    @date       2026-05-08
+    @version    0.2.0
     """
     prompt_user_shell = prompt_template_service.render_prompt(
         "text_chunking_user",
@@ -493,11 +495,15 @@ def _build_budget_metadata(
         config.DEFAULT_AI_CHUNKING_MIN_TEXT_BUDGET_TOKENS,
         "AI-assisted chunking cannot run because the selected AI profile context window "
         "and max output tokens leave too little room for chunking input",
+        online_text_context_fraction=config.DEFAULT_ONLINE_AI_TEXT_CONTEXT_FRACTION,
     )
-    strategy_paragraph_cap = config.AI_CHUNKING_WINDOW_SIZE_BY_STRATEGY.get(
-        semantic_strategy,
-        config.AI_CHUNKING_WINDOW_SIZE_BY_STRATEGY[config.DEFAULT_AI_CHUNKING_STRATEGY],
-    )
+    if ai_budget_service.uses_online_text_budget(ai_profile_payload):
+        strategy_paragraph_cap = 0
+    else:
+        strategy_paragraph_cap = config.AI_CHUNKING_WINDOW_SIZE_BY_STRATEGY.get(
+            semantic_strategy,
+            config.AI_CHUNKING_WINDOW_SIZE_BY_STRATEGY[config.DEFAULT_AI_CHUNKING_STRATEGY],
+        )
     return {
         **budget_metadata,
         "strategy_paragraph_cap": strategy_paragraph_cap,

@@ -31,9 +31,10 @@ The current `AI Settings` window exposes the following relevant profile fields:
 - `Structured output supported`
 - per-operation default profile selectors
 
-The current provider request uses `model`, `messages`, `temperature`, and
-`max_tokens`. Reasoning-effort controls are not exposed in the current
-AudioMancer UI.
+The current provider request uses `model`, `messages`, `temperature`,
+`max_tokens`, and `response_format: {"type": "json_object"}` when
+`Structured output supported` is enabled. Reasoning-effort controls are not
+exposed in the current AudioMancer UI.
 
 ## 3. Recommended Profiles
 
@@ -62,8 +63,8 @@ Recommended default selectors:
 - Translation can use a slightly higher temperature because style and fluency
   matter, but it should still remain conservative for review stability.
 - `Structured output supported` should be enabled for these online OpenAI
-  profiles, even though the current provider layer primarily relies on JSON
-  prompting and JSON repair.
+  profiles. AudioMancer still keeps prompt-level JSON instructions and JSON
+  repair as compatibility guardrails.
 - `gpt-5.5` is best reserved for the operation where quality has the largest
   direct user-facing impact: translation.
 - `gpt-5.4` is the safer default for Character Discovery and Speech Blocks

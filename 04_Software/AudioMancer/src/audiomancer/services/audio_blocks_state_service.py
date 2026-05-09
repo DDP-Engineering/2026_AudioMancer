@@ -14,7 +14,7 @@
          Blocks output, and the resumable runtime operation state.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-23
-@version 0.5.0
+@version 0.5.2
 """
 
 # IMPORTS
@@ -51,7 +51,7 @@ def build_audio_blocks_state(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-23
-    @version    0.5.0
+    @version    0.5.1
     """
     if project_root is None or manifest is None:
         return _empty_state(language, settings_payload)
@@ -108,7 +108,6 @@ def build_audio_blocks_state(
             regenerated_prompt_count=regenerated_prompt_count,
         ),
     ]
-    speech_blocks_ready = bool(speech_blocks) and any(bool(block.get("approved", False)) for block in speech_blocks)
     return {
         "full_source_text": _build_full_source_text(project_root, manifest, speech_blocks),
         "speech_blocks": merged_blocks,
@@ -126,7 +125,11 @@ def build_audio_blocks_state(
         "regenerated_prompt_count": regenerated_prompt_count,
         "invalidation_reason": invalidation_reason,
         "stage_status": resolved_stage_status,
-        "can_start_or_continue": speech_blocks_ready,
+        "can_start_or_continue": _can_start_or_continue_generation(
+            speech_blocks,
+            merged_blocks,
+            resolved_stage_status,
+        ),
         "can_reset": audio_blocks_service.has_persisted_audio_blocks(project_root),
         "can_approve_all": any(
             bool(block.get("generated", False)) and not bool(block.get("approved", False)) for block in merged_blocks
@@ -135,6 +138,40 @@ def build_audio_blocks_state(
         "can_approve_selected": current_block is not None and bool(current_block.get("generated", False)),
         "selected_text_character_limit": _selected_text_character_limit(settings_payload, merged_blocks),
     }
+
+
+def _can_start_or_continue_generation(
+    speech_blocks: list[dict[str, object]],
+    audio_blocks: list[dict[str, object]],
+    stage_status: str,
+) -> bool:
+    """
+    @brief      Return whether Audio Blocks generation still has approved source work to process.
+    @param[in]  speech_blocks Current Speech Blocks payload list.
+    @param[in]  audio_blocks Current merged Audio Blocks display payload list.
+    @param[in]  stage_status Effective Audio Blocks stage token.
+    @return     True when at least one approved Speech Block still lacks generated audio.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-08
+    @version    0.1.1
+    """
+    _ = stage_status
+    generated_by_speech_block_id = {
+        str(block.get("speech_block_id", "")).strip(): bool(block.get("generated", False)) for block in audio_blocks
+    }
+    for speech_block in speech_blocks:
+        speech_block_id = str(speech_block.get("speech_block_id", "")).strip()
+        if (
+            speech_block_id
+            and bool(speech_block.get("approved", False))
+            and not generated_by_speech_block_id.get(
+                speech_block_id,
+                False,
+            )
+        ):
+            return True
+    return False
 
 
 def build_audio_blocks_notes(

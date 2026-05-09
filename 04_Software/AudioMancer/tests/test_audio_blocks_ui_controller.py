@@ -14,7 +14,7 @@
          generated audio blocks.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-23
-@version 0.6.0
+@version 0.6.1
 """
 
 # IMPORTS
@@ -68,11 +68,11 @@ def test_audio_blocks_ui_controller_requires_confirmation_before_starting(
     assert start_calls == []
 
 
-def test_audio_blocks_ui_controller_completed_rerun_resets_downstream_before_dispatch(
+def test_audio_blocks_ui_controller_ignores_completed_start_request(
     monkeypatch, qtbot, tmp_path, default_settings_payload
 ) -> None:
     """
-    @brief      Verify completed Audio Blocks reruns reset Audio Blocks and Audio Assembly before dispatch.
+    @brief      Verify completed Audio Blocks cannot be accidentally restarted from the start action.
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @param[in]  qtbot Qt test helper fixture.
     @param[in]  tmp_path Pytest temporary directory fixture.
@@ -80,16 +80,87 @@ def test_audio_blocks_ui_controller_completed_rerun_resets_downstream_before_dis
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-23
-    @version    0.3.0
+    @date       2026-05-08
+    @version    0.1.0
     """
-    project_root = _create_project(tmp_path, "AudioBlocksControllerRerun")
+    project_root = _create_project(tmp_path, "AudioBlocksControllerCompletedStart")
     manifest = project_workspace_service.load_manifest(project_root)
     manifest["current_stage"] = "audio_assembly_ready"
     manifest["operations"]["audio_blocks"]["status"] = "completed"
     manifest["operations"]["audio_assembly"]["status"] = "completed"
     project_workspace_service.save_manifest(manifest, project_root)
-    _seed_audio_blocks_run(project_root, approved=False)
+    _seed_audio_blocks_run(project_root, approved=True)
+    window = _build_window(qtbot, project_root, default_settings_payload)
+    probe_calls = []
+    monkeypatch.setattr(
+        audio_blocks_ui_controller.tts_runtime_ui_support,
+        "probe_runtime_and_persist_cache",
+        lambda *_args, **_kwargs: (
+            probe_calls.append(True) or {"success": True, "discovered_models": _minimum_qwen_models()}
+        ),
+    )
+    monkeypatch.setattr(
+        audio_blocks_ui_controller.QMessageBox,
+        "question",
+        lambda *_args, **_kwargs: QMessageBox.StandardButton.Yes,
+    )
+    start_calls = []
+    monkeypatch.setattr(
+        audio_blocks_ui_controller,
+        "_start_operation",
+        lambda _window, **kwargs: start_calls.append(kwargs),
+    )
+
+    audio_blocks_ui_controller.handle_start_generation_requested(window)
+
+    assert start_calls == []
+    assert probe_calls == []
+    assert window._current_manifest is not None
+    assert window._current_manifest["current_stage"] == "audio_assembly_ready"
+    assert window._current_manifest["operations"]["audio_blocks"]["status"] == "completed"
+    assert window._current_manifest["operations"]["audio_assembly"]["status"] == "completed"
+    assert (project_root / config.AUDIO_BLOCKS_OUTPUT_FILE_NAME).exists()
+    assert (project_root / config.AUDIO_BLOCKS_STATE_FILE_NAME).exists()
+    assert (project_root / config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME / "0001_000001_narrator.wav").exists()
+
+
+def test_audio_blocks_ui_controller_allows_completed_start_when_current_speech_block_is_missing_audio(
+    monkeypatch, qtbot, tmp_path, default_settings_payload
+) -> None:
+    """
+    @brief      Verify stale completed reports do not block generation for newly inserted Speech Blocks.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  qtbot Qt test helper fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @param[in]  default_settings_payload Fixture supplying valid baseline settings.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-08
+    @version    0.1.0
+    """
+    project_root = _create_project(tmp_path, "AudioBlocksControllerCompletedWithMissing")
+    _seed_audio_blocks_run(project_root, approved=True)
+    speech_blocks_path = (
+        project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.SPEECH_BLOCKS_OUTPUT_FILE_NAME
+    )
+    speech_blocks = speech_blocks_service.load_speech_blocks(project_root)
+    speech_blocks.append(
+        {
+            "speech_block_id": "0001-000003",
+            "sequence_index": 3,
+            "chunk_id": "chunk-0001",
+            "source_language": "en",
+            "speaker_kind": speech_blocks_service.SPEAKER_KIND_NARRATOR,
+            "speaker_id": "narrator",
+            "speaker_display_name": "Narrator",
+            "content_kind": speech_blocks_service.CONTENT_KIND_NARRATION,
+            "text": "Inserted narration.",
+            "approved": True,
+            "warning_flags": [],
+        }
+    )
+    speech_blocks_path.write_text(json.dumps(speech_blocks, indent=2) + "\n", encoding="utf-8")
     window = _build_window(qtbot, project_root, default_settings_payload)
     monkeypatch.setattr(
         audio_blocks_ui_controller.tts_runtime_ui_support,
@@ -111,13 +182,6 @@ def test_audio_blocks_ui_controller_completed_rerun_resets_downstream_before_dis
     audio_blocks_ui_controller.handle_start_generation_requested(window)
 
     assert len(start_calls) == 1
-    assert window._current_manifest is not None
-    assert window._current_manifest["current_stage"] == "speech_blocks_ready"
-    assert window._current_manifest["operations"]["audio_blocks"]["status"] == "not_started"
-    assert window._current_manifest["operations"]["audio_assembly"]["status"] == "not_started"
-    assert not (project_root / config.AUDIO_BLOCKS_OUTPUT_FILE_NAME).exists()
-    assert not (project_root / config.AUDIO_BLOCKS_STATE_FILE_NAME).exists()
-    assert not (project_root / config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME / "0001_000001_narrator.wav").exists()
 
 
 def test_audio_blocks_ui_controller_approve_all_advances_manifest_after_full_approval(
@@ -475,6 +539,7 @@ def _create_project(tmp_path, name: str):
                     "speaker_display_name": "Narrator",
                     "content_kind": speech_blocks_service.CONTENT_KIND_NARRATION,
                     "text": "Narration one.",
+                    "approved": True,
                     "warning_flags": [],
                 },
                 {
@@ -487,6 +552,7 @@ def _create_project(tmp_path, name: str):
                     "speaker_display_name": "Alice",
                     "content_kind": speech_blocks_service.CONTENT_KIND_DIALOGUE,
                     "text": "Hello there.",
+                    "approved": True,
                     "warning_flags": [],
                 },
             ],

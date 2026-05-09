@@ -135,6 +135,9 @@ Outputs:
   `narrator_language`
   `voice_assignment_mode`
   `current_stage = "narrator_definition_ready"`
+- updated `project.json.operations.narrator_definition` summary when an
+  explicit narrator profile is selected, so reopening the project does not
+  require manifest repair for a valid selected narrator
 
 ## 6. Data Contracts
 

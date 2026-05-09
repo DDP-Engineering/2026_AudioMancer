@@ -14,7 +14,7 @@
          targeted downstream invalidation when upstream voice inputs change.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-23
-@version 0.7.0
+@version 0.7.2
 """
 
 # IMPORTS
@@ -57,7 +57,7 @@ def handle_start_generation_requested(window: "MainWindow") -> None:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-23
-    @version    0.3.0
+    @version    0.3.2
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._active_operation_kind is not None:
@@ -70,6 +70,10 @@ def handle_start_generation_requested(window: "MainWindow") -> None:
         )
         return
 
+    report = audio_blocks_service.load_audio_blocks_report(window._current_project_root)
+    if _has_fully_generated_run(window._current_project_root, report):
+        return
+
     probe_result = tts_runtime_ui_support.probe_runtime_and_persist_cache(window)
     if not bool(probe_result.get("success", False)):
         QMessageBox.warning(
@@ -79,11 +83,6 @@ def handle_start_generation_requested(window: "MainWindow") -> None:
         )
         return
     runtime_settings = _runtime_settings(window, probe_result)
-    report = audio_blocks_service.load_audio_blocks_report(window._current_project_root)
-    if _has_fully_generated_run(report) and not _confirm_audio_blocks_rerun(window, current_language):
-        return
-    if _has_fully_generated_run(report):
-        _reset_audio_blocks_and_downstream(window)
     if not _confirm_generation(window, current_language):
         return
 
@@ -924,21 +923,34 @@ def _runtime_settings(window: "MainWindow", probe_result: dict[str, object]) -> 
     }
 
 
-def _has_fully_generated_run(report: dict[str, object] | None) -> bool:
+def _has_fully_generated_run(project_root: str | Path, report: dict[str, object] | None) -> bool:
     """
     @brief      Return whether Audio Blocks already generated every speech-block WAV for the current inputs.
+    @param[in]  project_root Active project root folder.
     @param[in]  report Persisted Audio Blocks report or `None`.
     @return     `True` when generation is fully complete even if approvals are pending.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-23
-    @version    0.1.0
+    @version    0.1.1
     """
     if not isinstance(report, dict):
         return False
-    total_count = int(report.get("total_block_count", 0))
-    generated_count = int(report.get("generated_block_count", 0))
-    return total_count > 0 and generated_count >= total_count
+    speech_blocks = speech_blocks_service.sort_speech_blocks(speech_blocks_service.load_speech_blocks(project_root))
+    audio_by_speech_block_id = {
+        str(block.get("speech_block_id", "")).strip(): block
+        for block in audio_blocks_service.load_audio_blocks(project_root)
+    }
+    approved_block_ids = [
+        str(block.get("speech_block_id", "")).strip()
+        for block in speech_blocks
+        if bool(block.get("approved", False)) and str(block.get("speech_block_id", "")).strip()
+    ]
+    if not approved_block_ids:
+        return False
+    return all(
+        bool(audio_by_speech_block_id.get(block_id, {}).get("generated", False)) for block_id in approved_block_ids
+    )
 
 
 def _cancel_active_operation(window: "MainWindow") -> None:

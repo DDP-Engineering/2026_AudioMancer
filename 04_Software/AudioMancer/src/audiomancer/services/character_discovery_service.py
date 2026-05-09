@@ -15,7 +15,7 @@
          operation state.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-22
-@version 0.12.0
+@version 0.13.0
 """
 
 # IMPORTS
@@ -1244,12 +1244,12 @@ def _build_chunk_windows(
     @return     Derived helper result.
     @exception  ValueError Raised when one source chunk cannot fit inside the request budget.
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.2.0
+    @date       2026-05-08
+    @version    0.3.0
     """
     if not source_chunks:
         return []
-    max_window_chunks = max(1, int(window_size))
+    max_window_chunks = len(source_chunks) if int(window_size) <= 0 else max(1, int(window_size))
     window_overlap = max(0, min(int(overlap), max_window_chunks - 1))
     text_budget_tokens = int(budget_metadata["text_budget_tokens"])
     windows: list[list[dict[str, object]]] = []
@@ -1293,8 +1293,8 @@ def _build_budget_metadata(
     @return     Context-budget metadata used for windowing and synthesis guards.
     @exception  ValueError Raised when context and output settings leave too little input room.
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-28
-    @version    0.1.0
+    @date       2026-05-08
+    @version    0.2.0
     """
     discovery_prompt_shell = prompt_template_service.render_prompt(
         "character_discovery_window_user",
@@ -1313,18 +1313,22 @@ def _build_budget_metadata(
         config.DEFAULT_CHARACTER_DISCOVERY_MIN_TEXT_BUDGET_TOKENS,
         "AI-assisted character discovery cannot run because the selected AI profile context window "
         "and max output tokens leave too little room for discovery input",
+        online_text_context_fraction=config.DEFAULT_ONLINE_AI_TEXT_CONTEXT_FRACTION,
     )
     context_window = int(discovery_budget_metadata["context_window"])
     max_output_tokens = int(discovery_budget_metadata["max_output_tokens"])
     safety_margin_tokens = int(discovery_budget_metadata["safety_margin_tokens"])
     synthesis_prompt_budget_tokens = _estimate_text_tokens(f"{system_prompt}\n\n{synthesis_prompt_shell}")
-    synthesis_payload_budget_tokens = ai_budget_service.available_text_budget(
-        context_window,
-        max_output_tokens,
-        synthesis_prompt_budget_tokens,
-        safety_margin_tokens,
-        config.DEFAULT_CHARACTER_DISCOVERY_TEXT_CONTEXT_FRACTION,
-    )
+    if ai_budget_service.uses_online_text_budget(ai_profile_payload):
+        synthesis_payload_budget_tokens = int(context_window * config.DEFAULT_ONLINE_AI_TEXT_CONTEXT_FRACTION)
+    else:
+        synthesis_payload_budget_tokens = ai_budget_service.available_text_budget(
+            context_window,
+            max_output_tokens,
+            synthesis_prompt_budget_tokens,
+            safety_margin_tokens,
+            config.DEFAULT_CHARACTER_DISCOVERY_TEXT_CONTEXT_FRACTION,
+        )
     min_text_budget = config.DEFAULT_CHARACTER_DISCOVERY_MIN_TEXT_BUDGET_TOKENS
     if synthesis_payload_budget_tokens < min_text_budget:
         raise ValueError(
@@ -1334,7 +1338,11 @@ def _build_budget_metadata(
         )
     return {
         **discovery_budget_metadata,
-        "max_window_chunks": config.DEFAULT_CHARACTER_DISCOVERY_WINDOW_SIZE,
+        "max_window_chunks": (
+            0
+            if ai_budget_service.uses_online_text_budget(ai_profile_payload)
+            else config.DEFAULT_CHARACTER_DISCOVERY_WINDOW_SIZE
+        ),
         "window_overlap": config.DEFAULT_CHARACTER_DISCOVERY_WINDOW_OVERLAP,
         "synthesis_prompt_budget_tokens": synthesis_prompt_budget_tokens,
         "synthesis_payload_budget_tokens": synthesis_payload_budget_tokens,

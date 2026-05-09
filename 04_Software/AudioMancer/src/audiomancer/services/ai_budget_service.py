@@ -13,7 +13,7 @@
          budget calculations used by AI-assisted workflow services.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-29
-@version 0.2.0
+@version 0.3.0
 """
 
 # IMPORTS
@@ -65,6 +65,19 @@ def available_text_budget(
     )
 
 
+def uses_online_text_budget(ai_profile_payload: dict[str, object]) -> bool:
+    """
+    @brief      Return whether one AI profile should use online-provider text budgeting.
+    @param[in]  ai_profile_payload Selected AI profile payload.
+    @return     True when the profile backend is the configured online AI backend.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-08
+    @version    0.1.0
+    """
+    return str(ai_profile_payload.get("backend_kind", "")).strip() == config.ONLINE_AI_BACKEND_KIND
+
+
 def context_budget_metadata(
     ai_profile_payload: dict[str, object],
     prompt_text: str,
@@ -73,6 +86,7 @@ def context_budget_metadata(
     text_context_fraction: float,
     min_text_budget_tokens: int,
     error_prefix: str,
+    online_text_context_fraction: float | None = None,
 ) -> dict[str, int]:
     """
     @brief      Build common AI context-window budget metadata.
@@ -83,11 +97,12 @@ def context_budget_metadata(
     @param[in]  text_context_fraction Maximum context fraction available to input text.
     @param[in]  min_text_budget_tokens Minimum usable text budget required by the workflow.
     @param[in]  error_prefix Workflow-specific error message prefix.
+    @param[in]  online_text_context_fraction Optional direct context fraction for online AI providers.
     @return     Common context-budget metadata fields.
     @exception  ValueError Raised when the selected profile leaves too little input room.
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.1.0
+    @date       2026-05-08
+    @version    0.2.0
     """
     context_window = max(1, int(ai_profile_payload.get("context_window", config.DEFAULT_LLM_CONTEXT_WINDOW)))
     max_output_tokens = max(
@@ -99,13 +114,16 @@ def context_budget_metadata(
         int(min_safety_margin_tokens),
         int(context_window * float(safety_margin_context_fraction)),
     )
-    text_budget_tokens = available_text_budget(
-        context_window,
-        max_output_tokens,
-        prompt_budget_tokens,
-        safety_margin_tokens,
-        text_context_fraction,
-    )
+    if online_text_context_fraction is not None and uses_online_text_budget(ai_profile_payload):
+        text_budget_tokens = int(context_window * float(online_text_context_fraction))
+    else:
+        text_budget_tokens = available_text_budget(
+            context_window,
+            max_output_tokens,
+            prompt_budget_tokens,
+            safety_margin_tokens,
+            text_context_fraction,
+        )
     min_text_budget = int(min_text_budget_tokens)
     if text_budget_tokens < min_text_budget:
         raise ValueError(

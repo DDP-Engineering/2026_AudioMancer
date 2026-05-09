@@ -13,7 +13,7 @@
          the same first-page structure without implementing import behavior.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-06
-@version 0.10.7
+@version 0.10.8
 """
 
 # IMPORTS
@@ -684,22 +684,6 @@ def _normalize_voice_assignment_mode(value: object) -> str:
     if normalized_value in config.TTS_VOICE_ASSIGNMENT_MODE_OPTIONS:
         return normalized_value
     return config.DEFAULT_TTS_VOICE_ASSIGNMENT_MODE
-
-
-def _voice_assignment_mode_label(value: object, language: str) -> str:
-    """
-    @brief      Resolve one voice-assignment mode label.
-    @param[in]  value Candidate mode.
-    @param[in]  language Target UI language code.
-    @return     Operator-facing mode label.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-26
-    @version    0.1.0
-    """
-    if _normalize_voice_assignment_mode(value) == "same_narrator":
-        return ui_state_service.translate("home.mode_same_narrator", language)
-    return ui_state_service.translate("home.mode_narrator_and_characters", language)
 
 
 def _build_locked_source_text(language: str, source_name: str | None) -> str:

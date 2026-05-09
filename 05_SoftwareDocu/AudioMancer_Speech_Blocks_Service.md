@@ -53,9 +53,14 @@ narrator-only phrase/action/paragraph segments under the TTS text budget.
   projects, because the narrator voice plays all speech blocks
 - expose content kinds `Narration`, `Dialogue`, `Background Noise`, `Pause`,
   and `Indication`
-- support selected-block edit and save operations
+- support selected-block edit and save operations, with generated-audio impact
+  confirmation shown when Edit is pressed rather than when Save is pressed
 - support manual selected-chunk Speech Block insertion and deletion, with
   chunk-local sequence updates while preserving stable Speech Block IDs
+- keep the selected chunk and selected-chunk text scroll during manual review
+  edits; inserted blocks become selected immediately, and deleting a block
+  selects the next remaining block or the previous/current row when deleting
+  the last block
 - clear warning indicators as soon as an operator starts editing a block
   without changing approval state or downstream audio inputs
 - approve or unapprove the selected speech block, approve all speech blocks,
@@ -69,6 +74,8 @@ narrator-only phrase/action/paragraph segments under the TTS text budget.
   changes that do not alter existing Audio Blocks
 - persist resumable chunk-based operation state, report data, and AI
   transaction logs
+- resume from partially generated review state after operators approve or edit
+  already generated blocks
 - build page state, notes, speaker catalogs, content-kind labels, generated-run
   button state, reset state, selected-audio preview availability, and
   AI-profile selector entries for the `Speech Blocks` page
@@ -119,9 +126,9 @@ High-level flow:
 4. `speech_blocks_service.start_or_continue_generation(...)` validates the
    selected prompt files, builds request budget metadata from the selected AI
    profile and prompt shell, restores resumable state when the saved checkpoint
-   still matches the current source snapshot and source language, and processes each
-   remaining chunk through one or more budgeted model requests with the
-   currently selected AI profile/model.
+   or partial review state still matches the current source snapshot and source
+   language, and processes each remaining chunk through one or more budgeted
+   model requests with the currently selected AI profile/model.
 5. Each response is normalized into new speech-block payloads, including exact
    source spans, current editable values, warning flags,
    approval fields, chunk-local sequence indexes, and `CCCC-BBBBBB` IDs.
@@ -142,13 +149,15 @@ High-level flow:
 8. `Approve All Speech Blocks` marks every block approved, advances the
    manifest and Home-page operation summary to completed `speech_blocks_ready`,
    and resets Audio Assembly without deleting generated Audio Blocks.
-9. Editing or deleting one block asks for confirmation when that
-   exact Speech Block already has generated audio, then deletes only that
-   block's generated Audio Blocks WAV/metadata artifacts and resets Audio
-   Assembly.
+9. Pressing Edit on one block asks for confirmation when that exact Speech
+   Block already has generated audio, then unlocks the editor only after the
+   operator accepts the impact prompt. Save commits the edit without asking
+   again, deletes only that block's generated Audio Blocks WAV/metadata
+   artifacts, and resets Audio Assembly.
 10. Inserting a block rewrites `speech_blocks.json`, updates only the selected
     chunk sequence, leaves the inserted block unapproved, preserves existing
-    generated Audio Blocks, and resets Audio Assembly because playback order
+    generated Audio Blocks, selects the inserted block, preserves the selected
+    chunk review context, and resets Audio Assembly because playback order
     changed.
 11. Re-splitting one chunk replaces only that chunk's Speech Blocks, rebuilds
     that chunk's local sequence indexes and block IDs, marks new blocks
@@ -289,6 +298,9 @@ Current invariants:
 - selected-chunk re-splits reset generated Audio Blocks data for the affected
   chunk because the Speech Blocks in that chunk are replaced
 - generation creates unapproved blocks
+- partial generated blocks remain committed progress after approval or review
+  edits; pressing `Generate Speech Blocks` continues with the next unprocessed
+  source chunk
 - Speech Blocks is complete only when every block is approved; generated but
   unapproved full output is persisted as `review_pending` in `project.json`
   operation metadata
@@ -312,6 +324,9 @@ Report and operation-state metadata include:
   `source_snapshot_fingerprint`, `source_language`, `ai_profile_id`, and
   `budget_metadata`; resume compatibility uses the source snapshot and language,
   while the stored profile and budget describe the last saved run settings
+- when approval or review updates clear the explicit resume checkpoint, the
+  service restores the next chunk from `processed_chunk_count` in the report or
+  operation metadata
 
 ## 7. Workflow Integration
 
@@ -419,6 +434,8 @@ Operator path:
   split
 - press `Approve All Speech Blocks` after review
 - if interrupted, start generation again to continue from the saved checkpoint
+- if only part of the book is generated and reviewed, start generation again to
+  continue from the next unprocessed chunk without discarding approved blocks
 
 ## 9. Validation And Tests
 

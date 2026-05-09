@@ -13,7 +13,7 @@
          file support used by the current AudioMancer implementation scaffold.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 1.36.0
+@version 1.37.1
 """
 
 # IMPORTS
@@ -190,9 +190,6 @@ APP_HELP_INDEX_RELATIVE_PATHS = {
     "en": Path("help") / "en" / "index.html",
     "ro": Path("help") / "ro" / "index.html",
 }
-
-# @brief Relative path to the packaged English user-guide HTML entry point.
-APP_HELP_INDEX_RELATIVE_PATH = Path("help") / "en" / "index.html"
 
 # @brief Source-tree user-guide HTML entry points used during development.
 APP_HELP_SOURCE_INDEX_PATHS = {
@@ -442,6 +439,12 @@ DEFAULT_MAIN_WINDOW_MIN_HEIGHT = 560
 # @brief Supported AI backend kinds for OpenAI-compatible providers.
 LLM_BACKEND_OPTIONS = ("lmstudio", "ollama", "openai_compatible")
 
+# @brief Backend kind treated as an online AI provider for request-window sizing.
+ONLINE_AI_BACKEND_KIND = "openai_compatible"
+
+# @brief Context-window fraction used as text budget for online AI providers.
+DEFAULT_ONLINE_AI_TEXT_CONTEXT_FRACTION = 0.30
+
 # @brief Default configured context window for AI profiles.
 DEFAULT_LLM_CONTEXT_WINDOW = 16384
 
@@ -600,19 +603,6 @@ DEFAULT_CHARACTER_DISCOVERY_TEXT_CONTEXT_FRACTION = 0.60
 DEFAULT_CHARACTER_DISCOVERY_SYNTHESIS_MAX_EVIDENCE_ITEMS = 20
 
 
-# Export Defaults
-# @brief Default final export format.
-DEFAULT_EXPORT_FORMAT = "mp3"
-
-# @brief Default export bitrate in kilobits per second.
-DEFAULT_EXPORT_BITRATE_KBPS = 128
-
-# @brief Default export channel layout.
-DEFAULT_EXPORT_CHANNELS = "stereo"
-
-# @brief Default export split strategy.
-DEFAULT_EXPORT_SPLIT_MODE = "single_file"
-
 # @brief Supported output modes for Audio Assembly.
 AUDIO_ASSEMBLY_OUTPUT_MODE_OPTIONS = ("per_chunk", "time_limit", "whole_book")
 
@@ -679,11 +669,5 @@ AVAILABLE_LOG_COMPONENTS = (
     "ui_state",
     "voiceweaver_runtime",
 )
-
-# @brief Default flag controlling project-local AI exchange logging.
-DEFAULT_AI_EXCHANGE_LOG_ENABLED = False
-
-# @brief Default project-local AI exchange log output format.
-DEFAULT_AI_EXCHANGE_LOG_FORMAT = "json"
 
 # END OF FILE

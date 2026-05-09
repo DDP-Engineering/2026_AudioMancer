@@ -14,7 +14,7 @@
          controls for the Speech Blocks workflow.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-24
-@version 0.7.0
+@version 0.7.1
 """
 
 # IMPORTS
@@ -44,7 +44,7 @@ class SpeechBlocksPage(QWidget):
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-24
-    @version    0.6.0
+    @version    0.6.1
     """
 
     generate_requested = Signal(str)
@@ -67,7 +67,7 @@ class SpeechBlocksPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-24
-        @version    0.6.0
+        @version    0.6.1
         """
         super().__init__(parent)
         self._current_language = "en"
@@ -425,6 +425,29 @@ class SpeechBlocksPage(QWidget):
         @version    0.1.0
         """
         return int(self._source_text_edit.verticalScrollBar().value())
+
+    def replacement_block_id_after_delete(self, speech_block_id: str) -> str | None:
+        """
+        @brief      Return the block that should be selected after deleting one visible Speech Block.
+        @param[in]  speech_block_id Speech Block identifier being deleted.
+        @return     Next visible Speech Block id, previous id when deleting the last row, or `None`.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-08
+        @version    0.1.0
+        """
+        normalized_id = str(speech_block_id).strip()
+        blocks_for_chunk = self._blocks_for_current_chunk()
+        for index, block in enumerate(blocks_for_chunk):
+            if str(block.get("speech_block_id", "")).strip() != normalized_id:
+                continue
+            if len(blocks_for_chunk) <= 1:
+                return None
+            replacement_index = min(index + 1, len(blocks_for_chunk) - 1)
+            if replacement_index == index:
+                replacement_index = index - 1
+            return str(blocks_for_chunk[replacement_index].get("speech_block_id", "")).strip() or None
+        return None
 
     def restore_source_scroll_position(self, scroll_position: int) -> None:
         """
@@ -804,20 +827,17 @@ class SpeechBlocksPage(QWidget):
 
     def _begin_editing(self) -> None:
         """
-        @brief      Enable selected-block editing and clear the warning indicator.
+        @brief      Request selected-block editing through the controller.
         @return     None.
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-24
-        @version    0.1.0
+        @version    0.1.1
         """
         block_id = self.selected_block_id()
         if block_id is None:
             return
-        self._editing = True
-        self._warning_label.clear()
         self.edit_started.emit(block_id)
-        self._apply_control_state()
 
     def _emit_save_block(self) -> None:
         """

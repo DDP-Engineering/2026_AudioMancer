@@ -15,7 +15,7 @@
          chunk-based generation, and narrator-only segmentation.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-24
-@version 0.9.0
+@version 0.11.0
 """
 
 # IMPORTS
@@ -328,6 +328,41 @@ def test_start_generation_rejects_profile_with_too_little_ai_context(monkeypatch
         speech_blocks_service.start_or_continue_generation(project_root, manifest, profile_payload)
 
 
+def test_speech_blocks_online_profile_uses_direct_context_fraction(monkeypatch) -> None:
+    """
+    @brief      Verify online Speech Blocks budgets ignore output-token budget subtraction.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-08
+    @version    0.1.0
+    """
+    monkeypatch.setattr(
+        speech_blocks_service.prompt_template_service,
+        "render_prompt",
+        lambda _name, variables: f"prompt {variables}",
+    )
+    profile_payload = {
+        **_profile_payload(),
+        "backend_kind": config.ONLINE_AI_BACKEND_KIND,
+        "context_window": 10000,
+        "max_output_tokens": 9900,
+    }
+
+    budget_metadata = speech_blocks_service._build_budget_metadata(
+        profile_payload,
+        "system",
+        "speech_blocks_user",
+        "en",
+        {"narrator": {"speaker_id": "narrator", "display_name": "Narrator"}},
+        config.DEFAULT_TTS_VOICE_ASSIGNMENT_MODE,
+        speech_blocks_service._resolve_narrator_only_budget(None),
+    )
+
+    assert budget_metadata["text_budget_tokens"] == 3000
+
+
 def test_speech_blocks_resume_accepts_changed_profile_and_budget_metadata(tmp_path) -> None:
     """
     @brief      Verify Speech Blocks resume accepts a new profile and context-budget metadata.
@@ -368,8 +403,10 @@ def test_speech_blocks_resume_accepts_changed_profile_and_budget_metadata(tmp_pa
                 "budget_metadata": previous_budget,
             },
         },
+        None,
         input_fingerprint,
         "en",
+        len(source_chunks),
     )
 
     assert restored == ([], [], 1)
@@ -1258,6 +1295,137 @@ def test_start_or_continue_generation_resumes_with_current_selected_profile(monk
     assert speech_blocks[1]["text"] == "Maria smiled."
     assert speech_blocks[2]["text"] == "Welcome."
     assert report["processed_chunk_count"] == 2
+    assert report["token_usage"]["total_tokens"] == 22
+
+
+def test_start_or_continue_generation_resumes_after_partial_review_approval(monkeypatch, tmp_path) -> None:
+    """
+    @brief      Verify approved partial Speech Blocks remain committed when generation continues.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-08
+    @version    0.1.0
+    """
+    project_root, manifest = _create_chunked_project(tmp_path, "SpeechBlocksPartialReviewResume")
+    manifest["original_language"] = "en"
+    project_workspace_service.save_manifest(manifest, project_root)
+    character_voices_service.save_selected_voice_language(project_root, "en")
+    monkeypatch.setattr(speech_blocks_service.prompt_template_service, "validate_required_prompts", lambda _names: None)
+    monkeypatch.setattr(
+        speech_blocks_service.prompt_template_service,
+        "render_prompt",
+        lambda _name, variables: f"prompt {variables}",
+    )
+    source_resolution = speech_blocks_service.resolve_source_chunks(project_root, manifest)
+    source_chunks = list(source_resolution["source_chunks"])
+    existing_blocks = [
+        {
+            "speech_block_id": "0001-000001",
+            "sequence_index": 1,
+            "chunk_id": "chunk-0001",
+            "source_language": "en",
+            "speaker_kind": "narrator",
+            "speaker_id": "narrator",
+            "speaker_display_name": "Narrator",
+            "content_kind": "narration",
+            "source_text": "Narration.",
+            "text": "Narration.",
+            "warning_flags": [],
+            "approved": True,
+            "approved_at": "2026-05-08T18:00:00+00:00",
+        }
+    ]
+    fingerprint = speech_blocks_service._build_source_fingerprint(source_chunks, "en", "original")  # noqa: SLF001
+    token_usage = {"input_tokens": 5, "output_tokens": 2, "total_tokens": 7, "usage_available": True}
+    budget_metadata = speech_blocks_service._build_budget_metadata(  # noqa: SLF001
+        _profile_payload(),
+        "prompt {}",
+        "speech_blocks_user",
+        "en",
+        speech_blocks_service._speaker_catalog([]),  # noqa: SLF001
+        config.DEFAULT_TTS_VOICE_ASSIGNMENT_MODE,
+        speech_blocks_service._resolve_narrator_only_budget(None),  # noqa: SLF001
+    )
+    speech_blocks_service._persist_state(  # noqa: SLF001
+        project_root,
+        source_chunks,
+        existing_blocks,
+        speech_blocks_service._rebuild_report(  # noqa: SLF001
+            existing_blocks,
+            "en",
+            "original",
+            "profile-1",
+            len(source_chunks),
+            1,
+            [],
+            token_usage,
+            budget_metadata,
+        ),
+        speech_blocks_service._build_operation_state(  # noqa: SLF001
+            project_root,
+            source_chunks,
+            existing_blocks,
+            status="review_pending",
+            started_at="2026-05-08T17:47:40+00:00",
+            completed_at="2026-05-08T18:00:00+00:00",
+            source_language="en",
+            source_kind="original",
+            profile_id="profile-1",
+            warning_records=[],
+            input_fingerprint=fingerprint,
+            log_path=project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / "log_ai_transactions_review.log",
+            token_usage=token_usage,
+            next_chunk_index=None,
+            budget_metadata=budget_metadata,
+        ),
+    )
+    requested_prompts: list[str] = []
+
+    def _fake_chat_json(_profile, _system_prompt, user_prompt, **_kwargs):
+        """
+        @brief      Return one generated block for the unfinished chunk.
+        @param[in]  _profile Ignored AI profile payload.
+        @param[in]  _system_prompt Ignored system prompt.
+        @param[in]  user_prompt Captured user prompt.
+        @param[in]  _kwargs Ignored keyword request arguments.
+        @return     Fake Speech Blocks model response.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-08
+        @version    0.1.0
+        """
+        requested_prompts.append(str(user_prompt))
+        return {
+            "payload": {
+                "speech_blocks": [
+                    {
+                        "speaker_id": "narrator",
+                        "content_kind": "narration",
+                        "source_text": "Maria smiled.",
+                        "text": "Maria smiled.",
+                        "warning_flags": [],
+                    }
+                ]
+            },
+            "usage": {"input_tokens": 10, "output_tokens": 5, "total_tokens": 15, "usage_available": True},
+        }
+
+    monkeypatch.setattr(speech_blocks_service.llm_provider_service, "chat_json", _fake_chat_json)
+
+    report = speech_blocks_service.start_or_continue_generation(project_root, manifest, _profile_payload())
+
+    speech_blocks = speech_blocks_service.load_speech_blocks(project_root)
+    assert len(requested_prompts) == 1
+    assert [block["chunk_id"] for block in speech_blocks] == ["chunk-0001", "chunk-0002"]
+    assert speech_blocks[0]["approved"] is True
+    assert speech_blocks[0]["text"] == "Narration."
+    assert speech_blocks[1]["approved"] is False
+    assert speech_blocks[1]["text"] == "Maria smiled."
+    assert report["processed_chunk_count"] == 2
+    assert report["approved_block_count"] == 1
     assert report["token_usage"]["total_tokens"] == 22
 
 

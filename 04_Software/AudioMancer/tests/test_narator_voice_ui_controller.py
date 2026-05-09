@@ -13,7 +13,7 @@
          explicit narrator selection, and Qwen3-backed sample generation.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-18
-@version 3.2.0
+@version 3.3.0
 """
 
 # IMPORTS
@@ -181,7 +181,10 @@ def test_narator_voice_ui_controller_select_profile_with_sample_updates_manifest
         narrator_definition_service.load_selected_profile_state(project_root)["selected_profile_id"]
         == (created_profile["profile_id"])
     )
-    assert project_workspace_service.load_manifest(project_root)["narrator_profile_name"] == "My Narrator"
+    updated_manifest = project_workspace_service.load_manifest(project_root)
+    assert updated_manifest["narrator_profile_name"] == "My Narrator"
+    assert updated_manifest["narrator_language"] == "en"
+    assert updated_manifest["operations"]["narrator_definition"]["status"] == "completed"
     assert selected_audio_path.read_bytes() == b"RIFF-selected"
     assert "selected_profile_id" in selected_metadata_path.read_text(encoding="utf-8")
 
@@ -237,7 +240,10 @@ def test_narator_voice_ui_controller_select_profile_without_sample_updates_manif
         narrator_definition_service.load_selected_profile_state(project_root)["selected_profile_id"]
         == created_profile["profile_id"]
     )
-    assert project_workspace_service.load_manifest(project_root)["narrator_profile_name"] == "Unsampled Narrator"
+    updated_manifest = project_workspace_service.load_manifest(project_root)
+    assert updated_manifest["narrator_profile_name"] == "Unsampled Narrator"
+    assert updated_manifest["narrator_language"] == "en"
+    assert updated_manifest["operations"]["narrator_definition"]["status"] == "completed"
     assert selected_audio_path.exists() is False
     assert selected_metadata_path.exists() is False
 

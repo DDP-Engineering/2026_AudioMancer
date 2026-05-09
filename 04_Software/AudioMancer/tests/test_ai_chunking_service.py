@@ -13,7 +13,7 @@
          persists resumable state, and rebuilds chunk spans from AI boundaries.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-07
-@version 0.4.0
+@version 0.5.0
 """
 
 # IMPORTS
@@ -156,6 +156,41 @@ def test_ai_chunking_rejects_profiles_with_no_input_budget(tmp_path, monkeypatch
             "scene",
             "scene",
         )
+
+
+def test_ai_chunking_online_profile_uses_direct_context_fraction_without_paragraph_cap(tmp_path, monkeypatch) -> None:
+    """
+    @brief      Verify online AI chunking ignores local paragraph caps and output-token budget subtraction.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-08
+    @version    0.1.0
+    """
+    prompt_root = tmp_path / "prompts"
+    prompt_root.mkdir()
+    (prompt_root / "text_chunking_user.txt").write_text("{strategy}\n{units_block}", encoding="utf-8")
+    monkeypatch.setattr(config, "APP_PROMPTS_PATH", prompt_root)
+    monkeypatch.setattr(config, "AI_CHUNKING_WINDOW_SIZE_BY_STRATEGY", {"scene": 1})
+    paragraph_records = [{"unit_id": f"paragraph-{index:04d}", "text": "Short paragraph."} for index in range(1, 6)]
+
+    budget_metadata = ai_chunking_service._build_budget_metadata(
+        {
+            "backend_kind": config.ONLINE_AI_BACKEND_KIND,
+            "context_window": 10000,
+            "max_output_tokens": 9900,
+        },
+        "scene",
+        "scene",
+    )
+
+    assert budget_metadata["text_budget_tokens"] == 3000
+    assert budget_metadata["strategy_paragraph_cap"] == 0
+    assert ai_chunking_service._build_windows(paragraph_records, "scene", budget_metadata) == [
+        {"start_index": 0, "end_index": 4}
+    ]
 
 
 def test_ai_chunking_keeps_oversized_paragraphs_whole() -> None:

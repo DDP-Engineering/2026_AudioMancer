@@ -14,7 +14,7 @@
          persists resumable state, and creates one AI transaction log file.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-11
-@version 0.3.0
+@version 0.4.0
 """
 
 # IMPORTS
@@ -543,6 +543,37 @@ def test_ai_cleanup_small_context_limits_unit_windows() -> None:
 
     assert len(windows) > 1
     assert windows[0]["end_index"] < len(units) - 1
+
+
+def test_ai_cleanup_online_profile_uses_direct_context_fraction_without_unit_cap(mock_prompt_environment) -> None:
+    """
+    @brief      Validate online cleanup budgets ignore local unit caps and output-token budget subtraction.
+    @param[in]  mock_prompt_environment Shared prompt-template fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-08
+    @version    0.1.0
+    """
+    _ = mock_prompt_environment
+    profile_payload = {
+        **_MOCK_PROFILE,
+        "backend_kind": config.ONLINE_AI_BACKEND_KIND,
+        "context_window": 10000,
+        "max_output_tokens": 9900,
+    }
+
+    budget_metadata = ai_cleanup_service._build_budget_metadata(
+        profile_payload,
+        "English",
+        "Latin",
+        "system",
+    )
+    units = [{"unit_id": f"unit-{index:04d}", "text": "Short cleanup unit."} for index in range(1, 30)]
+
+    assert budget_metadata["text_budget_tokens"] == 3000
+    assert budget_metadata["max_window_units"] == 0
+    assert ai_cleanup_service._build_windows(units, budget_metadata) == [{"start_index": 0, "end_index": 28}]
 
 
 def test_ai_cleanup_resumes_with_new_model_settings(

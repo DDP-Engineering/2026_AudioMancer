@@ -13,7 +13,7 @@
          notes, and ready-for-assembly summaries.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-23
-@version 0.5.0
+@version 0.5.1
 """
 
 # IMPORTS
@@ -328,6 +328,118 @@ def test_build_audio_blocks_state_starts_when_any_speech_block_is_approved(tmp_p
     assert state["can_start_or_continue"] is True
 
 
+def test_build_audio_blocks_state_disables_start_after_completed_generation(tmp_path) -> None:
+    """
+    @brief      Verify completed Audio Blocks generation leaves only reset and approval/review actions enabled.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-08
+    @version    0.1.0
+    """
+    project_root, manifest = _create_audio_blocks_project(tmp_path, "AudioBlocksCompletedStartDisabled")
+    audio_root = project_root / config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME
+    audio_root.mkdir(parents=True, exist_ok=True)
+    (audio_root / "0001_000001_narrator.wav").write_bytes(b"RIFF-1")
+    (audio_root / "0002_000001_alice.wav").write_bytes(b"RIFF-2")
+    _write_json(
+        project_root / config.AUDIO_BLOCKS_OUTPUT_FILE_NAME,
+        [
+            {
+                "speech_block_id": "0001-000001",
+                "audio_relative_path": f"{config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME}/0001_000001_narrator.wav",
+                "generated": True,
+                "approved": True,
+            },
+            {
+                "speech_block_id": "0002-000001",
+                "audio_relative_path": f"{config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME}/0002_000001_alice.wav",
+                "generated": True,
+                "approved": True,
+            },
+        ],
+    )
+    _write_json(
+        project_root / config.AUDIO_BLOCKS_REPORT_FILE_NAME,
+        {
+            "audio_blocks_stage_status": "completed",
+            "generated_block_count": 2,
+            "approved_block_count": 2,
+            "total_block_count": 2,
+        },
+    )
+    _write_json(
+        project_root / config.AUDIO_BLOCKS_STATE_FILE_NAME,
+        {
+            "status": "completed",
+            "progress_current": 2,
+            "progress_total": 2,
+        },
+    )
+
+    state = audio_blocks_state_service.build_audio_blocks_state(project_root, manifest, "en")
+
+    assert state["stage_status"] == "completed"
+    assert state["can_start_or_continue"] is False
+    assert state["can_reset"] is True
+
+
+def test_build_audio_blocks_state_reenables_start_when_completed_report_has_missing_current_block(tmp_path) -> None:
+    """
+    @brief      Verify completed reports do not hide newly inserted approved Speech Blocks without audio.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-08
+    @version    0.1.0
+    """
+    project_root, manifest = _create_audio_blocks_project(tmp_path, "AudioBlocksCompletedWithMissing")
+    speech_blocks_path = (
+        project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.SPEECH_BLOCKS_OUTPUT_FILE_NAME
+    )
+    speech_blocks = json.loads(speech_blocks_path.read_text(encoding="utf-8"))
+    speech_blocks.append(
+        {
+            "speech_block_id": "0002-000002",
+            "sequence_index": 2,
+            "chunk_id": "chunk-0002",
+            "source_language": "en",
+            "speaker_kind": speech_blocks_service.SPEAKER_KIND_NARRATOR,
+            "speaker_id": "narrator",
+            "speaker_display_name": "Narrator",
+            "content_kind": speech_blocks_service.CONTENT_KIND_NARRATION,
+            "text": "Inserted narration.",
+            "approved": True,
+            "approved_at": "2026-05-08T12:00:00+00:00",
+            "warning_flags": [],
+        }
+    )
+    speech_blocks_path.write_text(json.dumps(speech_blocks, indent=2) + "\n", encoding="utf-8")
+    _write_json(
+        project_root / config.AUDIO_BLOCKS_OUTPUT_FILE_NAME,
+        [
+            {"speech_block_id": "0001-000001", "generated": True, "approved": True},
+            {"speech_block_id": "0002-000001", "generated": True, "approved": True},
+        ],
+    )
+    _write_json(
+        project_root / config.AUDIO_BLOCKS_REPORT_FILE_NAME,
+        {
+            "audio_blocks_stage_status": "completed",
+            "generated_block_count": 2,
+            "approved_block_count": 2,
+            "total_block_count": 2,
+        },
+    )
+
+    state = audio_blocks_state_service.build_audio_blocks_state(project_root, manifest, "en")
+
+    assert state["stage_status"] == "completed"
+    assert state["can_start_or_continue"] is True
+
+
 def test_build_audio_blocks_state_keeps_reset_disabled_for_default_metadata(tmp_path) -> None:
     """
     @brief      Verify first-access default Audio Blocks metadata does not enable reset generation.
@@ -446,6 +558,20 @@ def _create_audio_blocks_project(tmp_path, name: str):
         encoding="utf-8",
     )
     return project_root, project_workspace_service.load_manifest(project_root)
+
+
+def _write_json(path, payload: object) -> None:
+    """
+    @brief      Write one JSON fixture payload.
+    @param[in]  path Target file path.
+    @param[in]  payload JSON-serializable payload.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-08
+    @version    0.1.0
+    """
+    path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
 
 
 # END OF FILE

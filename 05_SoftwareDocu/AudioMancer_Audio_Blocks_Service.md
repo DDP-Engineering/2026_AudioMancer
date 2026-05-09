@@ -30,6 +30,8 @@ narrator sample and reusable narrator clone prompt.
 - generate one final WAV plus metadata pair per approved speech block in stable
   book order, splitting long Audio Blocks internally when the loaded clone
   model's runtime `max_new_tokens` budget requires it
+- on start/continue, skip every current Audio Block that already has generated
+  audio, regardless of whether that Audio Block is approved
 - persist resumable operation state, report data, reusable prompt metadata, and
   generated artifacts after each meaningful step
 - support responsive cancellation and restart-safe continuation from the saved
@@ -43,8 +45,9 @@ narrator sample and reusable narrator clone prompt.
   metadata-only Audio Blocks that do not call VoiceWeaver
 - build page state, notes, progress, selected-block details, and selected text
   character budget for the `Audio Blocks` page
-- coordinate confirmation popups, modal progress, destructive rerun or reset,
-  and manifest synchronization through the page controller
+- coordinate confirmation popups, modal progress, explicit reset-only
+  completed-run restarts, and manifest synchronization through the page
+  controller
 - invalidate persisted Audio Blocks data when upstream narrator, character,
   language, or Speech Blocks inputs change
 
@@ -103,10 +106,13 @@ High-level flow:
 6. Voice targets are processed first. Existing persisted reusable prompt
    payloads are reused only when target id, sample fingerprint, sample text,
    selected language, and clone-model id still match.
-7. Each approved speech block is then synthesized in canonical book order:
-   source chunk order first, then that chunk's local `sequence_index`. The
-   service calls the documented `POST /v1/voice/clone-from-prompt` endpoint
-   using the persisted client-owned `voice_clone_prompt` payload and
+7. Each approved speech block that does not already have generated audio is
+   then synthesized in canonical book order: source chunk order first, then
+   that chunk's local `sequence_index`. The service skips already-generated
+   Audio Blocks, including unapproved generated blocks, so adding or deleting
+   Speech Blocks only generates the current approved blocks that still lack
+   audio. The service calls the documented `POST /v1/voice/clone-from-prompt`
+   endpoint using the persisted client-owned `voice_clone_prompt` payload and
    `model_parameters={"max_new_tokens": resolved_budget}`. Long blocks are
    split by paragraph/sentence, then clause punctuation, then word groups, and
    the completed part WAVs are stitched with Python `wave`.
@@ -256,8 +262,9 @@ Current invariants:
   payload per input fingerprint
 - unapproved Speech Blocks remain present in `audio_blocks.json`, but they are
   skipped by generation until `speech_block_approved` becomes true
-- the Audio Blocks page enables start/continue when at least one Speech Block is
-  approved
+- the Audio Blocks page enables start/continue only when at least one approved
+  Speech Block still lacks generated audio; after all generated Audio Blocks
+  are approved, reset is the explicit restart path
 - metadata-only `pause`, `background_noise`, and `indication` blocks persist an
   explicit `special_block_status`; `pause` is implemented, while
   `background_noise` and `indication` are represented as `not_implemented`

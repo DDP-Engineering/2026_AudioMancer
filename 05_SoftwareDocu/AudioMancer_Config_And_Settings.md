@@ -124,7 +124,11 @@ defaults act as paragraph caps, AI translation uses the computed text budget to
 split oversized source chunks, character discovery uses its fixed chunk-window
 size as a maximum cap while guarding final synthesis payload size, and Speech
 Blocks uses the computed text budget to split oversized source chunks before
-AI-owned block generation.
+AI-owned block generation. For `openai_compatible` profiles, cleanup,
+chunking, character discovery, and Speech Blocks instead use
+`DEFAULT_ONLINE_AI_TEXT_CONTEXT_FRACTION` against the selected profile context
+window, and they skip the local cleanup-unit, chunking-paragraph, and
+character-discovery chunk-count caps.
 `DEFAULT_AUDIO_ASSEMBLY_*` constants define the WAV-only Audio Assembly
 defaults for output mode, max duration, output format, and silence gaps.
 - AI cleanup and chunking profile defaults

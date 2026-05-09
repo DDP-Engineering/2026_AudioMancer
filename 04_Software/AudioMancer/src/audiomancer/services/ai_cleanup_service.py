@@ -15,7 +15,7 @@
          resumable window-based progress plus AI transaction logs.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-07
-@version 0.7.0
+@version 0.8.0
 """
 
 # IMPORTS
@@ -484,8 +484,8 @@ def _build_windows(
     @param[in]  budget_metadata Context-budget metadata for the selected profile.
     @return     Derived helper result.
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-28
-    @version    0.2.0
+    @date       2026-05-08
+    @version    0.3.0
     """
     text_budget = int(budget_metadata["text_budget_tokens"])
     max_window_units = int(budget_metadata["max_window_units"])
@@ -499,7 +499,7 @@ def _build_windows(
             next_tokens = _estimate_text_tokens(_build_units_block(units, end_index + 1, end_index + 1))
             if next_tokens > text_budget:
                 raise ValueError("One AI cleanup unit exceeds the configured usable input budget.")
-            if current_unit_count >= max_window_units and end_index >= start_index:
+            if max_window_units > 0 and current_unit_count >= max_window_units and end_index >= start_index:
                 break
             if current_budget + next_tokens > text_budget and end_index >= start_index:
                 break
@@ -526,8 +526,8 @@ def _build_budget_metadata(
     @return     Context-budget metadata used for request-window construction.
     @exception  ValueError Raised when context and output settings leave too little input room.
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-28
-    @version    0.1.0
+    @date       2026-05-08
+    @version    0.2.0
     """
     prompt_user_shell = _render_cleanup_user_prompt(
         {
@@ -546,8 +546,14 @@ def _build_budget_metadata(
         config.DEFAULT_AI_CLEANUP_MIN_TEXT_BUDGET_TOKENS,
         "AI-assisted cleanup cannot run because the selected AI profile context window "
         "and max output tokens leave too little room for cleanup input",
+        online_text_context_fraction=config.DEFAULT_ONLINE_AI_TEXT_CONTEXT_FRACTION,
     )
-    return {**budget_metadata, "max_window_units": config.DEFAULT_AI_CLEANUP_MAX_WINDOW_UNITS}
+    max_window_units = (
+        0
+        if ai_budget_service.uses_online_text_budget(ai_profile_payload)
+        else config.DEFAULT_AI_CLEANUP_MAX_WINDOW_UNITS
+    )
+    return {**budget_metadata, "max_window_units": max_window_units}
 
 
 def _build_model_settings(

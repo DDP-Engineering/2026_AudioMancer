@@ -616,15 +616,15 @@ def test_audio_blocks_service_skips_voiceweaver_for_metadata_only_blocks(monkeyp
     assert audio_blocks[3]["audio_relative_path"] is None
 
 
-def test_audio_blocks_service_invalidates_stale_block_fingerprint_and_deletes_artifacts(tmp_path) -> None:
+def test_audio_blocks_service_preserves_existing_audio_when_block_fingerprint_changes(tmp_path) -> None:
     """
-    @brief      Verify persisted audio is not reused when its block fingerprint no longer matches.
+    @brief      Verify existing generated WAV files are not regenerated only because a block fingerprint changed.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-27
-    @version    0.1.0
+    @version    0.1.1
     """
     project_root, manifest = _create_audio_blocks_project(tmp_path, "AudioBlocksBlockFingerprint")
     speech_blocks = speech_blocks_service.load_speech_blocks(project_root)
@@ -656,12 +656,12 @@ def test_audio_blocks_service_invalidates_stale_block_fingerprint_and_deletes_ar
         project_root=project_root,
     )
 
-    assert merged_blocks[0]["generated"] is False
-    assert merged_blocks[0]["approved"] is False
-    assert merged_blocks[0]["audio_relative_path"] is None
+    assert merged_blocks[0]["generated"] is True
+    assert merged_blocks[0]["approved"] is True
+    assert merged_blocks[0]["audio_relative_path"] == audio_path.relative_to(project_root).as_posix()
     assert merged_blocks[0]["generation_fingerprint"] != "stale-fingerprint"
-    assert not audio_path.exists()
-    assert not metadata_path.exists()
+    assert audio_path.exists()
+    assert metadata_path.exists()
 
 
 def test_audio_blocks_service_rejects_invalid_generated_wav_bytes() -> None:
@@ -1315,6 +1315,118 @@ def test_audio_blocks_service_resume_continues_from_saved_checkpoint(monkeypatch
     assert [block["generated"] for block in resumed_blocks] == [True, True]
     assert resumed_blocks[0]["runtime_result_summary"] == "Narrator ready."
     assert resumed_blocks[1]["runtime_result_summary"] == "Alice ready."
+
+
+def test_audio_blocks_service_continuation_skips_later_existing_audio_after_insert(monkeypatch, tmp_path) -> None:
+    """
+    @brief      Verify continuation generates only missing Audio Blocks and does not regenerate later existing WAVs.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-08
+    @version    0.1.0
+    """
+    project_root, manifest = _create_audio_blocks_project(tmp_path, "AudioBlocksServiceContinueMissingOnly")
+    _seed_generated_audio_blocks(project_root)
+    speech_blocks_path = (
+        project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.SPEECH_BLOCKS_OUTPUT_FILE_NAME
+    )
+    speech_blocks = speech_blocks_service.load_speech_blocks(project_root)
+    speech_blocks[1]["sequence_index"] = 3
+    speech_blocks.insert(
+        1,
+        {
+            "speech_block_id": "0001-000003",
+            "sequence_index": 2,
+            "chunk_id": "chunk-0001",
+            "source_language": "en",
+            "speaker_kind": speech_blocks_service.SPEAKER_KIND_NARRATOR,
+            "speaker_id": "narrator",
+            "speaker_display_name": "Narrator",
+            "content_kind": speech_blocks_service.CONTENT_KIND_NARRATION,
+            "text": "Inserted narration.",
+            "approved": True,
+            "approved_at": "2026-05-08T12:00:00+00:00",
+            "warning_flags": [],
+        },
+    )
+    speech_blocks_path.write_text(json.dumps(speech_blocks, indent=2) + "\n", encoding="utf-8")
+    original_blocks = audio_blocks_service.load_audio_blocks(project_root)
+    original_audio_by_id = {
+        str(block["speech_block_id"]): (project_root / str(block["audio_relative_path"])).read_bytes()
+        for block in original_blocks
+    }
+    wait_payloads = [
+        {
+            "operation": {
+                "status": "completed",
+                "result": {"voice_clone_prompt": {"format": "qwen_voice_clone_prompt_v1", "speaker": "narrator"}},
+            },
+            "result": {},
+        },
+        {
+            "operation": {
+                "status": "completed",
+                "result": {"voice_clone_prompt": {"format": "qwen_voice_clone_prompt_v1", "speaker": "alice"}},
+            },
+            "result": {},
+        },
+        {"operation": {"status": "completed"}, "result": {"available": True, "summary": "Inserted ready."}},
+    ]
+    observed_generate_requests: list[str] = []
+    monkeypatch.setattr(
+        audio_blocks_service.voiceweaver_runtime_service,
+        "read_status",
+        lambda *_args, **_kwargs: {
+            "active_model": {
+                "model_id": "Qwen3-TTS-12Hz-1.7B-Base",
+                "effective_model_parameters": {"max_new_tokens": 512},
+            },
+            "operation": {"status": "idle"},
+        },
+    )
+    monkeypatch.setattr(
+        audio_blocks_service.voiceweaver_runtime_service,
+        "load_model",
+        lambda *_args, **_kwargs: {"status": "running"},
+    )
+    monkeypatch.setattr(
+        audio_blocks_service.voiceweaver_runtime_service,
+        "create_voice_clone_prompt",
+        lambda *_args, **_kwargs: {"status": "running"},
+    )
+    monkeypatch.setattr(
+        audio_blocks_service.voiceweaver_runtime_service,
+        "generate_voice_clone_from_prompt",
+        lambda _base_url, _api_key, _voice_clone_prompt, _language, text, **_kwargs: (
+            observed_generate_requests.append(text),
+            {"status": "running"},
+        )[1],
+    )
+    monkeypatch.setattr(
+        audio_blocks_service.voiceweaver_runtime_service,
+        "wait_for_terminal_operation",
+        lambda *_args, **_kwargs: wait_payloads.pop(0),
+    )
+    monkeypatch.setattr(
+        audio_blocks_service.voiceweaver_runtime_service,
+        "download_generated_voice",
+        lambda *_args, **_kwargs: _wav_bytes("inserted"),
+    )
+
+    report = audio_blocks_service.start_or_continue_generation(project_root, manifest, _runtime_settings())
+
+    updated_blocks = audio_blocks_service.load_audio_blocks(project_root)
+    assert report["generated_block_count"] == 3
+    assert observed_generate_requests == ["Inserted narration."]
+    assert (project_root / str(updated_blocks[0]["audio_relative_path"])).read_bytes() == original_audio_by_id[
+        "0001-000001"
+    ]
+    assert (project_root / str(updated_blocks[2]["audio_relative_path"])).read_bytes() == original_audio_by_id[
+        "0001-000002"
+    ]
 
 
 def test_audio_blocks_service_input_fingerprint_mismatch_starts_fresh_run(monkeypatch, tmp_path) -> None:

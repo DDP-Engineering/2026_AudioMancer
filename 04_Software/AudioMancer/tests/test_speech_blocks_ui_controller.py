@@ -13,7 +13,7 @@
          the Speech Blocks workflow.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 0.5.0
+@version 0.5.1
 """
 
 # IMPORTS
@@ -71,21 +71,24 @@ def test_speech_blocks_ui_controller_requires_confirmation_before_starting(monke
 
 def test_speech_blocks_ui_controller_edit_start_does_not_refresh_page(monkeypatch, tmp_path) -> None:
     """
-    @brief      Verify starting a block edit clears warnings without reloading the Speech Blocks page.
+    @brief      Verify accepted block edit clears warnings and unlocks the editor without refreshing the page.
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-24
-    @version    0.2.0
+    @version    0.2.1
     """
     project_root = tmp_path / "SpeechBlocksEditStart"
     project_root.mkdir()
     clear_calls = []
+    page_calls = []
     window = SimpleNamespace(
+        _settings_payload={"language": "en"},
         _current_project_root=project_root,
         _current_manifest={"current_stage": "character_voices_ready"},
+        _speech_blocks_page=SimpleNamespace(begin_editing_selected_block=lambda: page_calls.append("edit")),
         show_project_state=lambda *_args, **_kwargs: (_ for _ in ()).throw(AssertionError("unexpected refresh")),
     )
     monkeypatch.setattr(
@@ -105,10 +108,66 @@ def test_speech_blocks_ui_controller_edit_start_does_not_refresh_page(monkeypatc
         "clear_speech_block_warning_flags",
         lambda *args: clear_calls.append(args),
     )
+    monkeypatch.setattr(
+        speech_blocks_ui_controller,
+        "_confirm_speech_block_audio_reset_if_needed",
+        lambda *_args: True,
+    )
 
     speech_blocks_ui_controller.handle_edit_started(window, "0001-000001")
 
     assert clear_calls == [(project_root, "0001-000001")]
+    assert page_calls == ["edit"]
+
+
+def test_speech_blocks_ui_controller_edit_decline_keeps_editor_locked(monkeypatch, tmp_path) -> None:
+    """
+    @brief      Verify declining the edit impact confirmation keeps the selected Speech Block read-only.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-08
+    @version    0.1.0
+    """
+    project_root = tmp_path / "SpeechBlocksEditDecline"
+    project_root.mkdir()
+    clear_calls = []
+    page_calls = []
+    window = SimpleNamespace(
+        _settings_payload={"language": "en"},
+        _current_project_root=project_root,
+        _current_manifest={"current_stage": "character_voices_ready"},
+        _speech_blocks_page=SimpleNamespace(begin_editing_selected_block=lambda: page_calls.append("edit")),
+    )
+    monkeypatch.setattr(
+        speech_blocks_ui_controller.speech_blocks_service,
+        "load_speech_blocks",
+        lambda _project_root: [
+            {
+                "speech_block_id": "0001-000001",
+                "speaker_id": "alice",
+                "content_kind": "dialogue",
+                "text": "Hello.",
+            }
+        ],
+    )
+    monkeypatch.setattr(
+        speech_blocks_ui_controller.speech_blocks_service,
+        "clear_speech_block_warning_flags",
+        lambda *args: clear_calls.append(args),
+    )
+    monkeypatch.setattr(
+        speech_blocks_ui_controller,
+        "_confirm_speech_block_audio_reset_if_needed",
+        lambda *_args: False,
+    )
+
+    speech_blocks_ui_controller.handle_edit_started(window, "0001-000001")
+
+    assert clear_calls == []
+    assert page_calls == []
 
 
 def test_speech_blocks_ui_controller_save_restores_chunk_text_scroll(monkeypatch, tmp_path) -> None:
@@ -120,7 +179,7 @@ def test_speech_blocks_ui_controller_save_restores_chunk_text_scroll(monkeypatch
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.3.0
+    @version    0.3.1
     """
     project_root = tmp_path / "SpeechBlocksSaveScroll"
     project_root.mkdir()
@@ -148,7 +207,7 @@ def test_speech_blocks_ui_controller_save_restores_chunk_text_scroll(monkeypatch
     monkeypatch.setattr(
         speech_blocks_ui_controller,
         "_confirm_speech_block_audio_reset_if_needed",
-        lambda *_args: True,
+        lambda *_args: (_ for _ in ()).throw(AssertionError("save should not ask for edit confirmation")),
     )
     monkeypatch.setattr(speech_blocks_ui_controller, "_sync_manifest_after_speech_blocks_update", lambda _window: None)
     monkeypatch.setattr(
@@ -225,21 +284,30 @@ def test_speech_blocks_ui_controller_insert_resets_downstream_and_selects_new_bl
 
 def test_speech_blocks_ui_controller_delete_confirms_and_resets_downstream(monkeypatch, tmp_path) -> None:
     """
-    @brief      Verify delete asks confirmation, delegates to service, and resets only the selected block audio state.
+    @brief      Verify delete asks confirmation, delegates to service, restores scroll, and selects the replacement row.
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.3.0
+    @version    0.3.1
     """
     project_root = tmp_path / "SpeechBlocksDeleteController"
     project_root.mkdir()
+    page_calls: list[tuple[str, object]] = []
     window = SimpleNamespace(
         _settings_payload={"language": "en"},
         _current_project_root=project_root,
         _current_manifest={"current_stage": "audio_blocks_ready"},
+        _speech_blocks_page=SimpleNamespace(
+            source_scroll_position=lambda: 42,
+            replacement_block_id_after_delete=lambda speech_block_id: (
+                page_calls.append(("replacement_for", speech_block_id)) or "0001-000002"
+            ),
+            select_speech_block=lambda speech_block_id: page_calls.append(("select", speech_block_id)),
+            restore_source_scroll_position=lambda position: page_calls.append(("restore_scroll", int(position))),
+        ),
     )
     service_calls = []
     reset_calls = []
@@ -269,6 +337,11 @@ def test_speech_blocks_ui_controller_delete_confirms_and_resets_downstream(monke
 
     assert service_calls == [(project_root, "0001-000001")]
     assert reset_calls == ["sync", "reset:0001-000001"]
+    assert page_calls == [
+        ("replacement_for", "0001-000001"),
+        ("select", "0001-000002"),
+        ("restore_scroll", 42),
+    ]
 
 
 def test_speech_blocks_ui_controller_approve_preserves_audio_blocks_and_resets_assembly(monkeypatch, tmp_path) -> None:

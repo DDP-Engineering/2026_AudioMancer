@@ -16,7 +16,7 @@
          `80_audio_blocks` workflow artifacts.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-23
-@version 0.15.0
+@version 0.15.1
 """
 
 # IMPORTS
@@ -286,7 +286,7 @@ def start_or_continue_generation(
     @exception  OperationCancelledError Raised when the operator cancels the run.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-23
-    @version    0.3.3
+    @version    0.3.4
     """
     resolved_project_root = Path(project_root)
     generation_context = _resolve_generation_context(resolved_project_root, manifest, runtime_settings)
@@ -418,7 +418,7 @@ def start_or_continue_generation(
             generation_context=generation_context,
             project_root=resolved_project_root,
         )
-    block_index = _first_incomplete_block_index(existing_blocks)
+    block_index = _first_incomplete_block_index(existing_blocks, resolved_project_root)
     existing_blocks = [_apply_model_budget_to_block(block, generation_context) for block in existing_blocks]
 
     for current_profile_index in range(profile_index, len(generation_context["voice_targets"])):
@@ -536,6 +536,8 @@ def start_or_continue_generation(
         if not bool(current_block.get("speech_block_approved", False)):
             continue
         if bool(current_block.get("metadata_only", False)):
+            continue
+        if _audio_block_has_reusable_audio(current_block, resolved_project_root):
             continue
         clone_profile = clone_profiles_by_id.get(str(current_block.get("voice_target_id", "")).strip())
         if clone_profile is None:
@@ -2281,7 +2283,7 @@ def _merge_existing_audio_blocks(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-23
-    @version    0.4.0
+    @version    0.4.1
     """
     existing_by_id = {
         str(block.get("speech_block_id", "")).strip(): _normalize_persisted_audio_block(block)
@@ -2296,9 +2298,12 @@ def _merge_existing_audio_blocks(
         if existing_block is None:
             continue
         if current_fingerprint and str(existing_block.get("generation_fingerprint", "") or "") != current_fingerprint:
-            if project_root is not None:
-                _delete_audio_block_artifacts(project_root, existing_block)
-            continue
+            if _audio_block_has_reusable_audio(existing_block, project_root):
+                existing_block["generation_fingerprint"] = current_fingerprint
+            else:
+                if project_root is not None:
+                    _delete_audio_block_artifacts(project_root, existing_block)
+                continue
         block.update(
             {
                 "audio_relative_path": existing_block.get("audio_relative_path"),
@@ -2323,6 +2328,30 @@ def _merge_existing_audio_blocks(
             }
         )
     return merged_blocks
+
+
+def _audio_block_has_reusable_audio(audio_block: AudioBlockPayload, project_root: Path | None = None) -> bool:
+    """
+    @brief      Return whether one Audio Blocks entry already has generated audio that should not be regenerated.
+    @param[in]  audio_block Audio Blocks entry to inspect.
+    @param[in]  project_root Optional active project root for WAV validation.
+    @return     True when the entry is generated and its current audio artifact is reusable.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-08
+    @version    0.1.0
+    """
+    if not bool(audio_block.get("generated", False)):
+        return False
+    if bool(audio_block.get("metadata_only", False)):
+        return True
+    audio_relative_path = _optional_string(audio_block.get("audio_relative_path"))
+    if not audio_relative_path:
+        return project_root is None
+    if project_root is None:
+        return True
+    audio_path = _safe_project_artifact_path(project_root, audio_relative_path)
+    return audio_path is not None and _is_valid_wav_path(audio_path)
 
 
 def _apply_model_budget_to_block(
@@ -2837,18 +2866,22 @@ def _generated_count(audio_blocks: list[AudioBlockPayload]) -> int:
     return sum(1 for block in audio_blocks if bool(block.get("generated", False)))
 
 
-def _first_incomplete_block_index(audio_blocks: list[AudioBlockPayload]) -> int:
+def _first_incomplete_block_index(audio_blocks: list[AudioBlockPayload], project_root: Path | None = None) -> int:
     """
     @brief      Resolve the first block index that still needs generated audio.
     @param[in]  audio_blocks Current Audio Blocks payload list.
+    @param[in]  project_root Optional active project root for WAV validation.
     @return     Zero-based first incomplete index, or list length when complete.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-24
-    @version    0.2.0
+    @version    0.2.1
     """
     for index, block in enumerate(audio_blocks):
-        if bool(block.get("speech_block_approved", False)) and not bool(block.get("generated", False)):
+        if bool(block.get("speech_block_approved", False)) and not _audio_block_has_reusable_audio(
+            block,
+            project_root,
+        ):
             return index
     return len(audio_blocks)
 

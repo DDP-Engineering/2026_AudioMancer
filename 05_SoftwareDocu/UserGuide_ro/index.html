@@ -412,9 +412,10 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                 <ul>
                     <li>Genereaza Blocuri de vorbire pentru fiecare segment aprobat.</li>
                     <li>Inspecteaza vorbitorul, tipul blocului, textul, durata pauzelor, indicatiile si metadatele.</li>
-                    <li>Editeaza blocurile selectate cand textul sau atribuirea vorbitorului trebuie corectate.</li>
+                    <li>Editeaza blocurile selectate cand textul sau atribuirea vorbitorului trebuie corectate. Daca blocul selectat are deja audio generat, avertismentul de impact apare cand apesi <strong>Edit</strong>, inainte ca editorul sa fie deblocat.</li>
                     <li>Foloseste contorul blocului selectat pentru a compara lungimea textului curent cu limita modelului TTS activ.</li>
-                    <li>Insereaza sau sterge blocuri pentru a repara dialogul, pauzele sau fluxul narativ.</li>
+                    <li>Insereaza sau sterge blocuri pentru a repara dialogul, pauzele sau fluxul narativ. Inserarea selecteaza blocul inserat; stergerea selecteaza urmatorul bloc ramas sau randul anterior cand blocul sters era ultimul.</li>
+                    <li>Editarea pastreaza Blocul de vorbire activ selectat si pastreaza segmentul selectat impreuna cu pozitia de derulare a textului.</li>
                     <li>Reimparte segmentele selectate cand structura nu este utilizabila.</li>
                     <li>Aproba blocuri individuale sau foloseste aprobare globala dupa verificare. Pe un bloc aprobat, acelasi buton pentru blocul selectat devine <strong>Dezaproba</strong> si pastreaza randul selectat.</li>
                     <li>Foloseste <strong>Generate Audio</strong> si <strong>Play/Stop</strong> pe blocul aprobat selectat pentru a previzualiza sunetul fara sa parasesti pagina.</li>
@@ -437,6 +438,7 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                 </p>
                 <ul>
                     <li>Genereaza WAV pentru Blocurile de vorbire aprobate si vorbite.</li>
+                    <li>Foloseste <strong>Start Audio Generation</strong> pentru a continua dupa adaugarea sau stergerea Blocurilor de vorbire. Blocurile audio deja generate sunt sarite chiar daca nu sunt inca aprobate; se genereaza numai blocurile aprobate curente fara audio.</li>
                     <li>Nu trimite la TTS blocurile doar-metadate: pauza, indicatie si background-noise.</li>
                     <li>Imparte intern textul prea lung si reuneste partile valide intr-un singur bloc audio.</li>
                     <li>Previzualizeaza audio generat cu controale Play/Stop.</li>

@@ -14,7 +14,7 @@
          Speech Blocks workflow.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 0.8.0
+@version 0.8.3
 """
 
 # IMPORTS
@@ -237,13 +237,15 @@ def handle_delete_block_requested(window: "MainWindow", speech_block_id: str) ->
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.3.0
+    @version    0.3.1
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._current_project_root is None or window._current_manifest is None:
         return
     if not _confirm_delete_speech_block(window, current_language):
         return
+    source_scroll_position = window._speech_blocks_page.source_scroll_position()
+    replacement_block_id = window._speech_blocks_page.replacement_block_id_after_delete(speech_block_id)
     try:
         speech_blocks_service.delete_speech_block(window._current_project_root, speech_block_id)
     except ValueError as error:
@@ -255,6 +257,9 @@ def handle_delete_block_requested(window: "MainWindow", speech_block_id: str) ->
         return
     _sync_manifest_after_speech_blocks_update(window)
     _reset_audio_block_after_speech_block_change(window, speech_block_id)
+    if replacement_block_id is not None:
+        window._speech_blocks_page.select_speech_block(replacement_block_id)
+    window._speech_blocks_page.restore_source_scroll_position(source_scroll_position)
     misc_ui_controller.show_message(
         window,
         ui_state_service.translate("status.speech_block_deleted", current_language),
@@ -263,15 +268,16 @@ def handle_delete_block_requested(window: "MainWindow", speech_block_id: str) ->
 
 def handle_edit_started(window: "MainWindow", speech_block_id: str) -> None:
     """
-    @brief      Clear one selected Speech Block warning as soon as editing starts.
+    @brief      Confirm and unlock editing for one selected Speech Block.
     @param[in]  window Active main window instance.
     @param[in]  speech_block_id Selected Speech Block identifier.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-24
-    @version    0.2.0
+    @version    0.2.1
     """
+    current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._current_project_root is None or window._current_manifest is None:
         return
     selected_block = next(
@@ -284,7 +290,10 @@ def handle_edit_started(window: "MainWindow", speech_block_id: str) -> None:
     )
     if selected_block is None:
         return
+    if not _confirm_speech_block_audio_reset_if_needed(window, speech_block_id, current_language):
+        return
     speech_blocks_service.clear_speech_block_warning_flags(window._current_project_root, speech_block_id)
+    window._speech_blocks_page.begin_editing_selected_block()
 
 
 def handle_save_block_requested(
@@ -305,7 +314,7 @@ def handle_save_block_requested(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-24
-    @version    0.4.0
+    @version    0.4.1
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._current_project_root is None or window._current_manifest is None:
@@ -314,12 +323,6 @@ def handle_save_block_requested(
     if original_block is None:
         return
     audio_affecting_change = _speech_block_audio_fields_changed(original_block, speaker_id, content_kind, text)
-    if audio_affecting_change and not _confirm_speech_block_audio_reset_if_needed(
-        window,
-        speech_block_id,
-        current_language,
-    ):
-        return
     source_scroll_position = window._speech_blocks_page.source_scroll_position()
     if not audio_affecting_change:
         window._speech_blocks_page.restore_source_scroll_position(source_scroll_position)
@@ -591,26 +594,6 @@ def _reset_speech_blocks_and_downstream(window: "MainWindow") -> None:
     )
     project_workspace_service.save_manifest(reset_manifest, window._current_project_root)
     window._current_manifest = project_workspace_service.load_manifest(window._current_project_root)
-
-
-def _chunk_id_for_speech_block(window: "MainWindow", speech_block_id: str) -> str | None:
-    """
-    @brief      Resolve the chunk identifier for one Speech Block.
-    @param[in]  window Active main window instance.
-    @param[in]  speech_block_id Selected Speech Block identifier.
-    @return     Source chunk identifier or `None`.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-27
-    @version    0.1.0
-    """
-    if window._current_project_root is None:
-        return None
-    normalized_block_id = str(speech_block_id).strip()
-    for block in speech_blocks_service.load_speech_blocks(window._current_project_root):
-        if str(block.get("speech_block_id", "")).strip() == normalized_block_id:
-            return str(block.get("chunk_id", "")).strip() or None
-    return None
 
 
 def _speech_block_by_id(window: "MainWindow", speech_block_id: str) -> dict[str, object] | None:

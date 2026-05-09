@@ -59,9 +59,10 @@ The initial shell consists of:
   profiles, destructive edit confirmations, explicit create/edit/save/delete
   actions, runtime-backed sample generation, read-only project-language
   display, and local WAV preview playback
-- Home workflow-progress rows built from `project.json.current_stage` plus
-  persisted operation summaries, so completed ready stages and unfinished
-  downstream work are shown consistently
+- Home workflow-progress rows built from persisted operation summaries first,
+  with `project.json.current_stage` used only as a legacy fallback, so
+  independently completed narrator work does not mark unrelated downstream
+  operations as finished
 - real localized workflow pages for Speech Blocks, Audio Blocks, and Audio
   Assembly, including local playback surfaces for generated audio
 - an About dialog with scrollable AGPL license text and the non-commercial

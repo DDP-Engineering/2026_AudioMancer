@@ -14,7 +14,7 @@
          project-local narrator profile editing.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-18
-@version 3.13.0
+@version 3.14.0
 """
 
 # IMPORTS
@@ -31,6 +31,7 @@ from audiomancer.services import (
     narrator_definition_service,
     project_workspace_service,
     text_cleanup_state_service,
+    time_service,
     tts_budget_service,
     ui_state_service,
     voiceweaver_runtime_service,
@@ -926,8 +927,8 @@ def _sync_manifest_summary(
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-17
-    @version    1.1.0
+    @date       2026-05-08
+    @version    1.2.0
     """
     if window._current_project_root is None or window._current_manifest is None:
         return
@@ -936,12 +937,32 @@ def _sync_manifest_summary(
     if profile_payload is None:
         updated_manifest["narrator_profile_name"] = None
         updated_manifest["narrator_language"] = None
+        updated_manifest["operations"]["narrator_definition"] = (
+            project_workspace_service.project_manifest_operation_summary("narrator_definition")
+        )
         narrator_definition_service.clear_selected_narrator_sample(window._current_project_root)
     else:
         updated_manifest["narrator_profile_name"] = (
             narrator_definition_service.display_profile_name(profile_payload) or None
         )
-        updated_manifest["narrator_language"] = narrator_definition_service.narrator_language_label(selected_language)
+        updated_manifest["narrator_language"] = narrator_definition_service.narrator_language_code(selected_language)
+        timestamp = time_service.utc_now_iso()
+        updated_manifest["operations"]["narrator_definition"] = (
+            project_workspace_service.project_manifest_operation_summary(
+                "narrator_definition",
+                {
+                    "folder_relative_path": config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH,
+                    "status": "completed",
+                    "progress_current": 1,
+                    "progress_total": 1,
+                    "mode": "manual",
+                    "started_at": timestamp,
+                    "completed_at": timestamp,
+                    "updated_at": timestamp,
+                    "warning_count": 0,
+                },
+            )
+        )
         if narrator_definition_service.has_profile_sample(
             window._current_project_root,
             str(profile_payload.get("profile_id", "")).strip(),

@@ -23,6 +23,9 @@ The service owns:
 - request construction for `POST /v1/chat/completions`
 - endpoint normalization for base URLs that already include `/v1` or the full
   `/chat/completions` path
+- JSON-object `response_format` request mode when the selected profile marks
+  structured output as supported
+- compatibility retry when one backend rejects `response_format`
 - compatibility retry when one backend rejects `max_tokens` and requests
   `max_completion_tokens`
 - response extraction from OpenAI-compatible `choices[].message.content`
@@ -48,11 +51,14 @@ The implementation lives in:
 
 Main flow:
 
-1. `chat_json(...)` builds one OpenAI-compatible chat-completions payload.
+1. `chat_json(...)` builds one OpenAI-compatible chat-completions payload and
+   adds `response_format: {"type": "json_object"}` when
+   `supports_structured_output` is enabled for the selected profile.
 2. `_request_chat_completion_with_cancellation(...)` runs the blocking HTTP
    request in one worker thread so the caller can cancel cooperatively.
 3. `_request_chat_completion(...)` posts JSON to the resolved endpoint,
-   preserves already-complete `/chat/completions` URLs, and retries once with
+   preserves already-complete `/chat/completions` URLs, reports unsupported
+   `response_format` failures back to `chat_json(...)`, and retries once with
    `max_completion_tokens` when a backend explicitly rejects `max_tokens`.
 4. `_extract_message_content(...)` reads assistant text from the first choice.
 5. `_parse_json_content(...)` strips fences, trims surrounding text, and
@@ -86,7 +92,8 @@ External dependencies:
 Inputs:
 
 - one normalized AI profile payload with `base_url`, `model_name`,
-  `temperature`, timeout, and output-token settings
+  `temperature`, timeout, output-token settings, and
+  `supports_structured_output`
 - one system prompt and one user prompt
 - optional `log_path` and per-request `log_context`
 - optional cancellation callback
@@ -134,6 +141,11 @@ Transaction-log response entries now include normalized usage:
 - `usage` for the final request result
 - `repair_usage` when one follow-up repair request was needed
 
+Transaction-log request entries include the serialized provider payload, so
+operations can verify whether `response_format` was included. If a backend
+returns HTTP 400 for unsupported `response_format`, `chat_json(...)` appends a
+`request_fallback` entry with the retry payload that omits the field.
+
 ## 7. Workflow Integration
 
 Current in-repo callers are:
@@ -141,7 +153,10 @@ Current in-repo callers are:
 - `ai_cleanup_service.clean_text(...)`
 - `ai_chunking_service.chunk_text(...)`
 - `ai_translation_service._translate_text_in_budgeted_segments(...)`
-- `character_discovery_service.start_or_continue_discovery(...)`
+- `character_discovery_service.start_or_continue_discovery(...)` for both
+  character-window discovery and character-profile synthesis
+- `speech_blocks_service._generate_budgeted_chunk_blocks(...)` for full
+  Speech Blocks runs and selected-chunk re-splitting
 
 Downstream consumers use the returned `usage` payload to:
 
@@ -186,6 +201,8 @@ Current tests cover:
 - no retry on permanent HTTP failures
 - cooperative cancellation during provider waits
 - `max_completion_tokens` compatibility retry
+- structured-output `response_format` request mode
+- unsupported `response_format` compatibility retry
 - invalid backslash escape repair
 - follow-up JSON-repair requests
 - raw-content logging on parse failure
@@ -199,8 +216,9 @@ Minimum validation after changes:
 
 ## 10. Limitations And Future Work
 
-- The service still relies on prompt-shaped JSON rather than schema-enforced
-  structured output.
+- Structured output currently uses provider JSON-object mode only, not
+  operation-specific JSON Schema definitions.
+- Follow-up JSON-repair requests remain prompt-only.
 - Only the standard OpenAI-compatible `usage` object is recognized; provider-
   specific token fields are ignored.
 - Usage remains unavailable when the backend omits or partially populates

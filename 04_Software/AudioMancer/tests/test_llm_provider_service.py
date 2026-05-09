@@ -13,7 +13,7 @@
          cleanup provider requests.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-22
-@version 0.7.1
+@version 0.8.0
 """
 
 # IMPORTS
@@ -169,6 +169,171 @@ def test_chat_json_retries_transient_failure(monkeypatch) -> None:
     )
 
     assert call_counter["count"] == 2
+    assert result["payload"]["results"][0]["unit_id"] == "unit-0001"
+
+
+def test_chat_json_sends_response_format_when_structured_output_is_supported(monkeypatch) -> None:
+    """
+    @brief      Verify structured-output-capable profiles request JSON-object response format.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-08
+    @version    0.1.0
+    """
+    request_bodies: list[dict[str, object]] = []
+
+    def _fake_urlopen(http_request, **_kwargs):
+        """
+        @brief      Capture one structured-output provider request.
+        @param[in]  http_request Provider HTTP request.
+        @param[in]  _kwargs Ignored keyword request arguments.
+        @return     Fake successful provider response.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-08
+        @version    0.1.0
+        """
+        request_bodies.append(json.loads(http_request.data.decode("utf-8")))
+        return _FakeResponse(
+            '{"choices":[{"message":{"content":"{\\"results\\":[{\\"unit_id\\":\\"unit-0001\\"}]}"}}]}'
+        )
+
+    monkeypatch.setattr(llm_provider_service.request, "urlopen", _fake_urlopen)
+
+    llm_provider_service.chat_json(
+        {
+            "id": "profile_1",
+            "backend_kind": "openai_compatible",
+            "base_url": "https://api.openai.com/v1",
+            "model_name": "gpt-5.4-mini",
+            "request_timeout_seconds": 30,
+            "temperature": 0.1,
+            "max_output_tokens": 256,
+            "supports_structured_output": True,
+        },
+        "system",
+        "user",
+    )
+
+    assert request_bodies[0]["response_format"] == {"type": "json_object"}
+
+
+def test_chat_json_omits_response_format_when_structured_output_is_not_supported(monkeypatch) -> None:
+    """
+    @brief      Verify profiles without structured-output support keep prompt-only JSON behavior.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-08
+    @version    0.1.0
+    """
+    request_bodies: list[dict[str, object]] = []
+
+    def _fake_urlopen(http_request, **_kwargs):
+        """
+        @brief      Capture one prompt-only provider request.
+        @param[in]  http_request Provider HTTP request.
+        @param[in]  _kwargs Ignored keyword request arguments.
+        @return     Fake successful provider response.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-08
+        @version    0.1.0
+        """
+        request_bodies.append(json.loads(http_request.data.decode("utf-8")))
+        return _FakeResponse(
+            '{"choices":[{"message":{"content":"{\\"results\\":[{\\"unit_id\\":\\"unit-0001\\"}]}"}}]}'
+        )
+
+    monkeypatch.setattr(llm_provider_service.request, "urlopen", _fake_urlopen)
+
+    llm_provider_service.chat_json(
+        {
+            "id": "profile_1",
+            "backend_kind": "lmstudio",
+            "base_url": "http://127.0.0.1:1234",
+            "model_name": "qwen3-8b",
+            "request_timeout_seconds": 30,
+            "temperature": 0.2,
+            "max_output_tokens": 256,
+            "supports_structured_output": False,
+        },
+        "system",
+        "user",
+    )
+
+    assert "response_format" not in request_bodies[0]
+
+
+def test_chat_json_retries_without_response_format_when_provider_rejects_it(monkeypatch, tmp_path) -> None:
+    """
+    @brief      Verify unsupported response_format failures retry once without the field and log fallback.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-08
+    @version    0.1.0
+    """
+    request_bodies: list[dict[str, object]] = []
+
+    def _fake_urlopen(http_request, **_kwargs):
+        """
+        @brief      Simulate one response_format compatibility failure followed by success.
+        @param[in]  http_request Provider HTTP request.
+        @param[in]  _kwargs Ignored keyword request arguments.
+        @return     Fake successful provider response.
+        @exception  HTTPError Raised on the first incompatible request.
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-08
+        @version    0.1.0
+        """
+        request_payload = json.loads(http_request.data.decode("utf-8"))
+        request_bodies.append(request_payload)
+        if len(request_bodies) == 1:
+            raise error.HTTPError(
+                http_request.full_url,
+                400,
+                "Bad Request",
+                hdrs=None,
+                fp=io.BytesIO(
+                    b'{"error":{"message":"Unsupported parameter: response_format",'
+                    b'"param":"response_format","code":"unsupported_parameter"}}'
+                ),
+            )
+        return _FakeResponse(
+            '{"choices":[{"message":{"content":"{\\"results\\":[{\\"unit_id\\":\\"unit-0001\\"}]}"}}]}'
+        )
+
+    monkeypatch.setattr(llm_provider_service.request, "urlopen", _fake_urlopen)
+    log_path = tmp_path / "transactions.log"
+
+    result = llm_provider_service.chat_json(
+        {
+            "id": "profile_1",
+            "backend_kind": "openai_compatible",
+            "base_url": "https://api.openai.com/v1",
+            "model_name": "gpt-5.4-mini",
+            "request_timeout_seconds": 30,
+            "temperature": 0.1,
+            "max_output_tokens": 256,
+            "supports_structured_output": True,
+        },
+        "system",
+        "user",
+        log_path=log_path,
+    )
+
+    log_text = log_path.read_text(encoding="utf-8")
+
+    assert len(request_bodies) == 2
+    assert request_bodies[0]["response_format"] == {"type": "json_object"}
+    assert "response_format" not in request_bodies[1]
+    assert "response_format_unsupported_retry_without_response_format" in log_text
     assert result["payload"]["results"][0]["unit_id"] == "unit-0001"
 
 
@@ -374,12 +539,15 @@ def test_chat_json_repairs_non_json_output_with_followup_request(
             "request_timeout_seconds": 30,
             "temperature": 0.1,
             "max_output_tokens": 256,
+            "supports_structured_output": True,
         },
         "system",
         "user",
     )
 
     assert len(request_bodies) == 2
+    assert json.loads(request_bodies[0])["response_format"] == {"type": "json_object"}
+    assert "response_format" not in json.loads(request_bodies[1])
     assert "Repair the following malformed JSON" in request_bodies[1]
     assert result["payload"]["translated_text"] == "Hello from the model."
 

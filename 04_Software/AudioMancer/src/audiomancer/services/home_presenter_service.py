@@ -13,7 +13,7 @@
          page from manifest data without depending on Qt widgets.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-06
-@version 0.4.0
+@version 0.5.0
 """
 
 # IMPORTS
@@ -29,6 +29,8 @@ _OPERATION_TO_WORKFLOW_ROW = {
     "chunking": 1,
     "translation": 2,
     "character_discovery": 3,
+    "narrator_definition": 4,
+    "character_voices": 5,
     "speech_blocks": 6,
     "audio_blocks": 7,
     "audio_assembly": 8,
@@ -48,8 +50,8 @@ def build_stage_statuses(
     @return     Ordered stage-status entries for the home page.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.3.0
+    @date       2026-05-08
+    @version    0.4.0
     """
     stage_tokens = visible_workflow_stage_tokens()
     if manifest is None:
@@ -68,16 +70,15 @@ def build_stage_statuses(
             for token in stage_tokens
         ]
 
-    finished_index = stage_reached_index(str(manifest.get("current_stage", config.DEFAULT_WORKFLOW_STAGE)))
     statuses: list[dict[str, str]] = []
-    for index, token in enumerate(stage_tokens):
+    for token in stage_tokens:
         statuses.append(
             {
                 "label": ui_state_service.translate(
                     f"home.stage_label.{token}",
                     language,
                 ),
-                "status": "finished" if finished_index >= index else "not_started",
+                "status": "not_started",
                 "note": ui_state_service.translate(
                     f"home.stage_note.active.{token}",
                     language,
@@ -88,7 +89,7 @@ def build_stage_statuses(
     if cleanup_status in {"running", "failed"} and statuses:
         statuses[0]["status"] = "in_progress"
     _apply_operation_status_overlays(statuses, manifest)
-    _apply_ready_stage_overlays(statuses, str(manifest.get("current_stage", config.DEFAULT_WORKFLOW_STAGE)))
+    _apply_legacy_stage_fallbacks(statuses, manifest)
     return statuses
 
 
@@ -207,8 +208,8 @@ def _apply_operation_status_overlays(statuses: list[dict[str, str]], manifest: d
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.2.0
+    @date       2026-05-08
+    @version    0.3.0
     """
     for operation_kind, row_index in _OPERATION_TO_WORKFLOW_ROW.items():
         if row_index >= len(statuses):
@@ -220,30 +221,26 @@ def _apply_operation_status_overlays(statuses: list[dict[str, str]], manifest: d
             statuses[row_index]["status"] = "in_progress"
 
 
-def _apply_ready_stage_overlays(statuses: list[dict[str, str]], current_stage: str) -> None:
+def _apply_legacy_stage_fallbacks(statuses: list[dict[str, str]], manifest: dict[str, object]) -> None:
     """
-    @brief      Mark later non-operation readiness stages as finished when reached.
+    @brief      Mark rows finished from current stage only when no operation summary exists.
     @param[in]  statuses Mutable Home-page status rows.
-    @param[in]  current_stage Current manifest stage token.
+    @param[in]  manifest Active manifest payload.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.2.0
+    @date       2026-05-08
+    @version    0.1.0
     """
+    current_stage = str(manifest.get("current_stage", config.DEFAULT_WORKFLOW_STAGE))
     stage_sequence = config.PROJECT_WORKFLOW_STAGES
     if current_stage not in stage_sequence:
         return
-    current_index = stage_sequence.index(current_stage)
-    ready_stage_rows = {
-        "narrator_definition_ready": 4,
-        "character_voices_ready": 5,
-        "speech_blocks_ready": 6,
-        "audio_blocks_ready": 7,
-        "audio_assembly_ready": 8,
-    }
-    for stage_token, row_index in ready_stage_rows.items():
-        if row_index < len(statuses) and current_index >= stage_sequence.index(stage_token):
+    operations = manifest.get("operations")
+    operation_payloads = operations if isinstance(operations, dict) else {}
+    finished_index = stage_reached_index(current_stage)
+    for operation_kind, row_index in _OPERATION_TO_WORKFLOW_ROW.items():
+        if row_index < len(statuses) and operation_kind not in operation_payloads and finished_index >= row_index:
             statuses[row_index]["status"] = "finished"
 
 

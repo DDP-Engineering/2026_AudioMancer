@@ -310,13 +310,13 @@ def test_speech_blocks_page_list_shows_operation_name_for_metadata_block(qtbot) 
 
 def test_speech_blocks_page_edit_enables_fields_and_save_returns_to_indicators(qtbot) -> None:
     """
-    @brief      Verify Edit enables selected-block inputs and Save disables them after emitting changes.
+    @brief      Verify confirmed Edit enables inputs and Save disables them after emitting changes.
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-24
-    @version    0.1.0
+    @version    0.1.1
     """
     page = SpeechBlocksPage()
     qtbot.addWidget(page)
@@ -359,9 +359,19 @@ def test_speech_blocks_page_edit_enables_fields_and_save_returns_to_indicators(q
         selected_text_character_limit=120,
     )
     saved_payloads: list[tuple[str, str, str, str]] = []
+    edit_requests: list[str] = []
+    page.edit_started.connect(lambda block_id: edit_requests.append(str(block_id)))
     page.save_block_requested.connect(lambda *payload: saved_payloads.append(tuple(str(value) for value in payload)))
 
     page._edit_button.click()
+
+    assert edit_requests == ["0001-000001"]
+    assert page._speaker_combo.isEnabled() is False
+    assert page._content_kind_combo.isEnabled() is False
+    assert page._speech_block_text_edit.isReadOnly() is True
+    assert page._save_button.isEnabled() is False
+
+    page.begin_editing_selected_block()
 
     assert page._speaker_combo.isEnabled() is True
     assert page._content_kind_combo.isEnabled() is True
@@ -649,6 +659,69 @@ def test_speech_blocks_page_refresh_preserves_block_selection_and_source_scroll(
     assert page.selected_block_id() == "0001-000002"
     assert page._speech_block_list.currentRow() == 1
     assert source_scroll_bar.value() == saved_scroll_position
+
+
+def test_speech_blocks_page_resolves_delete_replacement_from_visible_block_order(qtbot) -> None:
+    """
+    @brief      Verify delete replacement selection uses next row or current row when deleting the last block.
+    @param[in]  qtbot Qt test helper fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-08
+    @version    0.1.0
+    """
+    page = SpeechBlocksPage()
+    qtbot.addWidget(page)
+    page.set_project_active(True)
+    page.set_ai_profiles([("Profile One", "profile-1")], "profile-1")
+    speech_blocks = [
+        {
+            "speech_block_id": "0001-000001",
+            "sequence_index": 1,
+            "chunk_id": "chunk-0001",
+            "speaker_id": "narrator",
+            "speaker_display_name": "Narrator",
+            "content_kind": speech_blocks_service.CONTENT_KIND_NARRATION,
+            "text": "First block.",
+            "approved": False,
+        },
+        {
+            "speech_block_id": "0001-000002",
+            "sequence_index": 2,
+            "chunk_id": "chunk-0001",
+            "speaker_id": "narrator",
+            "speaker_display_name": "Narrator",
+            "content_kind": speech_blocks_service.CONTENT_KIND_NARRATION,
+            "text": "Second block.",
+            "approved": False,
+        },
+        {
+            "speech_block_id": "0001-000003",
+            "sequence_index": 3,
+            "chunk_id": "chunk-0001",
+            "speaker_id": "narrator",
+            "speaker_display_name": "Narrator",
+            "content_kind": speech_blocks_service.CONTENT_KIND_NARRATION,
+            "text": "Third block.",
+            "approved": False,
+        },
+    ]
+    page.set_speech_blocks_state(
+        source_chunks=[{"chunk_id": "chunk-0001", "sequence_index": 1, "text": "Chunk text."}],
+        speech_blocks=speech_blocks,
+        notes=["Ready."],
+        selected_profile_id="profile-1",
+        stage_status="in_progress",
+        selected_source_language="en",
+        processed_chunk_count=1,
+        total_chunk_count=1,
+        speaker_catalog=[{"speaker_id": "narrator", "display_name": "Narrator", "speaker_kind": "narrator"}],
+        content_kind_options=[(speech_blocks_service.CONTENT_KIND_NARRATION, "Narration")],
+    )
+
+    assert page.replacement_block_id_after_delete("0001-000002") == "0001-000003"
+    assert page.replacement_block_id_after_delete("0001-000003") == "0001-000002"
 
 
 def test_speech_blocks_page_disables_generate_without_source_and_while_busy(qtbot) -> None:

@@ -12,11 +12,12 @@
 @details Verifies conservative token estimates and reusable input-budget math.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-29
-@version 0.2.0
+@version 0.3.0
 """
 
 # IMPORTS
 
+from audiomancer import config
 from audiomancer.services import ai_budget_service
 
 
@@ -87,6 +88,35 @@ def test_context_budget_metadata_builds_common_fields_and_rejects_tiny_budget() 
         assert str(error).startswith("Workflow cannot run")
     else:
         raise AssertionError("Expected tiny budget to raise ValueError.")
+
+
+def test_context_budget_metadata_uses_direct_online_context_fraction() -> None:
+    """
+    @brief      Verify online provider budgets use the configured direct context fraction.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-08
+    @version    0.1.0
+    """
+    metadata = ai_budget_service.context_budget_metadata(
+        {
+            "backend_kind": config.ONLINE_AI_BACKEND_KIND,
+            "context_window": 1000,
+            "max_output_tokens": 950,
+        },
+        "prompt text",
+        min_safety_margin_tokens=50,
+        safety_margin_context_fraction=0.01,
+        text_context_fraction=0.5,
+        min_text_budget_tokens=100,
+        error_prefix="Workflow cannot run",
+        online_text_context_fraction=config.DEFAULT_ONLINE_AI_TEXT_CONTEXT_FRACTION,
+    )
+
+    assert metadata["text_budget_tokens"] == 300
+    assert ai_budget_service.uses_online_text_budget({"backend_kind": config.ONLINE_AI_BACKEND_KIND}) is True
+    assert ai_budget_service.uses_online_text_budget({"backend_kind": "lmstudio"}) is False
 
 
 # END OF FILE

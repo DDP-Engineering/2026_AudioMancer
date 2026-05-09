@@ -19,7 +19,9 @@ approval-aware UI model.
 
 - load and merge Speech Blocks with persisted Audio Blocks
 - resolve the selected/current block and full source-text preview
-- build localized notes, status lines, progress values, and button enablement
+- build localized notes, status lines, progress values, and button enablement,
+  including disabling start/continue only when all current approved Speech
+  Blocks already have generated audio
 - expose generated/approved counts and resumable operation metadata
 - surface selected text character limits from cached VoiceWeaver budget data
 
@@ -42,6 +44,12 @@ The service loads current artifacts, merges block state by
 `speech_block_id`, computes progress and readiness, resolves the current block
 from operation state, and returns a dictionary consumed directly by
 `AudioBlocksPage.set_audio_blocks_state(...)`.
+
+Start/continue readiness is based on remaining approved source work, not only
+on whether approved Speech Blocks exist or whether an older report was marked
+completed. If Speech Blocks are inserted or affected Audio Blocks are removed
+after a completed run, `can_start_or_continue` becomes true again only for the
+current approved Speech Blocks that still lack generated audio.
 
 ## 4. Dependencies
 

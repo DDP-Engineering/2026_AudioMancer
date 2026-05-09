@@ -30,6 +30,8 @@ generation.
 - probe configured AI profiles and normalize discovered model metadata
 - estimate conservative local context budgets when a model profile exposes a
   context window
+- size online OpenAI-compatible request text budgets from a direct configured
+  fraction of the selected profile context window
 - render prompt templates from `prompts/*.txt` with exact placeholder checking
 - normalize provider-reported token usage and merge cumulative usage payloads
 - render shared AI token-usage notes for page-state services
@@ -118,8 +120,12 @@ Token usage payload:
 
 Budget metadata includes the source context window, reserved output tokens,
 safety tokens, estimated prompt tokens, estimated input tokens, and resulting
-available input budget. Tiny or exhausted budgets raise a value error instead
-of allowing an impossible AI request.
+available input budget. For local `lmstudio` and `ollama` profiles, the input
+budget subtracts prompt, output, and safety reserves before applying the local
+text-context fraction. For `openai_compatible` profiles, cleanup, chunking,
+character discovery, and Speech Blocks use the configured online text-context
+fraction directly against the selected context window. Tiny or exhausted
+budgets raise a value error instead of allowing an impossible AI request.
 
 Prompt rendering requires an exact placeholder set: missing placeholders and
 unused values are both treated as errors.
