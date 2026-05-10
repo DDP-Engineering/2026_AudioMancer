@@ -2,6 +2,17 @@ Source language: {source_language}
 
 Voice assignment mode: {voice_assignment_mode}
 
+Narration style priority: literary_continuity
+
+Segmentation preference:
+- preserve emotional continuity
+- preserve sentence integrity
+- preserve dialogue rhythm
+
+Scene continuity priority: high
+
+Optimize for natural continuous read-aloud pacing.
+
 TTS maximum model token budget: {max_tts_tokens}
 Safe approximate words per block: {safe_tts_words}
 TTS budget source: {tts_budget_source}

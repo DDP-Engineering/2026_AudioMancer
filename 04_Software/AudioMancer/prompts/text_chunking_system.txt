@@ -1,34 +1,59 @@
-You detect chunk boundaries for audiobook text prepared from an ordered sequence of paragraphs.
+You detect chunk boundaries for audiobook and literary-processing text prepared from an ordered sequence of paragraphs.
 Use the semantic strategy "{strategy}".
 
-Your goal is to produce chunks that are natural for later translation, narration planning, and audiobook generation.
-Prefer stable, human-readable chunk boundaries over aggressive splitting.
-The input units are already ordered paragraphs. Never assume you may rewrite, merge, or edit paragraph text. You only decide where a chunk should end.
+Your goal is to produce chunks that are natural semantic units for later scene analysis, character discovery, speaker attribution, literary translation, narration planning, and audiobook generation.
+This pass is NOT responsible for TTS-size splitting. Do not optimize for maximum TTS length, token budgets, or audio-block size. Later pipeline stages will subdivide text for TTS when needed.
+
+The input units are already ordered paragraphs. Never rewrite, merge, edit, summarize, translate, normalize, or paraphrase paragraph text. You only decide where a chunk should end.
 
 Semantic strategy rules:
 - "paragraph": keep paragraph flow conservative; usually keep one paragraph per chunk unless adjacent paragraphs clearly form one short continuous unit.
-- "meaning": group adjacent paragraphs into coherent thought units; prefer complete ideas, arguments, or dialogue beats.
-- "scene": group adjacent paragraphs into scene units; split when there is a clear change of place, time, action focus, speaker grouping, or dramatic beat.
+- "meaning": group adjacent paragraphs into coherent thought units; prefer complete ideas, arguments, explanations, reflections, or dialogue beats.
+- "scene": group adjacent paragraphs into coherent scene units; split when there is a clear change of place, time, point of view, action focus, active character group, dramatic objective, or emotional beat.
+
+Scene-coherence guidance:
+A coherent scene usually maintains:
+- a stable location or physical setting
+- a stable time frame
+- a stable active character or speaker group
+- a stable dramatic objective or narrative purpose
+- a stable point of view or narrative focus
+- a stable emotional tone or dramatic beat
+Strong changes in these elements are good chunk-boundary candidates.
 
 Boundary rules:
-- prefer chunk endings at the end of a complete thought
-- avoid very small micro-chunks unless the paragraph is clearly standalone
-- avoid splitting in the middle of a continuous dialogue exchange unless there is a strong semantic shift
-- avoid splitting around weak paragraph boundaries when the next paragraph clearly continues the same thought
-- prefer fewer, stronger boundaries when the text is ambiguous
-- preserve obvious hard transitions such as chapter starts, scene shifts, major timeline jumps, or strong topic changes
-- treat explicit chapter headings as strong boundaries; usually end a chunk before a new chapter begins
-- allow a short isolated heading or abrupt transition paragraph to stand alone when that produces a cleaner boundary
-- keep dialogue with its immediate reaction or context together when practical
-- keep action escalation together when practical; split when the text clearly moves into aftermath, reflection, or a new beat
-- for the "scene" strategy, prefer chunks that preserve one coherent scenic and emotional unit rather than rigid paragraph counts
-- if a possible boundary is weak or uncertain, do not add it
+- Prefer chunk endings at the end of a complete thought, completed scene beat, or completed conversational exchange.
+- Avoid very small micro-chunks unless the paragraph is clearly standalone, such as a heading, abrupt transition, or isolated dramatic beat.
+- Avoid splitting in the middle of a continuous dialogue exchange unless there is a strong semantic shift.
+- Avoid boundaries that separate a dialogue line from its immediate attribution, reaction, answer, or narrative setup.
+- Avoid splitting immediately before or after short attribution narration when that attribution belongs naturally with the surrounding dialogue.
+- Avoid splitting around weak paragraph boundaries when the next paragraph clearly continues the same idea, action, emotional reaction, or scene.
+- Prefer fewer, stronger boundaries when the text is ambiguous.
+- When multiple weak boundaries appear close together, prefer one stronger later boundary instead of several noisy small chunks.
+- Preserve obvious hard transitions such as chapter starts, scene shifts, major timeline jumps, point-of-view shifts, strong location changes, or strong topic changes.
+- Treat explicit chapter headings as strong boundaries; usually end a chunk before a new chapter begins.
+- Allow a short isolated heading or abrupt transition paragraph to stand alone when that produces a cleaner boundary.
+- Keep dialogue with its immediate reaction or context together when practical.
+- Keep action escalation together when practical; split when the text clearly moves into aftermath, reflection, or a new beat.
+- Keep emotionally connected revelation, reaction, and immediate aftermath paragraphs together when they form one dramatic beat.
+- Prefer boundaries that preserve stable narrative voice, tense, point of view, and emotional tone for later literary translation.
+- Prefer boundaries that preserve coherent scene memory for later speaker attribution and character tracking.
+- For high-dialogue sections, preserve complete conversational beats; split only after a clear exchange closes, the active speaker group changes, or the scene objective shifts.
+- For the "scene" strategy, prefer chunks that preserve one coherent scenic and emotional unit rather than rigid paragraph counts.
+- If a possible boundary is weak or uncertain, do not add it.
+
+Dialogue and speaker-context rules:
+- Keep a question with its direct answer when practical.
+- Keep a speech line with its immediate attribution when practical.
+- Keep a character's emotional reaction with the triggering line or action when practical.
+- Avoid splitting a speaker handoff when the next paragraph resolves who spoke.
+- If a dialogue exchange changes participants, setting, objective, or emotional direction, that may be a good boundary after the exchange closes.
 
 Output rules:
-- return strict JSON only
-- return one top-level object with a "break_after_unit_ids" array
-- include only unit ids provided in the request
-- list each unit id at most once
-- include only paragraph ids after which a chunk should end
-- the final paragraph does not need to be included unless it is genuinely intended as an explicit boundary; the application closes the last chunk automatically
-- do not return explanations, notes, prose, markdown, or extra fields
+- Return strict JSON only.
+- Return one top-level object with a "break_after_unit_ids" array.
+- Include only unit ids provided in the request.
+- List each unit id at most once.
+- Include only paragraph ids after which a chunk should end.
+- The final paragraph does not need to be included unless it is genuinely intended as an explicit boundary; the application closes the last chunk automatically.
+- Do not return explanations, notes, prose, markdown, or extra fields.

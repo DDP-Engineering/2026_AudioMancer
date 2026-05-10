@@ -1,8 +1,15 @@
 Review these ordered chunks and extract only character candidates who speak dialogue.
+
 The source language can be any language. Do not depend on English speech verbs.
 Use provided DIALOGUE_SPANS as primary evidence when available, and otherwise use language-agnostic dialogue punctuation or model confidence from the quoted/direct-speech structure.
 Analyze only the content between TEXT_BEGIN and TEXT_END for the selected input source.
 Do not mix source-language and translated-language wording in canonical_name, aliases, or evidence excerpts; preserve the form used in TEXT.
+
+Discovery priority:
+- stable canonicalization
+- conservative alias merging
+- audiobook voice consistency
+- evidence-backed speaking-character discovery
 
 Return exactly one JSON object with this shape:
 {
@@ -30,7 +37,11 @@ Do include recurring unnamed or role-based speakers when direct speech is attrib
 When a role-based speaker is unnamed, name the role in the same language/form used in TEXT.
 For each returned character, provide at least one evidence item tied to spoken dialogue or direct speech.
 Prefer `dialogue_span_id` from DIALOGUE_SPANS for each evidence item. Leave it empty only when no span id applies.
-Set evidence `confidence` to `high`, `medium`, or `low`; use `high` only when the evidence is anchored to a dialogue span or direct dialogue punctuation.
+Set evidence `confidence` to `high`, `medium`, or `low`; use `high` only when the evidence is anchored to a dialogue span, direct attribution, or clear direct dialogue punctuation.
+Use character-level `confidence` as:
+- `high` for directly attributed or repeatedly supported speaking characters
+- `medium` for probable but partially inferred speaking characters
+- `low` for weakly supported or ambiguous candidates
 Use each chunk id exactly as provided.
 Keep each source_excerpt short and escape any inner quotes correctly for JSON.
 Do not write final descriptions, voice notes, relationship summaries, or TTS voice fields in this discovery pass.

@@ -15,3 +15,11 @@ Chunk text:
 {chunk_text}
 
 Analyze this chunk and return one JSON object with the ordered `speech_blocks` array only.
+
+Important:
+- Analyze only the provided chunk text as the source of `source_text`.
+- Use only the provided chunk text and allowed speaker catalog to help speaker attribution.
+- Do not copy text from the allowed speaker catalog into `source_text`.
+- Preserve the full chunk in ordered contiguous Speech Blocks.
+- Use only speaker ids from the allowed speaker catalog.
+- If speaker attribution is uncertain, use `speaker_id: "narrator"` and include `ambiguous_speaker`.

@@ -11,8 +11,18 @@ Narration mode:
 Segmentation goal:
 - Split the chunk into natural continuous audio segments under the TTS budget.
 - Prefer paragraph, action, sentence-group, and phrase boundaries that preserve emotional continuity.
+- Strongly prefer preserving complete sentences within a block whenever practical under the TTS budget.
+- Preserve intentional paragraph rhythm and pacing when it contributes to dramatic or literary flow.
+- Prefer segmentation that produces comfortable read-aloud breathing rhythm for continuous narration.
+- Prefer boundaries that preserve natural literary cadence and read-aloud rhythm rather than purely maximizing block size.
+- Do not split at weak punctuation or paragraph boundaries when the next text strongly continues the same narrative or emotional flow.
+- Prefer boundaries at strong scene transitions, chapter transitions, major time jumps, or major location changes.
 - Keep dialogue, quoted text, guillemets, dash-led dialogue, punctuation, and attribution text inside the continuous narrator flow.
+- Prefer keeping short dialogue exchanges and their immediate narration together when they form one continuous dramatic beat.
 - Do not split a short dialogue turn away from its local attribution when keeping them together improves performance continuity.
+- When narration interrupts dialogue, preserve the interruption structure within the same continuous narrator flow whenever practical.
+- Nested quotation marks inside dialogue or narration should remain part of the same continuous narration flow unless a strong TTS boundary is needed.
+- Avoid boundaries that separate emotional setup, revelation, and immediate reaction when they form one dramatic beat.
 - Do not create tiny fragments unless the source itself is a tiny paragraph or the TTS budget requires it.
 
 TTS budget:

@@ -2,6 +2,7 @@ Classify the following extracted text units.
 
 Source language hint: {source_language_hint}
 Dominant script hint: {dominant_script_hint}
+Literary preservation priority: high
 Unit count: {unit_count}
 
 {units_block}

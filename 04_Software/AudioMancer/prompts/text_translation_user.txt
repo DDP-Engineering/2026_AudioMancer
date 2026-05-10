@@ -1,8 +1,15 @@
 Translate the following audiobook chunk into {target_language}.
 
+Translation mode: literary_audiobook
+Style preservation priority: high
+Translation faithfulness priority: high
+
 Requirements:
 - preserve the original meaning
 - preserve paragraph breaks whenever possible
+- preserve historical or literary tone when present in the source
+- preserve distinct character voice and dialogue personality whenever possible
+- optimize for natural read-aloud flow in the target language
 - keep character names, proper nouns, and invented terms consistent unless they clearly require translation
 - keep short standalone headings or standalone lines as standalone lines
 - avoid summaries, omissions, explanations, or added context

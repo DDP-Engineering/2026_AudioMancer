@@ -5,12 +5,42 @@ Do not use markdown fences.
 Do not add explanations outside JSON.
 Escape any quote characters and embedded newlines inside JSON string values.
 
-Focus only on characters who speak dialogue in the book and matter for later voice planning.
-Exclude characters mentioned only by narration, description, exposition, or crowd references.
-Include recurring role-based speakers even when no personal name is known, such as `his agent`, `the pilot`, or `a guard`, when quoted dialogue is directly attributed to that role.
-For role-based speakers, use the role phrase as the canonical name until a better personal name is supported by the source.
-Use chunk ids exactly as provided.
-Never invent chunk ids or evidence.
+Core goal:
+- Discover only characters who speak dialogue in the book and matter for later voice planning.
+- Exclude characters mentioned only by narration, description, exposition, internal thought, remembered speech, hypothetical dialogue, or crowd references.
+- Include recurring role-based speakers even when no personal name is known, such as `his agent`, `the pilot`, or `a guard`, when quoted dialogue is directly attributed to that role.
+- For role-based speakers, use the role phrase as the canonical name until a better personal name is supported by the source.
+- Use chunk ids exactly as provided.
+- Never invent chunk ids, dialogue span ids, aliases, or evidence.
+
+Speaking-character evidence rules:
+- Include only characters whose evidence shows spoken dialogue or direct speech.
+- Short emotional utterances, interjections, and non-verbal spoken reactions such as "Oh!", "Hm.", "Ah!", or similar may still represent valid speaking-character evidence when they are presented as spoken dialogue.
+- Do not infer speaking characters from narration-only references.
+- Do not infer speaking characters from internal thoughts, remembered speech, imagined speech, quoted documents, inscriptions, signs, or hypothetical dialogue unless the source clearly presents them as audible spoken dialogue.
+- Use provided dialogue spans as primary evidence when available.
+- If dialogue spans are not available, use language-agnostic dialogue punctuation, direct-speech structure, and local source context.
+- Do not depend only on English speech verbs.
+
+Canonical name and alias rules:
+- Identify the best canonical name available in the source.
+- Include aliases only when supported by the text.
+- Do not merge possible aliases unless the source provides reasonable supporting evidence that they refer to the same speaking character.
+- Preserve names, aliases, titles, honorifics, and role labels in the same language/form used in the source.
+- Honorifics and formal titles may appear with or without personal names. Preserve the source form used in dialogue evidence unless a stronger canonical form is clearly supported.
+- Prefer stable recurring role labels for unnamed speakers when the dialogue context strongly suggests the same recurring role-based character.
+- Do not create a new character candidate from a single weak or ambiguous dialogue attribution unless the source provides meaningful supporting evidence.
+
+Speaker continuity rules:
+- Prefer maintaining conversational continuity when a nearby dialogue sequence strongly implies the same speaker across adjacent dialogue turns.
+- Use speaker continuity only as supporting evidence, not as a reason to invent unsupported names.
+- If continuity suggests a speaker but evidence is weak, lower the candidate or evidence confidence rather than inventing certainty.
+
+Confidence rules:
+- Use high confidence for directly attributed or repeatedly supported speaking characters.
+- Use medium confidence for probable but partially inferred speaking characters.
+- Use low confidence for weakly supported or ambiguous candidates.
+- Evidence confidence should reflect the specific evidence item, not the whole character.
 
 For every discovered character candidate:
 - identify the best canonical name available in the source

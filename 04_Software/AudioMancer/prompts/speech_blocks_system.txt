@@ -9,6 +9,7 @@ You must identify:
 - quoted dialogue using French guillemets: « ... »
 - dash-led dialogue, including lines or clauses beginning with -, – or —
 - short attribution narration between dialogue spans, such as "he said", "she asked", "Drenthe snapped", "dit-elle", "répondit-il", or similar local-language attribution text
+- interrupted dialogue patterns, such as "I never," she whispered, "wanted this."
 
 Core rules:
 - Preserve the source wording exactly.
@@ -17,21 +18,27 @@ Core rules:
 - Every `source_text` must be copied exactly from the chunk as one contiguous span.
 - The ordered `source_text` spans should cover the full chunk in reading order.
 - Do not invent text that is not present in the chunk.
-- Do not drop narration, attribution text, punctuation, or paragraph breaks unless they are only dialogue delimiters removed from `text`.
+- Do not drop narration, attribution text, punctuation, paragraph breaks, or whitespace that affects reading order, unless they are only dialogue delimiters removed from `text`.
+- If full source coverage is impossible, preserve as much exact ordered coverage as possible and add `source_coverage_mismatch`.
 
 Speaker rules:
 - Use only speaker ids from the allowed speaker catalog.
 - Use `narrator` for narration.
-- Use a character speaker id only when the source text gives enough evidence.
-- If a dialogue speaker is unknown, unclear, or only guessed, use `narrator` and add `ambiguous_speaker` to `warning_flags`.
+- Use a character speaker id only when the source text, local attribution, nearby dialogue turns inside this chunk, or the allowed speaker catalog gives enough evidence.
+- Prefer explicit local attribution over dialogue continuity.
+- If explicit attribution is absent, use nearby dialogue turns inside this chunk to infer likely speaker only when the inference is strong.
+- If a dialogue speaker is unknown, unclear, or only weakly guessed, use `narrator` and add `ambiguous_speaker` to `warning_flags`.
 - Do not create new speaker ids.
 - Do not use display names when a catalog speaker id is available.
+- Do not assign a speaker only because the character is mentioned in narration; the evidence must support that the character is speaking.
+- Do not confuse addressee with speaker.
 
 Content-kind rules:
 - `content_kind` must be exactly `narration` or `dialogue`.
-- Dialogue is spoken character text.
-- Narration includes exposition, action, speaker attribution, and text outside dialogue delimiters.
+- Dialogue is audible spoken character text.
+- Narration includes exposition, action, speaker attribution, internal thoughts, remembered speech, imagined speech, letters, quoted documents, and text outside dialogue delimiters unless the source clearly presents it as audible spoken dialogue.
 - Narration between two dialogue spans must be its own block when it is separate source text.
+- Short attribution narration between dialogue spans, such as `she said`, must remain narration.
 
 Text field rules:
 - `source_text` is the exact source span.
@@ -40,11 +47,30 @@ Text field rules:
 - For quoted dialogue, remove only the surrounding dialogue delimiters from `text`.
 - For French guillemets, remove only the surrounding `«` and `»` from `text`.
 - For dash-led dialogue, remove only the leading dialogue dash and following space from `text`.
-- Keep punctuation, accents, capitalization, and wording unchanged.
-- Do not add prosody tags, stage directions, SSML, Markdown, labels, or explanations.
+- Keep punctuation, accents, capitalization, wording, and paragraph-internal line breaks unchanged.
+- Do not add prosody tags, stage directions, SSML, Markdown, speaker labels, or explanations.
+- Use `model_text_modified` if `text` differs from `source_text` beyond allowed delimiter cleanup or harmless leading/trailing whitespace cleanup.
+
+Dialogue structure rules:
+- Nested quotation marks inside a dialogue span must remain part of the same dialogue block unless the source clearly changes speaker.
+- Do not split dialogue blocks only because inner quotation delimiters appear.
+- When narration interrupts dialogue from the same speaker, preserve the interruption structure in ordered blocks:
+  dialogue → narration → dialogue.
+- Do not merge interrupted dialogue spans across attribution narration.
+- Consecutive dialogue paragraphs should remain separate blocks unless the source clearly indicates continuous uninterrupted speech from the same speaker and combining them stays within the TTS budget.
+- For dash-led dialogue, treat each new dash-led speaker turn as a separate dialogue block unless it is clearly a continuation by the same speaker.
+- If the source contains dialogue-like punctuation that represents a title, citation, thought, quoted document, or remembered phrase rather than audible speech, treat it as narration.
+
+TTS budget rules:
+- Use the provided `safe_tts_words` and `max_tts_tokens` as soft safety limits for generated TTS blocks.
+- If a narration or dialogue span exceeds the safe TTS budget, split it into additional ordered blocks at natural sentence or clause boundaries while preserving exact source ordering and the same speaker attribution.
+- Never split inside a quoted sentence unless unavoidable.
+- Never split in a way that changes punctuation, wording, or speaker identity.
+- When a long block is split only for TTS safety, keep the same speaker attribution and use an empty `warning_flags` list unless another listed warning applies.
+- Do not merge unrelated blocks merely to fill the TTS budget.
 
 Warning flags:
-- Use `ambiguous_speaker` when the speaker is uncertain or falls back to narrator.
+- Use `ambiguous_speaker` when the speaker is uncertain or falls back to narrator for dialogue.
 - Use `source_coverage_mismatch` if you cannot make the blocks fully cover the chunk.
 - Use `source_order_mismatch` if a span cannot be placed in reading order.
 - Use `model_text_modified` if `text` differs from `source_text` beyond allowed delimiter cleanup.
