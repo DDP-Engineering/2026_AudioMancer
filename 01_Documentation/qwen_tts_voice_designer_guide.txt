@@ -1,0 +1,292 @@
+
+QWEN TTS VOICE DESIGNER GUIDE
+=============================
+
+INTRODUCTION
+------------
+Qwen3-TTS Voice Designer works best with highly descriptive prompts that define:
+- vocal timbre
+- age
+- pacing
+- emotional tone
+- articulation
+- personality
+- delivery style
+- cinematic context
+
+The model responds much better to acoustic and emotional descriptors than to simple character labels.
+
+GOOD:
+"A mature male voice with deep resonance, calm pacing, and restrained emotional authority."
+
+BAD:
+"An old king voice."
+
+------------------------------------------------------------
+1. IDEAL PROMPT LENGTH
+------------------------------------------------------------
+
+Recommended:
+80–220 words
+
+Best practical range:
+120–180 words
+
+Too short:
+- voice becomes generic
+- unstable emotional identity
+- inconsistent speech rhythm
+
+Too long:
+- conflicting instructions
+- overfitting to irrelevant details
+- unstable tone generation
+
+The best prompts are:
+- dense
+- descriptive
+- focused
+- cinematic
+- acoustically grounded
+
+------------------------------------------------------------
+2. BEST PROMPT STRUCTURE
+------------------------------------------------------------
+
+Recommended structure:
+
+1. Age + gender
+2. Vocal timbre
+3. Speaking rhythm
+4. Emotional profile
+5. Delivery style
+6. Personality cues
+7. Optional cinematic context
+
+Example structure:
+
+"A mature female voice with a low resonant register and calm deliberate pacing.
+Speaks with controlled intelligence and emotional restraint.
+Clear articulation with subtle warmth beneath a stern exterior.
+Elegant and authoritative delivery suitable for a political leader in a cinematic science fiction audiobook."
+
+------------------------------------------------------------
+3. IMPORTANT ACOUSTIC DESCRIPTORS
+------------------------------------------------------------
+
+Useful terms:
+
+Timbre:
+- warm
+- deep
+- resonant
+- gravelly
+- smooth
+- breathy
+- sharp
+- velvety
+- textured
+- airy
+- metallic
+- soft
+- rough
+
+Pacing:
+- deliberate
+- measured
+- calm
+- rapid
+- controlled
+- fluid
+- rhythmic
+- clipped
+- reflective
+
+Emotional style:
+- restrained
+- melancholic
+- intelligent
+- intense
+- confident
+- mysterious
+- intimidating
+- compassionate
+- playful
+- detached
+
+Articulation:
+- crisp
+- precise
+- refined
+- elegant
+- natural
+- conversational
+
+------------------------------------------------------------
+4. WHAT WORKS BEST
+------------------------------------------------------------
+
+Qwen performs especially well with:
+- cinematic narration styles
+- emotionally restrained voices
+- audiobook-style performances
+- subtle emotional complexity
+- realistic human delivery
+
+The model is strongest when:
+- emotions are implied instead of exaggerated
+- pacing is described
+- voice texture is specified
+- the character has psychological depth
+
+------------------------------------------------------------
+5. WHAT TO AVOID
+------------------------------------------------------------
+
+Avoid:
+- excessive lore
+- plot summaries
+- visual descriptions only
+- contradictory descriptors
+- meme language
+- overly theatrical wording
+
+BAD:
+"A gigantic warrior with blue eyes and golden armor from planet X."
+
+GOOD:
+"A powerful male voice with deep resonance and calm disciplined authority."
+
+Avoid conflicting instructions:
+
+BAD:
+"Soft and aggressive."
+"Emotionless but highly emotional."
+"Fast slow pacing."
+
+------------------------------------------------------------
+6. CHARACTER DESIGN BEST PRACTICES
+------------------------------------------------------------
+
+Instead of describing appearance:
+Describe how the character SOUNDS.
+
+Instead of:
+"Beautiful young princess"
+
+Use:
+"A refined young female voice with graceful pacing and educated diction."
+
+Instead of:
+"Strong warrior"
+
+Use:
+"A rough textured male voice with deliberate pacing and natural command."
+
+Think in terms of:
+- microphone performance
+- acting direction
+- audiobook narration
+- vocal psychology
+
+------------------------------------------------------------
+7. AUDIOBOOK BEST PRACTICES
+------------------------------------------------------------
+
+For audiobook projects:
+
+1. Keep narrator voices neutral and stable
+2. Keep emotional range controlled
+3. Use subtle differentiation between characters
+4. Avoid cartoon exaggeration
+5. Maintain consistent pacing descriptors
+
+Recommended narrator traits:
+- smooth
+- cinematic
+- clear articulation
+- emotionally controlled
+- natural rhythm
+
+------------------------------------------------------------
+8. VOICE CONSISTENCY
+------------------------------------------------------------
+
+For best consistency:
+- generate one stable reference voice
+- reuse the same prompt
+- modify only small emotional elements
+
+Do NOT completely rewrite prompts between chapters.
+
+Stable prompts produce:
+- better continuity
+- better pronunciation consistency
+- more stable emotional identity
+
+------------------------------------------------------------
+9. ADVANCED TECHNIQUES
+------------------------------------------------------------
+
+Layering technique:
+Use 3 levels:
+
+1. Acoustic layer
+2. Emotional layer
+3. Character layer
+
+Example:
+
+Acoustic:
+"Deep resonant male voice"
+
+Emotional:
+"Restrained melancholy"
+
+Character:
+"A leader carrying immense responsibility"
+
+Combined:
+"A deep resonant male voice with restrained melancholy and calm authoritative delivery suitable for a leader burdened by prophecy."
+
+------------------------------------------------------------
+10. GOOD TEMPLATE
+------------------------------------------------------------
+
+TEMPLATE:
+
+"A [age] [gender] voice with [timbre].
+Speaks with [pacing] and [articulation].
+Carries [emotional profile].
+Delivery is [style].
+Suitable for [character archetype/context]."
+
+------------------------------------------------------------
+11. EXAMPLE HIGH-QUALITY PROMPT
+------------------------------------------------------------
+
+"A mature male voice with deep resonance and calm measured pacing.
+Clear articulate diction with restrained emotional intensity.
+Speaks with intelligence, quiet authority, and subtle melancholy.
+Smooth cinematic delivery with natural conversational rhythm.
+Suitable for a philosopher-king in a dramatic science fiction audiobook."
+
+------------------------------------------------------------
+12. FINAL RECOMMENDATIONS
+------------------------------------------------------------
+
+Best overall strategy:
+- Think like a voice director
+- Focus on sound, not visuals
+- Keep prompts emotionally coherent
+- Use cinematic realism
+- Prefer subtlety over exaggeration
+- Use stable prompt structures
+- Reuse reference voices whenever possible
+
+The best Qwen TTS voices usually feel:
+- human
+- grounded
+- emotionally believable
+- restrained
+- cinematic
