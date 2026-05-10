@@ -55,7 +55,7 @@ Audio Blocks selected reset, selected regeneration, approval, and unapproval
 now preserve unrelated generated audio and reset only Audio Assembly outputs.
 Audio Assembly settings changes and reruns now preserve upstream Audio Blocks
 while replacing only assembly outputs/state/report.
-Current package version is `1.0.0`; dense review pages now keep minimum
+Current package version is `1.0.1`; dense review pages now keep minimum
 splitter widths so important extracted text, chunk text, character evidence,
 voice editors, Speech Blocks, and Audio Blocks stay readable while panes are
 resized. The Speech Blocks selected audio shortcut uses the shorter

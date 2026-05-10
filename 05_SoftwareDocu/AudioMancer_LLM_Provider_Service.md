@@ -23,8 +23,10 @@ The service owns:
 - request construction for `POST /v1/chat/completions`
 - endpoint normalization for base URLs that already include `/v1` or the full
   `/chat/completions` path
-- JSON-object `response_format` request mode when the selected profile marks
-  structured output as supported
+- structured-output `response_format` request mode when the selected profile
+  marks structured output as supported, using JSON-object mode for general
+  OpenAI-compatible profiles and JSON Schema mode for LM Studio and Ollama
+  profiles
 - compatibility retry when one backend rejects `response_format`
 - compatibility retry when one backend rejects `max_tokens` and requests
   `max_completion_tokens`
@@ -52,8 +54,12 @@ The implementation lives in:
 Main flow:
 
 1. `chat_json(...)` builds one OpenAI-compatible chat-completions payload and
-   adds `response_format: {"type": "json_object"}` when
-   `supports_structured_output` is enabled for the selected profile.
+   adds a structured-output `response_format` when
+   `supports_structured_output` is enabled for the selected profile. General
+   OpenAI-compatible profiles receive `{"type": "json_object"}`. LM Studio
+   and Ollama profiles receive a permissive
+   `{"type": "json_schema", ...}` payload because their local servers support
+   schema-oriented structured output.
 2. `_request_chat_completion_with_cancellation(...)` runs the blocking HTTP
    request in one worker thread so the caller can cancel cooperatively.
 3. `_request_chat_completion(...)` posts JSON to the resolved endpoint,
@@ -202,6 +208,8 @@ Current tests cover:
 - cooperative cancellation during provider waits
 - `max_completion_tokens` compatibility retry
 - structured-output `response_format` request mode
+- local-backend JSON Schema response-format request mode for LM Studio and
+  Ollama
 - unsupported `response_format` compatibility retry
 - invalid backslash escape repair
 - follow-up JSON-repair requests
@@ -216,8 +224,8 @@ Minimum validation after changes:
 
 ## 10. Limitations And Future Work
 
-- Structured output currently uses provider JSON-object mode only, not
-  operation-specific JSON Schema definitions.
+- Structured output currently uses generic JSON-object or permissive JSON
+  Schema mode, not operation-specific JSON Schema definitions.
 - Follow-up JSON-repair requests remain prompt-only.
 - Only the standard OpenAI-compatible `usage` object is recognized; provider-
   specific token fields are ignored.

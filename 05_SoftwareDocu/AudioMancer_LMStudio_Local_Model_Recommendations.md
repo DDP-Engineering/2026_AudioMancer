@@ -32,10 +32,10 @@ Use LM Studio as an OpenAI-compatible local server:
 
 AudioMancer sends chat-completion requests with `model`, `messages`,
 `temperature`, and `max_tokens`. When `Structured output supported` is enabled,
-it also sends `response_format: {"type": "json_object"}` and falls back once
-without that field if the provider rejects it. Keep `Structured output
-supported` disabled until a specific LM Studio build and model revision pass the
-prompt-contract tests for the operation.
+it also sends a permissive `response_format: {"type": "json_schema", ...}`
+payload and falls back once without that field if the provider rejects it. Keep
+`Structured output supported` disabled until a specific LM Studio build and
+model revision pass the prompt-contract tests for the operation.
 
 ## 3. Recommended Profiles
 

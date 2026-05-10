@@ -13,7 +13,7 @@
          cleanup provider requests.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-22
-@version 0.8.0
+@version 0.8.1
 """
 
 # IMPORTS
@@ -218,6 +218,68 @@ def test_chat_json_sends_response_format_when_structured_output_is_supported(mon
     )
 
     assert request_bodies[0]["response_format"] == {"type": "json_object"}
+
+
+def test_chat_json_sends_json_schema_response_format_for_local_backends(monkeypatch) -> None:
+    """
+    @brief      Verify local backends receive their supported JSON Schema response format.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-10
+    @version    0.1.0
+    """
+    request_bodies: list[dict[str, object]] = []
+
+    def _fake_urlopen(http_request, **_kwargs):
+        """
+        @brief      Capture one local-backend structured-output provider request.
+        @param[in]  http_request Provider HTTP request.
+        @param[in]  _kwargs Ignored keyword request arguments.
+        @return     Fake successful provider response.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-10
+        @version    0.1.0
+        """
+        request_bodies.append(json.loads(http_request.data.decode("utf-8")))
+        return _FakeResponse(
+            '{"choices":[{"message":{"content":"{\\"results\\":[{\\"unit_id\\":\\"unit-0001\\"}]}"}}]}'
+        )
+
+    monkeypatch.setattr(llm_provider_service.request, "urlopen", _fake_urlopen)
+
+    expected_response_format = {
+        "type": "json_schema",
+        "json_schema": {
+            "name": "audiomancer_json_response",
+            "schema": {
+                "type": "object",
+                "additionalProperties": True,
+            },
+        },
+    }
+    for backend_kind in ("lmstudio", "ollama"):
+        llm_provider_service.chat_json(
+            {
+                "id": "profile_1",
+                "backend_kind": backend_kind,
+                "base_url": "http://127.0.0.1:1234/v1",
+                "model_name": "google/gemma-4-26b-a4b",
+                "request_timeout_seconds": 30,
+                "temperature": 0.1,
+                "max_output_tokens": 256,
+                "supports_structured_output": True,
+            },
+            "system",
+            "user",
+        )
+
+    assert [request_body["response_format"] for request_body in request_bodies] == [
+        expected_response_format,
+        expected_response_format,
+    ]
 
 
 def test_chat_json_omits_response_format_when_structured_output_is_not_supported(monkeypatch) -> None:

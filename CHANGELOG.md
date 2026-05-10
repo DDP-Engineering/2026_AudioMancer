@@ -10,12 +10,21 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-05-10
+
 ### Changed
 
-- JSON-producing AI requests now include OpenAI-compatible
-  `response_format: {"type": "json_object"}` when the selected AI profile has
-  structured output enabled, with a one-time compatibility retry for providers
-  that reject the field.
+- JSON-producing AI requests now choose the structured-output
+  `response_format` by backend: general OpenAI-compatible profiles use
+  `json_object`, while LM Studio and Ollama profiles use permissive
+  `json_schema` mode. Providers that reject `response_format` still get a
+  one-time compatibility retry without the field.
+- AI workflow prompts have been refreshed for literary/audiobook production,
+  with stronger preservation rules for cleanup, semantic chunking, translation,
+  character discovery, character voice synthesis, Speech Blocks, and
+  narrator-only Speech Blocks.
+- Speech Blocks prompts now preserve the improved v2 dialogue and attribution
+  guidance while staying aligned with the current application JSON contract.
 - Speech Blocks generation now resumes from partially generated, reviewed, or
   approved chunks instead of treating review state as a fresh run.
 - AI cleanup, AI-assisted chunking, character discovery, and Speech Blocks now

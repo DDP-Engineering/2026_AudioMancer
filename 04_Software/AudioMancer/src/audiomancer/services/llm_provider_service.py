@@ -16,7 +16,7 @@
          UI-driven cancellation responsive during provider waits.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-22
-@version 0.8.0
+@version 0.8.1
 """
 
 # IMPORTS
@@ -97,7 +97,7 @@ def chat_json(
     @exception  OperationCancelledError Raised when cooperative cancellation is requested.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-11
-    @version    0.6.0
+    @version    0.6.1
     """
     request_payload = {
         "model": str(profile_payload.get("model_name", "")).strip(),
@@ -114,7 +114,7 @@ def chat_json(
         ),
     }
     if structured_output and bool(profile_payload.get("supports_structured_output", False)):
-        request_payload["response_format"] = {"type": "json_object"}
+        request_payload["response_format"] = _build_response_format(profile_payload)
     _append_ai_log(
         log_path,
         {
@@ -402,6 +402,31 @@ def _build_chat_endpoint(base_url: str) -> str:
     )
 
 
+def _build_response_format(profile_payload: dict[str, object]) -> dict[str, object]:
+    """
+    @brief      Build the provider-specific structured-output response format.
+    @param[in]  profile_payload Normalized AI profile payload.
+    @return     Response-format payload accepted by the selected backend kind.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-10
+    @version    0.1.0
+    """
+    backend_kind = str(profile_payload.get("backend_kind", "")).strip()
+    if backend_kind not in {"lmstudio", "ollama"}:
+        return {"type": "json_object"}
+    return {
+        "type": "json_schema",
+        "json_schema": {
+            "name": "audiomancer_json_response",
+            "schema": {
+                "type": "object",
+                "additionalProperties": True,
+            },
+        },
+    }
+
+
 def _supports_max_completion_tokens_retry(status_code: int, error_body: str) -> bool:
     """
     @brief      Decide whether one provider failure should retry with max_completion_tokens.
@@ -429,8 +454,8 @@ def _supports_response_format_retry(status_code: int, error_body: str) -> bool:
     @return     True when the provider explicitly rejected response_format.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-08
-    @version    0.1.0
+    @date       2026-05-10
+    @version    0.1.1
     """
     if status_code != 400:
         return False
@@ -443,6 +468,7 @@ def _supports_response_format_retry(status_code: int, error_body: str) -> bool:
         "unknown parameter",
         "unrecognized",
         "invalid parameter",
+        "must be",
     )
     return any(marker in normalized_body for marker in unsupported_markers)
 
