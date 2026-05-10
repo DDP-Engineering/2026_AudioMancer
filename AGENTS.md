@@ -52,6 +52,25 @@ documentation header in the same change.
 - Keep repository instructions in `AGENTS.md` and broad style rules in
   documentation files.
 
+## GitHub Delivery Rules
+
+- Do not commit generated delivery archives, such as Windows or Linux zip files,
+  into the Git repository.
+- Publish delivery archives only through GitHub Releases for
+  `DDP-Engineering/2026_AudioMancer`.
+- When publishing a delivery archive, update or replace the relevant GitHub
+  Release asset so only the current delivery archive is attached for that
+  platform.
+- If a GitHub deployment record is needed, update the deployments page to point
+  at the current commit SHA and keep only the current deployment entry.
+- If useful for operators, update release notes or README text with the current
+  delivery SHA and a short description of the package contents, but do not mix
+  unrelated code changes into the delivery-only publish.
+- A delivery-only publish must stage and push only release metadata or
+  documentation explicitly needed for the delivery record; application code,
+  prompt files, tests, and generated archives must not be committed as part of
+  that publish unless the user explicitly requests it.
+
 ## Validation Rules
 
 For Python changes, run at minimum:
