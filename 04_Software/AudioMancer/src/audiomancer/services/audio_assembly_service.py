@@ -14,7 +14,7 @@
          generation through root-level state and report artifacts.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-25
-@version 0.5.0
+@version 0.5.1
 """
 
 # IMPORTS
@@ -280,7 +280,7 @@ def start_or_continue_composition(
     @exception  OperationCancelledError Raised when the operator cancels the run.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.2.0
+    @version    0.2.1
     """
     resolved_project_root = Path(project_root)
     settings = normalize_audio_assembly_settings(manifest.get("audio_assembly_settings"))
@@ -368,10 +368,17 @@ def start_or_continue_composition(
         started_at=started_at,
         completed_at=completed_at,
     )
+    completed_state = _build_operation_state(resolved_project_root, final_report, output_plan, len(output_plan))
     _persist_state(
         resolved_project_root,
         final_report,
-        _build_operation_state(resolved_project_root, final_report, output_plan, len(output_plan)),
+        completed_state,
+    )
+    project_workspace_service.sync_manifest_operation_summary(
+        resolved_project_root,
+        "audio_assembly",
+        completed_state,
+        current_stage="audio_assembly_ready",
     )
     _emit_progress(progress_callback, len(output_plan), len(output_plan), "Audio Assembly completed.")
     return final_report

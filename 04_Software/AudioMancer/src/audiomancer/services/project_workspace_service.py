@@ -13,7 +13,7 @@
          using one minimal root-level `project.json` manifest contract.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-20
-@version    2.0.5
+@version    2.0.6
 """
 
 # IMPORTS
@@ -49,8 +49,8 @@ from audiomancer.services.time_service import utc_now_iso as _utc_now_iso
 
 # @brief Component logger used by project workspace lifecycle helpers.
 _PROJECT_WORKSPACE_LOGGER = get_component_logger("project_workspace")
-# @brief Manifest optional strings preserve existing whitespace semantics.
-_optional_string = partial(_shared_optional_string, strip=False)
+# @brief Manifest optional strings preserve existing whitespace semantics while dropping null-like text.
+_raw_optional_string = partial(_shared_optional_string, strip=False)
 # @brief Canonical project-manifest payload type persisted in `project.json`.
 ProjectManifestPayload = dict[str, object]
 # @brief Normalized project-open result payload returned by open helpers.
@@ -451,7 +451,7 @@ def project_manifest_operation_summary(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-11
-    @version    0.1.0
+    @version    0.1.1
     """
     default_summary = _default_operation_state(operation_kind)
     if not isinstance(operation_payload, dict):
@@ -487,6 +487,44 @@ def project_manifest_operation_summary(
             )
         ),
     }
+
+
+def sync_manifest_operation_summary(
+    project_root: str | Path,
+    operation_kind: str,
+    operation_payload: object | None,
+    current_stage: str | None = None,
+    extra_fields: dict[str, object] | None = None,
+) -> ProjectManifestPayload:
+    """
+    @brief      Persist one backend operation summary directly into `project.json`.
+    @param[in]  project_root Active project root folder.
+    @param[in]  operation_kind Stable workflow operation token.
+    @param[in]  operation_payload Candidate operation-state payload.
+    @param[in]  current_stage Optional workflow stage to persist with the summary.
+    @param[in]  extra_fields Optional additional manifest fields to merge.
+    @return     Reloaded project manifest payload.
+    @exception  ValueError Raised when the operation kind or stage is unsupported.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-10
+    @version    0.1.0
+    """
+    manifest = load_manifest(project_root)
+    operations = _normalize_operations(manifest.get("operations"))
+    if operation_kind not in operations:
+        raise ValueError(f"Unsupported operation kind: {operation_kind}")
+    operations[operation_kind] = project_manifest_operation_summary(operation_kind, operation_payload)
+    manifest["operations"] = operations
+    if current_stage is not None:
+        normalized_stage = str(current_stage).strip()
+        if normalized_stage not in config.PROJECT_WORKFLOW_STAGES:
+            raise ValueError(f"Unsupported workflow stage: {current_stage}")
+        manifest["current_stage"] = normalized_stage
+    if isinstance(extra_fields, dict):
+        for field_name, field_value in extra_fields.items():
+            manifest[str(field_name)] = field_value
+    save_manifest(manifest, project_root)
+    return load_manifest(project_root)
 
 
 def _build_project_manifest_healing_result(
@@ -791,7 +829,7 @@ def _narrator_definition_completion_evidence(project_root: Path, warnings: list[
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.1.0
+    @version    0.1.1
     """
     _ = warnings
     profiles = _load_json_artifact(project_root, config.NARRATOR_PROFILE_FILE_NAME)
@@ -801,7 +839,16 @@ def _narrator_definition_completion_evidence(project_root: Path, warnings: list[
     selected_profile = _selected_narrator_profile(profiles, selection)
     if selected_profile is None:
         return None
-    timestamp = _first_optional_string(selection, selected_profile, "updated_at", "selected_at", "created_at")
+    sample_metadata = selected_profile.get("sample_metadata")
+    timestamp = _first_optional_string(
+        selection,
+        sample_metadata if isinstance(sample_metadata, dict) else {},
+        selected_profile,
+        "selected_at",
+        "updated_at",
+        "created_at",
+        "generated_at",
+    )
     operation = {
         "folder_relative_path": config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH,
         "status": "completed",
@@ -1361,6 +1408,24 @@ def _project_relative_path_exists(project_root: Path, relative_path: str) -> boo
     @version    0.2.0
     """
     return project_relative_path_exists(project_root, relative_path)
+
+
+def _optional_string(value: object) -> str | None:
+    """
+    @brief      Normalize one optional manifest string and reject null-like persisted text.
+    @param[in]  value Candidate optional value.
+    @return     Normalized string or `None`.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-10
+    @version    0.1.0
+    """
+    normalized_value = _raw_optional_string(value)
+    if normalized_value is None:
+        return None
+    if normalized_value.strip().casefold() in {"none", "null"}:
+        return None
+    return normalized_value
 
 
 def _first_optional_string(*payloads_and_fields: object) -> str | None:

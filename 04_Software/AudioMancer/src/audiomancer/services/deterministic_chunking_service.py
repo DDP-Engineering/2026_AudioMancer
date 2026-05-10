@@ -14,7 +14,7 @@
          operation state for interrupted deterministic chunking runs.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-11
-@version 0.4.0
+@version 0.4.1
 """
 
 # IMPORTS
@@ -25,7 +25,7 @@ from pathlib import Path
 import re
 
 from audiomancer import config
-from audiomancer.services import cleanup_metadata_service
+from audiomancer.services import cleanup_metadata_service, project_workspace_service
 from audiomancer.services.logging_service import get_component_logger, trace_function
 from audiomancer.services.operation_runtime_service import (
     build_operation_output_path,
@@ -83,7 +83,7 @@ def chunk_text(
     @exception  OperationCancelledError Raised when the operator cancels the run.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-11
-    @version    0.2.0
+    @version    0.2.1
     """
     resolved_project_root = Path(project_root)
     source_document = manifest.get("source_document")
@@ -215,6 +215,12 @@ def chunk_text(
     state_path.write_text(
         json.dumps(completed_state, indent=2, ensure_ascii=False) + "\n",
         encoding="utf-8",
+    )
+    project_workspace_service.sync_manifest_operation_summary(
+        resolved_project_root,
+        "chunking",
+        completed_state,
+        current_stage="translation_ready",
     )
     _emit_progress(
         progress_callback,

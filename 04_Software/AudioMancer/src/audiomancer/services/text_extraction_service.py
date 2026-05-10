@@ -14,7 +14,7 @@
          maintains resumable extraction state in `00_extraction`.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-06
-@version 0.5.0
+@version 0.5.1
 """
 
 # IMPORTS
@@ -33,6 +33,7 @@ from odf.opendocument import load as load_odf_document
 from striprtf.striprtf import rtf_to_text
 
 from audiomancer import config
+from audiomancer.services import project_workspace_service
 from audiomancer.services.logging_service import get_component_logger, trace_function
 from audiomancer.services.operation_runtime_service import (
     build_operation_state_payload,
@@ -177,7 +178,7 @@ def extract_text(
     @exception  OperationCancelledError Raised when the operator cancels the run.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.3.3
+    @version    0.3.4
     """
     resolved_project_root = Path(project_root)
     source_document = _source_document_from_manifest(manifest)
@@ -273,6 +274,16 @@ def extract_text(
     state_path.write_text(
         json.dumps(completed_state, indent=2, ensure_ascii=False) + "\n",
         encoding="utf-8",
+    )
+    project_workspace_service.sync_manifest_operation_summary(
+        resolved_project_root,
+        "extraction",
+        completed_state,
+        extra_fields={
+            "extracted_text_relative_path": report_payload["extracted_text_relative_path"],
+            "extraction_report_relative_path": config.EXTRACTION_REPORT_FILE_NAME,
+            "extraction_warning_count": len(report_payload["warnings"]),
+        },
     )
     return report_payload
 

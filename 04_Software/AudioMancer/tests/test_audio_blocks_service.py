@@ -14,7 +14,7 @@
          normalization.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-23
-@version 1.9.0
+@version 1.9.1
 """
 
 # IMPORTS
@@ -1619,6 +1619,39 @@ def test_audio_blocks_service_approve_all_marks_only_generated_blocks(tmp_path) 
     assert report["approved_block_count"] == 1
     assert updated_blocks[0]["approved"] is True
     assert updated_blocks[1]["approved"] is False
+
+
+def test_audio_blocks_service_approve_all_promotes_stale_in_progress_state(tmp_path) -> None:
+    """
+    @brief      Verify Approve All promotes stale in-progress state when the report becomes completed.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-10
+    @version    0.2.0
+    """
+    project_root, _manifest = _create_audio_blocks_project(tmp_path, "AudioBlocksServiceApproveAllStaleState")
+    _seed_generated_audio_blocks(project_root)
+    state_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.AUDIO_BLOCKS_STATE_FILE_NAME
+    stale_state = json.loads(state_path.read_text(encoding="utf-8"))
+    stale_state["status"] = "in_progress"
+    stale_state["completed_at"] = "None"
+    stale_state["metadata"]["current_block_id"] = "None"
+    state_path.write_text(json.dumps(stale_state, indent=2) + "\n", encoding="utf-8")
+
+    report = audio_blocks_service.approve_all_audio_blocks(project_root)
+
+    operation_state = audio_blocks_service.load_operation_state(project_root)
+    manifest = project_workspace_service.load_manifest(project_root)
+    assert report["audio_blocks_stage_status"] == audio_blocks_service.AUDIO_BLOCKS_STAGE_COMPLETED
+    assert operation_state is not None
+    assert operation_state["status"] == "completed"
+    assert operation_state["completed_at"] not in (None, "None")
+    assert operation_state["metadata"]["current_block_id"] is None
+    assert manifest["operations"]["audio_blocks"]["status"] == "completed"
+    assert manifest["operations"]["audio_blocks"]["completed_at"] not in (None, "None")
+    assert manifest["current_stage"] == "audio_blocks_ready"
 
 
 def test_audio_blocks_split_planner_prefers_sentences_then_word_groups() -> None:

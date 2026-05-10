@@ -15,7 +15,7 @@
          based operation state plus AI transaction logging.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 0.17.0
+@version 0.17.1
 """
 
 # IMPORTS
@@ -174,7 +174,7 @@ def load_input_source_chunks(project_root: str | Path) -> list[dict[str, object]
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.2.1
+    @version    0.2.0
     """
     operation_state = load_operation_state(project_root) or {}
     metadata = operation_state.get("metadata", {}) if isinstance(operation_state, dict) else {}
@@ -309,7 +309,7 @@ def start_or_continue_generation(
     @exception  OperationCancelledError Raised when the operator cancels the run.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.3.0
+    @version    0.3.1
     """
     resolved_project_root = Path(project_root)
     profile_id = str(ai_profile_payload.get("id", "")).strip()
@@ -502,28 +502,35 @@ def start_or_continue_generation(
         budget_metadata,
         updated_at=completed_at,
     )
+    completed_state = _build_operation_state(
+        resolved_project_root,
+        source_chunks,
+        all_blocks,
+        status="review_pending",
+        started_at=started_at,
+        completed_at=completed_at,
+        source_language=source_language,
+        source_kind=source_kind,
+        profile_id=profile_id,
+        warning_records=warning_entries,
+        input_fingerprint=input_fingerprint,
+        log_path=log_path,
+        token_usage=token_usage,
+        next_chunk_index=None,
+        budget_metadata=budget_metadata,
+    )
     _persist_state(
         resolved_project_root,
         source_chunks,
         all_blocks,
         report,
-        _build_operation_state(
-            resolved_project_root,
-            source_chunks,
-            all_blocks,
-            status="review_pending",
-            started_at=started_at,
-            completed_at=completed_at,
-            source_language=source_language,
-            source_kind=source_kind,
-            profile_id=profile_id,
-            warning_records=warning_entries,
-            input_fingerprint=input_fingerprint,
-            log_path=log_path,
-            token_usage=token_usage,
-            next_chunk_index=None,
-            budget_metadata=budget_metadata,
-        ),
+        completed_state,
+    )
+    project_workspace_service.sync_manifest_operation_summary(
+        resolved_project_root,
+        "speech_blocks",
+        completed_state,
+        current_stage="character_voices_ready",
     )
     _emit_progress(
         progress_callback,
@@ -956,7 +963,7 @@ def regenerate_chunk_speech_blocks(
     @exception  OperationCancelledError Raised when the operator cancels the run.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-24
-    @version    0.3.0
+    @version    0.3.1
     """
     resolved_project_root = Path(project_root)
     profile_id = str(ai_profile_payload.get("id", "")).strip()
@@ -1039,28 +1046,35 @@ def regenerate_chunk_speech_blocks(
         budget_metadata,
         updated_at=completed_at,
     )
+    resplit_state = _build_operation_state(
+        resolved_project_root,
+        source_chunks,
+        all_blocks,
+        status="review_pending",
+        started_at=started_at,
+        completed_at=completed_at,
+        source_language=source_language,
+        source_kind=source_kind,
+        profile_id=profile_id,
+        warning_records=[],
+        input_fingerprint=input_fingerprint,
+        log_path=log_path,
+        token_usage=token_usage,
+        next_chunk_index=None,
+        budget_metadata=budget_metadata,
+    )
     _persist_state(
         resolved_project_root,
         source_chunks,
         all_blocks,
         report,
-        _build_operation_state(
-            resolved_project_root,
-            source_chunks,
-            all_blocks,
-            status="review_pending",
-            started_at=started_at,
-            completed_at=completed_at,
-            source_language=source_language,
-            source_kind=source_kind,
-            profile_id=profile_id,
-            warning_records=[],
-            input_fingerprint=input_fingerprint,
-            log_path=log_path,
-            token_usage=token_usage,
-            next_chunk_index=None,
-            budget_metadata=budget_metadata,
-        ),
+        resplit_state,
+    )
+    project_workspace_service.sync_manifest_operation_summary(
+        resolved_project_root,
+        "speech_blocks",
+        resplit_state,
+        current_stage="character_voices_ready",
     )
     _emit_progress(progress_callback, 1, 1, "Selected chunk Speech Blocks re-split completed.", token_usage)
     return report
@@ -1414,7 +1428,7 @@ def _persist_report_update(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-24
-    @version    0.2.0
+    @version    0.2.1
     """
     source_chunks = load_input_source_chunks(project_root)
     report = load_speech_blocks_report(project_root) or {}
@@ -1453,28 +1467,35 @@ def _persist_report_update(
         if str(updated_report.get("speech_blocks_stage_status", "")).strip() == SPEECH_BLOCKS_STAGE_COMPLETED
         else "review_pending"
     )
+    updated_state = _build_operation_state(
+        project_root,
+        source_chunks,
+        renumbered_blocks,
+        status=status,
+        started_at=started_at,
+        completed_at=completed_at,
+        source_language=source_language,
+        source_kind=source_kind,
+        profile_id=profile_id,
+        warning_records=[],
+        input_fingerprint=input_fingerprint,
+        log_path=log_path,
+        token_usage=token_usage,
+        next_chunk_index=None,
+        budget_metadata=budget_metadata,
+    )
     _persist_state(
         project_root,
         source_chunks,
         renumbered_blocks,
         updated_report,
-        _build_operation_state(
-            project_root,
-            source_chunks,
-            renumbered_blocks,
-            status=status,
-            started_at=started_at,
-            completed_at=completed_at,
-            source_language=source_language,
-            source_kind=source_kind,
-            profile_id=profile_id,
-            warning_records=[],
-            input_fingerprint=input_fingerprint,
-            log_path=log_path,
-            token_usage=token_usage,
-            next_chunk_index=None,
-            budget_metadata=budget_metadata,
-        ),
+        updated_state,
+    )
+    project_workspace_service.sync_manifest_operation_summary(
+        project_root,
+        "speech_blocks",
+        updated_state,
+        current_stage="speech_blocks_ready" if status == "completed" else "character_voices_ready",
     )
     return updated_report
 

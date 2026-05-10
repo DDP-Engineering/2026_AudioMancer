@@ -15,7 +15,7 @@
          structure, and persists cleanup artifacts with resumable state.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-06
-@version 0.5.0
+@version 0.5.1
 """
 
 # IMPORTS
@@ -27,7 +27,7 @@ from pathlib import Path
 import re
 
 from audiomancer import config
-from audiomancer.services import cleanup_metadata_service, cleanup_text_analysis_service
+from audiomancer.services import cleanup_metadata_service, cleanup_text_analysis_service, project_workspace_service
 from audiomancer.services.logging_service import get_component_logger, trace_function
 from audiomancer.services.operation_runtime_service import (
     build_operation_output_path,
@@ -99,7 +99,7 @@ def clean_text(
     @exception  OperationCancelledError Raised when the operator cancels the run.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.3.2
+    @version    0.3.3
     """
     resolved_project_root = Path(project_root)
     source_document = manifest.get("source_document")
@@ -295,6 +295,13 @@ def clean_text(
     state_path.write_text(
         json.dumps(completed_state, indent=2, ensure_ascii=False) + "\n",
         encoding="utf-8",
+    )
+    project_workspace_service.sync_manifest_operation_summary(
+        resolved_project_root,
+        "cleanup",
+        completed_state,
+        current_stage="text_chunking_ready",
+        extra_fields={"original_language": detected_language},
     )
     _emit_progress(
         progress_callback,

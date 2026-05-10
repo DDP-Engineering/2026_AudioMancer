@@ -15,7 +15,7 @@
          resumable window-based progress plus AI transaction logs.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-07
-@version 0.8.0
+@version 0.8.1
 """
 
 # IMPORTS
@@ -31,6 +31,7 @@ from audiomancer.services import (
     cleanup_metadata_service,
     cleanup_text_analysis_service,
     llm_provider_service,
+    project_workspace_service,
     prompt_template_service,
     token_usage_service,
 )
@@ -145,7 +146,7 @@ def clean_text(
     @exception  ValueError Raised on missing profile data or unusable cleanup output.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-07
-    @version    0.5.1
+    @version    0.5.2
     """
     resolved_project_root = Path(project_root)
     source_document = manifest.get("source_document")
@@ -397,6 +398,13 @@ def clean_text(
     state_path.write_text(
         json.dumps(completed_state, indent=2, ensure_ascii=False) + "\n",
         encoding="utf-8",
+    )
+    project_workspace_service.sync_manifest_operation_summary(
+        resolved_project_root,
+        "cleanup",
+        completed_state,
+        current_stage="text_chunking_ready",
+        extra_fields={"original_language": detected_language},
     )
     _emit_progress(
         progress_callback,

@@ -14,13 +14,12 @@
          Blocks output, and the resumable runtime operation state.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-23
-@version 0.5.2
+@version 0.5.3
 """
 
 # IMPORTS
 
 from pathlib import Path
-import wave
 
 from audiomancer.services import (
     ai_translation_service,
@@ -51,7 +50,7 @@ def build_audio_blocks_state(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-23
-    @version    0.5.1
+    @version    0.5.2
     """
     if project_root is None or manifest is None:
         return _empty_state(language, settings_payload)
@@ -377,7 +376,7 @@ def _merge_audio_block_state(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-23
-    @version    0.3.1
+    @version    0.3.2
     """
     audio_by_id = {str(block.get("speech_block_id", "")).strip(): dict(block) for block in audio_blocks}
     current_block_id = None
@@ -416,7 +415,7 @@ def _merge_audio_block_state(
                 "special_block_status": str(persisted_audio_block.get("special_block_status", "") or ""),
                 "audio_relative_path": audio_relative_path,
                 "audio_file_name": "" if audio_path is None else audio_path.name,
-                "audio_duration_seconds": None if audio_path is None else _audio_duration_seconds(audio_path),
+                "audio_duration_seconds": None,
                 "can_play": audio_path is not None,
                 "runtime_result_summary": str(persisted_audio_block.get("runtime_result_summary", "")),
                 "is_current": speech_block_id == current_block_id,
@@ -472,26 +471,6 @@ def _resolve_existing_audio_path(project_root: Path, audio_relative_path: object
         return None
     audio_path = project_root / normalized_relative_path
     return audio_path if audio_path.is_file() else None
-
-
-def _audio_duration_seconds(audio_path: Path) -> float | None:
-    """
-    @brief      Read one WAV duration in seconds for Audio Blocks list display.
-    @param[in]  audio_path Existing WAV path.
-    @return     Duration in seconds, or `None` when the file cannot be measured.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.1.0
-    """
-    try:
-        with wave.open(str(audio_path), "rb") as audio_file:
-            frame_rate = audio_file.getframerate()
-            if frame_rate <= 0:
-                return None
-            return audio_file.getnframes() / frame_rate
-    except (OSError, EOFError, wave.Error):
-        return None
 
 
 def _resolve_current_block(

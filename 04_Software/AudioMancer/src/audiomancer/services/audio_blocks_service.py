@@ -16,7 +16,7 @@
          `80_audio_blocks` workflow artifacts.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-23
-@version 0.15.1
+@version 0.15.3
 """
 
 # IMPORTS
@@ -32,6 +32,7 @@ from audiomancer.services import (
     character_voices_service,
     narrator_definition_service,
     operation_runtime_service,
+    project_workspace_service,
     speech_blocks_service,
     voiceweaver_runtime_service,
     workflow_impact_service,
@@ -286,7 +287,7 @@ def start_or_continue_generation(
     @exception  OperationCancelledError Raised when the operator cancels the run.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-23
-    @version    0.3.4
+    @version    0.3.5
     """
     resolved_project_root = Path(project_root)
     generation_context = _resolve_generation_context(resolved_project_root, manifest, runtime_settings)
@@ -671,6 +672,12 @@ def start_or_continue_generation(
             reused_prompt_count=reused_prompt_count,
             regenerated_prompt_count=regenerated_prompt_count,
         ),
+    )
+    project_workspace_service.sync_manifest_operation_summary(
+        resolved_project_root,
+        "audio_blocks",
+        load_operation_state(resolved_project_root),
+        current_stage="audio_blocks_ready" if final_status == AUDIO_BLOCKS_STAGE_COMPLETED else "speech_blocks_ready",
     )
     _emit_progress(
         progress_callback,
@@ -2390,11 +2397,12 @@ def _persist_report_update(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-23
-    @version    0.2.0
+    @version    0.2.1
     """
     existing_state = load_operation_state(project_root) or {}
     metadata = existing_state.get("metadata", {})
-    voice_language = str(metadata.get("voice_language", "")).strip() if isinstance(metadata, dict) else ""
+    metadata = metadata if isinstance(metadata, dict) else {}
+    voice_language = str(metadata.get("voice_language", "")).strip()
     speech_blocks = speech_blocks_service.load_speech_blocks(project_root)
     current_clone_profiles = load_voice_clone_profiles(project_root) if clone_profiles is None else clone_profiles
     report = _rebuild_report(
@@ -2405,22 +2413,26 @@ def _persist_report_update(
         prompt_count=len(current_clone_profiles),
         reused_prompt_count=_metadata_int(existing_state, "reused_prompt_count", 0),
         regenerated_prompt_count=_metadata_int(existing_state, "regenerated_prompt_count", 0),
-        current_phase=str(metadata.get("current_phase", _GENERATE_PHASE)).strip() or _GENERATE_PHASE
-        if isinstance(metadata, dict)
-        else _GENERATE_PHASE,
+        current_phase=str(metadata.get("current_phase", _GENERATE_PHASE)).strip() or _GENERATE_PHASE,
+    )
+    report_updated_at = _operation_optional_string(report.get("updated_at")) or _utc_now_iso()
+    final_status = (
+        AUDIO_BLOCKS_STAGE_COMPLETED
+        if str(report.get("audio_blocks_stage_status", "")).strip() == AUDIO_BLOCKS_STAGE_COMPLETED
+        else AUDIO_BLOCKS_STAGE_IN_PROGRESS
     )
     persisted_state = _build_operation_state(
         project_root,
         speech_blocks,
         audio_blocks,
         current_clone_profiles,
-        status=str(existing_state.get("status", "completed")).strip() or "completed",
-        started_at=str(existing_state.get("started_at", "")).strip() or _utc_now_iso(),
-        completed_at=str(existing_state.get("completed_at", "")).strip() or _utc_now_iso(),
+        status=final_status,
+        started_at=_operation_optional_string(existing_state.get("started_at")) or report_updated_at,
+        completed_at=report_updated_at if final_status == AUDIO_BLOCKS_STAGE_COMPLETED else None,
         voice_language=voice_language,
-        input_fingerprint=str(metadata.get("input_fingerprint", "")).strip(),
+        input_fingerprint=_operation_optional_string(metadata.get("input_fingerprint")) or "",
         current_phase=str(metadata.get("current_phase", _GENERATE_PHASE)).strip() or _GENERATE_PHASE,
-        current_block_id=str(metadata.get("current_block_id", "")).strip() or None,
+        current_block_id=_operation_optional_string(metadata.get("current_block_id")),
         next_profile_index=int(_resume_checkpoint_field(existing_state, "next_profile_index", 0)),
         next_speech_block_index=int(
             _resume_checkpoint_field(
@@ -2440,7 +2452,29 @@ def _persist_report_update(
         report,
         persisted_state,
     )
+    project_workspace_service.sync_manifest_operation_summary(
+        project_root,
+        "audio_blocks",
+        persisted_state,
+        current_stage="audio_blocks_ready" if final_status == AUDIO_BLOCKS_STAGE_COMPLETED else "speech_blocks_ready",
+    )
     return report
+
+
+def _operation_optional_string(value: object) -> str | None:
+    """
+    @brief      Normalize one optional operation-state string and reject null-like persisted text.
+    @param[in]  value Candidate persisted operation-state value.
+    @return     Normalized string or `None`.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-10
+    @version    0.1.0
+    """
+    normalized_value = _optional_string(value)
+    if normalized_value is None or operation_runtime_service.is_missing_runtime_value(normalized_value):
+        return None
+    return normalized_value
 
 
 def _persist_split_checkpoint(

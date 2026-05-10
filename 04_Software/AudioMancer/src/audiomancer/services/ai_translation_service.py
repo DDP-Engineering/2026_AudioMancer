@@ -13,7 +13,7 @@
          executes resumable translation over canonical chunking output.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-07
-@version 0.10.0
+@version 0.10.1
 """
 
 # IMPORTS
@@ -360,7 +360,7 @@ def start_or_continue_translation(
     @exception  ValueError When inputs are invalid or the model returns empty text.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-07
-    @version    0.4.0
+    @version    0.4.1
     """
     project_root = Path(project_root)
     profile_id = str(ai_profile_payload.get("id", "")).strip()
@@ -489,6 +489,7 @@ def start_or_continue_translation(
         budget_metadata=budget_metadata,
     )
     _persist_translation_state(project_root, source_chunks, translated_chunks, report, operation_state=operation_state)
+    _sync_translation_manifest(project_root, operation_state, report)
     _emit_progress(
         progress_callback,
         len(translated_chunks),
@@ -635,7 +636,7 @@ def update_translated_text(
     @exception  ValueError When the selected chunk is unknown.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-07
-    @version    0.2.0
+    @version    0.2.1
     """
     project_root = Path(project_root)
     source_chunks, translated_chunks, report = ensure_translation_records(project_root, target_language, profile_id)
@@ -672,22 +673,24 @@ def update_translated_text(
         ),
         budget_metadata=_restore_persisted_budget_metadata(report, load_operation_state(project_root)),
     )
+    operation_state = _refresh_operation_state(
+        project_root,
+        source_chunks,
+        translated_chunks,
+        report,
+        load_operation_state(project_root),
+        profile_id,
+        target_language,
+        _restore_persisted_token_usage(report, load_operation_state(project_root)),
+    )
     _persist_translation_state(
         project_root,
         source_chunks,
         translated_chunks,
         report,
-        operation_state=_refresh_operation_state(
-            project_root,
-            source_chunks,
-            translated_chunks,
-            report,
-            load_operation_state(project_root),
-            profile_id,
-            target_language,
-            _restore_persisted_token_usage(report, load_operation_state(project_root)),
-        ),
+        operation_state=operation_state,
     )
+    _sync_translation_manifest(project_root, operation_state, report)
     return report
 
 
@@ -708,7 +711,7 @@ def approve_chunk(
     @exception  ValueError When the chunk is unknown or still untranslated.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-07
-    @version    0.2.0
+    @version    0.2.1
     """
     project_root = Path(project_root)
     source_chunks, translated_chunks, report = ensure_translation_records(project_root, target_language, profile_id)
@@ -731,22 +734,24 @@ def approve_chunk(
         ),
         budget_metadata=_restore_persisted_budget_metadata(report, load_operation_state(project_root)),
     )
+    operation_state = _refresh_operation_state(
+        project_root,
+        source_chunks,
+        translated_chunks,
+        report,
+        load_operation_state(project_root),
+        profile_id,
+        target_language,
+        _restore_persisted_token_usage(report, load_operation_state(project_root)),
+    )
     _persist_translation_state(
         project_root,
         source_chunks,
         translated_chunks,
         report,
-        operation_state=_refresh_operation_state(
-            project_root,
-            source_chunks,
-            translated_chunks,
-            report,
-            load_operation_state(project_root),
-            profile_id,
-            target_language,
-            _restore_persisted_token_usage(report, load_operation_state(project_root)),
-        ),
+        operation_state=operation_state,
     )
+    _sync_translation_manifest(project_root, operation_state, report)
     return report
 
 
@@ -765,7 +770,7 @@ def approve_all(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-07
-    @version    0.2.0
+    @version    0.2.1
     """
     project_root = Path(project_root)
     source_chunks, translated_chunks, report = ensure_translation_records(project_root, target_language, profile_id)
@@ -787,22 +792,24 @@ def approve_all(
         ),
         budget_metadata=_restore_persisted_budget_metadata(report, load_operation_state(project_root)),
     )
+    operation_state = _refresh_operation_state(
+        project_root,
+        source_chunks,
+        translated_chunks,
+        report,
+        load_operation_state(project_root),
+        profile_id,
+        target_language,
+        _restore_persisted_token_usage(report, load_operation_state(project_root)),
+    )
     _persist_translation_state(
         project_root,
         source_chunks,
         translated_chunks,
         report,
-        operation_state=_refresh_operation_state(
-            project_root,
-            source_chunks,
-            translated_chunks,
-            report,
-            load_operation_state(project_root),
-            profile_id,
-            target_language,
-            _restore_persisted_token_usage(report, load_operation_state(project_root)),
-        ),
+        operation_state=operation_state,
     )
+    _sync_translation_manifest(project_root, operation_state, report)
     return report
 
 
@@ -1000,6 +1007,30 @@ def _operation_status_from_report(report: dict[str, object]) -> str:
     if stage_status == TRANSLATION_STAGE_TRANSLATED:
         return TRANSLATION_STAGE_TRANSLATED
     return stage_status
+
+
+def _sync_translation_manifest(
+    project_root: Path,
+    operation_state: dict[str, object],
+    report: dict[str, object],
+) -> None:
+    """
+    @brief      Persist the backend translation operation status into `project.json`.
+    @param[in]  project_root Active project root path.
+    @param[in]  operation_state Latest persisted translation operation state.
+    @param[in]  report Latest translation report payload.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-10
+    @version    0.1.0
+    """
+    stage = (
+        "character_discovery_ready"
+        if str(report.get("translation_stage_status", "")).strip() == TRANSLATION_STAGE_APPROVED
+        else "translation_ready"
+    )
+    project_workspace_service.sync_manifest_operation_summary(project_root, "translation", operation_state, stage)
 
 
 def _refresh_operation_state(

@@ -55,13 +55,9 @@ Audio Blocks selected reset, selected regeneration, approval, and unapproval
 now preserve unrelated generated audio and reset only Audio Assembly outputs.
 Audio Assembly settings changes and reruns now preserve upstream Audio Blocks
 while replacing only assembly outputs/state/report.
-Current package version is `1.0.1`; dense review pages now keep minimum
-splitter widths so important extracted text, chunk text, character evidence,
-voice editors, Speech Blocks, and Audio Blocks stay readable while panes are
-resized. The Speech Blocks selected audio shortcut uses the shorter
-`Generate Audio` label for large-font layouts, and Character Voices also
-supports a confirmed batch action that regenerates samples for all current
-character targets.
+Current package version is `1.0.3`; Audio Blocks page opening is optimized for
+large projects by avoiding synchronous duration scans across every generated
+WAV and batching the page's row refresh.
 
 Focused implementation documentation is maintained in `05_SoftwareDocu/`.
 The end-user help bundles are maintained in `05_SoftwareDocu/UserGuide/` and

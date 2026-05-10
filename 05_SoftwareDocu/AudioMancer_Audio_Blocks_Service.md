@@ -135,9 +135,10 @@ High-level flow:
     re-splits reset generated Audio Blocks data only for the affected source
     chunk, deleting that chunk's WAV/metadata files while preserving other
     chunks.
-13. The controller advances `project.json.current_stage` to
-    `audio_blocks_ready` only when every speech block has generated audio and is
-    approved.
+13. The service syncs `project.json.operations["audio_blocks"]` after
+    generation, report refresh, and approval changes. It advances
+    `project.json.current_stage` to `audio_blocks_ready` only when every speech
+    block has generated audio and is approved.
 
 ## 4. Dependencies
 
@@ -193,7 +194,8 @@ Outputs:
 - `audio_blocks/<chunk_no_4digits>_<chunk_local_no_6digits>_<character_normalized_name>.json`
 - optional split part WAVs under
   `audio_blocks/parts/<chunk_no_4digits>_<chunk_local_no_6digits>_<character_normalized_name>_partNNN.wav`
-- updated compact manifest summary for `operations["audio_blocks"]`
+- updated compact manifest summary for `operations["audio_blocks"]`, written by
+  the backend Audio Blocks service
 - updated manifest stage `audio_blocks_ready` after full generation plus approval
 
 ## 6. Data Contracts

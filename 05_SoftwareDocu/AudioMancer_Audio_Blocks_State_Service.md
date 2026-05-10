@@ -17,7 +17,8 @@ approval-aware UI model.
 
 ## 2. Responsibilities
 
-- load and merge Speech Blocks with persisted Audio Blocks
+- load and merge Speech Blocks with persisted Audio Blocks without opening
+  every generated WAV during page refresh
 - resolve the selected/current block and full source-text preview
 - build localized notes, status lines, progress values, and button enablement,
   including disabling start/continue only when all current approved Speech
@@ -65,7 +66,7 @@ Internal dependencies:
 
 External dependencies:
 
-- Python standard library `pathlib` and `wave`
+- Python standard library `pathlib`
 
 ## 5. Inputs And Outputs
 
@@ -145,4 +146,6 @@ Minimum validation after changes:
 
 - the service intentionally mirrors the current dictionary-based page contract
   rather than introducing a separate dataclass model
-- audio duration discovery is conservative and depends on readable WAV files
+- Audio Blocks row labels intentionally do not compute every generated WAV
+  duration during page refresh; this keeps large projects responsive when the
+  operator opens the page

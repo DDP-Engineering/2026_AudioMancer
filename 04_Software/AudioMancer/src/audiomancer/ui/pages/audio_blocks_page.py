@@ -13,12 +13,12 @@
          review controls for the Audio Blocks workflow.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-23
-@version 0.5.0
+@version 0.5.1
 """
 
 # IMPORTS
 
-from PySide6.QtCore import Qt, Signal
+from PySide6.QtCore import QSignalBlocker, Qt, Signal
 from PySide6.QtWidgets import (
     QGroupBox,
     QHBoxLayout,
@@ -62,7 +62,7 @@ class AudioBlocksPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-23
-        @version    0.5.0
+        @version    0.5.1
         """
         super().__init__(parent)
         self._current_language = "en"
@@ -119,6 +119,7 @@ class AudioBlocksPage(QWidget):
         self._blocks_group = QGroupBox("Speech Blocks", self)
         blocks_layout = QVBoxLayout(self._blocks_group)
         self._speech_block_list = QListWidget(self)
+        self._speech_block_list.setUniformItemSizes(True)
         self._speech_block_list.currentRowChanged.connect(self._show_selected_block)
         blocks_layout.addWidget(self._speech_block_list)
         self._right_splitter.addWidget(self._blocks_group)
@@ -261,7 +262,7 @@ class AudioBlocksPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-23
-        @version    0.4.0
+        @version    0.4.1
         """
         self._speech_blocks = speech_blocks_service.sort_speech_blocks(speech_blocks)
         self._stage_status = stage_status
@@ -271,7 +272,8 @@ class AudioBlocksPage(QWidget):
         self._can_approve_all = can_approve_all
         self._can_regenerate_selected = can_regenerate_selected
         self._can_approve_selected = can_approve_selected
-        self._source_text_edit.setPlainText(full_source_text)
+        if self._source_text_edit.toPlainText() != full_source_text:
+            self._source_text_edit.setPlainText(full_source_text)
         self._progress_bar.setValue(max(0, min(int(progress_percent), 100)))
         self._progress_label.setText(
             ui_state_service.translate("audio_blocks.progress_label", self._current_language).format(
@@ -281,9 +283,15 @@ class AudioBlocksPage(QWidget):
         )
         self._status_edit.setPlainText("\n".join([*notes, "", *status_lines]).strip())
         previously_selected_id = self._current_block_id
-        self._speech_block_list.clear()
-        for speech_block in self._speech_blocks:
-            self._speech_block_list.addItem(_format_audio_block_list_item(speech_block, self._current_language))
+        self._speech_block_list.setUpdatesEnabled(False)
+        with QSignalBlocker(self._speech_block_list):
+            self._speech_block_list.clear()
+            self._speech_block_list.addItems(
+                [
+                    _format_audio_block_list_item(speech_block, self._current_language)
+                    for speech_block in self._speech_blocks
+                ]
+            )
         row_to_select = 0
         desired_block_id = current_block_id or previously_selected_id
         if desired_block_id is not None:
@@ -292,11 +300,14 @@ class AudioBlocksPage(QWidget):
                     row_to_select = index
                     break
         if self._speech_blocks:
-            self._speech_block_list.setCurrentRow(row_to_select)
+            with QSignalBlocker(self._speech_block_list):
+                self._speech_block_list.setCurrentRow(row_to_select)
+            self._show_selected_block(row_to_select)
         else:
             self._current_block_id = current_block_id
             self._speaker_label.setText(current_block_speaker)
             self._block_text_edit.setPlainText(current_block_text)
+        self._speech_block_list.setUpdatesEnabled(True)
         self._apply_control_state()
 
     def set_busy(self, is_busy: bool) -> None:

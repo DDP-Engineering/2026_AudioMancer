@@ -10,6 +10,32 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [1.0.3] - 2026-05-10
+
+### Changed
+
+- Audio Blocks page opening is faster on large projects because page-state
+  construction no longer opens every generated WAV to compute row durations,
+  and the page batches list-row refreshes while avoiding unchanged source-text
+  rewrites.
+
+## [1.0.2] - 2026-05-10
+
+### Fixed
+
+- Backend workflow services now persist compact operation status summaries and
+  workflow-stage transitions directly to `project.json` after operation
+  completion or review updates, instead of relying on the UI shell to mirror
+  backend state.
+- Audio Blocks completion and approval refreshes now promote stale
+  `audio_blocks_state.json` metadata to `completed` when the completed report
+  and generated output artifacts prove the operation finished.
+- Project-open metadata normalization now treats persisted string values such
+  as `"None"` and `"null"` as missing values, preventing repeat repair prompts
+  caused by stale null-like text.
+- Narrator completion evidence now prefers selected-sample timestamps so valid
+  narrator selections no longer require repeated summary normalization.
+
 ## [1.0.1] - 2026-05-10
 
 ### Changed

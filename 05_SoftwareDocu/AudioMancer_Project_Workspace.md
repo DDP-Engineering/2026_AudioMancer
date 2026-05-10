@@ -39,8 +39,8 @@ application shell.
   comparing manifest metadata with trusted local operation artifacts
 - return a metadata-only repair report with proposed changes, warnings, and a
   normalized manifest candidate before writing any repair
-- persist compact extraction, cleanup, chunking, translation, and
-  character-discovery summaries in the root manifest
+- expose a backend helper for workflow services to persist compact operation
+  summaries and stage transitions in the root manifest
 - persist locked project-local narrator workflow settings such as
   `target_language`, `selected_voice_language`, and `voice_assignment_mode` in
   the root manifest
@@ -104,11 +104,12 @@ High-level flow:
    metadata, `MainWindow` creates the missing `<step>_state.json` file with a
    `not_started` payload. It does not create reports or output artifacts.
 9. After one workflow step writes its full local state into root-level
-   operation artifacts, `MainWindow` stores only the compact operation summary
-   back into `project.json`.
-10. After deterministic cleanup completes, `MainWindow` advances the project to
-   `text_chunking_ready` while keeping cleanup detail files at the project
-   root.
+   operation artifacts, the backend workflow service calls
+   `project_workspace_service.sync_manifest_operation_summary(...)` to store
+   the compact operation summary and stage transition back into `project.json`.
+10. After deterministic cleanup completes, the cleanup service advances the
+   project to `text_chunking_ready` while keeping cleanup detail files at the
+   project root.
 11. After a selected chunk is manually edited and saved from `Text Chunking`,
    `MainWindow` keeps `chunks_text.json`, resets dependent runtime artifacts
    from translation onward, preserves existing Narator Voice profiles and

@@ -15,7 +15,7 @@
          operation state.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-22
-@version 0.13.0
+@version 0.13.1
 """
 
 # IMPORTS
@@ -30,6 +30,7 @@ from audiomancer.services import (
     ai_budget_service,
     deterministic_chunking_service,
     llm_provider_service,
+    project_workspace_service,
     prompt_template_service,
     token_usage_service,
 )
@@ -245,7 +246,7 @@ def start_or_continue_discovery(
     @exception  OperationCancelledError Raised when the operator cancels the run.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-08
-    @version    0.4.0
+    @version    0.4.1
     """
     resolved_project_root = Path(project_root)
     source_chunks, input_source = _resolve_discovery_input_chunks(resolved_project_root)
@@ -689,6 +690,12 @@ def start_or_continue_discovery(
         model_settings=model_settings,
         model_settings_history=model_settings_history,
         resume_checkpoint=None,
+    )
+    project_workspace_service.sync_manifest_operation_summary(
+        resolved_project_root,
+        "character_discovery",
+        load_operation_state(resolved_project_root),
+        current_stage="character_discovery_ready",
     )
     _emit_progress(
         progress_callback,
