@@ -13,7 +13,7 @@
          validation, project-root resolution, and open validation behavior.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-20
-@version 1.1.2
+@version 1.1.3
 """
 
 # IMPORTS
@@ -757,6 +757,77 @@ def test_open_project_does_not_require_repair_when_only_stale_state_warning_rema
 
     assert open_result["status"] == "ok"
     assert open_result["manifest"]["operations"]["audio_blocks"]["status"] == "completed"
+
+
+def test_open_project_ignores_narrator_timestamp_drift_with_noncompleted_downstream_artifacts(tmp_path) -> None:
+    """
+    @brief      Verify narrator timestamp drift and intentionally non-completed downstream artifacts open cleanly.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-11
+    @version    0.1.0
+    """
+    project_root, manifest = project_workspace_service.create_project("NarratorTimestampDrift", tmp_path)
+    profile_id = "narrator-1"
+    selected_at = "2026-05-11T10:23:11+00:00"
+    _write_json(
+        project_root / config.NARRATOR_PROFILE_FILE_NAME,
+        [
+            {
+                "profile_id": profile_id,
+                "display_name": "Selected Narrator",
+                "language": "en",
+            }
+        ],
+    )
+    _write_json(
+        project_root / config.NARRATOR_SELECTION_FILE_NAME,
+        {
+            "selected_profile_id": profile_id,
+            "display_name": "Selected Narrator",
+            "selected_language": "en",
+            "selected_at": selected_at,
+        },
+    )
+    _write_json(
+        project_root / config.SPEECH_BLOCKS_OUTPUT_FILE_NAME,
+        [{"speech_block_id": "sb-1", "approved": False}],
+    )
+    _write_json(
+        project_root / config.AUDIO_BLOCKS_OUTPUT_FILE_NAME,
+        [{"speech_block_id": "sb-1", "generated": False}],
+    )
+    manifest["current_stage"] = "narrator_definition_ready"
+    manifest["narrator_profile_name"] = "Selected Narrator"
+    manifest["narrator_language"] = "en"
+    manifest["operations"]["narrator_definition"] = project_workspace_service.project_manifest_operation_summary(
+        "narrator_definition",
+        {
+            **_operation_state("completed", 1, 1),
+            "mode": "manual",
+            "started_at": "2026-05-11T10:23:10+00:00",
+            "completed_at": "2026-05-11T10:23:10+00:00",
+            "updated_at": "2026-05-11T10:23:10+00:00",
+        },
+    )
+    manifest["operations"]["speech_blocks"] = {
+        **manifest["operations"]["speech_blocks"],
+        "status": "review_pending",
+    }
+    manifest["operations"]["audio_blocks"] = {
+        **manifest["operations"]["audio_blocks"],
+        "status": "in_progress",
+    }
+    project_workspace_service.save_manifest(manifest, project_root)
+
+    open_result = project_workspace_service.open_project(project_root)
+
+    assert open_result["status"] == "ok"
+    assert open_result["manifest"]["operations"]["narrator_definition"]["updated_at"] == "2026-05-11T10:23:10+00:00"
+    assert open_result["manifest"]["operations"]["speech_blocks"]["status"] == "review_pending"
+    assert open_result["manifest"]["operations"]["audio_blocks"]["status"] == "in_progress"
 
 
 def test_open_project_does_not_heal_audio_blocks_with_traversal_audio_path(tmp_path) -> None:

@@ -13,7 +13,7 @@
          explicit narrator selection, and Qwen3-backed sample generation.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-18
-@version 3.4.0
+@version 3.5.0
 """
 
 # IMPORTS
@@ -185,7 +185,11 @@ def test_narator_voice_ui_controller_select_profile_with_sample_updates_manifest
     updated_manifest = project_workspace_service.load_manifest(project_root)
     assert updated_manifest["narrator_profile_name"] == "My Narrator"
     assert updated_manifest["narrator_language"] == "en"
-    assert updated_manifest["operations"]["narrator_definition"]["status"] == "completed"
+    narrator_operation = updated_manifest["operations"]["narrator_definition"]
+    selected_metadata = json.loads(selected_metadata_path.read_text(encoding="utf-8"))
+    assert narrator_operation["status"] == "completed"
+    assert narrator_operation["updated_at"] == selected_metadata["selected_at"]
+    assert project_workspace_service.open_project(project_root)["status"] == "ok"
     assert selected_audio_path.read_bytes() == b"RIFF-selected"
     assert "selected_profile_id" in selected_metadata_path.read_text(encoding="utf-8")
 

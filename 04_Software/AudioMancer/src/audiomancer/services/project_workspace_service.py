@@ -13,7 +13,7 @@
          using one minimal root-level `project.json` manifest contract.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-20
-@version    2.0.6
+@version    2.0.7
 """
 
 # IMPORTS
@@ -507,7 +507,7 @@ def sync_manifest_operation_summary(
     @exception  ValueError Raised when the operation kind or stage is unsupported.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-10
-    @version    0.1.0
+    @version    0.2.0
     """
     manifest = load_manifest(project_root)
     operations = _normalize_operations(manifest.get("operations"))
@@ -572,6 +572,7 @@ def _build_project_manifest_healing_result(
         elif operation_kind != "extraction":
             contiguous = False
 
+    warnings = _filter_noncompleted_artifact_warnings(candidate_manifest, warnings)
     existing_stage = str(payload.get("current_stage", config.DEFAULT_WORKFLOW_STAGE))
     target_stage = max(base_stage, verified_stage, key=_stage_rank)
     if current_stage_is_invalid:
@@ -595,6 +596,37 @@ def _build_project_manifest_healing_result(
         "warnings": warnings,
         "normalized_manifest": normalized_manifest,
     }
+
+
+def _filter_noncompleted_artifact_warnings(
+    manifest: dict[str, object],
+    warnings: list[str],
+) -> list[str]:
+    """
+    @brief      Hide stale downstream artifact warnings when manifest already marks them non-completed.
+    @param[in]  manifest Candidate manifest payload.
+    @param[in]  warnings Collected metadata-healing warnings.
+    @return     Filtered warning list.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-11
+    @version    0.1.0
+    """
+    operations = manifest.get("operations")
+    if not isinstance(operations, dict):
+        return warnings
+    warning_operation_markers = {
+        "Speech Blocks artifacts exist but do not prove a completed, fully approved stage.": "speech_blocks",
+        "Audio Blocks artifacts exist but do not prove a completed stage.": "audio_blocks",
+    }
+    filtered_warnings = []
+    for warning in warnings:
+        operation_kind = warning_operation_markers.get(warning)
+        operation_payload = operations.get(operation_kind) if operation_kind is not None else None
+        if isinstance(operation_payload, dict) and str(operation_payload.get("status", "")).strip() != "completed":
+            continue
+        filtered_warnings.append(warning)
+    return filtered_warnings
 
 
 def _validate_project_scoped_manifest_paths(payload: dict[str, object], project_root: Path) -> None:
@@ -1052,6 +1084,8 @@ def _heal_operation_summary(
         return
     healed_summary = project_manifest_operation_summary(operation_kind, evidence.get("operation"))
     old_summary = operations.get(operation_kind)
+    if _is_nonmaterial_operation_summary_difference(operation_kind, old_summary, healed_summary):
+        return
     operations[operation_kind] = healed_summary
     if isinstance(old_summary, dict) and old_summary != healed_summary:
         old_status = old_summary.get("status")
@@ -1060,6 +1094,32 @@ def _heal_operation_summary(
             changes.append(f"{operation_kind}: {old_status} -> {new_status}")
         else:
             changes.append(f"{operation_kind}: summary metadata normalized")
+
+
+def _is_nonmaterial_operation_summary_difference(
+    operation_kind: str,
+    old_summary: object,
+    healed_summary: dict[str, object],
+) -> bool:
+    """
+    @brief      Return whether operation-summary differences should not trigger metadata repair.
+    @param[in]  operation_kind Stable workflow operation token.
+    @param[in]  old_summary Existing manifest operation summary.
+    @param[in]  healed_summary Artifact-derived operation summary.
+    @return     True when differences are timestamp-only narrator metadata drift.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-11
+    @version    0.1.0
+    """
+    if operation_kind != "narrator_definition" or not isinstance(old_summary, dict):
+        return False
+    timestamp_fields = {"started_at", "completed_at", "updated_at"}
+    old_without_timestamps = {key: value for key, value in old_summary.items() if key not in timestamp_fields}
+    healed_without_timestamps = {key: value for key, value in healed_summary.items() if key not in timestamp_fields}
+    if old_without_timestamps != healed_without_timestamps:
+        return False
+    return any(old_summary.get(field_name) != healed_summary.get(field_name) for field_name in timestamp_fields)
 
 
 def _heal_extraction_manifest_fields(

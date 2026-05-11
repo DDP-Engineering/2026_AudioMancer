@@ -14,7 +14,7 @@
          project-local narrator profile editing.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-18
-@version 3.15.0
+@version 3.16.0
 """
 
 # IMPORTS
@@ -423,7 +423,6 @@ def handle_select_profile_requested(window: "MainWindow", profile_id: str) -> No
             profile_id,
             selected_language,
         )
-        narrator_definition_service.copy_selected_narrator_sample(window._current_project_root, profile_id)
         window._narator_voice_inspected_profile_id = profile_id
         _sync_manifest_summary(window, profile_id, selected_language)
         audio_blocks_ui_controller.invalidate_audio_blocks_for_voice_targets(
@@ -553,7 +552,7 @@ def _handle_generate_sample_success(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-24
-    @version    0.4.0
+    @version    0.5.0
     """
     _ = result_payload
     window._settings_payload = settings_service.load_settings()
@@ -567,6 +566,16 @@ def _handle_generate_sample_success(
     try:
         if window._current_project_root is not None:
             _update_narator_voice_change_progress(progress_callback, 35, "progress.narator_voice_change_refresh")
+            selected_state = narrator_definition_service.load_selected_profile_state(window._current_project_root)
+            if str(selected_state.get("selected_profile_id", "") or "").strip() == str(profile_id).strip():
+                profile_payload = narrator_definition_service.profile_by_id(window._current_project_root, profile_id)
+                selected_language = str(
+                    selected_state.get("selected_language")
+                    or selected_state.get("language")
+                    or (profile_payload or {}).get("language")
+                    or narrator_definition_service.DEFAULT_NARRATOR_LANGUAGE
+                ).strip()
+                _sync_manifest_summary(window, profile_id, selected_language)
             window.show_project_state(
                 window._current_project_root,
                 project_workspace_service.load_manifest(window._current_project_root),
@@ -1083,7 +1092,7 @@ def _sync_manifest_summary(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-08
-    @version    1.2.0
+    @version    1.3.0
     """
     if window._current_project_root is None or window._current_manifest is None:
         return
@@ -1101,7 +1110,21 @@ def _sync_manifest_summary(
             narrator_definition_service.display_profile_name(profile_payload) or None
         )
         updated_manifest["narrator_language"] = narrator_definition_service.narrator_language_code(selected_language)
-        timestamp = time_service.utc_now_iso()
+        selected_metadata = None
+        profile_id_value = str(profile_payload.get("profile_id", "")).strip()
+        if narrator_definition_service.has_profile_sample(
+            window._current_project_root,
+            profile_id_value,
+        ):
+            selected_metadata = narrator_definition_service.copy_selected_narrator_sample(
+                window._current_project_root,
+                profile_id_value,
+            )
+        else:
+            narrator_definition_service.clear_selected_narrator_sample_artifacts(window._current_project_root)
+        timestamp = (
+            str(selected_metadata.get("selected_at", "")).strip() if isinstance(selected_metadata, dict) else ""
+        ) or time_service.utc_now_iso()
         updated_manifest["operations"]["narrator_definition"] = (
             project_workspace_service.project_manifest_operation_summary(
                 "narrator_definition",
@@ -1118,16 +1141,6 @@ def _sync_manifest_summary(
                 },
             )
         )
-        if narrator_definition_service.has_profile_sample(
-            window._current_project_root,
-            str(profile_payload.get("profile_id", "")).strip(),
-        ):
-            narrator_definition_service.copy_selected_narrator_sample(
-                window._current_project_root,
-                str(profile_payload.get("profile_id", "")).strip(),
-            )
-        else:
-            narrator_definition_service.clear_selected_narrator_sample_artifacts(window._current_project_root)
     updated_manifest["current_stage"] = "narrator_definition_ready"
     project_workspace_service.save_manifest(updated_manifest, window._current_project_root)
     window.show_project_state(
