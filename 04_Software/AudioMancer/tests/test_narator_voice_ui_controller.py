@@ -13,7 +13,7 @@
          explicit narrator selection, and Qwen3-backed sample generation.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-18
-@version 3.5.0
+@version 3.6.0
 """
 
 # IMPORTS
@@ -639,6 +639,154 @@ def test_narator_voice_generate_sample_reprobes_runtime_and_stores_audio(monkeyp
     }
 
 
+def test_narator_voice_generate_profiles_resolves_selected_ai_profile_and_starts_worker(
+    monkeypatch,
+    qtbot,
+    tmp_path,
+) -> None:
+    """
+    @brief      Verify narrator profile generation resolves the selected AI profile and count.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  qtbot Qt test helper fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-11
+    @version    0.1.0
+    """
+    project_root, _manifest = _create_project(tmp_path, "NarratorControllerGenerateProfiles")
+    settings_payload = {
+        **_default_settings_payload(),
+        "llm_profiles": [_ai_profile_payload("profile_1")],
+        "default_narrator_profile_generation_profile_id": "profile_1",
+        "tts_preview_text_character_limit": 180,
+    }
+    window = _build_window(qtbot, project_root, settings_payload=settings_payload)
+    captured: dict[str, object] = {}
+    monkeypatch.setattr(
+        narator_voice_ui_controller.QMessageBox,
+        "question",
+        lambda *_args, **_kwargs: QMessageBox.StandardButton.Yes,
+    )
+    monkeypatch.setattr(narator_voice_ui_controller.QInputDialog, "getInt", lambda *_args, **_kwargs: (4, True))
+    monkeypatch.setattr(narator_voice_ui_controller.misc_ui_controller, "show_message", lambda *args, **kwargs: None)
+    monkeypatch.setattr(
+        narator_voice_ui_controller.narrator_profile_generation_service,
+        "generate_narrator_profiles",
+        lambda project_root_arg, _manifest, ai_profile, profile_count, voice_language, preview_limit, **_kwargs: (
+            captured.update(
+                {
+                    "project_root": project_root_arg,
+                    "ai_profile_id": ai_profile["id"],
+                    "profile_count": profile_count,
+                    "voice_language": voice_language,
+                    "preview_limit": preview_limit,
+                }
+            )
+            or {"generated_profile_ids": [], "generated_profile_count": 4}
+        ),
+    )
+
+    def _start_threaded_operation(
+        window_arg,
+        operation_kind,
+        operation_name,
+        initial_message,
+        worker_callable,
+        set_busy,
+        success_handler,
+        failure_handler,
+        cancel_handler,
+        cancellable=True,
+    ):
+        """
+        @brief      Run the generation worker synchronously for controller testing.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-11
+        @version    0.1.0
+        """
+        _ = failure_handler
+        _ = cancel_handler
+        captured["operation_kind"] = operation_kind
+        captured["operation_name"] = operation_name
+        captured["initial_message"] = initial_message
+        captured["set_busy"] = set_busy
+        captured["cancellable"] = cancellable
+        success_handler(
+            worker_callable(
+                window_arg._current_project_root,
+                dict(window_arg._current_manifest),
+                progress_callback=lambda *_args, **_kwargs: None,
+                cancel_requested=lambda: False,
+            )
+        )
+
+    monkeypatch.setattr(
+        narator_voice_ui_controller.operation_runner_controller,
+        "start_threaded_operation",
+        _start_threaded_operation,
+    )
+
+    narator_voice_ui_controller.handle_generate_profiles_requested(window, "profile_1")
+
+    assert captured["operation_kind"] == "narrator_definition"
+    assert captured["operation_name"] == "Generate Narator Profiles"
+    assert captured["initial_message"] == "Generating narator profiles..."
+    assert captured["cancellable"] is True
+    assert captured["project_root"] == project_root
+    assert captured["ai_profile_id"] == "profile_1"
+    assert captured["profile_count"] == 4
+    assert captured["voice_language"] == "en"
+    assert captured["preview_limit"] == 180
+
+
+def test_narator_voice_generate_profiles_count_cancel_stops_before_worker(
+    monkeypatch,
+    qtbot,
+    tmp_path,
+) -> None:
+    """
+    @brief      Verify cancelling the count dialog prevents worker startup.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  qtbot Qt test helper fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-11
+    @version    0.1.0
+    """
+    project_root, _manifest = _create_project(tmp_path, "NarratorControllerGenerateProfilesCancel")
+    window = _build_window(
+        qtbot,
+        project_root,
+        settings_payload={
+            **_default_settings_payload(),
+            "llm_profiles": [_ai_profile_payload("profile_1")],
+            "default_narrator_profile_generation_profile_id": "profile_1",
+        },
+    )
+    start_calls: list[bool] = []
+    monkeypatch.setattr(
+        narator_voice_ui_controller.QMessageBox,
+        "question",
+        lambda *_args, **_kwargs: QMessageBox.StandardButton.Yes,
+    )
+    monkeypatch.setattr(narator_voice_ui_controller.QInputDialog, "getInt", lambda *_args, **_kwargs: (6, False))
+    monkeypatch.setattr(
+        narator_voice_ui_controller.operation_runner_controller,
+        "start_threaded_operation",
+        lambda *args, **kwargs: start_calls.append(True),
+    )
+
+    narator_voice_ui_controller.handle_generate_profiles_requested(window, "profile_1")
+
+    assert start_calls == []
+
+
 def test_narator_voice_ui_controller_preview_state_change_clears_preview_flag(qtbot, tmp_path) -> None:
     """
     @brief      Verify preview-state refresh accepts the Qt playback enum without crashing and clears the preview flag.
@@ -870,6 +1018,7 @@ def _default_settings_payload() -> dict[str, object]:
         "default_ai_cleanup_profile_id": None,
         "default_ai_chunking_profile_id": None,
         "default_ai_translation_profile_id": None,
+        "default_narrator_profile_generation_profile_id": None,
         "default_ai_chunking_strategy": "paragraph",
         "default_character_extraction_profile_id": None,
         "tts_runtime_base_url": "http://127.0.0.1:8059",
@@ -881,6 +1030,33 @@ def _default_settings_payload() -> dict[str, object]:
         "tts_runtime_device_diagnostics": {},
         "tts_audio_preview_timeout_seconds": 60,
         "tts_audio_generation_timeout_seconds": 300,
+        "tts_preview_text_character_limit": config.DEFAULT_TTS_PREVIEW_TEXT_CHARACTER_LIMIT,
+    }
+
+
+def _ai_profile_payload(profile_id: str) -> dict[str, object]:
+    """
+    @brief      Provide an enabled AI profile payload for controller tests.
+    @param[in]  profile_id Profile identifier.
+    @return     AI profile payload.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-11
+    @version    0.1.0
+    """
+    return {
+        "id": profile_id,
+        "label": "Profile One",
+        "backend_kind": "lmstudio",
+        "base_url": "http://127.0.0.1:1234/v1",
+        "api_key": "",
+        "model_name": "qwen3-8b",
+        "context_window": 8192,
+        "max_output_tokens": 1024,
+        "request_timeout_seconds": 90,
+        "temperature": 0.2,
+        "supports_structured_output": True,
+        "enabled": True,
     }
 
 

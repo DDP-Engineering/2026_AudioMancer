@@ -9,12 +9,12 @@
 """
 @file narator_voice_ui_controller.py
 @brief Narator Voice page UI controller for AudioMancer.
-@details Handles narrator profile inspection, explicit narrator selection,
-         Qwen3-backed sample generation, sample preview playback, and
-         project-local narrator profile editing.
+@details Handles narrator profile inspection, AI text-only profile suggestion
+         generation, explicit narrator selection, Qwen3-backed sample generation,
+         sample preview playback, and project-local narrator profile editing.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-18
-@version 3.16.0
+@version 3.17.1
 """
 
 # IMPORTS
@@ -29,8 +29,8 @@ from audiomancer import config
 from audiomancer.services import (
     character_voices_service,
     narrator_definition_service,
+    narrator_profile_generation_service,
     project_workspace_service,
-    text_cleanup_state_service,
     time_service,
     tts_budget_service,
     ui_state_service,
@@ -41,6 +41,7 @@ from audiomancer.ui.controllers import (
     misc_ui_controller,
     operation_runner_controller,
     tts_runtime_ui_support,
+    workflow_controller_service,
 )
 
 if TYPE_CHECKING:
@@ -67,75 +68,6 @@ def handle_selection_change_requested(window: "MainWindow", target_profile_id: o
         window._current_project_root,
         window._current_manifest,
         current_language,
-    )
-
-
-def handle_voice_language_change_requested(window: "MainWindow", voice_language: object) -> None:
-    """
-    @brief      Persist one audiobook voice language selection and clear stale generated voice data.
-    @param[in]  window Main application window.
-    @param[in]  voice_language Requested audiobook voice language code.
-    @return     None.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-26
-    @version    0.2.0
-    """
-    if window._current_project_root is None or window._current_manifest is None:
-        return
-    if bool(window._current_manifest.get("project_options_locked", False)):
-        window.show_project_state(
-            window._current_project_root,
-            project_workspace_service.load_manifest(window._current_project_root),
-        )
-        return
-    current_language = ui_state_service.current_language_from_settings(window._settings_payload)
-    previous_voice_language = character_voices_service.load_selected_voice_language(window._current_project_root)
-    requested_voice_language = narrator_definition_service.narrator_language_code(voice_language)
-    if previous_voice_language == requested_voice_language:
-        window.show_project_state(
-            window._current_project_root,
-            project_workspace_service.load_manifest(window._current_project_root),
-        )
-        return
-    if not _confirm_voice_language_change(window, current_language):
-        window.show_project_state(
-            window._current_project_root,
-            project_workspace_service.load_manifest(window._current_project_root),
-        )
-        return
-    if not audio_blocks_ui_controller.confirm_global_voice_settings_invalidation(window, current_language):
-        window.show_project_state(
-            window._current_project_root,
-            project_workspace_service.load_manifest(window._current_project_root),
-        )
-        return
-
-    _stop_preview_playback(window)
-    window._character_voices_audio_player.stop()
-    window._character_voices_audio_player.setSource(QUrl())
-    window._character_voices_page.set_preview_active(False)
-    persisted_voice_language = character_voices_service.save_selected_voice_language(
-        window._current_project_root,
-        requested_voice_language,
-    )
-    narrator_definition_service.apply_voice_language_to_profiles(window._current_project_root, persisted_voice_language)
-    narrator_definition_service.clear_all_profile_samples(window._current_project_root)
-    narrator_definition_service.clear_selected_narrator_sample(window._current_project_root)
-    character_voices_service.reset_samples_and_preview_texts_for_language(
-        window._current_project_root,
-        persisted_voice_language,
-    )
-    _reset_voice_language_downstream(window)
-    window._narator_voice_inspected_profile_id = None
-    window._character_voices_inspected_target_id = None
-    window.show_project_state(
-        window._current_project_root,
-        project_workspace_service.load_manifest(window._current_project_root),
-    )
-    misc_ui_controller.show_message(
-        window,
-        ui_state_service.translate("status.narator_voice_language_changed", current_language),
     )
 
 
@@ -531,6 +463,155 @@ def handle_generate_sample_requested(window: "MainWindow", profile_id: str) -> N
         failure_handler=lambda error: _handle_generate_sample_failure(window, error, current_language),
         cancel_handler=lambda message: _handle_generate_sample_cancelled(window, message, current_language),
         cancellable=False,
+    )
+
+
+def handle_generate_profiles_requested(window: "MainWindow", profile_id: str) -> None:
+    """
+    @brief      Run AI-assisted text-only narrator profile generation.
+    @param[in]  window Main application window.
+    @param[in]  profile_id Selected enabled AI profile identifier.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-11
+    @version    0.1.0
+    """
+    current_language = ui_state_service.current_language_from_settings(window._settings_payload)
+    if window._active_operation_kind is not None:
+        return
+    if window._current_project_root is None or window._current_manifest is None:
+        QMessageBox.warning(
+            window,
+            ui_state_service.translate("dialog.project_error_title", current_language),
+            ui_state_service.translate("project.error_no_active_project", current_language),
+        )
+        return
+    selected_profile = workflow_controller_service.resolve_enabled_ai_profile(window._settings_payload, profile_id)
+    if selected_profile is None:
+        QMessageBox.warning(
+            window,
+            ui_state_service.translate("dialog.project_error_title", current_language),
+            ui_state_service.translate("project.error_missing_narrator_generation_profile", current_language),
+        )
+        return
+    if not _confirm_generate_profiles(window, current_language):
+        return
+    profile_count, accepted = QInputDialog.getInt(
+        window,
+        ui_state_service.translate("dialog.narator_voice_generate_profiles_title", current_language),
+        ui_state_service.translate("dialog.narator_voice_generate_profiles_count_prompt", current_language),
+        config.DEFAULT_NARRATOR_PROFILE_GENERATION_COUNT,
+        1,
+        config.MAX_NARRATOR_PROFILE_GENERATION_COUNT,
+        1,
+    )
+    if not accepted:
+        return
+    voice_language = window._narator_voice_page.current_voice_language()
+    preview_limit = _preview_text_character_limit(window._settings_payload)
+    operation_runner_controller.start_threaded_operation(
+        window,
+        "narrator_definition",
+        ui_state_service.translate("narator_voice.generate_profiles", current_language),
+        ui_state_service.translate("progress.narator_voice_generate_profiles", current_language),
+        worker_callable=lambda project_root, manifest, progress_callback=None, cancel_requested=None: (
+            narrator_profile_generation_service.generate_narrator_profiles(
+                project_root,
+                manifest,
+                selected_profile,
+                profile_count,
+                voice_language,
+                preview_limit,
+                progress_callback=progress_callback,
+                cancel_requested=cancel_requested,
+            )
+        ),
+        set_busy=lambda is_busy: window._narator_voice_page.set_busy(is_busy),
+        success_handler=lambda result_payload: _handle_generate_profiles_success(window, result_payload),
+        failure_handler=lambda error: _handle_generate_profiles_failure(window, error, current_language),
+        cancel_handler=lambda message: _handle_generate_profiles_cancelled(window, message, current_language),
+    )
+
+
+def _handle_generate_profiles_success(window: "MainWindow", result_payload: object) -> None:
+    """
+    @brief      Refresh Narator Voice state after generated profiles are appended.
+    @param[in]  window Main application window.
+    @param[in]  result_payload Successful generation report payload.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-11
+    @version    0.1.0
+    """
+    current_language = ui_state_service.current_language_from_settings(window._settings_payload)
+    report_payload = dict(result_payload) if isinstance(result_payload, dict) else {}
+    generated_profile_ids = [
+        str(profile_id).strip()
+        for profile_id in list(report_payload.get("generated_profile_ids", []))
+        if str(profile_id).strip()
+    ]
+    if generated_profile_ids:
+        window._narator_voice_inspected_profile_id = generated_profile_ids[0]
+    if window._current_project_root is not None:
+        window.show_project_state(
+            window._current_project_root,
+            project_workspace_service.load_manifest(window._current_project_root),
+        )
+    misc_ui_controller.show_message(
+        window,
+        ui_state_service.translate("status.narator_voice_profiles_generated", current_language).format(
+            generated_count=len(generated_profile_ids),
+        ),
+    )
+
+
+def _handle_generate_profiles_failure(window: "MainWindow", error: Exception, current_language: str) -> None:
+    """
+    @brief      Refresh Narator Voice state after profile generation fails.
+    @param[in]  window Main application window.
+    @param[in]  error Raised operation exception.
+    @param[in]  current_language Current UI language code.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-11
+    @version    0.1.0
+    """
+    if window._current_project_root is not None:
+        window.show_project_state(
+            window._current_project_root,
+            project_workspace_service.load_manifest(window._current_project_root),
+        )
+    QMessageBox.warning(
+        window,
+        ui_state_service.translate("dialog.project_error_title", current_language),
+        str(error),
+    )
+
+
+def _handle_generate_profiles_cancelled(window: "MainWindow", message: str, current_language: str) -> None:
+    """
+    @brief      Refresh Narator Voice state after profile generation is cancelled.
+    @param[in]  window Main application window.
+    @param[in]  message Cancellation message.
+    @param[in]  current_language Current UI language code.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-11
+    @version    0.1.0
+    """
+    _ = message
+    if window._current_project_root is not None:
+        window.show_project_state(
+            window._current_project_root,
+            project_workspace_service.load_manifest(window._current_project_root),
+        )
+    misc_ui_controller.show_message(
+        window,
+        ui_state_service.translate("status.operation_cancelled", current_language),
     )
 
 
@@ -1149,36 +1230,6 @@ def _sync_manifest_summary(
     )
 
 
-def _reset_voice_language_downstream(window: "MainWindow") -> None:
-    """
-    @brief      Reset narrator-dependent and downstream manifest operation metadata after a language change.
-    @param[in]  window Main application window.
-    @return     None.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-26
-    @version    0.1.0
-    """
-    if window._current_project_root is None or window._current_manifest is None:
-        return
-    audio_blocks_ui_controller.invalidate_all_audio_blocks_after_voice_settings_change(window)
-    updated_manifest = project_workspace_service.load_manifest(window._current_project_root)
-    operations = text_cleanup_state_service.normalized_manifest_operations(updated_manifest)
-    default_operations = text_cleanup_state_service.normalized_manifest_operations({})
-    for operation_kind in ("character_voices",):
-        operations[operation_kind] = default_operations[operation_kind]
-    updated_manifest["operations"] = operations
-    updated_manifest["narrator_profile_name"] = None
-    updated_manifest["narrator_language"] = None
-    current_stage = str(updated_manifest.get("current_stage", "")).strip()
-    if current_stage in config.PROJECT_WORKFLOW_STAGES:
-        narrator_stage_rank = config.PROJECT_WORKFLOW_STAGES.index("narrator_definition_ready")
-        if config.PROJECT_WORKFLOW_STAGES.index(current_stage) >= narrator_stage_rank:
-            updated_manifest["current_stage"] = "narrator_definition_ready"
-    project_workspace_service.save_manifest(updated_manifest, window._current_project_root)
-    window._current_manifest = project_workspace_service.load_manifest(window._current_project_root)
-
-
 def _stop_preview_playback(window: "MainWindow") -> None:
     """
     @brief      Execute the stop preview playback helper.
@@ -1191,26 +1242,6 @@ def _stop_preview_playback(window: "MainWindow") -> None:
     window._narator_voice_audio_player.stop()
     window._narator_voice_audio_player.setSource(QUrl())
     window._narator_voice_page.set_preview_active(False)
-
-
-def _confirm_voice_language_change(window: "MainWindow", language: str) -> bool:
-    """
-    @brief      Confirm destructive audiobook voice-language switching.
-    @param[in]  window Main application window.
-    @param[in]  language Runtime UI language code.
-    @return     True when the operator confirms the reset.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-26
-    @version    0.1.0
-    """
-    return (
-        QMessageBox.question(
-            window,
-            ui_state_service.translate("dialog.narator_voice_language_change_title", language),
-            ui_state_service.translate("dialog.narator_voice_language_change_message", language),
-        )
-        == QMessageBox.StandardButton.Yes
-    )
 
 
 def _confirm_delete_profile(window: "MainWindow", language: str) -> bool:
@@ -1280,6 +1311,53 @@ def _confirm_generate_sample(window: "MainWindow", language: str, profile_id: st
         )
         == QMessageBox.StandardButton.Yes
     )
+
+
+def _confirm_generate_profiles(window: "MainWindow", language: str) -> bool:
+    """
+    @brief      Confirm AI-assisted text-only narrator profile generation.
+    @param[in]  window Main application window.
+    @param[in]  language Runtime UI language code.
+    @return     True when the operator accepts token-consuming AI work.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-11
+    @version    0.1.0
+    """
+    return (
+        QMessageBox.question(
+            window,
+            ui_state_service.translate("dialog.narator_voice_generate_profiles_title", language),
+            ui_state_service.translate("dialog.narator_voice_generate_profiles_message", language),
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        == QMessageBox.StandardButton.Yes
+    )
+
+
+def _preview_text_character_limit(settings_payload: dict[str, object] | None) -> int:
+    """
+    @brief      Resolve the configured narrator preview text character limit.
+    @param[in]  settings_payload Current application settings payload.
+    @return     Positive preview text character limit.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-11
+    @version    0.1.0
+    """
+    if not isinstance(settings_payload, dict):
+        return config.DEFAULT_TTS_PREVIEW_TEXT_CHARACTER_LIMIT
+    try:
+        character_limit = int(
+            settings_payload.get(
+                "tts_preview_text_character_limit",
+                config.DEFAULT_TTS_PREVIEW_TEXT_CHARACTER_LIMIT,
+            )
+        )
+    except (TypeError, ValueError):
+        return config.DEFAULT_TTS_PREVIEW_TEXT_CHARACTER_LIMIT
+    return character_limit if character_limit > 0 else config.DEFAULT_TTS_PREVIEW_TEXT_CHARACTER_LIMIT
 
 
 def _show_name_validation_error(window: "MainWindow", language: str, error_code: str) -> None:

@@ -14,7 +14,7 @@
          preview controls for the fixed Qwen3-backed narrator workflow.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-17
-@version 3.9.1
+@version 3.11.0
 """
 
 # IMPORTS
@@ -46,7 +46,7 @@ class NaratorVoicePage(QWidget):
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-17
-    @version    1.4.0
+    @version    1.6.0
     """
 
     create_profile_requested = Signal(dict)
@@ -56,8 +56,8 @@ class NaratorVoicePage(QWidget):
     selection_change_requested = Signal(object)
     preview_toggle_requested = Signal()
     generate_sample_requested = Signal(str)
+    generate_profiles_requested = Signal(str)
     select_profile_requested = Signal(str)
-    voice_language_change_requested = Signal(object)
 
     def __init__(self, parent=None) -> None:
         """
@@ -67,7 +67,7 @@ class NaratorVoicePage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-17
-        @version    1.6.0
+        @version    1.8.0
         """
         super().__init__(parent)
         self._project_active = False
@@ -75,12 +75,13 @@ class NaratorVoicePage(QWidget):
         self._preview_active = False
         self._ui_language = "en"
         self._profiles: list[dict[str, object]] = []
+        self._has_ai_profiles = False
+        self._can_generate_profiles = False
         self._profile_row_ids: list[str | None] = []
         self._current_profile_id: str | None = None
         self._selected_profile_id: str | None = None
         self._current_language = ""
         self._selected_voice_language = ""
-        self._loading_language_entries = False
         self._loading_profile = False
         self._edit_mode = False
         self._dirty = False
@@ -100,26 +101,17 @@ class NaratorVoicePage(QWidget):
         self._title_label = QLabel("<h2>Narator Voice</h2>")
         title_row.addWidget(self._title_label)
         title_row.addStretch(1)
+        self._ai_profile_label = QLabel("AI Profile", self)
+        self._ai_profile_label.setEnabled(False)
+        title_row.addWidget(self._ai_profile_label)
+        self._ai_profile_combo = QComboBox(self)
+        self._ai_profile_combo.addItem("(none)", None)
+        title_row.addWidget(self._ai_profile_combo)
+        self._generate_profiles_button = QPushButton("Generate Narator Profiles", self)
+        self._generate_profiles_button.clicked.connect(self._emit_generate_profiles)
+        title_row.addWidget(self._generate_profiles_button)
         header_layout.addLayout(title_row)
 
-        indicator_row = QHBoxLayout()
-        indicator_row.setSpacing(12)
-        self._original_language_group = QGroupBox("Original language", self)
-        original_layout = QVBoxLayout(self._original_language_group)
-        self._original_language_value_label = QLabel("Unknown", self)
-        original_layout.addWidget(self._original_language_value_label)
-        self._translated_language_group = QGroupBox("Translated language", self)
-        translated_layout = QVBoxLayout(self._translated_language_group)
-        self._translated_language_value_label = QLabel("Not translated", self)
-        translated_layout.addWidget(self._translated_language_value_label)
-        self._voice_language_group = QGroupBox("Voice language", self)
-        voice_language_layout = QVBoxLayout(self._voice_language_group)
-        self._voice_language_combo = QComboBox(self)
-        voice_language_layout.addWidget(self._voice_language_combo)
-        indicator_row.addWidget(self._original_language_group, 1)
-        indicator_row.addWidget(self._translated_language_group, 1)
-        indicator_row.addWidget(self._voice_language_group, 1)
-        header_layout.addLayout(indicator_row)
         layout.addLayout(header_layout)
 
         self._main_splitter = QSplitter(self)
@@ -228,7 +220,7 @@ class NaratorVoicePage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-17
-        @version    1.3.0
+        @version    1.5.0
         """
         self._project_active = is_active
         self._apply_control_state()
@@ -267,9 +259,6 @@ class NaratorVoicePage(QWidget):
         selected_profile_id: str | None,
         effective_language: str,
         selected_voice_language: str,
-        language_entries: list[tuple[str, str]],
-        original_language: str,
-        translated_language: str,
         profile_name: str,
         prompt_text: str,
         preview_text: str,
@@ -292,9 +281,6 @@ class NaratorVoicePage(QWidget):
         @param[in]  selected_profile_id Explicitly selected narrator-profile identifier.
         @param[in]  effective_language Effective project narration language.
         @param[in]  selected_voice_language Current selected audiobook voice language code.
-        @param[in]  language_entries Selectable audiobook voice-language entries as `(label, value)`.
-        @param[in]  original_language Source-book original language label.
-        @param[in]  translated_language Translation target label or fallback text.
         @param[in]  profile_name Display name shown in the editor.
         @param[in]  prompt_text Narrator-definition prompt text.
         @param[in]  preview_text Stored preview text for the inspected profile.
@@ -312,7 +298,7 @@ class NaratorVoicePage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-17
-        @version    1.4.0
+        @version    1.5.0
         """
         _ = notes
         _ = is_preset
@@ -333,9 +319,42 @@ class NaratorVoicePage(QWidget):
         self._original_profile = None
         self._refresh_profile_list(current_profile_id)
         self._load_profile_into_editor(_display_profile_name(profile_name), prompt_text, preview_text)
-        self._set_language_labels(original_language, translated_language)
-        self._load_language_entries(language_entries, selected_voice_language)
         self._status_edit.setPlainText("\n".join(line for line in status_lines if str(line).strip()))
+        self._apply_control_state()
+
+    def set_ai_profiles(
+        self,
+        entries: list[tuple[str, str | None]],
+        selected_profile_id: str | None,
+        can_generate_profiles: bool,
+    ) -> None:
+        """
+        @brief      Populate the narrator-profile generation AI selector.
+        @param[in]  entries Ordered profile label/id entries for the selector.
+        @param[in]  selected_profile_id Profile id that should be selected.
+        @param[in]  can_generate_profiles True when the active project has usable source text.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-11
+        @version    0.1.0
+        """
+        self._ai_profile_combo.blockSignals(True)
+        self._ai_profile_combo.clear()
+        if entries:
+            for label, profile_id in entries:
+                self._ai_profile_combo.addItem(label, profile_id)
+            selected_index = next(
+                (index for index, (_label, profile_id) in enumerate(entries) if profile_id == selected_profile_id),
+                0,
+            )
+            self._ai_profile_combo.setCurrentIndex(selected_index)
+        else:
+            self._ai_profile_combo.addItem(ui_state_service.translate("ai_settings.none", self._ui_language), None)
+            self._ai_profile_combo.setCurrentIndex(0)
+        self._ai_profile_combo.blockSignals(False)
+        self._has_ai_profiles = bool(entries)
+        self._can_generate_profiles = bool(can_generate_profiles)
         self._apply_control_state()
 
     def begin_edit_mode(self) -> None:
@@ -399,8 +418,19 @@ class NaratorVoicePage(QWidget):
         @date       2026-04-26
         @version    0.1.0
         """
-        voice_language = self._voice_language_combo.currentData()
-        return str(voice_language).strip() if voice_language not in (None, "") else self._selected_voice_language
+        return self._selected_voice_language
+
+    def current_ai_profile_id(self) -> str | None:
+        """
+        @brief      Return the selected AI profile identifier for narrator profile generation.
+        @return     Selected AI profile id or `None`.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-11
+        @version    0.1.0
+        """
+        value = self._ai_profile_combo.currentData()
+        return None if value in (None, "") else str(value)
 
     def current_editor_payload(self) -> dict[str, object]:
         """
@@ -461,25 +491,25 @@ class NaratorVoicePage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-17
-        @version    1.3.0
+        @version    1.5.0
         """
         self._ui_language = language
         self._title_label.setText(f"<h2>{ui_state_service.translate('narator_voice.title', language)}</h2>")
         self._profiles_group.setTitle(ui_state_service.translate("narator_voice.profiles_group", language))
         self._designer_group.setTitle(ui_state_service.translate("narator_voice.designer_group", language))
         self._preview_group.setTitle(ui_state_service.translate("narator_voice.preview_group", language))
-        self._original_language_group.setTitle(self._language_indicator_title("narator_voice.original_language"))
-        self._translated_language_group.setTitle(self._language_indicator_title("narator_voice.translated_language"))
-        self._voice_language_group.setTitle(ui_state_service.translate("narator_voice.voice_language", language))
         self._status_group.setTitle(ui_state_service.translate("narator_voice.status_group", language))
         self._select_profile_button.setText(ui_state_service.translate("narator_voice.select_profile", language))
+        self._ai_profile_label.setText(ui_state_service.translate("narator_voice.ai_profile", language))
+        self._generate_profiles_button.setText(ui_state_service.translate("narator_voice.generate_profiles", language))
         self._create_profile_button.setText(ui_state_service.translate("narator_voice.create_profile", language))
         self._edit_profile_button.setText(ui_state_service.translate("narator_voice.edit_profile", language))
         self._save_profile_button.setText(ui_state_service.translate("narator_voice.save_profile", language))
         self._delete_profile_button.setText(ui_state_service.translate("narator_voice.delete_profile", language))
         self._generate_sample_button.setText(ui_state_service.translate("narator_voice.generate_sample", language))
         self._preview_toggle_button.setText(ui_state_service.translate(self._preview_label_key(), language))
-        self._set_language_labels(self._current_original_language_text(), self._current_translated_language_text())
+        if not self._has_ai_profiles:
+            self._ai_profile_combo.setItemText(0, ui_state_service.translate("ai_settings.none", language))
         self._refresh_profile_list(self._current_profile_id)
         self._update_preview_budget_label()
 
@@ -489,12 +519,25 @@ class NaratorVoicePage(QWidget):
         @return     None.
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-21
-        @version    0.4.0
+        @version    0.6.0
         """
         list_enabled = self._project_active and not self._busy and not self._preview_active and not self._edit_mode
         editor_enabled = self._project_active and not self._busy and not self._preview_active and self._edit_mode
         self._profile_list.setEnabled(list_enabled)
-        self._voice_language_combo.setEnabled(False)
+        ai_selector_enabled = (
+            self._project_active and not self._busy and not self._preview_active and self._has_ai_profiles
+        )
+        self._ai_profile_label.setEnabled(ai_selector_enabled)
+        self._ai_profile_combo.setEnabled(ai_selector_enabled)
+        self._generate_profiles_button.setEnabled(
+            self._project_active
+            and not self._busy
+            and not self._preview_active
+            and not self._edit_mode
+            and self._has_ai_profiles
+            and self._can_generate_profiles
+            and self.current_ai_profile_id() is not None
+        )
         self._create_profile_button.setEnabled(list_enabled)
         self._edit_profile_button.setEnabled(
             self._project_active
@@ -586,24 +629,6 @@ class NaratorVoicePage(QWidget):
             self._profile_list.setCurrentRow(selected_row)
         self._profile_list.blockSignals(False)
 
-    def _load_language_entries(self, language_entries: list[tuple[str, str]], selected_voice_language: str) -> None:
-        """
-        @brief      Load selectable audiobook voice-language entries.
-        @param[in]  language_entries Selectable language entries.
-        @param[in]  selected_voice_language Current selected language code.
-        @return     None.
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-26
-        @version    0.1.0
-        """
-        self._loading_language_entries = True
-        self._voice_language_combo.clear()
-        for label, value in language_entries:
-            self._voice_language_combo.addItem(label, value)
-        selected_index = self._voice_language_combo.findData(selected_voice_language)
-        self._voice_language_combo.setCurrentIndex(0 if selected_index < 0 else selected_index)
-        self._loading_language_entries = False
-
     def _load_profile_into_editor(self, profile_name: str, prompt_text: str, preview_text: str) -> None:
         """
         @brief      Load the profile into editor.
@@ -651,52 +676,6 @@ class NaratorVoicePage(QWidget):
         """
         return str(preview_text or "")[: self._preview_text_character_limit]
 
-    def _set_language_labels(self, original_language: str, translated_language: str) -> None:
-        """
-        @brief      Set the language labels.
-        @param[in]  original_language Value for `original_language`.
-        @param[in]  translated_language Value for `translated_language`.
-        @return     None.
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-21
-        @version    0.1.0
-        """
-        self._original_language_value_label.setText(original_language)
-        self._translated_language_value_label.setText(translated_language)
-
-    def _current_original_language_text(self) -> str:
-        """
-        @brief      Return the current original language text.
-        @return     Resolved helper result.
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-21
-        @version    0.1.0
-        """
-        return self._original_language_value_label.text().strip()
-
-    def _current_translated_language_text(self) -> str:
-        """
-        @brief      Return the current translated language text.
-        @return     Resolved helper result.
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-21
-        @version    0.1.0
-        """
-        return self._translated_language_value_label.text().strip()
-
-    def _language_indicator_title(self, translation_key: str) -> str:
-        """
-        @brief      Build the boxed language-indicator title from one translated label template.
-        @param[in]  translation_key Translation key for the formatted language label.
-        @return     Group-box title without the trailing value placeholder.
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-21
-        @version    0.1.0
-        """
-        translated_label = ui_state_service.translate(translation_key, self._ui_language)
-        title = translated_label.split("{language_label}", maxsplit=1)[0]
-        return title.rstrip(": ").strip()
-
     def _current_profile(self) -> dict[str, object] | None:
         """
         @brief      Return the current profile.
@@ -733,18 +712,6 @@ class NaratorVoicePage(QWidget):
         if target_profile_id == str(self._current_profile_id or "").strip():
             return
         self.selection_change_requested.emit(target_profile_id)
-
-    def _handle_voice_language_changed(self) -> None:
-        """
-        @brief      Handle audiobook voice-language selection changes.
-        @return     None.
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-26
-        @version    0.2.0
-        """
-        if self._loading_language_entries:
-            return
-        self.voice_language_change_requested.emit(self.current_voice_language())
 
     def _handle_editor_changed(self) -> None:
         """
@@ -834,6 +801,19 @@ class NaratorVoicePage(QWidget):
         """
         if self._current_profile_id is not None:
             self.generate_sample_requested.emit(self._current_profile_id)
+
+    def _emit_generate_profiles(self) -> None:
+        """
+        @brief      Emit one AI narrator-profile generation request.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-11
+        @version    0.1.0
+        """
+        profile_id = self.current_ai_profile_id()
+        if profile_id is not None:
+            self.generate_profiles_requested.emit(profile_id)
 
     def _emit_select_profile(self) -> None:
         """

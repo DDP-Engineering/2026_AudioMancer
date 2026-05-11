@@ -1,0 +1,36 @@
+Synthesize the supplied style observations into narrator voice profiles.
+
+Selected voice language: {voice_language}
+Requested profile count: {profile_count}
+Required male profiles: {male_count}
+Required female profiles: {female_count}
+Random-extra profile count used by the app: {random_gender_count}
+
+Return exactly one JSON object with this shape:
+{
+  "style_brief": "",
+  "profiles": [
+    {
+      "display_name": "",
+      "gender": "male",
+      "style_label": "",
+      "prompt_text": "",
+      "preview_text": ""
+    }
+  ]
+}
+
+Profile rules:
+- Return exactly the requested number of profiles.
+- The number of `gender: "male"` profiles must match the required male count.
+- The number of `gender: "female"` profiles must match the required female count.
+- Each display_name must be unique and should include the gender and concise style label.
+- The prompt_text must be one English paragraph for Qwen3-TTS Voice Designer.
+- The prompt_text must describe vocal resonance, pacing, diction, emotional control, narration presence, and suitable book style.
+- The prompt_text must not ask to generate audio and must not mention implementation, tokens, JSON, or this prompt.
+- The preview_text must be one original short sentence in the selected voice language.
+- The preview_text must fit normal narrator sample use and must not quote the source text.
+- Do not imitate celebrities, actors, real people, or copyrighted character voices.
+
+Style observations:
+{style_observations}

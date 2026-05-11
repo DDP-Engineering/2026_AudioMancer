@@ -1,0 +1,21 @@
+Review these ordered source units and extract compact narrator-style observations.
+
+Return exactly one JSON object with this shape:
+{
+  "genre": [],
+  "tone": [],
+  "pacing": [],
+  "narrator_distance": [],
+  "emotional_range": [],
+  "diction": [],
+  "worldbuilding_cues": [],
+  "themes": [],
+  "narration_risks": []
+}
+
+Use short phrases only.
+Do not include direct quotations from the source.
+Do not include character voice profiles.
+Do not invent unsupported genre or tone claims.
+
+{units_block}

@@ -243,28 +243,29 @@
     },
     {
       "id": "llm_profile_54dd0bbcf94b",
-      "label": "mistralai/mistral-small-3.2",
+      "label": "unsloth_qwen3-coder-30b-a3b-instruct",
       "backend_kind": "lmstudio",
       "base_url": "http://192.168.1.28:1234/v1",
       "api_key": "",
-      "model_name": "mistralai/mistral-small-3.2",
-      "context_window": 16384,
-      "max_output_tokens": 8192,
-      "request_timeout_seconds": 500,
+      "model_name": "unsloth/qwen3-coder-30b-a3b-instruct",
+      "context_window": 32768,
+      "max_output_tokens": 16384,
+      "request_timeout_seconds": 900,
       "temperature": 0.1,
       "supports_structured_output": true,
       "enabled": true,
-      "discovered_model_name": "mistralai/mistral-small-3.2",
+      "discovered_model_name": "qwen3.6-35b-a3b",
       "discovered_context_window": null,
       "discovery_succeeded": true,
-      "discovery_message": "Connection successful. Discovered 13 models.",
-      "user_overrode_model_name": false,
-      "user_overrode_context_window": false
+      "discovery_message": "Connection successful. Discovered 14 models.",
+      "user_overrode_model_name": true,
+      "user_overrode_context_window": true
     }
   ],
   "default_ai_cleanup_profile_id": "llm_profile_967538a1c13e",
   "default_ai_chunking_profile_id": "llm_profile_037a54ff5e64",
   "default_ai_translation_profile_id": "llm_profile_fb88f056a8c8",
+  "default_narrator_profile_generation_profile_id": "llm_profile_54dd0bbcf94b",
   "default_speech_blocks_profile_id": "llm_profile_82b25da7070b",
   "default_ai_chunking_strategy": "scene",
   "default_character_extraction_profile_id": "llm_profile_696d54ac0fb4",
@@ -380,7 +381,7 @@
       "issues": null
     }
   ],
-  "tts_runtime_active_model_id": "Qwen3-TTS-12Hz-1.7B-Base",
+  "tts_runtime_active_model_id": "Qwen3-TTS-12Hz-1.7B-VoiceDesign",
   "tts_runtime_device_diagnostics": {
     "package_flavor": "cuda",
     "torch_installed": true,

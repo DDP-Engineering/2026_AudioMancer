@@ -13,23 +13,20 @@
          page-entry warnings for the Character Voices workflow.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-20
-@version 1.7.0
+@version 1.7.1
 """
 
 # IMPORTS
 
-import json
-
 from PySide6.QtWidgets import QMessageBox
 
-from audiomancer import config
 from audiomancer.services import (
     character_discovery_service,
     character_voices_service,
     narrator_definition_service,
     project_workspace_service,
 )
-from audiomancer.ui.controllers import character_voices_ui_controller, narator_voice_ui_controller
+from audiomancer.ui.controllers import character_voices_ui_controller
 from audiomancer.ui.main_window import MainWindow
 
 
@@ -536,109 +533,6 @@ def test_character_voices_progress_messages_hide_model_id(monkeypatch, qtbot, tm
     assert observed_updates[0][1] == "Loading voice generation model..."
     assert observed_updates[1][1] == "Generating character sample..."
     assert all("qwen" not in message.casefold() for _percent, message in observed_updates)
-
-
-def test_narator_voice_language_change_is_ignored_when_project_options_are_locked(qtbot, tmp_path) -> None:
-    """
-    @brief      Verify narrator language changes are ignored after project options are locked.
-    @param[in]  qtbot Qt test helper fixture.
-    @param[in]  tmp_path Pytest temporary directory fixture.
-    @return     None.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-26
-    @version    0.4.0
-    """
-    project_root = _create_project_with_character_and_selected_narrator(tmp_path, "CharacterVoicesLanguageReset")
-    manifest = project_workspace_service.load_manifest(project_root)
-    manifest["current_stage"] = "audio_assembly_ready"
-    manifest["target_language"] = "en"
-    manifest["selected_voice_language"] = "en"
-    manifest["project_options_locked"] = True
-    manifest["operations"]["speech_blocks"]["status"] = "completed"
-    manifest["operations"]["audio_blocks"]["status"] = "completed"
-    manifest["operations"]["audio_assembly"]["status"] = "completed"
-    project_workspace_service.save_manifest(manifest, project_root)
-    character_voices_service.save_selected_voice_language(project_root, "en")
-    (project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.CHUNK_ARTIFACT_FILE_NAME).write_text(
-        json.dumps(
-            [
-                {
-                    "chunk_id": "chunk-0001",
-                    "sequence_index": 1,
-                    "chapter_label": None,
-                    "text": 'Narration. "Hello there."',
-                    "source_start_line": 1,
-                    "source_end_line": 1,
-                    "chunking_mode": "deterministic",
-                    "semantic_strategy": None,
-                    "scene_note": None,
-                }
-            ],
-            indent=2,
-        )
-        + "\n",
-        encoding="utf-8",
-    )
-    (project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.TRANSLATION_REPORT_FILE_NAME).write_text(
-        json.dumps(
-            {
-                "target_language": "ro",
-                "translated_chunk_count": 1,
-                "approved_chunk_count": 1,
-                "total_chunk_count": 1,
-            },
-            indent=2,
-        )
-        + "\n",
-        encoding="utf-8",
-    )
-    (project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.TRANSLATED_CHUNKS_FILE_NAME).write_text(
-        json.dumps(
-            [
-                {
-                    "chunk_id": "chunk-0001",
-                    "sequence_index": 1,
-                    "source_text": 'Narration. "Hello there."',
-                    "translated_text": 'Naratiune. "Salut."',
-                    "approved": True,
-                    "translated_at": "2026-04-21T12:10:00+00:00",
-                    "approved_at": "2026-04-21T12:11:00+00:00",
-                    "translation_profile_id": "profile-1",
-                    "target_language": "ro",
-                    "status": "approved",
-                }
-            ],
-            indent=2,
-        )
-        + "\n",
-        encoding="utf-8",
-    )
-    window = _build_window(qtbot, project_root)
-    stale_artifact_paths = [
-        project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.SPEECH_BLOCKS_OUTPUT_FILE_NAME,
-        project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.AUDIO_BLOCKS_OUTPUT_FILE_NAME,
-        project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.AUDIO_ASSEMBLY_REPORT_FILE_NAME,
-    ]
-    for artifact_path in stale_artifact_paths:
-        artifact_path.write_text("[]", encoding="utf-8")
-    original_question = narator_voice_ui_controller.QMessageBox.question
-    narator_voice_ui_controller.QMessageBox.question = lambda *_args, **_kwargs: QMessageBox.StandardButton.Yes
-    try:
-        narator_voice_ui_controller.handle_voice_language_change_requested(window, "ro")
-    finally:
-        narator_voice_ui_controller.QMessageBox.question = original_question
-
-    assert window._current_manifest is not None
-    assert window._current_manifest["current_stage"] == "audio_assembly_ready"
-    assert window._current_manifest["operations"]["character_voices"]["status"] == "not_started"
-    assert window._current_manifest["operations"]["speech_blocks"]["status"] == "completed"
-    assert window._current_manifest["operations"]["audio_blocks"]["status"] == "completed"
-    assert window._current_manifest["operations"]["audio_assembly"]["status"] == "completed"
-    assert character_voices_service.load_selected_voice_language(project_root) == "en"
-    assert project_workspace_service.load_manifest(project_root)["selected_voice_language"] == "en"
-    assert narrator_definition_service.load_selected_profile_state(project_root)["selected_profile_id"] is not None
-    assert all(artifact_path.exists() for artifact_path in stale_artifact_paths)
 
 
 def _create_project_with_character_and_selected_narrator(

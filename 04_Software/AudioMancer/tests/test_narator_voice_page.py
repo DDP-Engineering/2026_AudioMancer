@@ -13,7 +13,7 @@
          sample-dependent button enablement, and bottom status rendering.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-18
-@version 3.4.1
+@version 3.5.0
 """
 
 # IMPORTS
@@ -75,9 +75,6 @@ def test_narator_voice_page_prompt_and_preview_editors_expose_scrollbars_and_lim
         selected_profile_id=None,
         effective_language="en",
         selected_voice_language="en",
-        language_entries=[("English", "en")],
-        original_language="Unknown",
-        translated_language="Not translated",
         profile_name="Custom One",
         prompt_text="Custom prompt.",
         preview_text="abcdef",
@@ -142,9 +139,6 @@ def test_narator_voice_page_edit_mode_disables_list_and_enables_save_after_chang
         selected_profile_id=None,
         effective_language="en",
         selected_voice_language="en",
-        language_entries=[("English", "en")],
-        original_language="Unknown",
-        translated_language="Not translated",
         profile_name="Custom One",
         prompt_text="Custom prompt.",
         preview_text="Preview text.",
@@ -198,9 +192,6 @@ def test_narator_voice_page_preview_toggle_updates_label_and_select_enablement(q
         selected_profile_id=None,
         effective_language="en",
         selected_voice_language="en",
-        language_entries=[("English", "en")],
-        original_language="Unknown",
-        translated_language="Not translated",
         profile_name="Vivian",
         prompt_text="Preset prompt.",
         preview_text="Preview text.",
@@ -219,15 +210,15 @@ def test_narator_voice_page_preview_toggle_updates_label_and_select_enablement(q
     assert page._preview_toggle_button.text() == "Stop play"
 
 
-def test_narator_voice_page_status_panel_and_language_labels_render_state(qtbot) -> None:
+def test_narator_voice_page_status_panel_keeps_language_value_internal(qtbot) -> None:
     """
-    @brief      Verify Narator Voice status lines and read-only language labels are rendered on the page.
+    @brief      Verify status lines render while voice language remains an internal value.
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-17
-    @version    1.1.0
+        @version    1.2.0
     """
     page = NaratorVoicePage()
     qtbot.addWidget(page)
@@ -239,9 +230,6 @@ def test_narator_voice_page_status_panel_and_language_labels_render_state(qtbot)
         selected_profile_id=None,
         effective_language="ro",
         selected_voice_language="ro",
-        language_entries=[("Romanian", "ro")],
-        original_language="Italian",
-        translated_language="Romanian",
         profile_name="",
         prompt_text="",
         preview_text="",
@@ -255,13 +243,36 @@ def test_narator_voice_page_status_panel_and_language_labels_render_state(qtbot)
         status_lines=["Profiles: 3", "Profiles with samples: 1"],
     )
 
-    assert page._original_language_group.title() == "Original language"
-    assert page._translated_language_group.title() == "Translated language"
-    assert page._voice_language_group.title() == "Voice language"
-    assert page._original_language_value_label.text() == "Italian"
-    assert page._translated_language_value_label.text() == "Romanian"
+    assert hasattr(page, "_original_language_group") is False
+    assert hasattr(page, "_translated_language_group") is False
+    assert hasattr(page, "_voice_language_group") is False
     assert page.current_voice_language() == "ro"
     assert "Profiles: 3" in page._status_edit.toPlainText()
+
+
+def test_narator_voice_page_renders_ai_profile_selector_and_generation_button(qtbot) -> None:
+    """
+    @brief      Verify AI profile generation controls follow page enabled state.
+    @param[in]  qtbot Qt test helper fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-11
+    @version    0.1.0
+    """
+    page = NaratorVoicePage()
+    qtbot.addWidget(page)
+
+    page.set_ai_profiles([("Profile One", "profile-1")], "profile-1", True)
+
+    assert page._ai_profile_combo.currentData() == "profile-1"
+    assert page.current_ai_profile_id() == "profile-1"
+    assert page._generate_profiles_button.isEnabled() is False
+
+    page.set_project_active(True)
+
+    assert page._ai_profile_combo.isEnabled() is True
+    assert page._generate_profiles_button.isEnabled() is True
 
 
 # END OF FILE

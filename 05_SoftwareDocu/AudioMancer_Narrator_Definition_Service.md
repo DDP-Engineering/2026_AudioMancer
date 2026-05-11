@@ -12,18 +12,20 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
 Implements the narrator-definition persistence and state contract for the
 current `Narator Voice` workflow in `AudioMancer`.
 It owns the project-local narrator profile catalog, explicit selected narrator
-state, locked project voice-language display, per-profile sample artifacts,
-localized preview text, and the runtime-aware state shaping used by the Narator
-Voice page.
+state, internal locked project voice-language use, AI-generated text-only profile
+suggestions, per-profile sample artifacts, localized preview text, and the
+runtime-aware state shaping used by the Narator Voice page.
 
 ## 2. Responsibilities
 
-- persist only operator-created custom user profiles in root-level
+- persist operator-created and AI-generated custom profiles in root-level
   `audio_profiles.json`
+- append AI-generated text-only narrator profiles while preserving existing
+  profiles and deferring all audio/sample work to explicit operator actions
 - persist the explicitly selected narrator profile and narrator language
   runtime code
 - read the locked project voice language from `project.json.target_language`
-  and expose it as a read-only indicator on the Narator Voice page
+  for narrator samples, generated profile suggestions, and preview defaults
 - persist one generated narrator WAV per narrator profile so multiple profiles
   can be previewed later without regenerating audio
 - localize the default narrator preview text for supported voice languages
@@ -46,22 +48,25 @@ It does not:
 The workflow is split across:
 
 - `04_Software/AudioMancer/src/audiomancer/services/narrator_definition_service.py`
-  for profile persistence, selection state, locked project-language display,
+  for profile persistence, selection state, internal locked project-language use,
   localized preview text, and sample
   artifact helpers
 - `04_Software/AudioMancer/src/audiomancer/services/narrator_definition_state_service.py`
-  for Narator Voice page state shaping, project-language display, and
+  for Narator Voice page state shaping, internal project-language resolution, and
   runtime-derived flags
+- `04_Software/AudioMancer/src/audiomancer/services/narrator_profile_generation_service.py`
+  for AI-assisted text-only profile suggestions, report/state sidecars, and
+  source-text analysis
 - `04_Software/AudioMancer/src/audiomancer/ui/controllers/narator_voice_ui_controller.py`
   for Qt actions, destructive edit/sample confirmations, manifest summary sync,
   VoiceWeaver sample generation, and preview playback
 - `04_Software/AudioMancer/src/audiomancer/ui/pages/narator_voice_page.py`
-  for the project-aware editor, read-only original/translated/voice-language
-  display, profile list, and bottom status panel
+  for the project-aware editor, AI profile selector, profile list, and bottom
+  status panel
 
 High-level flow:
 
-1. Project load refreshes read-only Narator Voice indicators without creating
+1. Project load refreshes Narator Voice state without creating
    narrator metadata. Opening the Narator Voice page initializes
    `audio_profiles.json`, `narator.json`, root-level narrator sample paths, and
    the required narrator-related `project.json` fields when they do not already
@@ -90,6 +95,10 @@ High-level flow:
    and marks the chosen profile sample metadata as selected.
 9. `Preview` plays the stored per-profile WAV locally through Qt media
    playback.
+10. `Generate Narator Profiles` runs the AI profile-generation service through
+    the shared threaded progress dialog, resumes compatible unfinished
+    style-analysis checkpoints, appends validated editable profiles, and leaves
+    narrator selection unchanged.
 
 ## 4. Dependencies
 
@@ -122,6 +131,8 @@ Inputs:
 Outputs:
 
 - `audio_profiles.json`
+- `narator_profile_generation_report.json`
+- `narator_profile_generation_state.json`
 - `narator.json`
 - selected voice language read from `project.json.selected_voice_language`,
   which is mirrored from locked `project.json.target_language`
@@ -164,6 +175,10 @@ Profile rules:
 
 - user-created profiles use
   `profile_kind = "custom"` and `profile_origin = "custom_user"`
+- AI-generated text-only suggestions use
+  `profile_kind = "custom"` and `profile_origin = "ai_generated"`
+- generated suggestions remain editable and have no `sample_audio_path` or
+  `sample_metadata` until the operator explicitly generates a sample
 - no narrator profile is selected by default for a new project
 - stored profile `language` values use VoiceWeaver language codes such as `en`
   and `ro`; legacy labels are normalized on load
@@ -227,8 +242,9 @@ Current runtime-aware rules:
 - `Generate Sample` is enabled only when the current runtime exposes the fixed
   minimum Qwen3 TTS Base and Voice Designer capability set and the profile
   resolves to `voice/design`
-- the voice-language control on Narator Voice is a read-only locked project
-  indicator
+- the Narator Voice page does not display language indicators; the project
+  language remains visible on Home and is still used internally by narrator
+  operations
 - changing the selected voice language is not part of the normal workflow after
   Home-page project locking
   state because those artifacts depend on the selected output language
@@ -248,6 +264,10 @@ Current runtime-aware rules:
   without regenerating audio
 - entering edit mode clears any existing sample for that profile and also
   clears explicit selection if the edited profile had been selected
+- AI-generated narrator profile suggestions can be appended repeatedly; the
+  service validates the requested count and male/female allocation before
+  writing profiles and adds suffixes for display-name collisions with existing
+  profiles
 
 ## 8. Usage
 
@@ -257,6 +277,15 @@ Representative service calls:
 profiles = narrator_definition_service.load_profiles(project_root)
 selected_state = narrator_definition_service.load_selected_profile_state(project_root)
 tts_plan = narrator_definition_service.load_tts_plan(project_root, discovered_models)
+
+generated_report = narrator_profile_generation_service.generate_narrator_profiles(
+    project_root,
+    manifest,
+    ai_profile_payload,
+    profile_count=6,
+    voice_language="en",
+    preview_text_character_limit=512,
+)
 
 custom_profile = narrator_definition_service.create_custom_profile(
     project_root,
@@ -277,6 +306,8 @@ Operator path:
 - open one project
 - run `TTS Settings -> Test Connection`
 - create one custom narrator profile
+- or choose an AI profile and press `Generate Narator Profiles` to append
+  editable text-only suggestions
 - review the locked voice language chosen on the Home page
 - optionally edit one profile after confirming the destructive sample reset
 - generate one sample for a narrator profile
@@ -293,6 +324,7 @@ Focused automated coverage includes:
 
 - `04_Software/AudioMancer/tests/test_narrator_definition_service.py`
 - `04_Software/AudioMancer/tests/test_narrator_definition_state_service.py`
+- `04_Software/AudioMancer/tests/test_narrator_profile_generation_service.py`
 - `04_Software/AudioMancer/tests/test_narator_voice_page.py`
 - `04_Software/AudioMancer/tests/test_narator_voice_ui_controller.py`
 - narrator integration checks in

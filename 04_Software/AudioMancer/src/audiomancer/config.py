@@ -13,7 +13,7 @@
          file support used by the current AudioMancer implementation scaffold.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 1.37.1
+@version 1.38.0
 """
 
 # IMPORTS
@@ -327,6 +327,12 @@ NARRATOR_PROFILE_FILE_NAME = "audio_profiles.json"
 # @brief File name used for persisted narrator-definition selection state.
 NARRATOR_SELECTION_FILE_NAME = "narator.json"
 
+# @brief File name used for persisted AI narrator-profile generation metadata.
+NARRATOR_PROFILE_GENERATION_REPORT_FILE_NAME = "narator_profile_generation_report.json"
+
+# @brief File name used for persisted AI narrator-profile generation runtime state.
+NARRATOR_PROFILE_GENERATION_STATE_FILE_NAME = "narator_profile_generation_state.json"
+
 # @brief File name used for persisted character-voices target records.
 CHARACTER_VOICES_TARGETS_FILE_NAME = "characters_voice.json"
 
@@ -601,6 +607,27 @@ DEFAULT_CHARACTER_DISCOVERY_TEXT_CONTEXT_FRACTION = 0.60
 
 # @brief Default maximum evidence item count retained in one character synthesis payload.
 DEFAULT_CHARACTER_DISCOVERY_SYNTHESIS_MAX_EVIDENCE_ITEMS = 20
+
+# @brief Default requested count for AI narrator profile generation.
+DEFAULT_NARRATOR_PROFILE_GENERATION_COUNT = 6
+
+# @brief Maximum requested count for one AI narrator profile generation run.
+MAX_NARRATOR_PROFILE_GENERATION_COUNT = 20
+
+# @brief Default text-unit cap per AI narrator style-analysis request for local providers.
+DEFAULT_NARRATOR_PROFILE_STYLE_WINDOW_SIZE = 12
+
+# @brief Minimum estimated source-text token budget required for one AI narrator style-analysis request.
+DEFAULT_NARRATOR_PROFILE_MIN_TEXT_BUDGET_TOKENS = 512
+
+# @brief Minimum estimated token safety margin reserved in each AI narrator profile request.
+DEFAULT_NARRATOR_PROFILE_MIN_SAFETY_MARGIN_TOKENS = 256
+
+# @brief Fraction of the context window reserved as safety margin for AI narrator profile generation.
+DEFAULT_NARRATOR_PROFILE_SAFETY_MARGIN_CONTEXT_FRACTION = 0.10
+
+# @brief Maximum context-window fraction used for AI narrator profile source text.
+DEFAULT_NARRATOR_PROFILE_TEXT_CONTEXT_FRACTION = 0.60
 
 
 # @brief Supported output modes for Audio Assembly.

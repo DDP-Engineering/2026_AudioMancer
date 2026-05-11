@@ -14,7 +14,7 @@
          settings service.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 0.8.0
+@version 0.9.2
 """
 
 # IMPORTS
@@ -28,6 +28,7 @@ from PySide6.QtWidgets import (
     QComboBox,
     QDoubleSpinBox,
     QFormLayout,
+    QGridLayout,
     QHBoxLayout,
     QLabel,
     QLineEdit,
@@ -76,7 +77,7 @@ class AiSettingsPage(QWidget):
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.6.0
+    @version    0.7.0
     """
 
     def __init__(self, parent=None) -> None:
@@ -87,7 +88,7 @@ class AiSettingsPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-21
-        @version    0.7.0
+        @version    0.8.2
         """
         super().__init__(parent)
         self._profiles: list[dict[str, object]] = []
@@ -171,7 +172,7 @@ class AiSettingsPage(QWidget):
         self._temperature_spin.setDecimals(2)
         self._temperature_spin.setSingleStep(0.05)
 
-        self._supports_structured_checkbox = QCheckBox("Structured output supported")
+        self._supports_structured_checkbox = QCheckBox("Structured output")
 
         self._profile_name_label = QLabel("Profile Name", self)
         self._backend_kind_label = QLabel("Backend Kind", self)
@@ -183,16 +184,31 @@ class AiSettingsPage(QWidget):
         self._timeout_label = QLabel("Timeout (s)", self)
         self._temperature_label = QLabel("Temperature", self)
 
+        model_name_row = QHBoxLayout()
+        model_name_row.addWidget(self._model_combo, 1)
+        model_name_row.addWidget(self._supports_structured_checkbox)
+
+        numeric_settings_grid = QGridLayout()
+        numeric_settings_grid.setContentsMargins(0, 0, 0, 0)
+        numeric_settings_grid.setHorizontalSpacing(12)
+        numeric_settings_grid.setVerticalSpacing(6)
+        numeric_settings_grid.addWidget(self._context_window_label, 0, 0)
+        numeric_settings_grid.addWidget(self._context_window_spin, 0, 1)
+        numeric_settings_grid.addWidget(self._max_output_label, 0, 2)
+        numeric_settings_grid.addWidget(self._max_output_spin, 0, 3)
+        numeric_settings_grid.addWidget(self._timeout_label, 1, 0)
+        numeric_settings_grid.addWidget(self._timeout_spin, 1, 1)
+        numeric_settings_grid.addWidget(self._temperature_label, 1, 2)
+        numeric_settings_grid.addWidget(self._temperature_spin, 1, 3)
+        numeric_settings_grid.setColumnStretch(1, 1)
+        numeric_settings_grid.setColumnStretch(3, 1)
+
         form_layout.addRow(self._profile_name_label, profile_name_row)
         form_layout.addRow(self._backend_kind_label, backend_row)
         form_layout.addRow(self._base_url_label, self._base_url_edit)
         form_layout.addRow(self._api_key_label, self._api_key_edit)
-        form_layout.addRow(self._model_name_label, self._model_combo)
-        form_layout.addRow(self._context_window_label, self._context_window_spin)
-        form_layout.addRow(self._max_output_label, self._max_output_spin)
-        form_layout.addRow(self._timeout_label, self._timeout_spin)
-        form_layout.addRow(self._temperature_label, self._temperature_spin)
-        form_layout.addRow("", self._supports_structured_checkbox)
+        form_layout.addRow(self._model_name_label, model_name_row)
+        form_layout.addRow(numeric_settings_grid)
 
         self._default_cleanup_combo = QComboBox(self)
         self._default_chunking_combo = QComboBox(self)
@@ -201,6 +217,7 @@ class AiSettingsPage(QWidget):
             self._default_strategy_combo.addItem(strategy.title(), strategy)
 
         self._default_translation_combo = QComboBox(self)
+        self._default_narrator_generation_combo = QComboBox(self)
         self._default_character_combo = QComboBox(self)
         self._default_speech_blocks_combo = QComboBox(self)
 
@@ -208,6 +225,7 @@ class AiSettingsPage(QWidget):
         self._default_chunking_label = QLabel("Default Chunking Profile", self)
         self._default_strategy_label = QLabel("Default AI Chunking Strategy", self)
         self._default_translation_label = QLabel("Default Translation Profile", self)
+        self._default_narrator_generation_label = QLabel("Default Narator Generation Profile", self)
         self._default_character_label = QLabel(
             "Default Character Extraction Profile",
             self,
@@ -218,6 +236,7 @@ class AiSettingsPage(QWidget):
         form_layout.addRow(self._default_chunking_label, self._default_chunking_combo)
         form_layout.addRow(self._default_strategy_label, self._default_strategy_combo)
         form_layout.addRow(self._default_translation_label, self._default_translation_combo)
+        form_layout.addRow(self._default_narrator_generation_label, self._default_narrator_generation_combo)
         form_layout.addRow(
             self._default_character_label,
             self._default_character_combo,
@@ -246,6 +265,7 @@ class AiSettingsPage(QWidget):
                 "default_ai_cleanup_profile_id": None,
                 "default_ai_chunking_profile_id": None,
                 "default_ai_translation_profile_id": None,
+                "default_narrator_profile_generation_profile_id": None,
                 "default_speech_blocks_profile_id": None,
                 "default_ai_chunking_strategy": config.DEFAULT_AI_CHUNKING_STRATEGY,
                 "default_character_extraction_profile_id": None,
@@ -260,7 +280,7 @@ class AiSettingsPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-21
-        @version    0.3.0
+        @version    0.4.0
         """
         source_profiles = settings_payload.get("llm_profiles", [])
         if not isinstance(source_profiles, list):
@@ -293,6 +313,10 @@ class AiSettingsPage(QWidget):
             settings_payload.get("default_ai_translation_profile_id"),
         )
         self._set_optional_combo(
+            self._default_narrator_generation_combo,
+            settings_payload.get("default_narrator_profile_generation_profile_id"),
+        )
+        self._set_optional_combo(
             self._default_speech_blocks_combo,
             settings_payload.get("default_speech_blocks_profile_id"),
         )
@@ -318,7 +342,7 @@ class AiSettingsPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-21
-        @version    0.3.0
+        @version    0.4.0
         """
         self._sync_editor_to_current_profile()
         merged_settings = copy.deepcopy(existing_settings_payload)
@@ -327,6 +351,9 @@ class AiSettingsPage(QWidget):
         merged_settings["default_ai_chunking_profile_id"] = self._optional_combo_value(self._default_chunking_combo)
         merged_settings["default_ai_translation_profile_id"] = self._optional_combo_value(
             self._default_translation_combo
+        )
+        merged_settings["default_narrator_profile_generation_profile_id"] = self._optional_combo_value(
+            self._default_narrator_generation_combo
         )
         merged_settings["default_speech_blocks_profile_id"] = self._optional_combo_value(
             self._default_speech_blocks_combo
@@ -346,7 +373,7 @@ class AiSettingsPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-05
-        @version    0.2.0
+        @version    0.3.0
         """
         self._sync_editor_to_current_profile()
         current_profile = self._current_profile()
@@ -494,11 +521,12 @@ class AiSettingsPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-21
-        @version    0.2.0
+        @version    0.3.0
         """
         current_cleanup = self._optional_combo_value(self._default_cleanup_combo)
         current_chunking = self._optional_combo_value(self._default_chunking_combo)
         current_translation = self._optional_combo_value(self._default_translation_combo)
+        current_narrator_generation = self._optional_combo_value(self._default_narrator_generation_combo)
         current_speech_blocks = self._optional_combo_value(self._default_speech_blocks_combo)
         current_character = self._optional_combo_value(self._default_character_combo)
 
@@ -506,6 +534,7 @@ class AiSettingsPage(QWidget):
             self._default_cleanup_combo,
             self._default_chunking_combo,
             self._default_translation_combo,
+            self._default_narrator_generation_combo,
             self._default_speech_blocks_combo,
             self._default_character_combo,
         ):
@@ -520,6 +549,7 @@ class AiSettingsPage(QWidget):
         self._set_optional_combo(self._default_cleanup_combo, current_cleanup)
         self._set_optional_combo(self._default_chunking_combo, current_chunking)
         self._set_optional_combo(self._default_translation_combo, current_translation)
+        self._set_optional_combo(self._default_narrator_generation_combo, current_narrator_generation)
         self._set_optional_combo(self._default_speech_blocks_combo, current_speech_blocks)
         self._set_optional_combo(self._default_character_combo, current_character)
 
@@ -700,7 +730,7 @@ class AiSettingsPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-21
-        @version    0.2.0
+        @version    0.3.0
         """
         row = self._profile_list.currentRow()
         if row < 0 or len(self._profiles) <= 1:
@@ -711,6 +741,7 @@ class AiSettingsPage(QWidget):
             self._default_cleanup_combo,
             self._default_chunking_combo,
             self._default_translation_combo,
+            self._default_narrator_generation_combo,
             self._default_speech_blocks_combo,
             self._default_character_combo,
         ):
@@ -728,7 +759,7 @@ class AiSettingsPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-21
-        @version    0.5.0
+        @version    0.6.0
         """
         self._current_language = language
         self._title_label.setText(f"<h2>{ui_state_service.translate('ai_settings.title', language)}</h2>")
@@ -748,6 +779,9 @@ class AiSettingsPage(QWidget):
         self._default_cleanup_label.setText(ui_state_service.translate("ai_settings.default_cleanup", language))
         self._default_chunking_label.setText(ui_state_service.translate("ai_settings.default_chunking", language))
         self._default_translation_label.setText(ui_state_service.translate("ai_settings.default_translation", language))
+        self._default_narrator_generation_label.setText(
+            ui_state_service.translate("ai_settings.default_narrator_generation", language)
+        )
         self._default_speech_blocks_label.setText(
             ui_state_service.translate("ai_settings.default_speech_blocks", language)
         )
@@ -762,6 +796,7 @@ class AiSettingsPage(QWidget):
             self._default_cleanup_combo,
             self._default_chunking_combo,
             self._default_translation_combo,
+            self._default_narrator_generation_combo,
             self._default_speech_blocks_combo,
             self._default_character_combo,
         ):

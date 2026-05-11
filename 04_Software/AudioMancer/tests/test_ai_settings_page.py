@@ -13,12 +13,12 @@
          and merged settings payload generation.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 0.5.0
+@version 0.5.3
 """
 
 # IMPORTS
 
-from PySide6.QtWidgets import QFormLayout
+from PySide6.QtWidgets import QFormLayout, QGridLayout
 
 from audiomancer.ui.pages.ai_settings_page import AiSettingsPage
 
@@ -56,6 +56,7 @@ def test_ai_settings_page_default_selectors_are_stacked_in_workflow_order(qtbot)
             page._default_chunking_label,
             page._default_strategy_label,
             page._default_translation_label,
+            page._default_narrator_generation_label,
             page._default_character_label,
             page._default_speech_blocks_label,
         )
@@ -66,9 +67,74 @@ def test_ai_settings_page_default_selectors_are_stacked_in_workflow_order(qtbot)
         "Default Chunking Profile",
         "Default AI Chunking Strategy",
         "Default Translation Profile",
+        "Default Narator Generation Profile",
         "Default Character Extraction Profile",
         "Default Speech Blocks Profile",
     ]
+
+
+def test_ai_settings_page_numeric_profile_options_use_two_column_grid(qtbot) -> None:
+    """
+    @brief      Verify compact numeric AI profile options are arranged in two columns.
+    @param[in]  qtbot Qt test helper fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-11
+    @version    0.1.0
+    """
+    page = AiSettingsPage()
+    qtbot.addWidget(page)
+
+    editor_container = page._default_cleanup_combo.parentWidget()
+    editor_layout = editor_container.layout()
+    form_layout = editor_layout.itemAt(0).layout()
+    numeric_layout = None
+    for index in range(form_layout.count()):
+        candidate = form_layout.itemAt(index)
+        if candidate is not None and isinstance(candidate.layout(), QGridLayout):
+            numeric_layout = candidate.layout()
+            break
+
+    assert numeric_layout is not None
+    assert numeric_layout.itemAtPosition(0, 0).widget() is page._context_window_label
+    assert numeric_layout.itemAtPosition(0, 1).widget() is page._context_window_spin
+    assert numeric_layout.itemAtPosition(0, 2).widget() is page._max_output_label
+    assert numeric_layout.itemAtPosition(0, 3).widget() is page._max_output_spin
+    assert numeric_layout.itemAtPosition(1, 0).widget() is page._timeout_label
+    assert numeric_layout.itemAtPosition(1, 1).widget() is page._timeout_spin
+    assert numeric_layout.itemAtPosition(1, 2).widget() is page._temperature_label
+    assert numeric_layout.itemAtPosition(1, 3).widget() is page._temperature_spin
+
+
+def test_ai_settings_page_structured_output_is_in_model_name_row(qtbot) -> None:
+    """
+    @brief      Verify the structured-output checkbox shares the model-name row.
+    @param[in]  qtbot Qt test helper fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-11
+    @version    0.1.0
+    """
+    page = AiSettingsPage()
+    qtbot.addWidget(page)
+
+    editor_container = page._default_cleanup_combo.parentWidget()
+    editor_layout = editor_container.layout()
+    form_layout = editor_layout.itemAt(0).layout()
+    model_row_layout = None
+    for row in range(form_layout.rowCount()):
+        label_item = form_layout.itemAt(row, QFormLayout.ItemRole.LabelRole)
+        field_item = form_layout.itemAt(row, QFormLayout.ItemRole.FieldRole)
+        if label_item is not None and label_item.widget() is page._model_name_label:
+            model_row_layout = field_item.layout() if field_item is not None else None
+            break
+
+    assert model_row_layout is not None
+    assert model_row_layout.itemAt(0).widget() is page._model_combo
+    assert model_row_layout.itemAt(1).widget() is page._supports_structured_checkbox
+    assert page._supports_structured_checkbox.text() == "Structured output"
 
 
 def test_ai_settings_page_loads_profiles_and_builds_merged_settings(qtbot) -> None:
@@ -105,6 +171,7 @@ def test_ai_settings_page_loads_profiles_and_builds_merged_settings(qtbot) -> No
         "default_ai_cleanup_profile_id": "profile_a",
         "default_ai_chunking_profile_id": "profile_a",
         "default_ai_translation_profile_id": "profile_a",
+        "default_narrator_profile_generation_profile_id": "profile_a",
         "default_speech_blocks_profile_id": "profile_a",
         "default_ai_chunking_strategy": "scene",
         "default_character_extraction_profile_id": "profile_a",
@@ -118,6 +185,7 @@ def test_ai_settings_page_loads_profiles_and_builds_merged_settings(qtbot) -> No
     assert page._backend_combo.currentText() == "ollama"
     assert page._default_cleanup_combo.currentData() == "profile_a"
     assert page._default_translation_combo.currentData() == "profile_a"
+    assert page._default_narrator_generation_combo.currentData() == "profile_a"
     assert page._default_speech_blocks_combo.currentData() == "profile_a"
     assert page._default_strategy_combo.currentData() == "scene"
 
@@ -132,6 +200,7 @@ def test_ai_settings_page_loads_profiles_and_builds_merged_settings(qtbot) -> No
     assert rebuilt["default_ai_chunking_strategy"] == "meaning"
     assert rebuilt["default_ai_cleanup_profile_id"] == "profile_a"
     assert rebuilt["default_ai_translation_profile_id"] == "profile_a"
+    assert rebuilt["default_narrator_profile_generation_profile_id"] == "profile_a"
     assert rebuilt["default_speech_blocks_profile_id"] == "profile_a"
 
 

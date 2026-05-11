@@ -13,7 +13,7 @@
          setup to reduce boilerplate across test files.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 1.3.0
+@version 1.3.1
 """
 
 # IMPORTS
@@ -134,6 +134,7 @@ def default_settings_payload():
         "default_ai_cleanup_profile_id": "profile_1",
         "default_ai_chunking_profile_id": "profile_1",
         "default_ai_translation_profile_id": "profile_1",
+        "default_narrator_profile_generation_profile_id": "profile_1",
         "default_speech_blocks_profile_id": "profile_1",
         "default_ai_chunking_strategy": "paragraph",
         "default_character_extraction_profile_id": "profile_1",

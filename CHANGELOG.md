@@ -10,6 +10,33 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [1.0.8] - 2026-05-11
+
+### Added
+
+- Narator Voice now supports AI-assisted text-only narrator profile generation
+  with an AI profile selector, token/cost confirmation, requested profile
+  count, gender allocation, generated voice-designer prompts, preview text, and
+  append-only editable profiles without generating audio or selecting a
+  narrator.
+- AI narrator profile generation now persists resumable checkpoints with
+  completed style observations, token usage, model settings, and the AI
+  transaction log path so interrupted runs can continue compatible unfinished
+  work instead of restarting from the first source window.
+
+### Changed
+
+- Narator Voice no longer shows the Original language, Translated language, and
+  Voice language indicator row; the project language remains visible on Home
+  and is used internally by narrator operations.
+- AI Settings now labels the narrator-generation default selector as
+  `Default Narator Generation Profile`.
+- AI Settings now places Context Window, Max Output Tokens, Timeout, and
+  Temperature into a compact two-column profile-options grid to leave more
+  vertical room for default-profile selectors.
+- AI Settings now places the shortened `Structured output` checkbox beside
+  Model Name to free another row in the profile editor.
+
 ## [1.0.7] - 2026-05-11
 
 ### Fixed

@@ -1,0 +1,264 @@
+<!--
+Copyright (c) 2026 DDP Engineering
+This software is licensed under the GNU Affero General Public License v3.0
+(AGPL-3.0) with additional Non-Commercial restriction.
+See the LICENSE.txt and LICENSE_NC.txt files for full license details.
+-->
+
+# AudioMancer Narrator Profile Generation Service
+
+## 1. Purpose
+
+Implements the text-only AI narrator-profile suggestion workflow used by the
+`Narator Voice` page. The component analyzes the current book text with a
+selected AI profile, generates editable narrator voice-designer prompts and
+short preview sentences, appends them to the project profile catalog, and
+records a report/state sidecar.
+
+The service does not generate WAV files, does not update `narator.wav`, and
+does not select a narrator profile.
+
+## 2. Responsibilities
+
+- resolve the best available book text for narrator-style analysis
+- window the resolved text with the shared AI context-budget service
+- run compact style-observation calls followed by one profile-generation call
+- resume compatible unfinished runs from persisted style observations and
+  cumulative token usage
+- validate profile count, gender allocation, names, prompt text, preview text,
+  and preview character limits before persistence
+- append generated profiles to `audio_profiles.json` only after full
+  validation succeeds
+- persist `narator_profile_generation_report.json` and
+  `narator_profile_generation_state.json`
+- preserve existing manual and generated profiles
+- propagate cancellation before any profile append
+
+It does not:
+
+- own the AI profile catalog in `settings.json`
+- own the narrator sample-generation workflow
+- mutate `narator.json`, `narator.wav`, or downstream narrator selection state
+- approve or select one generated profile automatically
+
+## 3. Implementation Overview
+
+Main implementation:
+
+- `04_Software/AudioMancer/src/audiomancer/services/narrator_profile_generation_service.py`
+- `04_Software/AudioMancer/src/audiomancer/services/narrator_definition_service.py`
+  via `append_ai_generated_profiles(...)`
+- prompt templates in `04_Software/AudioMancer/prompts/`:
+  `narrator_profile_style_system.txt`,
+  `narrator_profile_style_window_user.txt`,
+  `narrator_profile_generation_user.txt`
+
+Public entrypoints:
+
+- `generate_narrator_profiles(...)`
+- `load_operation_state(...)`
+- `load_generation_report(...)`
+
+Processing flow:
+
+1. Validate the selected enabled AI profile has an id, model name, and base URL.
+2. Validate the three narrator-profile prompt templates exist.
+3. Resolve source text using the selected voice language.
+4. Build source windows from the selected profile context window, output-token
+   limit, prompt budget, and safety margins.
+5. Restore compatible checkpointed style observations from
+   `narator_profile_generation_state.json` when the source fingerprint,
+   selected AI profile, requested count, gender allocation, model settings, and
+   context budget still match.
+6. Ask the AI for compact observations for each remaining source window.
+7. Ask the AI for strict JSON narrator profiles using the requested count and
+   deterministic gender allocation.
+8. Validate the full response before writing any profile data.
+9. Append generated profiles and persist report/state with cumulative token
+   usage and source fingerprint metadata.
+
+## 4. Dependencies
+
+Internal dependencies:
+
+- `config.py` for artifact names, count limits, and AI budget constants
+- `ai_budget_service.py` for token estimates and context-window budgeting
+- `ai_translation_service.py` for approved translation artifacts
+- `deterministic_chunking_service.py` for canonical chunks
+- `cleanup_metadata_service.py` for cleaned paragraph metadata and clean-text
+  fallback records
+- `llm_provider_service.py` for JSON AI calls
+- `narrator_definition_service.py` for profile append and language
+  normalization
+- `prompt_template_service.py` for prompt loading/rendering
+- `token_usage_service.py` for cumulative token usage
+- `operation_runtime_service.py` for progress, cancellation, state payloads,
+  and root-level operation paths
+
+External dependencies:
+
+- the selected OpenAI-compatible or local AI backend configured in AI Settings
+- no VoiceWeaver dependency for this workflow
+
+## 5. Inputs And Outputs
+
+Inputs:
+
+- active project root
+- active project manifest
+- selected AI profile payload
+- requested profile count, `1..20`
+- selected voice language code
+- TTS preview character limit
+- optional progress and cancellation callbacks
+
+Source text selection order:
+
+1. Approved `translated_text.json` when `translation_report.json.target_language`
+   matches the selected voice language and every translated chunk is approved.
+2. Canonical `chunks_text.json`.
+3. `clean_text_metadata.json` paragraphs.
+4. `clean_text.txt` split into fallback paragraph records.
+
+Outputs:
+
+- appended entries in `audio_profiles.json`
+- `narator_profile_generation_report.json`
+- `narator_profile_generation_state.json`
+- one AI transaction log named with the `narrator_profiles` operation token
+
+No audio artifact is created.
+
+## 6. Data Contracts
+
+Generated profile fields appended to `audio_profiles.json`:
+
+- `profile_id = "ai_narrator_<uuid>"`
+- `profile_origin = "ai_generated"`
+- `profile_kind = "custom"`
+- `provider_family = "qwen_voice_designer"`
+- `editable = True`
+- `sample_audio_path = None`
+- `sample_metadata = None`
+- `display_name`
+- `language`
+- `prompt_text`
+- `preview_text`
+- `generation_metadata`
+
+Duplicate generated display names are rejected within one AI response. Duplicate
+names against existing project profiles are preserved with a suffix such as
+` (2)` during append.
+
+Report/state metadata includes:
+
+- `ai_profile_id`
+- `model_settings`
+- `source`
+- `source_unit_count`
+- `input_fingerprint`
+- `requested_count`
+- `gender_allocation`
+- `generated_profile_ids`
+- `budget_metadata`
+- `token_usage`
+
+Running-state `resume_checkpoint` includes:
+
+- `input_fingerprint`
+- `profile_id`
+- `source`
+- `requested_count`
+- `gender_allocation`
+- `completed_window_count`
+- `total_window_count`
+- compact `style_observations`
+- AI transaction `log_relative_path`
+- `budget_metadata`
+- `model_settings`
+
+Gender allocation:
+
+- even counts split evenly between male and female profiles
+- odd counts split evenly and assign the extra profile randomly to male or
+  female; the selected extra gender is written in `gender_allocation`
+
+## 7. Workflow Integration
+
+The `Narator Voice` page exposes an AI profile selector and
+`Generate Narator Profiles` button. The controller asks for confirmation,
+requests the count, starts the shared threaded operation runner, and refreshes
+the page after success, failure, or cancellation.
+
+If a previous narrator profile generation run was interrupted, pressing
+`Generate Narator Profiles` with the same compatible settings resumes from the
+next unfinished style-analysis window. If all style windows were already
+checkpointed and only the final profile-generation request failed or was
+cancelled, the service reuses the saved observations and retries only the final
+request.
+
+The workflow can run before narrator selection and does not mark the
+`narrator_definition` manifest operation complete. A generated profile becomes
+part of the normal narrator workflow only after the operator inspects it,
+generates an audio sample if desired, and explicitly selects it.
+
+## 8. Usage
+
+Representative service call:
+
+```python
+report = narrator_profile_generation_service.generate_narrator_profiles(
+    project_root,
+    manifest,
+    ai_profile_payload,
+    profile_count=6,
+    voice_language="en",
+    preview_text_character_limit=512,
+)
+```
+
+UI path:
+
+- open a project with cleaned, chunked, or approved translated text
+- open `Narator Voice`
+- choose one enabled AI profile
+- press `Generate Narator Profiles`
+- confirm token/cost warning
+- choose a profile count
+- after interruption, press `Generate Narator Profiles` again with the same
+  count/profile/source to continue from the saved checkpoint
+- review the appended editable profiles
+
+## 9. Validation And Tests
+
+Focused automated coverage:
+
+- `04_Software/AudioMancer/tests/test_narrator_profile_generation_service.py`
+- Narator Voice controller coverage in
+  `04_Software/AudioMancer/tests/test_narator_voice_ui_controller.py`
+- Narator Voice page coverage in
+  `04_Software/AudioMancer/tests/test_narator_voice_page.py`
+- AI Settings/default-profile coverage in
+  `04_Software/AudioMancer/tests/test_ai_settings_page.py`
+  and `04_Software/AudioMancer/tests/test_settings_service.py`
+
+Minimum validation after changes:
+
+- `uv run python -m py_compile` for changed Python files
+- `uv run ruff check <changed_python_files> --fix`
+- `uv run ruff format <changed_python_files>`
+- focused pytest runs for narrator generation, Narator Voice UI/controller, AI
+  settings, and settings service
+
+## 10. Limitations And Future Work
+
+- The service trusts the selected AI backend's language ability; it validates
+  shape and length but does not perform full linguistic verification of preview
+  text.
+- The style-analysis pass stores compact observations only; it does not persist
+  source excerpts.
+- Resume is compatible only while the source fingerprint, selected AI profile,
+  requested count, gender allocation, context budget, and model settings match
+  the checkpoint.
+- Repeated runs append new suggestions and do not deduplicate against prior
+  generated profile semantics beyond display-name suffixing.

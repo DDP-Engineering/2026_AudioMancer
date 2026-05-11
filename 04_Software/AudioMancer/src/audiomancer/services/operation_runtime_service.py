@@ -14,7 +14,7 @@
          shared by long-running workflow operations.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-22
-@version 0.11.0
+@version 0.11.1
 """
 
 # IMPORTS
@@ -80,6 +80,8 @@ _OPERATION_ARTIFACT_FILE_NAMES = {
         config.NARRATOR_SELECTION_FILE_NAME,
         config.SELECTED_NARRATOR_AUDIO_FILE_NAME,
         config.SELECTED_NARRATOR_METADATA_FILE_NAME,
+        config.NARRATOR_PROFILE_GENERATION_REPORT_FILE_NAME,
+        config.NARRATOR_PROFILE_GENERATION_STATE_FILE_NAME,
     ),
     "character_voices": (config.CHARACTER_VOICES_TARGETS_FILE_NAME,),
     "speech_blocks": (

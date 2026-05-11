@@ -14,7 +14,7 @@
          settings file to the application root.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-22
-@version 0.8.0
+@version 0.9.0
 """
 
 # IMPORTS
@@ -456,6 +456,7 @@ def _validate_settings_internal(settings_payload: object) -> tuple[dict[str, Any
         "default_ai_cleanup_profile_id",
         "default_ai_chunking_profile_id",
         "default_ai_translation_profile_id",
+        "default_narrator_profile_generation_profile_id",
         "default_speech_blocks_profile_id",
         "default_character_extraction_profile_id",
     ):
@@ -597,7 +598,7 @@ def build_default_settings() -> dict[str, Any]:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.5.1
+    @version    0.6.0
     """
     return {
         "language": config.DEFAULT_LANGUAGE,
@@ -605,6 +606,7 @@ def build_default_settings() -> dict[str, Any]:
         "default_ai_cleanup_profile_id": None,
         "default_ai_chunking_profile_id": None,
         "default_ai_translation_profile_id": None,
+        "default_narrator_profile_generation_profile_id": None,
         "default_speech_blocks_profile_id": None,
         "default_ai_chunking_strategy": "scene",
         "default_character_extraction_profile_id": None,

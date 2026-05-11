@@ -10,11 +10,12 @@
 @file narrator_definition_service.py
 @brief Project-local narrator-definition persistence helpers for AudioMancer.
 @details Persists narrator profiles, explicit selection state, project-local
-         TTS plan data, and one per-profile sample artifact set whose JSON
-         metadata records whether that sample is selected.
+         TTS plan data, AI-generated text-only profile suggestions, and one
+         per-profile sample artifact set whose JSON metadata records whether
+         that sample is selected.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-20
-@version 3.13.1
+@version 3.14.0
 """
 
 # IMPORTS
@@ -36,6 +37,8 @@ _NARRATOR_DEFINITION_LOGGER = get_component_logger("narrator_definition")
 NARRATOR_PROFILE_KIND_CUSTOM = "custom"
 
 NARRATOR_PROFILE_ORIGIN_CUSTOM_USER = "custom_user"
+
+NARRATOR_PROFILE_ORIGIN_AI_GENERATED = "ai_generated"
 
 NARRATOR_PROVIDER_FAMILY_QWEN_VOICE_DESIGNER = "qwen3_tts_voice_designer_1_7b"
 
@@ -444,6 +447,61 @@ def create_custom_profile(
     profiles.append(custom_profile)
     _write_json(_profiles_path(project_root), profiles)
     return custom_profile
+
+
+def append_ai_generated_profiles(
+    project_root: str | Path,
+    profile_payloads: list[dict[str, object]],
+    generation_metadata: dict[str, object],
+) -> list[dict[str, object]]:
+    """
+    @brief      Append editable AI-generated narrator profiles without changing selection or samples.
+    @param[in]  project_root Active project root folder.
+    @param[in]  profile_payloads Validated generated narrator-profile payloads.
+    @param[in]  generation_metadata Shared metadata for the AI generation run.
+    @return     Persisted generated narrator-profile payload list.
+    @exception  ValueError Raised when no valid generated profiles are provided.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-11
+    @version    0.1.0
+    """
+    if not profile_payloads:
+        raise ValueError("No generated narrator profiles were provided.")
+    profiles = load_profiles(project_root)
+    existing_names = {display_profile_name(profile).casefold() for profile in profiles}
+    created_profiles: list[dict[str, object]] = []
+    for profile_payload in profile_payloads:
+        display_name = _unique_display_name(profile_payload.get("display_name", ""), existing_names)
+        generated_profile = _normalize_profile(
+            {
+                "profile_id": f"ai_narrator_{uuid4().hex}",
+                "speaker_id": None,
+                "source_model_id": None,
+                "display_name": display_name,
+                "language": narrator_language_code(profile_payload.get("language", DEFAULT_NARRATOR_LANGUAGE)),
+                "prompt_text": profile_payload.get("prompt_text", ""),
+                "preview_text": profile_payload.get("preview_text", DEFAULT_PREVIEW_TEXT),
+                "profile_kind": NARRATOR_PROFILE_KIND_CUSTOM,
+                "profile_origin": NARRATOR_PROFILE_ORIGIN_AI_GENERATED,
+                "provider_family": NARRATOR_PROVIDER_FAMILY_QWEN_VOICE_DESIGNER,
+                "editable": True,
+                "protected": False,
+                "is_selected": False,
+                "sample_audio_path": None,
+                "sample_metadata": None,
+                "generation_metadata": {
+                    **dict(generation_metadata),
+                    "gender": str(profile_payload.get("gender", "")).strip(),
+                    "style_label": str(profile_payload.get("style_label", "")).strip(),
+                },
+                "updated_at": _utc_now_iso(),
+            }
+        )
+        created_profiles.append(generated_profile)
+        profiles.append(generated_profile)
+        existing_names.add(display_profile_name(generated_profile).casefold())
+    _write_json(_profiles_path(project_root), profiles)
+    return created_profiles
 
 
 def update_custom_profile(
@@ -1036,12 +1094,16 @@ def _normalize_profile(profile: dict[str, object]) -> dict[str, object]:
     @return     Derived helper result.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.2.0
+    @version    0.3.0
     """
     profile_payload = dict(profile)
     profile_kind = NARRATOR_PROFILE_KIND_CUSTOM
-    profile_origin = NARRATOR_PROFILE_ORIGIN_CUSTOM_USER
-    provider_family = NARRATOR_PROVIDER_FAMILY_QWEN_VOICE_DESIGNER
+    profile_origin = str(profile_payload.get("profile_origin", NARRATOR_PROFILE_ORIGIN_CUSTOM_USER)).strip()
+    if profile_origin not in {NARRATOR_PROFILE_ORIGIN_CUSTOM_USER, NARRATOR_PROFILE_ORIGIN_AI_GENERATED}:
+        profile_origin = NARRATOR_PROFILE_ORIGIN_CUSTOM_USER
+    provider_family = str(profile_payload.get("provider_family", NARRATOR_PROVIDER_FAMILY_QWEN_VOICE_DESIGNER)).strip()
+    if not provider_family:
+        provider_family = NARRATOR_PROVIDER_FAMILY_QWEN_VOICE_DESIGNER
     editable_default = True
     return {
         "profile_id": str(profile_payload.get("profile_id", "")).strip() or f"profile_{uuid4().hex}",
@@ -1063,10 +1125,35 @@ def _normalize_profile(profile: dict[str, object]) -> dict[str, object]:
             if isinstance(profile_payload.get("sample_metadata"), dict)
             else None
         ),
+        "generation_metadata": (
+            dict(profile_payload.get("generation_metadata"))
+            if isinstance(profile_payload.get("generation_metadata"), dict)
+            else None
+        ),
         "updated_at": (
             None if profile_payload.get("updated_at") in (None, "") else str(profile_payload.get("updated_at"))
         ),
     }
+
+
+def _unique_display_name(display_name: object, existing_names: set[str]) -> str:
+    """
+    @brief      Build one unique narrator display name using numeric suffixes.
+    @param[in]  display_name Candidate display name.
+    @param[in]  existing_names Case-folded names already present in the project.
+    @return     Unique non-empty display name.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-11
+    @version    0.1.0
+    """
+    base_name = display_profile_name(display_name) or "AI Narrator"
+    candidate_name = base_name
+    suffix_index = 2
+    while candidate_name.casefold() in existing_names:
+        candidate_name = f"{base_name} ({suffix_index})"
+        suffix_index += 1
+    return candidate_name
 
 
 def _update_profile_sample_metadata(

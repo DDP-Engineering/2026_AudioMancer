@@ -13,7 +13,7 @@
          persisted settings self-healing, and validated save behavior.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-22
-@version 0.5.1
+@version 0.5.2
 """
 
 # IMPORTS
@@ -88,6 +88,7 @@ def test_load_settings_self_heals_missing_and_invalid_values(tmp_path, monkeypat
     invalid_settings["default_ai_cleanup_profile_id"] = "missing_profile"
     invalid_settings["default_ai_chunking_profile_id"] = "missing_profile"
     invalid_settings["default_ai_translation_profile_id"] = "missing_profile"
+    invalid_settings["default_narrator_profile_generation_profile_id"] = "missing_profile"
     invalid_settings["default_speech_blocks_profile_id"] = "missing_profile"
     invalid_settings["default_character_extraction_profile_id"] = "missing_profile"
     invalid_settings["play_completion_beep"] = "no"
@@ -101,6 +102,10 @@ def test_load_settings_self_heals_missing_and_invalid_values(tmp_path, monkeypat
     assert loaded_settings["default_ai_cleanup_profile_id"] == defaults["default_ai_cleanup_profile_id"]
     assert loaded_settings["default_ai_chunking_profile_id"] == defaults["default_ai_chunking_profile_id"]
     assert loaded_settings["default_ai_translation_profile_id"] == defaults["default_ai_translation_profile_id"]
+    assert (
+        loaded_settings["default_narrator_profile_generation_profile_id"]
+        == defaults["default_narrator_profile_generation_profile_id"]
+    )
     assert loaded_settings["default_speech_blocks_profile_id"] == defaults["default_speech_blocks_profile_id"]
     assert loaded_settings["default_ai_chunking_strategy"] == defaults["default_ai_chunking_strategy"]
     assert (
@@ -194,6 +199,7 @@ def test_validate_settings_keeps_valid_enabled_default_profile_ids() -> None:
     candidate_settings["default_ai_cleanup_profile_id"] = "profile_1"
     candidate_settings["default_ai_chunking_profile_id"] = "profile_1"
     candidate_settings["default_ai_translation_profile_id"] = "profile_1"
+    candidate_settings["default_narrator_profile_generation_profile_id"] = "profile_1"
     candidate_settings["default_speech_blocks_profile_id"] = "profile_1"
     candidate_settings["default_character_extraction_profile_id"] = "profile_1"
 
@@ -202,6 +208,7 @@ def test_validate_settings_keeps_valid_enabled_default_profile_ids() -> None:
     assert validated_settings["default_ai_cleanup_profile_id"] == "profile_1"
     assert validated_settings["default_ai_chunking_profile_id"] == "profile_1"
     assert validated_settings["default_ai_translation_profile_id"] == "profile_1"
+    assert validated_settings["default_narrator_profile_generation_profile_id"] == "profile_1"
     assert validated_settings["default_speech_blocks_profile_id"] == "profile_1"
     assert validated_settings["default_character_extraction_profile_id"] == "profile_1"
 

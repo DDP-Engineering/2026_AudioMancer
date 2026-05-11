@@ -10,11 +10,11 @@
 @file narrator_definition_state_service.py
 @brief Narator Voice page state helpers for AudioMancer.
 @details Builds project-local Narator Voice page state from manifest summary fields,
-         persisted narrator artifacts, per-profile sample state, and the cached
-         VoiceWeaver runtime discovery data.
+         persisted narrator artifacts, narrator-generation AI profile settings,
+         per-profile sample state, and the cached VoiceWeaver runtime discovery data.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-20
-@version 3.13.2
+@version 3.14.1
 """
 
 # IMPORTS
@@ -25,6 +25,8 @@ from audiomancer import config
 from audiomancer.services import (
     ai_translation_service,
     character_voices_service,
+    cleanup_metadata_service,
+    deterministic_chunking_service,
     deterministic_cleanup_service,
     home_presenter_service,
     narrator_definition_service,
@@ -32,6 +34,52 @@ from audiomancer.services import (
     ui_state_service,
     voiceweaver_runtime_service,
 )
+
+
+def build_narrator_profile_generation_profile_state(
+    settings_payload: dict[str, object] | None,
+    project_root: Path | None = None,
+    selected_profile_id: str | None = None,
+) -> dict[str, object]:
+    """
+    @brief      Build the AI-profile selector state for narrator profile generation.
+    @param[in]  settings_payload Persisted application settings payload.
+    @param[in]  project_root Optional active project root used to gate generation readiness.
+    @param[in]  selected_profile_id Preferred profile identifier if available.
+    @return     Selector entries, selected profile id, and source-text readiness flag.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-11
+    @version    0.1.0
+    """
+    if not isinstance(settings_payload, dict):
+        return {"entries": [], "selected_profile_id": None, "can_generate_profiles": False}
+    raw_profiles = settings_payload.get("llm_profiles", [])
+    if not isinstance(raw_profiles, list):
+        return {"entries": [], "selected_profile_id": None, "can_generate_profiles": False}
+    entries: list[tuple[str, str | None]] = []
+    enabled_ids: list[str] = []
+    for profile in raw_profiles:
+        if not isinstance(profile, dict) or not bool(profile.get("enabled", True)):
+            continue
+        profile_id = str(profile.get("id", "")).strip()
+        if not profile_id:
+            continue
+        entries.append((str(profile.get("label", "")).strip() or profile_id, profile_id))
+        enabled_ids.append(profile_id)
+    default_profile_id = settings_payload.get("default_narrator_profile_generation_profile_id")
+    resolved_selected_id = (
+        selected_profile_id
+        if selected_profile_id in enabled_ids
+        else (
+            str(default_profile_id) if default_profile_id in enabled_ids else (enabled_ids[0] if enabled_ids else None)
+        )
+    )
+    return {
+        "entries": entries,
+        "selected_profile_id": resolved_selected_id,
+        "can_generate_profiles": bool(entries) and _has_narrator_generation_source_text(project_root),
+    }
 
 
 def build_narrator_definition_state(
@@ -54,7 +102,7 @@ def build_narrator_definition_state(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-18
-    @version    2.1.0
+    @version    2.2.0
     """
     _ = initialize_defaults
     preview_text_character_limit = _preview_text_character_limit(settings_payload)
@@ -66,9 +114,6 @@ def build_narrator_definition_state(
             "selected_profile_id": None,
             "effective_language": narrator_definition_service.DEFAULT_NARRATOR_LANGUAGE,
             "selected_voice_language": narrator_definition_service.DEFAULT_NARRATOR_LANGUAGE,
-            "language_entries": [],
-            "original_language": ui_state_service.translate("narator_voice.language_unknown", language),
-            "translated_language": ui_state_service.translate("narator_voice.language_not_translated", language),
             "profile_name": "",
             "prompt_text": "",
             "preview_text": narrator_definition_service.DEFAULT_PREVIEW_TEXT,
@@ -98,11 +143,8 @@ def build_narrator_definition_state(
     tts_plan = narrator_definition_service.load_tts_plan(project_root, discovered_models)
     selected_state = narrator_definition_service.load_selected_profile_state(project_root)
     selected_profile_id = str(selected_state.get("selected_profile_id", "") or "").strip() or None
-    language_entries, selected_voice_language, original_language, translated_language, _translation_ready = (
-        _voice_language_state(project_root, manifest, language)
-    )
+    selectable_language_codes, selected_voice_language = _voice_language_state(project_root, manifest)
     saved_language = character_voices_service.load_selected_voice_language(project_root, selected_voice_language)
-    selectable_language_codes = [language_code for _label, language_code in language_entries]
     selected_voice_language = (
         saved_language
         if saved_language in selectable_language_codes
@@ -146,9 +188,6 @@ def build_narrator_definition_state(
         "selected_profile_id": selected_profile_id,
         "effective_language": effective_language,
         "selected_voice_language": selected_voice_language,
-        "language_entries": language_entries,
-        "original_language": original_language,
-        "translated_language": translated_language,
         "profile_name": ""
         if current_profile is None
         else narrator_definition_service.display_profile_name(current_profile),
@@ -360,6 +399,33 @@ def _active_model_id_from_settings(settings_payload: dict[str, object] | None) -
     return str(active_model_payload or "").strip()
 
 
+def _has_narrator_generation_source_text(project_root: Path | None) -> bool:
+    """
+    @brief      Return whether text exists for AI narrator profile generation.
+    @param[in]  project_root Optional active project root.
+    @return     True when translation, chunking, metadata, or cleaned text can be analyzed.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-11
+    @version    0.1.0
+    """
+    if project_root is None:
+        return False
+    if deterministic_chunking_service.load_chunks(project_root):
+        return True
+    translated_report = ai_translation_service.load_translation_report(project_root)
+    if isinstance(translated_report, dict) and int(translated_report.get("approved_chunk_count", 0) or 0) > 0:
+        return True
+    cleanup_metadata = cleanup_metadata_service.load_cleanup_metadata(project_root)
+    if isinstance(cleanup_metadata, dict) and cleanup_metadata.get("paragraphs"):
+        return True
+    cleaned_path = Path(project_root) / config.CLEANED_TEXT_FILE_NAME
+    try:
+        return cleaned_path.is_file() and bool(cleaned_path.read_text(encoding="utf-8").strip())
+    except OSError:
+        return False
+
+
 def voice_capability_matrix(discovered_models: list[dict[str, object]]) -> dict[str, object]:
     """
     @brief      Build the narrator-facing VoiceWeaver capability matrix wrapper.
@@ -470,70 +536,37 @@ def _profile_by_id(profiles: list[dict[str, object]], profile_id: str | None) ->
     return None
 
 
-def _original_language_label(project_root: Path, manifest: dict[str, object], language: str) -> str:
+def _voice_language_state(project_root: Path, manifest: dict[str, object]) -> tuple[list[str], str]:
     """
-    @brief      Resolve the original-language label from manifest or cleanup detection.
+    @brief      Resolve locked audiobook voice-language codes for narrator operations.
     @param[in]  project_root Active project root folder.
     @param[in]  manifest Active project manifest payload.
-    @param[in]  language Language code.
-    @return     Resolved original-language label.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.3.0
-    """
-    original_language = _resolved_original_language_code(project_root, manifest)
-    if original_language:
-        return narrator_definition_service.narrator_language_label(original_language)
-    return ui_state_service.translate("narator_voice.language_unknown", language)
-
-
-def _voice_language_state(
-    project_root: Path,
-    manifest: dict[str, object],
-    language: str,
-) -> tuple[list[tuple[str, str]], str, str, str, bool]:
-    """
-    @brief      Resolve locked audiobook voice-language state for the Narator Voice page.
-    @param[in]  project_root Active project root folder.
-    @param[in]  manifest Active project manifest payload.
-    @param[in]  language Runtime UI language code.
-    @return     Language entries, selected code, original label, target label, and translation-ready flag.
+    @return     Selectable language codes and selected code.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-26
-    @version    0.3.0
+    @version    0.4.0
     """
     translation_report = ai_translation_service.load_translation_report(project_root)
     original_language_code = narrator_definition_service.narrator_language_code(
         _resolved_original_language_code(project_root, manifest),
         narrator_definition_service.DEFAULT_NARRATOR_LANGUAGE,
     )
-    original_language_label = narrator_definition_service.narrator_language_label(original_language_code)
     selected_language_code = narrator_definition_service.narrator_language_code(
         manifest.get("selected_voice_language"),
         original_language_code,
     )
-    language_entries = [(original_language_label, original_language_code)]
-    translated_language_label = ui_state_service.translate("narator_voice.language_not_translated", language)
-    translation_ready = False
+    selectable_codes = [original_language_code]
     if isinstance(translation_report, dict):
         translated_language_code = str(translation_report.get("target_language", "")).strip()
         translated_total_count = int(translation_report.get("total_chunk_count", 0))
         translated_approved_count = int(translation_report.get("approved_chunk_count", 0))
         if translated_language_code in dict(config.TRANSLATION_LANGUAGE_OPTIONS):
-            translated_language_label = narrator_definition_service.narrator_language_label(translated_language_code)
             translation_ready = translated_total_count > 0 and translated_total_count == translated_approved_count
             if translation_ready and translated_language_code != original_language_code:
-                language_entries.append((translated_language_label, translated_language_code))
-    selectable_codes = {language_code for _label, language_code in language_entries}
+                selectable_codes.append(translated_language_code)
     if selected_language_code not in selectable_codes:
         selected_language_code = original_language_code
-    return (
-        language_entries,
-        selected_language_code,
-        original_language_label,
-        translated_language_label,
-        translation_ready,
-    )
+    return selectable_codes, selected_language_code
 
 
 def _resolved_original_language_code(project_root: Path, manifest: dict[str, object]) -> str:

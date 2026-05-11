@@ -14,7 +14,7 @@
          so the window remains a thin coordinator.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 1.45.2
+@version 1.46.1
 """
 
 # IMPORTS
@@ -396,7 +396,7 @@ class MainWindow(QMainWindow):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-26
-        @version    0.1.0
+        @version    0.2.0
         """
         self._text_chunking_page.set_project_active(project_root is not None)
         self._text_chunking_page.set_ai_profiles(
@@ -490,9 +490,15 @@ class MainWindow(QMainWindow):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-26
-        @version    0.1.0
+        @version    0.2.0
         """
         self._narator_voice_page.set_project_active(project_root is not None)
+        self._narator_voice_page.set_ai_profiles(
+            **narrator_definition_state_service.build_narrator_profile_generation_profile_state(
+                self._settings_payload,
+                project_root,
+            )
+        )
         self._narator_voice_page.set_narator_voice_state(
             **narrator_definition_state_service.build_narrator_definition_state(
                 project_root,
@@ -722,7 +728,7 @@ class MainWindow(QMainWindow):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-07
-        @version    0.20.1
+        @version    0.21.1
         """
         current_language = ui_state_service.current_language_from_settings(self._settings_payload)
         home_page = HomeProjectPage(self)
@@ -906,6 +912,12 @@ class MainWindow(QMainWindow):
                 profile_id,
             )
         )
+        self._narator_voice_page.generate_profiles_requested.connect(
+            lambda profile_id: narator_voice_ui_controller.handle_generate_profiles_requested(
+                self,
+                profile_id,
+            )
+        )
         self._narator_voice_page.select_profile_requested.connect(
             lambda profile_id: narator_voice_ui_controller.handle_select_profile_requested(
                 self,
@@ -914,12 +926,6 @@ class MainWindow(QMainWindow):
         )
         self._narator_voice_page.preview_toggle_requested.connect(
             lambda: narator_voice_ui_controller.handle_preview_toggle_requested(self)
-        )
-        self._narator_voice_page.voice_language_change_requested.connect(
-            lambda voice_language: narator_voice_ui_controller.handle_voice_language_change_requested(
-                self,
-                voice_language,
-            )
         )
         self._character_voices_page = CharacterVoicesPage(self)
         self._character_voices_page.selection_change_requested.connect(
