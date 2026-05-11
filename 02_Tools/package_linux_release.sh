@@ -170,9 +170,14 @@ APP_ROOT="${REPO_ROOT}/04_Software/AudioMancer"
 DELIVERY_ROOT="${REPO_ROOT}/07_Delivery"
 PYTHON_LAUNCHER_PATH="${SCRIPT_DIR}/audiomancer_windows_entry.py"
 PYPROJECT_PATH="${APP_ROOT}/pyproject.toml"
+CHANGELOG_PATH="${REPO_ROOT}/CHANGELOG.md"
 
 if [[ ! -f "${PYPROJECT_PATH}" ]]; then
     echo "Could not locate pyproject.toml at ${PYPROJECT_PATH}" >&2
+    exit 1
+fi
+if [[ ! -f "${CHANGELOG_PATH}" ]]; then
+    echo "Could not locate CHANGELOG.md at ${CHANGELOG_PATH}" >&2
     exit 1
 fi
 
@@ -225,6 +230,7 @@ invoke_step "Assemble delivery staging folder" mkdir -p "${STAGING_PATH}"
 # Start from PyInstaller output, then add project-controlled runtime assets.
 cp -a "${DIST_BUNDLE_PATH}/." "${STAGING_PATH}/"
 copy_required_root_files "${STAGING_PATH}"
+cp -- "${CHANGELOG_PATH}" "${STAGING_PATH}/CHANGELOG.md"
 copy_clean_settings_file "${APP_ROOT}/settings.json" "${STAGING_PATH}/settings.json"
 copy_user_guide "${STAGING_PATH}"
 copy_prompt_templates "${STAGING_PATH}"
@@ -270,6 +276,7 @@ Install:
   the app reports missing system display dependencies.
 
 Configuration and licenses are included next to the executable.
+The project changelog is included as CHANGELOG.md.
 The packaged settings.json is cleaned of operator API keys and runtime discovery cache.
 Prompt templates are included in prompts/.
 The app icon is included in assets/icons/.

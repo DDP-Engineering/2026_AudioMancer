@@ -10,6 +10,13 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [1.0.6] - 2026-05-11
+
+### Changed
+
+- Windows and Linux packaging scripts now include `CHANGELOG.md` in portable
+  release bundles.
+
 ## [1.0.5] - 2026-05-11
 
 ### Changed

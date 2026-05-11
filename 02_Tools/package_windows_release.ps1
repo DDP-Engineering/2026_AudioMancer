@@ -120,12 +120,16 @@ $appRoot = Join-Path $repoRoot '04_Software\AudioMancer'
 $deliveryRoot = Join-Path $repoRoot '07_Delivery'
 $specPath = Join-Path $scriptRoot 'audiomancer_windows.spec'
 $pyprojectPath = Join-Path $appRoot 'pyproject.toml'
+$changelogPath = Join-Path $repoRoot 'CHANGELOG.md'
 $englishUserGuidePath = Join-Path $repoRoot '05_SoftwareDocu\UserGuide'
 $romanianUserGuidePath = Join-Path $repoRoot '05_SoftwareDocu\UserGuide_ro'
 $promptTemplatePath = Join-Path $appRoot 'prompts'
 
 if (-not (Test-Path $pyprojectPath)) {
     throw "Could not locate pyproject.toml at $pyprojectPath"
+}
+if (-not (Test-Path $changelogPath)) {
+    throw "Could not locate CHANGELOG.md at $changelogPath"
 }
 
 # The archive filename is stable, but release notes still include the app
@@ -205,6 +209,7 @@ Invoke-Step -Name 'Assemble delivery staging folder' -Action {
         }
         Copy-Item -LiteralPath $sourcePath -Destination (Join-Path $stagingPath $fileName) -Force
     }
+    Copy-Item -LiteralPath $changelogPath -Destination (Join-Path $stagingPath 'CHANGELOG.md') -Force
     $settingsSourcePath = Join-Path $appRoot 'settings.json'
     if (-not (Test-Path $settingsSourcePath)) {
         throw "Required packaging file is missing: $settingsSourcePath"
@@ -256,6 +261,7 @@ Invoke-Step -Name 'Assemble delivery staging folder' -Action {
         '- Keep the files together; the executable depends on bundled runtime files.'
         ''
         'Configuration and licenses are included next to the executable.'
+        'The project changelog is included as CHANGELOG.md.'
         'The packaged settings.json is cleaned of operator API keys and runtime discovery cache.'
         'Prompt templates are included in prompts\.'
         'Offline help is included in help\en\index.html and help\ro\index.html.'

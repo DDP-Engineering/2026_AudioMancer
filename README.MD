@@ -55,9 +55,8 @@ Audio Blocks selected reset, selected regeneration, approval, and unapproval
 now preserve unrelated generated audio and reset only Audio Assembly outputs.
 Audio Assembly settings changes and reruns now preserve upstream Audio Blocks
 while replacing only assembly outputs/state/report.
-Current package version is `1.0.5`; Narator Voice changes now show synchronous
-progress while refreshing affected Audio Blocks and Audio Assembly state,
-matching the Characters save progress behavior for large-project saves.
+Current package version is `1.0.6`; Windows and Linux packaging scripts now
+include `CHANGELOG.md` in portable release bundles.
 
 Focused implementation documentation is maintained in `05_SoftwareDocu/`.
 The end-user help bundles are maintained in `05_SoftwareDocu/UserGuide/` and

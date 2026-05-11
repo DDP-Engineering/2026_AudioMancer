@@ -48,8 +48,8 @@ The Windows packaging flow is:
 
 1. syncs the `uv` environment with dev dependencies
 2. builds the Windows bundle with `PyInstaller`
-3. stages the packaged app together with a clean `settings.json`, the four
-   license files, `Start-AudioMancer.cmd`, and `README_RELEASE.txt`
+3. stages the packaged app together with a clean `settings.json`, `CHANGELOG.md`,
+   the four license files, `Start-AudioMancer.cmd`, and `README_RELEASE.txt`
 4. creates the stable Windows zip in `07_Delivery/`
 5. removes temporary build and staging artifacts after success
 
@@ -70,8 +70,8 @@ The Ubuntu packaging flow is:
 
 1. syncs the `uv` environment with dev dependencies
 2. builds the Ubuntu bundle with `PyInstaller`
-3. stages the packaged app together with a clean `settings.json`, the four
-   license files, `start-audiomancer.sh`, and `README_RELEASE.txt`
+3. stages the packaged app together with a clean `settings.json`, `CHANGELOG.md`,
+   the four license files, `start-audiomancer.sh`, and `README_RELEASE.txt`
 4. creates the stable Linux zip in `07_Delivery/`
 5. removes temporary build and staging artifacts after success
 
