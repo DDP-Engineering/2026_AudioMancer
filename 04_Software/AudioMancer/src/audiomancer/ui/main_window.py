@@ -14,7 +14,7 @@
          so the window remains a thin coordinator.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 1.45.1
+@version 1.45.2
 """
 
 # IMPORTS
@@ -722,7 +722,7 @@ class MainWindow(QMainWindow):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-07
-        @version    0.20.0
+        @version    0.20.1
         """
         current_language = ui_state_service.current_language_from_settings(self._settings_payload)
         home_page = HomeProjectPage(self)
@@ -854,6 +854,7 @@ class MainWindow(QMainWindow):
             lambda profile_payload: characters_ui_controller.handle_save_character_requested(
                 self,
                 profile_payload,
+                show_progress=True,
             )
         )
         self._characters_page.delete_character_requested.connect(

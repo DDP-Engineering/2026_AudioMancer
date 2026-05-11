@@ -13,7 +13,7 @@
          manifest refresh behavior, and safe generated-artifact deletion.
 @author Eng. Dan Dumitru Pasare
 @date 2026-05-04
-@version 0.1.0
+@version 0.2.0
 """
 
 # IMPORTS
@@ -197,6 +197,51 @@ def test_workflow_impact_deletes_audio_artifacts_for_affected_speech_block_only(
     assert not affected_wav.exists()
     assert not affected_json.exists()
     assert not affected_part.exists()
+    assert preserved_wav.is_file()
+
+
+def test_workflow_impact_can_skip_preserved_audio_artifact_collection(tmp_path) -> None:
+    """
+    @brief      Verify selective Audio Blocks deletion can avoid unaffected file checks.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-11
+    @version    0.1.0
+    """
+    project_root, _manifest = project_workspace_service.create_project("SelectiveAudioArtifactsFast", tmp_path)
+    audio_root = project_root / config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME
+    audio_root.mkdir()
+    affected_wav = audio_root / "affected.wav"
+    preserved_wav = audio_root / "preserved.wav"
+    affected_wav.write_bytes(b"affected")
+    preserved_wav.write_bytes(b"preserved")
+    audio_blocks = [
+        {
+            "speech_block_id": "sb-1",
+            "chunk_id": "chunk-0001",
+            "voice_target_id": "narrator",
+            "audio_relative_path": affected_wav.relative_to(project_root).as_posix(),
+        },
+        {
+            "speech_block_id": "sb-2",
+            "chunk_id": "chunk-0002",
+            "voice_target_id": "character_alice",
+            "audio_relative_path": preserved_wav.relative_to(project_root).as_posix(),
+        },
+    ]
+
+    summary = workflow_impact_service.delete_audio_block_artifacts(
+        project_root,
+        audio_blocks,
+        speech_block_ids=("sb-1",),
+        collect_preserved_paths=False,
+    )
+
+    assert summary.deleted_paths == ("audio_blocks/affected.wav",)
+    assert summary.preserved_paths == ()
+    assert not affected_wav.exists()
     assert preserved_wav.is_file()
 
 

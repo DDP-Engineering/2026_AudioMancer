@@ -14,7 +14,7 @@
          for the Characters page.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-11
-@version 0.14.0
+@version 0.15.0
 """
 
 # IMPORTS
@@ -194,16 +194,19 @@ def handle_edit_character_requested(window: "MainWindow", character_id: str) -> 
 def handle_save_character_requested(
     window: "MainWindow",
     profile_payload: dict[str, object],
+    *,
+    show_progress: bool = False,
 ) -> bool:
     """
     @brief      Validate and persist one manual add or edit draft.
     @param[in]  window Main application window.
     @param[in]  profile_payload Draft character profile payload from the page.
+    @param[in]  show_progress True to show the synchronous save progress dialog.
     @return     `True` when the character was saved successfully.
     @exception  ValueError Propagated from manual-name validation helpers.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-08
-    @version    0.4.0
+    @version    0.5.0
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._current_project_root is None:
@@ -218,62 +221,75 @@ def handle_save_character_requested(
     except ValueError as error:
         _show_name_validation_error(window, current_language, str(error))
         return False
+    progress_started = False
+    progress_callback = None
     saved_character_id: str
-    if window._characters_page.is_add_mode():
-        if not _confirm_add_character(window, current_language):
-            return False
-        existing_ids = {str(profile.get("character_id", "")).strip() for profile in existing_profiles}
-        created_profiles = character_discovery_service.add_character_profile(
+    try:
+        if window._characters_page.is_add_mode():
+            if not _confirm_add_character(window, current_language):
+                return False
+            progress_callback = _start_character_save_progress(window, current_language, show_progress)
+            progress_started = progress_callback is not None
+            _update_character_save_progress(progress_callback, 20, "progress.character_save_profile")
+            existing_ids = {str(profile.get("character_id", "")).strip() for profile in existing_profiles}
+            created_profiles = character_discovery_service.add_character_profile(
+                window._current_project_root,
+                normalized_name,
+            )
+            created_profile = next(
+                (
+                    profile
+                    for profile in created_profiles
+                    if str(profile.get("character_id", "")).strip() not in existing_ids
+                ),
+                None,
+            )
+            if created_profile is None:
+                raise RuntimeError("Could not persist the new manual character profile.")
+            persisted_payload = dict(profile_payload)
+            persisted_payload["character_id"] = created_profile["character_id"]
+            persisted_payload["canonical_name"] = normalized_name
+            persisted_payload["evidence"] = [dict(item) for item in created_profile["evidence"]]
+            persisted_payload["updated_at"] = created_profile.get("updated_at")
+            character_discovery_service.update_character_profile(
+                window._current_project_root,
+                persisted_payload,
+            )
+            saved_character_id = str(created_profile["character_id"])
+            _sync_manifest_after_character_add(window, progress_callback=progress_callback)
+            status_key = "status.character_added"
+        else:
+            previous_profile = _character_profile_by_id(
+                existing_profiles,
+                str(profile_payload.get("character_id", "")).strip(),
+            )
+            progress_callback = _start_character_save_progress(window, current_language, show_progress)
+            progress_started = progress_callback is not None
+            _update_character_save_progress(progress_callback, 20, "progress.character_save_profile")
+            persisted_payload = dict(profile_payload)
+            persisted_payload["canonical_name"] = normalized_name
+            updated_profiles = character_discovery_service.update_character_profile(
+                window._current_project_root,
+                persisted_payload,
+            )
+            saved_character_id = str(persisted_payload.get("character_id", ""))
+            updated_profile = _character_profile_by_id(updated_profiles, saved_character_id)
+            _sync_manifest_after_character_edit(window, previous_profile, updated_profile, progress_callback)
+            status_key = "status.character_saved"
+        _update_character_save_progress(progress_callback, 95, "progress.character_save_refresh")
+        window.show_project_state(
             window._current_project_root,
-            normalized_name,
+            project_workspace_service.load_manifest(window._current_project_root),
         )
-        created_profile = next(
-            (
-                profile
-                for profile in created_profiles
-                if str(profile.get("character_id", "")).strip() not in existing_ids
-            ),
-            None,
+        window._characters_page.apply_selected_character(saved_character_id)
+        misc_ui_controller.show_message(
+            window,
+            ui_state_service.translate(status_key, current_language),
         )
-        if created_profile is None:
-            raise RuntimeError("Could not persist the new manual character profile.")
-        persisted_payload = dict(profile_payload)
-        persisted_payload["character_id"] = created_profile["character_id"]
-        persisted_payload["canonical_name"] = normalized_name
-        persisted_payload["evidence"] = [dict(item) for item in created_profile["evidence"]]
-        persisted_payload["updated_at"] = created_profile.get("updated_at")
-        character_discovery_service.update_character_profile(
-            window._current_project_root,
-            persisted_payload,
-        )
-        saved_character_id = str(created_profile["character_id"])
-        _sync_manifest_after_character_add(window)
-        status_key = "status.character_added"
-    else:
-        previous_profile = _character_profile_by_id(
-            existing_profiles,
-            str(profile_payload.get("character_id", "")).strip(),
-        )
-        persisted_payload = dict(profile_payload)
-        persisted_payload["canonical_name"] = normalized_name
-        updated_profiles = character_discovery_service.update_character_profile(
-            window._current_project_root,
-            persisted_payload,
-        )
-        saved_character_id = str(persisted_payload.get("character_id", ""))
-        updated_profile = _character_profile_by_id(updated_profiles, saved_character_id)
-        _sync_manifest_after_character_edit(window, previous_profile, updated_profile)
-        status_key = "status.character_saved"
-    window.show_project_state(
-        window._current_project_root,
-        project_workspace_service.load_manifest(window._current_project_root),
-    )
-    window._characters_page.apply_selected_character(saved_character_id)
-    misc_ui_controller.show_message(
-        window,
-        ui_state_service.translate(status_key, current_language),
-    )
-    return True
+        return True
+    finally:
+        if progress_started:
+            _finish_character_save_progress(window)
 
 
 def handle_delete_character_requested(window: "MainWindow", character_id: str) -> None:
@@ -373,6 +389,85 @@ def handle_character_profile_changed(
     @version    0.2.0
     """
     handle_save_character_requested(window, profile_payload)
+
+
+def _start_character_save_progress(
+    window: "MainWindow",
+    language: str,
+    show_progress: bool,
+):
+    """
+    @brief      Start the synchronous Character save progress dialog when requested.
+    @param[in]  window Main application window.
+    @param[in]  language Runtime UI language code.
+    @param[in]  show_progress True to show progress.
+    @return     Progress update callback or `None`.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-11
+    @version    0.1.0
+    """
+    if not show_progress or window._operation_progress_dialog is not None:
+        return None
+    window._characters_page.set_busy(True)
+    misc_ui_controller.create_progress_dialog(
+        window,
+        ui_state_service.translate("characters.save_character", language),
+        ui_state_service.translate("progress.character_save_prepare", language),
+        lambda: None,
+        cancellable=False,
+    )
+    misc_ui_controller.process_pending_ui_events()
+
+    def _update(percent: int, message_key: str) -> None:
+        misc_ui_controller.update_progress_dialog(
+            window,
+            percent,
+            ui_state_service.translate(message_key, language),
+        )
+        misc_ui_controller.process_pending_ui_events()
+
+    return _update
+
+
+def _update_character_save_progress(progress_callback, percent: int, message_key: str) -> None:
+    """
+    @brief      Update Character save progress when a progress callback exists.
+    @param[in]  progress_callback Optional progress callback.
+    @param[in]  percent Progress percentage.
+    @param[in]  message_key Runtime UI translation key.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-11
+    @version    0.1.0
+    """
+    if progress_callback is not None:
+        progress_callback(percent, message_key)
+
+
+def _finish_character_save_progress(window: "MainWindow") -> None:
+    """
+    @brief      Close and clear the synchronous Character save progress dialog.
+    @param[in]  window Main application window.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-11
+    @version    0.1.0
+    """
+    misc_ui_controller.update_progress_dialog(
+        window,
+        100,
+        ui_state_service.translate(
+            "progress.character_save_refresh",
+            ui_state_service.current_language_from_settings(window._settings_payload),
+        ),
+    )
+    misc_ui_controller.finish_progress_dialog(window)
+    misc_ui_controller.clear_progress_dialog(window)
+    window._characters_page.set_busy(False)
+    misc_ui_controller.process_pending_ui_events()
 
 
 def _start_operation(
@@ -506,19 +601,25 @@ def _sync_manifest_after_discovery(
     )
 
 
-def _sync_manifest_after_character_add(window: "MainWindow") -> None:
+def _sync_manifest_after_character_add(
+    window: "MainWindow",
+    progress_callback=None,
+) -> None:
     """
     @brief      Refresh character metadata after adding one manual character.
     @param[in]  window Main application window.
+    @param[in]  progress_callback Optional synchronous progress updater.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-04
-    @version    0.1.0
+    @version    0.2.0
     """
     if window._current_project_root is None or window._current_manifest is None:
         return
+    _update_character_save_progress(progress_callback, 45, "progress.character_save_character_voices")
     _sync_character_voice_plan(window._current_project_root)
+    _update_character_save_progress(progress_callback, 85, "progress.character_save_manifest")
     _save_refreshed_manual_manifest(
         window,
         current_stage=str(window._current_manifest.get("current_stage", "character_discovery_ready")),
@@ -529,17 +630,19 @@ def _sync_manifest_after_character_edit(
     window: "MainWindow",
     previous_profile: dict[str, object] | None,
     updated_profile: dict[str, object] | None,
+    progress_callback=None,
 ) -> None:
     """
     @brief      Refresh selective downstream state after editing one character.
     @param[in]  window Main application window.
     @param[in]  previous_profile Previously persisted profile payload.
     @param[in]  updated_profile Updated persisted profile payload.
+    @param[in]  progress_callback Optional synchronous progress updater.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-04
-    @version    0.1.0
+    @version    0.2.0
     """
     if (
         window._current_project_root is None
@@ -551,17 +654,21 @@ def _sync_manifest_after_character_edit(
     character_id = str(updated_profile.get("character_id", "")).strip()
     display_name = str(updated_profile.get("canonical_name", "")).strip()
     voice_target_ids: tuple[str, ...] = ()
+    _update_character_save_progress(progress_callback, 35, "progress.character_save_character_voices")
     if _voice_definition_source_changed(previous_profile, updated_profile):
         voice_target_ids = (character_voices_service.mark_character_voice_target_stale(project_root, character_id),)
+    _update_character_save_progress(progress_callback, 50, "progress.character_save_speech_blocks")
     _speech_report, affected_speech_block_ids = speech_blocks_service.mark_speech_blocks_for_character_review(
         project_root,
         character_id,
         display_name=display_name,
     )
+    _update_character_save_progress(progress_callback, 70, "progress.character_save_audio_blocks")
     _audio_report, artifact_summary = audio_blocks_service.remove_audio_blocks_for_speech_blocks(
         project_root,
         affected_speech_block_ids,
         voice_target_ids=voice_target_ids,
+        collect_preserved_paths=False,
     )
     reset_assembly = bool(affected_speech_block_ids or voice_target_ids or artifact_summary.deleted_count)
     if reset_assembly:
@@ -569,6 +676,7 @@ def _sync_manifest_after_character_edit(
     current_stage = (
         "character_discovery_ready" if reset_assembly else str(window._current_manifest.get("current_stage"))
     )
+    _update_character_save_progress(progress_callback, 85, "progress.character_save_manifest")
     _save_refreshed_manual_manifest(window, current_stage=current_stage, reset_audio_assembly=reset_assembly)
 
 

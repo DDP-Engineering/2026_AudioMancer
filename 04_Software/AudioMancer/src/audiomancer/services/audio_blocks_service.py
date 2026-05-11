@@ -16,7 +16,7 @@
          `80_audio_blocks` workflow artifacts.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-23
-@version 0.15.3
+@version 0.15.4
 """
 
 # IMPORTS
@@ -927,17 +927,19 @@ def remove_audio_blocks_for_speech_blocks(
     project_root: str | Path,
     speech_block_ids: list[str] | tuple[str, ...] | set[str],
     voice_target_ids: list[str] | tuple[str, ...] | set[str] | None = None,
+    collect_preserved_paths: bool = True,
 ) -> tuple[AudioBlocksReportPayload | None, workflow_impact_service.ArtifactDeletionSummary]:
     """
     @brief      Remove Audio Blocks and generated files for selected Speech Blocks or voice targets.
     @param[in]  project_root Active project root folder.
     @param[in]  speech_block_ids Speech Block identifiers whose audio must reset.
     @param[in]  voice_target_ids Optional voice target identifiers whose audio must reset.
+    @param[in]  collect_preserved_paths True to check and report unaffected generated files.
     @return     Updated report, if Audio Blocks existed, plus artifact deletion summary.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-04
-    @version    0.2.0
+    @version    0.3.0
     """
     normalized_speech_block_ids = {
         str(speech_block_id).strip() for speech_block_id in speech_block_ids if str(speech_block_id).strip()
@@ -965,6 +967,7 @@ def remove_audio_blocks_for_speech_blocks(
         audio_blocks,
         speech_block_ids=normalized_speech_block_ids,
         voice_target_ids=normalized_voice_target_ids,
+        collect_preserved_paths=collect_preserved_paths,
     )
     preserved_blocks = [
         block

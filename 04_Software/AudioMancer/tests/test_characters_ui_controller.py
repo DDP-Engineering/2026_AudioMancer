@@ -13,7 +13,7 @@
          discovery start and reset behavior for the Characters page controller.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-08
-@version 0.8.0
+@version 0.9.0
 """
 
 # IMPORTS
@@ -21,6 +21,7 @@
 import json
 
 from PySide6.QtWidgets import QMessageBox
+import pytest
 
 from audiomancer import config
 from audiomancer.services import (
@@ -299,6 +300,90 @@ def test_character_ui_controller_edit_marks_assigned_blocks_for_review(monkeypat
     assert voice_target is not None
     assert voice_target["stale"] is True
     assert window._current_manifest["operations"]["audio_assembly"]["status"] == "not_started"
+
+
+def test_character_ui_controller_save_with_progress_stays_synchronous(monkeypatch, qtbot, tmp_path) -> None:
+    """
+    @brief      Validate Character save progress runs on the synchronous controller path.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-11
+    @version    0.1.0
+    """
+    project_root, _manifest = _create_project(tmp_path, "CharacterControllerEditProgress")
+    window = _build_window(qtbot, project_root)
+    _write_downstream_artifacts(project_root, window)
+    window._characters_page.begin_edit_mode()
+    draft_payload = window._characters_page.current_draft_payload()
+    draft_payload["canonical_name"] = "Alice Progress"
+
+    create_calls = []
+    progress_updates = []
+    process_calls = []
+    original_create = characters_ui_controller.misc_ui_controller.create_progress_dialog
+    original_remove_audio_blocks = audio_blocks_service.remove_audio_blocks_for_speech_blocks
+
+    def _capture_create(*args, **kwargs):
+        create_calls.append(kwargs)
+        return original_create(*args, **kwargs)
+
+    def _capture_remove_audio_blocks(*args, **kwargs):
+        assert window._characters_page._busy is True
+        assert kwargs["collect_preserved_paths"] is False
+        return original_remove_audio_blocks(*args, **kwargs)
+
+    monkeypatch.setattr(characters_ui_controller.misc_ui_controller, "create_progress_dialog", _capture_create)
+    monkeypatch.setattr(
+        characters_ui_controller.misc_ui_controller,
+        "update_progress_dialog",
+        lambda _window, percent, message, token_usage=None: progress_updates.append((percent, message)),
+    )
+    monkeypatch.setattr(
+        characters_ui_controller.misc_ui_controller,
+        "process_pending_ui_events",
+        lambda: process_calls.append(True),
+    )
+    monkeypatch.setattr(audio_blocks_service, "remove_audio_blocks_for_speech_blocks", _capture_remove_audio_blocks)
+
+    assert characters_ui_controller.handle_save_character_requested(window, draft_payload, show_progress=True) is True
+
+    assert create_calls[0]["cancellable"] is False
+    assert any(percent == 70 for percent, _message in progress_updates)
+    assert progress_updates[-1][0] == 100
+    assert process_calls
+    assert window._operation_progress_dialog is None
+    assert window._characters_page._busy is False
+
+
+def test_character_ui_controller_save_progress_clears_after_failure(monkeypatch, qtbot, tmp_path) -> None:
+    """
+    @brief      Validate Character save progress cleanup runs when save mutation fails.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-11
+    @version    0.1.0
+    """
+    project_root, _manifest = _create_project(tmp_path, "CharacterControllerEditProgressFailure")
+    window = _build_window(qtbot, project_root)
+    window._characters_page.begin_edit_mode()
+    draft_payload = window._characters_page.current_draft_payload()
+    original_update_character_profile = character_discovery_service.update_character_profile
+
+    def _raise_after_progress(*args, **kwargs):
+        _ = args
+        _ = kwargs
+        raise RuntimeError("progress cleanup failure")
+
+    monkeypatch.setattr(character_discovery_service, "update_character_profile", _raise_after_progress)
+
+    with pytest.raises(RuntimeError, match="progress cleanup failure"):
+        characters_ui_controller.handle_save_character_requested(window, draft_payload, show_progress=True)
+
+    monkeypatch.setattr(character_discovery_service, "update_character_profile", original_update_character_profile)
+    assert window._operation_progress_dialog is None
+    assert window._characters_page._busy is False
 
 
 def test_character_ui_controller_selection_change_cancel_restores_current_row(monkeypatch, qtbot, tmp_path) -> None:

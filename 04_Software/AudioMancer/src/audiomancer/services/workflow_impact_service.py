@@ -14,7 +14,7 @@
          deletion helpers used by staged v2 downstream invalidation work.
 @author Eng. Dan Dumitru Pasare
 @date 2026-05-04
-@version 0.1.1
+@version 0.1.2
 """
 
 # IMPORTS
@@ -388,6 +388,7 @@ def delete_audio_block_artifacts(
     chunk_ids: Iterable[str] | None = None,
     speech_block_ids: Iterable[str] | None = None,
     voice_target_ids: Iterable[str] | None = None,
+    collect_preserved_paths: bool = True,
 ) -> ArtifactDeletionSummary:
     """
     @brief      Delete generated Audio Blocks files for exact affected IDs.
@@ -396,11 +397,12 @@ def delete_audio_block_artifacts(
     @param[in]  chunk_ids Optional affected chunk identifiers.
     @param[in]  speech_block_ids Optional affected Speech Block identifiers.
     @param[in]  voice_target_ids Optional affected voice target identifiers.
-    @return     Deletion summary with deleted, missing, skipped, and preserved paths.
+    @param[in]  collect_preserved_paths True to check and report unaffected generated files.
+    @return     Deletion summary with deleted, missing, skipped, and optionally preserved paths.
     @exception  ValueError Raised when no exact affected IDs are provided.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-04
-    @version    0.1.0
+    @version    0.2.0
     """
     normalized_chunk_ids = set(_normalize_identity_tuple(chunk_ids))
     normalized_speech_block_ids = set(_normalize_identity_tuple(speech_block_ids))
@@ -422,6 +424,8 @@ def delete_audio_block_artifacts(
             speech_block_ids=normalized_speech_block_ids,
             voice_target_ids=normalized_voice_target_ids,
         )
+        if not should_delete and not collect_preserved_paths:
+            continue
         for relative_path in _iter_audio_block_artifact_paths(audio_block):
             _collect_or_delete_artifact_path(
                 resolved_project_root,

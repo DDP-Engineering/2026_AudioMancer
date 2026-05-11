@@ -13,7 +13,7 @@
          application through one centralized string catalog and scale mapping.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 0.44.0
+@version 0.44.1
 """
 
 # ruff: noqa: E501
@@ -849,6 +849,13 @@ _UI_STRINGS = {
         "progress.ai_translation": "AI translation in progress...",
         "progress.ai_translation_retranslate": "Selected chunk re-translation in progress...",
         "progress.character_discovery": "Character discovery in progress...",
+        "progress.character_save_prepare": "Preparing character save...",
+        "progress.character_save_profile": "Saving character profile...",
+        "progress.character_save_character_voices": "Synchronizing Character Voices...",
+        "progress.character_save_speech_blocks": "Updating Speech Blocks...",
+        "progress.character_save_audio_blocks": "Resetting affected Audio Blocks...",
+        "progress.character_save_manifest": "Saving project workflow state...",
+        "progress.character_save_refresh": "Refreshing project state...",
         "progress.speech_blocks": "Speech Blocks generation in progress...",
         "progress.speech_blocks_resplit": ("Selected chunk Speech Blocks re-splitting in progress..."),
         "progress.audio_blocks": "Audio Blocks generation in progress...",
@@ -1728,6 +1735,13 @@ _UI_STRINGS = {
         "progress.ai_translation": "Traducerea AI este in curs...",
         "progress.ai_translation_retranslate": "Retraducerea segmentului selectat este in curs...",
         "progress.character_discovery": "Descoperirea personajelor este in curs...",
+        "progress.character_save_prepare": "Se pregateste salvarea personajului...",
+        "progress.character_save_profile": "Se salveaza profilul personajului...",
+        "progress.character_save_character_voices": "Se sincronizeaza Vocile Personajelor...",
+        "progress.character_save_speech_blocks": "Se actualizeaza Blocurile de Vorbire...",
+        "progress.character_save_audio_blocks": "Se reseteaza Blocurile Audio afectate...",
+        "progress.character_save_manifest": "Se salveaza starea fluxului proiectului...",
+        "progress.character_save_refresh": "Se reimprospateaza starea proiectului...",
         "progress.speech_blocks": "Generarea blocurilor de vorbire este in curs...",
         "progress.speech_blocks_resplit": (
             "Resegmentarea blocurilor de vorbire pentru segmentul selectat este in curs..."

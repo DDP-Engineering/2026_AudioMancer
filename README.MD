@@ -55,9 +55,9 @@ Audio Blocks selected reset, selected regeneration, approval, and unapproval
 now preserve unrelated generated audio and reset only Audio Assembly outputs.
 Audio Assembly settings changes and reruns now preserve upstream Audio Blocks
 while replacing only assembly outputs/state/report.
-Current package version is `1.0.3`; Audio Blocks page opening is optimized for
-large projects by avoiding synchronous duration scans across every generated
-WAV and batching the page's row refresh.
+Current package version is `1.0.4`; Characters page saves now show synchronous
+progress while refreshing downstream state, and affected Audio Blocks cleanup
+skips unnecessary preserved-file checks during large-project saves.
 
 Focused implementation documentation is maintained in `05_SoftwareDocu/`.
 The end-user help bundles are maintained in `05_SoftwareDocu/UserGuide/` and

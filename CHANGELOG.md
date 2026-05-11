@@ -10,6 +10,15 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [1.0.4] - 2026-05-11
+
+### Changed
+
+- Characters page saves now show a synchronous modal progress dialog while
+  downstream Speech Blocks, Audio Blocks, and Audio Assembly state are
+  refreshed, and affected Audio Blocks cleanup skips unnecessary preserved-file
+  checks for faster large-project saves.
+
 ## [1.0.3] - 2026-05-10
 
 ### Changed
