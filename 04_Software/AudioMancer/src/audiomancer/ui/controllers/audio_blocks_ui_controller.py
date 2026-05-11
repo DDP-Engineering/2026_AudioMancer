@@ -14,7 +14,7 @@
          targeted downstream invalidation when upstream voice inputs change.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-23
-@version 0.7.2
+@version 0.7.3
 """
 
 # IMPORTS
@@ -432,16 +432,21 @@ def confirm_global_voice_settings_invalidation(window: "MainWindow", language: s
 def invalidate_audio_blocks_for_voice_targets(
     window: "MainWindow",
     voice_target_ids: list[str] | tuple[str, ...] | set[str],
+    *,
+    collect_preserved_paths: bool = True,
+    progress_callback=None,
 ) -> None:
     """
     @brief      Reset only Audio Blocks that use selected voice targets and reset Audio Assembly.
     @param[in]  window Active main window instance.
     @param[in]  voice_target_ids Voice target identifiers whose generated audio is stale.
+    @param[in]  collect_preserved_paths True to check and report unaffected generated files.
+    @param[in]  progress_callback Optional callback accepting percent and translation key.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-04
-    @version    0.1.0
+    @version    0.2.0
     """
     if window._current_project_root is None or window._current_manifest is None:
         return
@@ -461,18 +466,39 @@ def invalidate_audio_blocks_for_voice_targets(
     if not has_affected_audio_input:
         return
 
+    _emit_voice_invalidation_progress(progress_callback, 55, "progress.narator_voice_change_audio_blocks")
     _stop_audio_blocks_and_assembly_playback(window)
     audio_blocks_service.remove_audio_blocks_for_speech_blocks(
         window._current_project_root,
         (),
         voice_target_ids=normalized_voice_target_ids,
+        collect_preserved_paths=collect_preserved_paths,
     )
+    _emit_voice_invalidation_progress(progress_callback, 75, "progress.narator_voice_change_audio_assembly")
     workflow_impact_service.reset_audio_assembly_outputs(window._current_project_root)
+    _emit_voice_invalidation_progress(progress_callback, 85, "progress.narator_voice_change_manifest")
     _sync_manifest_after_selective_audio_invalidation(window)
+    _emit_voice_invalidation_progress(progress_callback, 95, "progress.narator_voice_change_refresh")
     window.show_project_state(
         window._current_project_root,
         project_workspace_service.load_manifest(window._current_project_root),
     )
+
+
+def _emit_voice_invalidation_progress(progress_callback, percent: int, message_key: str) -> None:
+    """
+    @brief      Emit one optional synchronous voice-invalidation progress update.
+    @param[in]  progress_callback Optional progress callback.
+    @param[in]  percent Progress percentage.
+    @param[in]  message_key Runtime UI translation key.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-11
+    @version    0.1.0
+    """
+    if progress_callback is not None:
+        progress_callback(percent, message_key)
 
 
 def invalidate_all_audio_blocks_after_voice_settings_change(window: "MainWindow") -> None:

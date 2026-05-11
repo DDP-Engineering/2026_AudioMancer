@@ -13,7 +13,7 @@
          application through one centralized string catalog and scale mapping.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 0.44.1
+@version 0.44.2
 """
 
 # ruff: noqa: E501
@@ -428,6 +428,12 @@ _UI_STRINGS = {
         "progress.narator_voice_sample_load_model": "Loading voice generation model...",
         "progress.narator_voice_sample_generate": "Generating narator voice sample...",
         "progress.narator_voice_sample_download": "Downloading narator voice sample...",
+        "progress.narator_voice_change_prepare": "Preparing narator voice change...",
+        "progress.narator_voice_change_profile": "Saving narator voice profile...",
+        "progress.narator_voice_change_audio_blocks": "Resetting affected Audio Blocks...",
+        "progress.narator_voice_change_audio_assembly": "Resetting Audio Assembly...",
+        "progress.narator_voice_change_manifest": "Saving project workflow state...",
+        "progress.narator_voice_change_refresh": "Refreshing project state...",
         "status.narator_voice_profile_created": "Narator voice profile created.",
         "status.narator_voice_profile_saved": "Narator voice profile saved.",
         "status.narator_voice_profile_deleted": "Narator voice profile deleted.",
@@ -1305,6 +1311,12 @@ _UI_STRINGS = {
         "progress.narator_voice_sample_load_model": "Se incarca modelul pentru generarea vocii...",
         "progress.narator_voice_sample_generate": "Se genereaza sample-ul pentru narator...",
         "progress.narator_voice_sample_download": "Se descarca sample-ul pentru narator...",
+        "progress.narator_voice_change_prepare": "Se pregateste schimbarea vocii naratorului...",
+        "progress.narator_voice_change_profile": "Se salveaza profilul vocii naratorului...",
+        "progress.narator_voice_change_audio_blocks": "Se reseteaza Blocurile Audio afectate...",
+        "progress.narator_voice_change_audio_assembly": "Se reseteaza Asamblarea Audio...",
+        "progress.narator_voice_change_manifest": "Se salveaza starea fluxului proiectului...",
+        "progress.narator_voice_change_refresh": "Se reimprospateaza starea proiectului...",
         "status.narator_voice_profile_created": "Profilul naratorului a fost creat.",
         "status.narator_voice_profile_saved": "Profilul naratorului a fost salvat.",
         "status.narator_voice_profile_deleted": "Profilul naratorului a fost sters.",

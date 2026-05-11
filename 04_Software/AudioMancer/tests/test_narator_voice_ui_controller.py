@@ -13,7 +13,7 @@
          explicit narrator selection, and Qwen3-backed sample generation.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-18
-@version 3.3.0
+@version 3.4.0
 """
 
 # IMPORTS
@@ -21,6 +21,7 @@
 import json
 
 from PySide6.QtWidgets import QMessageBox
+import pytest
 
 from audiomancer import config
 from audiomancer.services import narrator_definition_service, project_workspace_service
@@ -246,6 +247,134 @@ def test_narator_voice_ui_controller_select_profile_without_sample_updates_manif
     assert updated_manifest["operations"]["narrator_definition"]["status"] == "completed"
     assert selected_audio_path.exists() is False
     assert selected_metadata_path.exists() is False
+
+
+def test_narator_voice_select_profile_with_audio_blocks_shows_progress(monkeypatch, qtbot, tmp_path) -> None:
+    """
+    @brief      Verify selecting a narrator with generated audio uses synchronous progress and fast cleanup.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  qtbot Qt test helper fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-11
+    @version    0.1.0
+    """
+    project_root, _manifest = _create_project(tmp_path, "NarratorControllerSelectProgress")
+    created_profile = narrator_definition_service.create_custom_profile(
+        project_root,
+        "Progress Narrator",
+        "English",
+        "Prompt.",
+        "Preview text.",
+    )
+    narrator_definition_service.store_profile_sample(
+        project_root,
+        created_profile,
+        "Preview text.",
+        {
+            "generation_mode": "definition",
+            "model_id": "qwen-designer",
+            "source_model_id": "qwen-designer",
+            "speaker_id": None,
+            "language": "en",
+        },
+        "Generated custom sample.",
+        b"RIFF-selected",
+    )
+    _write_generated_audio_blocks(project_root)
+    window = _build_window(qtbot, project_root)
+    create_calls = []
+    progress_updates = []
+    process_calls = []
+    original_create = narator_voice_ui_controller.misc_ui_controller.create_progress_dialog
+    audio_blocks_service = narator_voice_ui_controller.audio_blocks_ui_controller.audio_blocks_service
+    original_remove_audio_blocks = audio_blocks_service.remove_audio_blocks_for_speech_blocks
+    monkeypatch.setattr(narator_voice_ui_controller.misc_ui_controller, "show_message", lambda *args, **kwargs: None)
+    monkeypatch.setattr(
+        narator_voice_ui_controller.audio_blocks_ui_controller,
+        "confirm_narrator_voice_invalidation",
+        lambda *_args, **_kwargs: True,
+    )
+
+    def _capture_create(*args, **kwargs):
+        create_calls.append(kwargs)
+        return original_create(*args, **kwargs)
+
+    def _capture_remove_audio_blocks(*args, **kwargs):
+        assert window._narator_voice_page._busy is True
+        assert kwargs["collect_preserved_paths"] is False
+        return original_remove_audio_blocks(*args, **kwargs)
+
+    monkeypatch.setattr(narator_voice_ui_controller.misc_ui_controller, "create_progress_dialog", _capture_create)
+    monkeypatch.setattr(
+        narator_voice_ui_controller.misc_ui_controller,
+        "update_progress_dialog",
+        lambda _window, percent, message, token_usage=None: progress_updates.append((percent, message)),
+    )
+    monkeypatch.setattr(
+        narator_voice_ui_controller.misc_ui_controller,
+        "process_pending_ui_events",
+        lambda: process_calls.append(True),
+    )
+    monkeypatch.setattr(
+        audio_blocks_service,
+        "remove_audio_blocks_for_speech_blocks",
+        _capture_remove_audio_blocks,
+    )
+
+    narator_voice_ui_controller.handle_select_profile_requested(window, created_profile["profile_id"])
+
+    output_payload = json.loads((project_root / config.AUDIO_BLOCKS_OUTPUT_FILE_NAME).read_text(encoding="utf-8"))
+    assert create_calls[0]["cancellable"] is False
+    assert any(percent == 55 for percent, _message in progress_updates)
+    assert progress_updates[-1][0] == 100
+    assert process_calls
+    assert window._operation_progress_dialog is None
+    assert window._narator_voice_page._busy is False
+    assert [block["speech_block_id"] for block in output_payload] == ["0001-000002"]
+    assert not (project_root / config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME / "0001-000001.wav").exists()
+    assert (project_root / config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME / "0001-000002.wav").is_file()
+
+
+def test_narator_voice_select_profile_progress_clears_after_failure(monkeypatch, qtbot, tmp_path) -> None:
+    """
+    @brief      Verify narrator selection progress cleanup runs when selection mutation fails.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  qtbot Qt test helper fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-11
+    @version    0.1.0
+    """
+    project_root, _manifest = _create_project(tmp_path, "NarratorControllerSelectProgressFailure")
+    created_profile = narrator_definition_service.create_custom_profile(
+        project_root,
+        "Failing Narrator",
+        "English",
+        "Prompt.",
+        "Preview text.",
+    )
+    window = _build_window(qtbot, project_root)
+    monkeypatch.setattr(
+        narator_voice_ui_controller.audio_blocks_ui_controller,
+        "confirm_narrator_voice_invalidation",
+        lambda *_args, **_kwargs: True,
+    )
+    monkeypatch.setattr(
+        narrator_definition_service,
+        "select_narrator_profile",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(RuntimeError("selection failed")),
+    )
+
+    with pytest.raises(RuntimeError, match="selection failed"):
+        narator_voice_ui_controller.handle_select_profile_requested(window, created_profile["profile_id"])
+
+    assert window._operation_progress_dialog is None
+    assert window._narator_voice_page._busy is False
 
 
 def test_narator_voice_ui_controller_selection_change_refreshes_delete_state(qtbot, tmp_path) -> None:
@@ -609,6 +738,115 @@ def _build_window(qtbot, project_root, settings_payload=None):
         str(window._settings_payload.get("language", "en")),
     )
     return window
+
+
+def _write_generated_audio_blocks(project_root) -> None:
+    """
+    @brief      Write generated Audio Blocks fixtures for narrator invalidation tests.
+    @param[in]  project_root Active project root folder.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-11
+    @version    0.1.0
+    """
+    generated_root = project_root / config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME
+    generated_root.mkdir(parents=True, exist_ok=True)
+    (generated_root / "0001-000001.wav").write_bytes(b"RIFF-narrator")
+    (generated_root / "0001-000001.json").write_text("{}\n", encoding="utf-8")
+    (generated_root / "0001-000002.wav").write_bytes(b"RIFF-character")
+    (generated_root / "0001-000002.json").write_text("{}\n", encoding="utf-8")
+    (project_root / config.SPEECH_BLOCKS_OUTPUT_FILE_NAME).write_text(
+        json.dumps(
+            [
+                {
+                    "speech_block_id": "0001-000001",
+                    "sequence_index": 1,
+                    "chunk_id": "chunk-0001",
+                    "source_language": "en",
+                    "speaker_kind": "narrator",
+                    "speaker_id": "narrator",
+                    "speaker_display_name": "Narrator",
+                    "content_kind": "Narration",
+                    "text": "Narration line.",
+                    "approved": True,
+                    "warning_flags": [],
+                },
+                {
+                    "speech_block_id": "0001-000002",
+                    "sequence_index": 2,
+                    "chunk_id": "chunk-0001",
+                    "source_language": "en",
+                    "speaker_kind": "character",
+                    "speaker_id": "alice",
+                    "speaker_display_name": "Alice",
+                    "content_kind": "Dialogue",
+                    "text": "Hello.",
+                    "approved": True,
+                    "warning_flags": [],
+                },
+            ],
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    (project_root / config.AUDIO_BLOCKS_OUTPUT_FILE_NAME).write_text(
+        json.dumps(
+            [
+                {
+                    "speech_block_id": "0001-000001",
+                    "sequence_index": 1,
+                    "chunk_id": "chunk-0001",
+                    "speaker_id": "narrator",
+                    "speaker_display_name": "Narrator",
+                    "content_kind": "Narration",
+                    "text": "Narration line.",
+                    "voice_target_id": "narrator",
+                    "audio_relative_path": "audio_blocks/0001-000001.wav",
+                    "metadata_relative_path": "audio_blocks/0001-000001.json",
+                    "generated": True,
+                    "approved": True,
+                    "approved_at": "2026-05-11T12:00:00+00:00",
+                },
+                {
+                    "speech_block_id": "0001-000002",
+                    "sequence_index": 2,
+                    "chunk_id": "chunk-0001",
+                    "speaker_id": "alice",
+                    "speaker_display_name": "Alice",
+                    "content_kind": "Dialogue",
+                    "text": "Hello.",
+                    "voice_target_id": "character_alice",
+                    "audio_relative_path": "audio_blocks/0001-000002.wav",
+                    "metadata_relative_path": "audio_blocks/0001-000002.json",
+                    "generated": True,
+                    "approved": True,
+                    "approved_at": "2026-05-11T12:00:00+00:00",
+                },
+            ],
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    (project_root / config.AUDIO_BLOCKS_STATE_FILE_NAME).write_text(
+        json.dumps(
+            {
+                "status": "completed",
+                "progress_current": 2,
+                "progress_total": 2,
+                "metadata": {"voice_language": "en"},
+            },
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    (project_root / config.AUDIO_BLOCKS_REPORT_FILE_NAME).write_text(
+        json.dumps({"audio_blocks_stage_status": "completed", "voice_language": "en"}, indent=2) + "\n",
+        encoding="utf-8",
+    )
 
 
 def _default_settings_payload() -> dict[str, object]:

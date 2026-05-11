@@ -14,7 +14,7 @@
          project-local narrator profile editing.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-18
-@version 3.14.0
+@version 3.15.0
 """
 
 # IMPORTS
@@ -197,7 +197,7 @@ def handle_edit_profile_requested(window: "MainWindow", profile_id: str) -> None
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-17
-    @version    1.2.0
+    @version    1.3.0
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._current_project_root is None:
@@ -211,8 +211,38 @@ def handle_edit_profile_requested(window: "MainWindow", profile_id: str) -> None
     if not _confirm_profile_edit(window, current_language):
         return
     _stop_preview_playback(window)
+    progress_callback = _start_narator_voice_change_progress(
+        window,
+        current_language,
+        selected_profile_id == profile_id,
+        "narator_voice.edit_profile",
+    )
     try:
+        _update_narator_voice_change_progress(progress_callback, 30, "progress.narator_voice_change_profile")
         narrator_definition_service.begin_profile_edit(window._current_project_root, profile_id)
+        window._narator_voice_inspected_profile_id = profile_id
+        selected_state = narrator_definition_service.load_selected_profile_state(window._current_project_root)
+        _sync_manifest_summary(
+            window,
+            str(selected_state.get("selected_profile_id", "") or "").strip() or None,
+            str(selected_state.get("selected_language", "") or "").strip(),
+        )
+        if selected_profile_id == profile_id:
+            audio_blocks_ui_controller.invalidate_audio_blocks_for_voice_targets(
+                window,
+                (character_voices_service.TARGET_ID_NARRATOR,),
+                collect_preserved_paths=False,
+                progress_callback=progress_callback,
+            )
+        window._narator_voice_inspected_profile_id = profile_id
+        window._current_manifest = project_workspace_service.load_manifest(window._current_project_root)
+        _update_narator_voice_change_progress(progress_callback, 95, "progress.narator_voice_change_refresh")
+        window._refresh_narator_voice_page_state(  # noqa: SLF001
+            window._current_project_root,
+            window._current_manifest,
+            current_language,
+        )
+        window._narator_voice_page.begin_edit_mode()
     except ValueError as error:
         if str(error) == "readonly_profile":
             QMessageBox.warning(
@@ -221,26 +251,9 @@ def handle_edit_profile_requested(window: "MainWindow", profile_id: str) -> None
                 ui_state_service.translate("narator_voice.error_readonly_profile", current_language),
             )
         return
-    window._narator_voice_inspected_profile_id = profile_id
-    selected_state = narrator_definition_service.load_selected_profile_state(window._current_project_root)
-    _sync_manifest_summary(
-        window,
-        str(selected_state.get("selected_profile_id", "") or "").strip() or None,
-        str(selected_state.get("selected_language", "") or "").strip(),
-    )
-    if selected_profile_id == profile_id:
-        audio_blocks_ui_controller.invalidate_audio_blocks_for_voice_targets(
-            window,
-            (character_voices_service.TARGET_ID_NARRATOR,),
-        )
-    window._narator_voice_inspected_profile_id = profile_id
-    window._current_manifest = project_workspace_service.load_manifest(window._current_project_root)
-    window._refresh_narator_voice_page_state(  # noqa: SLF001
-        window._current_project_root,
-        window._current_manifest,
-        current_language,
-    )
-    window._narator_voice_page.begin_edit_mode()
+    finally:
+        if progress_callback is not None:
+            _finish_narator_voice_change_progress(window)
 
 
 def handle_save_profile_requested(
@@ -255,7 +268,7 @@ def handle_save_profile_requested(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-17
-    @version    1.5.0
+    @version    1.6.0
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._current_project_root is None:
@@ -271,27 +284,41 @@ def handle_save_profile_requested(
     except ValueError as error:
         _show_name_validation_error(window, current_language, str(error))
         return
-    updated_profile = narrator_definition_service.update_custom_profile(
-        window._current_project_root,
-        {
-            **dict(profile_payload),
-            "display_name": normalized_name,
-        },
-    )
-    window._narator_voice_inspected_profile_id = str(updated_profile.get("profile_id", "")).strip()
-    window.show_project_state(
-        window._current_project_root,
-        project_workspace_service.load_manifest(window._current_project_root),
-    )
-    if selected_profile_id == str(updated_profile.get("profile_id", "")).strip():
-        audio_blocks_ui_controller.invalidate_audio_blocks_for_voice_targets(
-            window,
-            (character_voices_service.TARGET_ID_NARRATOR,),
-        )
-    misc_ui_controller.show_message(
+    progress_callback = _start_narator_voice_change_progress(
         window,
-        ui_state_service.translate("status.narator_voice_profile_saved", current_language),
+        current_language,
+        selected_profile_id == str(profile_payload.get("profile_id", "")).strip(),
+        "narator_voice.save_profile",
     )
+    try:
+        _update_narator_voice_change_progress(progress_callback, 30, "progress.narator_voice_change_profile")
+        updated_profile = narrator_definition_service.update_custom_profile(
+            window._current_project_root,
+            {
+                **dict(profile_payload),
+                "display_name": normalized_name,
+            },
+        )
+        window._narator_voice_inspected_profile_id = str(updated_profile.get("profile_id", "")).strip()
+        _update_narator_voice_change_progress(progress_callback, 45, "progress.narator_voice_change_refresh")
+        window.show_project_state(
+            window._current_project_root,
+            project_workspace_service.load_manifest(window._current_project_root),
+        )
+        if selected_profile_id == str(updated_profile.get("profile_id", "")).strip():
+            audio_blocks_ui_controller.invalidate_audio_blocks_for_voice_targets(
+                window,
+                (character_voices_service.TARGET_ID_NARRATOR,),
+                collect_preserved_paths=False,
+                progress_callback=progress_callback,
+            )
+        misc_ui_controller.show_message(
+            window,
+            ui_state_service.translate("status.narator_voice_profile_saved", current_language),
+        )
+    finally:
+        if progress_callback is not None:
+            _finish_narator_voice_change_progress(window)
 
 
 def handle_delete_profile_requested(window: "MainWindow", profile_id: str) -> None:
@@ -303,7 +330,7 @@ def handle_delete_profile_requested(window: "MainWindow", profile_id: str) -> No
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-17
-    @version    1.2.0
+    @version    1.3.0
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._current_project_root is None:
@@ -316,8 +343,35 @@ def handle_delete_profile_requested(window: "MainWindow", profile_id: str) -> No
         return
     if not _confirm_delete_profile(window, current_language):
         return
+    progress_callback = _start_narator_voice_change_progress(
+        window,
+        current_language,
+        selected_profile_id == profile_id,
+        "narator_voice.delete_profile",
+    )
     try:
+        _update_narator_voice_change_progress(progress_callback, 30, "progress.narator_voice_change_profile")
         narrator_definition_service.delete_profile(window._current_project_root, profile_id)
+        selected_state = narrator_definition_service.load_selected_profile_state(window._current_project_root)
+        window._narator_voice_inspected_profile_id = (
+            str(selected_state.get("selected_profile_id", "") or "").strip() or None
+        )
+        _sync_manifest_summary(
+            window,
+            window._narator_voice_inspected_profile_id,
+            str(selected_state.get("selected_language", "") or "").strip(),
+        )
+        if selected_profile_id == profile_id:
+            audio_blocks_ui_controller.invalidate_audio_blocks_for_voice_targets(
+                window,
+                (character_voices_service.TARGET_ID_NARRATOR,),
+                collect_preserved_paths=False,
+                progress_callback=progress_callback,
+            )
+        misc_ui_controller.show_message(
+            window,
+            ui_state_service.translate("status.narator_voice_profile_deleted", current_language),
+        )
     except ValueError as error:
         if str(error) == "protected_profile":
             QMessageBox.warning(
@@ -326,24 +380,9 @@ def handle_delete_profile_requested(window: "MainWindow", profile_id: str) -> No
                 ui_state_service.translate("narator_voice.error_protected_profile", current_language),
             )
         return
-    selected_state = narrator_definition_service.load_selected_profile_state(window._current_project_root)
-    window._narator_voice_inspected_profile_id = (
-        str(selected_state.get("selected_profile_id", "") or "").strip() or None
-    )
-    _sync_manifest_summary(
-        window,
-        window._narator_voice_inspected_profile_id,
-        str(selected_state.get("selected_language", "") or "").strip(),
-    )
-    if selected_profile_id == profile_id:
-        audio_blocks_ui_controller.invalidate_audio_blocks_for_voice_targets(
-            window,
-            (character_voices_service.TARGET_ID_NARRATOR,),
-        )
-    misc_ui_controller.show_message(
-        window,
-        ui_state_service.translate("status.narator_voice_profile_deleted", current_language),
-    )
+    finally:
+        if progress_callback is not None:
+            _finish_narator_voice_change_progress(window)
 
 
 def handle_select_profile_requested(window: "MainWindow", profile_id: str) -> None:
@@ -355,7 +394,7 @@ def handle_select_profile_requested(window: "MainWindow", profile_id: str) -> No
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-17
-    @version    1.3.0
+    @version    1.4.0
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._current_project_root is None or window._current_manifest is None:
@@ -371,22 +410,35 @@ def handle_select_profile_requested(window: "MainWindow", profile_id: str) -> No
             profile_payload.get("language", narrator_definition_service.DEFAULT_NARRATOR_LANGUAGE)
         ).strip()
     )
-    narrator_definition_service.select_narrator_profile(
-        window._current_project_root,
-        profile_id,
-        selected_language,
-    )
-    narrator_definition_service.copy_selected_narrator_sample(window._current_project_root, profile_id)
-    window._narator_voice_inspected_profile_id = profile_id
-    _sync_manifest_summary(window, profile_id, selected_language)
-    audio_blocks_ui_controller.invalidate_audio_blocks_for_voice_targets(
+    progress_callback = _start_narator_voice_change_progress(
         window,
-        (character_voices_service.TARGET_ID_NARRATOR,),
+        current_language,
+        True,
+        "narator_voice.select_profile",
     )
-    misc_ui_controller.show_message(
-        window,
-        ui_state_service.translate("status.narator_voice_profile_selected", current_language),
-    )
+    try:
+        _update_narator_voice_change_progress(progress_callback, 30, "progress.narator_voice_change_profile")
+        narrator_definition_service.select_narrator_profile(
+            window._current_project_root,
+            profile_id,
+            selected_language,
+        )
+        narrator_definition_service.copy_selected_narrator_sample(window._current_project_root, profile_id)
+        window._narator_voice_inspected_profile_id = profile_id
+        _sync_manifest_summary(window, profile_id, selected_language)
+        audio_blocks_ui_controller.invalidate_audio_blocks_for_voice_targets(
+            window,
+            (character_voices_service.TARGET_ID_NARRATOR,),
+            collect_preserved_paths=False,
+            progress_callback=progress_callback,
+        )
+        misc_ui_controller.show_message(
+            window,
+            ui_state_service.translate("status.narator_voice_profile_selected", current_language),
+        )
+    finally:
+        if progress_callback is not None:
+            _finish_narator_voice_change_progress(window)
 
 
 def handle_generate_sample_requested(window: "MainWindow", profile_id: str) -> None:
@@ -501,25 +553,38 @@ def _handle_generate_sample_success(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-24
-    @version    0.3.0
+    @version    0.4.0
     """
     _ = result_payload
     window._settings_payload = settings_service.load_settings()
     window._narator_voice_inspected_profile_id = profile_id
-    if window._current_project_root is not None:
-        window.show_project_state(
-            window._current_project_root,
-            project_workspace_service.load_manifest(window._current_project_root),
-        )
-    if invalidate_audio_blocks:
-        audio_blocks_ui_controller.invalidate_audio_blocks_for_voice_targets(
-            window,
-            (character_voices_service.TARGET_ID_NARRATOR,),
-        )
-    misc_ui_controller.show_message(
+    progress_callback = _start_narator_voice_change_progress(
         window,
-        ui_state_service.translate("status.narator_voice_sample_generated", current_language),
+        current_language,
+        invalidate_audio_blocks,
+        "narator_voice.generate_sample",
     )
+    try:
+        if window._current_project_root is not None:
+            _update_narator_voice_change_progress(progress_callback, 35, "progress.narator_voice_change_refresh")
+            window.show_project_state(
+                window._current_project_root,
+                project_workspace_service.load_manifest(window._current_project_root),
+            )
+        if invalidate_audio_blocks:
+            audio_blocks_ui_controller.invalidate_audio_blocks_for_voice_targets(
+                window,
+                (character_voices_service.TARGET_ID_NARRATOR,),
+                collect_preserved_paths=False,
+                progress_callback=progress_callback,
+            )
+        misc_ui_controller.show_message(
+            window,
+            ui_state_service.translate("status.narator_voice_sample_generated", current_language),
+        )
+    finally:
+        if progress_callback is not None:
+            _finish_narator_voice_change_progress(window)
 
 
 def _handle_generate_sample_failure(window: "MainWindow", error: Exception, current_language: str) -> None:
@@ -614,6 +679,96 @@ def handle_preview_playback_state_changed(window: "MainWindow") -> None:
     """
     if window._narator_voice_audio_player.playbackState() == QMediaPlayer.PlaybackState.StoppedState:
         window._narator_voice_page.set_preview_active(False)
+
+
+def _start_narator_voice_change_progress(
+    window: "MainWindow",
+    language: str,
+    show_progress: bool,
+    operation_name_key: str,
+):
+    """
+    @brief      Start synchronous Narator Voice change progress when requested.
+    @param[in]  window Main application window.
+    @param[in]  language Runtime UI language code.
+    @param[in]  show_progress True to show progress.
+    @param[in]  operation_name_key Runtime UI key for the progress title.
+    @return     Progress update callback or `None`.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-11
+    @version    0.1.0
+    """
+    if not show_progress:
+        return None
+    window._narator_voice_page.set_busy(True)
+    operation_name = ui_state_service.translate(operation_name_key, language)
+    initial_message = ui_state_service.translate("progress.narator_voice_change_prepare", language)
+    if window._operation_progress_dialog is None:
+        misc_ui_controller.create_progress_dialog(
+            window,
+            operation_name,
+            initial_message,
+            lambda: None,
+            cancellable=False,
+        )
+    else:
+        window._operation_progress_dialog.start(
+            operation_name,
+            initial_message,
+            cancellable=False,
+        )
+    misc_ui_controller.process_pending_ui_events()
+
+    def _update(percent: int, message_key: str) -> None:
+        misc_ui_controller.update_progress_dialog(
+            window,
+            percent,
+            ui_state_service.translate(message_key, language),
+        )
+        misc_ui_controller.process_pending_ui_events()
+
+    return _update
+
+
+def _update_narator_voice_change_progress(progress_callback, percent: int, message_key: str) -> None:
+    """
+    @brief      Update Narator Voice change progress when a progress callback exists.
+    @param[in]  progress_callback Optional progress callback.
+    @param[in]  percent Progress percentage.
+    @param[in]  message_key Runtime UI translation key.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-11
+    @version    0.1.0
+    """
+    if progress_callback is not None:
+        progress_callback(percent, message_key)
+
+
+def _finish_narator_voice_change_progress(window: "MainWindow") -> None:
+    """
+    @brief      Close and clear the synchronous Narator Voice change progress dialog.
+    @param[in]  window Main application window.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-11
+    @version    0.1.0
+    """
+    misc_ui_controller.update_progress_dialog(
+        window,
+        100,
+        ui_state_service.translate(
+            "progress.narator_voice_change_refresh",
+            ui_state_service.current_language_from_settings(window._settings_payload),
+        ),
+    )
+    misc_ui_controller.finish_progress_dialog(window)
+    misc_ui_controller.clear_progress_dialog(window)
+    window._narator_voice_page.set_busy(False)
+    misc_ui_controller.process_pending_ui_events()
 
 
 def _generate_and_store_sample(

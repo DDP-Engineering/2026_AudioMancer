@@ -10,6 +10,14 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [1.0.5] - 2026-05-11
+
+### Changed
+
+- Narator Voice changes now show a synchronous modal progress dialog while
+  affected Audio Blocks and Audio Assembly state is refreshed, using the same
+  faster affected-audio cleanup path as Characters saves.
+
 ## [1.0.4] - 2026-05-11
 
 ### Changed

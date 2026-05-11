@@ -14,7 +14,7 @@
          generated audio blocks.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-23
-@version 0.6.1
+@version 0.6.2
 """
 
 # IMPORTS
@@ -476,6 +476,50 @@ def test_audio_blocks_ui_controller_voice_target_invalidation_preserves_unrelate
     assert not assembly_report_path.exists()
     assert updated_manifest["current_stage"] == "speech_blocks_ready"
     assert updated_manifest["operations"]["audio_assembly"]["status"] == "not_started"
+
+
+def test_audio_blocks_ui_controller_voice_target_invalidation_can_skip_preserved_paths(
+    monkeypatch, qtbot, tmp_path, default_settings_payload
+) -> None:
+    """
+    @brief      Verify voice-target invalidation forwards the fast preserved-path option.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  qtbot Qt test helper fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @param[in]  default_settings_payload Fixture supplying valid baseline settings.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-11
+    @version    0.1.0
+    """
+    project_root = _create_project(tmp_path, "AudioBlocksControllerVoiceTargetInvalidationFast")
+    _seed_audio_blocks_run(project_root, approved=True)
+    window = _build_window(qtbot, project_root, default_settings_payload)
+    captured_kwargs = []
+    progress_updates = []
+    original_remove_audio_blocks = audio_blocks_ui_controller.audio_blocks_service.remove_audio_blocks_for_speech_blocks
+
+    def _capture_remove_audio_blocks(*args, **kwargs):
+        captured_kwargs.append(kwargs)
+        return original_remove_audio_blocks(*args, **kwargs)
+
+    monkeypatch.setattr(
+        audio_blocks_ui_controller.audio_blocks_service,
+        "remove_audio_blocks_for_speech_blocks",
+        _capture_remove_audio_blocks,
+    )
+
+    audio_blocks_ui_controller.invalidate_audio_blocks_for_voice_targets(
+        window,
+        ("character_alice",),
+        collect_preserved_paths=False,
+        progress_callback=lambda percent, message_key: progress_updates.append((percent, message_key)),
+    )
+
+    assert captured_kwargs[0]["collect_preserved_paths"] is False
+    assert (55, "progress.narator_voice_change_audio_blocks") in progress_updates
+    assert (75, "progress.narator_voice_change_audio_assembly") in progress_updates
 
 
 def _create_project(tmp_path, name: str):
