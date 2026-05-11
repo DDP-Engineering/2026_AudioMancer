@@ -23,6 +23,11 @@ All notable changes to this project will be documented in this file.
   completed style observations, token usage, model settings, and the AI
   transaction log path so interrupted runs can continue compatible unfinished
   work instead of restarting from the first source window.
+- AI narrator profile generation now folds the Qwen3-TTS Voice Designer guide
+  into generated prompt instructions, including prompt length, structure,
+  acoustic/emotional layering, stability, and anti-exaggeration guidance.
+- AI narrator profile generation now requires generated preview text to be long
+  enough for an estimated 3-second Qwen TTS reference sample.
 
 ### Changed
 

@@ -13,7 +13,7 @@
          selection, validation, persistence, resume, and cancellation contracts.
 @author Eng. Dan Dumitru Pasare
 @date 2026-05-11
-@version 0.2.0
+@version 0.2.1
 """
 
 # IMPORTS
@@ -192,6 +192,45 @@ def test_narrator_profile_generation_invalid_response_leaves_profiles_unchanged(
 
     assert (project_root / config.NARRATOR_PROFILE_FILE_NAME).read_text(encoding="utf-8") == before_payload
     assert not (project_root / config.NARRATOR_PROFILE_GENERATION_REPORT_FILE_NAME).exists()
+
+
+def test_narrator_profile_generation_rejects_short_preview_text(
+    tmp_path,
+    monkeypatch,
+    mock_prompt_environment,
+) -> None:
+    """
+    @brief      Verify generated preview text must be long enough for a Qwen TTS reference.
+    @param[in]  tmp_path Temporary path fixture.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  mock_prompt_environment Prompt-root fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-11
+    @version    0.1.0
+    """
+    _write_narrator_prompts(mock_prompt_environment)
+    project_root = tmp_path / "project"
+    project_root.mkdir()
+    _write_chunks(project_root, "A reflective book with intimate narration and restrained tension.")
+    monkeypatch.setattr(
+        narrator_profile_generation_service.llm_provider_service,
+        "chat_json",
+        _chat_json_factory([], _profiles_payload(2, preview_text="Too short.")),
+    )
+
+    with pytest.raises(ValueError, match="preview_text is too short"):
+        narrator_profile_generation_service.generate_narrator_profiles(
+            project_root,
+            {},
+            _MOCK_AI_PROFILE,
+            2,
+            "en",
+            220,
+        )
+
+    assert not narrator_definition_service.load_profiles(project_root)
 
 
 def test_narrator_profile_generation_merges_token_usage_into_report_and_state(
@@ -703,11 +742,16 @@ def _generation_usage_payload() -> dict[str, object]:
     return {"input_tokens": 20, "output_tokens": 8, "total_tokens": 28, "usage_available": True}
 
 
-def _profiles_payload(count: int, genders: tuple[str, ...] | None = None) -> dict[str, object]:
+def _profiles_payload(
+    count: int,
+    genders: tuple[str, ...] | None = None,
+    preview_text: str | None = None,
+) -> dict[str, object]:
     """
     @brief      Build a valid generated-profiles payload.
     @param[in]  count Profile count.
     @param[in]  genders Optional gender sequence.
+    @param[in]  preview_text Optional preview text override.
     @return     AI payload.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
@@ -726,7 +770,10 @@ def _profiles_payload(count: int, genders: tuple[str, ...] | None = None) -> dic
                     "A mature narrator voice with warm resonance, measured pacing, clear diction, restrained "
                     "emotion, immersive presence, and refined audiobook delivery."
                 ),
-                "preview_text": f"Original preview sentence number {index}.",
+                "preview_text": (
+                    preview_text
+                    or f"Original preview sentence number {index} carries enough words for a stable sample."
+                ),
             }
         )
     return {"style_brief": "Reflective literary science fiction.", "profiles": profiles}

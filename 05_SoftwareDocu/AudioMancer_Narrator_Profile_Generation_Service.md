@@ -52,6 +52,9 @@ Main implementation:
   `narrator_profile_style_system.txt`,
   `narrator_profile_style_window_user.txt`,
   `narrator_profile_generation_user.txt`
+- `01_Documentation/qwen_tts_voice_designer_guide.txt` is reflected in the
+  generation prompt through prompt-length, structure, acoustic/emotional
+  layering, stability, and anti-exaggeration guidance.
 
 Public entrypoints:
 
@@ -145,6 +148,26 @@ Generated profile fields appended to `audio_profiles.json`:
 - `prompt_text`
 - `preview_text`
 - `generation_metadata`
+
+Generated `prompt_text` guidance follows the Qwen3-TTS Voice Designer guide:
+
+- one English paragraph, recommended `80..220` words and preferably
+  `120..180`
+- age/gender, vocal timbre, speaking rhythm, emotional profile, articulation,
+  delivery style, personality cues, and audiobook context
+- acoustic and emotional descriptors instead of visual/lore-heavy description
+- stable, human, grounded, restrained, cinematic audiobook delivery
+- no contradictory descriptors, excessive plot summary, meme language,
+  cartoon exaggeration, or celebrity/real-person imitation
+
+Generated `preview_text` must be long enough to produce a useful Qwen TTS
+reference sample:
+
+- at least the configured minimum preview duration, currently `3.0` seconds
+- estimated with `DEFAULT_TTS_WORDS_PER_AUDIO_SECOND`, currently `2.5`
+- effectively at least `8` spoken words with the current defaults
+- still a single original sentence and still capped by the TTS preview
+  character limit
 
 Duplicate generated display names are rejected within one AI response. Duplicate
 names against existing project profiles are preserved with a suffix such as

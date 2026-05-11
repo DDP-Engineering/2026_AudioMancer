@@ -14,7 +14,7 @@
          generation report/state sidecars without generating narrator audio.
 @author Eng. Dan Dumitru Pasare
 @date 2026-05-11
-@version 0.2.0
+@version 0.2.1
 """
 
 # IMPORTS
@@ -34,6 +34,7 @@ from audiomancer.services import (
     narrator_definition_service,
     prompt_template_service,
     token_usage_service,
+    tts_budget_service,
 )
 from audiomancer.services.logging_service import get_component_logger, trace_function
 from audiomancer.services.operation_runtime_service import (
@@ -771,7 +772,7 @@ def _validated_generated_profiles(
     @exception  ValueError Raised when the AI response does not satisfy the contract.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-11
-    @version    0.1.0
+    @version    0.2.0
     """
     raw_profiles = response_payload.get("profiles", [])
     if not isinstance(raw_profiles, list) or len(raw_profiles) != requested_count:
@@ -780,6 +781,7 @@ def _validated_generated_profiles(
     names: set[str] = set()
     gender_counts = {"male": 0, "female": 0}
     preview_limit = max(1, int(preview_text_character_limit or config.DEFAULT_TTS_PREVIEW_TEXT_CHARACTER_LIMIT))
+    min_preview_words = _minimum_preview_word_count()
     for index, raw_profile in enumerate(raw_profiles, start=1):
         if not isinstance(raw_profile, dict):
             raise ValueError(f"Generated narrator profile #{index} is not an object.")
@@ -800,6 +802,12 @@ def _validated_generated_profiles(
             raise ValueError(f"Generated narrator profile '{display_name}' prompt_text asks for audio generation.")
         if not preview_text:
             raise ValueError(f"Generated narrator profile '{display_name}' is missing preview_text.")
+        preview_word_count = tts_budget_service.estimated_word_count(preview_text)
+        if preview_word_count < min_preview_words:
+            raise ValueError(
+                f"Generated narrator profile '{display_name}' preview_text is too short for a Qwen TTS reference "
+                f"({preview_word_count} words, minimum {min_preview_words})."
+            )
         if "\n" in preview_text or len(preview_text.split()) > 24:
             raise ValueError(f"Generated narrator profile '{display_name}' preview_text must be one short sentence.")
         if len(preview_text) > preview_limit:
@@ -821,6 +829,24 @@ def _validated_generated_profiles(
     if gender_counts["male"] != int(allocation["male"]) or gender_counts["female"] != int(allocation["female"]):
         raise ValueError("AI narrator generation returned profiles with the wrong male/female allocation.")
     return profiles
+
+
+def _minimum_preview_word_count() -> int:
+    """
+    @brief      Estimate the minimum preview-text word count for useful Qwen TTS references.
+    @return     Minimum preview word count.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-11
+    @version    0.1.0
+    """
+    return max(
+        1,
+        int(
+            float(config.DEFAULT_TTS_MIN_PREVIEW_AUDIO_SECONDS) * float(config.DEFAULT_TTS_WORDS_PER_AUDIO_SECOND)
+            + 0.999
+        ),
+    )
 
 
 def _build_model_settings(

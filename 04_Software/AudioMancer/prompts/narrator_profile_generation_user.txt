@@ -25,10 +25,15 @@ Profile rules:
 - The number of `gender: "male"` profiles must match the required male count.
 - The number of `gender: "female"` profiles must match the required female count.
 - Each display_name must be unique and should include the gender and concise style label.
-- The prompt_text must be one English paragraph for Qwen3-TTS Voice Designer.
+- The prompt_text must be one English paragraph for Qwen3-TTS Voice Designer, recommended 80-220 words and preferably 120-180 words.
+- Structure prompt_text like voice direction: age plus gender, vocal timbre, speaking rhythm, emotional profile, articulation, delivery style, personality cues, and suitable audiobook context.
+- Describe how the narrator sounds, not how a character looks. Favor acoustic and emotional descriptors over visual descriptions or lore.
+- Use layered voice design: acoustic layer, emotional layer, and narrator/personality layer.
 - The prompt_text must describe vocal resonance, pacing, diction, emotional control, narration presence, and suitable book style.
+- Keep the narrator voice stable, human, grounded, emotionally believable, restrained, cinematic, and natural for long-form audiobook delivery.
+- Avoid contradictory descriptors, excessive plot summary, meme language, cartoon exaggeration, and overly theatrical wording.
 - The prompt_text must not ask to generate audio and must not mention implementation, tokens, JSON, or this prompt.
-- The preview_text must be one original short sentence in the selected voice language.
+- The preview_text must be one original sentence in the selected voice language, long enough to produce at least 3 seconds of Qwen TTS audio, usually 8-24 spoken words.
 - The preview_text must fit normal narrator sample use and must not quote the source text.
 - Do not imitate celebrities, actors, real people, or copyrighted character voices.
 
