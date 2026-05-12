@@ -15,7 +15,7 @@
          chunk-based generation, and narrator-only segmentation.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-24
-@version 0.11.0
+@version 0.12.1
 """
 
 # IMPORTS
@@ -42,7 +42,7 @@ def test_resolve_source_chunks_uses_original_language_selection(tmp_path) -> Non
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.2.0
+    @version    0.3.0
     """
     project_root, manifest = _create_chunked_project(tmp_path, "SpeechBlocksOriginal")
     manifest["original_language"] = "en"
@@ -1545,7 +1545,7 @@ def test_start_generation_uses_narrator_only_prompt_for_same_narrator(monkeypatc
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-26
-    @version    0.1.0
+    @version    0.2.0
     """
     project_root, manifest = _create_chunked_project(tmp_path, "SpeechBlocksNarratorOnly")
     manifest["original_language"] = "en"
@@ -1579,29 +1579,13 @@ def test_start_generation_uses_narrator_only_prompt_for_same_narrator(monkeypatc
     responses = [
         {
             "payload": {
-                "speech_blocks": [
-                    {
-                        "speaker_id": "maria",
-                        "content_kind": "dialogue",
-                        "source_text": 'Narration. "Hello there."',
-                        "text": 'Narration. "Hello there."',
-                        "warning_flags": [],
-                    }
-                ]
+                "boundary_ids": ["b0002"],
             },
             "usage": {"input_tokens": 5, "output_tokens": 5, "total_tokens": 10, "usage_available": True},
         },
         {
             "payload": {
-                "speech_blocks": [
-                    {
-                        "speaker_id": "maria",
-                        "content_kind": "dialogue",
-                        "source_text": 'Maria smiled. "Welcome."',
-                        "text": 'Maria smiled. "Welcome."',
-                        "warning_flags": [],
-                    }
-                ]
+                "boundary_ids": ["b0002"],
             },
             "usage": {"input_tokens": 5, "output_tokens": 5, "total_tokens": 10, "usage_available": True},
         },
@@ -1617,7 +1601,7 @@ def test_start_generation_uses_narrator_only_prompt_for_same_narrator(monkeypatc
     speech_blocks = speech_blocks_service.load_speech_blocks(project_root)
     assert validated_prompt_names == ["speech_blocks_narrator_only_system", "speech_blocks_narrator_only_user"]
     assert rendered_prompts[1][0] == "speech_blocks_narrator_only_user"
-    assert rendered_prompts[1][1]["voice_assignment_mode"] == "same_narrator"
+    assert rendered_prompts[1][1]["split_boundary_candidates_json"]
     assert rendered_prompts[1][1]["max_tts_tokens"]
     assert {block["speaker_id"] for block in speech_blocks} == {"narrator"}
     assert {block["content_kind"] for block in speech_blocks} == {speech_blocks_service.CONTENT_KIND_NARRATION}
@@ -1639,7 +1623,7 @@ def test_start_generation_uses_narrator_only_prompt_for_same_narrator(monkeypatc
             "speech_blocks_narrator_only_system",
             "speech_blocks_narrator_only_user",
             False,
-            ("Voice assignment mode: same_narrator", '"speaker_id": "narrator"'),
+            ("Narration mode: same_narrator", '"boundary_id"'),
         ),
     ],
 )
@@ -1691,7 +1675,10 @@ def test_speech_blocks_production_prompt_contract_matrix(
     assert "TTS maximum model token budget: 9876" in rendered_prompt
     assert "Safe approximate words per block: 321" in rendered_prompt
     assert "TTS budget source: contract-test-cache" in rendered_prompt
-    assert "Allowed speaker catalog:" in rendered_prompt
+    if include_character:
+        assert "Allowed speaker catalog:" in rendered_prompt
+    else:
+        assert "Candidate split boundaries:" in rendered_prompt
     for expected_snippet in expected_snippets:
         assert expected_snippet in rendered_prompt
 
@@ -1732,6 +1719,57 @@ def test_normalize_chunk_blocks_narrator_only_preserves_delimiters() -> None:
     assert "ambiguous_speaker" not in blocks[0]["warning_flags"]
     assert "tts_budget_exceeded" not in blocks[0]["warning_flags"]
     assert warnings == []
+
+
+def test_normalize_narrator_boundary_blocks_builds_exact_source_spans() -> None:
+    """
+    @brief      Verify narrator-only boundary IDs are converted into exact deterministic source spans.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-12
+    @version    0.1.0
+    """
+    source_chunk = {"chunk_id": "chunk-0001", "text": "First sentence. Second sentence."}
+
+    blocks, warnings = speech_blocks_service._normalize_narrator_boundary_blocks(  # noqa: SLF001
+        source_chunk,
+        {"boundary_ids": ["b0001"]},
+        "en",
+        {"safe_word_count": 20},
+    )
+
+    assert [block["source_text"] for block in blocks] == ["First sentence. ", "Second sentence."]
+    assert "".join(str(block["source_text"]) for block in blocks) == source_chunk["text"]
+    assert [block["text"] for block in blocks] == ["First sentence.", "Second sentence."]
+    assert {block["speaker_id"] for block in blocks} == {"narrator"}
+    assert {block["content_kind"] for block in blocks} == {speech_blocks_service.CONTENT_KIND_NARRATION}
+    assert warnings == []
+
+
+def test_normalize_narrator_boundary_blocks_falls_back_on_unusable_ids() -> None:
+    """
+    @brief      Verify narrator-only boundary failures become deterministic review warnings.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-12
+    @version    0.1.0
+    """
+    source_chunk = {"chunk_id": "chunk-0001", "text": "First sentence. Second sentence."}
+
+    blocks, warnings = speech_blocks_service._normalize_narrator_boundary_blocks(  # noqa: SLF001
+        source_chunk,
+        {"boundary_ids": ["unknown-boundary"]},
+        "en",
+        {"safe_word_count": 20},
+    )
+
+    assert "".join(str(block["source_text"]) for block in blocks) == source_chunk["text"]
+    assert "boundary_selection_fallback" in blocks[0]["warning_flags"]
+    assert warnings[0]["reason"] == speech_blocks_service._speech_block_warning_reason(  # noqa: SLF001
+        "boundary_selection_fallback"
+    )
 
 
 def test_normalize_chunk_blocks_splits_over_budget_sentence_boundaries() -> None:

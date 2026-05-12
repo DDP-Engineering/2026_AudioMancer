@@ -15,7 +15,7 @@
          based operation state plus AI transaction logging.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 0.17.1
+@version 0.18.1
 """
 
 # IMPORTS
@@ -1136,7 +1136,7 @@ def _prompt_names_for_mode(voice_assignment_mode: str) -> tuple[str, str]:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-26
-    @version    0.1.0
+    @version    0.3.0
     """
     if str(voice_assignment_mode).strip() == "same_narrator":
         return "speech_blocks_narrator_only_system", "speech_blocks_narrator_only_user"
@@ -1163,9 +1163,29 @@ def _chunk_user_prompt(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-24
-    @version    0.3.0
+    @version    0.5.0
     """
     budget_payload = tts_budget or _resolve_narrator_only_budget(None)
+    if str(prompt_name).strip() == "speech_blocks_narrator_only_user":
+        return prompt_template_service.render_prompt(
+            prompt_name,
+            {
+                "source_language": narrator_definition_service.narrator_language_label(source_language),
+                "chunk_id": str(source_chunk.get("chunk_id", "")),
+                "chunk_text": str(source_chunk.get("text", "")),
+                "split_boundary_candidates_json": json.dumps(
+                    _narrator_split_boundary_candidates(
+                        str(source_chunk.get("text", "")),
+                        int(budget_payload.get("safe_word_count", 0) or 0),
+                    ),
+                    indent=2,
+                    ensure_ascii=False,
+                ),
+                "max_tts_tokens": str(int(budget_payload.get("model_token_budget", 0))),
+                "safe_tts_words": str(int(budget_payload.get("safe_word_count", 0))),
+                "tts_budget_source": str(budget_payload.get("model_budget_source", "")),
+            },
+        )
     return prompt_template_service.render_prompt(
         prompt_name,
         {
@@ -1276,29 +1296,52 @@ def _generate_budgeted_chunk_blocks(
             prompt_name,
         )
         try:
-            response_result = llm_provider_service.chat_json(
-                ai_profile_payload,
-                system_prompt,
-                user_prompt,
-                log_path=log_path,
-                log_context={
-                    **dict(log_context),
-                    "segment_index": segment_index,
-                    "segment_total": len(chunk_segments),
-                },
-                cancel_requested=cancel_requested,
-            )
+            if str(voice_assignment_mode).strip() == "same_narrator":
+                response_result = _generate_narrator_boundary_response(
+                    ai_profile_payload,
+                    system_prompt,
+                    user_prompt,
+                    log_path,
+                    {
+                        **dict(log_context),
+                        "segment_index": segment_index,
+                        "segment_total": len(chunk_segments),
+                        "response_contract": "narrator_boundary_ids",
+                    },
+                    cancel_requested,
+                )
+            else:
+                response_result = llm_provider_service.chat_json(
+                    ai_profile_payload,
+                    system_prompt,
+                    user_prompt,
+                    log_path=log_path,
+                    log_context={
+                        **dict(log_context),
+                        "segment_index": segment_index,
+                        "segment_total": len(chunk_segments),
+                    },
+                    cancel_requested=cancel_requested,
+                )
         except OperationCancelledError as error:
             raise OperationCancelledError(cancellation_message) from error
         chunk_token_usage = token_usage_service.merge_token_usage(chunk_token_usage, response_result.get("usage"))
-        segment_blocks, segment_warnings = _normalize_chunk_blocks(
-            segment_chunk,
-            dict(response_result.get("payload", {})),
-            speaker_catalog,
-            source_language,
-            voice_assignment_mode=voice_assignment_mode,
-            tts_budget=tts_budget,
-        )
+        if str(voice_assignment_mode).strip() == "same_narrator":
+            segment_blocks, segment_warnings = _normalize_narrator_boundary_blocks(
+                segment_chunk,
+                dict(response_result.get("payload", {})),
+                source_language,
+                tts_budget,
+            )
+        else:
+            segment_blocks, segment_warnings = _normalize_chunk_blocks(
+                segment_chunk,
+                dict(response_result.get("payload", {})),
+                speaker_catalog,
+                source_language,
+                voice_assignment_mode=voice_assignment_mode,
+                tts_budget=tts_budget,
+            )
         combined_blocks.extend(segment_blocks)
         combined_warnings.extend(segment_warnings)
     return (
@@ -1306,6 +1349,283 @@ def _generate_budgeted_chunk_blocks(
         combined_warnings,
         chunk_token_usage,
     )
+
+
+def _generate_narrator_boundary_response(
+    ai_profile_payload: dict[str, object],
+    system_prompt: str,
+    user_prompt: str,
+    log_path: Path,
+    log_context: dict[str, object],
+    cancel_requested,
+) -> dict[str, object]:
+    """
+    @brief      Request narrator-only boundary IDs from the selected AI model.
+    @param[in]  ai_profile_payload Selected validated AI profile payload.
+    @param[in]  system_prompt Rendered narrator-only boundary system prompt.
+    @param[in]  user_prompt Rendered narrator-only boundary user prompt.
+    @param[in]  log_path Operation-local AI transaction log path.
+    @param[in]  log_context Per-request transaction-log metadata.
+    @param[in]  cancel_requested Optional zero-argument cancellation callback.
+    @return     Provider response payload and token usage.
+    @exception  OperationCancelledError Raised when the operator cancels the run.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-12
+    @version    0.2.0
+    """
+    try:
+        return llm_provider_service.chat_json(
+            ai_profile_payload,
+            system_prompt,
+            user_prompt,
+            log_path=log_path,
+            log_context=log_context,
+            cancel_requested=cancel_requested,
+        )
+    except ValueError as error:
+        return {
+            "payload": {
+                "boundary_selection_error": str(error),
+            },
+            "usage": token_usage_service.empty_token_usage(),
+        }
+
+
+def _normalize_narrator_boundary_blocks(
+    source_chunk: dict[str, object],
+    response_payload: dict[str, object],
+    source_language: str,
+    tts_budget: dict[str, object] | None,
+) -> tuple[list[SpeechBlockPayload], list[dict[str, object]]]:
+    """
+    @brief      Build exact narrator Speech Blocks from AI-selected boundary IDs.
+    @param[in]  source_chunk Source chunk or AI-budget segment payload.
+    @param[in]  response_payload Parsed AI boundary-selection payload.
+    @param[in]  source_language Active source language code.
+    @param[in]  tts_budget Optional narrator-only TTS budget metadata.
+    @return     Generated Speech Blocks plus warning entries.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-12
+    @version    0.1.0
+    """
+    chunk_id = str(source_chunk.get("chunk_id", "")).strip()
+    source_text = str(source_chunk.get("text", ""))
+    safe_word_count = _safe_tts_word_count(tts_budget)
+    try:
+        if str(response_payload.get("boundary_selection_error", "")).strip():
+            raise ValueError(str(response_payload.get("boundary_selection_error", "")).strip())
+        candidates = _narrator_split_boundary_candidates(source_text, safe_word_count)
+        selected_offsets = _narrator_selected_boundary_offsets(response_payload, candidates)
+        ai_blocks = _narrator_ai_blocks_from_offsets(source_text, selected_offsets)
+        warning_entries: list[dict[str, object]] = []
+    except ValueError:
+        ai_blocks = _narrator_ai_blocks_from_offsets(source_text, [len(source_text)])
+        warning_entries = [
+            {
+                "chunk_id": chunk_id,
+                "reason": _speech_block_warning_reason("boundary_selection_fallback"),
+            }
+        ]
+        if ai_blocks:
+            warning_flags = list(ai_blocks[0].get("warning_flags", []))
+            _append_warning_flag(warning_flags, "boundary_selection_fallback")
+            ai_blocks[0]["warning_flags"] = warning_flags
+
+    ai_blocks, split_warnings = _split_over_budget_ai_blocks(chunk_id, ai_blocks, tts_budget)
+    warning_entries.extend(split_warnings)
+    warning_entries.extend(_validate_narrator_only_budget(chunk_id, ai_blocks, tts_budget))
+    return (
+        [
+            _build_speech_block_payload(
+                chunk_id,
+                sequence_index,
+                source_language,
+                SPEAKER_KIND_NARRATOR,
+                _NARRATOR_SPEAKER_ID,
+                _NARRATOR_DISPLAY_NAME,
+                CONTENT_KIND_NARRATION,
+                str(ai_block.get("text", "")),
+                _normalize_warning_flags(ai_block.get("warning_flags")),
+                source_text=str(ai_block.get("source_text", "")),
+            )
+            for sequence_index, ai_block in enumerate(ai_blocks, start=1)
+        ],
+        warning_entries,
+    )
+
+
+def _narrator_split_boundary_candidates(source_text: str, safe_word_count: int) -> list[dict[str, object]]:
+    """
+    @brief      Build stable candidate end-boundaries for narrator-only AI selection.
+    @param[in]  source_text Source chunk or segment text.
+    @param[in]  safe_word_count Approximate safe TTS word budget.
+    @return     Ordered boundary candidate payloads.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-12
+    @version    0.1.0
+    """
+    text = str(source_text)
+    if not text:
+        return []
+    offsets: set[int] = {len(text)}
+    offsets.update(_span_end_offsets(_ai_paragraph_spans(text)))
+    offsets.update(_span_end_offsets(_ai_sentence_spans(text)))
+    offsets.update(_word_budget_boundary_offsets(text, safe_word_count))
+    ordered_offsets = sorted(offset for offset in offsets if 0 < offset <= len(text))
+    previous_offset = 0
+    candidates: list[dict[str, object]] = []
+    for index, offset in enumerate(ordered_offsets, start=1):
+        segment_text = text[previous_offset:offset]
+        candidates.append(
+            {
+                "boundary_id": f"b{index:04d}",
+                "offset": offset,
+                "approx_words_since_previous": _tts_budget_unit_count(segment_text),
+                "is_final": offset == len(text),
+                "context": _boundary_context_preview(text, offset),
+            }
+        )
+        previous_offset = offset
+    return candidates
+
+
+def _span_end_offsets(spans: list[str]) -> set[int]:
+    """
+    @brief      Convert ordered source-preserving spans to cumulative end offsets.
+    @param[in]  spans Ordered spans returned by a source-preserving splitter.
+    @return     End-offset set.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-12
+    @version    0.1.0
+    """
+    offsets: set[int] = set()
+    cursor = 0
+    for span in spans:
+        cursor += len(str(span))
+        offsets.add(cursor)
+    return offsets
+
+
+def _word_budget_boundary_offsets(source_text: str, safe_word_count: int) -> set[int]:
+    """
+    @brief      Add coarse budget-sized fallback boundaries for long sentence spans.
+    @param[in]  source_text Source chunk or segment text.
+    @param[in]  safe_word_count Approximate safe TTS word budget.
+    @return     End-offset set at roughly one safe word budget interval.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-12
+    @version    0.1.0
+    """
+    if safe_word_count <= 0:
+        return set()
+    offsets: set[int] = set()
+    cursor = 0
+    unit_count = 0
+    for word_span in _ai_word_spans(source_text):
+        cursor += len(word_span)
+        unit_count += 1
+        if unit_count >= safe_word_count:
+            offsets.add(cursor)
+            unit_count = 0
+    return offsets
+
+
+def _boundary_context_preview(source_text: str, offset: int, radius: int = 80) -> str:
+    """
+    @brief      Build compact context text around one boundary offset.
+    @param[in]  source_text Source chunk or segment text.
+    @param[in]  offset Boundary offset.
+    @param[in]  radius Maximum characters to keep on either side.
+    @return     Whitespace-normalized context preview.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-12
+    @version    0.1.0
+    """
+    left = max(0, int(offset) - int(radius))
+    right = min(len(str(source_text)), int(offset) + int(radius))
+    return " ".join(str(source_text)[left:right].split())
+
+
+def _narrator_selected_boundary_offsets(
+    response_payload: dict[str, object],
+    candidates: list[dict[str, object]],
+) -> list[int]:
+    """
+    @brief      Resolve and validate AI-selected narrator boundary IDs.
+    @param[in]  response_payload Parsed AI response payload.
+    @param[in]  candidates Boundary candidates available to the model.
+    @return     Strictly increasing selected end offsets with final boundary included.
+    @exception  ValueError Raised when no usable boundary selection is present.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-12
+    @version    0.1.0
+    """
+    if not candidates:
+        return []
+    raw_boundary_ids = response_payload.get("boundary_ids", response_payload.get("split_boundary_ids", []))
+    if not isinstance(raw_boundary_ids, list):
+        raise ValueError("Narrator boundary response does not contain a boundary_ids list.")
+    if not raw_boundary_ids:
+        raise ValueError("Narrator boundary response selected no boundaries.")
+    offset_by_id = {
+        str(candidate.get("boundary_id", "")).strip(): int(candidate.get("offset", 0))
+        for candidate in candidates
+        if str(candidate.get("boundary_id", "")).strip()
+    }
+    selected_offsets: list[int] = []
+    previous_offset = 0
+    for raw_boundary_id in raw_boundary_ids:
+        boundary_id = str(raw_boundary_id).strip()
+        if boundary_id not in offset_by_id:
+            raise ValueError(f"Narrator boundary response selected an unknown boundary id: {boundary_id}")
+        offset = offset_by_id[boundary_id]
+        if offset <= previous_offset:
+            raise ValueError("Narrator boundary response selected boundaries out of order.")
+        selected_offsets.append(offset)
+        previous_offset = offset
+    final_offset = int(candidates[-1].get("offset", 0))
+    if not selected_offsets or selected_offsets[-1] != final_offset:
+        selected_offsets.append(final_offset)
+    return selected_offsets
+
+
+def _narrator_ai_blocks_from_offsets(source_text: str, selected_offsets: list[int]) -> list[dict[str, object]]:
+    """
+    @brief      Slice exact narrator AI block placeholders from source offsets.
+    @param[in]  source_text Source chunk or segment text.
+    @param[in]  selected_offsets Strictly increasing selected end offsets.
+    @return     AI-block-like dictionaries ready for deterministic normalization.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-12
+    @version    0.1.0
+    """
+    blocks: list[dict[str, object]] = []
+    cursor = 0
+    text = str(source_text)
+    for offset in selected_offsets:
+        bounded_offset = max(cursor, min(int(offset), len(text)))
+        source_span = text[cursor:bounded_offset]
+        cursor = bounded_offset
+        if not source_span.strip():
+            continue
+        blocks.append(
+            {
+                "speaker_kind": SPEAKER_KIND_NARRATOR,
+                "speaker_id": _NARRATOR_SPEAKER_ID,
+                "speaker_display_name": _NARRATOR_DISPLAY_NAME,
+                "content_kind": CONTENT_KIND_NARRATION,
+                "source_text": source_span,
+                "text": source_span.strip(),
+                "warning_flags": [],
+            }
+        )
+    return blocks
 
 
 def _budgeted_source_chunk_segments(

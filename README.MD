@@ -51,14 +51,16 @@ stable Speech Block IDs, reset only affected Audio Blocks when audio input
 changes, and reset Audio Assembly whenever final order, approval, or audio
 inputs change. Speech Blocks review also exposes selected-block audio regeneration
 plus Play/Stop preview controls mirrored from Audio Blocks.
+Same-narrator Speech Blocks now ask the AI for compact boundary IDs only and
+construct exact narrator spans deterministically, reducing malformed JSON and
+source-copy mismatches from local models.
 Audio Blocks selected reset, selected regeneration, approval, and unapproval
 now preserve unrelated generated audio and reset only Audio Assembly outputs.
 Audio Assembly settings changes and reruns now preserve upstream Audio Blocks
 while replacing only assembly outputs/state/report.
-Current package version is `1.0.8`; Narator Voice now supports AI-assisted
-text-only narrator profile generation with compatible interrupted-run resume,
-and project opening still ignores narrator timestamp-only metadata drift when
-narrator identity and downstream workflow statuses are already consistent.
+Current package version is `1.0.9`; same-narrator Speech Blocks now use compact
+AI-selected boundary IDs with deterministic source-span construction so local
+models no longer need to copy full narrator block text into JSON.
 
 Focused implementation documentation is maintained in `05_SoftwareDocu/`.
 The end-user help bundles are maintained in `05_SoftwareDocu/UserGuide/` and

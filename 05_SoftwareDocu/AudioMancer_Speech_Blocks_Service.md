@@ -16,14 +16,15 @@ It converts the chunk text selected through the locked project language into
 AI-owned ordered speech blocks, gives the operator a focused review and edit
 surface, and persists the approved results as root-level Speech Blocks
 artifacts. In `narrator_and_characters` projects the AI owns dialogue and
-speaker attribution. In `same_narrator` projects the AI creates continuous
-narrator-only phrase/action/paragraph segments under the TTS text budget.
+speaker attribution. In `same_narrator` projects the AI now chooses compact
+boundary IDs only, while AudioMancer slices the exact source text and builds
+continuous narrator-only blocks under the TTS text budget.
 
 ## 2. Responsibilities
 
 - resolve the active source language from the locked `project.json.target_language`
 - choose canonical chunking text or approved translated text as the source
-- choose the dialogue/speaker prompt or narrator-only segmentation prompt from
+- choose the dialogue/speaker prompt or narrator-only boundary prompt from
   `project.json.voice_assignment_mode`
 - size AI request input from the selected AI profile context window, max output
   tokens, prompt budget, and conservative safety margin
@@ -31,15 +32,17 @@ narrator-only phrase/action/paragraph segments under the TTS text budget.
   changing the public chunk identity
 - include the resolved TTS token budget and conservative word guidance in
   narrator-only requests
-- normalize model output into the new persisted speech-block schema only, with
-  the model owning final block boundaries
+- normalize model output into the new persisted speech-block schema; in
+  narrator-plus-character mode the model owns final block boundaries, while in
+  same-narrator mode the model selects candidate boundary IDs and AudioMancer
+  builds exact spans deterministically
 - assign speech block IDs in `CCCC-BBBBBB` format, for example
   `0001-000001`
 - persist only current source span, speaker, content kind, and text values for
   each Speech Block
 - preserve exact `source_text` spans for review traceability
 - validate model source spans for source coverage, source order, and text edits
-  without replacing AI block boundaries
+  without replacing AI block boundaries in narrator-plus-character mode
 - preserve source wording exactly except for stripping dialogue delimiters from
   dialogue audio text in `narrator_and_characters` mode
 - preserve quotes, guillemets, dashes, punctuation, and paragraph breaks in
@@ -130,15 +133,20 @@ High-level flow:
    language, and processes each remaining chunk through one or more budgeted
    model requests with the currently selected AI profile/model.
 5. Each response is normalized into new speech-block payloads, including exact
-   source spans, current editable values, warning flags,
-   approval fields, chunk-local sequence indexes, and `CCCC-BBBBBB` IDs.
-   Deterministic validation annotates suspicious spans with warning flags such
-   as `source_coverage_mismatch`, `source_order_mismatch`, and
-   `model_text_modified`. After validation, non-operation blocks that still
-   exceed the safe TTS budget are split locally as a safety net, preferring
-   paragraph and sentence boundaries before hard word/character splits. Hard
-   fallback splits add `tts_hard_split`; operation rows such as `pause`,
-   `background_noise`, and `indication` are never split.
+   source spans, current editable values, warning flags, approval fields,
+   chunk-local sequence indexes, and `CCCC-BBBBBB` IDs. In
+   narrator-plus-character mode, deterministic validation annotates suspicious
+   spans with warning flags such as `source_coverage_mismatch`,
+   `source_order_mismatch`, and `model_text_modified`. In same-narrator mode,
+   the response contains only ordered boundary IDs; AudioMancer slices
+   `source_text` from the original chunk and sets narrator/content fields
+   deterministically. If the boundary response is unusable, the service falls
+   back to deterministic TTS splitting and marks the first generated block with
+   `boundary_selection_fallback`. After validation or boundary slicing,
+   non-operation blocks that still exceed the safe TTS budget are split locally
+   as a safety net, preferring paragraph and sentence boundaries before hard
+   word/character splits. Hard fallback splits add `tts_hard_split`; operation
+   rows such as `pause`, `background_noise`, and `indication` are never split.
 6. The current `speech_blocks_report.json`, `speech_blocks_state.json`, and
    transaction log metadata are rewritten after every chunk with the current
    budget metadata so cancellation can resume from the next chunk even when the
@@ -261,8 +269,12 @@ Current invariants:
 - manual insert/delete updates `sequence_index` but preserves existing
   `speech_block_id` values for unchanged blocks
 - inserted blocks get the next unused chunk-local `speech_block_id`
-- AI output is the primary Speech Block list; deterministic helpers validate
-  and annotate the model result but do not force quote-based boundaries
+- AI output is the primary Speech Block list in narrator-plus-character mode;
+  deterministic helpers validate and annotate the model result but do not force
+  quote-based boundaries
+- AI output is only a boundary-id list in same-narrator mode; exact
+  `source_text`, `text`, `speaker_id`, and `content_kind` fields are built by
+  AudioMancer from the original source chunk
 - `speaker_id` must be `narrator` or one discovered `character_id`
 - for metadata-only operation kinds, `speaker_kind` is `operation`,
   `speaker_id` is the content-kind token, and `speaker_display_name` is the
@@ -279,6 +291,9 @@ Current invariants:
   `speaker_id = "narrator"` and `content_kind = "narration"`
 - in `same_narrator` mode block text preserves the source span exactly except
   harmless outer whitespace cleanup
+- same-narrator malformed JSON, missing boundary IDs, unknown boundary IDs, or
+  out-of-order boundary IDs trigger deterministic TTS splitting instead of
+  stopping the entire Speech Blocks run
 - narrator-only blocks that exceed the resolved safe TTS budget are retained and
   flagged with `tts_budget_exceeded`
 - `background_noise`, `pause`, and `indication` are metadata-only content kinds

@@ -10,6 +10,22 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [1.0.9] - 2026-05-12
+
+### Changed
+
+- Same-narrator Speech Blocks now ask the AI model for compact boundary IDs
+  instead of full copied Speech Block JSON, then build exact narrator
+  `source_text`, `text`, speaker, and content-kind fields deterministically
+  from the original source chunk.
+
+### Fixed
+
+- Same-narrator Speech Blocks now fall back to deterministic TTS splitting
+  with a review warning when a local model returns malformed JSON or unusable
+  boundary IDs, reducing run-stopping JSON parse failures and source-copy
+  mismatch warnings from offline models.
+
 ## [1.0.8] - 2026-05-11
 
 ### Added

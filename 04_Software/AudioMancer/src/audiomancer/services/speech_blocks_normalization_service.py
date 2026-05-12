@@ -13,7 +13,7 @@
          text, and identifier normalization outside the orchestration service.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-29
-@version 0.2.0
+@version 0.2.1
 """
 
 # IMPORTS
@@ -84,7 +84,7 @@ def speech_block_warning_reason(warning_flag: str) -> str:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-29
-    @version    0.1.0
+    @version    0.1.1
     """
     return {
         "ambiguous_speaker": "Speaker attribution was ambiguous and fell back to narrator.",
@@ -93,6 +93,9 @@ def speech_block_warning_reason(warning_flag: str) -> str:
         "model_text_modified": "Model audio text differs from the source span beyond delimiter cleanup.",
         "tts_budget_exceeded": "Narrator-only block exceeds the safe TTS word budget.",
         "tts_hard_split": "Speech Block was hard-split after no paragraph or sentence boundary fit the TTS budget.",
+        "boundary_selection_fallback": (
+            "Narrator-only AI boundary selection was unusable and deterministic TTS splitting was used."
+        ),
     }.get(str(warning_flag).strip(), str(warning_flag).strip() or "Speech Block warning.")
 
 

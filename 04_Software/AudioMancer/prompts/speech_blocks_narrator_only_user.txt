@@ -1,28 +1,17 @@
 Source language: {source_language}
 
-Voice assignment mode: {voice_assignment_mode}
-
-Narration style priority: literary_continuity
-
-Segmentation preference:
-- preserve emotional continuity
-- preserve sentence integrity
-- preserve dialogue rhythm
-
-Scene continuity priority: high
-
-Optimize for natural continuous read-aloud pacing.
+Narration mode: same_narrator
 
 TTS maximum model token budget: {max_tts_tokens}
 Safe approximate words per block: {safe_tts_words}
 TTS budget source: {tts_budget_source}
 
-Allowed speaker catalog:
-{speaker_catalog_json}
-
 Chunk id: {chunk_id}
+
+Candidate split boundaries:
+{split_boundary_candidates_json}
 
 Chunk text:
 {chunk_text}
 
-Split this chunk into ordered narrator-only `speech_blocks` for continuous audiobook audio. Return one JSON object with the ordered `speech_blocks` array only.
+Choose ordered boundary IDs that split this chunk into natural same-narrator audiobook blocks. Return one JSON object with `boundary_ids` only.
