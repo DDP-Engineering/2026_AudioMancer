@@ -25,7 +25,7 @@ import audiomancer
 # CONSTANTS
 
 APP_ROOT = Path(__file__).resolve().parents[1]
-EXPECTED_VERSION = "1.0.9"
+EXPECTED_VERSION = "1.0.10"
 
 # PUBLIC API
 

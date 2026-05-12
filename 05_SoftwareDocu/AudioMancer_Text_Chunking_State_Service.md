@@ -190,9 +190,13 @@ Downstream:
 Broad resets that remain intentional:
 
 - Text extraction reruns clear all follow-up data and metadata.
-- Text cleanup reruns clear all downstream data and metadata.
+- Text cleanup reruns clear regenerated text, Speech Blocks, Audio Blocks, and
+  Audio Assembly data while preserving completed Character Discovery, Narator
+  Voice, and Character Voices artifacts.
 - Full deterministic or AI Text Chunking regeneration clears downstream data
-  because the full canonical chunk set is replaced.
+  from generated text onward because the full canonical chunk set is replaced,
+  but preserves completed Character Discovery, Narator Voice, and Character
+  Voices artifacts.
 
 ## 8. Usage
 

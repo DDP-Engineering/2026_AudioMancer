@@ -14,7 +14,7 @@
          shared by long-running workflow operations.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-22
-@version 0.11.1
+@version 0.11.2
 """
 
 # IMPORTS
@@ -46,6 +46,15 @@ _OPERATION_ORDER = (
 
 # @brief Downstream reset operation kinds preserved when upstream text/character data is regenerated.
 NARRATOR_PROFILE_PRESERVED_OPERATION_KINDS = frozenset(("narrator_definition",))
+
+# @brief Downstream operation kinds preserved when cleanup or chunking text is revised.
+TEXT_REVISION_PRESERVED_OPERATION_KINDS = frozenset(
+    (
+        "character_discovery",
+        "narrator_definition",
+        "character_voices",
+    )
+)
 
 # @brief Root-level runtime artifact files owned by each resettable operation.
 _OPERATION_ARTIFACT_FILE_NAMES = {

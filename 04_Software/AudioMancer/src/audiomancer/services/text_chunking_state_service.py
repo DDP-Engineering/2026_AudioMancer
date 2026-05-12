@@ -14,7 +14,7 @@
          Chunking page.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-24
-@version 0.8.1
+@version 0.8.2
 """
 
 # IMPORTS
@@ -267,12 +267,12 @@ def build_manifest_after_chunk_edit(manifest: dict[str, object]) -> dict[str, ob
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-24
-    @version    0.2.0
+    @version    0.2.1
     """
     updated_manifest = dict(manifest)
     operations = text_cleanup_state_service.normalized_manifest_operations(updated_manifest)
     default_operations = text_cleanup_state_service.normalized_manifest_operations({})
-    preserved_operation_kinds = operation_runtime_service.NARRATOR_PROFILE_PRESERVED_OPERATION_KINDS
+    preserved_operation_kinds = operation_runtime_service.TEXT_REVISION_PRESERVED_OPERATION_KINDS
     for selected_kind in operation_runtime_service.downstream_operation_kinds("chunking", include_current=False):
         if selected_kind in default_operations and selected_kind not in preserved_operation_kinds:
             operations[selected_kind] = default_operations[selected_kind]

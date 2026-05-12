@@ -13,7 +13,7 @@
          extraction, cleanup, and future workflow operations.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-22
-@version 0.8.0
+@version 0.8.1
 """
 
 # IMPORTS
@@ -380,6 +380,41 @@ def test_reset_operation_data_preserves_requested_narrator_artifacts(tmp_path) -
     assert not (project_root / config.CHARACTER_PROFILE_FILE_NAME).exists()
     assert not (project_root / config.CHARACTER_VOICES_TARGETS_FILE_NAME).exists()
     assert not (project_root / config.SPEECH_BLOCKS_OUTPUT_FILE_NAME).exists()
+
+
+def test_reset_operation_data_preserves_text_revision_artifacts(tmp_path) -> None:
+    """
+    @brief      Verify text revisions can preserve discovered characters and prepared voices.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-12
+    @version    0.1.0
+    """
+    project_root, _manifest = project_workspace_service.create_project("PreserveTextRevisionRuntime", tmp_path)
+    (project_root / config.CHARACTER_PROFILE_FILE_NAME).write_text("[]\n", encoding="utf-8")
+    (project_root / config.CHARACTER_DISCOVERY_REPORT_FILE_NAME).write_text("{}\n", encoding="utf-8")
+    (project_root / config.CHARACTER_DISCOVERY_STATE_FILE_NAME).write_text("{}\n", encoding="utf-8")
+    (project_root / config.NARRATOR_PROFILE_FILE_NAME).write_text("[]\n", encoding="utf-8")
+    (project_root / config.CHARACTER_VOICES_TARGETS_FILE_NAME).write_text("[]\n", encoding="utf-8")
+    (project_root / config.SPEECH_BLOCKS_OUTPUT_FILE_NAME).write_text("[]\n", encoding="utf-8")
+    (project_root / config.AUDIO_BLOCKS_OUTPUT_FILE_NAME).write_text("[]\n", encoding="utf-8")
+
+    operation_runtime_service.reset_operation_data(
+        project_root,
+        "chunking",
+        include_current=True,
+        preserve_operation_kinds=operation_runtime_service.TEXT_REVISION_PRESERVED_OPERATION_KINDS,
+    )
+
+    assert (project_root / config.CHARACTER_PROFILE_FILE_NAME).is_file()
+    assert (project_root / config.CHARACTER_DISCOVERY_REPORT_FILE_NAME).is_file()
+    assert (project_root / config.CHARACTER_DISCOVERY_STATE_FILE_NAME).is_file()
+    assert (project_root / config.NARRATOR_PROFILE_FILE_NAME).is_file()
+    assert (project_root / config.CHARACTER_VOICES_TARGETS_FILE_NAME).is_file()
+    assert not (project_root / config.SPEECH_BLOCKS_OUTPUT_FILE_NAME).exists()
+    assert not (project_root / config.AUDIO_BLOCKS_OUTPUT_FILE_NAME).exists()
 
 
 def test_resolve_operation_path_uses_project_root_without_creating_folders(tmp_path) -> None:

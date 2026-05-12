@@ -38,6 +38,10 @@ for completed text artifacts, and external full-project ZIP snapshots.
 Manual Text Chunking edits, inserts, and deletes now use the selective
 impact path to preserve unaffected Translation, Speech Blocks, and Audio
 Blocks work while resetting only affected chunks plus Audio Assembly.
+Text Cleanup reruns, manual cleaned-text edits, and full Text Chunking
+regeneration now preserve completed Character Discovery, Narator Voice, and
+Character Voices artifacts while resetting regenerated text, Speech Blocks,
+Audio Blocks, and Audio Assembly data.
 Manual Character Discovery add/edit/delete actions now also use the selective
 impact path: character add preserves generated downstream work,
 character edit unapproves only assigned Speech Blocks and resets only affected
@@ -58,9 +62,9 @@ Audio Blocks selected reset, selected regeneration, approval, and unapproval
 now preserve unrelated generated audio and reset only Audio Assembly outputs.
 Audio Assembly settings changes and reruns now preserve upstream Audio Blocks
 while replacing only assembly outputs/state/report.
-Current package version is `1.0.9`; same-narrator Speech Blocks now use compact
-AI-selected boundary IDs with deterministic source-span construction so local
-models no longer need to copy full narrator block text into JSON.
+Current package version is `1.0.10`; text cleanup and chunking revisions now
+preserve completed Character Discovery, Narator Voice, and Character Voices
+artifacts while resetting regenerated downstream audio/text data.
 
 Focused implementation documentation is maintained in `05_SoftwareDocu/`.
 The end-user help bundles are maintained in `05_SoftwareDocu/UserGuide/` and

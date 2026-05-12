@@ -15,7 +15,7 @@
          synchronization for the Text Cleanup page.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-24
-@version 0.8.0
+@version 0.8.1
 """
 
 # IMPORTS
@@ -103,7 +103,7 @@ def handle_deterministic_cleanup_requested(window: "MainWindow") -> None:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.1.2
+    @version    0.1.3
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._active_operation_kind is not None:
@@ -138,12 +138,12 @@ def handle_deterministic_cleanup_requested(window: "MainWindow") -> None:
             "cleanup",
             include_current=True,
             keep_input_snapshots=False,
-            preserve_operation_kinds=operation_runtime_service.NARRATOR_PROFILE_PRESERVED_OPERATION_KINDS,
+            preserve_operation_kinds=operation_runtime_service.TEXT_REVISION_PRESERVED_OPERATION_KINDS,
         )
         reset_manifest = text_cleanup_state_service.build_manifest_after_operation_reset(
             window._current_manifest,
             "cleanup",
-            preserve_operation_kinds=operation_runtime_service.NARRATOR_PROFILE_PRESERVED_OPERATION_KINDS,
+            preserve_operation_kinds=operation_runtime_service.TEXT_REVISION_PRESERVED_OPERATION_KINDS,
         )
         project_workspace_service.save_manifest(reset_manifest, window._current_project_root)
         window._current_manifest = project_workspace_service.load_manifest(window._current_project_root)
@@ -168,7 +168,7 @@ def handle_ai_cleanup_requested(window: "MainWindow", profile_id: str) -> None:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-30
-    @version    0.4.0
+    @version    0.4.1
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._active_operation_kind is not None:
@@ -222,12 +222,12 @@ def handle_ai_cleanup_requested(window: "MainWindow", profile_id: str) -> None:
                 "cleanup",
                 include_current=True,
                 keep_input_snapshots=False,
-                preserve_operation_kinds=operation_runtime_service.NARRATOR_PROFILE_PRESERVED_OPERATION_KINDS,
+                preserve_operation_kinds=operation_runtime_service.TEXT_REVISION_PRESERVED_OPERATION_KINDS,
             )
             reset_manifest = text_cleanup_state_service.build_manifest_after_operation_reset(
                 window._current_manifest,
                 "cleanup",
-                preserve_operation_kinds=operation_runtime_service.NARRATOR_PROFILE_PRESERVED_OPERATION_KINDS,
+                preserve_operation_kinds=operation_runtime_service.TEXT_REVISION_PRESERVED_OPERATION_KINDS,
             )
             project_workspace_service.save_manifest(reset_manifest, window._current_project_root)
             window._current_manifest = project_workspace_service.load_manifest(window._current_project_root)

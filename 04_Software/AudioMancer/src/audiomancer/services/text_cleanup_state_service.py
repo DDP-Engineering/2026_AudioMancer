@@ -14,7 +14,7 @@
          including manual cleaned-text edits.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-24
-@version 0.11.0
+@version 0.11.1
 """
 
 # IMPORTS
@@ -142,7 +142,7 @@ def save_cleaned_text_edit(project_root: Path, manifest: dict[str, object], clea
     @exception  ValueError Raised when the cleaned text artifact does not exist yet.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-24
-    @version    0.3.0
+    @version    0.3.1
     """
     cleaned_text_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.CLEANED_TEXT_FILE_NAME
     if not cleaned_text_path.is_file():
@@ -154,7 +154,7 @@ def save_cleaned_text_edit(project_root: Path, manifest: dict[str, object], clea
         "cleanup",
         include_current=False,
         keep_input_snapshots=False,
-        preserve_operation_kinds=operation_runtime_service.NARRATOR_PROFILE_PRESERVED_OPERATION_KINDS,
+        preserve_operation_kinds=operation_runtime_service.TEXT_REVISION_PRESERVED_OPERATION_KINDS,
     )
     updated_manifest = build_manifest_after_cleanup_edit(manifest)
     project_workspace_service.save_manifest(updated_manifest, project_root)
@@ -169,12 +169,12 @@ def build_manifest_after_cleanup_edit(manifest: dict[str, object]) -> dict[str, 
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-24
-    @version    0.2.0
+    @version    0.2.1
     """
     updated_manifest = dict(manifest)
     operations = normalized_manifest_operations(updated_manifest)
     default_operations = normalized_manifest_operations({})
-    preserved_operation_kinds = operation_runtime_service.NARRATOR_PROFILE_PRESERVED_OPERATION_KINDS
+    preserved_operation_kinds = operation_runtime_service.TEXT_REVISION_PRESERVED_OPERATION_KINDS
     for selected_kind in operation_runtime_service.downstream_operation_kinds("cleanup", include_current=False):
         if selected_kind in default_operations and selected_kind not in preserved_operation_kinds:
             operations[selected_kind] = default_operations[selected_kind]

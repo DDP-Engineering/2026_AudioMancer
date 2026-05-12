@@ -10,6 +10,15 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [1.0.10] - 2026-05-12
+
+### Changed
+
+- Text Cleanup reruns, manual cleaned-text edits, and full Text Chunking
+  regeneration now preserve completed Character Discovery, Narator Voice, and
+  Character Voices artifacts while resetting regenerated text, Speech Blocks,
+  Audio Blocks, and Audio Assembly data.
+
 ## [1.0.9] - 2026-05-12
 
 ### Changed

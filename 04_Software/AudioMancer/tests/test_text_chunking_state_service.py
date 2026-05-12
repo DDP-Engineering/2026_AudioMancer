@@ -13,7 +13,7 @@
          states and manual selected-chunk edits correctly.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-24
-@version 0.5.0
+@version 0.5.1
 """
 
 # IMPORTS
@@ -172,12 +172,23 @@ def test_save_chunk_text_edit_persists_text_and_selectively_resets_downstream(tm
         encoding="utf-8",
     )
     (project_root / config.NARRATOR_PROFILE_FILE_NAME).write_text("[]\n", encoding="utf-8")
+    (project_root / config.CHARACTER_PROFILE_FILE_NAME).write_text("[]\n", encoding="utf-8")
+    (project_root / config.CHARACTER_DISCOVERY_REPORT_FILE_NAME).write_text("{}\n", encoding="utf-8")
+    (project_root / config.CHARACTER_DISCOVERY_STATE_FILE_NAME).write_text(
+        json.dumps({"status": "completed", "folder_relative_path": config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH}) + "\n",
+        encoding="utf-8",
+    )
+    (project_root / config.CHARACTER_VOICES_TARGETS_FILE_NAME).write_text("[]\n", encoding="utf-8")
+    (project_root / config.SPEECH_BLOCKS_OUTPUT_FILE_NAME).write_text("[]\n", encoding="utf-8")
     manifest["current_stage"] = "character_discovery_ready"
     manifest["narrator_profile_name"] = "Warm Narrator"
     manifest["narrator_language"] = "fr"
     manifest["operations"]["chunking"]["status"] = "completed"
     manifest["operations"]["translation"]["status"] = "completed"
+    manifest["operations"]["character_discovery"]["status"] = "completed"
     manifest["operations"]["narrator_definition"]["status"] = "completed"
+    manifest["operations"]["character_voices"]["status"] = "completed"
+    manifest["operations"]["speech_blocks"]["status"] = "completed"
     project_workspace_service.save_manifest(manifest, project_root)
 
     updated_manifest = text_chunking_state_service.save_chunk_text_edit(
@@ -192,7 +203,10 @@ def test_save_chunk_text_edit_persists_text_and_selectively_resets_downstream(tm
     assert updated_manifest["current_stage"] == "translation_ready"
     assert updated_manifest["operations"]["chunking"]["status"] == "completed"
     assert updated_manifest["operations"]["translation"]["status"] == "not_started"
+    assert updated_manifest["operations"]["character_discovery"]["status"] == "completed"
     assert updated_manifest["operations"]["narrator_definition"]["status"] == "completed"
+    assert updated_manifest["operations"]["character_voices"]["status"] == "completed"
+    assert updated_manifest["operations"]["speech_blocks"]["status"] == "not_started"
     assert updated_manifest["narrator_profile_name"] == "Warm Narrator"
     assert updated_manifest["narrator_language"] == "fr"
     translated_chunks = json.loads((translation_root / config.TRANSLATED_CHUNKS_FILE_NAME).read_text(encoding="utf-8"))
@@ -200,6 +214,10 @@ def test_save_chunk_text_edit_persists_text_and_selectively_resets_downstream(tm
     assert translated_chunks[0]["translated_text"] == ""
     assert translated_chunks[0]["approved"] is False
     assert (project_root / config.NARRATOR_PROFILE_FILE_NAME).is_file()
+    assert (project_root / config.CHARACTER_PROFILE_FILE_NAME).is_file()
+    assert (project_root / config.CHARACTER_DISCOVERY_REPORT_FILE_NAME).is_file()
+    assert (project_root / config.CHARACTER_DISCOVERY_STATE_FILE_NAME).is_file()
+    assert (project_root / config.CHARACTER_VOICES_TARGETS_FILE_NAME).is_file()
 
 
 def test_insert_chunk_preserves_existing_chunk_ids_and_translation(tmp_path) -> None:
