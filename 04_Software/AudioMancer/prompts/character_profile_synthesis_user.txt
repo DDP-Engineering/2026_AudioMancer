@@ -6,6 +6,7 @@ Return exactly one JSON object with this shape:
   "aliases": [],
   "gender_hint": "",
   "voice_definition_prompt": "",
+  "preview_text": "",
   "confidence": "",
   "evidence": [
     {
@@ -38,5 +39,12 @@ Voice prompt rules:
 - Keep the voice prompt concise, positive, stable, reusable, and non-contradictory.
 - `voice_definition_prompt` must be one short English paragraph that cleanly describes the target voice identity and delivery.
 - The paragraph must include one explicit `Sex/Gender:` sentence.
+
+Preview text rules:
+- The preview_text field must be extracted only from this character's spoken dialogue in the provided evidence.
+- Combine exact source-language dialogue excerpts in source order when needed, but do not invent, paraphrase, translate, summarize, or add narration.
+- Remove only surrounding dialogue delimiters when they are not part of the spoken text.
+- The preview_text must be long enough to produce at least 6 seconds of Qwen TTS audio, usually 15-24 spoken words.
+- If the provided evidence does not contain enough spoken dialogue for the 6-second minimum, return an empty preview_text string.
 
 {character_payload}

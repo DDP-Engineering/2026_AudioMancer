@@ -14,7 +14,7 @@
          discovery workflow.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-08
-@version 0.9.0
+@version 0.10.0
 """
 
 # IMPORTS
@@ -58,6 +58,10 @@ def test_start_discovery_persists_outputs_and_report(monkeypatch, tmp_path) -> N
                             "evidence": [
                                 {
                                     "chunk_id": "chunk-0001",
+                                    "source_excerpt": (
+                                        '"Alice keeps her voice steady as she tells everyone to wait until the moon '
+                                        'clears the tower."'
+                                    ),
                                     "reason": "Alice speaks in direct dialogue.",
                                 }
                             ],
@@ -73,6 +77,9 @@ def test_start_discovery_persists_outputs_and_report(monkeypatch, tmp_path) -> N
                     "gender_hint": "female",
                     "voice_definition_prompt": (
                         "Create a consistent spoken voice for Alice. Warm mezzo voice with gentle authority."
+                    ),
+                    "preview_text": (
+                        "Alice keeps her voice steady as she tells everyone to wait until the moon clears the tower."
                     ),
                     "confidence": "high",
                 },
@@ -101,6 +108,9 @@ def test_start_discovery_persists_outputs_and_report(monkeypatch, tmp_path) -> N
     assert profiles[0]["canonical_name"] == "Alice"
     assert profiles[0]["gender_hint"] == "female"
     assert "gentle authority" in profiles[0]["voice_definition_prompt"]
+    assert profiles[0]["preview_text"] == (
+        "Alice keeps her voice steady as she tells everyone to wait until the moon clears the tower."
+    )
     assert profiles[0]["evidence"][0]["chunk_id"] == "chunk-0001"
     assert character_discovery_service.load_input_chunks(project_root)[0]["chunk_id"] == "chunk-0001"
     assert (project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.CHUNK_ARTIFACT_FILE_NAME).is_file()
@@ -395,6 +405,55 @@ def test_regenerate_character_voice_definition_preserves_compact_voice_prompt() 
 
     assert regenerated_profile["voice_definition_prompt"].startswith("Create a consistent spoken voice for Elizabeth.")
     assert "Sex/Gender: female." in regenerated_profile["voice_definition_prompt"]
+
+
+def test_build_profile_from_synthesis_uses_dialogue_preview_fallback() -> None:
+    """
+    @brief      Verify character synthesis derives a six-second preview from dialogue evidence.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-12
+    @version    0.1.0
+    """
+    profile = character_discovery_service._build_profile_from_synthesis(  # noqa: SLF001
+        {
+            "canonical_name": "Alice",
+            "gender_hint": "female",
+            "voice_definition_prompt": "Create a consistent spoken voice for Alice. Clear and calm.",
+            "preview_text": "Too short.",
+            "confidence": "high",
+        },
+        {
+            "character_id": "alice",
+            "canonical_name": "Alice",
+            "gender_hint": "female",
+            "confidence": "high",
+            "evidence": [
+                {
+                    "chunk_id": "chunk-0001",
+                    "sequence_index": 1,
+                    "dialogue_span_id": "dialogue-001",
+                    "source_excerpt": '"Stay close to me while the storm passes over the harbor."',
+                    "reason": "Alice speaks.",
+                    "confidence": "high",
+                },
+                {
+                    "chunk_id": "chunk-0002",
+                    "sequence_index": 2,
+                    "dialogue_span_id": "dialogue-002",
+                    "source_excerpt": '"When the lamps are lit, we will cross the square together."',
+                    "reason": "Alice speaks again.",
+                    "confidence": "high",
+                },
+            ],
+        },
+    )
+
+    assert profile["preview_text"] == (
+        "Stay close to me while the storm passes over the harbor. "
+        "When the lamps are lit, we will cross the square together."
+    )
 
 
 def test_merge_character_candidates_keeps_role_speaker_candidate() -> None:

@@ -33,9 +33,9 @@ Profile rules:
 - Keep the narrator voice stable, human, grounded, emotionally believable, restrained, cinematic, and natural for long-form audiobook delivery.
 - Avoid contradictory descriptors, excessive plot summary, meme language, cartoon exaggeration, and overly theatrical wording.
 - The prompt_text must not ask to generate audio and must not mention implementation, tokens, JSON, or this prompt.
-- The preview_text must be one original sentence in the selected voice language, long enough to produce at least 3 seconds of Qwen TTS audio, usually 8-24 spoken words.
+- The preview_text must be one original sentence in the selected voice language, long enough to produce at least 6 seconds of Qwen TTS audio, usually 15-24 spoken words.
 - The preview_text must fit normal narrator sample use and must not quote the source text.
 - Do not imitate celebrities, actors, real people, or copyrighted character voices.
 
-Style observations:
+Compact style observations:
 {style_observations}

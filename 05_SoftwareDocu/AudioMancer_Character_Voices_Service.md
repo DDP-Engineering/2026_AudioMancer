@@ -159,6 +159,9 @@ Target rules:
   character-owned `voice_definition_prompt`
 - character `prompt_text` is preserved until reset, except that synchronization
   backfills mandatory sex/gender guidance when an existing prompt lacks it
+- new character targets prefer the Character Discovery `preview_text` handoff
+  when available, so samples start from source dialogue spoken by that
+  character
 - character `preview_text` is preserved until explicitly edited and saved, or
   reset to the localized default when the selected voice language changes on
   `Narator Voice`

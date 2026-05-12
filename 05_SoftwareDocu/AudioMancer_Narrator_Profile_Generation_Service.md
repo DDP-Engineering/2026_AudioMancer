@@ -74,8 +74,9 @@ Processing flow:
    selected AI profile, requested count, gender allocation, model settings, and
    context budget still match.
 6. Ask the AI for compact observations for each remaining source window.
-7. Ask the AI for strict JSON narrator profiles using the requested count and
-   deterministic gender allocation.
+7. Deterministically merge repeated style terms into a compact frequency
+   summary, then ask the AI for strict JSON narrator profiles using the
+   requested count and deterministic gender allocation.
 8. Validate the full response before writing any profile data.
 9. Append generated profiles and persist report/state with cumulative token
    usage and source fingerprint metadata.
@@ -163,9 +164,9 @@ Generated `prompt_text` guidance follows the Qwen3-TTS Voice Designer guide:
 Generated `preview_text` must be long enough to produce a useful Qwen TTS
 reference sample:
 
-- at least the configured minimum preview duration, currently `3.0` seconds
+- at least the configured minimum preview duration, currently `6.0` seconds
 - estimated with `DEFAULT_TTS_WORDS_PER_AUDIO_SECOND`, currently `2.5`
-- effectively at least `8` spoken words with the current defaults
+- effectively at least `15` spoken words with the current defaults
 - still a single original sentence and still capped by the TTS preview
   character limit
 
@@ -183,6 +184,7 @@ Report/state metadata includes:
 - `requested_count`
 - `gender_allocation`
 - `generated_profile_ids`
+- `style_summary`
 - `budget_metadata`
 - `token_usage`
 
@@ -199,6 +201,11 @@ Running-state `resume_checkpoint` includes:
 - AI transaction `log_relative_path`
 - `budget_metadata`
 - `model_settings`
+
+The final profile-synthesis request does not inject every raw style observation
+from large books. It sends a deterministic `style_summary` that counts repeated
+normalized terms per style field, preserves the top recurring terms, and keeps
+the raw per-window observations only in the resume checkpoint and AI log.
 
 Gender allocation:
 

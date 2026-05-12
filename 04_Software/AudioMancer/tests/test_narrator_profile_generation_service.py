@@ -13,7 +13,7 @@
          selection, validation, persistence, resume, and cancellation contracts.
 @author Eng. Dan Dumitru Pasare
 @date 2026-05-11
-@version 0.2.1
+@version 0.3.0
 """
 
 # IMPORTS
@@ -233,6 +233,51 @@ def test_narrator_profile_generation_rejects_short_preview_text(
     assert not narrator_definition_service.load_profiles(project_root)
 
 
+def test_narrator_profile_generation_rejects_preview_text_below_six_seconds(
+    tmp_path,
+    monkeypatch,
+    mock_prompt_environment,
+) -> None:
+    """
+    @brief      Verify generated preview text below the six-second estimate is rejected.
+    @param[in]  tmp_path Temporary path fixture.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  mock_prompt_environment Prompt-root fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-12
+    @version    0.1.0
+    """
+    _write_narrator_prompts(mock_prompt_environment)
+    project_root = tmp_path / "project"
+    project_root.mkdir()
+    _write_chunks(project_root, "A reflective book with intimate narration and restrained tension.")
+    monkeypatch.setattr(
+        narrator_profile_generation_service.llm_provider_service,
+        "chat_json",
+        _chat_json_factory(
+            [],
+            _profiles_payload(
+                2,
+                preview_text="This narrator sample sentence has only twelve measured spoken words for testing.",
+            ),
+        ),
+    )
+
+    with pytest.raises(ValueError, match=r"minimum 15"):
+        narrator_profile_generation_service.generate_narrator_profiles(
+            project_root,
+            {},
+            _MOCK_AI_PROFILE,
+            2,
+            "en",
+            220,
+        )
+
+    assert not narrator_definition_service.load_profiles(project_root)
+
+
 def test_narrator_profile_generation_merges_token_usage_into_report_and_state(
     tmp_path,
     monkeypatch,
@@ -293,7 +338,7 @@ def test_narrator_profile_generation_cancellation_leaves_profiles_unchanged(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-11
-    @version    0.1.0
+    @version    0.2.0
     """
     _write_narrator_prompts(mock_prompt_environment)
     project_root = tmp_path / "project"
@@ -517,6 +562,85 @@ def test_narrator_profile_generation_resumes_final_generation_without_reanalyzin
     )
 
     assert resumed_calls == ["profile_generation"]
+    assert len(narrator_definition_service.load_profiles(project_root)) == 2
+
+
+def test_narrator_profile_generation_compacts_style_observations_for_final_prompt(
+    tmp_path,
+    monkeypatch,
+    mock_prompt_environment,
+) -> None:
+    """
+    @brief      Verify final narrator profile synthesis receives a compact style summary.
+    @param[in]  tmp_path Temporary path fixture.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  mock_prompt_environment Prompt-root fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-12
+    @version    0.1.0
+    """
+    _write_narrator_prompts(mock_prompt_environment)
+    project_root = tmp_path / "project"
+    project_root.mkdir()
+    _write_chunk_records(
+        project_root,
+        [f"Style window {index} with irony, dialogue, manners, and restrained feeling." for index in range(1, 26)],
+    )
+    monkeypatch.setattr(narrator_profile_generation_service.config, "DEFAULT_NARRATOR_PROFILE_STYLE_WINDOW_SIZE", 1)
+    final_prompts: list[str] = []
+
+    def _chat_json(_profile, _system_prompt, user_prompt, **kwargs):
+        """
+        @brief      Return repeated style observations and capture the compact final prompt.
+        @return     Fake provider response.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-12
+        @version    0.1.0
+        """
+        stage_label = str(dict(kwargs.get("log_context") or {}).get("stage_label", ""))
+        if stage_label == "style_window":
+            return {
+                "payload": {
+                    "genre": ["Novel of manners", "Novel of manners"],
+                    "tone": ["Restrained irony", "restrained irony.", "Social satire"],
+                    "pacing": ["Measured"],
+                    "narrator_distance": ["Close social observation"],
+                    "emotional_range": ["Subtle"],
+                    "diction": ["Polished"],
+                    "worldbuilding_cues": ["Regency society"],
+                    "themes": ["Marriage and status", "Marriage and status"],
+                    "narration_risks": ["Overplaying irony"],
+                },
+                "usage": _style_usage_payload(),
+            }
+        final_prompts.append(user_prompt)
+        return {"payload": _profiles_payload(2), "usage": _generation_usage_payload()}
+
+    monkeypatch.setattr(
+        narrator_profile_generation_service.llm_provider_service,
+        "chat_json",
+        _chat_json,
+    )
+
+    report_payload = narrator_profile_generation_service.generate_narrator_profiles(
+        project_root,
+        {},
+        _MOCK_AI_PROFILE,
+        2,
+        "en",
+        220,
+    )
+
+    assert len(final_prompts) == 1
+    assert '"summary_mode": "frequency_merge"' in final_prompts[0]
+    assert '"observation_count": 25' in final_prompts[0]
+    assert '"value": "Restrained irony"' in final_prompts[0]
+    assert '"count": 50' in final_prompts[0]
+    assert '"window_index"' not in final_prompts[0]
+    assert report_payload["style_summary"]["observation_count"] == 25
     assert len(narrator_definition_service.load_profiles(project_root)) == 2
 
 
@@ -756,7 +880,7 @@ def _profiles_payload(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-11
-    @version    0.1.0
+    @version    0.2.0
     """
     resolved_genders = genders or tuple("male" if index < count // 2 else "female" for index in range(count))
     profiles = []
@@ -772,7 +896,10 @@ def _profiles_payload(
                 ),
                 "preview_text": (
                     preview_text
-                    or f"Original preview sentence number {index} carries enough words for a stable sample."
+                    or (
+                        f"Original preview sentence number {index} carries enough measured words for a stable "
+                        "narrator sample during calm audiobook testing."
+                    )
                 ),
             }
         )

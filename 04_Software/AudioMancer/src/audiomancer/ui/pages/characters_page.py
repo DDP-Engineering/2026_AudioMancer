@@ -14,7 +14,7 @@
          preview for discovered and manually added speaking characters.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-08
-@version 0.6.0
+@version 0.6.1
 """
 
 # IMPORTS
@@ -1022,7 +1022,7 @@ class CharactersPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-08
-        @version    0.5.0
+        @version    0.6.0
         """
         base_profile = self._active_profile() or {}
         draft_profile = {
@@ -1031,6 +1031,7 @@ class CharactersPage(QWidget):
             "aliases": [item.strip() for item in self._aliases_edit.text().split(",") if item.strip()],
             "gender_hint": self._gender_hint_edit.text().strip(),
             "voice_definition_prompt": self._voice_definition_prompt_edit.toPlainText().strip(),
+            "preview_text": str(base_profile.get("preview_text", "")).strip(),
             "confidence": self._confidence_edit.text().strip(),
             "evidence": [dict(item) for item in list(base_profile.get("evidence", []))],
             "updated_at": base_profile.get("updated_at"),
@@ -1182,11 +1183,12 @@ def _normalize_page_profile(profile: dict[str, object]) -> dict[str, object]:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-20
-    @version    2.0.0
+    @version    2.1.0
     """
     normalized_profile = dict(profile)
     normalized_profile.setdefault("aliases", [])
     normalized_profile.setdefault("voice_definition_prompt", "")
+    normalized_profile.setdefault("preview_text", "")
     return normalized_profile
 
 

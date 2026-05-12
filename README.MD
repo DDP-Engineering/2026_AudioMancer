@@ -62,9 +62,9 @@ Audio Blocks selected reset, selected regeneration, approval, and unapproval
 now preserve unrelated generated audio and reset only Audio Assembly outputs.
 Audio Assembly settings changes and reruns now preserve upstream Audio Blocks
 while replacing only assembly outputs/state/report.
-Current package version is `1.0.10`; text cleanup and chunking revisions now
-preserve completed Character Discovery, Narator Voice, and Character Voices
-artifacts while resetting regenerated downstream audio/text data.
+Current package version is `1.0.11`; AI-assisted Narator Voice generation now
+uses six-second preview text and compacted style summaries, while Character
+Discovery can hand source-dialogue preview text to Character Voices.
 
 Focused implementation documentation is maintained in `05_SoftwareDocu/`.
 The end-user help bundles are maintained in `05_SoftwareDocu/UserGuide/` and

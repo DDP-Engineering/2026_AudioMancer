@@ -15,7 +15,7 @@
          operation state.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-22
-@version 0.13.1
+@version 0.14.0
 """
 
 # IMPORTS
@@ -33,6 +33,7 @@ from audiomancer.services import (
     project_workspace_service,
     prompt_template_service,
     token_usage_service,
+    tts_budget_service,
 )
 from audiomancer.services.logging_service import get_component_logger, trace_function
 from audiomancer.services.operation_runtime_service import (
@@ -102,6 +103,7 @@ BudgetMetadataPayload = dict[str, int]
 ModelSettingsPayload = dict[str, object]
 
 CHARACTER_VOICE_PROMPT_FIELD = "voice_definition_prompt"
+CHARACTER_PREVIEW_TEXT_FIELD = "preview_text"
 
 
 # PUBLIC API
@@ -958,7 +960,7 @@ def _build_manual_character_profile(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-08
-    @version    1.0.0
+    @version    1.1.0
     """
     return regenerate_character_voice_definition(
         {
@@ -967,6 +969,7 @@ def _build_manual_character_profile(
             "aliases": [],
             "gender_hint": "",
             "voice_definition_prompt": "",
+            "preview_text": "",
             "confidence": "",
             "review_status": CHARACTER_REVIEW_STATUS_MANUAL,
             "evidence": [
@@ -2205,7 +2208,7 @@ def _build_profile_from_synthesis(
     @return     Derived helper result.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.1.0
+    @version    0.2.0
     """
     return regenerate_character_voice_definition(
         {
@@ -2216,6 +2219,7 @@ def _build_profile_from_synthesis(
             "voice_definition_prompt": str(
                 response_payload.get("voice_definition_prompt", candidate.get("voice_definition_prompt", ""))
             ).strip(),
+            CHARACTER_PREVIEW_TEXT_FIELD: _build_character_preview_text(response_payload, candidate),
             "confidence": str(response_payload.get("confidence", candidate.get("confidence", ""))).strip(),
             "review_status": _normalize_review_status(
                 response_payload.get(
@@ -2306,7 +2310,7 @@ def _normalized_character_profile_core(profile_payload: dict[str, object]) -> Ch
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    2.0.0
+    @version    2.1.0
     """
     normalized_profile: CharacterProfilePayload = {
         "character_id": str(profile_payload.get("character_id", "")).strip(),
@@ -2314,6 +2318,9 @@ def _normalized_character_profile_core(profile_payload: dict[str, object]) -> Ch
         "aliases": _normalize_string_list(profile_payload.get("aliases", [])),
         "gender_hint": str(profile_payload.get("gender_hint", "")).strip(),
         CHARACTER_VOICE_PROMPT_FIELD: str(profile_payload.get(CHARACTER_VOICE_PROMPT_FIELD, "")).strip(),
+        CHARACTER_PREVIEW_TEXT_FIELD: _normalized_character_preview_text(
+            profile_payload.get(CHARACTER_PREVIEW_TEXT_FIELD, "")
+        ),
         "confidence": str(profile_payload.get("confidence", "")).strip(),
         "review_status": _normalize_review_status(profile_payload.get("review_status", "")),
         "evidence": _restore_evidence(profile_payload.get("evidence", [])),
@@ -2334,6 +2341,162 @@ def _persistable_character_profile(profile_payload: dict[str, object]) -> Charac
     @version    0.1.0
     """
     return _normalize_character_profile(profile_payload)
+
+
+def _build_character_preview_text(
+    response_payload: dict[str, object],
+    candidate: dict[str, object],
+) -> str:
+    """
+    @brief      Build a validated character sample preview from spoken dialogue evidence.
+    @param[in]  response_payload AI synthesis response payload.
+    @param[in]  candidate Merged character candidate payload.
+    @return     Preview text meeting the configured minimum duration estimate, or an empty string.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-12
+    @version    0.1.0
+    """
+    response_preview_text = _normalized_character_preview_text(response_payload.get(CHARACTER_PREVIEW_TEXT_FIELD, ""))
+    if _is_valid_character_preview_text(response_preview_text) and _preview_text_supported_by_evidence(
+        response_preview_text,
+        candidate,
+    ):
+        return response_preview_text
+    return _candidate_preview_text(candidate)
+
+
+def _candidate_preview_text(candidate: dict[str, object]) -> str:
+    """
+    @brief      Derive a character preview text from ranked spoken-dialogue evidence excerpts.
+    @param[in]  candidate Merged character candidate payload.
+    @return     Preview text meeting the configured minimum duration estimate, or an empty string.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-12
+    @version    0.1.0
+    """
+    fragments: list[str] = []
+    preview_limit = max(1, int(config.DEFAULT_TTS_PREVIEW_TEXT_CHARACTER_LIMIT))
+    for evidence_item in _rank_synthesis_evidence(_restore_evidence(candidate.get("evidence", []))):
+        if not _evidence_has_direct_dialogue(evidence_item):
+            continue
+        fragment = _spoken_preview_fragment(str(evidence_item.get("source_excerpt", "")))
+        if not fragment:
+            continue
+        current_text = " ".join(fragments).strip()
+        proposed_text = " ".join(item for item in (current_text, fragment) if item).strip()
+        if len(proposed_text) > preview_limit:
+            if _is_valid_character_preview_text(current_text):
+                return current_text
+            continue
+        fragments.append(fragment)
+        if _is_valid_character_preview_text(proposed_text):
+            return proposed_text
+    return ""
+
+
+def _preview_text_supported_by_evidence(preview_text: str, candidate: dict[str, object]) -> bool:
+    """
+    @brief      Verify a generated preview is extracted from spoken-dialogue evidence.
+    @param[in]  preview_text Candidate preview text.
+    @param[in]  candidate Merged character candidate payload.
+    @return     True when the normalized preview appears in the normalized spoken evidence text.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-12
+    @version    0.1.0
+    """
+    normalized_preview_text = _normalized_preview_support_text(preview_text)
+    if not normalized_preview_text:
+        return False
+    evidence_fragments = [
+        _spoken_preview_fragment(str(evidence_item.get("source_excerpt", "")))
+        for evidence_item in _rank_synthesis_evidence(_restore_evidence(candidate.get("evidence", [])))
+        if _evidence_has_direct_dialogue(evidence_item)
+    ]
+    normalized_evidence_text = _normalized_preview_support_text(" ".join(evidence_fragments))
+    return normalized_preview_text in normalized_evidence_text
+
+
+def _spoken_preview_fragment(text: str) -> str:
+    """
+    @brief      Normalize one spoken evidence excerpt for preview-sample use.
+    @param[in]  text Source dialogue excerpt.
+    @return     Excerpt with surrounding dialogue delimiters removed.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-12
+    @version    0.1.0
+    """
+    normalized_text = " ".join(str(text).split()).strip()
+    normalized_text = normalized_text.strip("\"'\u201c\u201d\u2018\u2019\u00ab\u00bb\u300c\u300d\u300e\u300f")
+    normalized_text = normalized_text.lstrip("-\u2013\u2014").strip()
+    return normalized_text
+
+
+def _normalized_preview_support_text(text: str) -> str:
+    """
+    @brief      Normalize preview/evidence text for source-support checks.
+    @param[in]  text Candidate text.
+    @return     Lowercase alphanumeric support-check text with normalized spacing.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-12
+    @version    0.1.0
+    """
+    return " ".join(re.sub(r"[^\w\s]", " ", str(text).casefold(), flags=re.UNICODE).split())
+
+
+def _normalized_character_preview_text(preview_text: object) -> str:
+    """
+    @brief      Normalize one generated character preview text value.
+    @param[in]  preview_text Candidate preview text.
+    @return     Single-line preview text capped to the configured character limit.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-12
+    @version    0.1.0
+    """
+    normalized_text = " ".join(str(preview_text or "").split()).strip()
+    preview_limit = max(1, int(config.DEFAULT_TTS_PREVIEW_TEXT_CHARACTER_LIMIT))
+    if len(normalized_text) <= preview_limit:
+        return normalized_text
+    return ""
+
+
+def _is_valid_character_preview_text(preview_text: str) -> bool:
+    """
+    @brief      Decide whether preview text meets the configured Qwen TTS duration estimate.
+    @param[in]  preview_text Candidate preview text.
+    @return     True when the text is long enough and inside the preview character limit.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-12
+    @version    0.1.0
+    """
+    normalized_text = _normalized_character_preview_text(preview_text)
+    if not normalized_text:
+        return False
+    return tts_budget_service.estimated_word_count(normalized_text) >= _minimum_character_preview_word_count()
+
+
+def _minimum_character_preview_word_count() -> int:
+    """
+    @brief      Estimate the minimum character-preview word count for useful Qwen TTS references.
+    @return     Minimum preview word count.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-12
+    @version    0.1.0
+    """
+    return max(
+        1,
+        int(
+            float(config.DEFAULT_TTS_MIN_PREVIEW_AUDIO_SECONDS) * float(config.DEFAULT_TTS_WORDS_PER_AUDIO_SECOND)
+            + 0.999
+        ),
+    )
 
 
 def _character_voice_gender_instruction(profile_payload: dict[str, object]) -> str:

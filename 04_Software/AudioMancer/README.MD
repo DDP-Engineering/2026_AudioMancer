@@ -10,10 +10,10 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
 This folder contains the current Python application implementation for
 `AudioMancer`. It includes a project-aware main-window shell copied from
 `DDP_Audiomancer` and adapted to the local package.
-Current package version is `1.0.9`; same-narrator Speech Blocks now use compact
-AI-selected boundary IDs with deterministic source-span construction so local
-models no longer need to copy full narrator block text into JSON. Text
-Cleanup, Text Chunking, Characters, Narator Voice, Character Voices, Speech Blocks, and Audio Blocks now keep
+Current package version is `1.0.11`; AI-assisted Narator Voice generation now
+uses six-second preview text and compacted style summaries, while Character
+Discovery can hand source-dialogue preview text to Character Voices.
+Text Cleanup, Text Chunking, Characters, Narator Voice, Character Voices, Speech Blocks, and Audio Blocks now keep
 minimum splitter widths on their main review panes so operator text remains
 readable during resizing. Narator Voice now places profile selection directly
 above the profile list and gives the Voice Designer Prompt and Preview Text

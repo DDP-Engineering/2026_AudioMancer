@@ -14,7 +14,7 @@
          generation report/state sidecars without generating narrator audio.
 @author Eng. Dan Dumitru Pasare
 @date 2026-05-11
-@version 0.2.1
+@version 0.3.0
 """
 
 # IMPORTS
@@ -78,6 +78,30 @@ OperationStatePayload = dict[str, object]
 
 # @brief Runtime text unit consumed by the profile-generation workflow.
 SourceUnitPayload = dict[str, object]
+
+_STYLE_OBSERVATION_FIELDS = (
+    "genre",
+    "tone",
+    "pacing",
+    "narrator_distance",
+    "emotional_range",
+    "diction",
+    "worldbuilding_cues",
+    "themes",
+    "narration_risks",
+)
+
+_STYLE_SUMMARY_TERM_LIMITS = {
+    "genre": 8,
+    "tone": 12,
+    "pacing": 10,
+    "narrator_distance": 8,
+    "emotional_range": 12,
+    "diction": 12,
+    "worldbuilding_cues": 12,
+    "themes": 16,
+    "narration_risks": 12,
+}
 
 
 # PUBLIC API
@@ -308,6 +332,7 @@ def generate_narrator_profiles(
         )
 
     raise_if_cancelled(cancel_requested)
+    style_summary = _build_style_observation_summary(observations)
     user_prompt = prompt_template_service.render_prompt(
         "narrator_profile_generation_user",
         {
@@ -316,7 +341,7 @@ def generate_narrator_profiles(
             "male_count": int(allocation["male"]),
             "female_count": int(allocation["female"]),
             "random_gender_count": int(allocation["random"]),
-            "style_observations": json.dumps(observations, indent=2, ensure_ascii=False),
+            "style_observations": json.dumps(style_summary, indent=2, ensure_ascii=False),
         },
     )
     try:
@@ -373,6 +398,7 @@ def generate_narrator_profiles(
         "generated_profile_ids": generated_profile_ids,
         "generated_profile_count": len(generated_profile_ids),
         "style_brief": str(response_payload.get("style_brief", "")).strip(),
+        "style_summary": style_summary,
         "budget_metadata": budget_metadata,
         "warning_count": 0,
         "warnings": [],
@@ -742,16 +768,85 @@ def _normalize_style_observation(payload: object, window_index: int) -> dict[str
     response_payload = dict(payload) if isinstance(payload, dict) else {}
     return {
         "window_index": window_index,
-        "genre": _string_list(response_payload.get("genre")),
-        "tone": _string_list(response_payload.get("tone")),
-        "pacing": _string_list(response_payload.get("pacing")),
-        "narrator_distance": _string_list(response_payload.get("narrator_distance")),
-        "emotional_range": _string_list(response_payload.get("emotional_range")),
-        "diction": _string_list(response_payload.get("diction")),
-        "worldbuilding_cues": _string_list(response_payload.get("worldbuilding_cues")),
-        "themes": _string_list(response_payload.get("themes")),
-        "narration_risks": _string_list(response_payload.get("narration_risks")),
+        **{field_name: _string_list(response_payload.get(field_name)) for field_name in _STYLE_OBSERVATION_FIELDS},
     }
+
+
+def _build_style_observation_summary(observations: list[dict[str, object]]) -> dict[str, object]:
+    """
+    @brief      Build a compact frequency summary of repeated narrator style observations.
+    @param[in]  observations Per-window style observations from the first AI pass.
+    @return     Compact style summary safe for the final profile-generation prompt.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-12
+    @version    0.1.0
+    """
+    summarized_fields: dict[str, object] = {}
+    unique_term_counts: dict[str, int] = {}
+    omitted_term_counts: dict[str, int] = {}
+    for field_name in _STYLE_OBSERVATION_FIELDS:
+        ranked_terms = _rank_style_terms(observations, field_name)
+        limit = max(1, int(_STYLE_SUMMARY_TERM_LIMITS[field_name]))
+        summarized_fields[field_name] = ranked_terms[:limit]
+        unique_term_counts[field_name] = len(ranked_terms)
+        omitted_term_counts[field_name] = max(0, len(ranked_terms) - limit)
+    return {
+        "observation_count": len(observations),
+        "summary_mode": "frequency_merge",
+        "fields": summarized_fields,
+        "unique_term_counts": unique_term_counts,
+        "omitted_term_counts": omitted_term_counts,
+    }
+
+
+def _rank_style_terms(observations: list[dict[str, object]], field_name: str) -> list[dict[str, object]]:
+    """
+    @brief      Count and rank normalized style terms for one observation field.
+    @param[in]  observations Per-window style observations.
+    @param[in]  field_name Observation field to summarize.
+    @return     Ranked term payloads with original display value and count.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-12
+    @version    0.1.0
+    """
+    term_counts: dict[str, int] = {}
+    term_display_values: dict[str, str] = {}
+    term_first_seen: dict[str, int] = {}
+    sequence_index = 0
+    for observation in observations:
+        for raw_term in _string_list(observation.get(field_name)):
+            normalized_term = _normalized_style_term(raw_term)
+            if not normalized_term:
+                continue
+            sequence_index += 1
+            term_counts[normalized_term] = term_counts.get(normalized_term, 0) + 1
+            term_display_values.setdefault(normalized_term, raw_term.strip())
+            term_first_seen.setdefault(normalized_term, sequence_index)
+    return [
+        {
+            "value": term_display_values[normalized_term],
+            "count": term_counts[normalized_term],
+        }
+        for normalized_term in sorted(
+            term_counts,
+            key=lambda term: (-term_counts[term], term_first_seen[term], term_display_values[term].casefold()),
+        )
+    ]
+
+
+def _normalized_style_term(term: object) -> str:
+    """
+    @brief      Normalize one style term for deterministic exact-frequency merging.
+    @param[in]  term Candidate style term.
+    @return     Lowercase normalized style key.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-12
+    @version    0.1.0
+    """
+    return " ".join(str(term or "").casefold().strip(" \t\r\n.,;:!?").split())
 
 
 def _validated_generated_profiles(

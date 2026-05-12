@@ -129,7 +129,7 @@ High-level runtime flow:
 - Internal dependencies:
   `audiomancer.config`, `deterministic_chunking_service`,
   `text_cleanup_state_service`, `prompt_template_service`,
-  `llm_provider_service`, `operation_runtime_service`,
+  `llm_provider_service`, `operation_runtime_service`, `tts_budget_service`,
   `project_workspace_service`, `ui_state_service`, and the main-window shell
 - External dependencies:
   Python standard library, `PySide6`, and one OpenAI-compatible AI backend
@@ -163,6 +163,7 @@ Persisted character profile fields:
 - `aliases`
 - `gender_hint`
 - `voice_definition_prompt`
+- `preview_text`
 - `confidence`
 - `review_status`
 - `evidence`
@@ -181,6 +182,10 @@ Voice-definition rules:
   `Character Voices` and includes explicit `Sex/Gender:` guidance
 - manual edits to the final prompt are preserved as the current character
   voice-design source
+- `preview_text` is an optional handoff sample later consumed by
+  `Character Voices`; AI synthesis fills it only from the character's spoken
+  dialogue evidence when the extracted text is long enough for the configured
+  minimum preview duration, currently `6.0` seconds
 
 Evidence items currently store:
 

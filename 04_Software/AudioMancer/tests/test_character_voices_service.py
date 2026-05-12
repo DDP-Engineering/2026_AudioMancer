@@ -13,7 +13,7 @@
          persistence, and narrator-copy sample sync behavior.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-20
-@version 1.5.0
+@version 1.6.0
 """
 
 # IMPORTS
@@ -151,6 +151,40 @@ def test_save_target_prompt_persists_preview_text(tmp_path) -> None:
         character_voices_service.voice_target_by_id(project_root, target_id)["preview_text"]
         == "First line.\nSecond line."
     )
+
+
+def test_sync_voice_plan_uses_character_discovery_preview_text(tmp_path) -> None:
+    """
+    @brief      Verify new character voice targets use discovered spoken-dialogue preview text.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-12
+    @version    0.1.0
+    """
+    project_root, _manifest = _create_project_with_selected_narrator(tmp_path, "CharacterVoicesDiscoveryPreview")
+    discovered_preview_text = (
+        "Stay close to me while the storm passes over the harbor. "
+        "When the lamps are lit, we will cross the square together."
+    )
+
+    voice_targets = character_voices_service.sync_voice_plan(
+        project_root,
+        [
+            {
+                "character_id": "alice",
+                "canonical_name": "Alice",
+                "preview_text": discovered_preview_text,
+            }
+        ],
+        narrator_definition_service.profile_by_id(
+            project_root,
+            narrator_definition_service.load_selected_profile_state(project_root)["selected_profile_id"],
+        ),
+    )
+
+    assert voice_targets[1]["preview_text"] == discovered_preview_text
 
 
 def test_sync_voice_plan_refreshes_unedited_prompt_with_explicit_gender(tmp_path) -> None:

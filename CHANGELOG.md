@@ -10,6 +10,25 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [1.0.11] - 2026-05-12
+
+### Added
+
+- AI-assisted Character Discovery now stores a `preview_text` field extracted
+  from each character's spoken dialogue when enough evidence exists for an
+  estimated 6-second Qwen TTS reference sample, and Character Voices seeds new
+  character targets from that discovered preview text.
+
+### Changed
+
+- AI-assisted Narator Voice profile generation now requires preview text long
+  enough for an estimated 6-second Qwen TTS reference sample instead of the
+  previous 3-second minimum.
+- AI-assisted Narator Voice profile generation now compacts repeated
+  first-pass style observations into a deterministic frequency summary before
+  the final profile-synthesis request, avoiding oversized second-pass prompts
+  on large books.
+
 ## [1.0.10] - 2026-05-12
 
 ### Changed

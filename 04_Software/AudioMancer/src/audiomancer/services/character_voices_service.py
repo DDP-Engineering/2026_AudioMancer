@@ -14,7 +14,7 @@
          for the Character Voices workflow.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-20
-@version 1.7.0
+@version 1.8.0
 """
 
 # IMPORTS
@@ -182,7 +182,7 @@ def sync_voice_plan(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-20
-    @version    2.0.0
+    @version    2.1.0
     """
     normalized_voice_language = narrator_definition_service.narrator_language_code(voice_language)
     existing_targets_by_id = {
@@ -231,7 +231,11 @@ def sync_voice_plan(
                         default_prompt_text,
                     ),
                     "default_prompt_text": default_prompt_text,
-                    "preview_text": _synchronized_character_preview_text(existing_target, normalized_voice_language),
+                    "preview_text": _synchronized_character_preview_text(
+                        existing_target,
+                        character_profile,
+                        normalized_voice_language,
+                    ),
                     "editable": True,
                     "sample_mode": SAMPLE_MODE_VOICE_DESIGNER,
                     "updated_at": existing_target.get("updated_at"),
@@ -950,25 +954,31 @@ def _normalize_voice_target(target_payload: dict[str, object]) -> dict[str, obje
     }
 
 
-def _synchronized_character_preview_text(existing_target: dict[str, object], voice_language: str) -> str:
+def _synchronized_character_preview_text(
+    existing_target: dict[str, object],
+    character_profile: dict[str, object],
+    voice_language: str,
+) -> str:
     """
     @brief      Resolve character preview text while preserving operator edits.
     @param[in]  existing_target Existing persisted target payload.
+    @param[in]  character_profile Character Discovery profile payload.
     @param[in]  voice_language Selected audiobook voice language code.
-    @return     Existing edited preview text or the selected-language default.
+    @return     Existing edited preview text, discovered dialogue preview, or the selected-language default.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-27
-    @version    0.1.0
+    @version    0.2.0
     """
     localized_preview_text = preview_text_for_language(voice_language)
+    discovered_preview_text = str(character_profile.get("preview_text", "")).strip()
     existing_preview_text = str(existing_target.get("preview_text", "")).strip()
     if not existing_preview_text:
-        return localized_preview_text
+        return discovered_preview_text or localized_preview_text
     if _is_unmodified_default_preview_text(existing_preview_text, localized_preview_text) and not (
         _optional_string(existing_target.get("sample_audio_path"))
         or isinstance(existing_target.get("sample_metadata"), dict)
     ):
-        return localized_preview_text
+        return discovered_preview_text or localized_preview_text
     return existing_preview_text
 
 
