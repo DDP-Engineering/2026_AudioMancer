@@ -30,8 +30,9 @@ The software subtrees currently live under:
 `04_Software/AudioMancer/` contains the Python 3.12/PySide6 application. The
 current app supports project creation with locked audiobook language and
 narration mode, source import, extraction, deterministic and AI cleanup,
-resumable AI cleanup with current model settings, deterministic and AI
-chunking, locked-target AI translation, character
+optional operator rules for AI cleanup, chunking, translation, character
+discovery, Narator profile, and Speech Blocks prompts, resumable AI cleanup with current model settings,
+deterministic and AI chunking, locked-target AI translation, character
 discovery, narrator and character voice preparation, mode-aware Speech Blocks,
 Audio Blocks, WAV Audio Assembly deliverables, Home-page TXT/Markdown exports
 for completed text artifacts, and external full-project ZIP snapshots.
@@ -62,9 +63,9 @@ Audio Blocks selected reset, selected regeneration, approval, and unapproval
 now preserve unrelated generated audio and reset only Audio Assembly outputs.
 Audio Assembly settings changes and reruns now preserve upstream Audio Blocks
 while replacing only assembly outputs/state/report.
-Current package version is `1.0.11`; AI-assisted Narator Voice generation now
-uses six-second preview text and compacted style summaries, while Character
-Discovery can hand source-dialogue preview text to Character Voices.
+Current package version is `1.0.12`; AI-assisted text operations now support
+operator-supplied prompt rules, while Character Discovery can hand
+source-dialogue preview text to Character Voices.
 
 Focused implementation documentation is maintained in `05_SoftwareDocu/`.
 The end-user help bundles are maintained in `05_SoftwareDocu/UserGuide/` and

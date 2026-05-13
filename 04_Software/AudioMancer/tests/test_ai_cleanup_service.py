@@ -14,7 +14,7 @@
          persists resumable state, and creates one AI transaction log file.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-11
-@version 0.4.0
+@version 0.4.1
 """
 
 # IMPORTS
@@ -434,6 +434,68 @@ def test_ai_cleanup_prompt_includes_language_script_and_neighbor_context(
     assert "next_unit_text: Third paragraph." in prompt
 
 
+def test_ai_cleanup_appends_operator_instructions_to_prompt_and_state(
+    mock_extracted_project, mock_prompt_environment, monkeypatch
+) -> None:
+    """
+    @brief      Validate ai cleanup appends operator rules and persists them with operation state.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-12
+    @version    0.1.0
+    """
+    project_root, manifest = mock_extracted_project
+    (mock_prompt_environment / "text_cleanup_user.txt").write_text(
+        "Language: {source_language_hint}\n{units_block}",
+        encoding="utf-8",
+    )
+    extracted_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.EXTRACTED_TEXT_FILE_NAME
+    extracted_path.write_text("First paragraph.\n\nSecond paragraph.\n", encoding="utf-8")
+    captured_user_prompts: list[str] = []
+
+    def _fake_chat_json(_profile, _system_prompt, user_prompt, **_kwargs):
+        """
+        @brief      Provide the fake chat json test helper.
+        @return     Fake AI cleanup response payload.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-12
+        @version    0.1.0
+        """
+        captured_user_prompts.append(user_prompt)
+        return {
+            "payload": {
+                "results": [
+                    {"unit_id": "unit-0001", "label": "story"},
+                    {"unit_id": "unit-0002", "label": "story"},
+                ]
+            },
+            "usage": {"input_tokens": 12, "output_tokens": 4, "total_tokens": 16, "usage_available": True},
+        }
+
+    monkeypatch.setattr(ai_cleanup_service.llm_provider_service, "chat_json", _fake_chat_json)
+
+    report_payload = ai_cleanup_service.clean_text(
+        project_root,
+        manifest,
+        _MOCK_PROFILE,
+        additional_cleanup_instructions="Preserve all glossary terms exactly.",
+    )
+
+    assert captured_user_prompts
+    assert "Additional operator cleanup instructions:" in captured_user_prompts[0]
+    assert "Preserve all glossary terms exactly." in captured_user_prompts[0]
+    assert report_payload["additional_cleanup_instructions"] == "Preserve all glossary terms exactly."
+    state_payload = json.loads(
+        (project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.CLEANUP_STATE_FILE_NAME).read_text(
+            encoding="utf-8"
+        )
+    )
+    assert state_payload["metadata"]["additional_cleanup_instructions"] == "Preserve all glossary terms exactly."
+    assert state_payload["metadata"]["additional_cleanup_instructions_fingerprint"]
+
+
 def test_ai_cleanup_splits_long_input_into_multiple_windows(
     mock_extracted_project, mock_prompt_environment, monkeypatch
 ) -> None:
@@ -508,6 +570,7 @@ def test_ai_cleanup_rejects_profiles_with_no_input_budget(mock_prompt_environmen
             "en",
             "latin",
             "cleanup",
+            "",
         )
 
 
@@ -568,6 +631,7 @@ def test_ai_cleanup_online_profile_uses_direct_context_fraction_without_unit_cap
         "English",
         "Latin",
         "system",
+        "",
     )
     units = [{"unit_id": f"unit-{index:04d}", "text": "Short cleanup unit."} for index in range(1, 30)]
 

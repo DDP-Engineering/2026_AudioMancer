@@ -146,6 +146,51 @@ def test_narrator_profile_generation_odd_allocation_appends_without_deleting_exi
     assert len(report_payload["generated_profile_ids"]) == 3
 
 
+def test_narrator_profile_generation_adds_operator_prompt_rules(
+    tmp_path,
+    monkeypatch,
+    mock_prompt_environment,
+) -> None:
+    """
+    @brief      Verify operator narrator-profile instructions are appended and persisted.
+    @param[in]  tmp_path Temporary path fixture.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  mock_prompt_environment Prompt-root fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-13
+    @version    0.1.0
+    """
+    _write_narrator_prompts(mock_prompt_environment)
+    project_root = tmp_path / "project"
+    project_root.mkdir()
+    _write_chunks(project_root, "A formal court chronicle with dry wit and precise etiquette.")
+    prompts: list[str] = []
+    monkeypatch.setattr(
+        narrator_profile_generation_service.llm_provider_service,
+        "chat_json",
+        _chat_json_factory(prompts, _profiles_payload(2)),
+    )
+
+    report_payload = narrator_profile_generation_service.generate_narrator_profiles(
+        project_root,
+        {},
+        _MOCK_AI_PROFILE,
+        2,
+        "en",
+        220,
+        additional_profile_instructions="Favor refined BBC-style delivery notes.",
+    )
+
+    state_payload = narrator_profile_generation_service.load_operation_state(project_root)
+    assert prompts
+    assert all("Additional operator narrator profile instructions" in prompt for prompt in prompts)
+    assert all("Favor refined BBC-style delivery notes." in prompt for prompt in prompts)
+    assert report_payload["additional_profile_instructions"] == "Favor refined BBC-style delivery notes."
+    assert state_payload["metadata"]["additional_profile_instructions"] == "Favor refined BBC-style delivery notes."
+
+
 def test_narrator_profile_generation_invalid_response_leaves_profiles_unchanged(
     tmp_path,
     monkeypatch,

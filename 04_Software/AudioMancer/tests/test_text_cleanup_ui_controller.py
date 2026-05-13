@@ -199,8 +199,8 @@ def test_text_cleanup_ui_controller_ai_cleanup_request_uses_selected_profile(
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.1.0
+    @date       2026-05-12
+    @version    0.2.0
     """
     project_root, manifest = project_workspace_service.create_project(
         "ControllerAiCleanupProject",
@@ -251,12 +251,18 @@ def test_text_cleanup_ui_controller_ai_cleanup_request_uses_selected_profile(
     start_calls = []
     monkeypatch.setattr(text_cleanup_ui_controller, "confirm_ai_cleanup_start", lambda *_args: True)
     monkeypatch.setattr(
+        text_cleanup_ui_controller,
+        "prompt_ai_cleanup_instructions",
+        lambda *_args: "Keep glossary terms unchanged.",
+    )
+    monkeypatch.setattr(
         text_cleanup_ui_controller, "start_operation", lambda _window, **kwargs: start_calls.append(kwargs)
     )
+    cleanup_call_kwargs: list[dict[str, object]] = []
     monkeypatch.setattr(
         text_cleanup_ui_controller.ai_cleanup_service,
         "clean_text",
-        lambda *_args, **_kwargs: {"cleanup_mode": "ai_assisted"},
+        lambda *_args, **kwargs: cleanup_call_kwargs.append(dict(kwargs)) or {"cleanup_mode": "ai_assisted"},
     )
 
     text_cleanup_ui_controller.handle_ai_cleanup_requested(window, "profile_1")
@@ -266,6 +272,7 @@ def test_text_cleanup_ui_controller_ai_cleanup_request_uses_selected_profile(
     worker_callable = start_calls[0]["worker_callable"]
     result = worker_callable(project_root, project_workspace_service.load_manifest(project_root))
     assert result["cleanup_mode"] == "ai_assisted"
+    assert cleanup_call_kwargs[0]["additional_cleanup_instructions"] == "Keep glossary terms unchanged."
 
 
 def test_text_cleanup_ui_controller_ai_cleanup_resume_skips_confirmations(

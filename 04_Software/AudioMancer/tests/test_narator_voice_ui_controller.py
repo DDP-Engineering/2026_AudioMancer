@@ -670,22 +670,47 @@ def test_narator_voice_generate_profiles_resolves_selected_ai_profile_and_starts
         lambda *_args, **_kwargs: QMessageBox.StandardButton.Yes,
     )
     monkeypatch.setattr(narator_voice_ui_controller.QInputDialog, "getInt", lambda *_args, **_kwargs: (4, True))
+    monkeypatch.setattr(
+        narator_voice_ui_controller,
+        "prompt_ai_narrator_profile_instructions",
+        lambda _window, _language: "Prefer crisp theatrical-but-not-grandiose profiles.",
+    )
     monkeypatch.setattr(narator_voice_ui_controller.misc_ui_controller, "show_message", lambda *args, **kwargs: None)
+
+    def _generate_narrator_profiles(
+        project_root_arg,
+        _manifest,
+        ai_profile,
+        profile_count,
+        voice_language,
+        preview_limit,
+        additional_profile_instructions=None,
+        **_kwargs,
+    ):
+        """
+        @brief      Capture profile generation inputs.
+        @return     Fake narrator profile generation report.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-13
+        @version    0.1.0
+        """
+        captured.update(
+            {
+                "project_root": project_root_arg,
+                "ai_profile_id": ai_profile["id"],
+                "profile_count": profile_count,
+                "voice_language": voice_language,
+                "preview_limit": preview_limit,
+                "additional_profile_instructions": additional_profile_instructions,
+            }
+        )
+        return {"generated_profile_ids": [], "generated_profile_count": 4}
+
     monkeypatch.setattr(
         narator_voice_ui_controller.narrator_profile_generation_service,
         "generate_narrator_profiles",
-        lambda project_root_arg, _manifest, ai_profile, profile_count, voice_language, preview_limit, **_kwargs: (
-            captured.update(
-                {
-                    "project_root": project_root_arg,
-                    "ai_profile_id": ai_profile["id"],
-                    "profile_count": profile_count,
-                    "voice_language": voice_language,
-                    "preview_limit": preview_limit,
-                }
-            )
-            or {"generated_profile_ids": [], "generated_profile_count": 4}
-        ),
+        _generate_narrator_profiles,
     )
 
     def _start_threaded_operation(
@@ -741,6 +766,7 @@ def test_narator_voice_generate_profiles_resolves_selected_ai_profile_and_starts
     assert captured["profile_count"] == 4
     assert captured["voice_language"] == "en"
     assert captured["preview_limit"] == 180
+    assert captured["additional_profile_instructions"] == "Prefer crisp theatrical-but-not-grandiose profiles."
 
 
 def test_narator_voice_generate_profiles_count_cancel_stops_before_worker(

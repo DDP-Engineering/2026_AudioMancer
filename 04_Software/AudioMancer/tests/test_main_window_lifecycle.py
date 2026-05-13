@@ -13,7 +13,7 @@
          pages are created without workflow functionality.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-16
-@version 1.7.0
+@version 1.7.1
 """
 
 # IMPORTS
@@ -119,6 +119,45 @@ def test_main_window_show_message_does_not_create_status_bar(qtbot, default_sett
     window.show_message("Transient shell message")
 
     assert not window.findChildren(QStatusBar)
+
+
+def test_misc_prompt_multiline_text_uses_word_wrap(monkeypatch, qtbot, default_settings_payload) -> None:
+    """
+    @brief      Verify the shared multi-line prompt dialog wraps long operator text.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  qtbot Qt test helper fixture.
+    @param[in]  default_settings_payload Fixture supplying default test settings.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-12
+    @version    0.1.0
+    """
+    window = MainWindow(settings_payload=dict(default_settings_payload))
+    qtbot.addWidget(window)
+    observed_wrap_modes: list[QPlainTextEdit.LineWrapMode] = []
+
+    def _exec_dialog(dialog: QDialog):
+        """
+        @brief      Inspect the prompt text edit before accepting the dialog.
+        @return     Accepted dialog code.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-12
+        @version    0.1.0
+        """
+        text_edit = dialog.findChild(QPlainTextEdit)
+        assert text_edit is not None
+        observed_wrap_modes.append(text_edit.lineWrapMode())
+        text_edit.setPlainText("Extra AI prompt rule")
+        return QDialog.DialogCode.Accepted
+
+    monkeypatch.setattr(misc_ui_controller.QDialog, "exec", _exec_dialog)
+
+    result = misc_ui_controller.prompt_multiline_text(window, "Title", "Prompt label")
+
+    assert result == "Extra AI prompt rule"
+    assert observed_wrap_modes == [QPlainTextEdit.LineWrapMode.WidgetWidth]
 
 
 def test_main_window_refreshes_only_current_workflow_page(

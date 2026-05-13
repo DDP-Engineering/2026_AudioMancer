@@ -13,7 +13,7 @@
          and renders them through strict named placeholder substitution.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-06
-@version 0.1.0
+@version 0.1.1
 """
 
 # IMPORTS
@@ -74,8 +74,8 @@ def render_prompt(
     @return     Fully rendered prompt text.
     @exception  ValueError Raised on missing or extra placeholders.
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.1.0
+    @date       2026-05-12
+    @version    0.1.1
     """
     template = load_prompt(prompt_name, prompt_root)
     placeholders = set(_PLACEHOLDER_PATTERN.findall(template))
@@ -94,9 +94,6 @@ def render_prompt(
             str(variables[placeholder_name]),
         )
 
-    unresolved = sorted(set(_PLACEHOLDER_PATTERN.findall(rendered)))
-    if unresolved:
-        raise ValueError(f"Prompt '{prompt_name}' still contains unresolved placeholders: {', '.join(unresolved)}")
     if not rendered.strip():
         raise ValueError(f"Rendered prompt is empty: {prompt_name}")
     return rendered

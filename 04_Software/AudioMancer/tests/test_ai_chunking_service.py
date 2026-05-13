@@ -13,7 +13,7 @@
          persists resumable state, and rebuilds chunk spans from AI boundaries.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-07
-@version 0.5.0
+@version 0.5.1
 """
 
 # IMPORTS
@@ -92,6 +92,7 @@ def test_ai_chunking_large_context_allows_larger_scene_windows(tmp_path, monkeyp
         },
         "scene",
         "scene",
+        "",
     )
 
     windows = ai_chunking_service._build_windows(paragraph_records, "scene", budget_metadata)
@@ -123,6 +124,7 @@ def test_ai_chunking_small_context_limits_paragraph_windows(tmp_path, monkeypatc
         },
         "scene",
         "scene",
+        "",
     )
 
     windows = ai_chunking_service._build_windows(paragraph_records, "scene", budget_metadata)
@@ -155,6 +157,7 @@ def test_ai_chunking_rejects_profiles_with_no_input_budget(tmp_path, monkeypatch
             },
             "scene",
             "scene",
+            "",
         )
 
 
@@ -184,6 +187,7 @@ def test_ai_chunking_online_profile_uses_direct_context_fraction_without_paragra
         },
         "scene",
         "scene",
+        "",
     )
 
     assert budget_metadata["text_budget_tokens"] == 3000
@@ -308,6 +312,87 @@ def test_ai_chunking_writes_chunking_artifacts_and_log(tmp_path, monkeypatch) ->
     assert chunks[0]["source_start_line"] == 1
     assert chunks[0]["source_end_line"] == 3
     assert "CHAPTER I" in chunks[0]["text"]
+
+
+def test_ai_chunking_appends_operator_instructions_to_prompt_and_state(tmp_path, monkeypatch) -> None:
+    """
+    @brief      Verify AI-assisted chunking appends operator rules and persists them with operation state.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-12
+    @version    0.1.0
+    """
+    prompt_root = tmp_path / "prompts"
+    prompt_root.mkdir()
+    (prompt_root / "text_chunking_system.txt").write_text("{strategy}", encoding="utf-8")
+    (prompt_root / "text_chunking_user.txt").write_text("{strategy}\n{units_block}", encoding="utf-8")
+    monkeypatch.setattr(config, "APP_PROMPTS_PATH", prompt_root)
+
+    project_root, manifest = project_workspace_service.create_project("AiChunkingExtraPromptProject", tmp_path)
+    cleaned_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.CLEANED_TEXT_FILE_NAME
+    cleaned_path.parent.mkdir(parents=True, exist_ok=True)
+    cleaned_path.write_text("Paragraph one.\n\nParagraph two.\n", encoding="utf-8")
+    manifest["source_document"] = {
+        "original_name": "story.txt",
+        "stored_relative_path": "story.txt",
+        "file_type": "txt",
+        "imported_at": "2026-05-12T12:00:00+00:00",
+        "size_bytes": 10,
+    }
+    manifest["operations"]["cleanup"]["status"] = "completed"
+    manifest["operations"]["cleanup"]["output_paths"] = [
+        f"{config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH}/{config.CLEANED_TEXT_FILE_NAME}"
+    ]
+    captured_user_prompts: list[str] = []
+
+    def _chat_json(_profile, _system_prompt, user_prompt, **_kwargs):
+        """
+        @brief      Provide the fake chat json test helper.
+        @return     Fake AI chunking response payload.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-12
+        @version    0.1.0
+        """
+        captured_user_prompts.append(user_prompt)
+        return {
+            "payload": {"break_after_unit_ids": ["paragraph-0001"]},
+            "usage": {"input_tokens": 10, "output_tokens": 4, "total_tokens": 14, "usage_available": True},
+        }
+
+    monkeypatch.setattr(ai_chunking_service.llm_provider_service, "chat_json", _chat_json)
+
+    report_payload = ai_chunking_service.chunk_text(
+        project_root,
+        manifest,
+        {
+            "id": "profile_1",
+            "label": "Chunking Profile",
+            "backend_kind": "lmstudio",
+            "base_url": "http://127.0.0.1:1234",
+            "api_key": "",
+            "model_name": "qwen3-8b",
+            "context_window": 4096,
+            "max_output_tokens": 512,
+            "request_timeout_seconds": 30,
+            "temperature": 0.2,
+        },
+        "scene",
+        additional_chunking_instructions="Keep all chapter prologues in separate chunks.",
+    )
+
+    assert captured_user_prompts
+    assert "Additional operator chunking instructions:" in captured_user_prompts[0]
+    assert "Keep all chapter prologues in separate chunks." in captured_user_prompts[0]
+    assert report_payload["additional_chunking_instructions"] == "Keep all chapter prologues in separate chunks."
+    state_payload = json.loads((project_root / config.CHUNKING_STATE_FILE_NAME).read_text(encoding="utf-8"))
+    assert state_payload["metadata"]["additional_chunking_instructions"] == (
+        "Keep all chapter prologues in separate chunks."
+    )
+    assert state_payload["metadata"]["additional_chunking_instructions_fingerprint"]
 
 
 def test_ai_chunking_ignores_invalid_boundaries_and_closes_last_chunk(tmp_path, monkeypatch) -> None:

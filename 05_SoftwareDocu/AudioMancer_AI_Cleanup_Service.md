@@ -22,9 +22,12 @@ per-run AI transaction log.
 - populate the `Text Cleanup` AI profile selector from enabled AI settings
 - start AI-assisted cleanup from the selected profile
 - confirm that AI cleanup can take longer before the run starts
+- collect optional operator-supplied cleanup rules in a word-wrapped text box
+  before a fresh AI cleanup run and append them to each AI cleanup prompt
 - confirm destructive reruns when cleanup is already completed
 - resume interrupted AI cleanup with the currently selected model settings,
-  without the destructive rerun confirmation
+  the original operator-supplied cleanup rules, and without the destructive
+  rerun confirmation
 - load prompts from the application-root `prompts/` folder
 - call OpenAI-compatible `/v1/chat/completions` endpoints with the configured
   model, timeout, temperature, and max-token settings, while retrying with
@@ -70,15 +73,17 @@ High-level flow:
 1. `TextCleanupPage` emits `ai_clean_requested(profile_id)`.
 2. `text_cleanup_ui_controller` validates the active project, extracted-text
    prerequisite, and currently selected AI profile.
-3. The controller shows the AI-length warning popup and, when needed, the
-   destructive cleanup-rerun confirmation.
+3. The controller shows the AI-length warning popup, asks for optional extra
+   cleanup instructions, and, when needed, the destructive cleanup-rerun
+   confirmation.
 4. The shared modal progress dialog starts through the existing blocking
    operation flow.
 5. `ai_cleanup_service` loads prompt files, splits extracted text into
    paragraph-like units, windows them to fit the selected profile budget,
    computes source-language and dominant-script hints, adds previous and next
-   unit context for each classified unit, and resumes from stored unit
-   classifications when the extracted-text fingerprint still matches.
+   unit context plus any operator instructions for each classified unit, and
+   resumes from stored unit classifications when the extracted-text and
+   operator-instruction fingerprints still match.
 6. `llm_provider_service` sends one chat-completion request per window,
    retries one compatibility-adjusted request when a provider rejects
    `max_tokens`, attempts one follow-up JSON-repair request when the returned
@@ -139,7 +144,9 @@ Current prompt contract:
   confidence values, and required JSON response shape
 - `text_cleanup_user.txt` must expose the `{units_block}` placeholder and may
   also use `{source_language_hint}`, `{dominant_script_hint}`, and
-  `{unit_count}`
+  `{unit_count}`; when it does not expose
+  `{additional_cleanup_instructions}`, operator-supplied cleanup rules are
+  appended after template rendering
 - each current-schema result item contains `unit_id`, `artifact_type`,
   `action`, `confidence`, and a short `reason`
 - legacy result items containing only `unit_id` and `label` remain accepted for
@@ -154,6 +161,8 @@ Current AI cleanup report fields extend the shared cleanup report with:
 - `model_settings`
 - `model_settings_history`
 - `ai_log_relative_path`
+- `additional_cleanup_instructions`
+- `additional_cleanup_instructions_fingerprint`
 
 Current AI cleanup operation-state invariants:
 
@@ -162,11 +171,13 @@ Current AI cleanup operation-state invariants:
 - `mode` is `ai_assisted`
 - `resume_checkpoint` stores `completed_window_count`,
   `total_window_count`, `input_fingerprint`, concrete `model_settings`, and
-  accumulated unit classifications
-- resume identity is based on the extracted-text fingerprint and stored unit
-  classifications, not the earlier profile id; if the operator selects another
-  enabled model/profile before resuming, the remaining units use that selected
-  model's name, temperature, context window, and output-token budget
+  accumulated unit classifications plus the additional-instruction fingerprint
+- resume identity is based on the extracted-text fingerprint, stored
+  additional-instruction fingerprint, and stored unit classifications, not the
+  earlier profile id; if the operator selects another enabled model/profile
+  before resuming, the remaining units use that selected model's name,
+  temperature, context window, and output-token budget with the original
+  operator-supplied cleanup rules
 - `metadata.ai_log_relative_path` points to the per-run AI transaction log
 
 Current AI transaction log behavior:
@@ -203,6 +214,8 @@ Operator flow:
 - select the desired AI profile
 - press `AI-Assisted Cleanup`
 - confirm the AI-length warning
+- enter optional extra cleanup rules in the word-wrapped prompt box, or leave
+  it empty for the standard cleanup prompt
 - use `Edit` and `Save` under the cleaned text preview for manual corrections
 - right-click either text preview and choose `Find` to search within that
   preview
@@ -217,6 +230,7 @@ report_payload = ai_cleanup_service.clean_text(
     project_root,
     manifest,
     ai_profile_payload,
+    additional_cleanup_instructions="Preserve glossary terms exactly.",
 )
 ```
 

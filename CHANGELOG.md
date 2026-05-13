@@ -10,6 +10,22 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [1.0.12] - 2026-05-13
+
+### Added
+
+- Text Cleanup, Text Chunking, AI Translation, Character Discovery, Narator
+  profile generation, and Speech Blocks AI-assisted runs now ask for optional
+  operator-supplied prompt rules in a word-wrapped text box before a fresh run,
+  append those rules to each AI request, persist the rules with the report/state,
+  and resume unfinished AI work with the original saved rules.
+
+### Fixed
+
+- AI prompt rendering no longer rejects source text containing literal brace
+  markers such as Gutenberg index references (`{ix}`, `{x}`, `{xi}`) as
+  unresolved template placeholders.
+
 ## [1.0.11] - 2026-05-12
 
 ### Added

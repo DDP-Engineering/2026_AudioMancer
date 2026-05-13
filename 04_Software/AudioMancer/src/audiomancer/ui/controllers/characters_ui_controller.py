@@ -14,7 +14,7 @@
          for the Characters page.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-11
-@version 0.15.1
+@version 0.16.0
 """
 
 # IMPORTS
@@ -50,8 +50,8 @@ def handle_start_discovery_requested(window: "MainWindow", profile_id: str) -> N
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-08
-    @version    0.4.0
+    @date       2026-05-13
+    @version    0.5.0
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if not _resolve_unsaved_changes(window):
@@ -89,6 +89,14 @@ def handle_start_discovery_requested(window: "MainWindow", profile_id: str) -> N
             ui_state_service.translate("dialog.character_discovery_info_title", current_language),
             ui_state_service.translate("project.info_character_discovery", current_language),
         )
+    additional_character_discovery_instructions = None
+    if not _is_resuming_character_discovery(window):
+        additional_character_discovery_instructions = prompt_ai_character_discovery_instructions(
+            window,
+            current_language,
+        )
+        if additional_character_discovery_instructions is None:
+            return
     _start_operation(
         window,
         operation_name=ui_state_service.translate("characters.start", current_language),
@@ -100,6 +108,7 @@ def handle_start_discovery_requested(window: "MainWindow", profile_id: str) -> N
                 profile_payload,
                 progress_callback=progress_callback,
                 cancel_requested=cancel_requested,
+                additional_character_discovery_instructions=additional_character_discovery_instructions,
             )
         ),
     )
@@ -1104,6 +1113,50 @@ def _has_previous_character_discovery_state(window: "MainWindow") -> bool:
         or character_discovery_service.load_character_discovery_report(window._current_project_root)
         or character_discovery_service.load_character_profiles(window._current_project_root)
     )
+
+
+def prompt_ai_character_discovery_instructions(window: "MainWindow", language: str) -> str | None:
+    """
+    @brief      Ask the operator for optional extra AI Character Discovery prompt rules.
+    @param[in]  window Active main window instance.
+    @param[in]  language Runtime UI language code.
+    @return     Extra Character Discovery instructions, an empty string, or None when cancelled.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-13
+    @version    0.1.0
+    """
+    instructions = misc_ui_controller.prompt_multiline_text(
+        window,
+        ui_state_service.translate("dialog.character_discovery_extra_prompt_title", language),
+        ui_state_service.translate("dialog.character_discovery_extra_prompt_label", language),
+        "",
+    )
+    if instructions is None:
+        return None
+    return instructions.strip()
+
+
+def _is_resuming_character_discovery(window: "MainWindow") -> bool:
+    """
+    @brief      Return whether Character Discovery can resume saved AI work.
+    @param[in]  window Active main window instance.
+    @return     True when a running or failed AI Character Discovery operation is present.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-13
+    @version    0.1.0
+    """
+    if window._current_project_root is None:
+        return False
+    operation_state = character_discovery_service.load_operation_state(window._current_project_root)
+    if not isinstance(operation_state, dict):
+        return False
+    is_ai_mode = (
+        str(operation_state.get("mode", "")) == character_discovery_service.CHARACTER_DISCOVERY_MODE_AI_ASSISTED
+    )
+    is_resumable_status = str(operation_state.get("status", "")) in {"running", "failed"}
+    return is_ai_mode and is_resumable_status
 
 
 def _resolve_ai_profile(

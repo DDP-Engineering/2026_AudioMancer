@@ -14,7 +14,7 @@
          generation report/state sidecars without generating narrator audio.
 @author Eng. Dan Dumitru Pasare
 @date 2026-05-11
-@version 0.3.0
+@version 0.3.1
 """
 
 # IMPORTS
@@ -23,6 +23,7 @@ import hashlib
 import json
 from pathlib import Path
 import random
+import re
 
 from audiomancer import config
 from audiomancer.services import (
@@ -156,6 +157,7 @@ def generate_narrator_profiles(
     preview_text_character_limit: int,
     progress_callback=None,
     cancel_requested=None,
+    additional_profile_instructions: str | None = None,
 ) -> NarratorProfileGenerationReportPayload:
     """
     @brief      Generate and append editable text-only narrator profiles.
@@ -167,12 +169,13 @@ def generate_narrator_profiles(
     @param[in]  preview_text_character_limit Maximum accepted preview text characters.
     @param[in]  progress_callback Optional progress callback for the modal dialog.
     @param[in]  cancel_requested Optional zero-argument cancellation callback.
+    @param[in]  additional_profile_instructions Optional operator-supplied profile-generation rules.
     @return     Persisted narrator profile generation report.
     @exception  ValueError Raised on invalid input, missing source text, or invalid AI output.
     @exception  OperationCancelledError Raised when the operator cancels the run.
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-11
-    @version    0.2.0
+    @date       2026-05-13
+    @version    0.3.0
     """
     _ = manifest
     resolved_project_root = Path(project_root)
@@ -194,7 +197,13 @@ def generate_narrator_profiles(
     source_units, source_token, source_path = _resolve_source_units(resolved_project_root, normalized_voice_language)
     input_fingerprint = _build_input_fingerprint(source_units, source_token, normalized_voice_language)
     system_prompt = prompt_template_service.render_prompt("narrator_profile_style_system", {})
-    budget_metadata = _build_budget_metadata(ai_profile_payload, system_prompt)
+    existing_state = load_operation_state(resolved_project_root) or {}
+    additional_profile_instructions = _resolve_additional_profile_instructions(
+        additional_profile_instructions,
+        existing_state,
+    )
+    additional_profile_instructions_fingerprint = _compute_prompt_fingerprint(additional_profile_instructions)
+    budget_metadata = _build_budget_metadata(ai_profile_payload, system_prompt, additional_profile_instructions)
     windows = _build_source_windows(source_units, budget_metadata)
     if not windows:
         raise ValueError("Narrator profile generation requires at least one readable text window.")
@@ -212,7 +221,6 @@ def generate_narrator_profiles(
     allocation = _gender_allocation(requested_count)
     model_settings = _build_model_settings(ai_profile_payload, budget_metadata)
     total_progress = len(windows) + 1
-    existing_state = load_operation_state(resolved_project_root) or {}
     resume_state = _restore_resume_state(
         existing_state,
         resolved_project_root,
@@ -223,6 +231,7 @@ def generate_narrator_profiles(
         total_window_count=len(windows),
         budget_metadata=budget_metadata,
         model_settings=model_settings,
+        additional_profile_instructions_fingerprint=additional_profile_instructions_fingerprint,
     )
     if resume_state["resume_compatible"]:
         started_at = str(resume_state["started_at"])
@@ -261,6 +270,7 @@ def generate_narrator_profiles(
         model_settings=model_settings,
         style_observations=observations,
         total_window_count=len(windows),
+        additional_profile_instructions=additional_profile_instructions,
     )
     emit_progress_update(
         progress_callback,
@@ -274,9 +284,12 @@ def generate_narrator_profiles(
         if window_index <= completed_window_count:
             continue
         raise_if_cancelled(cancel_requested)
-        user_prompt = prompt_template_service.render_prompt(
+        user_prompt = _render_narrator_profile_prompt(
             "narrator_profile_style_window_user",
-            {"units_block": _build_units_block(window_units)},
+            {
+                "units_block": _build_units_block(window_units),
+                "additional_profile_instructions": additional_profile_instructions,
+            },
         )
         try:
             response_result = llm_provider_service.chat_json(
@@ -322,6 +335,7 @@ def generate_narrator_profiles(
             model_settings=model_settings,
             style_observations=observations,
             total_window_count=len(windows),
+            additional_profile_instructions=additional_profile_instructions,
         )
         emit_progress_update(
             progress_callback,
@@ -333,7 +347,7 @@ def generate_narrator_profiles(
 
     raise_if_cancelled(cancel_requested)
     style_summary = _build_style_observation_summary(observations)
-    user_prompt = prompt_template_service.render_prompt(
+    user_prompt = _render_narrator_profile_prompt(
         "narrator_profile_generation_user",
         {
             "voice_language": narrator_definition_service.narrator_language_label(normalized_voice_language),
@@ -342,6 +356,7 @@ def generate_narrator_profiles(
             "female_count": int(allocation["female"]),
             "random_gender_count": int(allocation["random"]),
             "style_observations": json.dumps(style_summary, indent=2, ensure_ascii=False),
+            "additional_profile_instructions": additional_profile_instructions,
         },
     )
     try:
@@ -379,6 +394,8 @@ def generate_narrator_profiles(
         "source": source_token,
         "input_fingerprint": input_fingerprint,
         "generated_at": _utc_now_iso(),
+        "additional_profile_instructions": additional_profile_instructions,
+        "additional_profile_instructions_fingerprint": additional_profile_instructions_fingerprint,
     }
     created_profiles = narrator_definition_service.append_ai_generated_profiles(
         resolved_project_root,
@@ -404,6 +421,8 @@ def generate_narrator_profiles(
         "warnings": [],
         "generated_at": generation_metadata["generated_at"],
         "token_usage": token_usage,
+        "additional_profile_instructions": additional_profile_instructions,
+        "additional_profile_instructions_fingerprint": additional_profile_instructions_fingerprint,
     }
     write_json_atomic(report_path, report_payload)
     _write_operation_state(
@@ -429,6 +448,7 @@ def generate_narrator_profiles(
         model_settings=model_settings,
         style_observations=observations,
         total_window_count=len(windows),
+        additional_profile_instructions=additional_profile_instructions,
     )
     emit_progress_update(
         progress_callback,
@@ -634,22 +654,30 @@ def _source_unit(unit_id: str, sequence_index: int, text: str) -> SourceUnitPayl
     }
 
 
-def _build_budget_metadata(ai_profile_payload: dict[str, object], system_prompt: str) -> dict[str, int]:
+def _build_budget_metadata(
+    ai_profile_payload: dict[str, object],
+    system_prompt: str,
+    additional_profile_instructions: str = "",
+) -> dict[str, int]:
     """
     @brief      Build context-window budget metadata for narrator profile generation.
     @param[in]  ai_profile_payload Selected AI profile payload.
     @param[in]  system_prompt Rendered system prompt.
+    @param[in]  additional_profile_instructions Optional operator-supplied profile-generation rules.
     @return     Context-budget metadata.
     @exception  ValueError Raised when too little input room remains.
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-11
-    @version    0.1.0
+    @date       2026-05-13
+    @version    0.2.0
     """
-    style_prompt_shell = prompt_template_service.render_prompt(
+    style_prompt_shell = _render_narrator_profile_prompt(
         "narrator_profile_style_window_user",
-        {"units_block": ""},
+        {
+            "units_block": "",
+            "additional_profile_instructions": additional_profile_instructions,
+        },
     )
-    generation_prompt_shell = prompt_template_service.render_prompt(
+    generation_prompt_shell = _render_narrator_profile_prompt(
         "narrator_profile_generation_user",
         {
             "voice_language": "",
@@ -658,6 +686,7 @@ def _build_budget_metadata(ai_profile_payload: dict[str, object], system_prompt:
             "female_count": 0,
             "random_gender_count": 0,
             "style_observations": "",
+            "additional_profile_instructions": additional_profile_instructions,
         },
     )
     style_budget = ai_budget_service.context_budget_metadata(
@@ -683,6 +712,111 @@ def _build_budget_metadata(ai_profile_payload: dict[str, object], system_prompt:
         ),
         "generation_prompt_budget_tokens": generation_prompt_budget_tokens,
     }
+
+
+def _render_narrator_profile_prompt(prompt_name: str, variables: dict[str, object]) -> str:
+    """
+    @brief      Render one narrator-profile prompt with optional operator rules.
+    @param[in]  prompt_name Prompt template identifier.
+    @param[in]  variables Prompt variables.
+    @return     Rendered narrator-profile prompt.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-13
+    @version    0.1.0
+    """
+    template = prompt_template_service.load_prompt(prompt_name)
+    placeholder_names = set(re.findall(r"{([A-Za-z_][A-Za-z0-9_]*)}", template))
+    rendered_prompt = prompt_template_service.render_prompt(
+        prompt_name,
+        {key: value for key, value in variables.items() if key in placeholder_names},
+    )
+    additional_profile_instructions = _normalized_additional_profile_instructions(
+        variables.get("additional_profile_instructions")
+    )
+    if additional_profile_instructions and "additional_profile_instructions" not in placeholder_names:
+        rendered_prompt = _append_additional_profile_instructions(
+            rendered_prompt,
+            additional_profile_instructions,
+        )
+    return rendered_prompt
+
+
+def _resolve_additional_profile_instructions(
+    additional_profile_instructions: str | None,
+    existing_state: dict[str, object],
+) -> str:
+    """
+    @brief      Resolve operator rules for a new or resumed narrator-profile generation run.
+    @param[in]  additional_profile_instructions New operator instructions or None when resuming.
+    @param[in]  existing_state Existing narrator-definition operation state.
+    @return     Normalized operator profile-generation instructions.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-13
+    @version    0.1.0
+    """
+    if additional_profile_instructions is not None:
+        return _normalized_additional_profile_instructions(additional_profile_instructions)
+    if existing_state.get("mode") != NARRATOR_PROFILE_GENERATION_MODE_AI_ASSISTED or str(
+        existing_state.get("status", "")
+    ) not in {
+        "running",
+        "failed",
+        "cancelled",
+    }:
+        return ""
+    metadata = existing_state.get("metadata", {})
+    if not isinstance(metadata, dict):
+        return ""
+    return _normalized_additional_profile_instructions(metadata.get("additional_profile_instructions"))
+
+
+def _normalized_additional_profile_instructions(value: object) -> str:
+    """
+    @brief      Normalize optional operator narrator-profile rules for prompts and state storage.
+    @param[in]  value Candidate instruction text.
+    @return     Trimmed instruction text.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-13
+    @version    0.1.0
+    """
+    if value is None:
+        return ""
+    return str(value).strip()
+
+
+def _append_additional_profile_instructions(prompt_text: str, additional_profile_instructions: str) -> str:
+    """
+    @brief      Append operator narrator-profile rules to one rendered prompt.
+    @param[in]  prompt_text Rendered prompt template text.
+    @param[in]  additional_profile_instructions Normalized operator rules.
+    @return     Prompt text with an additional-rules section.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-13
+    @version    0.1.0
+    """
+    if not additional_profile_instructions:
+        return prompt_text
+    return (
+        f"{prompt_text.rstrip()}\n\n"
+        f"Additional operator narrator profile instructions:\n{additional_profile_instructions}\n"
+    )
+
+
+def _compute_prompt_fingerprint(prompt_text: str) -> str:
+    """
+    @brief      Compute a stable fingerprint for operator-supplied prompt rules.
+    @param[in]  prompt_text Operator prompt-rule text.
+    @return     SHA-256 fingerprint for the prompt-rule text.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-13
+    @version    0.1.0
+    """
+    return hashlib.sha256(prompt_text.encode("utf-8")).hexdigest()
 
 
 def _build_source_windows(
@@ -979,6 +1113,7 @@ def _restore_resume_state(
     total_window_count: int,
     budget_metadata: dict[str, int],
     model_settings: dict[str, object],
+    additional_profile_instructions_fingerprint: str,
 ) -> dict[str, object]:
     """
     @brief      Restore a compatible unfinished narrator-profile-generation checkpoint.
@@ -991,11 +1126,12 @@ def _restore_resume_state(
     @param[in]  total_window_count Current source-window count.
     @param[in]  budget_metadata Current context-budget metadata.
     @param[in]  model_settings Current model settings metadata.
+    @param[in]  additional_profile_instructions_fingerprint Operator instruction fingerprint.
     @return     Resume metadata with `resume_compatible` flag.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-11
-    @version    0.1.0
+    @date       2026-05-13
+    @version    0.2.0
     """
     fallback = _empty_resume_state()
     if str(existing_state.get("status", "")) not in {"running", "failed", "cancelled"}:
@@ -1023,6 +1159,16 @@ def _restore_resume_state(
     if checkpoint_budget_metadata != dict(budget_metadata):
         return fallback
     if checkpoint_model_settings != dict(model_settings):
+        return fallback
+    metadata = existing_state.get("metadata", {})
+    if not isinstance(metadata, dict):
+        metadata = {}
+    stored_instruction_fingerprint = str(
+        metadata.get("additional_profile_instructions_fingerprint")
+        or resume_checkpoint.get("additional_profile_instructions_fingerprint")
+        or _compute_prompt_fingerprint("")
+    )
+    if stored_instruction_fingerprint != additional_profile_instructions_fingerprint:
         return fallback
     try:
         gender_allocation = dict(resume_checkpoint.get("gender_allocation") or {})
@@ -1173,6 +1319,7 @@ def _write_operation_state(
     model_settings: dict[str, object],
     style_observations: list[dict[str, object]],
     total_window_count: int,
+    additional_profile_instructions: str,
 ) -> None:
     """
     @brief      Persist one narrator-profile-generation operation state.
@@ -1198,12 +1345,15 @@ def _write_operation_state(
     @param[in]  model_settings Selected model settings metadata.
     @param[in]  style_observations Completed style-window observations.
     @param[in]  total_window_count Total style-window count.
+    @param[in]  additional_profile_instructions Optional operator-supplied profile-generation rules.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-11
-    @version    0.2.0
+    @date       2026-05-13
+    @version    0.3.0
     """
+    additional_profile_instructions = _normalized_additional_profile_instructions(additional_profile_instructions)
+    additional_profile_instructions_fingerprint = _compute_prompt_fingerprint(additional_profile_instructions)
     output_paths = [config.NARRATOR_PROFILE_FILE_NAME] if generated_profile_ids else []
     artifact_paths = [relative_to_project(project_root, state_path), relative_to_project(project_root, log_path)]
     if report_path is not None:
@@ -1231,6 +1381,8 @@ def _write_operation_state(
             "token_usage": token_usage_service.coerce_token_usage(token_usage),
             "budget_metadata": dict(budget_metadata),
             "model_settings": dict(model_settings),
+            "additional_profile_instructions": additional_profile_instructions,
+            "additional_profile_instructions_fingerprint": additional_profile_instructions_fingerprint,
         },
         resume_checkpoint=(
             None
@@ -1247,6 +1399,7 @@ def _write_operation_state(
                 "log_relative_path": relative_to_project(project_root, log_path),
                 "budget_metadata": dict(budget_metadata),
                 "model_settings": dict(model_settings),
+                "additional_profile_instructions_fingerprint": additional_profile_instructions_fingerprint,
             }
         ),
     )

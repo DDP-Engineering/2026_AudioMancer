@@ -15,7 +15,7 @@
          Chunking page.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-24
-@version 0.8.2
+@version 0.8.3
 """
 
 # IMPORTS
@@ -106,8 +106,8 @@ def handle_ai_chunking_requested(window: "MainWindow", profile_id: str, strategy
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-07
-    @version    0.2.0
+    @date       2026-05-12
+    @version    0.3.0
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._active_operation_kind is not None:
@@ -160,6 +160,14 @@ def handle_ai_chunking_requested(window: "MainWindow", profile_id: str, strategy
     if selected_strategy not in config.AI_CHUNKING_STRATEGY_OPTIONS:
         selected_strategy = config.DEFAULT_AI_CHUNKING_STRATEGY
 
+    additional_chunking_instructions = None
+    if chunking_status in {"running", "failed"} and chunking_mode == "ai_assisted":
+        pass
+    else:
+        additional_chunking_instructions = prompt_ai_chunking_instructions(window, current_language)
+        if additional_chunking_instructions is None:
+            return
+
     if (
         chunking_status not in {"running", "failed"} or chunking_mode != "ai_assisted"
     ) and chunking_status == "completed":
@@ -180,6 +188,7 @@ def handle_ai_chunking_requested(window: "MainWindow", profile_id: str, strategy
                 selected_strategy,
                 progress_callback=progress_callback,
                 cancel_requested=cancel_requested,
+                additional_chunking_instructions=additional_chunking_instructions,
             )
         ),
         success_handler=lambda result_payload: handle_chunking_success(window, result_payload),
@@ -607,6 +616,28 @@ def confirm_ai_chunking_rerun(window: "MainWindow", language: str) -> bool:
         QMessageBox.StandardButton.No,
     )
     return decision == QMessageBox.StandardButton.Yes
+
+
+def prompt_ai_chunking_instructions(window: "MainWindow", language: str) -> str | None:
+    """
+    @brief      Ask the operator for optional extra AI chunking prompt rules.
+    @param[in]  window Active main window shell.
+    @param[in]  language Runtime UI language code.
+    @return     Extra chunking instructions, an empty string, or None when cancelled.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-12
+    @version    0.1.0
+    """
+    instructions = misc_ui_controller.prompt_multiline_text(
+        window,
+        ui_state_service.translate("dialog.ai_chunking_extra_prompt_title", language),
+        ui_state_service.translate("dialog.ai_chunking_extra_prompt_label", language),
+        "",
+    )
+    if instructions is None:
+        return None
+    return instructions.strip()
 
 
 def confirm_chunk_insert(window: "MainWindow", language: str) -> bool:

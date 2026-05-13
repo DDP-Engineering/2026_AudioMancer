@@ -23,6 +23,8 @@ does not select a narrator profile.
 - resolve the best available book text for narrator-style analysis
 - window the resolved text with the shared AI context-budget service
 - run compact style-observation calls followed by one profile-generation call
+- append optional operator-supplied narrator-profile rules to the style-analysis
+  and profile-generation prompts
 - resume compatible unfinished runs from persisted style observations and
   cumulative token usage
 - validate profile count, gender allocation, names, prompt text, preview text,
@@ -72,11 +74,14 @@ Processing flow:
 5. Restore compatible checkpointed style observations from
    `narator_profile_generation_state.json` when the source fingerprint,
    selected AI profile, requested count, gender allocation, model settings, and
-   context budget still match.
-6. Ask the AI for compact observations for each remaining source window.
+   context budget still match, including the saved operator prompt-rule
+   fingerprint.
+6. Ask the AI for compact observations for each remaining source window,
+   including any operator-supplied profile rules.
 7. Deterministically merge repeated style terms into a compact frequency
    summary, then ask the AI for strict JSON narrator profiles using the
-   requested count and deterministic gender allocation.
+   requested count, deterministic gender allocation, and any operator-supplied
+   profile rules.
 8. Validate the full response before writing any profile data.
 9. Append generated profiles and persist report/state with cumulative token
    usage and source fingerprint metadata.
@@ -114,6 +119,8 @@ Inputs:
 - requested profile count, `1..20`
 - selected voice language code
 - TTS preview character limit
+- optional operator-supplied narrator-profile rules entered before a fresh AI
+  generation run
 - optional progress and cancellation callbacks
 
 Source text selection order:
@@ -187,6 +194,8 @@ Report/state metadata includes:
 - `style_summary`
 - `budget_metadata`
 - `token_usage`
+- `additional_profile_instructions`
+- `additional_profile_instructions_fingerprint`
 
 Running-state `resume_checkpoint` includes:
 
@@ -201,11 +210,15 @@ Running-state `resume_checkpoint` includes:
 - AI transaction `log_relative_path`
 - `budget_metadata`
 - `model_settings`
+- `additional_profile_instructions_fingerprint`
 
 The final profile-synthesis request does not inject every raw style observation
 from large books. It sends a deterministic `style_summary` that counts repeated
 normalized terms per style field, preserves the top recurring terms, and keeps
 the raw per-window observations only in the resume checkpoint and AI log.
+When operator-supplied profile rules are entered, the service appends them to
+both the style-window and final profile-generation prompts unless a prompt
+template provides an explicit `{additional_profile_instructions}` placeholder.
 
 Gender allocation:
 
@@ -217,15 +230,16 @@ Gender allocation:
 
 The `Narator Voice` page exposes an AI profile selector and
 `Generate Narator Profiles` button. The controller asks for confirmation,
-requests the count, starts the shared threaded operation runner, and refreshes
-the page after success, failure, or cancellation.
+requests the count, offers an optional word-wrapped prompt box for extra
+profile rules, starts the shared threaded operation runner, and refreshes the
+page after success, failure, or cancellation.
 
 If a previous narrator profile generation run was interrupted, pressing
 `Generate Narator Profiles` with the same compatible settings resumes from the
-next unfinished style-analysis window. If all style windows were already
-checkpointed and only the final profile-generation request failed or was
-cancelled, the service reuses the saved observations and retries only the final
-request.
+next unfinished style-analysis window with the original saved operator rules.
+If all style windows were already checkpointed and only the final
+profile-generation request failed or was cancelled, the service reuses the
+saved observations and retries only the final request with the same saved rules.
 
 The workflow can run before narrator selection and does not mark the
 `narrator_definition` manifest operation complete. A generated profile becomes
@@ -244,6 +258,7 @@ report = narrator_profile_generation_service.generate_narrator_profiles(
     profile_count=6,
     voice_language="en",
     preview_text_character_limit=512,
+    additional_profile_instructions="Favor intimate literary narration over trailer-style intensity.",
 )
 ```
 
@@ -255,8 +270,9 @@ UI path:
 - press `Generate Narator Profiles`
 - confirm token/cost warning
 - choose a profile count
+- optionally add extra profile-generation rules, or leave the text box empty
 - after interruption, press `Generate Narator Profiles` again with the same
-  count/profile/source to continue from the saved checkpoint
+  count/profile/source to continue from the saved checkpoint and saved rules
 - review the appended editable profiles
 
 ## 9. Validation And Tests

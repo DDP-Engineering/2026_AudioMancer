@@ -14,7 +14,7 @@
          Speech Blocks workflow.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 0.8.3
+@version 0.8.4
 """
 
 # IMPORTS
@@ -47,8 +47,8 @@ def handle_generate_requested(window: "MainWindow", profile_id: str) -> None:
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.3.0
+    @date       2026-05-13
+    @version    0.4.0
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._active_operation_kind is not None:
@@ -80,6 +80,11 @@ def handle_generate_requested(window: "MainWindow", profile_id: str) -> None:
 
     if not _confirm_generation(window, current_language):
         return
+    additional_speech_block_instructions = None
+    if not _is_resuming_speech_blocks_generation(window):
+        additional_speech_block_instructions = prompt_ai_speech_blocks_instructions(window, current_language)
+        if additional_speech_block_instructions is None:
+            return
 
     _start_operation(
         window,
@@ -93,6 +98,7 @@ def handle_generate_requested(window: "MainWindow", profile_id: str) -> None:
                 settings_payload=window._settings_payload,
                 progress_callback=progress_callback,
                 cancel_requested=cancel_requested,
+                additional_speech_block_instructions=additional_speech_block_instructions,
             )
         ),
     )
@@ -131,8 +137,8 @@ def handle_approve_all_requested(window: "MainWindow") -> None:
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.2.0
+    @date       2026-05-13
+    @version    0.3.0
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._current_project_root is None or window._current_manifest is None:
@@ -363,8 +369,8 @@ def handle_resplit_selected_requested(window: "MainWindow", chunk_id: str) -> No
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.2.0
+    @date       2026-05-13
+    @version    0.3.0
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._active_operation_kind is not None:
@@ -381,6 +387,9 @@ def handle_resplit_selected_requested(window: "MainWindow", chunk_id: str) -> No
         return
     if not _confirm_speech_blocks_resplit(window, current_language):
         return
+    additional_speech_block_instructions = prompt_ai_speech_blocks_instructions(window, current_language)
+    if additional_speech_block_instructions is None:
+        return
     _start_operation(
         window,
         operation_name=ui_state_service.translate("speech_blocks.resplit_selected", current_language),
@@ -394,6 +403,7 @@ def handle_resplit_selected_requested(window: "MainWindow", chunk_id: str) -> No
                 settings_payload=window._settings_payload,
                 progress_callback=progress_callback,
                 cancel_requested=cancel_requested,
+                additional_speech_block_instructions=additional_speech_block_instructions,
             )
         ),
         success_message_key="status.speech_blocks_resplit",
@@ -900,6 +910,49 @@ def _confirm_generation(window: "MainWindow", language: str) -> bool:
         )
         == QMessageBox.StandardButton.Yes
     )
+
+
+def prompt_ai_speech_blocks_instructions(window: "MainWindow", language: str) -> str | None:
+    """
+    @brief      Ask the operator for optional extra AI Speech Blocks prompt rules.
+    @param[in]  window Active main window instance.
+    @param[in]  language Runtime UI language code.
+    @return     Extra Speech Blocks instructions, an empty string, or None when cancelled.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-13
+    @version    0.1.0
+    """
+    instructions = misc_ui_controller.prompt_multiline_text(
+        window,
+        ui_state_service.translate("dialog.speech_blocks_extra_prompt_title", language),
+        ui_state_service.translate("dialog.speech_blocks_extra_prompt_label", language),
+        "",
+    )
+    if instructions is None:
+        return None
+    return instructions.strip()
+
+
+def _is_resuming_speech_blocks_generation(window: "MainWindow") -> bool:
+    """
+    @brief      Return whether Speech Blocks generation can resume saved AI work.
+    @param[in]  window Active main window instance.
+    @return     True when a running or failed AI Speech Blocks operation is present.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-13
+    @version    0.1.0
+    """
+    if window._current_project_root is None:
+        return False
+    operation_state = speech_blocks_service.load_operation_state(window._current_project_root)
+    if not isinstance(operation_state, dict):
+        return False
+    return str(operation_state.get("mode", "")) == "ai_assisted" and str(operation_state.get("status", "")) in {
+        "running",
+        "failed",
+    }
 
 
 def _confirm_speech_blocks_reset(window: "MainWindow", language: str) -> bool:

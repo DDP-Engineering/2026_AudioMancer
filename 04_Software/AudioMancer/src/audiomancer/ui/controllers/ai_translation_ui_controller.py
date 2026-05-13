@@ -13,7 +13,7 @@
          selected-chunk retranslation, and modal progress lifecycle.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-22
-@version 0.9.0
+@version 0.9.1
 """
 
 # IMPORTS
@@ -51,8 +51,8 @@ def handle_start_translation_requested(
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-11
-    @version    0.3.0
+    @date       2026-05-12
+    @version    0.4.0
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._active_operation_kind is not None:
@@ -80,6 +80,16 @@ def handle_start_translation_requested(
             ui_state_service.translate("project.error_missing_ai_translation_profile", current_language),
         )
         return
+    translation_operation = _manifest_translation_operation(window)
+    translation_status = str(translation_operation.get("status", "not_started"))
+    translation_mode = str(translation_operation.get("mode") or "")
+    additional_translation_instructions = None
+    if translation_status in {"running", "failed"} and translation_mode == "ai_assisted":
+        pass
+    elif _translation_requires_ai(window, target_language):
+        additional_translation_instructions = prompt_ai_translation_instructions(window, current_language)
+        if additional_translation_instructions is None:
+            return
     _start_operation(
         window,
         operation_name=ui_state_service.translate("ai_translation.start", current_language),
@@ -92,6 +102,7 @@ def handle_start_translation_requested(
                 target_language,
                 progress_callback=progress_callback,
                 cancel_requested=cancel_requested,
+                additional_translation_instructions=additional_translation_instructions,
             )
         ),
     )
@@ -110,8 +121,8 @@ def handle_retranslate_selected_requested(
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-22
-    @version    0.3.0
+    @date       2026-05-12
+    @version    0.4.0
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._active_operation_kind is not None:
@@ -127,6 +138,9 @@ def handle_retranslate_selected_requested(
             ui_state_service.translate("project.error_missing_ai_translation_profile", current_language),
         )
         return
+    additional_translation_instructions = prompt_ai_translation_instructions(window, current_language)
+    if additional_translation_instructions is None:
+        return
     _start_operation(
         window,
         operation_name=ui_state_service.translate("ai_translation.retranslate", current_language),
@@ -140,6 +154,7 @@ def handle_retranslate_selected_requested(
                 chunk_id,
                 progress_callback=progress_callback,
                 cancel_requested=cancel_requested,
+                additional_translation_instructions=additional_translation_instructions,
             )
         ),
     )
@@ -441,6 +456,28 @@ def _resolve_ai_profile(settings_payload: dict[str, object] | None, profile_id: 
     return workflow_controller_service.resolve_enabled_ai_profile(settings_payload, profile_id)
 
 
+def prompt_ai_translation_instructions(window: "MainWindow", language: str) -> str | None:
+    """
+    @brief      Ask the operator for optional extra AI translation prompt rules.
+    @param[in]  window Active main window shell.
+    @param[in]  language Runtime UI language code.
+    @return     Extra translation instructions, an empty string, or None when cancelled.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-12
+    @version    0.1.0
+    """
+    instructions = misc_ui_controller.prompt_multiline_text(
+        window,
+        ui_state_service.translate("dialog.ai_translation_extra_prompt_title", language),
+        ui_state_service.translate("dialog.ai_translation_extra_prompt_label", language),
+        "",
+    )
+    if instructions is None:
+        return None
+    return instructions.strip()
+
+
 def _has_chunking_output(project_root: str | None) -> bool:
     """
     @brief      Determine whether chunking output exists for translation input.
@@ -454,6 +491,44 @@ def _has_chunking_output(project_root: str | None) -> bool:
     if not project_root:
         return False
     return bool(deterministic_chunking_service.load_chunks(project_root))
+
+
+def _manifest_translation_operation(window: "MainWindow") -> dict[str, object]:
+    """
+    @brief      Resolve the current translation operation summary from the active manifest.
+    @param[in]  window Active main window instance.
+    @return     Translation operation payload or an empty payload.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-12
+    @version    0.1.0
+    """
+    if not isinstance(window._current_manifest, dict):
+        return {}
+    operations = window._current_manifest.get("operations", {})
+    if not isinstance(operations, dict):
+        return {}
+    translation_operation = operations.get("translation", {})
+    return dict(translation_operation) if isinstance(translation_operation, dict) else {}
+
+
+def _translation_requires_ai(window: "MainWindow", target_language: str) -> bool:
+    """
+    @brief      Determine whether the requested translation needs an AI model call.
+    @param[in]  window Active main window instance.
+    @param[in]  target_language Locked target language code.
+    @return     True when original and target languages differ or original language is unknown.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-12
+    @version    0.1.0
+    """
+    if not isinstance(window._current_manifest, dict):
+        return True
+    original_language = str(window._current_manifest.get("original_language", "") or "").strip()
+    if not original_language:
+        return True
+    return original_language != target_language
 
 
 def _persisted_target_language(window: "MainWindow") -> str:

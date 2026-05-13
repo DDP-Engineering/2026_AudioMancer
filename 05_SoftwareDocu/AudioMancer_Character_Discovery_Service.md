@@ -25,6 +25,9 @@ controller aligned with the project manifest.
 - use root-level cleanup and chunking artifacts as the discovery source
 - split chunk input into overlapping, budget-aware AI analysis windows
 - call the configured AI profile for window extraction and profile synthesis
+- collect optional operator Character Discovery rules before fresh discovery,
+  append those rules to window extraction and profile synthesis prompts, and
+  preserve them in report/state metadata for compatible resumes
 - detect language-agnostic dialogue spans from quotation and dash-style direct
   speech markers
 - normalize, score, merge, filter, and persist discovered speaking characters
@@ -77,12 +80,13 @@ High-level runtime flow:
 2. `characters_ui_controller.handle_start_discovery_requested(...)` validates
    the active project, chunking output, and selected enabled AI profile.
 3. On first start only, the controller shows one informational popup about
-   long-running AI work.
+   long-running AI work. For fresh runs, it then asks for optional operator
+   Character Discovery rules in a word-wrapped text box.
 4. `character_discovery_service.start_or_continue_discovery(...)` resolves
    canonical chunking output as the discovery input, derives request budgets
    from the selected profile context window and max output tokens, and restores
-   resumable state when fingerprints, profile ids, window counts, and budget
-   metadata still match.
+   resumable state when fingerprints, the saved operator-rule fingerprint,
+   window counts, and budget metadata still match.
 5. The service detects direct-dialogue spans in each chunk using punctuation
    structure rather than English-only speech verbs, analyzes budgeted chunk
    windows using eight chunks as a maximum cap, normalizes candidate evidence
@@ -153,6 +157,12 @@ Outputs:
 - `characters_state.json`
 - `log_ai_characters_<timestamp>.log`
 - updated `project.json` operation state and workflow stage
+
+Report and operation-state metadata also persist
+`additional_character_discovery_instructions` and
+`additional_character_discovery_instructions_fingerprint` so cancelled or
+failed runs continue with the original operator rules instead of silently
+switching prompt policy mid-run.
 
 ## 6. Data Contracts
 

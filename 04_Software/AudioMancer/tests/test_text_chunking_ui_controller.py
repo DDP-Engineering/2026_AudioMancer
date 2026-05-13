@@ -220,8 +220,8 @@ def test_text_chunking_ui_controller_completed_rerun_requires_confirmation(
     @return     None.
     @exception  None.
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-07
-    @version    0.1.0
+    @date       2026-05-12
+    @version    0.2.0
     """
     project_root, manifest = project_workspace_service.create_project(
         "ControllerChunkRerunProject",
@@ -337,13 +337,19 @@ def test_text_chunking_ui_controller_ai_chunk_request_uses_selected_profile_and_
     start_calls = []
     monkeypatch.setattr(
         text_chunking_ui_controller,
+        "prompt_ai_chunking_instructions",
+        lambda *_args: "Keep prologues separate.",
+    )
+    monkeypatch.setattr(
+        text_chunking_ui_controller,
         "start_operation",
         lambda _window, **kwargs: start_calls.append(kwargs),
     )
+    chunking_call_kwargs: list[dict[str, object]] = []
     monkeypatch.setattr(
         text_chunking_ui_controller.ai_chunking_service,
         "chunk_text",
-        lambda *_args, **_kwargs: {"chunking_mode": "ai_assisted"},
+        lambda *_args, **kwargs: chunking_call_kwargs.append(dict(kwargs)) or {"chunking_mode": "ai_assisted"},
     )
 
     text_chunking_ui_controller.handle_ai_chunking_requested(window, "profile_1", "scene")
@@ -353,6 +359,7 @@ def test_text_chunking_ui_controller_ai_chunk_request_uses_selected_profile_and_
     worker_callable = start_calls[0]["worker_callable"]
     result = worker_callable(project_root, project_workspace_service.load_manifest(project_root))
     assert result["chunking_mode"] == "ai_assisted"
+    assert chunking_call_kwargs[0]["additional_chunking_instructions"] == "Keep prologues separate."
 
 
 def test_text_chunking_ui_controller_ai_chunk_resume_skips_confirmation(

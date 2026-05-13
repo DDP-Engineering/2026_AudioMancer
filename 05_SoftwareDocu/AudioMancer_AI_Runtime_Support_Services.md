@@ -68,7 +68,10 @@ returns normalized success/failure payloads for settings UI state.
 
 `prompt_template_service` resolves prompt names under the app prompt root,
 loads UTF-8 text, and rejects missing or extra placeholders so a prompt change
-cannot silently drop required workflow data.
+cannot silently drop required workflow data. Placeholder validation is applied
+to the template contract before substitution; inserted source text may contain
+literal brace content such as book index markers without being treated as a new
+template placeholder.
 
 `token_usage_service` provides the shared token-usage contract used by AI
 operation reports, modal progress updates, and page notes.

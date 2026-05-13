@@ -13,7 +13,7 @@
          discovery start and reset behavior for the Characters page controller.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-08
-@version 0.9.0
+@version 0.10.0
 """
 
 # IMPORTS
@@ -63,6 +63,11 @@ def test_character_ui_controller_first_run_shows_info_popup(monkeypatch, qtbot, 
         "_has_previous_character_discovery_state",
         lambda _window: False,
     )
+    monkeypatch.setattr(
+        characters_ui_controller,
+        "prompt_ai_character_discovery_instructions",
+        lambda _window, _language: "",
+    )
 
     characters_ui_controller.handle_start_discovery_requested(window, "profile-1")
 
@@ -93,12 +98,58 @@ def test_character_ui_controller_resume_uses_current_selected_profile(monkeypatc
         "start_or_continue_discovery",
         lambda _project_root, _manifest, profile_payload, **_kwargs: used_profiles.append(dict(profile_payload)),
     )
+    monkeypatch.setattr(
+        characters_ui_controller,
+        "prompt_ai_character_discovery_instructions",
+        lambda _window, _language: "",
+    )
 
     characters_ui_controller.handle_start_discovery_requested(window, "profile-2")
     start_calls[0]["worker_callable"](project_root, window._current_manifest)
 
     assert used_profiles[0]["id"] == "profile-2"
     assert used_profiles[0]["model_name"] == "qwen3-14b"
+
+
+def test_character_ui_controller_passes_extra_prompt_to_discovery(monkeypatch, qtbot, tmp_path) -> None:
+    """
+    @brief      Validate character discovery asks for optional operator rules and passes them to the worker.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  qtbot Qt test helper fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-13
+    @version    0.1.0
+    """
+    project_root, _manifest = _create_project(tmp_path, "CharacterControllerExtraPrompt")
+    window = _build_window(qtbot, project_root)
+    start_calls = []
+    used_instructions = []
+    monkeypatch.setattr(characters_ui_controller, "_is_resuming_character_discovery", lambda _window: False)
+    monkeypatch.setattr(
+        characters_ui_controller,
+        "prompt_ai_character_discovery_instructions",
+        lambda _window, _language: "Track honorifics as part of canonical names.",
+    )
+    monkeypatch.setattr(
+        characters_ui_controller,
+        "_start_operation",
+        lambda _window, **kwargs: start_calls.append(kwargs),
+    )
+    monkeypatch.setattr(
+        characters_ui_controller.character_discovery_service,
+        "start_or_continue_discovery",
+        lambda _project_root, _manifest, _profile_payload, **kwargs: used_instructions.append(
+            kwargs.get("additional_character_discovery_instructions")
+        ),
+    )
+
+    characters_ui_controller.handle_start_discovery_requested(window, "profile-1")
+    start_calls[0]["worker_callable"](project_root, window._current_manifest)
+
+    assert used_instructions == ["Track honorifics as part of canonical names."]
 
 
 def test_character_ui_controller_add_flow_enters_draft_mode(monkeypatch, qtbot, tmp_path) -> None:

@@ -15,7 +15,7 @@
          chunk-based generation, and narrator-only segmentation.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-24
-@version 0.12.1
+@version 0.13.0
 """
 
 # IMPORTS
@@ -224,6 +224,80 @@ def test_start_or_continue_generation_creates_artifacts_and_normalizes_blocks(mo
     assert state["metadata"]["budget_metadata"] == report["budget_metadata"]
 
 
+def test_start_generation_appends_and_persists_operator_speech_block_rules(monkeypatch, tmp_path) -> None:
+    """
+    @brief      Verify optional operator Speech Blocks rules are sent to AI prompts and persisted.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-13
+    @version    0.1.0
+    """
+    project_root, manifest = _create_chunked_project(tmp_path, "SpeechBlocksExtraPrompt")
+    manifest["original_language"] = "en"
+    project_workspace_service.save_manifest(manifest, project_root)
+    character_voices_service.save_selected_voice_language(project_root, "en")
+    additional_rules = "Keep stage directions as indication blocks."
+    requested_prompts: list[str] = []
+    monkeypatch.setattr(speech_blocks_service.prompt_template_service, "validate_required_prompts", lambda _names: None)
+
+    def _fake_chat_json(_profile, _system_prompt, user_prompt, **_kwargs):
+        """
+        @brief      Capture the rendered user prompt and return one simple Speech Blocks response.
+        @param[in]  _profile Ignored AI profile payload.
+        @param[in]  _system_prompt Ignored system prompt.
+        @param[in]  user_prompt Rendered user prompt.
+        @param[in]  _kwargs Ignored keyword request arguments.
+        @return     Fake Speech Blocks response.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-13
+        @version    0.1.0
+        """
+        requested_prompts.append(str(user_prompt))
+        chunk_text = 'Narration. "Hello there."' if len(requested_prompts) == 1 else 'Maria smiled. "Welcome."'
+        return {
+            "payload": {
+                "speech_blocks": [
+                    {
+                        "speaker_id": "narrator",
+                        "content_kind": "narration",
+                        "source_text": chunk_text,
+                        "text": chunk_text,
+                        "warning_flags": [],
+                    }
+                ]
+            },
+            "usage": {"input_tokens": 5, "output_tokens": 4, "total_tokens": 9, "usage_available": True},
+        }
+
+    monkeypatch.setattr(speech_blocks_service.llm_provider_service, "chat_json", _fake_chat_json)
+
+    report = speech_blocks_service.start_or_continue_generation(
+        project_root,
+        manifest,
+        _profile_payload(),
+        additional_speech_block_instructions=additional_rules,
+    )
+
+    state = speech_blocks_service.load_operation_state(project_root)
+    assert len(requested_prompts) == 2
+    assert all("Additional operator Speech Blocks instructions:" in prompt for prompt in requested_prompts)
+    assert all(additional_rules in prompt for prompt in requested_prompts)
+    assert report["additional_speech_block_instructions"] == additional_rules
+    assert report["additional_speech_block_instructions_fingerprint"] == (
+        speech_blocks_service._compute_prompt_fingerprint(additional_rules)  # noqa: SLF001
+    )
+    assert state is not None
+    assert state["metadata"]["additional_speech_block_instructions"] == additional_rules
+    assert (
+        state["metadata"]["additional_speech_block_instructions_fingerprint"]
+        == report["additional_speech_block_instructions_fingerprint"]
+    )
+
+
 def test_start_generation_splits_oversized_chunk_by_ai_context_budget(monkeypatch, tmp_path) -> None:
     """
     @brief      Verify long chunks are split into multiple AI requests using the selected profile context budget.
@@ -407,6 +481,7 @@ def test_speech_blocks_resume_accepts_changed_profile_and_budget_metadata(tmp_pa
         input_fingerprint,
         "en",
         len(source_chunks),
+        speech_blocks_service._compute_prompt_fingerprint(""),  # noqa: SLF001
     )
 
     assert restored == ([], [], 1)

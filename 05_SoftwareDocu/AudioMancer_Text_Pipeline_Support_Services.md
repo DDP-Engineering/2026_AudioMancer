@@ -55,7 +55,8 @@ Main public entrypoints:
 The deterministic path consumes cleaned text and paragraph metadata, writes
 ordered chunk JSON, and persists operation state/report files. The AI path uses
 the same paragraph metadata but asks the configured model for safe break
-positions, then commits only valid break IDs and writes AI transaction logs.
+positions, appends optional operator-supplied chunking rules to each prompt,
+then commits only valid break IDs and writes AI transaction logs.
 
 ## 4. Dependencies
 
@@ -80,7 +81,8 @@ Inputs:
 
 - cleaned text from the project root
 - cleanup metadata JSON when available
-- selected AI profile and prompt templates for AI chunking
+- selected AI profile, optional operator prompt rules, and prompt templates for
+  AI chunking
 - Speech Blocks payloads and source chunk paths
 - context-budget values for AI/TTS segmentation
 
@@ -100,8 +102,9 @@ numbers where available, warnings, and timestamps.
 
 Chunk payloads keep stable `chunk_id` values, source paragraph references,
 chapter labels, sequence indexes, and text content. AI chunking persists token
-usage and profile runtime metadata in operation state so an interrupted run can
-resume with the same committed break IDs.
+usage, optional operator prompt rules, their fingerprint, and profile runtime
+metadata in operation state so an interrupted run can resume with the same
+committed break IDs and original prompt rules.
 
 Speech Blocks reports include stage status, approved counts, warning records,
 source metadata, and token-usage payloads.

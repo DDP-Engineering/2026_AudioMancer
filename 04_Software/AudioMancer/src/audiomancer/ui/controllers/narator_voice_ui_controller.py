@@ -14,7 +14,7 @@
          sample preview playback, and project-local narrator profile editing.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-18
-@version 3.17.1
+@version 3.17.2
 """
 
 # IMPORTS
@@ -474,8 +474,8 @@ def handle_generate_profiles_requested(window: "MainWindow", profile_id: str) ->
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-11
-    @version    0.1.0
+    @date       2026-05-13
+    @version    0.2.0
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._active_operation_kind is not None:
@@ -508,6 +508,13 @@ def handle_generate_profiles_requested(window: "MainWindow", profile_id: str) ->
     )
     if not accepted:
         return
+    additional_profile_instructions = None
+    if _is_resuming_profile_generation(window):
+        pass
+    else:
+        additional_profile_instructions = prompt_ai_narrator_profile_instructions(window, current_language)
+        if additional_profile_instructions is None:
+            return
     voice_language = window._narator_voice_page.current_voice_language()
     preview_limit = _preview_text_character_limit(window._settings_payload)
     operation_runner_controller.start_threaded_operation(
@@ -525,6 +532,7 @@ def handle_generate_profiles_requested(window: "MainWindow", profile_id: str) ->
                 preview_limit,
                 progress_callback=progress_callback,
                 cancel_requested=cancel_requested,
+                additional_profile_instructions=additional_profile_instructions,
             )
         ),
         set_busy=lambda is_busy: window._narator_voice_page.set_busy(is_busy),
@@ -1334,6 +1342,54 @@ def _confirm_generate_profiles(window: "MainWindow", language: str) -> bool:
         )
         == QMessageBox.StandardButton.Yes
     )
+
+
+def prompt_ai_narrator_profile_instructions(window: "MainWindow", language: str) -> str | None:
+    """
+    @brief      Ask the operator for optional extra AI narrator profile prompt rules.
+    @param[in]  window Main application window.
+    @param[in]  language Runtime UI language code.
+    @return     Extra narrator profile instructions, an empty string, or None when cancelled.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-13
+    @version    0.1.0
+    """
+    instructions = misc_ui_controller.prompt_multiline_text(
+        window,
+        ui_state_service.translate("dialog.narator_profile_generation_extra_prompt_title", language),
+        ui_state_service.translate("dialog.narator_profile_generation_extra_prompt_label", language),
+        "",
+    )
+    if instructions is None:
+        return None
+    return instructions.strip()
+
+
+def _is_resuming_profile_generation(window: "MainWindow") -> bool:
+    """
+    @brief      Return whether the narrator profile generation request resumes saved AI work.
+    @param[in]  window Main application window.
+    @return     True when a compatible unfinished operation may reuse saved prompt rules.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-13
+    @version    0.1.0
+    """
+    if window._current_project_root is None:
+        return False
+    operation_state = narrator_profile_generation_service.load_operation_state(window._current_project_root)
+    if not isinstance(operation_state, dict):
+        return False
+    is_ai_profile_generation = (
+        str(operation_state.get("mode", ""))
+        == narrator_profile_generation_service.NARRATOR_PROFILE_GENERATION_MODE_AI_ASSISTED
+    )
+    return is_ai_profile_generation and str(operation_state.get("status", "")) in {
+        "running",
+        "failed",
+        "cancelled",
+    }
 
 
 def _preview_text_character_limit(settings_payload: dict[str, object] | None) -> int:

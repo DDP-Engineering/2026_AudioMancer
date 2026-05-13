@@ -13,7 +13,7 @@
          dialogs, the common modal progress popup, and title-bar helpers.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-06
-@version 0.8.2
+@version 0.8.3
 """
 
 # IMPORTS
@@ -145,6 +145,51 @@ def show_about_dialog(window: "MainWindow") -> None:
     @version    0.1.0
     """
     build_about_dialog(window).exec()
+
+
+def prompt_multiline_text(
+    window: "MainWindow",
+    title: str,
+    label: str,
+    initial_text: str = "",
+) -> str | None:
+    """
+    @brief      Ask the operator for optional multi-line text with word wrapping.
+    @param[in]  window Active main window shell.
+    @param[in]  title Dialog title.
+    @param[in]  label Dialog explanatory label.
+    @param[in]  initial_text Initial text box value.
+    @return     Entered text, or None when cancelled.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-12
+    @version    0.1.0
+    """
+    dialog = QDialog(window)
+    dialog.setWindowTitle(title)
+    dialog.resize(560, 340)
+
+    layout = QVBoxLayout(dialog)
+    prompt_label = QLabel(label, dialog)
+    prompt_label.setWordWrap(True)
+    layout.addWidget(prompt_label)
+
+    text_edit = QPlainTextEdit(dialog)
+    text_edit.setLineWrapMode(QPlainTextEdit.LineWrapMode.WidgetWidth)
+    text_edit.setPlainText(initial_text)
+    layout.addWidget(text_edit, 1)
+
+    button_box = QDialogButtonBox(
+        QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel,
+        dialog,
+    )
+    button_box.accepted.connect(dialog.accept)
+    button_box.rejected.connect(dialog.reject)
+    layout.addWidget(button_box)
+
+    if dialog.exec() != QDialog.DialogCode.Accepted:
+        return None
+    return text_edit.toPlainText()
 
 
 def build_about_dialog(window: "MainWindow") -> QDialog:

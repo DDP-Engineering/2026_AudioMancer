@@ -15,7 +15,7 @@
          based operation state plus AI transaction logging.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 0.18.1
+@version 0.18.2
 """
 
 # IMPORTS
@@ -295,6 +295,7 @@ def start_or_continue_generation(
     settings_payload: dict[str, object] | None = None,
     progress_callback=None,
     cancel_requested=None,
+    additional_speech_block_instructions: str | None = None,
 ) -> SpeechBlocksReportPayload:
     """
     @brief      Run Speech Blocks generation for the active project.
@@ -304,12 +305,13 @@ def start_or_continue_generation(
     @param[in]  settings_payload Optional application settings payload for cached TTS model budgets.
     @param[in]  progress_callback Optional progress callback for the modal popup.
     @param[in]  cancel_requested Optional zero-argument cancellation callback.
+    @param[in]  additional_speech_block_instructions Optional operator-supplied Speech Blocks rules.
     @return     Final Speech Blocks report payload.
     @exception  ValueError Raised when prerequisites or profile data are invalid.
     @exception  OperationCancelledError Raised when the operator cancels the run.
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.3.1
+    @date       2026-05-13
+    @version    0.4.0
     """
     resolved_project_root = Path(project_root)
     profile_id = str(ai_profile_payload.get("id", "")).strip()
@@ -326,6 +328,12 @@ def start_or_continue_generation(
     prompt_names = _prompt_names_for_mode(voice_assignment_mode)
     prompt_template_service.validate_required_prompts(list(prompt_names))
     tts_budget = _resolve_narrator_only_budget(settings_payload)
+    existing_state = load_operation_state(resolved_project_root) or {}
+    additional_speech_block_instructions = _resolve_additional_speech_block_instructions(
+        additional_speech_block_instructions,
+        existing_state,
+    )
+    additional_speech_block_instructions_fingerprint = _compute_prompt_fingerprint(additional_speech_block_instructions)
 
     speaker_catalog = _speaker_catalog(character_discovery_service.load_character_profiles(resolved_project_root))
     system_prompt = prompt_template_service.render_prompt(prompt_names[0], {})
@@ -337,9 +345,9 @@ def start_or_continue_generation(
         speaker_catalog,
         voice_assignment_mode,
         tts_budget,
+        additional_speech_block_instructions,
     )
     input_fingerprint = _build_source_fingerprint(source_chunks, source_language, source_kind)
-    existing_state = load_operation_state(resolved_project_root) or {}
     existing_report = load_speech_blocks_report(resolved_project_root)
     started_at = _resolve_started_at(existing_state)
     log_path = _resolve_log_path(resolved_project_root, started_at)
@@ -350,6 +358,7 @@ def start_or_continue_generation(
         input_fingerprint,
         source_language,
         len(source_chunks),
+        additional_speech_block_instructions_fingerprint,
     )
     token_usage = (
         token_usage_service.restore_token_usage(
@@ -363,7 +372,7 @@ def start_or_continue_generation(
         return (
             dict(existing_report)
             if isinstance(existing_report, dict)
-            else _rebuild_report(
+            else _rebuild_report_with_prompt_rules(
                 existing_blocks,
                 source_language,
                 source_kind,
@@ -373,6 +382,7 @@ def start_or_continue_generation(
                 warning_records,
                 token_usage,
                 budget_metadata,
+                additional_speech_block_instructions,
             )
         )
 
@@ -380,7 +390,7 @@ def start_or_continue_generation(
         resolved_project_root,
         source_chunks,
         existing_blocks,
-        _rebuild_report(
+        _rebuild_report_with_prompt_rules(
             existing_blocks,
             source_language,
             source_kind,
@@ -390,8 +400,9 @@ def start_or_continue_generation(
             warning_records,
             token_usage,
             budget_metadata,
+            additional_speech_block_instructions,
         ),
-        _build_operation_state(
+        _build_operation_state_with_prompt_rules(
             resolved_project_root,
             source_chunks,
             existing_blocks,
@@ -407,6 +418,7 @@ def start_or_continue_generation(
             token_usage=token_usage,
             next_chunk_index=start_chunk_index,
             budget_metadata=budget_metadata,
+            additional_speech_block_instructions=additional_speech_block_instructions,
         ),
     )
     _emit_progress(
@@ -432,6 +444,7 @@ def start_or_continue_generation(
             tts_budget,
             prompt_names[1],
             budget_metadata,
+            additional_speech_block_instructions,
             log_path,
             {
                 "operation_kind": "speech_blocks",
@@ -447,7 +460,7 @@ def start_or_continue_generation(
         token_usage = token_usage_service.merge_token_usage(token_usage, chunk_token_usage)
         all_blocks.extend(chunk_blocks)
         warning_entries.extend(chunk_warnings)
-        report = _rebuild_report(
+        report = _rebuild_report_with_prompt_rules(
             all_blocks,
             source_language,
             source_kind,
@@ -457,13 +470,14 @@ def start_or_continue_generation(
             warning_entries,
             token_usage,
             budget_metadata,
+            additional_speech_block_instructions,
         )
         _persist_state(
             resolved_project_root,
             source_chunks,
             all_blocks,
             report,
-            _build_operation_state(
+            _build_operation_state_with_prompt_rules(
                 resolved_project_root,
                 source_chunks,
                 all_blocks,
@@ -479,6 +493,7 @@ def start_or_continue_generation(
                 token_usage=token_usage,
                 next_chunk_index=chunk_index + 1,
                 budget_metadata=budget_metadata,
+                additional_speech_block_instructions=additional_speech_block_instructions,
             ),
         )
         _emit_progress(
@@ -490,7 +505,7 @@ def start_or_continue_generation(
         )
 
     completed_at = _utc_now_iso()
-    report = _rebuild_report(
+    report = _rebuild_report_with_prompt_rules(
         all_blocks,
         source_language,
         source_kind,
@@ -500,9 +515,10 @@ def start_or_continue_generation(
         warning_entries,
         token_usage,
         budget_metadata,
+        additional_speech_block_instructions,
         updated_at=completed_at,
     )
-    completed_state = _build_operation_state(
+    completed_state = _build_operation_state_with_prompt_rules(
         resolved_project_root,
         source_chunks,
         all_blocks,
@@ -518,6 +534,7 @@ def start_or_continue_generation(
         token_usage=token_usage,
         next_chunk_index=None,
         budget_metadata=budget_metadata,
+        additional_speech_block_instructions=additional_speech_block_instructions,
     )
     _persist_state(
         resolved_project_root,
@@ -948,6 +965,7 @@ def regenerate_chunk_speech_blocks(
     settings_payload: dict[str, object] | None = None,
     progress_callback=None,
     cancel_requested=None,
+    additional_speech_block_instructions: str | None = None,
 ) -> SpeechBlocksReportPayload:
     """
     @brief      Re-run Speech Blocks splitting for one selected source chunk.
@@ -958,12 +976,13 @@ def regenerate_chunk_speech_blocks(
     @param[in]  settings_payload Optional application settings payload for cached TTS model budgets.
     @param[in]  progress_callback Optional progress callback for the modal popup.
     @param[in]  cancel_requested Optional zero-argument cancellation callback.
+    @param[in]  additional_speech_block_instructions Optional operator-supplied Speech Blocks rules.
     @return     Updated Speech Blocks report payload.
     @exception  ValueError Raised when prerequisites or target chunk are invalid.
     @exception  OperationCancelledError Raised when the operator cancels the run.
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.3.1
+    @date       2026-05-13
+    @version    0.4.0
     """
     resolved_project_root = Path(project_root)
     profile_id = str(ai_profile_payload.get("id", "")).strip()
@@ -987,6 +1006,10 @@ def regenerate_chunk_speech_blocks(
     prompt_template_service.validate_required_prompts(list(prompt_names))
     existing_report = load_speech_blocks_report(resolved_project_root)
     existing_state = load_operation_state(resolved_project_root) or {}
+    additional_speech_block_instructions = _resolve_additional_speech_block_instructions(
+        additional_speech_block_instructions,
+        existing_state,
+    )
     token_usage = token_usage_service.restore_token_usage(
         None if existing_report is None else existing_report.get("token_usage"),
         _metadata_token_usage(existing_state),
@@ -1003,6 +1026,7 @@ def regenerate_chunk_speech_blocks(
         speaker_catalog,
         voice_assignment_mode,
         tts_budget,
+        additional_speech_block_instructions,
     )
     raise_if_cancelled(cancel_requested)
     new_blocks, _chunk_warnings, chunk_token_usage = _generate_budgeted_chunk_blocks(
@@ -1015,6 +1039,7 @@ def regenerate_chunk_speech_blocks(
         tts_budget,
         prompt_names[1],
         budget_metadata,
+        additional_speech_block_instructions,
         log_path,
         {
             "operation_kind": "speech_blocks",
@@ -1034,7 +1059,7 @@ def regenerate_chunk_speech_blocks(
     all_blocks = _renumber_speech_blocks(source_chunks, [*existing_blocks, *new_blocks])
     input_fingerprint = _build_source_fingerprint(source_chunks, source_language, source_kind)
     completed_at = _utc_now_iso()
-    report = _rebuild_report(
+    report = _rebuild_report_with_prompt_rules(
         all_blocks,
         source_language,
         source_kind,
@@ -1044,9 +1069,10 @@ def regenerate_chunk_speech_blocks(
         [],
         token_usage,
         budget_metadata,
+        additional_speech_block_instructions,
         updated_at=completed_at,
     )
-    resplit_state = _build_operation_state(
+    resplit_state = _build_operation_state_with_prompt_rules(
         resolved_project_root,
         source_chunks,
         all_blocks,
@@ -1062,6 +1088,7 @@ def regenerate_chunk_speech_blocks(
         token_usage=token_usage,
         next_chunk_index=None,
         budget_metadata=budget_metadata,
+        additional_speech_block_instructions=additional_speech_block_instructions,
     )
     _persist_state(
         resolved_project_root,
@@ -1150,6 +1177,7 @@ def _chunk_user_prompt(
     voice_assignment_mode: str = config.DEFAULT_TTS_VOICE_ASSIGNMENT_MODE,
     tts_budget: dict[str, object] | None = None,
     prompt_name: str = "speech_blocks_user",
+    additional_speech_block_instructions: str = "",
 ) -> str:
     """
     @brief      Render the chunk-specific Speech Blocks user prompt.
@@ -1159,15 +1187,16 @@ def _chunk_user_prompt(
     @param[in]  voice_assignment_mode Active project voice-assignment mode.
     @param[in]  tts_budget Optional narrator-only TTS budget metadata.
     @param[in]  prompt_name Prompt template name.
+    @param[in]  additional_speech_block_instructions Optional operator-supplied Speech Blocks rules.
     @return     Rendered prompt text.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.5.0
+    @date       2026-05-13
+    @version    0.6.0
     """
     budget_payload = tts_budget or _resolve_narrator_only_budget(None)
     if str(prompt_name).strip() == "speech_blocks_narrator_only_user":
-        return prompt_template_service.render_prompt(
+        return _render_speech_blocks_user_prompt(
             prompt_name,
             {
                 "source_language": narrator_definition_service.narrator_language_label(source_language),
@@ -1184,9 +1213,10 @@ def _chunk_user_prompt(
                 "max_tts_tokens": str(int(budget_payload.get("model_token_budget", 0))),
                 "safe_tts_words": str(int(budget_payload.get("safe_word_count", 0))),
                 "tts_budget_source": str(budget_payload.get("model_budget_source", "")),
+                "additional_speech_block_instructions": additional_speech_block_instructions,
             },
         )
-    return prompt_template_service.render_prompt(
+    return _render_speech_blocks_user_prompt(
         prompt_name,
         {
             "source_language": narrator_definition_service.narrator_language_label(source_language),
@@ -1197,8 +1227,142 @@ def _chunk_user_prompt(
             "max_tts_tokens": str(int(budget_payload.get("model_token_budget", 0))),
             "safe_tts_words": str(int(budget_payload.get("safe_word_count", 0))),
             "tts_budget_source": str(budget_payload.get("model_budget_source", "")),
+            "additional_speech_block_instructions": additional_speech_block_instructions,
         },
     )
+
+
+def _render_speech_blocks_user_prompt(prompt_name: str, variables: dict[str, object]) -> str:
+    """
+    @brief      Render one Speech Blocks user prompt with optional operator rules.
+    @param[in]  prompt_name Prompt template identifier.
+    @param[in]  variables Prompt variables.
+    @return     Rendered Speech Blocks prompt.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-13
+    @version    0.1.0
+    """
+    template = prompt_template_service.load_prompt(prompt_name)
+    placeholder_names = set(re.findall(r"{([A-Za-z_][A-Za-z0-9_]*)}", template))
+    rendered_prompt = prompt_template_service.render_prompt(
+        prompt_name,
+        {key: value for key, value in variables.items() if key in placeholder_names},
+    )
+    additional_speech_block_instructions = _normalized_additional_speech_block_instructions(
+        variables.get("additional_speech_block_instructions")
+    )
+    if additional_speech_block_instructions and "additional_speech_block_instructions" not in placeholder_names:
+        rendered_prompt = _append_additional_speech_block_instructions(
+            rendered_prompt,
+            additional_speech_block_instructions,
+        )
+    return rendered_prompt
+
+
+def _resolve_additional_speech_block_instructions(
+    additional_speech_block_instructions: str | None,
+    existing_state: dict[str, object],
+) -> str:
+    """
+    @brief      Resolve operator rules for a new or resumed Speech Blocks generation run.
+    @param[in]  additional_speech_block_instructions New operator instructions or None when resuming.
+    @param[in]  existing_state Existing Speech Blocks operation state.
+    @return     Normalized operator Speech Blocks instructions.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-13
+    @version    0.1.0
+    """
+    if additional_speech_block_instructions is not None:
+        return _normalized_additional_speech_block_instructions(additional_speech_block_instructions)
+    if existing_state.get("mode") != "ai_assisted" or str(existing_state.get("status", "")) not in {
+        "running",
+        "failed",
+    }:
+        return ""
+    metadata = existing_state.get("metadata", {})
+    if not isinstance(metadata, dict):
+        return ""
+    return _normalized_additional_speech_block_instructions(metadata.get("additional_speech_block_instructions"))
+
+
+def _restore_persisted_additional_speech_block_instructions(
+    report: dict[str, object] | None,
+    operation_state: dict[str, object] | None,
+) -> str:
+    """
+    @brief      Restore persisted operator Speech Blocks rules from report or state.
+    @param[in]  report Speech Blocks report payload.
+    @param[in]  operation_state Speech Blocks operation-state payload.
+    @return     Normalized operator Speech Blocks instructions.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-13
+    @version    0.1.0
+    """
+    if isinstance(report, dict):
+        restored_report_value = _normalized_additional_speech_block_instructions(
+            report.get("additional_speech_block_instructions")
+        )
+        if restored_report_value:
+            return restored_report_value
+    if isinstance(operation_state, dict):
+        metadata = operation_state.get("metadata", {})
+        if isinstance(metadata, dict):
+            restored_metadata_value = _normalized_additional_speech_block_instructions(
+                metadata.get("additional_speech_block_instructions")
+            )
+            if restored_metadata_value:
+                return restored_metadata_value
+    return ""
+
+
+def _normalized_additional_speech_block_instructions(value: object) -> str:
+    """
+    @brief      Normalize optional operator Speech Blocks rules for prompts and state storage.
+    @param[in]  value Candidate instruction text.
+    @return     Trimmed instruction text.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-13
+    @version    0.1.0
+    """
+    if value is None:
+        return ""
+    return str(value).strip()
+
+
+def _append_additional_speech_block_instructions(prompt_text: str, additional_speech_block_instructions: str) -> str:
+    """
+    @brief      Append operator Speech Blocks rules to one rendered prompt.
+    @param[in]  prompt_text Rendered prompt template text.
+    @param[in]  additional_speech_block_instructions Normalized operator rules.
+    @return     Prompt text with an additional-rules section.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-13
+    @version    0.1.0
+    """
+    if not additional_speech_block_instructions:
+        return prompt_text
+    return (
+        f"{prompt_text.rstrip()}\n\n"
+        f"Additional operator Speech Blocks instructions:\n{additional_speech_block_instructions}\n"
+    )
+
+
+def _compute_prompt_fingerprint(prompt_text: str) -> str:
+    """
+    @brief      Compute a stable fingerprint for operator-supplied prompt rules.
+    @param[in]  prompt_text Operator prompt-rule text.
+    @return     SHA-256 fingerprint for the prompt-rule text.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-13
+    @version    0.1.0
+    """
+    return hashlib.sha256(prompt_text.encode("utf-8")).hexdigest()
 
 
 def _build_budget_metadata(
@@ -1209,6 +1373,7 @@ def _build_budget_metadata(
     speaker_catalog: dict[str, dict[str, object]],
     voice_assignment_mode: str,
     tts_budget: dict[str, object] | None,
+    additional_speech_block_instructions: str = "",
 ) -> BudgetMetadataPayload:
     """
     @brief      Build context-window budget metadata for AI Speech Blocks requests.
@@ -1219,11 +1384,12 @@ def _build_budget_metadata(
     @param[in]  speaker_catalog Allowed speaker catalog.
     @param[in]  voice_assignment_mode Active project voice-assignment mode.
     @param[in]  tts_budget Optional narrator-only TTS budget metadata.
+    @param[in]  additional_speech_block_instructions Optional operator-supplied Speech Blocks rules.
     @return     Context-budget metadata used for source chunk segmentation.
     @exception  ValueError Raised when context and output settings leave too little input room.
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-08
-    @version    0.2.0
+    @date       2026-05-13
+    @version    0.3.0
     """
     prompt_shell = _chunk_user_prompt(
         {"chunk_id": "", "text": ""},
@@ -1232,6 +1398,7 @@ def _build_budget_metadata(
         voice_assignment_mode,
         tts_budget,
         prompt_name,
+        additional_speech_block_instructions,
     )
     return ai_budget_service.context_budget_metadata(
         ai_profile_payload,
@@ -1256,6 +1423,7 @@ def _generate_budgeted_chunk_blocks(
     tts_budget: dict[str, object] | None,
     prompt_name: str,
     budget_metadata: BudgetMetadataPayload,
+    additional_speech_block_instructions: str,
     log_path: Path,
     log_context: dict[str, object],
     cancel_requested,
@@ -1272,6 +1440,7 @@ def _generate_budgeted_chunk_blocks(
     @param[in]  tts_budget Optional narrator-only TTS budget metadata.
     @param[in]  prompt_name Active Speech Blocks user prompt template name.
     @param[in]  budget_metadata Context-budget metadata.
+    @param[in]  additional_speech_block_instructions Optional operator-supplied Speech Blocks rules.
     @param[in]  log_path Operation-local AI transaction log path.
     @param[in]  log_context Base AI transaction log context.
     @param[in]  cancel_requested Optional zero-argument cancellation callback.
@@ -1279,8 +1448,8 @@ def _generate_budgeted_chunk_blocks(
     @return     Generated Speech Blocks, warning entries, and provider token usage for this chunk.
     @exception  OperationCancelledError Raised when the operator cancels the run.
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-28
-    @version    0.1.0
+    @date       2026-05-13
+    @version    0.2.0
     """
     chunk_segments = _budgeted_source_chunk_segments(source_chunk, budget_metadata)
     combined_blocks: list[SpeechBlockPayload] = []
@@ -1294,6 +1463,7 @@ def _generate_budgeted_chunk_blocks(
             voice_assignment_mode,
             tts_budget,
             prompt_name,
+            additional_speech_block_instructions,
         )
         try:
             if str(voice_assignment_mode).strip() == "same_narrator":
@@ -1736,6 +1906,129 @@ def _persist_state(
     write_operation_json_artifact(project_root, "speech_blocks", config.SPEECH_BLOCKS_STATE_FILE_NAME, operation_state)
 
 
+def _rebuild_report_with_prompt_rules(
+    speech_blocks: list[SpeechBlockPayload],
+    source_language: str,
+    source_kind: str,
+    profile_id: str,
+    total_chunk_count: int,
+    processed_chunk_count: int,
+    warning_records: list[dict[str, object]],
+    token_usage: dict[str, object],
+    budget_metadata: BudgetMetadataPayload | None,
+    additional_speech_block_instructions: str,
+    updated_at: str | None = None,
+) -> SpeechBlocksReportPayload:
+    """
+    @brief      Rebuild a Speech Blocks report and persist operator prompt-rule metadata.
+    @param[in]  speech_blocks Current Speech Blocks payload list.
+    @param[in]  source_language Active source language code.
+    @param[in]  source_kind Active source-kind token.
+    @param[in]  profile_id Active AI profile identifier.
+    @param[in]  total_chunk_count Total source chunk count.
+    @param[in]  processed_chunk_count Number of processed chunks.
+    @param[in]  warning_records Current warning entry list.
+    @param[in]  token_usage Current cumulative token-usage payload.
+    @param[in]  budget_metadata Optional context-budget metadata.
+    @param[in]  additional_speech_block_instructions Optional operator-supplied Speech Blocks rules.
+    @param[in]  updated_at Optional report timestamp override.
+    @return     Rebuilt Speech Blocks report payload.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-13
+    @version    0.1.0
+    """
+    report = _rebuild_report(
+        speech_blocks,
+        source_language,
+        source_kind,
+        profile_id,
+        total_chunk_count,
+        processed_chunk_count,
+        warning_records,
+        token_usage,
+        budget_metadata,
+        updated_at=updated_at,
+    )
+    normalized_instructions = _normalized_additional_speech_block_instructions(additional_speech_block_instructions)
+    report["additional_speech_block_instructions"] = normalized_instructions
+    report["additional_speech_block_instructions_fingerprint"] = _compute_prompt_fingerprint(normalized_instructions)
+    return report
+
+
+def _build_operation_state_with_prompt_rules(
+    project_root: Path,
+    source_chunks: list[dict[str, object]],
+    speech_blocks: list[SpeechBlockPayload],
+    status: str,
+    started_at: str,
+    completed_at: str | None,
+    source_language: str,
+    source_kind: str,
+    profile_id: str,
+    warning_records: list[dict[str, object]],
+    input_fingerprint: str,
+    log_path: Path,
+    token_usage: dict[str, object],
+    next_chunk_index: int | None,
+    budget_metadata: BudgetMetadataPayload | None,
+    additional_speech_block_instructions: str,
+) -> OperationStatePayload:
+    """
+    @brief      Build Speech Blocks operation state with operator prompt-rule metadata.
+    @param[in]  project_root Active project root folder.
+    @param[in]  source_chunks Current source-chunk snapshot.
+    @param[in]  speech_blocks Current Speech Blocks payload list.
+    @param[in]  status Persisted operation status token.
+    @param[in]  started_at Operation start timestamp.
+    @param[in]  completed_at Operation completion timestamp or `None`.
+    @param[in]  source_language Active source language code.
+    @param[in]  source_kind Active source-kind token.
+    @param[in]  profile_id Active AI profile identifier.
+    @param[in]  warning_records Current warning entry list.
+    @param[in]  input_fingerprint Stable source snapshot fingerprint.
+    @param[in]  log_path Operation-local AI transaction log path.
+    @param[in]  token_usage Current cumulative token-usage payload.
+    @param[in]  next_chunk_index Next chunk index to process or `None`.
+    @param[in]  budget_metadata Optional context-budget metadata.
+    @param[in]  additional_speech_block_instructions Optional operator-supplied Speech Blocks rules.
+    @return     Persisted operation-state payload.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-13
+    @version    0.1.0
+    """
+    state = _build_operation_state(
+        project_root,
+        source_chunks,
+        speech_blocks,
+        status=status,
+        started_at=started_at,
+        completed_at=completed_at,
+        source_language=source_language,
+        source_kind=source_kind,
+        profile_id=profile_id,
+        warning_records=warning_records,
+        input_fingerprint=input_fingerprint,
+        log_path=log_path,
+        token_usage=token_usage,
+        next_chunk_index=next_chunk_index,
+        budget_metadata=budget_metadata,
+    )
+    normalized_instructions = _normalized_additional_speech_block_instructions(additional_speech_block_instructions)
+    instruction_fingerprint = _compute_prompt_fingerprint(normalized_instructions)
+    metadata = state.get("metadata", {})
+    metadata = dict(metadata) if isinstance(metadata, dict) else {}
+    metadata["additional_speech_block_instructions"] = normalized_instructions
+    metadata["additional_speech_block_instructions_fingerprint"] = instruction_fingerprint
+    state["metadata"] = metadata
+    resume_checkpoint = state.get("resume_checkpoint")
+    if isinstance(resume_checkpoint, dict):
+        resume_checkpoint["additional_speech_block_instructions_fingerprint"] = instruction_fingerprint
+        state["resume_checkpoint"] = resume_checkpoint
+    return state
+
+
 def _persist_report_update(
     project_root: Path,
     speech_blocks: list[SpeechBlockPayload],
@@ -1761,6 +2054,10 @@ def _persist_report_update(
     profile_id = str(report.get("ai_profile_id", metadata.get("ai_profile_id", ""))).strip()
     token_usage = token_usage_service.restore_token_usage(report.get("token_usage"), metadata.get("token_usage"))
     budget_metadata = _restore_persisted_budget_metadata(report, operation_state)
+    additional_speech_block_instructions = _restore_persisted_additional_speech_block_instructions(
+        report,
+        operation_state,
+    )
     input_fingerprint = str(metadata.get("source_snapshot_fingerprint", "")).strip()
     if not input_fingerprint and source_chunks and source_language and source_kind:
         input_fingerprint = _build_source_fingerprint(source_chunks, source_language, source_kind)
@@ -1771,7 +2068,7 @@ def _persist_report_update(
     completed_at = completed_at or _utc_now_iso()
     log_path = _resolve_log_path(project_root, started_at)
     renumbered_blocks = _renumber_speech_blocks(source_chunks, speech_blocks)
-    updated_report = _rebuild_report(
+    updated_report = _rebuild_report_with_prompt_rules(
         renumbered_blocks,
         source_language,
         source_kind,
@@ -1781,13 +2078,14 @@ def _persist_report_update(
         [],
         token_usage,
         budget_metadata,
+        additional_speech_block_instructions,
     )
     status = (
         "completed"
         if str(updated_report.get("speech_blocks_stage_status", "")).strip() == SPEECH_BLOCKS_STAGE_COMPLETED
         else "review_pending"
     )
-    updated_state = _build_operation_state(
+    updated_state = _build_operation_state_with_prompt_rules(
         project_root,
         source_chunks,
         renumbered_blocks,
@@ -1803,6 +2101,7 @@ def _persist_report_update(
         token_usage=token_usage,
         next_chunk_index=None,
         budget_metadata=budget_metadata,
+        additional_speech_block_instructions=additional_speech_block_instructions,
     )
     _persist_state(
         project_root,
@@ -2087,6 +2386,7 @@ def _restore_resume_state(
     input_fingerprint: str,
     source_language: str,
     total_chunk_count: int,
+    additional_speech_block_instructions_fingerprint: str,
 ) -> tuple[list[SpeechBlockPayload], list[dict[str, object]], int]:
     """
     @brief      Restore resumable Speech Blocks state when the persisted checkpoint is still valid.
@@ -2096,11 +2396,12 @@ def _restore_resume_state(
     @param[in]  input_fingerprint Current source snapshot fingerprint.
     @param[in]  source_language Active source language code.
     @param[in]  total_chunk_count Current source chunk count.
+    @param[in]  additional_speech_block_instructions_fingerprint Operator instruction fingerprint.
     @return     Existing blocks, warning entries, and the next chunk index.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.4.0
+    @date       2026-05-13
+    @version    0.5.0
     """
     if not isinstance(existing_state, dict):
         return [], [], 0
@@ -2114,11 +2415,19 @@ def _restore_resume_state(
         return [], [], 0
     if str(metadata.get("source_language", "")).strip() != source_language:
         return [], [], 0
+    resume_checkpoint_payload = resume_checkpoint if isinstance(resume_checkpoint, dict) else {}
+    stored_instruction_fingerprint = str(
+        metadata.get("additional_speech_block_instructions_fingerprint")
+        or resume_checkpoint_payload.get("additional_speech_block_instructions_fingerprint")
+        or _compute_prompt_fingerprint("")
+    )
+    if stored_instruction_fingerprint != additional_speech_block_instructions_fingerprint:
+        return [], [], 0
     next_chunk_index = _restore_next_speech_blocks_chunk_index(
         existing_state,
         existing_report,
         metadata,
-        resume_checkpoint if isinstance(resume_checkpoint, dict) else {},
+        resume_checkpoint_payload,
         total_chunk_count,
     )
     if next_chunk_index <= 0:

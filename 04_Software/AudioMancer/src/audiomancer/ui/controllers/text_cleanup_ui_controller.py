@@ -15,7 +15,7 @@
          synchronization for the Text Cleanup page.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-24
-@version 0.8.1
+@version 0.8.2
 """
 
 # IMPORTS
@@ -168,7 +168,7 @@ def handle_ai_cleanup_requested(window: "MainWindow", profile_id: str) -> None:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-30
-    @version    0.4.1
+    @version    0.5.0
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._active_operation_kind is not None:
@@ -209,10 +209,14 @@ def handle_ai_cleanup_requested(window: "MainWindow", profile_id: str) -> None:
         )
         return
 
+    additional_cleanup_instructions = None
     if cleanup_status in {"running", "failed"} and cleanup_mode == "ai_assisted":
         pass
     else:
         if not confirm_ai_cleanup_start(window, current_language):
+            return
+        additional_cleanup_instructions = prompt_ai_cleanup_instructions(window, current_language)
+        if additional_cleanup_instructions is None:
             return
         if cleanup_status == "completed":
             if not confirm_ai_cleanup_rerun(window, current_language):
@@ -242,6 +246,7 @@ def handle_ai_cleanup_requested(window: "MainWindow", profile_id: str) -> None:
                 project_root,
                 manifest,
                 selected_profile,
+                additional_cleanup_instructions=additional_cleanup_instructions,
                 progress_callback=progress_callback,
                 cancel_requested=cancel_requested,
             )
@@ -708,6 +713,28 @@ def confirm_ai_cleanup_rerun(window: "MainWindow", language: str) -> bool:
         QMessageBox.StandardButton.No,
     )
     return decision == QMessageBox.StandardButton.Yes
+
+
+def prompt_ai_cleanup_instructions(window: "MainWindow", language: str) -> str | None:
+    """
+    @brief      Ask the operator for optional extra AI cleanup prompt rules.
+    @param[in]  window Active main window shell.
+    @param[in]  language Runtime UI language code.
+    @return     Extra cleanup instructions, an empty string, or None when cancelled.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-12
+    @version    0.1.0
+    """
+    instructions = misc_ui_controller.prompt_multiline_text(
+        window,
+        ui_state_service.translate("dialog.ai_cleanup_extra_prompt_title", language),
+        ui_state_service.translate("dialog.ai_cleanup_extra_prompt_label", language),
+        "",
+    )
+    if instructions is None:
+        return None
+    return instructions.strip()
 
 
 def _resolve_ai_profile(

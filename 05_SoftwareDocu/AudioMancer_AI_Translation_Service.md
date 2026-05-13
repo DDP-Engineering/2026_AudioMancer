@@ -21,6 +21,7 @@ the `AI Translation` UI.
 - create pass-through translation records when original and target languages
   match
 - call the configured OpenAI-compatible profile for chunk translation
+- append optional operator-supplied translation rules to translation prompts
 - split oversized chunk text into budgeted translation segments before model
   calls
 - persist translated chunk records, operation state, report data, and AI logs
@@ -65,12 +66,15 @@ High-level flow:
 3. The state service displays original and target language indicators.
 4. If original language equals target language, the service creates
    pass-through translated chunks without an AI call.
-5. Otherwise, the service translates one chunk at a time, persists progress
+5. Otherwise, the controller offers an optional word-wrapped prompt box for
+   operator translation rules before a fresh full translation run or selected
+   chunk retranslation.
+6. The service translates one chunk at a time, persists progress
    after each chunk, and appends provider transaction metadata.
-6. The generated-translation phase ends with `translation_stage_status =
+7. The generated-translation phase ends with `translation_stage_status =
    translated`.
-7. Review remains incomplete until translated chunks are approved.
-8. The translation operation is considered complete only when
+8. Review remains incomplete until translated chunks are approved.
+9. The translation operation is considered complete only when
    `translation_stage_status = approved`.
 
 ## 4. Dependencies
@@ -97,6 +101,8 @@ Inputs:
 - `project.json.original_language`, when detected by cleanup
 - selected enabled AI Translation profile from settings
 - translation prompt templates under `04_Software/AudioMancer/prompts/`
+- optional operator-supplied translation rules entered from the AI Translation
+  dialog before fresh AI translation work
 
 Outputs:
 
@@ -127,6 +133,12 @@ Invariants:
   narrator sample files, and the locked target language
 - same-language pass-through uses source text as translated text and avoids AI
   rewriting
+- operator-supplied translation rules are appended to the default prompt when
+  the prompt template does not provide an explicit
+  `{additional_translation_instructions}` placeholder
+- `translation_report.json` and `translation_state.json` persist
+  `additional_translation_instructions` plus a stable fingerprint for AI runs;
+  unfinished runs resumed from the UI reuse the saved rules
 - approval is required before downstream character and voice workflows consume
   translated text
 - manual translation edits clear the edited chunk approval when text changes
@@ -160,8 +172,14 @@ Representative service calls:
 
 ```python
 state = ai_translation_state_service.build_ai_translation_state(project_root, manifest, settings_payload, "en")
-report = ai_translation_service.start_or_continue_translation(project_root, manifest, "ro", profile_payload)
-report = ai_translation_service.approve_chunk(project_root, "chunk-0001")
+report = ai_translation_service.start_or_continue_translation(
+    project_root,
+    manifest,
+    profile_payload,
+    "ro",
+    additional_translation_instructions="Keep historical forms of address formal.",
+)
+report = ai_translation_service.approve_chunk(project_root, "chunk-0001", "ro", "profile-1")
 ```
 
 ## 9. Validation And Tests

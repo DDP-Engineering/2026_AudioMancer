@@ -15,7 +15,7 @@
          window-based operation state plus AI transaction logging.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-11
-@version 0.8.1
+@version 0.8.2
 """
 
 # IMPORTS
@@ -23,6 +23,7 @@
 import hashlib
 import json
 from pathlib import Path
+import re
 
 from audiomancer import config
 from audiomancer.services import (
@@ -76,6 +77,7 @@ def chunk_text(
     semantic_strategy: str,
     progress_callback=None,
     cancel_requested=None,
+    additional_chunking_instructions: str | None = None,
 ) -> ChunkingReportPayload:
     """
     @brief      Run AI-assisted chunking for one active project.
@@ -85,13 +87,14 @@ def chunk_text(
     @param[in]  semantic_strategy Selected semantic strategy token.
     @param[in]  progress_callback Optional progress callback for the modal popup.
     @param[in]  cancel_requested Optional zero-argument cancellation callback.
+    @param[in]  additional_chunking_instructions Optional operator-supplied chunking rules.
     @return     Chunking report payload for the persisted AI chunking artifacts.
     @exception  FileNotFoundError Raised when the cleaned input is missing.
     @exception  ValueError Raised on missing profile data or unusable cleaned text.
     @exception  OperationCancelledError Raised when the operator cancels the run.
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-11
-    @version    0.5.1
+    @date       2026-05-12
+    @version    0.6.0
     """
     resolved_project_root = Path(project_root)
     source_document = manifest.get("source_document")
@@ -142,20 +145,31 @@ def chunk_text(
         "text_chunking_system",
         {"strategy": semantic_strategy},
     )
-    budget_metadata = _build_budget_metadata(ai_profile_payload, semantic_strategy, system_prompt)
+    existing_state = load_operation_state(resolved_project_root) or {}
+    additional_chunking_instructions = _resolve_additional_chunking_instructions(
+        additional_chunking_instructions,
+        existing_state,
+    )
+    additional_chunking_instructions_fingerprint = _compute_prompt_fingerprint(additional_chunking_instructions)
+    budget_metadata = _build_budget_metadata(
+        ai_profile_payload,
+        semantic_strategy,
+        system_prompt,
+        additional_chunking_instructions,
+    )
     profile_runtime_metadata = _build_profile_runtime_metadata(ai_profile_payload)
     input_fingerprint = _compute_input_fingerprint(input_text)
     all_windows = _build_windows(paragraph_records, semantic_strategy, budget_metadata)
     if not all_windows:
         raise ValueError("Cleaned text does not contain any paragraphs for AI chunking.")
 
-    existing_state = load_operation_state(resolved_project_root) or {}
     started_at = str(existing_state.get("started_at") or _utc_now_iso())
     completed_window_count, completed_unit_count, committed_break_ids, log_relative_path = _restore_resume_state(
         existing_state,
         len(all_windows),
         input_fingerprint,
         semantic_strategy,
+        additional_chunking_instructions_fingerprint,
         paragraph_records,
         all_windows,
         budget_metadata,
@@ -202,6 +216,7 @@ def chunk_text(
         profile_runtime_metadata=profile_runtime_metadata,
         profile_usage_history=profile_usage_history,
         completed_unit_count=completed_unit_count,
+        additional_chunking_instructions=additional_chunking_instructions,
     )
     _emit_progress(
         progress_callback,
@@ -217,11 +232,11 @@ def chunk_text(
         progress_window_index = completed_window_count + relative_window_index
         raise_if_cancelled(cancel_requested)
         window_records = paragraph_records[int(window_payload["start_index"]) : int(window_payload["end_index"]) + 1]
-        user_prompt = prompt_template_service.render_prompt(
-            "text_chunking_user",
+        user_prompt = _render_chunking_user_prompt(
             {
                 "strategy": semantic_strategy,
                 "units_block": _build_units_block(window_records),
+                "additional_chunking_instructions": additional_chunking_instructions,
             },
         )
         try:
@@ -282,6 +297,7 @@ def chunk_text(
             profile_runtime_metadata=profile_runtime_metadata,
             profile_usage_history=profile_usage_history,
             completed_unit_count=int(window_payload["end_index"]) + 1,
+            additional_chunking_instructions=additional_chunking_instructions,
         )
         _emit_progress(
             progress_callback,
@@ -314,6 +330,8 @@ def chunk_text(
         "token_usage": token_usage,
         "budget_metadata": budget_metadata,
         "profile_usage_history": profile_usage_history,
+        "additional_chunking_instructions": additional_chunking_instructions,
+        "additional_chunking_instructions_fingerprint": additional_chunking_instructions_fingerprint,
     }
     report_path.write_text(
         json.dumps(report_payload, indent=2, ensure_ascii=False) + "\n",
@@ -342,6 +360,7 @@ def chunk_text(
         profile_runtime_metadata=profile_runtime_metadata,
         profile_usage_history=profile_usage_history,
         completed_unit_count=len(paragraph_records),
+        additional_chunking_instructions=additional_chunking_instructions,
     )
     state_path.write_text(
         json.dumps(completed_state, indent=2, ensure_ascii=False) + "\n",
@@ -390,6 +409,18 @@ def _compute_input_fingerprint(input_text: str) -> str:
     @version    0.2.0
     """
     return hashlib.sha256(input_text.encode("utf-8")).hexdigest()
+
+
+def _compute_prompt_fingerprint(prompt_text: str) -> str:
+    """
+    @brief      Compute a stable fingerprint for operator-supplied prompt rules.
+    @param[in]  prompt_text Operator prompt-rule text.
+    @return     SHA-256 fingerprint for the prompt-rule text.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-12
+    @version    0.1.0
+    """
+    return hashlib.sha256(prompt_text.encode("utf-8")).hexdigest()
 
 
 def _build_windows(
@@ -474,23 +505,25 @@ def _build_budget_metadata(
     ai_profile_payload: dict[str, object],
     semantic_strategy: str,
     system_prompt: str,
+    additional_chunking_instructions: str,
 ) -> BudgetMetadataPayload:
     """
     @brief      Build context-window budget metadata for AI chunking.
     @param[in]  ai_profile_payload Selected validated AI profile payload.
     @param[in]  semantic_strategy Selected semantic strategy token.
     @param[in]  system_prompt Rendered system prompt.
+    @param[in]  additional_chunking_instructions Optional operator-supplied chunking rules.
     @return     Context-budget metadata used for request-window construction.
     @exception  ValueError Raised when context and output settings leave too little input room.
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-08
-    @version    0.2.0
+    @date       2026-05-12
+    @version    0.3.0
     """
-    prompt_user_shell = prompt_template_service.render_prompt(
-        "text_chunking_user",
+    prompt_user_shell = _render_chunking_user_prompt(
         {
             "strategy": semantic_strategy,
             "units_block": "",
+            "additional_chunking_instructions": additional_chunking_instructions,
         },
     )
     budget_metadata = ai_budget_service.context_budget_metadata(
@@ -515,6 +548,87 @@ def _build_budget_metadata(
         **budget_metadata,
         "strategy_paragraph_cap": strategy_paragraph_cap,
     }
+
+
+def _render_chunking_user_prompt(variables: dict[str, object]) -> str:
+    """
+    @brief      Render the AI chunking user prompt with optional operator rules.
+    @param[in]  variables Prompt variables.
+    @return     Rendered AI chunking user prompt.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-12
+    @version    0.1.0
+    """
+    template = prompt_template_service.load_prompt("text_chunking_user")
+    placeholder_names = set(re.findall(r"{([A-Za-z_][A-Za-z0-9_]*)}", template))
+    rendered_prompt = prompt_template_service.render_prompt(
+        "text_chunking_user",
+        {key: value for key, value in variables.items() if key in placeholder_names},
+    )
+    additional_chunking_instructions = _normalized_additional_chunking_instructions(
+        variables.get("additional_chunking_instructions")
+    )
+    if additional_chunking_instructions and "additional_chunking_instructions" not in placeholder_names:
+        rendered_prompt = _append_additional_chunking_instructions(
+            rendered_prompt,
+            additional_chunking_instructions,
+        )
+    return rendered_prompt
+
+
+def _resolve_additional_chunking_instructions(
+    additional_chunking_instructions: str | None,
+    existing_state: dict[str, object],
+) -> str:
+    """
+    @brief      Resolve the operator chunking rules for a new or resumed AI chunking run.
+    @param[in]  additional_chunking_instructions New operator instructions or None when resuming.
+    @param[in]  existing_state Existing chunking operation state.
+    @return     Normalized operator chunking instructions.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-12
+    @version    0.1.0
+    """
+    if additional_chunking_instructions is not None:
+        return _normalized_additional_chunking_instructions(additional_chunking_instructions)
+    if existing_state.get("mode") != "ai_assisted" or str(existing_state.get("status", "")) not in {
+        "running",
+        "failed",
+    }:
+        return ""
+    metadata = existing_state.get("metadata", {})
+    if not isinstance(metadata, dict):
+        return ""
+    return _normalized_additional_chunking_instructions(metadata.get("additional_chunking_instructions"))
+
+
+def _normalized_additional_chunking_instructions(value: object) -> str:
+    """
+    @brief      Normalize optional operator chunking rules for prompt insertion and state storage.
+    @param[in]  value Candidate instruction text.
+    @return     Trimmed instruction text.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-12
+    @version    0.1.0
+    """
+    if value is None:
+        return ""
+    return str(value).strip()
+
+
+def _append_additional_chunking_instructions(prompt_text: str, additional_chunking_instructions: str) -> str:
+    """
+    @brief      Append operator chunking rules to one rendered AI chunking prompt.
+    @param[in]  prompt_text Rendered prompt template text.
+    @param[in]  additional_chunking_instructions Normalized operator rules.
+    @return     Prompt text with an additional-rules section.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-12
+    @version    0.1.0
+    """
+    if not additional_chunking_instructions:
+        return prompt_text
+    return f"{prompt_text.rstrip()}\n\nAdditional operator chunking instructions:\n{additional_chunking_instructions}\n"
 
 
 def _build_profile_runtime_metadata(ai_profile_payload: dict[str, object]) -> ProfileRuntimeMetadataPayload:
@@ -568,6 +682,7 @@ def _restore_resume_state(
     total_windows: int,
     input_fingerprint: str,
     semantic_strategy: str,
+    additional_chunking_instructions_fingerprint: str,
     paragraph_records: list[dict[str, object]],
     windows: list[dict[str, int]],
     budget_metadata: BudgetMetadataPayload,
@@ -578,13 +693,14 @@ def _restore_resume_state(
     @param[in]  total_windows Total number of windows.
     @param[in]  input_fingerprint Value for `input_fingerprint`.
     @param[in]  semantic_strategy Value for `semantic_strategy`.
+    @param[in]  additional_chunking_instructions_fingerprint Operator instruction fingerprint.
     @param[in]  paragraph_records Value for `paragraph_records`.
     @param[in]  windows Current full-document request windows.
     @param[in]  budget_metadata Current context-budget metadata.
     @return     Derived helper result.
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-30
-    @version    0.4.0
+    @date       2026-05-12
+    @version    0.5.0
     """
     if str(existing_state.get("status", "")) not in {"running", "failed"}:
         return 0, 0, [], None
@@ -594,6 +710,16 @@ def _restore_resume_state(
     if str(resume_checkpoint.get("input_fingerprint", "")) != input_fingerprint:
         return 0, 0, [], None
     if str(resume_checkpoint.get("semantic_strategy", "")) != semantic_strategy:
+        return 0, 0, [], None
+    metadata = existing_state.get("metadata", {})
+    if not isinstance(metadata, dict):
+        metadata = {}
+    stored_instruction_fingerprint = str(
+        metadata.get("additional_chunking_instructions_fingerprint")
+        or resume_checkpoint.get("additional_chunking_instructions_fingerprint")
+        or _compute_prompt_fingerprint("")
+    )
+    if stored_instruction_fingerprint != additional_chunking_instructions_fingerprint:
         return 0, 0, [], None
     completed_window_count = max(0, int(resume_checkpoint.get("completed_window_count", 0)))
     completed_unit_count = _restore_completed_unit_count(
@@ -893,6 +1019,7 @@ def _write_running_state(
     profile_runtime_metadata: ProfileRuntimeMetadataPayload,
     profile_usage_history: list[ProfileRuntimeMetadataPayload],
     completed_unit_count: int,
+    additional_chunking_instructions: str,
 ) -> None:
     """
     @brief      Write the running state.
@@ -916,11 +1043,13 @@ def _write_running_state(
     @param[in]  profile_runtime_metadata Runtime metadata for the current AI profile.
     @param[in]  profile_usage_history Runtime metadata entries used across resumed segments.
     @param[in]  completed_unit_count Number of paragraph units processed by completed AI windows.
+    @param[in]  additional_chunking_instructions Optional operator-supplied chunking rules.
     @return     None.
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-30
-    @version    0.3.0
+    @date       2026-05-12
+    @version    0.4.0
     """
+    additional_chunking_instructions_fingerprint = _compute_prompt_fingerprint(additional_chunking_instructions)
     chunks = _build_chunks_from_break_ids(
         paragraph_records,
         committed_break_ids,
@@ -957,11 +1086,13 @@ def _write_running_state(
             "committed_break_ids": list(committed_break_ids),
             "log_relative_path": log_relative_path,
             "budget_metadata": dict(budget_metadata),
+            "additional_chunking_instructions_fingerprint": additional_chunking_instructions_fingerprint,
         },
         budget_metadata=budget_metadata,
         profile_runtime_metadata=profile_runtime_metadata,
         profile_usage_history=profile_usage_history,
         completed_unit_count=completed_unit_count,
+        additional_chunking_instructions=additional_chunking_instructions,
     )
     state_path.write_text(
         json.dumps(state_payload, indent=2, ensure_ascii=False) + "\n",
@@ -992,6 +1123,7 @@ def _build_operation_state(
     profile_runtime_metadata: ProfileRuntimeMetadataPayload,
     profile_usage_history: list[ProfileRuntimeMetadataPayload],
     completed_unit_count: int,
+    additional_chunking_instructions: str,
 ) -> OperationStatePayload:
     """
     @brief      Build the operation state.
@@ -1017,11 +1149,13 @@ def _build_operation_state(
     @param[in]  profile_runtime_metadata Runtime metadata for the current AI profile.
     @param[in]  profile_usage_history Runtime metadata entries used across resumed segments.
     @param[in]  completed_unit_count Number of paragraph units processed by completed AI windows.
+    @param[in]  additional_chunking_instructions Optional operator-supplied chunking rules.
     @return     Derived helper result.
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-30
-    @version    0.3.0
+    @date       2026-05-12
+    @version    0.4.0
     """
+    additional_chunking_instructions_fingerprint = _compute_prompt_fingerprint(additional_chunking_instructions)
     artifact_paths = [log_relative_path]
     if report_path is not None and report_path.is_file():
         artifact_paths.insert(0, relative_to_project(project_root, report_path))
@@ -1051,6 +1185,8 @@ def _build_operation_state(
             "token_usage": token_usage_service.coerce_token_usage(token_usage),
             "budget_metadata": dict(budget_metadata),
             "profile_usage_history": [dict(item) for item in profile_usage_history],
+            "additional_chunking_instructions": additional_chunking_instructions,
+            "additional_chunking_instructions_fingerprint": additional_chunking_instructions_fingerprint,
         },
         resume_checkpoint=resume_checkpoint,
     )

@@ -14,7 +14,7 @@
          discovery workflow.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-08
-@version 0.10.0
+@version 0.11.0
 """
 
 # IMPORTS
@@ -138,6 +138,104 @@ def test_start_discovery_persists_outputs_and_report(monkeypatch, tmp_path) -> N
         }
     ]
     assert report["token_usage"]["total_tokens"] == 135
+
+
+def test_start_discovery_appends_and_persists_operator_character_rules(monkeypatch, tmp_path) -> None:
+    """
+    @brief      Validate optional operator Character Discovery rules are sent to AI prompts and persisted.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-13
+    @version    0.1.0
+    """
+    project_root, manifest = _create_character_project(tmp_path, "CharacterDiscoveryExtraPrompt")
+    additional_rules = "Treat titled names like Lady Catherine as character identities."
+    requested_prompts: list[str] = []
+    monkeypatch.setattr(
+        character_discovery_service.prompt_template_service,
+        "validate_required_prompts",
+        lambda _prompt_names: None,
+    )
+    monkeypatch.setattr(
+        character_discovery_service.prompt_template_service,
+        "render_prompt",
+        lambda prompt_name, payload: f"{prompt_name}:{sorted(payload.keys())}",
+    )
+    responses = iter(
+        [
+            {
+                "payload": {
+                    "characters": [
+                        {
+                            "canonical_name": "Alice",
+                            "aliases": [],
+                            "evidence": [
+                                {
+                                    "chunk_id": "chunk-0001",
+                                    "source_excerpt": '"Alice keeps watch," said Alice.',
+                                    "reason": "Alice speaks in direct dialogue.",
+                                }
+                            ],
+                        }
+                    ]
+                },
+                "usage": {"input_tokens": 40, "output_tokens": 12, "total_tokens": 52, "usage_available": True},
+            },
+            {
+                "payload": {
+                    "canonical_name": "Alice",
+                    "gender_hint": "female",
+                    "voice_definition_prompt": "Create a consistent spoken voice for Alice. Sex/Gender: female.",
+                    "preview_text": "Alice keeps watch.",
+                    "confidence": "high",
+                },
+                "usage": {"input_tokens": 30, "output_tokens": 14, "total_tokens": 44, "usage_available": True},
+            },
+        ]
+    )
+
+    def _fake_chat_json(_profile, _system_prompt, user_prompt, **_kwargs):
+        """
+        @brief      Capture rendered prompts and return fake Character Discovery responses.
+        @param[in]  _profile Ignored AI profile payload.
+        @param[in]  _system_prompt Ignored system prompt.
+        @param[in]  user_prompt Rendered user prompt.
+        @param[in]  _kwargs Ignored keyword request arguments.
+        @return     Fake Character Discovery model response.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-13
+        @version    0.1.0
+        """
+        requested_prompts.append(str(user_prompt))
+        return next(responses)
+
+    monkeypatch.setattr(character_discovery_service.llm_provider_service, "chat_json", _fake_chat_json)
+
+    report = character_discovery_service.start_or_continue_discovery(
+        project_root,
+        manifest,
+        _profile_payload("profile-1"),
+        additional_character_discovery_instructions=additional_rules,
+    )
+
+    state = character_discovery_service.load_operation_state(project_root)
+    assert len(requested_prompts) == 2
+    assert all("Additional operator Character Discovery instructions:" in prompt for prompt in requested_prompts)
+    assert all(additional_rules in prompt for prompt in requested_prompts)
+    assert report["additional_character_discovery_instructions"] == additional_rules
+    assert report["additional_character_discovery_instructions_fingerprint"] == (
+        character_discovery_service._compute_prompt_fingerprint(additional_rules)  # noqa: SLF001
+    )
+    assert state is not None
+    assert state["metadata"]["additional_character_discovery_instructions"] == additional_rules
+    assert (
+        state["metadata"]["additional_character_discovery_instructions_fingerprint"]
+        == report["additional_character_discovery_instructions_fingerprint"]
+    )
 
 
 def test_start_discovery_resumes_from_saved_synthesis_checkpoint(monkeypatch, tmp_path) -> None:

@@ -15,7 +15,7 @@
          operation state.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-22
-@version 0.14.0
+@version 0.15.0
 """
 
 # IMPORTS
@@ -234,6 +234,7 @@ def start_or_continue_discovery(
     progress_callback=None,
     cancel_requested=None,
     force_rerun: bool = False,
+    additional_character_discovery_instructions: str | None = None,
 ) -> CharacterDiscoveryReportPayload:
     """
     @brief      Run AI-assisted character discovery for the active project.
@@ -243,12 +244,13 @@ def start_or_continue_discovery(
     @param[in]  progress_callback Optional progress callback for the modal popup.
     @param[in]  cancel_requested Optional zero-argument cancellation callback.
     @param[in]  force_rerun Ignore compatible resumable state and start a fresh internal run.
+    @param[in]  additional_character_discovery_instructions Optional operator-supplied discovery rules.
     @return     Final character-discovery report payload.
     @exception  ValueError Raised on missing chunking input or invalid profile data.
     @exception  OperationCancelledError Raised when the operator cancels the run.
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-08
-    @version    0.4.1
+    @date       2026-05-13
+    @version    0.5.0
     """
     resolved_project_root = Path(project_root)
     source_chunks, input_source = _resolve_discovery_input_chunks(resolved_project_root)
@@ -272,7 +274,19 @@ def start_or_continue_discovery(
         "character_discovery_system",
         {},
     )
-    budget_metadata = _build_budget_metadata(ai_profile_payload, system_prompt)
+    existing_state = {} if force_rerun else (load_operation_state(resolved_project_root) or {})
+    additional_character_discovery_instructions = _resolve_additional_character_discovery_instructions(
+        additional_character_discovery_instructions,
+        existing_state,
+    )
+    additional_character_discovery_instructions_fingerprint = _compute_prompt_fingerprint(
+        additional_character_discovery_instructions
+    )
+    budget_metadata = _build_budget_metadata(
+        ai_profile_payload,
+        system_prompt,
+        additional_character_discovery_instructions,
+    )
     input_paths = _persist_input_snapshots(
         resolved_project_root,
         source_chunks,
@@ -305,7 +319,6 @@ def start_or_continue_discovery(
     if not current_full_windows:
         raise ValueError("Character discovery requires at least one chunk window.")
 
-    existing_state = {} if force_rerun else (load_operation_state(resolved_project_root) or {})
     started_at = str(existing_state.get("started_at") or _utc_now_iso())
     model_settings = _build_model_settings(ai_profile_payload, budget_metadata)
     (
@@ -321,6 +334,7 @@ def start_or_continue_discovery(
         input_fingerprint,
         source_chunks,
         budget_metadata,
+        additional_character_discovery_instructions_fingerprint,
     )
     resume_is_compatible = bool(
         completed_window_count > 0 or raw_candidates or merged_candidates or synthesized_profiles or log_relative_path
@@ -383,10 +397,14 @@ def start_or_continue_discovery(
         budget_metadata=budget_metadata,
         model_settings=model_settings,
         model_settings_history=model_settings_history,
+        additional_character_discovery_instructions=additional_character_discovery_instructions,
         resume_checkpoint={
             "input_fingerprint": input_fingerprint,
             "input_source": input_source,
             "profile_id": profile_id,
+            "additional_character_discovery_instructions_fingerprint": (
+                additional_character_discovery_instructions_fingerprint
+            ),
             "completed_window_count": completed_window_count,
             "total_window_count": discovery_progress_total,
             "next_discovery_start_chunk_index": next_discovery_start_chunk_index,
@@ -418,9 +436,12 @@ def start_or_continue_discovery(
     for relative_window_index, window_records in enumerate(windows):
         raise_if_cancelled(cancel_requested)
         progress_window_index = completed_window_count + relative_window_index
-        user_prompt = prompt_template_service.render_prompt(
-            "character_discovery_window_user",
-            {"units_block": _build_units_block(window_records)},
+        user_prompt = _append_additional_character_discovery_instructions(
+            prompt_template_service.render_prompt(
+                "character_discovery_window_user",
+                {"units_block": _build_units_block(window_records)},
+            ),
+            additional_character_discovery_instructions,
         )
         try:
             response_result = llm_provider_service.chat_json(
@@ -478,10 +499,14 @@ def start_or_continue_discovery(
             budget_metadata=budget_metadata,
             model_settings=model_settings,
             model_settings_history=model_settings_history,
+            additional_character_discovery_instructions=additional_character_discovery_instructions,
             resume_checkpoint={
                 "input_fingerprint": input_fingerprint,
                 "input_source": input_source,
                 "profile_id": profile_id,
+                "additional_character_discovery_instructions_fingerprint": (
+                    additional_character_discovery_instructions_fingerprint
+                ),
                 "completed_window_count": progress_window_index + 1,
                 "total_window_count": discovery_progress_total,
                 "next_discovery_start_chunk_index": next_discovery_start_chunk_index,
@@ -530,10 +555,14 @@ def start_or_continue_discovery(
         budget_metadata=budget_metadata,
         model_settings=model_settings,
         model_settings_history=model_settings_history,
+        additional_character_discovery_instructions=additional_character_discovery_instructions,
         resume_checkpoint={
             "input_fingerprint": input_fingerprint,
             "input_source": input_source,
             "profile_id": profile_id,
+            "additional_character_discovery_instructions_fingerprint": (
+                additional_character_discovery_instructions_fingerprint
+            ),
             "completed_window_count": discovery_progress_total,
             "total_window_count": discovery_progress_total,
             "next_discovery_start_chunk_index": len(source_chunks),
@@ -552,15 +581,18 @@ def start_or_continue_discovery(
             dict(merged_candidates[profile_index]),
             budget_metadata,
         )
-        user_prompt = prompt_template_service.render_prompt(
-            "character_profile_synthesis_user",
-            {
-                "character_payload": json.dumps(
-                    candidate,
-                    indent=2,
-                    ensure_ascii=False,
-                )
-            },
+        user_prompt = _append_additional_character_discovery_instructions(
+            prompt_template_service.render_prompt(
+                "character_profile_synthesis_user",
+                {
+                    "character_payload": json.dumps(
+                        candidate,
+                        indent=2,
+                        ensure_ascii=False,
+                    )
+                },
+            ),
+            additional_character_discovery_instructions,
         )
         try:
             response_result = llm_provider_service.chat_json(
@@ -612,10 +644,14 @@ def start_or_continue_discovery(
             budget_metadata=budget_metadata,
             model_settings=model_settings,
             model_settings_history=model_settings_history,
+            additional_character_discovery_instructions=additional_character_discovery_instructions,
             resume_checkpoint={
                 "input_fingerprint": input_fingerprint,
                 "input_source": input_source,
                 "profile_id": profile_id,
+                "additional_character_discovery_instructions_fingerprint": (
+                    additional_character_discovery_instructions_fingerprint
+                ),
                 "completed_window_count": discovery_progress_total,
                 "total_window_count": discovery_progress_total,
                 "next_discovery_start_chunk_index": len(source_chunks),
@@ -652,6 +688,10 @@ def start_or_continue_discovery(
         "window_size": config.DEFAULT_CHARACTER_DISCOVERY_WINDOW_SIZE,
         "window_overlap": config.DEFAULT_CHARACTER_DISCOVERY_WINDOW_OVERLAP,
         "budget_metadata": dict(budget_metadata),
+        "additional_character_discovery_instructions": additional_character_discovery_instructions,
+        "additional_character_discovery_instructions_fingerprint": (
+            additional_character_discovery_instructions_fingerprint
+        ),
         "model_settings_history": [dict(item) for item in model_settings_history],
         "warning_count": 0,
         "warnings": [],
@@ -691,6 +731,7 @@ def start_or_continue_discovery(
         budget_metadata=budget_metadata,
         model_settings=model_settings,
         model_settings_history=model_settings_history,
+        additional_character_discovery_instructions=additional_character_discovery_instructions,
         resume_checkpoint=None,
     )
     project_workspace_service.sync_manifest_operation_summary(
@@ -1295,24 +1336,32 @@ def _build_chunk_windows(
 def _build_budget_metadata(
     ai_profile_payload: dict[str, object],
     system_prompt: str,
+    additional_character_discovery_instructions: str = "",
 ) -> BudgetMetadataPayload:
     """
     @brief      Build context-window budget metadata for AI character discovery.
     @param[in]  ai_profile_payload Selected validated AI profile payload.
     @param[in]  system_prompt Rendered character-discovery system prompt.
+    @param[in]  additional_character_discovery_instructions Optional operator-supplied discovery rules.
     @return     Context-budget metadata used for windowing and synthesis guards.
     @exception  ValueError Raised when context and output settings leave too little input room.
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-08
-    @version    0.2.0
+    @date       2026-05-13
+    @version    0.3.0
     """
-    discovery_prompt_shell = prompt_template_service.render_prompt(
-        "character_discovery_window_user",
-        {"units_block": ""},
+    discovery_prompt_shell = _append_additional_character_discovery_instructions(
+        prompt_template_service.render_prompt(
+            "character_discovery_window_user",
+            {"units_block": ""},
+        ),
+        additional_character_discovery_instructions,
     )
-    synthesis_prompt_shell = prompt_template_service.render_prompt(
-        "character_profile_synthesis_user",
-        {"character_payload": ""},
+    synthesis_prompt_shell = _append_additional_character_discovery_instructions(
+        prompt_template_service.render_prompt(
+            "character_profile_synthesis_user",
+            {"character_payload": ""},
+        ),
+        additional_character_discovery_instructions,
     )
     discovery_budget_metadata = ai_budget_service.context_budget_metadata(
         ai_profile_payload,
@@ -1358,6 +1407,84 @@ def _build_budget_metadata(
         "synthesis_payload_budget_tokens": synthesis_payload_budget_tokens,
         "synthesis_max_evidence_items": config.DEFAULT_CHARACTER_DISCOVERY_SYNTHESIS_MAX_EVIDENCE_ITEMS,
     }
+
+
+def _resolve_additional_character_discovery_instructions(
+    additional_character_discovery_instructions: str | None,
+    existing_state: dict[str, object],
+) -> str:
+    """
+    @brief      Resolve operator rules for a new or resumed Character Discovery run.
+    @param[in]  additional_character_discovery_instructions New operator instructions or None when resuming.
+    @param[in]  existing_state Existing Character Discovery operation state.
+    @return     Normalized operator Character Discovery instructions.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-13
+    @version    0.1.0
+    """
+    if additional_character_discovery_instructions is not None:
+        return _normalized_additional_character_discovery_instructions(additional_character_discovery_instructions)
+    is_ai_mode = existing_state.get("mode") == CHARACTER_DISCOVERY_MODE_AI_ASSISTED
+    is_resumable_status = str(existing_state.get("status", "")) in {
+        "running",
+        "failed",
+    }
+    if not is_ai_mode or not is_resumable_status:
+        return ""
+    metadata = existing_state.get("metadata", {})
+    if not isinstance(metadata, dict):
+        return ""
+    return _normalized_additional_character_discovery_instructions(
+        metadata.get("additional_character_discovery_instructions")
+    )
+
+
+def _normalized_additional_character_discovery_instructions(value: object) -> str:
+    """
+    @brief      Normalize optional operator Character Discovery rules.
+    @param[in]  value Candidate instruction text.
+    @return     Trimmed instruction text.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-13
+    @version    0.1.0
+    """
+    if value is None:
+        return ""
+    return str(value).strip()
+
+
+def _append_additional_character_discovery_instructions(prompt_text: str, instructions: str) -> str:
+    """
+    @brief      Append optional operator Character Discovery rules to one rendered prompt.
+    @param[in]  prompt_text Rendered prompt template text.
+    @param[in]  instructions Normalized operator rules.
+    @return     Prompt text with the optional rule section appended.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-13
+    @version    0.1.0
+    """
+    normalized_instructions = _normalized_additional_character_discovery_instructions(instructions)
+    if not normalized_instructions:
+        return prompt_text
+    return (
+        f"{prompt_text.rstrip()}\n\nAdditional operator Character Discovery instructions:\n{normalized_instructions}\n"
+    )
+
+
+def _compute_prompt_fingerprint(prompt_text: str) -> str:
+    """
+    @brief      Compute a stable fingerprint for operator-supplied prompt rules.
+    @param[in]  prompt_text Operator prompt-rule text.
+    @return     SHA-256 fingerprint for the prompt-rule text.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-13
+    @version    0.1.0
+    """
+    return hashlib.sha256(prompt_text.encode("utf-8")).hexdigest()
 
 
 def _estimate_text_tokens(text: str) -> int:
@@ -1452,6 +1579,7 @@ def _restore_resume_state(
     input_fingerprint: str,
     source_chunks: list[dict[str, object]],
     budget_metadata: BudgetMetadataPayload,
+    additional_character_discovery_instructions_fingerprint: str = "",
 ) -> tuple[
     int,
     int,
@@ -1467,10 +1595,11 @@ def _restore_resume_state(
     @param[in]  input_fingerprint Value for `input_fingerprint`.
     @param[in]  source_chunks Current source chunk records.
     @param[in]  budget_metadata Current context-budget metadata.
+    @param[in]  additional_character_discovery_instructions_fingerprint Operator instruction fingerprint.
     @return     Derived helper result.
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.4.0
+    @date       2026-05-13
+    @version    0.5.0
     """
     if str(existing_state.get("status", "")) not in {"running", "failed"}:
         return 0, 0, [], [], [], [], None
@@ -1478,6 +1607,18 @@ def _restore_resume_state(
         return 0, 0, [], [], [], [], None
     resume_checkpoint = dict(existing_state.get("resume_checkpoint") or {})
     if str(resume_checkpoint.get("input_fingerprint", "")) != input_fingerprint:
+        return 0, 0, [], [], [], [], None
+    metadata = existing_state.get("metadata", {})
+    metadata_payload = metadata if isinstance(metadata, dict) else {}
+    expected_instruction_fingerprint = (
+        additional_character_discovery_instructions_fingerprint or _compute_prompt_fingerprint("")
+    )
+    stored_instruction_fingerprint = str(
+        resume_checkpoint.get("additional_character_discovery_instructions_fingerprint")
+        or metadata_payload.get("additional_character_discovery_instructions_fingerprint")
+        or _compute_prompt_fingerprint("")
+    )
+    if stored_instruction_fingerprint != expected_instruction_fingerprint:
         return 0, 0, [], [], [], [], None
     raw_candidates = _restore_mapping_list(resume_checkpoint.get("raw_candidates"))
     merged_candidates = _restore_mapping_list(resume_checkpoint.get("merged_candidates"))
@@ -1665,6 +1806,7 @@ def _write_operation_state(
     budget_metadata: BudgetMetadataPayload,
     model_settings: ModelSettingsPayload,
     model_settings_history: list[ModelSettingsPayload],
+    additional_character_discovery_instructions: str,
     resume_checkpoint: dict[str, object] | None,
 ) -> None:
     """
@@ -1693,12 +1835,20 @@ def _write_operation_state(
     @param[in]  budget_metadata Context-budget metadata used by discovery requests.
     @param[in]  model_settings Current AI model runtime settings.
     @param[in]  model_settings_history AI model settings used across resumed segments.
+    @param[in]  additional_character_discovery_instructions Optional operator-supplied discovery rules.
     @param[in]  resume_checkpoint Value for `resume_checkpoint`.
     @return     None.
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.4.0
+    @date       2026-05-13
+    @version    0.5.0
     """
+    normalized_instructions = _normalized_additional_character_discovery_instructions(
+        additional_character_discovery_instructions
+    )
+    instruction_fingerprint = _compute_prompt_fingerprint(normalized_instructions)
+    if isinstance(resume_checkpoint, dict):
+        resume_checkpoint = dict(resume_checkpoint)
+        resume_checkpoint["additional_character_discovery_instructions_fingerprint"] = instruction_fingerprint
     artifact_paths = [relative_to_project(project_root, log_path)]
     if report_path is not None and report_path.is_file():
         artifact_paths.insert(0, relative_to_project(project_root, report_path))
@@ -1734,6 +1884,8 @@ def _write_operation_state(
             "log_relative_path": relative_to_project(project_root, log_path),
             "token_usage": token_usage_service.coerce_token_usage(token_usage),
             "budget_metadata": dict(budget_metadata),
+            "additional_character_discovery_instructions": normalized_instructions,
+            "additional_character_discovery_instructions_fingerprint": instruction_fingerprint,
             "model_settings": dict(model_settings),
             "model_settings_history": [dict(item) for item in model_settings_history],
         },

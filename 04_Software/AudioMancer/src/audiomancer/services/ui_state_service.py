@@ -81,6 +81,30 @@ _UI_STRINGS = {
         "dialog.confirm_chunk_delete_title": "Confirm Chunk Delete",
         "dialog.confirm_ai_cleanup_title": "Start AI-Assisted Cleanup",
         "dialog.confirm_ai_cleanup_rerun_title": "Confirm AI Cleanup Rerun",
+        "dialog.ai_cleanup_extra_prompt_title": "AI Cleanup Instructions",
+        "dialog.ai_cleanup_extra_prompt_label": (
+            "Optional extra cleanup rules to add to the AI prompt. Leave empty to use the standard prompt."
+        ),
+        "dialog.ai_chunking_extra_prompt_title": "AI Chunking Instructions",
+        "dialog.ai_chunking_extra_prompt_label": (
+            "Optional extra chunking rules to add to the AI prompt. Leave empty to use the standard prompt."
+        ),
+        "dialog.ai_translation_extra_prompt_title": "AI Translation Instructions",
+        "dialog.ai_translation_extra_prompt_label": (
+            "Optional extra translation rules to add to the AI prompt. Leave empty to use the standard prompt."
+        ),
+        "dialog.character_discovery_extra_prompt_title": "Character Discovery Instructions",
+        "dialog.character_discovery_extra_prompt_label": (
+            "Optional extra Character Discovery rules to add to the AI prompt. Leave empty to use the standard prompt."
+        ),
+        "dialog.narator_profile_generation_extra_prompt_title": "Narator Profile Instructions",
+        "dialog.narator_profile_generation_extra_prompt_label": (
+            "Optional extra Narator profile rules to add to the AI prompt. Leave empty to use the standard prompt."
+        ),
+        "dialog.speech_blocks_extra_prompt_title": "Speech Blocks Instructions",
+        "dialog.speech_blocks_extra_prompt_label": (
+            "Optional extra Speech Blocks rules to add to the AI prompt. Leave empty to use the standard prompt."
+        ),
         "dialog.confirm_project_options_title": "Lock Project Options",
         "dialog.operation_progress_title": "{operation_name} In Progress",
         "dialog.operation_progress_cancel": "Cancel Operation",
@@ -964,6 +988,30 @@ _UI_STRINGS = {
         "dialog.confirm_chunk_delete_title": "Confirma Stergerea Segmentului",
         "dialog.confirm_ai_cleanup_title": "Porneste Curatarea Asistata de AI",
         "dialog.confirm_ai_cleanup_rerun_title": "Confirma Reluarea Curatarii AI",
+        "dialog.ai_cleanup_extra_prompt_title": "Instructiuni Curatare AI",
+        "dialog.ai_cleanup_extra_prompt_label": (
+            "Reguli suplimentare optionale de curatare de adaugat la promptul AI. Lasa gol pentru promptul standard."
+        ),
+        "dialog.ai_chunking_extra_prompt_title": "Instructiuni Segmentare AI",
+        "dialog.ai_chunking_extra_prompt_label": (
+            "Reguli suplimentare optionale de segmentare de adaugat la promptul AI. Lasa gol pentru promptul standard."
+        ),
+        "dialog.ai_translation_extra_prompt_title": "Instructiuni Traducere AI",
+        "dialog.ai_translation_extra_prompt_label": (
+            "Reguli suplimentare optionale de traducere de adaugat la promptul AI. Lasa gol pentru promptul standard."
+        ),
+        "dialog.character_discovery_extra_prompt_title": "Instructiuni Descoperire Personaje",
+        "dialog.character_discovery_extra_prompt_label": (
+            "Reguli suplimentare optionale pentru Descoperirea Personajelor de adaugat la promptul AI. Lasa gol pentru promptul standard."
+        ),
+        "dialog.narator_profile_generation_extra_prompt_title": "Instructiuni Profil Narator",
+        "dialog.narator_profile_generation_extra_prompt_label": (
+            "Reguli suplimentare optionale pentru profilurile Narator de adaugat la promptul AI. Lasa gol pentru promptul standard."
+        ),
+        "dialog.speech_blocks_extra_prompt_title": "Instructiuni Blocuri de Vorbire",
+        "dialog.speech_blocks_extra_prompt_label": (
+            "Reguli suplimentare optionale pentru Blocurile de vorbire de adaugat la promptul AI. Lasa gol pentru promptul standard."
+        ),
         "dialog.confirm_project_options_title": "Blocheaza Optiunile Proiectului",
         "dialog.operation_progress_title": "{operation_name} In Curs",
         "dialog.operation_progress_cancel": "Anuleaza Operatia",

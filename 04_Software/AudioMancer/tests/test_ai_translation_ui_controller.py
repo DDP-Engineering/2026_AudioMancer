@@ -37,10 +37,19 @@ def test_ai_translation_ui_controller_start_request_uses_modal_runner(monkeypatc
     """
     project_root, manifest = _create_project(tmp_path, "TranslationControllerProject")
     window = _build_window(qtbot, project_root)
-    monkeypatch.setattr(
-        ai_translation_ui_controller.ai_translation_service,
-        "start_or_continue_translation",
-        lambda _project_root, _manifest, profile, target_language, progress_callback=None, cancel_requested=None: {
+
+    def fake_start_translation(
+        _project_root,
+        _manifest,
+        profile,
+        target_language,
+        progress_callback=None,
+        cancel_requested=None,
+        additional_translation_instructions=None,
+    ):
+        _ = progress_callback
+        _ = cancel_requested
+        return {
             "target_language": target_language,
             "translation_profile_id_last_used": profile["id"],
             "translation_stage_status": "translated",
@@ -49,7 +58,18 @@ def test_ai_translation_ui_controller_start_request_uses_modal_runner(monkeypatc
             "total_chunk_count": 1,
             "updated_at": "2026-04-07T12:02:00+00:00",
             "warnings": [],
-        },
+            "additional_translation_instructions": additional_translation_instructions,
+        }
+
+    monkeypatch.setattr(
+        ai_translation_ui_controller.ai_translation_service,
+        "start_or_continue_translation",
+        fake_start_translation,
+    )
+    monkeypatch.setattr(
+        ai_translation_ui_controller,
+        "prompt_ai_translation_instructions",
+        lambda _window, _language: "Keep dialogue register formal.",
     )
     start_calls = []
     monkeypatch.setattr(
@@ -68,6 +88,7 @@ def test_ai_translation_ui_controller_start_request_uses_modal_runner(monkeypatc
         cancel_requested=lambda: False,
     )
     assert result["translation_stage_status"] == "translated"
+    assert result["additional_translation_instructions"] == "Keep dialogue register formal."
 
 
 def test_ai_translation_ui_controller_reset_clears_translation_state(monkeypatch, qtbot, tmp_path) -> None:

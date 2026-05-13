@@ -15,7 +15,7 @@
          resumable window-based progress plus AI transaction logs.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-07
-@version 0.8.1
+@version 0.8.2
 """
 
 # IMPORTS
@@ -133,6 +133,7 @@ def clean_text(
     ai_profile_payload: dict[str, object],
     progress_callback=None,
     cancel_requested=None,
+    additional_cleanup_instructions: str | None = None,
 ) -> CleanupReportPayload:
     """
     @brief      Run AI-assisted cleanup for one active project.
@@ -141,12 +142,13 @@ def clean_text(
     @param[in]  ai_profile_payload Selected validated AI profile payload.
     @param[in]  progress_callback Optional progress callback for the modal popup.
     @param[in]  cancel_requested Optional zero-argument cancellation callback.
+    @param[in]  additional_cleanup_instructions Optional operator-supplied cleanup rules.
     @return     Cleanup report payload for the persisted AI cleanup artifacts.
     @exception  FileNotFoundError Raised when the extracted input is missing.
     @exception  ValueError Raised on missing profile data or unusable cleanup output.
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-07
-    @version    0.5.2
+    @date       2026-05-12
+    @version    0.6.0
     """
     resolved_project_root = Path(project_root)
     source_document = manifest.get("source_document")
@@ -197,8 +199,19 @@ def clean_text(
     language_hint = _language_hint_for_text(input_text)
     script_hint = cleanup_text_analysis_service.classify_text_script(input_text)
     system_prompt = prompt_template_service.render_prompt("text_cleanup_system", {})
-    budget_metadata = _build_budget_metadata(ai_profile_payload, language_hint, script_hint, system_prompt)
     existing_state = load_operation_state_file(state_path) or {}
+    additional_cleanup_instructions = _resolve_additional_cleanup_instructions(
+        additional_cleanup_instructions,
+        existing_state,
+    )
+    additional_cleanup_instructions_fingerprint = _compute_prompt_fingerprint(additional_cleanup_instructions)
+    budget_metadata = _build_budget_metadata(
+        ai_profile_payload,
+        language_hint,
+        script_hint,
+        system_prompt,
+        additional_cleanup_instructions,
+    )
     input_fingerprint = _compute_input_fingerprint(input_text)
     windows = _build_windows(units, budget_metadata)
     total_windows = len(windows)
@@ -206,6 +219,7 @@ def clean_text(
     classifications, log_relative_path, resume_is_compatible = _restore_resume_state(
         existing_state,
         input_fingerprint,
+        additional_cleanup_instructions_fingerprint,
     )
     started_at = str(existing_state.get("started_at") or _utc_now_iso()) if resume_is_compatible else _utc_now_iso()
     start_window_index = _first_incomplete_window_index(windows, classifications)
@@ -242,6 +256,7 @@ def clean_text(
         budget_metadata,
         model_settings,
         model_settings_history,
+        additional_cleanup_instructions,
     )
     _emit_progress(
         progress_callback,
@@ -261,6 +276,7 @@ def clean_text(
                 windows[window_index]["end_index"],
                 language_hint,
                 script_hint,
+                additional_cleanup_instructions,
             )
         )
         response_result = llm_provider_service.chat_json(
@@ -306,6 +322,7 @@ def clean_text(
             budget_metadata,
             model_settings,
             model_settings_history,
+            additional_cleanup_instructions,
         )
         _emit_progress(
             progress_callback,
@@ -365,6 +382,8 @@ def clean_text(
         "window_count": total_windows,
         "token_usage": token_usage,
         "budget_metadata": budget_metadata,
+        "additional_cleanup_instructions": additional_cleanup_instructions,
+        "additional_cleanup_instructions_fingerprint": additional_cleanup_instructions_fingerprint,
     }
     report_path.write_text(
         json.dumps(report_payload, indent=2, ensure_ascii=False) + "\n",
@@ -394,6 +413,7 @@ def clean_text(
         budget_metadata=budget_metadata,
         model_settings=model_settings,
         model_settings_history=model_settings_history,
+        additional_cleanup_instructions=additional_cleanup_instructions,
     )
     state_path.write_text(
         json.dumps(completed_state, indent=2, ensure_ascii=False) + "\n",
@@ -524,6 +544,7 @@ def _build_budget_metadata(
     language_hint: str,
     script_hint: str,
     system_prompt: str,
+    additional_cleanup_instructions: str,
 ) -> BudgetMetadataPayload:
     """
     @brief      Build context-window budget metadata for AI cleanup.
@@ -531,11 +552,12 @@ def _build_budget_metadata(
     @param[in]  language_hint Detected source-language hint.
     @param[in]  script_hint Detected dominant-script hint.
     @param[in]  system_prompt Rendered system prompt.
+    @param[in]  additional_cleanup_instructions Optional operator-supplied cleanup rules.
     @return     Context-budget metadata used for request-window construction.
     @exception  ValueError Raised when context and output settings leave too little input room.
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-08
-    @version    0.2.0
+    @date       2026-05-12
+    @version    0.3.0
     """
     prompt_user_shell = _render_cleanup_user_prompt(
         {
@@ -543,6 +565,7 @@ def _build_budget_metadata(
             "dominant_script_hint": script_hint,
             "units_block": "(none)",
             "unit_count": 0,
+            "additional_cleanup_instructions": additional_cleanup_instructions,
         }
     )
     budget_metadata = ai_budget_service.context_budget_metadata(
@@ -617,21 +640,32 @@ def _updated_model_settings_history(
 def _restore_resume_state(
     existing_state: dict[str, object],
     input_fingerprint: str,
+    additional_cleanup_instructions_fingerprint: str,
 ) -> tuple[dict[str, str], str | None, bool]:
     """
     @brief      Restore the resume state.
     @param[in]  existing_state Value for `existing_state`.
     @param[in]  input_fingerprint Value for `input_fingerprint`.
+    @param[in]  additional_cleanup_instructions_fingerprint Operator instruction fingerprint.
     @return     Stored classifications, existing log path, and compatibility flag.
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-30
-    @version    0.3.0
+    @date       2026-05-12
+    @version    0.4.0
     """
     resume_checkpoint = dict(existing_state.get("resume_checkpoint") or {})
-    log_relative_path = existing_state.get("metadata", {}).get("ai_log_relative_path")
+    metadata = existing_state.get("metadata", {})
+    if not isinstance(metadata, dict):
+        metadata = {}
+    log_relative_path = metadata.get("ai_log_relative_path")
+    stored_instruction_fingerprint = str(
+        metadata.get("additional_cleanup_instructions_fingerprint")
+        or resume_checkpoint.get("additional_cleanup_instructions_fingerprint")
+        or _compute_prompt_fingerprint("")
+    )
     if (
         existing_state.get("mode") != "ai_assisted"
         or str(resume_checkpoint.get("input_fingerprint", "")) != input_fingerprint
+        or stored_instruction_fingerprint != additional_cleanup_instructions_fingerprint
     ):
         return {}, None, False
     stored_classifications = resume_checkpoint.get("classifications", {})
@@ -707,15 +741,24 @@ def _render_cleanup_user_prompt(variables: dict[str, object]) -> str:
     @param[in]  variables Preferred prompt variables.
     @return     Rendered AI cleanup user prompt.
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-26
-    @version    0.2.0
+    @date       2026-05-12
+    @version    0.3.0
     """
     template = prompt_template_service.load_prompt("text_cleanup_user")
     placeholder_names = set(re.findall(r"{([A-Za-z_][A-Za-z0-9_]*)}", template))
-    return prompt_template_service.render_prompt(
+    rendered_prompt = prompt_template_service.render_prompt(
         "text_cleanup_user",
         {key: value for key, value in variables.items() if key in placeholder_names},
     )
+    additional_cleanup_instructions = _normalized_additional_cleanup_instructions(
+        variables.get("additional_cleanup_instructions")
+    )
+    if additional_cleanup_instructions and "additional_cleanup_instructions" not in placeholder_names:
+        rendered_prompt = _append_additional_cleanup_instructions(
+            rendered_prompt,
+            additional_cleanup_instructions,
+        )
+    return rendered_prompt
 
 
 def _cleanup_prompt_variables(
@@ -724,6 +767,7 @@ def _cleanup_prompt_variables(
     end_index: int,
     language_hint: str,
     script_hint: str,
+    additional_cleanup_instructions: str,
 ) -> dict[str, object]:
     """
     @brief      Build AI cleanup prompt variables with language and neighbor context.
@@ -732,10 +776,11 @@ def _cleanup_prompt_variables(
     @param[in]  end_index Last window unit index.
     @param[in]  language_hint Detected source-language hint.
     @param[in]  script_hint Detected dominant-script hint.
+    @param[in]  additional_cleanup_instructions Optional operator-supplied cleanup rules.
     @return     Prompt variable mapping.
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-26
-    @version    0.1.0
+    @date       2026-05-12
+    @version    0.2.0
     """
     window_units = units[start_index : end_index + 1]
     return {
@@ -743,7 +788,63 @@ def _cleanup_prompt_variables(
         "dominant_script_hint": script_hint,
         "units_block": _build_units_block(units, start_index, end_index),
         "unit_count": len(window_units),
+        "additional_cleanup_instructions": additional_cleanup_instructions,
     }
+
+
+def _resolve_additional_cleanup_instructions(
+    additional_cleanup_instructions: str | None,
+    existing_state: dict[str, object],
+) -> str:
+    """
+    @brief      Resolve the operator cleanup rules for a new or resumed AI cleanup run.
+    @param[in]  additional_cleanup_instructions New operator instructions or None when resuming.
+    @param[in]  existing_state Existing cleanup operation state.
+    @return     Normalized operator cleanup instructions.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-12
+    @version    0.1.1
+    """
+    if additional_cleanup_instructions is not None:
+        return _normalized_additional_cleanup_instructions(additional_cleanup_instructions)
+    if existing_state.get("mode") != "ai_assisted" or str(existing_state.get("status", "")) not in {
+        "running",
+        "failed",
+    }:
+        return ""
+    metadata = existing_state.get("metadata", {})
+    if not isinstance(metadata, dict):
+        return ""
+    return _normalized_additional_cleanup_instructions(metadata.get("additional_cleanup_instructions"))
+
+
+def _normalized_additional_cleanup_instructions(value: object) -> str:
+    """
+    @brief      Normalize optional operator cleanup rules for prompt insertion and state storage.
+    @param[in]  value Candidate instruction text.
+    @return     Trimmed instruction text.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-12
+    @version    0.1.0
+    """
+    if value is None:
+        return ""
+    return str(value).strip()
+
+
+def _append_additional_cleanup_instructions(prompt_text: str, additional_cleanup_instructions: str) -> str:
+    """
+    @brief      Append operator cleanup rules to one rendered AI cleanup prompt.
+    @param[in]  prompt_text Rendered prompt template text.
+    @param[in]  additional_cleanup_instructions Normalized operator rules.
+    @return     Prompt text with an additional-rules section.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-12
+    @version    0.1.0
+    """
+    if not additional_cleanup_instructions:
+        return prompt_text
+    return f"{prompt_text.rstrip()}\n\nAdditional operator cleanup instructions:\n{additional_cleanup_instructions}\n"
 
 
 def _build_units_block(units: list[dict[str, object]], start_index: int, end_index: int) -> str:
@@ -995,6 +1096,7 @@ def _write_running_state(
     budget_metadata: BudgetMetadataPayload,
     model_settings: dict[str, object],
     model_settings_history: list[dict[str, object]],
+    additional_cleanup_instructions: str,
 ) -> None:
     """
     @brief      Write the running state.
@@ -1014,10 +1116,11 @@ def _write_running_state(
     @param[in]  budget_metadata Context-budget metadata.
     @param[in]  model_settings Current selected model settings.
     @param[in]  model_settings_history Ordered selected-model settings history.
+    @param[in]  additional_cleanup_instructions Optional operator-supplied cleanup rules.
     @return     None.
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-30
-    @version    0.3.0
+    @date       2026-05-12
+    @version    0.4.0
     """
     running_state = _build_operation_state(
         project_root,
@@ -1043,6 +1146,7 @@ def _write_running_state(
         budget_metadata=budget_metadata,
         model_settings=model_settings,
         model_settings_history=model_settings_history,
+        additional_cleanup_instructions=additional_cleanup_instructions,
     )
     state_path.write_text(
         json.dumps(running_state, indent=2, ensure_ascii=False) + "\n",
@@ -1074,6 +1178,7 @@ def _build_operation_state(
     budget_metadata: BudgetMetadataPayload,
     model_settings: dict[str, object],
     model_settings_history: list[dict[str, object]],
+    additional_cleanup_instructions: str,
 ) -> OperationStatePayload:
     """
     @brief      Build the operation state.
@@ -1099,11 +1204,13 @@ def _build_operation_state(
     @param[in]  budget_metadata Context-budget metadata.
     @param[in]  model_settings Current selected model settings.
     @param[in]  model_settings_history Ordered selected-model settings history.
+    @param[in]  additional_cleanup_instructions Optional operator-supplied cleanup rules.
     @return     Derived helper result.
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-30
-    @version    0.3.0
+    @date       2026-05-12
+    @version    0.4.0
     """
+    additional_cleanup_instructions_fingerprint = _compute_prompt_fingerprint(additional_cleanup_instructions)
     artifact_paths: list[str] = [log_relative_path]
     if report_path is not None and report_path.is_file():
         artifact_paths.append(relative_to_project(project_root, report_path))
@@ -1133,6 +1240,8 @@ def _build_operation_state(
             "ai_log_relative_path": log_relative_path,
             "token_usage": token_usage_service.coerce_token_usage(token_usage),
             "budget_metadata": dict(budget_metadata),
+            "additional_cleanup_instructions": additional_cleanup_instructions,
+            "additional_cleanup_instructions_fingerprint": additional_cleanup_instructions_fingerprint,
         },
         resume_checkpoint={
             "completed_window_count": progress_current,
@@ -1140,6 +1249,7 @@ def _build_operation_state(
             "input_fingerprint": input_fingerprint,
             "classifications": None if classifications is None else dict(classifications),
             "model_settings": dict(model_settings),
+            "additional_cleanup_instructions_fingerprint": additional_cleanup_instructions_fingerprint,
         }
         if status != "completed"
         else None,
@@ -1186,6 +1296,18 @@ def _compute_input_fingerprint(text: str) -> str:
     @version    0.1.0
     """
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
+def _compute_prompt_fingerprint(prompt_text: str) -> str:
+    """
+    @brief      Compute a stable fingerprint for operator-supplied prompt rules.
+    @param[in]  prompt_text Operator prompt-rule text.
+    @return     SHA-256 fingerprint for the prompt-rule text.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-12
+    @version    0.1.0
+    """
+    return hashlib.sha256(prompt_text.encode("utf-8")).hexdigest()
 
 
 def _build_cleanup_warnings(

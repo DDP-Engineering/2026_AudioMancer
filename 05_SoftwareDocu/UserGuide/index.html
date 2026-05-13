@@ -264,7 +264,7 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                 </p>
                 <ul>
                     <li>Extract source text from supported documents.</li>
-                    <li>Run deterministic cleanup or AI-assisted cleanup.</li>
+                    <li>Run deterministic cleanup or AI-assisted cleanup; for a fresh AI cleanup run, add optional extra prompt rules when the instructions box appears.</li>
                     <li>Edit the cleaned text directly to manually improve wording, fix OCR errors, or correct formatting. Confirm the impact prompt before editing because saved changes can affect downstream workflow data.</li>
                     <li>Approve the cleaned text only after review; approved text unlocks Text Chunking.</li>
                     <li>Drag the divider between extracted and cleaned previews; each preview keeps at least one third of the page width.</li>
@@ -285,6 +285,7 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                 </p>
                 <ul>
                     <li>Generate chunks deterministically or with AI assistance.</li>
+                    <li>For a fresh AI chunking run, add optional extra prompt rules when the word-wrapped instructions box appears.</li>
                     <li>Choose AI chunking strategy: <strong>Paragraph</strong> for stable paragraph windows, <strong>Meaning</strong> for semantic units, or <strong>Scene</strong> for scene-like boundaries.</li>
                     <li>Inspect generated chunks one by one.</li>
                     <li>Edit generated chunk output before approval when the split or text needs manual correction. Confirm the impact prompt before editing because saved changes can affect downstream workflow data.</li>
@@ -313,6 +314,7 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                 <ul>
                     <li>Supported translation targets: English, Romanian, Japanese, Korean, Chinese, German, French, Russian, Portuguese, Spanish, and Italian.</li>
                     <li>Generate translation per chunk, with transaction logging available when enabled in settings.</li>
+                    <li>Add optional operator translation rules in the word-wrapped prompt box before fresh translation or selected-chunk retranslation.</li>
                     <li>Inspect every translated chunk beside its source context.</li>
                     <li>Edit translated chunk text manually before approval.</li>
                     <li>Approve individual chunks or continue reviewing until all chunks are approved.</li>
@@ -335,6 +337,7 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                 </p>
                 <ul>
                     <li>Discover narrator and character profiles from approved chunks or translated chunks.</li>
+                    <li>Add optional operator Character Discovery rules in the word-wrapped prompt box before a fresh discovery run.</li>
                     <li>Review names, aliases, gender/age hints, role notes, speaking style, and source evidence.</li>
                     <li>Edit discovered characters when the model merges, misses, or mislabels a speaker. Assigned Speech Blocks become unapproved so speaker attribution can be reviewed.</li>
                     <li>Add missing characters manually or delete false positives. Deleting a character changes affected Speech Blocks back to Narrator, marks them unapproved, and resets only their Audio Blocks.</li>
@@ -362,6 +365,7 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                 </div>
                 <ul>
                     <li>Inspect available narrator profiles and the selected project narrator.</li>
+                    <li>Use Generate Narator Profiles to create editable text-only AI profile suggestions, with optional operator profile rules in a word-wrapped prompt box before generation.</li>
                     <li>Edit narrator prompt, preview text, and voice description before generation.</li>
                     <li>Generate a VoiceWeaver sample for the chosen voice language.</li>
                     <li>Play and stop narrator samples inside the page.</li>
@@ -420,6 +424,7 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                 </p>
                 <ul>
                     <li>Generate Speech Blocks per approved text chunk.</li>
+                    <li>Add optional operator Speech Blocks rules in the word-wrapped prompt box before fresh generation or selected-chunk re-splitting.</li>
                     <li>Inspect speaker, block type, text, pause duration, indication, and metadata.</li>
                     <li>Edit selected blocks manually when attribution or text needs correction. If the selected block already has generated audio, the impact warning appears when you press <strong>Edit</strong>, before the editor unlocks.</li>
                     <li>Use the selected-block character counter to compare current text length against the active TTS model limit.</li>

@@ -13,11 +13,12 @@
          executes resumable translation over canonical chunking output.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-07
-@version 0.10.1
+@version 0.10.2
 """
 
 # IMPORTS
 
+import hashlib
 import json
 from pathlib import Path
 import re
@@ -347,6 +348,7 @@ def start_or_continue_translation(
     target_language: str,
     progress_callback=None,
     cancel_requested=None,
+    additional_translation_instructions: str | None = None,
 ) -> dict[str, object]:
     """
     @brief      Translate all remaining untranslated chunks for the active project.
@@ -356,11 +358,12 @@ def start_or_continue_translation(
     @param[in]  target_language Requested target language code.
     @param[in]  progress_callback Optional progress callback.
     @param[in]  cancel_requested Optional cancellation callback.
+    @param[in]  additional_translation_instructions Optional operator-supplied translation rules.
     @return     Final translation report payload.
     @exception  ValueError When inputs are invalid or the model returns empty text.
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-07
-    @version    0.4.1
+    @date       2026-05-12
+    @version    0.5.0
     """
     project_root = Path(project_root)
     profile_id = str(ai_profile_payload.get("id", "")).strip()
@@ -378,15 +381,25 @@ def start_or_continue_translation(
         target_language,
         profile_id,
     )
+    existing_operation_state = load_operation_state(project_root) or {}
+    additional_translation_instructions = _resolve_additional_translation_instructions(
+        additional_translation_instructions,
+        existing_operation_state,
+    )
     prompt_template_service.validate_required_prompts(["text_translation_system", "text_translation_user"])
-    started_at = str((load_operation_state(project_root) or {}).get("started_at") or _utc_now_iso())
+    started_at = str(existing_operation_state.get("started_at") or _utc_now_iso())
     log_path = _resolve_log_path(project_root, started_at)
-    token_usage = _restore_persisted_token_usage(report, load_operation_state(project_root))
+    token_usage = _restore_persisted_token_usage(report, existing_operation_state)
     system_prompt = prompt_template_service.render_prompt(
         "text_translation_system",
         {"target_language": _language_label(target_language)},
     )
-    budget_metadata = _build_budget_metadata(ai_profile_payload, target_language, system_prompt)
+    budget_metadata = _build_budget_metadata(
+        ai_profile_payload,
+        target_language,
+        system_prompt,
+        additional_translation_instructions,
+    )
     _write_running_state(
         project_root,
         source_chunks,
@@ -397,6 +410,7 @@ def start_or_continue_translation(
         log_path,
         token_usage,
         budget_metadata,
+        additional_translation_instructions,
     )
     _emit_progress(
         progress_callback,
@@ -421,6 +435,7 @@ def start_or_continue_translation(
             log_path,
             token_usage,
             budget_metadata,
+            additional_translation_instructions,
             progress_callback=progress_callback,
             translated_chunk_count=_translated_count(translated_chunks),
             cancel_requested=cancel_requested,
@@ -441,6 +456,7 @@ def start_or_continue_translation(
             warnings=list(report.get("warnings", [])),
             token_usage=token_usage,
             budget_metadata=budget_metadata,
+            additional_translation_instructions=additional_translation_instructions,
         )
         _write_running_state(
             project_root,
@@ -452,6 +468,7 @@ def start_or_continue_translation(
             log_path,
             token_usage,
             budget_metadata,
+            additional_translation_instructions,
         )
         _persist_translation_state(
             project_root, source_chunks, translated_chunks, report, operation_state=load_operation_state(project_root)
@@ -472,6 +489,7 @@ def start_or_continue_translation(
         updated_at=completed_at,
         token_usage=token_usage,
         budget_metadata=budget_metadata,
+        additional_translation_instructions=additional_translation_instructions,
     )
     operation_state = _build_operation_state(
         project_root,
@@ -487,6 +505,7 @@ def start_or_continue_translation(
         resume_checkpoint=None,
         token_usage=token_usage,
         budget_metadata=budget_metadata,
+        additional_translation_instructions=additional_translation_instructions,
     )
     _persist_translation_state(project_root, source_chunks, translated_chunks, report, operation_state=operation_state)
     _sync_translation_manifest(project_root, operation_state, report)
@@ -509,6 +528,7 @@ def retranslate_chunk(
     chunk_id: str,
     progress_callback=None,
     cancel_requested=None,
+    additional_translation_instructions: str | None = None,
 ) -> dict[str, object]:
     """
     @brief      Re-translate one selected chunk and persist the new result.
@@ -519,11 +539,12 @@ def retranslate_chunk(
     @param[in]  chunk_id Selected chunk identifier.
     @param[in]  progress_callback Optional progress callback.
     @param[in]  cancel_requested Optional cancellation callback.
+    @param[in]  additional_translation_instructions Optional operator-supplied translation rules.
     @return     Updated translation report payload.
     @exception  ValueError When the selected chunk is unknown or translation is empty.
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-07
-    @version    0.4.0
+    @date       2026-05-12
+    @version    0.5.0
     """
     project_root = Path(project_root)
     profile_id = str(ai_profile_payload.get("id", "")).strip()
@@ -531,15 +552,25 @@ def retranslate_chunk(
     selected = next((item for item in translated_chunks if str(item.get("chunk_id", "")) == str(chunk_id)), None)
     if selected is None:
         raise ValueError(f"Unknown translation chunk id: {chunk_id}")
+    existing_operation_state = load_operation_state(project_root) or {}
+    additional_translation_instructions = _resolve_additional_translation_instructions(
+        additional_translation_instructions,
+        existing_operation_state,
+    )
     prompt_template_service.validate_required_prompts(["text_translation_system", "text_translation_user"])
-    started_at = str((load_operation_state(project_root) or {}).get("started_at") or _utc_now_iso())
+    started_at = str(existing_operation_state.get("started_at") or _utc_now_iso())
     log_path = _resolve_log_path(project_root, started_at)
-    token_usage = _restore_persisted_token_usage(report, load_operation_state(project_root))
+    token_usage = _restore_persisted_token_usage(report, existing_operation_state)
     system_prompt = prompt_template_service.render_prompt(
         "text_translation_system",
         {"target_language": _language_label(target_language)},
     )
-    budget_metadata = _build_budget_metadata(ai_profile_payload, target_language, system_prompt)
+    budget_metadata = _build_budget_metadata(
+        ai_profile_payload,
+        target_language,
+        system_prompt,
+        additional_translation_instructions,
+    )
     selected["translated_text"] = ""
     selected["approved"] = False
     selected["approved_at"] = None
@@ -557,6 +588,7 @@ def retranslate_chunk(
         log_path,
         token_usage,
         budget_metadata,
+        additional_translation_instructions,
     )
     translated_text, token_usage = _translate_text_in_budgeted_segments(
         project_root,
@@ -570,6 +602,7 @@ def retranslate_chunk(
         log_path,
         token_usage,
         budget_metadata,
+        additional_translation_instructions,
         progress_callback=progress_callback,
         translated_chunk_count=max(0, _translated_count(translated_chunks)),
         cancel_requested=cancel_requested,
@@ -590,6 +623,7 @@ def retranslate_chunk(
         warnings=list(report.get("warnings", [])),
         token_usage=token_usage,
         budget_metadata=budget_metadata,
+        additional_translation_instructions=additional_translation_instructions,
     )
     operation_state = _build_operation_state(
         project_root,
@@ -605,6 +639,7 @@ def retranslate_chunk(
         resume_checkpoint=None,
         token_usage=token_usage,
         budget_metadata=budget_metadata,
+        additional_translation_instructions=additional_translation_instructions,
     )
     _persist_translation_state(project_root, source_chunks, translated_chunks, report, operation_state=operation_state)
     _emit_progress(
@@ -662,6 +697,7 @@ def update_translated_text(
         selected["approved_at"] = None
         selected["translated_at"] = None
         selected["status"] = TRANSLATED_CHUNK_STATUS_NOT_STARTED
+    operation_state_payload = load_operation_state(project_root)
     report = _rebuild_report(
         translated_chunks,
         target_language,
@@ -669,19 +705,23 @@ def update_translated_text(
         warnings=list(report.get("warnings", [])),
         token_usage=_restore_persisted_token_usage(
             report,
-            load_operation_state(project_root),
+            operation_state_payload,
         ),
-        budget_metadata=_restore_persisted_budget_metadata(report, load_operation_state(project_root)),
+        budget_metadata=_restore_persisted_budget_metadata(report, operation_state_payload),
+        additional_translation_instructions=_restore_persisted_additional_translation_instructions(
+            report,
+            operation_state_payload,
+        ),
     )
     operation_state = _refresh_operation_state(
         project_root,
         source_chunks,
         translated_chunks,
         report,
-        load_operation_state(project_root),
+        operation_state_payload,
         profile_id,
         target_language,
-        _restore_persisted_token_usage(report, load_operation_state(project_root)),
+        _restore_persisted_token_usage(report, operation_state_payload),
     )
     _persist_translation_state(
         project_root,
@@ -723,6 +763,7 @@ def approve_chunk(
     selected["approved"] = True
     selected["approved_at"] = _utc_now_iso()
     selected["status"] = TRANSLATED_CHUNK_STATUS_APPROVED
+    operation_state_payload = load_operation_state(project_root)
     report = _rebuild_report(
         translated_chunks,
         target_language,
@@ -730,19 +771,23 @@ def approve_chunk(
         warnings=list(report.get("warnings", [])),
         token_usage=_restore_persisted_token_usage(
             report,
-            load_operation_state(project_root),
+            operation_state_payload,
         ),
-        budget_metadata=_restore_persisted_budget_metadata(report, load_operation_state(project_root)),
+        budget_metadata=_restore_persisted_budget_metadata(report, operation_state_payload),
+        additional_translation_instructions=_restore_persisted_additional_translation_instructions(
+            report,
+            operation_state_payload,
+        ),
     )
     operation_state = _refresh_operation_state(
         project_root,
         source_chunks,
         translated_chunks,
         report,
-        load_operation_state(project_root),
+        operation_state_payload,
         profile_id,
         target_language,
-        _restore_persisted_token_usage(report, load_operation_state(project_root)),
+        _restore_persisted_token_usage(report, operation_state_payload),
     )
     _persist_translation_state(
         project_root,
@@ -781,6 +826,7 @@ def approve_all(
         chunk["approved"] = True
         chunk["approved_at"] = approved_at
         chunk["status"] = TRANSLATED_CHUNK_STATUS_APPROVED
+    operation_state_payload = load_operation_state(project_root)
     report = _rebuild_report(
         translated_chunks,
         target_language,
@@ -788,19 +834,23 @@ def approve_all(
         warnings=list(report.get("warnings", [])),
         token_usage=_restore_persisted_token_usage(
             report,
-            load_operation_state(project_root),
+            operation_state_payload,
         ),
-        budget_metadata=_restore_persisted_budget_metadata(report, load_operation_state(project_root)),
+        budget_metadata=_restore_persisted_budget_metadata(report, operation_state_payload),
+        additional_translation_instructions=_restore_persisted_additional_translation_instructions(
+            report,
+            operation_state_payload,
+        ),
     )
     operation_state = _refresh_operation_state(
         project_root,
         source_chunks,
         translated_chunks,
         report,
-        load_operation_state(project_root),
+        operation_state_payload,
         profile_id,
         target_language,
-        _restore_persisted_token_usage(report, load_operation_state(project_root)),
+        _restore_persisted_token_usage(report, operation_state_payload),
     )
     _persist_translation_state(
         project_root,
@@ -949,6 +999,7 @@ def _rebuild_report(
     updated_at: str | None = None,
     token_usage: TokenUsagePayload | None = None,
     budget_metadata: BudgetMetadataPayload | None = None,
+    additional_translation_instructions: str | None = None,
 ) -> dict[str, object]:
     """
     @brief      Recompute the translation report from the current chunk records.
@@ -958,11 +1009,12 @@ def _rebuild_report(
     @param[in]  warnings Optional warning list to persist in the report.
     @param[in]  updated_at Optional report timestamp override.
     @param[in]  budget_metadata Optional context-budget metadata.
+    @param[in]  additional_translation_instructions Optional operator translation rules.
     @return     Rebuilt translation report payload.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-28
-    @version    0.4.0
+    @date       2026-05-12
+    @version    0.5.0
     """
     translated_count = _translated_count(translated_chunks)
     approved_count = sum(1 for chunk in translated_chunks if bool(chunk.get("approved", False)))
@@ -988,6 +1040,10 @@ def _rebuild_report(
     }
     if budget_metadata is not None:
         report["budget_metadata"] = dict(budget_metadata)
+    if additional_translation_instructions is not None:
+        normalized_instructions = _normalized_additional_translation_instructions(additional_translation_instructions)
+        report["additional_translation_instructions"] = normalized_instructions
+        report["additional_translation_instructions_fingerprint"] = _compute_prompt_fingerprint(normalized_instructions)
     return report
 
 
@@ -1056,8 +1112,8 @@ def _refresh_operation_state(
     @return     Refreshed operation state payload.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-28
-    @version    0.2.0
+    @date       2026-05-12
+    @version    0.3.0
     """
     state = dict(existing_operation_state or {})
     metadata = state.get("metadata", {})
@@ -1101,6 +1157,15 @@ def _refresh_operation_state(
         }
         if budget_metadata:
             resume_checkpoint["budget_metadata"] = budget_metadata
+    additional_translation_instructions = _restore_persisted_additional_translation_instructions(
+        report,
+        existing_operation_state,
+    )
+    additional_translation_fingerprint = _compute_prompt_fingerprint(additional_translation_instructions)
+    refreshed_metadata["additional_translation_instructions"] = additional_translation_instructions
+    refreshed_metadata["additional_translation_instructions_fingerprint"] = additional_translation_fingerprint
+    if resume_checkpoint is not None:
+        resume_checkpoint["additional_translation_instructions_fingerprint"] = additional_translation_fingerprint
     return {
         "folder_relative_path": config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH,
         "status": status,
@@ -1193,6 +1258,7 @@ def _write_running_state(
     log_path: Path,
     token_usage: TokenUsagePayload,
     budget_metadata: BudgetMetadataPayload,
+    additional_translation_instructions: str,
 ) -> None:
     """
     @brief      Persist the translation operation in the running state.
@@ -1204,11 +1270,12 @@ def _write_running_state(
     @param[in]  profile_id Active translation profile identifier.
     @param[in]  log_path Operation-local AI transaction log path.
     @param[in]  budget_metadata Context-budget metadata.
+    @param[in]  additional_translation_instructions Optional operator-supplied translation rules.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-28
-    @version    0.3.0
+    @date       2026-05-12
+    @version    0.4.0
     """
     report = _rebuild_report(
         translated_chunks,
@@ -1216,6 +1283,7 @@ def _write_running_state(
         profile_id,
         token_usage=token_usage,
         budget_metadata=budget_metadata,
+        additional_translation_instructions=additional_translation_instructions,
     )
     operation_state = _build_operation_state(
         project_root,
@@ -1234,8 +1302,12 @@ def _write_running_state(
             "translated_chunk_count": report["translated_chunk_count"],
             "total_chunk_count": report["total_chunk_count"],
             "budget_metadata": dict(budget_metadata),
+            "additional_translation_instructions_fingerprint": _compute_prompt_fingerprint(
+                additional_translation_instructions
+            ),
         },
         budget_metadata=budget_metadata,
+        additional_translation_instructions=additional_translation_instructions,
     )
     _persist_translation_state(
         project_root,
@@ -1260,6 +1332,7 @@ def _build_operation_state(
     token_usage: TokenUsagePayload,
     resume_checkpoint: dict[str, object] | None,
     budget_metadata: BudgetMetadataPayload | None = None,
+    additional_translation_instructions: str = "",
 ) -> dict[str, object]:
     """
     @brief      Build the persisted translation operation state payload.
@@ -1275,11 +1348,12 @@ def _build_operation_state(
     @param[in]  log_path Operation-local AI transaction log path.
     @param[in]  resume_checkpoint Resume checkpoint payload or `None`.
     @param[in]  budget_metadata Optional context-budget metadata.
+    @param[in]  additional_translation_instructions Optional operator-supplied translation rules.
     @return     Persisted operation state payload.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-28
-    @version    0.3.0
+    @date       2026-05-12
+    @version    0.4.0
     """
     input_path = _translation_input_snapshot_path(project_root)
     output_path = build_operation_output_path(
@@ -1303,6 +1377,12 @@ def _build_operation_state(
         "source_chunk_count": len(source_chunks),
         "log_relative_path": relative_to_project(project_root, log_path),
         "token_usage": token_usage_service.coerce_token_usage(token_usage),
+        "additional_translation_instructions": _normalized_additional_translation_instructions(
+            additional_translation_instructions
+        ),
+        "additional_translation_instructions_fingerprint": _compute_prompt_fingerprint(
+            _normalized_additional_translation_instructions(additional_translation_instructions)
+        ),
     }
     if budget_metadata is not None:
         metadata["budget_metadata"] = dict(budget_metadata)
@@ -1485,6 +1565,7 @@ def _translate_text_in_budgeted_segments(
     log_path: Path,
     token_usage: TokenUsagePayload,
     budget_metadata: BudgetMetadataPayload,
+    additional_translation_instructions: str,
     progress_callback=None,
     translated_chunk_count: int = 0,
     cancel_requested=None,
@@ -1501,12 +1582,13 @@ def _translate_text_in_budgeted_segments(
     @param[in]  total_chunks Total number of source chunks.
     @param[in]  log_path Operation-local AI transaction log path.
     @param[in]  budget_metadata Context-budget metadata for source segmentation.
+    @param[in]  additional_translation_instructions Optional operator-supplied translation rules.
     @param[in]  cancel_requested Optional cancellation callback.
     @return     Concatenated translated text plus updated cumulative token usage.
     @exception  ValueError When any translated segment is empty.
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-28
-    @version    0.3.0
+    @date       2026-05-12
+    @version    0.4.0
     """
     text_budget = int(budget_metadata["text_budget_tokens"])
     translated_segments: list[str] = []
@@ -1515,11 +1597,11 @@ def _translate_text_in_budgeted_segments(
         start=1,
     ):
         raise_if_cancelled(cancel_requested)
-        user_prompt = prompt_template_service.render_prompt(
-            "text_translation_user",
+        user_prompt = _render_translation_user_prompt(
             {
                 "target_language": _language_label(target_language),
                 "source_text": source_segment,
+                "additional_translation_instructions": additional_translation_instructions,
             },
         )
         response_result = llm_provider_service.chat_json(
@@ -1564,23 +1646,25 @@ def _build_budget_metadata(
     ai_profile_payload: dict[str, object],
     target_language: str,
     system_prompt: str,
+    additional_translation_instructions: str = "",
 ) -> BudgetMetadataPayload:
     """
     @brief      Build context-window budget metadata for AI translation.
     @param[in]  ai_profile_payload Enabled AI profile payload.
     @param[in]  target_language Requested target language code.
     @param[in]  system_prompt Rendered translation system prompt.
+    @param[in]  additional_translation_instructions Optional operator-supplied translation rules.
     @return     Context-budget metadata used for source segmentation.
     @exception  ValueError Raised when context and output settings leave too little input room.
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-28
-    @version    0.1.0
+    @date       2026-05-12
+    @version    0.2.0
     """
-    user_prompt_shell = prompt_template_service.render_prompt(
-        "text_translation_user",
+    user_prompt_shell = _render_translation_user_prompt(
         {
             "target_language": _language_label(target_language),
             "source_text": "(none)",
+            "additional_translation_instructions": additional_translation_instructions,
         },
     )
     return ai_budget_service.context_budget_metadata(
@@ -1593,6 +1677,138 @@ def _build_budget_metadata(
         "AI translation cannot run because the selected AI profile context window "
         "and max output tokens leave too little room for translation input",
     )
+
+
+def _render_translation_user_prompt(variables: dict[str, object]) -> str:
+    """
+    @brief      Render the AI translation user prompt with optional operator rules.
+    @param[in]  variables Prompt variables.
+    @return     Rendered AI translation user prompt.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-12
+    @version    0.1.0
+    """
+    template = prompt_template_service.load_prompt("text_translation_user")
+    placeholder_names = set(re.findall(r"{([A-Za-z_][A-Za-z0-9_]*)}", template))
+    rendered_prompt = prompt_template_service.render_prompt(
+        "text_translation_user",
+        {key: value for key, value in variables.items() if key in placeholder_names},
+    )
+    additional_translation_instructions = _normalized_additional_translation_instructions(
+        variables.get("additional_translation_instructions")
+    )
+    if additional_translation_instructions and "additional_translation_instructions" not in placeholder_names:
+        rendered_prompt = _append_additional_translation_instructions(
+            rendered_prompt,
+            additional_translation_instructions,
+        )
+    return rendered_prompt
+
+
+def _resolve_additional_translation_instructions(
+    additional_translation_instructions: str | None,
+    existing_state: dict[str, object],
+) -> str:
+    """
+    @brief      Resolve operator translation rules for a new or resumed AI translation run.
+    @param[in]  additional_translation_instructions New operator instructions or None when resuming.
+    @param[in]  existing_state Existing translation operation state.
+    @return     Normalized operator translation instructions.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-12
+    @version    0.1.0
+    """
+    if additional_translation_instructions is not None:
+        return _normalized_additional_translation_instructions(additional_translation_instructions)
+    if existing_state.get("mode") != "ai_assisted" or str(existing_state.get("status", "")) not in {
+        "running",
+        "failed",
+    }:
+        return ""
+    metadata = existing_state.get("metadata", {})
+    if not isinstance(metadata, dict):
+        return ""
+    return _normalized_additional_translation_instructions(metadata.get("additional_translation_instructions"))
+
+
+def _restore_persisted_additional_translation_instructions(
+    report: dict[str, object] | None,
+    operation_state: dict[str, object] | None,
+) -> str:
+    """
+    @brief      Restore persisted operator translation rules from report or state.
+    @param[in]  report Translation report payload.
+    @param[in]  operation_state Translation operation-state payload.
+    @return     Normalized operator translation instructions.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-12
+    @version    0.1.0
+    """
+    if isinstance(report, dict):
+        restored_report_value = _normalized_additional_translation_instructions(
+            report.get("additional_translation_instructions")
+        )
+        if restored_report_value:
+            return restored_report_value
+    if isinstance(operation_state, dict):
+        metadata = operation_state.get("metadata", {})
+        if isinstance(metadata, dict):
+            restored_metadata_value = _normalized_additional_translation_instructions(
+                metadata.get("additional_translation_instructions")
+            )
+            if restored_metadata_value:
+                return restored_metadata_value
+    return ""
+
+
+def _normalized_additional_translation_instructions(value: object) -> str:
+    """
+    @brief      Normalize optional operator translation rules for prompt insertion and state storage.
+    @param[in]  value Candidate instruction text.
+    @return     Trimmed instruction text.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-12
+    @version    0.1.0
+    """
+    if value is None:
+        return ""
+    return str(value).strip()
+
+
+def _append_additional_translation_instructions(prompt_text: str, additional_translation_instructions: str) -> str:
+    """
+    @brief      Append operator translation rules to one rendered AI translation prompt.
+    @param[in]  prompt_text Rendered prompt template text.
+    @param[in]  additional_translation_instructions Normalized operator rules.
+    @return     Prompt text with an additional-rules section.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-12
+    @version    0.1.0
+    """
+    if not additional_translation_instructions:
+        return prompt_text
+    return (
+        f"{prompt_text.rstrip()}\n\n"
+        f"Additional operator translation instructions:\n{additional_translation_instructions}\n"
+    )
+
+
+def _compute_prompt_fingerprint(prompt_text: str) -> str:
+    """
+    @brief      Compute a stable fingerprint for operator-supplied prompt rules.
+    @param[in]  prompt_text Operator prompt-rule text.
+    @return     SHA-256 fingerprint for the prompt-rule text.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-12
+    @version    0.1.0
+    """
+    return hashlib.sha256(prompt_text.encode("utf-8")).hexdigest()
 
 
 def _split_translation_source_text(source_text: str, usable_input_budget: int) -> list[str]:

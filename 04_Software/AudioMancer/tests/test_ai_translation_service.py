@@ -81,6 +81,65 @@ def test_ai_translation_service_creates_translation_artifacts(monkeypatch, tmp_p
     assert operation_state["metadata"]["budget_metadata"] == report["budget_metadata"]
 
 
+def test_ai_translation_service_adds_operator_prompt_rules(monkeypatch, tmp_path) -> None:
+    """
+    @brief      Verify operator translation instructions are appended and persisted.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-12
+    @version    0.1.0
+    """
+    project_root, manifest = _create_chunked_project(tmp_path, "TranslationPromptRulesProject")
+    captured_prompts = []
+    monkeypatch.setattr(
+        ai_translation_service.prompt_template_service,
+        "validate_required_prompts",
+        lambda _names: None,
+    )
+    monkeypatch.setattr(
+        ai_translation_service.prompt_template_service,
+        "load_prompt",
+        lambda _name: "Translate to {target_language}:\n{source_text}",
+    )
+    monkeypatch.setattr(
+        ai_translation_service.prompt_template_service,
+        "render_prompt",
+        lambda _name, variables: f"prompt {variables}",
+    )
+
+    def fake_chat_json(_profile_payload, _system_prompt, user_prompt, **_kwargs):
+        captured_prompts.append(user_prompt)
+        return {
+            "payload": {"translated_text": "Translated with style"},
+            "usage": {
+                "input_tokens": 10,
+                "output_tokens": 5,
+                "total_tokens": 15,
+                "usage_available": True,
+            },
+        }
+
+    monkeypatch.setattr(ai_translation_service.llm_provider_service, "chat_json", fake_chat_json)
+
+    report = ai_translation_service.start_or_continue_translation(
+        project_root,
+        manifest,
+        _profile_payload(),
+        "ro",
+        additional_translation_instructions="Keep the formality level consistent.",
+    )
+
+    operation_state = ai_translation_service.load_operation_state(project_root)
+    assert captured_prompts
+    assert "Additional operator translation instructions" in captured_prompts[0]
+    assert "Keep the formality level consistent." in captured_prompts[0]
+    assert report["additional_translation_instructions"] == "Keep the formality level consistent."
+    assert operation_state["metadata"]["additional_translation_instructions"] == "Keep the formality level consistent."
+
+
 def test_ai_translation_service_approve_and_edit_update_review_state(tmp_path) -> None:
     """
     @brief      Validate ai translation service approve and edit update review state.

@@ -26,6 +26,9 @@ continuous narrator-only blocks under the TTS text budget.
 - choose canonical chunking text or approved translated text as the source
 - choose the dialogue/speaker prompt or narrator-only boundary prompt from
   `project.json.voice_assignment_mode`
+- collect optional operator Speech Blocks rules before fresh full generation or
+  selected-chunk re-splitting, append those rules to each user prompt, and
+  preserve them in report/state metadata for compatible resumes
 - size AI request input from the selected AI profile context window, max output
   tokens, prompt budget, and conservative safety margin
 - split oversized source chunks into ordered AI request segments without
@@ -125,13 +128,15 @@ High-level flow:
    from `chunks_text.json` or approved translated chunks from
    `translated_text.json`.
 3. The controller confirms that the operator wants to start or continue one AI
-   run and warns about time plus token usage.
+   run, asks for optional operator Speech Blocks rules on fresh runs, and warns
+   about time plus token usage.
 4. `speech_blocks_service.start_or_continue_generation(...)` validates the
    selected prompt files, builds request budget metadata from the selected AI
    profile and prompt shell, restores resumable state when the saved checkpoint
-   or partial review state still matches the current source snapshot and source
-   language, and processes each remaining chunk through one or more budgeted
-   model requests with the currently selected AI profile/model.
+   or partial review state still matches the current source snapshot, source
+   language, and operator-rule fingerprint, and processes each remaining chunk
+   through one or more budgeted model requests with the currently selected AI
+   profile/model.
 5. Each response is normalized into new speech-block payloads, including exact
    source spans, current editable values, warning flags, approval fields,
    chunk-local sequence indexes, and `CCCC-BBBBBB` IDs. In
@@ -167,10 +172,11 @@ High-level flow:
     generated Audio Blocks, selects the inserted block, preserves the selected
     chunk review context, and resets Audio Assembly because playback order
     changed.
-11. Re-splitting one chunk replaces only that chunk's Speech Blocks, rebuilds
-    that chunk's local sequence indexes and block IDs, marks new blocks
-    unapproved, rolls Speech Blocks back from complete, and asks Audio Blocks to
-    delete/remap only the affected downstream records.
+11. Re-splitting one chunk asks for optional operator Speech Blocks rules,
+    replaces only that chunk's Speech Blocks, rebuilds that chunk's local
+    sequence indexes and block IDs, marks new blocks unapproved, rolls Speech
+    Blocks back from complete, and asks Audio Blocks to delete/remap only the
+    affected downstream records.
 12. The Speech Blocks page mirrors Audio Blocks selected-row audio controls:
     `Generate Audio` asks the Audio Blocks controller to generate only the
     selected approved spoken block, and `Play`/`Stop` reuses the selected Audio
@@ -335,10 +341,13 @@ Report and operation-state metadata include:
 - normalized `token_usage`
 - `budget_metadata`, with `context_window`, `max_output_tokens`,
   `prompt_budget_tokens`, `text_budget_tokens`, and `safety_margin_tokens`
+- `additional_speech_block_instructions`
+- `additional_speech_block_instructions_fingerprint`
 - one resume checkpoint with `next_chunk_index`,
   `source_snapshot_fingerprint`, `source_language`, `ai_profile_id`, and
-  `budget_metadata`; resume compatibility uses the source snapshot and language,
-  while the stored profile and budget describe the last saved run settings
+  `budget_metadata`; resume compatibility uses the source snapshot, language,
+  and saved operator-rule fingerprint, while the stored profile and budget
+  describe the last saved run settings
 - when approval or review updates clear the explicit resume checkpoint, the
   service restores the next chunk from `processed_chunk_count` in the report or
   operation metadata

@@ -266,7 +266,7 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                 </p>
                 <ul>
                     <li>Extrage textul din documente acceptate.</li>
-                    <li>Ruleaza curatare determinista sau curatare asistata AI.</li>
+                    <li>Ruleaza curatare determinista sau curatare asistata AI; pentru o rulare AI noua, adauga reguli optionale suplimentare cand apare caseta de instructiuni.</li>
                     <li>Editeaza direct textul curatat pentru corectii manuale, imbunatatiri sau repararea OCR. Confirma mesajul de impact inainte de editare deoarece salvarile pot afecta datele etapelor urmatoare.</li>
                     <li>Aproba textul curatat numai dupa verificare; aprobarea deblocheaza Segmentare text.</li>
                     <li>Trage separatorul dintre previzualizarea textului extras si textului curatat; fiecare previzualizare pastreaza cel putin o treime din latimea paginii.</li>
@@ -286,6 +286,7 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                 </p>
                 <ul>
                     <li>Genereaza segmente determinist sau cu asistenta AI.</li>
+                    <li>Pentru o rulare AI noua de segmentare, adauga reguli optionale suplimentare cand apare caseta de instructiuni cu word wrap.</li>
                     <li>Alege strategia AI: <strong>Paragraph</strong> pentru ferestre stabile de paragrafe, <strong>Meaning</strong> pentru unitati semantice sau <strong>Scene</strong> pentru limite apropiate de scene.</li>
                     <li>Inspecteaza fiecare segment generat.</li>
                     <li>Editeaza rezultatul generat cand textul sau impartirea trebuie corectate manual. Confirma mesajul de impact inainte de editare deoarece salvarile pot afecta datele etapelor urmatoare.</li>
@@ -313,6 +314,7 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                 <ul>
                     <li>Limbile tinta acceptate sunt engleza, romana, japoneza, coreeana, chineza, germana, franceza, rusa, portugheza, spaniola si italiana.</li>
                     <li>Genereaza traducerea pe segmente, cu jurnal AI optional daca este activat in setari.</li>
+                    <li>Adauga reguli optionale de traducere in caseta cu text incadrat pe randuri inainte de o traducere noua sau de retraducerea segmentului selectat.</li>
                     <li>Inspecteaza fiecare segment tradus impreuna cu sursa.</li>
                     <li>Editeaza manual textul tradus inainte de aprobare.</li>
                     <li>Aproba segmente individuale dupa verificare.</li>
@@ -333,6 +335,7 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                 </p>
                 <ul>
                     <li>Descopera naratorul si personajele din segmente aprobate sau traduceri aprobate.</li>
+                    <li>Adauga reguli optionale pentru Descoperirea Personajelor in caseta de prompt cu incadrare automata inainte de o rulare noua.</li>
                     <li>Revizuieste nume, aliasuri, indicii de varsta/gen, rol, stil de vorbire si dovezi din text.</li>
                     <li>Editeaza personajele cand modelul AI combina, omite sau eticheteaza gresit un vorbitor. Blocurile de vorbire atribuite revin la starea neaprobata pentru verificare.</li>
                     <li>Adauga manual personaje lipsa sau sterge rezultate false. Stergerea unui personaj muta Blocurile de vorbire afectate pe Narator, le marcheaza neaprobate si reseteaza numai Blocurile audio aferente.</li>
@@ -359,6 +362,7 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                 </div>
                 <ul>
                     <li>Inspecteaza profilurile de narator disponibile si selectia curenta.</li>
+                    <li>Foloseste Genereaza Profiluri Narator pentru sugestii AI editabile, cu reguli optionale de profil intr-o caseta cu text incadrat pe randuri inainte de generare.</li>
                     <li>Editeaza promptul naratorului, textul de previzualizare si descrierea vocii.</li>
                     <li>Genereaza o mostra VoiceWeaver pentru limba audio a proiectului.</li>
                     <li>Reda si opreste mostra direct in pagina.</li>
@@ -411,6 +415,7 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                 </p>
                 <ul>
                     <li>Genereaza Blocuri de vorbire pentru fiecare segment aprobat.</li>
+                    <li>Adauga reguli optionale pentru Blocuri de vorbire in caseta de prompt cu incadrare automata inainte de generare noua sau reimpartirea segmentului selectat.</li>
                     <li>Inspecteaza vorbitorul, tipul blocului, textul, durata pauzelor, indicatiile si metadatele.</li>
                     <li>Editeaza blocurile selectate cand textul sau atribuirea vorbitorului trebuie corectate. Daca blocul selectat are deja audio generat, avertismentul de impact apare cand apesi <strong>Edit</strong>, inainte ca editorul sa fie deblocat.</li>
                     <li>Foloseste contorul blocului selectat pentru a compara lungimea textului curent cu limita modelului TTS activ.</li>

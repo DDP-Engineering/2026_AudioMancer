@@ -13,7 +13,7 @@
          the Speech Blocks workflow.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 0.5.1
+@version 0.6.0
 """
 
 # IMPORTS
@@ -67,6 +67,137 @@ def test_speech_blocks_ui_controller_requires_confirmation_before_starting(monke
     speech_blocks_ui_controller.handle_generate_requested(window, "profile-1")
 
     assert start_calls == []
+
+
+def test_speech_blocks_ui_controller_passes_extra_prompt_to_generation(monkeypatch, tmp_path) -> None:
+    """
+    @brief      Verify Speech Blocks generation asks for optional operator rules and passes them to the worker.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-13
+    @version    0.1.0
+    """
+    project_root = _create_project(tmp_path, "SpeechBlocksControllerExtraPrompt")
+    manifest = project_workspace_service.load_manifest(project_root)
+    window = SimpleNamespace(
+        _active_operation_kind=None,
+        _settings_payload=_settings_payload(),
+        _current_project_root=project_root,
+        _current_manifest=manifest,
+    )
+    monkeypatch.setattr(
+        speech_blocks_ui_controller.speech_blocks_service,
+        "resolve_source_chunks",
+        lambda *_args, **_kwargs: {
+            "selected_source_language": "en",
+            "source_kind": "original",
+            "source_chunks": [{"chunk_id": "chunk-0001", "sequence_index": 1, "text": "Narration."}],
+        },
+    )
+    monkeypatch.setattr(
+        speech_blocks_ui_controller.QMessageBox,
+        "question",
+        lambda *_args, **_kwargs: QMessageBox.StandardButton.Yes,
+    )
+    monkeypatch.setattr(speech_blocks_ui_controller, "_is_resuming_speech_blocks_generation", lambda _window: False)
+    monkeypatch.setattr(
+        speech_blocks_ui_controller,
+        "prompt_ai_speech_blocks_instructions",
+        lambda _window, _language: "Keep whispers as separate dialogue blocks.",
+    )
+
+    def _fake_start_or_continue_generation(*_args, **kwargs):
+        """
+        @brief      Capture the worker keyword arguments for Speech Blocks generation.
+        @param[in]  _args Ignored positional arguments.
+        @param[in]  kwargs Worker keyword arguments.
+        @return     Captured extra prompt payload.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-13
+        @version    0.1.0
+        """
+        return {"additional": kwargs.get("additional_speech_block_instructions")}
+
+    start_calls = []
+    monkeypatch.setattr(
+        speech_blocks_ui_controller.speech_blocks_service,
+        "start_or_continue_generation",
+        _fake_start_or_continue_generation,
+    )
+    monkeypatch.setattr(
+        speech_blocks_ui_controller,
+        "_start_operation",
+        lambda _window, **kwargs: start_calls.append(kwargs),
+    )
+
+    speech_blocks_ui_controller.handle_generate_requested(window, "profile-1")
+
+    assert len(start_calls) == 1
+    worker_result = start_calls[0]["worker_callable"](project_root, manifest)
+    assert worker_result == {"additional": "Keep whispers as separate dialogue blocks."}
+
+
+def test_speech_blocks_ui_controller_passes_extra_prompt_to_selected_resplit(monkeypatch, tmp_path) -> None:
+    """
+    @brief      Verify selected-chunk re-splitting passes optional operator rules to the worker.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-13
+    @version    0.1.0
+    """
+    project_root = _create_project(tmp_path, "SpeechBlocksControllerResplitExtraPrompt")
+    manifest = project_workspace_service.load_manifest(project_root)
+    window = SimpleNamespace(
+        _active_operation_kind=None,
+        _settings_payload=_settings_payload(),
+        _current_project_root=project_root,
+        _current_manifest=manifest,
+        _speech_blocks_page=SimpleNamespace(current_profile_id=lambda: "profile-1"),
+    )
+    monkeypatch.setattr(speech_blocks_ui_controller, "_confirm_speech_blocks_resplit", lambda *_args: True)
+    monkeypatch.setattr(
+        speech_blocks_ui_controller,
+        "prompt_ai_speech_blocks_instructions",
+        lambda _window, _language: "Preserve ellipses in dialogue blocks.",
+    )
+
+    def _fake_regenerate_chunk_speech_blocks(*_args, **kwargs):
+        """
+        @brief      Capture the worker keyword arguments for selected-chunk re-splitting.
+        @param[in]  _args Ignored positional arguments.
+        @param[in]  kwargs Worker keyword arguments.
+        @return     Captured extra prompt payload.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-13
+        @version    0.1.0
+        """
+        return {"additional": kwargs.get("additional_speech_block_instructions")}
+
+    start_calls = []
+    monkeypatch.setattr(
+        speech_blocks_ui_controller.speech_blocks_service,
+        "regenerate_chunk_speech_blocks",
+        _fake_regenerate_chunk_speech_blocks,
+    )
+    monkeypatch.setattr(
+        speech_blocks_ui_controller,
+        "_start_operation",
+        lambda _window, **kwargs: start_calls.append(kwargs),
+    )
+
+    speech_blocks_ui_controller.handle_resplit_selected_requested(window, "chunk-0001")
+
+    assert len(start_calls) == 1
+    worker_result = start_calls[0]["worker_callable"](project_root, manifest)
+    assert worker_result == {"additional": "Preserve ellipses in dialogue blocks."}
 
 
 def test_speech_blocks_ui_controller_edit_start_does_not_refresh_page(monkeypatch, tmp_path) -> None:
