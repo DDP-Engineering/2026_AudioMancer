@@ -63,9 +63,9 @@ Audio Blocks selected reset, selected regeneration, approval, and unapproval
 now preserve unrelated generated audio and reset only Audio Assembly outputs.
 Audio Assembly settings changes and reruns now preserve upstream Audio Blocks
 while replacing only assembly outputs/state/report.
-Current package version is `1.0.12`; AI-assisted text operations now support
-operator-supplied prompt rules, while Character Discovery can hand
-source-dialogue preview text to Character Voices.
+Current package version is `1.0.13`; Text Chunking now allows operators to
+start a fully manual chunking pass from cleaned text before generated chunks
+exist.
 
 Focused implementation documentation is maintained in `05_SoftwareDocu/`.
 The end-user help bundles are maintained in `05_SoftwareDocu/UserGuide/` and

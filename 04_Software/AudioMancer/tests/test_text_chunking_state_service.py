@@ -13,7 +13,7 @@
          states and manual selected-chunk edits correctly.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-24
-@version 0.5.1
+@version 0.5.2
 """
 
 # IMPORTS
@@ -256,6 +256,36 @@ def test_insert_chunk_preserves_existing_chunk_ids_and_translation(tmp_path) -> 
     assert translated_chunks[1]["translated_text"] == ""
     assert translated_chunks[1]["approved"] is False
     assert translated_chunks[2]["translated_text"] == "Al doilea"
+    assert updated_manifest["current_stage"] == "translation_ready"
+
+
+def test_insert_chunk_creates_first_manual_chunk_when_no_chunks_exist(tmp_path) -> None:
+    """
+    @brief      Verify manual insertion can start a new chunk artifact before generated chunks exist.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-13
+    @version    0.1.0
+    """
+    project_root, manifest = project_workspace_service.create_project("ManualChunkStartProject", tmp_path)
+    (project_root / config.CLEANED_TEXT_FILE_NAME).write_text("First line\nSecond line", encoding="utf-8")
+
+    updated_manifest = text_chunking_state_service.insert_chunk_after_selected(
+        project_root,
+        manifest,
+        "",
+    )
+
+    chunks = json.loads((project_root / config.CHUNK_ARTIFACT_FILE_NAME).read_text(encoding="utf-8"))
+    assert len(chunks) == 1
+    assert chunks[0]["chunk_id"] == "chunk-0001"
+    assert chunks[0]["sequence_index"] == 1
+    assert chunks[0]["text"] == ""
+    assert chunks[0]["source_start_line"] == 1
+    assert chunks[0]["source_end_line"] == 2
+    assert chunks[0]["chunking_mode"] == "manual"
     assert updated_manifest["current_stage"] == "translation_ready"
 
 

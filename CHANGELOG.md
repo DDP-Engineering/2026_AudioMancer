@@ -10,6 +10,13 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [1.0.13] - 2026-05-13
+
+### Fixed
+
+- Text Chunking now enables the Insert action before generated chunks exist,
+  allowing operators to start a fully manual chunking pass from cleaned text.
+
 ## [1.0.12] - 2026-05-13
 
 ### Added
