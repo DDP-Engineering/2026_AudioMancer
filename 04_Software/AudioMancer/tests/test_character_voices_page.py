@@ -13,7 +13,7 @@
          bottom status rendering for the Character Voices page.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-20
-@version 1.4.1
+@version 1.4.2
 """
 
 # IMPORTS
@@ -130,13 +130,13 @@ def test_character_voices_page_edit_mode_disables_list_and_enables_save_after_ch
 
 def test_character_voices_page_batch_button_enables_for_current_character_targets(qtbot) -> None:
     """
-    @brief      Verify the batch generation button enables when current character targets exist.
+    @brief      Verify the batch generation button enables when current character targets can generate.
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-01
-    @version    0.1.0
+    @version    0.2.0
     """
     page = CharacterVoicesPage()
     qtbot.addWidget(page)
@@ -150,7 +150,7 @@ def test_character_voices_page_batch_button_enables_for_current_character_target
                 "display_name": "Alice",
                 "sample_status_label": "Sample missing",
                 "has_sample": False,
-                "can_generate_sample": False,
+                "can_generate_sample": True,
             },
             {
                 "target_id": "character_bob",
@@ -189,6 +189,60 @@ def test_character_voices_page_batch_button_enables_for_current_character_target
     page._generate_missing_samples_button.click()
 
     assert emitted == [True]
+
+
+def test_character_voices_page_batch_button_disables_when_character_targets_cannot_generate(qtbot) -> None:
+    """
+    @brief      Verify same-narrator or unavailable targets do not enable batch voice generation.
+    @param[in]  qtbot Qt test helper fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-13
+    @version    0.1.0
+    """
+    page = CharacterVoicesPage()
+    qtbot.addWidget(page)
+    page.apply_language("en")
+    page.set_project_active(True)
+    page.set_character_voices_state(
+        targets=[
+            {
+                "target_id": "character_alice",
+                "target_kind": "character",
+                "display_name": "Alice",
+                "sample_status_label": "Sample present",
+                "has_sample": True,
+                "can_generate_sample": False,
+            }
+        ],
+        notes=["Same narrator voice mode."],
+        current_target_id="character_alice",
+        selected_voice_language="en",
+        language_entries=[("English", "en")],
+        original_language="English",
+        translated_language="Not translated",
+        assignment_mode_label="Same narrator voice",
+        target_name="Alice",
+        target_kind_label="Character",
+        prompt_text="Original prompt.",
+        preview_text="Line one.",
+        is_editable=False,
+        can_reset_prompt=False,
+        can_edit_prompt=False,
+        can_generate_sample=False,
+        preview_available=True,
+        status_lines=["Total targets: 1"],
+        missing_narrator_sample=False,
+    )
+    emitted: list[bool] = []
+    page.generate_missing_samples_requested.connect(lambda: emitted.append(True))
+
+    assert page._generate_missing_samples_button.isEnabled() is False
+
+    page._generate_missing_samples_button.click()
+
+    assert emitted == []
 
 
 def test_character_voices_page_editor_payload_includes_preview_text(qtbot) -> None:

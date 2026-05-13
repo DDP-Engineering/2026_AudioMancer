@@ -1091,18 +1091,19 @@ def _confirm_generate_missing_samples(window: "MainWindow", language: str, sampl
 
 def _current_character_target_payloads(window: "MainWindow") -> list[dict[str, object]]:
     """
-    @brief      Build the batch target list for all current character targets.
+    @brief      Build the batch target list for all current generatable character targets.
     @param[in]  window Main application window.
-    @return     Ordered list of target payloads requiring sample generation.
+    @return     Ordered list of character target payloads allowed to generate samples.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-01
-    @version    0.1.0
+    @version    0.2.0
     """
     return [
         dict(target_payload)
         for target_payload in window._character_voices_page._targets  # noqa: SLF001
         if str(target_payload.get("target_kind", "")).strip() == character_voices_service.TARGET_KIND_CHARACTER
+        and bool(target_payload.get("can_generate_sample", False))
     ]
 
 

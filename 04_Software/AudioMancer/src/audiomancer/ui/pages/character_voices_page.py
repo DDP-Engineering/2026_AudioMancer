@@ -14,7 +14,7 @@
          sample preview controls for the Character Voices workflow.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-20
-@version 1.5.0
+@version 1.5.1
 """
 
 # IMPORTS
@@ -288,7 +288,7 @@ class CharacterVoicesPage(QWidget):
             @exception  None
             @author     Eng. Dan Dumitru Pasare
             @date       2026-04-20
-        @version    1.5.1
+        @version    1.5.2
         """
         _ = notes
         _ = missing_narrator_sample
@@ -299,7 +299,7 @@ class CharacterVoicesPage(QWidget):
         self._can_reset_prompt = can_reset_prompt
         self._can_edit_prompt = can_edit_prompt
         self._can_generate_sample = can_generate_sample
-        self._can_generate_missing_samples = _has_character_targets(self._targets)
+        self._can_generate_missing_samples = _has_generatable_character_targets(self._targets)
         self._preview_available = preview_available
         self._edit_mode = False
         self._dirty = False
@@ -739,17 +739,20 @@ def _format_target_list_item(target_payload: dict[str, object]) -> str:
     return f"{str(target_payload.get('display_name', '')).strip()} | {sample_label}"
 
 
-def _has_character_targets(targets: list[dict[str, object]]) -> bool:
+def _has_generatable_character_targets(targets: list[dict[str, object]]) -> bool:
     """
-    @brief      Return whether a batch character-sample generation run has character targets available.
+    @brief      Return whether a batch character-sample generation run has generatable character targets available.
     @param[in]  targets Current Character Voices target payload list.
-    @return     True when at least one current character target exists.
+    @return     True when at least one current character target can generate a sample.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-01
-    @version    0.1.0
+    @version    0.2.0
     """
-    return any(str(target.get("target_kind", "")).strip() == "character" for target in targets)
+    return any(
+        str(target.get("target_kind", "")).strip() == "character" and bool(target.get("can_generate_sample", False))
+        for target in targets
+    )
 
 
 # END OF FILE

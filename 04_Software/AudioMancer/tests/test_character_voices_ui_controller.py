@@ -13,10 +13,12 @@
          page-entry warnings for the Character Voices workflow.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-20
-@version 1.7.1
+@version 1.7.2
 """
 
 # IMPORTS
+
+from types import SimpleNamespace
 
 from PySide6.QtWidgets import QMessageBox
 
@@ -488,6 +490,42 @@ def test_character_voices_ui_controller_batch_regenerates_all_current_character_
 
     assert operation_kinds == ["character_voices_generate_all_samples"]
     assert generated_target_ids == ["character_alice", "character_bob"]
+
+
+def test_character_voices_ui_controller_batch_targets_only_generatable_characters() -> None:
+    """
+    @brief      Verify direct batch generation requests ignore non-generatable character targets.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-13
+    @version    0.1.0
+    """
+    window = SimpleNamespace(
+        _character_voices_page=SimpleNamespace(
+            _targets=[
+                {
+                    "target_id": "narrator",
+                    "target_kind": character_voices_service.TARGET_KIND_NARRATOR,
+                    "can_generate_sample": False,
+                },
+                {
+                    "target_id": "character_alice",
+                    "target_kind": character_voices_service.TARGET_KIND_CHARACTER,
+                    "can_generate_sample": False,
+                },
+                {
+                    "target_id": "character_bob",
+                    "target_kind": character_voices_service.TARGET_KIND_CHARACTER,
+                    "can_generate_sample": True,
+                },
+            ]
+        )
+    )
+
+    target_payloads = character_voices_ui_controller._current_character_target_payloads(window)
+
+    assert [target_payload["target_id"] for target_payload in target_payloads] == ["character_bob"]
 
 
 def test_character_voices_progress_messages_hide_model_id(monkeypatch, qtbot, tmp_path) -> None:

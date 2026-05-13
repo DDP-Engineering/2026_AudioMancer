@@ -25,6 +25,9 @@ All notable changes to this project will be documented in this file.
 - AI prompt rendering no longer rejects source text containing literal brace
   markers such as Gutenberg index references (`{ix}`, `{x}`, `{xi}`) as
   unresolved template placeholders.
+- Character Voices no longer enables batch character sample generation in
+  same-narrator mode, preventing cancelled or refreshed batch runs from
+  replacing character samples with copied Narator Voice audio.
 
 ## [1.0.11] - 2026-05-12
 
