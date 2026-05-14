@@ -602,13 +602,14 @@
             </p>
           </div>
           <div class="notice">
-            The planned VoiceWeaver package for this page uses only Qwen3-TTS Base and Qwen3 Voice Design models.
+            The current VoiceWeaver package is the multipart archive published with the v1.0.0 delivery. Use it with
+            the current AudioMancer release if you do not already have VoiceWeaver installed locally.
           </div>
         </div>
         <div class="download-box">
           <h3>VoiceWeaver steps</h3>
           <ol>
-            <li>Download all VoiceWeaver package parts from the same release.</li>
+            <li>Download all eight VoiceWeaver package parts from the <a href="https://github.com/DDP-Engineering/2026_AudioMancer/releases/tag/v1.0.0">v1.0.0 release</a>.</li>
             <li>Put all <code>.partNNN</code> files in the same folder.</li>
             <li>Join the parts into one VoiceWeaver ZIP with the PowerShell command below.</li>
             <li>Extract the VoiceWeaver ZIP to a folder, for example <code>C:\VoiceWeaver</code>.</li>
@@ -642,8 +643,8 @@
         </div>
         <div class="download-box">
           <h3>Join the VoiceWeaver parts</h3>
-          <pre>$outputZip = "VoiceWeaver_Windows_x64.zip"
-$parts = Get-ChildItem "VoiceWeaver*.zip.part*" | Sort-Object Name
+          <pre>$outputZip = "VoiceWeaver-v1.2.2-windows-x64-cuda-models-2.zip"
+$parts = Get-ChildItem "$outputZip.part*" | Sort-Object Name
 $out = [IO.File]::Create($outputZip)
 foreach ($part in $parts) {
     $in = [IO.File]::OpenRead($part.FullName)
@@ -653,7 +654,9 @@ foreach ($part in $parts) {
 $out.Dispose()
 Get-FileHash -Algorithm SHA256 $outputZip</pre>
           <div class="notice">
-            Use <code>SHA256SUMS.txt</code> to verify the AudioMancer ZIP, every VoiceWeaver part, and the final joined ZIP.
+            The expected joined VoiceWeaver ZIP SHA256 is
+            <code>a7ebe2dd594586da8b321aedd41ea8ddd12a4ee68a353c1e48b8dd6c5ee3aa5a</code>.
+            Use the v1.0.0 <code>SHA256SUMS.txt</code> to verify every VoiceWeaver part.
           </div>
         </div>
       </div>
