@@ -18,13 +18,24 @@ AI help is optional. You can use AI for cleanup, chunking, translation, characte
 
 AudioMancer is currently tested on Windows.
 
-Download from the current GitHub Release (`v1.0.13`):
+Download AudioMancer from the current GitHub Release (`v1.0.13`):
 
 - [AudioMancer_Windows_x64.zip](https://github.com/DDP-Engineering/2026_AudioMancer/releases/latest/download/AudioMancer_Windows_x64.zip)
 - [SHA256SUMS.txt](https://github.com/DDP-Engineering/2026_AudioMancer/releases/latest/download/SHA256SUMS.txt)
-- every `VoiceWeaver*.zip.partNNN` file listed in the same release
 
-VoiceWeaver is split into numbered release assets because the full Windows package can be larger than one GitHub release asset. The number of parts can change from one release to another. Always download all matching parts from the same release.
+Download VoiceWeaver from the `v1.0.0` release if you do not already have the runtime package locally:
+
+- [VoiceWeaver-v1.2.2-windows-x64-cuda-models-2.zip.part001](https://github.com/DDP-Engineering/2026_AudioMancer/releases/download/v1.0.0/VoiceWeaver-v1.2.2-windows-x64-cuda-models-2.zip.part001)
+- [VoiceWeaver-v1.2.2-windows-x64-cuda-models-2.zip.part002](https://github.com/DDP-Engineering/2026_AudioMancer/releases/download/v1.0.0/VoiceWeaver-v1.2.2-windows-x64-cuda-models-2.zip.part002)
+- [VoiceWeaver-v1.2.2-windows-x64-cuda-models-2.zip.part003](https://github.com/DDP-Engineering/2026_AudioMancer/releases/download/v1.0.0/VoiceWeaver-v1.2.2-windows-x64-cuda-models-2.zip.part003)
+- [VoiceWeaver-v1.2.2-windows-x64-cuda-models-2.zip.part004](https://github.com/DDP-Engineering/2026_AudioMancer/releases/download/v1.0.0/VoiceWeaver-v1.2.2-windows-x64-cuda-models-2.zip.part004)
+- [VoiceWeaver-v1.2.2-windows-x64-cuda-models-2.zip.part005](https://github.com/DDP-Engineering/2026_AudioMancer/releases/download/v1.0.0/VoiceWeaver-v1.2.2-windows-x64-cuda-models-2.zip.part005)
+- [VoiceWeaver-v1.2.2-windows-x64-cuda-models-2.zip.part006](https://github.com/DDP-Engineering/2026_AudioMancer/releases/download/v1.0.0/VoiceWeaver-v1.2.2-windows-x64-cuda-models-2.zip.part006)
+- [VoiceWeaver-v1.2.2-windows-x64-cuda-models-2.zip.part007](https://github.com/DDP-Engineering/2026_AudioMancer/releases/download/v1.0.0/VoiceWeaver-v1.2.2-windows-x64-cuda-models-2.zip.part007)
+- [VoiceWeaver-v1.2.2-windows-x64-cuda-models-2.zip.part008](https://github.com/DDP-Engineering/2026_AudioMancer/releases/download/v1.0.0/VoiceWeaver-v1.2.2-windows-x64-cuda-models-2.zip.part008)
+- [VoiceWeaver SHA256SUMS.txt](https://github.com/DDP-Engineering/2026_AudioMancer/releases/download/v1.0.0/SHA256SUMS.txt)
+
+VoiceWeaver is split into numbered release assets because the full Windows package can be larger than one GitHub release asset. Download all eight parts before reassembly.
 
 ## Install AudioMancer
 
@@ -34,7 +45,7 @@ VoiceWeaver is split into numbered release assets because the full Windows packa
 
 ## Install VoiceWeaver
 
-1. Download all matching VoiceWeaver `.partNNN` files from the same release.
+1. Download all eight VoiceWeaver `.partNNN` files from the `v1.0.0` release.
 2. Put all parts in one folder.
 3. Reassemble the VoiceWeaver ZIP with PowerShell.
 4. Extract the VoiceWeaver ZIP to a normal folder, for example `C:\VoiceWeaver`.
@@ -58,8 +69,6 @@ $out.Dispose()
 Get-FileHash -Algorithm SHA256 $outputZip
 ```
 
-If a future release uses a different VoiceWeaver ZIP name, set `$outputZip` to that release's ZIP name before running the command.
-
 ## Current VoiceWeaver Package
 
 The current VoiceWeaver package contains:
@@ -79,7 +88,7 @@ Expected AudioMancer ZIP SHA256:
 6f10b6c10ffd105312d711e1ecc673443bef826a510a079ac95544f9d33acd81
 ```
 
-Use `SHA256SUMS.txt` for the complete list of hashes, including every VoiceWeaver part.
+Use the `v1.0.13` `SHA256SUMS.txt` for AudioMancer and the `v1.0.0` `SHA256SUMS.txt` for VoiceWeaver parts.
 
 ## Connect AudioMancer To VoiceWeaver
 
