@@ -14,7 +14,7 @@
          so the window remains a thin coordinator.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 1.46.1
+@version 1.46.6
 """
 
 # IMPORTS
@@ -267,7 +267,7 @@ class MainWindow(QMainWindow):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-06
-        @version    0.6.0
+        @version    0.6.2
         """
         for page_id, _label in self.PAGE_ORDER:
             enabled = is_active or page_id == "home"
@@ -1099,17 +1099,26 @@ class MainWindow(QMainWindow):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-16
-        @version    0.6.0
+        @version    0.6.2
         """
         current_language = ui_state_service.current_language_from_settings(self._settings_payload)
 
         self._settings_dialog = QDialog(self)
         self._settings_dialog.setWindowTitle(ui_state_service.translate("dialog.settings_title", current_language))
-        self._settings_dialog.resize(680, 560)
+        self._settings_dialog.resize(840, 620)
         settings_layout = QVBoxLayout(self._settings_dialog)
         self._settings_page = SettingsPage(self._settings_dialog)
         self._settings_page._cancel_button.clicked.connect(self._settings_dialog.close)
-        self._settings_page._save_button.clicked.connect(
+        self._settings_page._theme_import_button.clicked.connect(
+            lambda _checked=False: settings_ui_controller.import_theme_from_dialog(self)
+        )
+        self._settings_page._theme_export_button.clicked.connect(
+            lambda _checked=False: settings_ui_controller.export_theme_from_dialog(self)
+        )
+        self._settings_page._apply_button.clicked.connect(
+            lambda _checked=False: settings_ui_controller.apply_settings_from_dialog(self)
+        )
+        self._settings_page._ok_button.clicked.connect(
             lambda _checked=False: settings_ui_controller.save_settings_from_dialog(self)
         )
         self._settings_page.load_settings(self._settings_payload)
@@ -1171,6 +1180,20 @@ class MainWindow(QMainWindow):
         @version    0.3.0
         """
         settings_ui_controller.apply_language(self, language)
+
+    def apply_theme(self, theme_payload: dict[str, object]) -> None:
+        """
+        @brief      Apply one UI theme across theme-aware shell pages.
+        @param[in]  theme_payload Runtime UI theme payload.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-14
+        @version    0.1.0
+        """
+        for widget in self._page_registry.values():
+            if hasattr(widget, "apply_theme"):
+                widget.apply_theme(theme_payload)
 
     def _activate_project(
         self,

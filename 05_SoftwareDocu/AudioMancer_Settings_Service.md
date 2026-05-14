@@ -62,6 +62,9 @@ Validation currently covers:
 - list fields such as recent projects and provider/profile lists
 - nested `llm_profiles` entries for required keys and supported backend values
   when profiles exist
+- UI theme settings: selected `ui_theme_id`, normalized custom `ui_themes`
+  with separate UI-control and text-window font payloads, and removal of the
+  deprecated top-level `ui_text_scale` field
 
 ## 4. Dependencies
 
@@ -110,7 +113,8 @@ Current deterministic behavior:
 - `llm_profiles` is empty by default
 - no default selected LLM profile id fields are persisted in the settings
   contract
-- unknown extra keys are preserved
+- unknown extra keys are preserved, except deprecated keys with an explicit
+  migration path such as `ui_text_scale`
 - invalid non-empty AI or TTS runtime base URLs heal back to their defaults
   instead of remaining in one broken-but-persisted state
 - normalized payloads are written back when healing is required

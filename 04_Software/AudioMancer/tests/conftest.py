@@ -13,7 +13,7 @@
          setup to reduce boilerplate across test files.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 1.3.1
+@version 1.3.2
 """
 
 # IMPORTS
@@ -109,11 +109,12 @@ def default_settings_payload():
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.3.1
+    @version    0.3.2
     """
     return {
         "language": "en",
-        "ui_text_scale": "normal",
+        "ui_theme_id": config.DEFAULT_UI_THEME_ID,
+        "ui_themes": [],
         "play_completion_beep": False,
         "llm_profiles": [
             {

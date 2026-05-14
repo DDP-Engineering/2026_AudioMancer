@@ -10,12 +10,13 @@ Implementation-focused software documentation and component notes.
 
 ## Current Documents
 
-- `UserGuide/` contains the English end-user help bundle for AudioMancer 1.0.1, including the offline HTML guide, resizable-pane minimum-width notes, and real UI screenshots used by packaged Windows and Ubuntu releases.
-- `UserGuide_ro/` contains the Romanian end-user help bundle for AudioMancer 1.0.1, including the offline HTML guide, resizable-pane minimum-width notes, and Romanian UI screenshots used when the application language is set to Romanian.
+- `UserGuide/` contains the English end-user help bundle for AudioMancer 1.0.13, including the offline HTML guide, runtime Settings theme notes, and real UI screenshots used by packaged Windows and Ubuntu releases.
+- `UserGuide_ro/` contains the Romanian end-user help bundle for AudioMancer 1.0.13, including the offline HTML guide, runtime Settings theme notes, and Romanian UI screenshots used when the application language is set to Romanian.
 - `AudioMancer_App_Shell.md` documents the desktop application shell, Home workflow progress presenter, project navigation, settings dialogs, and page-hosting responsibilities.
 - `AudioMancer_Config_And_Settings.md` documents the adapted configuration and settings scaffold.
 - `AudioMancer_Settings_Service.md` documents the shared settings lifecycle implementation.
 - `AudioMancer_UI_State_Service.md` documents the shared runtime UI string catalog, language application, text-size scaling behavior, and compact Speech Blocks selected-audio labels.
+- `AudioMancer_UI_Themes.md` documents the Settings-backed UI theme schema, built-in and custom themes, JSON import/export behavior, and runtime theme application path.
 - `AudioMancer_Persistence_Service.md` documents the shared atomic text and JSON write helpers used by critical project, settings, and operation state persistence paths.
 - `AudioMancer_Logging_Service.md` documents the shared runtime logging implementation.
 - `AudioMancer_Workflow_Impact_Service.md` documents the v2 workflow impact foundation for selective downstream preservation, stable IDs, reset summaries, manifest refresh, and safe generated-artifact deletion.

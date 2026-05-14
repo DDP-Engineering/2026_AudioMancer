@@ -13,7 +13,7 @@
          file support used by the current AudioMancer implementation scaffold.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 1.38.2
+@version 1.39.0
 """
 
 # IMPORTS
@@ -424,6 +424,12 @@ DEFAULT_UI_TEXT_SCALE = "normal"
 
 # @brief Supported operator-selectable UI text-scale presets.
 UI_TEXT_SCALE_OPTIONS = ("very_small", "small", "normal", "large", "very_large")
+
+# @brief Default selected UI theme identifier.
+DEFAULT_UI_THEME_ID = "classic_light"
+
+# @brief Current persisted UI theme schema version.
+UI_THEME_SCHEMA_VERSION = 1
 
 # @brief Default flag controlling whether the app plays a completion beep.
 DEFAULT_PLAY_COMPLETION_BEEP = False

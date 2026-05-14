@@ -13,7 +13,7 @@
          persisted settings self-healing, and validated save behavior.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-22
-@version 0.5.2
+@version 0.7.0
 """
 
 # IMPORTS
@@ -23,7 +23,7 @@ import json
 import logging
 
 from audiomancer import config
-from audiomancer.services import settings_service
+from audiomancer.services import settings_service, ui_theme_service
 
 # PUBLIC API
 
@@ -35,13 +35,28 @@ def test_committed_settings_scaffold_matches_valid_settings_schema() -> None:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-04
-    @version    0.2.0
+    @version    0.3.0
     """
     committed_settings = json.loads(config.APP_SETTINGS_PATH.read_text(encoding="utf-8"))
     validated_settings = settings_service.validate_settings(copy.deepcopy(committed_settings))
 
-    for field_name, field_value in committed_settings.items():
-        assert validated_settings[field_name] == field_value
+    assert validated_settings == committed_settings
+
+
+def test_build_default_settings_includes_theme_fields() -> None:
+    """
+    @brief      Verify default settings include theme persistence fields.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-13
+    @version    0.2.0
+    """
+    default_settings = settings_service.build_default_settings()
+
+    assert "ui_text_scale" not in default_settings
+    assert default_settings["ui_theme_id"] == config.DEFAULT_UI_THEME_ID
+    assert default_settings["ui_themes"] == []
 
 
 def test_load_settings_creates_default_file_when_missing(tmp_path, monkeypatch) -> None:
@@ -85,6 +100,17 @@ def test_load_settings_self_heals_missing_and_invalid_values(tmp_path, monkeypat
     invalid_settings["language"] = "fr"
     invalid_settings["ui_text_scale"] = "gigantic"
     invalid_settings["default_ai_chunking_strategy"] = "invalid"
+    invalid_settings["ui_theme_id"] = "missing_theme"
+    invalid_settings["ui_themes"] = [
+        {
+            "schema_version": config.UI_THEME_SCHEMA_VERSION,
+            "theme_id": "invalid_theme",
+            "display_name": "Invalid Theme",
+            "built_in": False,
+            "font": {},
+            "colors": {"accent": "blue"},
+        }
+    ]
     invalid_settings["default_ai_cleanup_profile_id"] = "missing_profile"
     invalid_settings["default_ai_chunking_profile_id"] = "missing_profile"
     invalid_settings["default_ai_translation_profile_id"] = "missing_profile"
@@ -98,7 +124,9 @@ def test_load_settings_self_heals_missing_and_invalid_values(tmp_path, monkeypat
     defaults = settings_service.build_default_settings()
 
     assert loaded_settings["language"] == defaults["language"]
-    assert loaded_settings["ui_text_scale"] == defaults["ui_text_scale"]
+    assert "ui_text_scale" not in loaded_settings
+    assert loaded_settings["ui_theme_id"] == defaults["ui_theme_id"]
+    assert loaded_settings["ui_themes"] == defaults["ui_themes"]
     assert loaded_settings["default_ai_cleanup_profile_id"] == defaults["default_ai_cleanup_profile_id"]
     assert loaded_settings["default_ai_chunking_profile_id"] == defaults["default_ai_chunking_profile_id"]
     assert loaded_settings["default_ai_translation_profile_id"] == defaults["default_ai_translation_profile_id"]
@@ -115,6 +143,109 @@ def test_load_settings_self_heals_missing_and_invalid_values(tmp_path, monkeypat
     assert loaded_settings["play_completion_beep"] == defaults["play_completion_beep"]
     assert loaded_settings["llm_profiles"] == defaults["llm_profiles"]
     assert json.loads(settings_path.read_text(encoding="utf-8")) == loaded_settings
+
+
+def test_load_settings_migrates_missing_theme_fields_and_removes_legacy_text_scale(tmp_path, monkeypatch) -> None:
+    """
+    @brief      Verify old settings gain theme fields while removing legacy ui_text_scale.
+    @param[in]  tmp_path Temporary path fixture.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-13
+    @version    0.2.0
+    """
+    settings_path = tmp_path / "settings.json"
+    monkeypatch.setattr(config, "APP_SETTINGS_PATH", settings_path)
+    monkeypatch.setattr(config, "APP_ROOT", tmp_path)
+
+    old_settings = settings_service.build_default_settings()
+    old_settings["ui_text_scale"] = "large"
+    old_settings.pop("ui_theme_id")
+    old_settings.pop("ui_themes")
+    settings_path.write_text(json.dumps(old_settings, indent=2), encoding="utf-8")
+
+    loaded_settings = settings_service.load_settings()
+
+    assert "ui_text_scale" not in loaded_settings
+    assert loaded_settings["ui_theme_id"] == config.DEFAULT_UI_THEME_ID
+    assert loaded_settings["ui_themes"] == []
+    assert json.loads(settings_path.read_text(encoding="utf-8")) == loaded_settings
+
+
+def test_validate_settings_keeps_valid_selected_custom_theme() -> None:
+    """
+    @brief      Verify a valid custom theme and selected custom id survive validation.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-13
+    @version    0.1.0
+    """
+    candidate_settings = settings_service.build_default_settings()
+    custom_theme = ui_theme_service.import_theme_payload(
+        {
+            "schema_version": config.UI_THEME_SCHEMA_VERSION,
+            "theme_id": "reading_theme",
+            "display_name": "Reading Theme",
+            "built_in": True,
+            "font": {"family": "", "point_size": None, "scale": "large"},
+            "colors": {"accent": "#123ABC"},
+        },
+        [],
+    )
+    candidate_settings["ui_theme_id"] = "reading_theme"
+    candidate_settings["ui_themes"] = [custom_theme]
+
+    validated_settings = settings_service.validate_settings(candidate_settings)
+
+    assert validated_settings["ui_theme_id"] == "reading_theme"
+    assert validated_settings["ui_themes"] == [custom_theme]
+    assert "ui_text_scale" not in validated_settings
+
+
+def test_validate_settings_repairs_invalid_selected_theme_id_to_default() -> None:
+    """
+    @brief      Verify missing selected theme ids are repaired to the default theme.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-13
+    @version    0.1.0
+    """
+    candidate_settings = settings_service.build_default_settings()
+    candidate_settings["ui_theme_id"] = "missing_theme"
+
+    validated_settings = settings_service.validate_settings(candidate_settings)
+
+    assert validated_settings["ui_theme_id"] == config.DEFAULT_UI_THEME_ID
+
+
+def test_validate_settings_drops_invalid_custom_themes() -> None:
+    """
+    @brief      Verify invalid custom theme payloads are removed from settings.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-13
+    @version    0.1.0
+    """
+    candidate_settings = settings_service.build_default_settings()
+    candidate_settings["ui_themes"] = [
+        {
+            "schema_version": config.UI_THEME_SCHEMA_VERSION,
+            "theme_id": "bad_theme",
+            "display_name": "Bad Theme",
+            "built_in": False,
+            "font": {},
+            "colors": {"accent": "#12345"},
+        }
+    ]
+
+    validated_settings = settings_service.validate_settings(candidate_settings)
+
+    assert validated_settings["ui_themes"] == []
 
 
 def test_validate_settings_heals_invalid_llm_profiles_but_keeps_non_empty_list() -> None:

@@ -10,6 +10,26 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [1.0.13] - 2026-05-14
+
+### Added
+
+- Settings now supports separate theme font controls for UI labels/controls and
+  multi-line text windows, so book-text editors can use a larger or different
+  reading font without enlarging the whole interface.
+- Settings now includes `Default Dark` and `Dark Contrast` built-in themes.
+
+### Changed
+
+- Settings theme editing now uses direct font-size values only; the previous
+  UI/text scale controls were removed from the dialog, while legacy scale fields
+  remain import-compatible.
+- Settings theme font-size fields are now always editable for custom themes;
+  the `Use default UI font size` and `Use default text font size` checkboxes
+  were removed.
+- The Settings dialog layout is more compact, with the preview area reduced and
+  the color-selector column given more room.
+
 ## [1.0.12] - 2026-05-13
 
 ### Added

@@ -270,7 +270,65 @@
   "default_ai_chunking_strategy": "scene",
   "default_character_extraction_profile_id": "llm_profile_2ed28efa4723",
   "play_completion_beep": true,
-  "ui_text_scale": "normal",
+  "ui_theme_id": "classic_light_copy",
+  "ui_themes": [
+    {
+      "schema_version": 1,
+      "theme_id": "warm_reading_copy",
+      "display_name": "Warm Reading Copy",
+      "built_in": false,
+      "font": {
+        "family": "",
+        "point_size": 14.0,
+        "scale": "normal"
+      },
+      "text_font": {
+        "family": "",
+        "point_size": null,
+        "scale": "normal"
+      },
+      "colors": {
+        "window_background": "#F4EFE7",
+        "panel_background": "#FFF9F0",
+        "text_primary": "#27231E",
+        "text_muted": "#6E6255",
+        "accent": "#7A5C2E",
+        "border": "#D8CCBA",
+        "warning": "#A66A00",
+        "success": "#3D7A4C",
+        "danger": "#7A2D2D",
+        "disabled": "#A99F92"
+      }
+    },
+    {
+      "schema_version": 1,
+      "theme_id": "classic_light_copy",
+      "display_name": "Classic Light Copy",
+      "built_in": false,
+      "font": {
+        "family": "",
+        "point_size": 10.0,
+        "scale": "normal"
+      },
+      "text_font": {
+        "family": "Microsoft Sans Serif",
+        "point_size": 12.0,
+        "scale": "normal"
+      },
+      "colors": {
+        "window_background": "#F6F7F9",
+        "panel_background": "#FFFFFF",
+        "text_primary": "#202124",
+        "text_muted": "#5F6368",
+        "accent": "#2F6FED",
+        "border": "#D7DDE5",
+        "warning": "#D6A300",
+        "success": "#2E8B57",
+        "danger": "#7A1F1F",
+        "disabled": "#A0A0A0"
+      }
+    }
+  ],
   "tts_runtime_base_url": "http://192.168.1.28:8059",
   "tts_runtime_api_key": "",
   "tts_runtime_probe_succeeded": true,

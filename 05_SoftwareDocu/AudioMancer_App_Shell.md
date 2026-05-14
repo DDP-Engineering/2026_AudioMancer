@@ -23,7 +23,7 @@ and the current end-to-end workflow surfaces through Audio Assembly.
 - create and open persisted project workspaces through the toolbar
 - host Home workflow progress and export controls
 - host current workflow pages from Text Cleanup through Audio Assembly
-- apply runtime UI language and text-size changes
+- apply runtime UI language and theme changes
 
 It initializes the shared settings and logging services at startup and shuts
 down logging on exit. Domain processing remains owned by the service modules
@@ -46,10 +46,13 @@ The initial shell consists of:
   and dialogs
 - toolbar-driven `New Project` and `Open Project` actions that activate the
   first persisted project workflow
-- a settings dialog that loads and saves the persisted language, text-size,
-  and completion-beep controls through the shared settings service
-- a runtime UI-state service that applies persisted language and text-size
-  changes to the running Qt shell after startup and after `Save Settings`
+- a settings dialog that loads and saves the persisted language,
+  completion-beep, and UI theme controls, including separate UI-control and
+  text-window fonts, through the shared settings service
+- Settings dialog `Apply` persists and refreshes runtime UI state without
+  closing the dialog; `OK` persists and closes it
+- a runtime UI-state service that applies persisted language and theme changes
+  to the running Qt shell after startup and after `Save Settings`
 - an AI settings dialog that loads and saves AI profiles plus default cleanup,
   chunking, and character-extraction selections through the shared settings
   service
@@ -99,7 +102,7 @@ Outputs:
 - the ability to create or open one persisted project workspace
 - a validated app settings payload loaded from `settings.json`
 - persisted updates from both the `Settings` and `AI Settings` dialogs
-- immediate runtime application of saved UI language and text-size changes
+- immediate runtime application of saved UI language and theme changes
 - Home-page workflow status and export readiness state
 - one new per-run application log file under `Logs/`
 - process exit code from the Qt event loop

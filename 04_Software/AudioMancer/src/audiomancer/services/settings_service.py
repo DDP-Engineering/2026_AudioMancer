@@ -14,7 +14,7 @@
          settings file to the application root.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-22
-@version 0.9.0
+@version 0.10.0
 """
 
 # IMPORTS
@@ -26,6 +26,7 @@ from typing import Any
 from urllib import parse
 
 from .. import config
+from . import ui_theme_service
 from .logging_service import get_component_logger, trace_function
 from .operation_runtime_service import optional_string as _shared_optional_string
 from .persistence_service import write_json_atomic
@@ -306,7 +307,7 @@ def _validate_settings_internal(settings_payload: object) -> tuple[dict[str, Any
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-23
-    @version    0.1.0
+    @version    0.2.0
     """
     repairs_made: list[bool] = []
     defaults = build_default_settings()
@@ -336,13 +337,39 @@ def _validate_settings_internal(settings_payload: object) -> tuple[dict[str, Any
         )
         normalized_settings["language"] = defaults["language"]
 
-    if normalized_settings["ui_text_scale"] not in config.UI_TEXT_SCALE_OPTIONS:
+    if "ui_text_scale" in normalized_settings:
+        normalized_settings.pop("ui_text_scale", None)
         _log_settings_repair(
-            "Repaired invalid 'ui_text_scale' using the default value.",
+            "Removed deprecated 'ui_text_scale' setting; theme font scale now owns interface sizing.",
             "ui_text_scale",
             repair_tracker=repairs_made,
         )
-        normalized_settings["ui_text_scale"] = defaults["ui_text_scale"]
+
+    normalized_ui_themes = ui_theme_service.normalize_theme_collection(normalized_settings.get("ui_themes"))
+    if normalized_settings.get("ui_themes") != normalized_ui_themes:
+        _log_settings_repair(
+            "Repaired invalid 'ui_themes' using the normalized custom theme collection.",
+            "ui_themes",
+            repair_tracker=repairs_made,
+        )
+        normalized_settings["ui_themes"] = normalized_ui_themes
+
+    available_theme_ids = {
+        str(theme_payload["theme_id"])
+        for theme_payload in ui_theme_service.merged_theme_catalog(normalized_settings["ui_themes"])
+    }
+    if (
+        not isinstance(normalized_settings.get("ui_theme_id"), str)
+        or normalized_settings["ui_theme_id"].strip() not in available_theme_ids
+    ):
+        _log_settings_repair(
+            "Repaired invalid 'ui_theme_id' using the default value.",
+            "ui_theme_id",
+            repair_tracker=repairs_made,
+        )
+        normalized_settings["ui_theme_id"] = defaults["ui_theme_id"]
+    else:
+        normalized_settings["ui_theme_id"] = normalized_settings["ui_theme_id"].strip()
 
     if normalized_settings["default_ai_chunking_strategy"] not in config.AI_CHUNKING_STRATEGY_OPTIONS:
         _log_settings_repair(
@@ -598,7 +625,7 @@ def build_default_settings() -> dict[str, Any]:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.6.0
+    @version    0.7.0
     """
     return {
         "language": config.DEFAULT_LANGUAGE,
@@ -611,7 +638,8 @@ def build_default_settings() -> dict[str, Any]:
         "default_ai_chunking_strategy": "scene",
         "default_character_extraction_profile_id": None,
         "play_completion_beep": True,
-        "ui_text_scale": config.DEFAULT_UI_TEXT_SCALE,
+        "ui_theme_id": config.DEFAULT_UI_THEME_ID,
+        "ui_themes": [],
         "tts_runtime_base_url": config.DEFAULT_TTS_RUNTIME_BASE_URL,
         "tts_runtime_api_key": config.DEFAULT_TTS_RUNTIME_API_KEY,
         "tts_runtime_probe_succeeded": False,
