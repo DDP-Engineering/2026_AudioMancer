@@ -14,7 +14,7 @@
          playback, and page-entry narrator-sample warnings.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 1.9.0
+@version 1.10.0
 """
 
 # IMPORTS
@@ -23,7 +23,7 @@ from typing import TYPE_CHECKING
 
 from PySide6.QtCore import QUrl
 from PySide6.QtMultimedia import QMediaPlayer
-from PySide6.QtWidgets import QMessageBox
+from PySide6.QtWidgets import QFileDialog, QInputDialog, QMessageBox
 
 from audiomancer import config
 from audiomancer.services import (
@@ -32,6 +32,7 @@ from audiomancer.services import (
     operation_runtime_service,
     project_workspace_service,
     ui_state_service,
+    voice_sample_import_service,
     voiceweaver_runtime_service,
 )
 from audiomancer.ui.controllers import (
@@ -133,38 +134,87 @@ def handle_voice_language_change_requested(window: "MainWindow", voice_language:
     _sync_manifest_stage(window)
 
 
-def handle_reset_prompt_requested(window: "MainWindow", target_id: str) -> None:
+def handle_import_sample_requested(window: "MainWindow", target_id: str) -> None:
     """
-    @brief      Reset one editable character prompt to the derived default prompt and refresh the page state.
+    @brief      Import one operator-provided WAV sample for an editable character voice target.
     @param[in]  window Main application window.
     @param[in]  target_id Requested character-voices target identifier.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-20
-    @version    1.2.0
+    @date       2026-05-15
+    @version    0.1.0
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
+    if window._active_operation_kind is not None:
+        return
     if window._current_project_root is None or window._current_manifest is None:
+        QMessageBox.warning(
+            window,
+            ui_state_service.translate("dialog.project_error_title", current_language),
+            ui_state_service.translate("project.error_no_active_project", current_language),
+        )
         return
     target_payload = character_voices_service.voice_target_by_id(window._current_project_root, target_id)
     if target_payload is None:
         return
+    if str(target_payload.get("target_kind", "")).strip() != character_voices_service.TARGET_KIND_CHARACTER:
+        _show_voice_sample_import_error(window, ValueError("readonly_target"), current_language)
+        return
+    selected_file, _selected_filter = QFileDialog.getOpenFileName(
+        window,
+        ui_state_service.translate("dialog.voice_sample_import_title", current_language),
+        "",
+        ui_state_service.translate("dialog.voice_sample_import_filter", current_language),
+    )
+    if not selected_file:
+        return
+    try:
+        voice_sample_import_service.validate_imported_wav_sample(selected_file)
+    except ValueError as error:
+        _show_voice_sample_import_error(window, error, current_language)
+        return
+    voice_language = window._character_voices_page.current_voice_language()
+    sample_text, accepted = QInputDialog.getMultiLineText(
+        window,
+        ui_state_service.translate("dialog.voice_sample_text_title", current_language),
+        ui_state_service.translate("dialog.voice_sample_text_prompt", current_language),
+        _current_character_import_preview_text(window, target_payload, target_id, voice_language),
+    )
+    if not accepted:
+        return
+    normalized_sample_text = sample_text.strip()
+    if not normalized_sample_text:
+        QMessageBox.warning(
+            window,
+            ui_state_service.translate("dialog.project_error_title", current_language),
+            ui_state_service.translate("character_voices.error_missing_preview_text", current_language),
+        )
+        return
     if not audio_blocks_ui_controller.confirm_single_voice_target_invalidation(window, current_language):
         return
     _stop_preview_playback(window)
-    character_voices_service.reset_target_prompt(
-        window._current_project_root,
-        target_id,
-        str(target_payload.get("default_prompt_text", "")).strip(),
-    )
+    try:
+        character_voices_service.import_target_sample(
+            window._current_project_root,
+            target_payload,
+            voice_language,
+            normalized_sample_text,
+            selected_file,
+        )
+    except ValueError as error:
+        _show_voice_sample_import_error(window, error, current_language)
+        return
     window._character_voices_inspected_target_id = target_id
-    window.show_project_state(window._current_project_root, window._current_manifest)
+    window.show_project_state(
+        window._current_project_root,
+        project_workspace_service.load_manifest(window._current_project_root),
+    )
     _sync_manifest_stage(window)
     audio_blocks_ui_controller.invalidate_audio_blocks_for_voice_targets(window, (target_id,))
     misc_ui_controller.show_message(
         window,
-        ui_state_service.translate("status.character_voices_prompt_reset", current_language),
+        ui_state_service.translate("status.character_voices_sample_imported", current_language),
     )
 
 
@@ -1062,6 +1112,59 @@ def _confirm_generate_sample(window: "MainWindow", language: str, target_id: str
             ui_state_service.translate(message_key, language),
         )
         == QMessageBox.StandardButton.Yes
+    )
+
+
+def _current_character_import_preview_text(
+    window: "MainWindow",
+    target_payload: dict[str, object],
+    target_id: str,
+    voice_language: str,
+) -> str:
+    """
+    @brief      Resolve the initial transcript text for character sample import.
+    @param[in]  window Main application window.
+    @param[in]  target_payload Persisted target payload.
+    @param[in]  target_id Imported target identifier.
+    @param[in]  voice_language Selected voice language.
+    @return     Initial sample transcript text.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-15
+    @version    0.1.0
+    """
+    if str(window._character_voices_page.current_target_id() or "").strip() == str(target_id).strip():
+        return str(window._character_voices_page.current_editor_payload().get("preview_text", "") or "").strip()
+    return character_voices_service.effective_target_preview_text(target_payload, voice_language)
+
+
+def _show_voice_sample_import_error(window: "MainWindow", error: ValueError, language: str) -> None:
+    """
+    @brief      Show one localized voice-sample import validation error.
+    @param[in]  window Main application window.
+    @param[in]  error Validation exception.
+    @param[in]  language Current UI language code.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-15
+    @version    0.1.0
+    """
+    message_key = {
+        "unsupported_file_type": "voice_sample_import.error_unsupported_file_type",
+        "missing_file": "voice_sample_import.error_missing_file",
+        "invalid_wav": "voice_sample_import.error_invalid_wav",
+        "sample_too_short": "voice_sample_import.error_sample_too_short",
+        "sample_silent": "voice_sample_import.error_sample_silent",
+        "empty_preview_text": "voice_sample_import.error_empty_sample_text",
+        "readonly_target": "voice_sample_import.error_readonly_target",
+    }.get(str(error), "voice_sample_import.error_invalid_wav")
+    QMessageBox.warning(
+        window,
+        ui_state_service.translate("dialog.project_error_title", language),
+        ui_state_service.translate(message_key, language).format(
+            min_duration_seconds=config.DEFAULT_IMPORTED_VOICE_SAMPLE_MIN_SECONDS,
+        ),
     )
 
 

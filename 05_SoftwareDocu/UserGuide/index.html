@@ -9,14 +9,14 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>AudioMancer User Guide v1.0.13</title>
+    <title>AudioMancer User Guide v1.0.14</title>
     <link rel="stylesheet" href="assets/styles/help.css">
 </head>
 <body>
     <div class="layout">
         <nav class="toc" aria-label="Table of contents">
             <h1>AudioMancer Help</h1>
-            <p>Version 1.0.13<br>Offline user guide for Windows and Ubuntu.</p>
+            <p>Version 1.0.14<br>Offline user guide for Windows and Ubuntu.</p>
             <a href="#welcome">Welcome</a>
             <a href="#requirements">What You Need</a>
             <a href="#install">Install And Start</a>
@@ -42,8 +42,8 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
             <section id="welcome">
                 <h2>Welcome</h2>
                 <div class="version-box">
-                    <p><strong>Help version:</strong> 1.0.13</p>
-                    <p><strong>Application version:</strong> 1.0.13</p>
+                    <p><strong>Help version:</strong> 1.0.14</p>
+                    <p><strong>Application version:</strong> 1.0.14</p>
                     <p><strong>Creator:</strong> Eng. Dipl. Dan Dumitru Pasare</p>
                     <p><strong>Contact:</strong> pasaredan1979@gmail.com</p>
                 </div>
@@ -55,15 +55,20 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                 </p>
                 <p>
                     Work through the left sidebar from top to bottom. Review visible text and audio before you press
-                    approval buttons. Version 1.0.13 preserves expensive downstream work when it can: local chunk,
+                    approval buttons. Version 1.0.14 preserves expensive downstream work when it can: local chunk,
                     translation, character, voice, Speech Block, and Audio Block edits reset only the affected
                     downstream records, while full upstream regeneration still clears dependent workflow data.
                 </p>
                 <p>
-                    In version 1.0.13, Text Chunking can start a fully manual chunking pass from cleaned text before
+                    In version 1.0.14, Settings includes runtime UI themes with built-in light and dark choices,
+                    editable custom themes, separate font controls for interface controls and long text windows, and
+                    portable theme JSON import/export. Text Chunking, Speech Blocks, and downstream reset behavior
+                    continue to preserve unrelated work where possible. Text Chunking can start a fully manual
+                    chunking pass from cleaned text before
                     generated chunks exist, insert or delete selected chunks, Speech Blocks can preview selected block
                     audio directly from the page, and selective reset rules keep unrelated translated chunks, voices,
-                    Speech Blocks, and Audio Blocks intact.
+                    Speech Blocks, and Audio Blocks intact. Narator Voice and Character Voices can import validated
+                    WAV samples with operator-entered sample text for Qwen TTS Base voice cloning.
                 </p>
                 <div class="warning">
                     Current AudioMancer audio generation requires VoiceWeaver. OpenAI or LM Studio profiles are used
@@ -139,17 +144,36 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                 <h2>Settings</h2>
                 <p>
                     Open <strong>Settings</strong> from the top toolbar before starting a long project. This dialog
-                    controls the interface language, interface text size, and the optional completion beep.
+                    controls the interface language, completion beep, and runtime UI theme.
                 </p>
                 <ol>
                     <li>Choose the interface language.</li>
-                    <li>Choose a text size that is comfortable for long review sessions.</li>
+                    <li>Select one of the built-in themes, such as <strong>Default Light</strong>, <strong>Default Dark</strong>, or <strong>Dark Contrast</strong>.</li>
                     <li>Enable or disable the completion beep.</li>
-                    <li>Save the settings. Dialogs and pages update to the selected language and text size.</li>
+                    <li>Use <strong>Apply</strong> to save and refresh the running interface without closing Settings, or use <strong>OK</strong> to save and close.</li>
                 </ol>
+                <h3>Custom Themes</h3>
+                <p>
+                    Built-in themes can be duplicated into custom themes. Custom themes let you edit the theme name,
+                    the font used by labels and controls, the font used by larger text review windows, and semantic
+                    color roles used by the interface. The text-window font is useful when book text needs to be larger
+                    or more readable without enlarging every button and label.
+                </p>
+                <ol>
+                    <li>Create or duplicate a custom theme.</li>
+                    <li>Set the UI-control font family and point size.</li>
+                    <li>Set the text-window font family and point size.</li>
+                    <li>Edit color roles and check the preview area.</li>
+                    <li>Apply or OK to persist the selected theme in <code>settings.json</code>.</li>
+                </ol>
+                <p>
+                    Use <strong>Export</strong> to save a custom theme as portable JSON, or <strong>Import</strong> to
+                    bring a theme JSON file into the current installation. Imported themes are copied into the custom
+                    theme list; if a theme id already exists, AudioMancer gives the imported copy a unique suffix.
+                </p>
                 <figure>
                     <img src="assets/screenshots/settings-dialog.png" alt="Settings dialog">
-                    <figcaption>The Settings dialog controls language, text size, and completion beep behavior.</figcaption>
+                    <figcaption>The Settings dialog controls language, completion beep behavior, built-in themes, custom themes, fonts, color roles, and theme import/export.</figcaption>
                 </figure>
             </section>
 

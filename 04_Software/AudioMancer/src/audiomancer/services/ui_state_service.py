@@ -10,20 +10,22 @@
 @file ui_state_service.py
 @brief Runtime UI-state helpers for AudioMancer.
 @details Applies runtime UI language and text-size settings to the running Qt
-         application through one centralized string catalog and scale mapping.
+         application through one centralized string catalog, scale mapping, and
+         theme runtime adapter.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 0.45.1
+@version 0.52.0
 """
 
 # ruff: noqa: E501
 
 # IMPORTS
 
-from PySide6.QtGui import QFont
+from PySide6.QtGui import QColor, QFont, QPalette
 from PySide6.QtWidgets import QApplication, QWidget
 
 from .. import config
+from . import ui_theme_service
 from .logging_service import get_component_logger, trace_function
 
 # CONSTANTS
@@ -39,10 +41,17 @@ _UI_SCALE_FACTORS = {
     "very_large": 1.24,
 }
 
+# @brief Dynamic Qt property used by read-only operator notes/status editors.
+CONTROL_TEXT_FONT_ROLE_PROPERTY = "audiomancerFontRole"
+# @brief Dynamic Qt property value for editors that should use the UI font.
+CONTROL_TEXT_FONT_ROLE_VALUE = "ui_controls"
+
 # @brief Default runtime UI language used as the catalog fallback.
 _DEFAULT_LANGUAGE = config.DEFAULT_LANGUAGE
 # @brief Lazily captured unscaled application font size used as the scaling baseline.
 _BASE_FONT_POINT_SIZE: float | None = None
+# @brief Lazily captured platform-default application font family.
+_BASE_FONT_FAMILY: str | None = None
 
 # @brief Centralized runtime UI string catalog keyed by language and stable identifier.
 _UI_STRINGS = {
@@ -56,6 +65,14 @@ _UI_STRINGS = {
         "toolbar.help": "Help",
         "toolbar.about": "About",
         "dialog.settings_title": "Settings",
+        "dialog.theme_name_title": "Theme Name",
+        "dialog.theme_name_prompt": "Enter the theme name:",
+        "dialog.theme_delete_title": "Delete Theme",
+        "dialog.theme_delete_message": "Delete this custom theme? Built-in themes cannot be deleted.",
+        "dialog.theme_import_title": "Import Theme",
+        "dialog.theme_export_title": "Export Theme",
+        "dialog.theme_import_error_title": "Theme Import Error",
+        "dialog.theme_export_error_title": "Theme Export Error",
         "dialog.ai_settings_title": "AI Settings",
         "dialog.tts_settings_title": "TTS Settings",
         "dialog.about_title": "About",
@@ -162,6 +179,9 @@ _UI_STRINGS = {
         "status.character_added": "Character added.",
         "status.character_saved": "Character changes saved.",
         "status.character_deleted": "Character deleted.",
+        "status.theme_imported": "Theme imported.",
+        "status.theme_exported": "Theme exported.",
+        "status.theme_deleted": "Theme deleted.",
         "status.operation_cancelled": "Operation cancelled.",
         "sidebar.home": "Home / Project",
         "sidebar.text_cleanup": "Text Cleanup",
@@ -174,15 +194,60 @@ _UI_STRINGS = {
         "sidebar.audio_blocks": "Audio Blocks",
         "sidebar.audio_assembly": "Audio Assembly",
         "settings.language": "Language",
-        "settings.text_size": "Interface Text Size",
         "settings.play_beep": "Play completion beep",
         "settings.cancel": "Cancel",
-        "settings.save": "Save Settings",
+        "settings.apply": "Apply",
+        "settings.ok": "OK",
+        "settings.save": "OK",
         "settings.scale.very_small": "Very Small",
         "settings.scale.small": "Small",
         "settings.scale.normal": "Normal",
         "settings.scale.large": "Large",
         "settings.scale.very_large": "Very Large",
+        "settings.theme_group": "Theme",
+        "settings.theme": "Theme",
+        "settings.theme_new": "New",
+        "settings.theme_duplicate": "Duplicate",
+        "settings.theme_delete": "Delete",
+        "settings.theme_import": "Import Theme",
+        "settings.theme_export": "Export Theme",
+        "settings.theme_import_failed": "Theme import failed.",
+        "settings.theme_export_failed": "Theme export failed.",
+        "settings.theme_import_too_large": "Theme file is larger than the 256 KB limit.",
+        "settings.theme_imported": "Imported theme: {theme_name}.",
+        "settings.theme_exported": "Theme exported to {path}.",
+        "settings.theme_name": "Name",
+        "settings.theme_font_family": "UI font family",
+        "settings.theme_text_font_family": "Text font family",
+        "settings.theme_font_size": "UI font size",
+        "settings.theme_text_font_size": "Text font size",
+        "settings.theme_colors": "Colors",
+        "settings.theme_preview": "Preview",
+        "settings.theme_preview_label": "Sample text",
+        "settings.theme_preview_input": "Sample text window",
+        "settings.theme_preview_button": "Sample button",
+        "settings.theme_preview_status": "Ready",
+        "settings.theme_builtin_readonly": "Built-in themes are read-only.",
+        "settings.theme_color_window_background": "Window background",
+        "settings.theme_color_panel_background": "Panel background",
+        "settings.theme_color_text_primary": "Primary text",
+        "settings.theme_color_text_muted": "Muted text",
+        "settings.theme_color_accent": "Accent",
+        "settings.theme_color_border": "Border",
+        "settings.theme_color_success": "Success",
+        "settings.theme_color_warning": "Warning",
+        "settings.theme_color_danger": "Danger",
+        "settings.theme_color_disabled": "Disabled",
+        "settings.theme_color.window_background": "Window background",
+        "settings.theme_color.panel_background": "Panel background",
+        "settings.theme_color.text_primary": "Primary text",
+        "settings.theme_color.text_muted": "Muted text",
+        "settings.theme_color.accent": "Accent",
+        "settings.theme_color.border": "Border",
+        "settings.theme_color.success": "Success",
+        "settings.theme_color.warning": "Warning",
+        "settings.theme_color.danger": "Danger",
+        "settings.theme_color.disabled": "Disabled",
         "ai_settings.title": "AI Settings",
         "ai_settings.profile_name": "Profile Name",
         "ai_settings.profile_enabled": "Profile enabled",
@@ -393,6 +458,7 @@ _UI_STRINGS = {
         "narator_voice.delete_profile": "Delete Profile",
         "narator_voice.select_profile": "Select",
         "narator_voice.generate_sample": "Generate Sample",
+        "narator_voice.import_sample": "Import Sample",
         "narator_voice.generate_profiles": "Generate Narator Profiles",
         "narator_voice.preview": "Play sample",
         "narator_voice.stop_preview": "Stop play",
@@ -443,6 +509,10 @@ _UI_STRINGS = {
         "dialog.narator_voice_generate_sample_title": "Generate Narator Voice Sample",
         "dialog.narator_voice_generate_sample_message": "AudioMancer will contact the configured TTS runtime and requires the connection to be tested first in TTS Settings. Continue?",
         "dialog.narator_voice_generate_sample_message_replace": "Continuing will delete the current audio sample and AudioMancer will contact the configured TTS runtime. The connection must be tested first in TTS Settings. Continue?",
+        "dialog.voice_sample_import_title": "Import Sample",
+        "dialog.voice_sample_import_filter": "WAV audio files (*.wav)",
+        "dialog.voice_sample_text_title": "Sample Text",
+        "dialog.voice_sample_text_prompt": "Enter the exact text spoken in the imported sample:",
         "dialog.narator_voice_generate_profiles_title": "Generate Narator Voice Profiles",
         "dialog.narator_voice_generate_profiles_message": "AudioMancer will analyze the current book style with the selected AI profile. This can take a long time and may consume paid tokens or credits. Continue?",
         "dialog.narator_voice_generate_profiles_count_prompt": "How many narator profiles should be generated?",
@@ -464,12 +534,20 @@ _UI_STRINGS = {
         "status.narator_voice_profile_selected": "Narator voice profile selected.",
         "status.narator_voice_profiles_imported": "Imported {imported_count} model profiles and skipped {skipped_count} existing ones.",
         "status.narator_voice_sample_generated": "Narator voice sample generated.",
+        "status.narator_voice_sample_imported": "Narator voice sample imported.",
         "status.narator_voice_profiles_generated": "Generated {generated_count} narator voice profiles.",
         "status.narator_voice_language_changed": "Audiobook voice language changed. Generated samples and downstream data were reset.",
-        "status.character_voices_prompt_reset": "Voice prompt reset.",
         "status.character_voices_prompt_saved": "Voice prompt saved.",
         "status.character_voices_sample_generated": "Character sample generated.",
+        "status.character_voices_sample_imported": "Character sample imported.",
         "status.character_voices_missing_samples_generated": "Character samples regenerated.",
+        "voice_sample_import.error_unsupported_file_type": "Import a WAV audio file.",
+        "voice_sample_import.error_missing_file": "The selected sample file could not be found.",
+        "voice_sample_import.error_invalid_wav": "The selected file is not a readable WAV sample.",
+        "voice_sample_import.error_sample_too_short": "The imported sample must be at least {min_duration_seconds:.1f} seconds long.",
+        "voice_sample_import.error_sample_silent": "The imported sample is silent or too close to silence.",
+        "voice_sample_import.error_empty_sample_text": "Enter the text spoken in the imported sample.",
+        "voice_sample_import.error_readonly_target": "Import samples for character targets only on this page.",
         "character_voices.title": "Character Voices",
         "character_voices.list_group": "Voice Targets",
         "character_voices.setup_group": "Voice Target",
@@ -486,7 +564,7 @@ _UI_STRINGS = {
         "character_voices.target_kind_character": "Character",
         "character_voices.assignment_same_narrator": "Same narrator for whole book",
         "character_voices.assignment_narrator_and_characters": "Narrator + character voices",
-        "character_voices.reset_prompt": "Reset Voice Prompt",
+        "character_voices.import_sample": "Import Sample",
         "character_voices.edit_prompt": "Edit Voice Prompt",
         "character_voices.save_prompt": "Save Voice Prompt",
         "character_voices.generate_sample": "Generate Sample",
@@ -963,6 +1041,14 @@ _UI_STRINGS = {
         "toolbar.help": "Ajutor",
         "toolbar.about": "Despre",
         "dialog.settings_title": "Setari",
+        "dialog.theme_name_title": "Nume Tema",
+        "dialog.theme_name_prompt": "Introdu numele temei:",
+        "dialog.theme_delete_title": "Sterge Tema",
+        "dialog.theme_delete_message": "Stergi aceasta tema personalizata? Temele incluse nu pot fi sterse.",
+        "dialog.theme_import_title": "Importa Tema",
+        "dialog.theme_export_title": "Exporta Tema",
+        "dialog.theme_import_error_title": "Eroare Import Tema",
+        "dialog.theme_export_error_title": "Eroare Export Tema",
         "dialog.ai_settings_title": "Setari AI",
         "dialog.tts_settings_title": "Setari TTS",
         "dialog.about_title": "Despre",
@@ -1069,6 +1155,9 @@ _UI_STRINGS = {
         "status.character_added": "Personajul a fost adaugat.",
         "status.character_saved": "Modificarile personajului au fost salvate.",
         "status.character_deleted": "Personajul a fost sters.",
+        "status.theme_imported": "Tema a fost importata.",
+        "status.theme_exported": "Tema a fost exportata.",
+        "status.theme_deleted": "Tema a fost stearsa.",
         "status.operation_cancelled": "Operatia a fost anulata.",
         "sidebar.home": "Acasa / Proiect",
         "sidebar.text_cleanup": "Curatare Text",
@@ -1081,15 +1170,60 @@ _UI_STRINGS = {
         "sidebar.audio_blocks": "Blocuri Audio",
         "sidebar.audio_assembly": "Asamblare Audio",
         "settings.language": "Limba",
-        "settings.text_size": "Dimensiune Text Interfata",
         "settings.play_beep": "Reda semnalul sonor la finalizare",
         "settings.cancel": "Anuleaza",
-        "settings.save": "Salveaza Setarile",
+        "settings.apply": "Aplica",
+        "settings.ok": "OK",
+        "settings.save": "OK",
         "settings.scale.very_small": "Foarte Mic",
         "settings.scale.small": "Mic",
         "settings.scale.normal": "Normal",
         "settings.scale.large": "Mare",
         "settings.scale.very_large": "Foarte Mare",
+        "settings.theme_group": "Tema",
+        "settings.theme": "Tema",
+        "settings.theme_new": "Noua",
+        "settings.theme_duplicate": "Duplica",
+        "settings.theme_delete": "Sterge",
+        "settings.theme_import": "Importa Tema",
+        "settings.theme_export": "Exporta Tema",
+        "settings.theme_import_failed": "Importul temei a esuat.",
+        "settings.theme_export_failed": "Exportul temei a esuat.",
+        "settings.theme_import_too_large": "Fisierul temei este mai mare decat limita de 256 KB.",
+        "settings.theme_imported": "Tema importata: {theme_name}.",
+        "settings.theme_exported": "Tema exportata in {path}.",
+        "settings.theme_name": "Nume",
+        "settings.theme_font_family": "Familie font UI",
+        "settings.theme_text_font_family": "Familie font text",
+        "settings.theme_font_size": "Marime font UI",
+        "settings.theme_text_font_size": "Marime font text",
+        "settings.theme_colors": "Culori",
+        "settings.theme_preview": "Previzualizare",
+        "settings.theme_preview_label": "Text exemplu",
+        "settings.theme_preview_input": "Fereastra text exemplu",
+        "settings.theme_preview_button": "Buton exemplu",
+        "settings.theme_preview_status": "Gata",
+        "settings.theme_builtin_readonly": "Temele incluse pot fi doar citite.",
+        "settings.theme_color_window_background": "Fundal fereastra",
+        "settings.theme_color_panel_background": "Fundal panou",
+        "settings.theme_color_text_primary": "Text principal",
+        "settings.theme_color_text_muted": "Text secundar",
+        "settings.theme_color_accent": "Accent",
+        "settings.theme_color_border": "Chenar",
+        "settings.theme_color_success": "Succes",
+        "settings.theme_color_warning": "Avertizare",
+        "settings.theme_color_danger": "Pericol",
+        "settings.theme_color_disabled": "Dezactivat",
+        "settings.theme_color.window_background": "Fundal fereastra",
+        "settings.theme_color.panel_background": "Fundal panou",
+        "settings.theme_color.text_primary": "Text principal",
+        "settings.theme_color.text_muted": "Text secundar",
+        "settings.theme_color.accent": "Accent",
+        "settings.theme_color.border": "Chenar",
+        "settings.theme_color.success": "Succes",
+        "settings.theme_color.warning": "Avertizare",
+        "settings.theme_color.danger": "Pericol",
+        "settings.theme_color.disabled": "Dezactivat",
         "ai_settings.title": "Setari AI",
         "ai_settings.profile_name": "Nume Profil",
         "ai_settings.profile_enabled": "Profil activ",
@@ -1300,6 +1434,7 @@ _UI_STRINGS = {
         "narator_voice.delete_profile": "Sterge Profil",
         "narator_voice.select_profile": "Selecteaza",
         "narator_voice.generate_sample": "Genereaza Sample",
+        "narator_voice.import_sample": "Import Sample",
         "narator_voice.generate_profiles": "Genereaza Profiluri Narator",
         "narator_voice.preview": "Reda sample",
         "narator_voice.stop_preview": "Opreste redarea",
@@ -1350,6 +1485,10 @@ _UI_STRINGS = {
         "dialog.narator_voice_generate_sample_title": "Genereaza Sample Voce Narator",
         "dialog.narator_voice_generate_sample_message": "AudioMancer va contacta runtime-ul TTS configurat si conexiunea trebuie testata inainte din Setari TTS. Continui?",
         "dialog.narator_voice_generate_sample_message_replace": "Continuarea va sterge sample-ul audio curent, iar AudioMancer va contacta runtime-ul TTS configurat. Conexiunea trebuie testata inainte din Setari TTS. Continui?",
+        "dialog.voice_sample_import_title": "Import Sample",
+        "dialog.voice_sample_import_filter": "Fisiere audio WAV (*.wav)",
+        "dialog.voice_sample_text_title": "Text Sample",
+        "dialog.voice_sample_text_prompt": "Introdu textul exact rostit in sample-ul importat:",
         "dialog.narator_voice_generate_profiles_title": "Genereaza Profiluri Voce Narator",
         "dialog.narator_voice_generate_profiles_message": "AudioMancer va analiza stilul cartii curente cu profilul AI selectat. Operatia poate dura mult si poate consuma tokeni platiti sau credite. Continui?",
         "dialog.narator_voice_generate_profiles_count_prompt": "Cate profiluri de narator trebuie generate?",
@@ -1371,12 +1510,20 @@ _UI_STRINGS = {
         "status.narator_voice_profile_selected": "Profilul naratorului a fost selectat.",
         "status.narator_voice_profiles_imported": "Au fost importate {imported_count} profiluri de model si au fost omise {skipped_count} existente.",
         "status.narator_voice_sample_generated": "Sample-ul naratorului a fost generat.",
+        "status.narator_voice_sample_imported": "Sample-ul naratorului a fost importat.",
         "status.narator_voice_profiles_generated": "Au fost generate {generated_count} profiluri de voce narator.",
         "status.narator_voice_language_changed": "Limba vocii audiobookului a fost schimbata. Sample-urile generate si datele ulterioare au fost resetate.",
-        "status.character_voices_prompt_reset": "Promptul vocal a fost resetat.",
         "status.character_voices_prompt_saved": "Promptul vocal a fost salvat.",
         "status.character_voices_sample_generated": "Sample-ul personajului a fost generat.",
+        "status.character_voices_sample_imported": "Sample-ul personajului a fost importat.",
         "status.character_voices_missing_samples_generated": "Sample-urile personajelor au fost regenerate.",
+        "voice_sample_import.error_unsupported_file_type": "Importa un fisier audio WAV.",
+        "voice_sample_import.error_missing_file": "Fisierul sample selectat nu a fost gasit.",
+        "voice_sample_import.error_invalid_wav": "Fisierul selectat nu este un sample WAV citibil.",
+        "voice_sample_import.error_sample_too_short": "Sample-ul importat trebuie sa aiba cel putin {min_duration_seconds:.1f} secunde.",
+        "voice_sample_import.error_sample_silent": "Sample-ul importat este silentios sau prea aproape de tacere.",
+        "voice_sample_import.error_empty_sample_text": "Introdu textul rostit in sample-ul importat.",
+        "voice_sample_import.error_readonly_target": "Importa sample-uri doar pentru tintele de personaj pe aceasta pagina.",
         "character_voices.title": "Voci Personaje",
         "character_voices.list_group": "Tintele Vocii",
         "character_voices.setup_group": "Tinta Vocala",
@@ -1393,7 +1540,7 @@ _UI_STRINGS = {
         "character_voices.target_kind_character": "Personaj",
         "character_voices.assignment_same_narrator": "Acelasi narator pentru toata cartea",
         "character_voices.assignment_narrator_and_characters": "Narator + voci personaje",
-        "character_voices.reset_prompt": "Reseteaza Promptul Vocal",
+        "character_voices.import_sample": "Import Sample",
         "character_voices.edit_prompt": "Editeaza Promptul Vocal",
         "character_voices.save_prompt": "Salveaza Promptul Vocal",
         "character_voices.generate_sample": "Genereaza Sample",
@@ -1925,6 +2072,134 @@ def current_language_from_settings(
     return str(settings_payload.get("language", _DEFAULT_LANGUAGE))
 
 
+# HELPER FUNCTIONS
+
+
+def _capture_base_font(application: QApplication) -> QFont:
+    """
+    @brief      Capture the platform baseline font used by text-scale and theme helpers.
+    @param[in]  application Running Qt application instance.
+    @return     Current application font.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-14
+    @version    0.1.0
+    """
+    global _BASE_FONT_FAMILY, _BASE_FONT_POINT_SIZE
+
+    current_font = application.font()
+    if _BASE_FONT_FAMILY is None:
+        _BASE_FONT_FAMILY = current_font.family()
+    if _BASE_FONT_POINT_SIZE is None:
+        current_size = current_font.pointSizeF()
+        _BASE_FONT_POINT_SIZE = current_size if current_size > 0 else 9.0
+    return current_font
+
+
+def _scaled_point_size(base_point_size: float, ui_text_scale: str | None) -> float:
+    """
+    @brief      Resolve an effective point size from one base size and scale key.
+    @param[in]  base_point_size Unscaled point size.
+    @param[in]  ui_text_scale Operator-selected UI text-scale preset.
+    @return     Effective scaled point size.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-14
+    @version    0.1.0
+    """
+    scale_key = ui_text_scale if ui_text_scale in _UI_SCALE_FACTORS else config.DEFAULT_UI_TEXT_SCALE
+    return base_point_size * _UI_SCALE_FACTORS[scale_key]
+
+
+def _font_stylesheet(font_payload: dict[str, object], base_point_size: float) -> str:
+    """
+    @brief      Build Qt stylesheet font declarations from one normalized theme font payload.
+    @param[in]  font_payload Normalized theme font payload.
+    @param[in]  base_point_size Unscaled application point size fallback.
+    @return     Font declaration lines for a Qt stylesheet block.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-14
+    @version    0.2.0
+    """
+    declarations: list[str] = []
+    font_family = str(font_payload.get("family", "")).strip()
+    if font_family:
+        escaped_family = font_family.replace("'", "\\'")
+        declarations.append(f"    font-family: '{escaped_family}';")
+
+    point_size = font_payload.get("point_size")
+    fallback_point_size = float(point_size) if isinstance(point_size, (int, float)) else base_point_size
+    declarations.append(f"    font-size: {fallback_point_size:.1f}pt;")
+    return "\n".join(declarations)
+
+
+def _theme_colors(theme_payload: dict[str, object]) -> dict[str, str]:
+    """
+    @brief      Extract normalized color roles from one theme payload.
+    @param[in]  theme_payload Normalized theme payload.
+    @return     Color-role mapping.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-14
+    @version    0.1.0
+    """
+    colors = theme_payload.get("colors")
+    if isinstance(colors, dict):
+        return {str(role_name): str(color_value) for role_name, color_value in colors.items()}
+    return {}
+
+
+def _qcolor(color_value: str) -> QColor:
+    """
+    @brief      Convert one normalized hex color into a Qt color object.
+    @param[in]  color_value Hex RGB color value.
+    @return     Qt color object.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-14
+    @version    0.1.0
+    """
+    return QColor(color_value)
+
+
+def _readable_foreground(background: QColor) -> QColor:
+    """
+    @brief      Choose black or white foreground text for one background color.
+    @param[in]  background Background color.
+    @return     Readable foreground color.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-14
+    @version    0.1.0
+    """
+    luminance = (0.299 * background.red()) + (0.587 * background.green()) + (0.114 * background.blue())
+    return QColor("#000000" if luminance > 145 else "#FFFFFF")
+
+
+def _refresh_top_level_widgets(application: QApplication, font: QFont | None = None) -> None:
+    """
+    @brief      Refresh visible top-level widgets after a global UI state change.
+    @param[in]  application Running Qt application instance.
+    @param[in]  font Optional font to apply to each top-level widget.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-14
+    @version    0.1.0
+    """
+    for widget in application.topLevelWidgets():
+        if isinstance(widget, QWidget):
+            if font is not None:
+                widget.setFont(QFont(font))
+            widget.style().unpolish(widget)
+            widget.style().polish(widget)
+            widget.update()
+
+
+# PUBLIC API
+
+
 @trace_function(_UI_STATE_LOGGER)
 def apply_text_scale(
     application: QApplication | None,
@@ -1940,8 +2215,6 @@ def apply_text_scale(
     @date       2026-04-05
     @version    0.1.0
     """
-    global _BASE_FONT_POINT_SIZE
-
     if application is None:
         return
 
@@ -1955,19 +2228,14 @@ def apply_text_scale(
                 "result": config.DEFAULT_UI_TEXT_SCALE,
             },
         )
-    current_font = application.font()
-    if _BASE_FONT_POINT_SIZE is None:
-        current_size = current_font.pointSizeF()
-        _BASE_FONT_POINT_SIZE = current_size if current_size > 0 else 9.0
+    current_font = _capture_base_font(application)
 
     scaled_font = QFont(current_font)
-    scaled_font.setPointSizeF(_BASE_FONT_POINT_SIZE * _UI_SCALE_FACTORS[scale_key])
+    assert _BASE_FONT_POINT_SIZE is not None
+    scaled_font.setPointSizeF(_scaled_point_size(_BASE_FONT_POINT_SIZE, scale_key))
     application.setFont(scaled_font)
 
-    for widget in application.topLevelWidgets():
-        if isinstance(widget, QWidget):
-            widget.setFont(QFont(scaled_font))
-            widget.update()
+    _refresh_top_level_widgets(application, scaled_font)
 
     _UI_STATE_LOGGER.info(
         f"Applied UI text scale '{scale_key}'.",
@@ -1975,6 +2243,166 @@ def apply_text_scale(
             "func_name": "apply_text_scale",
             "event": "ui-text-scale-applied",
             "result": scale_key,
+        },
+    )
+
+
+def build_theme_stylesheet(theme_payload: dict[str, object], base_point_size: float | None = None) -> str:
+    """
+    @brief      Build a compact application stylesheet for theme roles not covered by QPalette.
+    @param[in]  theme_payload Validated theme payload.
+    @param[in]  base_point_size Unscaled application point size used for text editor font fallback.
+    @return     Qt stylesheet string.
+    @exception  ValueError Raised when the theme payload is invalid.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-14
+    @version    0.5.0
+    """
+    normalized_theme = ui_theme_service.validate_theme_payload(theme_payload, allow_built_in=True)
+    colors = _theme_colors(normalized_theme)
+    ui_font_payload = normalized_theme["font"]
+    assert isinstance(ui_font_payload, dict)
+    text_font_payload = normalized_theme["text_font"]
+    assert isinstance(text_font_payload, dict)
+    base_font_point_size = base_point_size or _BASE_FONT_POINT_SIZE or 10.0
+    ui_font_stylesheet = _font_stylesheet(ui_font_payload, base_font_point_size)
+    text_font_stylesheet = _font_stylesheet(text_font_payload, base_font_point_size)
+    accent = colors["accent"]
+    panel_background = colors["panel_background"]
+    text_primary = colors["text_primary"]
+    text_muted = colors["text_muted"]
+    border = colors["border"]
+    disabled = colors["disabled"]
+    focus_text = _readable_foreground(_qcolor(accent)).name().upper()
+    hover_background = _qcolor(accent).lighter(128).name().upper()
+
+    return f"""
+QGroupBox {{
+    border: 1px solid {border};
+    border-radius: 4px;
+    margin-top: 0.7em;
+}}
+QGroupBox::title {{
+    color: {text_muted};
+    subcontrol-origin: margin;
+    left: 8px;
+    padding: 0 3px;
+}}
+QLineEdit, QTextEdit, QPlainTextEdit, QComboBox, QSpinBox, QTableWidget, QListWidget {{
+    background-color: {panel_background};
+    color: {text_primary};
+    border: 1px solid {border};
+    selection-background-color: {accent};
+    selection-color: {focus_text};
+}}
+QTextEdit, QPlainTextEdit {{
+{text_font_stylesheet}
+}}
+QTextEdit[{CONTROL_TEXT_FONT_ROLE_PROPERTY}="{CONTROL_TEXT_FONT_ROLE_VALUE}"],
+QPlainTextEdit[{CONTROL_TEXT_FONT_ROLE_PROPERTY}="{CONTROL_TEXT_FONT_ROLE_VALUE}"] {{
+{ui_font_stylesheet}
+}}
+QLineEdit:focus, QTextEdit:focus, QPlainTextEdit:focus, QComboBox:focus, QSpinBox:focus,
+QTableWidget:focus, QListWidget:focus {{
+    border: 1px solid {accent};
+}}
+QPushButton {{
+    color: {text_primary};
+    border: 1px solid {border};
+    padding: 4px 10px;
+}}
+QPushButton:hover {{
+    border-color: {accent};
+    background-color: {hover_background};
+    color: {focus_text};
+}}
+QPushButton:focus {{
+    border-color: {accent};
+}}
+QPushButton:disabled {{
+    color: {disabled};
+    border-color: {border};
+}}
+""".strip()
+
+
+def apply_theme(
+    application: QApplication | None,
+    theme_payload: dict[str, object],
+    ui_text_scale: str | None,
+) -> None:
+    """
+    @brief      Apply one validated UI theme to the running Qt application.
+    @param[in]  application Running Qt application instance.
+    @param[in]  theme_payload Theme payload to apply.
+    @param[in]  ui_text_scale Deprecated fallback text-scale preset.
+    @return     None.
+    @exception  ValueError Raised when the theme payload is invalid.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-14
+    @version    0.3.0
+    """
+    if application is None:
+        return
+
+    normalized_theme = ui_theme_service.validate_theme_payload(theme_payload, allow_built_in=True)
+    current_font = _capture_base_font(application)
+    font_payload = normalized_theme["font"]
+    assert isinstance(font_payload, dict)
+
+    theme_font_family = str(font_payload.get("family", "")).strip()
+    theme_point_size = font_payload.get("point_size")
+    base_point_size = float(theme_point_size) if isinstance(theme_point_size, (int, float)) else _BASE_FONT_POINT_SIZE
+    assert base_point_size is not None
+
+    themed_font = QFont(current_font)
+    themed_font.setFamily(theme_font_family or str(_BASE_FONT_FAMILY or current_font.family()))
+    themed_font.setPointSizeF(base_point_size)
+    application.setFont(themed_font)
+
+    colors = _theme_colors(normalized_theme)
+    palette = QPalette(application.palette())
+    window_background = _qcolor(colors["window_background"])
+    panel_background = _qcolor(colors["panel_background"])
+    text_primary = _qcolor(colors["text_primary"])
+    text_muted = _qcolor(colors["text_muted"])
+    accent = _qcolor(colors["accent"])
+    border = _qcolor(colors["border"])
+    disabled = _qcolor(colors["disabled"])
+    highlight_text = _readable_foreground(accent)
+
+    palette.setColor(QPalette.ColorRole.Window, window_background)
+    palette.setColor(QPalette.ColorRole.Base, panel_background)
+    palette.setColor(QPalette.ColorRole.AlternateBase, window_background.lighter(104))
+    palette.setColor(QPalette.ColorRole.Text, text_primary)
+    palette.setColor(QPalette.ColorRole.WindowText, text_primary)
+    palette.setColor(QPalette.ColorRole.Button, panel_background)
+    palette.setColor(QPalette.ColorRole.ButtonText, text_primary)
+    palette.setColor(QPalette.ColorRole.PlaceholderText, text_muted)
+    palette.setColor(QPalette.ColorRole.Highlight, accent)
+    palette.setColor(QPalette.ColorRole.HighlightedText, highlight_text)
+    palette.setColor(QPalette.ColorRole.Link, accent)
+    palette.setColor(QPalette.ColorRole.ToolTipBase, panel_background)
+    palette.setColor(QPalette.ColorRole.ToolTipText, text_primary)
+    palette.setColor(QPalette.ColorGroup.Disabled, QPalette.ColorRole.Text, disabled)
+    palette.setColor(QPalette.ColorGroup.Disabled, QPalette.ColorRole.WindowText, disabled)
+    palette.setColor(QPalette.ColorGroup.Disabled, QPalette.ColorRole.ButtonText, disabled)
+    palette.setColor(QPalette.ColorGroup.Disabled, QPalette.ColorRole.Highlight, border)
+    palette.setColor(QPalette.ColorGroup.Disabled, QPalette.ColorRole.HighlightedText, disabled)
+    application.setPalette(palette)
+    application.setStyleSheet(build_theme_stylesheet(normalized_theme, base_point_size=_BASE_FONT_POINT_SIZE))
+
+    for widget in application.topLevelWidgets():
+        if hasattr(widget, "apply_theme"):
+            widget.apply_theme(normalized_theme)
+
+    _refresh_top_level_widgets(application, themed_font)
+    _UI_STATE_LOGGER.info(
+        f"Applied UI theme '{normalized_theme['theme_id']}'.",
+        extra={
+            "func_name": "apply_theme",
+            "event": "ui-theme-applied",
+            "result": normalized_theme["theme_id"],
         },
     )
 
@@ -2020,20 +2448,21 @@ def apply_ui_settings(
     settings_payload: dict[str, object],
 ) -> None:
     """
-    @brief      Apply persisted UI language and text scale to the shell.
+    @brief      Apply persisted UI theme, text scale, and language to the shell.
     @param[in]  application Running Qt application instance.
     @param[in]  main_window Main application window.
     @param[in]  settings_payload Persisted application settings payload.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-05
-    @version    0.1.0
+    @date       2026-05-14
+    @version    0.2.0
     """
-    apply_text_scale(
-        application,
-        str(settings_payload.get("ui_text_scale", config.DEFAULT_UI_TEXT_SCALE)),
+    selected_theme = ui_theme_service.theme_by_id(
+        settings_payload.get("ui_theme_id", config.DEFAULT_UI_THEME_ID),
+        settings_payload.get("ui_themes", []),
     )
+    apply_theme(application, selected_theme, None)
     apply_language(
         main_window,
         str(settings_payload.get("language", config.DEFAULT_LANGUAGE)),

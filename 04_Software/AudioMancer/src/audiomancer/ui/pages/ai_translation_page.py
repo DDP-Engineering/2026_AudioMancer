@@ -13,7 +13,7 @@
          chunk review, manual edits, approval controls, and progress display.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-07
-@version 0.6.0
+@version 0.6.1
 """
 
 # IMPORTS
@@ -61,7 +61,7 @@ class AiTranslationPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-07
-        @version    0.4.0
+        @version    0.4.1
         """
         super().__init__(parent)
         self._project_active = False
@@ -160,6 +160,10 @@ class AiTranslationPage(QWidget):
         notes_layout = QVBoxLayout(self._notes_group)
         self._notes_edit = QPlainTextEdit(self)
         self._notes_edit.setReadOnly(True)
+        self._notes_edit.setProperty(
+            ui_state_service.CONTROL_TEXT_FONT_ROLE_PROPERTY,
+            ui_state_service.CONTROL_TEXT_FONT_ROLE_VALUE,
+        )
         notes_layout.addWidget(self._notes_edit)
         self._notes_group.setMinimumHeight(96)
         self._notes_group.setMaximumHeight(112)

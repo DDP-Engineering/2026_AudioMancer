@@ -12,15 +12,16 @@
 @details Verifies the export panel rows, readiness buttons, and runtime
          language application.
 @author Eng. Dan Dumitru Pasare
-@date 2026-04-25
-@version 0.4.3
+@date 2026-05-14
+@version 0.5.0
 """
 
 # IMPORTS
 
 from PySide6.QtWidgets import QScrollArea
 
-from audiomancer.services import project_export_service
+from audiomancer import config
+from audiomancer.services import project_export_service, ui_theme_service
 from audiomancer.ui.pages.home_page import HomeProjectPage
 
 # PUBLIC API
@@ -193,6 +194,77 @@ def test_home_page_project_options_lock_controls_source_import(qtbot) -> None:
     assert page._target_language_combo.isEnabled() is False
     assert page._narration_mode_combo.isEnabled() is False
     assert page._start_project_button.isEnabled() is False
+
+
+def test_home_page_stage_rows_use_theme_status_roles(qtbot) -> None:
+    """
+    @brief      Verify Home workflow status rows use runtime theme color roles.
+    @param[in]  qtbot Qt test helper fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-14
+    @version    0.1.0
+    """
+    page = HomeProjectPage()
+    qtbot.addWidget(page)
+    theme_payload = ui_theme_service.validate_theme_payload(
+        {
+            "schema_version": config.UI_THEME_SCHEMA_VERSION,
+            "theme_id": "home_theme",
+            "display_name": "Home Theme",
+            "built_in": False,
+            "font": {},
+            "colors": {
+                "panel_background": "#FEFEFE",
+                "border": "#112233",
+                "disabled": "#445566",
+                "warning": "#778899",
+                "success": "#AABBCC",
+                "danger": "#DDEEFF",
+                "text_primary": "#010203",
+            },
+        }
+    )
+
+    page.apply_theme(theme_payload)
+    page.set_stage_statuses(
+        [
+            {"label": "Draft", "status": "not_started", "note": ""},
+            {"label": "Working", "status": "in_progress", "note": ""},
+            {"label": "Done", "status": "finished", "note": ""},
+        ]
+    )
+
+    assert "color: #445566;" in page._stage_rows[0].styleSheet()
+    assert "color: #778899;" in page._stage_rows[1].styleSheet()
+    assert "color: #AABBCC;" in page._stage_rows[2].styleSheet()
+    assert "border: 1px solid #112233;" in page._stage_rows[0].styleSheet()
+    assert "background: #FEFEFE;" in page._stage_rows[0].styleSheet()
+
+
+def test_home_page_theme_fallback_keeps_source_lock_style_valid(qtbot) -> None:
+    """
+    @brief      Verify partial or malformed theme payloads fall back to built-in color roles.
+    @param[in]  qtbot Qt test helper fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-14
+    @version    0.1.0
+    """
+    page = HomeProjectPage()
+    qtbot.addWidget(page)
+
+    page.apply_theme({"colors": {"danger": "not-a-color"}})
+    page.set_project_active(True)
+    page.set_source_locked(True, "story.txt")
+    page.set_project_options(True, "en", "same_narrator")
+
+    default_theme = ui_theme_service.theme_by_id(ui_theme_service.default_theme_id(), [])
+    default_colors = default_theme["colors"]
+    assert isinstance(default_colors, dict)
+    assert f"color: {default_colors['danger']};" in page._source_lock_label.styleSheet()
 
 
 # END OF FILE

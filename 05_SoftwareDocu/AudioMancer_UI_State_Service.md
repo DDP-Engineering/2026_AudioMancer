@@ -12,9 +12,9 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
 Provides the shared runtime UI-state helpers for the `AudioMancer` desktop
 application.
 
-It centralizes operator-facing UI strings, language lookup, and application
-text-size scaling so pages and controllers do not keep separate translation or
-font-size logic.
+It centralizes operator-facing UI strings, language lookup, and runtime theme
+application so pages and controllers do not keep separate translation, UI-font,
+or text-window font-size logic.
 
 ## 2. Responsibilities
 
@@ -22,9 +22,10 @@ font-size logic.
 - resolve one translated string or one full language catalog on demand
 - fall back to the configured default language for unknown language codes
 - resolve the current UI language from persisted settings payloads
-- apply text-size presets to the running Qt application
+- apply selected theme UI font, text-window font, color, palette, and
+  stylesheet values to the running Qt application
 - apply the selected language to the main-window shell when supported
-- log invalid language and text-scale repair decisions
+- log invalid language and theme-application decisions
 
 It does not own settings persistence, help-file content, workflow state, or
 page-specific layout behavior.
@@ -40,17 +41,20 @@ Main public functions:
 - `translate(key, language)`
 - `get_ui_strings(language)`
 - `current_language_from_settings(settings_payload)`
-- `apply_text_scale(application, ui_text_scale)`
+- `apply_text_scale(application, ui_text_scale)` for compatibility and tests
+- `apply_theme(application, theme_payload, ui_text_scale)`
+- `build_theme_stylesheet(theme_payload, base_point_size=None)`
 - `apply_language(main_window, language)`
 - `apply_ui_settings(application, main_window, settings_payload)`
 
 Runtime flow:
 
 1. Settings are loaded by the application settings layer.
-2. `apply_ui_settings(...)` applies the configured text scale and language.
-3. `apply_text_scale(...)` captures the base application font size once, maps
-   the selected scale key to a factor, and updates the running application plus
-   top-level widgets.
+2. `apply_ui_settings(...)` resolves and applies the selected theme, then
+   applies the selected language.
+3. `apply_theme(...)` captures the base application font once, applies the
+   selected theme UI font size directly, updates the Qt palette and text-window
+   stylesheet, and refreshes top-level widgets.
 4. `apply_language(...)` resolves the requested language and calls
    `main_window.apply_language(...)` when the main window exposes that hook.
 5. Pages and controllers use stable catalog keys through `translate(...)` or a
@@ -76,14 +80,15 @@ Inputs:
 
 - stable string keys such as `toolbar.settings` and `speech_blocks.insert_block`
 - language codes such as `en` and `ro`
-- persisted settings payloads with `language` and `ui_text_scale`
+- persisted settings payloads with `language`, `ui_theme_id`, and `ui_themes`
 - a running `QApplication`
 - a main window that may expose `apply_language(language)`
 
 Outputs:
 
 - translated strings or copied language catalogs
-- updated application and top-level widget fonts
+- updated application and top-level widget UI fonts, text-window font
+  stylesheet, palette, and stylesheet
 - language updates delegated to the main window
 - warning and info records through the `ui_state` component logger
 
@@ -110,15 +115,23 @@ Supported text-scale keys are defined by `_UI_SCALE_FACTORS`:
 
 Unknown language codes fall back to `config.DEFAULT_LANGUAGE`. Unknown string
 keys fall back to the default-language value and finally to the key itself.
-Unknown text-scale values fall back to `config.DEFAULT_UI_TEXT_SCALE`.
+The theme `font` payload controls labels, buttons, and other interface
+controls. The theme `text_font` payload is emitted into the stylesheet for
+multi-line `QTextEdit` and `QPlainTextEdit` windows used for book text,
+character descriptions, prompts, speech blocks, audio-block text, and preview
+text. Read-only operator notes and bottom status panels opt back into the UI
+font through the `audiomancerFontRole=ui_controls` dynamic Qt property because
+they are interface feedback, not book-manipulation text. Legacy theme `scale`
+fields are accepted by schema validation but are not applied by the runtime
+theme path.
 
 ## 7. Workflow Integration
 
 The service sits between settings persistence and visible UI widgets.
 
 The main application uses it after loading settings so the shell, toolbar,
-sidebar, dialogs, pages, and status messages use the selected language and text
-scale. Page classes and controllers consume the catalog while building labels,
+sidebar, dialogs, pages, and status messages use the selected language and
+theme. Page classes and controllers consume the catalog while building labels,
 buttons, group titles, notes, confirmation text, and status messages.
 Current v2 entries cover Text Chunking insert/delete confirmations, selective
 Character Discovery add/edit/delete confirmations, voice-target and narrator

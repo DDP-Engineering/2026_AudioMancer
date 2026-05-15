@@ -63,9 +63,12 @@ Audio Blocks selected reset, selected regeneration, approval, and unapproval
 now preserve unrelated generated audio and reset only Audio Assembly outputs.
 Audio Assembly settings changes and reruns now preserve upstream Audio Blocks
 while replacing only assembly outputs/state/report.
-Current package version is `1.0.13`; Text Chunking now allows operators to
-start a fully manual chunking pass from cleaned text before generated chunks
-exist.
+Current package version is `1.0.14`; Settings now supports built-in and custom
+runtime UI themes with separate UI-control and text-window font controls,
+theme color roles, and portable JSON import/export. Text Chunking now allows
+operators to start a fully manual chunking pass from cleaned text before
+generated chunks exist. Narator Voice and Character Voices now accept validated
+WAV imports with operator-entered sample text for Qwen TTS Base voice cloning.
 
 Focused implementation documentation is maintained in `05_SoftwareDocu/`.
 The end-user help bundles are maintained in `05_SoftwareDocu/UserGuide/` and

@@ -14,7 +14,7 @@
          controls for the Speech Blocks workflow.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-24
-@version 0.7.1
+@version 0.7.2
 """
 
 # IMPORTS
@@ -67,7 +67,7 @@ class SpeechBlocksPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-24
-        @version    0.6.1
+        @version    0.6.2
         """
         super().__init__(parent)
         self._current_language = "en"
@@ -199,6 +199,10 @@ class SpeechBlocksPage(QWidget):
         notes_layout = QVBoxLayout(self._notes_group)
         self._notes_edit = QPlainTextEdit(self)
         self._notes_edit.setReadOnly(True)
+        self._notes_edit.setProperty(
+            ui_state_service.CONTROL_TEXT_FONT_ROLE_PROPERTY,
+            ui_state_service.CONTROL_TEXT_FONT_ROLE_VALUE,
+        )
         notes_layout.addWidget(self._notes_edit)
         self._notes_group.setMinimumHeight(96)
         self._notes_group.setMaximumHeight(112)

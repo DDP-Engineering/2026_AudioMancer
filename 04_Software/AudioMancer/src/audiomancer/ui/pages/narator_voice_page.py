@@ -14,7 +14,7 @@
          preview controls for the fixed Qwen3-backed narrator workflow.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-17
-@version 3.11.0
+@version 3.12.1
 """
 
 # IMPORTS
@@ -56,6 +56,7 @@ class NaratorVoicePage(QWidget):
     selection_change_requested = Signal(object)
     preview_toggle_requested = Signal()
     generate_sample_requested = Signal(str)
+    import_sample_requested = Signal(str)
     generate_profiles_requested = Signal(str)
     select_profile_requested = Signal(str)
 
@@ -67,7 +68,7 @@ class NaratorVoicePage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-17
-        @version    1.8.0
+        @version    1.9.1
         """
         super().__init__(parent)
         self._project_active = False
@@ -122,7 +123,10 @@ class NaratorVoicePage(QWidget):
         profiles_action_row = QHBoxLayout()
         self._select_profile_button = QPushButton("Select", self._profiles_group)
         self._select_profile_button.clicked.connect(self._emit_select_profile)
+        self._import_sample_button = QPushButton("Import Sample", self._profiles_group)
+        self._import_sample_button.clicked.connect(self._emit_import_sample)
         profiles_action_row.addStretch(1)
+        profiles_action_row.addWidget(self._import_sample_button)
         profiles_action_row.addWidget(self._select_profile_button)
         profiles_layout.addLayout(profiles_action_row)
         self._profile_list = QListWidget(self)
@@ -192,6 +196,10 @@ class NaratorVoicePage(QWidget):
         status_layout = QVBoxLayout(self._status_group)
         self._status_edit = QPlainTextEdit(self)
         self._status_edit.setReadOnly(True)
+        self._status_edit.setProperty(
+            ui_state_service.CONTROL_TEXT_FONT_ROLE_PROPERTY,
+            ui_state_service.CONTROL_TEXT_FONT_ROLE_VALUE,
+        )
         status_layout.addWidget(self._status_edit)
         self._status_group.setMinimumHeight(96)
         self._status_group.setMaximumHeight(112)
@@ -220,7 +228,7 @@ class NaratorVoicePage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-17
-        @version    1.5.0
+        @version    1.6.0
         """
         self._project_active = is_active
         self._apply_control_state()
@@ -500,6 +508,7 @@ class NaratorVoicePage(QWidget):
         self._preview_group.setTitle(ui_state_service.translate("narator_voice.preview_group", language))
         self._status_group.setTitle(ui_state_service.translate("narator_voice.status_group", language))
         self._select_profile_button.setText(ui_state_service.translate("narator_voice.select_profile", language))
+        self._import_sample_button.setText(ui_state_service.translate("narator_voice.import_sample", language))
         self._ai_profile_label.setText(ui_state_service.translate("narator_voice.ai_profile", language))
         self._generate_profiles_button.setText(ui_state_service.translate("narator_voice.generate_profiles", language))
         self._create_profile_button.setText(ui_state_service.translate("narator_voice.create_profile", language))
@@ -519,7 +528,7 @@ class NaratorVoicePage(QWidget):
         @return     None.
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-21
-        @version    0.6.0
+        @version    0.7.0
         """
         list_enabled = self._project_active and not self._busy and not self._preview_active and not self._edit_mode
         editor_enabled = self._project_active and not self._busy and not self._preview_active and self._edit_mode
@@ -569,6 +578,13 @@ class NaratorVoicePage(QWidget):
             and not self._preview_active
             and not self._edit_mode
             and self._can_select
+        )
+        self._import_sample_button.setEnabled(
+            self._project_active
+            and not self._busy
+            and not self._preview_active
+            and not self._edit_mode
+            and self._current_profile_id is not None
         )
         self._preview_toggle_button.setEnabled(
             self._project_active and self._preview_available and (not self._busy or self._preview_active)
@@ -801,6 +817,18 @@ class NaratorVoicePage(QWidget):
         """
         if self._current_profile_id is not None:
             self.generate_sample_requested.emit(self._current_profile_id)
+
+    def _emit_import_sample(self) -> None:
+        """
+        @brief      Emit the import sample request for the inspected profile.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-15
+        @version    0.1.0
+        """
+        if self._current_profile_id is not None:
+            self.import_sample_requested.emit(self._current_profile_id)
 
     def _emit_generate_profiles(self) -> None:
         """

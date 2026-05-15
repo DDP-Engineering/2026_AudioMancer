@@ -14,12 +14,14 @@
          generation resolution.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-20
-@version 3.9.0
+@version 3.10.0
 """
 
 # IMPORTS
 
 import json
+from pathlib import Path
+import wave
 
 from audiomancer import config
 from audiomancer.services import narrator_definition_service, project_workspace_service
@@ -153,6 +155,54 @@ def test_narrator_service_stores_single_profile_sample_and_marks_selected_metada
     assert not list(project_root.glob("audio_narator_*.json"))
 
 
+def test_narrator_service_imports_profile_sample_and_marks_selected_metadata(tmp_path) -> None:
+    """
+    @brief      Verify imported narrator samples persist audio, transcript, and selected metadata.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-15
+    @version    0.1.0
+    """
+    project_root, _manifest = project_workspace_service.create_project("NarratorImportedSampleProject", tmp_path)
+    source_sample = tmp_path / "source_voice.wav"
+    _write_import_test_wav(source_sample)
+    profile = narrator_definition_service.create_custom_profile(
+        project_root,
+        "Imported Voice",
+        "English",
+        "Warm prompt.",
+        "Preview text.",
+    )
+    narrator_definition_service.select_narrator_profile(project_root, profile["profile_id"], "en")
+
+    metadata = narrator_definition_service.import_profile_sample(
+        project_root,
+        profile,
+        "This is the exact imported sample text.",
+        source_sample,
+    )
+    selected_metadata = narrator_definition_service.copy_selected_narrator_sample(project_root, profile["profile_id"])
+    profile_audio_path, _profile_metadata_path = narrator_definition_service.profile_sample_paths(
+        project_root,
+        profile["profile_id"],
+    )
+    selected_audio_path, _selected_metadata_path = narrator_definition_service.selected_narrator_sample_paths(
+        project_root
+    )
+
+    assert profile_audio_path.read_bytes() == source_sample.read_bytes()
+    assert selected_audio_path.read_bytes() == source_sample.read_bytes()
+    assert metadata["sample_source"] == "imported_sample"
+    assert metadata["generation_mode"] == "imported_sample"
+    assert metadata["source_model_id"] is None
+    assert metadata["preview_text"] == "This is the exact imported sample text."
+    assert selected_metadata is not None
+    assert selected_metadata["sample_source"] == "imported_sample"
+    assert narrator_definition_service.sample_runtime_available(metadata, []) is True
+
+
 def test_narrator_service_store_profile_sample_preserves_other_profile_samples(tmp_path) -> None:
     """
     @brief      Verify storing one new narrator sample preserves samples generated for other profiles.
@@ -233,6 +283,26 @@ def test_narrator_service_store_profile_sample_preserves_other_profile_samples(t
     assert sorted(path.name for path in project_root.glob("audio_narator_*")) == sorted(
         [first_audio_path.name, second_audio_path.name]
     )
+
+
+def _write_import_test_wav(path: Path) -> None:
+    """
+    @brief      Write one valid imported-sample WAV fixture.
+    @param[in]  path Output path.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-15
+    @version    0.1.0
+    """
+    sample_rate = 16_000
+    frame_count = int(sample_rate * 3.2)
+    frame = (4000).to_bytes(2, byteorder="little", signed=True)
+    with wave.open(str(path), "wb") as wav_file:
+        wav_file.setnchannels(1)
+        wav_file.setsampwidth(2)
+        wav_file.setframerate(sample_rate)
+        wav_file.writeframes(frame * frame_count)
 
 
 def test_narrator_service_profile_sample_path_uses_stored_audio_path_after_rename(tmp_path) -> None:

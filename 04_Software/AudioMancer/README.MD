@@ -10,9 +10,12 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
 This folder contains the current Python application implementation for
 `AudioMancer`. It includes a project-aware main-window shell copied from
 `DDP_Audiomancer` and adapted to the local package.
-Current package version is `1.0.13`; Text Chunking now allows operators to
-start a fully manual chunking pass from cleaned text before generated chunks
-exist.
+Current package version is `1.0.14`; Settings now supports built-in and custom
+runtime UI themes with separate UI-control and text-window font controls. Text
+Chunking now allows operators to start a fully manual chunking pass from cleaned
+text before generated chunks exist. Narator Voice and Character Voices now
+accept validated WAV imports with operator-entered sample text for Qwen TTS Base
+voice cloning.
 Text Cleanup, Text Chunking, Characters, Narator Voice, Character Voices, Speech Blocks, and Audio Blocks now keep
 minimum splitter widths on their main review panes so operator text remains
 readable during resizing. Narator Voice now places profile selection directly
@@ -38,6 +41,7 @@ regenerates all current per-character samples.
 - the toolbar `Help` action opens the packaged offline HTML user guide for the current UI language, with source content maintained under `../../05_SoftwareDocu/UserGuide/` and `../../05_SoftwareDocu/UserGuide_ro/`.
 - `src/audiomancer/services/logging_service.py` provides per-run app logging and optional trace helpers.
 - `src/audiomancer/services/settings_service.py` provides load, validate, self-heal, and save behavior for `settings.json`.
+- `src/audiomancer/services/ui_theme_service.py` provides built-in UI themes, custom theme validation, settings normalization, and portable theme import/export payload helpers.
 - `src/audiomancer/services/ai_backend_service.py` provides backend probe and model-discovery helpers for AI provider profiles.
 - `src/audiomancer/services/project_workspace_service.py` provides new/open project creation, flat-layout validation, manifest persistence, and Home-page locking for `target_language`, mirrored `selected_voice_language`, and `voice_assignment_mode`.
 - `src/audiomancer/services/import_service.py` provides source-file validation, copy-into-project behavior, and source metadata creation.
@@ -144,8 +148,10 @@ regenerates all current per-character samples.
 - the shared modal progress dialog now shows live token counters for AI workflows and falls back to one localized “not reported by the backend” message when usage is unavailable.
 - AI workflow reports, operation-specific state files, transaction logs, and page notes now persist or display normalized token usage without copying those counters into the compact root `project.json`.
 - project names are stored exactly as entered but are rejected when invalid for Windows or Linux folder creation.
-- the `Settings` dialog now loads and saves `language`, `interface text size`, and `play completion beep` through the shared settings service.
-- saving `Settings` now applies the selected UI language and global text size to the running shell.
+- the `Settings` dialog now loads and saves `language`, `play completion beep`, and UI theme fields through the shared settings service.
+- the `Settings` dialog also manages UI themes: operators can select built-in themes, create/edit/delete custom themes, set separate UI-control and text-window font families/sizes, edit semantic color roles, preview changes, and import/export portable theme JSON.
+- Settings uses `Cancel`, `Apply`, and `OK`: Apply persists and refreshes the running shell without closing the dialog, while OK applies and closes.
+- saving or applying `Settings` updates the selected UI language and selected UI theme, including UI-control and text-window font sizes, in the running shell.
 - the current shell supports runtime English/Romanian UI switching through one centralized UI-state service.
 - the `AI Settings` dialog now loads and saves AI profiles plus the default cleanup, chunking, translation, Narator Voice profile generation, Speech Blocks, and character-extraction selections through the shared settings service.
 - the `AI Settings` dialog now supports backend connection probing, discovered model refresh, and popup feedback with discovered-model counts.
@@ -214,7 +220,7 @@ uv run python -m audiomancer
 - Missing `settings.json` is created automatically from service-owned defaults.
 - Persisted settings are validated and self-healed at startup.
 - Updated settings can be saved back through the shared settings service from both `Settings` and `AI Settings`.
-- Saved language and text-size changes are applied immediately to the running UI shell.
+- Saved language and UI theme changes are applied immediately to the running UI shell; theme settings persist through `ui_theme_id` and `ui_themes`.
 - Saved AI provider settings now include persisted connection-discovery state for each configured profile.
 - Saved TTS runtime settings now include persisted VoiceWeaver discovery state, active-model identity, normalized device diagnostics, narrator preview timeout, and long-form audio generation timeout.
 
@@ -345,6 +351,13 @@ uv run pytest tests/test_project_export_service.py
 uv run pytest tests/test_home_page.py
 uv run pytest tests/test_home_ui_controller.py
 uv run pytest tests/test_main_window_home_exports.py
+```
+
+Focused validation used for the current UI themes implementation:
+
+```powershell
+uv run pytest tests/test_ui_theme_service.py tests/test_settings_service.py tests/test_settings_page.py tests/test_ui_state_service.py
+uv run pytest tests/test_home_page.py
 ```
 
 ## Packaging

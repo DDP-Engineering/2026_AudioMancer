@@ -22,7 +22,7 @@ locked on the Home page before the later `Speech Blocks`,
 - persist one editable per-character preview text used for sample generation
   and reset that text to the localized default when the selected voice
   language changes
-- persist per-character generated samples and sample metadata in
+- persist per-character generated or imported samples and sample metadata in
   `narrator_and_characters` mode
 - regenerate all current per-character samples as one confirmed batch operation
 - mirror the selected narrator into the page as one preview-only target
@@ -52,6 +52,9 @@ The workflow is split across:
 - `04_Software/AudioMancer/src/audiomancer/services/character_voices_state_service.py`
   for page-state shaping from narrator selection, character discovery,
   translation readiness, and runtime capability cache
+- `04_Software/AudioMancer/src/audiomancer/services/voice_sample_import_service.py`
+  for WAV-only imported sample validation, minimum duration checks, and silence
+  rejection
 - `04_Software/AudioMancer/src/audiomancer/ui/pages/character_voices_page.py`
   for the target list, voice-language indicator, prompt editor, preview-text
   editor, and bottom status area
@@ -80,15 +83,20 @@ High-level flow:
 6. `Edit Voice Prompt` confirms v2 downstream impact, deletes the stored
    character sample, removes generated Audio Blocks for that target only, resets
    Audio Assembly, and enters explicit edit mode.
-7. `Generate Sample` verifies the fixed Qwen3 capability set, waits for model
+7. `Import Sample` accepts one operator-selected WAV for the selected character
+   target, validates that it is readable, non-silent, and at least three seconds
+   long, asks for the exact spoken sample text, then stores the WAV and
+   transcript in the same per-target sample slot used by generated samples.
+   The read-only Narator Voice row cannot import samples from this page.
+8. `Generate Sample` verifies the fixed Qwen3 capability set, waits for model
    load completion when needed, and stores one WAV plus metadata for the
    selected character target.
-8. `Generate Character Samples` confirms once, selects every current character
+9. `Generate Character Samples` confirms once, selects every current character
    target, then regenerates samples sequentially in the shared modal progress
    dialog. Existing character samples are replaced by the same per-target
    storage path used by single-sample generation, and generated Audio Blocks
    tied to those targets are reset while unrelated targets are preserved.
-9. When every character target plus the selected narrator sample exists, the
+10. When every character target plus the selected narrator sample exists, the
    controller keeps `project.json.current_stage = "character_voices_ready"`.
 
 ## 4. Dependencies
@@ -119,7 +127,7 @@ Inputs:
 - translation approval report from `translation_report.json`
 - cached VoiceWeaver discovery fields from `settings.json`
 - Character Voices page actions:
-  reset prompt, edit prompt, save prompt, generate one sample, regenerate all
+  import sample, edit prompt, save prompt, generate one sample, regenerate all
   current character samples, preview, and stop preview
 
 Outputs:
@@ -157,8 +165,9 @@ Target rules:
 - narrator target preview text is not editable on this page
 - character `default_prompt_text` is regenerated on synchronization from the
   character-owned `voice_definition_prompt`
-- character `prompt_text` is preserved until reset, except that synchronization
-  backfills mandatory sex/gender guidance when an existing prompt lacks it
+- character `prompt_text` is preserved unless explicitly edited, except that
+  synchronization backfills mandatory sex/gender guidance when an existing
+  prompt lacks it
 - new character targets prefer the Character Discovery `preview_text` handoff
   when available, so samples start from source dialogue spoken by that
   character
@@ -183,7 +192,15 @@ Character sample metadata uses:
 - `prompt_text`
 - `preview_text`
 - `generated_at`
+- `imported_at`
+- `source_file_name`
+- `audio_validation`
 - `runtime_result_summary`
+
+Generated samples use `sample_source = "voice_designer"`. Imported samples use
+`sample_source = "imported_sample"` and `generation_mode = "imported_sample"`;
+their `source_model_id` is `None` because Audio Blocks later creates the Qwen
+Base clone prompt directly from the stored WAV plus transcript.
 
 Same-narrator copied sample metadata uses:
 
@@ -224,8 +241,8 @@ Current rules:
   `narrator_and_characters` mode
 - batch sample generation processes every current character target and replaces
   any existing character sample for those targets
-- prompt reset, prompt edit, single sample regeneration, and batch character
-  sample regeneration preserve Speech Blocks and reset only Audio Blocks whose
+- sample import, prompt edit, single sample regeneration, and batch character
+  sample generation preserve Speech Blocks and reset only Audio Blocks whose
   `voice_target_id` matches the affected character targets
 - `same_narrator` mode disables prompt editing and generation but keeps
   preview available by copying narrator-derived samples into every character
@@ -265,8 +282,8 @@ Operator path:
 - enter `Character Voices`
 - confirm the voice language shown from `Narator Voice`
 - inspect each character
-- optionally reset or edit the derived voice prompt
-- generate and preview the character sample
+- optionally edit the derived voice prompt
+- import, generate, and preview the character sample
 - finish when every character row reports a sample
 
 ## 9. Validation And Tests

@@ -12,8 +12,8 @@
 @details Copies the DDP_Audiomancer dashboard layout so the main window uses
          the same first-page structure without implementing import behavior.
 @author Eng. Dan Dumitru Pasare
-@date 2026-04-06
-@version 0.10.8
+@date 2026-05-14
+@version 0.11.0
 """
 
 # IMPORTS
@@ -35,16 +35,10 @@ from PySide6.QtWidgets import (
 )
 
 from audiomancer import config
-from audiomancer.services import project_export_service, ui_state_service
+from audiomancer.services import project_export_service, ui_state_service, ui_theme_service
 
 # CONSTANTS
 
-# @brief Workflow-status color palette used by the Home page stage list.
-_STATUS_COLORS = {
-    "not_started": QColor("#A0A0A0"),
-    "in_progress": QColor("#D6A300"),
-    "finished": QColor("#2E8B57"),
-}
 # @brief Ordered visible workflow stage tokens used by the Home progress grid.
 _WORKFLOW_STAGE_TOKENS = tuple(
     stage_token
@@ -62,6 +56,16 @@ _EXPORT_KIND_BY_STAGE_TOKEN = {
 # @brief Stable compact height for correlated workflow and export rows.
 _WORKFLOW_ROW_MIN_HEIGHT = 28
 
+# @brief Home page fallback theme roles derived from the default built-in theme.
+_DEFAULT_THEME_COLORS = ui_theme_service.theme_by_id(ui_theme_service.default_theme_id(), [])["colors"]
+
+# @brief Stage status tokens mapped to theme color roles.
+_STATUS_COLOR_ROLES = {
+    "not_started": "disabled",
+    "in_progress": "warning",
+    "finished": "success",
+}
+
 
 # PUBLIC API
 
@@ -71,8 +75,8 @@ class HomeProjectPage(QWidget):
     @brief      Display the project dashboard and source-import controls.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-05
-    @version    0.9.2
+    @date       2026-05-14
+    @version    0.10.0
     """
 
     import_requested = Signal()
@@ -87,8 +91,8 @@ class HomeProjectPage(QWidget):
         @return     None.
         @exception  None
         @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-06
-        @version    0.10.4
+        @date       2026-05-14
+        @version    0.10.5
         """
         super().__init__(parent)
         self._project_active = False
@@ -107,6 +111,7 @@ class HomeProjectPage(QWidget):
         self._stage_rows: list[QLineEdit] = []
         self._export_states: dict[str, dict[str, object]] = {}
         self._export_rows: dict[str, dict[str, object]] = {}
+        self._theme_colors = _normalize_home_theme_colors(None)
 
         root_layout = QVBoxLayout(self)
         root_layout.setContentsMargins(8, 4, 8, 4)
@@ -373,7 +378,7 @@ class HomeProjectPage(QWidget):
             if row_index >= len(self._stage_entries):
                 stage_row.clear()
                 stage_row.setToolTip("")
-                stage_row.setStyleSheet(_stage_row_style("not_started"))
+                stage_row.setStyleSheet(_stage_row_style("not_started", self._theme_colors))
                 continue
             stage = self._stage_entries[row_index]
             status = stage.get("status", "not_started")
@@ -381,7 +386,7 @@ class HomeProjectPage(QWidget):
             label = stage.get("label", "Unknown Stage")
             stage_row.setText(f"{label} | {_status_title(status, self._current_language)}")
             stage_row.setToolTip(note)
-            stage_row.setStyleSheet(_stage_row_style(status))
+            stage_row.setStyleSheet(_stage_row_style(status, self._theme_colors))
 
     def set_export_states(self, export_states: list[dict[str, object]]) -> None:
         """
@@ -462,6 +467,20 @@ class HomeProjectPage(QWidget):
         self._refresh_export_rows()
         self._refresh_project_options_controls()
 
+    def apply_theme(self, theme_payload: dict[str, object]) -> None:
+        """
+        @brief      Apply one runtime UI theme to Home page status visuals.
+        @param[in]  theme_payload Runtime UI theme payload.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-14
+        @version    0.1.0
+        """
+        self._theme_colors = _normalize_home_theme_colors(theme_payload)
+        self.set_stage_statuses(self._stage_entries)
+        self._refresh_summary_labels()
+
     def _refresh_export_rows(self) -> None:
         """
         @brief      Refresh translated export row labels and readiness controls.
@@ -469,7 +488,7 @@ class HomeProjectPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-25
-        @version    0.1.0
+        @version    0.2.0
         """
         for export_kind, widgets in self._export_rows.items():
             state = self._export_states.get(
@@ -553,7 +572,9 @@ class HomeProjectPage(QWidget):
             )
         )
         self._source_lock_label.setStyleSheet(
-            "color: #7A1F1F;" if self._source_locked and self._project_options_locked else "color: #333333;"
+            f"color: {self._theme_colors['danger']};"
+            if self._source_locked and self._project_options_locked
+            else f"color: {self._theme_colors['text_primary']};"
         )
 
     def _source_lock_label_placeholder(self) -> QLabel:
@@ -563,14 +584,14 @@ class HomeProjectPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-05
-        @version    0.1.0
+        @version    0.2.0
         """
         self._source_lock_label = QLabel("No source imported yet.")
         self._source_lock_label.setWordWrap(True)
         locked_font = QFont(self.font())
         locked_font.setBold(True)
         self._source_lock_label.setFont(locked_font)
-        self._source_lock_label.setStyleSheet("color: #7A1F1F;")
+        self._source_lock_label.setStyleSheet(f"color: {self._theme_colors['danger']};")
         return self._source_lock_label
 
     def _emit_lock_project_options(self) -> None:
@@ -603,26 +624,54 @@ def _status_title(status: str, language: str) -> str:
     return ui_state_service.translate("home.status.not_started", language)
 
 
-def _stage_row_style(status: str) -> str:
+def _stage_row_style(status: str, theme_colors: dict[str, str] | None = None) -> str:
     """
     @brief      Build the read-only workflow row stylesheet for one status.
     @param[in]  status Internal stage-status token.
+    @param[in]  theme_colors Active Home page theme color roles.
     @return     Qt stylesheet for one row box.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
+    @date       2026-05-14
+    @version    0.2.0
     """
-    status_color = _STATUS_COLORS.get(status, _STATUS_COLORS["not_started"]).name()
+    colors = _normalize_home_theme_colors({"colors": theme_colors} if theme_colors is not None else None)
+    status_role = _STATUS_COLOR_ROLES.get(status, _STATUS_COLOR_ROLES["not_started"])
+    status_color = colors[status_role]
     return (
         "QLineEdit {"
-        "background: #FFFFFF;"
-        "border: 1px solid #D7DDE5;"
+        f"background: {colors['panel_background']};"
+        f"border: 1px solid {colors['border']};"
         "border-radius: 4px;"
         "padding: 4px 8px;"
         f"color: {status_color};"
         "}"
     )
+
+
+def _normalize_home_theme_colors(theme_payload: object) -> dict[str, str]:
+    """
+    @brief      Resolve a complete Home page theme color map.
+    @param[in]  theme_payload Candidate runtime theme payload or colors-only mapping.
+    @return     Complete color-role mapping with classic-light fallback values.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-14
+    @version    0.1.0
+    """
+    default_colors = dict(_DEFAULT_THEME_COLORS) if isinstance(_DEFAULT_THEME_COLORS, dict) else {}
+    if not isinstance(theme_payload, dict):
+        return default_colors
+    colors_payload = theme_payload.get("colors", theme_payload)
+    if not isinstance(colors_payload, dict):
+        return default_colors
+    resolved_colors = dict(default_colors)
+    for role_name, color_value in colors_payload.items():
+        normalized_role = str(role_name)
+        normalized_color = str(color_value).strip()
+        if QColor(normalized_color).isValid():
+            resolved_colors[normalized_role] = QColor(normalized_color).name().upper()
+    return resolved_colors
 
 
 def _build_summary_text(label_key: str, language: str, value: str) -> str:

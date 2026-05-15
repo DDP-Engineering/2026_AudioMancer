@@ -13,10 +13,10 @@ Delivery artifacts are produced by:
 - `../02_Tools/package_windows_release.ps1`
 - `../02_Tools/package_linux_release.sh`
 
-The expected archive naming patterns are:
+The expected stable archive names are:
 
-- `AudioMancer_Windows_x64_v<version>.zip`
-- `AudioMancer_Ubuntu_x64_v<version>.zip`
+- `AudioMancer_Windows_x64.zip`
+- `AudioMancer_Linux_x64.zip`
 
 Each delivery zip contains a portable application folder with:
 
@@ -44,7 +44,7 @@ The public executable-only delivery project is:
 
 - GitHub repository: `https://github.com/DDP-Engineering/2026_AudioMancer`
 - GitHub Pages download page: `https://ddp-engineering.github.io/2026_AudioMancer/`
-- Current release page: `https://github.com/DDP-Engineering/2026_AudioMancer/releases/tag/v1.0.0`
+- Current release page: `https://github.com/DDP-Engineering/2026_AudioMancer/releases/tag/v1.0.13`
 
 Publish only when the project owner gives specific, clear instructions to
 publish. Do not publish automatically after packaging, testing, documentation
@@ -63,8 +63,11 @@ generation. The VoiceWeaver delivery archive is produced from:
 - `D:\ProjectsDDP\2026_VoiceWeaver\07_Delivery\`
 
 The current VoiceWeaver Windows package is larger than a single GitHub Release
-asset, so it must be split into numbered parts before upload. Publish all parts
-together, and publish `SHA256SUMS.txt` with:
+asset. The current public AudioMancer release links to the VoiceWeaver multipart
+archive published on the `v1.0.0` release instead of re-uploading the same
+large runtime package for every AudioMancer-only release. When publishing a new
+VoiceWeaver runtime package, publish all parts together and publish
+`SHA256SUMS.txt` with:
 
 - the AudioMancer delivery archive hash
 - the original reassembled VoiceWeaver archive hash

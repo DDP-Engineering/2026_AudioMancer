@@ -14,7 +14,7 @@
          with local text search.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-24
-@version 0.5.2
+@version 0.5.3
 """
 
 # IMPORTS
@@ -66,7 +66,7 @@ class TextChunkingPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-24
-        @version    0.5.0
+        @version    0.5.1
         """
         super().__init__(parent)
         self._chunks: list[dict[str, object]] = []
@@ -169,6 +169,10 @@ class TextChunkingPage(QWidget):
         notes_layout = QVBoxLayout(notes_group)
         self._notes_edit = QPlainTextEdit(self)
         self._notes_edit.setReadOnly(True)
+        self._notes_edit.setProperty(
+            ui_state_service.CONTROL_TEXT_FONT_ROLE_PROPERTY,
+            ui_state_service.CONTROL_TEXT_FONT_ROLE_VALUE,
+        )
         self._notes_edit.setPlainText(
             "Run cleanup before chunking.\n"
             "Deterministic and AI-assisted chunk generation will populate the chunk list and selected preview."

@@ -29,7 +29,7 @@ Selective workflow regression set:
 uv run pytest tests/test_workflow_impact_service.py
 uv run pytest tests/test_text_chunking_state_service.py tests/test_text_chunking_page.py tests/test_text_chunking_ui_controller.py
 uv run pytest tests/test_characters_ui_controller.py tests/test_character_discovery_service.py
-uv run pytest tests/test_character_voices_ui_controller.py tests/test_narator_voice_ui_controller.py
+uv run pytest tests/test_voice_sample_import_service.py tests/test_character_voices_ui_controller.py tests/test_narator_voice_ui_controller.py
 uv run pytest tests/test_speech_blocks_service.py tests/test_speech_blocks_ui_controller.py
 uv run pytest tests/test_audio_blocks_service.py tests/test_audio_blocks_page.py tests/test_audio_blocks_ui_controller.py
 uv run pytest tests/test_audio_assembly_service.py tests/test_audio_assembly_ui_controller.py
@@ -64,7 +64,7 @@ Expected covered behavior:
   Audio Blocks
 - character delete moves affected Speech Blocks to Narrator, unapproves them,
   and resets only their Audio Blocks
-- character voice edit, prompt reset, and sample regeneration reset only Audio
+- character voice edit, sample import, and sample regeneration reset only Audio
   Blocks using the affected `voice_target_id`
 - narrator voice edit resets narrator-driven Audio Blocks only
 - Speech Block edit/reset/delete resets only that block's Audio Block
@@ -98,10 +98,16 @@ Use a small sample book and an offline or local AI/TTS setup when available.
 4. Delete one character assigned to some Speech Blocks. Confirm those Speech
    Blocks become Narrator, become unapproved, and only their Audio Blocks are
    reset.
-5. Change one character voice prompt or regenerate one character sample.
+5. Import a WAV sample for one narrator profile. Enter the exact spoken sample
+   text, select the profile, and confirm the sample previews and can be used by
+   later Audio Blocks.
+6. Import a WAV sample for one character voice. Confirm samples shorter than
+   three seconds, silent files, and non-WAV files are rejected. Confirm imported
+   samples reset only Audio Blocks using that character `voice_target_id`.
+7. Change one character voice prompt or regenerate one character sample.
    Confirm unrelated character audio remains.
-6. Edit one Speech Block. Confirm only that block's Audio Block is reset.
-7. Unapprove one Audio Block. Confirm generated audio remains and only Audio
+8. Edit one Speech Block. Confirm only that block's Audio Block is reset.
+9. Unapprove one Audio Block. Confirm generated audio remains and only Audio
    Assembly resets.
-8. Change one Audio Assembly setting. Confirm approved Audio Blocks remain and
+10. Change one Audio Assembly setting. Confirm approved Audio Blocks remain and
    only assembly outputs/state/report are reset.

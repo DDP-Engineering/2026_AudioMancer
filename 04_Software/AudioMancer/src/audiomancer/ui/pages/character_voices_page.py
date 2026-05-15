@@ -14,7 +14,7 @@
          sample preview controls for the Character Voices workflow.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-20
-@version 1.5.1
+@version 1.6.1
 """
 
 # IMPORTS
@@ -47,7 +47,7 @@ class CharacterVoicesPage(QWidget):
     """
 
     selection_change_requested = Signal(object)
-    reset_prompt_requested = Signal(str)
+    import_sample_requested = Signal(str)
     edit_prompt_requested = Signal(str)
     save_prompt_requested = Signal(dict)
     generate_sample_requested = Signal(str)
@@ -62,7 +62,7 @@ class CharacterVoicesPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-20
-        @version    1.0.2
+        @version    1.1.1
         """
         super().__init__(parent)
         self._project_active = False
@@ -75,7 +75,7 @@ class CharacterVoicesPage(QWidget):
         self._loading_state = False
         self._edit_mode = False
         self._dirty = False
-        self._can_reset_prompt = False
+        self._can_import_sample = False
         self._can_edit_prompt = False
         self._can_generate_sample = False
         self._can_generate_missing_samples = False
@@ -152,8 +152,8 @@ class CharacterVoicesPage(QWidget):
         self._preview_text_edit.textChanged.connect(self._handle_editor_changed)
         preview_layout.addWidget(self._preview_text_edit)
         actions_row = QHBoxLayout()
-        self._reset_prompt_button = QPushButton("Reset Voice Prompt", self)
-        self._reset_prompt_button.clicked.connect(self._emit_reset_prompt)
+        self._import_sample_button = QPushButton("Import Sample", self)
+        self._import_sample_button.clicked.connect(self._emit_import_sample)
         self._edit_prompt_button = QPushButton("Edit Voice Prompt", self)
         self._edit_prompt_button.clicked.connect(self._emit_edit_prompt)
         self._save_prompt_button = QPushButton("Save Voice Prompt", self)
@@ -162,7 +162,7 @@ class CharacterVoicesPage(QWidget):
         self._generate_sample_button.clicked.connect(self._emit_generate_sample)
         self._preview_toggle_button = QPushButton("Preview", self)
         self._preview_toggle_button.clicked.connect(self.preview_toggle_requested.emit)
-        actions_row.addWidget(self._reset_prompt_button)
+        actions_row.addWidget(self._import_sample_button)
         actions_row.addWidget(self._edit_prompt_button)
         actions_row.addWidget(self._save_prompt_button)
         actions_row.addWidget(self._generate_sample_button)
@@ -182,6 +182,10 @@ class CharacterVoicesPage(QWidget):
         status_layout = QVBoxLayout(self._status_group)
         self._status_edit = QPlainTextEdit(self)
         self._status_edit.setReadOnly(True)
+        self._status_edit.setProperty(
+            ui_state_service.CONTROL_TEXT_FONT_ROLE_PROPERTY,
+            ui_state_service.CONTROL_TEXT_FONT_ROLE_VALUE,
+        )
         status_layout.addWidget(self._status_edit)
         self._status_group.setMinimumHeight(96)
         self._status_group.setMaximumHeight(112)
@@ -256,7 +260,7 @@ class CharacterVoicesPage(QWidget):
         prompt_text: str,
         preview_text: str,
         is_editable: bool,
-        can_reset_prompt: bool,
+        can_import_sample: bool,
         can_edit_prompt: bool,
         can_generate_sample: bool,
         preview_available: bool,
@@ -278,7 +282,7 @@ class CharacterVoicesPage(QWidget):
             @param[in]  prompt_text Selected target prompt text.
             @param[in]  preview_text Selected target preview text.
             @param[in]  is_editable True when the selected target may be edited.
-            @param[in]  can_reset_prompt True when the selected target prompt may be reset.
+            @param[in]  can_import_sample True when the selected target may import one WAV sample.
             @param[in]  can_edit_prompt True when edit mode may start.
             @param[in]  can_generate_sample True when sample generation may start.
             @param[in]  preview_available True when one stored preview sample may play.
@@ -288,7 +292,7 @@ class CharacterVoicesPage(QWidget):
             @exception  None
             @author     Eng. Dan Dumitru Pasare
             @date       2026-04-20
-        @version    1.5.2
+        @version    1.6.0
         """
         _ = notes
         _ = missing_narrator_sample
@@ -296,7 +300,7 @@ class CharacterVoicesPage(QWidget):
         self._current_target_id = current_target_id
         self._selected_voice_language = selected_voice_language
         self._current_target_is_editable = is_editable
-        self._can_reset_prompt = can_reset_prompt
+        self._can_import_sample = can_import_sample
         self._can_edit_prompt = can_edit_prompt
         self._can_generate_sample = can_generate_sample
         self._can_generate_missing_samples = _has_generatable_character_targets(self._targets)
@@ -351,7 +355,7 @@ class CharacterVoicesPage(QWidget):
                 str(target_payload.get("preview_text", "") or ""),
             )
             self._current_target_is_editable = bool(target_payload.get("editable", False))
-            self._can_reset_prompt = bool(target_payload.get("can_reset_prompt", False))
+            self._can_import_sample = bool(target_payload.get("can_import_sample", False))
             self._can_edit_prompt = bool(target_payload.get("can_edit_prompt", False))
             self._can_generate_sample = bool(target_payload.get("can_generate_sample", False))
             self._preview_available = bool(target_payload.get("can_preview", False))
@@ -446,7 +450,7 @@ class CharacterVoicesPage(QWidget):
         self._assignment_mode_group.setTitle(ui_state_service.translate("character_voices.assignment_mode", language))
         self._voice_language_group.setTitle(ui_state_service.translate("character_voices.voice_language", language))
         self._status_group.setTitle(ui_state_service.translate("character_voices.status_group", language))
-        self._reset_prompt_button.setText(ui_state_service.translate("character_voices.reset_prompt", language))
+        self._import_sample_button.setText(ui_state_service.translate("character_voices.import_sample", language))
         self._edit_prompt_button.setText(ui_state_service.translate("character_voices.edit_prompt", language))
         self._save_prompt_button.setText(ui_state_service.translate("character_voices.save_prompt", language))
         self._generate_sample_button.setText(ui_state_service.translate("character_voices.generate_sample", language))
@@ -459,7 +463,7 @@ class CharacterVoicesPage(QWidget):
         @return     None.
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-21
-        @version    0.3.0
+        @version    0.4.0
         """
         list_enabled = self._project_active and not self._busy and not self._preview_active and not self._edit_mode
         editor_enabled = (
@@ -470,12 +474,12 @@ class CharacterVoicesPage(QWidget):
             and self._current_target_is_editable
         )
         self._target_list.setEnabled(list_enabled)
-        self._reset_prompt_button.setEnabled(
+        self._import_sample_button.setEnabled(
             self._project_active
             and not self._busy
             and not self._preview_active
             and not self._edit_mode
-            and self._can_reset_prompt
+            and self._can_import_sample
         )
         self._edit_prompt_button.setEnabled(
             self._project_active
@@ -680,16 +684,16 @@ class CharacterVoicesPage(QWidget):
         self._dirty = self.current_editor_payload() != (self._original_payload or {})
         self._apply_control_state()
 
-    def _emit_reset_prompt(self) -> None:
+    def _emit_import_sample(self) -> None:
         """
-        @brief      Emit the reset prompt.
+        @brief      Emit the import sample request.
         @return     None.
         @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-21
+        @date       2026-05-15
         @version    0.1.0
         """
         if self._current_target_id is not None:
-            self.reset_prompt_requested.emit(self._current_target_id)
+            self.import_sample_requested.emit(self._current_target_id)
 
     def _emit_edit_prompt(self) -> None:
         """

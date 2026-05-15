@@ -55,7 +55,6 @@ def test_main_window_can_be_created(qtbot, default_settings_payload) -> None:
     window = MainWindow(
         settings_payload={
             "language": "en",
-            "ui_text_scale": "normal",
             "play_completion_beep": False,
             "llm_profiles": [],
             "default_ai_cleanup_profile_id": None,
@@ -72,6 +71,8 @@ def test_main_window_can_be_created(qtbot, default_settings_payload) -> None:
     assert len(window.findChildren(QListWidget)) >= 2
     assert window.findChild(QStackedWidget) is not None
     assert len(window.findChildren(QDialog)) == 3
+    assert window._settings_dialog.width() <= main_window_module.WINDOW_WIDTH
+    assert window._settings_dialog.height() <= main_window_module.WINDOW_HEIGHT
     assert any(group_box.title() == "Project Summary" for group_box in window.findChildren(QGroupBox))
     assert any(group_box.title() == "Workflow Progress" for group_box in window.findChildren(QGroupBox))
     assert any(group_box.title() == "Narator Voice Profiles" for group_box in window.findChildren(QGroupBox))
@@ -86,8 +87,9 @@ def test_main_window_can_be_created(qtbot, default_settings_payload) -> None:
     assert any(button.text() == "Save TTS Settings" for button in window.findChildren(QPushButton))
     assert any(button.text() == "Connect" for button in window.findChildren(QPushButton))
     assert any(button.text() == "Test Connection" for button in window.findChildren(QPushButton))
-    assert any(button.text() == "Save Settings" for button in window.findChildren(QPushButton))
-    assert any(label.text() == "Interface Text Size" for label in window.findChildren(QLabel))
+    assert any(button.text() == "Apply" for button in window.findChildren(QPushButton))
+    assert any(button.text() == "OK" for button in window.findChildren(QPushButton))
+    assert not any(label.text() == "Interface Text Size" for label in window.findChildren(QLabel))
     assert window._sidebar.item(1).flags() == main_window_module.Qt.ItemFlag.NoItemFlags
     assert window._operation_progress_dialog is None
 
@@ -105,7 +107,6 @@ def test_main_window_show_message_does_not_create_status_bar(qtbot, default_sett
     window = MainWindow(
         settings_payload={
             "language": "en",
-            "ui_text_scale": "normal",
             "play_completion_beep": False,
             "llm_profiles": [],
             "default_ai_cleanup_profile_id": None,
@@ -131,7 +132,7 @@ def test_misc_prompt_multiline_text_uses_word_wrap(monkeypatch, qtbot, default_s
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-12
-    @version    0.1.0
+    @version    0.2.0
     """
     window = MainWindow(settings_payload=dict(default_settings_payload))
     qtbot.addWidget(window)
@@ -401,7 +402,6 @@ def test_about_dialog_includes_license_text(qtbot, default_settings_payload) -> 
     window = MainWindow(
         settings_payload={
             "language": "en",
-            "ui_text_scale": "normal",
             "play_completion_beep": False,
             "llm_profiles": [],
             "default_ai_cleanup_profile_id": None,
@@ -442,7 +442,6 @@ def test_about_dialog_loads_translated_license_text_for_romanian(qtbot, default_
     window = MainWindow(
         settings_payload={
             "language": "ro",
-            "ui_text_scale": "normal",
             "play_completion_beep": False,
             "llm_profiles": [],
             "default_ai_cleanup_profile_id": None,
@@ -466,9 +465,9 @@ def test_about_dialog_loads_translated_license_text_for_romanian(qtbot, default_
     assert "RESTRICTIE SUPLIMENTARA DE UTILIZARE NECOMERCIALA" in text_box.toPlainText()
 
 
-def test_main_window_saves_settings_dialog_payload(monkeypatch, qtbot, default_settings_payload) -> None:
+def test_main_window_applies_settings_without_closing(monkeypatch, qtbot, default_settings_payload) -> None:
     """
-    @brief      Verify saving Settings persists and reapplies runtime UI state.
+    @brief      Verify Apply persists and reapplies runtime UI state without closing Settings.
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
@@ -513,23 +512,29 @@ def test_main_window_saves_settings_dialog_payload(monkeypatch, qtbot, default_s
 
     window.show_settings_dialog()
     window._settings_page._language_combo.setCurrentText("ro")
-    window._settings_page._ui_text_scale_combo.setCurrentIndex(
-        window._settings_page._ui_text_scale_combo.findData("large")
-    )
+    window._settings_page._create_custom_theme()
+    window._settings_page._theme_font_size_spin.setValue(min(max(starting_font_size + 2.0, 12.0), 18.0))
     window._settings_page._completion_beep_checkbox.setChecked(True)
-    window._settings_page._save_button.click()
+    window._settings_page._apply_button.click()
 
     assert saved_payloads
     assert persisted_payload["language"] == "ro"
-    assert persisted_payload["ui_text_scale"] == "large"
+    assert "ui_text_scale" not in persisted_payload
+    assert persisted_payload["ui_theme_id"] == "custom_theme"
     assert persisted_payload["play_completion_beep"] is True
-    assert window._settings_dialog.isVisible() is False
+    assert window._settings_dialog.isVisible() is True
     assert window.windowTitle() == ("AudioMancer | Transforma cuvintele scrise intr-o experienta audio reala!")
     assert window._action_settings.text() == "Setari"
     assert window._action_tts_settings.text() == "Setari TTS"
     assert window._sidebar.item(0).text() == "Acasa / Proiect"
-    assert window._settings_page._save_button.text() == "Salveaza Setarile"
+    assert window._settings_page._apply_button.text() == "Aplica"
+    assert window._settings_page._ok_button.text() == "OK"
     assert QApplication.instance().font().pointSizeF() > starting_font_size
+
+    window._settings_page._ok_button.click()
+
+    assert len(saved_payloads) == 2
+    assert window._settings_dialog.isVisible() is False
 
 
 def test_main_window_reloads_dialogs_and_discards_unsaved_changes(monkeypatch, qtbot, default_settings_payload) -> None:
@@ -680,7 +685,7 @@ def test_settings_dialog_reopens_with_translated_labels(monkeypatch, qtbot, defa
 
     assert window._settings_dialog.windowTitle() == "Setari"
     assert window._settings_page._language_label.text() == "Limba"
-    assert window._settings_page._text_size_label.text() == "Dimensiune Text Interfata"
+    assert window._settings_page._completion_beep_checkbox.text() == "Reda semnalul sonor la finalizare"
 
 
 # END OF FILE

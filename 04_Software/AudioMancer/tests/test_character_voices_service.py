@@ -13,10 +13,13 @@
          persistence, and narrator-copy sample sync behavior.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-20
-@version 1.6.0
+@version 1.7.0
 """
 
 # IMPORTS
+
+from pathlib import Path
+import wave
 
 from audiomancer.services import character_voices_service, narrator_definition_service, project_workspace_service
 
@@ -151,6 +154,47 @@ def test_save_target_prompt_persists_preview_text(tmp_path) -> None:
         character_voices_service.voice_target_by_id(project_root, target_id)["preview_text"]
         == "First line.\nSecond line."
     )
+
+
+def test_import_target_sample_persists_character_sample_metadata(tmp_path) -> None:
+    """
+    @brief      Verify imported character samples persist audio, transcript, and clone-ready metadata.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-15
+    @version    0.1.0
+    """
+    project_root, _manifest = _create_project_with_selected_narrator(tmp_path, "CharacterVoicesImport")
+    source_sample = tmp_path / "alice_voice.wav"
+    _write_import_test_wav(source_sample)
+    voice_targets = character_voices_service.sync_voice_plan(
+        project_root,
+        [{"character_id": "alice", "canonical_name": "Alice"}],
+        narrator_definition_service.profile_by_id(
+            project_root,
+            narrator_definition_service.load_selected_profile_state(project_root)["selected_profile_id"],
+        ),
+    )
+    target_payload = voice_targets[1]
+
+    metadata = character_voices_service.import_target_sample(
+        project_root,
+        target_payload,
+        "en",
+        "This is the exact Alice sample text.",
+        source_sample,
+    )
+    audio_path, _metadata_path = character_voices_service.target_sample_paths(project_root, target_payload["target_id"])
+
+    assert audio_path.read_bytes() == source_sample.read_bytes()
+    assert metadata["sample_source"] == "imported_sample"
+    assert metadata["generation_mode"] == "imported_sample"
+    assert metadata["source_model_id"] is None
+    assert metadata["preview_text"] == "This is the exact Alice sample text."
+    assert character_voices_service.has_target_sample(project_root, target_payload["target_id"]) is True
+    assert character_voices_service.sample_runtime_available(metadata, []) is True
 
 
 def test_sync_voice_plan_uses_character_discovery_preview_text(tmp_path) -> None:
@@ -314,6 +358,26 @@ def _create_project_with_selected_narrator(tmp_path, name: str):
     narrator_definition_service.select_narrator_profile(project_root, narrator_profile["profile_id"], "en")
     narrator_definition_service.copy_selected_narrator_sample(project_root, narrator_profile["profile_id"])
     return project_root, manifest
+
+
+def _write_import_test_wav(path: Path) -> None:
+    """
+    @brief      Write one valid imported-sample WAV fixture.
+    @param[in]  path Output path.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-15
+    @version    0.1.0
+    """
+    sample_rate = 16_000
+    frame_count = int(sample_rate * 3.2)
+    frame = (4000).to_bytes(2, byteorder="little", signed=True)
+    with wave.open(str(path), "wb") as wav_file:
+        wav_file.setnchannels(1)
+        wav_file.setsampwidth(2)
+        wav_file.setframerate(sample_rate)
+        wav_file.writeframes(frame * frame_count)
 
 
 # END OF FILE

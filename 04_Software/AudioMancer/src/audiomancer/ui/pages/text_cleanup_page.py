@@ -14,7 +14,7 @@
          text-processing slice, including local preview text search.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-24
-@version 0.8.2
+@version 0.8.3
 """
 
 # IMPORTS
@@ -64,7 +64,7 @@ class TextCleanupPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-24
-        @version    0.7.1
+        @version    0.7.2
         """
         super().__init__(parent)
         self._project_active = False
@@ -146,6 +146,10 @@ class TextCleanupPage(QWidget):
         notes_layout = QVBoxLayout(notes_group)
         self._notes_edit = QPlainTextEdit(self)
         self._notes_edit.setReadOnly(True)
+        self._notes_edit.setProperty(
+            ui_state_service.CONTROL_TEXT_FONT_ROLE_PROPERTY,
+            ui_state_service.CONTROL_TEXT_FONT_ROLE_VALUE,
+        )
         notes_layout.addWidget(self._notes_edit)
         notes_group.setMinimumHeight(96)
         notes_group.setMaximumHeight(112)

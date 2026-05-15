@@ -15,7 +15,7 @@
          that sample is selected.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-20
-@version 3.14.0
+@version 3.15.0
 """
 
 # IMPORTS
@@ -25,7 +25,7 @@ from pathlib import Path
 from uuid import uuid4
 
 from audiomancer import config
-from audiomancer.services import project_workspace_service, voiceweaver_runtime_service
+from audiomancer.services import project_workspace_service, voice_sample_import_service, voiceweaver_runtime_service
 from audiomancer.services.logging_service import get_component_logger
 from audiomancer.services.operation_runtime_service import optional_string as _optional_string
 from audiomancer.services.time_service import utc_now_iso as _utc_now_iso
@@ -843,6 +843,63 @@ def store_profile_sample(
     return metadata_payload
 
 
+def import_profile_sample(
+    project_root: str | Path,
+    profile: dict[str, object],
+    preview_text: str,
+    source_audio_path: str | Path,
+) -> dict[str, object]:
+    """
+    @brief      Validate and persist one imported narrator profile WAV sample.
+    @param[in]  project_root Active project root folder.
+    @param[in]  profile Narrator-profile payload.
+    @param[in]  preview_text Transcript text spoken in the imported sample.
+    @param[in]  source_audio_path Operator-selected WAV file path.
+    @return     Persisted imported-sample metadata payload.
+    @exception  ValueError Raised when the sample path or transcript is invalid.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-15
+    @version    0.1.0
+    """
+    ensure_narrator_definition_files(project_root)
+    normalized_preview_text = str(preview_text or "").strip()
+    if not normalized_preview_text:
+        raise ValueError("empty_preview_text")
+    source_path = Path(source_audio_path)
+    validation_report = voice_sample_import_service.validate_imported_wav_sample(source_path)
+    profile_id = str(profile.get("profile_id", "")).strip()
+    delete_profile_sample(project_root, profile_id)
+    audio_path, _metadata_path = profile_sample_paths(project_root, profile_id)
+    selected_state = load_selected_profile_state(project_root)
+    selected_profile_id = str(selected_state.get("selected_profile_id", "") or "").strip()
+    metadata_payload = {
+        "profile_id": profile_id,
+        "is_selected": bool(selected_profile_id and selected_profile_id == profile_id),
+        "display_name": display_profile_name(profile),
+        "profile_kind": str(profile.get("profile_kind", "")).strip(),
+        "profile_origin": str(profile.get("profile_origin", "")).strip(),
+        "sample_source": voice_sample_import_service.IMPORTED_SAMPLE_SOURCE,
+        "source_model_id": None,
+        "speaker_id": _optional_string(profile.get("speaker_id")),
+        "generation_mode": voice_sample_import_service.IMPORTED_SAMPLE_GENERATION_MODE,
+        "language": narrator_language_code(profile.get("language", DEFAULT_NARRATOR_LANGUAGE)),
+        "prompt_text": str(profile.get("prompt_text", "")).strip(),
+        "preview_text": normalized_preview_text,
+        "imported_at": _utc_now_iso(),
+        "source_file_name": source_path.name,
+        "audio_validation": dict(validation_report),
+        "runtime_result_summary": "Imported WAV sample.",
+    }
+    audio_path.write_bytes(source_path.read_bytes())
+    _update_profile_sample_metadata(
+        project_root,
+        profile_id,
+        relative_path=str(audio_path.relative_to(Path(project_root))),
+        metadata_payload=metadata_payload,
+    )
+    return metadata_payload
+
+
 def clear_all_profile_samples(project_root: str | Path) -> None:
     """
     @brief      Delete every persisted narrator profile sample artifact from the project root.
@@ -990,10 +1047,12 @@ def sample_runtime_available(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-17
-    @version    1.2.0
+    @version    1.3.0
     """
     if not isinstance(sample_metadata, dict):
         return False
+    if _sample_metadata_is_imported(sample_metadata):
+        return True
     source_model_id = str(sample_metadata.get("source_model_id", "") or "").strip()
     if not source_model_id:
         _NARRATOR_DEFINITION_LOGGER.debug("Narrator sample runtime unavailable: missing source_model_id.")
@@ -1011,6 +1070,24 @@ def sample_runtime_available(
         )
         return False
     return True
+
+
+def _sample_metadata_is_imported(sample_metadata: dict[str, object]) -> bool:
+    """
+    @brief      Return whether sample metadata describes an operator-imported sample.
+    @param[in]  sample_metadata Persisted sample metadata payload.
+    @return     True when the sample came from local WAV import.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-15
+    @version    0.1.0
+    """
+    return (
+        str(sample_metadata.get("sample_source", "") or "").strip()
+        == voice_sample_import_service.IMPORTED_SAMPLE_SOURCE
+        or str(sample_metadata.get("generation_mode", "") or "").strip()
+        == voice_sample_import_service.IMPORTED_SAMPLE_GENERATION_MODE
+    )
 
 
 def seeded_narrator_profiles() -> list[dict[str, object]]:

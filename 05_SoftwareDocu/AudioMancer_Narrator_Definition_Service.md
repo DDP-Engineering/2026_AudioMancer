@@ -26,8 +26,8 @@ runtime-aware state shaping used by the Narator Voice page.
   runtime code
 - read the locked project voice language from `project.json.target_language`
   for narrator samples, generated profile suggestions, and preview defaults
-- persist one generated narrator WAV per narrator profile so multiple profiles
-  can be previewed later without regenerating audio
+- persist one generated or imported narrator WAV per narrator profile so
+  multiple profiles can be previewed later without regenerating audio
 - localize the default narrator preview text for supported voice languages
 - record selected-sample state in each profile's `sample_metadata`
 - derive Narator Voice page enablement for `Generate Sample`, `Select`, and
@@ -54,6 +54,9 @@ The workflow is split across:
 - `04_Software/AudioMancer/src/audiomancer/services/narrator_definition_state_service.py`
   for Narator Voice page state shaping, internal project-language resolution, and
   runtime-derived flags
+- `04_Software/AudioMancer/src/audiomancer/services/voice_sample_import_service.py`
+  for WAV-only imported sample validation, minimum duration checks, and silence
+  rejection
 - `04_Software/AudioMancer/src/audiomancer/services/narrator_profile_generation_service.py`
   for AI-assisted text-only profile suggestions, report/state sidecars, and
   source-text analysis
@@ -89,13 +92,19 @@ High-level flow:
    other profile samples intact, uses the saved TTS preview timeout, and marks
    the generated sample metadata as selected when the regenerated profile is
    already selected.
-7. The legacy voice-language change handler is a no-op for locked projects;
+7. `Import Sample` accepts one operator-selected WAV for the inspected profile,
+   validates that it is readable, non-silent, and at least three seconds long,
+   asks for the exact spoken sample text, then stores the WAV and transcript in
+   the same per-profile sample slot. Imported samples are clone-ready without a
+   Voice Designer `source_model_id` because Audio Blocks later creates Qwen Base
+   clone prompts directly from the WAV plus transcript.
+8. The legacy voice-language change handler is a no-op for locked projects;
    the normal workflow changes language only by creating a new project.
-8. `Select` persists `narator.json`, updates the compact manifest summary,
+9. `Select` persists `narator.json`, updates the compact manifest summary,
    and marks the chosen profile sample metadata as selected.
-9. `Preview` plays the stored per-profile WAV locally through Qt media
+10. `Preview` plays the stored per-profile WAV locally through Qt media
    playback.
-10. `Generate Narator Profiles` runs the AI profile-generation service through
+11. `Generate Narator Profiles` runs the AI profile-generation service through
     the shared threaded progress dialog, resumes compatible unfinished
     style-analysis checkpoints, appends validated editable profiles, and leaves
     narrator selection unchanged.
@@ -124,7 +133,8 @@ Inputs:
 - locked project options from `project.json.target_language` and
   `project.json.voice_assignment_mode`
 - Narator Voice page actions:
-  create, edit, save, delete, generate sample, preview, and explicit select
+  create, edit, save, delete, generate sample, import sample, preview, and
+  explicit select
 - narrator editor fields:
   display name, prompt text, and preview text
 
@@ -202,12 +212,21 @@ Per-profile sample metadata uses:
 - `profile_kind`
 - `profile_origin`
 - `source_model_id`
+- `sample_source`
 - `generation_mode`
 - `language`
 - `prompt_text`
 - `preview_text`
 - `generated_at`
+- `imported_at`
+- `source_file_name`
+- `audio_validation`
 - `runtime_result_summary`
+
+Generated samples use `sample_source = "voice_designer"` implicitly through
+their Voice Designer metadata. Imported samples use
+`sample_source = "imported_sample"` and `generation_mode = "imported_sample"`;
+their `source_model_id` is `None`.
 
 Selected narrator metadata mirrors the per-profile metadata and
 adds:
