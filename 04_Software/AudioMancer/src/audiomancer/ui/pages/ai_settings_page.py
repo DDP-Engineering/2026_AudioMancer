@@ -14,7 +14,7 @@
          settings service.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 0.9.2
+@version 0.9.3
 """
 
 # IMPORTS
@@ -77,7 +77,7 @@ class AiSettingsPage(QWidget):
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.7.0
+    @version    0.7.1
     """
 
     def __init__(self, parent=None) -> None:
@@ -88,7 +88,7 @@ class AiSettingsPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-21
-        @version    0.8.2
+        @version    0.8.3
         """
         super().__init__(parent)
         self._profiles: list[dict[str, object]] = []
@@ -250,9 +250,11 @@ class AiSettingsPage(QWidget):
         button_row = QHBoxLayout()
         button_row.addStretch(1)
         self._cancel_button = QPushButton("Cancel", self)
-        self._save_button = QPushButton("Save AI Settings", self)
+        self._save_button = QPushButton("Save", self)
+        self._ok_button = QPushButton("OK", self)
         button_row.addWidget(self._cancel_button)
         button_row.addWidget(self._save_button)
+        button_row.addWidget(self._ok_button)
         button_row.addStretch(1)
         layout.addLayout(button_row)
 
@@ -759,7 +761,7 @@ class AiSettingsPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-21
-        @version    0.6.0
+        @version    0.6.1
         """
         self._current_language = language
         self._title_label.setText(f"<h2>{ui_state_service.translate('ai_settings.title', language)}</h2>")
@@ -792,6 +794,7 @@ class AiSettingsPage(QWidget):
         self._connect_button.setText(ui_state_service.translate("ai_settings.connect", language))
         self._cancel_button.setText(ui_state_service.translate("ai_settings.cancel", language))
         self._save_button.setText(ui_state_service.translate("ai_settings.save", language))
+        self._ok_button.setText(ui_state_service.translate("ai_settings.ok", language))
         for combo in (
             self._default_cleanup_combo,
             self._default_chunking_combo,

@@ -13,7 +13,7 @@
          and merged settings payload generation.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 0.5.3
+@version 0.5.4
 """
 
 # IMPORTS
@@ -31,7 +31,7 @@ def test_ai_settings_page_default_selectors_are_stacked_in_workflow_order(qtbot)
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.2.0
+    @version    0.2.1
     """
     page = AiSettingsPage()
     qtbot.addWidget(page)
@@ -71,6 +71,9 @@ def test_ai_settings_page_default_selectors_are_stacked_in_workflow_order(qtbot)
         "Default Character Extraction Profile",
         "Default Speech Blocks Profile",
     ]
+    assert page._cancel_button.text() == "Cancel"
+    assert page._save_button.text() == "Save"
+    assert page._ok_button.text() == "OK"
 
 
 def test_ai_settings_page_numeric_profile_options_use_two_column_grid(qtbot) -> None:

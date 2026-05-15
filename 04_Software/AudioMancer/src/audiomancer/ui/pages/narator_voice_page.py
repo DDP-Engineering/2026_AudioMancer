@@ -14,7 +14,7 @@
          preview controls for the fixed Qwen3-backed narrator workflow.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-17
-@version 3.12.1
+@version 3.12.2
 """
 
 # IMPORTS
@@ -39,6 +39,8 @@ from PySide6.QtWidgets import (
 from audiomancer import config
 from audiomancer.services import ui_state_service
 
+_PROFILE_PANE_MINIMUM_WIDTH = 240
+
 
 class NaratorVoicePage(QWidget):
     """
@@ -46,7 +48,7 @@ class NaratorVoicePage(QWidget):
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-17
-    @version    1.6.0
+    @version    1.6.1
     """
 
     create_profile_requested = Signal(dict)
@@ -68,7 +70,7 @@ class NaratorVoicePage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-17
-        @version    1.9.1
+        @version    1.9.2
         """
         super().__init__(parent)
         self._project_active = False
@@ -188,7 +190,7 @@ class NaratorVoicePage(QWidget):
         self._main_splitter.addWidget(editor_container)
         self._main_splitter.setStretchFactor(0, 12)
         self._main_splitter.setStretchFactor(1, 48)
-        self._main_splitter.setSizes([260, 960])
+        self._main_splitter.setSizes([300, 920])
         layout.addWidget(self._main_splitter, 1)
         self._apply_main_splitter_minimums()
 
@@ -601,7 +603,7 @@ class NaratorVoicePage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-05-01
-        @version    0.3.0
+        @version    0.3.1
         """
         required_attributes = ("_main_splitter", "_profiles_group", "_editor_container")
         if not all(hasattr(self, attribute_name) for attribute_name in required_attributes):
@@ -609,7 +611,7 @@ class NaratorVoicePage(QWidget):
         splitter_width = self._main_splitter.width()
         if splitter_width <= 0:
             return
-        self._profiles_group.setMinimumWidth(splitter_width // 5)
+        self._profiles_group.setMinimumWidth(max(_PROFILE_PANE_MINIMUM_WIDTH, splitter_width // 5))
         self._editor_container.setMinimumWidth(splitter_width // 3)
 
     def _preview_label_key(self) -> str:

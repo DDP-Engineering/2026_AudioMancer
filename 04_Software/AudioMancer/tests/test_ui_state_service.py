@@ -13,7 +13,7 @@
          changes used by the settings-backed runtime UI behavior.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-05
-@version 0.6.0
+@version 0.6.2
 """
 
 # IMPORTS
@@ -204,6 +204,50 @@ def test_theme_settings_strings_cover_supported_languages() -> None:
         "status.theme_imported",
         "status.theme_exported",
         "status.theme_deleted",
+    )
+
+    for language in ("en", "ro"):
+        for key in required_keys:
+            translated_value = ui_state_service.translate(key, language)
+            assert translated_value != key
+            assert translated_value.strip()
+
+
+def test_ai_settings_dialog_flow_strings_cover_supported_languages() -> None:
+    """
+    @brief      Verify AI Settings dialog action labels exist in EN and RO.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-15
+    @version    0.1.0
+    """
+    required_keys = (
+        "ai_settings.cancel",
+        "ai_settings.save",
+        "ai_settings.ok",
+    )
+
+    for language in ("en", "ro"):
+        for key in required_keys:
+            translated_value = ui_state_service.translate(key, language)
+            assert translated_value != key
+            assert translated_value.strip()
+
+
+def test_tts_settings_dialog_flow_strings_cover_supported_languages() -> None:
+    """
+    @brief      Verify TTS Settings dialog action labels exist in EN and RO.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-15
+    @version    0.1.0
+    """
+    required_keys = (
+        "tts_settings.cancel",
+        "tts_settings.save",
+        "tts_settings.ok",
     )
 
     for language in ("en", "ro"):

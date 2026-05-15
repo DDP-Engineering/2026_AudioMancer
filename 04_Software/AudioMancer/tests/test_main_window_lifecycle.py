@@ -13,7 +13,7 @@
          pages are created without workflow functionality.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-16
-@version 1.7.1
+@version 1.7.3
 """
 
 # IMPORTS
@@ -35,7 +35,12 @@ from PySide6.QtWidgets import (
 
 from audiomancer import config
 from audiomancer.services import project_workspace_service
-from audiomancer.ui.controllers import misc_ui_controller, settings_ui_controller, tts_settings_ui_controller
+from audiomancer.ui.controllers import (
+    ai_settings_ui_controller,
+    misc_ui_controller,
+    settings_ui_controller,
+    tts_settings_ui_controller,
+)
 import audiomancer.ui.main_window as main_window_module
 from audiomancer.ui.main_window import MainWindow
 
@@ -50,7 +55,7 @@ def test_main_window_can_be_created(qtbot, default_settings_payload) -> None:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.4.2
+    @version    0.4.4
     """
     window = MainWindow(
         settings_payload={
@@ -83,8 +88,10 @@ def test_main_window_can_be_created(qtbot, default_settings_payload) -> None:
     assert any(button.text() == "Start Discovery" for button in window.findChildren(QPushButton))
     assert any(button.text() == "Preview" for button in window.findChildren(QPushButton))
     assert any(button.text() == "Delete Profile" for button in window.findChildren(QPushButton))
-    assert any(button.text() == "Save AI Settings" for button in window.findChildren(QPushButton))
-    assert any(button.text() == "Save TTS Settings" for button in window.findChildren(QPushButton))
+    assert any(button.text() == "Save" for button in window.findChildren(QPushButton))
+    assert any(button.text() == "OK" for button in window.findChildren(QPushButton))
+    assert window._tts_settings_page._save_button.text() == "Save"
+    assert window._tts_settings_page._ok_button.text() == "OK"
     assert any(button.text() == "Connect" for button in window.findChildren(QPushButton))
     assert any(button.text() == "Test Connection" for button in window.findChildren(QPushButton))
     assert any(button.text() == "Apply" for button in window.findChildren(QPushButton))
@@ -537,6 +544,65 @@ def test_main_window_applies_settings_without_closing(monkeypatch, qtbot, defaul
     assert window._settings_dialog.isVisible() is False
 
 
+def test_main_window_applies_ai_settings_without_closing(monkeypatch, qtbot, default_settings_payload) -> None:
+    """
+    @brief      Verify AI Settings Save persists changes while OK persists and closes.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  qtbot Qt test helper fixture.
+    @param[in]  default_settings_payload Default test settings payload fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-15
+    @version    0.1.0
+    """
+    persisted_payload = dict(default_settings_payload)
+    saved_payloads = []
+
+    def _fake_load_settings():
+        """
+        @brief      Return the mutable test settings payload.
+        @return     Copied persisted settings payload.
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-15
+        @version    0.1.0
+        """
+        return dict(persisted_payload)
+
+    def _fake_save_settings(payload):
+        """
+        @brief      Capture and persist one test settings payload.
+        @param[in]  payload Settings payload being saved.
+        @return     None.
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-15
+        @version    0.1.0
+        """
+        saved_payloads.append(dict(payload))
+        persisted_payload.update(payload)
+
+    monkeypatch.setattr(ai_settings_ui_controller.settings_service, "load_settings", _fake_load_settings)
+    monkeypatch.setattr(ai_settings_ui_controller.settings_service, "save_settings", _fake_save_settings)
+
+    window = MainWindow(settings_payload=dict(persisted_payload))
+    qtbot.addWidget(window)
+
+    window.show_ai_settings_dialog()
+    window._ai_settings_page._label_edit.setText("Saved AI Profile")
+    window._ai_settings_page._save_button.click()
+
+    assert saved_payloads
+    assert persisted_payload["llm_profiles"][0]["label"] == "Saved AI Profile"
+    assert window._ai_settings_dialog.isVisible() is True
+
+    window._ai_settings_page._label_edit.setText("OK AI Profile")
+    window._ai_settings_page._ok_button.click()
+
+    assert len(saved_payloads) == 2
+    assert persisted_payload["llm_profiles"][0]["label"] == "OK AI Profile"
+    assert window._ai_settings_dialog.isVisible() is False
+
+
 def test_main_window_reloads_dialogs_and_discards_unsaved_changes(monkeypatch, qtbot, default_settings_payload) -> None:
     """
     @brief      Verify dialog cancel actions discard unsaved editor changes.
@@ -587,7 +653,7 @@ def test_main_window_saves_tts_settings_dialog_payload(monkeypatch, qtbot, tmp_p
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-16
-    @version    0.1.0
+    @version    0.1.1
     """
     project_root, manifest = project_workspace_service.create_project("TtsSaveProject", tmp_path)
     persisted_payload = dict(default_settings_payload)
@@ -653,9 +719,17 @@ def test_main_window_saves_tts_settings_dialog_payload(monkeypatch, qtbot, tmp_p
     assert saved_payloads
     assert persisted_payload["tts_runtime_base_url"] == "http://127.0.0.1:9000"
     assert persisted_payload["tts_runtime_probe_succeeded"] is True
+    assert window._tts_settings_dialog.isVisible() is True
     assert saved_tts_plans
     assert saved_tts_plans[0][0] == project_root
     assert saved_tts_plans[0][1]["voice_assignment_mode"] == config.DEFAULT_TTS_VOICE_ASSIGNMENT_MODE
+
+    window._tts_settings_page._base_url_edit.setText("http://127.0.0.1:9001")
+    window._tts_settings_page._ok_button.click()
+
+    assert len(saved_payloads) == 2
+    assert persisted_payload["tts_runtime_base_url"] == "http://127.0.0.1:9001"
+    assert window._tts_settings_dialog.isVisible() is False
 
 
 def test_settings_dialog_reopens_with_translated_labels(monkeypatch, qtbot, default_settings_payload) -> None:

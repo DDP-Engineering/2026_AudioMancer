@@ -14,7 +14,7 @@
          normalization.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-16
-@version 0.4.0
+@version 0.4.1
 """
 
 # IMPORTS
@@ -56,15 +56,16 @@ def show_tts_settings_dialog(window) -> None:
     window._tts_settings_dialog.activateWindow()
 
 
-def save_tts_settings_from_dialog(window) -> None:
+def _persist_tts_settings_from_dialog(window, *, close_dialog: bool) -> None:
     """
-    @brief      Persist TTS runtime settings.
+    @brief      Persist TTS runtime settings and optionally close the dialog.
     @param[in]  window Active main window shell.
+    @param[in]  close_dialog Whether the TTS Settings dialog should close after saving.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-16
-    @version    0.4.0
+    @date       2026-05-15
+    @version    0.1.0
     """
     merged_settings = window._tts_settings_page.build_settings(window._settings_payload)
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
@@ -100,7 +101,8 @@ def save_tts_settings_from_dialog(window) -> None:
             audio_blocks_ui_controller.invalidate_all_audio_blocks_after_voice_settings_change(window)
     settings_ui_controller.apply_current_ui_settings(window)
     window.show_project_state(window._current_project_root, window._current_manifest)
-    window._tts_settings_dialog.close()
+    if close_dialog:
+        window._tts_settings_dialog.close()
     misc_ui_controller.show_message(
         window,
         ui_state_service.translate(
@@ -108,6 +110,32 @@ def save_tts_settings_from_dialog(window) -> None:
             current_language,
         ),
     )
+
+
+def apply_tts_settings_from_dialog(window) -> None:
+    """
+    @brief      Save TTS Settings changes without closing the TTS Settings dialog.
+    @param[in]  window Active main window shell.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-15
+    @version    0.1.0
+    """
+    _persist_tts_settings_from_dialog(window, close_dialog=False)
+
+
+def save_tts_settings_from_dialog(window) -> None:
+    """
+    @brief      Persist TTS runtime settings.
+    @param[in]  window Active main window shell.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-04-16
+    @version    0.4.1
+    """
+    _persist_tts_settings_from_dialog(window, close_dialog=True)
 
 
 def test_runtime_connection_from_dialog(window) -> None:

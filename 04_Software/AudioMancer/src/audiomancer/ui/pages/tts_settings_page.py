@@ -13,7 +13,7 @@
          build helpers so the main window can coordinate runtime persistence.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-18
-@version 1.4.0
+@version 1.4.1
 """
 
 # IMPORTS
@@ -44,7 +44,7 @@ class TtsSettingsPage(QWidget):
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-18
-    @version    1.3.0
+    @version    1.3.1
     """
 
     def __init__(self, parent=None) -> None:
@@ -55,7 +55,7 @@ class TtsSettingsPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-18
-        @version    1.3.0
+        @version    1.3.1
         """
         super().__init__(parent)
         self._current_language = config.DEFAULT_LANGUAGE
@@ -136,9 +136,11 @@ class TtsSettingsPage(QWidget):
         button_row = QHBoxLayout()
         button_row.addStretch(1)
         self._cancel_button = QPushButton("Cancel", self)
-        self._save_button = QPushButton("Save TTS Settings", self)
+        self._save_button = QPushButton("Save", self)
+        self._ok_button = QPushButton("OK", self)
         button_row.addWidget(self._cancel_button)
         button_row.addWidget(self._save_button)
+        button_row.addWidget(self._ok_button)
         button_row.addStretch(1)
         layout.addLayout(button_row)
 
@@ -247,7 +249,7 @@ class TtsSettingsPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-17
-        @version    1.1.0
+        @version    1.1.1
         """
         merged_settings = copy.deepcopy(existing_settings_payload)
         merged_settings["tts_runtime_base_url"] = self._base_url_edit.text().strip()
@@ -295,6 +297,7 @@ class TtsSettingsPage(QWidget):
         self._preview_text_limit_label.setText(ui_state_service.translate("tts_settings.preview_text_limit", language))
         self._cancel_button.setText(ui_state_service.translate("tts_settings.cancel", language))
         self._save_button.setText(ui_state_service.translate("tts_settings.save", language))
+        self._ok_button.setText(ui_state_service.translate("tts_settings.ok", language))
         self._runtime_status_label.setText(self._build_runtime_status_text())
         self._rebuild_model_list()
         self._apply_planning_state()

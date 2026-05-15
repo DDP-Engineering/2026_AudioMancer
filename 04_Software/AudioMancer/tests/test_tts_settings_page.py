@@ -13,7 +13,7 @@
          discovered-model rendering, and runtime limit persistence.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-17
-@version 1.3.1
+@version 1.3.2
 """
 
 # IMPORTS
@@ -30,7 +30,7 @@ def test_tts_settings_page_loads_runtime_limits_without_project_plan(qtbot, defa
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-17
-    @version    1.3.0
+    @version    1.3.1
     """
     page = TtsSettingsPage()
     qtbot.addWidget(page)
@@ -58,6 +58,9 @@ def test_tts_settings_page_loads_runtime_limits_without_project_plan(qtbot, defa
     assert page.build_settings(default_settings_payload)["tts_audio_preview_timeout_seconds"] == 75
     assert page.build_settings(default_settings_payload)["tts_audio_generation_timeout_seconds"] == 420
     assert page.build_settings(default_settings_payload)["tts_preview_text_character_limit"] == 640
+    assert page._cancel_button.text() == "Cancel"
+    assert page._save_button.text() == "Save"
+    assert page._ok_button.text() == "OK"
 
 
 def test_tts_settings_page_exposes_simple_connection_status_states(qtbot) -> None:

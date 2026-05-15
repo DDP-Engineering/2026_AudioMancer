@@ -33,7 +33,7 @@ narration mode, source import, extraction, deterministic and AI cleanup,
 optional operator rules for AI cleanup, chunking, translation, character
 discovery, Narator profile, and Speech Blocks prompts, resumable AI cleanup with current model settings,
 deterministic and AI chunking, locked-target AI translation, character
-discovery, narrator and character voice preparation, mode-aware Speech Blocks,
+discovery with explicit age-domain voice handoff, narrator and character voice preparation, mode-aware Speech Blocks,
 Audio Blocks, WAV Audio Assembly deliverables, Home-page TXT/Markdown exports
 for completed text artifacts, and external full-project ZIP snapshots.
 Manual Text Chunking edits, inserts, and deletes now use the selective
@@ -63,12 +63,15 @@ Audio Blocks selected reset, selected regeneration, approval, and unapproval
 now preserve unrelated generated audio and reset only Audio Assembly outputs.
 Audio Assembly settings changes and reruns now preserve upstream Audio Blocks
 while replacing only assembly outputs/state/report.
-Current package version is `1.0.14`; Settings now supports built-in and custom
+Current package version is `1.0.15`; Settings now supports built-in and custom
 runtime UI themes with separate UI-control and text-window font controls,
 theme color roles, and portable JSON import/export. Text Chunking now allows
 operators to start a fully manual chunking pass from cleaned text before
 generated chunks exist. Narator Voice and Character Voices now accept validated
 WAV imports with operator-entered sample text for Qwen TTS Base voice cloning.
+Character Discovery now hands off explicit age guidance to Qwen voice-designer
+prompts, and AI Settings plus TTS Settings now share the `Cancel`, `Save`, and
+`OK` flow used by the Settings dialog.
 
 Focused implementation documentation is maintained in `05_SoftwareDocu/`.
 The end-user help bundles are maintained in `05_SoftwareDocu/UserGuide/` and

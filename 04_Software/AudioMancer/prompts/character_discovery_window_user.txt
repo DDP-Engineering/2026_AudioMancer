@@ -17,6 +17,7 @@ Return exactly one JSON object with this shape:
     {
       "canonical_name": "",
       "aliases": [],
+      "age_hint": "",
       "confidence": "",
       "evidence": [
         {
@@ -36,6 +37,7 @@ Do not include characters mentioned only by narration.
 Do include recurring unnamed or role-based speakers when direct speech is attributed to them, for example `his agent said`.
 When a role-based speaker is unnamed, name the role in the same language/form used in TEXT.
 For each returned character, provide at least one evidence item tied to spoken dialogue or direct speech.
+Set `age_hint` only when the selected chunk text directly supports an exact age or age domain. Useful domains include child, teen, young adult, adult, middle-aged, old, very old, or an exact/source-backed age phrase. Leave `age_hint` empty when age is not supported.
 Prefer `dialogue_span_id` from DIALOGUE_SPANS for each evidence item. Leave it empty only when no span id applies.
 Set evidence `confidence` to `high`, `medium`, or `low`; use `high` only when the evidence is anchored to a dialogue span, direct attribution, or clear direct dialogue punctuation.
 Use character-level `confidence` as:

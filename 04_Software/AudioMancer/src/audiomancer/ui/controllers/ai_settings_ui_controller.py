@@ -13,7 +13,7 @@
          feedback for AI backend connection probing.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-06
-@version 0.2.1
+@version 0.2.2
 """
 
 # IMPORTS
@@ -42,6 +42,46 @@ def show_ai_settings_dialog(window) -> None:
     window._ai_settings_dialog.activateWindow()
 
 
+def _persist_ai_settings_from_dialog(window, *, close_dialog: bool) -> None:
+    """
+    @brief      Persist AI Settings changes and optionally close the dialog.
+    @param[in]  window Active main window shell.
+    @param[in]  close_dialog Whether the AI Settings dialog should close after saving.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-15
+    @version    0.1.0
+    """
+    merged_settings = window._ai_settings_page.build_settings(window._settings_payload)
+    settings_service.save_settings(merged_settings)
+    window._settings_payload = settings_service.load_settings()
+    settings_ui_controller.apply_current_ui_settings(window)
+    window.show_project_state(window._current_project_root, window._current_manifest)
+    if close_dialog:
+        window._ai_settings_dialog.close()
+    misc_ui_controller.show_message(
+        window,
+        ui_state_service.translate(
+            "status.saved_ai_settings",
+            ui_state_service.current_language_from_settings(window._settings_payload),
+        ),
+    )
+
+
+def apply_ai_settings_from_dialog(window) -> None:
+    """
+    @brief      Save AI Settings changes without closing the AI Settings dialog.
+    @param[in]  window Active main window shell.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-15
+    @version    0.1.0
+    """
+    _persist_ai_settings_from_dialog(window, close_dialog=False)
+
+
 def save_ai_settings_from_dialog(window) -> None:
     """
     @brief      Persist AI settings-page changes through the settings service.
@@ -50,21 +90,9 @@ def save_ai_settings_from_dialog(window) -> None:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.1.2
+    @version    0.1.3
     """
-    merged_settings = window._ai_settings_page.build_settings(window._settings_payload)
-    settings_service.save_settings(merged_settings)
-    window._settings_payload = settings_service.load_settings()
-    settings_ui_controller.apply_current_ui_settings(window)
-    window.show_project_state(window._current_project_root, window._current_manifest)
-    window._ai_settings_dialog.close()
-    misc_ui_controller.show_message(
-        window,
-        ui_state_service.translate(
-            "status.saved_ai_settings",
-            ui_state_service.current_language_from_settings(window._settings_payload),
-        ),
-    )
+    _persist_ai_settings_from_dialog(window, close_dialog=True)
 
 
 def connect_ai_profile_from_dialog(window) -> None:

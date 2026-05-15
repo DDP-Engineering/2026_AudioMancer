@@ -14,7 +14,7 @@
          for the Character Voices workflow.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-20
-@version 1.9.0
+@version 1.10.0
 """
 
 # IMPORTS
@@ -465,16 +465,17 @@ def build_character_default_prompt(character_profile: dict[str, object]) -> str:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-20
-    @version    1.2.0
+    @version    1.3.0
     """
     stored_voice_definition_prompt = str(character_profile.get("voice_definition_prompt", "")).strip()
     if stored_voice_definition_prompt:
-        return _ensure_character_prompt_gender_instruction(stored_voice_definition_prompt, character_profile)
+        return _ensure_character_prompt_instructions(stored_voice_definition_prompt, character_profile)
     character_name = str(character_profile.get("canonical_name", "Character")).strip() or "Character"
     return (
         f"Create a consistent spoken voice for {character_name} with clear diction, stable identity, "
         "and delivery suitable for repeated dialogue narration. "
-        f"{_character_voice_gender_instruction(character_profile)}"
+        f"{_character_voice_gender_instruction(character_profile)} "
+        f"{_character_voice_age_instruction(character_profile)}"
     )
 
 
@@ -1036,14 +1037,14 @@ def _synchronized_character_prompt_text(
     default_prompt_text: str,
 ) -> str:
     """
-    @brief      Resolve character prompt text while enforcing explicit sex/gender guidance.
+    @brief      Resolve character prompt text while enforcing explicit voice guidance.
     @param[in]  existing_target Existing persisted target payload.
     @param[in]  character_profile Current persisted character profile payload.
     @param[in]  default_prompt_text Current derived default prompt text.
     @return     Prompt text safe to send to VoiceWeaver voice design.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-27
-    @version    0.1.0
+    @version    0.2.0
     """
     existing_prompt_text = str(existing_target.get("prompt_text", "")).strip()
     existing_default_prompt_text = str(existing_target.get("default_prompt_text", "")).strip()
@@ -1051,7 +1052,21 @@ def _synchronized_character_prompt_text(
         return default_prompt_text
     if existing_default_prompt_text and existing_prompt_text == existing_default_prompt_text:
         return default_prompt_text
-    return _ensure_character_prompt_gender_instruction(existing_prompt_text, character_profile)
+    return _ensure_character_prompt_instructions(existing_prompt_text, character_profile)
+
+
+def _ensure_character_prompt_instructions(prompt_text: str, character_profile: dict[str, object]) -> str:
+    """
+    @brief      Add required character voice guidance to one voice prompt.
+    @param[in]  prompt_text Candidate voice-designer prompt.
+    @param[in]  character_profile Character profile used for voice evidence.
+    @return     Prompt text containing explicit sex/gender and age-domain guidance.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-15
+    @version    0.1.0
+    """
+    prompt_with_gender = _ensure_character_prompt_gender_instruction(prompt_text, character_profile)
+    return _ensure_character_prompt_age_instruction(prompt_with_gender, character_profile)
 
 
 def _ensure_character_prompt_gender_instruction(prompt_text: str, character_profile: dict[str, object]) -> str:
@@ -1071,6 +1086,25 @@ def _ensure_character_prompt_gender_instruction(prompt_text: str, character_prof
     if not normalized_prompt:
         return gender_instruction
     return f"{normalized_prompt} {gender_instruction}".strip()
+
+
+def _ensure_character_prompt_age_instruction(prompt_text: str, character_profile: dict[str, object]) -> str:
+    """
+    @brief      Add explicit age-domain guidance to one voice prompt when missing.
+    @param[in]  prompt_text Candidate voice-designer prompt.
+    @param[in]  character_profile Character profile used for age evidence.
+    @return     Prompt text containing one explicit age-domain instruction.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-15
+    @version    0.1.0
+    """
+    normalized_prompt = str(prompt_text).strip()
+    if _prompt_has_explicit_age_instruction(normalized_prompt):
+        return normalized_prompt
+    age_instruction = _character_voice_age_instruction(character_profile)
+    if not normalized_prompt:
+        return age_instruction
+    return f"{normalized_prompt} {age_instruction}".strip()
 
 
 def _character_voice_gender_instruction(character_profile: dict[str, object]) -> str:
@@ -1094,6 +1128,26 @@ def _character_voice_gender_instruction(character_profile: dict[str, object]) ->
     )
 
 
+def _character_voice_age_instruction(character_profile: dict[str, object]) -> str:
+    """
+    @brief      Build the mandatory age-domain instruction for one character voice prompt.
+    @param[in]  character_profile Character profile used for age evidence.
+    @return     Explicit age-domain instruction sentence.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-15
+    @version    0.1.0
+    """
+    age_hint = str(character_profile.get("age_hint", "")).strip()
+    if age_hint:
+        return (
+            f"Age Domain: {age_hint}. Match this explicitly in the vocal age and do not replace it with a younger "
+            "or older default."
+        )
+    return (
+        "Age Domain: not specified in the source. Use an age-neutral adult voice and do not default to a young voice."
+    )
+
+
 def _prompt_has_explicit_gender_instruction(prompt_text: str) -> bool:
     """
     @brief      Return whether a prompt already carries explicit sex/gender guidance.
@@ -1108,6 +1162,19 @@ def _prompt_has_explicit_gender_instruction(prompt_text: str) -> bool:
         re.search(r"\b(sex/gender|gender hint|gender)\s*:", normalized_prompt)
         or re.search(r"\b(female|male|woman|man|girl|boy|androgynous)\b", normalized_prompt)
     )
+
+
+def _prompt_has_explicit_age_instruction(prompt_text: str) -> bool:
+    """
+    @brief      Return whether a prompt already carries explicit age-domain guidance.
+    @param[in]  prompt_text Candidate voice-designer prompt.
+    @return     True when an age instruction is already present.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-15
+    @version    0.1.0
+    """
+    normalized_prompt = str(prompt_text).casefold()
+    return bool(re.search(r"\b(age domain|age hint|age)\s*:", normalized_prompt))
 
 
 def _is_unmodified_default_preview_text(preview_text: str, localized_preview_text: str) -> bool:

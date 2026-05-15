@@ -13,7 +13,7 @@
          project artifacts without modifying the active project workspace.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-25
-@version 0.3.6
+@version 0.3.7
 """
 
 # IMPORTS
@@ -183,7 +183,7 @@ def is_path_inside_project(project_root: str | Path, export_path: str | Path) ->
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.2.0
+    @version    0.3.0
     """
     return _is_path_inside_project(project_root, export_path)
 
@@ -727,12 +727,13 @@ def _render_character_dossiers(characters: list[dict[str, object]]) -> str:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.2.0
+    @version    0.3.0
     """
     dossiers: list[str] = []
     fields = [
         ("Name", "canonical_name"),
         ("Gender Hint", "gender_hint"),
+        ("Age Hint", "age_hint"),
         ("Voice Definition Prompt", "voice_definition_prompt"),
     ]
     for character in characters:

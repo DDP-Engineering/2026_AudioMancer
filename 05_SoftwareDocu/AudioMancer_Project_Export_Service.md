@@ -103,7 +103,8 @@ Body content is projected for delivery, not debugging. Text Chunks, AI
 Translation, and Speech Blocks bodies include only readable text/speaker data,
 not internal ids, JSON keys, or workflow metadata. Markdown character exports
 render each character as its own subsection with a visible attribute table so
-extracted traits and voice-definition fields remain scannable.
+extracted traits, `Gender Hint`, `Age Hint`, and voice-definition fields remain
+scannable.
 Speech Blocks exports use the shared canonical book order helper, so blocks are
 rendered by source chunk order and then by each chunk's local `sequence_index`.
 Each Speech Block body renders the speaker display name on its own line and the
@@ -146,14 +147,14 @@ export_path.write_text(content, encoding="utf-8")
 
 Documentation audit status:
 
-- reviewed against the current implementation on 2026-05-06
+- reviewed against the current implementation on 2026-05-15
 
 Automated coverage:
 
 - `tests/test_project_export_service.py` checks readiness, UTF-8 Romanian text
   preservation, TXT/Markdown rendering, header source metadata, internal
-  metadata suppression, character dossier labels, and inside-project path
-  detection.
+  metadata suppression, character dossier labels including Age Hint, and
+  inside-project path detection.
 - `tests/test_home_page.py` checks the export panel widget rows, readiness
   enablement, and language updates.
 - `tests/test_home_ui_controller.py` checks save-path rejection, extension

@@ -14,7 +14,7 @@
          so the window remains a thin coordinator.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 1.47.0
+@version 1.47.2
 """
 
 # IMPORTS
@@ -1105,7 +1105,7 @@ class MainWindow(QMainWindow):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-16
-        @version    0.6.2
+        @version    0.6.4
         """
         current_language = ui_state_service.current_language_from_settings(self._settings_payload)
 
@@ -1142,6 +1142,9 @@ class MainWindow(QMainWindow):
         )
         self._ai_settings_page._cancel_button.clicked.connect(self._ai_settings_dialog.close)
         self._ai_settings_page._save_button.clicked.connect(
+            lambda _checked=False: ai_settings_ui_controller.apply_ai_settings_from_dialog(self)
+        )
+        self._ai_settings_page._ok_button.clicked.connect(
             lambda _checked=False: ai_settings_ui_controller.save_ai_settings_from_dialog(self)
         )
         self._ai_settings_page.load_settings(self._settings_payload)
@@ -1159,6 +1162,9 @@ class MainWindow(QMainWindow):
         )
         self._tts_settings_page._cancel_button.clicked.connect(self._tts_settings_dialog.close)
         self._tts_settings_page._save_button.clicked.connect(
+            lambda _checked=False: tts_settings_ui_controller.apply_tts_settings_from_dialog(self)
+        )
+        self._tts_settings_page._ok_button.clicked.connect(
             lambda _checked=False: tts_settings_ui_controller.save_tts_settings_from_dialog(self)
         )
         self._tts_settings_page.load_state(self._settings_payload, None, False)

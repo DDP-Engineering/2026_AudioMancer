@@ -13,7 +13,7 @@
          user-facing export artifacts.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-25
-@version 0.3.2
+@version 0.3.3
 """
 
 # IMPORTS
@@ -57,7 +57,7 @@ def test_project_export_service_reports_not_ready_and_missing_artifact(tmp_path)
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.1.0
+    @version    0.2.0
     """
     project_root, manifest = _build_export_project(tmp_path)
     manifest["operations"]["chunking"]["status"] = "not_started"
@@ -149,7 +149,7 @@ def test_project_export_service_renders_character_dossier_labels(tmp_path) -> No
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.1.0
+    @version    0.2.0
     """
     project_root, manifest = _build_export_project(tmp_path)
 
@@ -162,6 +162,7 @@ def test_project_export_service_renders_character_dossier_labels(tmp_path) -> No
 
     assert "Name: Ștefan" in content
     assert "Gender Hint: male" in content
+    assert "Age Hint: old" in content
     assert "Speaking Style: teatral" not in content
     assert "Voice Definition Prompt:" in content
 
@@ -174,7 +175,7 @@ def test_project_export_service_renders_markdown_character_dossiers_as_tables(tm
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.1.0
+    @version    0.2.0
     """
     project_root, manifest = _build_export_project(tmp_path)
 
@@ -188,6 +189,7 @@ def test_project_export_service_renders_markdown_character_dossiers_as_tables(tm
     assert "### Ștefan" in content
     assert "| Attribute | Value |" in content
     assert "| **Gender Hint** | male |" in content
+    assert "| **Age Hint** | old |" in content
     assert "| **Voice Definition Prompt** |" in content
     assert "Name: Ștefan Gender Hint:" not in content
 
@@ -353,6 +355,7 @@ def _build_export_project(tmp_path):
                 "character_id": "stefan",
                 "canonical_name": "Ștefan",
                 "gender_hint": "male",
+                "age_hint": "old",
                 "voice_definition_prompt": "A dramatic Romanian baritone voice.",
             }
         ],

@@ -15,7 +15,8 @@ Provides the Character Discovery workflow used by the `Characters` page in
 It analyzes canonical chunking output as the authoritative source for character
 identity and dialogue evidence. It produces one persisted set of compact
 speaking-character profiles with identity, aliases, sex or gender guidance,
-evidence, confidence, and one final `voice_definition_prompt` per character.
+age-domain guidance, evidence, confidence, and one final
+`voice_definition_prompt` per character.
 It exposes resumable operation state and keeps the page state and UI
 controller aligned with the project manifest.
 
@@ -108,9 +109,10 @@ High-level runtime flow:
    dirty.
 10. The page exposes compact editable character identity fields plus one final
     `voice_definition_prompt`. The final prompt always includes explicit
-    `Sex/Gender:` guidance, using the stored `gender_hint` when available and
-    a neutral non-male-default instruction when the source does not specify sex
-    or gender.
+    `Sex/Gender:` and `Age Domain:` guidance, using stored hints when
+    available, a neutral non-male-default instruction when the source does not
+    specify sex or gender, and an age-neutral adult instruction when the source
+    does not specify age.
 11. Saving a manual add, edit, or delete uses the v2 selective impact path.
     Manual add synchronizes Character Voices targets and preserves existing
     Speech Blocks, Audio Blocks, and Audio Assembly outputs. Manual edit keeps
@@ -172,6 +174,7 @@ Persisted character profile fields:
 - `canonical_name`
 - `aliases`
 - `gender_hint`
+- `age_hint`
 - `voice_definition_prompt`
 - `preview_text`
 - `confidence`
@@ -189,7 +192,11 @@ Translation page:
 Voice-definition rules:
 
 - `voice_definition_prompt` is the final handoff prompt later consumed by
-  `Character Voices` and includes explicit `Sex/Gender:` guidance
+  `Character Voices` and includes explicit `Sex/Gender:` and `Age Domain:`
+  guidance
+- `age_hint` is a flexible evidence-backed text field for exact ages or domains
+  such as `child`, `teen`, `young adult`, `adult`, `middle-aged`, `old`, or
+  `very old`; it stays empty when source evidence does not support age
 - manual edits to the final prompt are preserved as the current character
   voice-design source
 - `preview_text` is an optional handoff sample later consumed by
@@ -360,6 +367,7 @@ Covered behaviors:
 - duplicate and invalid manual-name validation
 - explicit edit-mode enablement and save-button activation
 - compact voice-definition prompt normalization
+- evidence-backed `age_hint` persistence and `Age Domain:` voice-prompt handoff
 - guarded selection changes with unsaved drafts
 - reset behavior and stage rollback
 - profile-selector default resolution

@@ -10,6 +10,36 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [1.0.15] - 2026-05-15
+
+### Added
+
+- Character Discovery now persists an editable `age_hint` for each speaking
+  character and requires downstream Qwen voice-designer prompts to include an
+  explicit `Age Domain:` instruction, preventing older characters from silently
+  defaulting to younger generated voices when the source age is unclear.
+- AI Settings and TTS Settings now use the same `Cancel`, `Save`, and `OK`
+  dialog flow as Settings: `Save` persists changes without closing the dialog,
+  while `OK` persists changes and closes it.
+- Offline English and Romanian help screenshots for AI Settings and TTS
+  Settings were regenerated with the new Windows dialog button rows.
+
+### Changed
+
+- Character dossiers and Character Voices synchronization now carry the new
+  age handoff contract alongside sex/gender guidance.
+- Runtime UI translation coverage now includes the new AI Settings and TTS
+  Settings `OK` labels.
+
+### Fixed
+
+- Speech Blocks aligns selected-block `Generate Audio` and `Play` actions on
+  the same row.
+- Audio Assembly status text now refreshes with the UI-control font role, like
+  Audio Blocks status text.
+- Narator Voice gives the profile-list pane a wider minimum so `Import Sample`
+  fits beside `Select`.
+
 ## [1.0.14] - 2026-05-15
 
 ### Added

@@ -52,12 +52,16 @@ The initial shell consists of:
 - Settings dialog `Apply` persists and refreshes runtime UI state without
   closing the dialog; `OK` persists and closes it
 - a runtime UI-state service that applies persisted language and theme changes
-  to the running Qt shell after startup and after `Save Settings`
+  to the running Qt shell after startup and after Settings `Apply` or `OK`
 - an AI settings dialog that loads and saves AI profiles plus default cleanup,
   chunking, and character-extraction selections through the shared settings
-  service
+  service; `Save` persists without closing the dialog, while `OK` persists and
+  closes it
 - functional AI Settings connect flow with backend probing, discovered model
   refresh, and popup result feedback
+- a TTS Settings dialog that tests VoiceWeaver runtime connectivity, persists
+  runtime limits and cache fields, and uses the same `Cancel`, `Save`, and
+  `OK` flow as AI Settings
 - a project-aware narrator-definition page with operator-created Voice Designer
   profiles, destructive edit confirmations, explicit create/edit/save/delete
   actions, runtime-backed sample generation, read-only project-language
@@ -101,7 +105,8 @@ Outputs:
 - a project-aware workflow layout
 - the ability to create or open one persisted project workspace
 - a validated app settings payload loaded from `settings.json`
-- persisted updates from both the `Settings` and `AI Settings` dialogs
+- persisted updates from the `Settings`, `AI Settings`, and `TTS Settings`
+  dialogs
 - immediate runtime application of saved UI language and theme changes
 - Home-page workflow status and export readiness state
 - one new per-run application log file under `Logs/`

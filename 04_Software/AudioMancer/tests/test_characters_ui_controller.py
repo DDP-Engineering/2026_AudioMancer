@@ -13,7 +13,7 @@
          discovery start and reset behavior for the Characters page controller.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-08
-@version 0.10.0
+@version 0.11.0
 """
 
 # IMPORTS
@@ -121,7 +121,7 @@ def test_character_ui_controller_passes_extra_prompt_to_discovery(monkeypatch, q
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-13
-    @version    0.1.0
+    @version    0.2.0
     """
     project_root, _manifest = _create_project(tmp_path, "CharacterControllerExtraPrompt")
     window = _build_window(qtbot, project_root)
@@ -836,7 +836,7 @@ def _saved_profile_payload() -> dict[str, object]:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-02
-    @version    0.1.0
+    @version    0.2.0
     """
     return character_discovery_service.regenerate_character_voice_definition(
         {
@@ -844,6 +844,7 @@ def _saved_profile_payload() -> dict[str, object]:
             "canonical_name": "Alice",
             "aliases": ["Al"],
             "gender_hint": "",
+            "age_hint": "adult",
             "voice_definition_prompt": "Create a consistent spoken voice for Alice.",
             "confidence": "high",
             "evidence": [
@@ -866,7 +867,7 @@ def _manual_draft_payload(name: str) -> dict[str, object]:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-02
-    @version    0.1.0
+    @version    0.2.0
     """
     return character_discovery_service.regenerate_character_voice_definition(
         {
@@ -874,6 +875,7 @@ def _manual_draft_payload(name: str) -> dict[str, object]:
             "canonical_name": name,
             "aliases": [],
             "gender_hint": "",
+            "age_hint": "",
             "voice_definition_prompt": f"Create a consistent spoken voice for {name}.",
             "confidence": "",
             "evidence": [

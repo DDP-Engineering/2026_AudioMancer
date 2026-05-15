@@ -14,7 +14,7 @@
          preview for discovered and manually added speaking characters.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-08
-@version 0.6.1
+@version 0.7.0
 """
 
 # IMPORTS
@@ -73,7 +73,7 @@ class CharactersPage(QWidget):
             @exception  None
             @author     Eng. Dan Dumitru Pasare
             @date       2026-04-08
-        @version    0.6.0
+        @version    0.7.0
         """
         super().__init__(parent)
         self._project_active = False
@@ -168,6 +168,7 @@ class CharactersPage(QWidget):
         self._canonical_name_edit = QLineEdit(self)
         self._aliases_edit = QLineEdit(self)
         self._gender_hint_edit = QLineEdit(self)
+        self._age_hint_edit = QLineEdit(self)
         self._voice_definition_prompt_edit = QPlainTextEdit(self)
         self._confidence_edit = QLineEdit(self)
 
@@ -175,6 +176,7 @@ class CharactersPage(QWidget):
             self._canonical_name_edit,
             self._aliases_edit,
             self._gender_hint_edit,
+            self._age_hint_edit,
             self._voice_definition_prompt_edit,
             self._confidence_edit,
         ]
@@ -183,6 +185,7 @@ class CharactersPage(QWidget):
             self._canonical_name_edit,
             self._aliases_edit,
             self._gender_hint_edit,
+            self._age_hint_edit,
             self._confidence_edit,
         ):
             widget.setMinimumHeight(30)
@@ -194,12 +197,14 @@ class CharactersPage(QWidget):
         self._canonical_name_label = QLabel("Canonical Name", self)
         self._aliases_label = QLabel("Aliases", self)
         self._gender_hint_label = QLabel("Gender Hint", self)
+        self._age_hint_label = QLabel("Age Hint", self)
         self._voice_definition_prompt_label = QLabel("Voice Definition Prompt", self)
         self._confidence_label = QLabel("Confidence", self)
 
         editor_layout.addRow(self._canonical_name_label, self._canonical_name_edit)
         editor_layout.addRow(self._aliases_label, self._aliases_edit)
         editor_layout.addRow(self._gender_hint_label, self._gender_hint_edit)
+        editor_layout.addRow(self._age_hint_label, self._age_hint_edit)
         editor_layout.addRow(self._voice_definition_prompt_label, self._voice_definition_prompt_edit)
         editor_layout.addRow(self._confidence_label, self._confidence_edit)
         self._editor_scroll_area.setWidget(self._editor_form_widget)
@@ -465,7 +470,7 @@ class CharactersPage(QWidget):
             @exception  None
             @author     Eng. Dan Dumitru Pasare
             @date       2026-04-08
-        @version    0.3.0
+        @version    0.4.0
         """
         profile = self._current_profile()
         if profile is None:
@@ -587,7 +592,7 @@ class CharactersPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-08
-        @version    0.3.0
+        @version    0.4.0
         """
         self._title_label.setText(f"<h2>{ui_state_service.translate('characters.title', language)}</h2>")
         self._ui_language = language
@@ -604,6 +609,7 @@ class CharactersPage(QWidget):
         self._canonical_name_label.setText(ui_state_service.translate("characters.canonical_name", language))
         self._aliases_label.setText(ui_state_service.translate("characters.aliases", language))
         self._gender_hint_label.setText(ui_state_service.translate("characters.gender_hint", language))
+        self._age_hint_label.setText(ui_state_service.translate("characters.age_hint", language))
         self._confidence_label.setText(ui_state_service.translate("characters.confidence", language))
         self._voice_definition_prompt_label.setText(
             ui_state_service.translate("characters.voice_definition_prompt", language)
@@ -914,12 +920,13 @@ class CharactersPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-08
-        @version    0.4.0
+        @version    0.5.0
         """
         self._loading_profile = True
         self._canonical_name_edit.setText(str(profile.get("canonical_name", "")))
         self._aliases_edit.setText(", ".join(list(profile.get("aliases", []))))
         self._gender_hint_edit.setText(str(profile.get("gender_hint", "")))
+        self._age_hint_edit.setText(str(profile.get("age_hint", "")))
         self._voice_definition_prompt_edit.setPlainText(str(profile.get("voice_definition_prompt", "")))
         self._confidence_edit.setText(str(profile.get("confidence", "")))
         self._evidence_list.clear()
@@ -938,12 +945,13 @@ class CharactersPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-08
-        @version    0.3.0
+        @version    0.4.0
         """
         self._loading_profile = True
         self._canonical_name_edit.clear()
         self._aliases_edit.clear()
         self._gender_hint_edit.clear()
+        self._age_hint_edit.clear()
         self._voice_definition_prompt_edit.clear()
         self._confidence_edit.clear()
         self._evidence_list.clear()
@@ -1022,7 +1030,7 @@ class CharactersPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-08
-        @version    0.6.0
+        @version    0.7.0
         """
         base_profile = self._active_profile() or {}
         draft_profile = {
@@ -1030,6 +1038,7 @@ class CharactersPage(QWidget):
             "canonical_name": self._canonical_name_edit.text().strip(),
             "aliases": [item.strip() for item in self._aliases_edit.text().split(",") if item.strip()],
             "gender_hint": self._gender_hint_edit.text().strip(),
+            "age_hint": self._age_hint_edit.text().strip(),
             "voice_definition_prompt": self._voice_definition_prompt_edit.toPlainText().strip(),
             "preview_text": str(base_profile.get("preview_text", "")).strip(),
             "confidence": self._confidence_edit.text().strip(),
@@ -1158,7 +1167,7 @@ def _profiles_equal(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-08
-    @version    0.3.0
+    @version    0.4.0
     """
     if left_profile is None or right_profile is None:
         return left_profile is right_profile
@@ -1166,6 +1175,7 @@ def _profiles_equal(
         "canonical_name",
         "aliases",
         "gender_hint",
+        "age_hint",
         "voice_definition_prompt",
         "confidence",
         "evidence",
@@ -1183,10 +1193,11 @@ def _normalize_page_profile(profile: dict[str, object]) -> dict[str, object]:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-20
-    @version    2.1.0
+    @version    2.2.0
     """
     normalized_profile = dict(profile)
     normalized_profile.setdefault("aliases", [])
+    normalized_profile.setdefault("age_hint", "")
     normalized_profile.setdefault("voice_definition_prompt", "")
     normalized_profile.setdefault("preview_text", "")
     return normalized_profile
