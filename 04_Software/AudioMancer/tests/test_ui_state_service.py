@@ -306,15 +306,22 @@ def test_build_theme_stylesheet_applies_text_window_font() -> None:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-14
-    @version    0.1.0
+    @version    0.2.0
     """
-    theme_payload = _custom_theme(text_font={"family": "Georgia", "point_size": 14.0, "scale": "large"})
+    theme_payload = _custom_theme(
+        font={"family": "Courier New", "point_size": 11.0, "scale": "normal"},
+        text_font={"family": "Georgia", "point_size": 14.0, "scale": "large"},
+    )
 
     stylesheet = ui_state_service.build_theme_stylesheet(theme_payload, base_point_size=10.0)
 
     assert "QTextEdit, QPlainTextEdit" in stylesheet
     assert "font-family: 'Georgia';" in stylesheet
     assert "font-size: 14.0pt;" in stylesheet
+    assert f'QPlainTextEdit[{ui_state_service.CONTROL_TEXT_FONT_ROLE_PROPERTY}="' in stylesheet
+    assert f'"{ui_state_service.CONTROL_TEXT_FONT_ROLE_VALUE}"]' in stylesheet
+    assert "font-family: 'Courier New';" in stylesheet
+    assert "font-size: 11.0pt;" in stylesheet
 
 
 def test_apply_ui_settings_falls_back_to_default_theme_for_missing_theme_id(qtbot) -> None:

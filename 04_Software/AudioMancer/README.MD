@@ -10,8 +10,12 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
 This folder contains the current Python application implementation for
 `AudioMancer`. It includes a project-aware main-window shell copied from
 `DDP_Audiomancer` and adapted to the local package.
-Current package version is `1.0.13`; Settings now supports built-in and custom
-runtime UI themes with separate UI-control and text-window font controls.
+Current package version is `1.0.14`; Settings now supports built-in and custom
+runtime UI themes with separate UI-control and text-window font controls. Text
+Chunking now allows operators to start a fully manual chunking pass from cleaned
+text before generated chunks exist. Narator Voice and Character Voices now
+accept validated WAV imports with operator-entered sample text for Qwen TTS Base
+voice cloning.
 Text Cleanup, Text Chunking, Characters, Narator Voice, Character Voices, Speech Blocks, and Audio Blocks now keep
 minimum splitter widths on their main review panes so operator text remains
 readable during resizing. Narator Voice now places profile selection directly

@@ -14,7 +14,7 @@
          Chunking page.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-24
-@version 0.8.2
+@version 0.8.3
 """
 
 # IMPORTS
@@ -197,17 +197,26 @@ def insert_chunk_after_selected(
     selected_chunk_id: str,
 ) -> dict[str, object]:
     """
-    @brief      Insert one empty chunk after the selected persisted chunk.
+    @brief      Insert one empty chunk after the selected persisted chunk or create the first manual chunk.
     @param[in]  project_root Active project root folder.
     @param[in]  manifest Current project manifest payload.
-    @param[in]  selected_chunk_id Stable chunk identifier used as the insertion anchor.
+    @param[in]  selected_chunk_id Stable chunk identifier used as the insertion anchor, or empty for first insert.
     @return     Updated manifest payload.
-    @exception  ValueError Raised when the selected chunk is unavailable.
+    @exception  ValueError Raised when the selected chunk is unavailable or cleaned text is unavailable.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-04
-    @version    0.1.0
+    @version    0.2.0
     """
     chunks = deterministic_chunking_service.load_chunks(project_root)
+    if not chunks and not str(selected_chunk_id).strip():
+        inserted_chunk = _build_initial_manual_chunk_payload(project_root)
+        return _persist_manual_chunk_change(
+            project_root,
+            manifest,
+            [inserted_chunk],
+            affected_chunk_ids=(str(inserted_chunk["chunk_id"]),),
+            reason="manual_chunk_insert",
+        )
     selected_index = next(
         (index for index, chunk in enumerate(chunks) if str(chunk.get("chunk_id", "")) == selected_chunk_id),
         -1,
@@ -486,6 +495,41 @@ def _build_inserted_chunk_payload(source_chunk: dict[str, object], chunk_id: str
         "cleanup_joined_across_page_break": False,
         "cleanup_warning_flags": [],
         "chunking_mode": "manual",
+        "scene_note": "Inserted manually by the operator.",
+    }
+
+
+def _build_initial_manual_chunk_payload(project_root: Path) -> dict[str, object]:
+    """
+    @brief      Build the first empty chunk payload for a fully manual chunking session.
+    @param[in]  project_root Active project root folder.
+    @return     Initial manual chunk payload.
+    @exception  ValueError Raised when cleaned text is unavailable.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-13
+    @version    0.1.0
+    """
+    cleaned_text = text_cleanup_state_service.read_optional_project_text(
+        project_root,
+        f"{config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH}/{config.CLEANED_TEXT_FILE_NAME}",
+    )
+    if cleaned_text is None or not cleaned_text.strip():
+        raise ValueError("Cleaned text is required before manual chunk insertion.")
+    source_line_count = max(1, len(cleaned_text.splitlines()))
+    return {
+        "chunk_id": "chunk-0001",
+        "sequence_index": 1,
+        "chapter_label": None,
+        "text": "",
+        "source_start_line": 1,
+        "source_end_line": source_line_count,
+        "source_page_start": None,
+        "source_page_end": None,
+        "cleanup_boundary_confidence": None,
+        "cleanup_joined_across_page_break": False,
+        "cleanup_warning_flags": [],
+        "chunking_mode": "manual",
+        "semantic_strategy": None,
         "scene_note": "Inserted manually by the operator.",
     }
 

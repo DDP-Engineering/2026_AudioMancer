@@ -14,7 +14,7 @@
          theme runtime adapter.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 0.50.0
+@version 0.52.0
 """
 
 # ruff: noqa: E501
@@ -40,6 +40,11 @@ _UI_SCALE_FACTORS = {
     "large": 1.12,
     "very_large": 1.24,
 }
+
+# @brief Dynamic Qt property used by read-only operator notes/status editors.
+CONTROL_TEXT_FONT_ROLE_PROPERTY = "audiomancerFontRole"
+# @brief Dynamic Qt property value for editors that should use the UI font.
+CONTROL_TEXT_FONT_ROLE_VALUE = "ui_controls"
 
 # @brief Default runtime UI language used as the catalog fallback.
 _DEFAULT_LANGUAGE = config.DEFAULT_LANGUAGE
@@ -453,6 +458,7 @@ _UI_STRINGS = {
         "narator_voice.delete_profile": "Delete Profile",
         "narator_voice.select_profile": "Select",
         "narator_voice.generate_sample": "Generate Sample",
+        "narator_voice.import_sample": "Import Sample",
         "narator_voice.generate_profiles": "Generate Narator Profiles",
         "narator_voice.preview": "Play sample",
         "narator_voice.stop_preview": "Stop play",
@@ -503,6 +509,10 @@ _UI_STRINGS = {
         "dialog.narator_voice_generate_sample_title": "Generate Narator Voice Sample",
         "dialog.narator_voice_generate_sample_message": "AudioMancer will contact the configured TTS runtime and requires the connection to be tested first in TTS Settings. Continue?",
         "dialog.narator_voice_generate_sample_message_replace": "Continuing will delete the current audio sample and AudioMancer will contact the configured TTS runtime. The connection must be tested first in TTS Settings. Continue?",
+        "dialog.voice_sample_import_title": "Import Sample",
+        "dialog.voice_sample_import_filter": "WAV audio files (*.wav)",
+        "dialog.voice_sample_text_title": "Sample Text",
+        "dialog.voice_sample_text_prompt": "Enter the exact text spoken in the imported sample:",
         "dialog.narator_voice_generate_profiles_title": "Generate Narator Voice Profiles",
         "dialog.narator_voice_generate_profiles_message": "AudioMancer will analyze the current book style with the selected AI profile. This can take a long time and may consume paid tokens or credits. Continue?",
         "dialog.narator_voice_generate_profiles_count_prompt": "How many narator profiles should be generated?",
@@ -524,12 +534,20 @@ _UI_STRINGS = {
         "status.narator_voice_profile_selected": "Narator voice profile selected.",
         "status.narator_voice_profiles_imported": "Imported {imported_count} model profiles and skipped {skipped_count} existing ones.",
         "status.narator_voice_sample_generated": "Narator voice sample generated.",
+        "status.narator_voice_sample_imported": "Narator voice sample imported.",
         "status.narator_voice_profiles_generated": "Generated {generated_count} narator voice profiles.",
         "status.narator_voice_language_changed": "Audiobook voice language changed. Generated samples and downstream data were reset.",
-        "status.character_voices_prompt_reset": "Voice prompt reset.",
         "status.character_voices_prompt_saved": "Voice prompt saved.",
         "status.character_voices_sample_generated": "Character sample generated.",
+        "status.character_voices_sample_imported": "Character sample imported.",
         "status.character_voices_missing_samples_generated": "Character samples regenerated.",
+        "voice_sample_import.error_unsupported_file_type": "Import a WAV audio file.",
+        "voice_sample_import.error_missing_file": "The selected sample file could not be found.",
+        "voice_sample_import.error_invalid_wav": "The selected file is not a readable WAV sample.",
+        "voice_sample_import.error_sample_too_short": "The imported sample must be at least {min_duration_seconds:.1f} seconds long.",
+        "voice_sample_import.error_sample_silent": "The imported sample is silent or too close to silence.",
+        "voice_sample_import.error_empty_sample_text": "Enter the text spoken in the imported sample.",
+        "voice_sample_import.error_readonly_target": "Import samples for character targets only on this page.",
         "character_voices.title": "Character Voices",
         "character_voices.list_group": "Voice Targets",
         "character_voices.setup_group": "Voice Target",
@@ -546,7 +564,7 @@ _UI_STRINGS = {
         "character_voices.target_kind_character": "Character",
         "character_voices.assignment_same_narrator": "Same narrator for whole book",
         "character_voices.assignment_narrator_and_characters": "Narrator + character voices",
-        "character_voices.reset_prompt": "Reset Voice Prompt",
+        "character_voices.import_sample": "Import Sample",
         "character_voices.edit_prompt": "Edit Voice Prompt",
         "character_voices.save_prompt": "Save Voice Prompt",
         "character_voices.generate_sample": "Generate Sample",
@@ -1416,6 +1434,7 @@ _UI_STRINGS = {
         "narator_voice.delete_profile": "Sterge Profil",
         "narator_voice.select_profile": "Selecteaza",
         "narator_voice.generate_sample": "Genereaza Sample",
+        "narator_voice.import_sample": "Import Sample",
         "narator_voice.generate_profiles": "Genereaza Profiluri Narator",
         "narator_voice.preview": "Reda sample",
         "narator_voice.stop_preview": "Opreste redarea",
@@ -1466,6 +1485,10 @@ _UI_STRINGS = {
         "dialog.narator_voice_generate_sample_title": "Genereaza Sample Voce Narator",
         "dialog.narator_voice_generate_sample_message": "AudioMancer va contacta runtime-ul TTS configurat si conexiunea trebuie testata inainte din Setari TTS. Continui?",
         "dialog.narator_voice_generate_sample_message_replace": "Continuarea va sterge sample-ul audio curent, iar AudioMancer va contacta runtime-ul TTS configurat. Conexiunea trebuie testata inainte din Setari TTS. Continui?",
+        "dialog.voice_sample_import_title": "Import Sample",
+        "dialog.voice_sample_import_filter": "Fisiere audio WAV (*.wav)",
+        "dialog.voice_sample_text_title": "Text Sample",
+        "dialog.voice_sample_text_prompt": "Introdu textul exact rostit in sample-ul importat:",
         "dialog.narator_voice_generate_profiles_title": "Genereaza Profiluri Voce Narator",
         "dialog.narator_voice_generate_profiles_message": "AudioMancer va analiza stilul cartii curente cu profilul AI selectat. Operatia poate dura mult si poate consuma tokeni platiti sau credite. Continui?",
         "dialog.narator_voice_generate_profiles_count_prompt": "Cate profiluri de narator trebuie generate?",
@@ -1487,12 +1510,20 @@ _UI_STRINGS = {
         "status.narator_voice_profile_selected": "Profilul naratorului a fost selectat.",
         "status.narator_voice_profiles_imported": "Au fost importate {imported_count} profiluri de model si au fost omise {skipped_count} existente.",
         "status.narator_voice_sample_generated": "Sample-ul naratorului a fost generat.",
+        "status.narator_voice_sample_imported": "Sample-ul naratorului a fost importat.",
         "status.narator_voice_profiles_generated": "Au fost generate {generated_count} profiluri de voce narator.",
         "status.narator_voice_language_changed": "Limba vocii audiobookului a fost schimbata. Sample-urile generate si datele ulterioare au fost resetate.",
-        "status.character_voices_prompt_reset": "Promptul vocal a fost resetat.",
         "status.character_voices_prompt_saved": "Promptul vocal a fost salvat.",
         "status.character_voices_sample_generated": "Sample-ul personajului a fost generat.",
+        "status.character_voices_sample_imported": "Sample-ul personajului a fost importat.",
         "status.character_voices_missing_samples_generated": "Sample-urile personajelor au fost regenerate.",
+        "voice_sample_import.error_unsupported_file_type": "Importa un fisier audio WAV.",
+        "voice_sample_import.error_missing_file": "Fisierul sample selectat nu a fost gasit.",
+        "voice_sample_import.error_invalid_wav": "Fisierul selectat nu este un sample WAV citibil.",
+        "voice_sample_import.error_sample_too_short": "Sample-ul importat trebuie sa aiba cel putin {min_duration_seconds:.1f} secunde.",
+        "voice_sample_import.error_sample_silent": "Sample-ul importat este silentios sau prea aproape de tacere.",
+        "voice_sample_import.error_empty_sample_text": "Introdu textul rostit in sample-ul importat.",
+        "voice_sample_import.error_readonly_target": "Importa sample-uri doar pentru tintele de personaj pe aceasta pagina.",
         "character_voices.title": "Voci Personaje",
         "character_voices.list_group": "Tintele Vocii",
         "character_voices.setup_group": "Tinta Vocala",
@@ -1509,7 +1540,7 @@ _UI_STRINGS = {
         "character_voices.target_kind_character": "Personaj",
         "character_voices.assignment_same_narrator": "Acelasi narator pentru toata cartea",
         "character_voices.assignment_narrator_and_characters": "Narator + voci personaje",
-        "character_voices.reset_prompt": "Reseteaza Promptul Vocal",
+        "character_voices.import_sample": "Import Sample",
         "character_voices.edit_prompt": "Editeaza Promptul Vocal",
         "character_voices.save_prompt": "Salveaza Promptul Vocal",
         "character_voices.generate_sample": "Genereaza Sample",
@@ -2225,13 +2256,17 @@ def build_theme_stylesheet(theme_payload: dict[str, object], base_point_size: fl
     @exception  ValueError Raised when the theme payload is invalid.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-14
-    @version    0.4.0
+    @version    0.5.0
     """
     normalized_theme = ui_theme_service.validate_theme_payload(theme_payload, allow_built_in=True)
     colors = _theme_colors(normalized_theme)
+    ui_font_payload = normalized_theme["font"]
+    assert isinstance(ui_font_payload, dict)
     text_font_payload = normalized_theme["text_font"]
     assert isinstance(text_font_payload, dict)
-    text_font_stylesheet = _font_stylesheet(text_font_payload, base_point_size or _BASE_FONT_POINT_SIZE or 10.0)
+    base_font_point_size = base_point_size or _BASE_FONT_POINT_SIZE or 10.0
+    ui_font_stylesheet = _font_stylesheet(ui_font_payload, base_font_point_size)
+    text_font_stylesheet = _font_stylesheet(text_font_payload, base_font_point_size)
     accent = colors["accent"]
     panel_background = colors["panel_background"]
     text_primary = colors["text_primary"]
@@ -2262,6 +2297,10 @@ QLineEdit, QTextEdit, QPlainTextEdit, QComboBox, QSpinBox, QTableWidget, QListWi
 }}
 QTextEdit, QPlainTextEdit {{
 {text_font_stylesheet}
+}}
+QTextEdit[{CONTROL_TEXT_FONT_ROLE_PROPERTY}="{CONTROL_TEXT_FONT_ROLE_VALUE}"],
+QPlainTextEdit[{CONTROL_TEXT_FONT_ROLE_PROPERTY}="{CONTROL_TEXT_FONT_ROLE_VALUE}"] {{
+{ui_font_stylesheet}
 }}
 QLineEdit:focus, QTextEdit:focus, QPlainTextEdit:focus, QComboBox:focus, QSpinBox:focus,
 QTableWidget:focus, QListWidget:focus {{

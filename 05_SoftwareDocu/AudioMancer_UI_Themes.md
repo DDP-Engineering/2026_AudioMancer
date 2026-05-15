@@ -112,7 +112,8 @@ Theme payload contract:
 - `font.scale`: legacy compatibility field, normalized to a supported value
   but not exposed in Settings or applied at runtime
 - `text_font.family`: optional font family string for `QTextEdit` and
-  `QPlainTextEdit` text windows
+  `QPlainTextEdit` text windows that contain book-manipulation text; read-only
+  operator notes and bottom status panels use the UI-control font instead
 - `text_font.point_size`: `null` or a number from `7.0` through `18.0`
 - `text_font.scale`: legacy compatibility field, normalized to a supported
   value but not exposed in Settings or applied at runtime

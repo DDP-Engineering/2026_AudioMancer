@@ -10,6 +10,25 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [1.0.14] - 2026-05-15
+
+### Added
+
+- Narator Voice profiles and Character Voices character targets can now import
+  WAV voice samples with operator-entered sample text for Qwen TTS Base voice
+  cloning.
+- Imported voice samples validate WAV readability, minimum 3-second duration,
+  and non-silent audio before being copied into project sample storage.
+
+### Changed
+
+- Character Voices replaces the reset-prompt action with `Import Sample` for
+  editable character targets while keeping the Narator Voice row read-only.
+- Imported voice samples are treated as runtime-ready even without a source
+  model id, while generated samples keep the existing model-readiness checks.
+- Operator notes and bottom status panels now use the UI-control font instead
+  of the book/text-window font.
+
 ## [1.0.13] - 2026-05-14
 
 ### Added
@@ -29,6 +48,11 @@ All notable changes to this project will be documented in this file.
   were removed.
 - The Settings dialog layout is more compact, with the preview area reduced and
   the color-selector column given more room.
+
+### Fixed
+
+- Text Chunking now enables the Insert action before generated chunks exist,
+  allowing operators to start a fully manual chunking pass from cleaned text.
 
 ## [1.0.12] - 2026-05-13
 

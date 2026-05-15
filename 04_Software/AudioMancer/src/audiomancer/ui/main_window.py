@@ -14,7 +14,7 @@
          so the window remains a thin coordinator.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 1.46.6
+@version 1.47.0
 """
 
 # IMPORTS
@@ -728,7 +728,7 @@ class MainWindow(QMainWindow):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-07
-        @version    0.21.1
+        @version    0.22.0
         """
         current_language = ui_state_service.current_language_from_settings(self._settings_payload)
         home_page = HomeProjectPage(self)
@@ -912,6 +912,12 @@ class MainWindow(QMainWindow):
                 profile_id,
             )
         )
+        self._narator_voice_page.import_sample_requested.connect(
+            lambda profile_id: narator_voice_ui_controller.handle_import_sample_requested(
+                self,
+                profile_id,
+            )
+        )
         self._narator_voice_page.generate_profiles_requested.connect(
             lambda profile_id: narator_voice_ui_controller.handle_generate_profiles_requested(
                 self,
@@ -934,8 +940,8 @@ class MainWindow(QMainWindow):
                 target_id,
             )
         )
-        self._character_voices_page.reset_prompt_requested.connect(
-            lambda target_id: character_voices_ui_controller.handle_reset_prompt_requested(
+        self._character_voices_page.import_sample_requested.connect(
+            lambda target_id: character_voices_ui_controller.handle_import_sample_requested(
                 self,
                 target_id,
             )

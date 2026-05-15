@@ -13,7 +13,7 @@
          bottom status rendering for the Character Voices page.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-20
-@version 1.4.2
+@version 1.5.0
 """
 
 # IMPORTS
@@ -59,7 +59,7 @@ def test_character_voices_page_narrator_target_is_preview_only(qtbot) -> None:
         prompt_text="",
         preview_text="Narator Voice preview text.",
         is_editable=False,
-        can_reset_prompt=False,
+        can_import_sample=False,
         can_edit_prompt=False,
         can_generate_sample=False,
         preview_available=True,
@@ -67,10 +67,13 @@ def test_character_voices_page_narrator_target_is_preview_only(qtbot) -> None:
         missing_narrator_sample=False,
     )
 
-    assert page._reset_prompt_button.isEnabled() is False
+    assert page._import_sample_button.isEnabled() is False
     assert page._edit_prompt_button.isEnabled() is False
     assert page._generate_sample_button.isEnabled() is False
+    assert page._import_sample_button.text() == "Import Sample"
+    assert page._import_sample_button.isEnabled() is False
     assert page._preview_toggle_button.isEnabled() is True
+    assert hasattr(page, "_reset_prompt_button") is False
     assert hasattr(page, "_target_name_edit") is False
     assert hasattr(page, "_target_kind_edit") is False
 
@@ -110,7 +113,7 @@ def test_character_voices_page_edit_mode_disables_list_and_enables_save_after_ch
         prompt_text="Original prompt.",
         preview_text="Line one.\nLine two.",
         is_editable=True,
-        can_reset_prompt=True,
+        can_import_sample=True,
         can_edit_prompt=True,
         can_generate_sample=True,
         preview_available=False,
@@ -126,6 +129,60 @@ def test_character_voices_page_edit_mode_disables_list_and_enables_save_after_ch
     assert page._prompt_edit.isReadOnly() is False
     assert page._preview_text_edit.isReadOnly() is False
     assert page._save_prompt_button.isEnabled() is True
+
+
+def test_character_voices_page_import_button_emits_for_character_targets(qtbot) -> None:
+    """
+    @brief      Verify Import Sample is available for editable character targets.
+    @param[in]  qtbot Qt test helper fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-15
+    @version    0.1.0
+    """
+    page = CharacterVoicesPage()
+    qtbot.addWidget(page)
+    page.apply_language("en")
+    page.set_project_active(True)
+    page.set_character_voices_state(
+        targets=[
+            {
+                "target_id": "character_alice",
+                "target_kind": "character",
+                "display_name": "Alice",
+                "sample_status_label": "Sample missing",
+                "has_sample": False,
+                "can_import_sample": True,
+            }
+        ],
+        notes=["Ready."],
+        current_target_id="character_alice",
+        selected_voice_language="en",
+        language_entries=[("English", "en")],
+        original_language="English",
+        translated_language="Not translated",
+        assignment_mode_label="Narrator + character voices",
+        target_name="Alice",
+        target_kind_label="Character",
+        prompt_text="Original prompt.",
+        preview_text="Line one.",
+        is_editable=True,
+        can_import_sample=True,
+        can_edit_prompt=True,
+        can_generate_sample=True,
+        preview_available=False,
+        status_lines=["Total targets: 1"],
+        missing_narrator_sample=False,
+    )
+    emitted: list[str] = []
+    page.import_sample_requested.connect(lambda target_id: emitted.append(target_id))
+
+    assert page._import_sample_button.isEnabled() is True
+
+    page._import_sample_button.click()
+
+    assert emitted == ["character_alice"]
 
 
 def test_character_voices_page_batch_button_enables_for_current_character_targets(qtbot) -> None:
@@ -173,7 +230,7 @@ def test_character_voices_page_batch_button_enables_for_current_character_target
         prompt_text="Original prompt.",
         preview_text="Line one.",
         is_editable=True,
-        can_reset_prompt=True,
+        can_import_sample=True,
         can_edit_prompt=True,
         can_generate_sample=True,
         preview_available=False,
@@ -228,7 +285,7 @@ def test_character_voices_page_batch_button_disables_when_character_targets_cann
         prompt_text="Original prompt.",
         preview_text="Line one.",
         is_editable=False,
-        can_reset_prompt=False,
+        can_import_sample=False,
         can_edit_prompt=False,
         can_generate_sample=False,
         preview_available=True,
@@ -280,7 +337,7 @@ def test_character_voices_page_editor_payload_includes_preview_text(qtbot) -> No
         prompt_text="Original prompt.",
         preview_text="Line one.\nLine two.",
         is_editable=True,
-        can_reset_prompt=True,
+        can_import_sample=True,
         can_edit_prompt=True,
         can_generate_sample=True,
         preview_available=False,
@@ -319,7 +376,7 @@ def test_character_voices_page_header_indicators_render_languages_and_assignment
         prompt_text="",
         preview_text="",
         is_editable=False,
-        can_reset_prompt=False,
+        can_import_sample=False,
         can_edit_prompt=False,
         can_generate_sample=False,
         preview_available=False,

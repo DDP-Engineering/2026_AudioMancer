@@ -14,7 +14,7 @@
          with local text search.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-24
-@version 0.5.1
+@version 0.5.3
 """
 
 # IMPORTS
@@ -66,7 +66,7 @@ class TextChunkingPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-24
-        @version    0.5.0
+        @version    0.5.1
         """
         super().__init__(parent)
         self._chunks: list[dict[str, object]] = []
@@ -169,6 +169,10 @@ class TextChunkingPage(QWidget):
         notes_layout = QVBoxLayout(notes_group)
         self._notes_edit = QPlainTextEdit(self)
         self._notes_edit.setReadOnly(True)
+        self._notes_edit.setProperty(
+            ui_state_service.CONTROL_TEXT_FONT_ROLE_PROPERTY,
+            ui_state_service.CONTROL_TEXT_FONT_ROLE_VALUE,
+        )
         self._notes_edit.setPlainText(
             "Run cleanup before chunking.\n"
             "Deterministic and AI-assisted chunk generation will populate the chunk list and selected preview."
@@ -385,7 +389,7 @@ class TextChunkingPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-07
-        @version    0.2.0
+        @version    0.3.0
         """
         enabled = self._project_active and not self._busy
         self._chunk_button.setEnabled(enabled and self._can_chunk)
@@ -396,7 +400,8 @@ class TextChunkingPage(QWidget):
         self._strategy_combo.setEnabled(self._project_active and (self._can_chunk or self._can_ai_chunk))
         self._ai_chunk_button.setEnabled(enabled and self._can_ai_chunk and self.current_ai_profile_id() is not None)
         chunk_selected = 0 <= self._chunk_list.currentRow() < len(self._chunks)
-        self._insert_chunk_button.setEnabled(enabled and chunk_selected and not self._editing_chunk)
+        can_insert_chunk = chunk_selected or (self._can_chunk and not self._chunks)
+        self._insert_chunk_button.setEnabled(enabled and can_insert_chunk and not self._editing_chunk)
         self._delete_chunk_button.setEnabled(
             enabled and chunk_selected and len(self._chunks) > 1 and not self._editing_chunk
         )
@@ -646,10 +651,15 @@ class TextChunkingPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-05-04
-        @version    0.1.0
+        @version    0.2.0
         """
         row = self._chunk_list.currentRow()
-        if row < 0 or row >= len(self._chunks) or self._editing_chunk:
+        if self._editing_chunk:
+            return
+        if not self._chunks and self._can_chunk:
+            self.insert_chunk_requested.emit("")
+            return
+        if row < 0 or row >= len(self._chunks):
             return
         self.insert_chunk_requested.emit(str(self._chunks[row].get("chunk_id", "")))
 

@@ -14,7 +14,7 @@
          sample preview playback, and project-local narrator profile editing.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-18
-@version 3.17.2
+@version 3.18.0
 """
 
 # IMPORTS
@@ -23,7 +23,7 @@ from typing import TYPE_CHECKING
 
 from PySide6.QtCore import QUrl
 from PySide6.QtMultimedia import QMediaPlayer
-from PySide6.QtWidgets import QInputDialog, QMessageBox
+from PySide6.QtWidgets import QFileDialog, QInputDialog, QMessageBox
 
 from audiomancer import config
 from audiomancer.services import (
@@ -34,6 +34,7 @@ from audiomancer.services import (
     time_service,
     tts_budget_service,
     ui_state_service,
+    voice_sample_import_service,
     voiceweaver_runtime_service,
 )
 from audiomancer.ui.controllers import (
@@ -466,6 +467,81 @@ def handle_generate_sample_requested(window: "MainWindow", profile_id: str) -> N
     )
 
 
+def handle_import_sample_requested(window: "MainWindow", profile_id: str) -> None:
+    """
+    @brief      Import one operator-provided WAV sample for a narrator profile.
+    @param[in]  window Main application window.
+    @param[in]  profile_id Requested narrator-profile identifier.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-15
+    @version    0.1.0
+    """
+    current_language = ui_state_service.current_language_from_settings(window._settings_payload)
+    if window._active_operation_kind is not None:
+        return
+    if window._current_project_root is None or window._current_manifest is None:
+        QMessageBox.warning(
+            window,
+            ui_state_service.translate("dialog.project_error_title", current_language),
+            ui_state_service.translate("project.error_no_active_project", current_language),
+        )
+        return
+    profile_payload = narrator_definition_service.profile_by_id(window._current_project_root, profile_id)
+    if profile_payload is None:
+        return
+    selected_file, _selected_filter = QFileDialog.getOpenFileName(
+        window,
+        ui_state_service.translate("dialog.voice_sample_import_title", current_language),
+        "",
+        ui_state_service.translate("dialog.voice_sample_import_filter", current_language),
+    )
+    if not selected_file:
+        return
+    try:
+        voice_sample_import_service.validate_imported_wav_sample(selected_file)
+    except ValueError as error:
+        _show_voice_sample_import_error(window, error, current_language)
+        return
+    default_sample_text = _current_narrator_import_preview_text(window, profile_payload, profile_id)
+    sample_text, accepted = QInputDialog.getMultiLineText(
+        window,
+        ui_state_service.translate("dialog.voice_sample_text_title", current_language),
+        ui_state_service.translate("dialog.voice_sample_text_prompt", current_language),
+        default_sample_text,
+    )
+    if not accepted:
+        return
+    normalized_sample_text = sample_text.strip()
+    if not normalized_sample_text:
+        QMessageBox.warning(
+            window,
+            ui_state_service.translate("dialog.project_error_title", current_language),
+            ui_state_service.translate("narator_voice.error_missing_preview_text", current_language),
+        )
+        return
+    invalidate_audio_blocks = _selected_profile_id(window) == profile_id and (
+        audio_blocks_ui_controller.confirm_narrator_voice_invalidation(window, current_language)
+    )
+    if _selected_profile_id(window) == profile_id and not invalidate_audio_blocks:
+        return
+    _stop_preview_playback(window)
+    try:
+        narrator_definition_service.import_profile_sample(
+            window._current_project_root,
+            {**dict(profile_payload), "language": window._narator_voice_page.current_voice_language()},
+            normalized_sample_text,
+            selected_file,
+        )
+        if _selected_profile_id(window) == profile_id:
+            narrator_definition_service.copy_selected_narrator_sample(window._current_project_root, profile_id)
+    except ValueError as error:
+        _show_voice_sample_import_error(window, error, current_language)
+        return
+    _handle_import_sample_success(window, profile_id, invalidate_audio_blocks, current_language)
+
+
 def handle_generate_profiles_requested(window: "MainWindow", profile_id: str) -> None:
     """
     @brief      Run AI-assisted text-only narrator profile generation.
@@ -679,6 +755,63 @@ def _handle_generate_sample_success(
         misc_ui_controller.show_message(
             window,
             ui_state_service.translate("status.narator_voice_sample_generated", current_language),
+        )
+    finally:
+        if progress_callback is not None:
+            _finish_narator_voice_change_progress(window)
+
+
+def _handle_import_sample_success(
+    window: "MainWindow",
+    profile_id: str,
+    invalidate_audio_blocks: bool,
+    current_language: str,
+) -> None:
+    """
+    @brief      Refresh narrator UI state after successful sample import.
+    @param[in]  window Main application window.
+    @param[in]  profile_id Imported narrator profile identifier.
+    @param[in]  invalidate_audio_blocks True when downstream audio blocks must reset.
+    @param[in]  current_language Current UI language code.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-15
+    @version    0.1.0
+    """
+    window._settings_payload = settings_service.load_settings()
+    window._narator_voice_inspected_profile_id = profile_id
+    progress_callback = _start_narator_voice_change_progress(
+        window,
+        current_language,
+        invalidate_audio_blocks,
+        "narator_voice.import_sample",
+    )
+    try:
+        if window._current_project_root is not None:
+            _update_narator_voice_change_progress(progress_callback, 35, "progress.narator_voice_change_refresh")
+            selected_state = narrator_definition_service.load_selected_profile_state(window._current_project_root)
+            if str(selected_state.get("selected_profile_id", "") or "").strip() == str(profile_id).strip():
+                selected_language = str(
+                    selected_state.get("selected_language")
+                    or selected_state.get("language")
+                    or narrator_definition_service.DEFAULT_NARRATOR_LANGUAGE
+                ).strip()
+                _sync_manifest_summary(window, profile_id, selected_language)
+            window.show_project_state(
+                window._current_project_root,
+                project_workspace_service.load_manifest(window._current_project_root),
+            )
+        if invalidate_audio_blocks:
+            audio_blocks_ui_controller.invalidate_audio_blocks_for_voice_targets(
+                window,
+                (character_voices_service.TARGET_ID_NARRATOR,),
+                collect_preserved_paths=False,
+                progress_callback=progress_callback,
+            )
+        misc_ui_controller.show_message(
+            window,
+            ui_state_service.translate("status.narator_voice_sample_imported", current_language),
         )
     finally:
         if progress_callback is not None:
@@ -1318,6 +1451,57 @@ def _confirm_generate_sample(window: "MainWindow", language: str, profile_id: st
             ui_state_service.translate(message_key, language),
         )
         == QMessageBox.StandardButton.Yes
+    )
+
+
+def _current_narrator_import_preview_text(
+    window: "MainWindow",
+    profile_payload: dict[str, object],
+    profile_id: str,
+) -> str:
+    """
+    @brief      Resolve the initial transcript text for narrator sample import.
+    @param[in]  window Main application window.
+    @param[in]  profile_payload Persisted narrator profile payload.
+    @param[in]  profile_id Imported profile identifier.
+    @return     Initial sample transcript text.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-15
+    @version    0.1.0
+    """
+    if str(window._narator_voice_page.current_profile_id() or "").strip() == str(profile_id).strip():
+        return str(window._narator_voice_page.current_editor_payload().get("preview_text", "") or "").strip()
+    return str(profile_payload.get("preview_text", "") or "").strip()
+
+
+def _show_voice_sample_import_error(window: "MainWindow", error: ValueError, language: str) -> None:
+    """
+    @brief      Show one localized voice-sample import validation error.
+    @param[in]  window Main application window.
+    @param[in]  error Validation exception.
+    @param[in]  language Current UI language code.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-15
+    @version    0.1.0
+    """
+    message_key = {
+        "unsupported_file_type": "voice_sample_import.error_unsupported_file_type",
+        "missing_file": "voice_sample_import.error_missing_file",
+        "invalid_wav": "voice_sample_import.error_invalid_wav",
+        "sample_too_short": "voice_sample_import.error_sample_too_short",
+        "sample_silent": "voice_sample_import.error_sample_silent",
+        "empty_preview_text": "voice_sample_import.error_empty_sample_text",
+        "readonly_target": "voice_sample_import.error_readonly_target",
+    }.get(str(error), "voice_sample_import.error_invalid_wav")
+    QMessageBox.warning(
+        window,
+        ui_state_service.translate("dialog.project_error_title", language),
+        ui_state_service.translate(message_key, language).format(
+            min_duration_seconds=config.DEFAULT_IMPORTED_VOICE_SAMPLE_MIN_SECONDS,
+        ),
     )
 
 

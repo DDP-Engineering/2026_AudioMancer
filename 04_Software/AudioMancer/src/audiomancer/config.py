@@ -13,7 +13,7 @@
          file support used by the current AudioMancer implementation scaffold.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 1.39.0
+@version 1.40.0
 """
 
 # IMPORTS
@@ -497,6 +497,9 @@ DEFAULT_TTS_PREVIEW_TEXT_CHARACTER_LIMIT = 512
 
 # @brief Minimum estimated narrator preview audio duration required for useful Qwen TTS references.
 DEFAULT_TTS_MIN_PREVIEW_AUDIO_SECONDS = 6.0
+
+# @brief Minimum imported WAV sample duration required for Qwen TTS clone references.
+DEFAULT_IMPORTED_VOICE_SAMPLE_MIN_SECONDS = 3.0
 
 # @brief Default per-project narrator voice-assignment mode.
 DEFAULT_TTS_VOICE_ASSIGNMENT_MODE = "narrator_and_characters"

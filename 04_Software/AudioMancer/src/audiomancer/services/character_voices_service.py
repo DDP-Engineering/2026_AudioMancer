@@ -14,7 +14,7 @@
          for the Character Voices workflow.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-20
-@version 1.8.0
+@version 1.9.0
 """
 
 # IMPORTS
@@ -25,7 +25,12 @@ from pathlib import Path
 import re
 
 from audiomancer import config
-from audiomancer.services import narrator_definition_service, project_workspace_service, voiceweaver_runtime_service
+from audiomancer.services import (
+    narrator_definition_service,
+    project_workspace_service,
+    voice_sample_import_service,
+    voiceweaver_runtime_service,
+)
 from audiomancer.services.logging_service import get_component_logger
 from audiomancer.services.operation_runtime_service import optional_string as _optional_string
 from audiomancer.services.time_service import utc_now_iso as _utc_now_iso
@@ -44,6 +49,7 @@ SAMPLE_MODE_VOICE_DESIGNER = "voice_designer"
 
 SAMPLE_SOURCE_VOICE_DESIGNER = "voice_designer"
 SAMPLE_SOURCE_COPIED_NARRATOR = "copied_narrator"
+SAMPLE_SOURCE_IMPORTED = voice_sample_import_service.IMPORTED_SAMPLE_SOURCE
 
 DEFAULT_PREVIEW_TEXT_BY_LANGUAGE = {
     "en": "The evening settled over the old house, and each voice carried a different shade of memory.",
@@ -327,21 +333,6 @@ def remove_character_voice_target(project_root: str | Path, character_id: str) -
         ],
     )
     return target_id
-
-
-def reset_target_prompt(project_root: str | Path, target_id: str, default_prompt_text: str) -> dict[str, object]:
-    """
-    @brief      Reset one editable character target prompt to the current derived default and clear its sample.
-    @param[in]  project_root Active project root folder.
-    @param[in]  target_id Target voice identifier.
-    @param[in]  default_prompt_text Derived default voice-designer prompt.
-    @return     Persisted updated target payload.
-    @exception  ValueError Raised when the target is missing or not editable.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-20
-    @version    1.0.0
-    """
-    return _update_target_prompt(project_root, target_id, default_prompt_text, update_default_prompt=True)
 
 
 def save_target_prompt(
@@ -638,6 +629,63 @@ def store_target_sample(
         "runtime_result_summary": str(runtime_result_summary).strip(),
     }
     audio_path.write_bytes(audio_bytes)
+    _update_target_sample_metadata(
+        project_root,
+        target_id,
+        relative_path=str(audio_path.relative_to(Path(project_root))),
+        metadata_payload=metadata_payload,
+    )
+    return metadata_payload
+
+
+def import_target_sample(
+    project_root: str | Path,
+    target_payload: dict[str, object],
+    voice_language: object,
+    preview_text: str,
+    source_audio_path: str | Path,
+) -> dict[str, object]:
+    """
+    @brief      Validate and persist one imported character-voices WAV sample.
+    @param[in]  project_root Active project root folder.
+    @param[in]  target_payload Character-voices target payload.
+    @param[in]  voice_language Selected character-voices voice language code.
+    @param[in]  preview_text Transcript text spoken in the imported sample.
+    @param[in]  source_audio_path Operator-selected WAV file path.
+    @return     Persisted imported-sample metadata payload.
+    @exception  ValueError Raised when the target, sample, or transcript is invalid.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-15
+    @version    0.1.0
+    """
+    ensure_character_voices_files(project_root)
+    if str(target_payload.get("target_kind", "")).strip() != TARGET_KIND_CHARACTER:
+        raise ValueError("readonly_target")
+    normalized_preview_text = str(preview_text or "").strip()
+    if not normalized_preview_text:
+        raise ValueError("empty_preview_text")
+    source_path = Path(source_audio_path)
+    validation_report = voice_sample_import_service.validate_imported_wav_sample(source_path)
+    target_id = str(target_payload.get("target_id", "")).strip()
+    delete_target_sample(project_root, target_id)
+    audio_path, _metadata_path = target_sample_paths(project_root, target_id)
+    metadata_payload = {
+        "target_id": target_id,
+        "target_kind": str(target_payload.get("target_kind", "")).strip(),
+        "display_name": str(target_payload.get("display_name", "")).strip(),
+        "voice_language": narrator_definition_service.narrator_language_code(voice_language),
+        "sample_source": SAMPLE_SOURCE_IMPORTED,
+        "copied_from_target_id": None,
+        "source_model_id": None,
+        "generation_mode": voice_sample_import_service.IMPORTED_SAMPLE_GENERATION_MODE,
+        "prompt_text": str(target_payload.get("prompt_text", "")).strip(),
+        "preview_text": normalized_preview_text,
+        "imported_at": _utc_now_iso(),
+        "source_file_name": source_path.name,
+        "audio_validation": dict(validation_report),
+        "runtime_result_summary": "Imported WAV sample.",
+    }
+    audio_path.write_bytes(source_path.read_bytes())
     _update_target_sample_metadata(
         project_root,
         target_id,

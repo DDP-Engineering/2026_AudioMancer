@@ -13,7 +13,7 @@
          review controls for the Audio Blocks workflow.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-23
-@version 0.5.1
+@version 0.5.2
 """
 
 # IMPORTS
@@ -62,7 +62,7 @@ class AudioBlocksPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-23
-        @version    0.5.1
+        @version    0.5.2
         """
         super().__init__(parent)
         self._current_language = "en"
@@ -165,6 +165,10 @@ class AudioBlocksPage(QWidget):
         status_layout = QVBoxLayout(self._status_group)
         self._status_edit = QPlainTextEdit(self)
         self._status_edit.setReadOnly(True)
+        self._status_edit.setProperty(
+            ui_state_service.CONTROL_TEXT_FONT_ROLE_PROPERTY,
+            ui_state_service.CONTROL_TEXT_FONT_ROLE_VALUE,
+        )
         status_layout.addWidget(self._status_edit)
         self._status_group.setMinimumHeight(96)
         self._status_group.setMaximumHeight(112)

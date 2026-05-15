@@ -13,7 +13,7 @@
          sample-dependent button enablement, and bottom status rendering.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-18
-@version 3.5.0
+@version 3.6.0
 """
 
 # IMPORTS
@@ -40,6 +40,8 @@ def test_narator_voice_page_places_select_button_in_profiles_group(qtbot) -> Non
     assert isinstance(page._profile_name_edit, QLineEdit)
     assert page._profile_name_edit.isHidden() is True
     assert page._select_profile_button.parentWidget() is page._profiles_group
+    assert page._import_sample_button.parentWidget() is page._profiles_group
+    assert page._import_sample_button.text() == "Import Sample"
     assert hasattr(page, "_setup_group") is False
     assert hasattr(page, "_profile_name_label") is False
     assert hasattr(page, "_summary_label") is False

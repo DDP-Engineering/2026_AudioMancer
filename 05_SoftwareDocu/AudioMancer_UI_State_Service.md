@@ -116,10 +116,14 @@ Supported text-scale keys are defined by `_UI_SCALE_FACTORS`:
 Unknown language codes fall back to `config.DEFAULT_LANGUAGE`. Unknown string
 keys fall back to the default-language value and finally to the key itself.
 The theme `font` payload controls labels, buttons, and other interface
-controls; the theme `text_font` payload is emitted into the stylesheet for
-multi-line `QTextEdit` and `QPlainTextEdit` windows used for book text and
-preview text. Legacy theme `scale` fields are accepted by schema validation but
-are not applied by the runtime theme path.
+controls. The theme `text_font` payload is emitted into the stylesheet for
+multi-line `QTextEdit` and `QPlainTextEdit` windows used for book text,
+character descriptions, prompts, speech blocks, audio-block text, and preview
+text. Read-only operator notes and bottom status panels opt back into the UI
+font through the `audiomancerFontRole=ui_controls` dynamic Qt property because
+they are interface feedback, not book-manipulation text. Legacy theme `scale`
+fields are accepted by schema validation but are not applied by the runtime
+theme path.
 
 ## 7. Workflow Integration
 

@@ -14,7 +14,7 @@
          voices targets, and cached VoiceWeaver runtime discovery data.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-20
-@version 1.4.1
+@version 1.5.0
 """
 
 # IMPORTS
@@ -53,7 +53,7 @@ def build_character_voices_state(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-20
-    @version    1.3.0
+    @version    1.4.0
     """
     if project_root is None or manifest is None:
         return {
@@ -70,7 +70,7 @@ def build_character_voices_state(
             "prompt_text": "",
             "preview_text": "",
             "is_editable": False,
-            "can_reset_prompt": False,
+            "can_import_sample": False,
             "can_edit_prompt": False,
             "can_generate_sample": False,
             "preview_available": False,
@@ -183,7 +183,7 @@ def build_character_voices_state(
             )
         ),
         "is_editable": bool(current_target) and bool(current_target.get("editable", False)),
-        "can_reset_prompt": bool(current_target) and bool(current_target.get("can_reset_prompt", False)),
+        "can_import_sample": bool(current_target) and bool(current_target.get("can_import_sample", False)),
         "can_edit_prompt": bool(current_target) and bool(current_target.get("can_edit_prompt", False)),
         "can_generate_sample": bool(current_target) and bool(current_target.get("can_generate_sample", False)),
         "preview_available": bool(current_target) and bool(current_target.get("can_preview", False)),
@@ -242,7 +242,7 @@ def _empty_project_state(manifest: dict[str, object], language: str) -> dict[str
         "prompt_text": "",
         "preview_text": character_voices_service.preview_text_for_language(selected_voice_language),
         "is_editable": False,
-        "can_reset_prompt": False,
+        "can_import_sample": False,
         "can_edit_prompt": False,
         "can_generate_sample": False,
         "preview_available": False,
@@ -378,7 +378,7 @@ def _build_target_entry(
     @return     Derived helper result.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.2.0
+    @version    0.3.0
     """
     target_kind = str(target_payload.get("target_kind", "")).strip()
     target_id = str(target_payload.get("target_id", "")).strip()
@@ -412,7 +412,7 @@ def _build_target_entry(
             "runtime_available": runtime_available,
             "availability_note": availability_note,
             "editable": False,
-            "can_reset_prompt": False,
+            "can_import_sample": False,
             "can_edit_prompt": False,
             "can_generate_sample": False,
             "can_preview": has_sample,
@@ -447,7 +447,7 @@ def _build_target_entry(
         "runtime_available": runtime_available,
         "availability_note": availability_note,
         "editable": assignment_mode == "narrator_and_characters" and bool(target_payload.get("editable", False)),
-        "can_reset_prompt": assignment_mode == "narrator_and_characters"
+        "can_import_sample": assignment_mode == "narrator_and_characters"
         and bool(target_payload.get("editable", False)),
         "can_edit_prompt": assignment_mode == "narrator_and_characters" and bool(target_payload.get("editable", False)),
         "can_generate_sample": assignment_mode == "narrator_and_characters"

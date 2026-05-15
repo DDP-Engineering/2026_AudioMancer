@@ -13,7 +13,7 @@
          generated-output inspection, and local preview playback controls.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-25
-@version 0.3.0
+@version 0.3.1
 """
 
 # IMPORTS
@@ -63,7 +63,7 @@ class AudioAssemblyPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-25
-        @version    0.4.0
+        @version    0.4.1
         """
         super().__init__(parent)
         self._current_language = "en"
@@ -165,6 +165,10 @@ class AudioAssemblyPage(QWidget):
         status_layout = QVBoxLayout(self._status_group)
         self._status_edit = QPlainTextEdit(self)
         self._status_edit.setReadOnly(True)
+        self._status_edit.setProperty(
+            ui_state_service.CONTROL_TEXT_FONT_ROLE_PROPERTY,
+            ui_state_service.CONTROL_TEXT_FONT_ROLE_VALUE,
+        )
         status_layout.addWidget(self._status_edit)
         self._status_group.setMinimumHeight(96)
         self._status_group.setMaximumHeight(132)
