@@ -74,9 +74,10 @@ High-level flow:
 3. Target synchronization keeps narrator first when selected and gives each
    discovered character one stable `character_<character_id>` target row.
 4. Character default prompts use `character.voice_definition_prompt`. Target
-   synchronization enforces one explicit `Sex/Gender:` sentence in each
-   character prompt, using `gender_hint` when available and a neutral
-   non-male-default instruction when it is not.
+   synchronization enforces explicit `Sex/Gender:` and `Age Domain:` sentences
+   in each character prompt, using `gender_hint` and `age_hint` when available,
+   a neutral non-male-default instruction when sex or gender is not specified,
+   and an age-neutral adult instruction when age is not specified.
 5. In `same_narrator` mode, narrator-derived character samples are copied into
    each character slot during state build and per-character editing/generation
    stays disabled.
@@ -166,8 +167,8 @@ Target rules:
 - character `default_prompt_text` is regenerated on synchronization from the
   character-owned `voice_definition_prompt`
 - character `prompt_text` is preserved unless explicitly edited, except that
-  synchronization backfills mandatory sex/gender guidance when an existing
-  prompt lacks it
+  synchronization backfills mandatory sex/gender and age-domain guidance when
+  an existing prompt lacks it
 - new character targets prefer the Character Discovery `preview_text` handoff
   when available, so samples start from source dialogue spoken by that
   character
@@ -218,7 +219,8 @@ Upstream integrations:
   from `narator.wav` plus `narator_sample.json`
 - project-local `voice_assignment_mode` from `project.json`
 - character discovery artifacts from `characters_profile.json`, including the
-  compact sex/gender guidance and final `voice_definition_prompt`
+  compact sex/gender guidance, compact age-domain guidance, and final
+  `voice_definition_prompt`
 - translation approval state from `translation_report.json`
 
 Downstream integrations:
@@ -290,7 +292,7 @@ Operator path:
 
 Documentation audit status:
 
-- reviewed against the current implementation on 2026-05-06
+- reviewed against the current implementation on 2026-05-15
 
 Focused automated coverage exists in:
 

@@ -14,7 +14,7 @@
          discovery workflow.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-08
-@version 0.11.0
+@version 0.13.0
 """
 
 # IMPORTS
@@ -25,6 +25,21 @@ import pytest
 
 from audiomancer import config
 from audiomancer.services import character_discovery_service, project_workspace_service
+
+
+def test_character_discovery_window_prompt_requests_age_hint() -> None:
+    """
+    @brief      Verify first-pass discovery asks models to extract supported character age hints.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-15
+    @version    0.1.0
+    """
+    prompt_text = (config.APP_PROMPTS_PATH / "character_discovery_window_user.txt").read_text(encoding="utf-8")
+
+    assert '"age_hint": ""' in prompt_text
+    assert "Set `age_hint` only when the selected chunk text directly supports" in prompt_text
 
 
 def test_start_discovery_persists_outputs_and_report(monkeypatch, tmp_path) -> None:
@@ -75,6 +90,7 @@ def test_start_discovery_persists_outputs_and_report(monkeypatch, tmp_path) -> N
                     "canonical_name": "Alice",
                     "aliases": ["Al"],
                     "gender_hint": "female",
+                    "age_hint": "adult",
                     "voice_definition_prompt": (
                         "Create a consistent spoken voice for Alice. Warm mezzo voice with gentle authority."
                     ),
@@ -107,7 +123,9 @@ def test_start_discovery_persists_outputs_and_report(monkeypatch, tmp_path) -> N
     assert len(profiles) == 1
     assert profiles[0]["canonical_name"] == "Alice"
     assert profiles[0]["gender_hint"] == "female"
+    assert profiles[0]["age_hint"] == "adult"
     assert "gentle authority" in profiles[0]["voice_definition_prompt"]
+    assert "Age Domain: adult." in profiles[0]["voice_definition_prompt"]
     assert profiles[0]["preview_text"] == (
         "Alice keeps her voice steady as she tells everyone to wait until the moon clears the tower."
     )
@@ -488,13 +506,14 @@ def test_regenerate_character_voice_definition_preserves_compact_voice_prompt() 
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    2.0.0
+    @version    2.1.0
     """
     regenerated_profile = character_discovery_service.regenerate_character_voice_definition(
         {
             "character_id": "elizabeth",
             "canonical_name": "Elizabeth",
             "gender_hint": "female",
+            "age_hint": "young adult",
             "voice_definition_prompt": (
                 "Create a consistent spoken voice for Elizabeth. Warm tone with restrained authority."
             ),
@@ -503,6 +522,51 @@ def test_regenerate_character_voice_definition_preserves_compact_voice_prompt() 
 
     assert regenerated_profile["voice_definition_prompt"].startswith("Create a consistent spoken voice for Elizabeth.")
     assert "Sex/Gender: female." in regenerated_profile["voice_definition_prompt"]
+    assert "Age Domain: young adult." in regenerated_profile["voice_definition_prompt"]
+
+
+def test_regenerate_character_voice_definition_prevents_young_default_when_age_unknown() -> None:
+    """
+    @brief      Verify character voice prompts carry explicit unknown-age guidance.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-15
+    @version    0.1.0
+    """
+    regenerated_profile = character_discovery_service.regenerate_character_voice_definition(
+        {
+            "character_id": "ayla",
+            "canonical_name": "Ayla",
+            "voice_definition_prompt": "Create a consistent spoken voice for Ayla.",
+        }
+    )
+
+    assert "Age Domain: not specified in the source." in regenerated_profile["voice_definition_prompt"]
+    assert "do not default to a young voice" in regenerated_profile["voice_definition_prompt"]
+
+
+def test_regenerate_character_voice_definition_does_not_duplicate_explicit_age_guidance() -> None:
+    """
+    @brief      Verify character prompt regeneration preserves one explicit age-domain instruction.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-15
+    @version    0.1.0
+    """
+    regenerated_profile = character_discovery_service.regenerate_character_voice_definition(
+        {
+            "character_id": "mentor",
+            "canonical_name": "Mentor",
+            "age_hint": "old",
+            "voice_definition_prompt": (
+                "Create a consistent spoken voice for Mentor. Age Domain: old. Weathered but controlled."
+            ),
+        }
+    )
+
+    assert regenerated_profile["voice_definition_prompt"].count("Age Domain:") == 1
 
 
 def test_build_profile_from_synthesis_uses_dialogue_preview_fallback() -> None:
@@ -518,6 +582,7 @@ def test_build_profile_from_synthesis_uses_dialogue_preview_fallback() -> None:
         {
             "canonical_name": "Alice",
             "gender_hint": "female",
+            "age_hint": "adult",
             "voice_definition_prompt": "Create a consistent spoken voice for Alice. Clear and calm.",
             "preview_text": "Too short.",
             "confidence": "high",
@@ -526,6 +591,7 @@ def test_build_profile_from_synthesis_uses_dialogue_preview_fallback() -> None:
             "character_id": "alice",
             "canonical_name": "Alice",
             "gender_hint": "female",
+            "age_hint": "adult",
             "confidence": "high",
             "evidence": [
                 {
@@ -552,6 +618,8 @@ def test_build_profile_from_synthesis_uses_dialogue_preview_fallback() -> None:
         "Stay close to me while the storm passes over the harbor. "
         "When the lamps are lit, we will cross the square together."
     )
+    assert profile["age_hint"] == "adult"
+    assert "Age Domain: adult." in profile["voice_definition_prompt"]
 
 
 def test_merge_character_candidates_keeps_role_speaker_candidate() -> None:

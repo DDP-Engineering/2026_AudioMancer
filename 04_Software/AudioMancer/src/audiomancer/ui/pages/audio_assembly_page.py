@@ -13,7 +13,7 @@
          generated-output inspection, and local preview playback controls.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-25
-@version 0.3.1
+@version 0.3.2
 """
 
 # IMPORTS
@@ -44,7 +44,7 @@ class AudioAssemblyPage(QWidget):
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.1.0
+    @version    0.1.1
     """
 
     generate_requested = Signal(dict)
@@ -63,7 +63,7 @@ class AudioAssemblyPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-25
-        @version    0.4.1
+        @version    0.4.2
         """
         super().__init__(parent)
         self._current_language = "en"
@@ -165,10 +165,7 @@ class AudioAssemblyPage(QWidget):
         status_layout = QVBoxLayout(self._status_group)
         self._status_edit = QPlainTextEdit(self)
         self._status_edit.setReadOnly(True)
-        self._status_edit.setProperty(
-            ui_state_service.CONTROL_TEXT_FONT_ROLE_PROPERTY,
-            ui_state_service.CONTROL_TEXT_FONT_ROLE_VALUE,
-        )
+        self._apply_status_edit_font_role()
         status_layout.addWidget(self._status_edit)
         self._status_group.setMinimumHeight(96)
         self._status_group.setMaximumHeight(132)
@@ -190,6 +187,23 @@ class AudioAssemblyPage(QWidget):
         """
         self._project_active = is_active
         self._apply_control_state()
+
+    def _apply_status_edit_font_role(self) -> None:
+        """
+        @brief      Mark and refresh the operator status editor for the UI-control font.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-15
+        @version    0.1.0
+        """
+        self._status_edit.setProperty(
+            ui_state_service.CONTROL_TEXT_FONT_ROLE_PROPERTY,
+            ui_state_service.CONTROL_TEXT_FONT_ROLE_VALUE,
+        )
+        self._status_edit.style().unpolish(self._status_edit)
+        self._status_edit.style().polish(self._status_edit)
+        self._status_edit.update()
 
     def set_busy(self, is_busy: bool) -> None:
         """

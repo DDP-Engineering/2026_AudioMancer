@@ -5,6 +5,7 @@ Return exactly one JSON object with this shape:
   "canonical_name": "",
   "aliases": [],
   "gender_hint": "",
+  "age_hint": "",
   "voice_definition_prompt": "",
   "preview_text": "",
   "confidence": "",
@@ -27,6 +28,7 @@ Escape any inner quotes and embedded newlines correctly inside JSON string value
 Evidence and inference rules:
 - Preserve speaking style cues such as formality, emotional restraint, intensity, warmth, sarcasm, hesitation, confidence, age-coded language, social position, or authority only when supported by the evidence.
 - Do not infer age, accent, ethnicity, regional identity, class, profession, health, or personality traits unless clearly supported by the evidence payload.
+- Set `age_hint` only when the evidence directly supports an exact age or age domain. Useful domains include child, teen, young adult, adult, middle-aged, old, very old, or an exact/source-backed age phrase. If age is not supported, return an empty `age_hint`.
 - Avoid exaggerated emotional instructions unless the evidence strongly supports a consistently extreme speaking style.
 - Prefer stable, reusable voice identity traits over highly specific or theatrical characterization.
 - Preserve original-language pronunciation cues and naming forms when useful for later multilingual TTS consistency.
@@ -36,9 +38,11 @@ Voice prompt rules:
 - The voice_definition_prompt field must be written for later Qwen3-TTS voice design, not as plot summary.
 - The voice_definition_prompt should optimize for natural audiobook narration and spoken dialogue performance rather than exaggerated acting.
 - `gender_hint` must carry an explicit sex/gender cue when supported by the text, such as female, male, nonbinary, or unknown.
+- `age_hint` must carry a concise age domain only when supported by the text; otherwise leave it empty.
 - Keep the voice prompt concise, positive, stable, reusable, and non-contradictory.
 - `voice_definition_prompt` must be one short English paragraph that cleanly describes the target voice identity and delivery.
 - The paragraph must include one explicit `Sex/Gender:` sentence.
+- The paragraph must include one explicit `Age Domain:` sentence. If age is not supported, write `Age Domain: not specified in the source. Use an age-neutral adult voice and do not default to a young voice.`
 
 Preview text rules:
 - The preview_text field must be extracted only from this character's spoken dialogue in the provided evidence.

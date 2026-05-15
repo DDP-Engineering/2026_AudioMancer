@@ -14,7 +14,7 @@
          for the Characters page.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-11
-@version 0.16.0
+@version 0.17.0
 """
 
 # IMPORTS
@@ -801,15 +801,15 @@ def _voice_definition_source_changed(
     @brief      Return whether compact character voice-target fields changed.
     @param[in]  previous_profile Previous profile payload.
     @param[in]  updated_profile Updated profile payload.
-    @return     True when identity, sex/gender, voice prompt text, or preview text changed.
+    @return     True when identity, sex/gender, age, voice prompt text, or preview text changed.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-04
-    @version    0.3.0
+    @version    0.4.0
     """
     if not isinstance(previous_profile, dict) or not isinstance(updated_profile, dict):
         return False
-    comparable_fields = ("canonical_name", "gender_hint", "voice_definition_prompt", "preview_text")
+    comparable_fields = ("canonical_name", "gender_hint", "age_hint", "voice_definition_prompt", "preview_text")
     return any(
         str(previous_profile.get(field_name, "")).strip() != str(updated_profile.get(field_name, "")).strip()
         for field_name in comparable_fields
@@ -1053,6 +1053,7 @@ def _build_manual_draft_profile(
             "canonical_name": canonical_name,
             "aliases": [],
             "gender_hint": "",
+            "age_hint": "",
             "voice_definition_prompt": "",
             "confidence": "",
             "evidence": [

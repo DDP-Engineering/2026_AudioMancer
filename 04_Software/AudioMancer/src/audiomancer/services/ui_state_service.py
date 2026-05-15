@@ -14,7 +14,7 @@
          theme runtime adapter.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 0.52.0
+@version 0.53.2
 """
 
 # ruff: noqa: E501
@@ -272,7 +272,8 @@ _UI_STRINGS = {
         "ai_settings.remove_profile": "Remove Profile",
         "ai_settings.connect": "Connect",
         "ai_settings.cancel": "Cancel",
-        "ai_settings.save": "Save AI Settings",
+        "ai_settings.save": "Save",
+        "ai_settings.ok": "OK",
         "ai_settings.no_profiles": "(no profiles)",
         "ai_settings.not_connected": "Not connected yet.",
         "ai_settings.connection_status": "Connection status",
@@ -304,7 +305,8 @@ _UI_STRINGS = {
         "tts_settings.plan_missing_qwen": "The required Qwen3 TTS capabilities are missing: {missing_capabilities}.",
         "tts_settings.plan_ready": "The required Qwen3 base and Voice Designer capabilities are available.",
         "tts_settings.cancel": "Cancel",
-        "tts_settings.save": "Save TTS Settings",
+        "tts_settings.save": "Save",
+        "tts_settings.ok": "OK",
         "tts_settings.popup_success_title": "Connection Successful",
         "tts_settings.popup_failure_title": "Connection Failed",
         "tts_settings.popup_discovered_models": "Discovered models",
@@ -426,6 +428,7 @@ _UI_STRINGS = {
         "characters.canonical_name": "Canonical Name",
         "characters.aliases": "Aliases",
         "characters.gender_hint": "Gender Hint",
+        "characters.age_hint": "Age Hint",
         "characters.voice_definition_prompt": "Voice Definition Prompt",
         "characters.confidence": "Confidence",
         "characters.evidence_note": "Selected source evidence excerpt will appear here.",
@@ -1248,7 +1251,8 @@ _UI_STRINGS = {
         "ai_settings.remove_profile": "Sterge Profil",
         "ai_settings.connect": "Conecteaza",
         "ai_settings.cancel": "Anuleaza",
-        "ai_settings.save": "Salveaza Setarile AI",
+        "ai_settings.save": "Salveaza",
+        "ai_settings.ok": "OK",
         "ai_settings.no_profiles": "(fara profiluri)",
         "ai_settings.not_connected": "Nu este conectat inca.",
         "ai_settings.connection_status": "Stare conexiune",
@@ -1280,7 +1284,8 @@ _UI_STRINGS = {
         "tts_settings.plan_missing_qwen": "Capabilitatile Qwen3 TTS necesare lipsesc: {missing_capabilities}.",
         "tts_settings.plan_ready": "Capabilitatile Qwen3 base si Voice Designer necesare sunt disponibile.",
         "tts_settings.cancel": "Anuleaza",
-        "tts_settings.save": "Salveaza Setarile TTS",
+        "tts_settings.save": "Salveaza",
+        "tts_settings.ok": "OK",
         "tts_settings.popup_success_title": "Conectare Reusita",
         "tts_settings.popup_failure_title": "Conectare Esuata",
         "tts_settings.popup_discovered_models": "Modele descoperite",
@@ -1402,6 +1407,7 @@ _UI_STRINGS = {
         "characters.canonical_name": "Nume Canonic",
         "characters.aliases": "Aliasuri",
         "characters.gender_hint": "Indicatie Gen",
+        "characters.age_hint": "Indicatie Varsta",
         "characters.voice_definition_prompt": "Prompt Definitie Vocala",
         "characters.confidence": "Incredere",
         "characters.evidence_note": "Fragmentul de dovada selectat din sursa va aparea aici.",

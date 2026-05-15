@@ -15,7 +15,7 @@
          operation state.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-22
-@version 0.15.0
+@version 0.16.0
 """
 
 # IMPORTS
@@ -118,7 +118,7 @@ def load_operation_state(project_root: str | Path) -> OperationStatePayload | No
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-22
-    @version    0.3.0
+    @version    0.2.0
     """
     return load_operation_state_payload(
         project_root,
@@ -152,34 +152,35 @@ def load_character_profiles(project_root: str | Path) -> list[CharacterProfilePa
 def build_character_voice_definition_prompt(character_profile: dict[str, object]) -> str:
     """
     @brief      Build one Qwen-oriented voice-definition prompt from the compact character profile.
-    @param[in]  character_profile Character profile payload with identity, sex/gender, and voice prompt fields.
+    @param[in]  character_profile Character profile payload with identity, sex/gender, age, and voice prompt fields.
     @return     Stable English voice-definition prompt paragraph.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-20
-    @version    2.0.0
+    @version    2.1.0
     """
     normalized_profile = _normalized_character_profile_core(character_profile)
     stored_voice_prompt = str(normalized_profile.get(CHARACTER_VOICE_PROMPT_FIELD, "")).strip()
     if stored_voice_prompt:
-        return _ensure_character_voice_prompt_gender_instruction(stored_voice_prompt, normalized_profile)
+        return _ensure_character_voice_prompt_instructions(stored_voice_prompt, normalized_profile)
     character_name = str(normalized_profile.get("canonical_name", "Character")).strip() or "Character"
     return (
         f"Create a consistent spoken voice for {character_name} with clear diction, stable identity, "
         "natural emotional control, and delivery suitable for repeated dialogue narration. "
-        f"Sex/Gender: {_character_voice_gender_instruction(normalized_profile)}"
+        f"Sex/Gender: {_character_voice_gender_instruction(normalized_profile)} "
+        f"Age Domain: {_character_voice_age_instruction(normalized_profile)}"
     )
 
 
 def regenerate_character_voice_definition(profile_payload: dict[str, object]) -> CharacterProfilePayload:
     """
-    @brief      Normalize the compact profile and ensure the final voice prompt contains sex/gender guidance.
+    @brief      Normalize the compact profile and ensure the final voice prompt contains voice guidance.
     @param[in]  profile_payload Character profile payload.
     @return     Updated compact character profile payload.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-20
-    @version    2.0.0
+    @version    2.1.0
     """
     normalized_profile = _normalize_character_profile(profile_payload)
     updated_profile = dict(normalized_profile)
@@ -220,7 +221,7 @@ def load_input_chunks(project_root: str | Path) -> list[dict[str, object]]:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-08
-    @version    0.2.0
+    @version    0.3.0
     """
     input_chunks, _input_source = _resolve_discovery_input_chunks(Path(project_root))
     return input_chunks
@@ -898,7 +899,7 @@ def reset_character_discovery(project_root: str | Path) -> None:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-08
-    @version    0.2.0
+    @version    0.1.0
     """
     reset_operation_data(
         project_root,
@@ -924,7 +925,7 @@ def drop_character_evidence_for_chunks(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-04
-    @version    0.1.0
+    @version    0.2.0
     """
     normalized_chunk_ids = {str(chunk_id).strip() for chunk_id in chunk_ids if str(chunk_id).strip()}
     if not normalized_chunk_ids:
@@ -1009,6 +1010,7 @@ def _build_manual_character_profile(
             "canonical_name": canonical_name,
             "aliases": [],
             "gender_hint": "",
+            "age_hint": "",
             "voice_definition_prompt": "",
             "preview_text": "",
             "confidence": "",
@@ -1905,7 +1907,7 @@ def _normalize_window_candidates(
     @return     Derived helper result.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.2.0
+    @version    0.3.0
     """
     if not isinstance(payload, list):
         return []
@@ -1922,6 +1924,7 @@ def _normalize_window_candidates(
                 "canonical_name": canonical_name,
                 "aliases": _normalize_string_list(entry.get("aliases", [])),
                 "gender_hint": str(entry.get("gender_hint", "")).strip(),
+                "age_hint": str(entry.get("age_hint", "")).strip(),
                 "voice_definition_prompt": str(entry.get("voice_definition_prompt", "")).strip(),
                 "confidence": str(entry.get("confidence", "")).strip(),
                 "evidence": evidence,
@@ -2165,6 +2168,7 @@ def _merge_candidate_identity_group(identity_group: list[dict[str, object]]) -> 
         )
         for field_name in (
             "gender_hint",
+            "age_hint",
             "voice_definition_prompt",
             "confidence",
         ):
@@ -2291,13 +2295,14 @@ def _synthesis_candidate_payload(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-28
-    @version    0.1.0
+    @version    0.2.0
     """
     return {
         "character_id": str(candidate.get("character_id", "")).strip(),
         "canonical_name": str(candidate.get("canonical_name", "")).strip(),
         "aliases": _normalize_string_list(candidate.get("aliases", [])),
         "gender_hint": str(candidate.get("gender_hint", "")).strip(),
+        "age_hint": str(candidate.get("age_hint", "")).strip(),
         "confidence": str(candidate.get("confidence", "")).strip(),
         "identity_merge_count": int(candidate.get("identity_merge_count", 1)),
         "evidence": [_compact_synthesis_evidence(item) for item in evidence_items],
@@ -2360,7 +2365,7 @@ def _build_profile_from_synthesis(
     @return     Derived helper result.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.2.0
+    @version    0.3.0
     """
     return regenerate_character_voice_definition(
         {
@@ -2368,6 +2373,7 @@ def _build_profile_from_synthesis(
             "canonical_name": str(response_payload.get("canonical_name", candidate.get("canonical_name", ""))).strip(),
             "aliases": _normalize_string_list(response_payload.get("aliases", candidate.get("aliases", []))),
             "gender_hint": str(response_payload.get("gender_hint", candidate.get("gender_hint", ""))).strip(),
+            "age_hint": str(response_payload.get("age_hint", candidate.get("age_hint", ""))).strip(),
             "voice_definition_prompt": str(
                 response_payload.get("voice_definition_prompt", candidate.get("voice_definition_prompt", ""))
             ).strip(),
@@ -2394,11 +2400,11 @@ def _normalize_character_profile(profile_payload: dict[str, object]) -> Characte
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-20
-    @version    2.0.0
+    @version    2.1.0
     """
     normalized_profile = _normalized_character_profile_core(profile_payload)
     normalized_voice_prompt = str(normalized_profile.get(CHARACTER_VOICE_PROMPT_FIELD, "")).strip()
-    normalized_profile[CHARACTER_VOICE_PROMPT_FIELD] = _ensure_character_voice_prompt_gender_instruction(
+    normalized_profile[CHARACTER_VOICE_PROMPT_FIELD] = _ensure_character_voice_prompt_instructions(
         normalized_voice_prompt or build_character_voice_definition_prompt(normalized_profile),
         normalized_profile,
     )
@@ -2462,13 +2468,14 @@ def _normalized_character_profile_core(profile_payload: dict[str, object]) -> Ch
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    2.1.0
+    @version    2.2.0
     """
     normalized_profile: CharacterProfilePayload = {
         "character_id": str(profile_payload.get("character_id", "")).strip(),
         "canonical_name": str(profile_payload.get("canonical_name", "")).strip(),
         "aliases": _normalize_string_list(profile_payload.get("aliases", [])),
         "gender_hint": str(profile_payload.get("gender_hint", "")).strip(),
+        "age_hint": str(profile_payload.get("age_hint", "")).strip(),
         CHARACTER_VOICE_PROMPT_FIELD: str(profile_payload.get(CHARACTER_VOICE_PROMPT_FIELD, "")).strip(),
         CHARACTER_PREVIEW_TEXT_FIELD: _normalized_character_preview_text(
             profile_payload.get(CHARACTER_PREVIEW_TEXT_FIELD, "")
@@ -2671,6 +2678,37 @@ def _character_voice_gender_instruction(profile_payload: dict[str, object]) -> s
     )
 
 
+def _character_voice_age_instruction(profile_payload: dict[str, object]) -> str:
+    """
+    @brief      Build explicit age-domain guidance for one character voice prompt.
+    @param[in]  profile_payload Character profile payload.
+    @return     Age-domain instruction text without the field label.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-15
+    @version    0.1.0
+    """
+    age_hint = str(profile_payload.get("age_hint", "")).strip()
+    if age_hint:
+        return (
+            f"{age_hint}. Match this explicitly in the vocal age and do not replace it with a younger or older default."
+        )
+    return "not specified in the source. Use an age-neutral adult voice and do not default to a young voice."
+
+
+def _ensure_character_voice_prompt_instructions(prompt_text: str, profile_payload: dict[str, object]) -> str:
+    """
+    @brief      Add required character voice guidance to one voice-definition prompt.
+    @param[in]  prompt_text Candidate voice-definition prompt.
+    @param[in]  profile_payload Character profile payload.
+    @return     Prompt text containing explicit sex/gender and age-domain guidance.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-15
+    @version    0.1.0
+    """
+    prompt_with_gender = _ensure_character_voice_prompt_gender_instruction(prompt_text, profile_payload)
+    return _ensure_character_voice_prompt_age_instruction(prompt_with_gender, profile_payload)
+
+
 def _ensure_character_voice_prompt_gender_instruction(prompt_text: str, profile_payload: dict[str, object]) -> str:
     """
     @brief      Add explicit sex/gender guidance to one character voice-definition prompt.
@@ -2687,6 +2725,22 @@ def _ensure_character_voice_prompt_gender_instruction(prompt_text: str, profile_
     return f"{normalized_prompt} Sex/Gender: {_character_voice_gender_instruction(profile_payload)}".strip()
 
 
+def _ensure_character_voice_prompt_age_instruction(prompt_text: str, profile_payload: dict[str, object]) -> str:
+    """
+    @brief      Add explicit age-domain guidance to one character voice-definition prompt.
+    @param[in]  prompt_text Candidate voice-definition prompt.
+    @param[in]  profile_payload Character profile payload.
+    @return     Prompt text containing explicit age-domain guidance.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-15
+    @version    0.1.0
+    """
+    normalized_prompt = str(prompt_text).strip()
+    if _prompt_has_explicit_age_instruction(normalized_prompt):
+        return normalized_prompt
+    return f"{normalized_prompt} Age Domain: {_character_voice_age_instruction(profile_payload)}".strip()
+
+
 def _prompt_has_explicit_gender_instruction(prompt_text: str) -> bool:
     """
     @brief      Return whether a prompt already carries explicit sex/gender guidance.
@@ -2701,6 +2755,19 @@ def _prompt_has_explicit_gender_instruction(prompt_text: str) -> bool:
         re.search(r"\b(sex/gender|gender hint|gender)\s*:", normalized_prompt)
         or re.search(r"\b(female|male|woman|man|girl|boy|androgynous)\b", normalized_prompt)
     )
+
+
+def _prompt_has_explicit_age_instruction(prompt_text: str) -> bool:
+    """
+    @brief      Return whether a prompt already carries explicit age-domain guidance.
+    @param[in]  prompt_text Candidate voice-definition prompt.
+    @return     True when explicit age-domain guidance is already present.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-15
+    @version    0.1.0
+    """
+    normalized_prompt = str(prompt_text).casefold()
+    return bool(re.search(r"\b(age domain|age hint|age)\s*:", normalized_prompt))
 
 
 def _sentence_fragment(value: object) -> str:

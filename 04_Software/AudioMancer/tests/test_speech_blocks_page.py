@@ -14,7 +14,7 @@
          preservation, translated labels, and generation button enablement.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-24
-@version 0.7.1
+@version 0.7.2
 """
 
 # IMPORTS
@@ -98,7 +98,7 @@ def test_speech_blocks_page_selected_audio_controls_emit_and_track_playback(qtbo
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-04
-    @version    0.2.0
+    @version    0.2.1
     """
     page = SpeechBlocksPage()
     qtbot.addWidget(page)
@@ -138,6 +138,13 @@ def test_speech_blocks_page_selected_audio_controls_emit_and_track_playback(qtbo
     assert page._generate_audio_button.text() == "Generate Audio"
     assert page._selected_audio_playback_button.isEnabled() is True
     assert page._selected_audio_playback_button.text() == "Play"
+    generate_row = page._chunk_actions_grid_layout.getItemPosition(
+        page._chunk_actions_grid_layout.indexOf(page._generate_audio_button)
+    )[0]
+    play_row = page._chunk_actions_grid_layout.getItemPosition(
+        page._chunk_actions_grid_layout.indexOf(page._selected_audio_playback_button)
+    )[0]
+    assert generate_row == play_row
 
     with qtbot.waitSignal(page.generate_audio_selected_requested) as generation_signal:
         page._generate_audio_button.click()

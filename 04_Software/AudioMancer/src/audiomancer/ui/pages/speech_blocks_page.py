@@ -14,7 +14,7 @@
          controls for the Speech Blocks workflow.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-24
-@version 0.7.2
+@version 0.7.3
 """
 
 # IMPORTS
@@ -22,6 +22,7 @@
 from PySide6.QtCore import QTimer, Signal
 from PySide6.QtWidgets import (
     QComboBox,
+    QGridLayout,
     QGroupBox,
     QHBoxLayout,
     QLabel,
@@ -44,7 +45,7 @@ class SpeechBlocksPage(QWidget):
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-24
-    @version    0.6.1
+    @version    0.6.2
     """
 
     generate_requested = Signal(str)
@@ -67,7 +68,7 @@ class SpeechBlocksPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-24
-        @version    0.6.2
+        @version    0.6.3
         """
         super().__init__(parent)
         self._current_language = "en"
@@ -118,40 +119,35 @@ class SpeechBlocksPage(QWidget):
         self._chunk_list = QListWidget(self)
         self._chunk_list.currentRowChanged.connect(self._show_selected_chunk)
         chunk_layout.addWidget(self._chunk_list)
-        chunk_actions_left_layout = QVBoxLayout()
-        chunk_actions_right_layout = QVBoxLayout()
+        self._chunk_actions_grid_layout = QGridLayout()
         self._insert_block_button = QPushButton("Insert")
         self._insert_block_button.clicked.connect(self._emit_insert_block)
-        chunk_actions_left_layout.addWidget(self._insert_block_button)
+        self._chunk_actions_grid_layout.addWidget(self._insert_block_button, 0, 0)
         self._delete_block_button = QPushButton("Delete")
         self._delete_block_button.clicked.connect(self._emit_delete_block)
-        chunk_actions_right_layout.addWidget(self._delete_block_button)
+        self._chunk_actions_grid_layout.addWidget(self._delete_block_button, 0, 1)
         self._edit_button = QPushButton("Edit")
         self._edit_button.clicked.connect(self._begin_editing)
-        chunk_actions_left_layout.addWidget(self._edit_button)
+        self._chunk_actions_grid_layout.addWidget(self._edit_button, 1, 0)
         self._save_button = QPushButton("Save")
         self._save_button.clicked.connect(self._emit_save_block)
-        chunk_actions_right_layout.addWidget(self._save_button)
+        self._chunk_actions_grid_layout.addWidget(self._save_button, 1, 1)
         self._approve_block_button = QPushButton("Approve")
         self._approve_block_button.clicked.connect(self._emit_approve_block)
-        chunk_actions_left_layout.addWidget(self._approve_block_button)
+        self._chunk_actions_grid_layout.addWidget(self._approve_block_button, 2, 0)
         self._character_count_edit = QLineEdit(self)
         self._character_count_edit.setReadOnly(True)
         self._character_count_edit.setMinimumWidth(96)
-        chunk_actions_right_layout.addWidget(self._character_count_edit)
+        self._chunk_actions_grid_layout.addWidget(self._character_count_edit, 2, 1)
         self._generate_audio_button = QPushButton("Generate Audio")
         self._generate_audio_button.clicked.connect(self._emit_generate_audio_selected)
-        chunk_actions_left_layout.addWidget(self._generate_audio_button)
+        self._chunk_actions_grid_layout.addWidget(self._generate_audio_button, 3, 0)
         self._selected_audio_playback_button = QPushButton("Play")
         self._selected_audio_playback_button.clicked.connect(self._emit_selected_audio_playback_toggle)
-        chunk_actions_right_layout.addWidget(self._selected_audio_playback_button)
-        chunk_actions_left_layout.addStretch(1)
-        chunk_actions_right_layout.addStretch(1)
-        chunk_actions_grid_layout = QHBoxLayout()
-        chunk_actions_grid_layout.addLayout(chunk_actions_left_layout)
-        chunk_actions_grid_layout.addLayout(chunk_actions_right_layout)
+        self._chunk_actions_grid_layout.addWidget(self._selected_audio_playback_button, 3, 1)
+        self._chunk_actions_grid_layout.setRowStretch(4, 1)
         chunk_row.addWidget(self._chunk_group, 1)
-        chunk_row.addLayout(chunk_actions_grid_layout)
+        chunk_row.addLayout(self._chunk_actions_grid_layout)
         self._chunk_group.setMinimumHeight(94)
         self._chunk_group.setMaximumHeight(130)
         body_content_layout.addLayout(chunk_row)

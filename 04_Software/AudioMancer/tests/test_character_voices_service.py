@@ -13,7 +13,7 @@
          persistence, and narrator-copy sample sync behavior.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-20
-@version 1.7.0
+@version 1.8.0
 """
 
 # IMPORTS
@@ -31,17 +31,19 @@ def test_build_character_default_prompt_uses_compact_character_profile() -> None
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-20
-    @version    2.0.0
+    @version    2.1.0
     """
     prompt_text = character_voices_service.build_character_default_prompt(
         {
             "canonical_name": "Elizabeth",
             "gender_hint": "female",
+            "age_hint": "young adult",
         }
     )
 
     assert "Elizabeth" in prompt_text
     assert "Sex/Gender: female." in prompt_text
+    assert "Age Domain: young adult." in prompt_text
     assert "stable identity" in prompt_text
 
 
@@ -52,12 +54,13 @@ def test_build_character_default_prompt_prefers_character_owned_voice_definition
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    1.1.0
+    @version    1.2.0
     """
     prompt_text = character_voices_service.build_character_default_prompt(
         {
             "canonical_name": "Elizabeth",
             "gender_hint": "female",
+            "age_hint": "young adult",
             "voice_definition_prompt": (
                 "Create a consistent spoken voice for Elizabeth. Warm mezzo tone with restrained authority."
             ),
@@ -68,6 +71,7 @@ def test_build_character_default_prompt_prefers_character_owned_voice_definition
         "Create a consistent spoken voice for Elizabeth. Warm mezzo tone with restrained authority."
     )
     assert "Sex/Gender: female." in prompt_text
+    assert "Age Domain: young adult." in prompt_text
 
 
 def test_build_character_default_prompt_prevents_male_default_when_gender_is_unknown() -> None:
@@ -88,6 +92,46 @@ def test_build_character_default_prompt_prevents_male_default_when_gender_is_unk
 
     assert "Sex/Gender: not specified in the source." in prompt_text
     assert "do not default to a male voice" in prompt_text
+
+
+def test_build_character_default_prompt_prevents_young_default_when_age_is_unknown() -> None:
+    """
+    @brief      Verify every character prompt carries explicit unknown-age guidance.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-15
+    @version    0.1.0
+    """
+    prompt_text = character_voices_service.build_character_default_prompt(
+        {
+            "canonical_name": "Ayla",
+            "voice_definition_prompt": "Give Ayla a steady adult voice with medium pitch and clear articulation.",
+        }
+    )
+
+    assert "Age Domain: not specified in the source." in prompt_text
+    assert "do not default to a young voice" in prompt_text
+
+
+def test_build_character_default_prompt_preserves_existing_age_instruction() -> None:
+    """
+    @brief      Verify default prompt backfill does not duplicate explicit age-domain guidance.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-15
+    @version    0.1.0
+    """
+    prompt_text = character_voices_service.build_character_default_prompt(
+        {
+            "canonical_name": "Mentor",
+            "age_hint": "old",
+            "voice_definition_prompt": "Create a consistent spoken voice. Age Domain: old. Calm and weathered.",
+        }
+    )
+
+    assert prompt_text.count("Age Domain:") == 1
 
 
 def test_selected_voice_language_persists(tmp_path) -> None:

@@ -66,8 +66,9 @@ High-level flow:
    - the discovered-model list
    - the capability matrix
    - the operator-facing connection status label
-5. `Save TTS Settings` writes global runtime fields through the shared settings
-   service.
+5. `Save` writes global runtime fields through the shared settings service
+   without closing the dialog; `OK` writes the same fields and closes the
+   dialog.
 6. The Narator Voice workflow later reuses the same service to load models, poll
    `/v1/status` until the load reaches a terminal state, submit generation,
    poll again, and download `/v1/voice`.

@@ -159,6 +159,7 @@ The character workflow must:
 - identify relevant speaking characters
 - gather evidence from chunks
 - build editable character profiles
+- keep evidence-backed age-domain hints when they affect voice design
 - preserve operator control over the final character data
 - separate discovered data from approved canonical data when useful
 
@@ -189,6 +190,8 @@ This stage should consolidate:
 - real-voice assignment data where supported
 - pronunciation or style notes where needed
 - narration-oriented metadata required by downstream generation
+- explicit sex/gender and age-domain handoff text for character voice-design
+  prompts so TTS voice design has stable vocal anchors
 
 This is not the final step. It prepares the canonical generation plan used by
 later audio synthesis and assembly stages.
@@ -225,6 +228,11 @@ after generated audio is explicitly approved. The Speech Blocks review page can
 invoke selected-block audio regeneration through a compact `Generate Audio`
 button and Play/Stop preview through the same Audio Blocks controller path so
 operators can check formatting before moving to the Audio Blocks page.
+
+Application-level Settings, AI Settings, and TTS Settings should use consistent
+dialog semantics: Cancel discards unsaved edits, Save persists while keeping the
+dialog open, and OK persists then closes where the dialog supports Apply-style
+workflows.
 
 ### 5.10 Export And Assembly
 

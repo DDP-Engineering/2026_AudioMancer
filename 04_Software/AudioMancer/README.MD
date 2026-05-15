@@ -10,12 +10,15 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
 This folder contains the current Python application implementation for
 `AudioMancer`. It includes a project-aware main-window shell copied from
 `DDP_Audiomancer` and adapted to the local package.
-Current package version is `1.0.14`; Settings now supports built-in and custom
+Current package version is `1.0.15`; Settings now supports built-in and custom
 runtime UI themes with separate UI-control and text-window font controls. Text
 Chunking now allows operators to start a fully manual chunking pass from cleaned
 text before generated chunks exist. Narator Voice and Character Voices now
 accept validated WAV imports with operator-entered sample text for Qwen TTS Base
-voice cloning.
+voice cloning. Character Discovery now carries explicit `age_hint` values into
+Qwen voice-designer prompts, and AI Settings plus TTS Settings now use
+`Cancel`, `Save`, and `OK`, with `Save` persisting without closing and `OK`
+persisting then closing.
 Text Cleanup, Text Chunking, Characters, Narator Voice, Character Voices, Speech Blocks, and Audio Blocks now keep
 minimum splitter widths on their main review panes so operator text remains
 readable during resizing. Narator Voice now places profile selection directly
@@ -153,10 +156,10 @@ regenerates all current per-character samples.
 - Settings uses `Cancel`, `Apply`, and `OK`: Apply persists and refreshes the running shell without closing the dialog, while OK applies and closes.
 - saving or applying `Settings` updates the selected UI language and selected UI theme, including UI-control and text-window font sizes, in the running shell.
 - the current shell supports runtime English/Romanian UI switching through one centralized UI-state service.
-- the `AI Settings` dialog now loads and saves AI profiles plus the default cleanup, chunking, translation, Narator Voice profile generation, Speech Blocks, and character-extraction selections through the shared settings service.
+- the `AI Settings` dialog now loads and saves AI profiles plus the default cleanup, chunking, translation, Narator Voice profile generation, Speech Blocks, and character-extraction selections through the shared settings service; its `Save` action persists without closing the dialog, while `OK` persists and closes.
 - the `AI Settings` dialog now supports backend connection probing, discovered model refresh, and popup feedback with discovered-model counts.
 - invalid persisted AI profile base URLs and invalid VoiceWeaver runtime base URLs are now self-healed back to their defaults during settings validation instead of being left for downstream HTTP failures.
-- the `TTS Settings` dialog now persists one global VoiceWeaver runtime connection cache in `settings.json`, one narrator preview timeout, and one long-form audio generation timeout; project voice assignment is locked on the Home page instead.
+- the `TTS Settings` dialog now persists one global VoiceWeaver runtime connection cache in `settings.json`, one narrator preview timeout, and one long-form audio generation timeout; project voice assignment is locked on the Home page instead, and its `Save` action persists without closing the dialog while `OK` persists and closes.
 - the `TTS Settings` dialog now shows equally wide runtime connection and discovered-model columns, keeps the discovered-model list height close to the runtime controls height, and exposes runtime audio limit settings below the runtime area.
 - the VoiceWeaver runtime capability matrix now classifies fixed Qwen3 `base` and `voice_designer` readiness from the current REST generation modes (`clone` and `definition`) while still tolerating older alias values in cached data.
 - the `Narator Voice` page now starts without predefined narrator profiles, uses only Qwen3 TTS Voice Designer plus Qwen3 TTS Base for narrator samples, keeps no narrator selected by default, stores narrator language values internally as VoiceWeaver language codes, and stores `preview_text` plus `is_selected` in `audio_profiles.json`.
