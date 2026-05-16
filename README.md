@@ -18,7 +18,7 @@ AI help is optional. You can use AI for cleanup, chunking, translation, characte
 
 AudioMancer is currently tested on Windows.
 
-Download AudioMancer from the current GitHub Release (`v1.0.13`):
+Download AudioMancer from the current GitHub Release (`v1.1.0`):
 
 - [AudioMancer_Windows_x64.zip](https://github.com/DDP-Engineering/2026_AudioMancer/releases/latest/download/AudioMancer_Windows_x64.zip)
 - [SHA256SUMS.txt](https://github.com/DDP-Engineering/2026_AudioMancer/releases/latest/download/SHA256SUMS.txt)
@@ -85,10 +85,10 @@ a7ebe2dd594586da8b321aedd41ea8ddd12a4ee68a353c1e48b8dd6c5ee3aa5a
 Expected AudioMancer ZIP SHA256:
 
 ```text
-6f10b6c10ffd105312d711e1ecc673443bef826a510a079ac95544f9d33acd81
+048be440f316162e00e4fcd862fe421a952ac7742c348f869778dff8799922cc
 ```
 
-Use the `v1.0.13` `SHA256SUMS.txt` for AudioMancer and the `v1.0.0` `SHA256SUMS.txt` for VoiceWeaver parts.
+Use the `v1.1.0` `SHA256SUMS.txt` for AudioMancer and the `v1.0.0` `SHA256SUMS.txt` for VoiceWeaver parts.
 
 ## Connect AudioMancer To VoiceWeaver
 
