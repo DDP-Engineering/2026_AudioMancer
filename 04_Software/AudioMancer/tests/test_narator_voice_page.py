@@ -13,7 +13,7 @@
          sample-dependent button enablement, and bottom status rendering.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-18
-@version 3.6.1
+@version 3.6.2
 """
 
 # IMPORTS
@@ -82,7 +82,6 @@ def test_narator_voice_page_prompt_and_preview_editors_expose_scrollbars_and_lim
         prompt_text="Custom prompt.",
         preview_text="abcdef",
         is_editable=True,
-        is_preset=False,
         can_edit=True,
         can_delete=True,
         can_generate=True,
@@ -146,7 +145,6 @@ def test_narator_voice_page_edit_mode_disables_list_and_enables_save_after_chang
         prompt_text="Custom prompt.",
         preview_text="Preview text.",
         is_editable=True,
-        is_preset=False,
         can_edit=True,
         can_delete=True,
         can_generate=True,
@@ -181,27 +179,26 @@ def test_narator_voice_page_preview_toggle_updates_label_and_select_enablement(q
     page.set_narator_voice_state(
         profiles=[
             {
-                "profile_id": "preset_1",
+                "profile_id": "custom_1",
                 "display_name": "Vivian",
-                "prompt_text": "Preset prompt.",
+                "prompt_text": "Custom prompt.",
                 "preview_text": "Preview text.",
-                "profile_kind": "preset",
+                "profile_kind": "custom",
                 "editable": True,
                 "is_selected": False,
             }
         ],
         notes=["Ready."],
-        current_profile_id="preset_1",
+        current_profile_id="custom_1",
         selected_profile_id=None,
         effective_language="en",
         selected_voice_language="en",
         profile_name="Vivian",
-        prompt_text="Preset prompt.",
+        prompt_text="Custom prompt.",
         preview_text="Preview text.",
         is_editable=True,
-        is_preset=True,
         can_edit=True,
-        can_delete=False,
+        can_delete=True,
         can_generate=True,
         can_select=True,
         preview_available=True,
@@ -237,7 +234,6 @@ def test_narator_voice_page_status_panel_keeps_language_value_internal(qtbot) ->
         prompt_text="",
         preview_text="",
         is_editable=False,
-        is_preset=False,
         can_edit=False,
         can_delete=False,
         can_generate=False,

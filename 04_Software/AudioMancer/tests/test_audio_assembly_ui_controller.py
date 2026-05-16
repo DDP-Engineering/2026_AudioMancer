@@ -13,7 +13,7 @@
          playback, and reset synchronization for the Audio Assembly controller.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-25
-@version 0.4.0
+@version 0.4.1
 """
 
 # IMPORTS
@@ -200,6 +200,39 @@ def test_audio_assembly_ui_controller_starts_selected_output(tmp_path) -> None:
     assert window._audio_assembly_page.playback_active is True
     assert window._audio_assembly_page.playback_progress == (0, 1000)
     assert window._audio_assembly_playback_output_key == "part-0002"
+
+
+def test_audio_assembly_ui_controller_rejects_escaping_output_path(monkeypatch, tmp_path) -> None:
+    """
+    @brief      Verify generated-output playback cannot resolve paths outside the project root.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-16
+    @version    0.1.0
+    """
+    window = _controller_window(tmp_path)
+    outside_path = tmp_path / "outside.wav"
+    outside_path.write_bytes(b"RIFF")
+    _write_audio_assembly_report(window._current_project_root)
+    report_path = window._current_project_root / config.AUDIO_ASSEMBLY_REPORT_FILE_NAME
+    report = json.loads(report_path.read_text(encoding="utf-8"))
+    report["outputs"][0]["audio_relative_path"] = "../outside.wav"
+    report_path.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
+    warnings: list[str] = []
+    monkeypatch.setattr(
+        QMessageBox,
+        "warning",
+        lambda _window, _title, message: warnings.append(message),
+    )
+
+    audio_assembly_ui_controller.handle_playback_toggle_requested(window, "part-0001")
+
+    assert window._audio_assembly_audio_player.play_count == 0
+    assert window._audio_assembly_audio_player.source is None
+    assert warnings == ["The selected audiobook file is missing."]
 
 
 def test_audio_assembly_ui_controller_restarts_clicked_output_from_beginning(tmp_path) -> None:

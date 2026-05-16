@@ -15,7 +15,7 @@
          operation state.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-22
-@version 0.16.0
+@version 0.16.1
 """
 
 # IMPORTS
@@ -288,12 +288,7 @@ def start_or_continue_discovery(
         system_prompt,
         additional_character_discovery_instructions,
     )
-    input_paths = _persist_input_snapshots(
-        resolved_project_root,
-        source_chunks,
-        manifest,
-        input_source,
-    )
+    input_paths = _persist_input_snapshots(resolved_project_root)
     output_path = build_operation_output_path(
         resolved_project_root,
         "character_discovery",
@@ -334,7 +329,6 @@ def start_or_continue_discovery(
         existing_state,
         input_fingerprint,
         source_chunks,
-        budget_metadata,
         additional_character_discovery_instructions_fingerprint,
     )
     resume_is_compatible = bool(
@@ -1078,37 +1072,17 @@ def _sync_character_count_metadata(project_root: Path, character_count: int) -> 
     write_json_atomic(state_path, state_payload)
 
 
-def _persist_input_snapshots(
-    project_root: Path,
-    source_chunks: list[dict[str, object]],
-    manifest: dict[str, object],
-    input_source: str,
-) -> list[Path]:
+def _persist_input_snapshots(project_root: Path) -> list[Path]:
     """
     @brief      Persist the input snapshots.
     @param[in]  project_root Active project root folder.
-    @param[in]  source_chunks Value for `source_chunks`.
-    @param[in]  manifest Active project manifest payload.
-    @param[in]  input_source Selected discovery input source token.
     @return     Existing input artifact paths used by the run.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.2.0
+    @version    0.3.0
     """
-    _ = source_chunks
-    _ = manifest
     chunk_input_path = project_root / config.CHUNK_ARTIFACT_FILE_NAME
-    clean_text_input_path = project_root / config.CLEANED_TEXT_FILE_NAME
-    _ = input_source
-    input_paths = [chunk_input_path]
-    if not clean_text_input_path.is_file():
-        clean_text_input_path = chunk_input_path
-    input_paths.append(clean_text_input_path)
-    deduped_paths: list[Path] = []
-    for input_path in input_paths:
-        if input_path not in deduped_paths:
-            deduped_paths.append(input_path)
-    return deduped_paths
+    return [chunk_input_path] if chunk_input_path.is_file() else []
 
 
 def _resolve_discovery_input_chunks(project_root: Path) -> tuple[list[dict[str, object]], str]:
@@ -1147,36 +1121,6 @@ def _discovery_chunk_from_source(source_chunk: dict[str, object]) -> dict[str, o
     discovery_chunk["input_source"] = CHARACTER_DISCOVERY_INPUT_SOURCE_CHUNKS
     discovery_chunk["dialogue_spans"] = _detect_dialogue_spans(text)
     return discovery_chunk
-
-
-def _resolve_chunk_input_snapshot_path(project_root: Path) -> Path | None:
-    """
-    @brief      Resolve the chunk input snapshot path.
-    @param[in]  project_root Active project root folder.
-    @return     Derived helper result.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
-    """
-    candidate_path = project_root / config.CHUNK_ARTIFACT_FILE_NAME
-    return candidate_path if candidate_path.is_file() else None
-
-
-def _source_snapshot_base_name(manifest: dict[str, object]) -> str:
-    """
-    @brief      Execute the source snapshot base name helper.
-    @param[in]  manifest Active project manifest payload.
-    @return     Helper result.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
-    """
-    source_document = manifest.get("source_document", {})
-    if isinstance(source_document, dict):
-        original_name = str(source_document.get("original_name", "")).strip()
-        if original_name:
-            return Path(original_name).stem
-    return Path(config.CHUNK_ARTIFACT_FILE_NAME).stem
 
 
 def _build_input_fingerprint(source_chunks: list[dict[str, object]]) -> str:
@@ -1580,7 +1524,6 @@ def _restore_resume_state(
     existing_state: dict[str, object],
     input_fingerprint: str,
     source_chunks: list[dict[str, object]],
-    budget_metadata: BudgetMetadataPayload,
     additional_character_discovery_instructions_fingerprint: str = "",
 ) -> tuple[
     int,
@@ -1596,12 +1539,11 @@ def _restore_resume_state(
     @param[in]  existing_state Value for `existing_state`.
     @param[in]  input_fingerprint Value for `input_fingerprint`.
     @param[in]  source_chunks Current source chunk records.
-    @param[in]  budget_metadata Current context-budget metadata.
     @param[in]  additional_character_discovery_instructions_fingerprint Operator instruction fingerprint.
     @return     Derived helper result.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-13
-    @version    0.5.0
+    @version    0.6.0
     """
     if str(existing_state.get("status", "")) not in {"running", "failed"}:
         return 0, 0, [], [], [], [], None
@@ -1630,7 +1572,6 @@ def _restore_resume_state(
     next_chunk_index = _restore_next_discovery_start_chunk_index(
         resume_checkpoint,
         source_chunks,
-        budget_metadata,
         bool(merged_candidates),
     )
     if next_chunk_index is None:
@@ -1653,43 +1594,24 @@ def _restore_resume_state(
 def _restore_next_discovery_start_chunk_index(
     resume_checkpoint: dict[str, object],
     source_chunks: list[dict[str, object]],
-    budget_metadata: BudgetMetadataPayload,
     discovery_phase_completed: bool,
 ) -> int | None:
     """
     @brief      Restore the next source-chunk boundary for resumed discovery windows.
     @param[in]  resume_checkpoint Persisted discovery checkpoint.
     @param[in]  source_chunks Current source chunk records.
-    @param[in]  budget_metadata Current context-budget metadata.
     @param[in]  discovery_phase_completed True when merged candidates already exist.
     @return     Next source-chunk index or `None` when the checkpoint cannot be trusted.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-30
-    @version    0.1.0
+    @version    0.2.0
     """
     if discovery_phase_completed:
         return len(source_chunks)
     raw_next_index = resume_checkpoint.get("next_discovery_start_chunk_index")
     if raw_next_index not in (None, ""):
         return max(0, min(int(raw_next_index), len(source_chunks)))
-    completed_window_count = max(0, int(resume_checkpoint.get("completed_window_count", 0)))
-    if completed_window_count <= 0:
-        return 0
-    legacy_budget_metadata = dict(resume_checkpoint.get("budget_metadata") or {})
-    if not legacy_budget_metadata:
-        legacy_budget_metadata = dict(budget_metadata)
-    try:
-        legacy_windows = _build_chunk_windows(
-            source_chunks,
-            config.DEFAULT_CHARACTER_DISCOVERY_WINDOW_SIZE,
-            config.DEFAULT_CHARACTER_DISCOVERY_WINDOW_OVERLAP,
-            legacy_budget_metadata,
-        )
-    except ValueError:
-        return None
-    if completed_window_count > len(legacy_windows):
-        return None
-    return _next_chunk_index_after_window(source_chunks, legacy_windows[completed_window_count - 1])
+    return 0 if max(0, int(resume_checkpoint.get("completed_window_count", 0))) <= 0 else None
 
 
 def _next_chunk_index_after_window(
@@ -1907,7 +1829,7 @@ def _normalize_window_candidates(
     @return     Derived helper result.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.3.0
+    @version    0.4.0
     """
     if not isinstance(payload, list):
         return []
@@ -1915,7 +1837,7 @@ def _normalize_window_candidates(
     for entry in payload:
         if not isinstance(entry, dict):
             continue
-        canonical_name = str(entry.get("canonical_name") or entry.get("name") or "").strip()
+        canonical_name = str(entry.get("canonical_name", "")).strip()
         if not canonical_name:
             continue
         evidence = _normalize_evidence(entry.get("evidence", []), chunk_map)
@@ -1923,9 +1845,7 @@ def _normalize_window_candidates(
             {
                 "canonical_name": canonical_name,
                 "aliases": _normalize_string_list(entry.get("aliases", [])),
-                "gender_hint": str(entry.get("gender_hint", "")).strip(),
                 "age_hint": str(entry.get("age_hint", "")).strip(),
-                "voice_definition_prompt": str(entry.get("voice_definition_prompt", "")).strip(),
                 "confidence": str(entry.get("confidence", "")).strip(),
                 "evidence": evidence,
                 "has_dialogue_evidence": any(
@@ -2147,7 +2067,7 @@ def _merge_candidate_identity_group(identity_group: list[dict[str, object]]) -> 
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-27
-    @version    0.1.0
+    @version    0.2.0
     """
     target: dict[str, object] = {}
     alias_keys: set[str] = set()
@@ -2167,9 +2087,7 @@ def _merge_candidate_identity_group(identity_group: list[dict[str, object]]) -> 
             candidate.get("has_dialogue_evidence")
         )
         for field_name in (
-            "gender_hint",
             "age_hint",
-            "voice_definition_prompt",
             "confidence",
         ):
             existing_value = str(target.get(field_name, "")).strip()
@@ -2295,13 +2213,12 @@ def _synthesis_candidate_payload(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-28
-    @version    0.2.0
+    @version    0.3.0
     """
     return {
         "character_id": str(candidate.get("character_id", "")).strip(),
         "canonical_name": str(candidate.get("canonical_name", "")).strip(),
         "aliases": _normalize_string_list(candidate.get("aliases", [])),
-        "gender_hint": str(candidate.get("gender_hint", "")).strip(),
         "age_hint": str(candidate.get("age_hint", "")).strip(),
         "confidence": str(candidate.get("confidence", "")).strip(),
         "identity_merge_count": int(candidate.get("identity_merge_count", 1)),
@@ -2365,18 +2282,16 @@ def _build_profile_from_synthesis(
     @return     Derived helper result.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.3.0
+    @version    0.4.0
     """
     return regenerate_character_voice_definition(
         {
             "character_id": str(candidate.get("character_id", "")),
             "canonical_name": str(response_payload.get("canonical_name", candidate.get("canonical_name", ""))).strip(),
             "aliases": _normalize_string_list(response_payload.get("aliases", candidate.get("aliases", []))),
-            "gender_hint": str(response_payload.get("gender_hint", candidate.get("gender_hint", ""))).strip(),
+            "gender_hint": str(response_payload.get("gender_hint", "")).strip(),
             "age_hint": str(response_payload.get("age_hint", candidate.get("age_hint", ""))).strip(),
-            "voice_definition_prompt": str(
-                response_payload.get("voice_definition_prompt", candidate.get("voice_definition_prompt", ""))
-            ).strip(),
+            "voice_definition_prompt": str(response_payload.get("voice_definition_prompt", "")).strip(),
             CHARACTER_PREVIEW_TEXT_FIELD: _build_character_preview_text(response_payload, candidate),
             "confidence": str(response_payload.get("confidence", candidate.get("confidence", ""))).strip(),
             "review_status": _normalize_review_status(

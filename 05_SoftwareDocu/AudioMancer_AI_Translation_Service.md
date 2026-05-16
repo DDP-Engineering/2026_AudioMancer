@@ -133,6 +133,9 @@ Invariants:
   narrator sample files, and the locked target language
 - same-language pass-through uses source text as translated text and avoids AI
   rewriting
+- translation stage status uses the current review tokens only:
+  `not_started`, `in_progress`, `translated`, and `approved`; old
+  translation-report stage aliases are not normalized
 - operator-supplied translation rules are appended to the default prompt when
   the prompt template does not provide an explicit
   `{additional_translation_instructions}` placeholder

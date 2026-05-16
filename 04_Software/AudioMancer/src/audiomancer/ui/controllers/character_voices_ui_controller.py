@@ -14,7 +14,7 @@
          playback, and page-entry narrator-sample warnings.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 1.10.0
+@version 1.10.2
 """
 
 # IMPORTS
@@ -93,45 +93,6 @@ def handle_selection_change_requested(window: "MainWindow", target_id: object) -
     normalized_target_id = None if target_id in (None, "") else str(target_id)
     window._character_voices_inspected_target_id = normalized_target_id
     window.show_project_state(window._current_project_root, window._current_manifest)
-
-
-def handle_voice_language_change_requested(window: "MainWindow", voice_language: object) -> None:
-    """
-    @brief      Persist one character-voices voice language selection and refresh the page state.
-    @param[in]  window Main application window.
-    @param[in]  voice_language Requested character-voices voice language code.
-    @return     None.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    1.4.0
-    """
-    if window._current_project_root is None or window._current_manifest is None:
-        return
-    current_language = ui_state_service.current_language_from_settings(window._settings_payload)
-    previous_voice_language = character_voices_service.load_selected_voice_language(window._current_project_root)
-    requested_voice_language = narrator_definition_service.narrator_language_code(voice_language)
-    if (
-        previous_voice_language != requested_voice_language
-        and not audio_blocks_ui_controller.confirm_global_voice_settings_invalidation(window, current_language)
-    ):
-        return
-    persisted_voice_language = character_voices_service.save_selected_voice_language(
-        window._current_project_root,
-        voice_language,
-    )
-    if previous_voice_language != persisted_voice_language:
-        audio_blocks_ui_controller.invalidate_all_audio_blocks_after_voice_settings_change(window)
-        window.show_project_state(
-            window._current_project_root,
-            project_workspace_service.load_manifest(window._current_project_root),
-        )
-        return
-    window.show_project_state(
-        window._current_project_root,
-        project_workspace_service.load_manifest(window._current_project_root),
-    )
-    _sync_manifest_stage(window)
 
 
 def handle_import_sample_requested(window: "MainWindow", target_id: str) -> None:
@@ -1021,7 +982,7 @@ def _sync_manifest_stage(window: "MainWindow") -> None:
     @return     None.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.1.0
+    @version    0.2.0
     """
     if window._current_project_root is None or window._current_manifest is None:
         return
@@ -1040,11 +1001,23 @@ def _sync_manifest_stage(window: "MainWindow") -> None:
     )
     if current_stage_rank < narrator_stage_rank and desired_stage == "narrator_definition_ready":
         return
-    if current_stage == desired_stage:
+    operation_summary = character_voices_service.character_voices_operation_summary(
+        window._current_project_root,
+        list(window._character_voices_page._targets),  # noqa: SLF001
+    )
+    current_operation_summary = dict(
+        window._current_manifest.get("operations", {}).get("character_voices", {})
+        if isinstance(window._current_manifest.get("operations"), dict)
+        else {}
+    )
+    if current_stage == desired_stage and current_operation_summary == operation_summary:
         return
-    updated_manifest = dict(window._current_manifest)
-    updated_manifest["current_stage"] = desired_stage
-    project_workspace_service.save_manifest(updated_manifest, window._current_project_root)
+    project_workspace_service.sync_manifest_operation_summary(
+        window._current_project_root,
+        "character_voices",
+        operation_summary,
+        current_stage=desired_stage,
+    )
     window.show_project_state(
         window._current_project_root,
         project_workspace_service.load_manifest(window._current_project_root),

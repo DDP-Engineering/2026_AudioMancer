@@ -14,7 +14,7 @@
          preview controls for the fixed Qwen3-backed narrator workflow.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-17
-@version 3.12.2
+@version 3.12.3
 """
 
 # IMPORTS
@@ -243,7 +243,7 @@ class NaratorVoicePage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-17
-        @version    1.0.0
+        @version    1.0.1
         """
         self._busy = is_busy
         self._apply_control_state()
@@ -273,7 +273,6 @@ class NaratorVoicePage(QWidget):
         prompt_text: str,
         preview_text: str,
         is_editable: bool,
-        is_preset: bool,
         can_edit: bool,
         can_delete: bool,
         can_generate: bool,
@@ -295,7 +294,6 @@ class NaratorVoicePage(QWidget):
         @param[in]  prompt_text Narrator-definition prompt text.
         @param[in]  preview_text Stored preview text for the inspected profile.
         @param[in]  is_editable True when the inspected profile may be edited.
-        @param[in]  is_preset Compatibility flag from the page-state payload; currently always false.
         @param[in]  can_edit True when edit mode may start.
         @param[in]  can_delete True when delete may run.
         @param[in]  can_generate True when sample generation may start.
@@ -308,10 +306,9 @@ class NaratorVoicePage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-17
-        @version    1.5.0
+        @version    1.6.0
         """
         _ = notes
-        _ = is_preset
         self._profiles = [deepcopy(profile) for profile in profiles]
         self._current_profile_id = current_profile_id
         self._selected_profile_id = selected_profile_id
@@ -466,7 +463,6 @@ class NaratorVoicePage(QWidget):
             "profile_origin": str(current_profile.get("profile_origin", "")),
             "provider_family": str(current_profile.get("provider_family", "")),
             "editable": editable,
-            "protected": bool(current_profile.get("protected", False)),
             "is_selected": bool(current_profile.get("is_selected", False)),
             "updated_at": current_profile.get("updated_at"),
         }

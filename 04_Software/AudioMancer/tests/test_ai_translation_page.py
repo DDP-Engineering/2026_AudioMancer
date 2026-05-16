@@ -14,7 +14,7 @@
          workflow.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-07
-@version 0.4.1
+@version 0.4.2
 """
 
 # IMPORTS
@@ -80,7 +80,7 @@ def test_ai_translation_page_renders_selected_chunk_and_review_actions(qtbot) ->
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.1.0
+    @version    0.2.0
     """
     page = AiTranslationPage()
     qtbot.addWidget(page)
@@ -114,6 +114,8 @@ def test_ai_translation_page_renders_selected_chunk_and_review_actions(qtbot) ->
 
     assert page._chunk_list.count() == 1
     assert page._chunk_list_group.maximumHeight() == 176
+    assert page._chunk_list_group.layout().indexOf(page._translation_actions_widget) >= 0
+    assert page._start_button.parentWidget() == page._translation_actions_widget
     assert page._source_text_edit.toPlainText() == "Original text"
     assert page._translated_text_edit.toPlainText() == "Translated text"
     assert page._approve_all_button.isEnabled() is True

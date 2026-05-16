@@ -13,7 +13,7 @@
          the same first-page structure without implementing import behavior.
 @author Eng. Dan Dumitru Pasare
 @date 2026-05-14
-@version 0.11.0
+@version 0.12.1
 """
 
 # IMPORTS
@@ -51,7 +51,10 @@ _EXPORT_KIND_BY_STAGE_TOKEN = {
     "text_chunking_ready": project_export_service.EXPORT_KIND_TEXT_CHUNKS,
     "translation_ready": project_export_service.EXPORT_KIND_AI_TRANSLATION,
     "character_discovery_ready": project_export_service.EXPORT_KIND_CHARACTERS,
+    "narrator_definition_ready": project_export_service.EXPORT_KIND_NARRATOR_VOICE,
+    "character_voices_ready": project_export_service.EXPORT_KIND_CHARACTER_VOICES,
     "speech_blocks_ready": project_export_service.EXPORT_KIND_SPEECH_BLOCKS,
+    "audio_assembly_ready": project_export_service.EXPORT_KIND_AUDIO_ASSEMBLY,
 }
 # @brief Stable compact height for correlated workflow and export rows.
 _WORKFLOW_ROW_MIN_HEIGHT = 28
@@ -76,7 +79,7 @@ class HomeProjectPage(QWidget):
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-14
-    @version    0.10.0
+    @version    0.11.1
     """
 
     import_requested = Signal()
@@ -92,7 +95,7 @@ class HomeProjectPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-05-14
-        @version    0.10.5
+        @version    0.11.1
         """
         super().__init__(parent)
         self._project_active = False
@@ -111,6 +114,7 @@ class HomeProjectPage(QWidget):
         self._stage_rows: list[QLineEdit] = []
         self._export_states: dict[str, dict[str, object]] = {}
         self._export_rows: dict[str, dict[str, object]] = {}
+        self._export_spacers: list[QWidget] = []
         self._theme_colors = _normalize_home_theme_colors(None)
 
         root_layout = QVBoxLayout(self)
@@ -196,12 +200,15 @@ class HomeProjectPage(QWidget):
         exports_layout.setVerticalSpacing(4)
         exports_layout.setColumnStretch(0, 1)
         exports_layout.setColumnStretch(1, 0)
+        self._exports_layout = exports_layout
         for row_index, stage_token in enumerate(_WORKFLOW_STAGE_TOKENS):
             export_kind = _EXPORT_KIND_BY_STAGE_TOKEN.get(stage_token)
             if export_kind is None:
                 spacer = QWidget(self)
                 spacer.setMinimumHeight(_WORKFLOW_ROW_MIN_HEIGHT)
+                spacer.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
                 exports_layout.addWidget(spacer, row_index, 0, 1, 2)
+                self._export_spacers.append(spacer)
                 continue
             format_combo = QComboBox(self)
             format_combo.setMinimumWidth(120)
@@ -233,6 +240,7 @@ class HomeProjectPage(QWidget):
         self._summary_group = summary_group
         self._exports_group = exports_group
         self._stage_group = stage_group
+        self._apply_workflow_row_heights()
         self._refresh_import_button()
         self._refresh_project_options_controls()
         self._refresh_summary_labels()
@@ -296,7 +304,7 @@ class HomeProjectPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-25
-        @version    0.1.0
+        @version    0.2.0
         """
         self._operation_busy = is_busy
         self._refresh_import_button()
@@ -466,6 +474,7 @@ class HomeProjectPage(QWidget):
         self.set_stage_statuses(self._stage_entries)
         self._refresh_export_rows()
         self._refresh_project_options_controls()
+        self._apply_workflow_row_heights()
 
     def apply_theme(self, theme_payload: dict[str, object]) -> None:
         """
@@ -480,6 +489,7 @@ class HomeProjectPage(QWidget):
         self._theme_colors = _normalize_home_theme_colors(theme_payload)
         self.set_stage_statuses(self._stage_entries)
         self._refresh_summary_labels()
+        self._apply_workflow_row_heights()
 
     def _refresh_export_rows(self) -> None:
         """
@@ -488,7 +498,7 @@ class HomeProjectPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-25
-        @version    0.2.0
+        @version    0.3.0
         """
         for export_kind, widgets in self._export_rows.items():
             state = self._export_states.get(
@@ -506,16 +516,14 @@ class HomeProjectPage(QWidget):
             export_status = ui_state_service.translate(f"home.export_status.{status}", self._current_language)
             if isinstance(format_combo, QComboBox):
                 current_format = str(format_combo.currentData() or project_export_service.EXPORT_FORMAT_TXT)
+                supported_formats = project_export_service.export_formats_for_kind(export_kind)
                 format_combo.blockSignals(True)
                 format_combo.clear()
-                format_combo.addItem(
-                    ui_state_service.translate("home.export_format.txt", self._current_language),
-                    project_export_service.EXPORT_FORMAT_TXT,
-                )
-                format_combo.addItem(
-                    ui_state_service.translate("home.export_format.markdown", self._current_language),
-                    project_export_service.EXPORT_FORMAT_MARKDOWN,
-                )
+                for export_format in supported_formats:
+                    format_combo.addItem(
+                        ui_state_service.translate(f"home.export_format.{export_format}", self._current_language),
+                        export_format,
+                    )
                 restored_index = format_combo.findData(current_format)
                 format_combo.setCurrentIndex(max(restored_index, 0))
                 format_combo.blockSignals(False)
@@ -525,6 +533,45 @@ class HomeProjectPage(QWidget):
                 export_button.setText(ui_state_service.translate("home.export_button", self._current_language))
                 export_button.setEnabled(bool(state.get("can_export", False)))
                 export_button.setToolTip(f"{export_label}: {export_status}")
+        self._apply_workflow_row_heights()
+
+    def _apply_workflow_row_heights(self) -> None:
+        """
+        @brief      Keep workflow rows and matching export controls on identical fixed-height bands.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-16
+        @version    0.1.0
+        """
+        candidate_heights = [max(_WORKFLOW_ROW_MIN_HEIGHT, self.fontMetrics().height() + 12)]
+        candidate_heights.extend(stage_row.sizeHint().height() for stage_row in self._stage_rows)
+        for widgets in self._export_rows.values():
+            format_combo = widgets["format"]
+            export_button = widgets["button"]
+            if isinstance(format_combo, QComboBox):
+                candidate_heights.append(format_combo.sizeHint().height())
+            if isinstance(export_button, QPushButton):
+                candidate_heights.append(export_button.sizeHint().height())
+        row_height = max(candidate_heights)
+        for stage_row in self._stage_rows:
+            stage_row.setMinimumHeight(row_height)
+            stage_row.setMaximumHeight(row_height)
+        for widgets in self._export_rows.values():
+            format_combo = widgets["format"]
+            export_button = widgets["button"]
+            if isinstance(format_combo, QComboBox):
+                format_combo.setMinimumHeight(row_height)
+                format_combo.setMaximumHeight(row_height)
+            if isinstance(export_button, QPushButton):
+                export_button.setMinimumHeight(row_height)
+                export_button.setMaximumHeight(row_height)
+        for spacer in self._export_spacers:
+            spacer.setMinimumHeight(row_height)
+            spacer.setMaximumHeight(row_height)
+        for row_index in range(len(_WORKFLOW_STAGE_TOKENS)):
+            self._exports_layout.setRowMinimumHeight(row_index, row_height)
+            self._exports_layout.setRowStretch(row_index, 0)
 
     def _refresh_summary_labels(self) -> None:
         """

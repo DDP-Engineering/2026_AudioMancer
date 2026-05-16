@@ -208,12 +208,14 @@ checkpoints, translated chunks, warning details, and similar workflow
 internals are stored only in root-level state files, reports, and canonical
 output artifacts.
 
-AI-assisted chunking checkpoints store the completed paragraph-unit count plus
-the last completed unit id, so an interrupted run can continue with a different
-currently selected AI profile without reprocessing completed text. The chunking
-state and report persist the selected profile id, model name, context window,
-max output tokens, temperature, current budget metadata, and ordered profile
-settings history when resumed segments use different model settings.
+AI-assisted chunking checkpoints store the completed paragraph-unit count, so
+an interrupted current-version run can continue with a different currently
+selected AI profile without reprocessing completed text. Older checkpoint
+shapes that lack `completed_unit_count` are treated as incompatible and restart
+from the beginning. The chunking state and report persist the selected profile
+id, model name, context window, max output tokens, temperature, current budget
+metadata, and ordered profile settings history when resumed segments use
+different model settings.
 
 Default operation-state files are lazy page metadata. Opening a workflow page
 may create a `not_started` state file with empty `input_paths`, `output_paths`,
@@ -267,6 +269,9 @@ Current validation invariants:
 - project-open manifest healing can promote operation summaries only when
   local artifacts prove the step completed; `current_stage` alone never marks
   an operation completed
+- Character Voices completion evidence checks the current artifact contract:
+  the selected narrator WAV plus `narator_sample.json`, and every character
+  target's `sample_metadata` plus project-relative `sample_audio_path`
 - stale operation-state files are reported as warnings and are not rewritten by
   the project-open repair path
 - the repaired `current_stage` is derived from the highest contiguous

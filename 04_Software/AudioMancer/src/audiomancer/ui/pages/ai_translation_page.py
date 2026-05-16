@@ -13,7 +13,7 @@
          chunk review, manual edits, approval controls, and progress display.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-07
-@version 0.6.1
+@version 0.6.4
 """
 
 # IMPORTS
@@ -61,7 +61,7 @@ class AiTranslationPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-07
-        @version    0.4.1
+        @version    0.4.3
         """
         super().__init__(parent)
         self._project_active = False
@@ -97,16 +97,16 @@ class AiTranslationPage(QWidget):
         top_row = QHBoxLayout()
         top_row.setSpacing(12)
         self._chunk_list_group = QGroupBox("Chunk List", self)
-        chunk_list_layout = QVBoxLayout(self._chunk_list_group)
+        chunk_list_layout = QHBoxLayout(self._chunk_list_group)
+        chunk_list_layout.setContentsMargins(6, 12, 6, 6)
         self._chunk_list = QListWidget(self)
         self._chunk_list.currentRowChanged.connect(self._show_selected_chunk)
-        chunk_list_layout.addWidget(self._chunk_list)
+        chunk_list_layout.addWidget(self._chunk_list, 1)
         self._chunk_list_group.setMinimumHeight(150)
         self._chunk_list_group.setMaximumHeight(176)
-        top_row.addWidget(self._chunk_list_group, 5)
 
-        actions_widget = QWidget(self)
-        actions_layout = QVBoxLayout(actions_widget)
+        self._translation_actions_widget = QWidget(self._chunk_list_group)
+        actions_layout = QVBoxLayout(self._translation_actions_widget)
         actions_layout.setContentsMargins(0, 0, 0, 0)
         self._start_button = QPushButton("Start Translation")
         self._start_button.clicked.connect(self._emit_start_translation)
@@ -117,8 +117,8 @@ class AiTranslationPage(QWidget):
         self._approve_all_button = QPushButton("Approve All")
         self._approve_all_button.clicked.connect(self.approve_all_requested.emit)
         actions_layout.addWidget(self._approve_all_button)
-        actions_layout.addStretch(1)
-        top_row.addWidget(actions_widget, 2)
+        chunk_list_layout.addWidget(self._translation_actions_widget, 0)
+        top_row.addWidget(self._chunk_list_group, 1)
         layout.addLayout(top_row, 1)
 
         self._chunk_text_splitter = QSplitter(self)
@@ -156,18 +156,18 @@ class AiTranslationPage(QWidget):
         layout.addWidget(self._chunk_text_splitter, 7)
         self._apply_chunk_text_splitter_minimums()
 
-        self._notes_group = QGroupBox("Translation Notes", self)
-        notes_layout = QVBoxLayout(self._notes_group)
-        self._notes_edit = QPlainTextEdit(self)
-        self._notes_edit.setReadOnly(True)
-        self._notes_edit.setProperty(
+        self._status_group = QGroupBox("Translation Status", self)
+        status_layout = QVBoxLayout(self._status_group)
+        self._status_edit = QPlainTextEdit(self)
+        self._status_edit.setReadOnly(True)
+        self._status_edit.setProperty(
             ui_state_service.CONTROL_TEXT_FONT_ROLE_PROPERTY,
             ui_state_service.CONTROL_TEXT_FONT_ROLE_VALUE,
         )
-        notes_layout.addWidget(self._notes_edit)
-        self._notes_group.setMinimumHeight(96)
-        self._notes_group.setMaximumHeight(112)
-        layout.addWidget(self._notes_group, 0)
+        status_layout.addWidget(self._status_edit)
+        self._status_group.setMinimumHeight(96)
+        self._status_group.setMaximumHeight(112)
+        layout.addWidget(self._status_group, 0)
         self.set_project_active(False)
         self.set_translation_state(
             [],
@@ -263,7 +263,7 @@ class AiTranslationPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-07
-        @version    0.2.0
+        @version    0.2.1
         """
         self._source_chunks = sorted(source_chunks, key=lambda item: int(item.get("sequence_index", 0)))
         self._display_chunks = _build_display_chunks(self._source_chunks, translated_chunks)
@@ -283,7 +283,7 @@ class AiTranslationPage(QWidget):
         self._approved_progress_bar.setRange(0, max(total_count, 1))
         self._approved_progress_bar.setValue(min(approved_count, max(total_count, 1)))
         self._approved_progress_label.setText(f"Approved chunks: {approved_count}/{total_count}")
-        self._notes_edit.setPlainText("\n".join(notes))
+        self._status_edit.setPlainText("\n".join(notes))
         row_to_select = 0
         if current_chunk_id is not None:
             for index, chunk in enumerate(self._display_chunks):
@@ -366,7 +366,7 @@ class AiTranslationPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-07
-        @version    0.2.0
+        @version    0.2.1
         """
         has_source_chunks = bool(self._source_chunks)
         has_started_translation = self._stage_status in {
@@ -374,7 +374,7 @@ class AiTranslationPage(QWidget):
             "failed",
             ai_translation_service.TRANSLATION_STAGE_IN_PROGRESS,
             ai_translation_service.TRANSLATION_STAGE_TRANSLATED,
-            ai_translation_service.TRANSLATION_STAGE_COMPLETED,
+            ai_translation_service.TRANSLATION_STAGE_APPROVED,
         }
         has_translated_chunks = any(str(chunk.get("translated_text", "")).strip() for chunk in self._display_chunks)
         has_untranslated_chunks = any(
@@ -393,7 +393,7 @@ class AiTranslationPage(QWidget):
             and has_source_chunks
             and not self._busy
             and has_untranslated_chunks
-            and self._stage_status != ai_translation_service.TRANSLATION_STAGE_COMPLETED
+            and self._stage_status != ai_translation_service.TRANSLATION_STAGE_APPROVED
             and selected_profile_id is not None
         )
         self._reset_button.setEnabled(
@@ -565,7 +565,7 @@ class AiTranslationPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-07
-        @version    0.1.0
+        @version    0.1.1
         """
         self._title_label.setText(f"<h2>{ui_state_service.translate('ai_translation.title', language)}</h2>")
         self._original_language_label.setText(ui_state_service.translate("ai_translation.original_language", language))
@@ -577,7 +577,7 @@ class AiTranslationPage(QWidget):
         self._approve_all_button.setText(ui_state_service.translate("ai_translation.approve_all", language))
         self._source_group.setTitle(ui_state_service.translate("ai_translation.original_group", language))
         self._translated_group.setTitle(ui_state_service.translate("ai_translation.translated_group", language))
-        self._notes_group.setTitle(ui_state_service.translate("ai_translation.notes_group", language))
+        self._status_group.setTitle(ui_state_service.translate("ai_translation.status_group", language))
         self._retranslate_button.setText(ui_state_service.translate("ai_translation.retranslate", language))
         self._approve_selected_button.setText(ui_state_service.translate("ai_translation.approve_selected", language))
 

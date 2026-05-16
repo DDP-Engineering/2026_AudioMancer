@@ -10,10 +10,11 @@
 @file project_export_service.py
 @brief User-facing project artifact export projections for AudioMancer.
 @details Builds readiness state and TXT/Markdown export documents from runtime
-         project artifacts without modifying the active project workspace.
+         project artifacts plus ZIP archive exports for generated voice and
+         audiobook assets without modifying the active project workspace.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-25
-@version 0.3.7
+@version 0.4.0
 """
 
 # IMPORTS
@@ -23,13 +24,17 @@ from dataclasses import dataclass
 import json
 from pathlib import Path
 import re
+import zipfile
 
 from audiomancer import config
 from audiomancer.services import (
     ai_translation_service,
+    audio_assembly_service,
     character_discovery_service,
+    character_voices_service,
     deterministic_chunking_service,
     deterministic_cleanup_service,
+    narrator_definition_service,
     speech_blocks_service,
     token_usage_service,
 )
@@ -51,21 +56,32 @@ EXPORT_KIND_AI_TRANSLATION = "ai_translation"
 EXPORT_KIND_CHARACTERS = "characters"
 # @brief Export kind for generated Speech Blocks.
 EXPORT_KIND_SPEECH_BLOCKS = "speech_blocks"
+# @brief Export kind for narrator voice sample archives.
+EXPORT_KIND_NARRATOR_VOICE = "narrator_voice"
+# @brief Export kind for character voice sample archives.
+EXPORT_KIND_CHARACTER_VOICES = "character_voices"
+# @brief Export kind for final Audio Assembly archives.
+EXPORT_KIND_AUDIO_ASSEMBLY = "audio_assembly"
 # @brief Stable ordered Home export kind list.
 EXPORT_KIND_OPTIONS = (
     EXPORT_KIND_CLEANED_TEXT,
     EXPORT_KIND_TEXT_CHUNKS,
     EXPORT_KIND_AI_TRANSLATION,
     EXPORT_KIND_CHARACTERS,
+    EXPORT_KIND_NARRATOR_VOICE,
+    EXPORT_KIND_CHARACTER_VOICES,
     EXPORT_KIND_SPEECH_BLOCKS,
+    EXPORT_KIND_AUDIO_ASSEMBLY,
 )
 
 # @brief Plain-text export format token.
 EXPORT_FORMAT_TXT = "txt"
 # @brief Markdown export format token.
 EXPORT_FORMAT_MARKDOWN = "markdown"
+# @brief ZIP archive export format token.
+EXPORT_FORMAT_ZIP = "zip"
 # @brief Stable export format list.
-EXPORT_FORMAT_OPTIONS = (EXPORT_FORMAT_TXT, EXPORT_FORMAT_MARKDOWN)
+EXPORT_FORMAT_OPTIONS = (EXPORT_FORMAT_TXT, EXPORT_FORMAT_MARKDOWN, EXPORT_FORMAT_ZIP)
 
 # @brief Readiness token used when an export can be created.
 EXPORT_STATUS_AVAILABLE = "available"
@@ -79,7 +95,10 @@ _EXPORT_KIND_LABELS = {
     EXPORT_KIND_TEXT_CHUNKS: "Text Chunks",
     EXPORT_KIND_AI_TRANSLATION: "AI Translation",
     EXPORT_KIND_CHARACTERS: "Characters",
+    EXPORT_KIND_NARRATOR_VOICE: "Narator Voice",
+    EXPORT_KIND_CHARACTER_VOICES: "Character Voices",
     EXPORT_KIND_SPEECH_BLOCKS: "Speech Blocks",
+    EXPORT_KIND_AUDIO_ASSEMBLY: "Audio Assembly",
 }
 
 _EXPORT_OPERATION_BY_KIND = {
@@ -87,7 +106,10 @@ _EXPORT_OPERATION_BY_KIND = {
     EXPORT_KIND_TEXT_CHUNKS: "chunking",
     EXPORT_KIND_AI_TRANSLATION: "translation",
     EXPORT_KIND_CHARACTERS: "character_discovery",
+    EXPORT_KIND_NARRATOR_VOICE: "narrator_definition",
+    EXPORT_KIND_CHARACTER_VOICES: "character_voices",
     EXPORT_KIND_SPEECH_BLOCKS: "speech_blocks",
+    EXPORT_KIND_AUDIO_ASSEMBLY: "audio_assembly",
 }
 
 _EXPORT_ARTIFACT_BY_KIND = {
@@ -95,7 +117,16 @@ _EXPORT_ARTIFACT_BY_KIND = {
     EXPORT_KIND_TEXT_CHUNKS: config.CHUNK_ARTIFACT_FILE_NAME,
     EXPORT_KIND_AI_TRANSLATION: config.TRANSLATED_CHUNKS_FILE_NAME,
     EXPORT_KIND_CHARACTERS: config.CHARACTER_PROFILE_FILE_NAME,
+    EXPORT_KIND_NARRATOR_VOICE: config.NARRATOR_PROFILE_FILE_NAME,
+    EXPORT_KIND_CHARACTER_VOICES: config.CHARACTER_VOICES_TARGETS_FILE_NAME,
     EXPORT_KIND_SPEECH_BLOCKS: config.SPEECH_BLOCKS_OUTPUT_FILE_NAME,
+    EXPORT_KIND_AUDIO_ASSEMBLY: config.AUDIO_ASSEMBLY_REPORT_FILE_NAME,
+}
+
+_ARCHIVE_EXPORT_KINDS = {
+    EXPORT_KIND_NARRATOR_VOICE,
+    EXPORT_KIND_CHARACTER_VOICES,
+    EXPORT_KIND_AUDIO_ASSEMBLY,
 }
 
 # DATA MODELS / TYPEDEFINITIONS
@@ -133,7 +164,7 @@ def build_export_states(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.1.1
+    @version    0.2.0
     """
     return [_build_export_state(project_root, manifest, export_kind) for export_kind in EXPORT_KIND_OPTIONS]
 
@@ -148,7 +179,7 @@ def default_export_file_name(manifest: dict[str, object] | None, export_kind: st
     @exception  ValueError Raised when the export kind or format is unsupported.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.1.0
+    @version    0.2.0
     """
     _validate_export_kind(export_kind)
     extension = export_extension(export_format)
@@ -165,13 +196,31 @@ def export_extension(export_format: str) -> str:
     @exception  ValueError Raised when the format is unsupported.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.1.0
+    @version    0.2.0
     """
     if export_format == EXPORT_FORMAT_TXT:
         return ".txt"
     if export_format == EXPORT_FORMAT_MARKDOWN:
         return ".md"
+    if export_format == EXPORT_FORMAT_ZIP:
+        return ".zip"
     raise ValueError(f"Unsupported export format: {export_format}")
+
+
+def export_formats_for_kind(export_kind: str) -> tuple[str, ...]:
+    """
+    @brief      Return the supported file formats for one Home export kind.
+    @param[in]  export_kind Stable export kind token.
+    @return     Ordered export format tokens.
+    @exception  ValueError Raised when the export kind is unsupported.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-16
+    @version    0.1.0
+    """
+    _validate_export_kind(export_kind)
+    if export_kind in _ARCHIVE_EXPORT_KINDS:
+        return (EXPORT_FORMAT_ZIP,)
+    return (EXPORT_FORMAT_TXT, EXPORT_FORMAT_MARKDOWN)
 
 
 def is_path_inside_project(project_root: str | Path, export_path: str | Path) -> bool:
@@ -204,11 +253,15 @@ def render_export(
     @exception  ValueError Raised when the export is unavailable or unsupported.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.1.1
+    @version    0.2.0
     """
     _PROJECT_EXPORT_LOGGER.info("Rendering project export kind=%s format=%s", export_kind, export_format)
     _validate_export_kind(export_kind)
     _validate_export_format(export_format)
+    if export_format == EXPORT_FORMAT_ZIP:
+        raise ValueError("ZIP exports must be written with create_archive_export.")
+    if export_kind in _ARCHIVE_EXPORT_KINDS:
+        raise ValueError("Archive export kinds support ZIP only.")
     state = _build_export_state(project_root, manifest, export_kind)
     if not bool(state.get("can_export", False)):
         _PROJECT_EXPORT_LOGGER.warning("Project export unavailable kind=%s status=%s", export_kind, state.get("status"))
@@ -217,6 +270,49 @@ def render_export(
     if export_format == EXPORT_FORMAT_MARKDOWN:
         return _render_markdown_document(document)
     return _render_txt_document(document)
+
+
+def create_archive_export(
+    project_root: str | Path,
+    manifest: dict[str, object],
+    export_kind: str,
+    export_path: str | Path,
+) -> Path:
+    """
+    @brief      Create one ZIP archive export from generated audio assets and companion text metadata.
+    @param[in]  project_root Active project root folder.
+    @param[in]  manifest Active project manifest.
+    @param[in]  export_kind Stable archive export kind token.
+    @param[in]  export_path Destination ZIP path outside the active project.
+    @return     Final ZIP path.
+    @exception  ValueError Raised when the export is unavailable or unsupported.
+    @exception  OSError Raised when the archive cannot be written.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-16
+    @version    0.1.0
+    """
+    _PROJECT_EXPORT_LOGGER.info("Creating project archive export kind=%s path=%s", export_kind, export_path)
+    _validate_export_kind(export_kind)
+    if export_kind not in _ARCHIVE_EXPORT_KINDS:
+        raise ValueError(f"Export kind is not an archive export: {export_kind}")
+    state = _build_export_state(project_root, manifest, export_kind)
+    if not bool(state.get("can_export", False)):
+        _PROJECT_EXPORT_LOGGER.warning("Archive export unavailable kind=%s status=%s", export_kind, state.get("status"))
+        raise ValueError("The requested export is not available yet.")
+    archive_path = Path(export_path)
+    if archive_path.suffix.lower() != ".zip":
+        archive_path = archive_path.with_suffix(".zip")
+    archive_entries = _build_archive_entries(Path(project_root), manifest, export_kind)
+    if not archive_entries:
+        raise ValueError("The requested archive has no generated audio assets to export.")
+    archive_path.parent.mkdir(parents=True, exist_ok=True)
+    with zipfile.ZipFile(archive_path, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+        for archive_name, source_path, text_content in archive_entries:
+            if source_path is not None:
+                archive.write(source_path, archive_name)
+            else:
+                archive.writestr(archive_name, text_content or "")
+    return archive_path
 
 
 # LOCAL HELPERS
@@ -236,11 +332,16 @@ def _build_export_state(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.1.0
+    @version    0.2.0
     """
     operation_kind = _EXPORT_OPERATION_BY_KIND[export_kind]
     status = EXPORT_STATUS_NOT_READY
-    if project_root is not None and manifest is not None and _operation_is_completed(manifest, operation_kind):
+    if project_root is not None and manifest is not None and export_kind in _ARCHIVE_EXPORT_KINDS:
+        if _artifact_ready(Path(project_root), export_kind):
+            status = EXPORT_STATUS_AVAILABLE
+        elif _operation_is_completed(manifest, operation_kind):
+            status = EXPORT_STATUS_MISSING_ARTIFACT
+    elif project_root is not None and manifest is not None and _operation_is_completed(manifest, operation_kind):
         status = (
             EXPORT_STATUS_AVAILABLE
             if _artifact_ready(Path(project_root), export_kind)
@@ -680,8 +781,14 @@ def _artifact_ready(project_root: Path, export_kind: str) -> bool:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.1.0
+    @version    0.2.0
     """
+    if export_kind == EXPORT_KIND_NARRATOR_VOICE:
+        return bool(_narrator_voice_archive_items(project_root))
+    if export_kind == EXPORT_KIND_CHARACTER_VOICES:
+        return bool(_character_voice_archive_items(project_root))
+    if export_kind == EXPORT_KIND_AUDIO_ASSEMBLY:
+        return bool(_audio_assembly_archive_items(project_root))
     artifact_path = project_root / _EXPORT_ARTIFACT_BY_KIND[export_kind]
     if not artifact_path.is_file():
         return False
@@ -699,6 +806,294 @@ def _artifact_ready(project_root: Path, export_kind: str) -> bool:
     if export_kind == EXPORT_KIND_SPEECH_BLOCKS:
         return bool(speech_blocks_service.load_speech_blocks(project_root))
     return False
+
+
+def _build_archive_entries(
+    project_root: Path,
+    manifest: dict[str, object],
+    export_kind: str,
+) -> list[tuple[str, Path | None, str | None]]:
+    """
+    @brief      Build ZIP entries for one archive export kind.
+    @param[in]  project_root Active project root folder.
+    @param[in]  manifest Active project manifest.
+    @param[in]  export_kind Stable archive export kind token.
+    @return     Ordered tuples of archive name, optional source path, and optional text content.
+    @exception  ValueError Raised when the export kind is unsupported.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-16
+    @version    0.1.0
+    """
+    if export_kind == EXPORT_KIND_NARRATOR_VOICE:
+        return _build_narrator_voice_archive_entries(project_root)
+    if export_kind == EXPORT_KIND_CHARACTER_VOICES:
+        return _build_character_voice_archive_entries(project_root)
+    if export_kind == EXPORT_KIND_AUDIO_ASSEMBLY:
+        return _build_audio_assembly_archive_entries(project_root, manifest)
+    raise ValueError(f"Unsupported archive export kind: {export_kind}")
+
+
+def _build_narrator_voice_archive_entries(project_root: Path) -> list[tuple[str, Path | None, str | None]]:
+    """
+    @brief      Build narrator sample WAV and companion TXT archive entries.
+    @param[in]  project_root Active project root folder.
+    @return     Ordered ZIP entries.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-16
+    @version    0.1.0
+    """
+    entries: list[tuple[str, Path | None, str | None]] = []
+    used_names: set[str] = set()
+    for profile, audio_path, metadata in _narrator_voice_archive_items(project_root):
+        base_name = _unique_archive_stem(
+            _first_value(metadata.get("display_name"), profile.get("display_name"), profile.get("profile_id")),
+            used_names,
+        )
+        entries.append((f"narator_voice/{base_name}.wav", audio_path, None))
+        entries.append(
+            (
+                f"narator_voice/{base_name}.txt",
+                None,
+                _build_voice_companion_text(
+                    "Narator Voice",
+                    str(_first_value(metadata.get("display_name"), profile.get("display_name"), base_name)),
+                    str(_first_value(metadata.get("prompt_text"), profile.get("prompt_text"), "")),
+                    str(_first_value(metadata.get("preview_text"), profile.get("preview_text"), "")),
+                ),
+            )
+        )
+    return entries
+
+
+def _build_character_voice_archive_entries(project_root: Path) -> list[tuple[str, Path | None, str | None]]:
+    """
+    @brief      Build character voice sample WAV and companion TXT archive entries.
+    @param[in]  project_root Active project root folder.
+    @return     Ordered ZIP entries.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-16
+    @version    0.1.0
+    """
+    entries: list[tuple[str, Path | None, str | None]] = []
+    used_names: set[str] = set()
+    voice_language = character_voices_service.load_selected_voice_language(project_root)
+    for target, audio_path, metadata in _character_voice_archive_items(project_root):
+        base_name = _unique_archive_stem(
+            _first_value(metadata.get("display_name"), target.get("display_name"), target.get("target_id")),
+            used_names,
+        )
+        entries.append((f"character_voices/{base_name}.wav", audio_path, None))
+        entries.append(
+            (
+                f"character_voices/{base_name}.txt",
+                None,
+                _build_voice_companion_text(
+                    "Character Voice",
+                    str(_first_value(metadata.get("display_name"), target.get("display_name"), base_name)),
+                    str(_first_value(metadata.get("prompt_text"), target.get("prompt_text"), "")),
+                    str(
+                        _first_value(
+                            metadata.get("preview_text"),
+                            target.get("preview_text"),
+                            character_voices_service.effective_target_preview_text(target, voice_language),
+                        )
+                    ),
+                ),
+            )
+        )
+    return entries
+
+
+def _build_audio_assembly_archive_entries(
+    project_root: Path,
+    manifest: dict[str, object],
+) -> list[tuple[str, Path | None, str | None]]:
+    """
+    @brief      Build final audiobook WAV entries plus one assembly manifest TXT entry.
+    @param[in]  project_root Active project root folder.
+    @param[in]  manifest Active project manifest.
+    @return     Ordered ZIP entries.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-16
+    @version    0.1.0
+    """
+    items = _audio_assembly_archive_items(project_root)
+    entries: list[tuple[str, Path | None, str | None]] = []
+    used_names: set[str] = set()
+    for output, audio_path in items:
+        source_file_name = Path(str(output.get("file_name", "") or audio_path.name)).name
+        file_name = _unique_archive_file_name(source_file_name, used_names)
+        entries.append((f"audio_assembly/{file_name}", audio_path, None))
+    entries.append(
+        (
+            "audio_assembly/audio_assembly_manifest.txt",
+            None,
+            _build_audio_assembly_manifest_text(project_root, manifest, items),
+        )
+    )
+    return entries
+
+
+def _narrator_voice_archive_items(project_root: Path) -> list[tuple[dict[str, object], Path, dict[str, object]]]:
+    """
+    @brief      Collect narrator profiles that have an exportable sample WAV.
+    @param[in]  project_root Active project root folder.
+    @return     Ordered narrator profile, audio path, and metadata tuples.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-16
+    @version    0.1.0
+    """
+    items: list[tuple[dict[str, object], Path, dict[str, object]]] = []
+    for profile in narrator_definition_service.load_profiles(project_root):
+        profile_id = str(profile.get("profile_id", "")).strip()
+        metadata = narrator_definition_service.load_profile_sample_metadata(project_root, profile_id)
+        audio_path, _metadata_path = narrator_definition_service.profile_sample_paths(project_root, profile_id)
+        if profile_id and isinstance(metadata, dict) and audio_path.is_file():
+            items.append((profile, audio_path, metadata))
+    return items
+
+
+def _character_voice_archive_items(project_root: Path) -> list[tuple[dict[str, object], Path, dict[str, object]]]:
+    """
+    @brief      Collect character voice targets that have an exportable sample WAV.
+    @param[in]  project_root Active project root folder.
+    @return     Ordered character target, audio path, and metadata tuples.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-16
+    @version    0.1.0
+    """
+    items: list[tuple[dict[str, object], Path, dict[str, object]]] = []
+    for target in character_voices_service.load_voice_plan(project_root):
+        if str(target.get("target_kind", "")).strip() != character_voices_service.TARGET_KIND_CHARACTER:
+            continue
+        target_id = str(target.get("target_id", "")).strip()
+        metadata = character_voices_service.load_target_sample_metadata(project_root, target_id)
+        audio_path, _metadata_path = character_voices_service.target_sample_paths(project_root, target_id)
+        if target_id and isinstance(metadata, dict) and audio_path.is_file():
+            items.append((target, audio_path, metadata))
+    return items
+
+
+def _audio_assembly_archive_items(project_root: Path) -> list[tuple[dict[str, object], Path]]:
+    """
+    @brief      Collect generated Audio Assembly outputs that still exist on disk.
+    @param[in]  project_root Active project root folder.
+    @return     Ordered output record and audio path tuples.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-16
+    @version    0.1.0
+    """
+    items: list[tuple[dict[str, object], Path]] = []
+    for output in audio_assembly_service.load_generated_outputs(project_root):
+        audio_relative_path = str(output.get("audio_relative_path", "")).strip()
+        if not audio_relative_path:
+            continue
+        audio_path = project_root / audio_relative_path
+        if audio_path.is_file() and is_path_inside_project(project_root, audio_path):
+            items.append((output, audio_path))
+    return items
+
+
+def _build_voice_companion_text(
+    voice_type: str,
+    display_name: str,
+    prompt_text: str,
+    preview_text: str,
+) -> str:
+    """
+    @brief      Build one companion text file for a voice sample export.
+    @param[in]  voice_type Operator-facing voice type label.
+    @param[in]  display_name Voice display name.
+    @param[in]  prompt_text Voice definition prompt.
+    @param[in]  preview_text Preview text used for the sample.
+    @return     UTF-8 companion text content.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-16
+    @version    0.1.0
+    """
+    return (
+        f"{voice_type}: {display_name.strip() or '-'}\n\n"
+        "Voice Definition\n"
+        "----------------\n"
+        f"{prompt_text.strip() or '-'}\n\n"
+        "Preview Text\n"
+        "------------\n"
+        f"{preview_text.strip() or '-'}\n"
+    )
+
+
+def _build_audio_assembly_manifest_text(
+    project_root: Path,
+    manifest: dict[str, object],
+    items: list[tuple[dict[str, object], Path]],
+) -> str:
+    """
+    @brief      Build the text manifest included in Audio Assembly ZIP exports.
+    @param[in]  project_root Active project root folder.
+    @param[in]  manifest Active project manifest.
+    @param[in]  items Exported output record and audio path tuples.
+    @return     UTF-8 manifest text content.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-16
+    @version    0.1.0
+    """
+    report = audio_assembly_service.load_audio_assembly_report(project_root) or {}
+    settings = audio_assembly_service.normalize_audio_assembly_settings(
+        report.get("settings") if isinstance(report, dict) else manifest.get("audio_assembly_settings")
+    )
+    lines = [
+        "Audio Assembly Export",
+        "=====================",
+        "",
+        *_render_txt_fields(_header_fields(manifest, _EXPORT_KIND_LABELS[EXPORT_KIND_AUDIO_ASSEMBLY])),
+        "",
+        "Method of Composure",
+        "-------------------",
+        f"Output Mode: {settings['output_mode']}",
+        f"Output Format: {settings['output_format']}",
+        f"Inter-block Silence: {settings['inter_block_silence_ms']} ms",
+        f"Inter-chunk Silence: {settings['inter_chunk_silence_ms']} ms",
+        f"Max Duration: {settings['max_duration_minutes']} minutes",
+        "",
+        "Files",
+        "-----",
+    ]
+    total_size = 0
+    total_duration = 0.0
+    for output, audio_path in items:
+        size_bytes = audio_path.stat().st_size
+        duration_seconds = float(output.get("duration_seconds", 0.0) or 0.0)
+        total_size += size_bytes
+        total_duration += duration_seconds
+        lines.extend(
+            [
+                f"- {audio_path.name}",
+                f"  Project Path: {audio_path.relative_to(project_root)}",
+                f"  Duration: {_format_seconds(duration_seconds)}",
+                f"  Size: {size_bytes} bytes",
+                f"  Audio Blocks: {int(output.get('block_count', 0) or 0)}",
+            ]
+        )
+    lines.extend(
+        [
+            "",
+            "Totals",
+            "------",
+            f"File Count: {len(items)}",
+            f"Total Duration: {_format_seconds(total_duration)}",
+            f"Total Size: {total_size} bytes",
+            "",
+        ]
+    )
+    return "\n".join(lines)
 
 
 def _operation_is_completed(manifest: dict[str, object], operation_kind: str) -> bool:
@@ -1062,6 +1457,68 @@ def _safe_file_stem(value: str) -> str:
     normalized = re.sub(r'[<>:"/\\|?*\x00-\x1F]+', "_", str(value).strip())
     normalized = re.sub(r"\s+", "_", normalized).strip("._ ")
     return normalized or "AudioMancer"
+
+
+def _unique_archive_stem(value: object, used_names: set[str]) -> str:
+    """
+    @brief      Build one unique archive-safe file stem.
+    @param[in]  value Candidate display name.
+    @param[in]  used_names Case-folded names already emitted.
+    @return     Unique archive file stem.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-16
+    @version    0.1.0
+    """
+    base_name = _safe_file_stem(str(value or "AudioMancer"))
+    candidate_name = base_name
+    suffix = 2
+    while candidate_name.casefold() in used_names:
+        candidate_name = f"{base_name}_{suffix}"
+        suffix += 1
+    used_names.add(candidate_name.casefold())
+    return candidate_name
+
+
+def _unique_archive_file_name(value: object, used_names: set[str]) -> str:
+    """
+    @brief      Build one unique archive-safe file name while preserving the suffix.
+    @param[in]  value Candidate file name.
+    @param[in]  used_names Case-folded names already emitted.
+    @return     Unique archive file name.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-16
+    @version    0.1.0
+    """
+    file_name = Path(str(value or "audio.wav")).name
+    suffix = Path(file_name).suffix or ".wav"
+    stem = _safe_file_stem(Path(file_name).stem or "audio")
+    candidate_name = f"{stem}{suffix}"
+    counter = 2
+    while candidate_name.casefold() in used_names:
+        candidate_name = f"{stem}_{counter}{suffix}"
+        counter += 1
+    used_names.add(candidate_name.casefold())
+    return candidate_name
+
+
+def _format_seconds(duration_seconds: float) -> str:
+    """
+    @brief      Format seconds as a compact duration string for archive manifests.
+    @param[in]  duration_seconds Duration in seconds.
+    @return     Human-readable duration.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-16
+    @version    0.1.0
+    """
+    total_seconds = max(0, int(round(duration_seconds)))
+    hours, remainder = divmod(total_seconds, 3600)
+    minutes, seconds = divmod(remainder, 60)
+    if hours:
+        return f"{hours:02d}:{minutes:02d}:{seconds:02d}"
+    return f"{minutes:02d}:{seconds:02d}"
 
 
 def _escape_markdown(value: str) -> str:

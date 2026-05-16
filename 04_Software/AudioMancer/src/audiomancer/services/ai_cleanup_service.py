@@ -15,7 +15,7 @@
          resumable window-based progress plus AI transaction logs.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-07
-@version 0.8.2
+@version 0.8.3
 """
 
 # IMPORTS
@@ -1453,8 +1453,8 @@ def _classification_from_result_item(item: dict[str, object]) -> dict[str, str]:
     @param[in]  item Raw AI result item.
     @return     Classification with label, confidence, artifact type, action, and reason.
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-26
-    @version    0.1.0
+    @date       2026-05-15
+    @version    0.2.0
     """
     artifact_type = str(item.get("artifact_type", "")).strip().lower()
     if artifact_type not in _ARTIFACT_TYPES:
@@ -1464,12 +1464,8 @@ def _classification_from_result_item(item: dict[str, object]) -> dict[str, str]:
         action = ""
     confidence = str(item.get("confidence", "")).strip().lower()
     if confidence not in _CONFIDENCE_VALUES:
-        confidence = "high" if "label" in item and "confidence" not in item else "medium"
-    label = _label_from_artifact_action(
-        artifact_type,
-        action,
-        str(item.get("label", "")).strip().lower(),
-    )
+        confidence = "medium"
+    label = _label_from_artifact_action(artifact_type, action)
     return {
         "label": label,
         "confidence": confidence,
@@ -1479,16 +1475,15 @@ def _classification_from_result_item(item: dict[str, object]) -> dict[str, str]:
     }
 
 
-def _label_from_artifact_action(artifact_type: str, action: str, legacy_label: str) -> str:
+def _label_from_artifact_action(artifact_type: str, action: str) -> str:
     """
-    @brief      Derive the legacy cleanup label from the new prompt schema.
+    @brief      Derive the internal cleanup label from the prompt schema.
     @param[in]  artifact_type Normalized artifact type.
     @param[in]  action Normalized keep/remove action.
-    @param[in]  legacy_label Backward-compatible label field.
     @return     Internal cleanup label.
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-26
-    @version    0.1.0
+    @date       2026-05-15
+    @version    0.2.0
     """
     if action == "keep":
         return "story" if artifact_type not in {"unknown", ""} else "unknown"
@@ -1498,12 +1493,6 @@ def _label_from_artifact_action(artifact_type: str, action: str, legacy_label: s
         if artifact_type in _REMOVABLE_LABELS:
             return artifact_type
         return "unknown"
-    if legacy_label in _KEEP_LABELS or legacy_label in _REMOVABLE_LABELS:
-        return legacy_label
-    if artifact_type in _REMOVABLE_ARTIFACT_TYPES:
-        return "noise" if artifact_type == "ocr_noise" else artifact_type
-    if artifact_type in _ARTIFACT_TYPES:
-        return "story" if artifact_type != "unknown" else "unknown"
     return "unknown"
 
 

@@ -14,7 +14,7 @@
          persists resumable state, and creates one AI transaction log file.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-11
-@version 0.4.1
+@version 0.4.2
 """
 
 # IMPORTS
@@ -68,10 +68,15 @@ def test_ai_cleanup_writes_cleanup_artifacts_and_log(
             {
                 "payload": {
                     "results": [
-                        {"unit_id": "unit-0001", "label": "story"},
-                        {"unit_id": "unit-0002", "label": "story"},
-                        {"unit_id": "unit-0003", "label": "separator"},
-                        {"unit_id": "unit-0004", "label": "story"},
+                        {
+                            "unit_id": "unit-0001",
+                            "artifact_type": "chapter_heading",
+                            "action": "keep",
+                            "confidence": "high",
+                        },
+                        {"unit_id": "unit-0002", "artifact_type": "story", "action": "keep", "confidence": "high"},
+                        {"unit_id": "unit-0003", "artifact_type": "separator", "action": "keep", "confidence": "high"},
+                        {"unit_id": "unit-0004", "artifact_type": "story", "action": "keep", "confidence": "high"},
                     ]
                 },
                 "usage": {"input_tokens": 20, "output_tokens": 5, "total_tokens": 25, "usage_available": True},
@@ -132,7 +137,7 @@ def test_ai_cleanup_writes_cleanup_artifacts_and_log(
         (
             "Ottmar Drenthe was watching reviews of his latest project and fuming at\n"
             "the idiocy of the\nDominion's reviewing elites.\n",
-            [{"unit_id": "unit-0001", "label": "story"}],
+            [{"unit_id": "unit-0001", "artifact_type": "story", "action": "keep", "confidence": "high"}],
             {"input_tokens": 10, "output_tokens": 2, "total_tokens": 12, "usage_available": True},
             "idiocy of the Dominion's reviewing elites.",
             "idiocy of the\nDominion's reviewing elites.",
@@ -140,7 +145,7 @@ def test_ai_cleanup_writes_cleanup_artifacts_and_log(
         # Joins unfinished wrapped lines before one capitalized continuation
         (
             '"This is below\nDrenthe."\n',
-            [{"unit_id": "unit-0001", "label": "story"}],
+            [{"unit_id": "unit-0001", "artifact_type": "dialogue", "action": "keep", "confidence": "high"}],
             {"input_tokens": 10, "output_tokens": 2, "total_tokens": 12, "usage_available": True},
             '"This is below Drenthe."',
             '"This is below\nDrenthe."',
@@ -149,9 +154,9 @@ def test_ai_cleanup_writes_cleanup_artifacts_and_log(
         (
             "Drenthe will shoot this industrial if\n\n3\n\nyou swear that Heroes of the Periphery will then be the next project.\n",
             [
-                {"unit_id": "unit-0001", "label": "story"},
-                {"unit_id": "unit-0002", "label": "page_number"},
-                {"unit_id": "unit-0003", "label": "story"},
+                {"unit_id": "unit-0001", "artifact_type": "story", "action": "keep", "confidence": "high"},
+                {"unit_id": "unit-0002", "artifact_type": "page_number", "action": "remove", "confidence": "high"},
+                {"unit_id": "unit-0003", "artifact_type": "story", "action": "keep", "confidence": "high"},
             ],
             {"input_tokens": 12, "output_tokens": 3, "total_tokens": 15, "usage_available": True},
             "Drenthe will shoot this industrial if you swear that Heroes of the Periphery",
@@ -225,12 +230,12 @@ def test_ai_cleanup_corrects_invalid_tail_labels_and_persists_warnings(
         lambda *_args, **_kwargs: {
             "payload": {
                 "results": [
-                    {"unit_id": "unit-0001", "label": "story"},
-                    {"unit_id": "unit-0002", "label": "story"},
-                    {"unit_id": "unit-0003", "label": "page_number"},
-                    {"unit_id": "unit-0004", "label": "story"},
-                    {"unit_id": "unit-0005", "label": "page_number"},
-                    {"unit_id": "unit-0006", "label": "story"},
+                    {"unit_id": "unit-0001", "artifact_type": "story", "action": "keep", "confidence": "high"},
+                    {"unit_id": "unit-0002", "artifact_type": "separator", "action": "keep", "confidence": "high"},
+                    {"unit_id": "unit-0003", "artifact_type": "page_number", "action": "remove", "confidence": "high"},
+                    {"unit_id": "unit-0004", "artifact_type": "story", "action": "keep", "confidence": "high"},
+                    {"unit_id": "unit-0005", "artifact_type": "page_number", "action": "remove", "confidence": "high"},
+                    {"unit_id": "unit-0006", "artifact_type": "story", "action": "keep", "confidence": "high"},
                 ]
             },
             "usage": {"input_tokens": 18, "output_tokens": 6, "total_tokens": 24, "usage_available": True},
@@ -333,6 +338,46 @@ def test_ai_cleanup_accepts_artifact_action_confidence_schema(
     assert "Page 12" not in cleaned_text
 
 
+def test_ai_cleanup_ignores_legacy_label_only_schema(
+    mock_extracted_project, mock_prompt_environment, monkeypatch
+) -> None:
+    """
+    @brief      Validate ai cleanup ignores legacy label-only result items.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-15
+    @version    0.1.0
+    """
+    project_root, manifest = mock_extracted_project
+    extracted_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.EXTRACTED_TEXT_FILE_NAME
+    extracted_path.write_text("Book Title\n\nRunning Head\n\nStory paragraph.\n", encoding="utf-8")
+
+    monkeypatch.setattr(
+        ai_cleanup_service.llm_provider_service,
+        "chat_json",
+        lambda *_args, **_kwargs: {
+            "payload": {
+                "results": [
+                    {"unit_id": "unit-0001", "label": "header"},
+                    {"unit_id": "unit-0002", "artifact_type": "header", "confidence": "high"},
+                    {"unit_id": "unit-0003", "artifact_type": "story", "action": "keep", "confidence": "high"},
+                ]
+            },
+            "usage": {"input_tokens": 10, "output_tokens": 4, "total_tokens": 14, "usage_available": True},
+        },
+    )
+
+    ai_cleanup_service.clean_text(project_root, manifest, _MOCK_PROFILE)
+
+    cleaned_text = (
+        project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.CLEANED_TEXT_FILE_NAME
+    ).read_text(encoding="utf-8")
+    assert "Book Title" in cleaned_text
+    assert "Running Head" in cleaned_text
+    assert "Story paragraph." in cleaned_text
+
+
 def test_ai_cleanup_preserves_low_confidence_removals(
     mock_extracted_project, mock_prompt_environment, monkeypatch
 ) -> None:
@@ -412,9 +457,9 @@ def test_ai_cleanup_prompt_includes_language_script_and_neighbor_context(
         return {
             "payload": {
                 "results": [
-                    {"unit_id": "unit-0001", "label": "story"},
-                    {"unit_id": "unit-0002", "label": "story"},
-                    {"unit_id": "unit-0003", "label": "story"},
+                    {"unit_id": "unit-0001", "artifact_type": "story", "action": "keep", "confidence": "high"},
+                    {"unit_id": "unit-0002", "artifact_type": "story", "action": "keep", "confidence": "high"},
+                    {"unit_id": "unit-0003", "artifact_type": "story", "action": "keep", "confidence": "high"},
                 ]
             },
             "usage": {"input_tokens": 16, "output_tokens": 6, "total_tokens": 22, "usage_available": True},
@@ -467,8 +512,8 @@ def test_ai_cleanup_appends_operator_instructions_to_prompt_and_state(
         return {
             "payload": {
                 "results": [
-                    {"unit_id": "unit-0001", "label": "story"},
-                    {"unit_id": "unit-0002", "label": "story"},
+                    {"unit_id": "unit-0001", "artifact_type": "story", "action": "keep", "confidence": "high"},
+                    {"unit_id": "unit-0002", "artifact_type": "story", "action": "keep", "confidence": "high"},
                 ]
             },
             "usage": {"input_tokens": 12, "output_tokens": 4, "total_tokens": 16, "usage_available": True},
@@ -531,7 +576,12 @@ def test_ai_cleanup_splits_long_input_into_multiple_windows(
         return {
             "payload": {
                 "results": [
-                    {"unit_id": f"unit-{unit_index:04d}", "label": "story"}
+                    {
+                        "unit_id": f"unit-{unit_index:04d}",
+                        "artifact_type": "story",
+                        "action": "keep",
+                        "confidence": "high",
+                    }
                     for unit_index in range(start_unit, end_unit + 1)
                 ]
             },
@@ -661,7 +711,15 @@ def test_ai_cleanup_resumes_with_new_model_settings(
         [
             {
                 "payload": {
-                    "results": [{"unit_id": f"unit-{unit_index:04d}", "label": "story"} for unit_index in range(1, 25)]
+                    "results": [
+                        {
+                            "unit_id": f"unit-{unit_index:04d}",
+                            "artifact_type": "story",
+                            "action": "keep",
+                            "confidence": "high",
+                        }
+                        for unit_index in range(1, 25)
+                    ]
                 },
                 "usage": {"input_tokens": 10, "output_tokens": 2, "total_tokens": 12, "usage_available": True},
             },
@@ -701,7 +759,15 @@ def test_ai_cleanup_resumes_with_new_model_settings(
         captured_prompts.append(user_prompt)
         return {
             "payload": {
-                "results": [{"unit_id": f"unit-{unit_index:04d}", "label": "story"} for unit_index in range(1, 41)]
+                "results": [
+                    {
+                        "unit_id": f"unit-{unit_index:04d}",
+                        "artifact_type": "story",
+                        "action": "keep",
+                        "confidence": "high",
+                    }
+                    for unit_index in range(1, 41)
+                ]
             },
             "usage": {"input_tokens": 10, "output_tokens": 2, "total_tokens": 12, "usage_available": True},
         }
@@ -755,7 +821,15 @@ def test_ai_cleanup_restarts_when_extracted_text_changes(
         [
             {
                 "payload": {
-                    "results": [{"unit_id": f"unit-{unit_index:04d}", "label": "story"} for unit_index in range(1, 25)]
+                    "results": [
+                        {
+                            "unit_id": f"unit-{unit_index:04d}",
+                            "artifact_type": "story",
+                            "action": "keep",
+                            "confidence": "high",
+                        }
+                        for unit_index in range(1, 25)
+                    ]
                 },
                 "usage": {"input_tokens": 10, "output_tokens": 2, "total_tokens": 12, "usage_available": True},
             },
@@ -797,8 +871,8 @@ def test_ai_cleanup_restarts_when_extracted_text_changes(
         return {
             "payload": {
                 "results": [
-                    {"unit_id": "unit-0001", "label": "story"},
-                    {"unit_id": "unit-0002", "label": "story"},
+                    {"unit_id": "unit-0001", "artifact_type": "story", "action": "keep", "confidence": "high"},
+                    {"unit_id": "unit-0002", "artifact_type": "story", "action": "keep", "confidence": "high"},
                 ]
             },
             "usage": {"input_tokens": 10, "output_tokens": 2, "total_tokens": 12, "usage_available": True},

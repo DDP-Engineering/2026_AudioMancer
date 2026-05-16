@@ -13,7 +13,7 @@
          Audio Blocks orchestration service.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-29
-@version 0.1.0
+@version 0.2.0
 """
 
 # IMPORTS
@@ -69,7 +69,7 @@ def test_audio_blocks_artifact_wav_validation_and_stitching(tmp_path) -> None:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-29
-    @version    0.1.0
+    @version    0.2.0
     """
     first_part = tmp_path / "part1.wav"
     second_part = tmp_path / "part2.wav"
@@ -78,6 +78,8 @@ def test_audio_blocks_artifact_wav_validation_and_stitching(tmp_path) -> None:
     _write_wav(second_part, 12)
 
     assert audio_blocks_artifact_service.is_valid_wav_path(first_part) is True
+    assert audio_blocks_artifact_service.wav_duration_seconds(first_part) == 8 / 24_000
+    assert audio_blocks_artifact_service.wav_duration_seconds(tmp_path / "missing.wav") is None
     with pytest.raises(RuntimeError, match="invalid WAV audio"):
         audio_blocks_artifact_service.validate_wav_bytes(b"not-wav")
 

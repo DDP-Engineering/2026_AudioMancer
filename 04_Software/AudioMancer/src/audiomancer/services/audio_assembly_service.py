@@ -14,7 +14,7 @@
          generation through root-level state and report artifacts.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-25
-@version 0.5.1
+@version 0.5.2
 """
 
 # IMPORTS
@@ -309,7 +309,7 @@ def start_or_continue_composition(
     _emit_progress(progress_callback, len(completed_records), len(output_plan), "Audio Assembly started.")
 
     try:
-        for output_index, output_item in enumerate(output_plan):
+        for output_item in output_plan:
             if output_item["output_key"] in {str(record.get("output_key", "")) for record in completed_records}:
                 continue
             raise_if_cancelled(cancel_requested)
@@ -329,7 +329,7 @@ def start_or_continue_composition(
             _persist_state(
                 resolved_project_root,
                 report,
-                _build_operation_state(resolved_project_root, report, output_plan, output_index + 1),
+                _build_operation_state(resolved_project_root, report, output_plan),
             )
             _emit_progress(
                 progress_callback,
@@ -352,7 +352,7 @@ def start_or_continue_composition(
         _persist_state(
             resolved_project_root,
             cancelled_report,
-            _build_operation_state(resolved_project_root, cancelled_report, output_plan, len(completed_records)),
+            _build_operation_state(resolved_project_root, cancelled_report, output_plan),
         )
         raise
 
@@ -368,7 +368,7 @@ def start_or_continue_composition(
         started_at=started_at,
         completed_at=completed_at,
     )
-    completed_state = _build_operation_state(resolved_project_root, final_report, output_plan, len(output_plan))
+    completed_state = _build_operation_state(resolved_project_root, final_report, output_plan)
     _persist_state(
         resolved_project_root,
         final_report,
@@ -807,19 +807,17 @@ def _build_operation_state(
     project_root: Path,
     report: AudioAssemblyReport,
     output_plan: list[dict[str, object]],
-    next_output_index: int = 0,
 ) -> AudioAssemblyState:
     """
     @brief      Build one persisted Audio Assembly operation-state payload.
     @param[in]  project_root Active project root folder.
     @param[in]  report Current Audio Assembly report.
     @param[in]  output_plan Planned output files.
-    @param[in]  next_output_index Next output index to compose.
     @return     Operation-state payload.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.1.0
+    @version    0.2.0
     """
     report_path = build_operation_output_path(project_root, "audio_assembly", config.AUDIO_ASSEMBLY_REPORT_FILE_NAME)
     state_path = build_operation_output_path(project_root, "audio_assembly", config.AUDIO_ASSEMBLY_STATE_FILE_NAME)
@@ -845,11 +843,8 @@ def _build_operation_state(
             "output_mode": str(dict(report.get("settings", {})).get("output_mode", "")),
             "output_format": OUTPUT_FORMAT_WAV,
             "total_duration_seconds": float(report.get("total_duration_seconds", 0.0)),
-            "completed_output_keys": [str(output.get("output_key", "")) for output in report.get("outputs", [])],
         },
-        resume_checkpoint={
-            "next_output_index": max(int(next_output_index), 0),
-        },
+        resume_checkpoint=None,
     )
 
 
@@ -911,15 +906,32 @@ def _requires_manual_reset(existing_state: dict[str, object], input_fingerprint:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.1.0
+    @version    0.2.0
     """
     if not existing_state:
         return False
+    status = str(existing_state.get("status", "")).strip()
+    try:
+        progress_current = int(existing_state.get("progress_current", 0) or 0)
+        progress_total = int(existing_state.get("progress_total", 0) or 0)
+    except (TypeError, ValueError):
+        progress_current = 0
+        progress_total = 0
+    has_runtime_artifacts = any(
+        (
+            bool(existing_state.get("output_paths")),
+            bool(existing_state.get("artifact_paths")),
+            progress_current > 0,
+            progress_total > 0,
+        )
+    )
+    if status in {"", AUDIO_ASSEMBLY_STAGE_NOT_STARTED} and not has_runtime_artifacts:
+        return False
     metadata = existing_state.get("metadata", {}) if isinstance(existing_state, dict) else {}
     if not isinstance(metadata, dict):
-        return False
+        return True
     persisted = str(metadata.get("input_fingerprint", "")).strip()
-    return bool(persisted) and persisted != input_fingerprint
+    return not persisted or persisted != input_fingerprint
 
 
 def _audio_path(project_root: Path, audio_block: dict[str, object]) -> Path | None:
@@ -973,15 +985,13 @@ def _pause_duration_ms(audio_block: dict[str, object]) -> int:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.1.0
+    @version    0.2.0
     """
     value = audio_block.get("pause_duration_ms")
-    if value in (None, ""):
-        return speech_blocks_service.pause_duration_ms(audio_block.get("text", ""))
     try:
         duration_ms = int(value)
     except (TypeError, ValueError):
-        return speech_blocks_service.pause_duration_ms(audio_block.get("text", ""))
+        return config.DEFAULT_SPEECH_BLOCK_PAUSE_DURATION_MS
     if duration_ms <= 0:
         return config.DEFAULT_SPEECH_BLOCK_PAUSE_DURATION_MS
     return duration_ms

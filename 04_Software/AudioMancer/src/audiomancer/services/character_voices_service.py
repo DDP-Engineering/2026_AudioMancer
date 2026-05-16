@@ -14,7 +14,7 @@
          for the Character Voices workflow.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-20
-@version 1.10.0
+@version 1.10.2
 """
 
 # IMPORTS
@@ -43,9 +43,6 @@ TARGET_KIND_NARRATOR = "narrator"
 TARGET_KIND_CHARACTER = "character"
 
 TARGET_ID_NARRATOR = "narrator"
-
-SAMPLE_MODE_NARRATOR_REFERENCE = "narrator_reference"
-SAMPLE_MODE_VOICE_DESIGNER = "voice_designer"
 
 SAMPLE_SOURCE_VOICE_DESIGNER = "voice_designer"
 SAMPLE_SOURCE_COPIED_NARRATOR = "copied_narrator"
@@ -188,7 +185,7 @@ def sync_voice_plan(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-20
-    @version    2.1.0
+    @version    2.2.0
     """
     normalized_voice_language = narrator_definition_service.narrator_language_code(voice_language)
     existing_targets_by_id = {
@@ -203,14 +200,12 @@ def sync_voice_plan(
                     **existing_narrator_target,
                     "target_id": TARGET_ID_NARRATOR,
                     "target_kind": TARGET_KIND_NARRATOR,
-                    "source_profile_id": str(narrator_profile.get("profile_id", "")).strip() or None,
                     "display_name": "Narator Voice",
                     "character_id": None,
                     "prompt_text": None,
                     "default_prompt_text": None,
                     "preview_text": None,
                     "editable": False,
-                    "sample_mode": SAMPLE_MODE_NARRATOR_REFERENCE,
                     "updated_at": existing_narrator_target.get("updated_at"),
                 }
             )
@@ -228,7 +223,6 @@ def sync_voice_plan(
                     **existing_target,
                     "target_id": target_id,
                     "target_kind": TARGET_KIND_CHARACTER,
-                    "source_profile_id": None,
                     "display_name": str(character_profile.get("canonical_name", "")).strip() or target_id,
                     "character_id": normalized_character_id,
                     "prompt_text": _synchronized_character_prompt_text(
@@ -243,7 +237,6 @@ def sync_voice_plan(
                         normalized_voice_language,
                     ),
                     "editable": True,
-                    "sample_mode": SAMPLE_MODE_VOICE_DESIGNER,
                     "updated_at": existing_target.get("updated_at"),
                 }
             )
@@ -827,6 +820,64 @@ def character_voices_is_ready(
     )
 
 
+def character_voices_operation_summary(
+    project_root: str | Path,
+    voice_targets: list[dict[str, object]],
+) -> dict[str, object]:
+    """
+    @brief      Build the compact manifest operation summary for Character Voices.
+    @param[in]  project_root Active project root folder.
+    @param[in]  voice_targets Current character-voices target list.
+    @return     Project-manifest operation summary payload.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-16
+    @version    0.1.0
+    """
+    targets = [target for target in voice_targets if isinstance(target, dict)]
+    narrator_targets = [
+        target for target in targets if str(target.get("target_kind", "")).strip() == TARGET_KIND_NARRATOR
+    ]
+    character_targets = [
+        target for target in targets if str(target.get("target_kind", "")).strip() == TARGET_KIND_CHARACTER
+    ]
+    narrator_sample_metadata = selected_narrator_sample_metadata(project_root) if narrator_targets else None
+    narrator_sample_count = 1 if narrator_targets and selected_narrator_sample_exists(project_root) else 0
+    sampled_character_targets = [
+        target
+        for target in character_targets
+        if has_target_sample(project_root, str(target.get("target_id", "")).strip())
+    ]
+    progress_current = narrator_sample_count + len(sampled_character_targets)
+    progress_total = len(narrator_targets) + len(character_targets)
+    ready = character_voices_is_ready(project_root, targets)
+    if ready:
+        status = "completed"
+    elif progress_current > 0:
+        status = "in_progress"
+    else:
+        status = "not_started"
+    sampled_metadata_payloads = [narrator_sample_metadata]
+    sampled_metadata_payloads.extend(
+        load_target_sample_metadata(project_root, str(target.get("target_id", "")).strip())
+        for target in sampled_character_targets
+    )
+    timestamp = _latest_sample_timestamp(
+        [sample_metadata for sample_metadata in sampled_metadata_payloads if isinstance(sample_metadata, dict)]
+    )
+    return {
+        "folder_relative_path": config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH,
+        "status": status,
+        "progress_current": progress_current,
+        "progress_total": progress_total,
+        "mode": "manual" if progress_current > 0 else None,
+        "started_at": timestamp if progress_current > 0 else None,
+        "completed_at": timestamp if ready else None,
+        "updated_at": timestamp if progress_current > 0 else None,
+        "warning_count": 0,
+    }
+
+
 def selected_narrator_sample_exists(project_root: str | Path) -> bool:
     """
     @brief      Return whether the selected narrator sample exists for the current project.
@@ -855,38 +906,6 @@ def selected_narrator_sample_metadata(project_root: str | Path) -> dict[str, obj
     @version    1.1.0
     """
     return narrator_definition_service.load_selected_narrator_sample_metadata(project_root)
-
-
-def reset_samples_and_preview_texts_for_language(project_root: str | Path, voice_language: object) -> str:
-    """
-    @brief      Clear generated character samples and reset character preview text for one voice language.
-    @param[in]  project_root Active project root folder.
-    @param[in]  voice_language Candidate selected audiobook voice language.
-    @return     Canonical selected voice language code.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-26
-    @version    0.1.0
-    """
-    normalized_language = narrator_definition_service.narrator_language_code(voice_language)
-    localized_preview_text = preview_text_for_language(normalized_language)
-    updated_targets: list[dict[str, object]] = []
-    for target_payload in load_voice_plan(project_root):
-        target_id = str(target_payload.get("target_id", "")).strip()
-        if target_id:
-            audio_path, _metadata_path = target_sample_paths(project_root, target_id)
-            if audio_path.exists():
-                audio_path.unlink()
-        updated_target = {
-            **dict(target_payload),
-            "sample_audio_path": None,
-            "sample_metadata": None,
-        }
-        if str(target_payload.get("target_kind", "")).strip() == TARGET_KIND_CHARACTER:
-            updated_target["preview_text"] = localized_preview_text
-        updated_targets.append(_normalize_voice_target(updated_target))
-    save_voice_targets(project_root, updated_targets)
-    return normalized_language
 
 
 # LOCAL HELPERS
@@ -954,7 +973,7 @@ def _normalize_voice_target(target_payload: dict[str, object]) -> dict[str, obje
     @return     Derived helper result.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.1.0
+    @version    0.2.0
     """
     normalized_target_kind = (
         str(target_payload.get("target_kind", TARGET_KIND_CHARACTER)).strip() or TARGET_KIND_CHARACTER
@@ -977,21 +996,12 @@ def _normalize_voice_target(target_payload: dict[str, object]) -> dict[str, obje
     return {
         "target_id": normalized_target_id,
         "target_kind": normalized_target_kind,
-        "source_profile_id": _optional_string(target_payload.get("source_profile_id")),
         "display_name": normalized_display_name,
         "character_id": _optional_string(target_payload.get("character_id")),
         "prompt_text": prompt_text,
         "default_prompt_text": default_prompt_text,
         "preview_text": preview_text,
         "editable": bool(target_payload.get("editable", normalized_target_kind == TARGET_KIND_CHARACTER)),
-        "sample_mode": str(
-            target_payload.get(
-                "sample_mode",
-                SAMPLE_MODE_NARRATOR_REFERENCE
-                if normalized_target_kind == TARGET_KIND_NARRATOR
-                else SAMPLE_MODE_VOICE_DESIGNER,
-            )
-        ).strip(),
         "sample_audio_path": _optional_string(target_payload.get("sample_audio_path")),
         "sample_metadata": (
             dict(target_payload.get("sample_metadata"))
@@ -1205,17 +1215,15 @@ def _update_target_sample_metadata(
     @return     None.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.1.1
+    @version    0.2.0
     """
     normalized_target_id = str(target_id or "").strip()
     voice_targets = load_voice_plan(project_root)
     updated_targets: list[dict[str, object]] = []
-    target_found = False
     for target_payload in voice_targets:
         if str(target_payload.get("target_id", "")).strip() != normalized_target_id:
             updated_targets.append(target_payload)
             continue
-        target_found = True
         updated_targets.append(
             {
                 **dict(target_payload),
@@ -1224,18 +1232,27 @@ def _update_target_sample_metadata(
                 "stale": bool(target_payload.get("stale", False)) if metadata_payload is None else False,
             }
         )
-    if not target_found and metadata_payload is not None:
-        updated_targets.append(
-            _normalize_voice_target(
-                {
-                    **dict(metadata_payload),
-                    "target_id": normalized_target_id,
-                    "sample_audio_path": relative_path,
-                    "sample_metadata": dict(metadata_payload),
-                }
-            )
-        )
     save_voice_targets(project_root, updated_targets)
+
+
+def _latest_sample_timestamp(sample_metadata_payloads: list[dict[str, object]]) -> str | None:
+    """
+    @brief      Return the latest timestamp from persisted character-voices sample metadata.
+    @param[in]  sample_metadata_payloads Sample metadata payloads to inspect.
+    @return     Latest timestamp string or `None`.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-16
+    @version    0.1.0
+    """
+    timestamps: list[str] = []
+    for sample_metadata in sample_metadata_payloads:
+        for field_name in ("selected_at", "generated_at", "imported_at", "updated_at"):
+            timestamp = str(sample_metadata.get(field_name, "") or "").strip()
+            if timestamp:
+                timestamps.append(timestamp)
+                break
+    return max(timestamps) if timestamps else None
 
 
 def _targets_path(project_root: str | Path) -> Path:
@@ -1248,30 +1265,6 @@ def _targets_path(project_root: str | Path) -> Path:
     @version    0.1.0
     """
     return Path(project_root) / config.CHARACTER_VOICES_TARGETS_FILE_NAME
-
-
-def _selected_language_path(project_root: str | Path) -> Path:
-    """
-    @brief      Execute the selected language path helper.
-    @param[in]  project_root Active project root folder.
-    @return     Helper result.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
-    """
-    return Path(project_root) / config.PROJECT_MANIFEST_FILE_NAME
-
-
-def _audio_samples_root(project_root: str | Path) -> Path:
-    """
-    @brief      Execute the audio samples root helper.
-    @param[in]  project_root Active project root folder.
-    @return     Helper result.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
-    """
-    return Path(project_root)
 
 
 def _normalized_audio_name(value: object) -> str:

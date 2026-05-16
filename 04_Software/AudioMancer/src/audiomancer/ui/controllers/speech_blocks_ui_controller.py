@@ -14,7 +14,7 @@
          Speech Blocks workflow.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 0.8.4
+@version 0.8.6
 """
 
 # IMPORTS
@@ -194,17 +194,17 @@ def handle_approve_block_requested(window: "MainWindow", speech_block_id: str) -
     )
 
 
-def handle_insert_block_requested(window: "MainWindow", chunk_id: str, before_speech_block_id: str) -> None:
+def handle_insert_block_requested(window: "MainWindow", chunk_id: str, after_speech_block_id: str) -> None:
     """
     @brief      Insert one manual Speech Block at the selected chunk position.
     @param[in]  window Active main window instance.
     @param[in]  chunk_id Selected source chunk identifier.
-    @param[in]  before_speech_block_id Optional selected Speech Block before the new block.
+    @param[in]  after_speech_block_id Optional selected Speech Block after which to insert.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.3.0
+    @version    0.4.0
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._current_project_root is None or window._current_manifest is None:
@@ -215,7 +215,7 @@ def handle_insert_block_requested(window: "MainWindow", chunk_id: str, before_sp
         _report, inserted_block_id = speech_blocks_service.insert_speech_block(
             window._current_project_root,
             chunk_id,
-            before_speech_block_id or None,
+            after_speech_block_id or None,
         )
     except ValueError as error:
         QMessageBox.warning(
@@ -971,34 +971,6 @@ def _confirm_speech_blocks_reset(window: "MainWindow", language: str) -> bool:
             window,
             ui_state_service.translate("dialog.confirm_speech_blocks_rerun_title", language),
             ui_state_service.translate("project.confirm_speech_blocks_rerun", language),
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            QMessageBox.StandardButton.No,
-        )
-        == QMessageBox.StandardButton.Yes
-    )
-
-
-def _confirm_chunk_audio_reset_if_needed(window: "MainWindow", chunk_id: str | None, language: str) -> bool:
-    """
-    @brief      Ask before resetting generated Audio Blocks data for one changed Speech Blocks chunk.
-    @param[in]  window Active main window instance.
-    @param[in]  chunk_id Changed source chunk identifier.
-    @param[in]  language Current UI language code.
-    @return     True when the operation may continue.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-27
-    @version    0.1.0
-    """
-    if window._current_project_root is None or not chunk_id:
-        return True
-    if not audio_blocks_service.has_persisted_audio_for_chunk(window._current_project_root, chunk_id):
-        return True
-    return (
-        QMessageBox.question(
-            window,
-            ui_state_service.translate("dialog.confirm_speech_block_audio_reset_title", language),
-            ui_state_service.translate("project.confirm_speech_block_audio_reset", language),
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.No,
         )

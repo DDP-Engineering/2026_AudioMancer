@@ -13,7 +13,7 @@
          chunk records, translation reports, and current operation state.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-07
-@version 0.7.0
+@version 0.7.1
 """
 
 # IMPORTS
@@ -91,7 +91,7 @@ def build_ai_translation_state(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-07
-    @version    0.2.0
+    @version    0.3.0
     """
     if project_root is None or manifest is None:
         return {
@@ -110,22 +110,16 @@ def build_ai_translation_state(
     report = ai_translation_service.load_translation_report(project_root)
     operation_state = ai_translation_service.load_operation_state(project_root)
     translated_chunks = ai_translation_service.load_translated_chunks(project_root)
-    persisted_target_language = _persisted_target_language(manifest, report, operation_state)
+    persisted_target_language = _persisted_target_language(manifest)
     persisted_profile_id = _persisted_profile_id(report, operation_state)
     profile_state = build_ai_translation_profile_state(settings_payload, persisted_profile_id)
-    if source_chunks:
-        if _is_legacy_auto_pass_through(operation_state):
-            translated_chunks = []
-            report = None
-            operation_state = None
-            persisted_profile_id = None
-        elif _manifest_original_language(manifest) != persisted_target_language:
-            source_chunks, translated_chunks, report = ai_translation_service.ensure_translation_records(
-                project_root,
-                persisted_target_language,
-                persisted_profile_id,
-            )
-            operation_state = ai_translation_service.load_operation_state(project_root)
+    if source_chunks and _manifest_original_language(manifest) != persisted_target_language:
+        source_chunks, translated_chunks, report = ai_translation_service.ensure_translation_records(
+            project_root,
+            persisted_target_language,
+            persisted_profile_id,
+        )
+        operation_state = ai_translation_service.load_operation_state(project_root)
     translated_count = 0 if report is None else int(report.get("translated_chunk_count", 0))
     approved_count = 0 if report is None else int(report.get("approved_chunk_count", 0))
     total_count = len(source_chunks)
@@ -171,7 +165,7 @@ def build_ai_translation_notes(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-07
-    @version    0.2.0
+    @version    0.3.0
     """
     if home_presenter_service.source_document_name(manifest) is None:
         return [ui_state_service.translate("ai_translation.note_no_source", language)]
@@ -220,9 +214,17 @@ def build_ai_translation_notes(
                 progress_total=progress_total,
             )
         )
-    elif report is not None and _normalized_report_stage(report) == ai_translation_service.TRANSLATION_STAGE_TRANSLATED:
+    elif (
+        report is not None
+        and str(report.get("translation_stage_status", ai_translation_service.TRANSLATION_STAGE_NOT_STARTED))
+        == ai_translation_service.TRANSLATION_STAGE_TRANSLATED
+    ):
         notes.append(ui_state_service.translate("ai_translation.note_approval_pending", language))
-    elif report is not None and _normalized_report_stage(report) == ai_translation_service.TRANSLATION_STAGE_APPROVED:
+    elif (
+        report is not None
+        and str(report.get("translation_stage_status", ai_translation_service.TRANSLATION_STAGE_NOT_STARTED))
+        == ai_translation_service.TRANSLATION_STAGE_APPROVED
+    ):
         notes.append(ui_state_service.translate("ai_translation.note_completed_locked", language))
     else:
         notes.append(ui_state_service.translate("ai_translation.note_ready", language))
@@ -259,93 +261,35 @@ def _translation_stage_status(report: dict[str, object] | None, operation_state:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-07
-    @version    0.1.0
+    @version    0.2.0
     """
     if isinstance(operation_state, dict):
         operation_status = str(operation_state.get("status", ""))
         if operation_status in {"running", "failed"}:
             return operation_status
     if isinstance(report, dict):
-        return _normalized_report_stage(report)
+        return str(
+            report.get(
+                "translation_stage_status",
+                ai_translation_service.TRANSLATION_STAGE_NOT_STARTED,
+            )
+        )
     return ai_translation_service.TRANSLATION_STAGE_NOT_STARTED
 
 
-def _normalized_report_stage(report: dict[str, object]) -> str:
-    """
-    @brief      Normalize current and legacy translation report stage tokens.
-    @param[in]  report Persisted translation report payload.
-    @return     Normalized translation stage token.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-26
-    @version    0.1.0
-    """
-    stage_status = str(
-        report.get(
-            "translation_stage_status",
-            ai_translation_service.TRANSLATION_STAGE_NOT_STARTED,
-        )
-    )
-    if stage_status == "completed":
-        total_count = int(report.get("total_chunk_count", 0) or 0)
-        approved_count = int(report.get("approved_chunk_count", 0) or 0)
-        if total_count > 0 and approved_count >= total_count:
-            return ai_translation_service.TRANSLATION_STAGE_APPROVED
-        return ai_translation_service.TRANSLATION_STAGE_TRANSLATED
-    return stage_status
-
-
-def _is_legacy_auto_pass_through(operation_state: dict[str, object] | None) -> bool:
-    """
-    @brief      Detect pass-through translation state created by passive page loading.
-    @param[in]  operation_state Persisted translation operation state or `None`.
-    @return     True when the operation should be treated as not started.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-26
-    @version    0.1.0
-    """
-    if not isinstance(operation_state, dict):
-        return False
-    metadata = operation_state.get("metadata", {})
-    if not isinstance(metadata, dict):
-        return False
-    return (
-        str(operation_state.get("mode", "")) == "pass_through"
-        and bool(metadata.get("pass_through", False))
-        and not bool(metadata.get("started_by_operator", False))
-    )
-
-
-def _persisted_target_language(
-    manifest: dict[str, object],
-    report: dict[str, object] | None,
-    operation_state: dict[str, object] | None,
-) -> str:
+def _persisted_target_language(manifest: dict[str, object]) -> str:
     """
     @brief      Resolve the persisted target language for the translation page.
     @param[in]  manifest Active project manifest payload.
-    @param[in]  report Persisted translation report or `None`.
-    @param[in]  operation_state Persisted translation operation state or `None`.
     @return     Valid persisted target language or the application default.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-07
-    @version    0.2.0
+    @version    0.3.0
     """
     manifest_target_language = str(manifest.get("target_language", config.DEFAULT_TRANSLATION_TARGET_LANGUAGE)).strip()
     if manifest_target_language in dict(config.TRANSLATION_LANGUAGE_OPTIONS):
         return manifest_target_language
-    if isinstance(report, dict):
-        target_language = str(report.get("target_language", "")).strip()
-        if target_language in dict(config.TRANSLATION_LANGUAGE_OPTIONS):
-            return target_language
-    if isinstance(operation_state, dict):
-        metadata = operation_state.get("metadata", {})
-        if isinstance(metadata, dict):
-            target_language = str(metadata.get("target_language", "")).strip()
-            if target_language in dict(config.TRANSLATION_LANGUAGE_OPTIONS):
-                return target_language
     return config.DEFAULT_TRANSLATION_TARGET_LANGUAGE
 
 

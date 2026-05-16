@@ -14,7 +14,7 @@
          so the window remains a thin coordinator.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 1.47.2
+@version 1.47.4
 """
 
 # IMPORTS
@@ -490,7 +490,7 @@ class MainWindow(QMainWindow):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-26
-        @version    0.2.0
+        @version    0.2.1
         """
         self._narator_voice_page.set_project_active(project_root is not None)
         self._narator_voice_page.set_ai_profiles(
@@ -506,7 +506,6 @@ class MainWindow(QMainWindow):
                 current_language,
                 self._settings_payload,
                 self._narator_voice_inspected_profile_id,
-                initialize_defaults=self._current_page_id == "narator_voice",
             )
         )
 
@@ -728,7 +727,7 @@ class MainWindow(QMainWindow):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-07
-        @version    0.22.0
+        @version    0.22.1
         """
         current_language = ui_state_service.current_language_from_settings(self._settings_payload)
         home_page = HomeProjectPage(self)
@@ -987,10 +986,10 @@ class MainWindow(QMainWindow):
             lambda chunk_id: speech_blocks_ui_controller.handle_resplit_selected_requested(self, chunk_id)
         )
         self._speech_blocks_page.insert_block_requested.connect(
-            lambda chunk_id, before_speech_block_id: speech_blocks_ui_controller.handle_insert_block_requested(
+            lambda chunk_id, after_speech_block_id: speech_blocks_ui_controller.handle_insert_block_requested(
                 self,
                 chunk_id,
-                before_speech_block_id,
+                after_speech_block_id,
             )
         )
         self._speech_blocks_page.delete_block_requested.connect(

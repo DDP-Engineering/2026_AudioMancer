@@ -1,1 +1,1 @@
-6f10b6c10ffd105312d711e1ecc673443bef826a510a079ac95544f9d33acd81  AudioMancer_Windows_x64.zip
+048be440f316162e00e4fcd862fe421a952ac7742c348f869778dff8799922cc  AudioMancer_Windows_x64.zip

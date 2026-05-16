@@ -13,7 +13,7 @@
          page-entry warnings for the Character Voices workflow.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-20
-@version 1.7.2
+@version 1.7.3
 """
 
 # IMPORTS
@@ -157,6 +157,44 @@ def test_character_voices_ui_controller_page_activation_warns_when_narrator_samp
 
     assert len(warning_calls) == 1
     assert window._character_voices_missing_narrator_popup_shown is True
+
+
+def test_character_voices_ui_controller_page_activation_syncs_home_status(qtbot, tmp_path) -> None:
+    """
+    @brief      Verify page activation updates the Character Voices operation summary for Home.
+    @param[in]  qtbot Qt test helper fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-16
+    @version    0.1.0
+    """
+    project_root = _create_project_with_character_and_selected_narrator(tmp_path, "CharacterVoicesHomeStatus")
+    target_payload = character_voices_service.voice_target_by_id(project_root, "character_alice")
+    assert target_payload is not None
+    character_voices_service.store_target_sample(
+        project_root,
+        target_payload,
+        "en",
+        "Preview text.",
+        {
+            "generation_mode": "definition",
+            "source_model_id": "qwen-designer",
+        },
+        "Character sample ready.",
+        b"RIFF-character",
+    )
+    window = _build_window(qtbot, project_root)
+
+    character_voices_ui_controller.handle_page_activated(window)
+
+    manifest = project_workspace_service.load_manifest(project_root)
+    operation_summary = manifest["operations"]["character_voices"]
+    assert manifest["current_stage"] == "character_voices_ready"
+    assert operation_summary["status"] == "completed"
+    assert operation_summary["progress_current"] == 2
+    assert operation_summary["progress_total"] == 2
 
 
 def test_character_voices_ui_controller_save_prompt_persists_preview_text(monkeypatch, qtbot, tmp_path) -> None:

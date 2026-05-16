@@ -14,7 +14,7 @@
          text-processing slice, including local preview text search.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-24
-@version 0.8.3
+@version 0.8.4
 """
 
 # IMPORTS
@@ -64,7 +64,7 @@ class TextCleanupPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-24
-        @version    0.7.2
+        @version    0.7.3
         """
         super().__init__(parent)
         self._project_active = False
@@ -142,22 +142,22 @@ class TextCleanupPage(QWidget):
         self._preview_splitter.setStretchFactor(1, 1)
         layout.addWidget(self._preview_splitter, 6)
 
-        notes_group = QGroupBox("Cleanup Notes", self)
-        notes_layout = QVBoxLayout(notes_group)
-        self._notes_edit = QPlainTextEdit(self)
-        self._notes_edit.setReadOnly(True)
-        self._notes_edit.setProperty(
+        status_group = QGroupBox("Cleanup Status", self)
+        status_layout = QVBoxLayout(status_group)
+        self._status_edit = QPlainTextEdit(self)
+        self._status_edit.setReadOnly(True)
+        self._status_edit.setProperty(
             ui_state_service.CONTROL_TEXT_FONT_ROLE_PROPERTY,
             ui_state_service.CONTROL_TEXT_FONT_ROLE_VALUE,
         )
-        notes_layout.addWidget(self._notes_edit)
-        notes_group.setMinimumHeight(96)
-        notes_group.setMaximumHeight(112)
-        layout.addWidget(notes_group, 0)
+        status_layout.addWidget(self._status_edit)
+        status_group.setMinimumHeight(96)
+        status_group.setMaximumHeight(112)
+        layout.addWidget(status_group, 0)
 
         self._extracted_group = extracted_group
         self._cleaned_group = cleaned_group
-        self._notes_group = notes_group
+        self._status_group = status_group
         self._apply_preview_splitter_minimums()
 
         self.set_project_active(False)
@@ -217,7 +217,7 @@ class TextCleanupPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-06
-        @version    0.4.0
+        @version    0.4.1
         """
         self._can_extract = can_extract
         self._can_clean = can_clean
@@ -227,7 +227,7 @@ class TextCleanupPage(QWidget):
         self._extracted_text_edit.setPlainText(extracted_text or "")
         self._cleaned_text_edit.setPlainText(cleaned_text or "")
         self._cleaned_text_edit.setReadOnly(True)
-        self._notes_edit.setPlainText("\n".join(notes))
+        self._status_edit.setPlainText("\n".join(notes))
         self._apply_button_state()
 
     def preview_scroll_state(self) -> dict[str, tuple[int, int]]:
@@ -384,7 +384,7 @@ class TextCleanupPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-06
-        @version    0.5.0
+        @version    0.5.1
         """
         self._language = language
         self._title_label.setText(f"<h2>{ui_state_service.translate('text_cleanup.title', language)}</h2>")
@@ -396,7 +396,7 @@ class TextCleanupPage(QWidget):
         self._save_cleaned_button.setText(ui_state_service.translate("text_cleanup.save_cleaned", language))
         self._extracted_group.setTitle(ui_state_service.translate("text_cleanup.extracted_group", language))
         self._cleaned_group.setTitle(ui_state_service.translate("text_cleanup.cleaned_group", language))
-        self._notes_group.setTitle(ui_state_service.translate("text_cleanup.notes_group", language))
+        self._status_group.setTitle(ui_state_service.translate("text_cleanup.status_group", language))
         if not self._has_ai_profiles:
             self._ai_profile_combo.setItemText(
                 0,

@@ -13,7 +13,7 @@
          and source import workflows owned by the Home page.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-06
-@version 0.9.4
+@version 0.9.5
 """
 
 # IMPORTS
@@ -294,7 +294,7 @@ def handle_export_requested(window: "MainWindow", export_kind: str, export_forma
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.1.0
+    @version    0.2.0
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._current_project_root is None or window._current_manifest is None:
@@ -354,14 +354,22 @@ def handle_export_requested(window: "MainWindow", export_kind: str, export_forma
         return
 
     try:
-        export_content = project_export_service.render_export(
-            window._current_project_root,
-            window._current_manifest,
-            export_kind,
-            export_format,
-        )
         export_path.parent.mkdir(parents=True, exist_ok=True)
-        export_path.write_text(export_content, encoding="utf-8")
+        if export_format == project_export_service.EXPORT_FORMAT_ZIP:
+            project_export_service.create_archive_export(
+                window._current_project_root,
+                window._current_manifest,
+                export_kind,
+                export_path,
+            )
+        else:
+            export_content = project_export_service.render_export(
+                window._current_project_root,
+                window._current_manifest,
+                export_kind,
+                export_format,
+            )
+            export_path.write_text(export_content, encoding="utf-8")
     except (OSError, ValueError) as error:
         QMessageBox.warning(
             window,
@@ -603,8 +611,10 @@ def _export_dialog_filter(export_format: str, language: str) -> str:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.1.0
+    @version    0.2.0
     """
+    if export_format == project_export_service.EXPORT_FORMAT_ZIP:
+        return ui_state_service.translate("dialog.snapshot_filter_zip", language)
     if export_format == project_export_service.EXPORT_FORMAT_MARKDOWN:
         return ui_state_service.translate("dialog.export_filter_markdown", language)
     return ui_state_service.translate("dialog.export_filter_txt", language)

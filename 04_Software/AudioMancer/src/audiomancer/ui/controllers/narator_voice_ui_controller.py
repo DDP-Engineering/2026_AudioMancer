@@ -14,7 +14,7 @@
          sample preview playback, and project-local narrator profile editing.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-18
-@version 3.18.0
+@version 3.18.1
 """
 
 # IMPORTS
@@ -256,14 +256,14 @@ def handle_save_profile_requested(
 
 def handle_delete_profile_requested(window: "MainWindow", profile_id: str) -> None:
     """
-    @brief      Confirm and delete one persisted non-protected narrator profile.
+    @brief      Confirm and delete one persisted narrator profile.
     @param[in]  window Main application window.
     @param[in]  profile_id Target narrator-profile identifier.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-17
-    @version    1.3.0
+    @version    1.4.0
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._current_project_root is None:
@@ -305,13 +305,7 @@ def handle_delete_profile_requested(window: "MainWindow", profile_id: str) -> No
             window,
             ui_state_service.translate("status.narator_voice_profile_deleted", current_language),
         )
-    except ValueError as error:
-        if str(error) == "protected_profile":
-            QMessageBox.warning(
-                window,
-                ui_state_service.translate("dialog.project_error_title", current_language),
-                ui_state_service.translate("narator_voice.error_protected_profile", current_language),
-            )
+    except ValueError:
         return
     finally:
         if progress_callback is not None:

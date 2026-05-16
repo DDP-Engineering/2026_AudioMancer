@@ -14,7 +14,7 @@
          discovery workflow.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-08
-@version 0.13.0
+@version 0.13.1
 """
 
 # IMPORTS
@@ -286,7 +286,6 @@ def test_start_discovery_resumes_from_saved_synthesis_checkpoint(monkeypatch, tm
         "character_id": "alice",
         "canonical_name": "Alice",
         "aliases": ["Al"],
-        "gender_hint": "",
         "confidence": "",
         "evidence": [
             {
@@ -324,6 +323,7 @@ def test_start_discovery_resumes_from_saved_synthesis_checkpoint(monkeypatch, tm
                     "profile_id": "profile-1",
                     "completed_window_count": 1,
                     "total_window_count": 1,
+                    "next_discovery_start_chunk_index": len(source_chunks),
                     "budget_metadata": budget_metadata,
                     "raw_candidates": [resume_candidate],
                     "merged_candidates": [resume_candidate],
@@ -654,6 +654,51 @@ def test_merge_character_candidates_keeps_role_speaker_candidate() -> None:
     assert merged_candidates[0]["canonical_name"] == "His Agent"
 
 
+def test_window_candidate_normalization_uses_current_schema_only() -> None:
+    """
+    @brief      Verify window candidate normalization ignores removed discovery-pass fields.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-15
+    @version    0.1.0
+    """
+    source_chunk = _chunk_payload("chunk-0001", 1, '"Hello," said Alice.')
+    chunk_map = {"chunk-0001": source_chunk}
+
+    assert (
+        character_discovery_service._normalize_window_candidates(  # noqa: SLF001
+            [
+                {
+                    "name": "Alice",
+                    "evidence": [{"chunk_id": "chunk-0001"}],
+                }
+            ],
+            chunk_map,
+        )
+        == []
+    )
+
+    normalized_candidates = character_discovery_service._normalize_window_candidates(  # noqa: SLF001
+        [
+            {
+                "canonical_name": "Alice",
+                "gender_hint": "female",
+                "voice_definition_prompt": "Old discovery-pass voice prompt.",
+                "age_hint": "adult",
+                "confidence": "high",
+                "evidence": [{"chunk_id": "chunk-0001"}],
+            }
+        ],
+        chunk_map,
+    )
+
+    assert normalized_candidates[0]["canonical_name"] == "Alice"
+    assert normalized_candidates[0]["age_hint"] == "adult"
+    assert "gender_hint" not in normalized_candidates[0]
+    assert "voice_definition_prompt" not in normalized_candidates[0]
+
+
 def test_load_input_chunks_uses_source_chunks_when_translation_exists(tmp_path) -> None:
     """
     @brief      Verify character discovery keeps source chunks as the authoritative discovery input.
@@ -978,28 +1023,15 @@ def test_character_discovery_rejects_profile_with_too_little_context(monkeypatch
         )
 
 
-def test_resume_state_accepts_changed_profile_and_budget_metadata() -> None:
+def test_resume_state_requires_current_checkpoint_boundary() -> None:
     """
-    @brief      Validate resume state accepts changed profile and budget metadata.
+    @brief      Validate resume state requires current checkpoint boundary.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-02
     @version    0.1.0
     """
-    current_budget = {
-        "context_window": 4096,
-        "max_output_tokens": 512,
-        "prompt_budget_tokens": 20,
-        "text_budget_tokens": 2000,
-        "safety_margin_tokens": 409,
-        "max_window_chunks": 8,
-        "window_overlap": 1,
-        "synthesis_prompt_budget_tokens": 20,
-        "synthesis_payload_budget_tokens": 2000,
-        "synthesis_max_evidence_items": 20,
-    }
-    previous_budget = {**current_budget, "max_output_tokens": 1024}
     source_chunks = [
         _chunk_payload("chunk-0001", 1, '"Hello," said Alice.'),
         _chunk_payload("chunk-0002", 2, '"Hi," said Bob.'),
@@ -1020,18 +1052,33 @@ def test_resume_state_accepts_changed_profile_and_budget_metadata() -> None:
                 "total_window_count": 2,
                 "completed_window_count": 1,
                 "next_discovery_start_chunk_index": 1,
-                "budget_metadata": previous_budget,
                 "raw_candidates": [resume_candidate],
             },
         },
         input_fingerprint="abc",
         source_chunks=source_chunks,
-        budget_metadata=current_budget,
     )
 
     assert restored[0] == 1
     assert restored[1] == 1
     assert restored[2] == [resume_candidate]
+
+    stale_restored = character_discovery_service._restore_resume_state(  # noqa: SLF001
+        {
+            "status": "running",
+            "mode": character_discovery_service.CHARACTER_DISCOVERY_MODE_AI_ASSISTED,
+            "resume_checkpoint": {
+                "input_fingerprint": "abc",
+                "profile_id": "profile-1",
+                "total_window_count": 2,
+                "completed_window_count": 1,
+                "raw_candidates": [resume_candidate],
+            },
+        },
+        input_fingerprint="abc",
+        source_chunks=source_chunks,
+    )
+    assert stale_restored == (0, 0, [], [], [], [], None)
 
 
 def test_synthesis_candidate_payload_is_trimmed_to_budget_metadata() -> None:

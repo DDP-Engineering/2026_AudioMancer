@@ -13,7 +13,7 @@
          language application.
 @author Eng. Dan Dumitru Pasare
 @date 2026-05-14
-@version 0.5.0
+@version 0.6.1
 """
 
 # IMPORTS
@@ -35,7 +35,7 @@ def test_home_page_export_panel_widgets_exist(qtbot) -> None:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.2.1
+    @version    0.4.0
     """
     page = HomeProjectPage()
     qtbot.addWidget(page)
@@ -50,8 +50,17 @@ def test_home_page_export_panel_widgets_exist(qtbot) -> None:
         assert stage_row.isReadOnly() is True
     for row in page._export_rows.values():
         assert set(row) == {"format", "button"}
-        assert row["format"].count() == 2
         assert row["button"].text() == "Export"
+    for export_kind, row in page._export_rows.items():
+        assert row["format"].count() == len(project_export_service.export_formats_for_kind(export_kind))
+        assert row["format"].minimumHeight() == page._stage_rows[0].minimumHeight()
+        assert row["button"].minimumHeight() == page._stage_rows[0].minimumHeight()
+    for spacer in page._export_spacers:
+        assert spacer.minimumHeight() == page._stage_rows[0].minimumHeight()
+        assert spacer.maximumHeight() == page._stage_rows[0].maximumHeight()
+    assert page._export_rows[project_export_service.EXPORT_KIND_NARRATOR_VOICE]["format"].currentData() == (
+        project_export_service.EXPORT_FORMAT_ZIP
+    )
 
 
 def test_home_page_uses_compact_non_scrolled_dashboard(qtbot) -> None:
@@ -62,7 +71,7 @@ def test_home_page_uses_compact_non_scrolled_dashboard(qtbot) -> None:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-06
-    @version    0.1.0
+    @version    0.2.0
     """
     page = HomeProjectPage()
     qtbot.addWidget(page)
@@ -154,6 +163,7 @@ def test_home_page_language_application_updates_export_labels(qtbot) -> None:
         .toolTip()
         .startswith("Text Curatat:")
     )
+    assert page._export_rows[project_export_service.EXPORT_KIND_AUDIO_ASSEMBLY]["format"].itemText(0) == "ZIP"
 
 
 def test_home_page_project_options_lock_controls_source_import(qtbot) -> None:

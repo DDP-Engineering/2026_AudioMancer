@@ -13,7 +13,7 @@
          selected-chunk retranslation, and modal progress lifecycle.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-22
-@version 0.9.1
+@version 0.9.2
 """
 
 # IMPORTS
@@ -539,19 +539,9 @@ def _persisted_target_language(window: "MainWindow") -> str:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-07
-    @version    0.2.0
+    @version    0.3.0
     """
-    manifest_language = _manifest_target_language(window)
-    if manifest_language:
-        return manifest_language
-    if window._current_project_root is None:
-        return config.DEFAULT_TRANSLATION_TARGET_LANGUAGE
-    report = ai_translation_service.load_translation_report(window._current_project_root)
-    if isinstance(report, dict):
-        target_language = str(report.get("target_language", "")).strip()
-        if target_language:
-            return target_language
-    return config.DEFAULT_TRANSLATION_TARGET_LANGUAGE
+    return _manifest_target_language(window)
 
 
 def _manifest_target_language(window: "MainWindow") -> str:

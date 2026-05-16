@@ -14,7 +14,7 @@
          generated audio blocks.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-23
-@version 0.6.2
+@version 0.6.3
 """
 
 # IMPORTS
@@ -397,6 +397,100 @@ def test_audio_blocks_ui_controller_preserves_selected_block_after_regeneration_
     )
 
     assert window._audio_blocks_page.selected_block_id() == "0001-000002"
+
+
+def test_audio_blocks_ui_controller_preserves_speech_blocks_review_after_selected_audio_generation(
+    monkeypatch, qtbot, tmp_path, default_settings_payload
+) -> None:
+    """
+    @brief      Verify Speech Blocks selection is restored after selected-block audio generation refreshes state.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  qtbot Qt test helper fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @param[in]  default_settings_payload Fixture supplying valid baseline settings.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-16
+    @version    0.1.0
+    """
+    project_root = _create_project(tmp_path, "AudioBlocksControllerPreserveSpeechBlocksReview")
+    _seed_audio_blocks_run(project_root, approved=False)
+    window = _build_window(qtbot, project_root, default_settings_payload)
+    window.set_current_page("speech_blocks")
+    window._speech_blocks_page.select_speech_block("0001-000002")
+    review_position = window._speech_blocks_page.review_position()
+    monkeypatch.setattr(audio_blocks_ui_controller.misc_ui_controller, "show_message", lambda *args, **kwargs: None)
+
+    def _fake_audio_assembly_reset(active_window):
+        """
+        @brief      Emulate a state refresh that would otherwise move the Speech Blocks selection.
+        @param[in]  active_window Main window under test.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-16
+        @version    0.1.0
+        """
+        active_window.show_project_state(
+            active_window._current_project_root,
+            project_workspace_service.load_manifest(active_window._current_project_root),
+        )
+        active_window._speech_blocks_page.select_speech_block("0001-000001")
+
+    def _start_threaded_operation(
+        window,
+        operation_kind,
+        operation_name,
+        initial_message,
+        worker_callable,
+        set_busy,
+        success_handler,
+        failure_handler,
+        cancel_handler,
+        cancellable=True,
+    ):
+        """
+        @brief      Synchronously invoke the success handler for operation-start testing.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-16
+        @version    0.1.0
+        """
+        _ = window
+        _ = operation_kind
+        _ = operation_name
+        _ = initial_message
+        _ = worker_callable
+        _ = set_busy
+        _ = failure_handler
+        _ = cancel_handler
+        _ = cancellable
+        success_handler(None)
+
+    monkeypatch.setattr(
+        audio_blocks_ui_controller,
+        "_reset_audio_assembly_after_audio_blocks_change",
+        _fake_audio_assembly_reset,
+    )
+    monkeypatch.setattr(
+        audio_blocks_ui_controller.operation_runner_controller,
+        "start_threaded_operation",
+        _start_threaded_operation,
+    )
+
+    audio_blocks_ui_controller._start_operation(  # noqa: SLF001
+        window,
+        operation_name="Regenerate",
+        initial_message="Regenerating",
+        worker_callable=lambda *_args, **_kwargs: None,
+        success_message_key="status.audio_block_regenerated",
+        preserved_block_id="0001-000002",
+        preserved_speech_blocks_review_position=review_position,
+    )
+
+    assert window._speech_blocks_page.selected_block_id() == "0001-000002"
 
 
 def test_audio_blocks_ui_controller_preserves_selected_block_after_selected_playback_stop(

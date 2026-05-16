@@ -13,7 +13,7 @@
          and the persisted default AI translation profile selection.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-07
-@version 0.3.0
+@version 0.3.1
 """
 
 # IMPORTS
@@ -21,7 +21,7 @@
 import json
 
 from audiomancer import config
-from audiomancer.services import ai_translation_service, ai_translation_state_service, project_workspace_service
+from audiomancer.services import ai_translation_state_service, project_workspace_service
 
 # PUBLIC API
 
@@ -128,38 +128,6 @@ def test_build_ai_translation_state_does_not_auto_finalize_same_language(tmp_pat
             indent=2,
         )
         + "\n",
-        encoding="utf-8",
-    )
-
-    state = ai_translation_state_service.build_ai_translation_state(
-        project_root,
-        project_workspace_service.load_manifest(project_root),
-        "en",
-        {"llm_profiles": [{"id": "profile-1", "label": "GPT", "enabled": True}]},
-    )
-
-    assert state["stage_status"] == "not_started"
-    assert state["translated_chunks"] == []
-    assert state["translated_count"] == 0
-    assert state["approved_count"] == 0
-
-
-def test_build_ai_translation_state_ignores_legacy_auto_pass_through(tmp_path) -> None:
-    """
-    @brief      Verify old passive pass-through artifacts do not disable Start Translation.
-    @param[in]  tmp_path Pytest temporary directory fixture.
-    @return     None.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-26
-    @version    0.1.0
-    """
-    project_root, manifest = _create_same_language_chunked_project(tmp_path, "LegacyPassThroughState")
-    ai_translation_service.ensure_pass_through_translation(project_root, "en", "profile-1")
-    operation_state = ai_translation_service.load_operation_state(project_root)
-    operation_state["metadata"].pop("started_by_operator", None)
-    (project_root / config.TRANSLATION_STATE_FILE_NAME).write_text(
-        json.dumps(operation_state, indent=2) + "\n",
         encoding="utf-8",
     )
 

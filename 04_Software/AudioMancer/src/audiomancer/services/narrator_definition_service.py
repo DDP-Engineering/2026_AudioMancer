@@ -15,7 +15,7 @@
          that sample is selected.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-20
-@version 3.15.0
+@version 3.15.1
 """
 
 # IMPORTS
@@ -89,7 +89,7 @@ def load_tts_plan(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-18
-    @version    1.2.0
+    @version    1.2.1
     """
     ensure_narrator_definition_files(project_root)
     manifest_payload = project_workspace_service.load_manifest(project_root)
@@ -174,14 +174,14 @@ def narrator_language_code(language_value: object, fallback: str = DEFAULT_NARRA
 
 def narrator_language_label(language_value: object, fallback: str = DEFAULT_NARRATOR_LANGUAGE) -> str:
     """
-    @brief      Return one operator-facing narrator language label from one stored code or legacy label.
+    @brief      Return one operator-facing narrator language label from one stored code or label.
     @param[in]  language_value Candidate narrator language value.
     @param[in]  fallback Fallback language code used when the value is missing or unsupported.
     @return     Narrator language label.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-18
-    @version    1.0.0
+    @version    1.0.1
     """
     normalized_value = str(language_value or "").strip()
     if not normalized_value:
@@ -203,7 +203,7 @@ def preview_text_for_language(language_value: object) -> str:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-26
-    @version    0.1.0
+    @version    0.1.1
     """
     normalized_language = narrator_language_code(language_value)
     return DEFAULT_PREVIEW_TEXT_BY_LANGUAGE.get(
@@ -322,7 +322,7 @@ def select_narrator_profile(
     @exception  ValueError Raised when the target profile is missing.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-17
-    @version    1.4.0
+    @version    1.4.1
     """
     normalized_profile_id = str(profile_id or "").strip()
     profiles = load_profiles(project_root)
@@ -347,7 +347,6 @@ def select_narrator_profile(
         ),
     }
     _write_json(_selection_path(project_root), normalized_state)
-    _delete_legacy_selected_narrator_sample_files(project_root)
     _set_profile_sample_selection_flags(project_root, normalized_profile_id)
     return normalized_state
 
@@ -439,7 +438,6 @@ def create_custom_profile(
             "profile_origin": NARRATOR_PROFILE_ORIGIN_CUSTOM_USER,
             "provider_family": NARRATOR_PROVIDER_FAMILY_QWEN_VOICE_DESIGNER,
             "editable": True,
-            "protected": False,
             "is_selected": False,
             "updated_at": _utc_now_iso(),
         }
@@ -485,7 +483,6 @@ def append_ai_generated_profiles(
                 "profile_origin": NARRATOR_PROFILE_ORIGIN_AI_GENERATED,
                 "provider_family": NARRATOR_PROVIDER_FAMILY_QWEN_VOICE_DESIGNER,
                 "editable": True,
-                "protected": False,
                 "is_selected": False,
                 "sample_audio_path": None,
                 "sample_metadata": None,
@@ -570,14 +567,14 @@ def begin_profile_edit(project_root: str | Path, profile_id: str) -> dict[str, o
 
 def delete_profile(project_root: str | Path, profile_id: str) -> list[dict[str, object]]:
     """
-    @brief      Delete one existing non-protected narrator profile and repair selection.
+    @brief      Delete one existing narrator profile and repair selection.
     @param[in]  project_root Active project root folder.
     @param[in]  profile_id Target narrator-profile identifier.
     @return     Remaining narrator-profile payload list.
-    @exception  ValueError Raised when the target profile is missing or protected.
+    @exception  ValueError Raised when the target profile is missing.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-17
-    @version    1.2.0
+    @version    1.3.0
     """
     profiles = load_profiles(project_root)
     remaining_profiles: list[dict[str, object]] = []
@@ -589,28 +586,11 @@ def delete_profile(project_root: str | Path, profile_id: str) -> list[dict[str, 
         deleted_profile = profile
     if deleted_profile is None:
         raise ValueError("missing_profile")
-    if bool(deleted_profile.get("protected", False)):
-        raise ValueError("protected_profile")
-
     delete_profile_sample(project_root, profile_id)
     _write_json(_profiles_path(project_root), _repair_selected_profile_flags(remaining_profiles))
     if bool(deleted_profile.get("is_selected", False)):
         clear_narrator_selection(project_root)
     return load_profiles(project_root)
-
-
-def delete_custom_profile(project_root: str | Path, profile_id: str) -> list[dict[str, object]]:
-    """
-    @brief      Backward-compatible wrapper for narrator-profile deletion.
-    @param[in]  project_root Active project root folder.
-    @param[in]  profile_id Target narrator-profile identifier.
-    @return     Remaining narrator-profile payload list.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-17
-    @version    1.0.0
-    """
-    return delete_profile(project_root, profile_id)
 
 
 def profile_by_id(
@@ -1004,7 +984,7 @@ def copy_selected_narrator_sample(project_root: str | Path, profile_id: str) -> 
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-17
-    @version    1.5.0
+    @version    1.5.1
     """
     ensure_narrator_definition_files(project_root)
     normalized_profile_id = str(profile_id).strip()
@@ -1014,7 +994,6 @@ def copy_selected_narrator_sample(project_root: str | Path, profile_id: str) -> 
         clear_selected_narrator_sample_artifacts(project_root)
         return None
     select_narrator_profile(project_root, normalized_profile_id, str(profile_metadata.get("language", "")).strip())
-    _delete_legacy_selected_narrator_sample_files(project_root)
     selected_metadata = {
         **dict(profile_metadata),
         "selected_profile_id": normalized_profile_id,
@@ -1090,18 +1069,6 @@ def _sample_metadata_is_imported(sample_metadata: dict[str, object]) -> bool:
     )
 
 
-def seeded_narrator_profiles() -> list[dict[str, object]]:
-    """
-    @brief      Return one detached copy of the built-in narrator profile seed list.
-    @return     Seeded narrator-profile payload list.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-17
-    @version    1.1.0
-    """
-    return []
-
-
 def _profiles_path(project_root: str | Path) -> Path:
     """
     @brief      Execute the profiles path helper.
@@ -1126,18 +1093,6 @@ def _selection_path(project_root: str | Path) -> Path:
     return Path(project_root) / config.NARRATOR_SELECTION_FILE_NAME
 
 
-def _profile_audio_samples_root(project_root: str | Path) -> Path:
-    """
-    @brief      Execute the profile audio samples root helper.
-    @param[in]  project_root Active project root folder.
-    @return     Helper result.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
-    """
-    return Path(project_root)
-
-
 def _normalized_audio_name(value: object) -> str:
     """
     @brief      Normalize one narrator profile value for a root-level audio file name.
@@ -1152,18 +1107,6 @@ def _normalized_audio_name(value: object) -> str:
     return normalized or "narator"
 
 
-def _selected_audio_samples_root(project_root: str | Path) -> Path:
-    """
-    @brief      Resolve the selected narrator sample root as the shared narrator audio-sample folder.
-    @param[in]  project_root Active project root folder.
-    @return     Helper result.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.3.0
-    """
-    return _profile_audio_samples_root(project_root)
-
-
 def _normalize_profile(profile: dict[str, object]) -> dict[str, object]:
     """
     @brief      Normalize the profile.
@@ -1171,7 +1114,7 @@ def _normalize_profile(profile: dict[str, object]) -> dict[str, object]:
     @return     Derived helper result.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.3.0
+    @version    0.4.0
     """
     profile_payload = dict(profile)
     profile_kind = NARRATOR_PROFILE_KIND_CUSTOM
@@ -1194,7 +1137,6 @@ def _normalize_profile(profile: dict[str, object]) -> dict[str, object]:
         "profile_origin": profile_origin,
         "provider_family": provider_family,
         "editable": bool(profile_payload.get("editable", editable_default)),
-        "protected": False,
         "is_selected": bool(profile_payload.get("is_selected", False)),
         "sample_audio_path": _optional_string(profile_payload.get("sample_audio_path")),
         "sample_metadata": (
@@ -1317,18 +1259,6 @@ def _set_profile_sample_selection_flags(project_root: str | Path, selected_profi
             updated_payload.pop("copied_at", None)
         profiles.append({**dict(profile), "sample_metadata": updated_payload})
     _write_json(_profiles_path(project_root), profiles)
-
-
-def _delete_legacy_selected_narrator_sample_files(project_root: str | Path) -> None:
-    """
-    @brief      Delete legacy duplicate selected narrator sample files when present.
-    @param[in]  project_root Active project root folder.
-    @return     None.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.2.0
-    """
-    _ = project_root
 
 
 def _normalize_selected_state(

@@ -13,7 +13,7 @@
          status-line composition for the simplified narrator workflow.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-20
-@version 3.5.2
+@version 3.5.3
 """
 
 # IMPORTS
@@ -28,15 +28,15 @@ from audiomancer.services import (
 )
 
 
-def test_narrator_state_service_exposes_project_languages_and_no_default_selection(tmp_path) -> None:
+def test_narrator_state_service_uses_original_language_and_no_default_selection(tmp_path) -> None:
     """
-    @brief      Verify narrator state shows original and translated languages and starts with no selected profile.
+    @brief      Verify narrator state resolves the original voice language and starts with no selected profile.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-17
-    @version    1.2.0
+    @version    1.3.0
     """
     project_root, manifest = _create_project(tmp_path, "NarratorStateProject")
     manifest["original_language"] = "Italian"
@@ -53,11 +53,8 @@ def test_narrator_state_service_exposes_project_languages_and_no_default_selecti
     state = narrator_definition_state_service.build_narrator_definition_state(project_root, manifest, "en")
 
     assert state["selected_profile_id"] is None
-    assert state["original_language"] == "Italian"
-    assert state["translated_language"] == "Romanian"
     assert state["effective_language"] == "it"
     assert state["selected_voice_language"] == "it"
-    assert state["language_entries"] == [("Italian", "it"), ("Romanian", "ro")]
     assert state["can_select"] is False
 
 
@@ -69,7 +66,7 @@ def test_narrator_state_service_uses_cleanup_detected_original_language_when_man
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.3.0
+    @version    0.4.0
     """
     project_root, manifest = _create_project(tmp_path, "NarratorStateCleanupLanguageProject")
     cleanup_report_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.CLEANUP_REPORT_FILE_NAME
@@ -81,7 +78,6 @@ def test_narrator_state_service_uses_cleanup_detected_original_language_when_man
 
     state = narrator_definition_state_service.build_narrator_definition_state(project_root, manifest, "en")
 
-    assert state["original_language"] == "Italian"
     assert state["effective_language"] == "it"
     assert state["selected_voice_language"] == "it"
 
@@ -205,50 +201,6 @@ def test_narrator_state_service_status_lines_show_counts_and_qwen_readiness(tmp_
     assert "Profiles with samples: 1" in state["status_lines"]
     assert "Selected profiles: 0" in state["status_lines"]
     assert "Qwen3 TTS readiness: ready" in state["status_lines"]
-
-
-def test_narrator_state_service_legacy_default_custom_profile_is_deletable(tmp_path) -> None:
-    """
-    @brief      Verify legacy non-Qwen protected custom profiles are normalized into deletable custom profiles.
-    @param[in]  tmp_path Pytest temporary directory fixture.
-    @return     None.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-18
-    @version    1.0.0
-    """
-    project_root, manifest = _create_project(tmp_path, "NarratorStateLegacyDefaultProject")
-    profiles_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.NARRATOR_PROFILE_FILE_NAME
-    profiles_path.write_text(
-        json.dumps(
-            [
-                {
-                    "profile_id": "default_narrator_profile",
-                    "display_name": "Default1",
-                    "language": "en",
-                    "prompt_text": "Warm narrator prompt.",
-                    "profile_kind": "custom",
-                    "profile_origin": "default_custom",
-                    "provider_family": "project_default",
-                    "editable": True,
-                    "protected": True,
-                }
-            ],
-            indent=2,
-        )
-        + "\n",
-        encoding="utf-8",
-    )
-
-    state = narrator_definition_state_service.build_narrator_definition_state(
-        project_root,
-        manifest,
-        "en",
-        inspected_profile_id="default_narrator_profile",
-    )
-
-    assert state["current_profile_id"] == "default_narrator_profile"
-    assert state["can_delete"] is True
 
 
 def _create_project(tmp_path, name: str):

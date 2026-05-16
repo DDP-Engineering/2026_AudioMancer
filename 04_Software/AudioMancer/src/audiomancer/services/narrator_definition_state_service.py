@@ -14,7 +14,7 @@
          per-profile sample state, and the cached VoiceWeaver runtime discovery data.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-20
-@version 3.14.1
+@version 3.14.2
 """
 
 # IMPORTS
@@ -88,7 +88,6 @@ def build_narrator_definition_state(
     language: str,
     settings_payload: dict[str, object] | None = None,
     inspected_profile_id: str | None = None,
-    initialize_defaults: bool = False,
 ) -> dict[str, object]:
     """
     @brief      Build the full Narator Voice page state from project-local artifacts.
@@ -97,14 +96,12 @@ def build_narrator_definition_state(
     @param[in]  language Runtime UI language code.
     @param[in]  settings_payload Optional persisted application settings payload.
     @param[in]  inspected_profile_id Optional currently inspected narrator-profile identifier.
-    @param[in]  initialize_defaults True when opening the page may create default narrator metadata.
     @return     Page-state payload consumed by the Narator Voice page.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-18
-    @version    2.2.0
+    @version    2.3.0
     """
-    _ = initialize_defaults
     preview_text_character_limit = _preview_text_character_limit(settings_payload)
     if project_root is None or manifest is None:
         return {
@@ -119,7 +116,6 @@ def build_narrator_definition_state(
             "preview_text": narrator_definition_service.DEFAULT_PREVIEW_TEXT,
             "preview_text_character_limit": preview_text_character_limit,
             "is_editable": False,
-            "is_preset": False,
             "can_edit": False,
             "can_delete": False,
             "can_generate": False,
@@ -203,9 +199,8 @@ def build_narrator_definition_state(
         "preview_text_character_limit": preview_text_character_limit,
         "preview_text_safe_word_limit": preview_safe_word_limit,
         "is_editable": bool(current_profile) and bool(current_profile.get("editable", False)),
-        "is_preset": False,
         "can_edit": bool(current_profile) and bool(current_profile.get("editable", False)),
-        "can_delete": bool(current_profile) and not bool(current_profile.get("protected", False)),
+        "can_delete": bool(current_profile),
         "can_generate": bool(current_profile) and bool(current_profile.get("can_generate", False)),
         "can_select": bool(current_profile) and bool(current_profile.get("can_select", False)),
         "preview_available": bool(current_profile) and bool(current_profile.get("has_sample", False)),

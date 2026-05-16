@@ -14,7 +14,7 @@
          preservation, translated labels, and generation button enablement.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-24
-@version 0.7.2
+@version 0.7.6
 """
 
 # IMPORTS
@@ -98,7 +98,7 @@ def test_speech_blocks_page_selected_audio_controls_emit_and_track_playback(qtbo
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-04
-    @version    0.2.1
+    @version    0.2.3
     """
     page = SpeechBlocksPage()
     qtbot.addWidget(page)
@@ -145,6 +145,7 @@ def test_speech_blocks_page_selected_audio_controls_emit_and_track_playback(qtbo
         page._chunk_actions_grid_layout.indexOf(page._selected_audio_playback_button)
     )[0]
     assert generate_row == play_row
+    assert page._chunk_actions_column_layout.contentsMargins().top() == 2
 
     with qtbot.waitSignal(page.generate_audio_selected_requested) as generation_signal:
         page._generate_audio_button.click()
@@ -224,7 +225,7 @@ def test_speech_blocks_page_insert_delete_buttons_emit_selection(qtbot) -> None:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.2.0
+    @version    0.3.1
     """
     page = SpeechBlocksPage()
     qtbot.addWidget(page)
@@ -261,16 +262,58 @@ def test_speech_blocks_page_insert_delete_buttons_emit_selection(qtbot) -> None:
     page.insert_block_requested.connect(lambda *payload: insert_payloads.append(tuple(str(value) for value in payload)))
     page.delete_block_requested.connect(lambda speech_block_id: delete_payloads.append(str(speech_block_id)))
 
+    assert page._insert_block_button.isEnabled() is True
+    assert page._delete_block_button.isEnabled() is True
+
     page._insert_block_button.click()
     page._delete_block_button.click()
 
     assert page._insert_block_button.text() == "Insert"
     assert page._delete_block_button.text() == "Delete"
-    assert page._insert_block_button.parentWidget() is page
-    assert page._delete_block_button.parentWidget() is page
+    assert page._insert_block_button.parentWidget() is page._chunk_actions_column
+    assert page._delete_block_button.parentWidget() is page._chunk_actions_column
+    assert page._insert_block_button.parentWidget() is not page._chunk_group
+    assert page._delete_block_button.parentWidget() is not page._chunk_group
     assert insert_payloads == [("chunk-0001", "0001-000001")]
     assert delete_payloads == ["0001-000001"]
     assert page._content_kind_combo.findData(speech_blocks_service.CONTENT_KIND_INDICATION) >= 0
+
+
+def test_speech_blocks_page_insert_enabled_for_empty_selected_chunk(qtbot) -> None:
+    """
+    @brief      Verify Insert stays active when a selected source chunk has no Speech Blocks yet.
+    @param[in]  qtbot Qt test helper fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-16
+    @version    0.1.0
+    """
+    page = SpeechBlocksPage()
+    qtbot.addWidget(page)
+    page.set_project_active(True)
+    page.set_ai_profiles([("Profile One", "profile-1")], "profile-1")
+    page.set_speech_blocks_state(
+        source_chunks=[{"chunk_id": "chunk-0001", "sequence_index": 1, "text": "Narration."}],
+        speech_blocks=[],
+        notes=["Generated 0 speech blocks from 0/1 chunks."],
+        selected_profile_id="profile-1",
+        stage_status="not_started",
+        selected_source_language="en",
+        processed_chunk_count=0,
+        total_chunk_count=1,
+        speaker_catalog=[{"speaker_id": "narrator", "display_name": "Narrator", "speaker_kind": "narrator"}],
+        content_kind_options=[(speech_blocks_service.CONTENT_KIND_NARRATION, "Narration")],
+    )
+    insert_payloads: list[tuple[str, str]] = []
+    page.insert_block_requested.connect(lambda *payload: insert_payloads.append(tuple(str(value) for value in payload)))
+
+    assert page._insert_block_button.isEnabled() is True
+    assert page._delete_block_button.isEnabled() is False
+
+    page._insert_block_button.click()
+
+    assert insert_payloads == [("chunk-0001", "")]
 
 
 def test_speech_blocks_page_list_shows_operation_name_for_metadata_block(qtbot) -> None:
@@ -775,7 +818,7 @@ def test_speech_blocks_page_applies_translated_labels(qtbot) -> None:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.1.0
+    @version    0.2.0
     """
     page = SpeechBlocksPage()
     qtbot.addWidget(page)
@@ -787,7 +830,7 @@ def test_speech_blocks_page_applies_translated_labels(qtbot) -> None:
     assert page._reset_generation_button.text() == "Reseteaza Blocurile de Vorbire"
     assert page._approve_block_button.text() == "Aproba"
     assert page._chunk_group.title() == "Lista Segmentelor"
-    assert page._notes_group.title() == "Note Blocuri Vorbire"
+    assert page._status_group.title() == "Stare Blocuri Vorbire"
 
 
 # END OF FILE

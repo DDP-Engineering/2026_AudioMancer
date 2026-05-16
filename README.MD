@@ -4,78 +4,90 @@ This software is licensed under the GNU Affero General Public License v3.0
 (AGPL-3.0) with additional Non-Commercial restriction.
 See the LICENSE.txt and LICENSE_NC.txt files for full license details.
 -->
-# 2026_AudioMancer
+# AudioMancer
 
-Repository for the AudioMancer desktop application and its planning,
-documentation, tooling, delivery, and support material.
+<p align="center">
+  <img src="04_Software/AudioMancer/src/audiomancer/assets/icons/audiomancer_icon.png" alt="AudioMancer app icon" width="96">
+</p>
 
-## Top-Level Structure
+<p align="center">
+  <strong>Transform written words into real audio experience!</strong>
+</p>
 
-- `0_Planning/`
-- `01_Documentation/`
-- `02_Tools/`
-- `04_Software/`
-- `05_SoftwareDocu/`
-- `07_Delivery/`
-- `09_Others/`
+AudioMancer is a Windows desktop application for preparing translated books and
+audiobook production assets. It combines operator-controlled text processing,
+optional AI-assisted workflow steps, voice preparation, speech block review,
+audio block generation, and final WAV assembly.
 
-## Software Locations
-
-The software subtrees currently live under:
-
-- `04_Software/AudioMancer/`
+This repository contains the private source tree, planning material,
+implementation documentation, tooling, delivery scripts, and support files for
+AudioMancer.
 
 ## Current Implementation
 
-`04_Software/AudioMancer/` contains the Python 3.12/PySide6 application. The
-current app supports project creation with locked audiobook language and
-narration mode, source import, extraction, deterministic and AI cleanup,
-optional operator rules for AI cleanup, chunking, translation, character
-discovery, Narator profile, and Speech Blocks prompts, resumable AI cleanup with current model settings,
-deterministic and AI chunking, locked-target AI translation, character
-discovery with explicit age-domain voice handoff, narrator and character voice preparation, mode-aware Speech Blocks,
-Audio Blocks, WAV Audio Assembly deliverables, Home-page TXT/Markdown exports
-for completed text artifacts, and external full-project ZIP snapshots.
-Manual Text Chunking edits, inserts, and deletes now use the selective
-impact path to preserve unaffected Translation, Speech Blocks, and Audio
-Blocks work while resetting only affected chunks plus Audio Assembly.
-Text Cleanup reruns, manual cleaned-text edits, and full Text Chunking
-regeneration now preserve completed Character Discovery, Narator Voice, and
-Character Voices artifacts while resetting regenerated text, Speech Blocks,
-Audio Blocks, and Audio Assembly data.
-Manual Character Discovery add/edit/delete actions now also use the selective
-impact path: character add preserves generated downstream work,
-character edit unapproves only assigned Speech Blocks and resets only affected
-Audio Blocks, and character delete moves assigned Speech Blocks to Narrator
-instead of deleting them.
-Narrator and Character Voices changes now preserve Speech Blocks and reset only
-Audio Blocks that use the affected voice target, while global voice-language or
-runtime-model changes reset all generated Audio Blocks and Audio Assembly.
-Manual Speech Blocks insert/delete/edit/reset/approval actions now preserve
-stable Speech Block IDs, reset only affected Audio Blocks when audio input
-changes, and reset Audio Assembly whenever final order, approval, or audio
-inputs change. Speech Blocks review also exposes selected-block audio regeneration
-plus Play/Stop preview controls mirrored from Audio Blocks.
-Same-narrator Speech Blocks now ask the AI for compact boundary IDs only and
-construct exact narrator spans deterministically, reducing malformed JSON and
-source-copy mismatches from local models.
-Audio Blocks selected reset, selected regeneration, approval, and unapproval
-now preserve unrelated generated audio and reset only Audio Assembly outputs.
-Audio Assembly settings changes and reruns now preserve upstream Audio Blocks
-while replacing only assembly outputs/state/report.
-Current package version is `1.0.15`; Settings now supports built-in and custom
-runtime UI themes with separate UI-control and text-window font controls,
-theme color roles, and portable JSON import/export. Text Chunking now allows
-operators to start a fully manual chunking pass from cleaned text before
-generated chunks exist. Narator Voice and Character Voices now accept validated
-WAV imports with operator-entered sample text for Qwen TTS Base voice cloning.
-Character Discovery now hands off explicit age guidance to Qwen voice-designer
-prompts, and AI Settings plus TTS Settings now share the `Cancel`, `Save`, and
-`OK` flow used by the Settings dialog.
+`04_Software/AudioMancer/` contains the Python 3.12/PySide6 desktop
+application. The current package version is `1.1.0`.
 
-Focused implementation documentation is maintained in `05_SoftwareDocu/`.
-The end-user help bundles are maintained in `05_SoftwareDocu/UserGuide/` and
-`05_SoftwareDocu/UserGuide_ro/`, then packaged as offline HTML.
-Validation commands and targeted test groups are listed in
-`04_Software/AudioMancer/README.MD`; the current full regression baseline is
-also summarized in `HowToTest.md`.
+AudioMancer supports a reviewed audiobook-preparation workflow that includes:
+
+- project creation and source import
+- text cleanup and text chunking
+- AI translation
+- character discovery
+- narrator and character voice preparation
+- speech block editing and approval
+- audio block generation
+- WAV audio assembly
+- text, project, voice-sample, and audio-output exports
+
+The application is designed so operators can combine AI-assisted steps with
+manual review and manual editing. The workflow pages preserve completed work
+where possible and reset only affected downstream artifacts when source text,
+chunks, voices, speech blocks, audio blocks, or assembly settings change.
+
+## Repository Layout
+
+- `0_Planning/` - planning notes and design drafts.
+- `01_Documentation/` - project-level documentation and media.
+- `02_Tools/` - packaging, audit, and repository utility scripts.
+- `04_Software/` - application source code.
+- `05_SoftwareDocu/` - implementation documentation and offline user help.
+- `07_Delivery/` - delivery metadata and release packaging notes.
+- `09_Others/` - runtime projects, samples, and local support material.
+
+## Documentation
+
+- `04_Software/AudioMancer/README.MD` contains application development,
+  runtime, and validation notes.
+- `05_SoftwareDocu/` contains focused implementation documentation.
+- `05_SoftwareDocu/UserGuide/` contains the English offline help bundle.
+- `05_SoftwareDocu/UserGuide_ro/` contains the Romanian offline help bundle.
+- `CHANGELOG.md` contains detailed version history.
+- `HowToTest.md` summarizes the broader validation baseline.
+
+## Development
+
+The application code lives under `04_Software/AudioMancer/` and is managed as a
+Python project. Use the application README in that folder for setup, test, and
+runtime details.
+
+For Python changes in the application subtree, run targeted validation from
+`04_Software/AudioMancer/`, preferably through `uv`:
+
+```powershell
+uv run ruff check <changed_python_files> --fix
+uv run ruff format <changed_python_files>
+uv run python -m py_compile <changed_file.py>
+```
+
+## Release Notes
+
+Use `CHANGELOG.md` for source-level version history. Generated delivery
+archives are not committed to this repository; Windows release packages are
+published through the configured GitHub Releases delivery flow.
+
+## License
+
+AudioMancer is licensed under the GNU Affero General Public License v3.0
+(AGPL-3.0) with an additional Non-Commercial restriction. See `LICENSE.txt` and
+`LICENSE_NC.txt` for full license details.

@@ -438,13 +438,13 @@ def test_narrator_service_profile_generation_request_requires_minimum_qwen_capab
 
 def test_narrator_service_normalizes_language_labels_to_runtime_codes(tmp_path) -> None:
     """
-    @brief      Verify narrator profile storage normalizes legacy language labels into VoiceWeaver language codes.
+    @brief      Verify narrator profile storage normalizes language labels into VoiceWeaver language codes.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-18
-    @version    1.0.0
+    @version    1.0.1
     """
     project_root, _manifest = project_workspace_service.create_project("NarratorLanguageProject", tmp_path)
 

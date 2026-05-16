@@ -16,7 +16,7 @@
          `80_audio_blocks` workflow artifacts.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-23
-@version 0.15.4
+@version 0.15.6
 """
 
 # IMPORTS
@@ -206,37 +206,6 @@ def has_persisted_audio_blocks(project_root: str | Path) -> bool:
 
 
 @trace_function(_AUDIO_BLOCKS_LOGGER)
-def has_persisted_audio_for_chunk(project_root: str | Path, chunk_id: str) -> bool:
-    """
-    @brief      Return whether one chunk has persisted Audio Blocks progress or generated artifacts.
-    @param[in]  project_root Active project root folder.
-    @param[in]  chunk_id Source chunk identifier.
-    @return     `True` when the selected chunk has Audio Blocks records or files.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-27
-    @version    0.1.0
-    """
-    normalized_chunk_id = str(chunk_id).strip()
-    if not normalized_chunk_id:
-        return False
-    for block in load_audio_blocks(project_root):
-        if str(block.get("chunk_id", "")).strip() != normalized_chunk_id:
-            continue
-        if any(
-            (
-                bool(block.get("generated", False)),
-                bool(block.get("approved", False)),
-                bool(_optional_string(block.get("audio_relative_path"))),
-                bool(_optional_string(block.get("metadata_relative_path"))),
-                bool(block.get("generated_part_relative_paths")),
-            )
-        ):
-            return True
-    return False
-
-
-@trace_function(_AUDIO_BLOCKS_LOGGER)
 def has_persisted_audio_for_speech_block(project_root: str | Path, speech_block_id: str) -> bool:
     """
     @brief      Return whether one Speech Block has generated Audio Blocks data.
@@ -287,7 +256,7 @@ def start_or_continue_generation(
     @exception  OperationCancelledError Raised when the operator cancels the run.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-23
-    @version    0.3.5
+    @version    0.3.6
     """
     resolved_project_root = Path(project_root)
     generation_context = _resolve_generation_context(resolved_project_root, manifest, runtime_settings)
@@ -673,12 +642,6 @@ def start_or_continue_generation(
             regenerated_prompt_count=regenerated_prompt_count,
         ),
     )
-    project_workspace_service.sync_manifest_operation_summary(
-        resolved_project_root,
-        "audio_blocks",
-        load_operation_state(resolved_project_root),
-        current_stage="audio_blocks_ready" if final_status == AUDIO_BLOCKS_STAGE_COMPLETED else "speech_blocks_ready",
-    )
     _emit_progress(
         progress_callback,
         _generated_count(existing_blocks),
@@ -1000,7 +963,7 @@ def regenerate_audio_block(
     @exception  OperationCancelledError Raised when the operator cancels the run.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-23
-    @version    0.2.1
+    @version    0.2.2
     """
     resolved_project_root = Path(project_root)
     generation_context = _resolve_generation_context(resolved_project_root, manifest, runtime_settings)
@@ -1130,7 +1093,7 @@ def _resolve_generation_context(
     @exception  ValueError Raised when prerequisites or runtime settings are invalid.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-23
-    @version    0.4.1
+    @version    0.5.0
     """
     speech_blocks = speech_blocks_service.sort_speech_blocks(speech_blocks_service.load_speech_blocks(project_root))
     if not speech_blocks:
@@ -1162,17 +1125,16 @@ def _resolve_generation_context(
         project_root,
         narrator_definition_service.DEFAULT_NARRATOR_LANGUAGE,
     )
-    narrator_audio_path, _narrator_metadata_path = narrator_definition_service.selected_narrator_sample_paths(
+    narrator_audio_path, narrator_metadata_path = narrator_definition_service.selected_narrator_sample_paths(
         project_root
     )
     narrator_metadata: dict[str, object] = {}
     if speech_audio_blocks:
         if not narrator_audio_path.is_file():
             raise ValueError("Generate the selected narrator sample before starting Audio Blocks.")
-        narrator_metadata = narrator_definition_service.load_selected_narrator_sample_metadata(project_root)
+        narrator_metadata = load_optional_json_artifact(narrator_metadata_path)
         if not isinstance(narrator_metadata, dict):
             raise ValueError("The selected narrator sample metadata is missing or invalid.")
-        narrator_metadata = _resolve_selected_narrator_sample_metadata(project_root, narrator_metadata)
 
     voice_targets: list[dict[str, object]] = []
     voice_target_ids: set[str] = set()
@@ -1240,43 +1202,6 @@ def _resolve_generation_context(
         "timeout_seconds": timeout_seconds,
         "input_fingerprint": input_fingerprint,
     }
-
-
-def _resolve_selected_narrator_sample_metadata(
-    project_root: Path,
-    selected_metadata: dict[str, object],
-) -> dict[str, object]:
-    """
-    @brief      Resolve selected narrator metadata, falling back to the selected profile sample.
-    @param[in]  project_root Active project root folder.
-    @param[in]  selected_metadata Persisted selected-narrator metadata or selection state.
-    @return     Sample metadata with preview text when the selected profile provides it.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
-    """
-    resolved_metadata = dict(selected_metadata)
-    if str(resolved_metadata.get("preview_text", "")).strip():
-        return resolved_metadata
-
-    selected_profile_id = str(
-        resolved_metadata.get("selected_profile_id") or resolved_metadata.get("profile_id") or ""
-    ).strip()
-    if not selected_profile_id:
-        selected_state = narrator_definition_service.load_selected_profile_state(project_root)
-        selected_profile_id = str(selected_state.get("selected_profile_id", "") or "").strip()
-    if not selected_profile_id:
-        return resolved_metadata
-
-    profile_metadata = narrator_definition_service.load_profile_sample_metadata(project_root, selected_profile_id)
-    if not isinstance(profile_metadata, dict):
-        return resolved_metadata
-    resolved_metadata.update(dict(profile_metadata))
-    resolved_metadata["selected_profile_id"] = selected_profile_id
-    resolved_metadata["is_selected"] = True
-    resolved_metadata.setdefault("role", "narrator")
-    return resolved_metadata
 
 
 def _build_input_fingerprint(
@@ -2455,12 +2380,6 @@ def _persist_report_update(
         report,
         persisted_state,
     )
-    project_workspace_service.sync_manifest_operation_summary(
-        project_root,
-        "audio_blocks",
-        persisted_state,
-        current_stage="audio_blocks_ready" if final_status == AUDIO_BLOCKS_STAGE_COMPLETED else "speech_blocks_ready",
-    )
     return report
 
 
@@ -2784,7 +2703,7 @@ def _persist_state(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-23
-    @version    0.2.0
+    @version    0.3.0
     """
     _ = speech_blocks
     write_operation_json_artifact(project_root, "audio_blocks", config.AUDIO_BLOCKS_OUTPUT_FILE_NAME, audio_blocks)
@@ -2800,6 +2719,15 @@ def _persist_state(
         "audio_blocks",
         config.AUDIO_BLOCKS_STATE_FILE_NAME,
         operation_state,
+    )
+    operation_status = str(operation_state.get("status", "")).strip()
+    project_workspace_service.sync_manifest_operation_summary(
+        project_root,
+        "audio_blocks",
+        operation_state,
+        current_stage="audio_blocks_ready"
+        if operation_status == AUDIO_BLOCKS_STAGE_COMPLETED
+        else "speech_blocks_ready",
     )
 
 
@@ -2944,12 +2872,8 @@ def _normalize_persisted_audio_block(payload: dict[str, object]) -> AudioBlockPa
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-23
-    @version    0.4.0
+    @version    0.5.0
     """
-    if "chunk_sequence_index" in payload:
-        raise ValueError(
-            "Audio Blocks uses a legacy global-sequence schema. Reset and regenerate Audio Blocks for this project."
-        )
     return {
         "speech_block_id": str(payload.get("speech_block_id", "")).strip(),
         "sequence_index": int(payload.get("sequence_index", 0)),

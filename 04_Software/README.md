@@ -18,7 +18,7 @@ Implementation sources and runnable software artifacts.
   language, maintained under
   `../05_SoftwareDocu/UserGuide/` and `../05_SoftwareDocu/UserGuide_ro/`, and
   bundled into release archives as `help/en/` plus `help/ro/`. Current package
-  version `1.0.15` includes protected minimum splitter widths on the dense review
+  version `1.1.0` includes protected minimum splitter widths on the dense review
   pages, Character Discovery age-domain voice handoff, the Character Voices batch sample action, AI/TTS Settings
   `Cancel`/`Save`/`OK` dialog flow, and the selective
   downstream-preservation model for manual chunk, character, voice, speech,

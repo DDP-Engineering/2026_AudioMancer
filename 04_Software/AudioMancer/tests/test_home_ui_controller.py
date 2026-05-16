@@ -13,7 +13,7 @@
          activation correctly through the main-window shell.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-06
-@version 0.5.2
+@version 0.5.3
 """
 
 # IMPORTS
@@ -192,6 +192,70 @@ def test_home_ui_controller_applies_selected_export_extension_and_writes_utf8(
 
     export_path = selected_path.with_suffix(".md")
     assert export_path.read_text(encoding="utf-8") == "Text românesc cu ș, ț, ă.\n"
+
+
+def test_home_ui_controller_routes_zip_export_to_archive_writer(
+    monkeypatch,
+    qtbot,
+    tmp_path,
+    default_settings_payload,
+) -> None:
+    """
+    @brief      Verify ZIP artifact exports use the archive writer and `.zip` extension.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  qtbot Qt test helper fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @param[in]  default_settings_payload Fixture supplying default test settings.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-16
+    @version    0.1.0
+    """
+    project_root, manifest = project_workspace_service.create_project("ArchiveExportProject", tmp_path)
+    window = MainWindow(settings_payload=dict(default_settings_payload))
+    qtbot.addWidget(window)
+    window._current_project_root = project_root
+    window._current_manifest = manifest
+    selected_path = tmp_path / "outside" / "voices"
+    archive_calls = []
+
+    monkeypatch.setattr(
+        home_ui_controller.project_export_service,
+        "build_export_states",
+        lambda *_args: [
+            {
+                "export_kind": project_export_service.EXPORT_KIND_NARRATOR_VOICE,
+                "status": project_export_service.EXPORT_STATUS_AVAILABLE,
+                "can_export": True,
+            }
+        ],
+    )
+    monkeypatch.setattr(
+        home_ui_controller.QFileDialog,
+        "getSaveFileName",
+        lambda *args, **kwargs: (str(selected_path), ""),
+    )
+    monkeypatch.setattr(
+        home_ui_controller.project_export_service,
+        "create_archive_export",
+        lambda *args, **kwargs: archive_calls.append(args),
+    )
+    monkeypatch.setattr(
+        home_ui_controller.project_export_service,
+        "render_export",
+        lambda *args, **kwargs: (_ for _ in ()).throw(AssertionError("render_export should not handle ZIP")),
+    )
+
+    home_ui_controller.handle_export_requested(
+        window,
+        project_export_service.EXPORT_KIND_NARRATOR_VOICE,
+        project_export_service.EXPORT_FORMAT_ZIP,
+    )
+
+    assert archive_calls
+    assert archive_calls[0][2] == project_export_service.EXPORT_KIND_NARRATOR_VOICE
+    assert archive_calls[0][3] == selected_path.with_suffix(".zip")
 
 
 def test_home_ui_controller_rejects_snapshot_inside_project(

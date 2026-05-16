@@ -15,7 +15,7 @@
          based operation state plus AI transaction logging.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 0.18.2
+@version 0.18.5
 """
 
 # IMPORTS
@@ -749,37 +749,35 @@ def fallback_character_speech_blocks_to_narrator(
 def insert_speech_block(
     project_root: str | Path,
     chunk_id: str,
-    before_speech_block_id: str | None = None,
+    after_speech_block_id: str | None = None,
 ) -> tuple[SpeechBlocksReportPayload, str]:
     """
     @brief      Insert one manual Speech Block into a selected chunk.
     @param[in]  project_root Active project root folder.
     @param[in]  chunk_id Source chunk that receives the new block.
-    @param[in]  before_speech_block_id Optional block id before which to insert.
+    @param[in]  after_speech_block_id Optional block id after which to insert.
     @return     Updated report payload and final inserted Speech Block id.
-    @exception  ValueError Raised when Speech Blocks state, chunk, or before-block is invalid.
+    @exception  ValueError Raised when Speech Blocks state, chunk, or after-block is invalid.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.2.0
+    @version    0.4.0
     """
     resolved_project_root = Path(project_root)
     selected_chunk_id = str(chunk_id).strip()
-    source_chunks = load_input_source_chunks(resolved_project_root)
+    source_chunks, _source_language, _source_kind = _load_or_resolve_source_context(resolved_project_root)
     if not source_chunks:
-        raise ValueError("Generate Speech Blocks before inserting a Speech Block.")
+        raise ValueError("Source chunks are required before inserting a Speech Block.")
     if not any(str(chunk.get("chunk_id", "")).strip() == selected_chunk_id for chunk in source_chunks):
         raise ValueError("The selected chunk was not found.")
     speech_blocks = load_speech_blocks(resolved_project_root)
-    if not speech_blocks:
-        raise ValueError("Generate Speech Blocks before inserting a Speech Block.")
     blocks_for_chunk = [block for block in speech_blocks if str(block.get("chunk_id", "")).strip() == selected_chunk_id]
-    insertion_index = 1
-    normalized_before_id = str(before_speech_block_id or "").strip()
-    if normalized_before_id:
-        before_block = _speech_block_by_id(blocks_for_chunk, normalized_before_id)
-        if before_block is None:
+    insertion_index = max((int(block.get("sequence_index", 0)) for block in blocks_for_chunk), default=0) + 1
+    normalized_after_id = str(after_speech_block_id or "").strip()
+    if normalized_after_id:
+        after_block = _speech_block_by_id(blocks_for_chunk, normalized_after_id)
+        if after_block is None:
             raise ValueError("The selected Speech Block was not found in the selected chunk.")
-        insertion_index = int(before_block.get("sequence_index", 1))
+        insertion_index = int(after_block.get("sequence_index", 0)) + 1
     for block in speech_blocks:
         if (
             str(block.get("chunk_id", "")).strip() == selected_chunk_id
@@ -1841,12 +1839,8 @@ def _normalize_persisted_speech_block(payload: dict[str, object]) -> SpeechBlock
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.3.0
+    @version    0.4.0
     """
-    if "chunk_sequence_index" in payload:
-        raise ValueError(
-            "Speech Blocks uses a legacy global-sequence schema. Reset and regenerate Speech Blocks for this project."
-        )
     sequence_index = int(payload.get("sequence_index", 0))
     chunk_id = str(payload.get("chunk_id", "")).strip()
     speech_block_id = str(payload.get("speech_block_id", "")).strip() or _speech_block_id(chunk_id, sequence_index)
@@ -2041,16 +2035,18 @@ def _persist_report_update(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-24
-    @version    0.2.1
+    @version    0.3.0
     """
-    source_chunks = load_input_source_chunks(project_root)
+    source_chunks, resolved_source_language, resolved_source_kind = _load_or_resolve_source_context(project_root)
     report = load_speech_blocks_report(project_root) or {}
     operation_state = load_operation_state(project_root) or {}
     metadata = operation_state.get("metadata", {}) if isinstance(operation_state, dict) else {}
     if not isinstance(metadata, dict):
         metadata = {}
-    source_language = str(report.get("source_language", metadata.get("source_language", ""))).strip()
-    source_kind = str(report.get("source_kind", metadata.get("source_kind", ""))).strip()
+    source_language = str(
+        report.get("source_language", metadata.get("source_language", resolved_source_language))
+    ).strip()
+    source_kind = str(report.get("source_kind", metadata.get("source_kind", resolved_source_kind))).strip()
     profile_id = str(report.get("ai_profile_id", metadata.get("ai_profile_id", ""))).strip()
     token_usage = token_usage_service.restore_token_usage(report.get("token_usage"), metadata.get("token_usage"))
     budget_metadata = _restore_persisted_budget_metadata(report, operation_state)
@@ -2080,11 +2076,13 @@ def _persist_report_update(
         budget_metadata,
         additional_speech_block_instructions,
     )
-    status = (
-        "completed"
-        if str(updated_report.get("speech_blocks_stage_status", "")).strip() == SPEECH_BLOCKS_STAGE_COMPLETED
-        else "review_pending"
-    )
+    stage_status = str(updated_report.get("speech_blocks_stage_status", "")).strip()
+    if stage_status == SPEECH_BLOCKS_STAGE_COMPLETED:
+        status = "completed"
+    elif stage_status == SPEECH_BLOCKS_STAGE_NOT_STARTED:
+        status = "not_started"
+    else:
+        status = "review_pending"
     updated_state = _build_operation_state_with_prompt_rules(
         project_root,
         source_chunks,
@@ -2119,6 +2117,38 @@ def _persist_report_update(
     return updated_report
 
 
+def _load_or_resolve_source_context(project_root: Path) -> tuple[list[dict[str, object]], str, str]:
+    """
+    @brief      Load persisted Speech Blocks source context or resolve it from the current project artifacts.
+    @param[in]  project_root Active project root folder.
+    @return     Tuple of source chunks, source language, and source kind.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-16
+    @version    0.1.0
+    """
+    report = load_speech_blocks_report(project_root) or {}
+    operation_state = load_operation_state(project_root) or {}
+    metadata = operation_state.get("metadata", {}) if isinstance(operation_state, dict) else {}
+    if not isinstance(metadata, dict):
+        metadata = {}
+    source_language = str(report.get("source_language", metadata.get("source_language", ""))).strip()
+    source_kind = str(report.get("source_kind", metadata.get("source_kind", ""))).strip()
+    source_chunks = load_input_source_chunks(project_root)
+    if source_chunks:
+        return source_chunks, source_language, source_kind
+    try:
+        manifest = project_workspace_service.load_manifest(project_root)
+        source_resolution = resolve_source_chunks(project_root, manifest)
+    except (FileNotFoundError, OSError, ValueError):
+        return [], source_language, source_kind
+    return (
+        list(source_resolution["source_chunks"]),
+        str(source_resolution["selected_source_language"]),
+        str(source_resolution["source_kind"]),
+    )
+
+
 def _is_character_speech_block(block: SpeechBlockPayload, character_id: str) -> bool:
     """
     @brief      Return whether one Speech Block is assigned to the selected character speaker.
@@ -2148,7 +2178,7 @@ def _renumber_speech_blocks(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-24
-    @version    0.3.0
+    @version    0.4.0
     """
     chunk_order = {
         str(chunk.get("chunk_id", "")).strip(): int(chunk.get("sequence_index", 0)) for chunk in source_chunks
@@ -2169,7 +2199,6 @@ def _renumber_speech_blocks(
         sequence_index = local_counts[chunk_id]
         renumbered_block = dict(block)
         renumbered_block["sequence_index"] = sequence_index
-        renumbered_block.pop("chunk_sequence_index", None)
         renumbered_block["speech_block_id"] = _stable_speech_block_id(renumbered_block, chunk_id, used_ids)
         renumbered_blocks.append(renumbered_block)
     return renumbered_blocks
@@ -2187,7 +2216,7 @@ def _renumber_single_chunk_blocks(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-28
-    @version    0.2.0
+    @version    0.3.0
     """
     normalized_chunk_id = str(chunk_id).strip()
     renumbered_blocks: list[SpeechBlockPayload] = []
@@ -2195,7 +2224,6 @@ def _renumber_single_chunk_blocks(
     for sequence_index, block in enumerate(speech_blocks, start=1):
         renumbered_block = dict(block)
         renumbered_block["sequence_index"] = sequence_index
-        renumbered_block.pop("chunk_sequence_index", None)
         renumbered_block["chunk_id"] = normalized_chunk_id
         renumbered_block["speech_block_id"] = _stable_speech_block_id(renumbered_block, normalized_chunk_id, used_ids)
         renumbered_blocks.append(renumbered_block)
@@ -2292,41 +2320,6 @@ def _manual_inserted_speech_block(chunk_id: str, sequence_index: int, speech_blo
         "approved": False,
         "approved_at": None,
     }
-
-
-def _manual_inserted_block_by_temporary_id(
-    speech_blocks: list[SpeechBlockPayload],
-    chunk_id: str,
-    temporary_id: str,
-    insertion_index: int,
-) -> SpeechBlockPayload | None:
-    """
-    @brief      Resolve the final inserted block after chunk-local renumbering.
-    @param[in]  speech_blocks Reloaded Speech Blocks payload list.
-    @param[in]  chunk_id Source chunk identifier.
-    @param[in]  temporary_id Pre-renumber inserted Speech Block id.
-    @param[in]  insertion_index Requested insertion sequence index.
-    @return     Matching inserted block or `None`.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.2.0
-    """
-    return next(
-        (
-            block
-            for block in speech_blocks
-            if str(block.get("chunk_id", "")).strip() == chunk_id
-            and int(block.get("sequence_index", 0)) == insertion_index
-            and str(block.get("text", "")) == ""
-            and str(block.get("source_text", "")) == ""
-            and str(block.get("speaker_id", "")).strip() == _NARRATOR_SPEAKER_ID
-            and str(block.get("content_kind", "")).strip() == CONTENT_KIND_NARRATION
-            and str(block.get("speech_block_id", "")).strip()
-            in {temporary_id, _speech_block_id(chunk_id, insertion_index)}
-        ),
-        None,
-    )
 
 
 def _speech_block_by_id(
@@ -2458,7 +2451,7 @@ def _restore_next_speech_blocks_chunk_index(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-08
-    @version    0.1.0
+    @version    0.2.0
     """
     if str(existing_state.get("status", "")).strip() in {"running", "failed"}:
         raw_checkpoint_index = resume_checkpoint.get("next_chunk_index")
@@ -2471,9 +2464,6 @@ def _restore_next_speech_blocks_chunk_index(
     raw_metadata_count = metadata.get("processed_chunk_count")
     if raw_metadata_count not in (None, ""):
         return max(0, min(int(raw_metadata_count), total_chunk_count))
-    source_chunks = metadata.get("source_chunks")
-    if isinstance(source_chunks, list):
-        return max(0, min(len(source_chunks), total_chunk_count))
     return 0
 
 

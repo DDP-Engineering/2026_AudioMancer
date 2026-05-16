@@ -13,7 +13,7 @@
          executes resumable translation over canonical chunking output.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-07
-@version 0.10.2
+@version 0.10.3
 """
 
 # IMPORTS
@@ -61,8 +61,6 @@ TRANSLATION_STAGE_IN_PROGRESS = "in_progress"
 TRANSLATION_STAGE_TRANSLATED = "translated"
 # @brief Translation stage token used when all translated chunks are approved.
 TRANSLATION_STAGE_APPROVED = "approved"
-# @brief Backward-compatible alias for callers that still mean approved workflow completion.
-TRANSLATION_STAGE_COMPLETED = TRANSLATION_STAGE_APPROVED
 # @brief Translated-chunk status token used before a chunk receives translated text.
 TRANSLATED_CHUNK_STATUS_NOT_STARTED = "not_started"
 # @brief Translated-chunk status token used after a chunk receives translated text.

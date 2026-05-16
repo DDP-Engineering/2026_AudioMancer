@@ -13,7 +13,7 @@
          persists resumable state, and rebuilds chunk spans from AI boundaries.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-07
-@version 0.5.1
+@version 0.5.2
 """
 
 # IMPORTS
@@ -696,6 +696,121 @@ def test_ai_chunking_resumes_from_saved_window_checkpoint(tmp_path, monkeypatch)
     completed_state = json.loads((project_root / config.CHUNKING_STATE_FILE_NAME).read_text(encoding="utf-8"))
     assert completed_state["status"] == "completed"
     assert completed_state["progress_current"] == 2
+
+
+def test_ai_chunking_restarts_when_checkpoint_lacks_completed_unit_count(tmp_path, monkeypatch) -> None:
+    """
+    @brief      Verify old AI chunking checkpoints without completed-unit counts are not resumed.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-15
+    @version    0.1.0
+    """
+    monkeypatch.setattr(
+        config,
+        "AI_CHUNKING_WINDOW_SIZE_BY_STRATEGY",
+        {
+            **config.AI_CHUNKING_WINDOW_SIZE_BY_STRATEGY,
+            "paragraph": 20,
+        },
+    )
+    prompt_root = tmp_path / "prompts"
+    prompt_root.mkdir()
+    (prompt_root / "text_chunking_system.txt").write_text("{strategy}", encoding="utf-8")
+    (prompt_root / "text_chunking_user.txt").write_text("{strategy}\n{units_block}", encoding="utf-8")
+    monkeypatch.setattr(config, "APP_PROMPTS_PATH", prompt_root)
+
+    project_root, manifest = project_workspace_service.create_project("AiChunkingOldCheckpointProject", tmp_path)
+    cleaned_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.CLEANED_TEXT_FILE_NAME
+    cleaned_path.parent.mkdir(parents=True, exist_ok=True)
+    cleaned_path.write_text("\n\n".join(f"Paragraph {index}." for index in range(1, 41)) + "\n", encoding="utf-8")
+    manifest["source_document"] = {
+        "original_name": "story.txt",
+        "stored_relative_path": "story.txt",
+        "file_type": "txt",
+        "imported_at": "2026-04-07T12:00:00+00:00",
+        "size_bytes": 10,
+    }
+    manifest["operations"]["cleanup"]["status"] = "completed"
+    manifest["operations"]["cleanup"]["output_paths"] = [
+        f"{config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH}/{config.CLEANED_TEXT_FILE_NAME}"
+    ]
+    profile = {
+        "id": "profile_1",
+        "label": "Chunking Profile",
+        "backend_kind": "lmstudio",
+        "base_url": "http://127.0.0.1:1234",
+        "api_key": "",
+        "model_name": "qwen3-8b",
+        "context_window": 4096,
+        "max_output_tokens": 512,
+        "request_timeout_seconds": 30,
+        "temperature": 0.2,
+    }
+    responses = iter(
+        [
+            {"break_after_unit_ids": ["paragraph-0002"]},
+            operation_runtime_service.OperationCancelledError("stop"),
+        ]
+    )
+
+    def _first_chat_json(*_args, **_kwargs):
+        """
+        @brief      Return one response and then cancel to create an interrupted checkpoint.
+        @return     Fake provider payload with one chunking boundary.
+        @exception  OperationCancelledError Raised by queued cancellation response.
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-15
+        @version    0.1.0
+        """
+        response = next(responses)
+        if isinstance(response, Exception):
+            raise response
+        return {
+            "payload": response,
+            "usage": {"input_tokens": 10, "output_tokens": 2, "total_tokens": 12, "usage_available": True},
+        }
+
+    monkeypatch.setattr(ai_chunking_service.llm_provider_service, "chat_json", _first_chat_json)
+    with pytest.raises(operation_runtime_service.OperationCancelledError):
+        ai_chunking_service.chunk_text(project_root, manifest, profile, "paragraph")
+
+    state_path = project_root / config.CHUNKING_STATE_FILE_NAME
+    state_payload = json.loads(state_path.read_text(encoding="utf-8"))
+    checkpoint = dict(state_payload["resume_checkpoint"])
+    checkpoint.pop("completed_unit_count", None)
+    checkpoint["completed_last_unit_id"] = "paragraph-0020"
+    checkpoint["budget_metadata"] = dict(state_payload["metadata"]["budget_metadata"])
+    state_payload["resume_checkpoint"] = checkpoint
+    state_path.write_text(json.dumps(state_payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+
+    captured_prompts: list[str] = []
+
+    def _second_chat_json(_profile, _system_prompt, user_prompt, **_kwargs):
+        """
+        @brief      Capture prompts for restart verification.
+        @return     Fake provider payload with one chunking boundary.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-15
+        @version    0.1.0
+        """
+        captured_prompts.append(user_prompt)
+        return {
+            "payload": {"break_after_unit_ids": ["paragraph-0039"]},
+            "usage": {"input_tokens": 10, "output_tokens": 2, "total_tokens": 12, "usage_available": True},
+        }
+
+    monkeypatch.setattr(ai_chunking_service.llm_provider_service, "chat_json", _second_chat_json)
+
+    ai_chunking_service.chunk_text(project_root, manifest, profile, "paragraph")
+
+    assert captured_prompts
+    assert "paragraph-0001" in captured_prompts[0]
+    assert "paragraph-0021" not in captured_prompts[0]
 
 
 def test_ai_chunking_continues_resume_when_budget_metadata_changes(tmp_path, monkeypatch) -> None:
