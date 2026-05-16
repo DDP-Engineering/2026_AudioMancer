@@ -14,7 +14,7 @@
          normalization.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-23
-@version 1.9.1
+@version 1.9.3
 """
 
 # IMPORTS
@@ -46,7 +46,7 @@ def test_audio_blocks_service_generates_clone_prompts_and_ordered_wavs(monkeypat
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-23
-    @version    0.3.0
+    @version    0.4.0
     """
     project_root, manifest = _create_audio_blocks_project(tmp_path, "AudioBlocksServiceGenerate")
     wait_payloads = [
@@ -74,6 +74,7 @@ def test_audio_blocks_service_generates_clone_prompts_and_ordered_wavs(monkeypat
     ]
     observed_prompt_requests: list[tuple[str, str, str]] = []
     observed_generate_requests: list[tuple[str, str, str]] = []
+    observed_manifest_progress: list[tuple[int, int, str]] = []
     audio_payloads = [_wav_bytes("narrator"), _wav_bytes("alice")]
     monkeypatch.setattr(
         audio_blocks_service.voiceweaver_runtime_service,
@@ -122,6 +123,21 @@ def test_audio_blocks_service_generates_clone_prompts_and_ordered_wavs(monkeypat
         project_root,
         manifest,
         _runtime_settings(),
+        progress_callback=lambda *_args: observed_manifest_progress.append(
+            (
+                int(
+                    project_workspace_service.load_manifest(project_root)["operations"]["audio_blocks"][
+                        "progress_current"
+                    ]
+                ),
+                int(
+                    project_workspace_service.load_manifest(project_root)["operations"]["audio_blocks"][
+                        "progress_total"
+                    ]
+                ),
+                str(project_workspace_service.load_manifest(project_root)["operations"]["audio_blocks"]["status"]),
+            )
+        ),
     )
 
     assert report["generated_block_count"] == 2
@@ -147,6 +163,8 @@ def test_audio_blocks_service_generates_clone_prompts_and_ordered_wavs(monkeypat
         ("qwen_voice_clone_prompt_v1", "narrator", "Narration one."),
         ("qwen_voice_clone_prompt_v1", "alice", "Hello there."),
     ]
+    assert (1, 2, "running") in observed_manifest_progress
+    assert observed_manifest_progress[-1] == (2, 2, "in_progress")
     first_audio_path = project_root / str(audio_blocks[0]["audio_relative_path"])
     second_audio_path = project_root / str(audio_blocks[1]["audio_relative_path"])
     assert first_audio_path.name == "0001_000001_narrator.wav"
@@ -172,7 +190,6 @@ def test_audio_blocks_service_same_narrator_mode_uses_narrator_prompt_for_charac
         {"voice_assignment_mode": "same_narrator"},
         _runtime_settings()["discovered_models"],
     )
-    narrator_definition_service.selected_narrator_sample_paths(project_root)[1].unlink()
     character_voices_service.delete_target_sample(project_root, "character_alice")
     manifest = project_workspace_service.load_manifest(project_root)
     wait_payloads = [
@@ -250,6 +267,27 @@ def test_audio_blocks_service_same_narrator_mode_uses_narrator_prompt_for_charac
     ]
     assert [block["voice_target_id"] for block in audio_blocks] == ["narrator", "narrator"]
     assert [block["voice_source_kind"] for block in audio_blocks] == ["narrator_sample", "narrator_sample"]
+
+
+def test_audio_blocks_service_requires_selected_narrator_sample_metadata(tmp_path) -> None:
+    """
+    @brief      Verify Audio Blocks requires current selected narrator sample metadata.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-16
+    @version    0.1.0
+    """
+    project_root, manifest = _create_audio_blocks_project(tmp_path, "AudioBlocksCurrentNarratorMetadata")
+    narrator_definition_service.selected_narrator_sample_paths(project_root)[1].unlink()
+
+    with pytest.raises(ValueError, match="selected narrator sample metadata"):
+        audio_blocks_service._resolve_generation_context(  # noqa: SLF001
+            project_root,
+            manifest,
+            _runtime_settings(),
+        )
 
 
 def test_audio_blocks_service_clone_prompt_matching_uses_sample_language_for_romanian_output(tmp_path) -> None:
@@ -351,52 +389,6 @@ def test_audio_blocks_service_clone_prompt_creation_uses_reference_sample_langua
     assert not prompt_reused
     assert observed_prompt_languages == ["en"]
     assert clone_profiles[0]["voice_language"] == "en"
-
-
-def test_audio_blocks_service_rejects_legacy_global_sequence_schema(tmp_path) -> None:
-    """
-    @brief      Verify legacy global Audio Blocks artifacts require reset/regeneration.
-    @param[in]  tmp_path Pytest temporary directory fixture.
-    @return     None.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
-    """
-    project_root, _manifest = _create_audio_blocks_project(tmp_path, "AudioBlocksLegacySchema")
-    output_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.AUDIO_BLOCKS_OUTPUT_FILE_NAME
-    output_path.write_text(
-        json.dumps(
-            [
-                {
-                    "speech_block_id": "0002-000004",
-                    "sequence_index": 4,
-                    "chunk_sequence_index": 1,
-                    "chunk_id": "chunk-0002",
-                    "speaker_id": "alice",
-                    "speaker_display_name": "Alice",
-                    "normalized_speaker_name": "alice",
-                    "text": "Legacy block.",
-                    "voice_target_id": "character_alice",
-                    "voice_source_kind": "character_sample",
-                    "audio_relative_path": None,
-                    "metadata_relative_path": None,
-                    "generated": False,
-                    "approved": False,
-                    "approved_at": None,
-                    "generated_at": None,
-                    "runtime_result_summary": "",
-                    "warning_flags": [],
-                }
-            ],
-            indent=2,
-        )
-        + "\n",
-        encoding="utf-8",
-    )
-
-    with pytest.raises(ValueError, match="legacy global-sequence schema"):
-        audio_blocks_service.load_audio_blocks(project_root)
 
 
 def test_audio_blocks_service_generates_only_approved_speech_blocks(monkeypatch, tmp_path) -> None:
@@ -1159,9 +1151,6 @@ def test_audio_blocks_service_reconcile_after_resplit_deletes_changed_chunk_and_
         + "\n",
         encoding="utf-8",
     )
-
-    assert audio_blocks_service.has_persisted_audio_for_chunk(project_root, "chunk-0001") is True
-    assert audio_blocks_service.has_persisted_audio_for_chunk(project_root, "chunk-missing") is False
 
     report = audio_blocks_service.reset_audio_for_speech_chunk(project_root, "chunk-0001")
 

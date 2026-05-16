@@ -35,7 +35,9 @@ discovery, Narator profile, and Speech Blocks prompts, resumable AI cleanup with
 deterministic and AI chunking, locked-target AI translation, character
 discovery with explicit age-domain voice handoff, narrator and character voice preparation, mode-aware Speech Blocks,
 Audio Blocks, WAV Audio Assembly deliverables, Home-page TXT/Markdown exports
-for completed text artifacts, and external full-project ZIP snapshots.
+for completed text artifacts, ZIP exports for available narrator/character
+voice samples and Audio Assembly outputs, and external full-project ZIP
+snapshots.
 Manual Text Chunking edits, inserts, and deletes now use the selective
 impact path to preserve unaffected Translation, Speech Blocks, and Audio
 Blocks work while resetting only affected chunks plus Audio Assembly.
@@ -51,11 +53,14 @@ instead of deleting them.
 Narrator and Character Voices changes now preserve Speech Blocks and reset only
 Audio Blocks that use the affected voice target, while global voice-language or
 runtime-model changes reset all generated Audio Blocks and Audio Assembly.
-Manual Speech Blocks insert/delete/edit/reset/approval actions now preserve
-stable Speech Block IDs, reset only affected Audio Blocks when audio input
-changes, and reset Audio Assembly whenever final order, approval, or audio
-inputs change. Speech Blocks review also exposes selected-block audio regeneration
-plus Play/Stop preview controls mirrored from Audio Blocks.
+Character Voices readiness now writes the Home workflow operation summary from
+the selected narrator sample plus every character sample, so reopened projects
+do not show generated character voices as `Not Started`.
+Manual Speech Blocks insert-after/delete/edit/reset/approval actions now
+preserve stable Speech Block IDs, reset only affected Audio Blocks when audio
+input changes, and reset Audio Assembly whenever final order, approval, or
+audio inputs change. Speech Blocks review also exposes selected-block audio
+regeneration plus Play/Stop preview controls mirrored from Audio Blocks.
 Same-narrator Speech Blocks now ask the AI for compact boundary IDs only and
 construct exact narrator spans deterministically, reducing malformed JSON and
 source-copy mismatches from local models.
@@ -63,7 +68,7 @@ Audio Blocks selected reset, selected regeneration, approval, and unapproval
 now preserve unrelated generated audio and reset only Audio Assembly outputs.
 Audio Assembly settings changes and reruns now preserve upstream Audio Blocks
 while replacing only assembly outputs/state/report.
-Current package version is `1.0.15`; Settings now supports built-in and custom
+Current package version is `1.1.0`; Settings now supports built-in and custom
 runtime UI themes with separate UI-control and text-window font controls,
 theme color roles, and portable JSON import/export. Text Chunking now allows
 operators to start a fully manual chunking pass from cleaned text before

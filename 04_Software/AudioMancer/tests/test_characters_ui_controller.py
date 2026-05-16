@@ -13,7 +13,7 @@
          discovery start and reset behavior for the Characters page controller.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-08
-@version 0.11.0
+@version 0.11.1
 """
 
 # IMPORTS
@@ -672,7 +672,6 @@ def _write_downstream_artifacts(project_root, window: MainWindow) -> None:
                     "default_prompt_text": "Alice voice.",
                     "preview_text": "Alice preview.",
                     "editable": True,
-                    "sample_mode": character_voices_service.SAMPLE_MODE_VOICE_DESIGNER,
                     "sample_audio_path": "alice_sample.wav",
                     "sample_metadata": {"target_id": character_voices_service.character_target_id("alice")},
                     "updated_at": "2026-04-08T12:02:00+00:00",

@@ -13,7 +13,7 @@
          the Speech Blocks workflow.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 0.6.0
+@version 0.6.1
 """
 
 # IMPORTS
@@ -361,14 +361,14 @@ def test_speech_blocks_ui_controller_save_restores_chunk_text_scroll(monkeypatch
 
 def test_speech_blocks_ui_controller_insert_resets_downstream_and_selects_new_block(monkeypatch, tmp_path) -> None:
     """
-    @brief      Verify insert delegates to service, resets assembly state, and selects edit mode.
+    @brief      Verify insert-after delegates to service, resets assembly state, and selects edit mode.
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.3.0
+    @version    0.4.0
     """
     project_root = tmp_path / "SpeechBlocksInsertController"
     project_root.mkdir()

@@ -15,7 +15,7 @@
          window-based operation state plus AI transaction logging.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-11
-@version 0.8.2
+@version 0.8.3
 """
 
 # IMPORTS
@@ -722,16 +722,9 @@ def _restore_resume_state(
     if stored_instruction_fingerprint != additional_chunking_instructions_fingerprint:
         return 0, 0, [], None
     completed_window_count = max(0, int(resume_checkpoint.get("completed_window_count", 0)))
-    completed_unit_count = _restore_completed_unit_count(
-        resume_checkpoint,
-        existing_state,
-        paragraph_records,
-        windows,
-        total_windows,
-        budget_metadata,
-    )
+    completed_unit_count = _restore_completed_unit_count(resume_checkpoint, paragraph_records)
     if completed_unit_count <= 0:
-        completed_window_count = 0
+        return 0, 0, [], None
     committed_break_ids = [
         str(item) for item in list(resume_checkpoint.get("committed_break_ids", [])) if str(item).strip()
     ]
@@ -746,47 +739,22 @@ def _restore_resume_state(
 
 def _restore_completed_unit_count(
     resume_checkpoint: dict[str, object],
-    existing_state: dict[str, object],
     paragraph_records: list[dict[str, object]],
-    windows: list[dict[str, int]],
-    total_windows: int,
-    budget_metadata: BudgetMetadataPayload,
 ) -> int:
     """
     @brief      Restore the count of paragraphs already processed by previous AI windows.
     @param[in]  resume_checkpoint Persisted AI chunking checkpoint payload.
-    @param[in]  existing_state Persisted operation-state payload.
     @param[in]  paragraph_records Current paragraph records.
-    @param[in]  windows Current full-document request windows.
-    @param[in]  total_windows Current full-document window count.
-    @param[in]  budget_metadata Current context-budget metadata.
     @return     Completed paragraph count, or zero when the checkpoint cannot be trusted.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-30
-    @version    0.1.0
+    @date       2026-05-15
+    @version    0.2.0
     """
     raw_completed_unit_count = resume_checkpoint.get("completed_unit_count")
     if raw_completed_unit_count not in (None, ""):
         return max(0, min(int(raw_completed_unit_count), len(paragraph_records)))
-
-    completed_last_unit_id = str(resume_checkpoint.get("completed_last_unit_id", "")).strip()
-    if completed_last_unit_id:
-        for index, paragraph_record in enumerate(paragraph_records, start=1):
-            if str(paragraph_record.get("unit_id", "")) == completed_last_unit_id:
-                return index
-        return 0
-
-    if int(existing_state.get("progress_total", 0)) != total_windows:
-        return 0
-    if dict(resume_checkpoint.get("budget_metadata") or {}) != dict(budget_metadata):
-        return 0
-    completed_window_count = max(0, int(resume_checkpoint.get("completed_window_count", 0)))
-    if completed_window_count <= 0:
-        return 0
-    if completed_window_count > len(windows):
-        return 0
-    return int(windows[completed_window_count - 1]["end_index"]) + 1
+    return 0
 
 
 def _restore_token_usage(existing_state: dict[str, object]) -> TokenUsagePayload:
@@ -1080,12 +1048,8 @@ def _write_running_state(
             "completed_window_count": progress_current,
             "total_window_count": progress_total,
             "completed_unit_count": int(completed_unit_count),
-            "completed_last_unit_id": (
-                str(paragraph_records[-1].get("unit_id", "")) if paragraph_records and completed_unit_count > 0 else ""
-            ),
             "committed_break_ids": list(committed_break_ids),
             "log_relative_path": log_relative_path,
-            "budget_metadata": dict(budget_metadata),
             "additional_chunking_instructions_fingerprint": additional_chunking_instructions_fingerprint,
         },
         budget_metadata=budget_metadata,

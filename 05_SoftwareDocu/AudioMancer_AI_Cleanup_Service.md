@@ -90,11 +90,11 @@ High-level flow:
    assistant content is malformed, appends request or response or failure
    records to the operation-local AI log, and keeps polling for cancellation
    while the provider request runs in a small helper thread.
-7. The AI cleanup service accepts the current artifact/action/confidence
-   schema and legacy `label` output, preserves `keep` decisions and
-   low-confidence removals conservatively, removes only high-confidence or
-   medium-confidence removable artifacts, rebuilds the cleaned text, writes
-   the shared cleanup artifacts, and stores `mode="ai_assisted"` in the cleanup
+7. The AI cleanup service accepts only the current artifact/action/confidence
+   schema, ignores legacy label-only cleanup intent, preserves `keep` decisions
+   and low-confidence removals conservatively, removes only high-confidence or
+   medium-confidence removable artifacts, rebuilds the cleaned text, writes the
+   shared cleanup artifacts, and stores `mode="ai_assisted"` in the cleanup
    operation state.
 8. On success, the shell advances the workflow stage to `text_chunking_ready`.
 9. Manual edits to the cleaned text require a downstream impact confirmation
@@ -149,8 +149,9 @@ Current prompt contract:
   appended after template rendering
 - each current-schema result item contains `unit_id`, `artifact_type`,
   `action`, `confidence`, and a short `reason`
-- legacy result items containing only `unit_id` and `label` remain accepted for
-  compatibility with older prompts and tests
+- legacy result items containing only `unit_id` and `label`, or
+  `artifact_type` without `action`, are not accepted as cleanup intent; use
+  `artifact_type`, `action`, and `confidence`
 - ambiguous units should use `artifact_type="unknown"` and `action="keep"` so
   the cleaned text preserves content unless removal is high-confidence
 

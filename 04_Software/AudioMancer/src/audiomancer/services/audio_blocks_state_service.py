@@ -14,7 +14,7 @@
          Blocks output, and the resumable runtime operation state.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-23
-@version 0.5.3
+@version 0.5.4
 """
 
 # IMPORTS
@@ -23,6 +23,7 @@ from pathlib import Path
 
 from audiomancer.services import (
     ai_translation_service,
+    audio_blocks_artifact_service,
     audio_blocks_service,
     character_voices_service,
     deterministic_chunking_service,
@@ -376,7 +377,7 @@ def _merge_audio_block_state(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-23
-    @version    0.3.2
+    @version    0.4.0
     """
     audio_by_id = {str(block.get("speech_block_id", "")).strip(): dict(block) for block in audio_blocks}
     current_block_id = None
@@ -391,6 +392,7 @@ def _merge_audio_block_state(
         speaker_display_name = str(speech_block.get("speaker_display_name", "")).strip() or "Narrator"
         audio_relative_path = persisted_audio_block.get("audio_relative_path")
         audio_path = _resolve_existing_audio_path(project_root, audio_relative_path)
+        duration_seconds = _resolve_audio_duration_seconds(persisted_audio_block, audio_path)
         merged_blocks.append(
             {
                 "speech_block_id": speech_block_id,
@@ -415,13 +417,46 @@ def _merge_audio_block_state(
                 "special_block_status": str(persisted_audio_block.get("special_block_status", "") or ""),
                 "audio_relative_path": audio_relative_path,
                 "audio_file_name": "" if audio_path is None else audio_path.name,
-                "audio_duration_seconds": None,
+                "audio_duration_seconds": duration_seconds,
                 "can_play": audio_path is not None,
                 "runtime_result_summary": str(persisted_audio_block.get("runtime_result_summary", "")),
                 "is_current": speech_block_id == current_block_id,
             }
         )
     return merged_blocks
+
+
+def _resolve_audio_duration_seconds(
+    audio_block: dict[str, object],
+    audio_path: Path | None,
+) -> float | None:
+    """
+    @brief      Resolve display duration for one generated Audio Block.
+    @param[in]  audio_block Persisted Audio Blocks payload.
+    @param[in]  audio_path Resolved generated WAV path, or `None`.
+    @return     Duration in seconds, or `None` when no measurable duration exists.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-16
+    @version    0.1.0
+    """
+    for field_name in ("audio_duration_seconds", "duration_seconds"):
+        try:
+            duration_seconds = float(audio_block.get(field_name))
+        except (TypeError, ValueError):
+            continue
+        if duration_seconds >= 0.0:
+            return duration_seconds
+    if bool(audio_block.get("metadata_only", False)):
+        try:
+            pause_duration_ms = int(audio_block.get("pause_duration_ms"))
+        except (TypeError, ValueError):
+            pause_duration_ms = 0
+        if pause_duration_ms > 0:
+            return pause_duration_ms / 1000.0
+    if audio_path is None:
+        return None
+    return audio_blocks_artifact_service.wav_duration_seconds(audio_path)
 
 
 def _source_chunks_are_resolvable(project_root: Path, manifest: dict[str, object]) -> bool:

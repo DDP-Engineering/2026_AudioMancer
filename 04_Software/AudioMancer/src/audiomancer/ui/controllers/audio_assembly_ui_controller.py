@@ -14,7 +14,7 @@
          synchronization for the Audio Assembly workflow.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-25
-@version 0.5.0
+@version 0.5.1
 """
 
 # IMPORTS
@@ -28,6 +28,7 @@ from PySide6.QtWidgets import QMessageBox
 
 from audiomancer.services import (
     audio_assembly_service,
+    operation_runtime_service,
     project_workspace_service,
     text_cleanup_state_service,
     ui_state_service,
@@ -562,15 +563,18 @@ def _output_audio_path(window: "MainWindow", output_record: dict[str, object] | 
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.1.0
+    @version    0.2.0
     """
     if window._current_project_root is None or not isinstance(output_record, dict):
         return None
     relative_path = str(output_record.get("audio_relative_path", "")).strip()
     if not relative_path:
         return None
-    audio_path = Path(window._current_project_root) / relative_path
-    return audio_path if audio_path.is_file() else None
+    audio_path = operation_runtime_service.try_resolve_project_relative_path(
+        window._current_project_root,
+        relative_path,
+    )
+    return audio_path if audio_path is not None and audio_path.is_file() else None
 
 
 def _stop_audio_assembly_playback(window: "MainWindow") -> None:

@@ -13,7 +13,7 @@
          explicit narrator selection, and Qwen3-backed sample generation.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-18
-@version 3.6.0
+@version 3.6.1
 """
 
 # IMPORTS
@@ -390,9 +390,16 @@ def test_narator_voice_ui_controller_selection_change_refreshes_delete_state(qtb
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-18
-    @version    1.1.0
+    @version    1.2.0
     """
     project_root, _manifest = _create_project(tmp_path, "NarratorControllerSelectionRefresh")
+    first_profile = narrator_definition_service.create_custom_profile(
+        project_root,
+        "First Narrator",
+        "English",
+        "Warm narrator prompt.",
+        "Preview text.",
+    )
     custom_profile = narrator_definition_service.create_custom_profile(
         project_root,
         "My Narrator",
@@ -400,35 +407,10 @@ def test_narator_voice_ui_controller_selection_change_refreshes_delete_state(qtb
         "Prompt.",
         "Preview text.",
     )
-    profiles_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.NARRATOR_PROFILE_FILE_NAME
-    profiles_path.write_text(
-        json.dumps(
-            [
-                {
-                    "profile_id": "default_narrator_profile",
-                    "display_name": "Default1",
-                    "language": "English",
-                    "prompt_text": "Warm narrator prompt.",
-                    "preview_text": "Preview text.",
-                    "profile_kind": "custom",
-                    "profile_origin": "default_custom",
-                    "provider_family": "project_default",
-                    "editable": True,
-                    "protected": True,
-                    "is_selected": True,
-                },
-                custom_profile,
-            ],
-            indent=2,
-        )
-        + "\n",
-        encoding="utf-8",
-    )
-    narrator_definition_service.load_profiles(project_root)
-    narrator_definition_service.select_narrator_profile(project_root, "default_narrator_profile", "English")
+    narrator_definition_service.select_narrator_profile(project_root, first_profile["profile_id"], "English")
     window = _build_window(qtbot, project_root)
 
-    assert window._narator_voice_page.current_profile_id() == "default_narrator_profile"
+    assert window._narator_voice_page.current_profile_id() == first_profile["profile_id"]
     assert window._narator_voice_page._delete_profile_button.isEnabled() is True
 
     narator_voice_ui_controller.handle_selection_change_requested(window, custom_profile["profile_id"])

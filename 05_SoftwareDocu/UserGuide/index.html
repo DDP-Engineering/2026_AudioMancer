@@ -9,14 +9,14 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>AudioMancer User Guide v1.0.15</title>
+    <title>AudioMancer User Guide v1.1.0</title>
     <link rel="stylesheet" href="assets/styles/help.css">
 </head>
 <body>
     <div class="layout">
         <nav class="toc" aria-label="Table of contents">
             <h1>AudioMancer Help</h1>
-            <p>Version 1.0.15<br>Offline user guide for Windows and Ubuntu.</p>
+            <p>Version 1.1.0<br>Offline user guide for Windows and Ubuntu.</p>
             <a href="#welcome">Welcome</a>
             <a href="#requirements">What You Need</a>
             <a href="#install">Install And Start</a>
@@ -24,6 +24,7 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
             <a href="#ai-settings">AI Settings</a>
             <a href="#tts-settings">TTS / VoiceWeaver</a>
             <a href="#project">Create Or Open A Project</a>
+            <a href="#manual-workflow">Manual Workflow Example</a>
             <a href="#cleanup">Text Cleanup</a>
             <a href="#chunking">Text Chunking</a>
             <a href="#translation">AI Translation</a>
@@ -42,8 +43,8 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
             <section id="welcome">
                 <h2>Welcome</h2>
                 <div class="version-box">
-                    <p><strong>Help version:</strong> 1.0.15</p>
-                    <p><strong>Application version:</strong> 1.0.15</p>
+                    <p><strong>Help version:</strong> 1.1.0</p>
+                    <p><strong>Application version:</strong> 1.1.0</p>
                     <p><strong>Creator:</strong> Eng. Dipl. Dan Dumitru Pasare</p>
                     <p><strong>Contact:</strong> pasaredan1979@gmail.com</p>
                 </div>
@@ -55,12 +56,12 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                 </p>
                 <p>
                     Work through the left sidebar from top to bottom. Review visible text and audio before you press
-                    approval buttons. Version 1.0.15 preserves expensive downstream work when it can: local chunk,
+                    approval buttons. Version 1.1.0 preserves expensive downstream work when it can: local chunk,
                     translation, character, voice, Speech Block, and Audio Block edits reset only the affected
                     downstream records, while full upstream regeneration still clears dependent workflow data.
                 </p>
                 <p>
-                    In version 1.0.15, Settings includes runtime UI themes with built-in light and dark choices,
+                    In version 1.1.0, Settings includes runtime UI themes with built-in light and dark choices,
                     editable custom themes, separate font controls for interface controls and long text windows, and
                     portable theme JSON import/export. Text Chunking, Speech Blocks, and downstream reset behavior
                     continue to preserve unrelated work where possible. Text Chunking can start a fully manual
@@ -281,6 +282,35 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                     Blocks can be exported as documents, and <strong>Export Project ZIP</strong> creates a complete
                     project snapshot.
                 </p>
+            </section>
+
+            <section id="manual-workflow">
+                <h2>Manual Workflow Example</h2>
+                <p>
+                    This example shows a mostly manual production path. Use it when you want AudioMancer to manage
+                    project files, review state, voices, generated audio, and exports, but you want to decide the text
+                    chunks and Speech Blocks yourself.
+                </p>
+                <ol>
+                    <li>Create a project from <strong>Home / Project</strong>, select the source file, choose the translation language and audio output style, then click <strong>Start Project</strong>.</li>
+                    <li>Open <strong>Text Cleanup</strong>, run deterministic cleanup, manually edit the cleaned text if needed, then approve it.</li>
+                    <li>Open <strong>Text Chunking</strong>. If you want a fully manual structure, use <strong>Insert</strong> to create the first chunk, paste or type the desired chunk text, and save it. Select a chunk and press <strong>Insert</strong> again to add the next chunk after the current one.</li>
+                    <li>Use <strong>Edit</strong>, <strong>Save</strong>, and <strong>Delete</strong> in Text Chunking until the chunk list matches the book order you want.</li>
+                    <li>Run <strong>AI Translation</strong> only when the audiobook language differs from the source language. Otherwise approve the pass-through chunks.</li>
+                    <li>Open <strong>Characters</strong>. Run discovery or add/edit characters manually. Confirm names, aliases, gender hint, age hint, voice definition prompt, and evidence, then approve the character list.</li>
+                    <li>Open <strong>Narator Voice</strong>. Generate or edit the narrator profile, create or import the narrator WAV sample, preview it, and select it.</li>
+                    <li>Open <strong>Character Voices</strong> when the project uses character voices. Generate or import the available character samples; it is fine to continue with only the characters that already have usable samples.</li>
+                    <li>Open <strong>Speech Blocks</strong>. Select the first source chunk, press <strong>Insert</strong>, choose the speaker and content kind, enter the text, and save. Keep inserting after the selected block until the chunk contains the narration, dialogue, pauses, and metadata you want.</li>
+                    <li>Use <strong>Edit</strong>, <strong>Delete</strong>, <strong>Approve</strong>, <strong>Generate Audio</strong>, and <strong>Play/Stop</strong> on selected Speech Blocks to review one block at a time without losing your current selection.</li>
+                    <li>Open <strong>Audio Blocks</strong> to generate any remaining approved spoken blocks, listen to generated WAV files, regenerate weak blocks, then approve the audio.</li>
+                    <li>Open <strong>Audio Assembly</strong>, choose the composition method, generate the final audiobook WAV output, and review the files with the playback controls.</li>
+                    <li>Return to <strong>Home / Project</strong> to export text documents, voice ZIP archives, Audio Assembly ZIP archives, or a complete project ZIP snapshot.</li>
+                </ol>
+                <div class="note">
+                    Manual edits preserve unrelated downstream work where possible. When a change affects generated
+                    audio, AudioMancer resets only the affected Audio Blocks and asks you to review the impact before
+                    destructive edits.
+                </div>
             </section>
 
             <section id="cleanup">
@@ -539,8 +569,12 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                 <h2>Export And Results</h2>
                 <p>
                     The Home page can export cleaned text, chunks, AI translations, characters, and Speech Blocks as
-                    text files. <strong>Export Project ZIP</strong> creates a full project snapshot. Final audiobook
-                    WAV files are saved inside the project folder under <code>audiobook/</code>.
+                    text files. It can also export Narator Voice samples, Character Voices samples, and Audio Assembly
+                    outputs as ZIP archives. Voice ZIP exports include the generated WAV sample plus a companion text
+                    file with the voice definition and preview text; Audio Assembly ZIP exports include the WAV output
+                    files and a manifest with composition method, file list, duration, and size details.
+                    <strong>Export Project ZIP</strong> creates a full project snapshot. Final audiobook WAV files are
+                    saved inside the project folder under <code>audiobook/</code>.
                 </p>
                 <p>
                     Export buttons become available only after the matching phase has produced approved data. Use the

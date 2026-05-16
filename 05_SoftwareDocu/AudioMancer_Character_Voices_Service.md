@@ -20,8 +20,6 @@ locked on the Home page before the later `Speech Blocks`,
 - prefer the character-owned `voice_definition_prompt` from `Characters` as
   the default voice-designer prompt for each character
 - persist one editable per-character preview text used for sample generation
-  and reset that text to the localized default when the selected voice
-  language changes
 - persist per-character generated or imported samples and sample metadata in
   `narrator_and_characters` mode
 - regenerate all current per-character samples as one confirmed batch operation
@@ -30,7 +28,8 @@ locked on the Home page before the later `Speech Blocks`,
   `voice_assignment_mode == "same_narrator"`
 - keep `same_narrator` projects read-only for per-character voice generation
 - build page state for target ordering, enablement, notes, and status lines
-- keep the manifest stage aligned with Character Voices readiness
+- keep the manifest stage and compact Character Voices operation summary aligned
+  with Character Voices readiness for the Home workflow row
 - apply v2 downstream impact when one voice target changes by preserving Speech
   Blocks, deleting only matching Audio Blocks and reusable clone-prompt
   metadata, and resetting Audio Assembly
@@ -60,7 +59,7 @@ The workflow is split across:
   editor, and bottom status area
 - `04_Software/AudioMancer/src/audiomancer/ui/controllers/character_voices_ui_controller.py`
   for destructive edit confirmation, single and batch VoiceWeaver generation,
-  preview playback, and stage synchronization
+  preview playback, and stage plus operation-summary synchronization
 
 High-level flow:
 
@@ -98,7 +97,9 @@ High-level flow:
    storage path used by single-sample generation, and generated Audio Blocks
    tied to those targets are reset while unrelated targets are preserved.
 10. When every character target plus the selected narrator sample exists, the
-   controller keeps `project.json.current_stage = "character_voices_ready"`.
+   controller keeps `project.json.current_stage = "character_voices_ready"` and
+   writes `project.json.operations.character_voices.status = "completed"` so
+   Home workflow progress reflects the generated samples.
 
 ## 4. Dependencies
 
@@ -141,6 +142,9 @@ Outputs:
 - updated manifest stage:
   `current_stage = "character_voices_ready"` when narrator plus all character
   samples exist
+- updated manifest operation summary:
+  `operations.character_voices.status = "completed"` with progress equal to
+  narrator plus character targets when all required samples exist
 
 ## 6. Data Contracts
 
@@ -148,14 +152,12 @@ Character Voices target payloads use:
 
 - `target_id`
 - `target_kind`
-- `source_profile_id`
 - `display_name`
 - `character_id`
 - `prompt_text`
 - `preview_text`
 - `default_prompt_text`
 - `editable`
-- `sample_mode`
 - `updated_at`
 
 Target rules:
@@ -172,9 +174,7 @@ Target rules:
 - new character targets prefer the Character Discovery `preview_text` handoff
   when available, so samples start from source dialogue spoken by that
   character
-- character `preview_text` is preserved until explicitly edited and saved, or
-  reset to the localized default when the selected voice language changes on
-  `Narator Voice`
+- character `preview_text` is preserved until explicitly edited and saved
 
 Selected voice-language payload uses:
 

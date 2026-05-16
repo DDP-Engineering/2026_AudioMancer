@@ -13,7 +13,7 @@
          separate from Audio Blocks orchestration and persistence workflows.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-29
-@version 0.1.0
+@version 0.2.0
 """
 
 # IMPORTS
@@ -163,6 +163,26 @@ def is_valid_wav_path(audio_path: Path) -> bool:
             )
     except (EOFError, OSError, wave.Error):
         return False
+
+
+def wav_duration_seconds(audio_path: Path) -> float | None:
+    """
+    @brief      Measure one readable WAV file duration in seconds.
+    @param[in]  audio_path Candidate WAV path.
+    @return     Duration in seconds, or `None` when the file cannot be measured.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-16
+    @version    0.1.0
+    """
+    try:
+        with wave.open(str(audio_path), "rb") as audio_file:
+            frame_rate = audio_file.getframerate()
+            if frame_rate <= 0:
+                return None
+            return audio_file.getnframes() / frame_rate
+    except (EOFError, OSError, wave.Error):
+        return None
 
 
 def stitch_wav_parts(part_paths: list[Path], output_path: Path) -> None:

@@ -98,13 +98,11 @@ High-level flow:
    the same per-profile sample slot. Imported samples are clone-ready without a
    Voice Designer `source_model_id` because Audio Blocks later creates Qwen Base
    clone prompts directly from the WAV plus transcript.
-8. The legacy voice-language change handler is a no-op for locked projects;
-   the normal workflow changes language only by creating a new project.
-9. `Select` persists `narator.json`, updates the compact manifest summary,
+8. `Select` persists `narator.json`, updates the compact manifest summary,
    and marks the chosen profile sample metadata as selected.
-10. `Preview` plays the stored per-profile WAV locally through Qt media
+9. `Preview` plays the stored per-profile WAV locally through Qt media
    playback.
-11. `Generate Narator Profiles` runs the AI profile-generation service through
+10. `Generate Narator Profiles` runs the AI profile-generation service through
     the shared threaded progress dialog, resumes compatible unfinished
     style-analysis checkpoints, appends validated editable profiles, and leaves
     narrator selection unchanged.
@@ -175,7 +173,6 @@ Narrator profile payloads currently use:
 - `profile_origin`
 - `provider_family`
 - `editable`
-- `protected`
 - `is_selected`
 - `sample_audio_path`
 - `sample_metadata`
@@ -191,7 +188,8 @@ Profile rules:
   `sample_metadata` until the operator explicitly generates a sample
 - no narrator profile is selected by default for a new project
 - stored profile `language` values use VoiceWeaver language codes such as `en`
-  and `ro`; legacy labels are normalized on load
+  and `ro`; operator-facing labels are normalized when profile actions provide
+  them
 - supported voice languages are English, Romanian, Japanese, Korean, Chinese,
   German, French, Russian, Portuguese, Spanish, and Italian
 - the default narrator preview text is localized for every supported voice

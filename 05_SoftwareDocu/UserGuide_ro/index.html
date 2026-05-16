@@ -9,14 +9,14 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Ghid AudioMancer v1.0.15</title>
+    <title>Ghid AudioMancer v1.1.0</title>
     <link rel="stylesheet" href="assets/styles/help.css">
 </head>
 <body>
     <div class="layout">
         <nav class="toc" aria-label="Cuprins">
             <h1>Ajutor AudioMancer</h1>
-            <p>Versiune 1.0.15<br>Ghid offline pentru Windows si Ubuntu.</p>
+            <p>Versiune 1.1.0<br>Ghid offline pentru Windows si Ubuntu.</p>
             <a href="#welcome">Bun venit</a>
             <a href="#requirements">Ce este necesar</a>
             <a href="#install">Instalare si pornire</a>
@@ -24,6 +24,7 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
             <a href="#ai-settings">Setari AI</a>
             <a href="#tts-settings">Setari TTS</a>
             <a href="#project">Proiecte</a>
+            <a href="#manual-workflow">Exemplu flux manual</a>
             <a href="#cleanup">Curatare text</a>
             <a href="#chunking">Segmentare text</a>
             <a href="#translation">Traducere AI</a>
@@ -42,8 +43,8 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
             <section id="welcome">
                 <h2>Bun venit</h2>
                 <div class="version-box">
-                    <p><strong>Versiune ajutor:</strong> 1.0.15</p>
-                    <p><strong>Versiune aplicatie:</strong> 1.0.15</p>
+                    <p><strong>Versiune ajutor:</strong> 1.1.0</p>
+                    <p><strong>Versiune aplicatie:</strong> 1.1.0</p>
                     <p><strong>Creator:</strong> Eng. Dipl. Dan Dumitru Pasare</p>
                     <p><strong>Contact:</strong> pasaredan1979@gmail.com</p>
                 </div>
@@ -54,13 +55,13 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                 </p>
                 <p>
                     Lucreaza paginile din bara stanga de sus in jos. Apasa butoanele de generare, aprobare sau salvare
-                    numai dupa ce ai verificat textul si sunetul afisat. Versiunea 1.0.15 pastreaza cat mai mult din
+                    numai dupa ce ai verificat textul si sunetul afisat. Versiunea 1.1.0 pastreaza cat mai mult din
                     munca deja facuta: editarile locale de segment, traducere, personaj, voce, Bloc de vorbire sau Bloc
                     audio reseteaza numai inregistrarile afectate, iar regenerarile complete din amonte sterg datele
                     dependente.
                 </p>
                 <p>
-                    In versiunea 1.0.15, Setari include teme vizuale pentru interfata, teme luminoase si intunecate
+                    In versiunea 1.1.0, Setari include teme vizuale pentru interfata, teme luminoase si intunecate
                     incluse, teme personalizate, font separat pentru controalele interfetei si pentru ferestrele mari
                     de text, plus import si export de teme in format JSON. Segmentare text poate porni manual
                     segmentarea din textul curatat inainte sa
@@ -97,7 +98,7 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                     <li><strong>VoiceWeaver este obligatoriu pentru audio.</strong> Instaleaza VoiceWeaver pe acelasi calculator sau pe un calculator din aceeasi retea.</li>
                     <li><strong>OpenAI</strong> poate fi folosit pentru curatare, segmentare, traducere, personaje si blocuri de vorbire.</li>
                     <li><strong>LM Studio</strong> poate fi folosit pentru aceleasi etape text, daca modelul local este incarcat si serverul API este pornit.</li>
-                    <li>OpenAI si LM Studio nu genereaza audio direct in AudioMancer 1.0.15; ele pregatesc textul si structura pentru VoiceWeaver.</li>
+                    <li>OpenAI si LM Studio nu genereaza audio direct in AudioMancer 1.1.0; ele pregatesc textul si structura pentru VoiceWeaver.</li>
                 </ul>
                 <div class="warning">
                     Daca VoiceWeaver nu este instalat sau nu poate fi accesat in retea, paginile text pot functiona, dar
@@ -294,6 +295,35 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                     poti exporta documentele aferente: text curatat, segmente, traduceri, personaje si Blocuri de
                     vorbire. Butonul <strong>Export Project ZIP</strong> salveaza o copie completa a proiectului.
                 </p>
+            </section>
+
+            <section id="manual-workflow">
+                <h2>Exemplu flux manual</h2>
+                <p>
+                    Acest exemplu arata un flux aproape complet manual. Foloseste-l cand vrei ca AudioMancer sa
+                    administreze fisierele proiectului, starea de verificare, vocile, audio generat si exporturile, dar
+                    vrei sa decizi manual segmentele de text si Blocurile de vorbire.
+                </p>
+                <ol>
+                    <li>Creeaza un proiect din <strong>Acasa / Proiect</strong>, selecteaza fisierul sursa, alege limba de traducere si stilul audio, apoi apasa <strong>Start Project</strong>.</li>
+                    <li>Deschide <strong>Curatare text</strong>, ruleaza curatarea determinista, editeaza manual textul curatat daca este nevoie, apoi aproba rezultatul.</li>
+                    <li>Deschide <strong>Segmentare text</strong>. Pentru o structura complet manuala, foloseste <strong>Insert</strong> pentru primul segment, introdu sau lipeste textul dorit si salveaza. Selecteaza un segment si apasa din nou <strong>Insert</strong> pentru a adauga urmatorul segment dupa cel curent.</li>
+                    <li>Foloseste <strong>Edit</strong>, <strong>Save</strong> si <strong>Delete</strong> in Segmentare text pana cand lista de segmente corespunde ordinii dorite a cartii.</li>
+                    <li>Ruleaza <strong>Traducere AI</strong> numai cand limba audiobook-ului difera de limba sursa. Altfel, aproba segmentele pass-through.</li>
+                    <li>Deschide <strong>Personaje</strong>. Ruleaza descoperirea sau adauga/editeaza manual personajele. Confirma nume, aliasuri, indiciu de gen, indiciu de varsta, prompt de definitie vocala si dovezi, apoi aproba lista.</li>
+                    <li>Deschide <strong>Voce narator</strong>. Genereaza sau editeaza profilul naratorului, creeaza sau importa mostra WAV, ascult-o si selecteaz-o.</li>
+                    <li>Deschide <strong>Voci personaje</strong> cand proiectul foloseste voci de personaje. Genereaza sau importa mostrele disponibile; poti continua si daca numai o parte dintre personaje au deja mostre utilizabile.</li>
+                    <li>Deschide <strong>Blocuri de vorbire</strong>. Selecteaza primul segment sursa, apasa <strong>Insert</strong>, alege vorbitorul si tipul de continut, introdu textul si salveaza. Continua sa inserezi dupa blocul selectat pana cand segmentul contine naratiunea, dialogul, pauzele si metadatele dorite.</li>
+                    <li>Foloseste <strong>Edit</strong>, <strong>Delete</strong>, <strong>Approve</strong>, <strong>Generate Audio</strong> si <strong>Play/Stop</strong> pe Blocurile de vorbire selectate pentru verificare pe rand, fara pierderea selectiei curente.</li>
+                    <li>Deschide <strong>Blocuri audio</strong> pentru a genera orice blocuri vorbite aprobate ramase, asculta fisierele WAV, regenereaza blocurile slabe, apoi aproba audio.</li>
+                    <li>Deschide <strong>Asamblare audio</strong>, alege metoda de compunere, genereaza iesirea WAV finala si verifica fisierele cu controalele de redare.</li>
+                    <li>Revino la <strong>Acasa / Proiect</strong> pentru exporturi text, arhive ZIP cu voci, arhive ZIP cu Asamblare audio sau arhiva ZIP completa a proiectului.</li>
+                </ol>
+                <div class="note">
+                    Editarile manuale pastreaza datele downstream neafectate unde este posibil. Cand o schimbare
+                    afecteaza audio generat, AudioMancer reseteaza numai Blocurile audio afectate si cere confirmare
+                    pentru editari cu impact distructiv.
+                </div>
             </section>
 
             <section id="cleanup">
@@ -523,8 +553,13 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
             <section id="export">
                 <h2>Export</h2>
                 <p>
-                    Exportul copiaza rezultatele proiectului intr-un dosar de livrare. Verifica inainte ca toate etapele
-                    necesare sa fie aprobate si ca fisierele audio finale se pot reda corect.
+                    Exportul copiaza rezultatele proiectului intr-un dosar de livrare. Pagina Acasa poate exporta text
+                    curatat, segmente, traduceri AI, personaje si Blocuri de vorbire ca documente text. Poate exporta
+                    si arhive ZIP pentru mostre Voce narator, mostre Voci personaje si iesiri Asamblare audio.
+                    Arhivele de voce includ mostra WAV generata si un fisier text cu definitia vocii si textul de
+                    previzualizare; arhivele de Asamblare audio includ fisiere WAV plus un manifest cu metoda de
+                    compunere, lista fisierelor, durata si dimensiune. Verifica inainte ca toate etapele necesare sa
+                    fie aprobate si ca fisierele audio finale se pot reda corect.
                 </p>
                 <p>
                     Exporturile de documente devin disponibile numai dupa ce faza corespunzatoare a produs date aprobate.

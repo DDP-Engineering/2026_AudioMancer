@@ -13,7 +13,7 @@
          using one minimal root-level `project.json` manifest contract.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-20
-@version    2.0.7
+@version    2.0.8
 """
 
 # IMPORTS
@@ -904,18 +904,45 @@ def _character_voices_completion_evidence(project_root: Path, warnings: list[str
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.1.0
+    @version    0.2.0
     """
     _ = warnings
     targets = _load_json_artifact(project_root, config.CHARACTER_VOICES_TARGETS_FILE_NAME)
-    if not _non_empty_payload_list(targets) or not all(_voice_target_is_usable(target) for target in targets):
+    if not _non_empty_payload_list(targets):
         return None
-    timestamp = _first_optional_string(*[target for target in targets if isinstance(target, dict)], "updated_at")
+    narrator_targets = [
+        target
+        for target in targets
+        if isinstance(target, dict) and str(target.get("target_kind", "")).strip() == "narrator"
+    ]
+    character_targets = [
+        target
+        for target in targets
+        if isinstance(target, dict) and str(target.get("target_kind", "")).strip() == "character"
+    ]
+    narrator_metadata = _load_json_artifact(project_root, config.SELECTED_NARRATOR_METADATA_FILE_NAME)
+    if narrator_targets and (
+        not (project_root / config.SELECTED_NARRATOR_AUDIO_FILE_NAME).is_file()
+        or not isinstance(narrator_metadata, dict)
+    ):
+        return None
+    if not all(_character_voice_target_has_sample(project_root, target) for target in character_targets):
+        return None
+    sample_payloads = [
+        sample_payload
+        for sample_payload in (
+            narrator_metadata,
+            *(target.get("sample_metadata") for target in character_targets if isinstance(target, dict)),
+        )
+        if isinstance(sample_payload, dict)
+    ]
+    timestamp = _latest_voice_sample_timestamp(sample_payloads)
+    progress_count = len(narrator_targets) + len(character_targets)
     operation = {
         "folder_relative_path": config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH,
         "status": "completed",
-        "progress_current": len(targets),
-        "progress_total": len(targets),
+        "progress_current": progress_count,
+        "progress_total": progress_count,
         "mode": "manual",
         "started_at": timestamp,
         "completed_at": timestamp,
@@ -1345,29 +1372,47 @@ def _selected_narrator_profile(profiles: object, selection: dict[str, object]) -
     return None
 
 
-def _voice_target_is_usable(target: object) -> bool:
+def _character_voice_target_has_sample(project_root: Path, target: object) -> bool:
     """
-    @brief      Return whether one character-voice target contains a usable assignment.
-    @param[in]  target Candidate target payload.
-    @return     True when the target has a voice assignment marker.
+    @brief      Return whether one character voice target references an existing sample.
+    @param[in]  project_root Active project root folder.
+    @param[in]  target Candidate character-voice target payload.
+    @return     True when the target has sample metadata and an existing audio file.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
+    @version    0.2.0
+    """
+    if not isinstance(target, dict) or not isinstance(target.get("sample_metadata"), dict):
+        return False
+    audio_relative_path = _first_optional_string(
+        target,
+        "sample_audio_path",
+        "voice_sample_relative_path",
+        "sample_relative_path",
+        "audio_relative_path",
+    )
+    return audio_relative_path is not None and _project_relative_path_exists(project_root, audio_relative_path)
+
+
+def _latest_voice_sample_timestamp(sample_metadata_payloads: list[dict[str, object]]) -> str | None:
+    """
+    @brief      Return the latest timestamp from persisted voice sample metadata payloads.
+    @param[in]  sample_metadata_payloads Sample metadata payloads to inspect.
+    @return     Latest timestamp string or `None`.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-16
     @version    0.1.0
     """
-    return isinstance(target, dict) and any(
-        _first_optional_string(target, field_name) is not None
-        for field_name in (
-            "voice_profile_id",
-            "selected_voice_id",
-            "target_voice_id",
-            "profile_id",
-            "voice_sample_relative_path",
-            "sample_relative_path",
-            "audio_relative_path",
-            "voice_definition_prompt",
-        )
-    )
+    timestamps: list[str] = []
+    for sample_metadata in sample_metadata_payloads:
+        for field_name in ("selected_at", "generated_at", "imported_at", "updated_at"):
+            timestamp = str(sample_metadata.get(field_name, "") or "").strip()
+            if timestamp:
+                timestamps.append(timestamp)
+                break
+    return max(timestamps) if timestamps else None
 
 
 def _audio_blocks_report_is_completed(report: object) -> bool:

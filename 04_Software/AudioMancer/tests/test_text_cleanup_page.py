@@ -13,7 +13,7 @@
          preview editing and search state updates for the cleanup page.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-24
-@version 0.7.1
+@version 0.7.2
 """
 
 # IMPORTS
@@ -33,7 +33,7 @@ def test_text_cleanup_page_enables_actions_only_with_project_inputs(qtbot) -> No
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.3.0
+    @version    0.4.0
     """
     page = TextCleanupPage()
     qtbot.addWidget(page)
@@ -75,9 +75,9 @@ def test_text_cleanup_page_enables_actions_only_with_project_inputs(qtbot) -> No
     assert page._ai_clean_button.isEnabled() is False
 
 
-def test_text_cleanup_page_updates_previews_and_notes(qtbot) -> None:
+def test_text_cleanup_page_updates_previews_and_status(qtbot) -> None:
     """
-    @brief      Verify extraction state updates the previews and notes panes.
+    @brief      Verify extraction state updates the previews and status pane.
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
@@ -100,8 +100,8 @@ def test_text_cleanup_page_updates_previews_and_notes(qtbot) -> None:
 
     assert page._extracted_text_edit.toPlainText() == "Raw paragraph"
     assert page._cleaned_text_edit.toPlainText() == "Clean paragraph"
-    assert page._notes_edit.toPlainText() == "Warning A\nWarning B"
-    assert page._notes_group.maximumHeight() == 112
+    assert page._status_edit.toPlainText() == "Warning A\nWarning B"
+    assert page._status_group.maximumHeight() == 112
 
 
 def test_text_cleanup_page_allows_cleaned_text_edit_and_save(monkeypatch, qtbot) -> None:

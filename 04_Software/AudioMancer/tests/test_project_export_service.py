@@ -13,12 +13,13 @@
          user-facing export artifacts.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-25
-@version 0.3.3
+@version 0.4.0
 """
 
 # IMPORTS
 
 import json
+import zipfile
 
 from audiomancer import config
 from audiomancer.services import project_export_service, project_workspace_service
@@ -28,13 +29,13 @@ from audiomancer.services import project_export_service, project_workspace_servi
 
 def test_project_export_service_detects_readiness_for_all_export_types(tmp_path) -> None:
     """
-    @brief      Verify all five export types become available from completed operations and artifacts.
+    @brief      Verify all export types become available from completed operations and artifacts.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.1.0
+    @version    0.2.0
     """
     project_root, manifest = _build_export_project(tmp_path)
 
@@ -45,7 +46,10 @@ def test_project_export_service_detects_readiness_for_all_export_types(tmp_path)
         project_export_service.EXPORT_KIND_TEXT_CHUNKS: project_export_service.EXPORT_STATUS_AVAILABLE,
         project_export_service.EXPORT_KIND_AI_TRANSLATION: project_export_service.EXPORT_STATUS_AVAILABLE,
         project_export_service.EXPORT_KIND_CHARACTERS: project_export_service.EXPORT_STATUS_AVAILABLE,
+        project_export_service.EXPORT_KIND_NARRATOR_VOICE: project_export_service.EXPORT_STATUS_AVAILABLE,
+        project_export_service.EXPORT_KIND_CHARACTER_VOICES: project_export_service.EXPORT_STATUS_AVAILABLE,
         project_export_service.EXPORT_KIND_SPEECH_BLOCKS: project_export_service.EXPORT_STATUS_AVAILABLE,
+        project_export_service.EXPORT_KIND_AUDIO_ASSEMBLY: project_export_service.EXPORT_STATUS_AVAILABLE,
     }
 
 
@@ -224,6 +228,56 @@ def test_project_export_service_exports_ai_request_parameters_without_prompts(tm
     assert "sk-secret" not in content
 
 
+def test_project_export_service_creates_voice_and_audio_archives(tmp_path) -> None:
+    """
+    @brief      Verify ZIP exports include generated audio assets and companion manifests.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-16
+    @version    0.1.0
+    """
+    project_root, manifest = _build_export_project(tmp_path)
+
+    narrator_zip = project_export_service.create_archive_export(
+        project_root,
+        manifest,
+        project_export_service.EXPORT_KIND_NARRATOR_VOICE,
+        tmp_path / "narrator_voice",
+    )
+    character_zip = project_export_service.create_archive_export(
+        project_root,
+        manifest,
+        project_export_service.EXPORT_KIND_CHARACTER_VOICES,
+        tmp_path / "character_voices.zip",
+    )
+    assembly_zip = project_export_service.create_archive_export(
+        project_root,
+        manifest,
+        project_export_service.EXPORT_KIND_AUDIO_ASSEMBLY,
+        tmp_path / "assembly.zip",
+    )
+
+    with zipfile.ZipFile(narrator_zip) as archive:
+        assert sorted(archive.namelist()) == [
+            "narator_voice/Narator_Profile.txt",
+            "narator_voice/Narator_Profile.wav",
+        ]
+        narrator_text = archive.read("narator_voice/Narator_Profile.txt").decode("utf-8")
+        assert "A warm narrator definition." in narrator_text
+        assert "Narrator preview." in narrator_text
+    with zipfile.ZipFile(character_zip) as archive:
+        assert "character_voices/Stefan.wav" in archive.namelist()
+        assert "Character voice definition." in archive.read("character_voices/Stefan.txt").decode("utf-8")
+    with zipfile.ZipFile(assembly_zip) as archive:
+        assert "audio_assembly/audiobook.wav" in archive.namelist()
+        manifest_text = archive.read("audio_assembly/audio_assembly_manifest.txt").decode("utf-8")
+        assert "Output Mode: whole_book" in manifest_text
+        assert "Duration: 01:15" in manifest_text
+        assert "Size: 14 bytes" in manifest_text
+
+
 def test_project_export_service_detects_paths_inside_project(tmp_path) -> None:
     """
     @brief      Verify selected save paths can be checked against the active project root.
@@ -261,7 +315,16 @@ def _build_export_project(tmp_path):
         "imported_at": "2026-04-25T10:00:00+00:00",
         "size_bytes": 64,
     }
-    for operation_kind in ("cleanup", "chunking", "translation", "character_discovery", "speech_blocks"):
+    for operation_kind in (
+        "cleanup",
+        "chunking",
+        "translation",
+        "character_discovery",
+        "narrator_definition",
+        "character_voices",
+        "speech_blocks",
+        "audio_assembly",
+    ):
         manifest["operations"][operation_kind]["status"] = "completed"
 
     (project_root / config.CLEANED_TEXT_FILE_NAME).write_text(
@@ -371,6 +434,51 @@ def _build_export_project(tmp_path):
     )
     _write_json(project_root / config.CHARACTER_DISCOVERY_STATE_FILE_NAME, {"status": "completed", "metadata": {}})
 
+    narrator_audio_path = project_root / "audio_narator_profile.wav"
+    narrator_audio_path.write_bytes(b"RIFF-narrator")
+    _write_json(
+        project_root / config.NARRATOR_PROFILE_FILE_NAME,
+        [
+            {
+                "profile_id": "narrator-1",
+                "display_name": "Narator Profile",
+                "language": "en",
+                "prompt_text": "A warm narrator definition.",
+                "preview_text": "Narrator preview.",
+                "sample_audio_path": narrator_audio_path.name,
+                "sample_metadata": {
+                    "display_name": "Narator Profile",
+                    "prompt_text": "A warm narrator definition.",
+                    "preview_text": "Narrator preview.",
+                },
+            }
+        ],
+    )
+    _write_json(project_root / config.NARRATOR_SELECTION_FILE_NAME, {"selected_profile_id": "narrator-1"})
+
+    character_audio_path = project_root / "audio_stefan.wav"
+    character_audio_path.write_bytes(b"RIFF-character")
+    _write_json(
+        project_root / config.CHARACTER_VOICES_TARGETS_FILE_NAME,
+        [
+            {
+                "target_id": "character_stefan",
+                "target_kind": "character",
+                "display_name": "Stefan",
+                "character_id": "stefan",
+                "prompt_text": "Character voice definition.",
+                "preview_text": "Character preview.",
+                "editable": True,
+                "sample_audio_path": character_audio_path.name,
+                "sample_metadata": {
+                    "display_name": "Stefan",
+                    "prompt_text": "Character voice definition.",
+                    "preview_text": "Character preview.",
+                },
+            }
+        ],
+    )
+
     _write_json(
         project_root / config.SPEECH_BLOCKS_OUTPUT_FILE_NAME,
         [
@@ -398,6 +506,34 @@ def _build_export_project(tmp_path):
         },
     )
     _write_json(project_root / config.SPEECH_BLOCKS_STATE_FILE_NAME, {"status": "completed", "metadata": {}})
+
+    audiobook_path = project_root / config.AUDIOBOOK_OUTPUT_FOLDER_NAME / "audiobook.wav"
+    audiobook_path.parent.mkdir(parents=True, exist_ok=True)
+    audiobook_path.write_bytes(b"RIFF-audiobook")
+    _write_json(
+        project_root / config.AUDIO_ASSEMBLY_REPORT_FILE_NAME,
+        {
+            "audio_assembly_stage_status": "completed",
+            "settings": {
+                "output_mode": "whole_book",
+                "max_duration_minutes": 30,
+                "output_format": "wav",
+                "inter_block_silence_ms": 250,
+                "inter_chunk_silence_ms": 1000,
+            },
+            "outputs": [
+                {
+                    "output_key": "whole_book",
+                    "file_name": "audiobook.wav",
+                    "audio_relative_path": "audiobook/audiobook.wav",
+                    "block_count": 1,
+                    "duration_seconds": 75.0,
+                    "generated": True,
+                    "output_format": "wav",
+                }
+            ],
+        },
+    )
     return project_root, manifest
 
 

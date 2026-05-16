@@ -11,10 +11,11 @@
 @brief Character Discovery workflow page for AudioMancer.
 @details Provides AI profile selection, guarded manual character maintenance,
          explicit edit mode, compact voice-profile editing, and source-evidence
-         preview for discovered and manually added speaking characters.
+         preview plus a status window for discovered and manually added
+         speaking characters.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-08
-@version 0.7.0
+@version 0.8.6
 """
 
 # IMPORTS
@@ -54,7 +55,7 @@ class CharactersPage(QWidget):
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-08
-    @version    0.5.0
+    @version    0.6.0
     """
 
     start_discovery_requested = Signal(str)
@@ -73,7 +74,7 @@ class CharactersPage(QWidget):
             @exception  None
             @author     Eng. Dan Dumitru Pasare
             @date       2026-04-08
-        @version    0.7.0
+        @version    0.8.5
         """
         super().__init__(parent)
         self._project_active = False
@@ -95,6 +96,7 @@ class CharactersPage(QWidget):
         self._can_delete = False
         self._ui_language = "en"
         self._evidence_find_text_by_editor_id: dict[int, str] = {}
+        self._clamping_evidence_splitter = False
 
         layout = QVBoxLayout(self)
         header_row = QHBoxLayout()
@@ -117,10 +119,6 @@ class CharactersPage(QWidget):
         header_row.addWidget(self._reset_button)
         layout.addLayout(header_row)
 
-        self._summary_label = QLabel("")
-        self._summary_label.setWordWrap(False)
-        layout.addWidget(self._summary_label)
-
         self._main_splitter = QSplitter(self)
         self._main_splitter.setChildrenCollapsible(False)
         self._left_splitter = QSplitter(self)
@@ -135,7 +133,9 @@ class CharactersPage(QWidget):
         self._character_list.currentRowChanged.connect(self._handle_character_selection_changed)
         list_layout.addWidget(self._character_list, 1)
 
-        button_column = QVBoxLayout()
+        self._character_actions_widget = QWidget(self._list_group)
+        button_column = QVBoxLayout(self._character_actions_widget)
+        button_column.setContentsMargins(0, 0, 0, 0)
         self._add_character_button = QPushButton("Add Character", self)
         self._add_character_button.clicked.connect(self.add_character_requested.emit)
         button_column.addWidget(self._add_character_button)
@@ -148,8 +148,8 @@ class CharactersPage(QWidget):
         self._delete_character_button = QPushButton("Delete Character", self)
         self._delete_character_button.clicked.connect(self._emit_delete_character)
         button_column.addWidget(self._delete_character_button)
-        button_column.addStretch(1)
-        list_layout.addLayout(button_column)
+        list_layout.addWidget(self._character_actions_widget, 0, Qt.AlignmentFlag.AlignTop)
+        self._apply_character_list_height()
         self._left_splitter.addWidget(self._list_group)
 
         self._editor_group = QGroupBox("Character Profile", self)
@@ -201,10 +201,17 @@ class CharactersPage(QWidget):
         self._voice_definition_prompt_label = QLabel("Voice Definition Prompt", self)
         self._confidence_label = QLabel("Confidence", self)
 
+        self._gender_age_row_widget = QWidget(self)
+        gender_age_row_layout = QHBoxLayout(self._gender_age_row_widget)
+        gender_age_row_layout.setContentsMargins(0, 0, 0, 0)
+        gender_age_row_layout.setSpacing(8)
+        gender_age_row_layout.addWidget(self._gender_hint_edit, 1)
+        gender_age_row_layout.addWidget(self._age_hint_label)
+        gender_age_row_layout.addWidget(self._age_hint_edit, 1)
+
         editor_layout.addRow(self._canonical_name_label, self._canonical_name_edit)
         editor_layout.addRow(self._aliases_label, self._aliases_edit)
-        editor_layout.addRow(self._gender_hint_label, self._gender_hint_edit)
-        editor_layout.addRow(self._age_hint_label, self._age_hint_edit)
+        editor_layout.addRow(self._gender_hint_label, self._gender_age_row_widget)
         editor_layout.addRow(self._voice_definition_prompt_label, self._voice_definition_prompt_edit)
         editor_layout.addRow(self._confidence_label, self._confidence_edit)
         self._editor_scroll_area.setWidget(self._editor_form_widget)
@@ -214,24 +221,45 @@ class CharactersPage(QWidget):
         self._evidence_group = QGroupBox("Evidence", self)
         self._evidence_group.setMinimumWidth(280)
         evidence_layout = QVBoxLayout(self._evidence_group)
+        self._evidence_splitter = QSplitter(self._evidence_group)
+        self._evidence_splitter.setOrientation(Qt.Orientation.Vertical)
+        self._evidence_splitter.setChildrenCollapsible(False)
         self._evidence_list = QListWidget(self)
         self._evidence_list.currentRowChanged.connect(self._show_selected_evidence)
         self._evidence_preview = QPlainTextEdit(self)
         self._evidence_preview.setReadOnly(True)
         self._install_evidence_find_context_menu(self._evidence_preview)
-        evidence_layout.addWidget(self._evidence_list)
-        evidence_layout.addWidget(self._evidence_preview)
+        self._evidence_splitter.addWidget(self._evidence_list)
+        self._evidence_splitter.addWidget(self._evidence_preview)
+        self._evidence_splitter.setStretchFactor(0, 1)
+        self._evidence_splitter.setStretchFactor(1, 1)
+        self._evidence_splitter.setSizes([240, 240])
+        self._evidence_splitter.splitterMoved.connect(self._clamp_evidence_splitter_sizes)
+        evidence_layout.addWidget(self._evidence_splitter)
 
         self._main_splitter.addWidget(self._left_splitter)
         self._main_splitter.addWidget(self._evidence_group)
-        self._left_splitter.setStretchFactor(0, 2)
-        self._left_splitter.setStretchFactor(1, 6)
-        self._left_splitter.setSizes([220, 640])
+        self._left_splitter.setStretchFactor(0, 0)
+        self._left_splitter.setStretchFactor(1, 1)
+        self._left_splitter.setSizes([self._list_group.minimumHeight(), 860])
         self._main_splitter.setStretchFactor(0, 7)
         self._main_splitter.setStretchFactor(1, 3)
         self._main_splitter.setSizes([900, 300])
         layout.addWidget(self._main_splitter, 1)
         self._apply_main_splitter_minimums()
+
+        self._status_group = QGroupBox("Character Discovery Status", self)
+        status_layout = QVBoxLayout(self._status_group)
+        self._status_edit = QPlainTextEdit(self)
+        self._status_edit.setReadOnly(True)
+        self._status_edit.setProperty(
+            ui_state_service.CONTROL_TEXT_FONT_ROLE_PROPERTY,
+            ui_state_service.CONTROL_TEXT_FONT_ROLE_VALUE,
+        )
+        status_layout.addWidget(self._status_edit)
+        self._status_group.setMinimumHeight(96)
+        self._status_group.setMaximumHeight(112)
+        layout.addWidget(self._status_group, 0)
 
         self.set_project_active(False)
         self.set_ai_profiles([], None)
@@ -260,7 +288,7 @@ class CharactersPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-05-01
-        @version    0.3.0
+        @version    0.4.0
         """
         super().resizeEvent(event)
         self._apply_main_splitter_minimums()
@@ -346,7 +374,7 @@ class CharactersPage(QWidget):
             @exception  None
             @author     Eng. Dan Dumitru Pasare
             @date       2026-04-08
-        @version    0.4.0
+        @version    0.5.0
         """
         del character_count
         del can_save
@@ -369,7 +397,7 @@ class CharactersPage(QWidget):
             profile_index = self._profile_combo.findData(selected_profile_id)
             if profile_index >= 0:
                 self._profile_combo.setCurrentIndex(profile_index)
-        self._summary_label.setText(_build_summary_text(notes))
+        self._status_edit.setPlainText("\n".join(str(note) for note in notes if str(note).strip()))
         preferred_character_id = current_character_id
         if preferred_character_id is None and self._profiles:
             preferred_character_id = str(self._profiles[0].get("character_id", ""))
@@ -592,7 +620,7 @@ class CharactersPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-08
-        @version    0.4.0
+        @version    0.5.0
         """
         self._title_label.setText(f"<h2>{ui_state_service.translate('characters.title', language)}</h2>")
         self._ui_language = language
@@ -606,6 +634,7 @@ class CharactersPage(QWidget):
         self._list_group.setTitle(ui_state_service.translate("characters.list_group", language))
         self._editor_group.setTitle(ui_state_service.translate("characters.profile_group", language))
         self._evidence_group.setTitle(ui_state_service.translate("characters.evidence_group", language))
+        self._status_group.setTitle(ui_state_service.translate("characters.status_group", language))
         self._canonical_name_label.setText(ui_state_service.translate("characters.canonical_name", language))
         self._aliases_label.setText(ui_state_service.translate("characters.aliases", language))
         self._gender_hint_label.setText(ui_state_service.translate("characters.gender_hint", language))
@@ -614,6 +643,7 @@ class CharactersPage(QWidget):
         self._voice_definition_prompt_label.setText(
             ui_state_service.translate("characters.voice_definition_prompt", language)
         )
+        self._apply_character_list_height()
         if self._profile_combo.count() == 1 and self._profile_combo.currentData() is None:
             self._profile_combo.setItemText(
                 0,
@@ -797,11 +827,13 @@ class CharactersPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-05-01
-        @version    0.3.0
+        @version    0.5.0
         """
         required_attributes = ("_main_splitter", "_left_splitter", "_list_group", "_editor_group", "_evidence_group")
         if not all(hasattr(self, attribute_name) for attribute_name in required_attributes):
             return
+        self._apply_character_list_height()
+        self._apply_evidence_splitter_minimums()
         splitter_width = self._main_splitter.width()
         if splitter_width > 0:
             minimum_pane_width = splitter_width // 4
@@ -809,9 +841,87 @@ class CharactersPage(QWidget):
             self._evidence_group.setMinimumWidth(minimum_pane_width)
         splitter_height = self._left_splitter.height()
         if splitter_height > 0:
-            minimum_pane_height = splitter_height // 4
-            self._list_group.setMinimumHeight(minimum_pane_height)
-            self._editor_group.setMinimumHeight(minimum_pane_height)
+            self._editor_group.setMinimumHeight(splitter_height // 4)
+
+    def _apply_evidence_splitter_minimums(self) -> None:
+        """
+        @brief      Keep each Evidence splitter pane at least twenty percent of the available Evidence height.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-16
+        @version    0.2.0
+        """
+        required_attributes = ("_evidence_splitter", "_evidence_list", "_evidence_preview")
+        if not all(hasattr(self, attribute_name) for attribute_name in required_attributes):
+            return
+        splitter_height = self._evidence_splitter.height()
+        if splitter_height <= 0:
+            return
+        minimum_pane_height = splitter_height // 5
+        self._evidence_list.setMinimumHeight(minimum_pane_height)
+        self._evidence_preview.setMinimumHeight(minimum_pane_height)
+        self._clamp_evidence_splitter_sizes()
+
+    def _clamp_evidence_splitter_sizes(self, *_args) -> None:
+        """
+        @brief      Clamp Evidence splitter panes so neither pane collapses below twenty percent.
+        @param[in]  *_args Optional Qt signal arguments.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-16
+        @version    0.1.0
+        """
+        if self._clamping_evidence_splitter:
+            return
+        if not hasattr(self, "_evidence_splitter"):
+            return
+        sizes = self._evidence_splitter.sizes()
+        if len(sizes) < 2:
+            return
+        total_size = sum(sizes)
+        if total_size <= 0:
+            return
+        minimum_pane_size = total_size // 5
+        if minimum_pane_size <= 0 or total_size < (minimum_pane_size * 2):
+            return
+        clamped_sizes = sizes[:]
+        if clamped_sizes[0] < minimum_pane_size:
+            clamped_sizes[0] = minimum_pane_size
+            clamped_sizes[1] = total_size - minimum_pane_size
+        elif clamped_sizes[1] < minimum_pane_size:
+            clamped_sizes[0] = total_size - minimum_pane_size
+            clamped_sizes[1] = minimum_pane_size
+        else:
+            return
+        self._clamping_evidence_splitter = True
+        try:
+            self._evidence_splitter.setSizes(clamped_sizes)
+        finally:
+            self._clamping_evidence_splitter = False
+
+    def _apply_character_list_height(self) -> None:
+        """
+        @brief      Match the Character List group height to the current action-button stack.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-16
+        @version    0.1.0
+        """
+        if not hasattr(self, "_character_actions_widget"):
+            return
+        list_margins = self._list_group.layout().contentsMargins()
+        title_allowance = max(20, self._list_group.fontMetrics().height() + 8)
+        target_height = (
+            self._character_actions_widget.sizeHint().height()
+            + list_margins.top()
+            + list_margins.bottom()
+            + title_allowance
+        )
+        self._list_group.setMinimumHeight(target_height)
+        self._list_group.setMaximumHeight(target_height)
 
     def _emit_start_discovery(self) -> None:
         """
@@ -1138,21 +1248,6 @@ def _format_profile_item(profile: dict[str, object]) -> str:
     """
     canonical_name = str(profile.get("canonical_name", "")).strip()
     return canonical_name
-
-
-def _build_summary_text(notes: list[str]) -> str:
-    """
-    @brief      Join page notes into the compact summary line text.
-    @param[in]  notes Ordered note string list.
-    @return     One single-line summary string.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-08
-    @version    0.1.0
-    """
-    if not notes:
-        return ""
-    return " ".join(str(item).strip() for item in notes if str(item).strip())
 
 
 def _profiles_equal(

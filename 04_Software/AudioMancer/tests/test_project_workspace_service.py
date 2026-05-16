@@ -13,7 +13,7 @@
          validation, project-root resolution, and open validation behavior.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-20
-@version 1.1.3
+@version 1.1.4
 """
 
 # IMPORTS
@@ -828,6 +828,72 @@ def test_open_project_ignores_narrator_timestamp_drift_with_noncompleted_downstr
     assert open_result["manifest"]["operations"]["narrator_definition"]["updated_at"] == "2026-05-11T10:23:10+00:00"
     assert open_result["manifest"]["operations"]["speech_blocks"]["status"] == "review_pending"
     assert open_result["manifest"]["operations"]["audio_blocks"]["status"] == "in_progress"
+
+
+def test_open_project_heals_completed_character_voices_manifest_summary(tmp_path) -> None:
+    """
+    @brief      Verify Character Voices samples heal stale manifest status metadata.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-16
+    @version    0.1.0
+    """
+    project_root, manifest = project_workspace_service.create_project("CharacterVoicesHeal", tmp_path)
+    manifest["source_document"] = {
+        "original_name": "story.txt",
+        "stored_relative_path": "story.txt",
+        "file_type": "txt",
+        "imported_at": "2026-05-16T12:00:00+00:00",
+        "size_bytes": 128,
+    }
+    manifest["current_stage"] = "character_voices_ready"
+    project_workspace_service.save_manifest(manifest, project_root)
+    (project_root / "story.txt").write_text("Story.", encoding="utf-8")
+    (project_root / config.SELECTED_NARRATOR_AUDIO_FILE_NAME).write_bytes(b"RIFF-narrator")
+    _write_json(
+        project_root / config.SELECTED_NARRATOR_METADATA_FILE_NAME,
+        {
+            "voice_language": "en",
+            "preview_text": "Narrator preview.",
+            "selected_at": "2026-05-16T12:01:00+00:00",
+        },
+    )
+    (project_root / "audio_alice.wav").write_bytes(b"RIFF-alice")
+    _write_json(
+        project_root / config.CHARACTER_VOICES_TARGETS_FILE_NAME,
+        [
+            {
+                "target_id": "narrator",
+                "target_kind": "narrator",
+                "display_name": "Narator Voice",
+                "sample_audio_path": None,
+                "sample_metadata": None,
+            },
+            {
+                "target_id": "character_alice",
+                "target_kind": "character",
+                "display_name": "Alice",
+                "sample_audio_path": "audio_alice.wav",
+                "sample_metadata": {
+                    "target_id": "character_alice",
+                    "voice_language": "en",
+                    "preview_text": "Alice preview.",
+                    "generated_at": "2026-05-16T12:02:00+00:00",
+                },
+            },
+        ],
+    )
+
+    open_result = project_workspace_service.open_project(project_root)
+
+    assert open_result["status"] == "repair_required"
+    operation_summary = open_result["normalized_manifest"]["operations"]["character_voices"]
+    assert operation_summary["status"] == "completed"
+    assert operation_summary["progress_current"] == 2
+    assert operation_summary["progress_total"] == 2
+    assert operation_summary["updated_at"] == "2026-05-16T12:02:00+00:00"
 
 
 def test_open_project_does_not_heal_audio_blocks_with_traversal_audio_path(tmp_path) -> None:

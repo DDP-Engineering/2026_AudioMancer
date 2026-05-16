@@ -14,7 +14,7 @@
          targeted downstream invalidation when upstream voice inputs change.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-23
-@version 0.7.3
+@version 0.7.5
 """
 
 # IMPORTS
@@ -203,7 +203,7 @@ def handle_regenerate_selected_requested(window: "MainWindow", speech_block_id: 
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-23
-    @version    0.2.0
+    @version    0.3.0
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._active_operation_kind is not None:
@@ -221,6 +221,7 @@ def handle_regenerate_selected_requested(window: "MainWindow", speech_block_id: 
         )
         return
     runtime_settings = _runtime_settings(window, probe_result)
+    speech_blocks_review_position = _speech_blocks_review_position(window)
     _start_operation(
         window,
         operation_name=ui_state_service.translate("audio_blocks.regenerate_selected", current_language),
@@ -237,6 +238,7 @@ def handle_regenerate_selected_requested(window: "MainWindow", speech_block_id: 
         ),
         success_message_key="status.audio_block_regenerated",
         preserved_block_id=str(speech_block_id).strip(),
+        preserved_speech_blocks_review_position=speech_blocks_review_position,
     )
 
 
@@ -552,6 +554,7 @@ def _start_operation(
     worker_callable,
     success_message_key: str = "status.audio_blocks_generated",
     preserved_block_id: str | None = None,
+    preserved_speech_blocks_review_position: dict[str, object] | None = None,
 ) -> None:
     """
     @brief      Start one Audio Blocks operation on a worker thread.
@@ -561,11 +564,12 @@ def _start_operation(
     @param[in]  worker_callable Callable that performs the operation.
     @param[in]  success_message_key UI string key emitted after success.
     @param[in]  preserved_block_id Optional speech-block id to reselect after page refresh.
+    @param[in]  preserved_speech_blocks_review_position Optional Speech Blocks review position to restore.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-23
-    @version    0.4.0
+    @version    0.5.0
     """
     _stop_audio_blocks_playback(window)
     workflow_controller_service.start_operation(
@@ -580,9 +584,20 @@ def _start_operation(
             result_payload,
             success_message_key,
             preserved_block_id,
+            preserved_speech_blocks_review_position,
         ),
-        failure_handler=lambda error: _handle_audio_blocks_failure(window, error, preserved_block_id),
-        cancel_handler=lambda message: _handle_audio_blocks_cancelled(window, message, preserved_block_id),
+        failure_handler=lambda error: _handle_audio_blocks_failure(
+            window,
+            error,
+            preserved_block_id,
+            preserved_speech_blocks_review_position,
+        ),
+        cancel_handler=lambda message: _handle_audio_blocks_cancelled(
+            window,
+            message,
+            preserved_block_id,
+            preserved_speech_blocks_review_position,
+        ),
     )
 
 
@@ -591,6 +606,7 @@ def _handle_audio_blocks_success(
     result_payload: object,
     success_message_key: str,
     preserved_block_id: str | None,
+    preserved_speech_blocks_review_position: dict[str, object] | None,
 ) -> None:
     """
     @brief      Refresh Audio Blocks UI state after a successful worker run.
@@ -598,15 +614,17 @@ def _handle_audio_blocks_success(
     @param[in]  result_payload Worker result payload.
     @param[in]  success_message_key UI string key emitted after success.
     @param[in]  preserved_block_id Optional speech-block id to reselect.
+    @param[in]  preserved_speech_blocks_review_position Optional Speech Blocks review position to restore.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-24
-    @version    0.3.0
+    @version    0.4.0
     """
     _ = result_payload
     _reset_audio_assembly_after_audio_blocks_change(window)
     _restore_audio_blocks_selection(window, preserved_block_id)
+    _restore_speech_blocks_review_position(window, preserved_speech_blocks_review_position)
     misc_ui_controller.show_message(
         window,
         ui_state_service.translate(success_message_key, current_language_from_window(window)),
@@ -617,20 +635,23 @@ def _handle_audio_blocks_failure(
     window: "MainWindow",
     error: Exception,
     preserved_block_id: str | None,
+    preserved_speech_blocks_review_position: dict[str, object] | None,
 ) -> None:
     """
     @brief      Refresh Audio Blocks UI state after a failed worker run.
     @param[in]  window Active main window instance.
     @param[in]  error Raised operation exception.
     @param[in]  preserved_block_id Optional speech-block id to reselect.
+    @param[in]  preserved_speech_blocks_review_position Optional Speech Blocks review position to restore.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-24
-    @version    0.1.0
+    @version    0.2.0
     """
     _sync_manifest_from_disk(window)
     _restore_audio_blocks_selection(window, preserved_block_id)
+    _restore_speech_blocks_review_position(window, preserved_speech_blocks_review_position)
     QMessageBox.warning(
         window,
         ui_state_service.translate("dialog.project_error_title", current_language_from_window(window)),
@@ -642,21 +663,24 @@ def _handle_audio_blocks_cancelled(
     window: "MainWindow",
     message: str,
     preserved_block_id: str | None,
+    preserved_speech_blocks_review_position: dict[str, object] | None,
 ) -> None:
     """
     @brief      Refresh Audio Blocks UI state after a cancelled worker run.
     @param[in]  window Active main window instance.
     @param[in]  message Cancellation message.
     @param[in]  preserved_block_id Optional speech-block id to reselect.
+    @param[in]  preserved_speech_blocks_review_position Optional Speech Blocks review position to restore.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-24
-    @version    0.1.0
+    @version    0.2.0
     """
     _ = message
     _sync_manifest_from_disk(window)
     _restore_audio_blocks_selection(window, preserved_block_id)
+    _restore_speech_blocks_review_position(window, preserved_speech_blocks_review_position)
     misc_ui_controller.show_message(
         window,
         ui_state_service.translate("status.operation_cancelled", current_language_from_window(window)),
@@ -1028,29 +1052,6 @@ def _confirm_generation(window: "MainWindow", language: str) -> bool:
     )
 
 
-def _confirm_audio_blocks_rerun(window: "MainWindow", language: str) -> bool:
-    """
-    @brief      Ask the operator whether one completed Audio Blocks generation should rerun destructively.
-    @param[in]  window Active main window instance.
-    @param[in]  language Current UI language code.
-    @return     True when the operator accepts the rerun reset.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-23
-    @version    0.1.0
-    """
-    return (
-        QMessageBox.question(
-            window,
-            ui_state_service.translate("dialog.confirm_audio_blocks_rerun_title", language),
-            ui_state_service.translate("project.confirm_audio_blocks_rerun", language),
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            QMessageBox.StandardButton.No,
-        )
-        == QMessageBox.StandardButton.Yes
-    )
-
-
 def _confirm_audio_blocks_reset(window: "MainWindow", language: str) -> bool:
     """
     @brief      Ask the operator whether persisted Audio Blocks data should be reset.
@@ -1297,6 +1298,40 @@ def _restore_audio_blocks_selection(window: "MainWindow", speech_block_id: str |
             "_current_block_id",
         ):
             window._audio_blocks_page._current_block_id = normalized_block_id  # noqa: SLF001
+
+
+def _speech_blocks_review_position(window: "MainWindow") -> dict[str, object] | None:
+    """
+    @brief      Capture Speech Blocks review position when the page exists.
+    @param[in]  window Active main window instance.
+    @return     Speech Blocks review-position payload or `None`.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-16
+    @version    0.1.0
+    """
+    if not hasattr(window, "_speech_blocks_page"):
+        return None
+    return window._speech_blocks_page.review_position()
+
+
+def _restore_speech_blocks_review_position(
+    window: "MainWindow",
+    review_position: dict[str, object] | None,
+) -> None:
+    """
+    @brief      Restore Speech Blocks review position when the page exists.
+    @param[in]  window Active main window instance.
+    @param[in]  review_position Review-position payload to restore.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-16
+    @version    0.1.0
+    """
+    if review_position is None or not hasattr(window, "_speech_blocks_page"):
+        return
+    window._speech_blocks_page.restore_review_position(review_position)
 
 
 def _stop_other_audio_previews(window: "MainWindow") -> None:

@@ -23,7 +23,7 @@ controller aligned with the project manifest.
 ## 2. Responsibilities
 
 - resolve the discovery input from `chunks_text.json`
-- use root-level cleanup and chunking artifacts as the discovery source
+- use canonical chunking artifacts as the discovery source
 - split chunk input into overlapping, budget-aware AI analysis windows
 - call the configured AI profile for window extraction and profile synthesis
 - collect optional operator Character Discovery rules before fresh discovery,
@@ -86,8 +86,8 @@ High-level runtime flow:
 4. `character_discovery_service.start_or_continue_discovery(...)` resolves
    canonical chunking output as the discovery input, derives request budgets
    from the selected profile context window and max output tokens, and restores
-   resumable state when fingerprints, the saved operator-rule fingerprint,
-   window counts, and budget metadata still match.
+   resumable state when the chunk fingerprint, saved operator-rule fingerprint,
+   and current checkpoint boundary are valid.
 5. The service detects direct-dialogue spans in each chunk using punctuation
    structure rather than English-only speech verbs, analyzes budgeted chunk
    windows using eight chunks as a maximum cap, normalizes candidate evidence
@@ -254,8 +254,11 @@ Operation-state invariants:
   and temperature in `model_settings` plus `model_settings_history`
 - discovery-window checkpoints store `next_discovery_start_chunk_index` so
   remaining windows can be rebuilt from the current profile budget after a
-  cancellation; older checkpoints derive that boundary from the saved window
-  budget when possible
+  cancellation; checkpoints missing that boundary are ignored
+- discovery-window candidate payloads use only the current window schema:
+  `canonical_name`, `aliases`, `age_hint`, `confidence`, and `evidence`; final
+  `gender_hint` and `voice_definition_prompt` fields are produced only by the
+  synthesis pass
 - completed discovery disables the page start action until reset
 - reset preserves upstream translation artifacts and existing narrator profiles
   or samples, then clears dependent character voice, speech, audio block, and

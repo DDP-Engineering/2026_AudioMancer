@@ -14,7 +14,7 @@
          theme runtime adapter.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 0.53.2
+@version 0.54.1
 """
 
 # ruff: noqa: E501
@@ -41,7 +41,7 @@ _UI_SCALE_FACTORS = {
     "very_large": 1.24,
 }
 
-# @brief Dynamic Qt property used by read-only operator notes/status editors.
+# @brief Dynamic Qt property used by read-only operator status editors.
 CONTROL_TEXT_FONT_ROLE_PROPERTY = "audiomancerFontRole"
 # @brief Dynamic Qt property value for editors that should use the UI font.
 CONTROL_TEXT_FONT_ROLE_VALUE = "ui_controls"
@@ -326,7 +326,7 @@ _UI_STRINGS = {
         "text_cleanup.find_not_found": "No match found for '{search_text}'.",
         "text_cleanup.extracted_group": "Extracted Text Preview",
         "text_cleanup.cleaned_group": "Cleaned Text Preview",
-        "text_cleanup.notes_group": "Cleanup Notes",
+        "text_cleanup.status_group": "Cleanup Status",
         "text_cleanup.extracted_note": "Raw extracted text will appear here after source processing.",
         "text_cleanup.cleaned_note": "Deterministic or AI-assisted cleanup output will appear here.",
         "text_cleanup.notes_text": "Import a source to begin text extraction.\nDeterministic cleanup and AI-assisted cleanup are not wired yet.",
@@ -364,7 +364,7 @@ _UI_STRINGS = {
         "text_chunking.find_title": "Find Text",
         "text_chunking.find_prompt": "Text to find:",
         "text_chunking.find_not_found": "No match found for '{search_text}'.",
-        "text_chunking.notes_group": "Chunking Notes",
+        "text_chunking.status_group": "Chunking Status",
         "text_chunking.cleaned_note": "Cleaned text will appear here and serve as the chunking reference.",
         "text_chunking.selected_note": "The full text of the selected chunk will appear here.",
         "text_chunking.notes_text": "Run cleanup before chunking.\nDeterministic chunking will populate the chunk list and selected preview.",
@@ -387,7 +387,7 @@ _UI_STRINGS = {
         "ai_translation.target_language": "Target Language",
         "ai_translation.ai_profile": "AI Profile",
         "ai_translation.chunk_list_group": "Chunk List",
-        "ai_translation.notes_group": "Translation Notes",
+        "ai_translation.status_group": "Translation Status",
         "ai_translation.start": "Start Translation",
         "ai_translation.reset": "Reset Translation",
         "ai_translation.approve_all": "Approve All",
@@ -425,6 +425,7 @@ _UI_STRINGS = {
         "characters.list_group": "Character List",
         "characters.profile_group": "Character Profile",
         "characters.evidence_group": "Evidence",
+        "characters.status_group": "Character Discovery Status",
         "characters.canonical_name": "Canonical Name",
         "characters.aliases": "Aliases",
         "characters.gender_hint": "Gender Hint",
@@ -485,7 +486,6 @@ _UI_STRINGS = {
         "narator_voice.note_profile_runtime_missing": "This stored sample references a model that is not currently reported by VoiceWeaver.",
         "narator_voice.error_invalid_profile_name": "Enter one narator voice profile name before creating or saving a custom profile.",
         "narator_voice.error_duplicate_profile_name": "A narator voice profile with this name already exists in the current project.",
-        "narator_voice.error_protected_profile": "The default narator voice profile cannot be deleted.",
         "narator_voice.error_readonly_profile": "This narator voice profile cannot be edited.",
         "narator_voice.error_missing_preview_text": "Enter one preview text before generating the narator voice sample.",
         "narator_voice.error_missing_sample": "Generate one sample for this narator voice profile before selecting or previewing it.",
@@ -604,7 +604,7 @@ _UI_STRINGS = {
         "speech_blocks.chunk_list_group": "Chunk List",
         "speech_blocks.selected_group": "Selected Chunk",
         "speech_blocks.blocks_group": "Speech Blocks",
-        "speech_blocks.notes_group": "Speech Blocks Notes",
+        "speech_blocks.status_group": "Speech Blocks Status",
         "speech_blocks.note_no_project": "Create or open a project to begin Speech Blocks generation.",
         "speech_blocks.note_no_source": "Import a source file and complete Character Voices before generating Speech Blocks.",
         "speech_blocks.note_missing_source": "Run text chunking, resolve the Character Voices language, and approve translation if needed before generating Speech Blocks.",
@@ -801,12 +801,16 @@ _UI_STRINGS = {
         "home.export.text_chunks": "Text Chunks",
         "home.export.ai_translation": "AI Translation",
         "home.export.characters": "Characters",
+        "home.export.narrator_voice": "Narator Voice",
+        "home.export.character_voices": "Character Voices",
         "home.export.speech_blocks": "Speech Blocks",
+        "home.export.audio_assembly": "Audio Assembly",
         "home.export_status.available": "Available",
         "home.export_status.not_ready": "Not ready",
         "home.export_status.missing_artifact": "Missing artifact",
         "home.export_format.txt": "TXT",
         "home.export_format.markdown": "Markdown",
+        "home.export_format.zip": "ZIP",
         "home.export_button": "Export",
         "home.export_not_ready_message": "This export is not available yet.",
         "home.export_inside_project_message": (
@@ -1305,7 +1309,7 @@ _UI_STRINGS = {
         "text_cleanup.find_not_found": "Nu s-a gasit niciun rezultat pentru '{search_text}'.",
         "text_cleanup.extracted_group": "Previzualizare Text Extras",
         "text_cleanup.cleaned_group": "Previzualizare Text Curatat",
-        "text_cleanup.notes_group": "Note Curatare",
+        "text_cleanup.status_group": "Stare Curatare",
         "text_cleanup.extracted_note": "Textul extras brut va aparea aici dupa procesarea sursei.",
         "text_cleanup.cleaned_note": "Rezultatul curatarii deterministe sau asistate de AI va aparea aici.",
         "text_cleanup.notes_text": "Importa o sursa pentru a incepe extragerea textului.\nCuratarea determinista si cea asistata de AI nu sunt inca conectate.",
@@ -1343,7 +1347,7 @@ _UI_STRINGS = {
         "text_chunking.find_title": "Cauta Text",
         "text_chunking.find_prompt": "Text de cautat:",
         "text_chunking.find_not_found": "Nu s-a gasit niciun rezultat pentru '{search_text}'.",
-        "text_chunking.notes_group": "Note Segmentare",
+        "text_chunking.status_group": "Stare Segmentare",
         "text_chunking.cleaned_note": "Textul curatat va aparea aici si va servi drept referinta pentru segmentare.",
         "text_chunking.selected_note": "Textul complet al segmentului selectat va aparea aici.",
         "text_chunking.notes_text": "Ruleaza curatarea inainte de segmentare.\nSegmentarea determinista va popula lista segmentelor si previzualizarea selectiei.",
@@ -1366,7 +1370,7 @@ _UI_STRINGS = {
         "ai_translation.target_language": "Limba Tinta",
         "ai_translation.ai_profile": "Profil AI",
         "ai_translation.chunk_list_group": "Lista Segmentelor",
-        "ai_translation.notes_group": "Note Traducere",
+        "ai_translation.status_group": "Stare Traducere",
         "ai_translation.start": "Porneste Traducerea",
         "ai_translation.reset": "Reseteaza Traducerea",
         "ai_translation.approve_all": "Aproba Tot",
@@ -1404,6 +1408,7 @@ _UI_STRINGS = {
         "characters.list_group": "Lista Personajelor",
         "characters.profile_group": "Profil Personaj",
         "characters.evidence_group": "Dovezi",
+        "characters.status_group": "Stare Descoperire Personaje",
         "characters.canonical_name": "Nume Canonic",
         "characters.aliases": "Aliasuri",
         "characters.gender_hint": "Indicatie Gen",
@@ -1464,7 +1469,6 @@ _UI_STRINGS = {
         "narator_voice.note_profile_runtime_missing": "Acest sample stocat face referire la un model care nu este raportat momentan de VoiceWeaver.",
         "narator_voice.error_invalid_profile_name": "Introdu un nume pentru profilul naratorului inainte de a crea sau salva un profil personalizat.",
         "narator_voice.error_duplicate_profile_name": "Un profil de narator cu acest nume exista deja in proiectul curent.",
-        "narator_voice.error_protected_profile": "Profilul implicit de narator nu poate fi sters.",
         "narator_voice.error_readonly_profile": "Acest profil de narator nu poate fi editat.",
         "narator_voice.error_missing_preview_text": "Introdu un text de previzualizare inainte de a genera sample-ul naratorului.",
         "narator_voice.error_missing_sample": "Genereaza un sample pentru acest profil de narator inainte sa il selectezi sau sa il previzualizezi.",
@@ -1584,7 +1588,7 @@ _UI_STRINGS = {
         "speech_blocks.chunk_list_group": "Lista Segmentelor",
         "speech_blocks.selected_group": "Segment Selectat",
         "speech_blocks.blocks_group": "Blocuri Vorbire",
-        "speech_blocks.notes_group": "Note Blocuri Vorbire",
+        "speech_blocks.status_group": "Stare Blocuri Vorbire",
         "speech_blocks.note_no_project": "Creeaza sau deschide un proiect pentru a incepe generarea blocurilor de vorbire.",
         "speech_blocks.note_no_source": "Importa o sursa si finalizeaza Vocile Personajelor inainte de a genera blocurile de vorbire.",
         "speech_blocks.note_missing_source": "Ruleaza segmentarea textului, rezolva limba din Vocile Personajelor si aproba traducerea daca este necesar inainte de a genera blocurile de vorbire.",
@@ -1788,12 +1792,16 @@ _UI_STRINGS = {
         "home.export.text_chunks": "Segmente Text",
         "home.export.ai_translation": "Traducere AI",
         "home.export.characters": "Personaje",
+        "home.export.narrator_voice": "Voce Narator",
+        "home.export.character_voices": "Voci Personaje",
         "home.export.speech_blocks": "Blocuri Vorbire",
+        "home.export.audio_assembly": "Asamblare Audio",
         "home.export_status.available": "Disponibil",
         "home.export_status.not_ready": "Nepregatit",
         "home.export_status.missing_artifact": "Artefact lipsa",
         "home.export_format.txt": "TXT",
         "home.export_format.markdown": "Markdown",
+        "home.export_format.zip": "ZIP",
         "home.export_button": "Exporta",
         "home.export_not_ready_message": "Acest export nu este inca disponibil.",
         "home.export_inside_project_message": (

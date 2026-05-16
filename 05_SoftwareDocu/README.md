@@ -10,8 +10,8 @@ Implementation-focused software documentation and component notes.
 
 ## Current Documents
 
-- `UserGuide/` contains the English end-user help bundle for AudioMancer 1.0.15, including the offline HTML guide, runtime Settings theme notes, and real UI screenshots used by packaged Windows and Ubuntu releases.
-- `UserGuide_ro/` contains the Romanian end-user help bundle for AudioMancer 1.0.15, including the offline HTML guide, runtime Settings theme notes, and Romanian UI screenshots used when the application language is set to Romanian.
+- `UserGuide/` contains the English end-user help bundle for AudioMancer 1.1.0, including the offline HTML guide, runtime Settings theme notes, and real UI screenshots used by packaged Windows and Ubuntu releases.
+- `UserGuide_ro/` contains the Romanian end-user help bundle for AudioMancer 1.1.0, including the offline HTML guide, runtime Settings theme notes, and Romanian UI screenshots used when the application language is set to Romanian.
 - `AudioMancer_App_Shell.md` documents the desktop application shell, Home workflow progress presenter, project navigation, settings dialogs, and page-hosting responsibilities.
 - `AudioMancer_Config_And_Settings.md` documents the adapted configuration and settings scaffold.
 - `AudioMancer_Settings_Service.md` documents the shared settings lifecycle implementation.
@@ -21,7 +21,7 @@ Implementation-focused software documentation and component notes.
 - `AudioMancer_Logging_Service.md` documents the shared runtime logging implementation.
 - `AudioMancer_Workflow_Impact_Service.md` documents the v2 workflow impact foundation for selective downstream preservation, stable IDs, reset summaries, manifest refresh, and safe generated-artifact deletion.
 - `AudioMancer_Project_Workspace.md` documents the new/open project workspace layer, locked Home-page project options, source import flow, and current `project.json` contract.
-- `AudioMancer_Project_Export_Service.md` documents the Home-page export readiness and TXT/Markdown projection layer for cleaned text, chunks, translations, character dossiers, and Speech Blocks.
+- `AudioMancer_Project_Export_Service.md` documents the Home-page export readiness, TXT/Markdown projection layer for text artifacts, and ZIP archive exports for voice samples plus Audio Assembly outputs.
 - `AudioMancer_Project_Snapshot_Service.md` documents the Home-page full-project ZIP snapshot export, external destination guard, temporary archive replacement, and long-operation blocking behavior.
 - `AudioMancer_Text_Extraction_Service.md` documents the deterministic extraction workflow, artifacts, and rerun/reset behavior used by the Text Cleanup page.
 - `AudioMancer_Deterministic_Cleanup_Service.md` documents the deterministic cleanup workflow, cleanup artifacts, and resumable cleanup behavior used by the Text Cleanup page.

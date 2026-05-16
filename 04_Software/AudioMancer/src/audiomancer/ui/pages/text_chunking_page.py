@@ -14,7 +14,7 @@
          with local text search.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-24
-@version 0.5.3
+@version 0.5.4
 """
 
 # IMPORTS
@@ -66,7 +66,7 @@ class TextChunkingPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-24
-        @version    0.5.1
+        @version    0.5.2
         """
         super().__init__(parent)
         self._chunks: list[dict[str, object]] = []
@@ -165,27 +165,27 @@ class TextChunkingPage(QWidget):
         self._preview_splitter.setStretchFactor(1, 2)
         layout.addWidget(self._preview_splitter, 7)
 
-        notes_group = QGroupBox("Chunking Notes", self)
-        notes_layout = QVBoxLayout(notes_group)
-        self._notes_edit = QPlainTextEdit(self)
-        self._notes_edit.setReadOnly(True)
-        self._notes_edit.setProperty(
+        status_group = QGroupBox("Chunking Status", self)
+        status_layout = QVBoxLayout(status_group)
+        self._status_edit = QPlainTextEdit(self)
+        self._status_edit.setReadOnly(True)
+        self._status_edit.setProperty(
             ui_state_service.CONTROL_TEXT_FONT_ROLE_PROPERTY,
             ui_state_service.CONTROL_TEXT_FONT_ROLE_VALUE,
         )
-        self._notes_edit.setPlainText(
+        self._status_edit.setPlainText(
             "Run cleanup before chunking.\n"
             "Deterministic and AI-assisted chunk generation will populate the chunk list and selected preview."
         )
-        notes_layout.addWidget(self._notes_edit)
-        notes_group.setMinimumHeight(96)
-        notes_group.setMaximumHeight(112)
-        layout.addWidget(notes_group, 0)
+        status_layout.addWidget(self._status_edit)
+        status_group.setMinimumHeight(96)
+        status_group.setMaximumHeight(112)
+        layout.addWidget(status_group, 0)
         self._cleaned_group = cleaned_group
         self._chunk_list_group = chunk_list_group
         self._left_preview_container = left_container
         self._chunk_preview_group = chunk_preview_group
-        self._notes_group = notes_group
+        self._status_group = status_group
         self._apply_preview_splitter_minimums()
         self.set_project_active(False)
         self.set_processing_state(
@@ -217,7 +217,7 @@ class TextChunkingPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-07
-        @version    0.1.0
+        @version    0.1.1
         """
         self._project_active = is_active
         self._apply_button_state()
@@ -258,7 +258,7 @@ class TextChunkingPage(QWidget):
             chunk_text = str(chunk.get("text", ""))
             preview = chunk_text if len(chunk_text) <= 80 else chunk_text[:77] + "..."
             self._chunk_list.addItem(f"{chunk.get('chunk_id', '')} | {preview}")
-        self._notes_edit.setPlainText("\n".join(notes))
+        self._status_edit.setPlainText("\n".join(notes))
         if self._chunks:
             self._chunk_list.setCurrentRow(0)
         else:
@@ -469,7 +469,7 @@ class TextChunkingPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-05
-        @version    0.3.0
+        @version    0.3.1
         """
         self._language = language
         self._title_label.setText(f"<h2>{ui_state_service.translate('text_chunking.title', language)}</h2>")
@@ -484,7 +484,7 @@ class TextChunkingPage(QWidget):
         self._delete_chunk_button.setText(ui_state_service.translate("text_chunking.delete_chunk", language))
         self._edit_chunk_button.setText(ui_state_service.translate("text_chunking.edit_chunk", language))
         self._save_chunk_button.setText(ui_state_service.translate("text_chunking.save_chunk", language))
-        self._notes_group.setTitle(ui_state_service.translate("text_chunking.notes_group", language))
+        self._status_group.setTitle(ui_state_service.translate("text_chunking.status_group", language))
         if not self._has_ai_profiles:
             self._profile_combo.setItemText(
                 0,

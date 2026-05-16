@@ -13,12 +13,14 @@
          notes, and ready-for-assembly summaries.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-23
-@version 0.5.1
+@version 0.6.0
 """
 
 # IMPORTS
 
 import json
+from pathlib import Path
+import wave
 
 from audiomancer import config
 from audiomancer.services import (
@@ -208,6 +210,47 @@ def test_build_audio_blocks_notes_cover_resume_and_ready_for_assembly_states() -
 
     assert any("was not finalized" in note for note in failed_notes)
     assert any("ready for Audio Assembly" in note for note in completed_notes)
+
+
+def test_build_audio_blocks_state_measures_generated_audio_duration(tmp_path) -> None:
+    """
+    @brief      Verify Audio Blocks page state displays measured WAV durations for generated blocks.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-16
+    @version    0.1.0
+    """
+    project_root, manifest = _create_audio_blocks_project(tmp_path, "AudioBlocksDuration")
+    audio_root = project_root / config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME
+    audio_root.mkdir(parents=True, exist_ok=True)
+    audio_path = audio_root / "0001_000001_narrator.wav"
+    _write_wav(audio_path, frame_count=12_000)
+    _write_json(
+        project_root / config.AUDIO_BLOCKS_OUTPUT_FILE_NAME,
+        [
+            {
+                "speech_block_id": "0001-000001",
+                "sequence_index": 1,
+                "chunk_id": "chunk-0001",
+                "speaker_id": "narrator",
+                "speaker_display_name": "Narrator",
+                "normalized_speaker_name": "narrator",
+                "content_kind": speech_blocks_service.CONTENT_KIND_NARRATION,
+                "text": "Narration one.",
+                "audio_relative_path": f"{config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME}/0001_000001_narrator.wav",
+                "generated": True,
+                "approved": False,
+            }
+        ],
+    )
+
+    state = audio_blocks_state_service.build_audio_blocks_state(project_root, manifest, "en")
+
+    assert state["speech_blocks"][0]["audio_file_name"] == "0001_000001_narrator.wav"
+    assert state["speech_blocks"][0]["audio_duration_seconds"] == 0.5
+    assert state["speech_blocks"][0]["can_play"] is True
 
 
 def test_build_audio_blocks_state_does_not_resolve_missing_chunks(monkeypatch, tmp_path) -> None:
@@ -572,6 +615,24 @@ def _write_json(path, payload: object) -> None:
     @version    0.1.0
     """
     path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+
+
+def _write_wav(path: Path, frame_count: int) -> None:
+    """
+    @brief      Write one small mono PCM WAV test file.
+    @param[in]  path Destination WAV path.
+    @param[in]  frame_count Number of silent frames to write.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-16
+    @version    0.1.0
+    """
+    with wave.open(str(path), "wb") as wav_file:
+        wav_file.setnchannels(1)
+        wav_file.setsampwidth(2)
+        wav_file.setframerate(24_000)
+        wav_file.writeframes(b"\x00\x00" * frame_count)
 
 
 # END OF FILE

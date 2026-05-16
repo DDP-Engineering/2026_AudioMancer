@@ -154,7 +154,8 @@ Current invariants:
 
 - Audio Assembly uses approved, generated Audio Blocks only
 - metadata-only pause Audio Blocks are included as silence using
-  `pause_duration_ms`, or `1000 ms` when no valid duration exists
+  the current `pause_duration_ms` field, or `1000 ms` when that field is
+  missing or invalid; pause text is not parsed as a compatibility fallback
 - an explicit pause block replaces adjacent automatic inter-block silence for
   that pause position, so the pause duration is not double-counted
 - metadata-only indication and background-noise Audio Blocks are skipped by the
@@ -166,9 +167,9 @@ Current invariants:
   order, then chunk-local `sequence_index`
 - all source WAV files in a run must share compatible channel count, sample
   width, frame rate, compression type, and compression name
-- persisted resume requires the current input/settings fingerprint to match the
-  fingerprint stored in `audio_assembly_state.json`
-- mismatched fingerprints require explicit reset
+- persisted resume requires non-default state to contain the current
+  input/settings fingerprint in `audio_assembly_state.json`
+- missing or mismatched fingerprints require explicit reset
 - reset, settings-change reset, and upstream Audio Blocks impact delete only
   assembly state, report, and generated audiobook output files; approved Audio
   Blocks and voice data remain untouched

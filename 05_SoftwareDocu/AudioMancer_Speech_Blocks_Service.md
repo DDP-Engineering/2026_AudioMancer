@@ -61,8 +61,9 @@ continuous narrator-only blocks under the TTS text budget.
   and `Indication`
 - support selected-block edit and save operations, with generated-audio impact
   confirmation shown when Edit is pressed rather than when Save is pressed
-- support manual selected-chunk Speech Block insertion and deletion, with
-  chunk-local sequence updates while preserving stable Speech Block IDs
+- support manual selected-chunk Speech Block insertion before or after AI
+  generation and deletion when a block is selected, with chunk-local sequence
+  updates while preserving stable Speech Block IDs
 - keep the selected chunk and selected-chunk text scroll during manual review
   edits; inserted blocks become selected immediately, and deleting a block
   selects the next remaining block or the previous/current row when deleting
@@ -167,11 +168,12 @@ High-level flow:
    operator accepts the impact prompt. Save commits the edit without asking
    again, deletes only that block's generated Audio Blocks WAV/metadata
    artifacts, and resets Audio Assembly.
-10. Inserting a block rewrites `speech_blocks.json`, updates only the selected
-    chunk sequence, leaves the inserted block unapproved, preserves existing
-    generated Audio Blocks, selects the inserted block, preserves the selected
-    chunk review context, and resets Audio Assembly because playback order
-    changed.
+10. Inserting a block rewrites `speech_blocks.json`, appends after the selected
+    Speech Block or creates the first/end block when none is selected, updates
+    only the selected chunk sequence, leaves the inserted block unapproved,
+    preserves existing generated Audio Blocks, selects the inserted block,
+    preserves the selected chunk review context, and resets Audio Assembly
+    because playback order changed.
 11. Re-splitting one chunk asks for optional operator Speech Blocks rules,
     replaces only that chunk's Speech Blocks, rebuilds that chunk's local
     sequence indexes and block IDs, marks new blocks unapproved, rolls Speech
@@ -272,8 +274,9 @@ Current invariants:
   rewritten only because `sequence_index` changes
 - canonical book order is source chunk order, then chunk-local
   `sequence_index`
-- manual insert/delete updates `sequence_index` but preserves existing
-  `speech_block_id` values for unchanged blocks
+- manual insert appends after the selected block, and manual insert/delete
+  updates `sequence_index` but preserves existing `speech_block_id` values for
+  unchanged blocks
 - inserted blocks get the next unused chunk-local `speech_block_id`
 - AI output is the primary Speech Block list in narrator-plus-character mode;
   deterministic helpers validate and annotate the model result but do not force
@@ -307,7 +310,9 @@ Current invariants:
 - pause text may include a millisecond duration; when no valid duration exists,
   downstream audio composition uses `1000 ms`
 - block ordering never crosses chunk boundaries
-- manual insert creates an unapproved narrator narration block with empty text
+- manual insert creates an unapproved narrator narration block with empty text,
+  initializing Speech Blocks report and operation state from current source
+  chunks when no generated Speech Blocks pass exists yet
 - manual delete removes only the selected block and leaves the source chunk in
   the chunk list even when no Speech Blocks remain for that chunk
 - warning flags are cleared when the operator starts editing a block, without
@@ -325,6 +330,9 @@ Current invariants:
 - Speech Blocks is complete only when every block is approved; generated but
   unapproved full output is persisted as `review_pending` in `project.json`
   operation metadata
+- deleting the last remaining manual block returns Speech Blocks operation
+  status to `not_started` while keeping the source chunks available for another
+  manual insert or generation run
 
 Report and operation-state metadata include:
 
@@ -343,14 +351,14 @@ Report and operation-state metadata include:
   `prompt_budget_tokens`, `text_budget_tokens`, and `safety_margin_tokens`
 - `additional_speech_block_instructions`
 - `additional_speech_block_instructions_fingerprint`
-- one resume checkpoint with `next_chunk_index`,
+- one current-version resume checkpoint with `next_chunk_index`,
   `source_snapshot_fingerprint`, `source_language`, `ai_profile_id`, and
-  `budget_metadata`; resume compatibility uses the source snapshot, language,
+  `budget_metadata`; resume validation uses the source snapshot, language,
   and saved operator-rule fingerprint, while the stored profile and budget
   describe the last saved run settings
 - when approval or review updates clear the explicit resume checkpoint, the
-  service restores the next chunk from `processed_chunk_count` in the report or
-  operation metadata
+  service restores the next chunk only from current `processed_chunk_count`
+  values in the report or operation metadata
 
 ## 7. Workflow Integration
 

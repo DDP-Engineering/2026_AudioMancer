@@ -14,7 +14,7 @@
          controls for the Speech Blocks workflow.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-24
-@version 0.7.3
+@version 0.7.8
 """
 
 # IMPORTS
@@ -36,6 +36,10 @@ from PySide6.QtWidgets import (
 )
 
 from audiomancer.services import speech_blocks_service, ui_state_service
+
+# CONSTANTS
+
+_CHUNK_ACTION_TOP_MARGIN_PX = 2
 
 
 class SpeechBlocksPage(QWidget):
@@ -68,7 +72,7 @@ class SpeechBlocksPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-24
-        @version    0.6.3
+        @version    0.6.6
         """
         super().__init__(parent)
         self._current_language = "en"
@@ -120,6 +124,7 @@ class SpeechBlocksPage(QWidget):
         self._chunk_list.currentRowChanged.connect(self._show_selected_chunk)
         chunk_layout.addWidget(self._chunk_list)
         self._chunk_actions_grid_layout = QGridLayout()
+        self._chunk_actions_grid_layout.setContentsMargins(0, 0, 0, 0)
         self._insert_block_button = QPushButton("Insert")
         self._insert_block_button.clicked.connect(self._emit_insert_block)
         self._chunk_actions_grid_layout.addWidget(self._insert_block_button, 0, 0)
@@ -145,9 +150,14 @@ class SpeechBlocksPage(QWidget):
         self._selected_audio_playback_button = QPushButton("Play")
         self._selected_audio_playback_button.clicked.connect(self._emit_selected_audio_playback_toggle)
         self._chunk_actions_grid_layout.addWidget(self._selected_audio_playback_button, 3, 1)
-        self._chunk_actions_grid_layout.setRowStretch(4, 1)
+        self._chunk_actions_column = QWidget(self)
+        self._chunk_actions_column_layout = QVBoxLayout(self._chunk_actions_column)
+        self._chunk_actions_column_layout.setContentsMargins(0, 0, 0, 0)
+        self._chunk_actions_column_layout.addLayout(self._chunk_actions_grid_layout)
+        self._chunk_actions_column_layout.addStretch(1)
+        self._apply_chunk_action_top_margin()
         chunk_row.addWidget(self._chunk_group, 1)
-        chunk_row.addLayout(self._chunk_actions_grid_layout)
+        chunk_row.addWidget(self._chunk_actions_column)
         self._chunk_group.setMinimumHeight(94)
         self._chunk_group.setMaximumHeight(130)
         body_content_layout.addLayout(chunk_row)
@@ -191,18 +201,18 @@ class SpeechBlocksPage(QWidget):
         layout.addLayout(body_content_layout, 1)
         self._apply_lower_splitter_minimums()
 
-        self._notes_group = QGroupBox("Speech Blocks Notes", self)
-        notes_layout = QVBoxLayout(self._notes_group)
-        self._notes_edit = QPlainTextEdit(self)
-        self._notes_edit.setReadOnly(True)
-        self._notes_edit.setProperty(
+        self._status_group = QGroupBox("Speech Blocks Status", self)
+        status_layout = QVBoxLayout(self._status_group)
+        self._status_edit = QPlainTextEdit(self)
+        self._status_edit.setReadOnly(True)
+        self._status_edit.setProperty(
             ui_state_service.CONTROL_TEXT_FONT_ROLE_PROPERTY,
             ui_state_service.CONTROL_TEXT_FONT_ROLE_VALUE,
         )
-        notes_layout.addWidget(self._notes_edit)
-        self._notes_group.setMinimumHeight(96)
-        self._notes_group.setMaximumHeight(112)
-        layout.addWidget(self._notes_group)
+        status_layout.addWidget(self._status_edit)
+        self._status_group.setMinimumHeight(96)
+        self._status_group.setMaximumHeight(112)
+        layout.addWidget(self._status_group)
 
         self.apply_language(self._current_language)
         self.set_project_active(False)
@@ -225,10 +235,24 @@ class SpeechBlocksPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-05-01
-        @version    0.1.0
+        @version    0.1.1
         """
         super().resizeEvent(event)
+        self._apply_chunk_action_top_margin()
         self._apply_lower_splitter_minimums()
+
+    def _apply_chunk_action_top_margin(self) -> None:
+        """
+        @brief      Align the chunk action column with the content area inside the Chunk List frame.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-16
+        @version    0.1.1
+        """
+        if not hasattr(self, "_chunk_actions_column_layout"):
+            return
+        self._chunk_actions_column_layout.setContentsMargins(0, _CHUNK_ACTION_TOP_MARGIN_PX, 0, 0)
 
     def set_project_active(self, is_active: bool) -> None:
         """
@@ -310,7 +334,7 @@ class SpeechBlocksPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-24
-        @version    0.3.0
+        @version    0.4.0
         """
         _ = selected_source_language
         _ = approved_block_count
@@ -328,7 +352,7 @@ class SpeechBlocksPage(QWidget):
         self._can_resplit_selected = can_resplit_selected
         self._selected_text_character_limit = max(0, int(selected_text_character_limit))
         current_block_id = self._current_block_id
-        current_source_scroll_position = self._source_text_edit.verticalScrollBar().value()
+        current_review_position = self.review_position()
         self._editing = False
         self._populate_selectors()
         if selected_profile_id is not None:
@@ -340,7 +364,7 @@ class SpeechBlocksPage(QWidget):
         block_count_by_chunk = _block_count_by_chunk(self._speech_blocks)
         for source_chunk in self._source_chunks:
             self._chunk_list.addItem(_format_chunk_list_item(source_chunk, block_count_by_chunk))
-        self._notes_edit.setPlainText("\n".join(notes))
+        self._status_edit.setPlainText("\n".join(notes))
         if self._source_chunks:
             selected_row = 0
             if current_chunk_id is not None:
@@ -350,7 +374,7 @@ class SpeechBlocksPage(QWidget):
                         break
             self._chunk_list.setCurrentRow(selected_row)
             self._select_block_by_id(current_block_id)
-            self.restore_source_scroll_position(current_source_scroll_position)
+            self.restore_review_position(current_review_position)
         else:
             self._show_selected_chunk(-1)
         self._apply_control_state()
@@ -426,6 +450,23 @@ class SpeechBlocksPage(QWidget):
         """
         return int(self._source_text_edit.verticalScrollBar().value())
 
+    def review_position(self) -> dict[str, object]:
+        """
+        @brief      Return the current Speech Blocks review selection and scroll positions.
+        @return     Review-position payload suitable for later restoration.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-16
+        @version    0.1.0
+        """
+        return {
+            "chunk_id": self.selected_chunk_id(),
+            "block_id": self.selected_block_id(),
+            "source_scroll": self.source_scroll_position(),
+            "chunk_list_scroll": int(self._chunk_list.verticalScrollBar().value()),
+            "block_list_scroll": int(self._speech_block_list.verticalScrollBar().value()),
+        }
+
     def replacement_block_id_after_delete(self, speech_block_id: str) -> str | None:
         """
         @brief      Return the block that should be selected after deleting one visible Speech Block.
@@ -461,6 +502,39 @@ class SpeechBlocksPage(QWidget):
         """
         self._restore_source_scroll_position(scroll_position)
         QTimer.singleShot(0, lambda: self._restore_source_scroll_position(scroll_position))
+
+    def restore_review_position(self, review_position: dict[str, object]) -> None:
+        """
+        @brief      Restore the Speech Blocks review selection and scroll positions.
+        @param[in]  review_position Payload returned by `review_position`.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-16
+        @version    0.1.0
+        """
+        block_id = str(review_position.get("block_id", "") or "").strip()
+        chunk_id = str(review_position.get("chunk_id", "") or "").strip()
+        if block_id:
+            self.select_speech_block(block_id)
+        elif chunk_id:
+            self._select_chunk_by_id(chunk_id)
+        source_scroll_position = int(review_position.get("source_scroll", 0) or 0)
+        chunk_list_scroll_position = int(review_position.get("chunk_list_scroll", 0) or 0)
+        block_list_scroll_position = int(review_position.get("block_list_scroll", 0) or 0)
+        self._restore_review_scroll_positions(
+            source_scroll_position,
+            chunk_list_scroll_position,
+            block_list_scroll_position,
+        )
+        QTimer.singleShot(
+            0,
+            lambda: self._restore_review_scroll_positions(
+                source_scroll_position,
+                chunk_list_scroll_position,
+                block_list_scroll_position,
+            ),
+        )
 
     def advance_to_next_block(self) -> None:
         """
@@ -525,7 +599,7 @@ class SpeechBlocksPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-24
-        @version    0.4.0
+        @version    0.4.2
         """
         self._current_language = language
         self._title_label.setText(f"<h2>{ui_state_service.translate('speech_blocks.title', language)}</h2>")
@@ -550,9 +624,10 @@ class SpeechBlocksPage(QWidget):
         self._selected_audio_playback_button.setText(
             ui_state_service.translate(self._selected_audio_playback_label_key(), language)
         )
-        self._notes_group.setTitle(ui_state_service.translate("speech_blocks.notes_group", language))
+        self._status_group.setTitle(ui_state_service.translate("speech_blocks.status_group", language))
         if self._profile_combo.count() > 0 and self._profile_combo.itemData(0) in (None, ""):
             self._profile_combo.setItemText(0, ui_state_service.translate("ai_settings.none", language))
+        self._apply_chunk_action_top_margin()
         current_row = self._speech_block_list.currentRow()
         if current_row >= 0:
             self._show_selected_block(current_row)
@@ -594,7 +669,7 @@ class SpeechBlocksPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-24
-        @version    0.6.0
+        @version    0.6.1
         """
         selected_block = self._current_display_block()
         generated_all_chunks = (
@@ -625,9 +700,7 @@ class SpeechBlocksPage(QWidget):
             and bool(selected_block.get("audio_can_play", False))
             and not self._editing
         )
-        can_insert_block = (
-            self._project_active and not self._busy and bool(self._speech_blocks) and self._current_chunk_id is not None
-        )
+        can_insert_block = self._project_active and not self._busy and self._current_chunk_id is not None
         self._profile_combo.setEnabled(self._project_active and not self._busy)
         self._generate_button.setEnabled(can_generate)
         self._reset_generation_button.setEnabled(self._project_active and not self._busy and self._can_reset)
@@ -966,6 +1039,22 @@ class SpeechBlocksPage(QWidget):
                 self._speech_block_list.setCurrentRow(index)
                 return
 
+    def _select_chunk_by_id(self, chunk_id: str) -> None:
+        """
+        @brief      Restore one source-chunk selection in the chunk list.
+        @param[in]  chunk_id Source chunk identifier to restore.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-16
+        @version    0.1.0
+        """
+        normalized_id = str(chunk_id).strip()
+        for index, chunk in enumerate(self._source_chunks):
+            if str(chunk.get("chunk_id", "")).strip() == normalized_id:
+                self._chunk_list.setCurrentRow(index)
+                return
+
     def _restore_source_scroll_position(self, scroll_position: int) -> None:
         """
         @brief      Restore the selected-chunk text vertical scroll position after refresh.
@@ -978,6 +1067,42 @@ class SpeechBlocksPage(QWidget):
         """
         scroll_bar = self._source_text_edit.verticalScrollBar()
         bounded_position = max(scroll_bar.minimum(), min(scroll_position, scroll_bar.maximum()))
+        scroll_bar.setValue(bounded_position)
+
+    def _restore_review_scroll_positions(
+        self,
+        source_scroll_position: int,
+        chunk_list_scroll_position: int,
+        block_list_scroll_position: int,
+    ) -> None:
+        """
+        @brief      Restore all Speech Blocks review scroll positions after a refresh.
+        @param[in]  source_scroll_position Selected-chunk text scroll value.
+        @param[in]  chunk_list_scroll_position Chunk-list scroll value.
+        @param[in]  block_list_scroll_position Speech-block-list scroll value.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-16
+        @version    0.1.0
+        """
+        self._restore_source_scroll_position(source_scroll_position)
+        self._restore_scroll_bar_position(self._chunk_list.verticalScrollBar(), chunk_list_scroll_position)
+        self._restore_scroll_bar_position(self._speech_block_list.verticalScrollBar(), block_list_scroll_position)
+
+    @staticmethod
+    def _restore_scroll_bar_position(scroll_bar, scroll_position: int) -> None:
+        """
+        @brief      Restore one scrollbar within its current bounds.
+        @param[in]  scroll_bar Scrollbar to update.
+        @param[in]  scroll_position Requested scroll position.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-16
+        @version    0.1.0
+        """
+        bounded_position = max(scroll_bar.minimum(), min(int(scroll_position), scroll_bar.maximum()))
         scroll_bar.setValue(bounded_position)
 
     def _selected_audio_playback_label_key(self) -> str:

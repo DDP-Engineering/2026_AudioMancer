@@ -13,7 +13,7 @@
          signaling, and evidence preview behavior for discovered characters.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-08
-@version 0.7.0
+@version 0.8.6
 """
 
 # IMPORTS
@@ -32,7 +32,7 @@ def test_characters_page_fields_are_read_only_by_default(qtbot) -> None:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-02
-    @version    0.1.0
+    @version    0.5.0
     """
     page = _build_page(qtbot)
 
@@ -41,6 +41,45 @@ def test_characters_page_fields_are_read_only_by_default(qtbot) -> None:
     assert page._canonical_name_edit.isReadOnly() is True
     assert page._age_hint_edit.isReadOnly() is True
     assert page._voice_definition_prompt_edit.isReadOnly() is True
+    assert page._gender_hint_edit.parentWidget() == page._gender_age_row_widget
+    assert page._age_hint_edit.parentWidget() == page._gender_age_row_widget
+    assert page._list_group.minimumHeight() == page._list_group.maximumHeight()
+    assert page._list_group.minimumHeight() > page._character_actions_widget.sizeHint().height()
+    assert hasattr(page, "_summary_label") is False
+    assert page._evidence_splitter.orientation() == Qt.Orientation.Vertical
+    assert page._evidence_splitter.count() == 2
+    assert page._status_group.title() == "Character Discovery Status"
+    assert page._status_edit.toPlainText() == "Completed."
+
+
+def test_characters_page_evidence_splitter_keeps_twenty_percent_minimums(qtbot) -> None:
+    """
+    @brief      Verify Evidence list and preview keep a twenty-percent splitter minimum.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-16
+    @version    0.2.0
+    """
+    page = _build_page(qtbot)
+
+    page._evidence_splitter.resize(320, 500)
+    page._apply_evidence_splitter_minimums()
+
+    assert page._evidence_list.minimumHeight() == 100
+    assert page._evidence_preview.minimumHeight() == 100
+
+    page._evidence_splitter.setSizes([1, 499])
+    page._clamp_evidence_splitter_sizes()
+    top_size, bottom_size = page._evidence_splitter.sizes()
+
+    assert top_size >= (top_size + bottom_size) // 5
+
+    page._evidence_splitter.setSizes([499, 1])
+    page._clamp_evidence_splitter_sizes()
+    top_size, bottom_size = page._evidence_splitter.sizes()
+
+    assert bottom_size >= (top_size + bottom_size) // 5
 
 
 def test_characters_page_edit_mode_enables_save_after_change(qtbot) -> None:

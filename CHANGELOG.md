@@ -10,6 +10,84 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+No notable changes yet.
+
+## [1.1.0] - 2026-05-16
+
+### Added
+
+- Character Discovery now shows a dedicated bottom `Character Discovery Status`
+  window, matching the workflow status pattern used by AI Translation.
+- Character Discovery Evidence now uses a vertical splitter between the
+  evidence list and source preview, with each pane clamped to at least 20% of
+  the available Evidence height.
+- Home exports now include ZIP archive rows for Narator Voice samples,
+  Character Voices samples, and Audio Assembly outputs. Voice archives include
+  each available WAV sample plus a companion text file with the voice definition
+  and preview text; Audio Assembly archives include generated WAV outputs plus a
+  manifest with composition settings, file list, duration, and size details.
+
+### Changed
+
+- Workflow pages now label operator progress panels as `Status` instead of
+  `Notes` where the panel reports pipeline state.
+- Character Discovery removes the duplicated summary line under the page title
+  because the same details are now shown in the status window.
+- Character Discovery places `Age Hint` on the same row as `Gender Hint` and
+  sizes the Character List panel to the action-button stack so the Character
+  Profile area has more usable vertical space, including with larger UI fonts.
+- AI Translation now keeps the `Start Translation`, `Reset Translation`, and
+  `Approve All` actions inside the `Chunk List` frame so the button column
+  aligns with the list window.
+- Home export rows now use the same fixed row height as Workflow Progress rows,
+  including blank rows, so export buttons stay aligned with their operation.
+- Speech Blocks now allows manual `Insert` on any selected source chunk before
+  AI-generated speech blocks exist, enables `Delete` whenever a block is
+  selected, and initializes or clears the Speech Blocks report/state so both the
+  Speech Blocks page and Home workflow status reflect manual-only edits.
+- Speech Blocks manual `Insert` now adds the new block after the selected block,
+  or creates/appends the block when nothing is selected in the current chunk,
+  matching manual top-to-bottom authoring.
+- Character Voices now synchronizes its compact `project.json` operation
+  summary whenever readiness changes, so the Home workflow row shows completed
+  when the selected narrator sample and every character sample are present.
+  Project-open metadata repair now recognizes current Character Voices artifacts
+  where narrator sample data lives in `narator_sample.json`.
+- Speech Blocks now preserves the selected chunk, selected Speech Block, and
+  review-list scroll positions after the selected `Generate Audio` action
+  refreshes Audio Blocks and Audio Assembly state.
+- Speech Blocks now uses a tighter top offset for the chunk action button
+  column so the `Insert`, `Delete`, edit, approval, audio generation, and
+  playback actions sit closer to the Chunk List content line.
+- Audio Blocks now measures generated WAV files when building the Speech Blocks
+  list, so manually generated speech-block audio shows its duration instead of
+  the unknown-duration placeholder.
+- Audio Blocks now refreshes the compact Home workflow progress summary at each
+  persisted generation checkpoint, including selected/manual generation from
+  the Speech Blocks page.
+
+## [1.0.16] - 2026-05-16
+
+### Changed
+
+- Narator Voice now uses only the current custom-profile model by removing old
+  default/preset/protected-profile compatibility paths and their dead API
+  wrappers.
+- Character Voices now uses only the current read-only project voice-language
+  model, drops obsolete `sample_mode` and `source_profile_id` target fields,
+  and removes dead selected-language reset helpers so character preview text is
+  preserved until explicitly edited.
+- Speech Blocks now drops older `chunk_sequence_index` global-sequence schema
+  compatibility, removes dead inserted-block and chunk-audio confirmation
+  helpers, and no longer resumes from `metadata["source_chunks"]` length.
+- Audio Blocks now requires current `narator_sample.json` selected narrator
+  metadata, drops older `chunk_sequence_index` global-sequence compatibility,
+  and removes dead chunk-level audio inspection and rerun-confirmation helpers.
+- Audio Assembly now drops write-only resume metadata, requires non-default
+  persisted state to carry the current input fingerprint, uses only current
+  `pause_duration_ms` metadata for pause silence, and resolves playback output
+  paths through the safe project-relative resolver.
+
 ## [1.0.15] - 2026-05-15
 
 ### Added
@@ -28,6 +106,19 @@ All notable changes to this project will be documented in this file.
 
 - Character dossiers and Character Voices synchronization now carry the new
   age handoff contract alongside sex/gender guidance.
+- AI-assisted Text Cleanup now requires the current
+  `artifact_type`/`action`/`confidence` JSON result schema and no longer treats
+  legacy label-only cleanup items as valid removal instructions.
+- AI-assisted Text Chunking now resumes only from current-version checkpoints
+  with `completed_unit_count`; older checkpoint fallback by last unit id or
+  window/budget inference was removed.
+- AI Translation now uses only the current `approved` review-complete stage and
+  no longer normalizes older `completed` report stages or passive pass-through
+  artifacts.
+- Character Discovery now requires current-version resume checkpoints with
+  `next_discovery_start_chunk_index`, uses only canonical chunk input metadata,
+  and no longer accepts legacy discovery-window `name`, `gender_hint`, or
+  `voice_definition_prompt` fields.
 - Runtime UI translation coverage now includes the new AI Settings and TTS
   Settings `OK` labels.
 
