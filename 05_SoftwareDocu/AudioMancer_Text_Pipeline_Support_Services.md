@@ -24,7 +24,8 @@ or TTS-sized units, and shape chunking/Speech Blocks operation reports.
 
 ## 2. Responsibilities
 
-- build and persist cleaned-text paragraph metadata with stable paragraph IDs
+- build and persist cleaned-text paragraph structure/provenance with stable
+  paragraph IDs and no duplicated paragraph text
 - classify text lines, scripts, language hints, chapter labels, sentence
   endings, and dialogue line breaks
 - produce deterministic one-paragraph chunk artifacts for local chunking
@@ -52,9 +53,10 @@ Main public entrypoints:
 - `speech_blocks_text_split_service.split_text_for_ai_context_budget(...)`
 - `speech_blocks_text_split_service.tts_budget_unit_count(...)`
 
-The deterministic path consumes cleaned text and paragraph metadata, writes
-ordered chunk JSON, and persists operation state/report files. The AI path uses
-the same paragraph metadata but asks the configured model for safe break
+The deterministic path consumes cleaned text and compact paragraph metadata,
+reconstructs paragraph text from `clean_text.txt`, writes ordered chunk JSON,
+and persists operation state/report files. The AI path uses the same paragraph
+metadata but asks the configured model for safe break
 positions, appends optional operator-supplied chunking rules to each prompt,
 then commits only valid break IDs and writes AI transaction logs.
 
@@ -97,8 +99,12 @@ Outputs:
 
 ## 6. Data Contracts
 
-Cleanup metadata records preserve paragraph ordering, paragraph IDs, source page
-numbers where available, warnings, and timestamps.
+Cleanup metadata records preserve paragraph ordering, paragraph IDs,
+`source_start_line`/`source_end_line` spans in canonical `clean_text.txt`,
+source page numbers where available, warnings, and timestamps. They do not
+persist paragraph `text`; `cleanup_metadata_service.load_or_build_paragraph_records(...)`
+adds text back at runtime by slicing `clean_text.txt` with the stored line
+spans.
 
 Chunk payloads keep stable `chunk_id` values, source paragraph references,
 chapter labels, sequence indexes, and text content. AI chunking persists token

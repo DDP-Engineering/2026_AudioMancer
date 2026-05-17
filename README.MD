@@ -26,7 +26,7 @@ AudioMancer.
 ## Current Implementation
 
 `04_Software/AudioMancer/` contains the Python 3.12/PySide6 desktop
-application. The current package version is `1.1.0`.
+application. The current package version is `1.1.1`.
 
 AudioMancer supports a reviewed audiobook-preparation workflow that includes:
 

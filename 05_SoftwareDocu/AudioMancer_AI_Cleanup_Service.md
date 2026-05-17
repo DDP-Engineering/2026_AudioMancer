@@ -37,7 +37,9 @@ per-run AI transaction log.
 - retry transient provider failures conservatively
 - normalize model JSON output before parsing and attempt one conservative
   malformed-JSON repair pass when the assistant content is not valid JSON
-- persist `clean_text.txt`, `cleanup_report.json`, and `cleanup_state.json`
+- persist canonical `clean_text.txt`, structure-only
+  `clean_text_metadata.json`, `cleanup_report.json`, and
+  `cleanup_state.json`
 - append project-local AI transaction records to
   `log_ai_cleanup_<timestamp>.log`
 - allow the operator to manually edit and save the shared cleaned-text output
@@ -94,9 +96,13 @@ High-level flow:
    schema, ignores legacy label-only cleanup intent, preserves `keep` decisions
    and low-confidence removals conservatively, removes only high-confidence or
    medium-confidence removable artifacts, rebuilds the cleaned text, writes the
-   shared cleanup artifacts, and stores `mode="ai_assisted"` in the cleanup
-   operation state.
-8. On success, the shell advances the workflow stage to `text_chunking_ready`.
+   shared cleanup artifacts, stores `mode="ai_assisted"` in the cleanup
+   operation state, and syncs the compact cleanup summary into
+   `project.json.operations.cleanup` during running, cancelled, and completed
+   transitions.
+8. On success, the service advances the workflow stage to
+   `text_chunking_ready` and persists the detected original language in
+   `project.json`.
 9. Manual edits to the cleaned text require a downstream impact confirmation
    before the editor unlocks, then save back to `clean_text.txt` and reset
    downstream workflow state from chunking onward while preserving the
@@ -128,6 +134,7 @@ Inputs:
 Outputs:
 
 - `clean_text.txt`
+- `clean_text_metadata.json`
 - `cleanup_report.json`
 - `cleanup_state.json`
 - `log_ai_cleanup_<timestamp>.log`
@@ -173,6 +180,13 @@ Current AI cleanup operation-state invariants:
 - `resume_checkpoint` stores `completed_window_count`,
   `total_window_count`, `input_fingerprint`, concrete `model_settings`, and
   accumulated unit classifications plus the additional-instruction fingerprint
+- incomplete running or cancelled state keeps the classifications, input
+  fingerprint, model settings, additional-instruction fingerprint, token
+  usage, warning details, and AI log path needed to continue
+- completed state removes resume-only classifications by writing
+  `resume_checkpoint: null`; final model settings, token usage, warning
+  details, and AI log path remain in `cleanup_report.json` and operation
+  metadata
 - resume identity is based on the extracted-text fingerprint, stored
   additional-instruction fingerprint, and stored unit classifications, not the
   earlier profile id; if the operator selects another enabled model/profile
@@ -180,6 +194,9 @@ Current AI cleanup operation-state invariants:
   temperature, context window, and output-token budget with the original
   operator-supplied cleanup rules
 - `metadata.ai_log_relative_path` points to the per-run AI transaction log
+- `clean_text_metadata.json` stores paragraph order, ids, line spans,
+  page-break flags, and warning flags only; it does not persist paragraph
+  `text`, which downstream readers rebuild from canonical `clean_text.txt`
 
 Current AI transaction log behavior:
 

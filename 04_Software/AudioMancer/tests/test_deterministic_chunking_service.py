@@ -13,7 +13,7 @@
          metadata, and resumable cancellation state for deterministic chunking.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-11
-@version 0.2.0
+@version 0.2.1
 """
 
 # IMPORTS
@@ -34,7 +34,7 @@ def test_chunking_writes_runtime_artifacts_and_detects_chapters(tmp_path) -> Non
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-07
-    @version    0.1.0
+    @version    0.2.0
     """
     project_root, manifest = project_workspace_service.create_project("ChunkProject", tmp_path)
     source_path = project_root / "story.pdf"
@@ -138,7 +138,6 @@ def test_chunking_prefers_cleanup_metadata_paragraph_records(tmp_path) -> None:
                 "paragraphs": [
                     {
                         "paragraph_id": "paragraph-0001",
-                        "text": "Split by visible text.\n\nBut metadata says one unit.",
                         "source_start_line": 1,
                         "source_end_line": 3,
                         "source_page_start": 1,

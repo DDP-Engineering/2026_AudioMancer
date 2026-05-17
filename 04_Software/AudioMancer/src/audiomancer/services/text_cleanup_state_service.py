@@ -14,12 +14,13 @@
          including manual cleaned-text edits.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-24
-@version 0.11.1
+@version 0.12.0
 """
 
 # IMPORTS
 
 from collections.abc import Iterable
+import json
 from pathlib import Path
 
 from audiomancer import config
@@ -33,6 +34,7 @@ from audiomancer.services import (
     text_extraction_service,
     ui_state_service,
 )
+from audiomancer.services.time_service import utc_now_iso as _utc_now_iso
 
 # PUBLIC API
 
@@ -142,13 +144,17 @@ def save_cleaned_text_edit(project_root: Path, manifest: dict[str, object], clea
     @exception  ValueError Raised when the cleaned text artifact does not exist yet.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-24
-    @version    0.3.1
+    @version    0.4.0
     """
     cleaned_text_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.CLEANED_TEXT_FILE_NAME
     if not cleaned_text_path.is_file():
         raise ValueError("No cleaned text is available to edit.")
     cleaned_text_path.write_text(cleaned_text, encoding="utf-8")
-    cleanup_metadata_service.write_minimal_cleanup_metadata(project_root, cleaned_text, "manual_edit")
+    metadata_payload = cleanup_metadata_service.write_minimal_cleanup_metadata(
+        project_root,
+        cleaned_text,
+        "manual_edit",
+    )
     operation_runtime_service.reset_operation_data(
         project_root,
         "cleanup",
@@ -158,7 +164,13 @@ def save_cleaned_text_edit(project_root: Path, manifest: dict[str, object], clea
     )
     updated_manifest = build_manifest_after_cleanup_edit(manifest)
     project_workspace_service.save_manifest(updated_manifest, project_root)
-    return updated_manifest
+    manual_state = _write_manual_cleanup_state(project_root, updated_manifest, metadata_payload)
+    return project_workspace_service.sync_manifest_operation_summary(
+        project_root,
+        "cleanup",
+        manual_state,
+        current_stage="text_cleanup_ready",
+    )
 
 
 def build_manifest_after_cleanup_edit(manifest: dict[str, object]) -> dict[str, object]:
@@ -203,7 +215,7 @@ def build_text_cleanup_notes(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.2.0
+    @version    0.2.1
     """
     notes: list[str] = []
     if home_presenter_service.source_document_name(manifest) is None:
@@ -317,7 +329,7 @@ def build_text_cleanup_notes(
             notes.append(ui_state_service.translate(rerun_key, language))
         return notes
 
-    if cleanup_status in {"running", "failed"}:
+    if cleanup_status in {"running", "failed", "cancelled"}:
         progress_current = (
             0
             if not isinstance(cleanup_operation_state, dict)
@@ -501,6 +513,78 @@ def read_optional_project_text(
     if not artifact_path.is_file():
         return None
     return artifact_path.read_text(encoding="utf-8")
+
+
+def _write_manual_cleanup_state(
+    project_root: Path,
+    manifest: dict[str, object],
+    metadata_payload: dict[str, object],
+) -> dict[str, object]:
+    """
+    @brief      Persist compact cleanup operation state for one manual cleaned-text edit.
+    @param[in]  project_root Active project root folder.
+    @param[in]  manifest Manifest payload after the edit reset.
+    @param[in]  metadata_payload Newly persisted cleanup metadata payload.
+    @return     Persisted operation-state payload.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-17
+    @version    0.1.0
+    """
+    cleaned_text_path = operation_runtime_service.build_operation_output_path(
+        project_root,
+        "cleanup",
+        config.CLEANED_TEXT_FILE_NAME,
+    )
+    metadata_path = cleanup_metadata_service.cleanup_metadata_path(project_root)
+    state_path = operation_runtime_service.build_operation_output_path(
+        project_root,
+        "cleanup",
+        config.CLEANUP_STATE_FILE_NAME,
+    )
+    report_path = operation_runtime_service.build_operation_output_path(
+        project_root,
+        "cleanup",
+        config.CLEANUP_REPORT_FILE_NAME,
+    )
+    input_paths = []
+    extracted_relative_path = manifest.get("extracted_text_relative_path")
+    if isinstance(extracted_relative_path, str) and extracted_relative_path.strip():
+        input_paths.append(extracted_relative_path)
+    output_paths = []
+    if cleaned_text_path.is_file():
+        output_paths.append(operation_runtime_service.relative_to_project(project_root, cleaned_text_path))
+    if metadata_path.is_file():
+        output_paths.append(operation_runtime_service.relative_to_project(project_root, metadata_path))
+    artifact_paths = (
+        [operation_runtime_service.relative_to_project(project_root, report_path)] if report_path.is_file() else []
+    )
+    paragraph_count = int(metadata_payload.get("paragraph_count", 0) or 0)
+    timestamp = _utc_now_iso()
+    state_payload = operation_runtime_service.build_operation_state_payload(
+        status="completed",
+        input_paths=input_paths,
+        output_paths=output_paths,
+        artifact_paths=artifact_paths,
+        progress_current=paragraph_count,
+        progress_total=paragraph_count,
+        mode="manual_edit",
+        started_at=timestamp,
+        completed_at=timestamp,
+        warning_count=0,
+        metadata={
+            "warnings": [],
+            "detected_language": manifest.get("original_language"),
+            "paragraph_count": paragraph_count,
+            "detected_chapter_count": None,
+        },
+        resume_checkpoint=None,
+    )
+    state_path.write_text(
+        json.dumps(state_payload, indent=2, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
+    return state_payload
 
 
 def _stage_after_operation_reset(operation_kind: str) -> str:

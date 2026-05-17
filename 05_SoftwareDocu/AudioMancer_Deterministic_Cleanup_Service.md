@@ -32,7 +32,8 @@ self-contained cleanup artifacts at the active project root.
   chunking with localized chapter/scene/part labels for the configured
   translation-language set
 - persist cleanup output as `clean_text.txt`
-- persist page-break-aware paragraph metadata as `clean_text_metadata.json`
+- persist page-break-aware paragraph structure/provenance as
+  `clean_text_metadata.json` without duplicating paragraph text
 - persist cleanup metadata as `cleanup_report.json`
 - persist resumable operation state as `cleanup_state.json`
 - allow the operator to manually edit and save the persisted cleaned text from
@@ -74,15 +75,18 @@ High-level flow:
    numbers and ornamental separator lines, heals false blank-line paragraph
    splits with script-aware continuation rules plus language-agnostic page-break
    continuation cues, rebuilds cleaned paragraphs, records paragraph provenance
-   in `clean_text_metadata.json`, and updates `cleanup_state.json` after each
-   processed page.
-6. On success, the shell stores the completed cleanup operation state in
-   `project.json` and advances the workflow stage to `text_chunking_ready`.
+   in `clean_text_metadata.json`, writes partial `clean_text.txt`, updates
+   `cleanup_state.json` after each processed page, and syncs the compact
+   cleanup summary into `project.json.operations.cleanup`.
+6. On success, the service stores completed cleanup state in `project.json`,
+   advances the workflow stage to `text_chunking_ready`, and persists the
+   detected original language.
 7. After cleanup output exists, the operator can press `Edit` under the cleaned
    text preview, confirm the downstream impact prompt, change the text, and
    press `Save`; the page writes
   `clean_text.txt`, regenerates minimal cleaned-text metadata, resets
-  downstream workflow data, and preserves the extracted-text preview scroll
+  downstream workflow data, refreshes the compact cleanup summary as
+  `mode="manual_edit"`, and preserves the extracted-text preview scroll
   position.
 
 ## 4. Dependencies
@@ -158,6 +162,24 @@ Current cleanup operation-state fields:
 - `metadata`
 - `resume_checkpoint`
 
+Current cleaned-text metadata fields:
+
+- `schema_version`
+- `cleanup_mode`
+- `input_relative_path`
+- `cleaned_text_relative_path`
+- `created_at`
+- `paragraph_count`
+- `page_break_repair_count`
+- `weak_boundary_count`
+- `paragraphs`
+
+Each paragraph record stores paragraph id, cleaned-text line span, optional
+source page span, page-break flags, boundary confidence, and warning flags.
+Paragraph records do not persist a `text` key. Downstream readers reconstruct
+the paragraph text from canonical `clean_text.txt` using `source_start_line`
+and `source_end_line`.
+
 Current deterministic cleanup invariants:
 
 - cleanup primary file names are defined centrally in
@@ -173,17 +195,22 @@ Current deterministic cleanup invariants:
   punctuation and continuation rules strongly indicate a false paragraph break
 - page-break boundaries are preserved as paragraph metadata so deterministic
   and AI chunking can prefer cleanup paragraph records over ad-hoc blank-line
-  splitting
+  splitting while still reading paragraph text from `clean_text.txt`
 - cross-page joins are marked with `boundary_confidence` value `repaired`;
   preserved first paragraphs after page breaks are marked `weak` when their
   boundary is low confidence
 - deterministic cleanup is format-independent after extraction; it is strongest
   for sources such as PDFs where extraction preserved page boundaries
-- interrupted cleanup leaves resumable state instead of deleting partial
-  output
+- interrupted cleanup leaves partial `clean_text.txt`, deterministic
+  `metadata.cleaned_pages`, counters, and `resume_checkpoint.next_page_index`
+  in `cleanup_state.json`; cancelled runs also sync `status="cancelled"` into
+  `project.json`
+- completed cleanup removes resume-only `cleaned_pages` and persists
+  `resume_checkpoint: null`
 - manual cleaned-text edits preserve the cleanup operation artifacts but reset
   chunking, translation, character discovery, voice, Speech Blocks, Audio
-  Blocks, and Audio Assembly state
+  Blocks, and Audio Assembly state, then write a compact completed
+  `manual_edit` cleanup state
 
 ## 7. Workflow Integration
 
@@ -196,7 +223,7 @@ Upstream:
 Downstream:
 
 - deterministic and AI chunking consume `clean_text_metadata.json` when present
-  and fall back to `clean_text.txt` for older projects
+  and reconstruct paragraph text from canonical `clean_text.txt`
 - confirmed cleanup reruns reset chunking, translation, character discovery,
   narrator, character voice, speech-block, audio-block, and audio-assembly
   runtime artifacts
@@ -262,6 +289,6 @@ Minimum validation after a change:
   multi-operation queue or scheduler
 - page-boundary-aware cleanup depends on extraction preserving page separators
   in the extracted output
-- interruption resume currently restores page progress conservatively but does
-  not persist richer semantic cleanup checkpoints
+- interruption resume restores page progress from deterministic resume data
+  without keeping duplicated paragraph text in metadata
 - AI-assisted cleanup is still out of scope for this component

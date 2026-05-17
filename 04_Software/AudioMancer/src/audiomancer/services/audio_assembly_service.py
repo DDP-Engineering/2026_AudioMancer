@@ -14,7 +14,7 @@
          generation through root-level state and report artifacts.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-25
-@version 0.5.2
+@version 0.5.3
 """
 
 # IMPORTS
@@ -395,12 +395,12 @@ def _load_approved_audio_blocks(project_root: Path) -> list[dict[str, object]]:
     @exception  ValueError Raised when prerequisites are not satisfied.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.2.0
+    @version    0.3.0
     """
     audio_blocks = speech_blocks_service.sort_speech_blocks(audio_blocks_service.load_audio_blocks(project_root))
     if not audio_blocks:
         raise ValueError("Generate and approve Audio Blocks before running Audio Assembly.")
-    unapproved = [block for block in audio_blocks if not bool(block.get("approved", False))]
+    unapproved = [block for block in audio_blocks if not audio_blocks_service.is_approved(block)]
     if unapproved:
         raise ValueError("Approve every generated Audio Block before running Audio Assembly.")
     playable_blocks = [block for block in audio_blocks if not bool(block.get("metadata_only", False))]

@@ -30,6 +30,7 @@ from audiomancer import config
 from audiomancer.services import cleanup_metadata_service, cleanup_text_analysis_service, project_workspace_service
 from audiomancer.services.logging_service import get_component_logger, trace_function
 from audiomancer.services.operation_runtime_service import (
+    OperationCancelledError,
     build_operation_output_path,
     build_operation_state_payload,
     emit_progress_update,
@@ -99,7 +100,7 @@ def clean_text(
     @exception  OperationCancelledError Raised when the operator cancels the run.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.3.3
+    @version    0.3.4
     """
     resolved_project_root = Path(project_root)
     source_document = manifest.get("source_document")
@@ -187,38 +188,59 @@ def clean_text(
         message="Deterministic cleanup in progress...",
     )
 
-    for page_index in range(start_page_index, progress_total):
-        raise_if_cancelled(cancel_requested)
-        page_paragraphs, current_lines, page_number_removed_count, separator_removed_count = _build_page_paragraphs(
-            cleaned_pages[page_index],
-            cleaned_pages[page_index + 1] if page_index + 1 < len(cleaned_pages) else None,
-            current_lines,
-            page_index,
-        )
-        removed_page_number_count += page_number_removed_count
-        removed_separator_count += separator_removed_count
-        paragraph_records.extend(page_paragraphs)
-        _write_partial_output(output_path, [str(record["text"]) for record in paragraph_records], current_lines)
+    last_progress_current = start_page_index
+    try:
+        for page_index in range(start_page_index, progress_total):
+            raise_if_cancelled(cancel_requested)
+            page_paragraphs, current_lines, page_number_removed_count, separator_removed_count = _build_page_paragraphs(
+                cleaned_pages[page_index],
+                cleaned_pages[page_index + 1] if page_index + 1 < len(cleaned_pages) else None,
+                current_lines,
+                page_index,
+            )
+            removed_page_number_count += page_number_removed_count
+            removed_separator_count += separator_removed_count
+            paragraph_records.extend(page_paragraphs)
+            _write_partial_output(output_path, [str(record["text"]) for record in paragraph_records], current_lines)
+            last_progress_current = page_index + 1
+            _write_running_state(
+                state_path,
+                resolved_project_root,
+                input_snapshot_path,
+                output_path,
+                started_at,
+                last_progress_current,
+                progress_total,
+                warnings,
+                cleaned_pages,
+                removed_header_footer_count,
+                removed_page_number_count,
+                removed_separator_count,
+            )
+            _emit_progress(
+                progress_callback,
+                progress_current=last_progress_current,
+                progress_total=progress_total,
+                message="Deterministic cleanup in progress...",
+            )
+    except OperationCancelledError:
         _write_running_state(
             state_path,
             resolved_project_root,
             input_snapshot_path,
             output_path,
             started_at,
-            page_index + 1,
+            last_progress_current,
             progress_total,
             warnings,
             cleaned_pages,
             removed_header_footer_count,
             removed_page_number_count,
             removed_separator_count,
+            status="cancelled",
+            completed_at=_utc_now_iso(),
         )
-        _emit_progress(
-            progress_callback,
-            progress_current=page_index + 1,
-            progress_total=progress_total,
-            message="Deterministic cleanup in progress...",
-        )
+        raise
 
     if current_lines:
         paragraph_records.append(_build_paragraph_record(current_lines))
@@ -387,6 +409,8 @@ def _write_running_state(
     removed_header_footer_count: int,
     removed_page_number_count: int,
     removed_separator_count: int,
+    status: str = "running",
+    completed_at: str | None = None,
 ) -> None:
     """
     @brief      Write the running state.
@@ -402,10 +426,12 @@ def _write_running_state(
     @param[in]  removed_header_footer_count Value for `removed_header_footer_count`.
     @param[in]  removed_page_number_count Value for `removed_page_number_count`.
     @param[in]  removed_separator_count Value for `removed_separator_count`.
+    @param[in]  status Operation status token.
+    @param[in]  completed_at Optional completion timestamp for terminal incomplete states.
     @return     None.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.1.0
+    @version    0.2.0
     """
     running_state = _build_operation_state(
         project_root,
@@ -413,11 +439,11 @@ def _write_running_state(
         output_path=output_path,
         report_path=None,
         metadata_path=None,
-        status="running",
+        status=status,
         progress_current=progress_current,
         progress_total=progress_total,
         started_at=started_at,
-        completed_at=None,
+        completed_at=completed_at,
         warnings=warnings,
         cleaned_pages=cleaned_pages,
         removed_header_footer_count=removed_header_footer_count,
@@ -432,6 +458,7 @@ def _write_running_state(
         json.dumps(running_state, indent=2, ensure_ascii=False) + "\n",
         encoding="utf-8",
     )
+    project_workspace_service.sync_manifest_operation_summary(project_root, "cleanup", running_state)
 
 
 def _build_operation_state(
@@ -478,7 +505,7 @@ def _build_operation_state(
     @return     Derived helper result.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.1.0
+    @version    0.2.0
     """
     artifact_paths: list[str] = []
     if report_path is not None and report_path.is_file():
@@ -486,6 +513,17 @@ def _build_operation_state(
     output_paths = [relative_to_project(project_root, output_path)] if output_path.is_file() else []
     if metadata_path is not None and metadata_path.is_file():
         output_paths.append(relative_to_project(project_root, metadata_path))
+    metadata = {
+        "warnings": list(warnings),
+        "removed_header_footer_line_count": removed_header_footer_count,
+        "removed_page_number_line_count": removed_page_number_count,
+        "removed_separator_line_count": removed_separator_count,
+        "detected_language": detected_language,
+        "paragraph_count": paragraph_count,
+        "detected_chapter_count": chapter_count,
+    }
+    if cleaned_pages is not None:
+        metadata["cleaned_pages"] = list(cleaned_pages)
     return build_operation_state_payload(
         status=status,
         input_paths=[relative_to_project(project_root, input_snapshot_path)],
@@ -497,16 +535,7 @@ def _build_operation_state(
         started_at=started_at,
         completed_at=completed_at,
         warning_count=len(warnings),
-        metadata={
-            "warnings": list(warnings),
-            "cleaned_pages": None if cleaned_pages is None else list(cleaned_pages),
-            "removed_header_footer_line_count": removed_header_footer_count,
-            "removed_page_number_line_count": removed_page_number_count,
-            "removed_separator_line_count": removed_separator_count,
-            "detected_language": detected_language,
-            "paragraph_count": paragraph_count,
-            "detected_chapter_count": chapter_count,
-        },
+        metadata=metadata,
         resume_checkpoint=resume_checkpoint,
     )
 

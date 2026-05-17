@@ -13,7 +13,7 @@
          review controls for the Audio Blocks workflow.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-23
-@version 0.5.2
+@version 0.5.3
 """
 
 # IMPORTS
@@ -469,7 +469,7 @@ class AudioBlocksPage(QWidget):
             self._project_active
             and not self._busy
             and selected_block is not None
-            and bool(selected_block.get("generated", False))
+            and audio_blocks_service.is_generated(selected_block)
         )
         self._speech_block_list.setEnabled(self._project_active and not self._busy)
 
@@ -525,10 +525,10 @@ class AudioBlocksPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-05-05
-        @version    0.1.0
+        @version    0.2.0
         """
         selected_block = self._current_display_block()
-        if selected_block is not None and bool(selected_block.get("approved", False)):
+        if selected_block is not None and audio_blocks_service.is_approved(selected_block):
             return "audio_blocks.unapprove_selected"
         return "audio_blocks.approve_selected"
 
@@ -540,7 +540,7 @@ class AudioBlocksPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-23
-        @version    0.2.0
+        @version    0.3.0
         """
         if row < 0 or row >= len(self._speech_blocks):
             self._current_block_id = None
@@ -559,7 +559,7 @@ class AudioBlocksPage(QWidget):
         )
         status_key = (
             "audio_blocks.approval_status_approved"
-            if bool(selected_block.get("approved", False))
+            if audio_blocks_service.is_approved(selected_block)
             else ("audio_blocks.approval_status_pending")
         )
         self._approval_status_label.setText(
@@ -655,10 +655,12 @@ def _format_audio_block_list_item(audio_block: dict[str, object], language: str)
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-23
-    @version    0.3.0
+    @version    0.4.0
     """
     approval_label = ui_state_service.translate(
-        "audio_blocks.marker_approved" if bool(audio_block.get("approved", False)) else "audio_blocks.marker_pending",
+        "audio_blocks.marker_approved"
+        if audio_blocks_service.is_approved(audio_block)
+        else "audio_blocks.marker_pending",
         language,
     )
     duration_label = _format_duration_label(audio_block.get("audio_duration_seconds"), language)

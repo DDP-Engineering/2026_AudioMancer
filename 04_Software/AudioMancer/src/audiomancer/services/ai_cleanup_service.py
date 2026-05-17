@@ -15,7 +15,7 @@
          resumable window-based progress plus AI transaction logs.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-07
-@version 0.8.3
+@version 0.9.0
 """
 
 # IMPORTS
@@ -37,6 +37,7 @@ from audiomancer.services import (
 )
 from audiomancer.services.logging_service import get_component_logger, trace_function
 from audiomancer.services.operation_runtime_service import (
+    OperationCancelledError,
     build_operation_output_path,
     build_operation_state_payload,
     load_operation_state_file,
@@ -148,7 +149,7 @@ def clean_text(
     @exception  ValueError Raised on missing profile data or unusable cleanup output.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-12
-    @version    0.6.0
+    @version    0.6.1
     """
     resolved_project_root = Path(project_root)
     source_document = manifest.get("source_document")
@@ -266,52 +267,82 @@ def clean_text(
         token_usage=token_usage,
     )
 
-    for window_index in range(start_window_index, total_windows):
-        raise_if_cancelled(cancel_requested)
-        window_units = units[windows[window_index]["start_index"] : windows[window_index]["end_index"] + 1]
-        user_prompt = _render_cleanup_user_prompt(
-            _cleanup_prompt_variables(
-                units,
-                windows[window_index]["start_index"],
-                windows[window_index]["end_index"],
-                language_hint,
-                script_hint,
+    last_progress_current = start_window_index
+    try:
+        for window_index in range(start_window_index, total_windows):
+            raise_if_cancelled(cancel_requested)
+            window_units = units[windows[window_index]["start_index"] : windows[window_index]["end_index"] + 1]
+            user_prompt = _render_cleanup_user_prompt(
+                _cleanup_prompt_variables(
+                    units,
+                    windows[window_index]["start_index"],
+                    windows[window_index]["end_index"],
+                    language_hint,
+                    script_hint,
+                    additional_cleanup_instructions,
+                )
+            )
+            response_result = llm_provider_service.chat_json(
+                ai_profile_payload,
+                system_prompt,
+                user_prompt,
+                log_path=log_path,
+                log_context={
+                    "operation_kind": "cleanup",
+                    "stage_label": "ai_cleanup",
+                    "profile_id": profile_id,
+                    "window_index": window_index + 1,
+                    "window_total": total_windows,
+                },
+                cancel_requested=cancel_requested,
+            )
+            response_payload = dict(response_result.get("payload", {}))
+            token_usage = token_usage_service.merge_token_usage(
+                token_usage,
+                response_result.get("usage"),
+            )
+            _apply_response_labels(
+                classifications,
+                response_payload,
+                window_units,
+                warning_details,
+                window_index + 1,
+            )
+            last_progress_current = window_index + 1
+            _write_running_state(
+                state_path,
+                resolved_project_root,
+                input_snapshot_path,
+                output_path,
+                started_at,
+                last_progress_current,
+                total_windows,
+                profile_id,
+                log_relative_path,
+                input_fingerprint,
+                classifications,
+                warning_details,
+                token_usage,
+                budget_metadata,
+                model_settings,
+                model_settings_history,
                 additional_cleanup_instructions,
             )
-        )
-        response_result = llm_provider_service.chat_json(
-            ai_profile_payload,
-            system_prompt,
-            user_prompt,
-            log_path=log_path,
-            log_context={
-                "operation_kind": "cleanup",
-                "stage_label": "ai_cleanup",
-                "profile_id": profile_id,
-                "window_index": window_index + 1,
-                "window_total": total_windows,
-            },
-            cancel_requested=cancel_requested,
-        )
-        response_payload = dict(response_result.get("payload", {}))
-        token_usage = token_usage_service.merge_token_usage(
-            token_usage,
-            response_result.get("usage"),
-        )
-        _apply_response_labels(
-            classifications,
-            response_payload,
-            window_units,
-            warning_details,
-            window_index + 1,
-        )
+            _emit_progress(
+                progress_callback,
+                progress_current=last_progress_current,
+                progress_total=total_windows,
+                message="AI-assisted cleanup in progress...",
+                token_usage=token_usage,
+            )
+    except OperationCancelledError:
         _write_running_state(
             state_path,
             resolved_project_root,
             input_snapshot_path,
             output_path,
             started_at,
-            window_index + 1,
+            last_progress_current,
             total_windows,
             profile_id,
             log_relative_path,
@@ -323,14 +354,10 @@ def clean_text(
             model_settings,
             model_settings_history,
             additional_cleanup_instructions,
+            status="cancelled",
+            completed_at=_utc_now_iso(),
         )
-        _emit_progress(
-            progress_callback,
-            progress_current=window_index + 1,
-            progress_total=total_windows,
-            message="AI-assisted cleanup in progress...",
-            token_usage=token_usage,
-        )
+        raise
 
     kept_units = [unit for unit in units if classifications.get(unit["unit_id"], "unknown") in _KEEP_LABELS]
     cleaned_paragraphs = [
@@ -803,11 +830,12 @@ def _resolve_additional_cleanup_instructions(
     @return     Normalized operator cleanup instructions.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-12
-    @version    0.1.1
+    @version    0.1.2
     """
     if additional_cleanup_instructions is not None:
         return _normalized_additional_cleanup_instructions(additional_cleanup_instructions)
     if existing_state.get("mode") != "ai_assisted" or str(existing_state.get("status", "")) not in {
+        "cancelled",
         "running",
         "failed",
     }:
@@ -1097,6 +1125,8 @@ def _write_running_state(
     model_settings: dict[str, object],
     model_settings_history: list[dict[str, object]],
     additional_cleanup_instructions: str,
+    status: str = "running",
+    completed_at: str | None = None,
 ) -> None:
     """
     @brief      Write the running state.
@@ -1117,23 +1147,26 @@ def _write_running_state(
     @param[in]  model_settings Current selected model settings.
     @param[in]  model_settings_history Ordered selected-model settings history.
     @param[in]  additional_cleanup_instructions Optional operator-supplied cleanup rules.
+    @param[in]  status Operation status token.
+    @param[in]  completed_at Optional completion timestamp for terminal incomplete states.
     @return     None.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-12
-    @version    0.4.0
+    @version    0.5.0
     """
+    warning_messages = _warning_messages_from_details(warning_details)
     running_state = _build_operation_state(
         project_root,
         input_snapshot_path,
         output_path,
         report_path=None,
         metadata_path=None,
-        status="running",
+        status=status,
         progress_current=progress_current,
         progress_total=progress_total,
         started_at=started_at,
-        completed_at=None,
-        warnings=[],
+        completed_at=completed_at,
+        warnings=warning_messages,
         profile_id=profile_id,
         log_relative_path=log_relative_path,
         input_fingerprint=input_fingerprint,
@@ -1152,6 +1185,19 @@ def _write_running_state(
         json.dumps(running_state, indent=2, ensure_ascii=False) + "\n",
         encoding="utf-8",
     )
+    project_workspace_service.sync_manifest_operation_summary(project_root, "cleanup", running_state)
+
+
+def _warning_messages_from_details(warning_details: list[dict[str, object]]) -> list[str]:
+    """
+    @brief      Build compact warning messages from persisted warning details.
+    @param[in]  warning_details Detailed AI cleanup warning records.
+    @return     Ordered warning message list.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-17
+    @version    0.1.0
+    """
+    return [str(item.get("message", "")).strip() for item in warning_details if str(item.get("message", "")).strip()]
 
 
 def _build_operation_state(

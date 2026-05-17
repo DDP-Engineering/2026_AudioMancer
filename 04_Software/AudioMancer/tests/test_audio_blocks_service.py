@@ -153,8 +153,9 @@ def test_audio_blocks_service_generates_clone_prompts_and_ordered_wavs(monkeypat
         "qwen_voice_clone_prompt_v1",
     ]
     audio_blocks = audio_blocks_service.load_audio_blocks(project_root)
-    assert [block["generated"] for block in audio_blocks] == [True, True]
-    assert [block["approved"] for block in audio_blocks] == [False, False]
+    assert [audio_blocks_service.is_generated(block) for block in audio_blocks] == [True, True]
+    assert [audio_blocks_service.is_approved(block) for block in audio_blocks] == [False, False]
+    assert all(isinstance(block["generated"], str) for block in audio_blocks)
     assert observed_prompt_requests == [
         ("selected-narrator", "Narrator preview line.", "en"),
         ("alice-sample", "Character preview line.", "en"),
@@ -266,7 +267,6 @@ def test_audio_blocks_service_same_narrator_mode_uses_narrator_prompt_for_charac
         ("qwen_voice_clone_prompt_v1", "narrator", "Hello there."),
     ]
     assert [block["voice_target_id"] for block in audio_blocks] == ["narrator", "narrator"]
-    assert [block["voice_source_kind"] for block in audio_blocks] == ["narrator_sample", "narrator_sample"]
 
 
 def test_audio_blocks_service_requires_selected_narrator_sample_metadata(tmp_path) -> None:
@@ -475,7 +475,7 @@ def test_audio_blocks_service_generates_only_approved_speech_blocks(monkeypatch,
     assert report["total_block_count"] == 2
     assert operation_state is not None
     assert operation_state["status"] == "in_progress"
-    assert [block["generated"] for block in audio_blocks] == [True, False]
+    assert [audio_blocks_service.is_generated(block) for block in audio_blocks] == [True, False]
     assert [block["speech_block_approved"] for block in audio_blocks] == [True, False]
     assert observed_prompt_requests == [("selected-narrator", "Narrator preview line.", "en")]
     assert observed_generate_requests == ["Narration one."]
@@ -508,8 +508,8 @@ def test_audio_blocks_service_skips_voiceweaver_for_metadata_only_blocks(monkeyp
             "speaker_display_name": "Narrator",
             "content_kind": speech_blocks_service.CONTENT_KIND_PAUSE,
             "text": "Pause between sections for 1500 ms.",
-            "approved": True,
-            "approved_at": "2026-04-23T12:04:00+00:00",
+            "approved": False,
+            "approved_at": None,
             "warning_flags": [],
         }
     )
@@ -596,15 +596,12 @@ def test_audio_blocks_service_skips_voiceweaver_for_metadata_only_blocks(monkeyp
     assert observed_generate_requests == ["Narration one.", "Hello there."]
     assert audio_blocks[2]["speech_block_id"] == "0001-000003"
     assert audio_blocks[2]["metadata_only"] is True
-    assert audio_blocks[2]["special_block_status"] == "implemented"
     assert audio_blocks[2]["pause_duration_ms"] == 1500
-    assert audio_blocks[2]["generated"] is True
-    assert audio_blocks[2]["approved"] is True
+    assert audio_blocks_service.is_generated(audio_blocks[2]) is True
+    assert audio_blocks_service.is_approved(audio_blocks[2]) is True
     assert audio_blocks[2]["audio_relative_path"] is None
     assert audio_blocks[3]["content_kind"] == speech_blocks_service.CONTENT_KIND_INDICATION
     assert audio_blocks[3]["metadata_only"] is True
-    assert audio_blocks[3]["special_block_status"] == "not_implemented"
-    assert "not implemented" in audio_blocks[3]["runtime_result_summary"]
     assert audio_blocks[3]["audio_relative_path"] is None
 
 
@@ -648,8 +645,8 @@ def test_audio_blocks_service_preserves_existing_audio_when_block_fingerprint_ch
         project_root=project_root,
     )
 
-    assert merged_blocks[0]["generated"] is True
-    assert merged_blocks[0]["approved"] is True
+    assert audio_blocks_service.is_generated(merged_blocks[0]) is True
+    assert audio_blocks_service.is_approved(merged_blocks[0]) is True
     assert merged_blocks[0]["audio_relative_path"] == audio_path.relative_to(project_root).as_posix()
     assert merged_blocks[0]["generation_fingerprint"] != "stale-fingerprint"
     assert audio_path.exists()
@@ -970,16 +967,16 @@ def test_audio_blocks_service_approve_and_regenerate_selected_block(monkeypatch,
     report = audio_blocks_service.approve_audio_block(project_root, "0001-000001")
     assert report["approved_block_count"] == 1
     updated_blocks = audio_blocks_service.load_audio_blocks(project_root)
-    assert updated_blocks[0]["approved"] is True
-    assert updated_blocks[1]["approved"] is False
+    assert audio_blocks_service.is_approved(updated_blocks[0]) is True
+    assert audio_blocks_service.is_approved(updated_blocks[1]) is False
     approved_audio_path = project_root / str(updated_blocks[0]["audio_relative_path"])
     approved_audio_bytes = approved_audio_path.read_bytes()
 
     unapprove_report = audio_blocks_service.unapprove_audio_block(project_root, "0001-000001")
     unapproved_blocks = audio_blocks_service.load_audio_blocks(project_root)
     assert unapprove_report["approved_block_count"] == 0
-    assert unapproved_blocks[0]["approved"] is False
-    assert unapproved_blocks[0]["approved_at"] is None
+    assert audio_blocks_service.is_approved(unapproved_blocks[0]) is False
+    assert unapproved_blocks[0]["approved"] is None
     assert approved_audio_path.read_bytes() == approved_audio_bytes
 
     wait_payloads = [
@@ -1038,8 +1035,9 @@ def test_audio_blocks_service_approve_and_regenerate_selected_block(monkeypatch,
 
     regenerated_blocks = audio_blocks_service.load_audio_blocks(project_root)
     assert regen_report["generated_block_count"] == 2
-    assert regenerated_blocks[0]["approved"] is False
-    assert regenerated_blocks[0]["runtime_result_summary"] == "Narrator regenerated."
+    assert audio_blocks_service.is_approved(regenerated_blocks[0]) is False
+    metadata_payload = json.loads((project_root / str(regenerated_blocks[0]["metadata_relative_path"])).read_text())
+    assert metadata_payload["runtime_result_summary"] == "Narrator regenerated."
     assert (project_root / str(regenerated_blocks[0]["audio_relative_path"])).read_bytes() == _wav_bytes("regenerated")
 
 
@@ -1159,10 +1157,10 @@ def test_audio_blocks_service_reconcile_after_resplit_deletes_changed_chunk_and_
     remapped_metadata_path = generated_root / "0002_000001_alice.json"
     assert report["generated_block_count"] == 1
     assert audio_blocks[0]["speech_block_id"] == "0001-000001"
-    assert audio_blocks[0]["generated"] is False
+    assert audio_blocks_service.is_generated(audio_blocks[0]) is False
     assert audio_blocks[1]["speech_block_id"] == "0002-000001"
     assert audio_blocks[1]["sequence_index"] == 1
-    assert audio_blocks[1]["generated"] is True
+    assert audio_blocks_service.is_generated(audio_blocks[1]) is True
     assert not changed_audio_path.exists()
     assert later_audio_path.exists()
     assert remapped_audio_path.read_bytes() == _wav_bytes("later")
@@ -1286,7 +1284,7 @@ def test_audio_blocks_service_resume_continues_from_saved_checkpoint(monkeypatch
         raise AssertionError("Expected the first Audio Blocks run to stop through cooperative cancellation.")
 
     persisted_blocks = audio_blocks_service.load_audio_blocks(project_root)
-    assert [block["generated"] for block in persisted_blocks] == [True, False]
+    assert [audio_blocks_service.is_generated(block) for block in persisted_blocks] == [True, False]
     assert observed_generate_requests == [("qwen_voice_clone_prompt_v1", "narrator", "Narration one.")]
 
     report = audio_blocks_service.start_or_continue_generation(
@@ -1301,9 +1299,11 @@ def test_audio_blocks_service_resume_continues_from_saved_checkpoint(monkeypatch
         ("qwen_voice_clone_prompt_v1", "narrator", "Narration one."),
         ("qwen_voice_clone_prompt_v1", "alice", "Hello there."),
     ]
-    assert [block["generated"] for block in resumed_blocks] == [True, True]
-    assert resumed_blocks[0]["runtime_result_summary"] == "Narrator ready."
-    assert resumed_blocks[1]["runtime_result_summary"] == "Alice ready."
+    assert [audio_blocks_service.is_generated(block) for block in resumed_blocks] == [True, True]
+    resumed_metadata = [
+        json.loads((project_root / str(block["metadata_relative_path"])).read_text()) for block in resumed_blocks
+    ]
+    assert [metadata["runtime_result_summary"] for metadata in resumed_metadata] == ["Narrator ready.", "Alice ready."]
 
 
 def test_audio_blocks_service_continuation_skips_later_existing_audio_after_insert(monkeypatch, tmp_path) -> None:
@@ -1606,8 +1606,8 @@ def test_audio_blocks_service_approve_all_marks_only_generated_blocks(tmp_path) 
 
     updated_blocks = audio_blocks_service.load_audio_blocks(project_root)
     assert report["approved_block_count"] == 1
-    assert updated_blocks[0]["approved"] is True
-    assert updated_blocks[1]["approved"] is False
+    assert audio_blocks_service.is_approved(updated_blocks[0]) is True
+    assert audio_blocks_service.is_approved(updated_blocks[1]) is False
 
 
 def test_audio_blocks_service_approve_all_promotes_stale_in_progress_state(tmp_path) -> None:

@@ -203,25 +203,20 @@ Outputs:
 Persisted audio-block payloads include at minimum:
 
 - `speech_block_id`
-- `sequence_index`
 - `chunk_id`
 - `speaker_id`
-- `speaker_display_name`
-- `normalized_speaker_name`
-- `content_kind`
-- `metadata_only`
-- `special_block_status`
-- `pause_duration_ms` for pause blocks when an explicit duration was parsed
-- `speech_block_approved`
-- `text`
 - `voice_target_id`
-- `voice_source_kind`
 - `audio_relative_path`
 - `metadata_relative_path`
-- `generated`
-- `approved`
-- `approved_at`
-- `generated_at`
+- `audio_duration_seconds`
+- `generated` as an ISO timestamp or `null`
+- `approved` as an ISO timestamp or `null`
+- `content_kind` and `pause_duration_ms` for metadata-only pause blocks
+
+Speech Blocks remain the source of truth for sequence order, speaker display
+names, content kind, and text. Generated WAV sidecar metadata stores runtime
+details that are not needed for fast UI loading, including:
+
 - `runtime_result_summary`
 - `split_part_count`
 - `split_strategy`
@@ -273,10 +268,12 @@ Current invariants:
   until downstream behavior is added
 - pause blocks retain a millisecond duration for Audio Assembly silence
   insertion; the downstream default is `1000 ms`
-- all approvals are explicit; generation never auto-approves audio
+- spoken Audio Blocks require explicit operator approval; metadata-only pause
+  blocks are generated and approved automatically as timing entries so they do
+  not block Audio Assembly
 - `approve_all_audio_blocks(...)` updates only already generated blocks
-- `unapprove_audio_block(...)` clears only `approved` and `approved_at`; it does
-  not delete the generated WAV or metadata file
+- `unapprove_audio_block(...)` clears the compact `approved` timestamp; it does
+  not delete the generated WAV or metadata sidecar
 - `remove_audio_blocks_for_speech_blocks(...)` is used by upstream selective
   invalidation to remove only exact `speech_block_id` matches and their
   generated artifacts

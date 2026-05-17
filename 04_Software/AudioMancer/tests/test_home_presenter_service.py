@@ -13,7 +13,7 @@
          from manifest data without Qt dependencies.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-06
-@version 0.5.0
+@version 0.5.1
 """
 
 # IMPORTS
@@ -69,6 +69,29 @@ def test_build_stage_statuses_keeps_chunking_not_started_after_cleanup_completio
 
     assert statuses[0]["status"] == "finished"
     assert statuses[1]["status"] == "not_started"
+
+
+def test_build_stage_statuses_marks_cancelled_cleanup_as_in_progress() -> None:
+    """
+    @brief      Verify cancelled cleanup remains visible as resumable in-progress work on Home.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-17
+    @version    0.1.0
+    """
+    manifest = {
+        "current_stage": "source_selected",
+        "source_document": {"original_name": "story.txt"},
+        "operations": {
+            "cleanup": {"status": "cancelled"},
+            "extraction": {"status": "completed"},
+        },
+    }
+
+    statuses = home_presenter_service.build_stage_statuses(manifest, "en")
+
+    assert statuses[0]["status"] == "in_progress"
 
 
 def test_build_stage_statuses_marks_chunking_finished_after_chunking_completion() -> None:

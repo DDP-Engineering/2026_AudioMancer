@@ -14,7 +14,7 @@
          generated audio blocks.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-23
-@version 0.6.3
+@version 0.6.4
 """
 
 # IMPORTS
@@ -266,8 +266,8 @@ def test_audio_blocks_ui_controller_approval_resets_only_audio_assembly(
         project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / "audio_blocks/0001_000001_narrator.wav"
     )
     alice_audio_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / "audio_blocks/0001_000002_alice.wav"
-    assert output_payload[0]["approved"] is True
-    assert output_payload[1]["approved"] is False
+    assert isinstance(output_payload[0]["approved"], str)
+    assert output_payload[1]["approved"] is None
     assert window._audio_blocks_page.selected_block_id() == "0001-000002"
     assert narrator_audio_path.exists()
     assert alice_audio_path.exists()
@@ -315,8 +315,8 @@ def test_audio_blocks_ui_controller_approval_toggle_unapproves_without_advancing
     )
     alice_audio_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / "audio_blocks/0001_000002_alice.wav"
     assert [block["speech_block_id"] for block in output_payload] == ["0001-000001", "0001-000002"]
-    assert output_payload[0]["approved"] is True
-    assert output_payload[1]["approved"] is False
+    assert isinstance(output_payload[0]["approved"], str)
+    assert output_payload[1]["approved"] is None
     assert narrator_audio_path.exists()
     assert alice_audio_path.exists()
     assert not (project_root / config.AUDIOBOOK_OUTPUT_FOLDER_NAME / "audiobook.wav").exists()
@@ -524,6 +524,57 @@ def test_audio_blocks_ui_controller_preserves_selected_block_after_selected_play
     audio_blocks_ui_controller.handle_selected_playback_toggle_requested(window, "0001-000001")
 
     assert window._speech_blocks_page._selected_audio_playback_active is True
+
+
+def test_audio_blocks_ui_controller_audiobook_playback_includes_current_pause_without_audio_block(
+    qtbot, tmp_path, default_settings_payload
+) -> None:
+    """
+    @brief      Verify audiobook preview inserts current Speech Blocks pauses missing from Audio Blocks output.
+    @param[in]  qtbot Qt test helper fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @param[in]  default_settings_payload Fixture supplying valid baseline settings.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-17
+    @version    0.1.0
+    """
+    project_root = _create_project(tmp_path, "AudioBlocksControllerPlaybackPause")
+    _seed_audio_blocks_run(project_root, approved=True)
+    speech_blocks_path = (
+        project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.SPEECH_BLOCKS_OUTPUT_FILE_NAME
+    )
+    speech_blocks_payload = json.loads(speech_blocks_path.read_text(encoding="utf-8"))
+    speech_blocks_payload[1]["sequence_index"] = 3
+    speech_blocks_payload.insert(
+        1,
+        {
+            "speech_block_id": "0001-000003",
+            "sequence_index": 2,
+            "chunk_id": "chunk-0001",
+            "source_language": "en",
+            "speaker_kind": speech_blocks_service.SPEAKER_KIND_NARRATOR,
+            "speaker_id": "narrator",
+            "speaker_display_name": "Narrator",
+            "content_kind": speech_blocks_service.CONTENT_KIND_PAUSE,
+            "text": "Pause between sections for 1250 ms.",
+            "approved": False,
+            "approved_at": None,
+            "warning_flags": [],
+        },
+    )
+    speech_blocks_path.write_text(json.dumps(speech_blocks_payload, indent=2) + "\n", encoding="utf-8")
+    window = _build_window(qtbot, project_root, default_settings_payload)
+
+    playable_blocks = audio_blocks_ui_controller._playable_audio_blocks(window)  # noqa: SLF001
+    pause_block = audio_blocks_ui_controller._audio_block_by_id(window, "0001-000003")  # noqa: SLF001
+
+    assert [block["speech_block_id"] for block in playable_blocks] == ["0001-000001", "0001-000003", "0001-000002"]
+    assert pause_block is not None
+    assert pause_block["content_kind"] == speech_blocks_service.CONTENT_KIND_PAUSE
+    assert pause_block["metadata_only"] is True
+    assert pause_block["pause_duration_ms"] == 1250
 
 
 def test_audio_blocks_ui_controller_voice_target_invalidation_preserves_unrelated_audio(

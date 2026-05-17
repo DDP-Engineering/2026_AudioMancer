@@ -10,12 +10,13 @@ Implementation-focused software documentation and component notes.
 
 ## Current Documents
 
-- `UserGuide/` contains the English end-user help bundle for AudioMancer 1.1.0, including the offline HTML guide, runtime Settings theme notes, and real UI screenshots used by packaged Windows and Ubuntu releases.
-- `UserGuide_ro/` contains the Romanian end-user help bundle for AudioMancer 1.1.0, including the offline HTML guide, runtime Settings theme notes, and Romanian UI screenshots used when the application language is set to Romanian.
+- `UserGuide/` contains the English end-user help bundle for AudioMancer 1.1.2, including the offline HTML guide, runtime Settings theme notes, and real UI screenshots used by packaged Windows and Ubuntu releases.
+- `UserGuide_ro/` contains the Romanian end-user help bundle for AudioMancer 1.1.2, including the offline HTML guide, runtime Settings theme notes, and Romanian UI screenshots used when the application language is set to Romanian.
 - `AudioMancer_App_Shell.md` documents the desktop application shell, Home workflow progress presenter, project navigation, settings dialogs, and page-hosting responsibilities.
 - `AudioMancer_Config_And_Settings.md` documents the adapted configuration and settings scaffold.
 - `AudioMancer_Settings_Service.md` documents the shared settings lifecycle implementation.
 - `AudioMancer_UI_State_Service.md` documents the shared runtime UI string catalog, language application, text-size scaling behavior, and compact Speech Blocks selected-audio labels.
+- `AudioMancer_UI_Theme_Service.md` documents the Qt-independent theme schema helper, built-in theme catalog, custom theme validation, and import/export payload behavior.
 - `AudioMancer_UI_Themes.md` documents the Settings-backed UI theme schema, built-in and custom themes, JSON import/export behavior, and runtime theme application path.
 - `AudioMancer_Persistence_Service.md` documents the shared atomic text and JSON write helpers used by critical project, settings, and operation state persistence paths.
 - `AudioMancer_Logging_Service.md` documents the shared runtime logging implementation.
@@ -43,11 +44,12 @@ Implementation-focused software documentation and component notes.
 - `AudioMancer_Speech_Blocks_Service.md` documents the Speech Blocks source-resolution rules, optional operator prompt rules, mode-aware AI-first per-chunk generation flow, quoted/guillemet/dash dialogue validation, narrator-only TTS-budget segmentation, manual insert/delete behavior, metadata-only operation blocks, root-level persisted artifacts, resumable state contract, and page/controller integration.
 - `AudioMancer_Speech_Blocks_State_Service.md` documents the Speech Blocks page-state helper, source resolution, localized notes, selector state, and selected-audio preview flags used by the Speech Blocks page.
 - `AudioMancer_Speech_Blocks_Normalization_Service.md` documents shared Speech Blocks normalization helpers for content kinds, operation rows, warning flags, text spans, stable block IDs, and narrator-only TTS budget lookup.
-- `AudioMancer_Audio_Blocks_Service.md` documents the Audio Blocks reusable clone-prompt workflow, block-level generation fingerprints, metadata-only pause/background/indication handling, root-level persisted artifact contract, approval rules, generated `audio_blocks/` media folder, and upstream invalidation behavior.
+- `AudioMancer_Audio_Blocks_Service.md` documents the Audio Blocks reusable clone-prompt workflow, compact timestamp-based `audio_blocks.json` index, block-level generation fingerprints, metadata-only pause/background/indication handling, approval rules, generated `audio_blocks/` media folder, and upstream invalidation behavior.
 - `AudioMancer_Audio_Blocks_State_Service.md` documents the Audio Blocks page-state helper, merged Speech/Audio Blocks rows, localized notes, progress values, approval flags, and selected text character budget.
 - `AudioMancer_Audio_Assembly_Service.md` documents the final WAV audiobook composition workflow, pause-to-silence handling, per-project assembly settings, resumable state/report artifacts, generated `audiobook/` deliverables, playback seek/progress controls, and reset page integration.
 - `AudioMancer_TTS_Settings_And_VoiceWeaver_Runtime.md` documents the simplified TTS Settings dialog, VoiceWeaver runtime integration, fixed Qwen3 readiness classification, generation helpers, and runtime limit settings.
 - `AudioMancer_Voiceweaver_Runtime_Service.md` documents the service-only VoiceWeaver REST wrapper boundary for probing, model operations, generation calls, polling, endpoint normalization, and generated-audio downloads.
+- `AudioMancer_Voice_Sample_Import_Service.md` documents the shared WAV validation helper used before importing operator-provided narrator and character reference samples.
 - `AudioMancer_TTS_Budget_Service.md` documents the cached VoiceWeaver TTS budget resolver used by narrator-only Speech Blocks prompting and validation.
 - `AudioMancer_Operation_Runner_Controller.md` documents the shared threaded modal-operation runner used by long-running UI workflows.
 - The app shell document also covers the shared runtime logging bootstrap.

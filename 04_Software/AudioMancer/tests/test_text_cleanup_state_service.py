@@ -14,7 +14,7 @@
          artifact data.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-24
-@version 0.5.1
+@version 0.5.2
 """
 
 # IMPORTS
@@ -22,7 +22,12 @@
 import json
 
 from audiomancer import config
-from audiomancer.services import operation_runtime_service, project_workspace_service, text_cleanup_state_service
+from audiomancer.services import (
+    cleanup_metadata_service,
+    operation_runtime_service,
+    project_workspace_service,
+    text_cleanup_state_service,
+)
 
 # PUBLIC API
 
@@ -273,7 +278,7 @@ def test_save_cleaned_text_edit_persists_text_and_resets_downstream(tmp_path) ->
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-24
-    @version    0.2.0
+    @version    0.3.0
     """
     project_root, manifest = project_workspace_service.create_project(
         "CleanupEditProject",
@@ -329,8 +334,16 @@ def test_save_cleaned_text_edit_persists_text_and_resets_downstream(tmp_path) ->
     assert (project_root / config.CHARACTER_VOICES_TARGETS_FILE_NAME).is_file()
     assert not (project_root / config.SPEECH_BLOCKS_OUTPUT_FILE_NAME).exists()
     metadata_payload = json.loads((cleanup_root / config.CLEANED_TEXT_METADATA_FILE_NAME).read_text(encoding="utf-8"))
+    state_payload = json.loads((cleanup_root / config.CLEANUP_STATE_FILE_NAME).read_text(encoding="utf-8"))
+    reloaded_manifest = project_workspace_service.load_manifest(project_root)
     assert metadata_payload["cleanup_mode"] == "manual_edit"
-    assert metadata_payload["paragraphs"][0]["text"] == "Edited clean text"
+    assert "text" not in metadata_payload["paragraphs"][0]
+    assert state_payload["mode"] == "manual_edit"
+    assert state_payload["resume_checkpoint"] is None
+    assert reloaded_manifest["current_stage"] == "text_cleanup_ready"
+    assert reloaded_manifest["operations"]["cleanup"]["mode"] == "manual_edit"
+    loaded_records = cleanup_metadata_service.load_or_build_paragraph_records(project_root, "Edited clean text\n")
+    assert loaded_records[0]["text"] == "Edited clean text"
 
 
 def test_cleanup_reset_can_preserve_character_discovery_and_voice_artifacts() -> None:

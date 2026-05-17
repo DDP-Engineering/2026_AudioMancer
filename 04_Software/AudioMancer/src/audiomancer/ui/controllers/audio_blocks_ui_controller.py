@@ -14,7 +14,7 @@
          targeted downstream invalidation when upstream voice inputs change.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-23
-@version 0.7.5
+@version 0.8.1
 """
 
 # IMPORTS
@@ -22,7 +22,7 @@
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from PySide6.QtCore import QUrl
+from PySide6.QtCore import QTimer, QUrl
 from PySide6.QtMultimedia import QMediaPlayer
 from PySide6.QtWidgets import QMessageBox
 
@@ -166,7 +166,7 @@ def handle_approve_selected_requested(window: "MainWindow", speech_block_id: str
     if window._current_project_root is None or window._current_manifest is None:
         return
     audio_block = _audio_block_by_id(window, speech_block_id)
-    was_approved = bool(audio_block.get("approved", False)) if isinstance(audio_block, dict) else False
+    was_approved = audio_blocks_service.is_approved(audio_block) if isinstance(audio_block, dict) else False
     if not _confirm_audio_approval_change(window, current_language):
         return
     try:
@@ -999,7 +999,7 @@ def _has_fully_generated_run(project_root: str | Path, report: dict[str, object]
     if not approved_block_ids:
         return False
     return all(
-        bool(audio_by_speech_block_id.get(block_id, {}).get("generated", False)) for block_id in approved_block_ids
+        audio_blocks_service.is_generated(audio_by_speech_block_id.get(block_id, {})) for block_id in approved_block_ids
     )
 
 
@@ -1084,12 +1084,12 @@ def _audio_block_by_id(window: "MainWindow", speech_block_id: str) -> dict[str, 
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-24
-    @version    0.1.0
+    @version    0.2.0
     """
     if window._current_project_root is None:
         return None
     normalized_block_id = str(speech_block_id).strip()
-    return next(
+    audio_block = next(
         (
             block
             for block in audio_blocks_service.load_audio_blocks(window._current_project_root)
@@ -1097,27 +1097,146 @@ def _audio_block_by_id(window: "MainWindow", speech_block_id: str) -> dict[str, 
         ),
         None,
     )
+    if audio_block is not None:
+        return audio_block
+    return next(
+        (
+            _preview_pause_block_from_speech_block(speech_block)
+            for speech_block in speech_blocks_service.load_speech_blocks(window._current_project_root)
+            if str(speech_block.get("speech_block_id", "")).strip() == normalized_block_id
+        ),
+        None,
+    )
 
 
 def _playable_audio_blocks(window: "MainWindow") -> list[dict[str, object]]:
     """
-    @brief      Load all generated Audio Blocks that have an existing WAV file.
+    @brief      Load all generated Audio Blocks that contribute to Audio Blocks preview playback.
     @param[in]  window Active main window instance.
-    @return     Ordered playable Audio Blocks payload list.
+    @return     Ordered playable WAV and metadata-only pause Audio Blocks payload list.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-24
-    @version    0.1.0
+    @version    0.3.0
     """
     if window._current_project_root is None:
         return []
     playable_blocks: list[dict[str, object]] = []
-    for audio_block in speech_blocks_service.sort_speech_blocks(
-        audio_blocks_service.load_audio_blocks(window._current_project_root)
-    ):
-        if _audio_path_for_block(window, audio_block) is not None:
+    for audio_block in _audio_blocks_for_playback(window):
+        if _audio_path_for_block(window, audio_block) is not None or _is_preview_pause_block(audio_block):
             playable_blocks.append(audio_block)
     return playable_blocks
+
+
+def _audio_blocks_for_playback(window: "MainWindow") -> list[dict[str, object]]:
+    """
+    @brief      Merge persisted Audio Blocks with current metadata-only pauses for playback.
+    @param[in]  window Active main window instance.
+    @return     Ordered Audio Blocks payload list for audiobook preview.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-17
+    @version    0.1.0
+    """
+    if window._current_project_root is None:
+        return []
+    persisted_blocks = audio_blocks_service.load_audio_blocks(window._current_project_root)
+    persisted_by_id = {str(block.get("speech_block_id", "")).strip(): dict(block) for block in persisted_blocks}
+    playback_blocks: list[dict[str, object]] = []
+    for speech_block in speech_blocks_service.sort_speech_blocks(
+        speech_blocks_service.load_speech_blocks(window._current_project_root)
+    ):
+        speech_block_id = str(speech_block.get("speech_block_id", "")).strip()
+        if not speech_block_id:
+            continue
+        persisted_block = persisted_by_id.get(speech_block_id)
+        if persisted_block is not None:
+            playback_blocks.append(persisted_block)
+            continue
+        preview_pause_block = _preview_pause_block_from_speech_block(speech_block)
+        if preview_pause_block is not None:
+            playback_blocks.append(preview_pause_block)
+    return speech_blocks_service.sort_speech_blocks(playback_blocks)
+
+
+def _preview_pause_block_from_speech_block(speech_block: dict[str, object]) -> dict[str, object] | None:
+    """
+    @brief      Build a metadata-only Audio Blocks preview entry from one current pause Speech Block.
+    @param[in]  speech_block Speech Blocks payload.
+    @return     Preview-ready pause Audio Block payload, or `None` for non-pause input.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-17
+    @version    0.1.0
+    """
+    content_kind = str(speech_block.get("content_kind", "")).strip()
+    if content_kind != speech_blocks_service.CONTENT_KIND_PAUSE:
+        return None
+    pause_duration_ms = speech_blocks_service.pause_duration_ms(speech_block.get("text", ""))
+    if pause_duration_ms <= 0:
+        pause_duration_ms = config.DEFAULT_SPEECH_BLOCK_PAUSE_DURATION_MS
+    timestamp = str(speech_block.get("approved_at", "")).strip() or "1970-01-01T00:00:00+00:00"
+    speaker_display_name = str(speech_block.get("speaker_display_name", "")).strip() or "Narrator"
+    return {
+        "speech_block_id": str(speech_block.get("speech_block_id", "")).strip(),
+        "sequence_index": int(speech_block.get("sequence_index", 0)),
+        "chunk_id": str(speech_block.get("chunk_id", "")).strip(),
+        "speaker_id": str(speech_block.get("speaker_id", "")).strip(),
+        "speaker_display_name": speaker_display_name,
+        "normalized_speaker_name": audio_blocks_service.normalize_speaker_name(speaker_display_name),
+        "content_kind": speech_blocks_service.CONTENT_KIND_PAUSE,
+        "metadata_only": True,
+        "special_block_status": "implemented",
+        "pause_duration_ms": pause_duration_ms,
+        "speech_block_approved": bool(speech_block.get("approved", False)),
+        "text": str(speech_block.get("text", "")),
+        "voice_target_id": "",
+        "voice_source_kind": "",
+        "audio_relative_path": None,
+        "metadata_relative_path": None,
+        "audio_duration_seconds": pause_duration_ms / 1000.0,
+        "generated": timestamp,
+        "approved": timestamp,
+        "generated_at": None,
+        "approved_at": None,
+        "runtime_result_summary": "Metadata-only pause block; silence is added during Audio Blocks playback.",
+        "warning_flags": [],
+    }
+
+
+def _is_preview_pause_block(audio_block: dict[str, object] | None) -> bool:
+    """
+    @brief      Return whether one Audio Blocks entry should preview as timed silence.
+    @param[in]  audio_block Candidate Audio Blocks payload.
+    @return     True when the entry is a generated metadata-only pause block.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-17
+    @version    0.1.0
+    """
+    if not isinstance(audio_block, dict) or not audio_blocks_service.is_generated(audio_block):
+        return False
+    return (
+        bool(audio_block.get("metadata_only", False))
+        and str(audio_block.get("content_kind", "")).strip() == speech_blocks_service.CONTENT_KIND_PAUSE
+    )
+
+
+def _preview_pause_duration_ms(audio_block: dict[str, object]) -> int:
+    """
+    @brief      Resolve the Audio Blocks preview pause duration.
+    @param[in]  audio_block Pause Audio Blocks payload.
+    @return     Positive pause duration in milliseconds.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-17
+    @version    0.1.0
+    """
+    try:
+        duration_ms = int(audio_block.get("pause_duration_ms"))
+    except (TypeError, ValueError):
+        duration_ms = config.DEFAULT_SPEECH_BLOCK_PAUSE_DURATION_MS
+    return duration_ms if duration_ms > 0 else config.DEFAULT_SPEECH_BLOCK_PAUSE_DURATION_MS
 
 
 def _audio_path_for_block(window: "MainWindow", audio_block: dict[str, object] | None) -> Path | None:
@@ -1133,7 +1252,7 @@ def _audio_path_for_block(window: "MainWindow", audio_block: dict[str, object] |
     """
     if window._current_project_root is None or not isinstance(audio_block, dict):
         return None
-    if not bool(audio_block.get("generated", False)):
+    if not audio_blocks_service.is_generated(audio_block):
         return None
     relative_path = str(audio_block.get("audio_relative_path", "")).strip()
     if not relative_path:
@@ -1193,13 +1312,21 @@ def _play_audio_block_at_index(window: "MainWindow", playback_index: int) -> Non
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-24
-    @version    0.1.0
+    @version    0.2.0
     """
     if playback_index < 0 or playback_index >= len(window._audio_blocks_playback_block_ids):
         _stop_audio_blocks_playback(window)
         return
     speech_block_id = window._audio_blocks_playback_block_ids[playback_index]
     audio_block = _audio_block_by_id(window, speech_block_id)
+    if _is_preview_pause_block(audio_block):
+        window._audio_blocks_playback_index = playback_index
+        window._audio_blocks_page.select_block_id(speech_block_id)
+        QTimer.singleShot(
+            _preview_pause_duration_ms(audio_block),
+            lambda expected_index=playback_index: _continue_audiobook_after_pause(window, expected_index),
+        )
+        return
     audio_path = _audio_path_for_block(window, audio_block)
     if audio_path is None:
         _play_audio_block_at_index(window, playback_index + 1)
@@ -1208,6 +1335,24 @@ def _play_audio_block_at_index(window: "MainWindow", playback_index: int) -> Non
     window._audio_blocks_page.select_block_id(speech_block_id)
     window._audio_blocks_audio_player.setSource(QUrl.fromLocalFile(str(audio_path)))
     window._audio_blocks_audio_player.play()
+
+
+def _continue_audiobook_after_pause(window: "MainWindow", expected_index: int) -> None:
+    """
+    @brief      Continue Audio Blocks audiobook preview after one metadata-only pause.
+    @param[in]  window Active main window instance.
+    @param[in]  expected_index Playback index that scheduled the pause.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-17
+    @version    0.1.0
+    """
+    if window._audio_blocks_playback_mode != "audiobook":
+        return
+    if int(window._audio_blocks_playback_index) != int(expected_index):
+        return
+    _play_audio_block_at_index(window, expected_index + 1)
 
 
 def _current_audio_blocks_playback_block_id(window: "MainWindow") -> str | None:
