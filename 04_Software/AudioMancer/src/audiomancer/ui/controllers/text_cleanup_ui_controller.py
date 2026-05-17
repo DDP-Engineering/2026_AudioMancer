@@ -15,7 +15,7 @@
          synchronization for the Text Cleanup page.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-24
-@version 0.8.2
+@version 0.8.3
 """
 
 # IMPORTS
@@ -103,7 +103,7 @@ def handle_deterministic_cleanup_requested(window: "MainWindow") -> None:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.1.3
+    @version    0.1.4
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._active_operation_kind is not None:
@@ -115,7 +115,7 @@ def handle_deterministic_cleanup_requested(window: "MainWindow") -> None:
             ui_state_service.translate("project.error_no_active_project", current_language),
         )
         return
-    if not window._current_manifest.get("extracted_text_relative_path"):
+    if not (window._current_project_root / config.EXTRACTED_TEXT_FILE_NAME).is_file():
         QMessageBox.warning(
             window,
             ui_state_service.translate("dialog.project_error_title", current_language),
@@ -168,7 +168,7 @@ def handle_ai_cleanup_requested(window: "MainWindow", profile_id: str) -> None:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-30
-    @version    0.5.1
+    @version    0.5.2
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._active_operation_kind is not None:
@@ -180,7 +180,7 @@ def handle_ai_cleanup_requested(window: "MainWindow", profile_id: str) -> None:
             ui_state_service.translate("project.error_no_active_project", current_language),
         )
         return
-    if not window._current_manifest.get("extracted_text_relative_path"):
+    if not (window._current_project_root / config.EXTRACTED_TEXT_FILE_NAME).is_file():
         QMessageBox.warning(
             window,
             ui_state_service.translate("dialog.project_error_title", current_language),
@@ -420,7 +420,7 @@ def handle_operation_failure(window: "MainWindow", failure_handler, error: Excep
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.1.0
+    @version    0.1.1
     """
     misc_ui_controller.update_progress_dialog(window, 100, str(error))
     misc_ui_controller.fail_progress_dialog(window, str(error))
@@ -479,16 +479,12 @@ def handle_extraction_success(window: "MainWindow", result_payload: object) -> N
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.1.0
+    @version    0.1.1
     """
     assert isinstance(result_payload, dict)
     assert window._current_project_root is not None
     assert window._current_manifest is not None
     updated_manifest = dict(window._current_manifest)
-    updated_manifest["extracted_text_relative_path"] = str(result_payload["extracted_text_relative_path"])
-    updated_manifest["extraction_report_relative_path"] = (
-        f"{config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH}/{config.EXTRACTION_REPORT_FILE_NAME}"
-    )
     updated_manifest["extraction_warning_count"] = len(list(result_payload.get("warnings", [])))
     operations = text_cleanup_state_service.normalized_manifest_operations(updated_manifest)
     operations["extraction"] = project_workspace_service.project_manifest_operation_summary(

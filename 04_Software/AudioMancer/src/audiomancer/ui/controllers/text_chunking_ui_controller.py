@@ -764,15 +764,16 @@ def _resume_ai_profile_id(
     @return     Helper result.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.1.0
+    @version    0.2.0
     """
-    metadata = chunking_operation.get("metadata")
-    if isinstance(metadata, dict):
-        profile_id = metadata.get("ai_profile_id")
-        if profile_id not in (None, ""):
-            return str(profile_id)
+    _ = chunking_operation
     state_payload = ai_chunking_service.load_operation_state(window._current_project_root or "")
     if isinstance(state_payload, dict):
+        resume_checkpoint = state_payload.get("resume_checkpoint")
+        if isinstance(resume_checkpoint, dict):
+            profile_id = resume_checkpoint.get("profile_id")
+            if profile_id not in (None, ""):
+                return str(profile_id)
         state_metadata = state_payload.get("metadata")
         if isinstance(state_metadata, dict):
             profile_id = state_metadata.get("ai_profile_id")
@@ -792,15 +793,16 @@ def _resume_ai_strategy(
     @return     Helper result.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.1.0
+    @version    0.2.0
     """
-    metadata = chunking_operation.get("metadata")
-    if isinstance(metadata, dict):
-        semantic_strategy = str(metadata.get("semantic_strategy", "")).strip()
-        if semantic_strategy in config.AI_CHUNKING_STRATEGY_OPTIONS:
-            return semantic_strategy
+    _ = chunking_operation
     state_payload = ai_chunking_service.load_operation_state(window._current_project_root or "")
     if isinstance(state_payload, dict):
+        resume_checkpoint = state_payload.get("resume_checkpoint")
+        if isinstance(resume_checkpoint, dict):
+            semantic_strategy = str(resume_checkpoint.get("semantic_strategy", "")).strip()
+            if semantic_strategy in config.AI_CHUNKING_STRATEGY_OPTIONS:
+                return semantic_strategy
         state_metadata = state_payload.get("metadata")
         if isinstance(state_metadata, dict):
             semantic_strategy = str(state_metadata.get("semantic_strategy", "")).strip()

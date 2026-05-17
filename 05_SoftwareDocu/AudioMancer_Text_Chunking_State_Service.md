@@ -165,7 +165,11 @@ Manual delete rules:
 
 Metadata rules:
 
-- `chunking_report.json` and `chunking_state.json` set `manual_adjusted = true`
+- persisted chunk records do not store `chapter_label`; chapter counts are
+  derived by scanning chunk text for chapter or scene heading lines
+- `chunking_report.json` records manual adjustment and audit metadata
+- `chunking_state.json` stays compact after manual edits and does not duplicate
+  the chunk list in `metadata.chunks`
 - `last_workflow_impact` records affected chunks, reset operation kinds,
   assembly reset, deleted generated files, and timestamp
 - no complex v1 metadata migration is attempted

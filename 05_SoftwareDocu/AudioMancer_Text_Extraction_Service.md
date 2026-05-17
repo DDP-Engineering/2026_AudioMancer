@@ -65,7 +65,7 @@ High-level flow:
    `extracted_text.txt` and `extraction_report.json`.
 7. `MainWindow` drives the extraction run through the reusable modal progress
    dialog, including cooperative cancellation.
-8. `MainWindow` stores the resulting artifact paths and operation state in
+8. `MainWindow` stores the compact extraction summary and warning count in
    `project.json` and refreshes the cleanup page preview.
 
 ## 4. Dependencies
@@ -97,9 +97,7 @@ Outputs:
 - `extraction_report.json`
 - `extraction_state.json`
 - updated `project.json` fields:
-  `extracted_text_relative_path`,
-  `extraction_report_relative_path`,
-  `extraction_warning_count`, and `operations.extraction`
+  `extraction_warning_count` and `operations.extraction`
 - progress updates delivered to the modal operation-progress dialog
 - cleanup-page preview text and operator-facing notes
 
@@ -147,6 +145,9 @@ Supported extraction formats in the current implementation:
 Current deterministic behavior:
 
 - extracted output is always written as `extracted_text.txt`
+- `project.json` does not store extracted-text or extraction-report shortcut
+  paths; downstream services resolve the root-level artifact names from
+  `config.py`
 - line endings are normalized to `\n`
 - leading and trailing unusable whitespace is trimmed
 - one final trailing newline is written to the completed output file

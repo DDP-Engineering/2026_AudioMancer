@@ -738,6 +738,46 @@ def test_load_input_chunks_uses_source_chunks_when_translation_exists(tmp_path) 
     assert input_chunks[0]["dialogue_spans"][0]["dialogue_span_id"] == "dialogue-001"
 
 
+def test_load_input_chunks_derives_runtime_chapter_context(tmp_path) -> None:
+    """
+    @brief      Verify discovery derives chapter context without persisted chunk metadata.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  AssertionError Raised when runtime chapter context is not carried forward.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-17
+    @version    0.1.0
+    """
+    project_root, _manifest = _create_character_project(tmp_path, "CharacterDiscoveryRuntimeChapter")
+    artifact_root = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH
+    (artifact_root / config.CHUNK_ARTIFACT_FILE_NAME).write_text(
+        json.dumps(
+            [
+                {
+                    "chunk_id": "chunk-0001",
+                    "sequence_index": 1,
+                    "text": "Chapter I\n\nAlice waits at the gate.",
+                },
+                {
+                    "chunk_id": "chunk-0002",
+                    "sequence_index": 2,
+                    "text": '"Come inside," said Alice.',
+                },
+            ],
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    input_chunks = character_discovery_service.load_input_chunks(project_root)
+
+    persisted_chunks = json.loads((artifact_root / config.CHUNK_ARTIFACT_FILE_NAME).read_text(encoding="utf-8"))
+    assert input_chunks[0]["chapter_label"] == "Chapter I"
+    assert input_chunks[1]["chapter_label"] == "Chapter I"
+    assert "chapter_label" not in persisted_chunks[0]
+
+
 def test_load_input_chunks_ignores_mixed_translation_targets(tmp_path) -> None:
     """
     @brief      Verify character discovery never consumes mixed-language translation records.
@@ -756,13 +796,11 @@ def test_load_input_chunks_ignores_mixed_translation_targets(tmp_path) -> None:
                 {
                     "chunk_id": "chunk-0001",
                     "sequence_index": 1,
-                    "chapter_label": None,
                     "text": '"Hello there," said Alice.',
                 },
                 {
                     "chunk_id": "chunk-0002",
                     "sequence_index": 2,
-                    "chapter_label": None,
                     "text": '"Goodbye," said Bob.',
                 },
             ],
@@ -1163,7 +1201,6 @@ def _create_character_project(tmp_path, project_name: str):
                 {
                     "chunk_id": "chunk-0001",
                     "sequence_index": 1,
-                    "chapter_label": None,
                     "text": '"Hello there," said Alice.',
                     "source_start_line": 1,
                     "source_end_line": 1,
@@ -1192,7 +1229,6 @@ def _chunk_payload(chunk_id: str, sequence_index: int, text: str) -> dict[str, o
     return {
         "chunk_id": chunk_id,
         "sequence_index": sequence_index,
-        "chapter_label": None,
         "input_source": character_discovery_service.CHARACTER_DISCOVERY_INPUT_SOURCE_CHUNKS,
         "text": text,
         "dialogue_spans": [],

@@ -15,7 +15,7 @@
          structure, and persists cleanup artifacts with resumable state.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-06
-@version 0.5.1
+@version 0.5.2
 """
 
 # IMPORTS
@@ -100,18 +100,14 @@ def clean_text(
     @exception  OperationCancelledError Raised when the operator cancels the run.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.3.4
+    @version    0.3.5
     """
     resolved_project_root = Path(project_root)
     source_document = manifest.get("source_document")
     if not isinstance(source_document, dict):
         raise ValueError("No imported source is available for deterministic cleanup.")
 
-    extracted_relative_path = manifest.get("extracted_text_relative_path")
-    if not isinstance(extracted_relative_path, str) or not extracted_relative_path.strip():
-        raise FileNotFoundError("Deterministic cleanup requires extracted text first.")
-
-    extracted_path = resolve_project_relative_path(resolved_project_root, extracted_relative_path)
+    extracted_path = resolve_project_relative_path(resolved_project_root, config.EXTRACTED_TEXT_FILE_NAME)
     if not extracted_path.is_file():
         raise FileNotFoundError(f"Extracted text is missing: {extracted_path}")
 

@@ -14,7 +14,7 @@
          Chunking page.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-24
-@version 0.8.3
+@version 0.9.0
 """
 
 # IMPORTS
@@ -250,7 +250,7 @@ def delete_selected_chunk(
     @exception  ValueError Raised when the selected chunk is unavailable.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-04
-    @version    0.1.0
+    @version    0.2.0
     """
     chunks = deterministic_chunking_service.load_chunks(project_root)
     if not any(str(chunk.get("chunk_id", "")) == chunk_id for chunk in chunks):
@@ -375,7 +375,8 @@ def _write_manual_chunking_metadata(
     now = utc_now_iso()
     existing_report = deterministic_chunking_service.load_chunking_report(project_root) or {}
     existing_state = deterministic_chunking_service.load_operation_state(project_root) or {}
-    chapter_count = len({str(chunk.get("chapter_label", "")).strip() for chunk in chunks if chunk.get("chapter_label")})
+    chapter_count = deterministic_chunking_service._chapter_count_from_chunks(chunks)
+    impact_metadata = workflow_impact_service.build_impact_metadata(impact_summary)
     warnings = (
         list(existing_report.get("warnings", [])) if isinstance(existing_report.get("warnings", []), list) else []
     )
@@ -387,22 +388,20 @@ def _write_manual_chunking_metadata(
         "chunk_count": len(chunks),
         "detected_chapter_count": chapter_count,
         "manual_adjusted": True,
-        "last_workflow_impact": workflow_impact_service.build_impact_metadata(impact_summary),
+        "last_workflow_impact": impact_metadata,
     }
     if not report.get("chunking_mode"):
         report["chunking_mode"] = "manual"
     report_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.CHUNKING_REPORT_FILE_NAME
     report_path.parent.mkdir(parents=True, exist_ok=True)
     report_path.write_text(json.dumps(report, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
-    metadata = dict(existing_state.get("metadata", {})) if isinstance(existing_state.get("metadata"), dict) else {}
-    metadata.update(
-        {
-            "chunk_count": len(chunks),
-            "detected_chapter_count": chapter_count,
-            "manual_adjusted": True,
-            "last_workflow_impact": workflow_impact_service.build_impact_metadata(impact_summary),
-        }
-    )
+    metadata = {
+        "warnings": warnings,
+        "chunk_count": len(chunks),
+        "detected_chapter_count": chapter_count,
+        "manual_adjusted": True,
+        "last_workflow_impact": impact_metadata,
+    }
     state = operation_runtime_service.build_operation_state_payload(
         status="completed",
         input_paths=list(existing_state.get("input_paths", [])) if isinstance(existing_state, dict) else [],
@@ -441,7 +440,7 @@ def _build_manifest_after_selective_chunk_change(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-04
-    @version    0.1.0
+    @version    0.2.0
     """
     updated_manifest = dict(manifest)
     operations = text_cleanup_state_service.normalized_manifest_operations(updated_manifest)
@@ -481,10 +480,12 @@ def _build_inserted_chunk_payload(source_chunk: dict[str, object], chunk_id: str
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-04
-    @version    0.1.0
+    @version    0.2.0
     """
+    payload = dict(source_chunk)
+    payload.pop("chapter_label", None)
     return {
-        **dict(source_chunk),
+        **payload,
         "chunk_id": chunk_id,
         "text": "",
         "source_start_line": source_chunk.get("source_end_line", source_chunk.get("source_start_line", 0)),
@@ -519,7 +520,6 @@ def _build_initial_manual_chunk_payload(project_root: Path) -> dict[str, object]
     return {
         "chunk_id": "chunk-0001",
         "sequence_index": 1,
-        "chapter_label": None,
         "text": "",
         "source_start_line": 1,
         "source_end_line": source_line_count,
@@ -684,11 +684,7 @@ def build_text_chunking_notes(
             ui_state_service.translate(in_progress_key, language).format(
                 progress_current=progress_current,
                 progress_total=progress_total,
-                strategy=(
-                    chunking_operation_state.get("metadata", {})
-                    if isinstance(chunking_operation_state.get("metadata"), dict)
-                    else {}
-                ).get("semantic_strategy", config.DEFAULT_AI_CHUNKING_STRATEGY),
+                strategy=_chunking_state_strategy(chunking_operation_state),
             )
         )
         if chunking_mode == "ai_assisted":
@@ -717,11 +713,7 @@ def build_text_chunking_notes(
             ui_state_service.translate(resume_key, language).format(
                 progress_current=progress_current,
                 progress_total=progress_total,
-                strategy=(
-                    chunking_operation_state.get("metadata", {})
-                    if isinstance(chunking_operation_state.get("metadata"), dict)
-                    else {}
-                ).get("semantic_strategy", config.DEFAULT_AI_CHUNKING_STRATEGY),
+                strategy=_chunking_state_strategy(chunking_operation_state),
             )
         )
         if chunking_mode == "ai_assisted":
@@ -762,6 +754,29 @@ def _selected_ai_strategy(settings_payload: dict[str, object] | None) -> str:
     if candidate not in config.AI_CHUNKING_STRATEGY_OPTIONS:
         return config.DEFAULT_AI_CHUNKING_STRATEGY
     return candidate
+
+
+def _chunking_state_strategy(chunking_operation_state: dict[str, object]) -> str:
+    """
+    @brief      Resolve the AI chunking strategy from a resumable state payload.
+    @param[in]  chunking_operation_state Persisted chunking operation state.
+    @return     Valid semantic strategy or the configured default.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-17
+    @version    0.1.0
+    """
+    resume_checkpoint = chunking_operation_state.get("resume_checkpoint")
+    if isinstance(resume_checkpoint, dict):
+        semantic_strategy = str(resume_checkpoint.get("semantic_strategy", "")).strip()
+        if semantic_strategy in config.AI_CHUNKING_STRATEGY_OPTIONS:
+            return semantic_strategy
+    metadata = chunking_operation_state.get("metadata")
+    if isinstance(metadata, dict):
+        semantic_strategy = str(metadata.get("semantic_strategy", "")).strip()
+        if semantic_strategy in config.AI_CHUNKING_STRATEGY_OPTIONS:
+            return semantic_strategy
+    return config.DEFAULT_AI_CHUNKING_STRATEGY
 
 
 def _build_token_usage_notes(

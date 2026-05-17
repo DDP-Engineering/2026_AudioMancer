@@ -161,8 +161,6 @@ Current root manifest contract in `project.json`:
 - `updated_at`
 - `current_stage`
 - `source_document`
-- `extracted_text_relative_path`
-- `extraction_report_relative_path`
 - `extraction_warning_count`
 - `operations`
 - `original_language`
@@ -193,7 +191,6 @@ Current `operations` map keys:
 
 Each compact operation entry stores:
 
-- `folder_relative_path`
 - `status`
 - `progress_current`
 - `progress_total`
@@ -258,9 +255,12 @@ Current validation invariants:
 - once locked, `selected_voice_language` is kept equal to `target_language`
 - `current_stage` must match one of the configured workflow stage tokens
 - `source_document`, when present, must contain one valid structured payload
-- project-relative manifest paths must remain inside the active project root;
-  absolute paths, `..` traversal, and symlink escapes fail validation before
-  source or artifact evidence is trusted
+- `project.json` no longer stores extracted-text, extraction-report, or
+  operation-folder shortcut paths; workflow artifacts are resolved from the
+  canonical root-level filenames in `config.py`
+- project-relative source-document paths must remain inside the active project
+  root; absolute paths, `..` traversal, and symlink escapes fail validation
+  before source evidence is trusted
 - opening a project expects a selected project root with `project.json`
 - legacy numbered workflow folders cause validation to fail with an unsupported
   legacy layout error
@@ -349,9 +349,10 @@ Covered behaviors:
 - source import rejection for `.doc`
 - copied source metadata persistence, collision-safe file naming, and pre-start
   source replacement cleanup
-- manifest defaults for extraction fields and operation-state entries
-- rejection of tampered manifest paths and traversal artifact references during
-  project-open completion healing
+- manifest defaults for compact operation-state entries
+- stripping of legacy extraction shortcut fields and operation folder paths
+  from normalized project manifests
+- rejection of tampered source-document paths during project-open validation
 - main-window activation and workflow progress updates after create/open
 - main-window source import, replacement, and project-start lock behavior
 - main-window metadata repair confirmation flow during open
@@ -371,6 +372,6 @@ Minimum validation after a change:
   `05_SoftwareDocu/AudioMancer_Text_Extraction_Service.md`
 - deterministic cleanup artifacts are produced by a separate component
   documented in `05_SoftwareDocu/AudioMancer_Deterministic_Cleanup_Service.md`
-- existing projects with older detailed operation payloads remain readable, but
-  there is no automatic manifest migration layer yet for future schema
-  revisions
+- existing projects with old extraction shortcut fields or operation folder
+  paths are normalized to the current compact manifest shape; operators must
+  re-run Extraction when the current root-level artifacts are missing

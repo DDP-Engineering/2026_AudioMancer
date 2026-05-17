@@ -10,7 +10,7 @@
 @file test_deterministic_chunking_service.py
 @brief Focused tests for the AudioMancer deterministic chunking service.
 @details Verifies runtime artifact naming, paragraph chunk generation, chapter
-         metadata, and resumable cancellation state for deterministic chunking.
+         counting, and resumable cancellation state for deterministic chunking.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-11
 @version 0.2.1
@@ -28,7 +28,7 @@ from audiomancer.services import deterministic_chunking_service, operation_runti
 
 def test_chunking_writes_runtime_artifacts_and_detects_chapters(tmp_path) -> None:
     """
-    @brief      Verify chunking writes self-contained artifacts and carries chapter labels forward.
+    @brief      Verify chunking writes self-contained artifacts without persisted chapter labels.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
@@ -61,8 +61,9 @@ def test_chunking_writes_runtime_artifacts_and_detects_chapters(tmp_path) -> Non
     assert (project_root / config.CHUNKING_STATE_FILE_NAME).is_file()
     chunks = json.loads((project_root / config.CHUNK_ARTIFACT_FILE_NAME).read_text(encoding="utf-8"))
     assert chunks[0]["chunk_id"] == "chunk-0001"
-    assert chunks[1]["chapter_label"] == "Chapter I"
-    assert chunks[2]["chapter_label"] == "Chapter I"
+    assert "chapter_label" not in chunks[0]
+    assert "chapter_label" not in chunks[1]
+    assert "chapter_label" not in chunks[2]
     assert chunks[2]["source_start_line"] == 5
     assert report_payload["chunk_count"] == 3
     assert report_payload["detected_chapter_count"] == 1
@@ -282,7 +283,6 @@ def test_chunking_resumes_after_interruption(tmp_path) -> None:
                 {
                     "chunk_id": "chunk-0001",
                     "sequence_index": 1,
-                    "chapter_label": None,
                     "text": "Paragraph one.",
                     "source_start_line": 1,
                     "source_end_line": 1,

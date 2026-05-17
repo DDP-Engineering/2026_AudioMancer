@@ -10,11 +10,11 @@
 @file deterministic_chunking_service.py
 @brief Deterministic text chunking helpers for AudioMancer.
 @details Consumes cleaned text, produces one ordered paragraph chunk per unit,
-         persists chunk artifacts in `20_chunking`, and maintains resumable
+         persists chunk artifacts at the project root, and maintains resumable
          operation state for interrupted deterministic chunking runs.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-11
-@version 0.4.1
+@version 0.5.0
 """
 
 # IMPORTS
@@ -45,7 +45,7 @@ from audiomancer.services.time_service import utc_now_iso as _utc_now_iso
 _CHUNKING_LOGGER = get_component_logger("deterministic_chunking")
 _emit_progress = partial(emit_progress_update, include_token_usage=False)
 
-# @brief Supported chapter-heading detection patterns used to carry chapter metadata across chunks.
+# @brief Supported chapter-heading detection patterns used for transient chapter-count and prompt context.
 _CHAPTER_PATTERNS = (
     re.compile(r"^(chapter|capitolul|scene|scena)\s+[\wIVXLCDM0-9][\wIVXLCDM0-9 .:-]*$", re.IGNORECASE),
     re.compile(r"^[IVXLCDM]+$", re.IGNORECASE),
@@ -148,22 +148,12 @@ def chunk_text(
         message="Deterministic chunking in progress...",
     )
 
-    current_chapter = _current_chapter_from_chunks(chunks)
     chapter_count = _chapter_count_from_chunks(chunks)
     for chunk_index in range(start_chunk_index, progress_total):
         raise_if_cancelled(cancel_requested)
         paragraph_record = paragraph_records[chunk_index]
-        chapter_label = _detect_chapter_label(str(paragraph_record["text"]))
-        if chapter_label is not None and chapter_label != current_chapter:
-            current_chapter = chapter_label
-            chapter_count += 1
-        chunks.append(
-            _build_chunk_payload(
-                chunk_index + 1,
-                paragraph_record,
-                current_chapter,
-            )
-        )
+        chunks.append(_build_chunk_payload(chunk_index + 1, paragraph_record))
+        chapter_count = _chapter_count_from_chunks(chunks)
         _write_chunk_payload(output_path, chunks)
         _write_running_state(
             state_path,
@@ -209,7 +199,6 @@ def chunk_text(
         warnings=warnings,
         chunk_count=len(chunks),
         chapter_count=chapter_count,
-        chunks=None,
         resume_checkpoint=None,
     )
     state_path.write_text(
@@ -316,22 +305,19 @@ def _build_paragraph_records(cleaned_text: str, project_root: str | Path | None 
 def _build_chunk_payload(
     sequence_index: int,
     paragraph_record: dict[str, object],
-    chapter_label: str | None,
 ) -> ChunkPayload:
     """
     @brief      Build the chunk payload.
     @param[in]  sequence_index Value for `sequence_index`.
     @param[in]  paragraph_record Value for `paragraph_record`.
-    @param[in]  chapter_label Value for `chapter_label`.
     @return     Derived helper result.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.1.0
+    @version    0.2.0
     """
     return {
         "chunk_id": f"chunk-{sequence_index:04d}",
         "sequence_index": sequence_index,
-        "chapter_label": chapter_label,
         "text": str(paragraph_record["text"]),
         "source_start_line": int(paragraph_record["line_start"]),
         "source_end_line": int(paragraph_record["line_end"]),
@@ -417,7 +403,6 @@ def _write_running_state(
         warnings=[],
         chunk_count=len(chunks),
         chapter_count=_chapter_count_from_chunks(chunks),
-        chunks=chunks,
         resume_checkpoint={"next_chunk_index": progress_current},
     )
     state_path.write_text(
@@ -439,7 +424,6 @@ def _build_operation_state(
     warnings: list[str],
     chunk_count: int,
     chapter_count: int,
-    chunks: list[ChunkPayload] | None,
     resume_checkpoint: dict[str, object] | None,
 ) -> OperationStatePayload:
     """
@@ -456,12 +440,11 @@ def _build_operation_state(
     @param[in]  warnings Value for `warnings`.
     @param[in]  chunk_count Value for `chunk_count`.
     @param[in]  chapter_count Value for `chapter_count`.
-    @param[in]  chunks Value for `chunks`.
     @param[in]  resume_checkpoint Value for `resume_checkpoint`.
     @return     Derived helper result.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.1.0
+    @version    0.2.0
     """
     artifact_paths: list[str] = []
     if report_path is not None and report_path.is_file():
@@ -481,7 +464,6 @@ def _build_operation_state(
             "warnings": list(warnings),
             "chunk_count": chunk_count,
             "detected_chapter_count": chapter_count,
-            "chunks": None if chunks is None else list(chunks),
         },
         resume_checkpoint=resume_checkpoint,
     )
@@ -506,37 +488,34 @@ def _build_chunking_warnings(chapter_count: int) -> list[str]:
 
 def _chapter_count_from_chunks(chunks: list[ChunkPayload]) -> int:
     """
-    @brief      Execute the chapter count from chunks helper.
+    @brief      Count distinct chapter or scene headings from chunk text.
     @param[in]  chunks Value for `chunks`.
     @return     Helper result.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.1.0
+    @version    0.2.0
     """
     chapter_labels: list[str] = []
     for chunk in chunks:
-        chapter_label = chunk.get("chapter_label")
-        if chapter_label in (None, ""):
-            continue
-        resolved_label = str(chapter_label)
-        if not chapter_labels or chapter_labels[-1] != resolved_label:
-            chapter_labels.append(resolved_label)
+        chapter_label = _chapter_label_from_text(str(chunk.get("text", "")))
+        if chapter_label is not None and (not chapter_labels or chapter_labels[-1] != chapter_label):
+            chapter_labels.append(chapter_label)
     return len(chapter_labels)
 
 
-def _current_chapter_from_chunks(chunks: list[ChunkPayload]) -> str | None:
+def _chapter_label_from_text(chunk_text: str) -> str | None:
     """
-    @brief      Return the current chapter from chunks.
-    @param[in]  chunks Value for `chunks`.
-    @return     Resolved helper result.
+    @brief      Return the first chapter or scene heading found in chunk text.
+    @param[in]  chunk_text Chunk text to scan.
+    @return     Detected chapter label or `None`.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.1.0
+    @version    0.2.0
     """
-    for chunk in reversed(chunks):
-        chapter_label = chunk.get("chapter_label")
-        if chapter_label not in (None, ""):
-            return str(chapter_label)
+    for line in chunk_text.splitlines():
+        chapter_label = _detect_chapter_label(line)
+        if chapter_label is not None:
+            return chapter_label
     return None
 
 

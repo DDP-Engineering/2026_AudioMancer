@@ -12,6 +12,28 @@ All notable changes to this project will be documented in this file.
 
 No notable changes yet.
 
+## [1.1.3] - 2026-05-17
+
+### Changed
+
+- Text Chunking now persists smaller chunk artifacts by removing duplicated
+  `chapter_label` values from `chunks_text.json`; chapter counts and
+  Character Discovery prompt context are derived from ordered chunk text at
+  runtime.
+- Chunking operation state is now more compact: resume-only AI fields,
+  completed-window progress, committed break ids, log path, selected strategy,
+  profile id, and extra instruction fingerprints live only in
+  `resume_checkpoint` while completed audit data remains in
+  `chunking_report.json`.
+- Manual chunk edit, insert, and delete operations now update
+  `chunks_text.json` and `chunking_report.json` while keeping
+  `chunking_state.json` compact after the operation completes.
+- `project.json` now stores only compact operation summaries and no longer
+  persists extraction shortcut paths or operation folder paths.
+- Deterministic and AI cleanup now resolve the canonical root-level
+  `extracted_text.txt` artifact directly instead of reading manifest shortcut
+  paths.
+
 ## [1.1.2] - 2026-05-17
 
 ### Changed

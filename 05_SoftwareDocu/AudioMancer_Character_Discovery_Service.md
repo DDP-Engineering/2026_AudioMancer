@@ -24,6 +24,8 @@ controller aligned with the project manifest.
 
 - resolve the discovery input from `chunks_text.json`
 - use canonical chunking artifacts as the discovery source
+- derive transient chapter context from ordered chunk text instead of requiring
+  persisted `chapter_label` values in `chunks_text.json`
 - split chunk input into overlapping, budget-aware AI analysis windows
 - call the configured AI profile for window extraction and profile synthesis
 - collect optional operator Character Discovery rules before fresh discovery,
@@ -84,10 +86,12 @@ High-level runtime flow:
    long-running AI work. For fresh runs, it then asks for optional operator
    Character Discovery rules in a word-wrapped text box.
 4. `character_discovery_service.start_or_continue_discovery(...)` resolves
-   canonical chunking output as the discovery input, derives request budgets
-   from the selected profile context window and max output tokens, and restores
-   resumable state when the chunk fingerprint, saved operator-rule fingerprint,
-   and current checkpoint boundary are valid.
+   canonical chunking output as the discovery input, derives runtime
+   `CHAPTER_LABEL` prompt context by scanning ordered chunk text for
+   chapter/scene headings, derives request budgets from the selected profile
+   context window and max output tokens, and restores resumable state when the
+   chunk fingerprint, saved operator-rule fingerprint, and current checkpoint
+   boundary are valid.
 5. The service detects direct-dialogue spans in each chunk using punctuation
    structure rather than English-only speech verbs, analyzes budgeted chunk
    windows using eight chunks as a maximum cap, normalizes candidate evidence
@@ -148,6 +152,7 @@ Inputs:
 - active project root and manifest
 - enabled AI profile payload from `settings.json`
 - canonical chunking output at `chunks_text.json`
+- transient chapter context derived at runtime from chunk text
 - optional cleaned text from `clean_text.txt`
 - prompt templates from the app-root `prompts/` directory
 - optional resumable `characters_state.json`

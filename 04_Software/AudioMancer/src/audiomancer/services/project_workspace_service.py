@@ -13,7 +13,7 @@
          using one minimal root-level `project.json` manifest contract.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-20
-@version    2.0.8
+@version    2.1.0
 """
 
 # IMPORTS
@@ -364,7 +364,7 @@ def build_project_manifest(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-18
-    @version    0.8.0
+    @version    0.9.0
     """
     resolved_timestamp = timestamp_iso or _utc_now_iso()
     return {
@@ -374,8 +374,6 @@ def build_project_manifest(
         "updated_at": resolved_timestamp,
         "current_stage": config.DEFAULT_WORKFLOW_STAGE,
         "source_document": None,
-        "extracted_text_relative_path": None,
-        "extraction_report_relative_path": None,
         "extraction_warning_count": 0,
         "operations": _build_default_operation_states(),
         "project_options_locked": False,
@@ -399,7 +397,7 @@ def validate_project_manifest(payload: object) -> ProjectManifestPayload:
     @exception  ValueError Raised when the payload is invalid.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-18
-    @version    0.7.0
+    @version    0.8.0
     """
     _validate_manifest_payload(payload)
     assert isinstance(payload, dict)
@@ -423,8 +421,6 @@ def validate_project_manifest(payload: object) -> ProjectManifestPayload:
         "updated_at": str(payload["updated_at"]),
         "current_stage": current_stage,
         "source_document": _normalize_source_document(payload.get("source_document")),
-        "extracted_text_relative_path": _optional_string(payload.get("extracted_text_relative_path")),
-        "extraction_report_relative_path": _optional_string(payload.get("extraction_report_relative_path")),
         "extraction_warning_count": _non_negative_int(payload.get("extraction_warning_count", 0)),
         "operations": _normalize_operations(payload.get("operations")),
         "project_options_locked": project_options_locked,
@@ -451,18 +447,12 @@ def project_manifest_operation_summary(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-11
-    @version    0.1.1
+    @version    0.2.0
     """
     default_summary = _default_operation_state(operation_kind)
     if not isinstance(operation_payload, dict):
         return default_summary
     return {
-        "folder_relative_path": str(
-            operation_payload.get(
-                "folder_relative_path",
-                default_summary["folder_relative_path"],
-            )
-        ),
         "status": str(operation_payload.get("status", default_summary["status"])),
         "progress_current": _non_negative_int(
             operation_payload.get(
@@ -539,7 +529,7 @@ def _build_project_manifest_healing_result(
     @exception  ValueError Raised when non-repairable manifest fields are invalid.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.1.0
+    @version    0.2.0
     """
     current_stage_is_invalid = _is_invalid_current_stage(payload)
     base_stage = (
@@ -645,23 +635,12 @@ def _validate_project_scoped_manifest_paths(payload: dict[str, object], project_
         stored_relative_path = _optional_string(source_document.get("stored_relative_path"))
         if stored_relative_path is not None:
             _resolve_manifest_path(project_root, stored_relative_path, "source_document.stored_relative_path")
-    for field_name in ("extracted_text_relative_path", "extraction_report_relative_path"):
-        relative_path = _optional_string(payload.get(field_name))
-        if relative_path is not None:
-            _resolve_manifest_path(project_root, relative_path, field_name)
     operations = payload.get("operations")
     if not isinstance(operations, dict):
         return
     for operation_kind, operation_payload in operations.items():
         if not isinstance(operation_payload, dict):
             continue
-        folder_relative_path = _optional_string(operation_payload.get("folder_relative_path"))
-        if folder_relative_path is not None:
-            _resolve_manifest_path(
-                project_root,
-                folder_relative_path,
-                f"operations.{operation_kind}.folder_relative_path",
-            )
         for field_name in ("input_paths", "output_paths", "artifact_paths"):
             for index, relative_path in enumerate(_operation_path_list(operation_payload, field_name)):
                 _resolve_manifest_path(
@@ -882,7 +861,6 @@ def _narrator_definition_completion_evidence(project_root: Path, warnings: list[
         "generated_at",
     )
     operation = {
-        "folder_relative_path": config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH,
         "status": "completed",
         "progress_current": 1,
         "progress_total": 1,
@@ -939,7 +917,6 @@ def _character_voices_completion_evidence(project_root: Path, warnings: list[str
     timestamp = _latest_voice_sample_timestamp(sample_payloads)
     progress_count = len(narrator_targets) + len(character_targets)
     operation = {
-        "folder_relative_path": config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH,
         "status": "completed",
         "progress_current": progress_count,
         "progress_total": progress_count,
@@ -1066,7 +1043,6 @@ def _completed_or_report_healed_operation(
     timestamp = _first_optional_string(report, operation, "updated_at", "completed_at", "generated_at")
     operation.update(
         {
-            "folder_relative_path": config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH,
             "status": "completed",
             "completed_at": _optional_string(operation.get("completed_at")) or timestamp,
             "updated_at": _optional_string(operation.get("updated_at")) or timestamp,
@@ -1155,7 +1131,7 @@ def _heal_extraction_manifest_fields(
     changes: list[str],
 ) -> None:
     """
-    @brief      Align extraction shortcut fields in the candidate manifest.
+    @brief      Align extraction warning metadata in the candidate manifest.
     @param[in,out] manifest Candidate manifest payload.
     @param[in]  evidence Completed extraction evidence payload.
     @param[out] changes Human-readable metadata changes.
@@ -1163,17 +1139,9 @@ def _heal_extraction_manifest_fields(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.1.0
+    @version    0.2.0
     """
     report = evidence.get("report")
-    operation = evidence.get("operation")
-    extracted_path = _first_optional_string(report, operation, "extracted_text_relative_path")
-    if extracted_path is None:
-        extracted_path = config.EXTRACTED_TEXT_FILE_NAME
-    _record_manifest_value_change(manifest, "extracted_text_relative_path", extracted_path, changes)
-    existing_report_path = _optional_string(manifest.get("extraction_report_relative_path"))
-    healed_report_path = existing_report_path or config.EXTRACTION_REPORT_FILE_NAME
-    _record_manifest_value_change(manifest, "extraction_report_relative_path", healed_report_path, changes)
     warnings_value = 0
     if isinstance(report, dict):
         warnings_value = _non_negative_int(report.get("warning_count", len(report.get("warnings", []))))
@@ -1661,7 +1629,7 @@ def _build_repaired_manifest(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-18
-    @version    0.3.0
+    @version    0.4.0
     """
     repaired_manifest = {
         "project_id": str(payload["project_id"]),
@@ -1672,8 +1640,6 @@ def _build_repaired_manifest(
             reset_stage if reset_stage in config.PROJECT_WORKFLOW_STAGES else config.DEFAULT_WORKFLOW_STAGE
         ),
         "source_document": _normalize_source_document(payload.get("source_document")),
-        "extracted_text_relative_path": _optional_string(payload.get("extracted_text_relative_path")),
-        "extraction_report_relative_path": _optional_string(payload.get("extraction_report_relative_path")),
         "extraction_warning_count": _non_negative_int(payload.get("extraction_warning_count", 0)),
         "operations": _normalize_operations(payload.get("operations")),
         "project_options_locked": bool(payload.get("project_options_locked", False)),
@@ -1928,10 +1894,9 @@ def _default_operation_state(operation_kind: str) -> dict[str, object]:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-11
-    @version    0.3.0
+    @version    0.4.0
     """
     return {
-        "folder_relative_path": config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH,
         "status": "not_started",
         "progress_current": 0,
         "progress_total": 0,

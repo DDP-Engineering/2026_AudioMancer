@@ -312,6 +312,8 @@ def test_ai_chunking_writes_chunking_artifacts_and_log(tmp_path, monkeypatch) ->
     assert chunks[0]["source_start_line"] == 1
     assert chunks[0]["source_end_line"] == 3
     assert "CHAPTER I" in chunks[0]["text"]
+    assert "chapter_label" not in chunks[0]
+    assert "chapter_label" not in chunks[1]
 
 
 def test_ai_chunking_appends_operator_instructions_to_prompt_and_state(tmp_path, monkeypatch) -> None:
@@ -388,11 +390,10 @@ def test_ai_chunking_appends_operator_instructions_to_prompt_and_state(tmp_path,
     assert "Additional operator chunking instructions:" in captured_user_prompts[0]
     assert "Keep all chapter prologues in separate chunks." in captured_user_prompts[0]
     assert report_payload["additional_chunking_instructions"] == "Keep all chapter prologues in separate chunks."
+    assert report_payload["additional_chunking_instructions_fingerprint"]
     state_payload = json.loads((project_root / config.CHUNKING_STATE_FILE_NAME).read_text(encoding="utf-8"))
-    assert state_payload["metadata"]["additional_chunking_instructions"] == (
-        "Keep all chapter prologues in separate chunks."
-    )
-    assert state_payload["metadata"]["additional_chunking_instructions_fingerprint"]
+    assert state_payload["resume_checkpoint"] is None
+    assert "additional_chunking_instructions" not in state_payload["metadata"]
 
 
 def test_ai_chunking_ignores_invalid_boundaries_and_closes_last_chunk(tmp_path, monkeypatch) -> None:
@@ -934,7 +935,8 @@ def test_ai_chunking_continues_resume_when_budget_metadata_changes(tmp_path, mon
     assert report_payload["temperature"] == 0.4
     assert len(report_payload["profile_usage_history"]) == 2
     completed_state = json.loads((project_root / config.CHUNKING_STATE_FILE_NAME).read_text(encoding="utf-8"))
-    assert completed_state["metadata"]["completed_unit_count"] == 40
+    assert completed_state["resume_checkpoint"] is None
+    assert "completed_unit_count" not in completed_state["metadata"]
     assert completed_state["metadata"]["model_name"] == "qwen3-14b"
 
 

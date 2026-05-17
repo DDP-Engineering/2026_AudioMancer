@@ -15,7 +15,7 @@
          resumable window-based progress plus AI transaction logs.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-07
-@version 0.9.0
+@version 0.9.1
 """
 
 # IMPORTS
@@ -149,23 +149,19 @@ def clean_text(
     @exception  ValueError Raised on missing profile data or unusable cleanup output.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-12
-    @version    0.6.1
+    @version    0.6.2
     """
     resolved_project_root = Path(project_root)
     source_document = manifest.get("source_document")
     if not isinstance(source_document, dict):
         raise ValueError("No imported source is available for AI-assisted cleanup.")
-    extracted_relative_path = manifest.get("extracted_text_relative_path")
-    if not isinstance(extracted_relative_path, str) or not extracted_relative_path.strip():
-        raise FileNotFoundError("AI-assisted cleanup requires extracted text first.")
-
     profile_id = str(ai_profile_payload.get("id", "")).strip()
     model_name = str(ai_profile_payload.get("model_name", "")).strip()
     base_url = str(ai_profile_payload.get("base_url", "")).strip()
     if not profile_id or not model_name or not base_url:
         raise ValueError("AI-assisted cleanup requires a valid enabled AI profile.")
 
-    extracted_path = resolved_project_root / extracted_relative_path
+    extracted_path = resolved_project_root / config.EXTRACTED_TEXT_FILE_NAME
     if not extracted_path.is_file():
         raise FileNotFoundError(f"Extracted text is missing: {extracted_path}")
 

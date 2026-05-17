@@ -14,7 +14,7 @@
          including manual cleaned-text edits.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-24
-@version 0.12.0
+@version 0.13.0
 """
 
 # IMPORTS
@@ -53,7 +53,7 @@ def build_text_cleanup_state(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.1.3
+    @version    0.1.4
     """
     if project_root is None or manifest is None:
         return {
@@ -65,10 +65,7 @@ def build_text_cleanup_state(
             "can_ai_clean": False,
         }
 
-    extracted_text = read_optional_project_text(
-        project_root,
-        home_presenter_service.optional_manifest_string(manifest.get("extracted_text_relative_path")),
-    )
+    extracted_text = read_optional_project_text(project_root, config.EXTRACTED_TEXT_FILE_NAME)
     extraction_report_payload = text_extraction_service.load_extraction_report(project_root)
     extraction_operation_state = text_extraction_service.load_operation_state(project_root)
     cleaned_text = read_optional_project_text(
@@ -400,30 +397,29 @@ def normalized_manifest_operations(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.3.0
+    @version    0.4.0
     """
     operations = manifest.get("operations")
     if not isinstance(operations, dict):
         operations = {}
     normalized: dict[str, dict[str, object]] = {}
-    for operation_kind, folder_name in (
-        ("extraction", config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH),
-        ("cleanup", config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH),
-        ("chunking", config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH),
-        ("translation", config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH),
-        ("character_discovery", config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH),
-        ("narrator_definition", config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH),
-        ("character_voices", config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH),
-        ("speech_blocks", config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH),
-        ("audio_blocks", config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH),
-        ("audio_assembly", config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH),
+    for operation_kind in (
+        "extraction",
+        "cleanup",
+        "chunking",
+        "translation",
+        "character_discovery",
+        "narrator_definition",
+        "character_voices",
+        "speech_blocks",
+        "audio_blocks",
+        "audio_assembly",
     ):
         candidate = operations.get(operation_kind)
         normalized[operation_kind] = project_workspace_service.project_manifest_operation_summary(
             operation_kind,
             candidate if isinstance(candidate, dict) else None,
         )
-        normalized[operation_kind].setdefault("folder_relative_path", folder_name)
     return normalized
 
 
@@ -437,7 +433,7 @@ def build_manifest_after_extraction_reset(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.1.0
+    @version    0.2.0
     """
     return build_manifest_after_operation_reset(manifest, "extraction")
 
@@ -456,7 +452,7 @@ def build_manifest_after_operation_reset(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.3.0
+    @version    0.4.0
     """
     updated_manifest = dict(manifest)
     operations = normalized_manifest_operations(updated_manifest)
@@ -465,8 +461,6 @@ def build_manifest_after_operation_reset(
         str(selected_kind).strip() for selected_kind in (preserve_operation_kinds or ()) if str(selected_kind).strip()
     }
     if operation_kind == "extraction":
-        updated_manifest["extracted_text_relative_path"] = None
-        updated_manifest["extraction_report_relative_path"] = None
         updated_manifest["extraction_warning_count"] = 0
         updated_manifest["current_stage"] = "source_selected"
         for selected_kind in operations:
@@ -529,7 +523,7 @@ def _write_manual_cleanup_state(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-17
-    @version    0.1.0
+    @version    0.2.0
     """
     cleaned_text_path = operation_runtime_service.build_operation_output_path(
         project_root,
@@ -548,9 +542,8 @@ def _write_manual_cleanup_state(
         config.CLEANUP_REPORT_FILE_NAME,
     )
     input_paths = []
-    extracted_relative_path = manifest.get("extracted_text_relative_path")
-    if isinstance(extracted_relative_path, str) and extracted_relative_path.strip():
-        input_paths.append(extracted_relative_path)
+    if (project_root / config.EXTRACTED_TEXT_FILE_NAME).is_file():
+        input_paths.append(config.EXTRACTED_TEXT_FILE_NAME)
     output_paths = []
     if cleaned_text_path.is_file():
         output_paths.append(operation_runtime_service.relative_to_project(project_root, cleaned_text_path))

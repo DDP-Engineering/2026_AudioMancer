@@ -14,7 +14,7 @@
          maintains resumable extraction state in `00_extraction`.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-06
-@version 0.5.1
+@version 0.5.2
 """
 
 # IMPORTS
@@ -178,7 +178,7 @@ def extract_text(
     @exception  OperationCancelledError Raised when the operator cancels the run.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.3.4
+    @version    0.3.5
     """
     resolved_project_root = Path(project_root)
     source_document = _source_document_from_manifest(manifest)
@@ -279,11 +279,7 @@ def extract_text(
         resolved_project_root,
         "extraction",
         completed_state,
-        extra_fields={
-            "extracted_text_relative_path": report_payload["extracted_text_relative_path"],
-            "extraction_report_relative_path": config.EXTRACTION_REPORT_FILE_NAME,
-            "extraction_warning_count": len(report_payload["warnings"]),
-        },
+        extra_fields={"extraction_warning_count": len(report_payload["warnings"])},
     )
     return report_payload
 

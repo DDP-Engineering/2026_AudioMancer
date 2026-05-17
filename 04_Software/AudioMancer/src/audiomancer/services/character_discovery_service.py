@@ -1093,30 +1093,41 @@ def _resolve_discovery_input_chunks(project_root: Path) -> tuple[list[dict[str, 
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-27
-    @version    0.2.0
+    @version    0.3.0
     """
     source_chunks = sorted(
         deterministic_chunking_service.load_chunks(project_root),
         key=lambda item: int(item.get("sequence_index", 0)),
     )
+    discovery_chunks: list[dict[str, object]] = []
+    current_chapter_label: str | None = None
+    for source_chunk in source_chunks:
+        detected_chapter_label = deterministic_chunking_service._chapter_label_from_text(
+            str(source_chunk.get("text", ""))
+        )
+        if detected_chapter_label is not None:
+            current_chapter_label = detected_chapter_label
+        discovery_chunks.append(_discovery_chunk_from_source(source_chunk, current_chapter_label))
     return (
-        [_discovery_chunk_from_source(source_chunk) for source_chunk in source_chunks],
+        discovery_chunks,
         CHARACTER_DISCOVERY_INPUT_SOURCE_CHUNKS,
     )
 
 
-def _discovery_chunk_from_source(source_chunk: dict[str, object]) -> dict[str, object]:
+def _discovery_chunk_from_source(source_chunk: dict[str, object], chapter_label: str | None) -> dict[str, object]:
     """
     @brief      Build one discovery chunk from canonical source chunking output.
     @param[in]  source_chunk Source chunk payload.
+    @param[in]  chapter_label Runtime chapter context carried from ordered chunk text.
     @return     Discovery chunk payload.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-27
-    @version    0.1.0
+    @version    0.3.0
     """
     discovery_chunk = dict(source_chunk)
     text = str(discovery_chunk.get("text", "")).strip()
+    discovery_chunk["chapter_label"] = chapter_label
     discovery_chunk["source_text"] = text
     discovery_chunk["input_source"] = CHARACTER_DISCOVERY_INPUT_SOURCE_CHUNKS
     discovery_chunk["dialogue_spans"] = _detect_dialogue_spans(text)

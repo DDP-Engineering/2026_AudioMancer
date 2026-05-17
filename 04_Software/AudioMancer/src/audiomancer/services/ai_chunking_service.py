@@ -15,7 +15,7 @@
          window-based operation state plus AI transaction logging.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-11
-@version 0.8.3
+@version 0.9.0
 """
 
 # IMPORTS
@@ -349,18 +349,14 @@ def chunk_text(
         completed_at=report_payload["chunked_at"],
         warnings=warnings,
         chunks=None,
-        committed_break_ids=committed_break_ids,
         profile_id=profile_id,
         semantic_strategy=semantic_strategy,
-        input_fingerprint=input_fingerprint,
         log_relative_path=log_relative_path,
         resume_checkpoint=None,
         token_usage=token_usage,
         budget_metadata=budget_metadata,
         profile_runtime_metadata=profile_runtime_metadata,
         profile_usage_history=profile_usage_history,
-        completed_unit_count=len(paragraph_records),
-        additional_chunking_instructions=additional_chunking_instructions,
     )
     state_path.write_text(
         json.dumps(completed_state, indent=2, ensure_ascii=False) + "\n",
@@ -596,10 +592,10 @@ def _resolve_additional_chunking_instructions(
         "failed",
     }:
         return ""
-    metadata = existing_state.get("metadata", {})
-    if not isinstance(metadata, dict):
+    resume_checkpoint = existing_state.get("resume_checkpoint", {})
+    if not isinstance(resume_checkpoint, dict):
         return ""
-    return _normalized_additional_chunking_instructions(metadata.get("additional_chunking_instructions"))
+    return _normalized_additional_chunking_instructions(resume_checkpoint.get("additional_chunking_instructions"))
 
 
 def _normalized_additional_chunking_instructions(value: object) -> str:
@@ -711,13 +707,8 @@ def _restore_resume_state(
         return 0, 0, [], None
     if str(resume_checkpoint.get("semantic_strategy", "")) != semantic_strategy:
         return 0, 0, [], None
-    metadata = existing_state.get("metadata", {})
-    if not isinstance(metadata, dict):
-        metadata = {}
     stored_instruction_fingerprint = str(
-        metadata.get("additional_chunking_instructions_fingerprint")
-        or resume_checkpoint.get("additional_chunking_instructions_fingerprint")
-        or _compute_prompt_fingerprint("")
+        resume_checkpoint.get("additional_chunking_instructions_fingerprint") or _compute_prompt_fingerprint("")
     )
     if stored_instruction_fingerprint != additional_chunking_instructions_fingerprint:
         return 0, 0, [], None
@@ -896,12 +887,8 @@ def _build_chunks_from_break_ids(
     boundary_ids = set(committed_break_ids)
     chunks: list[ChunkPayload] = []
     start_index = 0
-    current_chapter: str | None = None
     chunk_index = 1
     for record_index, paragraph_record in enumerate(paragraph_records):
-        chapter_label = deterministic_chunking_service._detect_chapter_label(str(paragraph_record["text"]))
-        if chapter_label is not None:
-            current_chapter = chapter_label
         is_boundary = str(paragraph_record["unit_id"]) in boundary_ids
         is_last_record = record_index == len(paragraph_records) - 1
         if not is_boundary and not is_last_record:
@@ -911,7 +898,6 @@ def _build_chunks_from_break_ids(
             {
                 "chunk_id": f"chunk-{chunk_index:04d}",
                 "sequence_index": chunk_index,
-                "chapter_label": current_chapter,
                 "text": "\n\n".join(str(item["text"]) for item in selected_records).strip(),
                 "source_start_line": int(selected_records[0]["line_start"]),
                 "source_end_line": int(selected_records[-1]["line_end"]),
@@ -1035,10 +1021,8 @@ def _write_running_state(
         completed_at=None,
         warnings=warnings,
         chunks=chunks,
-        committed_break_ids=committed_break_ids,
         profile_id=profile_id,
         semantic_strategy=semantic_strategy,
-        input_fingerprint=input_fingerprint,
         log_relative_path=log_relative_path,
         token_usage=token_usage,
         resume_checkpoint={
@@ -1050,13 +1034,12 @@ def _write_running_state(
             "completed_unit_count": int(completed_unit_count),
             "committed_break_ids": list(committed_break_ids),
             "log_relative_path": log_relative_path,
+            "additional_chunking_instructions": additional_chunking_instructions,
             "additional_chunking_instructions_fingerprint": additional_chunking_instructions_fingerprint,
         },
         budget_metadata=budget_metadata,
         profile_runtime_metadata=profile_runtime_metadata,
         profile_usage_history=profile_usage_history,
-        completed_unit_count=completed_unit_count,
-        additional_chunking_instructions=additional_chunking_instructions,
     )
     state_path.write_text(
         json.dumps(state_payload, indent=2, ensure_ascii=False) + "\n",
@@ -1076,18 +1059,14 @@ def _build_operation_state(
     completed_at: str | None,
     warnings: list[str],
     chunks: list[ChunkPayload] | None,
-    committed_break_ids: list[str],
     profile_id: str,
     semantic_strategy: str,
-    input_fingerprint: str,
     log_relative_path: str,
     resume_checkpoint: dict[str, object] | None,
     token_usage: TokenUsagePayload,
     budget_metadata: BudgetMetadataPayload,
     profile_runtime_metadata: ProfileRuntimeMetadataPayload,
     profile_usage_history: list[ProfileRuntimeMetadataPayload],
-    completed_unit_count: int,
-    additional_chunking_instructions: str,
 ) -> OperationStatePayload:
     """
     @brief      Build the operation state.
@@ -1102,24 +1081,19 @@ def _build_operation_state(
     @param[in]  completed_at Value for `completed_at`.
     @param[in]  warnings Value for `warnings`.
     @param[in]  chunks Value for `chunks`.
-    @param[in]  committed_break_ids Value for `committed_break_ids`.
     @param[in]  profile_id Profile identifier.
     @param[in]  semantic_strategy Value for `semantic_strategy`.
-    @param[in]  input_fingerprint Value for `input_fingerprint`.
     @param[in]  log_relative_path Path for `log_relative_path`.
     @param[in]  resume_checkpoint Value for `resume_checkpoint`.
     @param[in]  token_usage Value for `token_usage`.
     @param[in]  budget_metadata Context-budget metadata.
     @param[in]  profile_runtime_metadata Runtime metadata for the current AI profile.
     @param[in]  profile_usage_history Runtime metadata entries used across resumed segments.
-    @param[in]  completed_unit_count Number of paragraph units processed by completed AI windows.
-    @param[in]  additional_chunking_instructions Optional operator-supplied chunking rules.
     @return     Derived helper result.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-12
-    @version    0.4.0
+    @version    0.5.0
     """
-    additional_chunking_instructions_fingerprint = _compute_prompt_fingerprint(additional_chunking_instructions)
     artifact_paths = [log_relative_path]
     if report_path is not None and report_path.is_file():
         artifact_paths.insert(0, relative_to_project(project_root, report_path))
@@ -1138,19 +1112,12 @@ def _build_operation_state(
             "warnings": list(warnings),
             "chunk_count": 0 if chunks is None else len(chunks),
             "detected_chapter_count": 0 if chunks is None else _chapter_count_from_chunks(chunks),
-            "chunks": None if chunks is None else list(chunks),
             "ai_profile_id": profile_id,
             **profile_runtime_metadata,
             "semantic_strategy": semantic_strategy,
-            "input_fingerprint": input_fingerprint,
-            "log_relative_path": log_relative_path,
-            "committed_break_ids": list(committed_break_ids),
-            "completed_unit_count": int(completed_unit_count),
             "token_usage": token_usage_service.coerce_token_usage(token_usage),
             "budget_metadata": dict(budget_metadata),
             "profile_usage_history": [dict(item) for item in profile_usage_history],
-            "additional_chunking_instructions": additional_chunking_instructions,
-            "additional_chunking_instructions_fingerprint": additional_chunking_instructions_fingerprint,
         },
         resume_checkpoint=resume_checkpoint,
     )

@@ -46,8 +46,6 @@ def test_cleanup_writes_runtime_artifacts_and_preserves_structure(tmp_path) -> N
         "imported_at": "2026-04-06T12:00:00+00:00",
         "size_bytes": source_path.stat().st_size,
     }
-    extracted_relative_path = config.EXTRACTED_TEXT_FILE_NAME
-    manifest["extracted_text_relative_path"] = extracted_relative_path
     (project_root / config.EXTRACTED_TEXT_FILE_NAME).write_text(
         (
             "Book Title\n1\nChapter I\nThis is the first paragraph"
@@ -81,9 +79,9 @@ def test_cleanup_writes_runtime_artifacts_and_preserves_structure(tmp_path) -> N
     assert manifest_payload["operations"]["cleanup"]["status"] == "completed"
 
 
-def test_cleanup_rejects_traversal_extracted_text_path(tmp_path) -> None:
+def test_cleanup_requires_canonical_extracted_text_artifact(tmp_path) -> None:
     """
-    @brief      Verify cleanup input loading rejects extracted-text paths outside the project.
+    @brief      Verify cleanup input loading requires the canonical extracted-text artifact.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
@@ -92,11 +90,7 @@ def test_cleanup_rejects_traversal_extracted_text_path(tmp_path) -> None:
     @version    0.1.0
     """
     project_root, manifest = _build_cleanup_project(tmp_path, "CleanupTraversal")
-    outside_text = tmp_path / "outside.txt"
-    outside_text.write_text("outside project", encoding="utf-8")
-    manifest["extracted_text_relative_path"] = "../outside.txt"
-
-    with pytest.raises(ValueError, match="Project-relative path"):
+    with pytest.raises(FileNotFoundError, match="Extracted text is missing"):
         deterministic_cleanup_service.clean_text(project_root, manifest)
 
     assert not (project_root / config.CLEANED_TEXT_FILE_NAME).exists()
@@ -223,7 +217,6 @@ def test_cleanup_persists_resumable_state_after_cancellation(tmp_path) -> None:
         "imported_at": "2026-04-06T12:00:00+00:00",
         "size_bytes": source_path.stat().st_size,
     }
-    manifest["extracted_text_relative_path"] = config.EXTRACTED_TEXT_FILE_NAME
     (project_root / config.EXTRACTED_TEXT_FILE_NAME).write_text(
         "Header\n1\nParagraph one.\n\n\f\n\nHeader\n2\nParagraph two.",
         encoding="utf-8",
@@ -277,7 +270,6 @@ def test_cleanup_removes_separator_marks_and_heals_false_phrase_breaks(tmp_path)
         "imported_at": "2026-04-06T12:00:00+00:00",
         "size_bytes": source_path.stat().st_size,
     }
-    manifest["extracted_text_relative_path"] = config.EXTRACTED_TEXT_FILE_NAME
     (project_root / config.EXTRACTED_TEXT_FILE_NAME).write_text(
         (
             '"Drenthe will shoot this industrial if\n\n'
@@ -316,7 +308,6 @@ def test_cleanup_displays_dialogue_markers_on_new_lines(tmp_path) -> None:
         "imported_at": "2026-04-06T12:00:00+00:00",
         "size_bytes": source_path.stat().st_size,
     }
-    manifest["extracted_text_relative_path"] = config.EXTRACTED_TEXT_FILE_NAME
     (project_root / config.EXTRACTED_TEXT_FILE_NAME).write_text(
         (
             "Chani Ã®l zori, trÄƒgÃ¢ndu-l de mantie: - Mai iute. Se face luminÄƒ. "
@@ -352,7 +343,6 @@ def test_cleanup_preserves_original_newline_after_dialogue_line(tmp_path) -> Non
         "imported_at": "2026-04-06T12:00:00+00:00",
         "size_bytes": source_path.stat().st_size,
     }
-    manifest["extracted_text_relative_path"] = config.EXTRACTED_TEXT_FILE_NAME
     (project_root / config.EXTRACTED_TEXT_FILE_NAME).write_text(
         ("- E primul schimb al gÄƒrzii de zi, Ã®i rÄƒspunse fata. GrÄƒbeÈ™te-te!\nPosteazÄƒ santinele, gÃ®ndi Paul."),
         encoding="utf-8",
@@ -549,7 +539,6 @@ def _build_cleanup_project(tmp_path, project_name: str):
         "imported_at": "2026-04-26T12:00:00+00:00",
         "size_bytes": source_path.stat().st_size,
     }
-    manifest["extracted_text_relative_path"] = config.EXTRACTED_TEXT_FILE_NAME
     return project_root, manifest
 
 

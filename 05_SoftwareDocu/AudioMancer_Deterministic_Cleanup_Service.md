@@ -19,7 +19,7 @@ self-contained cleanup artifacts at the active project root.
 
 ## 2. Responsibilities
 
-- read the canonical extracted text selected by `project.json`
+- read the canonical root-level `extracted_text.txt` artifact
 - remove repeated page headers and footers when the extracted text still
   exposes page boundaries, including repeated lines whose page-number suffixes
   change from page to page
@@ -107,10 +107,7 @@ Inputs:
 
 - active project root folder
 - current `project.json` manifest with populated `source_document`
-- extracted text referenced by `extracted_text_relative_path`
-- the extracted-text reference must be a safe project-relative path; absolute
-  paths, parent traversal, and symlink escapes are rejected before the file is
-  read
+- root-level `extracted_text.txt` produced by Text Extraction
 - optional progress callback and cancellation callback
 
 Outputs:

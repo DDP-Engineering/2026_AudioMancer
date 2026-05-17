@@ -48,11 +48,9 @@ def test_create_project_creates_required_structure_and_manifest(tmp_path) -> Non
     assert manifest["display_name"] == "Book5_CAL_CAL"
     assert manifest["current_stage"] == config.DEFAULT_WORKFLOW_STAGE
     assert manifest["source_document"] is None
-    assert manifest["extracted_text_relative_path"] is None
-    assert manifest["extraction_report_relative_path"] is None
     assert manifest["extraction_warning_count"] == 0
     assert manifest["operations"]["extraction"]["status"] == "not_started"
-    assert manifest["operations"]["cleanup"]["folder_relative_path"] == "."
+    assert "folder_relative_path" not in manifest["operations"]["cleanup"]
     assert manifest["voice_assignment_mode"] == config.DEFAULT_TTS_VOICE_ASSIGNMENT_MODE
     assert "metadata" not in manifest["operations"]["extraction"]
     assert "output_paths" not in manifest["operations"]["cleanup"]
@@ -454,6 +452,7 @@ def test_validate_project_manifest_normalizes_operations_map() -> None:
 
     assert validated["operations"]["extraction"]["status"] == "running"
     assert validated["operations"]["extraction"]["progress_current"] == 1
+    assert "folder_relative_path" not in validated["operations"]["extraction"]
     assert validated["operations"]["translation"]["status"] == "not_started"
     assert "metadata" not in validated["operations"]["extraction"]
     assert "output_paths" not in validated["operations"]["translation"]
@@ -505,6 +504,7 @@ def test_save_manifest_projects_detailed_operation_state_to_compact_summary(tmp_
     assert "input_paths" not in translation_operation
     assert "output_paths" not in translation_operation
     assert "artifact_paths" not in translation_operation
+    assert "folder_relative_path" not in translation_operation
     assert "metadata" not in translation_operation
     assert "resume_checkpoint" not in translation_operation
 
@@ -1021,7 +1021,6 @@ def _operation_state(status: str, current: int, total: int) -> dict[str, object]
     """
     completed_at = "2026-04-25T12:01:00+00:00" if status == "completed" else None
     return {
-        "folder_relative_path": ".",
         "status": status,
         "progress_current": current,
         "progress_total": total,
