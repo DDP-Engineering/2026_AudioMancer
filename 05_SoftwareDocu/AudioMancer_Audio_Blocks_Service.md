@@ -268,10 +268,12 @@ Current invariants:
   until downstream behavior is added
 - pause blocks retain a millisecond duration for Audio Assembly silence
   insertion; the downstream default is `1000 ms`
-- all approvals are explicit; generation never auto-approves audio
+- spoken Audio Blocks require explicit operator approval; metadata-only pause
+  blocks are generated and approved automatically as timing entries so they do
+  not block Audio Assembly
 - `approve_all_audio_blocks(...)` updates only already generated blocks
-- `unapprove_audio_block(...)` clears only `approved` and `approved_at`; it does
-  not delete the generated WAV or metadata file
+- `unapprove_audio_block(...)` clears the compact `approved` timestamp; it does
+  not delete the generated WAV or metadata sidecar
 - `remove_audio_blocks_for_speech_blocks(...)` is used by upstream selective
   invalidation to remove only exact `speech_block_id` matches and their
   generated artifacts
