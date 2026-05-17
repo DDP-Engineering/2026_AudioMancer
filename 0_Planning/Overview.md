@@ -11,6 +11,7 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
 
 `AudioMancer` is an offline-first desktop application for generating audiobooks
 from written books with personalized character voices or real cloned voices.
+The current project version is `1.1.5`.
 
 Its purpose is to take a written book, transform it into clean structured
 narration data, and support the operator through the full pipeline required to

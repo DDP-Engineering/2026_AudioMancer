@@ -142,7 +142,7 @@ def test_sync_manifest_after_translation_advances_only_after_full_approval(qtbot
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-22
-    @version    0.1.0
+    @version    0.2.0
     """
     project_root, _manifest = _create_project(tmp_path, "TranslationApprovalControllerProject")
     translation_root = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH
@@ -150,12 +150,16 @@ def test_sync_manifest_after_translation_advances_only_after_full_approval(qtbot
     (translation_root / config.TRANSLATION_STATE_FILE_NAME).write_text(
         json.dumps(
             {
-                "folder_relative_path": config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH,
                 "status": "completed",
-                "output_paths": [f"{config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH}/{config.TRANSLATED_CHUNKS_FILE_NAME}"],
-                "artifact_paths": [
-                    f"{config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH}/{config.TRANSLATION_REPORT_FILE_NAME}"
-                ],
+                "progress_current": 1,
+                "progress_total": 1,
+                "mode": "ai_assisted",
+                "started_at": "2026-04-22T12:00:00+00:00",
+                "completed_at": "2026-04-22T12:05:00+00:00",
+                "updated_at": "2026-04-22T12:05:00+00:00",
+                "warning_count": 0,
+                "metadata": {"log_relative_path": "log_ai_translation_20260422.log"},
+                "resume_checkpoint": None,
             },
             indent=2,
         )
@@ -175,6 +179,16 @@ def test_sync_manifest_after_translation_advances_only_after_full_approval(qtbot
     )
     assert window._current_manifest is not None
     assert window._current_manifest["current_stage"] == "translation_ready"
+    assert set(window._current_manifest["operations"]["translation"]) == {
+        "status",
+        "progress_current",
+        "progress_total",
+        "mode",
+        "started_at",
+        "completed_at",
+        "updated_at",
+        "warning_count",
+    }
 
     ai_translation_ui_controller._sync_manifest_after_translation(
         window,
@@ -197,16 +211,22 @@ def test_sync_manifest_after_translation_resets_downstream_when_approval_is_lost
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-26
-    @version    0.1.0
+    @version    0.2.0
     """
     project_root, _manifest = _create_project(tmp_path, "TranslationDownstreamResetProject")
     (project_root / config.TRANSLATION_STATE_FILE_NAME).write_text(
         json.dumps(
             {
-                "folder_relative_path": config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH,
                 "status": "translated",
-                "output_paths": [config.TRANSLATED_CHUNKS_FILE_NAME],
-                "artifact_paths": [config.TRANSLATION_REPORT_FILE_NAME],
+                "progress_current": 1,
+                "progress_total": 1,
+                "mode": "ai_assisted",
+                "started_at": "2026-04-26T12:00:00+00:00",
+                "completed_at": None,
+                "updated_at": "2026-04-26T12:05:00+00:00",
+                "warning_count": 0,
+                "metadata": {"log_relative_path": "log_ai_translation_20260426.log"},
+                "resume_checkpoint": None,
             },
             indent=2,
         )

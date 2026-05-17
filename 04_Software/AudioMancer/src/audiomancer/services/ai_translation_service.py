@@ -13,7 +13,7 @@
          executes resumable translation over canonical chunking output.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-07
-@version 0.10.3
+@version 0.11.0
 """
 
 # IMPORTS
@@ -36,7 +36,6 @@ from audiomancer.services.logging_service import get_component_logger, trace_fun
 from audiomancer.services.operation_runtime_service import (
     NARRATOR_PROFILE_PRESERVED_OPERATION_KINDS,
     build_operation_output_path,
-    build_operation_state_payload,
     raise_if_cancelled,
     relative_to_project,
     reset_operation_data,
@@ -333,7 +332,6 @@ def ensure_pass_through_translation(
     )
     operation_state["mode"] = "pass_through"
     operation_state["metadata"]["pass_through"] = True
-    operation_state["metadata"]["started_by_operator"] = True
     _persist_translation_state(project_root, source_chunks, translated_chunks, report, operation_state)
     return source_chunks, translated_chunks, report
 
@@ -1111,19 +1109,12 @@ def _refresh_operation_state(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-12
-    @version    0.3.0
+    @version    0.4.0
     """
     state = dict(existing_operation_state or {})
     metadata = state.get("metadata", {})
     metadata = dict(metadata) if isinstance(metadata, dict) else {}
-    input_path = _translation_input_snapshot_path(project_root)
-    output_path = build_operation_output_path(project_root, "translation", config.TRANSLATED_CHUNKS_FILE_NAME)
-    report_path = build_operation_output_path(project_root, "translation", config.TRANSLATION_REPORT_FILE_NAME)
-    report_relative_path = relative_to_project(project_root, report_path)
-    artifact_paths = [report_relative_path]
     log_relative_path = metadata.get("log_relative_path")
-    if log_relative_path not in (None, ""):
-        artifact_paths.append(str(log_relative_path))
     status = _operation_status_from_report(report)
     completed_at = str(report["updated_at"]) if status == "completed" else None
     started_at = None if state.get("started_at") in (None, "") else str(state.get("started_at"))
@@ -1139,7 +1130,6 @@ def _refresh_operation_state(
         "total_chunk_count": report["total_chunk_count"],
         "warnings": list(report.get("warnings", [])),
         "translated_chunks": translated_chunks,
-        "source_chunk_count": len(source_chunks),
         "token_usage": token_usage_service.coerce_token_usage(token_usage),
     }
     if budget_metadata:
@@ -1165,11 +1155,7 @@ def _refresh_operation_state(
     if resume_checkpoint is not None:
         resume_checkpoint["additional_translation_instructions_fingerprint"] = additional_translation_fingerprint
     return {
-        "folder_relative_path": config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH,
         "status": status,
-        "input_paths": [relative_to_project(project_root, input_path)],
-        "output_paths": [relative_to_project(project_root, output_path)],
-        "artifact_paths": artifact_paths,
         "progress_current": report["translated_chunk_count"],
         "progress_total": report["total_chunk_count"],
         "mode": mode,
@@ -1351,19 +1337,8 @@ def _build_operation_state(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-12
-    @version    0.4.0
+    @version    0.5.0
     """
-    input_path = _translation_input_snapshot_path(project_root)
-    output_path = build_operation_output_path(
-        project_root,
-        "translation",
-        config.TRANSLATED_CHUNKS_FILE_NAME,
-    )
-    report_path = build_operation_output_path(
-        project_root,
-        "translation",
-        config.TRANSLATION_REPORT_FILE_NAME,
-    )
     metadata = {
         "target_language": target_language,
         "translation_profile_id": profile_id,
@@ -1372,7 +1347,6 @@ def _build_operation_state(
         "total_chunk_count": report["total_chunk_count"],
         "warnings": list(report.get("warnings", [])),
         "translated_chunks": translated_chunks,
-        "source_chunk_count": len(source_chunks),
         "log_relative_path": relative_to_project(project_root, log_path),
         "token_usage": token_usage_service.coerce_token_usage(token_usage),
         "additional_translation_instructions": _normalized_additional_translation_instructions(
@@ -1384,24 +1358,18 @@ def _build_operation_state(
     }
     if budget_metadata is not None:
         metadata["budget_metadata"] = dict(budget_metadata)
-    return build_operation_state_payload(
-        status=status,
-        input_paths=[relative_to_project(project_root, input_path)],
-        output_paths=[relative_to_project(project_root, output_path)],
-        artifact_paths=[
-            relative_to_project(project_root, report_path),
-            relative_to_project(project_root, log_path),
-        ],
-        progress_current=int(report["translated_chunk_count"]),
-        progress_total=int(report["total_chunk_count"]),
-        mode="ai_assisted",
-        started_at=started_at,
-        completed_at=completed_at,
-        warning_count=len(list(report.get("warnings", []))),
-        metadata=metadata,
-        resume_checkpoint=resume_checkpoint,
-        updated_at=str(report["updated_at"]),
-    )
+    return {
+        "status": str(status),
+        "progress_current": int(report["translated_chunk_count"]),
+        "progress_total": int(report["total_chunk_count"]),
+        "mode": "ai_assisted",
+        "started_at": started_at,
+        "completed_at": completed_at,
+        "updated_at": str(report["updated_at"]),
+        "warning_count": len(list(report.get("warnings", []))),
+        "metadata": metadata,
+        "resume_checkpoint": None if resume_checkpoint is None else dict(resume_checkpoint),
+    }
 
 
 def _next_untranslated_chunk_id(translated_chunks: list[dict[str, object]]) -> str | None:
@@ -1429,12 +1397,13 @@ def _resolve_log_path(project_root: Path, started_at: str) -> Path:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-07
-    @version    0.1.0
+    @version    0.2.1
     """
     existing_state = load_operation_state(project_root) or {}
-    for artifact_path in list(existing_state.get("artifact_paths", [])):
-        relative_path = str(artifact_path)
-        if Path(relative_path).name.startswith(config.AI_TRANSACTION_LOG_FILE_PREFIX):
+    metadata = existing_state.get("metadata", {})
+    if isinstance(metadata, dict):
+        relative_path = str(metadata.get("log_relative_path", "")).strip()
+        if relative_path:
             resolved_path = project_root / relative_path
             resolved_path.parent.mkdir(parents=True, exist_ok=True)
             if not resolved_path.exists():
@@ -1449,18 +1418,6 @@ def _resolve_log_path(project_root: Path, started_at: str) -> Path:
     if not log_path.exists():
         log_path.write_text("", encoding="utf-8")
     return log_path
-
-
-def _translation_input_snapshot_path(project_root: Path) -> Path:
-    """
-    @brief      Resolve the canonical chunking artifact used as translation input.
-    @param[in]  project_root Active project root folder.
-    @return     Helper result.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.2.0
-    """
-    return project_root / config.CHUNK_ARTIFACT_FILE_NAME
 
 
 def _translation_source_snapshot_base_name(project_root: Path) -> str:

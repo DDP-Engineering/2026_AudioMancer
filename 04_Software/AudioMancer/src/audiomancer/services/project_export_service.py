@@ -14,7 +14,7 @@
          audiobook assets without modifying the active project workspace.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-25
-@version 0.4.0
+@version 0.4.1
 """
 
 # IMPORTS
@@ -583,23 +583,30 @@ def _build_speech_blocks_document(project_root: Path, manifest: dict[str, object
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.1.1
+    @version    0.1.2
     """
     report = speech_blocks_service.load_speech_blocks_report(project_root) or {}
     state = speech_blocks_service.load_operation_state(project_root) or {}
     metadata = _metadata_from_state(state)
     speech_blocks = speech_blocks_service.sort_speech_blocks(speech_blocks_service.load_speech_blocks(project_root))
+    source_kind = _first_value(report.get("source_kind"), metadata.get("source_kind"))
+    source_chunks = (
+        ai_translation_service.load_translated_chunks(project_root)
+        if source_kind == "translated_chunks"
+        else deterministic_chunking_service.load_chunks(project_root)
+    )
+    source_chunk_count = len(source_chunks) if source_chunks else None
     parameters = _compact_fields(
         [
             ("Source Language", _first_value(report.get("source_language"), metadata.get("source_language"))),
-            ("Source Kind", _first_value(report.get("source_kind"), metadata.get("source_kind"))),
+            ("Source Kind", source_kind),
             *_ai_parameter_fields(
                 project_root,
                 report,
                 state,
                 _first_value(report.get("speech_blocks_profile_id_last_used"), metadata.get("ai_profile_id")),
             ),
-            ("Source Chunk Count", _first_value(report.get("source_chunk_count"), metadata.get("source_chunk_count"))),
+            ("Source Chunk Count", _first_value(report.get("source_chunk_count"), source_chunk_count)),
             ("Speech Block Count", _first_value(report.get("speech_block_count"), len(speech_blocks))),
             ("Warnings Count", _first_value(report.get("warning_count"), state.get("warning_count"))),
             *_token_usage_fields(report, metadata),

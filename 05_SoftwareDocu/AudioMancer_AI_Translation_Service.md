@@ -25,6 +25,8 @@ the `AI Translation` UI.
 - split oversized chunk text into budgeted translation segments before model
   calls
 - persist translated chunk records, operation state, report data, and AI logs
+- keep translation operation state compact by storing resume-critical metadata
+  instead of duplicated input, output, and artifact path lists
 - support selected-chunk edit, retranslate, approve, approve-all, and reset
 - reset downstream character, character-voice, speech, audio, and audiobook
   artifacts when translation is fully reset, while preserving existing Narator
@@ -110,7 +112,8 @@ Outputs:
 - `translation_report.json`
 - `translation_state.json`
 - `log_ai_translation_<timestamp>.log`
-- compact manifest operation summary for `operations["translation"]`
+- compact, path-list-free manifest operation summary for
+  `operations["translation"]`
 
 ## 6. Data Contracts
 
@@ -142,6 +145,13 @@ Invariants:
 - `translation_report.json` and `translation_state.json` persist
   `additional_translation_instructions` plus a stable fingerprint for AI runs;
   unfinished runs resumed from the UI reuse the saved rules
+- `translation_state.json` does not duplicate `folder_relative_path`,
+  `input_paths`, `output_paths`, `artifact_paths`, or `source_chunk_count` for
+  Translation; resume uses `translated_text.json` to skip completed chunks,
+  `metadata.log_relative_path` to keep appending to the same AI transaction log,
+  and persisted token-usage and prompt-rule metadata for continuity
+- `project.json.operations["translation"]` remains a compact Home summary with
+  status, progress, mode, timestamps, and warning count only
 - approval is required before downstream character and voice workflows consume
   translated text
 - manual translation edits clear the edited chunk approval when text changes

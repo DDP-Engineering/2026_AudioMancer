@@ -305,7 +305,7 @@ def _build_export_project(tmp_path):
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.1.0
+    @version    0.2.0
     """
     project_root, manifest = project_workspace_service.create_project("ExportProject", tmp_path)
     manifest["source_document"] = {
@@ -500,7 +500,6 @@ def _build_export_project(tmp_path):
             "source_language": "ro",
             "source_kind": "translated_chunks",
             "speech_blocks_profile_id_last_used": "profile_1",
-            "source_chunk_count": 1,
             "speech_block_count": 1,
             "warning_count": 0,
         },

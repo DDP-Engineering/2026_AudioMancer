@@ -12,6 +12,19 @@ All notable changes to this project will be documented in this file.
 
 No notable changes yet.
 
+## [1.1.5] - 2026-05-18
+
+### Changed
+
+- AI Translation now persists compact operation state by removing duplicated
+  path-list, source-count, and pass-through operator metadata while preserving
+  chunk-record resume, AI log reuse, token usage, and saved operator prompt
+  rules.
+- Speech Blocks export source chunk counts now fall back to current
+  `translated_text.json` or `chunks_text.json` artifacts instead of removed
+  operation-state metadata.
+- Offline English and Romanian help bundles were updated to version `1.1.5`.
+
 ## [1.1.4] - 2026-05-17
 
 ### Changed
