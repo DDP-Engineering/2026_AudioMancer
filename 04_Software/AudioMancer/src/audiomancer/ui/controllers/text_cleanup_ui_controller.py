@@ -168,7 +168,7 @@ def handle_ai_cleanup_requested(window: "MainWindow", profile_id: str) -> None:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-30
-    @version    0.5.0
+    @version    0.5.1
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._active_operation_kind is not None:
@@ -210,7 +210,7 @@ def handle_ai_cleanup_requested(window: "MainWindow", profile_id: str) -> None:
         return
 
     additional_cleanup_instructions = None
-    if cleanup_status in {"running", "failed"} and cleanup_mode == "ai_assisted":
+    if cleanup_status in {"running", "failed", "cancelled"} and cleanup_mode == "ai_assisted":
         pass
     else:
         if not confirm_ai_cleanup_start(window, current_language):

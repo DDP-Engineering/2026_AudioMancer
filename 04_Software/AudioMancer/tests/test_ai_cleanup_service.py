@@ -14,7 +14,7 @@
          persists resumable state, and creates one AI transaction log file.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-11
-@version 0.4.2
+@version 0.4.3
 """
 
 # IMPORTS
@@ -53,7 +53,7 @@ def test_ai_cleanup_writes_cleanup_artifacts_and_log(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-02
-    @version    0.1.0
+    @version    0.2.0
     """
     project_root, manifest = mock_extracted_project
 
@@ -124,10 +124,15 @@ def test_ai_cleanup_writes_cleanup_artifacts_and_log(
     metadata_payload = json.loads((cleanup_root / config.CLEANED_TEXT_METADATA_FILE_NAME).read_text(encoding="utf-8"))
     assert state_payload["mode"] == "ai_assisted"
     assert state_payload["status"] == "completed"
+    assert state_payload["resume_checkpoint"] is None
     assert state_payload["metadata"]["model_settings"] == report_payload["model_settings"]
     assert state_payload["metadata"]["budget_metadata"] == report_payload["budget_metadata"]
     assert metadata_payload["cleanup_mode"] == "ai_assisted"
+    assert "text" not in metadata_payload["paragraphs"][0]
     assert metadata_payload["paragraphs"][0]["source_page_start"] is None
+    manifest_payload = json.loads((project_root / config.PROJECT_MANIFEST_FILE_NAME).read_text(encoding="utf-8"))
+    assert manifest_payload["operations"]["cleanup"]["status"] == "completed"
+    assert manifest_payload["operations"]["cleanup"]["mode"] == "ai_assisted"
 
 
 @pytest.mark.parametrize(
@@ -181,7 +186,7 @@ def test_ai_cleanup_text_transformations(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-02
-    @version    0.1.0
+    @version    0.2.0
     """
     project_root, manifest = mock_extracted_project
     extracted_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.EXTRACTED_TEXT_FILE_NAME
@@ -744,6 +749,14 @@ def test_ai_cleanup_resumes_with_new_model_settings(
     monkeypatch.setattr(ai_cleanup_service.llm_provider_service, "chat_json", _first_chat_json)
     with pytest.raises(RuntimeError, match="stop"):
         ai_cleanup_service.clean_text(project_root, manifest, _MOCK_PROFILE)
+    interrupted_manifest = json.loads((project_root / config.PROJECT_MANIFEST_FILE_NAME).read_text(encoding="utf-8"))
+    interrupted_state = json.loads(
+        (project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.CLEANUP_STATE_FILE_NAME).read_text(
+            encoding="utf-8"
+        )
+    )
+    assert interrupted_manifest["operations"]["cleanup"]["status"] == "running"
+    assert interrupted_state["resume_checkpoint"]["classifications"]
 
     captured_prompts: list[str] = []
 

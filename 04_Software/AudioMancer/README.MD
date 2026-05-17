@@ -10,7 +10,7 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
 This folder contains the Python 3.12/PySide6 desktop application package for
 AudioMancer.
 
-Current package version: `1.1.1`
+Current package version: `1.1.2`
 
 Component behavior, service contracts, persistence formats, UI workflows, and
 runtime architecture are documented under `../../05_SoftwareDocu/`. Keep this

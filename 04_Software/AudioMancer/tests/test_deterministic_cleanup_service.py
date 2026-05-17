@@ -13,7 +13,7 @@
          resumable cancellation state for deterministic text cleanup.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-06
-@version 0.2.1
+@version 0.2.2
 """
 
 # IMPORTS
@@ -71,6 +71,14 @@ def test_cleanup_writes_runtime_artifacts_and_preserves_structure(tmp_path) -> N
     assert report_payload["paragraph_count"] == 2
     assert report_payload["page_break_repair_count"] == 1
     assert report_payload["removed_line_count"] >= 3
+    metadata_payload = json.loads((project_root / config.CLEANED_TEXT_METADATA_FILE_NAME).read_text(encoding="utf-8"))
+    state_payload = json.loads((project_root / config.CLEANUP_STATE_FILE_NAME).read_text(encoding="utf-8"))
+    manifest_payload = project_workspace_service.load_manifest(project_root)
+    assert "text" not in metadata_payload["paragraphs"][0]
+    assert state_payload["resume_checkpoint"] is None
+    assert "cleaned_pages" not in state_payload["metadata"]
+    assert manifest_payload["current_stage"] == "text_chunking_ready"
+    assert manifest_payload["operations"]["cleanup"]["status"] == "completed"
 
 
 def test_cleanup_rejects_traversal_extracted_text_path(tmp_path) -> None:
@@ -203,7 +211,7 @@ def test_cleanup_persists_resumable_state_after_cancellation(tmp_path) -> None:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.1.1
+    @version    0.2.0
     """
     project_root, manifest = project_workspace_service.create_project("CleanupCancel", tmp_path)
     source_path = project_root / "story.pdf"
@@ -242,9 +250,11 @@ def test_cleanup_persists_resumable_state_after_cancellation(tmp_path) -> None:
         )
 
     state_payload = json.loads((project_root / config.CLEANUP_STATE_FILE_NAME).read_text(encoding="utf-8"))
-    assert state_payload["status"] == "running"
+    manifest_payload = project_workspace_service.load_manifest(project_root)
+    assert state_payload["status"] == "cancelled"
     assert state_payload["progress_current"] < state_payload["progress_total"]
     assert state_payload["resume_checkpoint"] is not None
+    assert manifest_payload["operations"]["cleanup"]["status"] == "cancelled"
 
 
 def test_cleanup_removes_separator_marks_and_heals_false_phrase_breaks(tmp_path) -> None:

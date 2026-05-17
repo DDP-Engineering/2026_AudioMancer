@@ -14,7 +14,7 @@
          provenance without changing the operator-editable text file.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-26
-@version 0.1.1
+@version 0.2.0
 """
 
 # IMPORTS
@@ -140,7 +140,7 @@ def write_cleanup_metadata(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-26
-    @version    0.1.0
+    @version    0.2.0
     """
     resolved_project_root = Path(project_root)
     metadata_path = cleanup_metadata_path(resolved_project_root)
@@ -157,7 +157,7 @@ def write_cleanup_metadata(
             1 for record in paragraph_records if bool(record.get("joined_across_page_break"))
         ),
         "weak_boundary_count": sum(1 for record in paragraph_records if record.get("boundary_confidence") == "weak"),
-        "paragraphs": [dict(record) for record in paragraph_records],
+        "paragraphs": [_metadata_record_without_text(record) for record in paragraph_records],
     }
     metadata_path.write_text(
         json.dumps(metadata_payload, indent=2, ensure_ascii=False) + "\n",
@@ -216,13 +216,17 @@ def load_or_build_paragraph_records(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-26
-    @version    0.1.0
+    @version    0.2.0
     """
     metadata_payload = load_cleanup_metadata(project_root)
     if isinstance(metadata_payload, dict):
         paragraph_payloads = metadata_payload.get("paragraphs", [])
         if isinstance(paragraph_payloads, list):
-            records = [_normalize_loaded_record(item, index) for index, item in enumerate(paragraph_payloads, start=1)]
+            text_lines = _cleaned_text_lines(cleaned_text)
+            records = [
+                _normalize_loaded_record(item, index, text_lines)
+                for index, item in enumerate(paragraph_payloads, start=1)
+            ]
             records = [record for record in records if str(record.get("text", "")).strip()]
             if records:
                 return records
@@ -247,23 +251,83 @@ def remove_cleanup_metadata(project_root: str | Path) -> None:
 # LOCAL HELPERS
 
 
-def _normalize_loaded_record(item: object, index: int) -> ParagraphRecordPayload:
+def _metadata_record_without_text(record: ParagraphRecordPayload) -> ParagraphRecordPayload:
+    """
+    @brief      Build one persisted metadata record without duplicated paragraph text.
+    @param[in]  record Runtime paragraph record.
+    @return     JSON-ready paragraph metadata payload.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-17
+    @version    0.1.0
+    """
+    return {
+        "paragraph_id": str(record.get("paragraph_id", "")).strip(),
+        "source_start_line": _positive_int(record.get("source_start_line"), 1),
+        "source_end_line": _positive_int(record.get("source_end_line"), 1),
+        "source_page_start": _optional_positive_int(record.get("source_page_start")),
+        "source_page_end": _optional_positive_int(record.get("source_page_end")),
+        "starts_after_page_break": bool(record.get("starts_after_page_break", False)),
+        "joined_across_page_break": bool(record.get("joined_across_page_break", False)),
+        "boundary_confidence": str(record.get("boundary_confidence") or "strong"),
+        "warning_flags": [str(flag) for flag in list(record.get("warning_flags", []))],
+    }
+
+
+def _cleaned_text_lines(cleaned_text: str) -> list[str]:
+    """
+    @brief      Split canonical cleaned text into one-based line-span source lines.
+    @param[in]  cleaned_text Canonical cleaned text.
+    @return     Normalized text lines.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-17
+    @version    0.1.0
+    """
+    return cleaned_text.replace("\r\n", "\n").replace("\r", "\n").split("\n")
+
+
+def _paragraph_text_from_span(text_lines: list[str], start_line: int, end_line: int) -> str:
+    """
+    @brief      Reconstruct paragraph text from cleaned-text line spans.
+    @param[in]  text_lines Canonical cleaned-text lines.
+    @param[in]  start_line One-based paragraph start line.
+    @param[in]  end_line One-based paragraph end line.
+    @return     Paragraph text.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-17
+    @version    0.1.0
+    """
+    if start_line <= 0 or end_line < start_line or not text_lines:
+        return ""
+    start_index = max(start_line - 1, 0)
+    end_index = min(end_line, len(text_lines))
+    if start_index >= end_index:
+        return ""
+    return "\n".join(text_lines[start_index:end_index]).strip()
+
+
+def _normalize_loaded_record(item: object, index: int, text_lines: list[str]) -> ParagraphRecordPayload:
     """
     @brief      Normalize one loaded metadata paragraph record.
     @param[in]  item Raw paragraph record.
     @param[in]  index Fallback one-based paragraph index.
+    @param[in]  text_lines Canonical cleaned-text lines.
     @return     Normalized paragraph record.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-26
-    @version    0.1.0
+    @version    0.2.0
     """
     payload = item if isinstance(item, dict) else {}
+    start_line = _positive_int(payload.get("source_start_line"), index)
+    end_line = _positive_int(payload.get("source_end_line"), start_line)
     return {
         "paragraph_id": str(payload.get("paragraph_id") or f"paragraph-{index:04d}"),
-        "text": str(payload.get("text", "")).strip(),
-        "source_start_line": _positive_int(payload.get("source_start_line"), index),
-        "source_end_line": _positive_int(payload.get("source_end_line"), index),
+        "text": _paragraph_text_from_span(text_lines, start_line, end_line),
+        "source_start_line": start_line,
+        "source_end_line": end_line,
         "source_page_start": _optional_positive_int(payload.get("source_page_start")),
         "source_page_end": _optional_positive_int(payload.get("source_page_end")),
         "starts_after_page_break": bool(payload.get("starts_after_page_break", False)),

@@ -12,6 +12,30 @@ All notable changes to this project will be documented in this file.
 
 No notable changes yet.
 
+## [1.1.2] - 2026-05-17
+
+### Changed
+
+- Text Cleanup now treats `clean_text.txt` as the only persisted source of
+  cleaned paragraph text. `clean_text_metadata.json` stores paragraph ids,
+  line spans, page-break provenance, boundary confidence, and warning flags
+  without duplicating paragraph `text`.
+- Deterministic cleanup, AI cleanup, and manual cleaned-text edits now refresh
+  the compact `project.json.operations.cleanup` summary during running,
+  cancelled, completed, and manual-edit transitions so the Home workflow status
+  stays current.
+- Completed cleanup state is now compact: deterministic cleanup removes
+  resume-only `cleaned_pages`, AI cleanup removes resume-only classifications,
+  and both persist `resume_checkpoint: null` after success.
+- Chunking and narrator profile generation now rebuild cleanup paragraph text
+  from `clean_text.txt` when consuming cleanup metadata.
+
+### Fixed
+
+- Cancelled deterministic and AI cleanup runs now persist resumable
+  `status="cancelled"` cleanup state while preserving partial progress and
+  Home-visible operation status.
+
 ## [1.1.1] - 2026-05-17
 
 ### Changed

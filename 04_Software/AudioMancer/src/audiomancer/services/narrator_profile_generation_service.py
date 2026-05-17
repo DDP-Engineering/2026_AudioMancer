@@ -606,15 +606,18 @@ def _cleaned_metadata_units(project_root: Path) -> list[SourceUnitPayload]:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-11
-    @version    0.1.0
+    @version    0.2.1
     """
     metadata_payload = cleanup_metadata_service.load_cleanup_metadata(project_root)
     if not isinstance(metadata_payload, dict):
         return []
-    paragraph_payloads = metadata_payload.get("paragraphs", [])
-    if not isinstance(paragraph_payloads, list):
+    cleaned_text_path = project_root / config.CLEANED_TEXT_FILE_NAME
+    if not cleaned_text_path.is_file():
         return []
-    return _paragraph_units([dict(item) for item in paragraph_payloads if isinstance(item, dict)])
+    cleaned_text = cleaned_text_path.read_text(encoding="utf-8")
+    if not cleaned_text.strip():
+        return []
+    return _paragraph_units(cleanup_metadata_service.load_or_build_paragraph_records(project_root, cleaned_text))
 
 
 def _paragraph_units(records: list[dict[str, object]]) -> list[SourceUnitPayload]:
