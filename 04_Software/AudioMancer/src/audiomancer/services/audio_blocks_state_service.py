@@ -14,7 +14,7 @@
          Blocks output, and the resumable runtime operation state.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-23
-@version 0.5.4
+@version 0.6.0
 """
 
 # IMPORTS
@@ -23,7 +23,6 @@ from pathlib import Path
 
 from audiomancer.services import (
     ai_translation_service,
-    audio_blocks_artifact_service,
     audio_blocks_service,
     character_voices_service,
     deterministic_chunking_service,
@@ -66,8 +65,8 @@ def build_audio_blocks_state(
     merged_blocks = _merge_audio_block_state(project_root, speech_blocks, audio_blocks, operation_state)
     current_block = _resolve_current_block(merged_blocks, operation_state)
     current_block_id = None if current_block is None else str(current_block.get("speech_block_id", "")).strip()
-    generated_count = sum(1 for block in merged_blocks if bool(block.get("generated", False)))
-    approved_count = sum(1 for block in merged_blocks if bool(block.get("approved", False)))
+    generated_count = sum(1 for block in merged_blocks if audio_blocks_service.is_generated(block))
+    approved_count = sum(1 for block in merged_blocks if audio_blocks_service.is_approved(block))
     total_count = len(merged_blocks)
     progress_current = generated_count if operation_state is None else int(operation_state.get("progress_current", 0))
     progress_total = total_count if operation_state is None else int(operation_state.get("progress_total", total_count))
@@ -132,10 +131,11 @@ def build_audio_blocks_state(
         ),
         "can_reset": audio_blocks_service.has_persisted_audio_blocks(project_root),
         "can_approve_all": any(
-            bool(block.get("generated", False)) and not bool(block.get("approved", False)) for block in merged_blocks
+            audio_blocks_service.is_generated(block) and not audio_blocks_service.is_approved(block)
+            for block in merged_blocks
         ),
         "can_regenerate_selected": current_block is not None,
-        "can_approve_selected": current_block is not None and bool(current_block.get("generated", False)),
+        "can_approve_selected": current_block is not None and audio_blocks_service.is_generated(current_block),
         "selected_text_character_limit": _selected_text_character_limit(settings_payload, merged_blocks),
     }
 
@@ -158,7 +158,8 @@ def _can_start_or_continue_generation(
     """
     _ = stage_status
     generated_by_speech_block_id = {
-        str(block.get("speech_block_id", "")).strip(): bool(block.get("generated", False)) for block in audio_blocks
+        str(block.get("speech_block_id", "")).strip(): audio_blocks_service.is_generated(block)
+        for block in audio_blocks
     }
     for speech_block in speech_blocks:
         speech_block_id = str(speech_block.get("speech_block_id", "")).strip()
@@ -201,8 +202,8 @@ def build_audio_blocks_notes(
     if not speech_blocks:
         return [ui_state_service.translate("audio_blocks.note_missing_speech_blocks", language)]
 
-    generated_count = sum(1 for block in audio_blocks if bool(block.get("generated", False)))
-    approved_count = sum(1 for block in audio_blocks if bool(block.get("approved", False)))
+    generated_count = sum(1 for block in audio_blocks if audio_blocks_service.is_generated(block))
+    approved_count = sum(1 for block in audio_blocks if audio_blocks_service.is_approved(block))
     operation_metadata = operation_state.get("metadata", {}) if isinstance(operation_state, dict) else {}
     if not isinstance(operation_metadata, dict):
         operation_metadata = {}
@@ -377,7 +378,7 @@ def _merge_audio_block_state(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-23
-    @version    0.4.0
+    @version    0.5.0
     """
     audio_by_id = {str(block.get("speech_block_id", "")).strip(): dict(block) for block in audio_blocks}
     current_block_id = None
@@ -392,7 +393,7 @@ def _merge_audio_block_state(
         speaker_display_name = str(speech_block.get("speaker_display_name", "")).strip() or "Narrator"
         audio_relative_path = persisted_audio_block.get("audio_relative_path")
         audio_path = _resolve_existing_audio_path(project_root, audio_relative_path)
-        duration_seconds = _resolve_audio_duration_seconds(persisted_audio_block, audio_path)
+        duration_seconds = _resolve_audio_duration_seconds(persisted_audio_block)
         merged_blocks.append(
             {
                 "speech_block_id": speech_block_id,
@@ -405,8 +406,8 @@ def _merge_audio_block_state(
                     or audio_blocks_service.normalize_speaker_name(speaker_display_name)
                 ),
                 "text": str(speech_block.get("text", "")),
-                "generated": bool(persisted_audio_block.get("generated", False)),
-                "approved": bool(persisted_audio_block.get("approved", False)),
+                "generated": audio_blocks_service.generated_at(persisted_audio_block),
+                "approved": audio_blocks_service.approved_at(persisted_audio_block),
                 "metadata_only": bool(persisted_audio_block.get("metadata_only", False))
                 or str(speech_block.get("content_kind", "")).strip()
                 in {
@@ -428,17 +429,15 @@ def _merge_audio_block_state(
 
 def _resolve_audio_duration_seconds(
     audio_block: dict[str, object],
-    audio_path: Path | None,
 ) -> float | None:
     """
     @brief      Resolve display duration for one generated Audio Block.
     @param[in]  audio_block Persisted Audio Blocks payload.
-    @param[in]  audio_path Resolved generated WAV path, or `None`.
     @return     Duration in seconds, or `None` when no measurable duration exists.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-16
-    @version    0.1.0
+    @version    0.2.0
     """
     for field_name in ("audio_duration_seconds", "duration_seconds"):
         try:
@@ -454,9 +453,7 @@ def _resolve_audio_duration_seconds(
             pause_duration_ms = 0
         if pause_duration_ms > 0:
             return pause_duration_ms / 1000.0
-    if audio_path is None:
-        return None
-    return audio_blocks_artifact_service.wav_duration_seconds(audio_path)
+    return None
 
 
 def _source_chunks_are_resolvable(project_root: Path, manifest: dict[str, object]) -> bool:

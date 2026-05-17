@@ -18,12 +18,14 @@ Implementation sources and runnable software artifacts.
   language, maintained under
   `../05_SoftwareDocu/UserGuide/` and `../05_SoftwareDocu/UserGuide_ro/`, and
   bundled into release archives as `help/en/` plus `help/ro/`. Current package
-  version `1.1.0` includes protected minimum splitter widths on the dense review
+  version `1.1.1` includes protected minimum splitter widths on the dense review
   pages, Character Discovery age-domain voice handoff, the Character Voices batch sample action, AI/TTS Settings
   `Cancel`/`Save`/`OK` dialog flow, and the selective
   downstream-preservation model for manual chunk, character, voice, speech,
   audio-block, and assembly operations. Speech Blocks review can also trigger
   selected-block audio regeneration and Play/Stop preview through the existing
   Audio Blocks workflow, using the compact `Generate Audio` label on that page.
+  Audio Blocks now persists a compact timestamp-based index and previews current
+  pause blocks as timed silence during Play Audiobook review.
   Current validation guidance and the full regression baseline are documented
   in `../HowToTest.md` and `AudioMancer/README.MD`.

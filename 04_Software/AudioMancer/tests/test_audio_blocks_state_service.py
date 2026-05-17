@@ -24,6 +24,7 @@ import wave
 
 from audiomancer import config
 from audiomancer.services import (
+    audio_blocks_service,
     audio_blocks_state_service,
     character_voices_service,
     operation_runtime_service,
@@ -155,7 +156,7 @@ def test_build_audio_blocks_state_surfaces_progress_current_block_and_full_sourc
     assert state["selected_text_character_limit"] == (
         int(tts_budget_service.resolve_cached_tts_budget([])["safe_word_count"]) * 6
     )
-    assert state["speech_blocks"][0]["generated"] is True
+    assert audio_blocks_service.is_generated(state["speech_blocks"][0]) is True
     assert state["speech_blocks"][1]["is_current"] is True
     assert any("Audio generation is in progress at 1/2." in note for note in state["notes"])
     assert any("Preparing reusable voice prompts." in note for note in state["notes"])
@@ -249,7 +250,7 @@ def test_build_audio_blocks_state_measures_generated_audio_duration(tmp_path) ->
     state = audio_blocks_state_service.build_audio_blocks_state(project_root, manifest, "en")
 
     assert state["speech_blocks"][0]["audio_file_name"] == "0001_000001_narrator.wav"
-    assert state["speech_blocks"][0]["audio_duration_seconds"] == 0.5
+    assert state["speech_blocks"][0]["audio_duration_seconds"] is None
     assert state["speech_blocks"][0]["can_play"] is True
 
 

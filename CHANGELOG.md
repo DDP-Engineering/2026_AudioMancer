@@ -12,6 +12,25 @@ All notable changes to this project will be documented in this file.
 
 No notable changes yet.
 
+## [1.1.1] - 2026-05-17
+
+### Changed
+
+- Audio Blocks now persists a compact `audio_blocks.json` index with nullable
+  timestamp `generated` and `approved` fields while keeping runtime, split,
+  fingerprint, and resume details in per-block metadata sidecars.
+- Audio Blocks page state now joins the compact Audio Blocks index with current
+  Speech Blocks metadata and avoids opening WAV files or sidecar metadata during
+  normal page loading.
+- Play Audiobook preview now treats pause Speech Blocks as timed silence,
+  including pauses that are present in current Speech Blocks but not yet present
+  in the compact Audio Blocks index.
+
+### Fixed
+
+- Pause blocks are now generated and approved as metadata-only timing entries,
+  so they cannot block Audio Assembly approval or generation flow.
+
 ## [1.1.0] - 2026-05-16
 
 ### Added
