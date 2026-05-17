@@ -15,7 +15,7 @@
          operation state.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-22
-@version 0.16.1
+@version 0.17.0
 """
 
 # IMPORTS
@@ -40,11 +40,9 @@ from audiomancer.services.operation_runtime_service import (
     NARRATOR_PROFILE_PRESERVED_OPERATION_KINDS,
     OperationCancelledError,
     build_operation_output_path,
-    build_operation_state_payload,
     load_operation_state_payload,
     load_optional_json_artifact,
     raise_if_cancelled,
-    relative_to_project,
     reset_operation_data,
     resolve_operation_path,
 )
@@ -251,7 +249,7 @@ def start_or_continue_discovery(
     @exception  OperationCancelledError Raised when the operator cancels the run.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-13
-    @version    0.5.0
+    @version    0.6.0
     """
     resolved_project_root = Path(project_root)
     source_chunks, input_source = _resolve_discovery_input_chunks(resolved_project_root)
@@ -288,7 +286,6 @@ def start_or_continue_discovery(
         system_prompt,
         additional_character_discovery_instructions,
     )
-    input_paths = _persist_input_snapshots(resolved_project_root)
     output_path = build_operation_output_path(
         resolved_project_root,
         "character_discovery",
@@ -336,11 +333,8 @@ def start_or_continue_discovery(
     )
     if not resume_is_compatible:
         started_at = _utc_now_iso()
-    model_settings_history = _updated_model_settings_history(
-        existing_state if resume_is_compatible else {},
-        model_settings,
-        profile_id,
-    )
+        log_relative_path = None
+    model_settings_history = [{"profile_id": profile_id, **dict(model_settings)}]
     windows = (
         []
         if merged_candidates
@@ -358,6 +352,7 @@ def start_or_continue_discovery(
         else token_usage_service.empty_token_usage()
     )
     log_path = _resolve_log_path(resolved_project_root, started_at, log_relative_path)
+    log_relative_path = log_path.name
     chunk_map = {
         str(chunk.get("chunk_id", "")): dict(chunk) for chunk in source_chunks if str(chunk.get("chunk_id", "")).strip()
     }
@@ -369,47 +364,24 @@ def start_or_continue_discovery(
     )
     _write_operation_state(
         state_path=state_path,
-        project_root=resolved_project_root,
-        input_paths=input_paths,
-        output_path=None,
-        report_path=None,
         status="running",
+        phase="synthesis" if merged_candidates else "discovery",
         progress_current=initial_progress_current,
         progress_total=initial_progress_total,
         started_at=started_at,
         completed_at=None,
         profile_id=profile_id,
-        source_chunk_count=len(source_chunks),
-        character_count=len(synthesized_profiles),
-        analyzed_window_count=discovery_progress_total,
-        merged_candidate_count=len(merged_candidates),
-        rejected_candidate_count=len(rejected_candidates),
-        input_source=input_source,
-        warnings=[],
         input_fingerprint=input_fingerprint,
-        log_path=log_path,
+        log_relative_path=log_relative_path,
         token_usage=token_usage,
-        budget_metadata=budget_metadata,
-        model_settings=model_settings,
-        model_settings_history=model_settings_history,
         additional_character_discovery_instructions=additional_character_discovery_instructions,
-        resume_checkpoint={
-            "input_fingerprint": input_fingerprint,
-            "input_source": input_source,
-            "profile_id": profile_id,
-            "additional_character_discovery_instructions_fingerprint": (
-                additional_character_discovery_instructions_fingerprint
-            ),
+        checkpoint={
             "completed_window_count": completed_window_count,
-            "total_window_count": discovery_progress_total,
             "next_discovery_start_chunk_index": next_discovery_start_chunk_index,
-            "budget_metadata": dict(budget_metadata),
             "raw_candidates": list(raw_candidates),
             "merged_candidates": list(merged_candidates),
             "rejected_candidates": list(rejected_candidates),
             "synthesized_profiles": list(synthesized_profiles),
-            "synthesis_progress_count": len(synthesized_profiles),
-            "log_relative_path": relative_to_project(resolved_project_root, log_path),
         },
     )
     _emit_progress(
@@ -471,47 +443,24 @@ def start_or_continue_discovery(
         next_discovery_start_chunk_index = _next_chunk_index_after_window(source_chunks, window_records)
         _write_operation_state(
             state_path=state_path,
-            project_root=resolved_project_root,
-            input_paths=input_paths,
-            output_path=None,
-            report_path=None,
             status="running",
+            phase="discovery",
             progress_current=progress_window_index + 1,
             progress_total=discovery_progress_total,
             started_at=started_at,
             completed_at=None,
             profile_id=profile_id,
-            source_chunk_count=len(source_chunks),
-            character_count=0,
-            analyzed_window_count=discovery_progress_total,
-            merged_candidate_count=0,
-            rejected_candidate_count=len(rejected_candidates),
-            input_source=input_source,
-            warnings=[],
             input_fingerprint=input_fingerprint,
-            log_path=log_path,
+            log_relative_path=log_relative_path,
             token_usage=token_usage,
-            budget_metadata=budget_metadata,
-            model_settings=model_settings,
-            model_settings_history=model_settings_history,
             additional_character_discovery_instructions=additional_character_discovery_instructions,
-            resume_checkpoint={
-                "input_fingerprint": input_fingerprint,
-                "input_source": input_source,
-                "profile_id": profile_id,
-                "additional_character_discovery_instructions_fingerprint": (
-                    additional_character_discovery_instructions_fingerprint
-                ),
+            checkpoint={
                 "completed_window_count": progress_window_index + 1,
-                "total_window_count": discovery_progress_total,
                 "next_discovery_start_chunk_index": next_discovery_start_chunk_index,
-                "budget_metadata": dict(budget_metadata),
                 "raw_candidates": list(raw_candidates),
                 "merged_candidates": [],
                 "rejected_candidates": [],
                 "synthesized_profiles": [],
-                "synthesis_progress_count": 0,
-                "log_relative_path": relative_to_project(resolved_project_root, log_path),
             },
         )
         _emit_progress(
@@ -527,47 +476,24 @@ def start_or_continue_discovery(
     total_progress = max(discovery_progress_total + len(merged_candidates), 1)
     _write_operation_state(
         state_path=state_path,
-        project_root=resolved_project_root,
-        input_paths=input_paths,
-        output_path=None,
-        report_path=None,
         status="running",
+        phase="synthesis",
         progress_current=discovery_progress_total + len(synthesized_profiles),
         progress_total=total_progress,
         started_at=started_at,
         completed_at=None,
         profile_id=profile_id,
-        source_chunk_count=len(source_chunks),
-        character_count=len(synthesized_profiles),
-        analyzed_window_count=discovery_progress_total,
-        merged_candidate_count=len(merged_candidates),
-        rejected_candidate_count=len(rejected_candidates),
-        input_source=input_source,
-        warnings=[],
         input_fingerprint=input_fingerprint,
-        log_path=log_path,
+        log_relative_path=log_relative_path,
         token_usage=token_usage,
-        budget_metadata=budget_metadata,
-        model_settings=model_settings,
-        model_settings_history=model_settings_history,
         additional_character_discovery_instructions=additional_character_discovery_instructions,
-        resume_checkpoint={
-            "input_fingerprint": input_fingerprint,
-            "input_source": input_source,
-            "profile_id": profile_id,
-            "additional_character_discovery_instructions_fingerprint": (
-                additional_character_discovery_instructions_fingerprint
-            ),
+        checkpoint={
             "completed_window_count": discovery_progress_total,
-            "total_window_count": discovery_progress_total,
             "next_discovery_start_chunk_index": len(source_chunks),
-            "budget_metadata": dict(budget_metadata),
             "raw_candidates": list(raw_candidates),
             "merged_candidates": list(merged_candidates),
             "rejected_candidates": list(rejected_candidates),
             "synthesized_profiles": list(synthesized_profiles),
-            "synthesis_progress_count": len(synthesized_profiles),
-            "log_relative_path": relative_to_project(resolved_project_root, log_path),
         },
     )
     for profile_index in range(len(synthesized_profiles), len(merged_candidates)):
@@ -616,47 +542,24 @@ def start_or_continue_discovery(
         synthesized_profiles.append(_build_profile_from_synthesis(response_payload, candidate))
         _write_operation_state(
             state_path=state_path,
-            project_root=resolved_project_root,
-            input_paths=input_paths,
-            output_path=None,
-            report_path=None,
             status="running",
+            phase="synthesis",
             progress_current=discovery_progress_total + len(synthesized_profiles),
             progress_total=total_progress,
             started_at=started_at,
             completed_at=None,
             profile_id=profile_id,
-            source_chunk_count=len(source_chunks),
-            character_count=len(synthesized_profiles),
-            analyzed_window_count=discovery_progress_total,
-            merged_candidate_count=len(merged_candidates),
-            rejected_candidate_count=len(rejected_candidates),
-            input_source=input_source,
-            warnings=[],
             input_fingerprint=input_fingerprint,
-            log_path=log_path,
+            log_relative_path=log_relative_path,
             token_usage=token_usage,
-            budget_metadata=budget_metadata,
-            model_settings=model_settings,
-            model_settings_history=model_settings_history,
             additional_character_discovery_instructions=additional_character_discovery_instructions,
-            resume_checkpoint={
-                "input_fingerprint": input_fingerprint,
-                "input_source": input_source,
-                "profile_id": profile_id,
-                "additional_character_discovery_instructions_fingerprint": (
-                    additional_character_discovery_instructions_fingerprint
-                ),
+            checkpoint={
                 "completed_window_count": discovery_progress_total,
-                "total_window_count": discovery_progress_total,
                 "next_discovery_start_chunk_index": len(source_chunks),
-                "budget_metadata": dict(budget_metadata),
                 "raw_candidates": list(raw_candidates),
                 "merged_candidates": list(merged_candidates),
                 "rejected_candidates": list(rejected_candidates),
                 "synthesized_profiles": list(synthesized_profiles),
-                "synthesis_progress_count": len(synthesized_profiles),
-                "log_relative_path": relative_to_project(resolved_project_root, log_path),
             },
         )
         _emit_progress(
@@ -703,31 +606,18 @@ def start_or_continue_discovery(
     )
     _write_operation_state(
         state_path=state_path,
-        project_root=resolved_project_root,
-        input_paths=input_paths,
-        output_path=output_path,
-        report_path=report_path,
         status="completed",
+        phase="completed",
         progress_current=total_progress,
         progress_total=total_progress,
         started_at=started_at,
         completed_at=report_payload["generated_at"],
         profile_id=profile_id,
-        source_chunk_count=len(source_chunks),
-        character_count=len(ordered_profiles),
-        analyzed_window_count=discovery_progress_total,
-        merged_candidate_count=len(merged_candidates),
-        rejected_candidate_count=len(rejected_candidates),
-        input_source=input_source,
-        warnings=[],
         input_fingerprint=input_fingerprint,
-        log_path=log_path,
+        log_relative_path=log_relative_path,
         token_usage=token_usage,
-        budget_metadata=budget_metadata,
-        model_settings=model_settings,
-        model_settings_history=model_settings_history,
         additional_character_discovery_instructions=additional_character_discovery_instructions,
-        resume_checkpoint=None,
+        checkpoint=None,
     )
     project_workspace_service.sync_manifest_operation_summary(
         resolved_project_root,
@@ -893,7 +783,7 @@ def reset_character_discovery(project_root: str | Path) -> None:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-08
-    @version    0.1.0
+    @version    0.2.0
     """
     reset_operation_data(
         project_root,
@@ -962,14 +852,14 @@ def _write_character_profiles(
     profiles: list[CharacterProfilePayload],
 ) -> None:
     """
-    @brief      Persist the current character profile list and count metadata.
+    @brief      Persist the current character profile list and refresh state timestamp.
     @param[in]  project_root Active project root folder.
     @param[in]  profiles Ordered character profile payload list.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-08
-    @version    0.2.0
+    @version    0.3.0
     """
     output_path = build_operation_output_path(
         project_root,
@@ -981,7 +871,7 @@ def _write_character_profiles(
         json.dumps(persisted_profiles, indent=2, ensure_ascii=False) + "\n",
         encoding="utf-8",
     )
-    _sync_character_count_metadata(project_root, len(profiles))
+    _touch_character_discovery_state(project_root)
 
 
 def _build_manual_character_profile(
@@ -1046,23 +936,19 @@ def _next_manual_character_id(
     return f"{base_slug}_{suffix}"
 
 
-def _sync_character_count_metadata(project_root: Path, character_count: int) -> None:
+def _touch_character_discovery_state(project_root: Path) -> None:
     """
-    @brief      Update persisted operation metadata after manual list changes.
+    @brief      Refresh persisted operation-state timestamp after manual list changes.
     @param[in]  project_root Active project root folder.
-    @param[in]  character_count Current persisted character count.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-08
-    @version    0.1.0
+    @version    0.3.0
     """
     state_payload = load_operation_state(project_root)
     if not isinstance(state_payload, dict):
         return
-    metadata = dict(state_payload.get("metadata") or {})
-    metadata["character_count"] = character_count
-    state_payload["metadata"] = metadata
     state_payload["updated_at"] = _utc_now_iso()
     state_path = build_operation_output_path(
         project_root,
@@ -1070,19 +956,6 @@ def _sync_character_count_metadata(project_root: Path, character_count: int) -> 
         config.CHARACTER_DISCOVERY_STATE_FILE_NAME,
     )
     write_json_atomic(state_path, state_payload)
-
-
-def _persist_input_snapshots(project_root: Path) -> list[Path]:
-    """
-    @brief      Persist the input snapshots.
-    @param[in]  project_root Active project root folder.
-    @return     Existing input artifact paths used by the run.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.3.0
-    """
-    chunk_input_path = project_root / config.CHUNK_ARTIFACT_FILE_NAME
-    return [chunk_input_path] if chunk_input_path.is_file() else []
 
 
 def _resolve_discovery_input_chunks(project_root: Path) -> tuple[list[dict[str, object]], str]:
@@ -1378,7 +1251,7 @@ def _resolve_additional_character_discovery_instructions(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-13
-    @version    0.1.0
+    @version    0.2.0
     """
     if additional_character_discovery_instructions is not None:
         return _normalized_additional_character_discovery_instructions(additional_character_discovery_instructions)
@@ -1389,11 +1262,8 @@ def _resolve_additional_character_discovery_instructions(
     }
     if not is_ai_mode or not is_resumable_status:
         return ""
-    metadata = existing_state.get("metadata", {})
-    if not isinstance(metadata, dict):
-        return ""
     return _normalized_additional_character_discovery_instructions(
-        metadata.get("additional_character_discovery_instructions")
+        existing_state.get("additional_character_discovery_instructions")
     )
 
 
@@ -1504,33 +1374,6 @@ def _build_model_settings(
     }
 
 
-def _updated_model_settings_history(
-    existing_state: dict[str, object],
-    model_settings: ModelSettingsPayload,
-    profile_id: str,
-) -> list[ModelSettingsPayload]:
-    """
-    @brief      Return model-settings history with the current settings appended once.
-    @param[in]  existing_state Existing discovery operation state.
-    @param[in]  model_settings Current selected model settings.
-    @param[in]  profile_id Current selected profile identifier.
-    @return     Ordered model-settings history.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-30
-    @version    0.1.0
-    """
-    metadata = existing_state.get("metadata", {})
-    existing_history: list[ModelSettingsPayload] = []
-    if isinstance(metadata, dict):
-        raw_history = metadata.get("model_settings_history", [])
-        if isinstance(raw_history, list):
-            existing_history = [dict(item) for item in raw_history if isinstance(item, dict)]
-    current_item = {"profile_id": profile_id, **dict(model_settings)}
-    if not existing_history or existing_history[-1] != current_item:
-        existing_history.append(current_item)
-    return existing_history
-
-
 def _restore_resume_state(
     existing_state: dict[str, object],
     input_fingerprint: str,
@@ -1554,34 +1397,30 @@ def _restore_resume_state(
     @return     Derived helper result.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-13
-    @version    0.6.0
+    @version    0.7.0
     """
     if str(existing_state.get("status", "")) not in {"running", "failed"}:
         return 0, 0, [], [], [], [], None
     if str(existing_state.get("mode", "")) != CHARACTER_DISCOVERY_MODE_AI_ASSISTED:
         return 0, 0, [], [], [], [], None
-    resume_checkpoint = dict(existing_state.get("resume_checkpoint") or {})
-    if str(resume_checkpoint.get("input_fingerprint", "")) != input_fingerprint:
+    checkpoint = dict(existing_state.get("checkpoint") or {})
+    if str(existing_state.get("input_fingerprint", "")) != input_fingerprint:
         return 0, 0, [], [], [], [], None
-    metadata = existing_state.get("metadata", {})
-    metadata_payload = metadata if isinstance(metadata, dict) else {}
     expected_instruction_fingerprint = (
         additional_character_discovery_instructions_fingerprint or _compute_prompt_fingerprint("")
     )
     stored_instruction_fingerprint = str(
-        resume_checkpoint.get("additional_character_discovery_instructions_fingerprint")
-        or metadata_payload.get("additional_character_discovery_instructions_fingerprint")
-        or _compute_prompt_fingerprint("")
+        existing_state.get("additional_character_discovery_instructions_fingerprint") or _compute_prompt_fingerprint("")
     )
     if stored_instruction_fingerprint != expected_instruction_fingerprint:
         return 0, 0, [], [], [], [], None
-    raw_candidates = _restore_mapping_list(resume_checkpoint.get("raw_candidates"))
-    merged_candidates = _restore_mapping_list(resume_checkpoint.get("merged_candidates"))
-    rejected_candidates = _restore_mapping_list(resume_checkpoint.get("rejected_candidates"))
-    synthesized_profiles = _restore_mapping_list(resume_checkpoint.get("synthesized_profiles"))
-    completed_window_count = max(0, int(resume_checkpoint.get("completed_window_count", 0)))
+    raw_candidates = _restore_mapping_list(checkpoint.get("raw_candidates"))
+    merged_candidates = _restore_mapping_list(checkpoint.get("merged_candidates"))
+    rejected_candidates = _restore_mapping_list(checkpoint.get("rejected_candidates"))
+    synthesized_profiles = _restore_mapping_list(checkpoint.get("synthesized_profiles"))
+    completed_window_count = max(0, int(checkpoint.get("completed_window_count", 0)))
     next_chunk_index = _restore_next_discovery_start_chunk_index(
-        resume_checkpoint,
+        checkpoint,
         source_chunks,
         bool(merged_candidates),
     )
@@ -1596,33 +1435,33 @@ def _restore_resume_state(
         synthesized_profiles,
         (
             None
-            if resume_checkpoint.get("log_relative_path") in (None, "")
-            else str(resume_checkpoint.get("log_relative_path"))
+            if existing_state.get("log_relative_path") in (None, "")
+            else str(existing_state.get("log_relative_path"))
         ),
     )
 
 
 def _restore_next_discovery_start_chunk_index(
-    resume_checkpoint: dict[str, object],
+    checkpoint: dict[str, object],
     source_chunks: list[dict[str, object]],
     discovery_phase_completed: bool,
 ) -> int | None:
     """
     @brief      Restore the next source-chunk boundary for resumed discovery windows.
-    @param[in]  resume_checkpoint Persisted discovery checkpoint.
+    @param[in]  checkpoint Persisted discovery checkpoint.
     @param[in]  source_chunks Current source chunk records.
     @param[in]  discovery_phase_completed True when merged candidates already exist.
     @return     Next source-chunk index or `None` when the checkpoint cannot be trusted.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-30
-    @version    0.2.0
+    @version    0.3.0
     """
     if discovery_phase_completed:
         return len(source_chunks)
-    raw_next_index = resume_checkpoint.get("next_discovery_start_chunk_index")
+    raw_next_index = checkpoint.get("next_discovery_start_chunk_index")
     if raw_next_index not in (None, ""):
         return max(0, min(int(raw_next_index), len(source_chunks)))
-    return 0 if max(0, int(resume_checkpoint.get("completed_window_count", 0))) <= 0 else None
+    return 0 if max(0, int(checkpoint.get("completed_window_count", 0))) <= 0 else None
 
 
 def _next_chunk_index_after_window(
@@ -1662,12 +1501,9 @@ def _restore_token_usage(existing_state: dict[str, object]) -> TokenUsagePayload
     @return     Derived helper result.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.1.0
+    @version    0.2.0
     """
-    metadata = existing_state.get("metadata", {})
-    if not isinstance(metadata, dict):
-        return token_usage_service.empty_token_usage()
-    return token_usage_service.restore_token_usage(metadata.get("token_usage"))
+    return token_usage_service.restore_token_usage(existing_state.get("token_usage"))
 
 
 def _restore_mapping_list(payload: object) -> list[dict[str, object]]:
@@ -1697,11 +1533,10 @@ def _resolve_log_path(
     @return     Derived helper result.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.1.0
+    @version    0.2.0
     """
     if log_relative_path not in (None, ""):
-        resolved_log_path = project_root / str(log_relative_path)
-        resolved_log_path.parent.mkdir(parents=True, exist_ok=True)
+        resolved_log_path = project_root / Path(str(log_relative_path)).name
         if not resolved_log_path.exists():
             resolved_log_path.write_text("", encoding="utf-8")
         return resolved_log_path
@@ -1718,114 +1553,61 @@ def _resolve_log_path(
 
 def _write_operation_state(
     state_path: Path,
-    project_root: Path,
-    input_paths: list[Path],
-    output_path: Path | None,
-    report_path: Path | None,
     status: str,
+    phase: str,
     progress_current: int,
     progress_total: int,
     started_at: str,
     completed_at: str | None,
     profile_id: str,
-    source_chunk_count: int,
-    character_count: int,
-    analyzed_window_count: int,
-    merged_candidate_count: int,
-    rejected_candidate_count: int,
-    input_source: str,
-    warnings: list[str],
     input_fingerprint: str,
-    log_path: Path,
+    log_relative_path: str,
     token_usage: TokenUsagePayload,
-    budget_metadata: BudgetMetadataPayload,
-    model_settings: ModelSettingsPayload,
-    model_settings_history: list[ModelSettingsPayload],
     additional_character_discovery_instructions: str,
-    resume_checkpoint: dict[str, object] | None,
+    checkpoint: dict[str, object] | None,
 ) -> None:
     """
     @brief      Write the operation state.
     @param[in]  state_path Operation-state file path.
-    @param[in]  project_root Active project root folder.
-    @param[in]  input_paths Value for `input_paths`.
-    @param[in]  output_path Output file path.
-    @param[in]  report_path Report file path.
     @param[in]  status Value for `status`.
+    @param[in]  phase Character Discovery operation phase.
     @param[in]  progress_current Value for `progress_current`.
     @param[in]  progress_total Value for `progress_total`.
     @param[in]  started_at Value for `started_at`.
     @param[in]  completed_at Value for `completed_at`.
     @param[in]  profile_id Profile identifier.
-    @param[in]  source_chunk_count Value for `source_chunk_count`.
-    @param[in]  character_count Value for `character_count`.
-    @param[in]  analyzed_window_count Value for `analyzed_window_count`.
-    @param[in]  merged_candidate_count Value for `merged_candidate_count`.
-    @param[in]  rejected_candidate_count Value for `rejected_candidate_count`.
-    @param[in]  input_source Selected discovery input source token.
-    @param[in]  warnings Value for `warnings`.
     @param[in]  input_fingerprint Value for `input_fingerprint`.
-    @param[in]  log_path Operation log file path.
+    @param[in]  log_relative_path Operation log file name.
     @param[in]  token_usage Value for `token_usage`.
-    @param[in]  budget_metadata Context-budget metadata used by discovery requests.
-    @param[in]  model_settings Current AI model runtime settings.
-    @param[in]  model_settings_history AI model settings used across resumed segments.
     @param[in]  additional_character_discovery_instructions Optional operator-supplied discovery rules.
-    @param[in]  resume_checkpoint Value for `resume_checkpoint`.
+    @param[in]  checkpoint Value for `checkpoint`.
     @return     None.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-13
-    @version    0.5.0
+    @version    0.7.0
     """
     normalized_instructions = _normalized_additional_character_discovery_instructions(
         additional_character_discovery_instructions
     )
     instruction_fingerprint = _compute_prompt_fingerprint(normalized_instructions)
-    if isinstance(resume_checkpoint, dict):
-        resume_checkpoint = dict(resume_checkpoint)
-        resume_checkpoint["additional_character_discovery_instructions_fingerprint"] = instruction_fingerprint
-    artifact_paths = [relative_to_project(project_root, log_path)]
-    if report_path is not None and report_path.is_file():
-        artifact_paths.insert(0, relative_to_project(project_root, report_path))
-    state_payload: OperationStatePayload = build_operation_state_payload(
-        status=status,
-        input_paths=[
-            relative_to_project(project_root, input_path) for input_path in input_paths if input_path.is_file()
-        ],
-        output_paths=(
-            [relative_to_project(project_root, output_path)]
-            if output_path is not None and output_path.is_file()
-            else []
-        ),
-        artifact_paths=artifact_paths,
-        progress_current=progress_current,
-        progress_total=progress_total,
-        mode=CHARACTER_DISCOVERY_MODE_AI_ASSISTED,
-        started_at=started_at,
-        completed_at=completed_at,
-        warning_count=len(warnings),
-        metadata={
-            "ai_profile_id": profile_id,
-            "source_chunk_count": source_chunk_count,
-            "character_count": character_count,
-            "analyzed_window_count": analyzed_window_count,
-            "merged_candidate_count": merged_candidate_count,
-            "rejected_candidate_count": rejected_candidate_count,
-            "input_source": input_source,
-            "window_size": config.DEFAULT_CHARACTER_DISCOVERY_WINDOW_SIZE,
-            "window_overlap": config.DEFAULT_CHARACTER_DISCOVERY_WINDOW_OVERLAP,
-            "warnings": list(warnings),
-            "input_fingerprint": input_fingerprint,
-            "log_relative_path": relative_to_project(project_root, log_path),
-            "token_usage": token_usage_service.coerce_token_usage(token_usage),
-            "budget_metadata": dict(budget_metadata),
-            "additional_character_discovery_instructions": normalized_instructions,
-            "additional_character_discovery_instructions_fingerprint": instruction_fingerprint,
-            "model_settings": dict(model_settings),
-            "model_settings_history": [dict(item) for item in model_settings_history],
-        },
-        resume_checkpoint=resume_checkpoint,
-    )
+    state_payload: OperationStatePayload = {
+        "status": str(status),
+        "mode": CHARACTER_DISCOVERY_MODE_AI_ASSISTED,
+        "phase": str(phase),
+        "progress_current": int(progress_current),
+        "progress_total": int(progress_total),
+        "started_at": started_at,
+        "completed_at": completed_at,
+        "updated_at": _utc_now_iso(),
+        "warning_count": 0,
+        "ai_profile_id": profile_id,
+        "input_fingerprint": input_fingerprint,
+        "additional_character_discovery_instructions": normalized_instructions,
+        "additional_character_discovery_instructions_fingerprint": instruction_fingerprint,
+        "token_usage": token_usage_service.coerce_token_usage(token_usage),
+        "log_relative_path": str(log_relative_path),
+        "checkpoint": None if checkpoint is None else dict(checkpoint),
+    }
     write_json_atomic(state_path, state_payload)
 
 
@@ -1900,7 +1682,7 @@ def _normalize_evidence(
     @return     Derived helper result.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.2.0
+    @version    0.3.0
     """
     if not isinstance(payload, list):
         return []
@@ -1948,7 +1730,7 @@ def _dialogue_span_excerpt(source_chunk: dict[str, object], dialogue_span_id: st
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-27
-    @version    0.1.0
+    @version    0.2.0
     """
     for dialogue_span in list(source_chunk.get("dialogue_spans", [])):
         if not isinstance(dialogue_span, dict):

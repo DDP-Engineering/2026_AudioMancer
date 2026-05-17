@@ -14,7 +14,7 @@
          shared by long-running workflow operations.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-22
-@version 0.11.2
+@version 0.12.0
 """
 
 # IMPORTS
@@ -246,10 +246,34 @@ def default_operation_state(operation_kind: str) -> dict[str, object]:
     @exception  ValueError Raised when the operation kind is unsupported.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-26
-    @version    0.2.0
+    @version    0.3.0
     """
     if operation_kind not in _OPERATION_ORDER:
         raise ValueError(f"Unsupported operation kind: {operation_kind}")
+    if operation_kind == "character_discovery":
+        return {
+            "status": "not_started",
+            "mode": "ai_assisted",
+            "phase": "not_started",
+            "progress_current": 0,
+            "progress_total": 0,
+            "started_at": None,
+            "completed_at": None,
+            "updated_at": utc_now_iso(),
+            "warning_count": 0,
+            "ai_profile_id": "",
+            "input_fingerprint": "",
+            "additional_character_discovery_instructions": "",
+            "additional_character_discovery_instructions_fingerprint": "",
+            "token_usage": {
+                "input_tokens": None,
+                "output_tokens": None,
+                "total_tokens": None,
+                "usage_available": False,
+            },
+            "log_relative_path": "",
+            "checkpoint": None,
+        }
     return {
         "folder_relative_path": config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH,
         "status": "not_started",
@@ -332,27 +356,8 @@ def _default_operation_metadata(operation_kind: str) -> dict[str, object]:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-26
-    @version    0.2.0
+    @version    0.3.0
     """
-    if operation_kind == "character_discovery":
-        return {
-            "ai_profile_id": "",
-            "source_chunk_count": 0,
-            "character_count": 0,
-            "analyzed_window_count": 0,
-            "merged_candidate_count": 0,
-            "window_size": 0,
-            "window_overlap": 0,
-            "warnings": [],
-            "input_fingerprint": "",
-            "log_relative_path": "",
-            "token_usage": {
-                "input_tokens": None,
-                "output_tokens": None,
-                "total_tokens": None,
-                "usage_available": False,
-            },
-        }
     if operation_kind == "audio_blocks":
         return {
             "voice_language": "",

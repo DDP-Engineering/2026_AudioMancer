@@ -14,12 +14,13 @@
          discovery workflow.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-08
-@version 0.13.1
+@version 0.14.0
 """
 
 # IMPORTS
 
 import json
+from pathlib import Path
 
 import pytest
 
@@ -34,7 +35,7 @@ def test_character_discovery_window_prompt_requests_age_hint() -> None:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-15
-    @version    0.1.0
+    @version    0.2.0
     """
     prompt_text = (config.APP_PROMPTS_PATH / "character_discovery_window_user.txt").read_text(encoding="utf-8")
 
@@ -49,7 +50,7 @@ def test_start_discovery_persists_outputs_and_report(monkeypatch, tmp_path) -> N
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-02
-    @version    0.1.0
+    @version    0.2.0
     """
     project_root, manifest = _create_character_project(tmp_path, "CharacterDiscoveryService")
     monkeypatch.setattr(
@@ -136,10 +137,20 @@ def test_start_discovery_persists_outputs_and_report(monkeypatch, tmp_path) -> N
     state = character_discovery_service.load_operation_state(project_root)
     assert state is not None
     assert state["status"] == "completed"
-    assert state["output_paths"] == [config.CHARACTER_PROFILE_FILE_NAME]
+    assert state["phase"] == "completed"
+    assert state["checkpoint"] is None
+    assert state["log_relative_path"].startswith("log_ai_characters_")
+    assert (project_root / str(state["log_relative_path"])).is_file()
+    assert "output_paths" not in state
+    assert "artifact_paths" not in state
+    assert "metadata" not in state
+    manifest_operation = project_workspace_service.load_manifest(project_root)["operations"]["character_discovery"]
+    assert manifest_operation["status"] == "completed"
+    assert "checkpoint" not in manifest_operation
+    assert "log_relative_path" not in manifest_operation
     assert report["budget_metadata"]["context_window"] == 4096
     assert report["budget_metadata"]["max_output_tokens"] == 512
-    assert state["metadata"]["budget_metadata"] == report["budget_metadata"]
+    assert state["token_usage"] == report["token_usage"]
     assert report["model_settings"] == {
         "model_name": "qwen3-8b",
         "context_window": 4096,
@@ -167,7 +178,7 @@ def test_start_discovery_appends_and_persists_operator_character_rules(monkeypat
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-13
-    @version    0.1.0
+    @version    0.2.0
     """
     project_root, manifest = _create_character_project(tmp_path, "CharacterDiscoveryExtraPrompt")
     additional_rules = "Treat titled names like Lady Catherine as character identities."
@@ -249,9 +260,9 @@ def test_start_discovery_appends_and_persists_operator_character_rules(monkeypat
         character_discovery_service._compute_prompt_fingerprint(additional_rules)  # noqa: SLF001
     )
     assert state is not None
-    assert state["metadata"]["additional_character_discovery_instructions"] == additional_rules
+    assert state["additional_character_discovery_instructions"] == additional_rules
     assert (
-        state["metadata"]["additional_character_discovery_instructions_fingerprint"]
+        state["additional_character_discovery_instructions_fingerprint"]
         == report["additional_character_discovery_instructions_fingerprint"]
     )
 
@@ -263,7 +274,7 @@ def test_start_discovery_resumes_from_saved_synthesis_checkpoint(monkeypatch, tm
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-02
-    @version    0.1.0
+    @version    0.2.0
     """
     project_root, manifest = _create_character_project(tmp_path, "CharacterDiscoveryResume")
     source_chunks = character_discovery_service.load_input_chunks(project_root)
@@ -277,10 +288,6 @@ def test_start_discovery_resumes_from_saved_synthesis_checkpoint(monkeypatch, tm
         character_discovery_service.prompt_template_service,
         "render_prompt",
         lambda prompt_name, payload: f"{prompt_name}:{sorted(payload.keys())}",
-    )
-    budget_metadata = character_discovery_service._build_budget_metadata(  # noqa: SLF001
-        _profile_payload("profile-1"),
-        "character_discovery_system:[]",
     )
     resume_candidate = {
         "character_id": "alice",
@@ -301,11 +308,8 @@ def test_start_discovery_resumes_from_saved_synthesis_checkpoint(monkeypatch, tm
     state_path.write_text(
         json.dumps(
             {
-                "folder_relative_path": config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH,
                 "status": "running",
-                "input_paths": [],
-                "output_paths": [],
-                "artifact_paths": [],
+                "phase": "synthesis",
                 "progress_current": 1,
                 "progress_total": 2,
                 "mode": character_discovery_service.CHARACTER_DISCOVERY_MODE_AI_ASSISTED,
@@ -313,24 +317,26 @@ def test_start_discovery_resumes_from_saved_synthesis_checkpoint(monkeypatch, tm
                 "completed_at": None,
                 "updated_at": "2026-04-08T12:00:00+00:00",
                 "warning_count": 0,
-                "metadata": {
-                    "ai_profile_id": "profile-1",
-                    "input_fingerprint": fingerprint,
-                    "budget_metadata": budget_metadata,
+                "ai_profile_id": "profile-1",
+                "input_fingerprint": fingerprint,
+                "additional_character_discovery_instructions": "",
+                "additional_character_discovery_instructions_fingerprint": (
+                    character_discovery_service._compute_prompt_fingerprint("")  # noqa: SLF001
+                ),
+                "token_usage": {
+                    "input_tokens": None,
+                    "output_tokens": None,
+                    "total_tokens": None,
+                    "usage_available": False,
                 },
-                "resume_checkpoint": {
-                    "input_fingerprint": fingerprint,
-                    "profile_id": "profile-1",
+                "log_relative_path": "saved_character_discovery.log",
+                "checkpoint": {
                     "completed_window_count": 1,
-                    "total_window_count": 1,
                     "next_discovery_start_chunk_index": len(source_chunks),
-                    "budget_metadata": budget_metadata,
                     "raw_candidates": [resume_candidate],
                     "merged_candidates": [resume_candidate],
                     "rejected_candidates": [],
                     "synthesized_profiles": [],
-                    "synthesis_progress_count": 0,
-                    "log_relative_path": None,
                 },
             },
             indent=2,
@@ -339,8 +345,9 @@ def test_start_discovery_resumes_from_saved_synthesis_checkpoint(monkeypatch, tm
         encoding="utf-8",
     )
     call_profiles = []
+    log_paths = []
 
-    def _fake_chat_json(ai_profile_payload, *_args, **_kwargs):
+    def _fake_chat_json(ai_profile_payload, *_args, **kwargs):
         """
         @brief      Provide the fake chat json test helper.
         @return     None.
@@ -350,6 +357,7 @@ def test_start_discovery_resumes_from_saved_synthesis_checkpoint(monkeypatch, tm
         @version    0.1.0
         """
         call_profiles.append(dict(ai_profile_payload))
+        log_paths.append(Path(kwargs["log_path"]).name)
         return {
             "payload": {
                 "canonical_name": "Alice",
@@ -388,6 +396,7 @@ def test_start_discovery_resumes_from_saved_synthesis_checkpoint(monkeypatch, tm
     )
 
     assert len(call_profiles) == 1
+    assert log_paths == ["saved_character_discovery.log"]
     assert call_profiles[0]["id"] == "profile-2"
     assert call_profiles[0]["model_name"] == "qwen3-14b"
     assert report["character_count"] == 1
@@ -409,8 +418,8 @@ def test_start_discovery_resumes_from_saved_synthesis_checkpoint(monkeypatch, tm
     assert report["token_usage"]["total_tokens"] == 90
     state = character_discovery_service.load_operation_state(project_root)
     assert state is not None
-    assert state["metadata"]["model_settings"] == report["model_settings"]
-    assert state["metadata"]["model_settings_history"] == report["model_settings_history"]
+    assert state["checkpoint"] is None
+    assert state["log_relative_path"] == "saved_character_discovery.log"
     resumed_profile = character_discovery_service.load_character_profiles(project_root)[0]
     assert resumed_profile["gender_hint"] == "female"
     assert "Clear and calm" in resumed_profile["voice_definition_prompt"]
@@ -423,7 +432,7 @@ def test_manual_add_update_delete_and_reset(tmp_path) -> None:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-02
-    @version    0.1.0
+    @version    0.2.0
     """
     project_root, _manifest = _create_character_project(tmp_path, "CharacterDiscoveryManual")
     discovery_root = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH
@@ -434,11 +443,8 @@ def test_manual_add_update_delete_and_reset(tmp_path) -> None:
     (discovery_root / config.CHARACTER_DISCOVERY_STATE_FILE_NAME).write_text(
         json.dumps(
             {
-                "folder_relative_path": config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH,
                 "status": "completed",
-                "input_paths": [],
-                "output_paths": [f"{config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH}/{config.CHARACTER_PROFILE_FILE_NAME}"],
-                "artifact_paths": [],
+                "phase": "completed",
                 "progress_current": 1,
                 "progress_total": 1,
                 "mode": "ai_assisted",
@@ -446,8 +452,13 @@ def test_manual_add_update_delete_and_reset(tmp_path) -> None:
                 "completed_at": "2026-04-08T12:01:00+00:00",
                 "updated_at": "2026-04-08T12:01:00+00:00",
                 "warning_count": 0,
-                "metadata": {"ai_profile_id": "profile-1", "character_count": 1},
-                "resume_checkpoint": None,
+                "ai_profile_id": "profile-1",
+                "input_fingerprint": "",
+                "additional_character_discovery_instructions": "",
+                "additional_character_discovery_instructions_fingerprint": "",
+                "token_usage": {},
+                "log_relative_path": "log_ai_characters_saved.log",
+                "checkpoint": None,
             },
             indent=2,
         )
@@ -488,7 +499,10 @@ def test_manual_add_update_delete_and_reset(tmp_path) -> None:
     )
     assert len(remaining_profiles) == 1
     assert remaining_profiles[0]["character_id"] == "alice"
-    assert character_discovery_service.load_operation_state(project_root)["metadata"]["character_count"] == 1
+    updated_state = character_discovery_service.load_operation_state(project_root)
+    assert updated_state is not None
+    assert "metadata" not in updated_state
+    assert updated_state["status"] == "completed"
 
     character_discovery_service.reset_character_discovery(project_root)
 
@@ -1068,7 +1082,7 @@ def test_resume_state_requires_current_checkpoint_boundary() -> None:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-02
-    @version    0.1.0
+    @version    0.2.0
     """
     source_chunks = [
         _chunk_payload("chunk-0001", 1, '"Hello," said Alice.'),
@@ -1084,10 +1098,12 @@ def test_resume_state_requires_current_checkpoint_boundary() -> None:
         {
             "status": "running",
             "mode": character_discovery_service.CHARACTER_DISCOVERY_MODE_AI_ASSISTED,
-            "resume_checkpoint": {
-                "input_fingerprint": "abc",
-                "profile_id": "profile-1",
-                "total_window_count": 2,
+            "input_fingerprint": "abc",
+            "additional_character_discovery_instructions_fingerprint": (
+                character_discovery_service._compute_prompt_fingerprint("")  # noqa: SLF001
+            ),
+            "log_relative_path": "log_ai_characters_saved.log",
+            "checkpoint": {
                 "completed_window_count": 1,
                 "next_discovery_start_chunk_index": 1,
                 "raw_candidates": [resume_candidate],
@@ -1105,10 +1121,11 @@ def test_resume_state_requires_current_checkpoint_boundary() -> None:
         {
             "status": "running",
             "mode": character_discovery_service.CHARACTER_DISCOVERY_MODE_AI_ASSISTED,
-            "resume_checkpoint": {
-                "input_fingerprint": "abc",
-                "profile_id": "profile-1",
-                "total_window_count": 2,
+            "input_fingerprint": "abc",
+            "additional_character_discovery_instructions_fingerprint": (
+                character_discovery_service._compute_prompt_fingerprint("")  # noqa: SLF001
+            ),
+            "checkpoint": {
                 "completed_window_count": 1,
                 "raw_candidates": [resume_candidate],
             },

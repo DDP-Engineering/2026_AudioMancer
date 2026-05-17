@@ -13,7 +13,7 @@
          discovery start and reset behavior for the Characters page controller.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-08
-@version 0.11.1
+@version 0.12.0
 """
 
 # IMPORTS
@@ -42,7 +42,7 @@ def test_character_ui_controller_first_run_shows_info_popup(monkeypatch, qtbot, 
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-02
-    @version    0.1.0
+    @version    0.2.0
     """
     project_root, _manifest = _create_project(tmp_path, "CharacterControllerFirstRun")
     window = _build_window(qtbot, project_root)
@@ -551,13 +551,8 @@ def _create_project(tmp_path, name: str):
     (discovery_root / config.CHARACTER_DISCOVERY_STATE_FILE_NAME).write_text(
         json.dumps(
             {
-                "folder_relative_path": config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH,
                 "status": "completed",
-                "input_paths": [],
-                "output_paths": [f"{config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH}/{config.CHARACTER_PROFILE_FILE_NAME}"],
-                "artifact_paths": [
-                    f"{config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH}/{config.CHARACTER_DISCOVERY_REPORT_FILE_NAME}"
-                ],
+                "phase": "completed",
                 "progress_current": 1,
                 "progress_total": 1,
                 "mode": "ai_assisted",
@@ -565,8 +560,13 @@ def _create_project(tmp_path, name: str):
                 "completed_at": "2026-04-08T12:01:00+00:00",
                 "updated_at": "2026-04-08T12:01:00+00:00",
                 "warning_count": 0,
-                "metadata": {"ai_profile_id": "profile-1", "character_count": 1},
-                "resume_checkpoint": None,
+                "ai_profile_id": "profile-1",
+                "input_fingerprint": "",
+                "additional_character_discovery_instructions": "",
+                "additional_character_discovery_instructions_fingerprint": "",
+                "token_usage": {},
+                "log_relative_path": "log_ai_characters_saved.log",
+                "checkpoint": None,
             },
             indent=2,
         )

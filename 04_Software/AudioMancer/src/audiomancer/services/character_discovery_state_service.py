@@ -14,7 +14,7 @@
          and settings.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-08
-@version 0.5.0
+@version 0.5.1
 """
 
 # IMPORTS
@@ -267,7 +267,7 @@ def _character_discovery_stage_status(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-08
-    @version    0.1.0
+    @version    0.2.0
     """
     if isinstance(operation_state, dict):
         operation_status = str(operation_state.get("status", ""))
@@ -299,6 +299,9 @@ def _persisted_profile_id(
         if profile_id not in (None, ""):
             return str(profile_id)
     if isinstance(operation_state, dict):
+        profile_id = operation_state.get("ai_profile_id")
+        if profile_id not in (None, ""):
+            return str(profile_id)
         metadata = operation_state.get("metadata", {})
         if isinstance(metadata, dict):
             profile_id = metadata.get("ai_profile_id")

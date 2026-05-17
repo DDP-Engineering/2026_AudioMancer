@@ -14,7 +14,7 @@
          profile behavior.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-08
-@version 0.3.1
+@version 0.4.0
 """
 
 # IMPORTS
@@ -32,7 +32,7 @@ def test_profile_state_prefers_default_character_profile() -> None:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-02
-    @version    0.1.0
+    @version    0.2.0
     """
     profile_state = character_discovery_state_service.build_character_discovery_profile_state(
         {
@@ -247,13 +247,8 @@ def _create_project(tmp_path, name: str):
     (discovery_root / config.CHARACTER_DISCOVERY_STATE_FILE_NAME).write_text(
         json.dumps(
             {
-                "folder_relative_path": config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH,
                 "status": "completed",
-                "input_paths": [],
-                "output_paths": [f"{config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH}/{config.CHARACTER_PROFILE_FILE_NAME}"],
-                "artifact_paths": [
-                    f"{config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH}/{config.CHARACTER_DISCOVERY_REPORT_FILE_NAME}"
-                ],
+                "phase": "completed",
                 "progress_current": 1,
                 "progress_total": 1,
                 "mode": "ai_assisted",
@@ -261,17 +256,18 @@ def _create_project(tmp_path, name: str):
                 "completed_at": "2026-04-08T12:01:00+00:00",
                 "updated_at": "2026-04-08T12:01:00+00:00",
                 "warning_count": 0,
-                "metadata": {
-                    "ai_profile_id": "profile-1",
-                    "character_count": 1,
-                    "token_usage": {
-                        "input_tokens": 140,
-                        "output_tokens": 35,
-                        "total_tokens": 175,
-                        "usage_available": True,
-                    },
+                "ai_profile_id": "profile-1",
+                "input_fingerprint": "",
+                "additional_character_discovery_instructions": "",
+                "additional_character_discovery_instructions_fingerprint": "",
+                "token_usage": {
+                    "input_tokens": 140,
+                    "output_tokens": 35,
+                    "total_tokens": 175,
+                    "usage_available": True,
                 },
-                "resume_checkpoint": None,
+                "log_relative_path": "log_ai_characters_saved.log",
+                "checkpoint": None,
             },
             indent=2,
         )

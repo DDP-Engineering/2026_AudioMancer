@@ -12,6 +12,14 @@ All notable changes to this project will be documented in this file.
 
 No notable changes yet.
 
+## [1.1.4] - 2026-05-17
+
+### Changed
+
+- Character Discovery now persists compact operation state with a top-level
+  `checkpoint` and root-level `log_relative_path`, removing duplicated path,
+  metadata, and synthesis-progress fields while preserving resumable AI logs.
+
 ## [1.1.3] - 2026-05-17
 
 ### Changed
