@@ -34,7 +34,6 @@ from audiomancer.services.operation_runtime_service import (
     load_operation_state_file,
     load_operation_state_payload,
     raise_if_cancelled,
-    relative_to_project,
     resolve_operation_path,
 )
 from audiomancer.services.time_service import utc_now_iso as _utc_now_iso
@@ -174,9 +173,6 @@ def chunk_text(
 
     warnings = _build_chunking_warnings(chapter_count)
     report_payload: ChunkingReportPayload = {
-        "input_relative_path": relative_to_project(resolved_project_root, input_snapshot_path),
-        "chunk_artifact_relative_path": relative_to_project(resolved_project_root, output_path),
-        "chunked_at": _utc_now_iso(),
         "warnings": warnings,
         "chunk_count": len(chunks),
         "detected_chapter_count": chapter_count,
@@ -195,7 +191,7 @@ def chunk_text(
         progress_current=progress_total,
         progress_total=progress_total,
         started_at=started_at,
-        completed_at=report_payload["chunked_at"],
+        completed_at=None,
         warnings=warnings,
         chunk_count=len(chunks),
         chapter_count=chapter_count,
@@ -328,7 +324,6 @@ def _build_chunk_payload(
         "cleanup_warning_flags": list(paragraph_record.get("warning_flags", [])),
         "chunking_mode": "deterministic",
         "semantic_strategy": None,
-        "scene_note": None,
     }
 
 
@@ -446,14 +441,15 @@ def _build_operation_state(
     @date       2026-04-21
     @version    0.2.0
     """
-    artifact_paths: list[str] = []
-    if report_path is not None and report_path.is_file():
-        artifact_paths.append(relative_to_project(project_root, report_path))
+    _ = project_root
+    _ = input_snapshot_path
+    _ = output_path
+    _ = report_path
     return build_operation_state_payload(
         status=status,
-        input_paths=[relative_to_project(project_root, input_snapshot_path)],
-        output_paths=([relative_to_project(project_root, output_path)] if output_path.is_file() else []),
-        artifact_paths=artifact_paths,
+        input_paths=[],
+        output_paths=[],
+        artifact_paths=[],
         progress_current=progress_current,
         progress_total=progress_total,
         mode="deterministic",

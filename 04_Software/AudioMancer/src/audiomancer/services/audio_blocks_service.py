@@ -16,7 +16,7 @@
          `80_audio_blocks` workflow artifacts.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-23
-@version 0.16.0
+@version 0.17.0
 """
 
 # IMPORTS
@@ -39,7 +39,6 @@ from audiomancer.services import (
 )
 from audiomancer.services.logging_service import get_component_logger, trace_function
 from audiomancer.services.operation_runtime_service import (
-    build_operation_output_path,
     build_operation_state_payload,
     load_operation_state_payload,
     load_optional_json_artifact,
@@ -241,9 +240,6 @@ def has_persisted_audio_blocks(project_root: str | Path) -> bool:
     if isinstance(operation_state, dict):
         has_runtime_state = str(operation_state.get("status", "")).strip() != AUDIO_BLOCKS_STAGE_NOT_STARTED or any(
             (
-                bool(operation_state.get("input_paths")),
-                bool(operation_state.get("output_paths")),
-                bool(operation_state.get("artifact_paths")),
                 int(operation_state.get("progress_current", 0) or 0) > 0,
                 int(operation_state.get("progress_total", 0) or 0) > 0,
             )
@@ -2420,7 +2416,6 @@ def _persist_report_update(
         regenerated_prompt_count=_metadata_int(existing_state, "regenerated_prompt_count", 0),
         current_phase=str(metadata.get("current_phase", _GENERATE_PHASE)).strip() or _GENERATE_PHASE,
     )
-    report_updated_at = _operation_optional_string(report.get("updated_at")) or _utc_now_iso()
     final_status = (
         AUDIO_BLOCKS_STAGE_COMPLETED
         if str(report.get("audio_blocks_stage_status", "")).strip() == AUDIO_BLOCKS_STAGE_COMPLETED
@@ -2432,8 +2427,8 @@ def _persist_report_update(
         audio_blocks,
         current_clone_profiles,
         status=final_status,
-        started_at=_operation_optional_string(existing_state.get("started_at")) or report_updated_at,
-        completed_at=report_updated_at if final_status == AUDIO_BLOCKS_STAGE_COMPLETED else None,
+        started_at=_resolve_started_at(existing_state),
+        completed_at=None,
         voice_language=voice_language,
         input_fingerprint=_operation_optional_string(metadata.get("input_fingerprint")) or "",
         current_phase=str(metadata.get("current_phase", _GENERATE_PHASE)).strip() or _GENERATE_PHASE,
@@ -2634,7 +2629,7 @@ def _rebuild_report(
     @param[in]  voice_language Selected character-voices voice language.
     @param[in]  speech_blocks Current Speech Blocks payload list.
     @param[in]  warning_records Current warning entry list.
-    @param[in]  updated_at Optional report timestamp override.
+    @param[in]  updated_at Ignored legacy report timestamp override.
     @param[in]  prompt_count Current persisted prompt count.
     @param[in]  reused_prompt_count Count of reusable prompts reused from persisted project data.
     @param[in]  regenerated_prompt_count Count of reusable prompts freshly created in the current run.
@@ -2643,8 +2638,9 @@ def _rebuild_report(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-23
-    @version    0.2.0
+    @version    0.3.0
     """
+    _ = updated_at
     total_block_count = len(speech_blocks)
     generated_block_count = _generated_count(audio_blocks)
     approved_block_count = _approved_count(audio_blocks)
@@ -2668,7 +2664,6 @@ def _rebuild_report(
         "current_phase": str(current_phase).strip() if current_phase else None,
         "warning_count": len(warning_records),
         "warnings": list(warning_records),
-        "updated_at": updated_at or _utc_now_iso(),
     }
 
 
@@ -2697,8 +2692,8 @@ def _build_operation_state(
     @param[in]  audio_blocks Current Audio Blocks payload list.
     @param[in]  clone_profiles Current persisted direct-clone source profile list.
     @param[in]  status Persisted operation status token.
-    @param[in]  started_at Operation start timestamp.
-    @param[in]  completed_at Operation completion timestamp or `None`.
+    @param[in]  started_at Runtime token preserved only inside the resume checkpoint.
+    @param[in]  completed_at Ignored legacy completion timestamp.
     @param[in]  voice_language Selected character-voices voice language.
     @param[in]  input_fingerprint Stable validated input fingerprint.
     @param[in]  current_phase Current resumable phase token.
@@ -2712,30 +2707,20 @@ def _build_operation_state(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-24
-    @version    0.3.0
+    @version    0.4.0
     """
-    input_path = _speech_blocks_snapshot_path(project_root)
-    output_path = build_operation_output_path(project_root, "audio_blocks", config.AUDIO_BLOCKS_OUTPUT_FILE_NAME)
-    report_path = build_operation_output_path(project_root, "audio_blocks", config.AUDIO_BLOCKS_REPORT_FILE_NAME)
-    clone_path = build_operation_output_path(
-        project_root,
-        "audio_blocks",
-        config.AUDIO_BLOCKS_VOICE_CLONE_PROFILES_FILE_NAME,
-    )
-    artifact_paths = [relative_to_project(project_root, report_path), relative_to_project(project_root, clone_path)]
-    generated_root = _generated_audio_root(project_root)
-    if generated_root.is_dir():
-        artifact_paths.extend(relative_to_project(project_root, path) for path in sorted(generated_root.rglob("*")))
+    _ = project_root
+    _ = completed_at
     return build_operation_state_payload(
         status=status,
-        input_paths=[relative_to_project(project_root, input_path)],
-        output_paths=[relative_to_project(project_root, output_path)],
-        artifact_paths=artifact_paths,
+        input_paths=[],
+        output_paths=[],
+        artifact_paths=[],
         progress_current=_generated_count(audio_blocks),
         progress_total=len(speech_blocks),
         mode=_MODE,
-        started_at=started_at,
-        completed_at=completed_at,
+        started_at=None,
+        completed_at=None,
         warning_count=0,
         metadata={
             "voice_language": voice_language,
@@ -2754,6 +2739,7 @@ def _build_operation_state(
             "model_audio_seconds_budget": _first_present(audio_blocks, "model_audio_seconds_budget"),
         },
         resume_checkpoint={
+            "run_token": started_at,
             "next_profile_index": max(next_profile_index, 0),
             "next_speech_block_index": max(next_speech_block_index, 0),
             "next_split_part_index": max(next_split_part_index, 0),
@@ -3332,17 +3318,19 @@ def _active_model_id_from_status(status_payload: dict[str, object]) -> str | Non
 
 def _resolve_started_at(existing_state: dict[str, object]) -> str:
     """
-    @brief      Resolve the stable operation start timestamp for one Audio Blocks run.
+    @brief      Resolve the runtime token for one Audio Blocks run.
     @param[in]  existing_state Existing operation-state payload.
-    @return     Stable operation start timestamp.
+    @return     Stable runtime token.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-23
-    @version    0.2.0
+    @version    0.3.0
     """
-    started_at_value = existing_state.get("started_at", "") if isinstance(existing_state, dict) else ""
-    started_at = "" if started_at_value in (None, "") else str(started_at_value).strip()
-    return started_at or _utc_now_iso()
+    resume_checkpoint = existing_state.get("resume_checkpoint", {}) if isinstance(existing_state, dict) else {}
+    if not isinstance(resume_checkpoint, dict):
+        resume_checkpoint = {}
+    run_token = str(resume_checkpoint.get("run_token", "") or "").strip()
+    return run_token or _utc_now_iso()
 
 
 def _resume_checkpoint_field(existing_state: dict[str, object], field_name: str, fallback: int) -> int:

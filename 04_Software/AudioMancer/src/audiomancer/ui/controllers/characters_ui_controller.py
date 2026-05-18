@@ -259,7 +259,6 @@ def handle_save_character_requested(
             persisted_payload["character_id"] = created_profile["character_id"]
             persisted_payload["canonical_name"] = normalized_name
             persisted_payload["evidence"] = [dict(item) for item in created_profile["evidence"]]
-            persisted_payload["updated_at"] = created_profile.get("updated_at")
             character_discovery_service.update_character_profile(
                 window._current_project_root,
                 persisted_payload,
@@ -1064,7 +1063,6 @@ def _build_manual_draft_profile(
                     "reason": character_discovery_service.MANUAL_CHARACTER_EVIDENCE_NOTE,
                 }
             ],
-            "updated_at": None,
         }
     )
 

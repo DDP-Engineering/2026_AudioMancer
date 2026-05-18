@@ -136,7 +136,7 @@ def test_narrator_service_stores_single_profile_sample_and_marks_selected_metada
     assert selected_metadata is not None
     assert selected_metadata["profile_id"] == profile["profile_id"]
     assert selected_metadata["source_kind"] == narrator_definition_service.NARRATOR_SAMPLE_SOURCE_VOICE_DESIGNER
-    assert selected_metadata["selected_at"]
+    assert "selected_at" not in selected_metadata
     assert selected_audio_path == project_root / config.SELECTED_NARRATOR_AUDIO_FILE_NAME
     assert selected_metadata_path == project_root / config.SELECTED_NARRATOR_METADATA_FILE_NAME
     assert selected_metadata_path != project_root / config.NARRATOR_SELECTION_FILE_NAME
@@ -443,10 +443,8 @@ def test_narrator_service_normalizes_legacy_profile_sample_metadata(tmp_path) ->
                 "preview_text": "Legacy sample transcript.",
                 "language": "en",
                 "source_model_id": None,
-                "created_at": "2026-05-18T00:00:00+00:00",
                 "source_file_name": "legacy.wav",
             },
-            "updated_at": None,
         }
     ]
     assert audio_path == project_root / "audio_narator_legacy_voice.wav"
@@ -457,9 +455,7 @@ def test_narrator_service_normalizes_legacy_profile_sample_metadata(tmp_path) ->
         "preview_text": "Legacy selected transcript.",
         "language": "en",
         "source_model_id": None,
-        "created_at": "2026-05-18T00:01:00+00:00",
         "source_file_name": "selected.wav",
-        "selected_at": "2026-05-18T00:02:00+00:00",
     }
 
 

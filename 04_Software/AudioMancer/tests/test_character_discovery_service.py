@@ -137,20 +137,19 @@ def test_start_discovery_persists_outputs_and_report(monkeypatch, tmp_path) -> N
     state = character_discovery_service.load_operation_state(project_root)
     assert state is not None
     assert state["status"] == "completed"
-    assert state["phase"] == "completed"
-    assert state["checkpoint"] is None
-    assert state["log_relative_path"].startswith("log_ai_characters_")
-    assert (project_root / str(state["log_relative_path"])).is_file()
-    assert "output_paths" not in state
-    assert "artifact_paths" not in state
-    assert "metadata" not in state
+    assert state["metadata"]["phase"] == "completed"
+    assert state["resume_checkpoint"] is None
+    assert state["metadata"]["log_relative_path"].startswith("log_ai_characters_")
+    assert (project_root / str(state["metadata"]["log_relative_path"])).is_file()
+    for field_name in ("output_paths", "artifact_paths", "started_at", "completed_at", "updated_at"):
+        assert field_name not in state
     manifest_operation = project_workspace_service.load_manifest(project_root)["operations"]["character_discovery"]
     assert manifest_operation["status"] == "completed"
     assert "checkpoint" not in manifest_operation
     assert "log_relative_path" not in manifest_operation
     assert report["budget_metadata"]["context_window"] == 4096
     assert report["budget_metadata"]["max_output_tokens"] == 512
-    assert state["token_usage"] == report["token_usage"]
+    assert state["metadata"]["token_usage"] == report["token_usage"]
     assert report["model_settings"] == {
         "model_name": "qwen3-8b",
         "context_window": 4096,
@@ -260,9 +259,9 @@ def test_start_discovery_appends_and_persists_operator_character_rules(monkeypat
         character_discovery_service._compute_prompt_fingerprint(additional_rules)  # noqa: SLF001
     )
     assert state is not None
-    assert state["additional_character_discovery_instructions"] == additional_rules
+    assert state["metadata"]["additional_character_discovery_instructions"] == additional_rules
     assert (
-        state["additional_character_discovery_instructions_fingerprint"]
+        state["metadata"]["additional_character_discovery_instructions_fingerprint"]
         == report["additional_character_discovery_instructions_fingerprint"]
     )
 
@@ -309,28 +308,32 @@ def test_start_discovery_resumes_from_saved_synthesis_checkpoint(monkeypatch, tm
         json.dumps(
             {
                 "status": "running",
-                "phase": "synthesis",
                 "progress_current": 1,
                 "progress_total": 2,
                 "mode": character_discovery_service.CHARACTER_DISCOVERY_MODE_AI_ASSISTED,
-                "started_at": "2026-04-08T12:00:00+00:00",
-                "completed_at": None,
-                "updated_at": "2026-04-08T12:00:00+00:00",
                 "warning_count": 0,
-                "ai_profile_id": "profile-1",
-                "input_fingerprint": fingerprint,
-                "additional_character_discovery_instructions": "",
-                "additional_character_discovery_instructions_fingerprint": (
-                    character_discovery_service._compute_prompt_fingerprint("")  # noqa: SLF001
-                ),
-                "token_usage": {
-                    "input_tokens": None,
-                    "output_tokens": None,
-                    "total_tokens": None,
-                    "usage_available": False,
+                "metadata": {
+                    "phase": "synthesis",
+                    "ai_profile_id": "profile-1",
+                    "additional_character_discovery_instructions": "",
+                    "additional_character_discovery_instructions_fingerprint": (
+                        character_discovery_service._compute_prompt_fingerprint("")  # noqa: SLF001
+                    ),
+                    "token_usage": {
+                        "input_tokens": None,
+                        "output_tokens": None,
+                        "total_tokens": None,
+                        "usage_available": False,
+                    },
+                    "log_relative_path": "saved_character_discovery.log",
                 },
-                "log_relative_path": "saved_character_discovery.log",
-                "checkpoint": {
+                "resume_checkpoint": {
+                    "run_token": "2026-04-08T12:00:00+00:00",
+                    "input_fingerprint": fingerprint,
+                    "log_relative_path": "saved_character_discovery.log",
+                    "additional_character_discovery_instructions_fingerprint": (
+                        character_discovery_service._compute_prompt_fingerprint("")  # noqa: SLF001
+                    ),
                     "completed_window_count": 1,
                     "next_discovery_start_chunk_index": len(source_chunks),
                     "raw_candidates": [resume_candidate],
@@ -418,8 +421,8 @@ def test_start_discovery_resumes_from_saved_synthesis_checkpoint(monkeypatch, tm
     assert report["token_usage"]["total_tokens"] == 90
     state = character_discovery_service.load_operation_state(project_root)
     assert state is not None
-    assert state["checkpoint"] is None
-    assert state["log_relative_path"] == "saved_character_discovery.log"
+    assert state["resume_checkpoint"] is None
+    assert state["metadata"]["log_relative_path"] == "saved_character_discovery.log"
     resumed_profile = character_discovery_service.load_character_profiles(project_root)[0]
     assert resumed_profile["gender_hint"] == "female"
     assert "Clear and calm" in resumed_profile["voice_definition_prompt"]

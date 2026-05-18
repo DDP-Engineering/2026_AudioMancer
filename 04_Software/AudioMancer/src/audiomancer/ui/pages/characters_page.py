@@ -1153,7 +1153,6 @@ class CharactersPage(QWidget):
             "preview_text": str(base_profile.get("preview_text", "")).strip(),
             "confidence": self._confidence_edit.text().strip(),
             "evidence": [dict(item) for item in list(base_profile.get("evidence", []))],
-            "updated_at": base_profile.get("updated_at"),
         }
         return draft_profile
 

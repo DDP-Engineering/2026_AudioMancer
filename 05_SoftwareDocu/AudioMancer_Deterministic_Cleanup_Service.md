@@ -127,10 +127,6 @@ Outputs:
 
 Current cleanup report fields:
 
-- `input_relative_path`
-- `cleaned_text_relative_path`
-- `cleaned_text_metadata_relative_path`
-- `cleaned_at`
 - `detected_language`
 - `warnings`
 - `paragraph_count`
@@ -144,17 +140,10 @@ Current cleanup report fields:
 
 Current cleanup operation-state fields:
 
-- `folder_relative_path`
 - `status`
-- `input_paths`
-- `output_paths`
-- `artifact_paths`
 - `progress_current`
 - `progress_total`
 - `mode`
-- `started_at`
-- `completed_at`
-- `updated_at`
 - `warning_count`
 - `metadata`
 - `resume_checkpoint`
@@ -163,13 +152,14 @@ Current cleaned-text metadata fields:
 
 - `schema_version`
 - `cleanup_mode`
-- `input_relative_path`
-- `cleaned_text_relative_path`
-- `created_at`
 - `paragraph_count`
 - `page_break_repair_count`
 - `weak_boundary_count`
 - `paragraphs`
+
+Cleanup paths are fixed by configuration and are not mirrored in report,
+metadata, or state payloads. Operation audit timestamps are not persisted;
+resume uses `resume_checkpoint` and the partial cleaned-text artifacts.
 
 Each paragraph record stores paragraph id, cleaned-text line span, optional
 source page span, page-break flags, boundary confidence, and warning flags.

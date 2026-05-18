@@ -316,9 +316,6 @@ def chunk_text(
     chapter_count = _chapter_count_from_chunks(chunks)
     warnings = deterministic_chunking_service._build_chunking_warnings(chapter_count)
     report_payload: ChunkingReportPayload = {
-        "input_relative_path": relative_to_project(resolved_project_root, input_snapshot_path),
-        "chunk_artifact_relative_path": relative_to_project(resolved_project_root, output_path),
-        "chunked_at": _utc_now_iso(),
         "warnings": warnings,
         "chunk_count": len(chunks),
         "detected_chapter_count": chapter_count,
@@ -346,7 +343,7 @@ def chunk_text(
         progress_current=total_windows,
         progress_total=total_windows,
         started_at=started_at,
-        completed_at=report_payload["chunked_at"],
+        completed_at=None,
         warnings=warnings,
         chunks=None,
         profile_id=profile_id,
@@ -910,7 +907,6 @@ def _build_chunks_from_break_ids(
                 "cleanup_warning_flags": _merged_warning_flags(selected_records),
                 "chunking_mode": "ai_assisted",
                 "semantic_strategy": semantic_strategy,
-                "scene_note": None,
             }
         )
         chunk_index += 1
@@ -1094,14 +1090,15 @@ def _build_operation_state(
     @date       2026-05-12
     @version    0.5.0
     """
-    artifact_paths = [log_relative_path]
-    if report_path is not None and report_path.is_file():
-        artifact_paths.insert(0, relative_to_project(project_root, report_path))
+    _ = project_root
+    _ = input_snapshot_path
+    _ = output_path
+    _ = report_path
     return build_operation_state_payload(
         status=status,
-        input_paths=[relative_to_project(project_root, input_snapshot_path)],
-        output_paths=([relative_to_project(project_root, output_path)] if output_path.is_file() else []),
-        artifact_paths=artifact_paths,
+        input_paths=[],
+        output_paths=[],
+        artifact_paths=[],
         progress_current=progress_current,
         progress_total=progress_total,
         mode="ai_assisted",
@@ -1115,6 +1112,7 @@ def _build_operation_state(
             "ai_profile_id": profile_id,
             **profile_runtime_metadata,
             "semantic_strategy": semantic_strategy,
+            "log_relative_path": log_relative_path,
             "token_usage": token_usage_service.coerce_token_usage(token_usage),
             "budget_metadata": dict(budget_metadata),
             "profile_usage_history": [dict(item) for item in profile_usage_history],

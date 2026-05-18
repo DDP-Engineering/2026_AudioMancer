@@ -352,13 +352,15 @@ Report and operation-state metadata include:
 - `additional_speech_block_instructions`
 - `additional_speech_block_instructions_fingerprint`
 - one current-version resume checkpoint with `next_chunk_index`,
-  `source_snapshot_fingerprint`, `source_language`, `ai_profile_id`, and
-  `budget_metadata`; resume validation uses the source snapshot, language,
-  and saved operator-rule fingerprint, while the stored profile and budget
-  describe the last saved run settings
+  `run_token`, `log_relative_path`, `source_snapshot_fingerprint`,
+  `source_language`, `ai_profile_id`, and `budget_metadata`; resume validation
+  uses the source snapshot, language, and saved operator-rule fingerprint,
+  while the stored profile and budget describe the last saved run settings
 - when approval or review updates clear the explicit resume checkpoint, the
   service restores the next chunk only from current `processed_chunk_count`
   values in the report or operation metadata
+- operation audit timestamps and generic input/output/artifact path arrays are
+  not stored in current Speech Blocks state or report payloads
 
 ## 7. Workflow Integration
 

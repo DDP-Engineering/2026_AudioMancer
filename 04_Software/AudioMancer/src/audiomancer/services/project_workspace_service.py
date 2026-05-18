@@ -196,7 +196,7 @@ def lock_project_options(
     @exception  ValueError Raised when options are invalid or already locked.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-26
-    @version    0.2.0
+    @version    0.3.0
     """
     manifest = load_manifest(project_root)
     if bool(manifest.get("project_options_locked", False)):
@@ -467,9 +467,6 @@ def project_manifest_operation_summary(
             )
         ),
         "mode": _optional_string(operation_payload.get("mode")),
-        "started_at": _optional_string(operation_payload.get("started_at")),
-        "completed_at": _optional_string(operation_payload.get("completed_at")),
-        "updated_at": _optional_string(operation_payload.get("updated_at")),
         "warning_count": _non_negative_int(
             operation_payload.get(
                 "warning_count",
@@ -850,26 +847,11 @@ def _narrator_definition_completion_evidence(project_root: Path, warnings: list[
     selected_profile = _selected_narrator_profile(profiles, selection)
     if selected_profile is None:
         return None
-    sample_metadata = selected_profile.get("sample")
-    if not isinstance(sample_metadata, dict):
-        sample_metadata = selected_profile.get("sample_metadata")
-    timestamp = _first_optional_string(
-        selection,
-        sample_metadata if isinstance(sample_metadata, dict) else {},
-        selected_profile,
-        "created_at",
-        "generated_at",
-        "imported_at",
-        "updated_at",
-    )
     operation = {
         "status": "completed",
         "progress_current": 1,
         "progress_total": 1,
         "mode": "manual",
-        "started_at": timestamp,
-        "completed_at": timestamp,
-        "updated_at": timestamp,
         "warning_count": 0,
     }
     return {"operation": operation, "selection": selection, "profile": selected_profile}
@@ -908,24 +890,12 @@ def _character_voices_completion_evidence(project_root: Path, warnings: list[str
         return None
     if not all(_character_voice_target_has_sample(project_root, target) for target in character_targets):
         return None
-    sample_payloads = [
-        sample_payload
-        for sample_payload in (
-            narrator_metadata,
-            *(target.get("sample_metadata") for target in character_targets if isinstance(target, dict)),
-        )
-        if isinstance(sample_payload, dict)
-    ]
-    timestamp = _latest_voice_sample_timestamp(sample_payloads)
     progress_count = len(narrator_targets) + len(character_targets)
     operation = {
         "status": "completed",
         "progress_current": progress_count,
         "progress_total": progress_count,
         "mode": "manual",
-        "started_at": timestamp,
-        "completed_at": timestamp,
-        "updated_at": timestamp,
         "warning_count": 0,
     }
     return {"operation": operation, "targets": targets}
@@ -1010,7 +980,7 @@ def _audio_assembly_completion_evidence(project_root: Path, warnings: list[str])
     report = _load_json_artifact(project_root, config.AUDIO_ASSEMBLY_REPORT_FILE_NAME)
     if not _status_is_completed(state) or not isinstance(report, dict):
         return None
-    output_paths = _operation_path_list(state, "output_paths") + _report_output_paths(report)
+    output_paths = _report_output_paths(report)
     if not output_paths or not all(_project_relative_path_exists(project_root, path) for path in output_paths):
         warnings.append(
             "Audio Assembly completion was not healed because one or more final audiobook outputs are missing."
@@ -1037,17 +1007,14 @@ def _completed_or_report_healed_operation(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.1.0
+    @version    0.2.0
     """
     if _status_is_completed(state):
         return {"operation": state, "report": report}
     operation = dict(state) if isinstance(state, dict) else {}
-    timestamp = _first_optional_string(report, operation, "updated_at", "completed_at", "generated_at")
     operation.update(
         {
             "status": "completed",
-            "completed_at": _optional_string(operation.get("completed_at")) or timestamp,
-            "updated_at": _optional_string(operation.get("updated_at")) or timestamp,
             "warning_count": _non_negative_int(operation.get("warning_count", report.get("warning_count", 0))),
         }
     )
@@ -1089,8 +1056,6 @@ def _heal_operation_summary(
         return
     healed_summary = project_manifest_operation_summary(operation_kind, evidence.get("operation"))
     old_summary = operations.get(operation_kind)
-    if _is_nonmaterial_operation_summary_difference(operation_kind, old_summary, healed_summary):
-        return
     operations[operation_kind] = healed_summary
     if isinstance(old_summary, dict) and old_summary != healed_summary:
         old_status = old_summary.get("status")
@@ -1099,32 +1064,6 @@ def _heal_operation_summary(
             changes.append(f"{operation_kind}: {old_status} -> {new_status}")
         else:
             changes.append(f"{operation_kind}: summary metadata normalized")
-
-
-def _is_nonmaterial_operation_summary_difference(
-    operation_kind: str,
-    old_summary: object,
-    healed_summary: dict[str, object],
-) -> bool:
-    """
-    @brief      Return whether operation-summary differences should not trigger metadata repair.
-    @param[in]  operation_kind Stable workflow operation token.
-    @param[in]  old_summary Existing manifest operation summary.
-    @param[in]  healed_summary Artifact-derived operation summary.
-    @return     True when differences are timestamp-only narrator metadata drift.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-11
-    @version    0.1.0
-    """
-    if operation_kind != "narrator_definition" or not isinstance(old_summary, dict):
-        return False
-    timestamp_fields = {"started_at", "completed_at", "updated_at"}
-    old_without_timestamps = {key: value for key, value in old_summary.items() if key not in timestamp_fields}
-    healed_without_timestamps = {key: value for key, value in healed_summary.items() if key not in timestamp_fields}
-    if old_without_timestamps != healed_without_timestamps:
-        return False
-    return any(old_summary.get(field_name) != healed_summary.get(field_name) for field_name in timestamp_fields)
 
 
 def _heal_extraction_manifest_fields(
@@ -1365,26 +1304,6 @@ def _character_voice_target_has_sample(project_root: Path, target: object) -> bo
     return audio_relative_path is not None and _project_relative_path_exists(project_root, audio_relative_path)
 
 
-def _latest_voice_sample_timestamp(sample_metadata_payloads: list[dict[str, object]]) -> str | None:
-    """
-    @brief      Return the latest timestamp from persisted voice sample metadata payloads.
-    @param[in]  sample_metadata_payloads Sample metadata payloads to inspect.
-    @return     Latest timestamp string or `None`.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-16
-    @version    0.2.0
-    """
-    timestamps: list[str] = []
-    for sample_metadata in sample_metadata_payloads:
-        for field_name in ("selected_at", "created_at", "generated_at", "imported_at", "updated_at"):
-            timestamp = str(sample_metadata.get(field_name, "") or "").strip()
-            if timestamp:
-                timestamps.append(timestamp)
-                break
-    return max(timestamps) if timestamps else None
-
-
 def _audio_blocks_report_is_completed(report: object) -> bool:
     """
     @brief      Return whether an Audio Blocks report proves completion.
@@ -1426,12 +1345,6 @@ def _audio_block_files_exist(project_root: Path, audio_blocks: object, state: ob
         if isinstance(generated_part_paths, list):
             block_paths.extend(_optional_string(value) for value in generated_part_paths)
         audio_paths.extend(path for path in block_paths if path is not None)
-    if isinstance(state, dict):
-        audio_paths.extend(
-            path
-            for path in _operation_path_list(state, "output_paths") + _operation_path_list(state, "artifact_paths")
-            if Path(path).suffix.lower() in {".wav", ".mp3", ".flac", ".ogg", ".m4a", ".aac"}
-        )
     return bool(audio_paths) and all(_project_relative_path_exists(project_root, path) for path in audio_paths)
 
 
@@ -1896,16 +1809,13 @@ def _default_operation_state(operation_kind: str) -> dict[str, object]:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-11
-    @version    0.4.0
+    @version    0.5.0
     """
     return {
         "status": "not_started",
         "progress_current": 0,
         "progress_total": 0,
         "mode": None,
-        "started_at": None,
-        "completed_at": None,
-        "updated_at": None,
         "warning_count": 0,
     }
 

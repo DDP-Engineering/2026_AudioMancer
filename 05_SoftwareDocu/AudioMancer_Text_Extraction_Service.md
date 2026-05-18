@@ -107,8 +107,6 @@ Current extraction report fields:
 
 - `source_relative_path`
 - `source_type`
-- `extracted_text_relative_path`
-- `extracted_at`
 - `page_count`
 - `warnings`
 - `character_count`
@@ -117,20 +115,17 @@ Current extraction report fields:
 
 Current extraction operation-state fields:
 
-- `folder_relative_path`
 - `status`
-- `input_paths`
-- `output_paths`
-- `artifact_paths`
 - `progress_current`
 - `progress_total`
 - `mode`
-- `started_at`
-- `completed_at`
-- `updated_at`
 - `warning_count`
 - `metadata`
 - `resume_checkpoint`
+
+The extracted text path is derived from configuration. Resume uses the
+checkpoint plus the partially written output artifact rather than persisted
+generic path arrays or operation audit timestamps.
 
 Supported extraction formats in the current implementation:
 

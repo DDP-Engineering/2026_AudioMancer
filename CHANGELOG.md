@@ -12,6 +12,29 @@ All notable changes to this project will be documented in this file.
 
 No notable changes yet.
 
+## [1.2.0] - 2026-05-18
+
+### Changed
+
+- Operation state payloads now use the compact shared envelope only:
+  `status`, progress fields, `mode`, `warning_count`, `metadata`, and
+  `resume_checkpoint`.
+- Extraction, cleanup, chunking, character discovery, narrator profile
+  generation, speech blocks, audio blocks, and audio assembly reports no
+  longer persist operation audit timestamps or fixed path mirrors.
+- Resume behavior is preserved through checkpoints, input and prompt-rule
+  fingerprints, token usage metadata, partial output artifacts, and explicit
+  AI log path metadata.
+- Narrator profiles, narrator samples, character profiles, and character voice
+  targets no longer persist audit timestamp fields or `stale`; `editable`
+  remains in character voice targets to protect read-only narrator behavior.
+- Project-open and manifest healing now validate completion from status,
+  counters, reports, and existing artifacts instead of audit timestamps or
+  generic path arrays.
+- Project package metadata and `audiomancer.__version__` were updated to
+  `1.2.0`.
+- Offline English and Romanian help bundles were updated to version `1.2.0`.
+
 ## [1.1.6] - 2026-05-18
 
 ### Changed

@@ -169,7 +169,6 @@ Narrator profile payloads currently use:
 - `prompt_text`
 - `preview_text`
 - `sample`
-- `updated_at`
 
 Profile rules:
 
@@ -198,7 +197,6 @@ Per-profile sample metadata uses:
 - `preview_text`
 - `language`
 - `source_model_id`
-- `created_at`
 - `source_file_name`
 
 Generated samples use `source_kind = "voice_designer"`. Imported samples use
@@ -209,12 +207,12 @@ Selected narrator metadata in `narator_sample.json` mirrors the compact
 per-profile sample metadata and adds:
 
 - `profile_id`
-- `selected_at`
 
 Legacy projects that still contain `sample_metadata`, `sample_audio_path`,
 `sample_source`, `generation_mode`, `generated_at`, or `imported_at` are read
 compatibly and normalized to the compact `sample` contract when profiles are
-loaded. Existing display-name-based `audio_narator_<name>.wav` files remain
+loaded; audit timestamps are dropped during that normalization. Existing
+display-name-based `audio_narator_<name>.wav` files remain
 discoverable until a later sample replacement writes the current
 profile-id-based path, and legacy selected-sample JSON remains readable by
 downstream workflows through the compact selected-sample return shape.

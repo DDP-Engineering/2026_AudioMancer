@@ -238,8 +238,6 @@ def extract_text(
     report_payload: ExtractionReportPayload = {
         "source_relative_path": _relative_to_project(resolved_project_root, input_snapshot_path),
         "source_type": file_type,
-        "extracted_text_relative_path": _relative_to_project(resolved_project_root, output_path),
-        "extracted_at": _utc_now_iso(),
         "page_count": progress_payload.get("page_count"),
         "warnings": list(progress_payload["warnings"]),
         "character_count": len(normalized_text),
@@ -259,8 +257,8 @@ def extract_text(
         warning_count=len(report_payload["warnings"]),
         progress_current=int(progress_payload["progress_total"]),
         progress_total=int(progress_payload["progress_total"]),
-        started_at=str(progress_payload["started_at"]),
-        completed_at=report_payload["extracted_at"],
+        started_at=None,
+        completed_at=None,
         metadata={
             "warnings": list(report_payload["warnings"]),
             "word_count": report_payload["word_count"],
@@ -362,7 +360,7 @@ def _start_fresh_extraction(
     """
     if output_path.exists():
         output_path.unlink()
-    started_at = _utc_now_iso()
+    run_token = _utc_now_iso()
     progress_payload = _build_progress_units(input_snapshot_path, file_type)
     progress_units = list(progress_payload["units"])
     warnings[:] = [*warnings, *list(progress_payload["warnings"])]
@@ -371,7 +369,7 @@ def _start_fresh_extraction(
         state_path,
         input_snapshot_path,
         output_path,
-        started_at,
+        run_token,
         0,
         total_units,
         warnings,
@@ -383,7 +381,7 @@ def _start_fresh_extraction(
         input_snapshot_path,
         output_path,
         state_path,
-        started_at,
+        run_token,
         warnings,
         file_type,
         0,
@@ -391,7 +389,6 @@ def _start_fresh_extraction(
         cancel_requested,
     )
     return {
-        "started_at": started_at,
         "progress_total": total_units,
         "warnings": list(warnings),
         "page_count": progress_payload["page_count"],
@@ -423,7 +420,7 @@ def _resume_extraction(
     existing_state = load_operation_state_file(state_path) or {}
     resume_checkpoint = dict(existing_state.get("resume_checkpoint") or {})
     next_unit_index = int(resume_checkpoint.get("next_unit_index", 0))
-    started_at = str(existing_state.get("started_at") or _utc_now_iso())
+    run_token = str((existing_state.get("resume_checkpoint") or {}).get("run_token") or _utc_now_iso())
     progress_payload = _build_progress_units(input_snapshot_path, file_type)
     progress_units = list(progress_payload["units"])
     warnings[:] = [*warnings, *list(progress_payload["warnings"])]
@@ -432,7 +429,7 @@ def _resume_extraction(
         state_path,
         input_snapshot_path,
         output_path,
-        started_at,
+        run_token,
         next_unit_index,
         total_units,
         warnings,
@@ -444,7 +441,7 @@ def _resume_extraction(
         input_snapshot_path,
         output_path,
         state_path,
-        started_at,
+        run_token,
         warnings,
         file_type,
         next_unit_index,
@@ -452,7 +449,6 @@ def _resume_extraction(
         cancel_requested,
     )
     return {
-        "started_at": started_at,
         "progress_total": total_units,
         "warnings": list(warnings),
         "page_count": progress_payload["page_count"],
@@ -464,7 +460,7 @@ def _process_units(
     input_snapshot_path: Path,
     output_path: Path,
     state_path: Path,
-    started_at: str,
+    run_token: str,
     warnings: list[str],
     file_type: str,
     start_index: int,
@@ -477,7 +473,7 @@ def _process_units(
     @param[in]  input_snapshot_path Operation-local source snapshot path.
     @param[in]  output_path Canonical extracted output path.
     @param[in]  state_path Operation-state file path.
-    @param[in]  started_at Stable operation start timestamp.
+    @param[in]  run_token Stable resume token for the current extraction attempt.
     @param[in,out] warnings Mutable warnings list.
     @param[in]  file_type Normalized source-type token.
     @param[in]  start_index First unit index to process.
@@ -510,7 +506,7 @@ def _process_units(
                     state_path,
                     input_snapshot_path,
                     output_path,
-                    started_at,
+                    run_token,
                     unit_index + 1,
                     total_units,
                     warnings,
@@ -538,7 +534,7 @@ def _process_units(
             state_path,
             input_snapshot_path,
             output_path,
-            started_at,
+            run_token,
             unit_index + 1,
             total_units,
             warnings,
@@ -557,7 +553,7 @@ def _write_running_state(
     state_path: Path,
     input_snapshot_path: Path,
     output_path: Path,
-    started_at: str,
+    run_token: str,
     progress_current: int,
     progress_total: int,
     warnings: list[str],
@@ -569,7 +565,7 @@ def _write_running_state(
     @param[in]  state_path Operation-state file path.
     @param[in]  input_snapshot_path Operation-local source snapshot path.
     @param[in]  output_path Canonical extracted output path.
-    @param[in]  started_at Stable operation start timestamp.
+    @param[in]  run_token Stable resume token for the current extraction attempt.
     @param[in]  progress_current Completed unit count.
     @param[in]  progress_total Total unit count.
     @param[in]  warnings Current warning list.
@@ -580,28 +576,23 @@ def _write_running_state(
     @date       2026-04-06
     @version    0.2.0
     """
-    project_root = state_path.parent
-    input_paths = []
-    if input_snapshot_path.exists():
-        input_paths.append(_relative_to_project(project_root, input_snapshot_path))
-    output_paths = []
-    if output_path.exists():
-        output_paths.append(_relative_to_project(project_root, output_path))
+    _ = input_snapshot_path
+    _ = output_path
     running_state = _build_operation_state(
         status="running",
-        input_paths=input_paths,
-        output_paths=output_paths,
+        input_paths=[],
+        output_paths=[],
         artifact_paths=[],
         warning_count=len(warnings),
         progress_current=progress_current,
         progress_total=progress_total,
-        started_at=started_at,
+        started_at=None,
         completed_at=None,
         metadata={
             "warnings": list(warnings),
             "source_type": file_type,
         },
-        resume_checkpoint={"next_unit_index": progress_current},
+        resume_checkpoint={"next_unit_index": progress_current, "run_token": run_token},
     )
     state_path.write_text(
         json.dumps(running_state, indent=2, ensure_ascii=False) + "\n",
@@ -850,7 +841,7 @@ def _can_resume_from_state(
         return False
     if output_path.exists():
         return True
-    return len(list(state_payload.get("output_paths", []))) == 0
+    return int(checkpoint.get("next_unit_index", 0)) == 0
 
 
 def _source_path_from_manifest(project_root: Path, source_document: dict[str, object]) -> Path:

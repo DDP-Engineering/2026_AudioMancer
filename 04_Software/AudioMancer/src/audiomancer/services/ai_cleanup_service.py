@@ -382,13 +382,6 @@ def clean_text(
     )
     warnings = _build_cleanup_warnings(detected_language, chapter_count, warning_details)
     report_payload: CleanupReportPayload = {
-        "input_relative_path": relative_to_project(resolved_project_root, input_snapshot_path),
-        "cleaned_text_relative_path": relative_to_project(resolved_project_root, output_path),
-        "cleaned_text_metadata_relative_path": relative_to_project(
-            resolved_project_root,
-            cleanup_metadata_service.cleanup_metadata_path(resolved_project_root),
-        ),
-        "cleaned_at": _utc_now_iso(),
         "detected_language": detected_language,
         "warnings": warnings,
         "warning_details": warning_details,
@@ -422,7 +415,7 @@ def clean_text(
         progress_current=total_windows,
         progress_total=total_windows,
         started_at=started_at,
-        completed_at=report_payload["cleaned_at"],
+        completed_at=None,
         warnings=warnings,
         profile_id=profile_id,
         log_relative_path=log_relative_path,
@@ -1253,17 +1246,16 @@ def _build_operation_state(
     @version    0.4.0
     """
     additional_cleanup_instructions_fingerprint = _compute_prompt_fingerprint(additional_cleanup_instructions)
-    artifact_paths: list[str] = [log_relative_path]
-    if report_path is not None and report_path.is_file():
-        artifact_paths.append(relative_to_project(project_root, report_path))
-    output_paths = [relative_to_project(project_root, output_path)] if output_path.is_file() else []
-    if metadata_path is not None and metadata_path.is_file():
-        output_paths.append(relative_to_project(project_root, metadata_path))
+    _ = project_root
+    _ = input_snapshot_path
+    _ = output_path
+    _ = report_path
+    _ = metadata_path
     return build_operation_state_payload(
         status=status,
-        input_paths=[relative_to_project(project_root, input_snapshot_path)],
-        output_paths=output_paths,
-        artifact_paths=artifact_paths,
+        input_paths=[],
+        output_paths=[],
+        artifact_paths=[],
         progress_current=progress_current,
         progress_total=progress_total,
         mode="ai_assisted",

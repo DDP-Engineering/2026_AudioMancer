@@ -61,9 +61,8 @@ def test_extract_text_writes_self_contained_artifacts_for_txt_source(tmp_path) -
 
     state_payload = json.loads((project_root / config.EXTRACTION_STATE_FILE_NAME).read_text(encoding="utf-8"))
     assert state_payload["status"] == "completed"
-    assert state_payload["input_paths"] == ["story.txt"]
-    assert state_payload["output_paths"] == [config.EXTRACTED_TEXT_FILE_NAME]
-    assert state_payload["artifact_paths"] == [config.EXTRACTION_REPORT_FILE_NAME]
+    for field_name in ("input_paths", "output_paths", "artifact_paths", "started_at", "completed_at", "updated_at"):
+        assert field_name not in state_payload
 
 
 @pytest.mark.parametrize(

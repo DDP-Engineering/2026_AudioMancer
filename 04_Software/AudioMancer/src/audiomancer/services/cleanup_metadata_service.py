@@ -23,8 +23,7 @@ import json
 from pathlib import Path
 
 from audiomancer import config
-from audiomancer.services.operation_runtime_service import relative_to_project, resolve_operation_path
-from audiomancer.services.time_service import utc_now_iso as _utc_now_iso
+from audiomancer.services.operation_runtime_service import resolve_operation_path
 
 # CONSTANTS
 
@@ -140,18 +139,15 @@ def write_cleanup_metadata(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-26
-    @version    0.2.0
+    @version    0.3.0
     """
+    _ = input_path
+    _ = cleaned_text_path
     resolved_project_root = Path(project_root)
     metadata_path = cleanup_metadata_path(resolved_project_root)
     metadata_payload = {
         "schema_version": CLEANED_TEXT_METADATA_SCHEMA_VERSION,
         "cleanup_mode": cleanup_mode,
-        "input_relative_path": (
-            None if input_path is None else relative_to_project(resolved_project_root, Path(input_path))
-        ),
-        "cleaned_text_relative_path": relative_to_project(resolved_project_root, Path(cleaned_text_path)),
-        "created_at": _utc_now_iso(),
         "paragraph_count": len(paragraph_records),
         "page_break_repair_count": sum(
             1 for record in paragraph_records if bool(record.get("joined_across_page_break"))

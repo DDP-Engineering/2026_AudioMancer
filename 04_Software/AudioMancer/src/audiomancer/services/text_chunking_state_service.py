@@ -38,7 +38,6 @@ from audiomancer.services import (
     workflow_impact_service,
 )
 from audiomancer.services.logging_service import get_component_logger
-from audiomancer.services.time_service import utc_now_iso
 
 # CONSTANTS
 
@@ -372,7 +371,6 @@ def _write_manual_chunking_metadata(
     @date       2026-05-04
     @version    0.1.0
     """
-    now = utc_now_iso()
     existing_report = deterministic_chunking_service.load_chunking_report(project_root) or {}
     existing_state = deterministic_chunking_service.load_operation_state(project_root) or {}
     chapter_count = deterministic_chunking_service._chapter_count_from_chunks(chunks)
@@ -382,8 +380,6 @@ def _write_manual_chunking_metadata(
     )
     report = {
         **dict(existing_report),
-        "chunked_at": existing_report.get("chunked_at") or now,
-        "updated_at": now,
         "warnings": warnings,
         "chunk_count": len(chunks),
         "detected_chapter_count": chapter_count,
@@ -404,18 +400,17 @@ def _write_manual_chunking_metadata(
     }
     state = operation_runtime_service.build_operation_state_payload(
         status="completed",
-        input_paths=list(existing_state.get("input_paths", [])) if isinstance(existing_state, dict) else [],
-        output_paths=[config.CHUNK_ARTIFACT_FILE_NAME],
-        artifact_paths=[config.CHUNKING_REPORT_FILE_NAME],
+        input_paths=[],
+        output_paths=[],
+        artifact_paths=[],
         progress_current=len(chunks),
         progress_total=len(chunks),
         mode=str(existing_state.get("mode") or report.get("chunking_mode") or "manual"),
-        started_at=None if existing_state.get("started_at") in (None, "") else str(existing_state.get("started_at")),
-        completed_at=now,
+        started_at=None,
+        completed_at=None,
         warning_count=len(warnings),
         metadata=metadata,
         resume_checkpoint=None,
-        updated_at=now,
     )
     state_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.CHUNKING_STATE_FILE_NAME
     state_path.parent.mkdir(parents=True, exist_ok=True)
@@ -496,7 +491,6 @@ def _build_inserted_chunk_payload(source_chunk: dict[str, object], chunk_id: str
         "cleanup_joined_across_page_break": False,
         "cleanup_warning_flags": [],
         "chunking_mode": "manual",
-        "scene_note": "Inserted manually by the operator.",
     }
 
 
@@ -530,7 +524,6 @@ def _build_initial_manual_chunk_payload(project_root: Path) -> dict[str, object]
         "cleanup_warning_flags": [],
         "chunking_mode": "manual",
         "semantic_strategy": None,
-        "scene_note": "Inserted manually by the operator.",
     }
 
 

@@ -185,7 +185,6 @@ Persisted character profile fields:
 - `confidence`
 - `review_status`
 - `evidence`
-- `updated_at`
 
 Internal review statuses are persisted without adding controls to the AI
 Translation page:
@@ -244,7 +243,6 @@ Report fields currently include:
 - `model_settings_history`
 - `warning_count`
 - `warnings`
-- `generated_at`
 
 Operation-state invariants:
 
@@ -253,15 +251,15 @@ Operation-state invariants:
   compact character-discovery state; it does not create
   `characters_profile.json`, `characters_report.json`, or an AI log
 - `mode` is `ai_assisted`
-- `characters_state.json` stores operation fields directly rather than through
-  the shared path-heavy operation envelope; it does not store
-  `folder_relative_path`, `input_paths`, `output_paths`, `artifact_paths`,
-  `metadata`, or `resume_checkpoint`
-- `log_relative_path` is a top-level project-root-relative log filename such as
-  `log_ai_characters_<timestamp>.log`; compatible resumes append to that file
-- checkpoints are stored in top-level `checkpoint` and are reused when the
-  chunk fingerprint still matches; the remaining discovery or synthesis work
-  uses the currently selected enabled AI profile
+- `characters_state.json` uses the shared compact operation envelope; phase,
+  profile id, token usage, prompt-rule fingerprint, and log filename live in
+  `metadata`
+- `metadata.log_relative_path` is a top-level project-root-relative log
+  filename such as `log_ai_characters_<timestamp>.log`; compatible resumes
+  append to that file
+- checkpoints are stored in `resume_checkpoint` and are reused when the chunk
+  fingerprint still matches; the remaining discovery or synthesis work uses
+  the currently selected enabled AI profile
 - discovery-window checkpoints store `next_discovery_start_chunk_index` so
   remaining windows can be rebuilt from the current profile budget after a
   cancellation; checkpoints missing that boundary are ignored
@@ -275,13 +273,11 @@ Operation-state invariants:
 - reset preserves upstream translation artifacts and existing narrator profiles
   or samples, then clears dependent character voice, speech, audio block, and
   assembly data
-- manual add, edit, or delete operations refresh the persisted operation-state
-  timestamp when a state file already exists
 - manual add preserves downstream Speech Blocks, Audio Blocks, and Audio
   Assembly while adding or refreshing the matching Character Voices target
 - manual edit unapproves only Speech Blocks assigned to the edited character,
-  marks the matching voice target stale when voice-definition source fields
-  change, resets only affected Audio Blocks, and resets Audio Assembly
+  clears the matching character voice sample when voice-definition source
+  fields change, resets only affected Audio Blocks, and resets Audio Assembly
 - manual delete removes the matching Character Voices target, moves assigned
   Speech Blocks to Narrator without deleting them, unapproves those blocks,
   resets only their Audio Blocks, and resets Audio Assembly

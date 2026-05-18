@@ -14,7 +14,7 @@
          generation report/state sidecars without generating narrator audio.
 @author Eng. Dan Dumitru Pasare
 @date 2026-05-11
-@version 0.3.1
+@version 0.4.0
 """
 
 # IMPORTS
@@ -393,7 +393,6 @@ def generate_narrator_profiles(
         "model_name": model_name,
         "source": source_token,
         "input_fingerprint": input_fingerprint,
-        "generated_at": _utc_now_iso(),
         "additional_profile_instructions": additional_profile_instructions,
         "additional_profile_instructions_fingerprint": additional_profile_instructions_fingerprint,
     }
@@ -419,7 +418,6 @@ def generate_narrator_profiles(
         "budget_metadata": budget_metadata,
         "warning_count": 0,
         "warnings": [],
-        "generated_at": generation_metadata["generated_at"],
         "token_usage": token_usage,
         "additional_profile_instructions": additional_profile_instructions,
         "additional_profile_instructions_fingerprint": additional_profile_instructions_fingerprint,
@@ -434,7 +432,7 @@ def generate_narrator_profiles(
         progress_current=total_progress,
         progress_total=total_progress,
         started_at=started_at,
-        completed_at=str(report_payload["generated_at"]),
+        completed_at=None,
         profile_id=profile_id,
         source_token=source_token,
         source_unit_count=len(source_units),
@@ -1191,7 +1189,7 @@ def _restore_resume_state(
     log_path = _restored_log_path(project_root, resume_checkpoint)
     return {
         "resume_compatible": True,
-        "started_at": str(existing_state.get("started_at") or _utc_now_iso()),
+        "started_at": str(resume_checkpoint.get("run_token") or _utc_now_iso()),
         "token_usage": _restore_token_usage(existing_state),
         "log_path": log_path,
         "gender_allocation": gender_allocation,
@@ -1333,8 +1331,8 @@ def _write_operation_state(
     @param[in]  status Runtime operation status token.
     @param[in]  progress_current Completed work units.
     @param[in]  progress_total Total work units.
-    @param[in]  started_at Operation start timestamp.
-    @param[in]  completed_at Optional completion timestamp.
+    @param[in]  started_at Runtime token preserved only inside the resume checkpoint.
+    @param[in]  completed_at Ignored legacy completion timestamp.
     @param[in]  profile_id Selected AI profile identifier.
     @param[in]  source_token Selected input source token.
     @param[in]  source_unit_count Number of text units analyzed.
@@ -1357,20 +1355,19 @@ def _write_operation_state(
     """
     additional_profile_instructions = _normalized_additional_profile_instructions(additional_profile_instructions)
     additional_profile_instructions_fingerprint = _compute_prompt_fingerprint(additional_profile_instructions)
-    output_paths = [config.NARRATOR_PROFILE_FILE_NAME] if generated_profile_ids else []
-    artifact_paths = [relative_to_project(project_root, state_path), relative_to_project(project_root, log_path)]
-    if report_path is not None:
-        artifact_paths.append(relative_to_project(project_root, report_path))
+    _ = input_path
+    _ = report_path
+    _ = completed_at
     state_payload = build_operation_state_payload(
         status=status,
-        input_paths=[relative_to_project(project_root, input_path)],
-        output_paths=output_paths,
-        artifact_paths=artifact_paths,
+        input_paths=[],
+        output_paths=[],
+        artifact_paths=[],
         progress_current=progress_current,
         progress_total=progress_total,
         mode=NARRATOR_PROFILE_GENERATION_MODE_AI_ASSISTED,
-        started_at=started_at,
-        completed_at=completed_at,
+        started_at=None,
+        completed_at=None,
         warning_count=0,
         metadata={
             "ai_profile_id": profile_id,
@@ -1399,6 +1396,7 @@ def _write_operation_state(
                 "completed_window_count": len(style_observations),
                 "total_window_count": int(total_window_count),
                 "style_observations": [dict(item) for item in style_observations],
+                "run_token": started_at,
                 "log_relative_path": relative_to_project(project_root, log_path),
                 "budget_metadata": dict(budget_metadata),
                 "model_settings": dict(model_settings),

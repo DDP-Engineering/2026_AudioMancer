@@ -37,7 +37,6 @@ from audiomancer.services.operation_runtime_service import (
     load_operation_state_file,
     load_operation_state_payload,
     raise_if_cancelled,
-    relative_to_project,
     resolve_project_relative_path,
 )
 from audiomancer.services.time_service import utc_now_iso as _utc_now_iso
@@ -267,13 +266,6 @@ def clean_text(
     weak_boundary_count = int(metadata_payload.get("weak_boundary_count", 0))
     warnings = _build_cleanup_warnings(detected_language, chapter_count, page_break_repair_count, weak_boundary_count)
     report_payload: CleanupReportPayload = {
-        "input_relative_path": relative_to_project(resolved_project_root, input_snapshot_path),
-        "cleaned_text_relative_path": relative_to_project(resolved_project_root, output_path),
-        "cleaned_text_metadata_relative_path": relative_to_project(
-            resolved_project_root,
-            cleanup_metadata_service.cleanup_metadata_path(resolved_project_root),
-        ),
-        "cleaned_at": _utc_now_iso(),
         "detected_language": detected_language,
         "warnings": warnings,
         "paragraph_count": len(paragraph_texts),
@@ -299,7 +291,7 @@ def clean_text(
         progress_current=progress_total,
         progress_total=progress_total,
         started_at=started_at,
-        completed_at=report_payload["cleaned_at"],
+        completed_at=None,
         warnings=warnings,
         cleaned_pages=None,
         removed_header_footer_count=removed_header_footer_count,
@@ -503,12 +495,8 @@ def _build_operation_state(
     @date       2026-04-21
     @version    0.2.0
     """
-    artifact_paths: list[str] = []
-    if report_path is not None and report_path.is_file():
-        artifact_paths.append(relative_to_project(project_root, report_path))
-    output_paths = [relative_to_project(project_root, output_path)] if output_path.is_file() else []
-    if metadata_path is not None and metadata_path.is_file():
-        output_paths.append(relative_to_project(project_root, metadata_path))
+    _ = report_path
+    _ = metadata_path
     metadata = {
         "warnings": list(warnings),
         "removed_header_footer_line_count": removed_header_footer_count,
@@ -522,9 +510,9 @@ def _build_operation_state(
         metadata["cleaned_pages"] = list(cleaned_pages)
     return build_operation_state_payload(
         status=status,
-        input_paths=[relative_to_project(project_root, input_snapshot_path)],
-        output_paths=output_paths,
-        artifact_paths=artifact_paths,
+        input_paths=[],
+        output_paths=[],
+        artifact_paths=[],
         progress_current=progress_current,
         progress_total=progress_total,
         mode="deterministic",

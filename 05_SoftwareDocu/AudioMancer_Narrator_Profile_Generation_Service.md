@@ -152,7 +152,6 @@ Generated profile fields appended to `audio_profiles.json`:
 - `prompt_text`
 - `preview_text`
 - `sample = null`
-- `updated_at`
 
 Generated profile entries intentionally do not duplicate `profile_origin`,
 `profile_kind`, `provider_family`, `editable`, `speaker_id`,
@@ -210,10 +209,15 @@ Running-state `resume_checkpoint` includes:
 - `completed_window_count`
 - `total_window_count`
 - compact `style_observations`
+- `run_token`
 - AI transaction `log_relative_path`
 - `budget_metadata`
 - `model_settings`
 - `additional_profile_instructions_fingerprint`
+
+Generated narrator profile reports and operation state do not persist operation
+audit timestamps or generic path arrays. Resume uses the checkpoint,
+fingerprints, prompt-rule fingerprints, token usage, and explicit AI log path.
 
 The final profile-synthesis request does not inject every raw style observation
 from large books. It sends a deterministic `style_summary` that counts repeated

@@ -312,7 +312,6 @@ def ensure_pass_through_translation(
         target_language,
         profile_id,
         warnings=["Translation target matches the original language; source chunks were passed through."],
-        updated_at=passed_at,
         token_usage=token_usage,
     )
     log_path = _resolve_log_path(project_root, passed_at)
@@ -482,7 +481,6 @@ def start_or_continue_translation(
         target_language,
         profile_id,
         warnings=list(report.get("warnings", [])),
-        updated_at=completed_at,
         token_usage=token_usage,
         budget_metadata=budget_metadata,
         additional_translation_instructions=additional_translation_instructions,
@@ -628,7 +626,7 @@ def retranslate_chunk(
         report,
         status=_operation_status_from_report(report),
         started_at=started_at,
-        completed_at=report["updated_at"] if _operation_status_from_report(report) == "completed" else None,
+        completed_at=None,
         profile_id=profile_id,
         target_language=target_language,
         log_path=log_path,
@@ -1003,7 +1001,7 @@ def _rebuild_report(
     @param[in]  target_language Active target language code.
     @param[in]  profile_id Active translation profile identifier or `None`.
     @param[in]  warnings Optional warning list to persist in the report.
-    @param[in]  updated_at Optional report timestamp override.
+    @param[in]  updated_at Ignored legacy report timestamp override.
     @param[in]  budget_metadata Optional context-budget metadata.
     @param[in]  additional_translation_instructions Optional operator translation rules.
     @return     Rebuilt translation report payload.
@@ -1030,7 +1028,6 @@ def _rebuild_report(
         "translated_chunk_count": translated_count,
         "approved_chunk_count": approved_count,
         "total_chunk_count": total_count,
-        "updated_at": updated_at or _utc_now_iso(),
         "warnings": list(warnings or []),
         "token_usage": token_usage_service.coerce_token_usage(token_usage),
     }
@@ -1116,8 +1113,6 @@ def _refresh_operation_state(
     metadata = dict(metadata) if isinstance(metadata, dict) else {}
     log_relative_path = metadata.get("log_relative_path")
     status = _operation_status_from_report(report)
-    completed_at = str(report["updated_at"]) if status == "completed" else None
-    started_at = None if state.get("started_at") in (None, "") else str(state.get("started_at"))
     mode = state.get("mode")
     if mode in (None, "") and (profile_id not in (None, "") or int(report.get("translated_chunk_count", 0)) > 0):
         mode = "ai_assisted"
@@ -1159,9 +1154,6 @@ def _refresh_operation_state(
         "progress_current": report["translated_chunk_count"],
         "progress_total": report["total_chunk_count"],
         "mode": mode,
-        "started_at": started_at,
-        "completed_at": completed_at,
-        "updated_at": report["updated_at"],
         "warning_count": len(list(report.get("warnings", []))),
         "metadata": refreshed_metadata,
         "resume_checkpoint": resume_checkpoint,
@@ -1363,9 +1355,6 @@ def _build_operation_state(
         "progress_current": int(report["translated_chunk_count"]),
         "progress_total": int(report["total_chunk_count"]),
         "mode": "ai_assisted",
-        "started_at": started_at,
-        "completed_at": completed_at,
-        "updated_at": str(report["updated_at"]),
         "warning_count": len(list(report.get("warnings", []))),
         "metadata": metadata,
         "resume_checkpoint": None if resume_checkpoint is None else dict(resume_checkpoint),

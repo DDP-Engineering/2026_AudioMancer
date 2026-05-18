@@ -1636,10 +1636,10 @@ def test_audio_blocks_service_approve_all_promotes_stale_in_progress_state(tmp_p
     assert report["audio_blocks_stage_status"] == audio_blocks_service.AUDIO_BLOCKS_STAGE_COMPLETED
     assert operation_state is not None
     assert operation_state["status"] == "completed"
-    assert operation_state["completed_at"] not in (None, "None")
+    assert "completed_at" not in operation_state
     assert operation_state["metadata"]["current_block_id"] is None
     assert manifest["operations"]["audio_blocks"]["status"] == "completed"
-    assert manifest["operations"]["audio_blocks"]["completed_at"] not in (None, "None")
+    assert "completed_at" not in manifest["operations"]["audio_blocks"]
     assert manifest["current_stage"] == "audio_blocks_ready"
 
 

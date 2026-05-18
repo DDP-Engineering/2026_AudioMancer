@@ -14,7 +14,7 @@
          compact per-profile sample artifact set.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-20
-@version 3.16.1
+@version 3.17.0
 """
 
 # IMPORTS
@@ -27,7 +27,6 @@ from audiomancer import config
 from audiomancer.services import project_workspace_service, voice_sample_import_service, voiceweaver_runtime_service
 from audiomancer.services.logging_service import get_component_logger
 from audiomancer.services.operation_runtime_service import optional_string as _optional_string
-from audiomancer.services.time_service import utc_now_iso as _utc_now_iso
 
 # CONSTANTS
 
@@ -404,7 +403,6 @@ def create_custom_profile(
             "language": narrator_language_code(language),
             "prompt_text": prompt_text,
             "preview_text": preview_text or DEFAULT_PREVIEW_TEXT,
-            "updated_at": _utc_now_iso(),
         }
     )
     profiles.append(custom_profile)
@@ -444,7 +442,6 @@ def append_ai_generated_profiles(
                 "prompt_text": profile_payload.get("prompt_text", ""),
                 "preview_text": profile_payload.get("preview_text", DEFAULT_PREVIEW_TEXT),
                 "sample": None,
-                "updated_at": _utc_now_iso(),
             }
         )
         created_profiles.append(generated_profile)
@@ -483,7 +480,6 @@ def update_custom_profile(
                 "language": narrator_language_code(profile_payload.get("language"), str(profile.get("language", ""))),
                 "prompt_text": profile_payload.get("prompt_text"),
                 "preview_text": profile_payload.get("preview_text"),
-                "updated_at": _utc_now_iso(),
             }
         )
         normalized_profiles.append(updated_profile)
@@ -749,7 +745,6 @@ def store_profile_sample(
         "source_model_id": _optional_string(
             generation_request.get("source_model_id") or generation_request.get("model_id")
         ),
-        "created_at": _utc_now_iso(),
     }
     _ = runtime_result_summary
     audio_path.write_bytes(audio_bytes)
@@ -793,7 +788,6 @@ def import_profile_sample(
         "preview_text": normalized_preview_text,
         "language": narrator_language_code(profile.get("language", DEFAULT_NARRATOR_LANGUAGE)),
         "source_model_id": None,
-        "created_at": _utc_now_iso(),
         "source_file_name": source_path.name,
     }
     audio_path.write_bytes(source_path.read_bytes())
@@ -864,9 +858,6 @@ def load_selected_narrator_sample_metadata(project_root: str | Path) -> dict[str
                     "profile_id": selected_profile_id,
                     **selected_sample,
                 }
-                selected_at = _optional_string(payload.get("selected_at"))
-                if selected_at is not None:
-                    selected_metadata["selected_at"] = selected_at
                 return selected_metadata
             return dict(payload)
 
@@ -936,7 +927,6 @@ def copy_selected_narrator_sample(project_root: str | Path, profile_id: str) -> 
     selected_metadata = {
         "profile_id": normalized_profile_id,
         **dict(profile_metadata),
-        "selected_at": _utc_now_iso(),
     }
     selected_audio_path, selected_metadata_path = selected_narrator_sample_paths(project_root)
     selected_audio_path.write_bytes(profile_audio_path.read_bytes())
@@ -1058,9 +1048,6 @@ def _normalize_profile(profile: dict[str, object]) -> dict[str, object]:
         "prompt_text": str(profile_payload.get("prompt_text", "")).strip(),
         "preview_text": str(profile_payload.get("preview_text", DEFAULT_PREVIEW_TEXT)).strip() or DEFAULT_PREVIEW_TEXT,
         "sample": _normalize_sample_payload(sample_payload),
-        "updated_at": (
-            None if profile_payload.get("updated_at") in (None, "") else str(profile_payload.get("updated_at"))
-        ),
     }
 
 
@@ -1088,18 +1075,11 @@ def _normalize_sample_payload(payload: object) -> dict[str, object] | None:
     preview_text = str(payload.get("preview_text", "") or "").strip()
     if not source_kind or not preview_text:
         return None
-    created_at = _optional_string(
-        payload.get("created_at")
-        or payload.get("generated_at")
-        or payload.get("imported_at")
-        or payload.get("selected_at")
-    )
     normalized_payload: dict[str, object] = {
         "source_kind": source_kind,
         "preview_text": preview_text,
         "language": narrator_language_code(payload.get("language", DEFAULT_NARRATOR_LANGUAGE)),
         "source_model_id": _optional_string(payload.get("source_model_id")),
-        "created_at": created_at,
     }
     source_file_name = _optional_string(payload.get("source_file_name"))
     if source_file_name is not None:

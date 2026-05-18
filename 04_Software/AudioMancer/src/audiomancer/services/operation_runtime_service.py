@@ -26,7 +26,6 @@ from pathlib import Path, PureWindowsPath
 
 from audiomancer import config
 from audiomancer.services.persistence_service import write_json_atomic
-from audiomancer.services.time_service import utc_now_iso
 
 # CONSTANTS
 
@@ -190,7 +189,7 @@ def build_operation_input_snapshot_path(
     @exception  RuntimeError Raised because input snapshots are no longer supported.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.3.0
+    @version    0.4.0
     """
     _ = project_root
     _ = operation_kind
@@ -257,9 +256,6 @@ def default_operation_state(operation_kind: str) -> dict[str, object]:
             "phase": "not_started",
             "progress_current": 0,
             "progress_total": 0,
-            "started_at": None,
-            "completed_at": None,
-            "updated_at": utc_now_iso(),
             "warning_count": 0,
             "ai_profile_id": "",
             "input_fingerprint": "",
@@ -275,17 +271,10 @@ def default_operation_state(operation_kind: str) -> dict[str, object]:
             "checkpoint": None,
         }
     return {
-        "folder_relative_path": config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH,
         "status": "not_started",
-        "input_paths": [],
-        "output_paths": [],
-        "artifact_paths": [],
         "progress_current": 0,
         "progress_total": 0,
         "mode": None,
-        "started_at": None,
-        "completed_at": None,
-        "updated_at": None,
         "warning_count": 0,
         "metadata": _default_operation_metadata(operation_kind),
         "resume_checkpoint": None,
@@ -309,7 +298,7 @@ def build_operation_state_payload(
     updated_at: str | None = None,
 ) -> dict[str, object]:
     """
-    @brief      Build the shared operation-state envelope.
+    @brief      Build the shared compact operation-state envelope.
     @param[in]  status Persisted operation status token.
     @param[in]  input_paths Project-relative input artifact paths.
     @param[in]  output_paths Project-relative output artifact paths.
@@ -328,20 +317,20 @@ def build_operation_state_payload(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-29
-    @version    0.1.0
+    @version    0.2.0
     """
+    _ = input_paths
+    _ = output_paths
+    _ = artifact_paths
+    _ = started_at
+    _ = completed_at
+    _ = folder_relative_path
+    _ = updated_at
     return {
-        "folder_relative_path": str(folder_relative_path),
         "status": str(status),
-        "input_paths": list(input_paths),
-        "output_paths": list(output_paths),
-        "artifact_paths": list(artifact_paths),
         "progress_current": int(progress_current),
         "progress_total": int(progress_total),
         "mode": str(mode),
-        "started_at": started_at,
-        "completed_at": completed_at,
-        "updated_at": updated_at or utc_now_iso(),
         "warning_count": int(warning_count),
         "metadata": dict(metadata),
         "resume_checkpoint": None if resume_checkpoint is None else dict(resume_checkpoint),

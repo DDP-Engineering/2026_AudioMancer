@@ -195,15 +195,13 @@ Each compact operation entry stores:
 - `progress_current`
 - `progress_total`
 - `mode`
-- `started_at`
-- `completed_at`
-- `updated_at`
 - `warning_count`
 
-Detailed operation payloads such as input or output paths, metadata,
-checkpoints, translated chunks, warning details, and similar workflow
-internals are stored only in root-level state files, reports, and canonical
-output artifacts.
+Detailed operation payloads such as metadata, resume checkpoints, translated
+chunks, warning details, and similar workflow internals are stored only in
+root-level state files, reports, and canonical output artifacts. Generic input,
+output, and artifact path arrays and operation audit timestamps are not part of
+manifest summaries or current operation-state payloads.
 
 AI-assisted chunking checkpoints store the completed paragraph-unit count, so
 an interrupted current-version run can continue with a different currently
@@ -215,12 +213,11 @@ metadata, and ordered profile settings history when resumed segments use
 different model settings.
 
 Default operation-state files are lazy page metadata. Opening a workflow page
-may create a `not_started` state file with empty `input_paths`, `output_paths`,
-`artifact_paths`, operation-specific default `metadata`, and
-`resume_checkpoint = null`. For example, opening the Characters page creates
-`characters_state.json` with zero-valued character-discovery metadata counters.
-This initialization does not imply that the workflow step has run and does not
-create reports or canonical outputs.
+may create a `not_started` state file with zero progress, operation-specific
+default `metadata`, and `resume_checkpoint = null`. For example, opening the
+Characters page creates `characters_state.json` with zero-valued
+character-discovery metadata counters. This initialization does not imply that
+the workflow step has run and does not create reports or canonical outputs.
 
 Voice workflow metadata is also lazy. Project activation and Home-page refreshes
 do not create `audio_profiles.json`, `narator.json`, or `characters_voice.json`.

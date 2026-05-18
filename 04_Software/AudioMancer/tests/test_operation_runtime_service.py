@@ -166,21 +166,24 @@ def test_build_operation_state_payload_uses_shared_envelope() -> None:
     )
 
     assert payload == {
-        "folder_relative_path": config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH,
         "status": "running",
-        "input_paths": ["input.txt"],
-        "output_paths": ["output.json"],
-        "artifact_paths": ["report.json"],
         "progress_current": 1,
         "progress_total": 3,
         "mode": "ai_assisted",
-        "started_at": "2026-04-29T12:00:00+00:00",
-        "completed_at": None,
-        "updated_at": "2026-04-29T12:01:00+00:00",
         "warning_count": 2,
         "metadata": {"warnings": ["one", "two"]},
         "resume_checkpoint": {"next_index": 1},
     }
+    for field_name in (
+        "folder_relative_path",
+        "input_paths",
+        "output_paths",
+        "artifact_paths",
+        "started_at",
+        "completed_at",
+        "updated_at",
+    ):
+        assert field_name not in payload
 
 
 def test_operation_json_artifact_round_trips_via_shared_io(tmp_path) -> None:
@@ -462,11 +465,10 @@ def test_ensure_default_operation_state_creates_not_started_state_only(tmp_path)
     assert (project_root / config.TRANSLATED_CHUNKS_FILE_NAME).exists() is False
     state_payload = json.loads(state_path.read_text(encoding="utf-8"))
     assert state_payload["status"] == "not_started"
-    assert state_payload["input_paths"] == []
-    assert state_payload["output_paths"] == []
-    assert state_payload["artifact_paths"] == []
     assert state_payload["metadata"] == {}
     assert state_payload["resume_checkpoint"] is None
+    for field_name in ("input_paths", "output_paths", "artifact_paths"):
+        assert field_name not in state_payload
 
 
 def test_ensure_default_operation_state_creates_compact_character_discovery_state(tmp_path) -> None:
@@ -516,8 +518,8 @@ def test_ensure_default_operation_state_creates_zero_audio_blocks_metadata(tmp_p
     assert state_payload["status"] == "not_started"
     assert state_payload["progress_current"] == 0
     assert state_payload["progress_total"] == 0
-    assert state_payload["output_paths"] == []
-    assert state_payload["artifact_paths"] == []
+    assert "output_paths" not in state_payload
+    assert "artifact_paths" not in state_payload
     assert state_payload["metadata"]["voice_language"] == ""
     assert state_payload["metadata"]["speech_block_count"] == 0
     assert state_payload["metadata"]["generated_block_count"] == 0

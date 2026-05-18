@@ -468,7 +468,6 @@ class NaratorVoicePage(QWidget):
             "provider_family": str(current_profile.get("provider_family", "")),
             "editable": editable,
             "is_selected": bool(current_profile.get("is_selected", False)),
-            "updated_at": current_profile.get("updated_at"),
         }
 
     def is_edit_mode(self) -> bool:

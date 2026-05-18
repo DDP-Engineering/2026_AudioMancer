@@ -402,7 +402,6 @@ class CharacterVoicesPage(QWidget):
             "default_prompt_text": current_target.get("default_prompt_text"),
             "editable": bool(current_target.get("editable", False)),
             "voice_language": self.current_voice_language(),
-            "updated_at": current_target.get("updated_at"),
         }
 
     def is_edit_mode(self) -> bool:
