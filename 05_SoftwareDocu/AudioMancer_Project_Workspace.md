@@ -269,6 +269,9 @@ Current validation invariants:
 - project-open manifest healing can promote operation summaries only when
   local artifacts prove the step completed; `current_stage` alone never marks
   an operation completed
+- Narrator Definition completion evidence checks the explicit `narator.json`
+  selection and the selected profile's compact `sample` metadata, while still
+  accepting legacy `sample_metadata` during project-open repair.
 - Character Voices completion evidence checks the current artifact contract:
   the selected narrator WAV plus `narator_sample.json`, and every character
   target's `sample_metadata` plus project-relative `sample_audio_path`
@@ -333,6 +336,15 @@ Automated tests:
 - `tests/test_import_service.py`
 - `tests/test_main_window.py`
 - `tests/test_config_contract.py`
+
+Documentation audit status:
+
+- narrator-definition compact sample evidence reviewed on 2026-05-18
+- legacy narrator sample evidence fallback reviewed on 2026-05-18
+- project-open narrator evidence repair reviewed after metadata simplification
+  on 2026-05-18
+- compact narrator sample timestamps reviewed for manifest summary repair on
+  2026-05-18
 
 Covered behaviors:
 

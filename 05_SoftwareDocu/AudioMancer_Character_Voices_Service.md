@@ -208,6 +208,12 @@ Same-narrator copied sample metadata uses:
 - `sample_source = "copied_narrator"`
 - `copied_from_target_id = "narrator"`
 
+When same-narrator mode copies from `narator_sample.json`, the source narrator
+sample may use the compact Narator Voice schema (`source_kind`, `created_at`)
+or the legacy selected-sample keys (`generation_mode`, `sample_source`,
+`generated_at`, `imported_at`). Character Voices writes its own target metadata
+using the Character Voices contract above.
+
 ## 7. Workflow Integration
 
 This workflow sits immediately after `Narator Voice` in the current stage
@@ -293,6 +299,7 @@ Operator path:
 Documentation audit status:
 
 - reviewed against the current implementation on 2026-05-15
+- same-narrator compact narrator sample compatibility reviewed on 2026-05-18
 
 Focused automated coverage exists in:
 

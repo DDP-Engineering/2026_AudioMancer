@@ -840,7 +840,7 @@ def _narrator_definition_completion_evidence(project_root: Path, warnings: list[
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.1.1
+    @version    0.2.0
     """
     _ = warnings
     profiles = _load_json_artifact(project_root, config.NARRATOR_PROFILE_FILE_NAME)
@@ -850,15 +850,17 @@ def _narrator_definition_completion_evidence(project_root: Path, warnings: list[
     selected_profile = _selected_narrator_profile(profiles, selection)
     if selected_profile is None:
         return None
-    sample_metadata = selected_profile.get("sample_metadata")
+    sample_metadata = selected_profile.get("sample")
+    if not isinstance(sample_metadata, dict):
+        sample_metadata = selected_profile.get("sample_metadata")
     timestamp = _first_optional_string(
         selection,
         sample_metadata if isinstance(sample_metadata, dict) else {},
         selected_profile,
-        "selected_at",
-        "updated_at",
         "created_at",
         "generated_at",
+        "imported_at",
+        "updated_at",
     )
     operation = {
         "status": "completed",
@@ -1371,11 +1373,11 @@ def _latest_voice_sample_timestamp(sample_metadata_payloads: list[dict[str, obje
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-16
-    @version    0.1.0
+    @version    0.2.0
     """
     timestamps: list[str] = []
     for sample_metadata in sample_metadata_payloads:
-        for field_name in ("selected_at", "generated_at", "imported_at", "updated_at"):
+        for field_name in ("selected_at", "created_at", "generated_at", "imported_at", "updated_at"):
             timestamp = str(sample_metadata.get(field_name, "") or "").strip()
             if timestamp:
                 timestamps.append(timestamp)

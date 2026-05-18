@@ -11,7 +11,6 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
 
 `AudioMancer` is an offline-first desktop application for generating audiobooks
 from written books with personalized character voices or real cloned voices.
-The current project version is `1.1.5`.
 
 Its purpose is to take a written book, transform it into clean structured
 narration data, and support the operator through the full pipeline required to
@@ -336,62 +335,3 @@ The UI should make it easy to understand:
 - what can be rerun safely
 - what downstream data will be invalidated by rerunning an earlier stage
 - what expensive downstream work will be preserved after local manual edits
-
-The v2 preservation model keeps `chunk_id`, `speech_block_id`, and
-`voice_target_id` stable and treats sequence indexes as ordering metadata.
-Manual Text Chunking, Character Discovery, Character Voices/Narator Voice,
-Speech Blocks, Audio Blocks, and Audio Assembly settings changes preserve
-unrelated downstream artifacts wherever implemented. Source-wide reruns remain
-intentionally broad: Text Extraction clears all follow-up data, Text Cleanup
-clears all downstream data, full Text Chunking regeneration clears the
-chunk-dependent workflow, and AI Translation approval loss still uses the
-current broad downstream reset path.
-
-The current v2 direction also makes these implementation-policy decisions:
-
-- committed `settings.json` may contain runtime profile definitions for the
-  local application baseline, but API-key and VoiceWeaver secret fields must
-  stay blank
-- backward compatibility with pre-v2 workflow metadata is not required
-- missing v2 identifiers in Audio Blocks metadata may be treated as stale and
-  reset broadly instead of migrated
-- Speech Blocks selected-audio preview is a global playback control; pressing
-  Stop should stop the currently playing block even if selection changed
-
-The engineering follow-up list is tracked in
-`0_Planning/08_Implementation_Review_Followups.md`. Before calling v2 complete,
-the validation baseline should stay green so the selective invalidation tests,
-main-window workflow tests, and documentation checks all describe the intended
-behavior rather than stale expectations.
-
-## 10. Success Criteria For The Final Application
-
-The application can be considered functionally complete when it supports the
-full intended workflow with stable persistence and operator review.
-
-That means:
-
-- all major stages exist and are connected coherently
-- the project can be reopened at any point without losing meaningful state
-- artifacts and reports are written deterministically
-- long-running operations can fail or stop without corrupting the project
-- operator review and correction is supported where it matters
-- the codebase remains simple, readable, and maintainable
-
-## 11. Immediate Planning Implication
-
-The implementation should proceed as a clean, coherent build from explicit
-product and architecture decisions.
-
-The project should define its own structure, contracts, and implementation
-details in a simple and coherent way.
-
-Near-term work should prioritize:
-
-- keeping the v2 selective invalidation behavior simple and preservation-first
-- restoring the automated test baseline after policy and UI-contract changes
-- consolidating duplicated workflow-stage and confirmation-dialog patterns only
-  where this directly reduces maintenance risk
-- documenting limitations as future work instead of implying they are already
-  implemented
-

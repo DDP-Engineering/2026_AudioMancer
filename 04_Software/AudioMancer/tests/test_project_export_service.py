@@ -434,7 +434,7 @@ def _build_export_project(tmp_path):
     )
     _write_json(project_root / config.CHARACTER_DISCOVERY_STATE_FILE_NAME, {"status": "completed", "metadata": {}})
 
-    narrator_audio_path = project_root / "audio_narator_profile.wav"
+    narrator_audio_path = project_root / "audio_narator_narrator_1.wav"
     narrator_audio_path.write_bytes(b"RIFF-narrator")
     _write_json(
         project_root / config.NARRATOR_PROFILE_FILE_NAME,
@@ -445,11 +445,12 @@ def _build_export_project(tmp_path):
                 "language": "en",
                 "prompt_text": "A warm narrator definition.",
                 "preview_text": "Narrator preview.",
-                "sample_audio_path": narrator_audio_path.name,
-                "sample_metadata": {
-                    "display_name": "Narator Profile",
-                    "prompt_text": "A warm narrator definition.",
+                "sample": {
+                    "source_kind": "voice_designer",
                     "preview_text": "Narrator preview.",
+                    "language": "en",
+                    "source_model_id": "qwen-designer",
+                    "created_at": "2026-05-16T00:00:00+00:00",
                 },
             }
         ],

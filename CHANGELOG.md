@@ -12,6 +12,32 @@ All notable changes to this project will be documented in this file.
 
 No notable changes yet.
 
+## [1.1.6] - 2026-05-18
+
+### Changed
+
+- Narator Voice now persists compact narrator profile and sample metadata,
+  removing duplicated profile-kind, origin, provider, selection, sample-path,
+  validation, runtime-summary, and generation metadata fields while preserving
+  selected narrator behavior.
+- AI narrator profile generation keeps resume checkpoints, reports, token
+  usage, and AI transaction logs in the operation sidecars instead of
+  duplicating provenance into each generated profile.
+- Legacy narrator profile samples, selected-sample metadata, and existing
+  display-name-based narrator WAV files remain readable and normalize into the
+  compact sample contract on load.
+- Same-narrator Character Voices, project-open operation evidence, Audio
+  Blocks, and export readiness now consume the compact narrator sample
+  contract with legacy fallbacks where needed.
+- Narator Voice now gives the profile-list pane a slightly smaller initial
+  width and protects the `Generate Sample` button label from clipping.
+- Repository agent instructions now forbid writing the current application
+  version in README files; version-sensitive references belong in the
+  changelog, project metadata, and synchronized help files.
+- Project package metadata and `audiomancer.__version__` were updated to
+  `1.1.6`.
+- Offline English and Romanian help bundles were updated to version `1.1.6`.
+
 ## [1.1.5] - 2026-05-18
 
 ### Changed

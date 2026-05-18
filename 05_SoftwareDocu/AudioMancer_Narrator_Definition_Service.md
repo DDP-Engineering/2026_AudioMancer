@@ -29,7 +29,9 @@ runtime-aware state shaping used by the Narator Voice page.
 - persist one generated or imported narrator WAV per narrator profile so
   multiple profiles can be previewed later without regenerating audio
 - localize the default narrator preview text for supported voice languages
-- record selected-sample state in each profile's `sample_metadata`
+- store compact per-profile sample metadata in each profile's `sample` payload
+- keep explicit selection state in `narator.json` and the selected-sample copy
+  in `narator_sample.json`
 - derive Narator Voice page enablement for `Generate Sample`, `Select`, and
   `Preview` from the cached VoiceWeaver runtime state and stored sample
   metadata
@@ -79,9 +81,9 @@ High-level flow:
 3. The selected voice language is resolved from the locked
    `project.json.target_language`, then applied to narrator profile generation
    requests and default preview text.
-4. Each profile is enriched with `is_selected`, `has_sample`,
+4. Each profile row is enriched for UI use with `has_sample`,
    `runtime_available`, `can_generate`, `can_select`, and an operator-facing
-   availability note.
+   availability note; persisted profiles do not store UI selection flags.
 5. `Edit Profile` shows a destructive confirmation, deletes the current
    per-profile sample, clears explicit selection when necessary, and only then
    unlocks the page editor.
@@ -89,23 +91,23 @@ High-level flow:
    Base and Voice Designer capability set (`base`, `voice_designer`), waits for
    model-load completion before submitting Voice Designer generation, stores or
    replaces only the current profile's `audio_narator_<profile>.wav`, keeps
-   other profile samples intact, uses the saved TTS preview timeout, and marks
-   the generated sample metadata as selected when the regenerated profile is
-   already selected.
+   other profile samples intact, and uses the saved TTS preview timeout.
 7. `Import Sample` accepts one operator-selected WAV for the inspected profile,
    validates that it is readable, non-silent, and at least three seconds long,
    asks for the exact spoken sample text, then stores the WAV and transcript in
    the same per-profile sample slot. Imported samples are clone-ready without a
    Voice Designer `source_model_id` because Audio Blocks later creates Qwen Base
    clone prompts directly from the WAV plus transcript.
-8. `Select` persists `narator.json`, updates the compact manifest summary,
-   and marks the chosen profile sample metadata as selected.
+8. `Select` persists `narator.json`, copies the chosen profile sample to
+   `narator.wav` and `narator_sample.json`, and updates the compact manifest
+   summary.
 9. `Preview` plays the stored per-profile WAV locally through Qt media
    playback.
 10. `Generate Narator Profiles` runs the AI profile-generation service through
     the shared threaded progress dialog, resumes compatible unfinished
-    style-analysis checkpoints, appends validated editable profiles, and leaves
-    narrator selection unchanged.
+    style-analysis checkpoints, appends validated editable text profiles, keeps
+    AI logs/report/state sidecars intact, and leaves narrator selection
+    unchanged.
 
 ## 4. Dependencies
 
@@ -147,8 +149,7 @@ Outputs:
 - `audio_narator_<profile>.wav`
 - `narator.wav` and `narator_sample.json` selected-sample copies for the
   explicit narrator selection
-- per-profile `sample_audio_path` and `sample_metadata` entries stored inside
-  `audio_profiles.json`
+- compact per-profile `sample` entries stored inside `audio_profiles.json`
 - updated manifest summary fields:
   `narrator_profile_name`
   `narrator_language`
@@ -167,25 +168,14 @@ Narrator profile payloads currently use:
 - `language`
 - `prompt_text`
 - `preview_text`
-- `profile_kind`
-- `speaker_id`
-- `source_model_id`
-- `profile_origin`
-- `provider_family`
-- `editable`
-- `is_selected`
-- `sample_audio_path`
-- `sample_metadata`
+- `sample`
 - `updated_at`
 
 Profile rules:
 
-- user-created profiles use
-  `profile_kind = "custom"` and `profile_origin = "custom_user"`
-- AI-generated text-only suggestions use
-  `profile_kind = "custom"` and `profile_origin = "ai_generated"`
-- generated suggestions remain editable and have no `sample_audio_path` or
-  `sample_metadata` until the operator explicitly generates a sample
+- user-created and AI-generated profiles share the same compact profile shape
+- generated suggestions remain editable by current workflow rules and have
+  `sample = null` until the operator explicitly generates or imports a sample
 - no narrator profile is selected by default for a new project
 - stored profile `language` values use VoiceWeaver language codes such as `en`
   and `ro`; operator-facing labels are normalized when profile actions provide
@@ -204,33 +194,30 @@ Selected narrator state uses:
 
 Per-profile sample metadata uses:
 
-- `profile_id`
-- `is_selected`
-- `display_name`
-- `profile_kind`
-- `profile_origin`
-- `source_model_id`
-- `sample_source`
-- `generation_mode`
-- `language`
-- `prompt_text`
+- `source_kind`
 - `preview_text`
-- `generated_at`
-- `imported_at`
+- `language`
+- `source_model_id`
+- `created_at`
 - `source_file_name`
-- `audio_validation`
-- `runtime_result_summary`
 
-Generated samples use `sample_source = "voice_designer"` implicitly through
-their Voice Designer metadata. Imported samples use
-`sample_source = "imported_sample"` and `generation_mode = "imported_sample"`;
-their `source_model_id` is `None`.
+Generated samples use `source_kind = "voice_designer"`. Imported samples use
+`source_kind = "imported_sample"` and set `source_model_id = None`.
+`source_file_name` is present only for imported samples.
 
-Selected narrator metadata mirrors the per-profile metadata and
-adds:
+Selected narrator metadata in `narator_sample.json` mirrors the compact
+per-profile sample metadata and adds:
 
-- `role = "narrator"`
+- `profile_id`
 - `selected_at`
+
+Legacy projects that still contain `sample_metadata`, `sample_audio_path`,
+`sample_source`, `generation_mode`, `generated_at`, or `imported_at` are read
+compatibly and normalized to the compact `sample` contract when profiles are
+loaded. Existing display-name-based `audio_narator_<name>.wav` files remain
+discoverable until a later sample replacement writes the current
+profile-id-based path, and legacy selected-sample JSON remains readable by
+downstream workflows through the compact selected-sample return shape.
 
 ## 7. Workflow Integration
 
@@ -285,6 +272,11 @@ Current runtime-aware rules:
   service validates the requested count and male/female allocation before
   writing profiles and adds suffixes for display-name collisions with existing
   profiles
+- AI narrator generation provenance, resume checkpoints, token usage, and raw
+  AI transaction logs remain in
+  `narator_profile_generation_report.json`,
+  `narator_profile_generation_state.json`, and the project AI log files rather
+  than being duplicated into each generated profile
 
 ## 8. Usage
 
@@ -336,6 +328,9 @@ Operator path:
 Documentation audit status:
 
 - reviewed against the current implementation on 2026-05-06
+- compact narrator profile/sample metadata contract reviewed on 2026-05-18
+- legacy narrator sample read-compatibility reviewed on 2026-05-18
+- legacy selected-sample normalization reviewed on 2026-05-18
 
 Focused automated coverage includes:
 
@@ -360,5 +355,6 @@ Minimum validation after changes:
 - preview playback is local only and does not stream directly from VoiceWeaver
 - runtime availability depends on the last saved discovery cache, not an
   automatic background probe at page load
-- selected narrator samples are referenced from profile-owned artifacts instead
-  of a duplicated selected-audio copy
+- selected narrator samples are still copied to `narator.wav` and
+  `narator_sample.json` so downstream workflows can consume one stable selected
+  narrator artifact

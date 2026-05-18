@@ -104,6 +104,9 @@ ZIP readiness is more permissive for partial progress: Narator Voice and
 Character Voices become available when at least one profile/target has both a
 sample WAV and sample metadata, and Audio Assembly becomes available when at
 least one generated output record still points to an existing WAV file.
+Narator Voice samples use the compact per-profile `sample` payload from
+`audio_profiles.json`; Character Voices targets continue to use their
+target-level sample metadata.
 
 Every rendered export starts with:
 
@@ -189,6 +192,7 @@ export_path.write_text(content, encoding="utf-8")
 Documentation audit status:
 
 - reviewed against the current implementation on 2026-05-15
+- compact Narator Voice sample archive input reviewed on 2026-05-18
 
 Automated coverage:
 

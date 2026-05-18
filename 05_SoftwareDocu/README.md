@@ -10,8 +10,8 @@ Implementation-focused software documentation and component notes.
 
 ## Current Documents
 
-- `UserGuide/` contains the English end-user help bundle for AudioMancer 1.1.5, including the offline HTML guide, runtime Settings theme notes, and real UI screenshots used by packaged Windows and Ubuntu releases.
-- `UserGuide_ro/` contains the Romanian end-user help bundle for AudioMancer 1.1.5, including the offline HTML guide, runtime Settings theme notes, and Romanian UI screenshots used when the application language is set to Romanian.
+- `UserGuide/` contains the English end-user help bundle for AudioMancer, including the offline HTML guide, runtime Settings theme notes, and real UI screenshots used by packaged Windows and Ubuntu releases.
+- `UserGuide_ro/` contains the Romanian end-user help bundle for AudioMancer, including the offline HTML guide, runtime Settings theme notes, and Romanian UI screenshots used when the application language is set to Romanian.
 - `AudioMancer_App_Shell.md` documents the desktop application shell, Home workflow progress presenter, project navigation, settings dialogs, and page-hosting responsibilities.
 - `AudioMancer_Config_And_Settings.md` documents the adapted configuration and settings scaffold.
 - `AudioMancer_Settings_Service.md` documents the shared settings lifecycle implementation.
@@ -37,7 +37,7 @@ Implementation-focused software documentation and component notes.
 - `AudioMancer_Text_Pipeline_Support_Services.md` documents grouped cleanup metadata, text analysis, deterministic/AI chunking with optional operator prompt rules, Speech Blocks report shaping, and text-splitting helpers.
 - `AudioMancer_Project_Runtime_Support_Services.md` documents grouped source-import, shared operation-runtime, and generated-audio artifact helpers.
 - `AudioMancer_Character_Discovery_Service.md` documents the AI-assisted character-discovery workflow, optional operator prompt rules, persisted compact voice-ready profiles, final prompt handoff, page/controller integration, and resumable discovery behavior used by the Characters page.
-- `AudioMancer_Narrator_Definition_Service.md` documents the custom Voice Designer narrator-profile workflow, AI-generated text profile append behavior, explicit narrator selection, internal locked voice-language use, per-profile sample artifacts, destructive edit behavior, and Narator Voice page integration.
+- `AudioMancer_Narrator_Definition_Service.md` documents the custom Voice Designer narrator-profile workflow, compact profile/sample metadata contract, AI-generated text profile append behavior, explicit narrator selection, internal locked voice-language use, per-profile sample artifacts, destructive edit behavior, and Narator Voice page integration.
 - `AudioMancer_Narrator_Profile_Generation_Service.md` documents the AI-assisted text-only narrator-profile suggestion workflow, source resolution, optional operator prompt rules, resumable style-analysis checkpoints, prompt flow, validation rules, report/state sidecars, and Narator Voice page/controller integration.
 - `AudioMancer_Narrator_Definition_State_Service.md` documents the Narator Voice page-state helper, inspected/selected profile state, locked voice-language labels, preview limits, Qwen3 readiness notes, and status lines.
 - `AudioMancer_Character_Voices_Service.md` documents the Character Voices target contract, character-owned prompt handoff from `Characters`, read-only selected voice-language display, same-narrator read-only reuse behavior, full-current-target batch generation, and root-level page/controller integration.
@@ -53,23 +53,3 @@ Implementation-focused software documentation and component notes.
 - `AudioMancer_TTS_Budget_Service.md` documents the cached VoiceWeaver TTS budget resolver used by narrator-only Speech Blocks prompting and validation.
 - `AudioMancer_Operation_Runner_Controller.md` documents the shared threaded modal-operation runner used by long-running UI workflows.
 - The app shell document also covers the shared runtime logging bootstrap.
-
-## Documentation Status
-
-These documents describe the current v2 implementation direction. The
-documented workflow contract assumes stable v2 identifiers such as `chunk_id`,
-`speech_block_id`, and `voice_target_id`; compatibility with pre-v2 workflow
-metadata is not a documentation requirement unless a future implementation task
-explicitly reintroduces migration support.
-
-The application-level settings documentation may describe committed
-`settings.json` runtime profile definitions because the repository allows the
-app baseline settings file to include runnable profile scaffolding. API-key and
-VoiceWeaver secret fields must remain blank in the committed file; tests and
-documentation should focus on the supported settings lifecycle while preserving
-that secret-free baseline.
-
-Implementation-review follow-ups that are not yet code or documentation
-contracts are tracked in `../0_Planning/08_Implementation_Review_Followups.md`.
-Do not describe those follow-ups as implemented behavior until the matching
-code and tests have been completed.

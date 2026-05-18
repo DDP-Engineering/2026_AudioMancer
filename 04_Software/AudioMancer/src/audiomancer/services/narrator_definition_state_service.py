@@ -14,7 +14,7 @@
          per-profile sample state, and the cached VoiceWeaver runtime discovery data.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-20
-@version 3.14.2
+@version 3.15.0
 """
 
 # IMPORTS
@@ -100,7 +100,7 @@ def build_narrator_definition_state(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-18
-    @version    2.3.0
+    @version    2.4.0
     """
     preview_text_character_limit = _preview_text_character_limit(settings_payload)
     if project_root is None or manifest is None:
@@ -198,8 +198,8 @@ def build_narrator_definition_state(
         ),
         "preview_text_character_limit": preview_text_character_limit,
         "preview_text_safe_word_limit": preview_safe_word_limit,
-        "is_editable": bool(current_profile) and bool(current_profile.get("editable", False)),
-        "can_edit": bool(current_profile) and bool(current_profile.get("editable", False)),
+        "is_editable": bool(current_profile),
+        "can_edit": bool(current_profile),
         "can_delete": bool(current_profile),
         "can_generate": bool(current_profile) and bool(current_profile.get("can_generate", False)),
         "can_select": bool(current_profile) and bool(current_profile.get("can_select", False)),

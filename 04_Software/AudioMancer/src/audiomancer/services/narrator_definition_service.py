@@ -11,11 +11,10 @@
 @brief Project-local narrator-definition persistence helpers for AudioMancer.
 @details Persists narrator profiles, explicit selection state, project-local
          TTS plan data, AI-generated text-only profile suggestions, and one
-         per-profile sample artifact set whose JSON metadata records whether
-         that sample is selected.
+         compact per-profile sample artifact set.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-20
-@version 3.15.1
+@version 3.16.1
 """
 
 # IMPORTS
@@ -34,13 +33,7 @@ from audiomancer.services.time_service import utc_now_iso as _utc_now_iso
 
 _NARRATOR_DEFINITION_LOGGER = get_component_logger("narrator_definition")
 
-NARRATOR_PROFILE_KIND_CUSTOM = "custom"
-
-NARRATOR_PROFILE_ORIGIN_CUSTOM_USER = "custom_user"
-
-NARRATOR_PROFILE_ORIGIN_AI_GENERATED = "ai_generated"
-
-NARRATOR_PROVIDER_FAMILY_QWEN_VOICE_DESIGNER = "qwen3_tts_voice_designer_1_7b"
+NARRATOR_SAMPLE_SOURCE_VOICE_DESIGNER = "voice_designer"
 
 DEFAULT_NARRATOR_LANGUAGE = "en"
 DEFAULT_PREVIEW_TEXT = (
@@ -221,7 +214,7 @@ def apply_voice_language_to_profiles(project_root: str | Path, voice_language: o
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-26
-    @version    0.1.0
+    @version    0.2.0
     """
     normalized_language = narrator_language_code(voice_language)
     localized_preview_text = preview_text_for_language(normalized_language)
@@ -253,7 +246,7 @@ def load_profiles(project_root: str | Path) -> list[dict[str, object]]:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-20
-    @version    1.8.0
+    @version    2.0.0
     """
     profile_path = _profiles_path(project_root)
     if not profile_path.is_file():
@@ -264,7 +257,6 @@ def load_profiles(project_root: str | Path) -> list[dict[str, object]]:
         if isinstance(payload, list)
         else []
     )
-    normalized_profiles = _repair_selected_profile_flags(normalized_profiles)
     _write_json(profile_path, normalized_profiles)
     return normalized_profiles
 
@@ -277,7 +269,7 @@ def load_selected_profile_state(project_root: str | Path) -> dict[str, object]:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-18
-    @version    1.4.1
+    @version    1.5.0
     """
     ensure_narrator_definition_files(project_root)
     profiles = load_profiles(project_root)
@@ -322,22 +314,12 @@ def select_narrator_profile(
     @exception  ValueError Raised when the target profile is missing.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-17
-    @version    1.4.1
+    @version    1.5.0
     """
     normalized_profile_id = str(profile_id or "").strip()
     profiles = load_profiles(project_root)
     if not any(str(profile.get("profile_id", "")).strip() == normalized_profile_id for profile in profiles):
         raise ValueError("missing_profile")
-
-    normalized_profiles: list[dict[str, object]] = []
-    for profile in profiles:
-        normalized_profiles.append(
-            {
-                **dict(profile),
-                "is_selected": str(profile.get("profile_id", "")).strip() == normalized_profile_id,
-            }
-        )
-    _write_json(_profiles_path(project_root), normalized_profiles)
 
     selected_profile = profile_by_id(project_root, normalized_profile_id)
     normalized_state = {
@@ -347,7 +329,6 @@ def select_narrator_profile(
         ),
     }
     _write_json(_selection_path(project_root), normalized_state)
-    _set_profile_sample_selection_flags(project_root, normalized_profile_id)
     return normalized_state
 
 
@@ -359,19 +340,10 @@ def clear_narrator_selection(project_root: str | Path) -> dict[str, object]:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-17
-    @version    1.1.0
+    @version    1.2.0
     """
-    profiles = [
-        {
-            **dict(profile),
-            "is_selected": False,
-        }
-        for profile in load_profiles(project_root)
-    ]
-    _write_json(_profiles_path(project_root), profiles)
     normalized_state = {"selected_profile_id": None, "selected_language": None}
     _write_json(_selection_path(project_root), normalized_state)
-    _set_profile_sample_selection_flags(project_root, None)
     return normalized_state
 
 
@@ -422,23 +394,16 @@ def create_custom_profile(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-17
-    @version    1.2.0
+    @version    1.4.0
     """
     profiles = load_profiles(project_root)
     custom_profile = _normalize_profile(
         {
             "profile_id": f"custom_{uuid4().hex}",
-            "speaker_id": None,
-            "source_model_id": None,
             "display_name": display_name,
             "language": narrator_language_code(language),
             "prompt_text": prompt_text,
             "preview_text": preview_text or DEFAULT_PREVIEW_TEXT,
-            "profile_kind": NARRATOR_PROFILE_KIND_CUSTOM,
-            "profile_origin": NARRATOR_PROFILE_ORIGIN_CUSTOM_USER,
-            "provider_family": NARRATOR_PROVIDER_FAMILY_QWEN_VOICE_DESIGNER,
-            "editable": True,
-            "is_selected": False,
             "updated_at": _utc_now_iso(),
         }
     )
@@ -461,8 +426,9 @@ def append_ai_generated_profiles(
     @exception  ValueError Raised when no valid generated profiles are provided.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-11
-    @version    0.1.0
+    @version    0.2.0
     """
+    _ = generation_metadata
     if not profile_payloads:
         raise ValueError("No generated narrator profiles were provided.")
     profiles = load_profiles(project_root)
@@ -473,24 +439,11 @@ def append_ai_generated_profiles(
         generated_profile = _normalize_profile(
             {
                 "profile_id": f"ai_narrator_{uuid4().hex}",
-                "speaker_id": None,
-                "source_model_id": None,
                 "display_name": display_name,
                 "language": narrator_language_code(profile_payload.get("language", DEFAULT_NARRATOR_LANGUAGE)),
                 "prompt_text": profile_payload.get("prompt_text", ""),
                 "preview_text": profile_payload.get("preview_text", DEFAULT_PREVIEW_TEXT),
-                "profile_kind": NARRATOR_PROFILE_KIND_CUSTOM,
-                "profile_origin": NARRATOR_PROFILE_ORIGIN_AI_GENERATED,
-                "provider_family": NARRATOR_PROVIDER_FAMILY_QWEN_VOICE_DESIGNER,
-                "editable": True,
-                "is_selected": False,
-                "sample_audio_path": None,
-                "sample_metadata": None,
-                "generation_metadata": {
-                    **dict(generation_metadata),
-                    "gender": str(profile_payload.get("gender", "")).strip(),
-                    "style_label": str(profile_payload.get("style_label", "")).strip(),
-                },
+                "sample": None,
                 "updated_at": _utc_now_iso(),
             }
         )
@@ -506,14 +459,14 @@ def update_custom_profile(
     profile_payload: dict[str, object],
 ) -> dict[str, object]:
     """
-    @brief      Update and persist one existing editable narrator profile.
+    @brief      Update and persist one existing narrator profile.
     @param[in]  project_root Active project root folder.
     @param[in]  profile_payload Updated narrator-profile payload.
     @return     The persisted updated narrator-profile payload.
-    @exception  ValueError Raised when the profile is missing or not editable.
+    @exception  ValueError Raised when the profile is missing.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-17
-    @version    1.2.0
+    @version    1.3.0
     """
     profile_id = str(profile_payload.get("profile_id", "")).strip()
     profiles = load_profiles(project_root)
@@ -523,8 +476,6 @@ def update_custom_profile(
         if str(profile.get("profile_id", "")).strip() != profile_id:
             normalized_profiles.append(profile)
             continue
-        if not bool(profile.get("editable", False)):
-            raise ValueError("readonly_profile")
         updated_profile = _normalize_profile(
             {
                 **dict(profile),
@@ -548,19 +499,18 @@ def begin_profile_edit(project_root: str | Path, profile_id: str) -> dict[str, o
     @param[in]  project_root Active project root folder.
     @param[in]  profile_id Target narrator-profile identifier.
     @return     Updated target profile payload.
-    @exception  ValueError Raised when the profile is missing or not editable.
+    @exception  ValueError Raised when the profile is missing.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-17
-    @version    1.0.0
+    @version    1.1.0
     """
     target_profile = profile_by_id(project_root, profile_id)
     if target_profile is None:
         raise ValueError("missing_profile")
-    if not bool(target_profile.get("editable", False)):
-        raise ValueError("readonly_profile")
 
     delete_profile_sample(project_root, profile_id)
-    if bool(target_profile.get("is_selected", False)):
+    selected_state = load_selected_profile_state(project_root)
+    if str(selected_state.get("selected_profile_id", "") or "").strip() == str(profile_id).strip():
         clear_narrator_selection(project_root)
     return profile_by_id(project_root, profile_id) or target_profile
 
@@ -574,7 +524,7 @@ def delete_profile(project_root: str | Path, profile_id: str) -> list[dict[str, 
     @exception  ValueError Raised when the target profile is missing.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-17
-    @version    1.3.0
+    @version    1.4.0
     """
     profiles = load_profiles(project_root)
     remaining_profiles: list[dict[str, object]] = []
@@ -586,9 +536,10 @@ def delete_profile(project_root: str | Path, profile_id: str) -> list[dict[str, 
         deleted_profile = profile
     if deleted_profile is None:
         raise ValueError("missing_profile")
+    selected_state = load_selected_profile_state(project_root)
     delete_profile_sample(project_root, profile_id)
-    _write_json(_profiles_path(project_root), _repair_selected_profile_flags(remaining_profiles))
-    if bool(deleted_profile.get("is_selected", False)):
+    _write_json(_profiles_path(project_root), remaining_profiles)
+    if str(selected_state.get("selected_profile_id", "") or "").strip() == str(profile_id).strip():
         clear_narrator_selection(project_root)
     return load_profiles(project_root)
 
@@ -698,22 +649,19 @@ def profile_sample_paths(project_root: str | Path, profile_id: str) -> tuple[Pat
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-17
-    @version    1.2.0
+    @version    1.3.0
     """
     normalized_profile_id = str(profile_id).strip()
+    project_path = Path(project_root)
+    current_audio_path = project_path / f"audio_narator_{_normalized_audio_name(normalized_profile_id)}.wav"
     profile_payload = profile_by_id(project_root, normalized_profile_id)
     if isinstance(profile_payload, dict):
-        stored_relative_path = _optional_string(profile_payload.get("sample_audio_path"))
-        if stored_relative_path is not None:
-            stored_audio_path = Path(project_root) / stored_relative_path
-            return stored_audio_path, _profiles_path(project_root)
-    normalized_name = _normalized_audio_name(
-        profile_payload.get("display_name", normalized_profile_id) if profile_payload else normalized_profile_id
-    )
-    return (
-        Path(project_root) / f"audio_narator_{normalized_name}.wav",
-        _profiles_path(project_root),
-    )
+        legacy_audio_path = (
+            project_path / f"audio_narator_{_normalized_audio_name(profile_payload.get('display_name'))}.wav"
+        )
+        if legacy_audio_path.is_file() and not current_audio_path.is_file():
+            return legacy_audio_path, _profiles_path(project_root)
+    return current_audio_path, _profiles_path(project_root)
 
 
 def has_profile_sample(project_root: str | Path, profile_id: str) -> bool:
@@ -740,12 +688,12 @@ def load_profile_sample_metadata(project_root: str | Path, profile_id: str) -> d
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-17
-    @version    1.1.0
+    @version    1.2.0
     """
     profile_payload = profile_by_id(project_root, profile_id)
     if not isinstance(profile_payload, dict):
         return None
-    payload = profile_payload.get("sample_metadata")
+    payload = profile_payload.get("sample")
     return dict(payload) if isinstance(payload, dict) else None
 
 
@@ -763,7 +711,7 @@ def delete_profile_sample(project_root: str | Path, profile_id: str) -> None:
     audio_path, _metadata_path = profile_sample_paths(project_root, profile_id)
     if audio_path.exists():
         audio_path.unlink()
-    _update_profile_sample_metadata(project_root, profile_id, None, None)
+    _update_profile_sample_metadata(project_root, profile_id, None)
 
 
 def store_profile_sample(
@@ -786,38 +734,28 @@ def store_profile_sample(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-17
-    @version    1.6.0
+    @version    1.7.0
     """
     ensure_narrator_definition_files(project_root)
     profile_id = str(profile.get("profile_id", "")).strip()
     delete_profile_sample(project_root, profile_id)
     audio_path, _metadata_path = profile_sample_paths(project_root, profile_id)
-    selected_state = load_selected_profile_state(project_root)
-    selected_profile_id = str(selected_state.get("selected_profile_id", "") or "").strip()
     metadata_payload = {
-        "profile_id": profile_id,
-        "is_selected": bool(selected_profile_id and selected_profile_id == profile_id),
-        "display_name": display_profile_name(profile),
-        "profile_kind": str(profile.get("profile_kind", "")).strip(),
-        "profile_origin": str(profile.get("profile_origin", "")).strip(),
-        "source_model_id": _optional_string(
-            generation_request.get("source_model_id") or profile.get("source_model_id")
-        ),
-        "speaker_id": _optional_string(profile.get("speaker_id")),
-        "generation_mode": str(generation_request.get("generation_mode", "")).strip(),
+        "source_kind": NARRATOR_SAMPLE_SOURCE_VOICE_DESIGNER,
+        "preview_text": str(preview_text).strip(),
         "language": narrator_language_code(
             generation_request.get("language", profile.get("language", DEFAULT_NARRATOR_LANGUAGE))
         ),
-        "prompt_text": str(profile.get("prompt_text", "")).strip(),
-        "preview_text": str(preview_text).strip(),
-        "generated_at": _utc_now_iso(),
-        "runtime_result_summary": str(runtime_result_summary).strip(),
+        "source_model_id": _optional_string(
+            generation_request.get("source_model_id") or generation_request.get("model_id")
+        ),
+        "created_at": _utc_now_iso(),
     }
+    _ = runtime_result_summary
     audio_path.write_bytes(audio_bytes)
     _update_profile_sample_metadata(
         project_root,
         profile_id,
-        relative_path=str(audio_path.relative_to(Path(project_root))),
         metadata_payload=metadata_payload,
     )
     return metadata_payload
@@ -839,42 +777,29 @@ def import_profile_sample(
     @exception  ValueError Raised when the sample path or transcript is invalid.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-15
-    @version    0.1.0
+    @version    0.2.0
     """
     ensure_narrator_definition_files(project_root)
     normalized_preview_text = str(preview_text or "").strip()
     if not normalized_preview_text:
         raise ValueError("empty_preview_text")
     source_path = Path(source_audio_path)
-    validation_report = voice_sample_import_service.validate_imported_wav_sample(source_path)
+    voice_sample_import_service.validate_imported_wav_sample(source_path)
     profile_id = str(profile.get("profile_id", "")).strip()
     delete_profile_sample(project_root, profile_id)
     audio_path, _metadata_path = profile_sample_paths(project_root, profile_id)
-    selected_state = load_selected_profile_state(project_root)
-    selected_profile_id = str(selected_state.get("selected_profile_id", "") or "").strip()
     metadata_payload = {
-        "profile_id": profile_id,
-        "is_selected": bool(selected_profile_id and selected_profile_id == profile_id),
-        "display_name": display_profile_name(profile),
-        "profile_kind": str(profile.get("profile_kind", "")).strip(),
-        "profile_origin": str(profile.get("profile_origin", "")).strip(),
-        "sample_source": voice_sample_import_service.IMPORTED_SAMPLE_SOURCE,
-        "source_model_id": None,
-        "speaker_id": _optional_string(profile.get("speaker_id")),
-        "generation_mode": voice_sample_import_service.IMPORTED_SAMPLE_GENERATION_MODE,
-        "language": narrator_language_code(profile.get("language", DEFAULT_NARRATOR_LANGUAGE)),
-        "prompt_text": str(profile.get("prompt_text", "")).strip(),
+        "source_kind": voice_sample_import_service.IMPORTED_SAMPLE_SOURCE,
         "preview_text": normalized_preview_text,
-        "imported_at": _utc_now_iso(),
+        "language": narrator_language_code(profile.get("language", DEFAULT_NARRATOR_LANGUAGE)),
+        "source_model_id": None,
+        "created_at": _utc_now_iso(),
         "source_file_name": source_path.name,
-        "audio_validation": dict(validation_report),
-        "runtime_result_summary": "Imported WAV sample.",
     }
     audio_path.write_bytes(source_path.read_bytes())
     _update_profile_sample_metadata(
         project_root,
         profile_id,
-        relative_path=str(audio_path.relative_to(Path(project_root))),
         metadata_payload=metadata_payload,
     )
     return metadata_payload
@@ -920,13 +845,29 @@ def load_selected_narrator_sample_metadata(project_root: str | Path) -> dict[str
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.1.0
+    @version    0.3.0
     """
     ensure_narrator_definition_files(project_root)
     _audio_path, metadata_path = selected_narrator_sample_paths(project_root)
     if metadata_path.is_file():
         payload = json.loads(metadata_path.read_text(encoding="utf-8"))
         if isinstance(payload, dict) and str(payload.get("preview_text", "")).strip():
+            selected_sample = _normalize_sample_payload(payload)
+            if isinstance(selected_sample, dict):
+                selected_profile_id = str(
+                    payload.get("profile_id", "") or payload.get("selected_profile_id", "")
+                ).strip()
+                if not selected_profile_id:
+                    selected_state = load_selected_profile_state(project_root)
+                    selected_profile_id = str(selected_state.get("selected_profile_id", "") or "").strip()
+                selected_metadata = {
+                    "profile_id": selected_profile_id,
+                    **selected_sample,
+                }
+                selected_at = _optional_string(payload.get("selected_at"))
+                if selected_at is not None:
+                    selected_metadata["selected_at"] = selected_at
+                return selected_metadata
             return dict(payload)
 
     selected_state = load_selected_profile_state(project_root)
@@ -937,10 +878,8 @@ def load_selected_narrator_sample_metadata(project_root: str | Path) -> dict[str
     if not isinstance(profile_metadata, dict):
         return None
     return {
+        "profile_id": selected_profile_id,
         **dict(profile_metadata),
-        "selected_profile_id": selected_profile_id,
-        "is_selected": True,
-        "role": "narrator",
     }
 
 
@@ -984,7 +923,7 @@ def copy_selected_narrator_sample(project_root: str | Path, profile_id: str) -> 
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-17
-    @version    1.5.1
+    @version    1.6.0
     """
     ensure_narrator_definition_files(project_root)
     normalized_profile_id = str(profile_id).strip()
@@ -995,19 +934,10 @@ def copy_selected_narrator_sample(project_root: str | Path, profile_id: str) -> 
         return None
     select_narrator_profile(project_root, normalized_profile_id, str(profile_metadata.get("language", "")).strip())
     selected_metadata = {
+        "profile_id": normalized_profile_id,
         **dict(profile_metadata),
-        "selected_profile_id": normalized_profile_id,
-        "is_selected": True,
-        "role": "narrator",
         "selected_at": _utc_now_iso(),
     }
-    _set_profile_sample_selection_flags(project_root, normalized_profile_id)
-    _update_profile_sample_metadata(
-        project_root,
-        normalized_profile_id,
-        relative_path=str(profile_audio_path.relative_to(Path(project_root))),
-        metadata_payload=selected_metadata,
-    )
     selected_audio_path, selected_metadata_path = selected_narrator_sample_paths(project_root)
     selected_audio_path.write_bytes(profile_audio_path.read_bytes())
     _write_json(selected_metadata_path, selected_metadata)
@@ -1026,7 +956,7 @@ def sample_runtime_available(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-17
-    @version    1.3.0
+    @version    1.4.0
     """
     if not isinstance(sample_metadata, dict):
         return False
@@ -1059,10 +989,11 @@ def _sample_metadata_is_imported(sample_metadata: dict[str, object]) -> bool:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-15
-    @version    0.1.0
+    @version    0.2.0
     """
     return (
-        str(sample_metadata.get("sample_source", "") or "").strip()
+        str(sample_metadata.get("source_kind", "") or "").strip() == voice_sample_import_service.IMPORTED_SAMPLE_SOURCE
+        or str(sample_metadata.get("sample_source", "") or "").strip()
         == voice_sample_import_service.IMPORTED_SAMPLE_SOURCE
         or str(sample_metadata.get("generation_mode", "") or "").strip()
         == voice_sample_import_service.IMPORTED_SAMPLE_GENERATION_MODE
@@ -1114,45 +1045,66 @@ def _normalize_profile(profile: dict[str, object]) -> dict[str, object]:
     @return     Derived helper result.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.4.0
+    @version    0.6.0
     """
     profile_payload = dict(profile)
-    profile_kind = NARRATOR_PROFILE_KIND_CUSTOM
-    profile_origin = str(profile_payload.get("profile_origin", NARRATOR_PROFILE_ORIGIN_CUSTOM_USER)).strip()
-    if profile_origin not in {NARRATOR_PROFILE_ORIGIN_CUSTOM_USER, NARRATOR_PROFILE_ORIGIN_AI_GENERATED}:
-        profile_origin = NARRATOR_PROFILE_ORIGIN_CUSTOM_USER
-    provider_family = str(profile_payload.get("provider_family", NARRATOR_PROVIDER_FAMILY_QWEN_VOICE_DESIGNER)).strip()
-    if not provider_family:
-        provider_family = NARRATOR_PROVIDER_FAMILY_QWEN_VOICE_DESIGNER
-    editable_default = True
+    sample_payload = profile_payload.get("sample")
+    if not isinstance(sample_payload, dict):
+        sample_payload = profile_payload.get("sample_metadata")
     return {
         "profile_id": str(profile_payload.get("profile_id", "")).strip() or f"profile_{uuid4().hex}",
-        "speaker_id": None,
-        "source_model_id": _optional_string(profile_payload.get("source_model_id")),
         "display_name": display_profile_name(profile_payload.get("display_name", "")) or "Unnamed Narrator",
         "language": narrator_language_code(profile_payload.get("language", DEFAULT_NARRATOR_LANGUAGE)),
         "prompt_text": str(profile_payload.get("prompt_text", "")).strip(),
         "preview_text": str(profile_payload.get("preview_text", DEFAULT_PREVIEW_TEXT)).strip() or DEFAULT_PREVIEW_TEXT,
-        "profile_kind": profile_kind,
-        "profile_origin": profile_origin,
-        "provider_family": provider_family,
-        "editable": bool(profile_payload.get("editable", editable_default)),
-        "is_selected": bool(profile_payload.get("is_selected", False)),
-        "sample_audio_path": _optional_string(profile_payload.get("sample_audio_path")),
-        "sample_metadata": (
-            dict(profile_payload.get("sample_metadata"))
-            if isinstance(profile_payload.get("sample_metadata"), dict)
-            else None
-        ),
-        "generation_metadata": (
-            dict(profile_payload.get("generation_metadata"))
-            if isinstance(profile_payload.get("generation_metadata"), dict)
-            else None
-        ),
+        "sample": _normalize_sample_payload(sample_payload),
         "updated_at": (
             None if profile_payload.get("updated_at") in (None, "") else str(profile_payload.get("updated_at"))
         ),
     }
+
+
+def _normalize_sample_payload(payload: object) -> dict[str, object] | None:
+    """
+    @brief      Normalize one compact narrator sample payload.
+    @param[in]  payload Candidate compact sample payload.
+    @return     Compact sample payload or `None` when incomplete.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-18
+    @version    0.3.0
+    """
+    if not isinstance(payload, dict):
+        return None
+    generation_mode = str(payload.get("generation_mode", "") or "").strip()
+    source_kind = str(payload.get("source_kind", "") or payload.get("sample_source", "") or generation_mode).strip()
+    if source_kind == voice_sample_import_service.IMPORTED_SAMPLE_GENERATION_MODE:
+        source_kind = voice_sample_import_service.IMPORTED_SAMPLE_SOURCE
+    if generation_mode and source_kind not in {
+        voice_sample_import_service.IMPORTED_SAMPLE_SOURCE,
+        NARRATOR_SAMPLE_SOURCE_VOICE_DESIGNER,
+    }:
+        source_kind = NARRATOR_SAMPLE_SOURCE_VOICE_DESIGNER
+    preview_text = str(payload.get("preview_text", "") or "").strip()
+    if not source_kind or not preview_text:
+        return None
+    created_at = _optional_string(
+        payload.get("created_at")
+        or payload.get("generated_at")
+        or payload.get("imported_at")
+        or payload.get("selected_at")
+    )
+    normalized_payload: dict[str, object] = {
+        "source_kind": source_kind,
+        "preview_text": preview_text,
+        "language": narrator_language_code(payload.get("language", DEFAULT_NARRATOR_LANGUAGE)),
+        "source_model_id": _optional_string(payload.get("source_model_id")),
+        "created_at": created_at,
+    }
+    source_file_name = _optional_string(payload.get("source_file_name"))
+    if source_file_name is not None:
+        normalized_payload["source_file_name"] = source_file_name
+    return normalized_payload
 
 
 def _unique_display_name(display_name: object, existing_names: set[str]) -> str:
@@ -1178,19 +1130,17 @@ def _unique_display_name(display_name: object, existing_names: set[str]) -> str:
 def _update_profile_sample_metadata(
     project_root: str | Path,
     profile_id: str,
-    relative_path: str | None,
     metadata_payload: dict[str, object] | None,
 ) -> None:
     """
     @brief      Store or clear one narrator profile sample metadata entry in `audio_profiles.json`.
     @param[in]  project_root Active project root folder.
     @param[in]  profile_id Target narrator-profile identifier.
-    @param[in]  relative_path Project-relative sample WAV path or `None`.
-    @param[in]  metadata_payload Sample metadata payload or `None` to clear it.
+    @param[in]  metadata_payload Sample payload or `None` to clear it.
     @return     None.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.1.0
+    @version    0.2.0
     """
     normalized_profile_id = str(profile_id or "").strip()
     profiles = load_profiles(project_root)
@@ -1202,8 +1152,7 @@ def _update_profile_sample_metadata(
         updated_profiles.append(
             {
                 **dict(profile),
-                "sample_audio_path": relative_path,
-                "sample_metadata": None if metadata_payload is None else dict(metadata_payload),
+                "sample": None if metadata_payload is None else dict(metadata_payload),
             }
         )
     _write_json(_profiles_path(project_root), updated_profiles)
@@ -1216,48 +1165,15 @@ def _clear_profile_sample_metadata(project_root: str | Path) -> None:
     @return     None.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.1.0
+    @version    0.2.0
     """
     profiles = [
         {
             **dict(profile),
-            "sample_audio_path": None,
-            "sample_metadata": None,
+            "sample": None,
         }
         for profile in load_profiles(project_root)
     ]
-    _write_json(_profiles_path(project_root), profiles)
-
-
-def _set_profile_sample_selection_flags(project_root: str | Path, selected_profile_id: str | None) -> None:
-    """
-    @brief      Update narrator sample metadata selection markers in-place.
-    @param[in]  project_root Active project root folder.
-    @param[in]  selected_profile_id Selected profile identifier, or None to clear all sample selections.
-    @return     None.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.2.0
-    """
-    normalized_selected_profile_id = str(selected_profile_id or "").strip()
-    profiles = []
-    for profile in load_profiles(project_root):
-        payload = profile.get("sample_metadata")
-        if not isinstance(payload, dict):
-            profiles.append(profile)
-            continue
-        profile_id = str(payload.get("profile_id", profile.get("profile_id", "")) or "").strip()
-        is_selected = bool(normalized_selected_profile_id and profile_id == normalized_selected_profile_id)
-        updated_payload = {
-            **dict(payload),
-            "is_selected": is_selected,
-        }
-        if not is_selected:
-            updated_payload.pop("role", None)
-            updated_payload.pop("selected_at", None)
-            updated_payload.pop("selected_profile_id", None)
-            updated_payload.pop("copied_at", None)
-        profiles.append({**dict(profile), "sample_metadata": updated_payload})
     _write_json(_profiles_path(project_root), profiles)
 
 
@@ -1272,25 +1188,14 @@ def _normalize_selected_state(
     @return     Derived helper result.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.1.0
+    @version    0.2.0
     """
-    selected_profiles = [profile for profile in profiles if bool(profile.get("is_selected", False))]
-    if len(selected_profiles) > 1:
-        profiles = _repair_selected_profile_flags(profiles)
-        selected_profiles = [profile for profile in profiles if bool(profile.get("is_selected", False))]
-
-    selected_profile = selected_profiles[0] if selected_profiles else None
     normalized_payload = dict(payload) if isinstance(payload, dict) else {}
     fallback_selected_profile_id = str(normalized_payload.get("selected_profile_id", "") or "").strip()
-    if selected_profile is None and fallback_selected_profile_id:
-        profiles = [
-            {
-                **dict(profile),
-                "is_selected": str(profile.get("profile_id", "")).strip() == fallback_selected_profile_id,
-            }
-            for profile in profiles
-        ]
-        selected_profile = next((profile for profile in profiles if bool(profile.get("is_selected", False))), None)
+    selected_profile = next(
+        (profile for profile in profiles if str(profile.get("profile_id", "")).strip() == fallback_selected_profile_id),
+        None,
+    )
 
     selected_language = narrator_language_code(
         normalized_payload.get("selected_language", "")
@@ -1306,29 +1211,6 @@ def _normalize_selected_state(
         "selected_language": selected_language if selected_profile is not None else None,
     }
     return normalized_state, profiles
-
-
-def _repair_selected_profile_flags(profiles: list[dict[str, object]]) -> list[dict[str, object]]:
-    """
-    @brief      Execute the repair selected profile flags helper.
-    @param[in]  profiles Value for `profiles`.
-    @return     Helper result.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
-    """
-    first_selected_profile_id = next(
-        (str(profile.get("profile_id", "")).strip() for profile in profiles if bool(profile.get("is_selected", False))),
-        None,
-    )
-    return [
-        {
-            **dict(profile),
-            "is_selected": first_selected_profile_id is not None
-            and str(profile.get("profile_id", "")).strip() == first_selected_profile_id,
-        }
-        for profile in profiles
-    ]
 
 
 def _build_generation_request(

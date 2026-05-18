@@ -703,7 +703,7 @@ def sync_same_narrator_samples(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-20
-    @version    1.1.1
+    @version    1.3.0
     """
     ensure_character_voices_files(project_root)
     if not load_voice_plan(project_root):
@@ -734,10 +734,22 @@ def sync_same_narrator_samples(
         narrator_metadata.get("language", voice_language),
     )
     narrator_preview_text = str(narrator_metadata.get("preview_text", "")).strip()
-    narrator_generation_mode = str(narrator_metadata.get("generation_mode", "")).strip()
+    narrator_generation_mode = str(
+        narrator_metadata.get("source_kind", "")
+        or narrator_metadata.get("generation_mode", "")
+        or narrator_metadata.get("sample_source", "")
+    ).strip()
     narrator_source_model_id = str(narrator_metadata.get("source_model_id", "")).strip() or None
     narrator_runtime_summary = str(narrator_metadata.get("runtime_result_summary", "")).strip()
-    narrator_generated_at = str(narrator_metadata.get("generated_at", "")).strip() or _utc_now_iso()
+    narrator_generated_at = (
+        str(
+            narrator_metadata.get("created_at", "")
+            or narrator_metadata.get("selected_at", "")
+            or narrator_metadata.get("generated_at", "")
+            or narrator_metadata.get("imported_at", "")
+        ).strip()
+        or _utc_now_iso()
+    )
     copied_samples = 0
     for target_payload in character_targets:
         target_id = str(target_payload.get("target_id", "")).strip()

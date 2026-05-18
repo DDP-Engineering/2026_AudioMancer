@@ -13,7 +13,7 @@
          sample-dependent button enablement, and bottom status rendering.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-18
-@version 3.6.2
+@version 3.6.4
 """
 
 # IMPORTS
@@ -32,7 +32,7 @@ def test_narator_voice_page_places_select_button_in_profiles_group(qtbot) -> Non
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-17
-    @version    1.2.1
+    @version    1.4.0
     """
     page = NaratorVoicePage()
     qtbot.addWidget(page)
@@ -42,7 +42,9 @@ def test_narator_voice_page_places_select_button_in_profiles_group(qtbot) -> Non
     assert page._select_profile_button.parentWidget() is page._profiles_group
     assert page._import_sample_button.parentWidget() is page._profiles_group
     assert page._import_sample_button.text() == "Import Sample"
-    assert page._profiles_group.minimumWidth() >= 240
+    assert page._profiles_group.minimumWidth() >= 212
+    assert page._profiles_group.maximumWidth() <= 248
+    assert page._generate_sample_button.minimumWidth() > page._generate_sample_button.sizeHint().width()
     assert hasattr(page, "_setup_group") is False
     assert hasattr(page, "_profile_name_label") is False
     assert hasattr(page, "_summary_label") is False

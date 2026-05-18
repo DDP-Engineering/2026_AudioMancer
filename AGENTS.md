@@ -111,6 +111,10 @@ Use:
 ## Documentation Rules
 
 - Update `README.MD` when module scope or behavior changes.
+- Do not write the current application version in README files. Keep README
+  files simple and refer version-sensitive readers to the changelog, project
+  version metadata, and help-file versioning so help files can be kept in sync
+  with the project without forcing broad README churn on fast revisions.
 - Update `05_SoftwareDocu/` when implementation behavior or contracts change.
 - Update `HowToTest*.md` when setup, validation, or operator workflow changes.
 

@@ -23,6 +23,8 @@ into one UI-facing model.
 - build profile rows, status lines, and operator notes
 - classify Qwen3 narrator-generation readiness from discovered runtime models
 - expose preview text character and safe-word limits
+- derive editability from the inspected profile's existence rather than a
+  persisted profile-level `editable` flag
 
 It does not create profiles, generate samples, select profiles, or write
 runtime settings.
@@ -95,8 +97,10 @@ The state payload includes stable keys such as:
 - `preview_available`
 - `status_lines`
 
-Profile rows are derived from `narator.json`, `audio_profiles.json`, and
-per-profile sample metadata.
+Profile rows are derived from `narator.json`, `audio_profiles.json`, compact
+per-profile `sample` metadata, and computed per-profile WAV paths. Persisted
+profiles do not carry `is_selected` or `editable`; those values are resolved
+for the page state from explicit selection and current workflow context.
 
 ## 7. Workflow Integration
 
@@ -132,6 +136,11 @@ Focused tests:
 - `tests/test_narrator_definition_state_service.py`
 - `tests/test_narator_voice_page.py`
 - `tests/test_narator_voice_ui_controller.py`
+
+Documentation audit status:
+
+- compact narrator profile state contract reviewed on 2026-05-18
+- profile editability and selection flags reviewed on 2026-05-18
 
 Minimum validation after changes:
 

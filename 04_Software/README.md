@@ -14,7 +14,6 @@ Implementation sources and runnable software artifacts.
   project-local runtime services, Qt pages/controllers, prompt templates,
   focused tests, packaging metadata, and the current end-to-end workflow from
   source selection and locked project options through WAV Audio Assembly. The
-  current package version is `1.1.5`. The
   application Help action opens the offline user guide for the selected UI
   language, maintained under
   `../05_SoftwareDocu/UserGuide/` and `../05_SoftwareDocu/UserGuide_ro/`, and

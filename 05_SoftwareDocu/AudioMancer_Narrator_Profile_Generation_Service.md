@@ -33,6 +33,8 @@ does not select a narrator profile.
   validation succeeds
 - persist `narator_profile_generation_report.json` and
   `narator_profile_generation_state.json`
+- preserve AI transaction logs and resumable checkpoint details outside the
+  compact profile records
 - preserve existing manual and generated profiles
 - propagate cancellation before any profile append
 
@@ -145,17 +147,18 @@ No audio artifact is created.
 Generated profile fields appended to `audio_profiles.json`:
 
 - `profile_id = "ai_narrator_<uuid>"`
-- `profile_origin = "ai_generated"`
-- `profile_kind = "custom"`
-- `provider_family = "qwen_voice_designer"`
-- `editable = True`
-- `sample_audio_path = None`
-- `sample_metadata = None`
 - `display_name`
 - `language`
 - `prompt_text`
 - `preview_text`
-- `generation_metadata`
+- `sample = null`
+- `updated_at`
+
+Generated profile entries intentionally do not duplicate `profile_origin`,
+`profile_kind`, `provider_family`, `editable`, `speaker_id`,
+`source_model_id`, `sample_audio_path`, `sample_metadata`, or
+`generation_metadata`. The profiles remain editable through the Narator Voice
+workflow, while run provenance lives in the report/state sidecars and AI logs.
 
 Generated `prompt_text` guidance follows the Qwen3-TTS Voice Designer guide:
 
@@ -287,6 +290,10 @@ Focused automated coverage:
 - AI Settings/default-profile coverage in
   `04_Software/AudioMancer/tests/test_ai_settings_page.py`
   and `04_Software/AudioMancer/tests/test_settings_service.py`
+
+Documentation audit status:
+
+- compact generated-profile metadata contract reviewed on 2026-05-18
 
 Minimum validation after changes:
 
