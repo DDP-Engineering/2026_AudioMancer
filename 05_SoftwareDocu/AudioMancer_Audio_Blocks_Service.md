@@ -28,9 +28,10 @@ narrator sample and reusable narrator clone prompt.
   Qwen base clone models
 - build one reusable client-owned `voice_clone_prompt` payload per referenced
   narrator or character sample through `POST /v1/voice/clone-prompt`
-- generate one final WAV plus metadata pair per approved speech block in stable
-  book order, splitting long Audio Blocks internally when the loaded clone
-  model's runtime `max_new_tokens` budget requires it
+- generate one final WAV per approved speech block in stable book order while
+  keeping per-block generation metadata in `audio_blocks.json`; long Audio
+  Blocks are split internally when the loaded clone model's runtime
+  `max_new_tokens` budget requires it
 - on start/continue, skip every current Audio Block that already has generated
   audio, regardless of whether that Audio Block is approved
 - persist resumable operation state, report data, reusable prompt metadata, and
@@ -117,7 +118,8 @@ High-level flow:
    the completed part WAVs are stitched with Python `wave`.
 8. After each generated block, and after each completed split part, the service rewrites
    `audio_blocks.json`, `audio_blocks_report.json`, `voice_clone_profiles.json`,
-   and `audio_blocks_state.json`.
+   and `audio_blocks_state.json`. Per-block generation metadata is stored in
+   the `audio_blocks.json` entry rather than in a WAV-adjacent JSON sidecar.
 9. Operators can later approve or unapprove one generated block through the
    selected approval toggle, approve all generated blocks, or regenerate one
    selected block, which clears only that block approval.
@@ -132,8 +134,8 @@ High-level flow:
     resets Audio Assembly.
 12. Speech Blocks edits, resets, approvals, inserts, deletes, and selected-chunk
     re-splits reset generated Audio Blocks data only for the affected source
-    chunk, deleting that chunk's WAV/metadata files while preserving other
-    chunks.
+    chunk, deleting that chunk's generated WAV and split-part files while
+    preserving other chunks.
 13. The service syncs `project.json.operations["audio_blocks"]` after
     generation, report refresh, and approval changes. It advances
     `project.json.current_stage` to `audio_blocks_ready` only when every speech
@@ -194,7 +196,6 @@ Outputs:
 - `audio_blocks_state.json`
 - `voice_clone_profiles.json`
 - `audio_blocks/<chunk_no_4digits>_<chunk_local_no_6digits>_<character_normalized_name>.wav`
-- `audio_blocks/<chunk_no_4digits>_<chunk_local_no_6digits>_<character_normalized_name>.json`
 - optional split part WAVs under
   `audio_blocks/parts/<chunk_no_4digits>_<chunk_local_no_6digits>_<character_normalized_name>_partNNN.wav`
 - updated compact manifest summary for `operations["audio_blocks"]`, written by
@@ -210,16 +211,18 @@ Persisted audio-block payloads include at minimum:
 - `speaker_id`
 - `voice_target_id`
 - `audio_relative_path`
-- `metadata_relative_path`
 - `audio_duration_seconds`
 - `generated` as an ISO timestamp or `null`
 - `approved` as an ISO timestamp or `null`
 - `content_kind` and `pause_duration_ms` for metadata-only pause blocks
 
 Speech Blocks remain the source of truth for sequence order, speaker display
-names, content kind, and text. Generated WAV sidecar metadata stores runtime
-details that are not needed for fast UI loading, including:
+names, content kind, and text. `audio_blocks.json` also stores runtime
+generation details needed for review, regeneration safety, and split-part
+resume:
 
+- `voice_language`
+- `prompt_format`
 - `runtime_result_summary`
 - `split_part_count`
 - `split_strategy`
@@ -228,7 +231,7 @@ details that are not needed for fast UI loading, including:
 - `generated_part_relative_paths`
 - `generation_fingerprint`
 - `split_plan_fingerprint`
-- `warning_flags`
+- optional `warning_flags`
 
 Persisted reusable clone-prompt payloads include:
 
@@ -281,7 +284,7 @@ Current invariants:
   not block Audio Assembly
 - `approve_all_audio_blocks(...)` updates only already generated blocks
 - `unapprove_audio_block(...)` clears the compact `approved` timestamp; it does
-  not delete the generated WAV or metadata sidecar
+  not delete the generated WAV or canonical per-block metadata
 - `remove_audio_blocks_for_speech_blocks(...)` is used by upstream selective
   invalidation to remove only exact `speech_block_id` matches and their
   generated artifacts
@@ -298,18 +301,11 @@ Current operation-state metadata includes:
 
 - `voice_language`
 - `input_fingerprint`
-- `speech_block_count`
-- `generated_block_count`
-- `approved_block_count`
-- `clone_profile_count`
 - `prompt_count`
 - `reused_prompt_count`
 - `regenerated_prompt_count`
 - `current_phase`
 - `current_block_id`
-- `model_id`
-- `model_token_budget`
-- `model_audio_seconds_budget`
 - one resume checkpoint with `next_profile_index`, `next_speech_block_index`,
   and `next_split_part_index`
 

@@ -9,14 +9,14 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>AudioMancer User Guide v1.2.1</title>
+    <title>AudioMancer User Guide v1.2.2</title>
     <link rel="stylesheet" href="assets/styles/help.css">
 </head>
 <body>
     <div class="layout">
         <nav class="toc" aria-label="Table of contents">
             <h1>AudioMancer Help</h1>
-            <p>Version 1.2.1<br>Offline user guide for Windows and Ubuntu.</p>
+            <p>Version 1.2.2<br>Offline user guide for Windows and Ubuntu.</p>
             <a href="#welcome">Welcome</a>
             <a href="#requirements">What You Need</a>
             <a href="#install">Install And Start</a>
@@ -43,8 +43,8 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
             <section id="welcome">
                 <h2>Welcome</h2>
                 <div class="version-box">
-                    <p><strong>Help version:</strong> 1.2.1</p>
-                    <p><strong>Application version:</strong> 1.2.1</p>
+                    <p><strong>Help version:</strong> 1.2.2</p>
+                    <p><strong>Application version:</strong> 1.2.2</p>
                     <p><strong>Creator:</strong> Eng. Dipl. Dan Dumitru Pasare</p>
                     <p><strong>Contact:</strong> pasaredan1979@gmail.com</p>
                 </div>
@@ -56,13 +56,16 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                 </p>
                 <p>
                     Work through the left sidebar from top to bottom. Review visible text and audio before you press
-                    approval buttons. Version 1.2.1 preserves expensive downstream work when it can: local chunk,
+                    approval buttons. Version 1.2.2 preserves expensive downstream work when it can: local chunk,
                     translation, character, voice, Speech Block, and Audio Block edits reset only the affected
                     downstream records, while full upstream regeneration still clears dependent workflow data.
                 </p>
                 <p>
-                    In version 1.2.1, AudioMancer keeps compact operation metadata across workflow state and report
-                    files while preserving resume checkpoints, token usage, and AI transaction logs. Narator Voice
+                    In version 1.2.2, AudioMancer keeps compact operation metadata across workflow state and report
+                    files while preserving resume checkpoints, token usage, and AI transaction logs. Audio Blocks now
+                    keeps per-block generation details in the main Audio Blocks index instead of WAV-adjacent JSON
+                    sidecars, reducing duplicated metadata while preserving prompt reuse, split-part resume, generated
+                    audio playback, and approvals. Narator Voice
                     and Character Voices keep compact profile and sample metadata without operation audit timestamps.
                     AI Translation now uses the configured AI profile even when the target language matches the
                     source language, so same-language runs can rewrite or normalize text instead of copying it.

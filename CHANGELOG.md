@@ -12,6 +12,24 @@ All notable changes to this project will be documented in this file.
 
 No notable changes yet.
 
+## [1.2.2] - 2026-05-19
+
+### Changed
+
+- Audio Blocks now stores per-block generation metadata directly in
+  `audio_blocks.json` instead of writing separate WAV-adjacent JSON sidecars,
+  reducing duplicated metadata while preserving generated-audio playback,
+  approval state, prompt reuse, split-part resume, and operation resumability.
+- `audio_blocks_state.json` now keeps only resume-critical operation metadata;
+  prompt counts, generated counts, selected model names, and block totals are
+  derived from canonical Audio Blocks/report data instead of duplicated into
+  state metadata.
+- Audio Blocks, operation-runtime, and software documentation were updated to
+  describe the compact metadata contract and current resume data boundaries.
+- Project package metadata and `audiomancer.__version__` were updated to
+  `1.2.2`.
+- Offline English and Romanian help bundles were updated to version `1.2.2`.
+
 ## [1.2.1] - 2026-05-19
 
 ### Changed

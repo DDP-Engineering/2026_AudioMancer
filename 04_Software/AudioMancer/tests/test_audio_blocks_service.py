@@ -46,7 +46,7 @@ def test_audio_blocks_service_generates_clone_prompts_and_ordered_wavs(monkeypat
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-23
-    @version    0.4.0
+    @version    0.5.0
     """
     project_root, manifest = _create_audio_blocks_project(tmp_path, "AudioBlocksServiceGenerate")
     wait_payloads = [
@@ -183,7 +183,7 @@ def test_audio_blocks_service_same_narrator_mode_uses_narrator_prompt_for_charac
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.3.0
+    @version    0.4.0
     """
     project_root, manifest = _create_audio_blocks_project(tmp_path, "AudioBlocksServiceSameNarrator")
     narrator_definition_service.save_tts_plan(
@@ -1036,8 +1036,8 @@ def test_audio_blocks_service_approve_and_regenerate_selected_block(monkeypatch,
     regenerated_blocks = audio_blocks_service.load_audio_blocks(project_root)
     assert regen_report["generated_block_count"] == 2
     assert audio_blocks_service.is_approved(regenerated_blocks[0]) is False
-    metadata_payload = json.loads((project_root / str(regenerated_blocks[0]["metadata_relative_path"])).read_text())
-    assert metadata_payload["runtime_result_summary"] == "Narrator regenerated."
+    assert regenerated_blocks[0]["metadata_relative_path"] is None
+    assert regenerated_blocks[0]["runtime_result_summary"] == "Narrator regenerated."
     assert (project_root / str(regenerated_blocks[0]["audio_relative_path"])).read_bytes() == _wav_bytes("regenerated")
 
 
@@ -1300,10 +1300,8 @@ def test_audio_blocks_service_resume_continues_from_saved_checkpoint(monkeypatch
         ("qwen_voice_clone_prompt_v1", "alice", "Hello there."),
     ]
     assert [audio_blocks_service.is_generated(block) for block in resumed_blocks] == [True, True]
-    resumed_metadata = [
-        json.loads((project_root / str(block["metadata_relative_path"])).read_text()) for block in resumed_blocks
-    ]
-    assert [metadata["runtime_result_summary"] for metadata in resumed_metadata] == ["Narrator ready.", "Alice ready."]
+    assert [block["metadata_relative_path"] for block in resumed_blocks] == [None, None]
+    assert [block["runtime_result_summary"] for block in resumed_blocks] == ["Narrator ready.", "Alice ready."]
 
 
 def test_audio_blocks_service_continuation_skips_later_existing_audio_after_insert(monkeypatch, tmp_path) -> None:

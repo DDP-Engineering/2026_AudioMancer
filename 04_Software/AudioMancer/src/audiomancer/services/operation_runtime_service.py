@@ -14,7 +14,7 @@
          shared by long-running workflow operations.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-22
-@version 0.12.0
+@version 0.13.0
 """
 
 # IMPORTS
@@ -345,24 +345,17 @@ def _default_operation_metadata(operation_kind: str) -> dict[str, object]:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-26
-    @version    0.3.0
+    @version    0.4.0
     """
     if operation_kind == "audio_blocks":
         return {
             "voice_language": "",
             "input_fingerprint": "",
-            "speech_block_count": 0,
-            "generated_block_count": 0,
-            "approved_block_count": 0,
-            "clone_profile_count": 0,
             "prompt_count": 0,
             "reused_prompt_count": 0,
             "regenerated_prompt_count": 0,
             "current_phase": "",
             "current_block_id": "",
-            "model_id": "",
-            "model_token_budget": 0,
-            "model_audio_seconds_budget": 0.0,
         }
     return {}
 

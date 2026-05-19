@@ -501,13 +501,13 @@ def test_ensure_default_operation_state_creates_compact_character_discovery_stat
 
 def test_ensure_default_operation_state_creates_zero_audio_blocks_metadata(tmp_path) -> None:
     """
-    @brief      Verify first Audio Blocks page access creates zero-valued generation metadata.
+    @brief      Verify first Audio Blocks page access creates compact resume metadata.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-27
-    @version    0.1.0
+    @version    0.2.0
     """
     project_root, _manifest = project_workspace_service.create_project("DefaultAudioBlocksStateRuntime", tmp_path)
 
@@ -521,17 +521,11 @@ def test_ensure_default_operation_state_creates_zero_audio_blocks_metadata(tmp_p
     assert "output_paths" not in state_payload
     assert "artifact_paths" not in state_payload
     assert state_payload["metadata"]["voice_language"] == ""
-    assert state_payload["metadata"]["speech_block_count"] == 0
-    assert state_payload["metadata"]["generated_block_count"] == 0
-    assert state_payload["metadata"]["approved_block_count"] == 0
-    assert state_payload["metadata"]["clone_profile_count"] == 0
     assert state_payload["metadata"]["prompt_count"] == 0
     assert state_payload["metadata"]["reused_prompt_count"] == 0
     assert state_payload["metadata"]["regenerated_prompt_count"] == 0
     assert state_payload["metadata"]["current_phase"] == ""
     assert state_payload["metadata"]["current_block_id"] == ""
-    assert state_payload["metadata"]["model_token_budget"] == 0
-    assert state_payload["metadata"]["model_audio_seconds_budget"] == 0.0
     assert state_payload["resume_checkpoint"] is None
 
 
