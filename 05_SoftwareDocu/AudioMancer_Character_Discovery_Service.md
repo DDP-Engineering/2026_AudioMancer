@@ -15,7 +15,7 @@ Provides the Character Discovery workflow used by the `Characters` page in
 It analyzes canonical chunking output as the authoritative source for character
 identity and dialogue evidence. It produces one persisted set of compact
 speaking-character profiles with identity, aliases, sex or gender guidance,
-age-domain guidance, evidence, confidence, and one final
+age-domain guidance, demographic confidence, evidence, character confidence, and one final
 `voice_definition_prompt` per character.
 It exposes resumable operation state and keeps the page state and UI
 controller aligned with the project manifest.
@@ -179,7 +179,9 @@ Persisted character profile fields:
 - `canonical_name`
 - `aliases`
 - `gender_hint`
+- `gender_confidence`
 - `age_hint`
+- `age_confidence`
 - `voice_definition_prompt`
 - `preview_text`
 - `confidence`
@@ -201,6 +203,9 @@ Voice-definition rules:
 - `age_hint` is a flexible evidence-backed text field for exact ages or domains
   such as `child`, `teen`, `young adult`, `adult`, `middle-aged`, `old`, or
   `very old`; it stays empty when source evidence does not support age
+- `gender_confidence` and `age_confidence` store `high`, `medium`, `low`, or
+  an empty string for the matching demographic hint; they do not replace the
+  character-level `confidence` field
 - manual edits to the final prompt are preserved as the current character
   voice-design source
 - `preview_text` is an optional handoff sample later consumed by
@@ -265,10 +270,10 @@ Operation-state invariants:
   cancellation; checkpoints missing that boundary are ignored
 - synthesis progress is derived from the number of persisted
   `synthesized_profiles`; no separate `synthesis_progress_count` is stored
-- discovery-window candidate payloads use only the current window schema:
-  `canonical_name`, `aliases`, `age_hint`, `confidence`, and `evidence`; final
-  `gender_hint` and `voice_definition_prompt` fields are produced only by the
-  synthesis pass
+- discovery-window candidate payloads use the current window schema:
+  `canonical_name`, `aliases`, `gender_hint`, `gender_confidence`, `age_hint`,
+  `age_confidence`, `confidence`, and `evidence`; final
+  `voice_definition_prompt` is produced by the synthesis pass
 - completed discovery disables the page start action until reset
 - reset preserves upstream translation artifacts and existing narrator profiles
   or samples, then clears dependent character voice, speech, audio block, and

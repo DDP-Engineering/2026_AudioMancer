@@ -14,7 +14,7 @@
          theme runtime adapter.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 0.54.1
+@version 0.54.2
 """
 
 # ruff: noqa: E501
@@ -429,7 +429,9 @@ _UI_STRINGS = {
         "characters.canonical_name": "Canonical Name",
         "characters.aliases": "Aliases",
         "characters.gender_hint": "Gender Hint",
+        "characters.gender_confidence": "Gender Confidence",
         "characters.age_hint": "Age Hint",
+        "characters.age_confidence": "Age Confidence",
         "characters.voice_definition_prompt": "Voice Definition Prompt",
         "characters.confidence": "Confidence",
         "characters.evidence_note": "Selected source evidence excerpt will appear here.",
@@ -1412,7 +1414,9 @@ _UI_STRINGS = {
         "characters.canonical_name": "Nume Canonic",
         "characters.aliases": "Aliasuri",
         "characters.gender_hint": "Indicatie Gen",
+        "characters.gender_confidence": "Incredere Gen",
         "characters.age_hint": "Indicatie Varsta",
+        "characters.age_confidence": "Incredere Varsta",
         "characters.voice_definition_prompt": "Prompt Definitie Vocala",
         "characters.confidence": "Incredere",
         "characters.evidence_note": "Fragmentul de dovada selectat din sursa va aparea aici.",

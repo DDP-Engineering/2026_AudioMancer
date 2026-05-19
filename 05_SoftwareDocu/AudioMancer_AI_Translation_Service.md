@@ -18,8 +18,7 @@ the `AI Translation` UI.
 
 - read canonical chunk text from `chunks_text.json`
 - use the locked `project.json.target_language` as the only translation target
-- create pass-through translation records when original and target languages
-  match
+- call the configured AI profile even when original and target languages match
 - call the configured OpenAI-compatible profile for chunk translation
 - append optional operator-supplied translation rules to translation prompts
 - split oversized chunk text into budgeted translation segments before model
@@ -51,7 +50,6 @@ The component is implemented in:
 Main service entrypoints:
 
 - `ensure_translation_records(...)`
-- `ensure_pass_through_translation(...)`
 - `start_or_continue_translation(...)`
 - `retranslate_chunk(...)`
 - `update_translated_text(...)`
@@ -66,17 +64,15 @@ High-level flow:
 1. Text Chunking creates canonical chunks.
 2. The controller reads the locked target language from `project.json`.
 3. The state service displays original and target language indicators.
-4. If original language equals target language, the service creates
-   pass-through translated chunks without an AI call.
-5. Otherwise, the controller offers an optional word-wrapped prompt box for
-   operator translation rules before a fresh full translation run or selected
-   chunk retranslation.
-6. The service translates one chunk at a time, persists progress
+4. The controller offers an optional word-wrapped prompt box for operator
+   translation rules before a fresh full translation run or selected chunk
+   retranslation.
+5. The service translates one chunk at a time, persists progress
    after each chunk, and appends provider transaction metadata.
-7. The generated-translation phase ends with `translation_stage_status =
+6. The generated-translation phase ends with `translation_stage_status =
    translated`.
-8. Review remains incomplete until translated chunks are approved.
-9. The translation operation is considered complete only when
+7. Review remains incomplete until translated chunks are approved.
+8. The translation operation is considered complete only when
    `translation_stage_status = approved`.
 
 ## 4. Dependencies
@@ -125,7 +121,6 @@ Translated chunk records include:
 - `target_language`
 - `status`
 - `approved`
-- `approved_at`
 - warning and metadata fields used by review state
 
 Invariants:
@@ -134,8 +129,9 @@ Invariants:
 - reset clears translation artifacts and dependent downstream runtime artifacts,
   but preserves Narator Voice profiles, selected narrator state, selected
   narrator sample files, and the locked target language
-- same-language pass-through uses source text as translated text and avoids AI
-  rewriting
+- same-language translation uses the normal AI-assisted translation path; it
+  can rewrite, adapt, or normalize text according to the prompt and operator
+  instructions
 - translation stage status uses the current review tokens only:
   `not_started`, `in_progress`, `translated`, and `approved`; old
   translation-report stage aliases are not normalized
@@ -151,7 +147,7 @@ Invariants:
   `metadata.log_relative_path` to keep appending to the same AI transaction log,
   and persisted token-usage and prompt-rule metadata for continuity
 - `project.json.operations["translation"]` remains a compact Home summary with
-  status, progress, mode, timestamps, and warning count only
+  status, progress, mode, and warning count only
 - approval is required before downstream character and voice workflows consume
   translated text
 - manual translation edits clear the edited chunk approval when text changes
@@ -215,4 +211,3 @@ uv run pytest tests/test_ai_translation_service.py tests/test_ai_translation_sta
 
 - The service relies on language codes and labels already supported by
   `config.TRANSLATION_LANGUAGE_OPTIONS`.
-- Pass-through translation is intentionally not an AI rewrite or proofread.

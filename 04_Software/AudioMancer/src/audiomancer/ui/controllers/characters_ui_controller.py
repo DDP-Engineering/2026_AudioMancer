@@ -587,7 +587,7 @@ def _sync_manifest_after_discovery(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-08
-    @version    0.1.0
+    @version    0.2.0
     """
     _ = report
     assert window._current_project_root is not None
@@ -804,11 +804,19 @@ def _voice_definition_source_changed(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-04
-    @version    0.4.0
+    @version    0.5.0
     """
     if not isinstance(previous_profile, dict) or not isinstance(updated_profile, dict):
         return False
-    comparable_fields = ("canonical_name", "gender_hint", "age_hint", "voice_definition_prompt", "preview_text")
+    comparable_fields = (
+        "canonical_name",
+        "gender_hint",
+        "gender_confidence",
+        "age_hint",
+        "age_confidence",
+        "voice_definition_prompt",
+        "preview_text",
+    )
     return any(
         str(previous_profile.get(field_name, "")).strip() != str(updated_profile.get(field_name, "")).strip()
         for field_name in comparable_fields
@@ -1052,7 +1060,9 @@ def _build_manual_draft_profile(
             "canonical_name": canonical_name,
             "aliases": [],
             "gender_hint": "",
+            "gender_confidence": "",
             "age_hint": "",
+            "age_confidence": "",
             "voice_definition_prompt": "",
             "confidence": "",
             "evidence": [

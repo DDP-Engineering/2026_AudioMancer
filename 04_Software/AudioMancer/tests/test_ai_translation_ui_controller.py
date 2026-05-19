@@ -13,7 +13,7 @@
          persists reset behavior through the main window shell.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-22
-@version 0.5.0
+@version 0.5.1
 """
 
 # IMPORTS
@@ -142,7 +142,7 @@ def test_sync_manifest_after_translation_advances_only_after_full_approval(qtbot
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-22
-    @version    0.2.0
+    @version    0.3.0
     """
     project_root, _manifest = _create_project(tmp_path, "TranslationApprovalControllerProject")
     translation_root = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH
@@ -184,9 +184,6 @@ def test_sync_manifest_after_translation_advances_only_after_full_approval(qtbot
         "progress_current",
         "progress_total",
         "mode",
-        "started_at",
-        "completed_at",
-        "updated_at",
         "warning_count",
     }
 

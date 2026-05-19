@@ -14,7 +14,7 @@
          discovery workflow.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-08
-@version 0.14.0
+@version 0.15.0
 """
 
 # IMPORTS
@@ -28,19 +28,29 @@ from audiomancer import config
 from audiomancer.services import character_discovery_service, project_workspace_service
 
 
-def test_character_discovery_window_prompt_requests_age_hint() -> None:
+def test_character_discovery_prompts_request_demographic_confidence() -> None:
     """
-    @brief      Verify first-pass discovery asks models to extract supported character age hints.
+    @brief      Verify Character Discovery prompts request demographic hints and confidence values.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-15
-    @version    0.2.0
+    @version    0.3.0
     """
-    prompt_text = (config.APP_PROMPTS_PATH / "character_discovery_window_user.txt").read_text(encoding="utf-8")
+    window_prompt_text = (config.APP_PROMPTS_PATH / "character_discovery_window_user.txt").read_text(encoding="utf-8")
+    synthesis_prompt_text = (config.APP_PROMPTS_PATH / "character_profile_synthesis_user.txt").read_text(
+        encoding="utf-8"
+    )
 
-    assert '"age_hint": ""' in prompt_text
-    assert "Set `age_hint` only when the selected chunk text directly supports" in prompt_text
+    assert '"gender_hint": ""' in window_prompt_text
+    assert '"gender_confidence": ""' in window_prompt_text
+    assert '"age_hint": ""' in window_prompt_text
+    assert '"age_confidence": ""' in window_prompt_text
+    assert "Demographic inference rules:" in window_prompt_text
+    assert "Do not infer sex/gender from occupation alone." in window_prompt_text
+    assert '"gender_confidence": ""' in synthesis_prompt_text
+    assert '"age_confidence": ""' in synthesis_prompt_text
+    assert "Demographic synthesis rules:" in synthesis_prompt_text
 
 
 def test_start_discovery_persists_outputs_and_report(monkeypatch, tmp_path) -> None:
@@ -71,6 +81,11 @@ def test_start_discovery_persists_outputs_and_report(monkeypatch, tmp_path) -> N
                         {
                             "canonical_name": "Alice",
                             "aliases": ["Al"],
+                            "gender_hint": "female",
+                            "gender_confidence": "high",
+                            "age_hint": "adult",
+                            "age_confidence": "medium",
+                            "confidence": "high",
                             "evidence": [
                                 {
                                     "chunk_id": "chunk-0001",
@@ -91,7 +106,9 @@ def test_start_discovery_persists_outputs_and_report(monkeypatch, tmp_path) -> N
                     "canonical_name": "Alice",
                     "aliases": ["Al"],
                     "gender_hint": "female",
+                    "gender_confidence": "high",
                     "age_hint": "adult",
+                    "age_confidence": "medium",
                     "voice_definition_prompt": (
                         "Create a consistent spoken voice for Alice. Warm mezzo voice with gentle authority."
                     ),
@@ -124,9 +141,11 @@ def test_start_discovery_persists_outputs_and_report(monkeypatch, tmp_path) -> N
     assert len(profiles) == 1
     assert profiles[0]["canonical_name"] == "Alice"
     assert profiles[0]["gender_hint"] == "female"
+    assert profiles[0]["gender_confidence"] == "high"
     assert profiles[0]["age_hint"] == "adult"
+    assert profiles[0]["age_confidence"] == "medium"
     assert "gentle authority" in profiles[0]["voice_definition_prompt"]
-    assert "Age Domain: adult." in profiles[0]["voice_definition_prompt"]
+    assert "Age Domain: adult (medium confidence)." in profiles[0]["voice_definition_prompt"]
     assert profiles[0]["preview_text"] == (
         "Alice keeps her voice steady as she tells everyone to wait until the moon clears the tower."
     )
@@ -472,6 +491,10 @@ def test_manual_add_update_delete_and_reset(tmp_path) -> None:
     narrator_root.mkdir(parents=True, exist_ok=True)
     (narrator_root / config.NARRATOR_PROFILE_FILE_NAME).write_text("{}\n", encoding="utf-8")
 
+    existing_alice = character_discovery_service.load_character_profiles(project_root)[0]
+    assert existing_alice["gender_confidence"] == ""
+    assert existing_alice["age_confidence"] == ""
+
     added_profiles = character_discovery_service.add_character_profile(project_root, "Bob")
     bob_profile = next(profile for profile in added_profiles if str(profile.get("canonical_name")) == "Bob")
     assert bob_profile["evidence"][0]["chunk_id"] == character_discovery_service.MANUAL_CHARACTER_EVIDENCE_CHUNK_ID
@@ -671,14 +694,74 @@ def test_merge_character_candidates_keeps_role_speaker_candidate() -> None:
     assert merged_candidates[0]["canonical_name"] == "His Agent"
 
 
-def test_window_candidate_normalization_uses_current_schema_only() -> None:
+def test_merge_character_candidates_keeps_strongest_demographic_confidence() -> None:
     """
-    @brief      Verify window candidate normalization ignores removed discovery-pass fields.
+    @brief      Verify merged candidates keep the strongest demographic hint/confidence pairs.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-19
+    @version    0.1.0
+    """
+    merged_candidates = character_discovery_service._merge_character_candidates(  # noqa: SLF001
+        [
+            {
+                "canonical_name": "The Pilot",
+                "aliases": ["pilot"],
+                "gender_hint": "male",
+                "gender_confidence": "low",
+                "age_hint": "adult",
+                "age_confidence": "medium",
+                "confidence": "high",
+                "evidence": [
+                    {
+                        "chunk_id": "chunk-0001",
+                        "sequence_index": 1,
+                        "source_excerpt": '"Roger," said the military pilot.',
+                        "reason": "Direct speech is attributed to a military pilot.",
+                        "confidence": "high",
+                    }
+                ],
+                "has_dialogue_evidence": True,
+            },
+            {
+                "canonical_name": "pilot",
+                "aliases": ["The Pilot"],
+                "gender_hint": "female",
+                "gender_confidence": "high",
+                "age_hint": "middle-aged",
+                "age_confidence": "low",
+                "confidence": "medium",
+                "evidence": [
+                    {
+                        "chunk_id": "chunk-0002",
+                        "sequence_index": 2,
+                        "source_excerpt": '"Hold formation," she said.',
+                        "reason": "Pronoun evidence supports the speaker's gender.",
+                        "confidence": "high",
+                    }
+                ],
+                "has_dialogue_evidence": True,
+            },
+        ]
+    )
+
+    assert len(merged_candidates) == 1
+    assert merged_candidates[0]["gender_hint"] == "female"
+    assert merged_candidates[0]["gender_confidence"] == "high"
+    assert merged_candidates[0]["age_hint"] == "adult"
+    assert merged_candidates[0]["age_confidence"] == "medium"
+    assert merged_candidates[0]["confidence"] == "high"
+
+
+def test_window_candidate_normalization_preserves_demographic_confidence() -> None:
+    """
+    @brief      Verify window candidate normalization preserves current demographic fields only.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-15
-    @version    0.1.0
+    @version    0.2.0
     """
     source_chunk = _chunk_payload("chunk-0001", 1, '"Hello," said Alice.')
     chunk_map = {"chunk-0001": source_chunk}
@@ -701,8 +784,10 @@ def test_window_candidate_normalization_uses_current_schema_only() -> None:
             {
                 "canonical_name": "Alice",
                 "gender_hint": "female",
+                "gender_confidence": "HIGH",
                 "voice_definition_prompt": "Old discovery-pass voice prompt.",
                 "age_hint": "adult",
+                "age_confidence": "medium",
                 "confidence": "high",
                 "evidence": [{"chunk_id": "chunk-0001"}],
             }
@@ -711,8 +796,10 @@ def test_window_candidate_normalization_uses_current_schema_only() -> None:
     )
 
     assert normalized_candidates[0]["canonical_name"] == "Alice"
+    assert normalized_candidates[0]["gender_hint"] == "female"
+    assert normalized_candidates[0]["gender_confidence"] == "high"
     assert normalized_candidates[0]["age_hint"] == "adult"
-    assert "gender_hint" not in normalized_candidates[0]
+    assert normalized_candidates[0]["age_confidence"] == "medium"
     assert "voice_definition_prompt" not in normalized_candidates[0]
 
 

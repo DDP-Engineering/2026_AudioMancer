@@ -17,7 +17,10 @@ Return exactly one JSON object with this shape:
     {
       "canonical_name": "",
       "aliases": [],
+      "gender_hint": "",
+      "gender_confidence": "",
       "age_hint": "",
+      "age_confidence": "",
       "confidence": "",
       "evidence": [
         {
@@ -37,7 +40,17 @@ Do not include characters mentioned only by narration.
 Do include recurring unnamed or role-based speakers when direct speech is attributed to them, for example `his agent said`.
 When a role-based speaker is unnamed, name the role in the same language/form used in TEXT.
 For each returned character, provide at least one evidence item tied to spoken dialogue or direct speech.
-Set `age_hint` only when the selected chunk text directly supports an exact age or age domain. Useful domains include child, teen, young adult, adult, middle-aged, old, very old, or an exact/source-backed age phrase. Leave `age_hint` empty when age is not supported.
+Demographic inference rules:
+- `confidence` is the confidence that this is a real speaking character and that the canonical identity is correct.
+- `gender_confidence` is the confidence in `gender_hint`.
+- `age_confidence` is the confidence in `age_hint`.
+- Use `high`, `medium`, or `low` for each confidence field. Leave gender_confidence empty when gender_hint is empty. Leave age_confidence empty when age_hint is empty.
+- Estimate `gender_hint` and `age_hint` from direct evidence first: pronouns, titles, honorifics, kinship terms, explicit age phrases, descriptions such as old man or young woman, and how other speakers address the character.
+- When direct evidence is absent, you may make a conservative inference from strong local book context: occupation, rank, training requirements, seniority, military/social setting, school status, marriage/parenthood, command authority, or repeated role context.
+- Do not infer sex/gender from occupation alone. Occupation may contribute only when combined with era, military/social context, pronouns, titles, or other local evidence.
+- Prefer broad age domains: child, teen, young adult, adult, middle-aged, old, very old.
+- For role-based speakers, infer conservatively. Example: an experienced military pilot is unlikely to be a child or teen; use adult or middle-aged only when training, service, rank, or seniority context supports it.
+- If clues conflict or are weak, leave the hint empty rather than inventing certainty.
 Prefer `dialogue_span_id` from DIALOGUE_SPANS for each evidence item. Leave it empty only when no span id applies.
 Set evidence `confidence` to `high`, `medium`, or `low`; use `high` only when the evidence is anchored to a dialogue span, direct attribution, or clear direct dialogue punctuation.
 Use character-level `confidence` as:

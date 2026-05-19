@@ -13,7 +13,7 @@
          chunk review, manual edits, approval controls, and progress display.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-07
-@version 0.6.4
+@version 0.6.5
 """
 
 # IMPORTS
@@ -511,7 +511,7 @@ class AiTranslationPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-07
-        @version    0.1.0
+        @version    0.2.0
         """
         if self._loading_translation_text:
             return
@@ -527,7 +527,6 @@ class AiTranslationPage(QWidget):
             if translated_text.strip():
                 if translated_text != previous_text:
                     selected_chunk["approved"] = False
-                    selected_chunk["approved_at"] = None
                 selected_chunk["status"] = (
                     ai_translation_service.TRANSLATED_CHUNK_STATUS_APPROVED
                     if bool(selected_chunk.get("approved", False))
@@ -535,7 +534,6 @@ class AiTranslationPage(QWidget):
                 )
             else:
                 selected_chunk["approved"] = False
-                selected_chunk["approved_at"] = None
                 selected_chunk["status"] = ai_translation_service.TRANSLATED_CHUNK_STATUS_NOT_STARTED
             current_item = self._chunk_list.currentItem()
             if current_item is not None:
@@ -596,7 +594,7 @@ def _build_display_chunks(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-07
-    @version    0.1.0
+    @version    0.2.0
     """
     translated_by_id = {str(chunk.get("chunk_id", "")): dict(chunk) for chunk in translated_chunks}
     display_chunks: list[dict[str, object]] = []
@@ -611,8 +609,6 @@ def _build_display_chunks(
                     "source_text": str(source_chunk.get("text", "")),
                     "translated_text": "",
                     "approved": False,
-                    "approved_at": None,
-                    "translated_at": None,
                     "translation_profile_id": None,
                     "target_language": config.DEFAULT_TRANSLATION_TARGET_LANGUAGE,
                     "status": ai_translation_service.TRANSLATED_CHUNK_STATUS_NOT_STARTED,

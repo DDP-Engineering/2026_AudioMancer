@@ -13,7 +13,7 @@
          selected-chunk retranslation, and modal progress lifecycle.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-22
-@version 0.9.2
+@version 0.9.3
 """
 
 # IMPORTS
@@ -52,7 +52,7 @@ def handle_start_translation_requested(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-12
-    @version    0.4.0
+    @version    0.5.0
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._active_operation_kind is not None:
@@ -86,7 +86,7 @@ def handle_start_translation_requested(
     additional_translation_instructions = None
     if translation_status in {"running", "failed"} and translation_mode == "ai_assisted":
         pass
-    elif _translation_requires_ai(window, target_language):
+    else:
         additional_translation_instructions = prompt_ai_translation_instructions(window, current_language)
         if additional_translation_instructions is None:
             return
@@ -510,25 +510,6 @@ def _manifest_translation_operation(window: "MainWindow") -> dict[str, object]:
         return {}
     translation_operation = operations.get("translation", {})
     return dict(translation_operation) if isinstance(translation_operation, dict) else {}
-
-
-def _translation_requires_ai(window: "MainWindow", target_language: str) -> bool:
-    """
-    @brief      Determine whether the requested translation needs an AI model call.
-    @param[in]  window Active main window instance.
-    @param[in]  target_language Locked target language code.
-    @return     True when original and target languages differ or original language is unknown.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-12
-    @version    0.1.0
-    """
-    if not isinstance(window._current_manifest, dict):
-        return True
-    original_language = str(window._current_manifest.get("original_language", "") or "").strip()
-    if not original_language:
-        return True
-    return original_language != target_language
 
 
 def _persisted_target_language(window: "MainWindow") -> str:

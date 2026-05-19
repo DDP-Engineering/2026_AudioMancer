@@ -15,7 +15,7 @@
          operation state.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-22
-@version 0.18.0
+@version 0.18.1
 """
 
 # IMPORTS
@@ -89,6 +89,12 @@ EVIDENCE_CONFIDENCE_HIGH = "high"
 EVIDENCE_CONFIDENCE_MEDIUM = "medium"
 # @brief Evidence confidence token for weak or narrative-only support.
 EVIDENCE_CONFIDENCE_LOW = "low"
+# @brief Supported confidence tokens for inferred demographic fields.
+DEMOGRAPHIC_CONFIDENCE_VALUES = {
+    EVIDENCE_CONFIDENCE_HIGH,
+    EVIDENCE_CONFIDENCE_MEDIUM,
+    EVIDENCE_CONFIDENCE_LOW,
+}
 
 # @brief Persisted character-profile payload type.
 CharacterProfilePayload = dict[str, object]
@@ -879,7 +885,7 @@ def _build_manual_character_profile(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-08
-    @version    1.1.0
+    @version    1.2.0
     """
     return regenerate_character_voice_definition(
         {
@@ -887,7 +893,9 @@ def _build_manual_character_profile(
             "canonical_name": canonical_name,
             "aliases": [],
             "gender_hint": "",
+            "gender_confidence": "",
             "age_hint": "",
+            "age_confidence": "",
             "voice_definition_prompt": "",
             "preview_text": "",
             "confidence": "",
@@ -1609,7 +1617,7 @@ def _normalize_window_candidates(
     @return     Derived helper result.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.4.0
+    @version    0.5.0
     """
     if not isinstance(payload, list):
         return []
@@ -1621,11 +1629,16 @@ def _normalize_window_candidates(
         if not canonical_name:
             continue
         evidence = _normalize_evidence(entry.get("evidence", []), chunk_map)
+        gender_hint = str(entry.get("gender_hint", "")).strip()
+        age_hint = str(entry.get("age_hint", "")).strip()
         normalized_candidates.append(
             {
                 "canonical_name": canonical_name,
                 "aliases": _normalize_string_list(entry.get("aliases", [])),
-                "age_hint": str(entry.get("age_hint", "")).strip(),
+                "gender_hint": gender_hint,
+                "gender_confidence": _demographic_confidence_for_hint(gender_hint, entry.get("gender_confidence")),
+                "age_hint": age_hint,
+                "age_confidence": _demographic_confidence_for_hint(age_hint, entry.get("age_confidence")),
                 "confidence": str(entry.get("confidence", "")).strip(),
                 "evidence": evidence,
                 "has_dialogue_evidence": any(
@@ -1866,14 +1879,9 @@ def _merge_candidate_identity_group(identity_group: list[dict[str, object]]) -> 
         target["has_dialogue_evidence"] = bool(target.get("has_dialogue_evidence")) or bool(
             candidate.get("has_dialogue_evidence")
         )
-        for field_name in (
-            "age_hint",
-            "confidence",
-        ):
-            existing_value = str(target.get(field_name, "")).strip()
-            candidate_value = str(candidate.get(field_name, "")).strip()
-            if candidate_value and len(candidate_value) > len(existing_value):
-                target[field_name] = candidate_value
+        _merge_confidence_field(target, candidate, "confidence")
+        _merge_demographic_field(target, candidate, "gender")
+        _merge_demographic_field(target, candidate, "age")
     target["identity_alias_keys"] = sorted(alias_keys)
     target["identity_merge_count"] = len(identity_group)
     return target
@@ -1897,6 +1905,106 @@ def _rejected_candidate_payload(candidate: dict[str, object], reason: str) -> di
         "evidence_count": len(evidence),
         "identity_merge_count": int(candidate.get("identity_merge_count", 1)),
     }
+
+
+def _merge_demographic_field(target: dict[str, object], candidate: dict[str, object], field_prefix: str) -> None:
+    """
+    @brief      Merge one demographic hint and confidence pair into an identity-group target.
+    @param[in,out] target Merged candidate payload being built.
+    @param[in]  candidate Candidate payload being folded into the target.
+    @param[in]  field_prefix Demographic prefix, for example `gender` or `age`.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-19
+    @version    0.1.0
+    """
+    hint_field = f"{field_prefix}_hint"
+    confidence_field = f"{field_prefix}_confidence"
+    existing_hint = str(target.get(hint_field, "")).strip()
+    candidate_hint = str(candidate.get(hint_field, "")).strip()
+    existing_confidence = _normalize_demographic_confidence(target.get(confidence_field))
+    candidate_confidence = _normalize_demographic_confidence(candidate.get(confidence_field))
+    if not candidate_hint:
+        return
+    if (
+        not existing_hint
+        or _demographic_confidence_rank(candidate_confidence) > _demographic_confidence_rank(existing_confidence)
+        or candidate_confidence == existing_confidence
+        and len(candidate_hint) > len(existing_hint)
+    ):
+        target[hint_field] = candidate_hint
+        target[confidence_field] = candidate_confidence
+
+
+def _merge_confidence_field(target: dict[str, object], candidate: dict[str, object], field_name: str) -> None:
+    """
+    @brief      Merge one high-medium-low confidence field into an identity-group target.
+    @param[in,out] target Merged candidate payload being built.
+    @param[in]  candidate Candidate payload being folded into the target.
+    @param[in]  field_name Confidence field to merge.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-19
+    @version    0.1.0
+    """
+    existing_value = str(target.get(field_name, "")).strip()
+    candidate_value = str(candidate.get(field_name, "")).strip()
+    if not candidate_value:
+        return
+    if not existing_value or _demographic_confidence_rank(candidate_value) > _demographic_confidence_rank(
+        existing_value
+    ):
+        target[field_name] = candidate_value
+
+
+def _normalize_demographic_confidence(value: object) -> str:
+    """
+    @brief      Normalize one demographic-confidence token.
+    @param[in]  value Candidate confidence value.
+    @return     Supported confidence token or an empty string.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-19
+    @version    0.1.0
+    """
+    confidence = str(value or "").strip().casefold()
+    return confidence if confidence in DEMOGRAPHIC_CONFIDENCE_VALUES else ""
+
+
+def _demographic_confidence_for_hint(hint: object, confidence: object) -> str:
+    """
+    @brief      Normalize demographic confidence only when its matching hint exists.
+    @param[in]  hint Matching demographic hint value.
+    @param[in]  confidence Candidate confidence value.
+    @return     Supported confidence token or an empty string.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-19
+    @version    0.1.0
+    """
+    if not str(hint or "").strip():
+        return ""
+    return _normalize_demographic_confidence(confidence)
+
+
+def _demographic_confidence_rank(value: object) -> int:
+    """
+    @brief      Rank one demographic-confidence token for merge precedence.
+    @param[in]  value Candidate confidence value.
+    @return     Numeric rank where larger is stronger.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-19
+    @version    0.1.0
+    """
+    return {
+        "": 0,
+        EVIDENCE_CONFIDENCE_LOW: 1,
+        EVIDENCE_CONFIDENCE_MEDIUM: 2,
+        EVIDENCE_CONFIDENCE_HIGH: 3,
+    }.get(_normalize_demographic_confidence(value), 0)
 
 
 def _restore_evidence(payload: object) -> list[dict[str, object]]:
@@ -1993,13 +2101,22 @@ def _synthesis_candidate_payload(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-28
-    @version    0.3.0
+    @version    0.4.0
     """
     return {
         "character_id": str(candidate.get("character_id", "")).strip(),
         "canonical_name": str(candidate.get("canonical_name", "")).strip(),
         "aliases": _normalize_string_list(candidate.get("aliases", [])),
+        "gender_hint": str(candidate.get("gender_hint", "")).strip(),
+        "gender_confidence": _demographic_confidence_for_hint(
+            candidate.get("gender_hint", ""),
+            candidate.get("gender_confidence"),
+        ),
         "age_hint": str(candidate.get("age_hint", "")).strip(),
+        "age_confidence": _demographic_confidence_for_hint(
+            candidate.get("age_hint", ""),
+            candidate.get("age_confidence"),
+        ),
         "confidence": str(candidate.get("confidence", "")).strip(),
         "identity_merge_count": int(candidate.get("identity_merge_count", 1)),
         "evidence": [_compact_synthesis_evidence(item) for item in evidence_items],
@@ -2062,15 +2179,25 @@ def _build_profile_from_synthesis(
     @return     Derived helper result.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.4.0
+    @version    0.5.0
     """
+    gender_hint = str(response_payload.get("gender_hint", candidate.get("gender_hint", ""))).strip()
+    age_hint = str(response_payload.get("age_hint", candidate.get("age_hint", ""))).strip()
     return regenerate_character_voice_definition(
         {
             "character_id": str(candidate.get("character_id", "")),
             "canonical_name": str(response_payload.get("canonical_name", candidate.get("canonical_name", ""))).strip(),
             "aliases": _normalize_string_list(response_payload.get("aliases", candidate.get("aliases", []))),
-            "gender_hint": str(response_payload.get("gender_hint", "")).strip(),
-            "age_hint": str(response_payload.get("age_hint", candidate.get("age_hint", ""))).strip(),
+            "gender_hint": gender_hint,
+            "gender_confidence": _demographic_confidence_for_hint(
+                gender_hint,
+                response_payload.get("gender_confidence", candidate.get("gender_confidence", "")),
+            ),
+            "age_hint": age_hint,
+            "age_confidence": _demographic_confidence_for_hint(
+                age_hint,
+                response_payload.get("age_confidence", candidate.get("age_confidence", "")),
+            ),
             "voice_definition_prompt": str(response_payload.get("voice_definition_prompt", "")).strip(),
             CHARACTER_PREVIEW_TEXT_FIELD: _build_character_preview_text(response_payload, candidate),
             "confidence": str(response_payload.get("confidence", candidate.get("confidence", ""))).strip(),
@@ -2094,7 +2221,7 @@ def _normalize_character_profile(profile_payload: dict[str, object]) -> Characte
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-20
-    @version    2.1.0
+    @version    2.3.0
     """
     normalized_profile = _normalized_character_profile_core(profile_payload)
     normalized_voice_prompt = str(normalized_profile.get(CHARACTER_VOICE_PROMPT_FIELD, "")).strip()
@@ -2162,14 +2289,21 @@ def _normalized_character_profile_core(profile_payload: dict[str, object]) -> Ch
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    2.2.0
+    @version    2.3.0
     """
+    gender_hint = str(profile_payload.get("gender_hint", "")).strip()
+    age_hint = str(profile_payload.get("age_hint", "")).strip()
     normalized_profile: CharacterProfilePayload = {
         "character_id": str(profile_payload.get("character_id", "")).strip(),
         "canonical_name": str(profile_payload.get("canonical_name", "")).strip(),
         "aliases": _normalize_string_list(profile_payload.get("aliases", [])),
-        "gender_hint": str(profile_payload.get("gender_hint", "")).strip(),
-        "age_hint": str(profile_payload.get("age_hint", "")).strip(),
+        "gender_hint": gender_hint,
+        "gender_confidence": _demographic_confidence_for_hint(
+            gender_hint,
+            profile_payload.get("gender_confidence"),
+        ),
+        "age_hint": age_hint,
+        "age_confidence": _demographic_confidence_for_hint(age_hint, profile_payload.get("age_confidence")),
         CHARACTER_VOICE_PROMPT_FIELD: str(profile_payload.get(CHARACTER_VOICE_PROMPT_FIELD, "")).strip(),
         CHARACTER_PREVIEW_TEXT_FIELD: _normalized_character_preview_text(
             profile_payload.get(CHARACTER_PREVIEW_TEXT_FIELD, "")
@@ -2356,10 +2490,16 @@ def _character_voice_gender_instruction(profile_payload: dict[str, object]) -> s
     @return     Sex/gender instruction text without the field label.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-27
-    @version    0.1.0
+    @version    0.2.0
     """
     gender_hint = str(profile_payload.get("gender_hint", "")).strip()
     if gender_hint:
+        gender_confidence = _normalize_demographic_confidence(profile_payload.get("gender_confidence"))
+        if gender_confidence in {EVIDENCE_CONFIDENCE_LOW, EVIDENCE_CONFIDENCE_MEDIUM}:
+            return (
+                f"{gender_hint} ({gender_confidence} confidence). Match this cautiously in the vocal identity and "
+                "do not let it overpower clearer voice evidence."
+            )
         return (
             f"{gender_hint}. Match this explicitly in the vocal identity and do not replace it with a different "
             "default."
@@ -2376,10 +2516,16 @@ def _character_voice_age_instruction(profile_payload: dict[str, object]) -> str:
     @return     Age-domain instruction text without the field label.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-15
-    @version    0.1.0
+    @version    0.2.0
     """
     age_hint = str(profile_payload.get("age_hint", "")).strip()
     if age_hint:
+        age_confidence = _normalize_demographic_confidence(profile_payload.get("age_confidence"))
+        if age_confidence in {EVIDENCE_CONFIDENCE_LOW, EVIDENCE_CONFIDENCE_MEDIUM}:
+            return (
+                f"{age_hint} ({age_confidence} confidence). Match this cautiously in the vocal age and do not let it "
+                "overpower clearer voice evidence."
+            )
         return (
             f"{age_hint}. Match this explicitly in the vocal age and do not replace it with a younger or older default."
         )

@@ -16,7 +16,7 @@
          UI-driven cancellation responsive during provider waits.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-22
-@version 0.8.1
+@version 0.8.2
 """
 
 # IMPORTS
@@ -97,7 +97,7 @@ def chat_json(
     @exception  OperationCancelledError Raised when cooperative cancellation is requested.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-11
-    @version    0.6.1
+    @version    0.6.2
     """
     request_payload = {
         "model": str(profile_payload.get("model_name", "")).strip(),
@@ -168,6 +168,8 @@ def chat_json(
                 parsed_payload = _parse_json_content(raw_content)
                 normalized_usage = token_usage_service.normalize_provider_usage(raw_payload)
             except ValueError as parse_error:
+                if not raw_content.strip():
+                    raise
                 (
                     parsed_payload,
                     repair_body,

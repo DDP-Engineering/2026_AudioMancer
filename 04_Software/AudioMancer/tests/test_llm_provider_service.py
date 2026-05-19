@@ -13,7 +13,7 @@
          cleanup provider requests.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-22
-@version 0.8.1
+@version 0.8.2
 """
 
 # IMPORTS
@@ -612,6 +612,69 @@ def test_chat_json_repairs_non_json_output_with_followup_request(
     assert "response_format" not in json.loads(request_bodies[1])
     assert "Repair the following malformed JSON" in request_bodies[1]
     assert result["payload"]["translated_text"] == "Hello from the model."
+
+
+def test_chat_json_does_not_repair_empty_message_content(monkeypatch) -> None:
+    """
+    @brief      Verify empty assistant content fails without a JSON-repair follow-up request.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-19
+    @version    0.1.0
+    """
+    request_bodies: list[str] = []
+
+    def _fake_urlopen(http_request, **_kwargs):
+        """
+        @brief      Simulate a reasoning-only provider response with empty message content.
+        @param[in]  http_request Provider HTTP request.
+        @param[in]  _kwargs Ignored keyword request arguments.
+        @return     Fake empty-content provider response.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-19
+        @version    0.1.0
+        """
+        request_bodies.append(http_request.data.decode("utf-8"))
+        return _FakeResponse(
+            json.dumps(
+                {
+                    "choices": [
+                        {
+                            "message": {
+                                "content": "\n\n",
+                                "reasoning_content": "The model thought about the answer but emitted no JSON content.",
+                            }
+                        }
+                    ]
+                }
+            )
+        )
+
+    monkeypatch.setattr(llm_provider_service.request, "urlopen", _fake_urlopen)
+
+    try:
+        llm_provider_service.chat_json(
+            {
+                "id": "profile_1",
+                "backend_kind": "openai_compatible",
+                "base_url": "https://api.openai.com/v1",
+                "model_name": "qwen3.6-35b-a3b",
+                "request_timeout_seconds": 30,
+                "temperature": 0.1,
+                "max_output_tokens": 256,
+                "supports_structured_output": True,
+            },
+            "system",
+            "user",
+        )
+    except ValueError as error_object:
+        assert str(error_object) == "AI provider returned an empty response."
+        assert len(request_bodies) == 1
+    else:  # pragma: no cover - defensive assertion path.
+        raise AssertionError("Expected empty provider response to fail.")
 
 
 def test_chat_json_normalizes_provider_usage(monkeypatch) -> None:

@@ -12,6 +12,35 @@ All notable changes to this project will be documented in this file.
 
 No notable changes yet.
 
+## [1.2.1] - 2026-05-19
+
+### Changed
+
+- AI Translation now always uses the configured AI profile when Start
+  Translation is pressed, including when the source and target languages match.
+  Same-language translation is now an AI-assisted rewrite/adaptation path
+  instead of a source-text pass-through.
+- Removed the same-language pass-through helper and `pass_through` translation
+  operation mode.
+- Translation chunk records no longer persist `translated_at` or `approved_at`;
+  resume continues to use chunk text/status plus `translation_state.json`
+  checkpoints, token usage, prompt-rule fingerprints, and AI log metadata.
+- `translation_state.json` no longer duplicates the per-chunk translated text
+  records stored in `translated_text.json`.
+- LLM JSON parsing now fails fast on empty assistant content instead of sending
+  an empty malformed-JSON repair request back to the model.
+- Character Discovery now persists separate `gender_confidence` and
+  `age_confidence` fields while preserving existing evidence records and using
+  `confidence` only for speaking-character identity confidence.
+- Character Discovery prompts now instruct the LLM to estimate age and
+  sex/gender from direct evidence first and conservative local book context
+  when direct evidence is missing.
+- Characters page editing now shows and saves the new demographic confidence
+  fields with English and Romanian runtime labels.
+- Project package metadata and `audiomancer.__version__` were updated to
+  `1.2.1`.
+- Offline English and Romanian help bundles were updated to version `1.2.1`.
+
 ## [1.2.0] - 2026-05-18
 
 ### Changed
