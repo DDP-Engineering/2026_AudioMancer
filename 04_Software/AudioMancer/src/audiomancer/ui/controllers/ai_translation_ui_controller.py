@@ -13,7 +13,7 @@
          selected-chunk retranslation, and modal progress lifecycle.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-22
-@version 0.9.3
+@version 0.9.4
 """
 
 # IMPORTS
@@ -401,7 +401,6 @@ def _sync_manifest_after_translation(window: "MainWindow", report: dict[str, obj
             window._current_project_root,
             "translation",
             include_current=False,
-            keep_input_snapshots=False,
             preserve_operation_kinds=operation_runtime_service.NARRATOR_PROFILE_PRESERVED_OPERATION_KINDS,
         )
         default_operations = text_cleanup_state_service.normalized_manifest_operations({})
@@ -561,32 +560,6 @@ def _persisted_profile_id(window: "MainWindow") -> str | None:
             if profile_id not in (None, ""):
                 return str(profile_id)
     return window._ai_translation_page.current_profile_id()
-
-
-def _cancel_active_operation(window: "MainWindow") -> None:
-    """
-    @brief      Mark the active translation operation for cancellation.
-    @param[in]  window Active main window instance.
-    @return     None.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-07
-    @version    0.1.0
-    """
-    workflow_controller_service.cancel_active_operation(window)
-
-
-def _is_cancel_requested(window: "MainWindow") -> bool:
-    """
-    @brief      Check whether the current translation operation should cancel.
-    @param[in]  window Active main window instance.
-    @return     True when cancellation was requested.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-07
-    @version    0.1.1
-    """
-    return workflow_controller_service.is_cancel_requested(window)
 
 
 # END OF FILE

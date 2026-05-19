@@ -24,7 +24,6 @@
 import json
 from pathlib import Path
 import threading
-import time
 from urllib import error, parse, request
 
 from audiomancer import config
@@ -255,7 +254,7 @@ def _request_chat_completion_with_cancellation(
     @return     Helper result.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.1.1
+    @version    0.1.2
     """
     _LLM_PROVIDER_LOGGER.debug(
         "Starting cancellable AI provider request base_url=%s",
@@ -292,7 +291,6 @@ def _request_chat_completion_with_cancellation(
             _LLM_PROVIDER_LOGGER.info("AI provider request cancelled while waiting for model response.")
             raise OperationCancelledError("AI-assisted cleanup cancelled while waiting for the model response.")
         request_thread.join(timeout=0.05)
-        time.sleep(0.01)
     if "error" in error_holder:
         raise error_holder["error"]
     payload = result_holder.get("payload")

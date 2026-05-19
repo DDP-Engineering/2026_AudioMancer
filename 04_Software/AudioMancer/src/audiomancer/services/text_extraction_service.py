@@ -14,7 +14,7 @@
          maintains resumable extraction state in `00_extraction`.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-06
-@version 0.5.2
+@version 0.5.3
 """
 
 # IMPORTS
@@ -329,7 +329,6 @@ def reset_extraction_and_downstream(project_root: str | Path) -> None:
         project_root,
         "extraction",
         include_current=True,
-        keep_input_snapshots=True,
     )
 
 
@@ -635,18 +634,12 @@ def _build_operation_state(
     """
     return build_operation_state_payload(
         status=status,
-        input_paths=input_paths,
-        output_paths=output_paths,
-        artifact_paths=artifact_paths,
         progress_current=progress_current,
         progress_total=progress_total,
         mode="deterministic",
-        started_at=started_at,
-        completed_at=completed_at,
         warning_count=warning_count,
         metadata=metadata,
         resume_checkpoint=resume_checkpoint,
-        folder_relative_path=_EXTRACTION_FOLDER_NAME,
     )
 
 

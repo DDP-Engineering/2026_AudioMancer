@@ -16,7 +16,7 @@
          `80_audio_blocks` workflow artifacts.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-23
-@version 0.18.0
+@version 0.18.1
 """
 
 # IMPORTS
@@ -1121,7 +1121,6 @@ def reset_audio_blocks(project_root: str | Path) -> None:
         project_root,
         "audio_blocks",
         include_current=True,
-        keep_input_snapshots=False,
     )
 
 
@@ -2664,14 +2663,9 @@ def _build_operation_state(
     _ = completed_at
     return build_operation_state_payload(
         status=status,
-        input_paths=[],
-        output_paths=[],
-        artifact_paths=[],
         progress_current=_generated_count(audio_blocks),
         progress_total=len(speech_blocks),
         mode=_MODE,
-        started_at=None,
-        completed_at=None,
         warning_count=0,
         metadata={
             "voice_language": voice_language,

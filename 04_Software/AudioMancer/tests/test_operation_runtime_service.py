@@ -151,18 +151,12 @@ def test_build_operation_state_payload_uses_shared_envelope() -> None:
     """
     payload = operation_runtime_service.build_operation_state_payload(
         status="running",
-        input_paths=["input.txt"],
-        output_paths=["output.json"],
-        artifact_paths=["report.json"],
         progress_current=1,
         progress_total=3,
         mode="ai_assisted",
-        started_at="2026-04-29T12:00:00+00:00",
-        completed_at=None,
         warning_count=2,
         metadata={"warnings": ["one", "two"]},
         resume_checkpoint={"next_index": 1},
-        updated_at="2026-04-29T12:01:00+00:00",
     )
 
     assert payload == {
@@ -338,7 +332,6 @@ def test_reset_operation_data_clears_known_root_artifacts_only(tmp_path) -> None
         project_root,
         "cleanup",
         include_current=True,
-        keep_input_snapshots=False,
     )
 
     assert (project_root / "story.txt").is_file()
@@ -490,13 +483,18 @@ def test_ensure_default_operation_state_creates_compact_character_discovery_stat
     assert state_payload["status"] == "not_started"
     assert state_payload["progress_current"] == 0
     assert state_payload["progress_total"] == 0
-    assert state_payload["phase"] == "not_started"
-    assert state_payload["log_relative_path"] == ""
-    assert state_payload["checkpoint"] is None
+    assert state_payload["mode"] == "ai_assisted"
+    assert state_payload["warning_count"] == 0
+    assert state_payload["metadata"]["phase"] == "not_started"
+    assert state_payload["metadata"]["log_relative_path"] == ""
+    assert state_payload["metadata"]["ai_profile_id"] == ""
+    assert state_payload["metadata"]["additional_character_discovery_instructions"] == ""
+    assert state_payload["metadata"]["token_usage"]["usage_available"] is False
+    assert state_payload["resume_checkpoint"] is None
     assert "output_paths" not in state_payload
     assert "artifact_paths" not in state_payload
-    assert "metadata" not in state_payload
-    assert "resume_checkpoint" not in state_payload
+    assert "phase" not in state_payload
+    assert "checkpoint" not in state_payload
 
 
 def test_ensure_default_operation_state_creates_zero_audio_blocks_metadata(tmp_path) -> None:

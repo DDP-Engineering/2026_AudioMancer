@@ -14,7 +14,7 @@
          audiobook assets without modifying the active project workspace.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-25
-@version 0.4.1
+@version 0.5.0
 """
 
 # IMPORTS
@@ -23,7 +23,6 @@ from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 import json
 from pathlib import Path
-import re
 import zipfile
 
 from audiomancer import config
@@ -40,6 +39,7 @@ from audiomancer.services import (
 )
 from audiomancer.services.logging_service import get_component_logger
 from audiomancer.services.operation_runtime_service import is_path_inside_project as _is_path_inside_project
+from audiomancer.services.operation_runtime_service import safe_file_stem as _shared_safe_file_stem
 from audiomancer.services.time_service import utc_now_iso
 
 # CONSTANTS
@@ -136,17 +136,21 @@ _ARCHIVE_EXPORT_KINDS = {
 class ExportDocument:
     """
     @brief      Normalized export document model shared by text renderers.
+    @details    `character_dossiers` carries the structured per-character
+                label/value records so the Markdown renderer never re-parses
+                the plain-text projection.
     @return     Immutable export document payload.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.2.0
+    @date       2026-05-19
+    @version    0.3.0
     """
 
     title: str
     header_fields: list[tuple[str, str]]
     parameter_fields: list[tuple[str, str]]
     sections: list[tuple[str, str]]
+    character_dossiers: list[list[tuple[str, str]]] | None = None
 
 
 # PUBLIC API
@@ -542,8 +546,8 @@ def _build_characters_document(project_root: Path, manifest: dict[str, object]) 
     @return     Normalized export document.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
+    @date       2026-05-19
+    @version    0.2.0
     """
     report = character_discovery_service.load_character_discovery_report(project_root) or {}
     state = character_discovery_service.load_operation_state(project_root) or {}
@@ -566,11 +570,13 @@ def _build_characters_document(project_root: Path, manifest: dict[str, object]) 
             *_token_usage_fields(report, metadata),
         ]
     )
+    dossier_records = _character_dossier_records(characters)
     return ExportDocument(
         title="AudioMancer Export",
         header_fields=_header_fields(manifest, _EXPORT_KIND_LABELS[EXPORT_KIND_CHARACTERS]),
         parameter_fields=parameters,
-        sections=[("Character Dossiers", _render_character_dossiers(characters))],
+        sections=[("Character Dossiers", _render_character_dossiers(dossier_records))],
+        character_dossiers=dossier_records,
     )
 
 
@@ -646,8 +652,8 @@ def _render_markdown_document(document: ExportDocument) -> str:
     @return     Markdown document content.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
+    @date       2026-05-19
+    @version    0.2.0
     """
     lines = [f"# {document.title}", "", "## Header", "", "| Field | Value |", "| --- | --- |"]
     lines.extend(
@@ -658,23 +664,26 @@ def _render_markdown_document(document: ExportDocument) -> str:
         f"| {_escape_markdown(label)} | {_escape_markdown(value)} |" for label, value in document.parameter_fields
     )
     for section_title, section_body in document.sections:
-        lines.extend(["", f"## {section_title}", "", _render_markdown_section_body(section_title, section_body)])
+        lines.extend(
+            ["", f"## {section_title}", "", _render_markdown_section_body(section_title, section_body, document)]
+        )
     return "\n".join(lines).rstrip() + "\n"
 
 
-def _render_markdown_section_body(section_title: str, section_body: str) -> str:
+def _render_markdown_section_body(section_title: str, section_body: str, document: ExportDocument) -> str:
     """
     @brief      Render one Markdown section body with export-specific shaping.
     @param[in]  section_title Section heading.
     @param[in]  section_body Plain normalized section body.
+    @param[in]  document Source export document carrying structured payloads.
     @return     Markdown-ready section body.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.1
+    @date       2026-05-19
+    @version    0.2.0
     """
-    if section_title == "Character Dossiers":
-        return _render_character_dossiers_markdown(section_body)
+    if section_title == "Character Dossiers" and document.character_dossiers is not None:
+        return _render_character_dossiers_markdown(document.character_dossiers)
     if section_title == "Speech Blocks":
         return _render_speech_blocks_markdown(section_body)
     return section_body.strip()
@@ -698,51 +707,28 @@ def _render_speech_blocks_markdown(section_body: str) -> str:
     return "\n\n".join(rendered_blocks)
 
 
-def _render_character_dossiers_markdown(section_body: str) -> str:
+def _render_character_dossiers_markdown(records: list[list[tuple[str, str]]]) -> str:
     """
-    @brief      Render character dossiers as Markdown subsections and attribute tables.
-    @param[in]  section_body Plain character dossier section body.
+    @brief      Render structured character dossiers as Markdown subsections and attribute tables.
+    @param[in]  records Ordered per-character label/value records.
     @return     Markdown-ready character dossier section body.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
+    @date       2026-05-19
+    @version    0.2.0
     """
     rendered_dossiers: list[str] = []
-    for dossier_text in section_body.split("\n\n----\n\n"):
-        fields = _parse_character_dossier_fields(dossier_text)
-        if not fields:
+    for record in records:
+        if not record:
             continue
-        name = next((value for label, value in fields if label == "Name"), "Character")
+        name = next((value for label, value in record if label == "Name"), "Character")
         lines = [f"### {_escape_markdown(name)}", "", "| Attribute | Value |", "| --- | --- |"]
-        for label, value in fields:
+        for label, value in record:
             if label == "Name":
                 continue
             lines.append(f"| **{_escape_markdown(label)}** | {_escape_markdown(value)} |")
         rendered_dossiers.append("\n".join(lines))
     return "\n\n".join(rendered_dossiers).strip()
-
-
-def _parse_character_dossier_fields(dossier_text: str) -> list[tuple[str, str]]:
-    """
-    @brief      Parse plain character dossier label lines into Markdown table fields.
-    @param[in]  dossier_text Plain dossier text.
-    @return     Ordered label/value pairs.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
-    """
-    fields: list[tuple[str, str]] = []
-    for raw_line in dossier_text.splitlines():
-        if ":" not in raw_line:
-            continue
-        label, value = raw_line.split(":", maxsplit=1)
-        normalized_label = label.strip()
-        normalized_value = value.strip()
-        if normalized_label and normalized_value:
-            fields.append((normalized_label, normalized_value))
-    return fields
 
 
 def _render_txt_fields(fields: Iterable[tuple[str, str]]) -> list[str]:
@@ -1121,30 +1107,47 @@ def _operation_is_completed(manifest: dict[str, object], operation_kind: str) ->
     return isinstance(operation, dict) and str(operation.get("status", "")).strip() == "completed"
 
 
-def _render_character_dossiers(characters: list[dict[str, object]]) -> str:
+def _character_dossier_records(characters: list[dict[str, object]]) -> list[list[tuple[str, str]]]:
     """
-    @brief      Render compact character profiles into readable dossiers.
+    @brief      Build the structured per-character label/value records.
+    @details    Single source of truth shared by the plain-text and Markdown
+                character renderers so neither re-parses the other's output.
     @param[in]  characters Normalized character profile payloads.
-    @return     Character dossier text.
+    @return     Ordered per-character label/value records (empty records dropped).
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.3.0
+    @date       2026-05-19
+    @version    0.1.0
     """
-    dossiers: list[str] = []
-    fields = [
+    field_map = [
         ("Name", "canonical_name"),
         ("Gender Hint", "gender_hint"),
         ("Age Hint", "age_hint"),
         ("Voice Definition Prompt", "voice_definition_prompt"),
     ]
+    records: list[list[tuple[str, str]]] = []
     for character in characters:
-        lines = []
-        for label, key in fields:
+        record: list[tuple[str, str]] = []
+        for label, key in field_map:
             value = _format_value(character.get(key))
             if value != "-":
-                lines.append(f"{label}: {value}")
-        dossiers.append("\n".join(lines))
+                record.append((label, value))
+        if record:
+            records.append(record)
+    return records
+
+
+def _render_character_dossiers(records: list[list[tuple[str, str]]]) -> str:
+    """
+    @brief      Render structured character records into readable plain dossiers.
+    @param[in]  records Ordered per-character label/value records.
+    @return     Character dossier text.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-19
+    @version    0.4.0
+    """
+    dossiers = ["\n".join(f"{label}: {value}" for label, value in record) for record in records]
     return "\n\n----\n\n".join(dossier for dossier in dossiers if dossier.strip())
 
 
@@ -1453,17 +1456,15 @@ def _source_original_name(manifest: dict[str, object]) -> str:
 
 def _safe_file_stem(value: str) -> str:
     """
-    @brief      Normalize one default export file stem.
+    @brief      Normalize one default export file stem via the shared helper.
     @param[in]  value Candidate file stem.
     @return     Filesystem-safe file stem.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
+    @date       2026-05-19
+    @version    0.2.0
     """
-    normalized = re.sub(r'[<>:"/\\|?*\x00-\x1F]+', "_", str(value).strip())
-    normalized = re.sub(r"\s+", "_", normalized).strip("._ ")
-    return normalized or "AudioMancer"
+    return _shared_safe_file_stem(value)
 
 
 def _unique_archive_stem(value: object, used_names: set[str]) -> str:

@@ -15,7 +15,7 @@
          structure, and persists cleanup artifacts with resumable state.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-06
-@version 0.5.2
+@version 0.5.3
 """
 
 # IMPORTS
@@ -510,14 +510,9 @@ def _build_operation_state(
         metadata["cleaned_pages"] = list(cleaned_pages)
     return build_operation_state_payload(
         status=status,
-        input_paths=[],
-        output_paths=[],
-        artifact_paths=[],
         progress_current=progress_current,
         progress_total=progress_total,
         mode="deterministic",
-        started_at=started_at,
-        completed_at=completed_at,
         warning_count=len(warnings),
         metadata=metadata,
         resume_checkpoint=resume_checkpoint,

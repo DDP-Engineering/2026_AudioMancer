@@ -14,7 +14,7 @@
          orchestration service.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-29
-@version 0.3.0
+@version 0.3.1
 """
 
 # IMPORTS
@@ -225,14 +225,9 @@ def build_operation_state(
             resume_checkpoint["budget_metadata"] = dict(budget_metadata)
     return build_operation_state_payload(
         status=status,
-        input_paths=[],
-        output_paths=[],
-        artifact_paths=[],
         progress_current=processed_chunk_count,
         progress_total=len(source_chunks),
         mode="ai_assisted",
-        started_at=None,
-        completed_at=None,
         warning_count=len(warning_entries),
         metadata=metadata_payload,
         resume_checkpoint=resume_checkpoint,

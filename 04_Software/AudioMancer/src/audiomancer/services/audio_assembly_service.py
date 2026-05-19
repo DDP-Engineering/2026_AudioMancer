@@ -14,7 +14,7 @@
          generation through root-level state and report artifacts.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-25
-@version 0.6.0
+@version 0.6.1
 """
 
 # IMPORTS
@@ -816,14 +816,9 @@ def _build_operation_state(
     _ = project_root
     return build_operation_state_payload(
         status=str(report.get("operation_status", "not_started")),
-        input_paths=[],
-        output_paths=[],
-        artifact_paths=[],
         progress_current=int(report.get("generated_output_count", 0)),
         progress_total=len(output_plan),
         mode=_MODE,
-        started_at=None,
-        completed_at=None,
         warning_count=int(report.get("warning_count", 0)),
         metadata={
             "input_fingerprint": str(report.get("input_fingerprint", "")),

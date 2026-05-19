@@ -15,7 +15,7 @@
          based operation state plus AI transaction logging.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 0.19.0
+@version 0.19.1
 """
 
 # IMPORTS
@@ -631,7 +631,7 @@ def reset_speech_blocks(project_root: str | Path) -> None:
     @date       2026-04-24
     @version    0.1.0
     """
-    reset_operation_data(project_root, "speech_blocks", include_current=True, keep_input_snapshots=False)
+    reset_operation_data(project_root, "speech_blocks", include_current=True)
 
 
 @trace_function(_SPEECH_BLOCKS_LOGGER)

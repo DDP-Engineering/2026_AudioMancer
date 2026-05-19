@@ -15,7 +15,7 @@
          resumable window-based progress plus AI transaction logs.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-07
-@version 0.9.1
+@version 0.9.2
 """
 
 # IMPORTS
@@ -1253,14 +1253,9 @@ def _build_operation_state(
     _ = metadata_path
     return build_operation_state_payload(
         status=status,
-        input_paths=[],
-        output_paths=[],
-        artifact_paths=[],
         progress_current=progress_current,
         progress_total=progress_total,
         mode="ai_assisted",
-        started_at=started_at,
-        completed_at=completed_at,
         warning_count=len(warnings),
         metadata={
             "warnings": list(warnings),

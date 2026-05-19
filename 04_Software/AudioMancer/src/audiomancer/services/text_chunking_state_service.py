@@ -14,7 +14,7 @@
          Chunking page.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-24
-@version 0.9.0
+@version 0.9.1
 """
 
 # IMPORTS
@@ -400,14 +400,9 @@ def _write_manual_chunking_metadata(
     }
     state = operation_runtime_service.build_operation_state_payload(
         status="completed",
-        input_paths=[],
-        output_paths=[],
-        artifact_paths=[],
         progress_current=len(chunks),
         progress_total=len(chunks),
         mode=str(existing_state.get("mode") or report.get("chunking_mode") or "manual"),
-        started_at=None,
-        completed_at=None,
         warning_count=len(warnings),
         metadata=metadata,
         resume_checkpoint=None,

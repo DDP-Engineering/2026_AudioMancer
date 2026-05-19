@@ -15,7 +15,7 @@
          synchronization for the Text Cleanup page.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-24
-@version 0.8.3
+@version 0.8.4
 """
 
 # IMPORTS
@@ -137,7 +137,6 @@ def handle_deterministic_cleanup_requested(window: "MainWindow") -> None:
             window._current_project_root,
             "cleanup",
             include_current=True,
-            keep_input_snapshots=False,
             preserve_operation_kinds=operation_runtime_service.TEXT_REVISION_PRESERVED_OPERATION_KINDS,
         )
         reset_manifest = text_cleanup_state_service.build_manifest_after_operation_reset(
@@ -225,7 +224,6 @@ def handle_ai_cleanup_requested(window: "MainWindow", profile_id: str) -> None:
                 window._current_project_root,
                 "cleanup",
                 include_current=True,
-                keep_input_snapshots=False,
                 preserve_operation_kinds=operation_runtime_service.TEXT_REVISION_PRESERVED_OPERATION_KINDS,
             )
             reset_manifest = text_cleanup_state_service.build_manifest_after_operation_reset(
@@ -359,33 +357,6 @@ def handle_operation_progress(
     _ = progress_current
     _ = progress_total
     misc_ui_controller.update_progress_dialog(window, percent, message, token_usage)
-
-
-def cancel_active_operation(window: "MainWindow") -> None:
-    """
-    @brief      Request cooperative cancellation for the active synchronous operation.
-    @param[in]  window Active main window shell.
-    @return     None.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.1.1
-    """
-    if window._active_operation_kind is not None:
-        window._operation_cancel_requested = True
-
-
-def is_cancel_requested(window: "MainWindow") -> bool:
-    """
-    @brief      Return whether the active modal operation was asked to cancel.
-    @param[in]  window Active main window shell.
-    @return     True when cooperative cancellation was requested.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.1.3
-    """
-    return window._operation_cancel_requested
 
 
 def handle_operation_success(window: "MainWindow", success_handler, result_payload: object) -> None:

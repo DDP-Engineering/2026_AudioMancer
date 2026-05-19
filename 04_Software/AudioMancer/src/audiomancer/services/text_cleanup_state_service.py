@@ -14,7 +14,7 @@
          including manual cleaned-text edits.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-24
-@version 0.13.0
+@version 0.13.1
 """
 
 # IMPORTS
@@ -34,7 +34,6 @@ from audiomancer.services import (
     text_extraction_service,
     ui_state_service,
 )
-from audiomancer.services.time_service import utc_now_iso as _utc_now_iso
 
 # PUBLIC API
 
@@ -156,7 +155,6 @@ def save_cleaned_text_edit(project_root: Path, manifest: dict[str, object], clea
         project_root,
         "cleanup",
         include_current=False,
-        keep_input_snapshots=False,
         preserve_operation_kinds=operation_runtime_service.TEXT_REVISION_PRESERVED_OPERATION_KINDS,
     )
     updated_manifest = build_manifest_after_cleanup_edit(manifest)
@@ -525,45 +523,17 @@ def _write_manual_cleanup_state(
     @date       2026-05-17
     @version    0.2.0
     """
-    cleaned_text_path = operation_runtime_service.build_operation_output_path(
-        project_root,
-        "cleanup",
-        config.CLEANED_TEXT_FILE_NAME,
-    )
-    metadata_path = cleanup_metadata_service.cleanup_metadata_path(project_root)
     state_path = operation_runtime_service.build_operation_output_path(
         project_root,
         "cleanup",
         config.CLEANUP_STATE_FILE_NAME,
     )
-    report_path = operation_runtime_service.build_operation_output_path(
-        project_root,
-        "cleanup",
-        config.CLEANUP_REPORT_FILE_NAME,
-    )
-    input_paths = []
-    if (project_root / config.EXTRACTED_TEXT_FILE_NAME).is_file():
-        input_paths.append(config.EXTRACTED_TEXT_FILE_NAME)
-    output_paths = []
-    if cleaned_text_path.is_file():
-        output_paths.append(operation_runtime_service.relative_to_project(project_root, cleaned_text_path))
-    if metadata_path.is_file():
-        output_paths.append(operation_runtime_service.relative_to_project(project_root, metadata_path))
-    artifact_paths = (
-        [operation_runtime_service.relative_to_project(project_root, report_path)] if report_path.is_file() else []
-    )
     paragraph_count = int(metadata_payload.get("paragraph_count", 0) or 0)
-    timestamp = _utc_now_iso()
     state_payload = operation_runtime_service.build_operation_state_payload(
         status="completed",
-        input_paths=input_paths,
-        output_paths=output_paths,
-        artifact_paths=artifact_paths,
         progress_current=paragraph_count,
         progress_total=paragraph_count,
         mode="manual_edit",
-        started_at=timestamp,
-        completed_at=timestamp,
         warning_count=0,
         metadata={
             "warnings": [],

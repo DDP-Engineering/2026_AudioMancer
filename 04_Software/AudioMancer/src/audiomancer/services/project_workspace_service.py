@@ -13,7 +13,7 @@
          using one minimal root-level `project.json` manifest contract.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-20
-@version    2.1.0
+@version    2.1.1
 """
 
 # IMPORTS
@@ -69,30 +69,9 @@ _UNSUPPORTED_LEGACY_WORKFLOW_FOLDERS = (
     "90_audio_assembly",
 )
 # @brief Workflow milestone promoted by each completed operation.
-_OPERATION_STAGE_BY_KIND = {
-    "cleanup": "text_cleanup_ready",
-    "chunking": "text_chunking_ready",
-    "translation": "translation_ready",
-    "character_discovery": "character_discovery_ready",
-    "narrator_definition": "narrator_definition_ready",
-    "character_voices": "character_voices_ready",
-    "speech_blocks": "speech_blocks_ready",
-    "audio_blocks": "audio_blocks_ready",
-    "audio_assembly": "audio_assembly_ready",
-}
+_OPERATION_STAGE_BY_KIND = config.OPERATION_STAGE_BY_KIND
 # @brief Ordered operation kinds that can be verified from local artifacts.
-_HEALABLE_OPERATION_ORDER = (
-    "extraction",
-    "cleanup",
-    "chunking",
-    "translation",
-    "character_discovery",
-    "narrator_definition",
-    "character_voices",
-    "speech_blocks",
-    "audio_blocks",
-    "audio_assembly",
-)
+_HEALABLE_OPERATION_ORDER = config.WORKFLOW_OPERATION_ORDER
 
 
 # PUBLIC API

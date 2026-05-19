@@ -14,7 +14,7 @@
          operation state for interrupted deterministic chunking runs.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-11
-@version 0.5.0
+@version 0.5.1
 """
 
 # IMPORTS
@@ -447,14 +447,9 @@ def _build_operation_state(
     _ = report_path
     return build_operation_state_payload(
         status=status,
-        input_paths=[],
-        output_paths=[],
-        artifact_paths=[],
         progress_current=progress_current,
         progress_total=progress_total,
         mode="deterministic",
-        started_at=started_at,
-        completed_at=completed_at,
         warning_count=len(warnings),
         metadata={
             "warnings": list(warnings),

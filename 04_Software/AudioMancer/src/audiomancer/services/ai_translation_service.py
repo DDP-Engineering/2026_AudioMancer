@@ -13,7 +13,7 @@
          executes resumable translation over canonical chunking output.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-07
-@version 0.12.0
+@version 0.12.1
 """
 
 # IMPORTS
@@ -797,7 +797,6 @@ def reset_translation(project_root: str | Path) -> None:
         project_root,
         "translation",
         include_current=True,
-        keep_input_snapshots=False,
         preserve_operation_kinds=NARRATOR_PROFILE_PRESERVED_OPERATION_KINDS,
     )
 

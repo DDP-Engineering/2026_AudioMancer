@@ -13,7 +13,7 @@
          without registering the archive as a project runtime artifact.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-25
-@version 0.3.1
+@version 0.3.2
 """
 
 # IMPORTS
@@ -23,7 +23,6 @@ from datetime import datetime
 from functools import partial
 import os
 from pathlib import Path
-import re
 import zipfile
 
 from audiomancer import config
@@ -230,17 +229,15 @@ def _raise_if_cancelled(cancel_requested) -> None:
 
 def _safe_file_stem(value: str) -> str:
     """
-    @brief      Normalize one operator-facing name into a safe file stem.
+    @brief      Normalize one operator-facing name into a safe file stem via the shared helper.
     @param[in]  value Raw project name.
     @return     Filesystem-safe file stem.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.1.0
+    @date       2026-05-19
+    @version    0.2.0
     """
-    normalized = re.sub(r"[^A-Za-z0-9._-]+", "_", value.strip())
-    normalized = normalized.strip("._-")
-    return normalized or "AudioMancer"
+    return operation_runtime_service.safe_file_stem(value)
 
 
 # END OF FILE

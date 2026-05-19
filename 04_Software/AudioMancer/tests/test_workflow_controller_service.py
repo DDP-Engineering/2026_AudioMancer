@@ -9,38 +9,46 @@
 """
 @file test_workflow_controller_service.py
 @brief Focused tests for shared workflow controller helpers.
-@details Verifies cancellation flag handling and enabled AI profile resolution.
+@details Verifies the worker-visible cancellation path and enabled AI profile
+         resolution.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-29
-@version 0.1.0
+@version 0.2.0
 """
 
 # IMPORTS
 
+from threading import Event
 from types import SimpleNamespace
 
-from audiomancer.ui.controllers import workflow_controller_service
+from audiomancer.ui.controllers import operation_runner_controller, workflow_controller_service
 
 
-def test_cancel_active_operation_only_marks_active_workflow() -> None:
+def test_request_operation_cancel_sets_worker_visible_event() -> None:
     """
-    @brief      Verify shared cancellation helpers only mark an active workflow.
+    @brief      Verify cancellation flips the worker-visible cancel event, not just a flag.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
+    @date       2026-05-19
     @version    0.1.0
     """
-    window = SimpleNamespace(_active_operation_kind=None, _operation_cancel_requested=False)
+    cancel_event = Event()
+    window = SimpleNamespace(
+        _active_operation_kind=None,
+        _operation_cancel_requested=False,
+        _operation_cancel_event=cancel_event,
+    )
 
-    workflow_controller_service.cancel_active_operation(window)
-
-    assert workflow_controller_service.is_cancel_requested(window) is False
+    operation_runner_controller.request_operation_cancel(window)
+    assert cancel_event.is_set() is False
+    assert window._operation_cancel_requested is False
 
     window._active_operation_kind = "translation"
-    workflow_controller_service.cancel_active_operation(window)
+    operation_runner_controller.request_operation_cancel(window)
 
-    assert workflow_controller_service.is_cancel_requested(window) is True
+    assert window._operation_cancel_requested is True
+    assert cancel_event.is_set() is True
 
 
 def test_resolve_enabled_ai_profile_ignores_disabled_or_missing_profiles() -> None:

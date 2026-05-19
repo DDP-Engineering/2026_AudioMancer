@@ -14,7 +14,7 @@
          generation report/state sidecars without generating narrator audio.
 @author Eng. Dan Dumitru Pasare
 @date 2026-05-11
-@version 0.4.0
+@version 0.4.1
 """
 
 # IMPORTS
@@ -1360,14 +1360,9 @@ def _write_operation_state(
     _ = completed_at
     state_payload = build_operation_state_payload(
         status=status,
-        input_paths=[],
-        output_paths=[],
-        artifact_paths=[],
         progress_current=progress_current,
         progress_total=progress_total,
         mode=NARRATOR_PROFILE_GENERATION_MODE_AI_ASSISTED,
-        started_at=None,
-        completed_at=None,
         warning_count=0,
         metadata={
             "ai_profile_id": profile_id,

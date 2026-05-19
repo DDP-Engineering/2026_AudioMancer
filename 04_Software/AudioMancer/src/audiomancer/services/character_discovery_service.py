@@ -15,7 +15,7 @@
          operation state.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-22
-@version 0.18.1
+@version 0.18.2
 """
 
 # IMPORTS
@@ -791,7 +791,6 @@ def reset_character_discovery(project_root: str | Path) -> None:
         project_root,
         "character_discovery",
         include_current=True,
-        keep_input_snapshots=False,
         preserve_operation_kinds=NARRATOR_PROFILE_PRESERVED_OPERATION_KINDS,
     )
 
