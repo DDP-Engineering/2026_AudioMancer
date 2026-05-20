@@ -392,7 +392,6 @@ def test_text_chunking_ui_controller_ai_chunk_resume_skips_confirmation(
     manifest["operations"]["cleanup"]["status"] = "completed"
     manifest["operations"]["cleanup"]["output_paths"] = [config.CLEANED_TEXT_FILE_NAME]
     manifest["operations"]["chunking"] = {
-        "folder_relative_path": "20_chunking",
         "status": "running",
         "mode": "ai_assisted",
         "metadata": {
@@ -492,7 +491,6 @@ def test_text_chunking_ui_controller_ai_chunk_resume_uses_selected_profile(
     manifest["operations"]["cleanup"]["status"] = "completed"
     manifest["operations"]["cleanup"]["output_paths"] = [config.CLEANED_TEXT_FILE_NAME]
     manifest["operations"]["chunking"] = {
-        "folder_relative_path": "20_chunking",
         "status": "running",
         "mode": "ai_assisted",
         "metadata": {

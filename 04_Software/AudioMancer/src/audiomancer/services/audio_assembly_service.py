@@ -14,7 +14,7 @@
          generation through root-level state and report artifacts.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-25
-@version 0.5.3
+@version 0.6.1
 """
 
 # IMPORTS
@@ -232,8 +232,6 @@ def has_persisted_audio_assembly(project_root: str | Path) -> bool:
     if isinstance(operation_state, dict):
         has_runtime_state = str(operation_state.get("status", "")).strip() != AUDIO_ASSEMBLY_STAGE_NOT_STARTED or any(
             (
-                bool(operation_state.get("output_paths")),
-                bool(operation_state.get("artifact_paths")),
                 int(operation_state.get("progress_current", 0) or 0) > 0,
                 int(operation_state.get("progress_total", 0) or 0) > 0,
             )
@@ -689,7 +687,6 @@ def _compose_output_file(
         "chunk_ids": list(output_item.get("chunk_ids", [])),
         "duration_seconds": duration_seconds,
         "generated": True,
-        "generated_at": _utc_now_iso(),
         "output_format": OUTPUT_FORMAT_WAV,
     }
 
@@ -797,9 +794,6 @@ def _build_report(
         "outputs": [_normalize_output_record(output) for output in outputs],
         "warning_count": len(warnings),
         "warnings": list(warnings),
-        "started_at": started_at,
-        "completed_at": completed_at,
-        "updated_at": _utc_now_iso(),
     }
 
 
@@ -819,24 +813,12 @@ def _build_operation_state(
     @date       2026-04-25
     @version    0.2.0
     """
-    report_path = build_operation_output_path(project_root, "audio_assembly", config.AUDIO_ASSEMBLY_REPORT_FILE_NAME)
-    state_path = build_operation_output_path(project_root, "audio_assembly", config.AUDIO_ASSEMBLY_STATE_FILE_NAME)
-    output_paths = [str(output.get("audio_relative_path", "")) for output in report.get("outputs", [])]
-    output_paths = [path for path in output_paths if path]
+    _ = project_root
     return build_operation_state_payload(
         status=str(report.get("operation_status", "not_started")),
-        input_paths=[config.AUDIO_BLOCKS_OUTPUT_FILE_NAME],
-        output_paths=output_paths,
-        artifact_paths=[
-            relative_to_project(project_root, report_path),
-            relative_to_project(project_root, state_path),
-            *output_paths,
-        ],
         progress_current=int(report.get("generated_output_count", 0)),
         progress_total=len(output_plan),
         mode=_MODE,
-        started_at=report.get("started_at"),
-        completed_at=report.get("completed_at"),
         warning_count=int(report.get("warning_count", 0)),
         metadata={
             "input_fingerprint": str(report.get("input_fingerprint", "")),
@@ -919,8 +901,6 @@ def _requires_manual_reset(existing_state: dict[str, object], input_fingerprint:
         progress_total = 0
     has_runtime_artifacts = any(
         (
-            bool(existing_state.get("output_paths")),
-            bool(existing_state.get("artifact_paths")),
             progress_current > 0,
             progress_total > 0,
         )
@@ -1153,7 +1133,6 @@ def _normalize_output_record(payload: dict[str, object]) -> dict[str, object]:
         "chunk_ids": list(payload.get("chunk_ids", [])) if isinstance(payload.get("chunk_ids"), list) else [],
         "duration_seconds": float(payload.get("duration_seconds", 0.0) or 0.0),
         "generated": bool(payload.get("generated", False)),
-        "generated_at": str(payload.get("generated_at", "") or ""),
         "output_format": str(payload.get("output_format", OUTPUT_FORMAT_WAV)).strip() or OUTPUT_FORMAT_WAV,
     }
 
@@ -1180,16 +1159,19 @@ def _bounded_int(value: object, minimum: int, maximum: int, fallback: int) -> in
 
 def _resolve_started_at(existing_state: dict[str, object]) -> str:
     """
-    @brief      Resolve the operation start timestamp for a resumed or fresh run.
+    @brief      Resolve the runtime token for a resumed or fresh run.
     @param[in]  existing_state Existing operation-state payload.
-    @return     Existing start timestamp or the current UTC timestamp.
+    @return     Existing runtime token or the current UTC timestamp.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.1.0
+    @version    0.2.0
     """
-    started_at = str(existing_state.get("started_at", "") or "").strip() if isinstance(existing_state, dict) else ""
-    return started_at or _utc_now_iso()
+    resume_checkpoint = existing_state.get("resume_checkpoint", {}) if isinstance(existing_state, dict) else {}
+    if not isinstance(resume_checkpoint, dict):
+        resume_checkpoint = {}
+    run_token = str(resume_checkpoint.get("run_token", "") or "").strip()
+    return run_token or _utc_now_iso()
 
 
 # END OF FILE

@@ -15,7 +15,7 @@
          based operation state plus AI transaction logging.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 0.18.5
+@version 0.19.1
 """
 
 # IMPORTS
@@ -54,9 +54,6 @@ from audiomancer.services.operation_runtime_service import (
 )
 from audiomancer.services.operation_runtime_service import (
     emit_progress_update as _emit_progress,
-)
-from audiomancer.services.operation_runtime_service import (
-    is_missing_runtime_value as _is_missing_runtime_value,
 )
 from audiomancer.services.operation_runtime_service import (
     valid_runtime_value as _valid_runtime_value,
@@ -634,7 +631,7 @@ def reset_speech_blocks(project_root: str | Path) -> None:
     @date       2026-04-24
     @version    0.1.0
     """
-    reset_operation_data(project_root, "speech_blocks", include_current=True, keep_input_snapshots=False)
+    reset_operation_data(project_root, "speech_blocks", include_current=True)
 
 
 @trace_function(_SPEECH_BLOCKS_LOGGER)
@@ -1925,7 +1922,7 @@ def _rebuild_report_with_prompt_rules(
     @param[in]  token_usage Current cumulative token-usage payload.
     @param[in]  budget_metadata Optional context-budget metadata.
     @param[in]  additional_speech_block_instructions Optional operator-supplied Speech Blocks rules.
-    @param[in]  updated_at Optional report timestamp override.
+    @param[in]  updated_at Ignored legacy report timestamp override.
     @return     Rebuilt Speech Blocks report payload.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
@@ -2057,11 +2054,8 @@ def _persist_report_update(
     input_fingerprint = str(metadata.get("source_snapshot_fingerprint", "")).strip()
     if not input_fingerprint and source_chunks and source_language and source_kind:
         input_fingerprint = _build_source_fingerprint(source_chunks, source_language, source_kind)
-    started_at = _valid_runtime_value(operation_state.get("started_at") if isinstance(operation_state, dict) else "")
-    started_at = started_at or _utc_now_iso()
-    completed_at_value = operation_state.get("completed_at") if isinstance(operation_state, dict) else ""
-    completed_at = _valid_runtime_value(completed_at_value)
-    completed_at = completed_at or _utc_now_iso()
+    started_at = _resolve_started_at(operation_state if isinstance(operation_state, dict) else {})
+    completed_at = None
     log_path = _resolve_log_path(project_root, started_at)
     renumbered_blocks = _renumber_speech_blocks(source_chunks, speech_blocks)
     updated_report = _rebuild_report_with_prompt_rules(
@@ -2497,7 +2491,10 @@ def _resolve_started_at(existing_state: dict[str, object]) -> str:
     @date       2026-04-21
     @version    0.2.0
     """
-    started_at = _valid_runtime_value(existing_state.get("started_at") if isinstance(existing_state, dict) else "")
+    resume_checkpoint = existing_state.get("resume_checkpoint", {}) if isinstance(existing_state, dict) else {}
+    if not isinstance(resume_checkpoint, dict):
+        resume_checkpoint = {}
+    started_at = _valid_runtime_value(resume_checkpoint.get("run_token"))
     return started_at or _utc_now_iso()
 
 
@@ -2513,16 +2510,19 @@ def _resolve_log_path(project_root: Path, started_at: str) -> Path:
     @version    0.2.0
     """
     existing_state = load_operation_state(project_root) or {}
-    for artifact_path in list(existing_state.get("artifact_paths", [])):
-        relative_path = str(artifact_path)
-        if Path(relative_path).name.startswith(config.AI_TRANSACTION_LOG_FILE_PREFIX):
-            if any(_is_missing_runtime_value(part) for part in Path(relative_path).stem.split("_")):
-                continue
-            resolved_path = project_root / relative_path
-            resolved_path.parent.mkdir(parents=True, exist_ok=True)
-            if not resolved_path.exists():
-                resolved_path.write_text("", encoding="utf-8")
-            return resolved_path
+    metadata = existing_state.get("metadata", {}) if isinstance(existing_state, dict) else {}
+    resume_checkpoint = existing_state.get("resume_checkpoint", {}) if isinstance(existing_state, dict) else {}
+    if not isinstance(metadata, dict):
+        metadata = {}
+    if not isinstance(resume_checkpoint, dict):
+        resume_checkpoint = {}
+    relative_path = str(metadata.get("log_relative_path") or resume_checkpoint.get("log_relative_path") or "").strip()
+    if relative_path:
+        resolved_path = project_root / relative_path
+        resolved_path.parent.mkdir(parents=True, exist_ok=True)
+        if not resolved_path.exists():
+            resolved_path.write_text("", encoding="utf-8")
+        return resolved_path
     timestamp_token = started_at.replace("-", "").replace(":", "").replace("+", "_").replace(".", "")
     log_path = build_operation_output_path(
         project_root,

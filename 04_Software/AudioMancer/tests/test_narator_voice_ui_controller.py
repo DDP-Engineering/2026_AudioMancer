@@ -129,7 +129,7 @@ def test_narator_voice_ui_controller_select_profile_with_sample_updates_manifest
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-17
-    @version    1.2.0
+    @version    1.3.0
     """
     project_root, _manifest = _create_project(tmp_path, "NarratorControllerSelect")
     created_profile = narrator_definition_service.create_custom_profile(
@@ -191,7 +191,7 @@ def test_narator_voice_ui_controller_select_profile_with_sample_updates_manifest
     assert narrator_operation["updated_at"] == selected_metadata["selected_at"]
     assert project_workspace_service.open_project(project_root)["status"] == "ok"
     assert selected_audio_path.read_bytes() == b"RIFF-selected"
-    assert "selected_profile_id" in selected_metadata_path.read_text(encoding="utf-8")
+    assert selected_metadata["profile_id"] == created_profile["profile_id"]
 
 
 def test_narator_voice_ui_controller_select_profile_without_sample_updates_manifest(
@@ -429,7 +429,7 @@ def test_narator_voice_generate_sample_reprobes_runtime_and_stores_audio(monkeyp
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-17
-    @version    1.1.0
+    @version    1.2.0
     """
     project_root, _manifest = _create_project(tmp_path, "NarratorControllerGenerate")
     profile = narrator_definition_service.create_custom_profile(
@@ -611,7 +611,9 @@ def test_narator_voice_generate_sample_reprobes_runtime_and_stores_audio(monkeyp
     )
 
     assert profile_audio_path.read_bytes() == b"RIFF-generated"
-    assert "Narator voice sample ready." in profile_metadata_path.read_text(encoding="utf-8")
+    sample_metadata = json.loads(profile_metadata_path.read_text(encoding="utf-8"))[0]["sample"]
+    assert sample_metadata["source_kind"] == narrator_definition_service.NARRATOR_SAMPLE_SOURCE_VOICE_DESIGNER
+    assert sample_metadata["source_model_id"] == "qwen-designer"
     assert observed_timeouts == {
         "read_status": 60,
         "load_model": 60,

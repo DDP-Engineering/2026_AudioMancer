@@ -43,24 +43,19 @@ def test_build_manifest_after_cleanup_reset_preserves_extraction_outputs() -> No
     """
     manifest = {
         "current_stage": "text_chunking_ready",
-        "extracted_text_relative_path": "00_extraction/output_raw_text.txt",
-        "extraction_report_relative_path": "00_extraction/extraction_report.json",
         "extraction_warning_count": 0,
         "operations": {
             "extraction": {
-                "folder_relative_path": config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH,
                 "status": "completed",
                 "output_paths": ["00_extraction/output_raw_text.txt"],
             },
             "cleanup": {
-                "folder_relative_path": config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH,
                 "status": "completed",
                 "output_paths": ["10_cleanup/output_clean_text.txt"],
             },
-            "chunking": {"folder_relative_path": "20_chunking", "status": "completed"},
-            "translation": {"folder_relative_path": "30_translation", "status": "completed"},
+            "chunking": {"status": "completed"},
+            "translation": {"status": "completed"},
             "character_discovery": {
-                "folder_relative_path": "40_character_discovery",
                 "status": "completed",
             },
         },
@@ -71,8 +66,8 @@ def test_build_manifest_after_cleanup_reset_preserves_extraction_outputs() -> No
         "cleanup",
     )
 
-    assert reset_manifest["extracted_text_relative_path"] == "00_extraction/output_raw_text.txt"
-    assert reset_manifest["extraction_report_relative_path"] == "00_extraction/extraction_report.json"
+    assert "extracted_text_relative_path" not in reset_manifest
+    assert "extraction_report_relative_path" not in reset_manifest
     assert reset_manifest["operations"]["extraction"]["status"] == "completed"
     assert reset_manifest["operations"]["cleanup"]["status"] == "not_started"
     assert reset_manifest["operations"]["chunking"]["status"] == "not_started"
@@ -141,9 +136,6 @@ def test_build_text_cleanup_state_loads_previews_and_notes(tmp_path) -> None:
         encoding="utf-8",
     )
     manifest["source_document"] = {"original_name": "story.txt"}
-    manifest["extracted_text_relative_path"] = (
-        f"{config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH}/{config.EXTRACTED_TEXT_FILE_NAME}"
-    )
     manifest["operations"]["cleanup"]["status"] = "completed"
     manifest["operations"]["cleanup"]["output_paths"] = [
         f"{config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH}/{config.CLEANED_TEXT_FILE_NAME}"
@@ -251,9 +243,6 @@ def test_build_text_cleanup_state_surfaces_ai_cleanup_review_warning(tmp_path) -
         encoding="utf-8",
     )
     manifest["source_document"] = {"original_name": "story.txt"}
-    manifest["extracted_text_relative_path"] = (
-        f"{config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH}/{config.EXTRACTED_TEXT_FILE_NAME}"
-    )
     manifest["operations"]["cleanup"]["status"] = "completed"
     manifest["operations"]["cleanup"]["mode"] = "ai_assisted"
     manifest["operations"]["cleanup"]["output_paths"] = [
@@ -360,23 +349,19 @@ def test_cleanup_reset_can_preserve_character_discovery_and_voice_artifacts() ->
         "narrator_profile_name": "Warm Narrator",
         "narrator_language": "fr",
         "operations": {
-            "cleanup": {"folder_relative_path": config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH, "status": "completed"},
-            "chunking": {"folder_relative_path": config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH, "status": "completed"},
-            "translation": {"folder_relative_path": config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH, "status": "completed"},
+            "cleanup": {"status": "completed"},
+            "chunking": {"status": "completed"},
+            "translation": {"status": "completed"},
             "character_discovery": {
-                "folder_relative_path": config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH,
                 "status": "completed",
             },
             "narrator_definition": {
-                "folder_relative_path": config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH,
                 "status": "completed",
             },
             "character_voices": {
-                "folder_relative_path": config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH,
                 "status": "completed",
             },
             "speech_blocks": {
-                "folder_relative_path": config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH,
                 "status": "completed",
             },
         },
@@ -435,32 +420,25 @@ def test_build_manifest_after_character_discovery_reset_returns_translation_read
     """
     manifest = {
         "current_stage": "character_discovery_ready",
-        "extracted_text_relative_path": "00_extraction/output_raw_text.txt",
-        "extraction_report_relative_path": "00_extraction/extraction_report.json",
         "extraction_warning_count": 0,
         "narrator_profile_name": "Warm Narrator",
         "narrator_language": "en",
         "operations": {
             "extraction": {
-                "folder_relative_path": config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH,
                 "status": "completed",
                 "output_paths": ["00_extraction/output_raw_text.txt"],
             },
             "cleanup": {
-                "folder_relative_path": config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH,
                 "status": "completed",
                 "output_paths": ["10_cleanup/output_clean_text.txt"],
             },
             "chunking": {
-                "folder_relative_path": "20_chunking",
                 "status": "completed",
             },
             "translation": {
-                "folder_relative_path": "30_translation",
                 "status": "completed",
             },
             "character_discovery": {
-                "folder_relative_path": "40_character_discovery",
                 "status": "completed",
             },
         },
@@ -493,23 +471,18 @@ def test_build_manifest_after_character_discovery_reset_can_preserve_narrator_de
         "narrator_language": "fr",
         "operations": {
             "translation": {
-                "folder_relative_path": config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH,
                 "status": "completed",
             },
             "character_discovery": {
-                "folder_relative_path": config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH,
                 "status": "completed",
             },
             "narrator_definition": {
-                "folder_relative_path": config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH,
                 "status": "completed",
             },
             "character_voices": {
-                "folder_relative_path": config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH,
                 "status": "completed",
             },
             "speech_blocks": {
-                "folder_relative_path": config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH,
                 "status": "completed",
             },
         },

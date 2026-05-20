@@ -12,7 +12,7 @@
 @details Verifies that the package imports and keeps release version metadata aligned.
 @author Eng. Dan Dumitru Pasare
 @date 2026-05-14
-@version 1.0.8
+@version 1.1.1
 """
 
 # IMPORTS
@@ -25,7 +25,7 @@ import audiomancer
 # CONSTANTS
 
 APP_ROOT = Path(__file__).resolve().parents[1]
-EXPECTED_VERSION = "1.1.2"
+EXPECTED_VERSION = "1.2.2"
 
 # PUBLIC API
 
@@ -37,7 +37,7 @@ def test_package_exposes_main_and_release_version_metadata() -> None:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-14
-    @version    1.0.8
+    @version    1.1.0
     """
     pyproject_payload = tomllib.loads((APP_ROOT / "pyproject.toml").read_text(encoding="utf-8"))
     lock_payload = tomllib.loads((APP_ROOT / "uv.lock").read_text(encoding="utf-8"))

@@ -14,12 +14,13 @@
          discovery workflow.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-08
-@version 0.13.1
+@version 0.15.0
 """
 
 # IMPORTS
 
 import json
+from pathlib import Path
 
 import pytest
 
@@ -27,19 +28,29 @@ from audiomancer import config
 from audiomancer.services import character_discovery_service, project_workspace_service
 
 
-def test_character_discovery_window_prompt_requests_age_hint() -> None:
+def test_character_discovery_prompts_request_demographic_confidence() -> None:
     """
-    @brief      Verify first-pass discovery asks models to extract supported character age hints.
+    @brief      Verify Character Discovery prompts request demographic hints and confidence values.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-15
-    @version    0.1.0
+    @version    0.3.0
     """
-    prompt_text = (config.APP_PROMPTS_PATH / "character_discovery_window_user.txt").read_text(encoding="utf-8")
+    window_prompt_text = (config.APP_PROMPTS_PATH / "character_discovery_window_user.txt").read_text(encoding="utf-8")
+    synthesis_prompt_text = (config.APP_PROMPTS_PATH / "character_profile_synthesis_user.txt").read_text(
+        encoding="utf-8"
+    )
 
-    assert '"age_hint": ""' in prompt_text
-    assert "Set `age_hint` only when the selected chunk text directly supports" in prompt_text
+    assert '"gender_hint": ""' in window_prompt_text
+    assert '"gender_confidence": ""' in window_prompt_text
+    assert '"age_hint": ""' in window_prompt_text
+    assert '"age_confidence": ""' in window_prompt_text
+    assert "Demographic inference rules:" in window_prompt_text
+    assert "Do not infer sex/gender from occupation alone." in window_prompt_text
+    assert '"gender_confidence": ""' in synthesis_prompt_text
+    assert '"age_confidence": ""' in synthesis_prompt_text
+    assert "Demographic synthesis rules:" in synthesis_prompt_text
 
 
 def test_start_discovery_persists_outputs_and_report(monkeypatch, tmp_path) -> None:
@@ -49,7 +60,7 @@ def test_start_discovery_persists_outputs_and_report(monkeypatch, tmp_path) -> N
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-02
-    @version    0.1.0
+    @version    0.2.0
     """
     project_root, manifest = _create_character_project(tmp_path, "CharacterDiscoveryService")
     monkeypatch.setattr(
@@ -70,6 +81,11 @@ def test_start_discovery_persists_outputs_and_report(monkeypatch, tmp_path) -> N
                         {
                             "canonical_name": "Alice",
                             "aliases": ["Al"],
+                            "gender_hint": "female",
+                            "gender_confidence": "high",
+                            "age_hint": "adult",
+                            "age_confidence": "medium",
+                            "confidence": "high",
                             "evidence": [
                                 {
                                     "chunk_id": "chunk-0001",
@@ -90,7 +106,9 @@ def test_start_discovery_persists_outputs_and_report(monkeypatch, tmp_path) -> N
                     "canonical_name": "Alice",
                     "aliases": ["Al"],
                     "gender_hint": "female",
+                    "gender_confidence": "high",
                     "age_hint": "adult",
+                    "age_confidence": "medium",
                     "voice_definition_prompt": (
                         "Create a consistent spoken voice for Alice. Warm mezzo voice with gentle authority."
                     ),
@@ -123,9 +141,11 @@ def test_start_discovery_persists_outputs_and_report(monkeypatch, tmp_path) -> N
     assert len(profiles) == 1
     assert profiles[0]["canonical_name"] == "Alice"
     assert profiles[0]["gender_hint"] == "female"
+    assert profiles[0]["gender_confidence"] == "high"
     assert profiles[0]["age_hint"] == "adult"
+    assert profiles[0]["age_confidence"] == "medium"
     assert "gentle authority" in profiles[0]["voice_definition_prompt"]
-    assert "Age Domain: adult." in profiles[0]["voice_definition_prompt"]
+    assert "Age Domain: adult (medium confidence)." in profiles[0]["voice_definition_prompt"]
     assert profiles[0]["preview_text"] == (
         "Alice keeps her voice steady as she tells everyone to wait until the moon clears the tower."
     )
@@ -136,10 +156,19 @@ def test_start_discovery_persists_outputs_and_report(monkeypatch, tmp_path) -> N
     state = character_discovery_service.load_operation_state(project_root)
     assert state is not None
     assert state["status"] == "completed"
-    assert state["output_paths"] == [config.CHARACTER_PROFILE_FILE_NAME]
+    assert state["metadata"]["phase"] == "completed"
+    assert state["resume_checkpoint"] is None
+    assert state["metadata"]["log_relative_path"].startswith("log_ai_characters_")
+    assert (project_root / str(state["metadata"]["log_relative_path"])).is_file()
+    for field_name in ("output_paths", "artifact_paths", "started_at", "completed_at", "updated_at"):
+        assert field_name not in state
+    manifest_operation = project_workspace_service.load_manifest(project_root)["operations"]["character_discovery"]
+    assert manifest_operation["status"] == "completed"
+    assert "checkpoint" not in manifest_operation
+    assert "log_relative_path" not in manifest_operation
     assert report["budget_metadata"]["context_window"] == 4096
     assert report["budget_metadata"]["max_output_tokens"] == 512
-    assert state["metadata"]["budget_metadata"] == report["budget_metadata"]
+    assert state["metadata"]["token_usage"] == report["token_usage"]
     assert report["model_settings"] == {
         "model_name": "qwen3-8b",
         "context_window": 4096,
@@ -167,7 +196,7 @@ def test_start_discovery_appends_and_persists_operator_character_rules(monkeypat
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-13
-    @version    0.1.0
+    @version    0.2.0
     """
     project_root, manifest = _create_character_project(tmp_path, "CharacterDiscoveryExtraPrompt")
     additional_rules = "Treat titled names like Lady Catherine as character identities."
@@ -263,7 +292,7 @@ def test_start_discovery_resumes_from_saved_synthesis_checkpoint(monkeypatch, tm
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-02
-    @version    0.1.0
+    @version    0.2.0
     """
     project_root, manifest = _create_character_project(tmp_path, "CharacterDiscoveryResume")
     source_chunks = character_discovery_service.load_input_chunks(project_root)
@@ -277,10 +306,6 @@ def test_start_discovery_resumes_from_saved_synthesis_checkpoint(monkeypatch, tm
         character_discovery_service.prompt_template_service,
         "render_prompt",
         lambda prompt_name, payload: f"{prompt_name}:{sorted(payload.keys())}",
-    )
-    budget_metadata = character_discovery_service._build_budget_metadata(  # noqa: SLF001
-        _profile_payload("profile-1"),
-        "character_discovery_system:[]",
     )
     resume_candidate = {
         "character_id": "alice",
@@ -301,36 +326,39 @@ def test_start_discovery_resumes_from_saved_synthesis_checkpoint(monkeypatch, tm
     state_path.write_text(
         json.dumps(
             {
-                "folder_relative_path": config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH,
                 "status": "running",
-                "input_paths": [],
-                "output_paths": [],
-                "artifact_paths": [],
                 "progress_current": 1,
                 "progress_total": 2,
                 "mode": character_discovery_service.CHARACTER_DISCOVERY_MODE_AI_ASSISTED,
-                "started_at": "2026-04-08T12:00:00+00:00",
-                "completed_at": None,
-                "updated_at": "2026-04-08T12:00:00+00:00",
                 "warning_count": 0,
                 "metadata": {
+                    "phase": "synthesis",
                     "ai_profile_id": "profile-1",
-                    "input_fingerprint": fingerprint,
-                    "budget_metadata": budget_metadata,
+                    "additional_character_discovery_instructions": "",
+                    "additional_character_discovery_instructions_fingerprint": (
+                        character_discovery_service._compute_prompt_fingerprint("")  # noqa: SLF001
+                    ),
+                    "token_usage": {
+                        "input_tokens": None,
+                        "output_tokens": None,
+                        "total_tokens": None,
+                        "usage_available": False,
+                    },
+                    "log_relative_path": "saved_character_discovery.log",
                 },
                 "resume_checkpoint": {
+                    "run_token": "2026-04-08T12:00:00+00:00",
                     "input_fingerprint": fingerprint,
-                    "profile_id": "profile-1",
+                    "log_relative_path": "saved_character_discovery.log",
+                    "additional_character_discovery_instructions_fingerprint": (
+                        character_discovery_service._compute_prompt_fingerprint("")  # noqa: SLF001
+                    ),
                     "completed_window_count": 1,
-                    "total_window_count": 1,
                     "next_discovery_start_chunk_index": len(source_chunks),
-                    "budget_metadata": budget_metadata,
                     "raw_candidates": [resume_candidate],
                     "merged_candidates": [resume_candidate],
                     "rejected_candidates": [],
                     "synthesized_profiles": [],
-                    "synthesis_progress_count": 0,
-                    "log_relative_path": None,
                 },
             },
             indent=2,
@@ -339,8 +367,9 @@ def test_start_discovery_resumes_from_saved_synthesis_checkpoint(monkeypatch, tm
         encoding="utf-8",
     )
     call_profiles = []
+    log_paths = []
 
-    def _fake_chat_json(ai_profile_payload, *_args, **_kwargs):
+    def _fake_chat_json(ai_profile_payload, *_args, **kwargs):
         """
         @brief      Provide the fake chat json test helper.
         @return     None.
@@ -350,6 +379,7 @@ def test_start_discovery_resumes_from_saved_synthesis_checkpoint(monkeypatch, tm
         @version    0.1.0
         """
         call_profiles.append(dict(ai_profile_payload))
+        log_paths.append(Path(kwargs["log_path"]).name)
         return {
             "payload": {
                 "canonical_name": "Alice",
@@ -388,6 +418,7 @@ def test_start_discovery_resumes_from_saved_synthesis_checkpoint(monkeypatch, tm
     )
 
     assert len(call_profiles) == 1
+    assert log_paths == ["saved_character_discovery.log"]
     assert call_profiles[0]["id"] == "profile-2"
     assert call_profiles[0]["model_name"] == "qwen3-14b"
     assert report["character_count"] == 1
@@ -409,8 +440,8 @@ def test_start_discovery_resumes_from_saved_synthesis_checkpoint(monkeypatch, tm
     assert report["token_usage"]["total_tokens"] == 90
     state = character_discovery_service.load_operation_state(project_root)
     assert state is not None
-    assert state["metadata"]["model_settings"] == report["model_settings"]
-    assert state["metadata"]["model_settings_history"] == report["model_settings_history"]
+    assert state["resume_checkpoint"] is None
+    assert state["metadata"]["log_relative_path"] == "saved_character_discovery.log"
     resumed_profile = character_discovery_service.load_character_profiles(project_root)[0]
     assert resumed_profile["gender_hint"] == "female"
     assert "Clear and calm" in resumed_profile["voice_definition_prompt"]
@@ -423,7 +454,7 @@ def test_manual_add_update_delete_and_reset(tmp_path) -> None:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-02
-    @version    0.1.0
+    @version    0.2.0
     """
     project_root, _manifest = _create_character_project(tmp_path, "CharacterDiscoveryManual")
     discovery_root = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH
@@ -434,11 +465,8 @@ def test_manual_add_update_delete_and_reset(tmp_path) -> None:
     (discovery_root / config.CHARACTER_DISCOVERY_STATE_FILE_NAME).write_text(
         json.dumps(
             {
-                "folder_relative_path": config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH,
                 "status": "completed",
-                "input_paths": [],
-                "output_paths": [f"{config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH}/{config.CHARACTER_PROFILE_FILE_NAME}"],
-                "artifact_paths": [],
+                "phase": "completed",
                 "progress_current": 1,
                 "progress_total": 1,
                 "mode": "ai_assisted",
@@ -446,8 +474,13 @@ def test_manual_add_update_delete_and_reset(tmp_path) -> None:
                 "completed_at": "2026-04-08T12:01:00+00:00",
                 "updated_at": "2026-04-08T12:01:00+00:00",
                 "warning_count": 0,
-                "metadata": {"ai_profile_id": "profile-1", "character_count": 1},
-                "resume_checkpoint": None,
+                "ai_profile_id": "profile-1",
+                "input_fingerprint": "",
+                "additional_character_discovery_instructions": "",
+                "additional_character_discovery_instructions_fingerprint": "",
+                "token_usage": {},
+                "log_relative_path": "log_ai_characters_saved.log",
+                "checkpoint": None,
             },
             indent=2,
         )
@@ -457,6 +490,10 @@ def test_manual_add_update_delete_and_reset(tmp_path) -> None:
     narrator_root = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH
     narrator_root.mkdir(parents=True, exist_ok=True)
     (narrator_root / config.NARRATOR_PROFILE_FILE_NAME).write_text("{}\n", encoding="utf-8")
+
+    existing_alice = character_discovery_service.load_character_profiles(project_root)[0]
+    assert existing_alice["gender_confidence"] == ""
+    assert existing_alice["age_confidence"] == ""
 
     added_profiles = character_discovery_service.add_character_profile(project_root, "Bob")
     bob_profile = next(profile for profile in added_profiles if str(profile.get("canonical_name")) == "Bob")
@@ -488,7 +525,10 @@ def test_manual_add_update_delete_and_reset(tmp_path) -> None:
     )
     assert len(remaining_profiles) == 1
     assert remaining_profiles[0]["character_id"] == "alice"
-    assert character_discovery_service.load_operation_state(project_root)["metadata"]["character_count"] == 1
+    updated_state = character_discovery_service.load_operation_state(project_root)
+    assert updated_state is not None
+    assert "metadata" not in updated_state
+    assert updated_state["status"] == "completed"
 
     character_discovery_service.reset_character_discovery(project_root)
 
@@ -654,14 +694,74 @@ def test_merge_character_candidates_keeps_role_speaker_candidate() -> None:
     assert merged_candidates[0]["canonical_name"] == "His Agent"
 
 
-def test_window_candidate_normalization_uses_current_schema_only() -> None:
+def test_merge_character_candidates_keeps_strongest_demographic_confidence() -> None:
     """
-    @brief      Verify window candidate normalization ignores removed discovery-pass fields.
+    @brief      Verify merged candidates keep the strongest demographic hint/confidence pairs.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-19
+    @version    0.1.0
+    """
+    merged_candidates = character_discovery_service._merge_character_candidates(  # noqa: SLF001
+        [
+            {
+                "canonical_name": "The Pilot",
+                "aliases": ["pilot"],
+                "gender_hint": "male",
+                "gender_confidence": "low",
+                "age_hint": "adult",
+                "age_confidence": "medium",
+                "confidence": "high",
+                "evidence": [
+                    {
+                        "chunk_id": "chunk-0001",
+                        "sequence_index": 1,
+                        "source_excerpt": '"Roger," said the military pilot.',
+                        "reason": "Direct speech is attributed to a military pilot.",
+                        "confidence": "high",
+                    }
+                ],
+                "has_dialogue_evidence": True,
+            },
+            {
+                "canonical_name": "pilot",
+                "aliases": ["The Pilot"],
+                "gender_hint": "female",
+                "gender_confidence": "high",
+                "age_hint": "middle-aged",
+                "age_confidence": "low",
+                "confidence": "medium",
+                "evidence": [
+                    {
+                        "chunk_id": "chunk-0002",
+                        "sequence_index": 2,
+                        "source_excerpt": '"Hold formation," she said.',
+                        "reason": "Pronoun evidence supports the speaker's gender.",
+                        "confidence": "high",
+                    }
+                ],
+                "has_dialogue_evidence": True,
+            },
+        ]
+    )
+
+    assert len(merged_candidates) == 1
+    assert merged_candidates[0]["gender_hint"] == "female"
+    assert merged_candidates[0]["gender_confidence"] == "high"
+    assert merged_candidates[0]["age_hint"] == "adult"
+    assert merged_candidates[0]["age_confidence"] == "medium"
+    assert merged_candidates[0]["confidence"] == "high"
+
+
+def test_window_candidate_normalization_preserves_demographic_confidence() -> None:
+    """
+    @brief      Verify window candidate normalization preserves current demographic fields only.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-15
-    @version    0.1.0
+    @version    0.2.0
     """
     source_chunk = _chunk_payload("chunk-0001", 1, '"Hello," said Alice.')
     chunk_map = {"chunk-0001": source_chunk}
@@ -684,8 +784,10 @@ def test_window_candidate_normalization_uses_current_schema_only() -> None:
             {
                 "canonical_name": "Alice",
                 "gender_hint": "female",
+                "gender_confidence": "HIGH",
                 "voice_definition_prompt": "Old discovery-pass voice prompt.",
                 "age_hint": "adult",
+                "age_confidence": "medium",
                 "confidence": "high",
                 "evidence": [{"chunk_id": "chunk-0001"}],
             }
@@ -694,8 +796,10 @@ def test_window_candidate_normalization_uses_current_schema_only() -> None:
     )
 
     assert normalized_candidates[0]["canonical_name"] == "Alice"
+    assert normalized_candidates[0]["gender_hint"] == "female"
+    assert normalized_candidates[0]["gender_confidence"] == "high"
     assert normalized_candidates[0]["age_hint"] == "adult"
-    assert "gender_hint" not in normalized_candidates[0]
+    assert normalized_candidates[0]["age_confidence"] == "medium"
     assert "voice_definition_prompt" not in normalized_candidates[0]
 
 
@@ -738,6 +842,46 @@ def test_load_input_chunks_uses_source_chunks_when_translation_exists(tmp_path) 
     assert input_chunks[0]["dialogue_spans"][0]["dialogue_span_id"] == "dialogue-001"
 
 
+def test_load_input_chunks_derives_runtime_chapter_context(tmp_path) -> None:
+    """
+    @brief      Verify discovery derives chapter context without persisted chunk metadata.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  AssertionError Raised when runtime chapter context is not carried forward.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-17
+    @version    0.1.0
+    """
+    project_root, _manifest = _create_character_project(tmp_path, "CharacterDiscoveryRuntimeChapter")
+    artifact_root = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH
+    (artifact_root / config.CHUNK_ARTIFACT_FILE_NAME).write_text(
+        json.dumps(
+            [
+                {
+                    "chunk_id": "chunk-0001",
+                    "sequence_index": 1,
+                    "text": "Chapter I\n\nAlice waits at the gate.",
+                },
+                {
+                    "chunk_id": "chunk-0002",
+                    "sequence_index": 2,
+                    "text": '"Come inside," said Alice.',
+                },
+            ],
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    input_chunks = character_discovery_service.load_input_chunks(project_root)
+
+    persisted_chunks = json.loads((artifact_root / config.CHUNK_ARTIFACT_FILE_NAME).read_text(encoding="utf-8"))
+    assert input_chunks[0]["chapter_label"] == "Chapter I"
+    assert input_chunks[1]["chapter_label"] == "Chapter I"
+    assert "chapter_label" not in persisted_chunks[0]
+
+
 def test_load_input_chunks_ignores_mixed_translation_targets(tmp_path) -> None:
     """
     @brief      Verify character discovery never consumes mixed-language translation records.
@@ -756,13 +900,11 @@ def test_load_input_chunks_ignores_mixed_translation_targets(tmp_path) -> None:
                 {
                     "chunk_id": "chunk-0001",
                     "sequence_index": 1,
-                    "chapter_label": None,
                     "text": '"Hello there," said Alice.',
                 },
                 {
                     "chunk_id": "chunk-0002",
                     "sequence_index": 2,
-                    "chapter_label": None,
                     "text": '"Goodbye," said Bob.',
                 },
             ],
@@ -1030,7 +1172,7 @@ def test_resume_state_requires_current_checkpoint_boundary() -> None:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-02
-    @version    0.1.0
+    @version    0.2.0
     """
     source_chunks = [
         _chunk_payload("chunk-0001", 1, '"Hello," said Alice.'),
@@ -1046,10 +1188,12 @@ def test_resume_state_requires_current_checkpoint_boundary() -> None:
         {
             "status": "running",
             "mode": character_discovery_service.CHARACTER_DISCOVERY_MODE_AI_ASSISTED,
-            "resume_checkpoint": {
-                "input_fingerprint": "abc",
-                "profile_id": "profile-1",
-                "total_window_count": 2,
+            "input_fingerprint": "abc",
+            "additional_character_discovery_instructions_fingerprint": (
+                character_discovery_service._compute_prompt_fingerprint("")  # noqa: SLF001
+            ),
+            "log_relative_path": "log_ai_characters_saved.log",
+            "checkpoint": {
                 "completed_window_count": 1,
                 "next_discovery_start_chunk_index": 1,
                 "raw_candidates": [resume_candidate],
@@ -1067,10 +1211,11 @@ def test_resume_state_requires_current_checkpoint_boundary() -> None:
         {
             "status": "running",
             "mode": character_discovery_service.CHARACTER_DISCOVERY_MODE_AI_ASSISTED,
-            "resume_checkpoint": {
-                "input_fingerprint": "abc",
-                "profile_id": "profile-1",
-                "total_window_count": 2,
+            "input_fingerprint": "abc",
+            "additional_character_discovery_instructions_fingerprint": (
+                character_discovery_service._compute_prompt_fingerprint("")  # noqa: SLF001
+            ),
+            "checkpoint": {
                 "completed_window_count": 1,
                 "raw_candidates": [resume_candidate],
             },
@@ -1163,7 +1308,6 @@ def _create_character_project(tmp_path, project_name: str):
                 {
                     "chunk_id": "chunk-0001",
                     "sequence_index": 1,
-                    "chapter_label": None,
                     "text": '"Hello there," said Alice.',
                     "source_start_line": 1,
                     "source_end_line": 1,
@@ -1192,7 +1336,6 @@ def _chunk_payload(chunk_id: str, sequence_index: int, text: str) -> dict[str, o
     return {
         "chunk_id": chunk_id,
         "sequence_index": sequence_index,
-        "chapter_label": None,
         "input_source": character_discovery_service.CHARACTER_DISCOVERY_INPUT_SOURCE_CHUNKS,
         "text": text,
         "dialogue_spans": [],

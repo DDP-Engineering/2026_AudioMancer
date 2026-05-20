@@ -98,7 +98,8 @@ Project runtime artifact contracts currently include:
   `speech_blocks.json`, `audio_blocks.json`, and
   `audio_assembly_report.json`
 - `audio_blocks/` as the runtime artifact subfolder used for generated
-  audio-block WAV and metadata files
+  audio-block WAV and split-part WAV files; per-block generation metadata is
+  stored in `audio_blocks.json`
 - `audiobook/` as the runtime artifact subfolder used for generated final WAV
   audiobook deliverables
 

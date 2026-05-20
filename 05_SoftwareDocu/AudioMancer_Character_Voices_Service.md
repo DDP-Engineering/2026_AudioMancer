@@ -158,7 +158,6 @@ Character Voices target payloads use:
 - `preview_text`
 - `default_prompt_text`
 - `editable`
-- `updated_at`
 
 Target rules:
 
@@ -192,8 +191,6 @@ Character sample metadata uses:
 - `generation_mode`
 - `prompt_text`
 - `preview_text`
-- `generated_at`
-- `imported_at`
 - `source_file_name`
 - `audio_validation`
 - `runtime_result_summary`
@@ -207,6 +204,13 @@ Same-narrator copied sample metadata uses:
 
 - `sample_source = "copied_narrator"`
 - `copied_from_target_id = "narrator"`
+
+When same-narrator mode copies from `narator_sample.json`, the source narrator
+sample may use the compact Narator Voice schema (`source_kind`) or legacy
+selected-sample source keys (`generation_mode`, `sample_source`). Character
+Voices writes its own target metadata using the Character Voices contract above
+and does not persist sample audit timestamps or `stale`; changing a character
+voice prompt clears the affected sample instead.
 
 ## 7. Workflow Integration
 
@@ -293,6 +297,7 @@ Operator path:
 Documentation audit status:
 
 - reviewed against the current implementation on 2026-05-15
+- same-narrator compact narrator sample compatibility reviewed on 2026-05-18
 
 Focused automated coverage exists in:
 

@@ -14,7 +14,7 @@
          preview controls for the fixed Qwen3-backed narrator workflow.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-17
-@version 3.12.3
+@version 3.12.6
 """
 
 # IMPORTS
@@ -39,7 +39,9 @@ from PySide6.QtWidgets import (
 from audiomancer import config
 from audiomancer.services import ui_state_service
 
-_PROFILE_PANE_MINIMUM_WIDTH = 240
+_PROFILE_PANE_INITIAL_WIDTH = 236
+_PROFILE_PANE_MAXIMUM_WIDTH = 248
+_PROFILE_PANE_MINIMUM_WIDTH = 212
 
 
 class NaratorVoicePage(QWidget):
@@ -70,7 +72,7 @@ class NaratorVoicePage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-17
-        @version    1.9.2
+        @version    1.9.5
         """
         super().__init__(parent)
         self._project_active = False
@@ -174,6 +176,7 @@ class NaratorVoicePage(QWidget):
         self._delete_profile_button = QPushButton("Delete Profile", self)
         self._delete_profile_button.clicked.connect(self._emit_delete_profile)
         self._generate_sample_button = QPushButton("Generate Sample", self)
+        self._generate_sample_button.setMinimumWidth(self._generate_sample_button.sizeHint().width() + 12)
         self._generate_sample_button.clicked.connect(self._emit_generate_sample)
         self._preview_toggle_button = QPushButton("Preview", self)
         self._preview_toggle_button.clicked.connect(self.preview_toggle_requested.emit)
@@ -190,7 +193,8 @@ class NaratorVoicePage(QWidget):
         self._main_splitter.addWidget(editor_container)
         self._main_splitter.setStretchFactor(0, 12)
         self._main_splitter.setStretchFactor(1, 48)
-        self._main_splitter.setSizes([300, 920])
+        self._profiles_group.setMaximumWidth(_PROFILE_PANE_MAXIMUM_WIDTH)
+        self._main_splitter.setSizes([_PROFILE_PANE_INITIAL_WIDTH, 960])
         layout.addWidget(self._main_splitter, 1)
         self._apply_main_splitter_minimums()
 
@@ -464,7 +468,6 @@ class NaratorVoicePage(QWidget):
             "provider_family": str(current_profile.get("provider_family", "")),
             "editable": editable,
             "is_selected": bool(current_profile.get("is_selected", False)),
-            "updated_at": current_profile.get("updated_at"),
         }
 
     def is_edit_mode(self) -> bool:
@@ -599,7 +602,7 @@ class NaratorVoicePage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-05-01
-        @version    0.3.1
+        @version    0.4.0
         """
         required_attributes = ("_main_splitter", "_profiles_group", "_editor_container")
         if not all(hasattr(self, attribute_name) for attribute_name in required_attributes):
@@ -607,7 +610,8 @@ class NaratorVoicePage(QWidget):
         splitter_width = self._main_splitter.width()
         if splitter_width <= 0:
             return
-        self._profiles_group.setMinimumWidth(max(_PROFILE_PANE_MINIMUM_WIDTH, splitter_width // 5))
+        self._profiles_group.setMinimumWidth(_PROFILE_PANE_MINIMUM_WIDTH)
+        self._profiles_group.setMaximumWidth(_PROFILE_PANE_MAXIMUM_WIDTH)
         self._editor_container.setMinimumWidth(splitter_width // 3)
 
     def _preview_label_key(self) -> str:

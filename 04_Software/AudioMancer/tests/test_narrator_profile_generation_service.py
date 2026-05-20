@@ -58,7 +58,7 @@ def test_narrator_profile_generation_prefers_approved_translation_for_voice_lang
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-11
-    @version    0.1.0
+    @version    0.2.0
     """
     _write_narrator_prompts(mock_prompt_environment)
     project_root = tmp_path / "project"
@@ -86,8 +86,9 @@ def test_narrator_profile_generation_prefers_approved_translation_for_voice_lang
     assert "Text tradus" in prompts[0]
     assert "Original desert" not in prompts[0]
     assert len(profiles) == 2
-    assert all(profile["profile_origin"] == "ai_generated" for profile in profiles)
-    assert all(profile.get("sample_audio_path") is None for profile in profiles)
+    assert all("profile_origin" not in profile for profile in profiles)
+    assert all(profile.get("sample") is None for profile in profiles)
+    assert all("generation_metadata" not in profile for profile in profiles)
     assert not (project_root / config.SELECTED_NARRATOR_AUDIO_FILE_NAME).exists()
 
 

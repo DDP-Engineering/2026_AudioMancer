@@ -125,8 +125,8 @@ High-level flow:
 Inputs:
 
 - active project root folder
-- current `project.json` manifest with `source_document` and
-  `extracted_text_relative_path`
+- current `project.json` manifest with `source_document`
+- root-level `extracted_text.txt` produced by Text Extraction
 - selected enabled AI profile from `settings.json`
 - prompt files in `04_Software/AudioMancer/prompts/`
 - optional progress callback and cancellation callback

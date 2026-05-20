@@ -13,7 +13,7 @@
          signaling, and evidence preview behavior for discovered characters.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-08
-@version 0.8.6
+@version 0.8.7
 """
 
 # IMPORTS
@@ -32,17 +32,21 @@ def test_characters_page_fields_are_read_only_by_default(qtbot) -> None:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-02
-    @version    0.5.0
+    @version    0.6.0
     """
     page = _build_page(qtbot)
 
     assert page._edit_character_button.isEnabled() is True
     assert page._save_character_button.isEnabled() is False
     assert page._canonical_name_edit.isReadOnly() is True
+    assert page._gender_confidence_edit.isReadOnly() is True
     assert page._age_hint_edit.isReadOnly() is True
+    assert page._age_confidence_edit.isReadOnly() is True
     assert page._voice_definition_prompt_edit.isReadOnly() is True
-    assert page._gender_hint_edit.parentWidget() == page._gender_age_row_widget
-    assert page._age_hint_edit.parentWidget() == page._gender_age_row_widget
+    assert page._gender_hint_edit.parentWidget() == page._gender_row_widget
+    assert page._gender_confidence_edit.parentWidget() == page._gender_row_widget
+    assert page._age_hint_edit.parentWidget() == page._age_row_widget
+    assert page._age_confidence_edit.parentWidget() == page._age_row_widget
     assert page._list_group.minimumHeight() == page._list_group.maximumHeight()
     assert page._list_group.minimumHeight() > page._character_actions_widget.sizeHint().height()
     assert hasattr(page, "_summary_label") is False
@@ -89,14 +93,16 @@ def test_characters_page_edit_mode_enables_save_after_change(qtbot) -> None:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-02
-    @version    0.1.0
+    @version    0.2.0
     """
     page = _build_page(qtbot)
 
     page.begin_edit_mode()
 
     assert page._canonical_name_edit.isReadOnly() is False
+    assert page._gender_confidence_edit.isReadOnly() is False
     assert page._age_hint_edit.isReadOnly() is False
+    assert page._age_confidence_edit.isReadOnly() is False
     assert page._save_character_button.isEnabled() is True
 
     page._voice_definition_prompt_edit.setPlainText("Updated voice prompt")
@@ -106,26 +112,33 @@ def test_characters_page_edit_mode_enables_save_after_change(qtbot) -> None:
     assert page._save_character_button.isEnabled() is True
 
 
-def test_characters_page_age_hint_loads_and_saves(qtbot) -> None:
+def test_characters_page_demographic_fields_load_and_save(qtbot) -> None:
     """
-    @brief      Verify the age hint editor loads and emits draft payload changes.
+    @brief      Verify demographic editors load and emit draft payload changes.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-15
-    @version    0.1.0
+    @version    0.2.0
     """
     page = _build_page(qtbot)
     requested_payloads = []
     page.save_character_requested.connect(lambda payload: requested_payloads.append(payload))
 
+    assert page._gender_hint_edit.text() == "female"
+    assert page._gender_confidence_edit.text() == "high"
     assert page._age_hint_edit.text() == "adult"
+    assert page._age_confidence_edit.text() == "medium"
 
     page.begin_edit_mode()
+    page._gender_confidence_edit.setText("medium")
     page._age_hint_edit.setText("old")
+    page._age_confidence_edit.setText("high")
     page._emit_save_character()
 
+    assert requested_payloads[0]["gender_confidence"] == "medium"
     assert requested_payloads[0]["age_hint"] == "old"
+    assert requested_payloads[0]["age_confidence"] == "high"
 
 
 def test_characters_page_save_without_changes_exits_edit_mode(qtbot) -> None:
@@ -177,7 +190,7 @@ def test_characters_page_selection_change_emits_requested_character_id(qtbot) ->
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-02
-    @version    0.2.0
+    @version    0.3.0
     """
     page = _build_page(qtbot, profiles=[_profile_payload(), _second_profile_payload()])
     requested = []
@@ -264,8 +277,10 @@ def _profile_payload() -> dict[str, object]:
             "character_id": "alice",
             "canonical_name": "Alice",
             "aliases": ["Al"],
-            "gender_hint": "",
+            "gender_hint": "female",
+            "gender_confidence": "high",
             "age_hint": "adult",
+            "age_confidence": "medium",
             "voice_definition_prompt": "Create a consistent spoken voice for Alice.",
             "confidence": "high",
             "evidence": [
@@ -288,7 +303,7 @@ def _second_profile_payload() -> dict[str, object]:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-02
-    @version    0.2.0
+    @version    0.3.0
     """
     payload = dict(_profile_payload())
     payload["character_id"] = "bob"
@@ -312,7 +327,9 @@ def _manual_draft_payload() -> dict[str, object]:
             "canonical_name": "Manual Bob",
             "aliases": [],
             "gender_hint": "",
+            "gender_confidence": "",
             "age_hint": "",
+            "age_confidence": "",
             "voice_definition_prompt": "Create a consistent spoken voice for Manual Bob.",
             "confidence": "",
             "evidence": [

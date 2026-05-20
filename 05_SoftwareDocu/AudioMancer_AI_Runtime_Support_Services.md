@@ -36,7 +36,8 @@ generation.
 - normalize provider-reported token usage and merge cumulative usage payloads
 - render shared AI token-usage notes for page-state services
 - join and trim REST endpoint URLs without double slashes or duplicated paths
-- produce stable UTC ISO timestamps for persisted operation state
+- produce stable UTC ISO tokens where runtime filenames still need them; current
+  operation state no longer stores audit timestamp fields
 
 They do not own workflow prompts, provider chat-completion requests, UI
 controller behavior, or project artifact reset policy.

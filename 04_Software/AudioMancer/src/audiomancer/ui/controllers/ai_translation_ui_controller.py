@@ -13,7 +13,7 @@
          selected-chunk retranslation, and modal progress lifecycle.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-22
-@version 0.9.2
+@version 0.9.4
 """
 
 # IMPORTS
@@ -52,7 +52,7 @@ def handle_start_translation_requested(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-12
-    @version    0.4.0
+    @version    0.5.0
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._active_operation_kind is not None:
@@ -86,7 +86,7 @@ def handle_start_translation_requested(
     additional_translation_instructions = None
     if translation_status in {"running", "failed"} and translation_mode == "ai_assisted":
         pass
-    elif _translation_requires_ai(window, target_language):
+    else:
         additional_translation_instructions = prompt_ai_translation_instructions(window, current_language)
         if additional_translation_instructions is None:
             return
@@ -401,7 +401,6 @@ def _sync_manifest_after_translation(window: "MainWindow", report: dict[str, obj
             window._current_project_root,
             "translation",
             include_current=False,
-            keep_input_snapshots=False,
             preserve_operation_kinds=operation_runtime_service.NARRATOR_PROFILE_PRESERVED_OPERATION_KINDS,
         )
         default_operations = text_cleanup_state_service.normalized_manifest_operations({})
@@ -512,25 +511,6 @@ def _manifest_translation_operation(window: "MainWindow") -> dict[str, object]:
     return dict(translation_operation) if isinstance(translation_operation, dict) else {}
 
 
-def _translation_requires_ai(window: "MainWindow", target_language: str) -> bool:
-    """
-    @brief      Determine whether the requested translation needs an AI model call.
-    @param[in]  window Active main window instance.
-    @param[in]  target_language Locked target language code.
-    @return     True when original and target languages differ or original language is unknown.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-12
-    @version    0.1.0
-    """
-    if not isinstance(window._current_manifest, dict):
-        return True
-    original_language = str(window._current_manifest.get("original_language", "") or "").strip()
-    if not original_language:
-        return True
-    return original_language != target_language
-
-
 def _persisted_target_language(window: "MainWindow") -> str:
     """
     @brief      Resolve the translation target language from the locked project options.
@@ -580,32 +560,6 @@ def _persisted_profile_id(window: "MainWindow") -> str | None:
             if profile_id not in (None, ""):
                 return str(profile_id)
     return window._ai_translation_page.current_profile_id()
-
-
-def _cancel_active_operation(window: "MainWindow") -> None:
-    """
-    @brief      Mark the active translation operation for cancellation.
-    @param[in]  window Active main window instance.
-    @return     None.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-07
-    @version    0.1.0
-    """
-    workflow_controller_service.cancel_active_operation(window)
-
-
-def _is_cancel_requested(window: "MainWindow") -> bool:
-    """
-    @brief      Check whether the current translation operation should cancel.
-    @param[in]  window Active main window instance.
-    @return     True when cancellation was requested.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-07
-    @version    0.1.1
-    """
-    return workflow_controller_service.is_cancel_requested(window)
 
 
 # END OF FILE

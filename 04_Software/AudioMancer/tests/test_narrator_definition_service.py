@@ -14,7 +14,7 @@
          generation resolution.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-20
-@version 3.10.0
+@version 3.11.0
 """
 
 # IMPORTS
@@ -54,7 +54,7 @@ def test_narrator_service_begin_profile_edit_clears_sample_and_selection(tmp_pat
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-17
-    @version    1.1.0
+    @version    1.2.0
     """
     project_root, _manifest = project_workspace_service.create_project("NarratorEditProject", tmp_path)
     profile = narrator_definition_service.create_custom_profile(
@@ -83,7 +83,8 @@ def test_narrator_service_begin_profile_edit_clears_sample_and_selection(tmp_pat
 
     assert narrator_definition_service.has_profile_sample(project_root, profile["profile_id"]) is False
     assert narrator_definition_service.load_selected_profile_state(project_root)["selected_profile_id"] is None
-    assert updated_profile["is_selected"] is False
+    assert "is_selected" not in updated_profile
+    assert updated_profile["sample"] is None
 
 
 def test_narrator_service_stores_single_profile_sample_and_marks_selected_metadata(tmp_path) -> None:
@@ -95,7 +96,7 @@ def test_narrator_service_stores_single_profile_sample_and_marks_selected_metada
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-17
-    @version    1.4.0
+    @version    1.5.0
     """
     project_root, _manifest = project_workspace_service.create_project("NarratorSampleProject", tmp_path)
     profile = narrator_definition_service.create_custom_profile(
@@ -134,14 +135,17 @@ def test_narrator_service_stores_single_profile_sample_and_marks_selected_metada
     ] == ("Preview text for the narrator.")
     assert selected_metadata is not None
     assert selected_metadata["profile_id"] == profile["profile_id"]
-    assert selected_metadata["is_selected"] is True
-    assert selected_metadata["role"] == "narrator"
+    assert selected_metadata["source_kind"] == narrator_definition_service.NARRATOR_SAMPLE_SOURCE_VOICE_DESIGNER
+    assert "selected_at" not in selected_metadata
     assert selected_audio_path == project_root / config.SELECTED_NARRATOR_AUDIO_FILE_NAME
     assert selected_metadata_path == project_root / config.SELECTED_NARRATOR_METADATA_FILE_NAME
     assert selected_metadata_path != project_root / config.NARRATOR_SELECTION_FILE_NAME
     assert profile_metadata_path == project_root / config.NARRATOR_PROFILE_FILE_NAME
     assert selected_audio_path.read_bytes() == b"RIFF-test-wav"
-    assert json.loads(selected_metadata_path.read_text(encoding="utf-8"))["is_selected"] is True
+    assert json.loads(selected_metadata_path.read_text(encoding="utf-8"))["profile_id"] == profile["profile_id"]
+    profile_payload = json.loads(profile_metadata_path.read_text(encoding="utf-8"))[0]
+    assert "sample_metadata" not in profile_payload
+    assert profile_payload["sample"]["source_model_id"] == "qwen-designer"
     assert (
         json.loads((project_root / config.NARRATOR_SELECTION_FILE_NAME).read_text(encoding="utf-8"))[
             "selected_profile_id"
@@ -163,7 +167,7 @@ def test_narrator_service_imports_profile_sample_and_marks_selected_metadata(tmp
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-15
-    @version    0.1.0
+    @version    0.2.0
     """
     project_root, _manifest = project_workspace_service.create_project("NarratorImportedSampleProject", tmp_path)
     source_sample = tmp_path / "source_voice.wav"
@@ -194,12 +198,12 @@ def test_narrator_service_imports_profile_sample_and_marks_selected_metadata(tmp
 
     assert profile_audio_path.read_bytes() == source_sample.read_bytes()
     assert selected_audio_path.read_bytes() == source_sample.read_bytes()
-    assert metadata["sample_source"] == "imported_sample"
-    assert metadata["generation_mode"] == "imported_sample"
+    assert metadata["source_kind"] == "imported_sample"
     assert metadata["source_model_id"] is None
     assert metadata["preview_text"] == "This is the exact imported sample text."
+    assert "audio_validation" not in metadata
     assert selected_metadata is not None
-    assert selected_metadata["sample_source"] == "imported_sample"
+    assert selected_metadata["source_kind"] == "imported_sample"
     assert narrator_definition_service.sample_runtime_available(metadata, []) is True
 
 
@@ -356,6 +360,103 @@ def test_narrator_service_profile_sample_path_uses_stored_audio_path_after_renam
     assert renamed_audio_path == original_audio_path
     assert narrator_definition_service.has_profile_sample(project_root, profile["profile_id"]) is True
     assert renamed_audio_path.read_bytes() == b"RIFF-renamed"
+
+
+def test_narrator_service_normalizes_legacy_profile_sample_metadata(tmp_path) -> None:
+    """
+    @brief      Verify old narrator profile sample metadata remains usable after schema normalization.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-18
+    @version    0.1.0
+    """
+    project_root, _manifest = project_workspace_service.create_project("NarratorLegacySampleProject", tmp_path)
+    profile_path = project_root / config.NARRATOR_PROFILE_FILE_NAME
+    profile_path.write_text(
+        json.dumps(
+            [
+                {
+                    "profile_id": "legacy_profile",
+                    "display_name": "Legacy Voice",
+                    "language": "English",
+                    "prompt_text": "Legacy prompt.",
+                    "preview_text": "Legacy preview text.",
+                    "profile_kind": "custom",
+                    "sample_audio_path": "audio_narator_legacy_voice.wav",
+                    "sample_metadata": {
+                        "sample_source": "imported_sample",
+                        "generation_mode": "imported_sample",
+                        "preview_text": "Legacy sample transcript.",
+                        "language": "en",
+                        "imported_at": "2026-05-18T00:00:00+00:00",
+                        "source_file_name": "legacy.wav",
+                        "audio_validation": {"duration_seconds": 3.2},
+                    },
+                }
+            ],
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    (project_root / "audio_narator_legacy_voice.wav").write_bytes(b"RIFF-legacy")
+    (project_root / config.NARRATOR_SELECTION_FILE_NAME).write_text(
+        json.dumps({"selected_profile_id": "legacy_profile", "selected_language": "en"}, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    (project_root / config.SELECTED_NARRATOR_METADATA_FILE_NAME).write_text(
+        json.dumps(
+            {
+                "selected_profile_id": "legacy_profile",
+                "is_selected": True,
+                "role": "narrator",
+                "sample_source": "imported_sample",
+                "generation_mode": "imported_sample",
+                "preview_text": "Legacy selected transcript.",
+                "language": "en",
+                "imported_at": "2026-05-18T00:01:00+00:00",
+                "source_file_name": "selected.wav",
+                "audio_validation": {"duration_seconds": 3.4},
+                "selected_at": "2026-05-18T00:02:00+00:00",
+            },
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    profiles = narrator_definition_service.load_profiles(project_root)
+    audio_path, _metadata_path = narrator_definition_service.profile_sample_paths(project_root, "legacy_profile")
+    selected_metadata = narrator_definition_service.load_selected_narrator_sample_metadata(project_root)
+
+    assert profiles == [
+        {
+            "profile_id": "legacy_profile",
+            "display_name": "Legacy Voice",
+            "language": "en",
+            "prompt_text": "Legacy prompt.",
+            "preview_text": "Legacy preview text.",
+            "sample": {
+                "source_kind": "imported_sample",
+                "preview_text": "Legacy sample transcript.",
+                "language": "en",
+                "source_model_id": None,
+                "source_file_name": "legacy.wav",
+            },
+        }
+    ]
+    assert audio_path == project_root / "audio_narator_legacy_voice.wav"
+    assert narrator_definition_service.has_profile_sample(project_root, "legacy_profile") is True
+    assert selected_metadata == {
+        "profile_id": "legacy_profile",
+        "source_kind": "imported_sample",
+        "preview_text": "Legacy selected transcript.",
+        "language": "en",
+        "source_model_id": None,
+        "source_file_name": "selected.wav",
+    }
 
 
 def test_narrator_service_simplifies_tts_plan_to_voice_assignment_mode_only(tmp_path) -> None:

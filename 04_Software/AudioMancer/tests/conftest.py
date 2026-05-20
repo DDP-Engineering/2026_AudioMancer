@@ -194,9 +194,6 @@ def mock_extracted_project(mock_clean_project):
         "imported_at": "2026-04-06T12:00:00+00:00",
         "size_bytes": 10,
     }
-    manifest["extracted_text_relative_path"] = (
-        f"{config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH}/{config.EXTRACTED_TEXT_FILE_NAME}"
-    )
     project_workspace_service.save_manifest(manifest, project_root)
 
     return project_root, manifest

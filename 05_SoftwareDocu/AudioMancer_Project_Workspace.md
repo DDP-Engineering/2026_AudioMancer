@@ -161,8 +161,6 @@ Current root manifest contract in `project.json`:
 - `updated_at`
 - `current_stage`
 - `source_document`
-- `extracted_text_relative_path`
-- `extraction_report_relative_path`
 - `extraction_warning_count`
 - `operations`
 - `original_language`
@@ -193,20 +191,17 @@ Current `operations` map keys:
 
 Each compact operation entry stores:
 
-- `folder_relative_path`
 - `status`
 - `progress_current`
 - `progress_total`
 - `mode`
-- `started_at`
-- `completed_at`
-- `updated_at`
 - `warning_count`
 
-Detailed operation payloads such as input or output paths, metadata,
-checkpoints, translated chunks, warning details, and similar workflow
-internals are stored only in root-level state files, reports, and canonical
-output artifacts.
+Detailed operation payloads such as metadata, resume checkpoints, translated
+chunks, warning details, and similar workflow internals are stored only in
+root-level state files, reports, and canonical output artifacts. Generic input,
+output, and artifact path arrays and operation audit timestamps are not part of
+manifest summaries or current operation-state payloads.
 
 AI-assisted chunking checkpoints store the completed paragraph-unit count, so
 an interrupted current-version run can continue with a different currently
@@ -218,12 +213,11 @@ metadata, and ordered profile settings history when resumed segments use
 different model settings.
 
 Default operation-state files are lazy page metadata. Opening a workflow page
-may create a `not_started` state file with empty `input_paths`, `output_paths`,
-`artifact_paths`, operation-specific default `metadata`, and
-`resume_checkpoint = null`. For example, opening the Characters page creates
-`characters_state.json` with zero-valued character-discovery metadata counters.
-This initialization does not imply that the workflow step has run and does not
-create reports or canonical outputs.
+may create a `not_started` state file with zero progress, operation-specific
+default `metadata`, and `resume_checkpoint = null`. For example, opening the
+Characters page creates `characters_state.json` with zero-valued
+character-discovery metadata counters. This initialization does not imply that
+the workflow step has run and does not create reports or canonical outputs.
 
 Voice workflow metadata is also lazy. Project activation and Home-page refreshes
 do not create `audio_profiles.json`, `narator.json`, or `characters_voice.json`.
@@ -258,9 +252,12 @@ Current validation invariants:
 - once locked, `selected_voice_language` is kept equal to `target_language`
 - `current_stage` must match one of the configured workflow stage tokens
 - `source_document`, when present, must contain one valid structured payload
-- project-relative manifest paths must remain inside the active project root;
-  absolute paths, `..` traversal, and symlink escapes fail validation before
-  source or artifact evidence is trusted
+- `project.json` no longer stores extracted-text, extraction-report, or
+  operation-folder shortcut paths; workflow artifacts are resolved from the
+  canonical root-level filenames in `config.py`
+- project-relative source-document paths must remain inside the active project
+  root; absolute paths, `..` traversal, and symlink escapes fail validation
+  before source evidence is trusted
 - opening a project expects a selected project root with `project.json`
 - legacy numbered workflow folders cause validation to fail with an unsupported
   legacy layout error
@@ -269,6 +266,9 @@ Current validation invariants:
 - project-open manifest healing can promote operation summaries only when
   local artifacts prove the step completed; `current_stage` alone never marks
   an operation completed
+- Narrator Definition completion evidence checks the explicit `narator.json`
+  selection and the selected profile's compact `sample` metadata, while still
+  accepting legacy `sample_metadata` during project-open repair.
 - Character Voices completion evidence checks the current artifact contract:
   the selected narrator WAV plus `narator_sample.json`, and every character
   target's `sample_metadata` plus project-relative `sample_audio_path`
@@ -334,6 +334,15 @@ Automated tests:
 - `tests/test_main_window.py`
 - `tests/test_config_contract.py`
 
+Documentation audit status:
+
+- narrator-definition compact sample evidence reviewed on 2026-05-18
+- legacy narrator sample evidence fallback reviewed on 2026-05-18
+- project-open narrator evidence repair reviewed after metadata simplification
+  on 2026-05-18
+- compact narrator sample timestamps reviewed for manifest summary repair on
+  2026-05-18
+
 Covered behaviors:
 
 - project creation layout
@@ -349,9 +358,10 @@ Covered behaviors:
 - source import rejection for `.doc`
 - copied source metadata persistence, collision-safe file naming, and pre-start
   source replacement cleanup
-- manifest defaults for extraction fields and operation-state entries
-- rejection of tampered manifest paths and traversal artifact references during
-  project-open completion healing
+- manifest defaults for compact operation-state entries
+- stripping of legacy extraction shortcut fields and operation folder paths
+  from normalized project manifests
+- rejection of tampered source-document paths during project-open validation
 - main-window activation and workflow progress updates after create/open
 - main-window source import, replacement, and project-start lock behavior
 - main-window metadata repair confirmation flow during open
@@ -371,6 +381,6 @@ Minimum validation after a change:
   `05_SoftwareDocu/AudioMancer_Text_Extraction_Service.md`
 - deterministic cleanup artifacts are produced by a separate component
   documented in `05_SoftwareDocu/AudioMancer_Deterministic_Cleanup_Service.md`
-- existing projects with older detailed operation payloads remain readable, but
-  there is no automatic manifest migration layer yet for future schema
-  revisions
+- existing projects with old extraction shortcut fields or operation folder
+  paths are normalized to the current compact manifest shape; operators must
+  re-run Extraction when the current root-level artifacts are missing

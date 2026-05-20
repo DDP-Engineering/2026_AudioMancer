@@ -14,7 +14,7 @@
          resolution used by workflow page controllers.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-29
-@version 0.1.0
+@version 0.2.0
 """
 
 # IMPORTS
@@ -70,33 +70,6 @@ def start_operation(
         failure_handler=failure_handler,
         cancel_handler=cancel_handler,
     )
-
-
-def cancel_active_operation(window: "MainWindow") -> None:
-    """
-    @brief      Mark the active modal workflow operation for cooperative cancellation.
-    @param[in]  window Active main window instance.
-    @return     None.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.1.0
-    """
-    if getattr(window, "_active_operation_kind", None) is not None:
-        window._operation_cancel_requested = True
-
-
-def is_cancel_requested(window: "MainWindow") -> bool:
-    """
-    @brief      Return whether the active modal workflow operation was asked to cancel.
-    @param[in]  window Active main window instance.
-    @return     True when cancellation was requested.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.1.0
-    """
-    return bool(getattr(window, "_operation_cancel_requested", False))
 
 
 def sync_manifest_operation_from_disk(

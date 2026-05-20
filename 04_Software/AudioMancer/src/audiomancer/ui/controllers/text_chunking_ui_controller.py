@@ -15,7 +15,7 @@
          Chunking page.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-24
-@version 0.8.3
+@version 0.8.4
 """
 
 # IMPORTS
@@ -379,33 +379,6 @@ def handle_operation_progress(
     misc_ui_controller.update_progress_dialog(window, percent, message, token_usage)
 
 
-def cancel_active_operation(window: "MainWindow") -> None:
-    """
-    @brief      Request cooperative cancellation for the active synchronous operation.
-    @param[in]  window Active main window shell.
-    @return     None.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-07
-    @version    0.1.0
-    """
-    if window._active_operation_kind is not None:
-        window._operation_cancel_requested = True
-
-
-def is_cancel_requested(window: "MainWindow") -> bool:
-    """
-    @brief      Return whether the active modal operation was asked to cancel.
-    @param[in]  window Active main window shell.
-    @return     True when cooperative cancellation was requested.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-07
-    @version    0.1.1
-    """
-    return window._operation_cancel_requested
-
-
 def handle_operation_success(window: "MainWindow", success_handler, result_payload: object) -> None:
     """
     @brief      Finalize one successful long-running operation.
@@ -697,7 +670,6 @@ def _reset_chunking_and_downstream(window: "MainWindow") -> None:
         window._current_project_root,
         "chunking",
         include_current=True,
-        keep_input_snapshots=False,
         preserve_operation_kinds=operation_runtime_service.TEXT_REVISION_PRESERVED_OPERATION_KINDS,
     )
     reset_manifest = text_cleanup_state_service.build_manifest_after_operation_reset(
@@ -764,15 +736,16 @@ def _resume_ai_profile_id(
     @return     Helper result.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.1.0
+    @version    0.2.0
     """
-    metadata = chunking_operation.get("metadata")
-    if isinstance(metadata, dict):
-        profile_id = metadata.get("ai_profile_id")
-        if profile_id not in (None, ""):
-            return str(profile_id)
+    _ = chunking_operation
     state_payload = ai_chunking_service.load_operation_state(window._current_project_root or "")
     if isinstance(state_payload, dict):
+        resume_checkpoint = state_payload.get("resume_checkpoint")
+        if isinstance(resume_checkpoint, dict):
+            profile_id = resume_checkpoint.get("profile_id")
+            if profile_id not in (None, ""):
+                return str(profile_id)
         state_metadata = state_payload.get("metadata")
         if isinstance(state_metadata, dict):
             profile_id = state_metadata.get("ai_profile_id")
@@ -792,15 +765,16 @@ def _resume_ai_strategy(
     @return     Helper result.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.1.0
+    @version    0.2.0
     """
-    metadata = chunking_operation.get("metadata")
-    if isinstance(metadata, dict):
-        semantic_strategy = str(metadata.get("semantic_strategy", "")).strip()
-        if semantic_strategy in config.AI_CHUNKING_STRATEGY_OPTIONS:
-            return semantic_strategy
+    _ = chunking_operation
     state_payload = ai_chunking_service.load_operation_state(window._current_project_root or "")
     if isinstance(state_payload, dict):
+        resume_checkpoint = state_payload.get("resume_checkpoint")
+        if isinstance(resume_checkpoint, dict):
+            semantic_strategy = str(resume_checkpoint.get("semantic_strategy", "")).strip()
+            if semantic_strategy in config.AI_CHUNKING_STRATEGY_OPTIONS:
+                return semantic_strategy
         state_metadata = state_payload.get("metadata")
         if isinstance(state_metadata, dict):
             semantic_strategy = str(state_metadata.get("semantic_strategy", "")).strip()

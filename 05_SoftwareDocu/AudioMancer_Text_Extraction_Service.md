@@ -65,7 +65,7 @@ High-level flow:
    `extracted_text.txt` and `extraction_report.json`.
 7. `MainWindow` drives the extraction run through the reusable modal progress
    dialog, including cooperative cancellation.
-8. `MainWindow` stores the resulting artifact paths and operation state in
+8. `MainWindow` stores the compact extraction summary and warning count in
    `project.json` and refreshes the cleanup page preview.
 
 ## 4. Dependencies
@@ -97,9 +97,7 @@ Outputs:
 - `extraction_report.json`
 - `extraction_state.json`
 - updated `project.json` fields:
-  `extracted_text_relative_path`,
-  `extraction_report_relative_path`,
-  `extraction_warning_count`, and `operations.extraction`
+  `extraction_warning_count` and `operations.extraction`
 - progress updates delivered to the modal operation-progress dialog
 - cleanup-page preview text and operator-facing notes
 
@@ -109,8 +107,6 @@ Current extraction report fields:
 
 - `source_relative_path`
 - `source_type`
-- `extracted_text_relative_path`
-- `extracted_at`
 - `page_count`
 - `warnings`
 - `character_count`
@@ -119,20 +115,17 @@ Current extraction report fields:
 
 Current extraction operation-state fields:
 
-- `folder_relative_path`
 - `status`
-- `input_paths`
-- `output_paths`
-- `artifact_paths`
 - `progress_current`
 - `progress_total`
 - `mode`
-- `started_at`
-- `completed_at`
-- `updated_at`
 - `warning_count`
 - `metadata`
 - `resume_checkpoint`
+
+The extracted text path is derived from configuration. Resume uses the
+checkpoint plus the partially written output artifact rather than persisted
+generic path arrays or operation audit timestamps.
 
 Supported extraction formats in the current implementation:
 
@@ -147,6 +140,9 @@ Supported extraction formats in the current implementation:
 Current deterministic behavior:
 
 - extracted output is always written as `extracted_text.txt`
+- `project.json` does not store extracted-text or extraction-report shortcut
+  paths; downstream services resolve the root-level artifact names from
+  `config.py`
 - line endings are normalized to `\n`
 - leading and trailing unusable whitespace is trimmed
 - one final trailing newline is written to the completed output file

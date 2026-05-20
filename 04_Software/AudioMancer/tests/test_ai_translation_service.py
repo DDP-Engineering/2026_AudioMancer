@@ -13,7 +13,7 @@
          review-state updates, and approval helpers.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-07
-@version 0.5.0
+@version 0.7.0
 """
 
 # IMPORTS
@@ -79,6 +79,7 @@ def test_ai_translation_service_creates_translation_artifacts(monkeypatch, tmp_p
     operation_state = ai_translation_service.load_operation_state(project_root)
     assert operation_state["status"] == "translated"
     assert operation_state["metadata"]["budget_metadata"] == report["budget_metadata"]
+    _assert_simplified_translation_state(operation_state)
 
 
 def test_ai_translation_service_adds_operator_prompt_rules(monkeypatch, tmp_path) -> None:
@@ -90,7 +91,7 @@ def test_ai_translation_service_adds_operator_prompt_rules(monkeypatch, tmp_path
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-12
-    @version    0.1.0
+    @version    0.2.0
     """
     project_root, manifest = _create_chunked_project(tmp_path, "TranslationPromptRulesProject")
     captured_prompts = []
@@ -157,7 +158,6 @@ def test_ai_translation_service_approve_and_edit_update_review_state(tmp_path) -
     )
     translated_chunks[0]["translated_text"] = "Translated one"
     translated_chunks[0]["status"] = ai_translation_service.TRANSLATED_CHUNK_STATUS_TRANSLATED
-    translated_chunks[0]["translated_at"] = "2026-04-07T12:00:00+00:00"
     report = ai_translation_service._rebuild_report(translated_chunks, "ro", "profile-1")
     ai_translation_service._persist_translation_state(
         project_root,
@@ -166,8 +166,6 @@ def test_ai_translation_service_approve_and_edit_update_review_state(tmp_path) -
         report,
         operation_state=ai_translation_service._build_operation_state(
             project_root,
-            source_chunks,
-            translated_chunks,
             report,
             status="running",
             started_at="2026-04-07T12:00:00+00:00",
@@ -202,7 +200,7 @@ def test_ai_translation_service_resume_preserves_completed_chunks(monkeypatch, t
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-02
-    @version    0.1.0
+    @version    0.2.0
     """
     project_root, manifest = _create_chunked_project(tmp_path, "TranslationResumeProject")
     source_chunks, translated_chunks, _report = ai_translation_service.ensure_translation_records(
@@ -212,7 +210,6 @@ def test_ai_translation_service_resume_preserves_completed_chunks(monkeypatch, t
     )
     translated_chunks[0]["translated_text"] = "Existing translation"
     translated_chunks[0]["status"] = ai_translation_service.TRANSLATED_CHUNK_STATUS_TRANSLATED
-    translated_chunks[0]["translated_at"] = "2026-04-07T12:00:00+00:00"
     report = ai_translation_service._rebuild_report(translated_chunks, "ro", "profile-1")
     ai_translation_service._persist_translation_state(
         project_root,
@@ -221,15 +218,13 @@ def test_ai_translation_service_resume_preserves_completed_chunks(monkeypatch, t
         report,
         operation_state=ai_translation_service._build_operation_state(
             project_root,
-            source_chunks,
-            translated_chunks,
             report,
             status="running",
             started_at="2026-04-07T12:00:00+00:00",
             completed_at=None,
             profile_id="profile-1",
             target_language="ro",
-            log_path=project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / "log_ai_transactions_20260407.log",
+            log_path=project_root / "log_ai_translation_20260407.log",
             token_usage={
                 "input_tokens": 20,
                 "output_tokens": 10,
@@ -239,6 +234,8 @@ def test_ai_translation_service_resume_preserves_completed_chunks(monkeypatch, t
             resume_checkpoint={"next_untranslated_chunk_id": "chunk-0002"},
         ),
     )
+    existing_log_path = project_root / "log_ai_translation_20260407.log"
+    existing_log_path.write_text("", encoding="utf-8")
     monkeypatch.setattr(
         ai_translation_service.prompt_template_service,
         "validate_required_prompts",
@@ -250,22 +247,20 @@ def test_ai_translation_service_resume_preserves_completed_chunks(monkeypatch, t
         lambda _name, variables: f"prompt {variables}",
     )
     calls = []
-    monkeypatch.setattr(
-        ai_translation_service.llm_provider_service,
-        "chat_json",
-        lambda *_args, **_kwargs: (
-            calls.append("called")
-            or {
-                "payload": {"translated_text": "New translation"},
-                "usage": {
-                    "input_tokens": 50,
-                    "output_tokens": 15,
-                    "total_tokens": 65,
-                    "usage_available": True,
-                },
-            }
-        ),
-    )
+
+    def fake_chat_json(*_args, **kwargs):
+        calls.append(str(kwargs.get("log_path", "")))
+        return {
+            "payload": {"translated_text": "New translation"},
+            "usage": {
+                "input_tokens": 50,
+                "output_tokens": 15,
+                "total_tokens": 65,
+                "usage_available": True,
+            },
+        }
+
+    monkeypatch.setattr(ai_translation_service.llm_provider_service, "chat_json", fake_chat_json)
 
     report = ai_translation_service.start_or_continue_translation(
         project_root,
@@ -281,6 +276,72 @@ def test_ai_translation_service_resume_preserves_completed_chunks(monkeypatch, t
     assert report["translated_chunk_count"] == 2
     assert report["translation_stage_status"] == ai_translation_service.TRANSLATION_STAGE_TRANSLATED
     assert report["token_usage"]["total_tokens"] == 95
+    operation_state = ai_translation_service.load_operation_state(project_root)
+    _assert_simplified_translation_state(operation_state)
+    assert operation_state["metadata"]["log_relative_path"] == "log_ai_translation_20260407.log"
+    assert calls == [str(existing_log_path)]
+
+
+def test_ai_translation_start_same_language_uses_llm(monkeypatch, tmp_path) -> None:
+    """
+    @brief      Verify start translation calls the LLM even when source and target languages match.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-19
+    @version    0.1.0
+    """
+    project_root, manifest = _create_chunked_project(tmp_path, "TranslationStartSameLanguageProject")
+    manifest["original_language"] = "en"
+    calls: list[str] = []
+    monkeypatch.setattr(
+        ai_translation_service.prompt_template_service,
+        "validate_required_prompts",
+        lambda _names: None,
+    )
+    monkeypatch.setattr(
+        ai_translation_service.prompt_template_service,
+        "render_prompt",
+        lambda _name, variables: f"prompt {variables}",
+    )
+
+    def fake_chat_json(_profile_payload, _system_prompt, user_prompt, **_kwargs):
+        calls.append(user_prompt)
+        return {
+            "payload": {"translated_text": f"LLM same-language text {len(calls)}"},
+            "usage": {
+                "input_tokens": 10,
+                "output_tokens": 5,
+                "total_tokens": 15,
+                "usage_available": True,
+            },
+        }
+
+    monkeypatch.setattr(ai_translation_service.llm_provider_service, "chat_json", fake_chat_json)
+
+    report = ai_translation_service.start_or_continue_translation(
+        project_root,
+        manifest,
+        _profile_payload(),
+        "en",
+    )
+
+    assert isinstance(report, dict)
+    assert len(calls) == 2
+    assert report["translation_stage_status"] == ai_translation_service.TRANSLATION_STAGE_TRANSLATED
+    assert report["translated_chunk_count"] == 2
+    assert report["approved_chunk_count"] == 0
+    translated_chunks = ai_translation_service.load_translated_chunks(project_root)
+    assert [chunk["translated_text"] for chunk in translated_chunks] == [
+        "LLM same-language text 1",
+        "LLM same-language text 2",
+    ]
+    operation_state = ai_translation_service.load_operation_state(project_root)
+    assert operation_state["mode"] == "ai_assisted"
+    assert "pass_through" not in operation_state["metadata"]
+    _assert_simplified_translation_state(operation_state)
 
 
 def test_ai_translation_service_initializes_empty_operation_metadata(tmp_path) -> None:
@@ -291,7 +352,7 @@ def test_ai_translation_service_initializes_empty_operation_metadata(tmp_path) -
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-26
-    @version    0.1.0
+    @version    0.2.0
     """
     project_root, _manifest = _create_chunked_project(tmp_path, "TranslationInitialStateProject")
 
@@ -306,6 +367,7 @@ def test_ai_translation_service_initializes_empty_operation_metadata(tmp_path) -
     assert translated_chunks[0]["translated_text"] == ""
     assert operation_state["status"] == "not_started"
     assert operation_state["metadata"]["total_chunk_count"] == 2
+    _assert_simplified_translation_state(operation_state)
 
 
 def test_ai_translation_budget_metadata_reserves_max_output_tokens(monkeypatch) -> None:
@@ -373,6 +435,24 @@ def test_ai_translation_rejects_profiles_with_no_input_budget(monkeypatch) -> No
             "ro",
             "system",
         )
+
+
+def _assert_simplified_translation_state(operation_state: dict[str, object]) -> None:
+    """
+    @brief      Assert translation operation state does not contain removed path metadata.
+    @param[in]  operation_state Persisted translation operation state payload.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-17
+    @version    0.1.0
+    """
+    for field_name in ("folder_relative_path", "input_paths", "output_paths", "artifact_paths"):
+        assert field_name not in operation_state
+    metadata = operation_state.get("metadata", {})
+    assert isinstance(metadata, dict)
+    assert "source_chunk_count" not in metadata
+    assert "started_by_operator" not in metadata
 
 
 def _create_chunked_project(tmp_path, name: str):

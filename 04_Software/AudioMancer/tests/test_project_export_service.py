@@ -198,6 +198,55 @@ def test_project_export_service_renders_markdown_character_dossiers_as_tables(tm
     assert "Name: Ștefan Gender Hint:" not in content
 
 
+def test_project_export_markdown_character_dossiers_survive_separator_and_colon_prompts(tmp_path) -> None:
+    """
+    @brief      Verify tricky voice prompts do not corrupt the Markdown character table.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-19
+    @version    0.1.0
+    """
+    project_root, manifest = _build_export_project(tmp_path)
+    tricky_prompt = "Whispered: intimate.\n\n----\n\nTone: warm and resonant."
+    _write_json(
+        project_root / config.CHARACTER_PROFILE_FILE_NAME,
+        [
+            {
+                "character_id": "stefan",
+                "canonical_name": "Ștefan",
+                "gender_hint": "male",
+                "age_hint": "old",
+                "voice_definition_prompt": tricky_prompt,
+            }
+        ],
+    )
+
+    markdown = project_export_service.render_export(
+        project_root,
+        manifest,
+        project_export_service.EXPORT_KIND_CHARACTERS,
+        project_export_service.EXPORT_FORMAT_MARKDOWN,
+    )
+    plain = project_export_service.render_export(
+        project_root,
+        manifest,
+        project_export_service.EXPORT_KIND_CHARACTERS,
+        project_export_service.EXPORT_FORMAT_TXT,
+    )
+
+    # Exactly one character subsection: the embedded "----" must not split Ștefan into two.
+    assert markdown.count("### ") == 1
+    assert "### Ștefan" in markdown
+    assert "### Character" not in markdown
+    # The full prompt stays in one escaped table cell; no spurious "Tone" attribute row.
+    assert "Whispered: intimate.<br><br>----<br><br>Tone: warm and resonant." in markdown
+    assert "| **Tone** |" not in markdown
+    # Plain-text export preserves the literal multi-line prompt verbatim.
+    assert tricky_prompt in plain
+
+
 def test_project_export_service_exports_ai_request_parameters_without_prompts(tmp_path) -> None:
     """
     @brief      Verify AI exports include model request settings but not prompt bodies or secrets.
@@ -278,6 +327,43 @@ def test_project_export_service_creates_voice_and_audio_archives(tmp_path) -> No
         assert "Size: 14 bytes" in manifest_text
 
 
+def test_project_export_archives_never_include_ai_transaction_logs(tmp_path) -> None:
+    """
+    @brief      Verify no archive export bundles project-local AI transaction log files.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-19
+    @version    0.1.0
+    """
+    project_root, manifest = _build_export_project(tmp_path)
+    ai_log_name = (
+        f"{config.AI_TRANSACTION_LOG_FILE_PREFIX}character_discovery_20260519{config.AI_TRANSACTION_LOG_FILE_EXTENSION}"
+    )
+    (project_root / ai_log_name).write_text('{"exchange_event": "request"}\n', encoding="utf-8")
+
+    archive_kinds = (
+        project_export_service.EXPORT_KIND_NARRATOR_VOICE,
+        project_export_service.EXPORT_KIND_CHARACTER_VOICES,
+        project_export_service.EXPORT_KIND_AUDIO_ASSEMBLY,
+    )
+    for export_kind in archive_kinds:
+        archive_path = project_export_service.create_archive_export(
+            project_root,
+            manifest,
+            export_kind,
+            tmp_path / f"{export_kind}_no_ai_log.zip",
+        )
+        with zipfile.ZipFile(archive_path) as archive:
+            offending = [
+                name
+                for name in archive.namelist()
+                if config.AI_TRANSACTION_LOG_FILE_PREFIX in name.rsplit("/", maxsplit=1)[-1]
+            ]
+        assert offending == [], f"{export_kind} archive leaked AI logs: {offending}"
+
+
 def test_project_export_service_detects_paths_inside_project(tmp_path) -> None:
     """
     @brief      Verify selected save paths can be checked against the active project root.
@@ -305,7 +391,7 @@ def _build_export_project(tmp_path):
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.1.0
+    @version    0.2.0
     """
     project_root, manifest = project_workspace_service.create_project("ExportProject", tmp_path)
     manifest["source_document"] = {
@@ -434,7 +520,7 @@ def _build_export_project(tmp_path):
     )
     _write_json(project_root / config.CHARACTER_DISCOVERY_STATE_FILE_NAME, {"status": "completed", "metadata": {}})
 
-    narrator_audio_path = project_root / "audio_narator_profile.wav"
+    narrator_audio_path = project_root / "audio_narator_narrator_1.wav"
     narrator_audio_path.write_bytes(b"RIFF-narrator")
     _write_json(
         project_root / config.NARRATOR_PROFILE_FILE_NAME,
@@ -445,11 +531,12 @@ def _build_export_project(tmp_path):
                 "language": "en",
                 "prompt_text": "A warm narrator definition.",
                 "preview_text": "Narrator preview.",
-                "sample_audio_path": narrator_audio_path.name,
-                "sample_metadata": {
-                    "display_name": "Narator Profile",
-                    "prompt_text": "A warm narrator definition.",
+                "sample": {
+                    "source_kind": "voice_designer",
                     "preview_text": "Narrator preview.",
+                    "language": "en",
+                    "source_model_id": "qwen-designer",
+                    "created_at": "2026-05-16T00:00:00+00:00",
                 },
             }
         ],
@@ -500,7 +587,6 @@ def _build_export_project(tmp_path):
             "source_language": "ro",
             "source_kind": "translated_chunks",
             "speech_blocks_profile_id_last_used": "profile_1",
-            "source_chunk_count": 1,
             "speech_block_count": 1,
             "warning_count": 0,
         },

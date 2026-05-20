@@ -14,7 +14,7 @@
          for the Character Voices workflow.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-20
-@version 1.10.2
+@version 1.11.0
 """
 
 # IMPORTS
@@ -33,7 +33,6 @@ from audiomancer.services import (
 )
 from audiomancer.services.logging_service import get_component_logger
 from audiomancer.services.operation_runtime_service import optional_string as _optional_string
-from audiomancer.services.time_service import utc_now_iso as _utc_now_iso
 
 # CONSTANTS
 
@@ -206,7 +205,6 @@ def sync_voice_plan(
                     "default_prompt_text": None,
                     "preview_text": None,
                     "editable": False,
-                    "updated_at": existing_narrator_target.get("updated_at"),
                 }
             )
         )
@@ -237,7 +235,6 @@ def sync_voice_plan(
                         normalized_voice_language,
                     ),
                     "editable": True,
-                    "updated_at": existing_target.get("updated_at"),
                 }
             )
         )
@@ -270,14 +267,14 @@ def voice_target_by_id(project_root: str | Path, target_id: str | None) -> dict[
 
 def mark_character_voice_target_stale(project_root: str | Path, character_id: str) -> str:
     """
-    @brief      Mark one character voice target stale and clear generated sample metadata.
+    @brief      Clear generated sample metadata for one character voice target.
     @param[in]  project_root Active project root folder.
     @param[in]  character_id Character identifier whose voice definition changed.
     @return     Stable character voice target identifier.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-04
-    @version    0.1.1
+    @version    0.2.0
     """
     target_id = character_target_id(str(character_id).strip())
     if not _targets_path(project_root).is_file():
@@ -285,19 +282,6 @@ def mark_character_voice_target_stale(project_root: str | Path, character_id: st
     if not voice_target_by_id(project_root, target_id):
         return target_id
     delete_target_sample(project_root, target_id)
-    updated_targets: list[dict[str, object]] = []
-    for target_payload in load_voice_plan(project_root):
-        if str(target_payload.get("target_id", "")).strip() == target_id:
-            updated_targets.append(
-                {
-                    **dict(target_payload),
-                    "stale": True,
-                    "updated_at": _utc_now_iso(),
-                }
-            )
-            continue
-        updated_targets.append(target_payload)
-    save_voice_targets(project_root, updated_targets)
     return target_id
 
 
@@ -619,7 +603,6 @@ def store_target_sample(
         "generation_mode": str(generation_request.get("generation_mode", "")).strip(),
         "prompt_text": str(target_payload.get("prompt_text", "")).strip(),
         "preview_text": str(preview_text).strip(),
-        "generated_at": _utc_now_iso(),
         "runtime_result_summary": str(runtime_result_summary).strip(),
     }
     audio_path.write_bytes(audio_bytes)
@@ -674,7 +657,6 @@ def import_target_sample(
         "generation_mode": voice_sample_import_service.IMPORTED_SAMPLE_GENERATION_MODE,
         "prompt_text": str(target_payload.get("prompt_text", "")).strip(),
         "preview_text": normalized_preview_text,
-        "imported_at": _utc_now_iso(),
         "source_file_name": source_path.name,
         "audio_validation": dict(validation_report),
         "runtime_result_summary": "Imported WAV sample.",
@@ -703,7 +685,7 @@ def sync_same_narrator_samples(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-20
-    @version    1.1.1
+    @version    1.3.0
     """
     ensure_character_voices_files(project_root)
     if not load_voice_plan(project_root):
@@ -734,10 +716,13 @@ def sync_same_narrator_samples(
         narrator_metadata.get("language", voice_language),
     )
     narrator_preview_text = str(narrator_metadata.get("preview_text", "")).strip()
-    narrator_generation_mode = str(narrator_metadata.get("generation_mode", "")).strip()
+    narrator_generation_mode = str(
+        narrator_metadata.get("source_kind", "")
+        or narrator_metadata.get("generation_mode", "")
+        or narrator_metadata.get("sample_source", "")
+    ).strip()
     narrator_source_model_id = str(narrator_metadata.get("source_model_id", "")).strip() or None
     narrator_runtime_summary = str(narrator_metadata.get("runtime_result_summary", "")).strip()
-    narrator_generated_at = str(narrator_metadata.get("generated_at", "")).strip() or _utc_now_iso()
     copied_samples = 0
     for target_payload in character_targets:
         target_id = str(target_payload.get("target_id", "")).strip()
@@ -754,7 +739,6 @@ def sync_same_narrator_samples(
             "generation_mode": narrator_generation_mode,
             "prompt_text": str(target_payload.get("prompt_text", "")).strip(),
             "preview_text": narrator_preview_text,
-            "generated_at": narrator_generated_at,
             "runtime_result_summary": narrator_runtime_summary,
         }
         audio_path.write_bytes(narrator_audio_bytes)
@@ -841,7 +825,6 @@ def character_voices_operation_summary(
     character_targets = [
         target for target in targets if str(target.get("target_kind", "")).strip() == TARGET_KIND_CHARACTER
     ]
-    narrator_sample_metadata = selected_narrator_sample_metadata(project_root) if narrator_targets else None
     narrator_sample_count = 1 if narrator_targets and selected_narrator_sample_exists(project_root) else 0
     sampled_character_targets = [
         target
@@ -857,23 +840,11 @@ def character_voices_operation_summary(
         status = "in_progress"
     else:
         status = "not_started"
-    sampled_metadata_payloads = [narrator_sample_metadata]
-    sampled_metadata_payloads.extend(
-        load_target_sample_metadata(project_root, str(target.get("target_id", "")).strip())
-        for target in sampled_character_targets
-    )
-    timestamp = _latest_sample_timestamp(
-        [sample_metadata for sample_metadata in sampled_metadata_payloads if isinstance(sample_metadata, dict)]
-    )
     return {
-        "folder_relative_path": config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH,
         "status": status,
         "progress_current": progress_current,
         "progress_total": progress_total,
         "mode": "manual" if progress_current > 0 else None,
-        "started_at": timestamp if progress_current > 0 else None,
-        "completed_at": timestamp if ready else None,
-        "updated_at": timestamp if progress_current > 0 else None,
         "warning_count": 0,
     }
 
@@ -955,7 +926,6 @@ def _update_target_prompt(
                 "preview_text": (
                     target_payload.get("preview_text") if preview_text is None else normalized_preview_text
                 ),
-                "updated_at": _utc_now_iso(),
             }
         )
         normalized_targets.append(updated_target)
@@ -1008,8 +978,6 @@ def _normalize_voice_target(target_payload: dict[str, object]) -> dict[str, obje
             if isinstance(target_payload.get("sample_metadata"), dict)
             else None
         ),
-        "stale": bool(target_payload.get("stale", False)),
-        "updated_at": None if target_payload.get("updated_at") in (None, "") else str(target_payload.get("updated_at")),
     }
 
 
@@ -1229,30 +1197,9 @@ def _update_target_sample_metadata(
                 **dict(target_payload),
                 "sample_audio_path": relative_path,
                 "sample_metadata": None if metadata_payload is None else dict(metadata_payload),
-                "stale": bool(target_payload.get("stale", False)) if metadata_payload is None else False,
             }
         )
     save_voice_targets(project_root, updated_targets)
-
-
-def _latest_sample_timestamp(sample_metadata_payloads: list[dict[str, object]]) -> str | None:
-    """
-    @brief      Return the latest timestamp from persisted character-voices sample metadata.
-    @param[in]  sample_metadata_payloads Sample metadata payloads to inspect.
-    @return     Latest timestamp string or `None`.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-16
-    @version    0.1.0
-    """
-    timestamps: list[str] = []
-    for sample_metadata in sample_metadata_payloads:
-        for field_name in ("selected_at", "generated_at", "imported_at", "updated_at"):
-            timestamp = str(sample_metadata.get(field_name, "") or "").strip()
-            if timestamp:
-                timestamps.append(timestamp)
-                break
-    return max(timestamps) if timestamps else None
 
 
 def _targets_path(project_root: str | Path) -> Path:

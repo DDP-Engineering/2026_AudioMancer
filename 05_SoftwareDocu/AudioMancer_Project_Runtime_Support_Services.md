@@ -102,9 +102,13 @@ Outputs:
 Imported source metadata includes original filename, project-relative path,
 file type, byte size, and import timestamp.
 
-Operation state payloads use a shared envelope with status, progress, input and
-output paths, artifact paths, timestamps, warning counts, metadata, and resume
-checkpoint fields.
+Operation state payloads use a compact shared envelope with `status`,
+`progress_current`, `progress_total`, `mode`, `warning_count`, `metadata`, and
+`resume_checkpoint`. Generic input, output, artifact path arrays and operation
+audit timestamps are intentionally not persisted. Fixed artifact names are
+derived from configuration, while AI transaction logs remain explicit through
+`metadata.log_relative_path`, `metadata.ai_log_relative_path`, or matching
+resume-checkpoint fields.
 
 Generated audio filenames combine chunk/block identity, sequence indexes, and a
 normalized speaker name. WAV validation rejects empty, malformed, or non-WAV

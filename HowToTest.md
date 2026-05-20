@@ -7,7 +7,7 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
 
 # How To Test AudioMancer
 
-This file lists the focused validation used for the v2 selective downstream
+This file lists the focused validation used for the selective downstream
 preservation release work.
 
 Run Python commands from `04_Software/AudioMancer/`.

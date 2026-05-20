@@ -14,7 +14,7 @@
          workflow.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-07
-@version 0.4.2
+@version 0.4.3
 """
 
 # IMPORTS
@@ -48,8 +48,6 @@ def test_ai_translation_page_displays_locked_language_indicators(qtbot) -> None:
                 "source_text": "Original",
                 "translated_text": "Translated",
                 "approved": False,
-                "approved_at": None,
-                "translated_at": "2026-04-07T12:00:00+00:00",
                 "translation_profile_id": "profile-1",
                 "target_language": "ro",
                 "status": ai_translation_service.TRANSLATED_CHUNK_STATUS_TRANSLATED,
@@ -95,8 +93,6 @@ def test_ai_translation_page_renders_selected_chunk_and_review_actions(qtbot) ->
                 "source_text": "Original text",
                 "translated_text": "Translated text",
                 "approved": False,
-                "approved_at": None,
-                "translated_at": "2026-04-07T12:00:00+00:00",
                 "translation_profile_id": "profile-1",
                 "target_language": "ro",
                 "status": ai_translation_service.TRANSLATED_CHUNK_STATUS_TRANSLATED,
@@ -147,8 +143,6 @@ def test_ai_translation_page_edit_marks_selected_chunk_unapproved(qtbot) -> None
                 "source_text": "Original text",
                 "translated_text": "Translated text",
                 "approved": True,
-                "approved_at": "2026-04-07T12:01:00+00:00",
-                "translated_at": "2026-04-07T12:00:00+00:00",
                 "translation_profile_id": "profile-1",
                 "target_language": "ro",
                 "status": ai_translation_service.TRANSLATED_CHUNK_STATUS_APPROVED,
@@ -196,8 +190,6 @@ def test_ai_translation_page_advances_to_next_chunk_with_limit(qtbot) -> None:
                 "source_text": "Original one",
                 "translated_text": "Translated one",
                 "approved": False,
-                "approved_at": None,
-                "translated_at": "2026-04-07T12:00:00+00:00",
                 "translation_profile_id": "profile-1",
                 "target_language": "ro",
                 "status": ai_translation_service.TRANSLATED_CHUNK_STATUS_TRANSLATED,
@@ -208,8 +200,6 @@ def test_ai_translation_page_advances_to_next_chunk_with_limit(qtbot) -> None:
                 "source_text": "Original two",
                 "translated_text": "Translated two",
                 "approved": False,
-                "approved_at": None,
-                "translated_at": "2026-04-07T12:00:01+00:00",
                 "translation_profile_id": "profile-1",
                 "target_language": "ro",
                 "status": ai_translation_service.TRANSLATED_CHUNK_STATUS_TRANSLATED,

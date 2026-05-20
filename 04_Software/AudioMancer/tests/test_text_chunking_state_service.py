@@ -333,7 +333,6 @@ def _write_chunks(project_root, texts: tuple[str, ...]) -> None:
             "chunk_id": f"chunk-{index:04d}",
             "sequence_index": index,
             "text": text,
-            "chapter_label": None,
             "source_start_line": index,
             "source_end_line": index,
             "chunking_mode": "deterministic",

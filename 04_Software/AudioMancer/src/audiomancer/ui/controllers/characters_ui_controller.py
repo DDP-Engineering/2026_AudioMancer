@@ -14,7 +14,7 @@
          for the Characters page.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-11
-@version 0.17.0
+@version 0.17.1
 """
 
 # IMPORTS
@@ -259,7 +259,6 @@ def handle_save_character_requested(
             persisted_payload["character_id"] = created_profile["character_id"]
             persisted_payload["canonical_name"] = normalized_name
             persisted_payload["evidence"] = [dict(item) for item in created_profile["evidence"]]
-            persisted_payload["updated_at"] = created_profile.get("updated_at")
             character_discovery_service.update_character_profile(
                 window._current_project_root,
                 persisted_payload,
@@ -588,7 +587,7 @@ def _sync_manifest_after_discovery(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-08
-    @version    0.1.0
+    @version    0.2.0
     """
     _ = report
     assert window._current_project_root is not None
@@ -805,11 +804,19 @@ def _voice_definition_source_changed(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-04
-    @version    0.4.0
+    @version    0.5.0
     """
     if not isinstance(previous_profile, dict) or not isinstance(updated_profile, dict):
         return False
-    comparable_fields = ("canonical_name", "gender_hint", "age_hint", "voice_definition_prompt", "preview_text")
+    comparable_fields = (
+        "canonical_name",
+        "gender_hint",
+        "gender_confidence",
+        "age_hint",
+        "age_confidence",
+        "voice_definition_prompt",
+        "preview_text",
+    )
     return any(
         str(previous_profile.get(field_name, "")).strip() != str(updated_profile.get(field_name, "")).strip()
         for field_name in comparable_fields
@@ -1053,7 +1060,9 @@ def _build_manual_draft_profile(
             "canonical_name": canonical_name,
             "aliases": [],
             "gender_hint": "",
+            "gender_confidence": "",
             "age_hint": "",
+            "age_confidence": "",
             "voice_definition_prompt": "",
             "confidence": "",
             "evidence": [
@@ -1064,7 +1073,6 @@ def _build_manual_draft_profile(
                     "reason": character_discovery_service.MANUAL_CHARACTER_EVIDENCE_NOTE,
                 }
             ],
-            "updated_at": None,
         }
     )
 
@@ -1190,32 +1198,6 @@ def _has_chunking_output(project_root: str | None) -> bool:
     if not project_root:
         return False
     return bool(deterministic_chunking_service.load_chunks(project_root))
-
-
-def _cancel_active_operation(window: "MainWindow") -> None:
-    """
-    @brief      Mark the active character-discovery operation for cancellation.
-    @param[in]  window Main application window.
-    @return     None.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-08
-    @version    0.1.0
-    """
-    workflow_controller_service.cancel_active_operation(window)
-
-
-def _is_cancel_requested(window: "MainWindow") -> bool:
-    """
-    @brief      Read the current cancellation flag for the active operation.
-    @param[in]  window Main application window.
-    @return     `True` when cancellation was requested.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-08
-    @version    0.1.0
-    """
-    return workflow_controller_service.is_cancel_requested(window)
 
 
 # END OF FILE

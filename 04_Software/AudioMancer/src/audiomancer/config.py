@@ -13,7 +13,7 @@
          file support used by the current AudioMancer implementation scaffold.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 1.40.0
+@version 1.41.0
 """
 
 # IMPORTS
@@ -221,6 +221,33 @@ PROJECT_WORKFLOW_STAGES = (
     "audio_blocks_ready",
     "audio_assembly_ready",
 )
+
+# @brief Canonical ordered workflow operation kinds shared by runtime, impact, and workspace layers.
+WORKFLOW_OPERATION_ORDER = (
+    "extraction",
+    "cleanup",
+    "chunking",
+    "translation",
+    "character_discovery",
+    "narrator_definition",
+    "character_voices",
+    "speech_blocks",
+    "audio_blocks",
+    "audio_assembly",
+)
+
+# @brief Workflow stage milestone promoted by each completed operation.
+OPERATION_STAGE_BY_KIND = {
+    "cleanup": "text_cleanup_ready",
+    "chunking": "text_chunking_ready",
+    "translation": "translation_ready",
+    "character_discovery": "character_discovery_ready",
+    "narrator_definition": "narrator_definition_ready",
+    "character_voices": "character_voices_ready",
+    "speech_blocks": "speech_blocks_ready",
+    "audio_blocks": "audio_blocks_ready",
+    "audio_assembly": "audio_assembly_ready",
+}
 
 # @brief Characters rejected for exact project folder names across Windows and Linux.
 INVALID_PROJECT_NAME_CHARACTERS = '<>:"/\\|?*\x00'

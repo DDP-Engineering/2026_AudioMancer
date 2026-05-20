@@ -100,10 +100,10 @@ The page-state payload includes stable keys such as:
 - `can_approve_selected`
 - `selected_text_character_limit`
 
-Merged block rows preserve compact generated-audio index fields from
-`audio_blocks.json` and derive review/source fields from `speech_blocks.json`.
-The page uses persisted `audio_duration_seconds` and does not open WAV files or
-sidecar metadata during normal state loading.
+Merged block rows preserve generated-audio fields from `audio_blocks.json` and
+derive review/source fields from `speech_blocks.json`. The page uses persisted
+`audio_duration_seconds` and does not open WAV files during normal state
+loading.
 
 ## 7. Workflow Integration
 

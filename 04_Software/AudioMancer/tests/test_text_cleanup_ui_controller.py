@@ -206,8 +206,7 @@ def test_text_cleanup_ui_controller_ai_cleanup_request_uses_selected_profile(
         "ControllerAiCleanupProject",
         tmp_path,
     )
-    extracted_path = project_root / "00_extraction" / "output_raw_text.txt"
-    extracted_path.parent.mkdir(parents=True, exist_ok=True)
+    extracted_path = project_root / config.EXTRACTED_TEXT_FILE_NAME
     extracted_path.write_text("Paragraph one.\n\nParagraph two.\n", encoding="utf-8")
     manifest["source_document"] = {
         "original_name": "story.txt",
@@ -216,7 +215,6 @@ def test_text_cleanup_ui_controller_ai_cleanup_request_uses_selected_profile(
         "imported_at": "2026-04-06T12:00:00+00:00",
         "size_bytes": 10,
     }
-    manifest["extracted_text_relative_path"] = "00_extraction/output_raw_text.txt"
     project_workspace_service.save_manifest(manifest, project_root)
 
     settings_payload = dict(default_settings_payload)
@@ -297,6 +295,7 @@ def test_text_cleanup_ui_controller_ai_cleanup_resume_skips_confirmations(
         "ControllerAiCleanupResumeProject",
         tmp_path,
     )
+    (project_root / config.EXTRACTED_TEXT_FILE_NAME).write_text("Paragraph one.\n", encoding="utf-8")
     manifest["source_document"] = {
         "original_name": "story.txt",
         "stored_relative_path": "story.txt",
@@ -304,10 +303,8 @@ def test_text_cleanup_ui_controller_ai_cleanup_resume_skips_confirmations(
         "imported_at": "2026-04-06T12:00:00+00:00",
         "size_bytes": 10,
     }
-    manifest["extracted_text_relative_path"] = "00_extraction/output_raw_text.txt"
     manifest["operations"] = {
         "cleanup": {
-            "folder_relative_path": "10_cleanup",
             "status": "running",
             "mode": "ai_assisted",
             "metadata": {"ai_profile_id": "profile_1", "model_settings": {"model_name": "qwen3-8b"}},
@@ -415,9 +412,6 @@ def test_text_cleanup_ui_controller_save_cleaned_text_updates_project_state(
         "imported_at": "2026-04-24T00:00:00+00:00",
         "size_bytes": 10,
     }
-    manifest["extracted_text_relative_path"] = (
-        f"{config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH}/{config.EXTRACTED_TEXT_FILE_NAME}"
-    )
     manifest["current_stage"] = "text_chunking_ready"
     manifest["operations"]["cleanup"]["status"] = "completed"
     project_workspace_service.save_manifest(manifest, project_root)

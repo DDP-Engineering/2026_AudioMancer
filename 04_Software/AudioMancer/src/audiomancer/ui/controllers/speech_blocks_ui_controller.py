@@ -14,7 +14,7 @@
          Speech Blocks workflow.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 0.8.6
+@version 0.8.7
 """
 
 # IMPORTS
@@ -833,32 +833,6 @@ def _sync_audio_blocks_manifest_summary(window: "MainWindow") -> None:
         window._current_project_root,
         project_workspace_service.load_manifest(window._current_project_root),
     )
-
-
-def _cancel_active_operation(window: "MainWindow") -> None:
-    """
-    @brief      Mark the active Speech Blocks operation for cancellation.
-    @param[in]  window Active main window instance.
-    @return     None.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.0
-    """
-    workflow_controller_service.cancel_active_operation(window)
-
-
-def _is_cancel_requested(window: "MainWindow") -> bool:
-    """
-    @brief      Check whether the current Speech Blocks operation should cancel.
-    @param[in]  window Active main window instance.
-    @return     True when cancellation was requested.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-21
-    @version    0.1.1
-    """
-    return workflow_controller_service.is_cancel_requested(window)
 
 
 def _speech_blocks_manifest_operation_summary(

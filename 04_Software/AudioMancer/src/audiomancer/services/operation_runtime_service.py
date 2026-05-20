@@ -14,7 +14,7 @@
          shared by long-running workflow operations.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-22
-@version 0.11.2
+@version 0.15.0
 """
 
 # IMPORTS
@@ -23,26 +23,15 @@ from collections.abc import Iterable
 import json
 import math
 from pathlib import Path, PureWindowsPath
+import re
 
 from audiomancer import config
 from audiomancer.services.persistence_service import write_json_atomic
-from audiomancer.services.time_service import utc_now_iso
 
 # CONSTANTS
 
 # @brief Stable execution order used for downstream reset calculations.
-_OPERATION_ORDER = (
-    "extraction",
-    "cleanup",
-    "chunking",
-    "translation",
-    "character_discovery",
-    "narrator_definition",
-    "character_voices",
-    "speech_blocks",
-    "audio_blocks",
-    "audio_assembly",
-)
+_OPERATION_ORDER = config.WORKFLOW_OPERATION_ORDER
 
 # @brief Downstream reset operation kinds preserved when upstream text/character data is regenerated.
 NARRATOR_PROFILE_PRESERVED_OPERATION_KINDS = frozenset(("narrator_definition",))
@@ -176,28 +165,6 @@ def downstream_operation_kinds(
     return _OPERATION_ORDER[start_index:]
 
 
-def build_operation_input_snapshot_path(
-    project_root: str | Path,
-    operation_kind: str,
-    original_name: str,
-) -> Path:
-    """
-    @brief      Reject operation-local input snapshot path creation.
-    @param[in]  project_root Active project root.
-    @param[in]  operation_kind Stable workflow operation token.
-    @param[in]  original_name Original imported source file name.
-    @return     Never returns.
-    @exception  RuntimeError Raised because input snapshots are no longer supported.
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.3.0
-    """
-    _ = project_root
-    _ = operation_kind
-    _ = original_name
-    raise RuntimeError("Operation-local input snapshots are not supported by the flat project layout.")
-
-
 def resolve_operation_path(
     project_root: str | Path,
     operation_kind: str,
@@ -241,27 +208,47 @@ def build_operation_output_path(
 def default_operation_state(operation_kind: str) -> dict[str, object]:
     """
     @brief      Build one persisted default operation-state payload.
+    @details    All operations, including character discovery, use the shared
+                compact envelope (status, progress, mode, warning_count,
+                metadata, resume_checkpoint); workflow-specific fields live
+                under `metadata`.
     @param[in]  operation_kind Stable workflow operation token.
     @return     Default operation-state payload.
     @exception  ValueError Raised when the operation kind is unsupported.
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-26
-    @version    0.2.0
+    @date       2026-05-19
+    @version    0.4.0
     """
     if operation_kind not in _OPERATION_ORDER:
         raise ValueError(f"Unsupported operation kind: {operation_kind}")
+    if operation_kind == "character_discovery":
+        return {
+            "status": "not_started",
+            "progress_current": 0,
+            "progress_total": 0,
+            "mode": "ai_assisted",
+            "warning_count": 0,
+            "metadata": {
+                "phase": "not_started",
+                "ai_profile_id": "",
+                "input_fingerprint": "",
+                "log_relative_path": "",
+                "additional_character_discovery_instructions": "",
+                "additional_character_discovery_instructions_fingerprint": "",
+                "token_usage": {
+                    "input_tokens": None,
+                    "output_tokens": None,
+                    "total_tokens": None,
+                    "usage_available": False,
+                },
+            },
+            "resume_checkpoint": None,
+        }
     return {
-        "folder_relative_path": config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH,
         "status": "not_started",
-        "input_paths": [],
-        "output_paths": [],
-        "artifact_paths": [],
         "progress_current": 0,
         "progress_total": 0,
         "mode": None,
-        "started_at": None,
-        "completed_at": None,
-        "updated_at": None,
         "warning_count": 0,
         "metadata": _default_operation_metadata(operation_kind),
         "resume_checkpoint": None,
@@ -270,54 +257,33 @@ def default_operation_state(operation_kind: str) -> dict[str, object]:
 
 def build_operation_state_payload(
     status: str,
-    input_paths: list[str],
-    output_paths: list[str],
-    artifact_paths: list[str],
     progress_current: int,
     progress_total: int,
     mode: str,
-    started_at: str | None,
-    completed_at: str | None,
     warning_count: int,
     metadata: dict[str, object],
     resume_checkpoint: dict[str, object] | None,
-    folder_relative_path: str = config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH,
-    updated_at: str | None = None,
 ) -> dict[str, object]:
     """
-    @brief      Build the shared operation-state envelope.
+    @brief      Build the shared compact operation-state envelope.
     @param[in]  status Persisted operation status token.
-    @param[in]  input_paths Project-relative input artifact paths.
-    @param[in]  output_paths Project-relative output artifact paths.
-    @param[in]  artifact_paths Project-relative report, log, and sidecar artifact paths.
     @param[in]  progress_current Completed progress count.
     @param[in]  progress_total Total progress count.
     @param[in]  mode Operation execution mode token.
-    @param[in]  started_at Optional operation start timestamp.
-    @param[in]  completed_at Optional operation completion timestamp.
     @param[in]  warning_count Persisted warning count.
     @param[in]  metadata Workflow-specific metadata payload.
     @param[in]  resume_checkpoint Optional workflow-specific resume checkpoint.
-    @param[in]  folder_relative_path Project-relative operation folder token.
-    @param[in]  updated_at Optional state update timestamp override.
     @return     JSON-ready operation-state payload.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-29
-    @version    0.1.0
+    @version    0.3.0
     """
     return {
-        "folder_relative_path": str(folder_relative_path),
         "status": str(status),
-        "input_paths": list(input_paths),
-        "output_paths": list(output_paths),
-        "artifact_paths": list(artifact_paths),
         "progress_current": int(progress_current),
         "progress_total": int(progress_total),
         "mode": str(mode),
-        "started_at": started_at,
-        "completed_at": completed_at,
-        "updated_at": updated_at or utc_now_iso(),
         "warning_count": int(warning_count),
         "metadata": dict(metadata),
         "resume_checkpoint": None if resume_checkpoint is None else dict(resume_checkpoint),
@@ -332,43 +298,17 @@ def _default_operation_metadata(operation_kind: str) -> dict[str, object]:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-26
-    @version    0.2.0
+    @version    0.4.0
     """
-    if operation_kind == "character_discovery":
-        return {
-            "ai_profile_id": "",
-            "source_chunk_count": 0,
-            "character_count": 0,
-            "analyzed_window_count": 0,
-            "merged_candidate_count": 0,
-            "window_size": 0,
-            "window_overlap": 0,
-            "warnings": [],
-            "input_fingerprint": "",
-            "log_relative_path": "",
-            "token_usage": {
-                "input_tokens": None,
-                "output_tokens": None,
-                "total_tokens": None,
-                "usage_available": False,
-            },
-        }
     if operation_kind == "audio_blocks":
         return {
             "voice_language": "",
             "input_fingerprint": "",
-            "speech_block_count": 0,
-            "generated_block_count": 0,
-            "approved_block_count": 0,
-            "clone_profile_count": 0,
             "prompt_count": 0,
             "reused_prompt_count": 0,
             "regenerated_prompt_count": 0,
             "current_phase": "",
             "current_block_id": "",
-            "model_id": "",
-            "model_token_budget": 0,
-            "model_audio_seconds_budget": 0.0,
         }
     return {}
 
@@ -720,6 +660,22 @@ def optional_string(value: object, *, strip: bool = True) -> str | None:
     return normalized_value or None
 
 
+def safe_file_stem(value: object, fallback: str = "AudioMancer") -> str:
+    """
+    @brief      Normalize one operator-facing name into a cross-platform-safe file stem.
+    @param[in]  value Candidate file stem source value.
+    @param[in]  fallback Stem returned when the normalized value is empty.
+    @return     Filesystem-safe file stem preserving Unicode word characters.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-19
+    @version    0.1.0
+    """
+    normalized = re.sub(r'[<>:"/\\|?*\x00-\x1F]+', "_", str(value).strip())
+    normalized = re.sub(r"\s+", "_", normalized).strip("._ ")
+    return normalized or fallback
+
+
 def is_missing_runtime_value(value: object) -> bool:
     """
     @brief      Return whether one persisted runtime value is missing or null-like.
@@ -751,7 +707,6 @@ def reset_operation_data(
     project_root: str | Path,
     operation_kind: str,
     include_current: bool = True,
-    keep_input_snapshots: bool = False,
     preserve_operation_kinds: Iterable[str] | None = None,
 ) -> None:
     """
@@ -759,15 +714,13 @@ def reset_operation_data(
     @param[in]  project_root Active project root.
     @param[in]  operation_kind Selected workflow operation token.
     @param[in]  include_current True to clear the selected operation folder too.
-    @param[in]  keep_input_snapshots Ignored; input snapshots are no longer created.
     @param[in]  preserve_operation_kinds Optional operation kinds excluded from clearing.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.3.0
+    @version    0.4.0
     """
-    _ = keep_input_snapshots
     preserved_operation_kinds = _normalized_operation_kind_set(preserve_operation_kinds)
     operation_kinds = downstream_operation_kinds(
         operation_kind,

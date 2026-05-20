@@ -15,7 +15,7 @@ Provides the Character Discovery workflow used by the `Characters` page in
 It analyzes canonical chunking output as the authoritative source for character
 identity and dialogue evidence. It produces one persisted set of compact
 speaking-character profiles with identity, aliases, sex or gender guidance,
-age-domain guidance, evidence, confidence, and one final
+age-domain guidance, demographic confidence, evidence, character confidence, and one final
 `voice_definition_prompt` per character.
 It exposes resumable operation state and keeps the page state and UI
 controller aligned with the project manifest.
@@ -24,11 +24,13 @@ controller aligned with the project manifest.
 
 - resolve the discovery input from `chunks_text.json`
 - use canonical chunking artifacts as the discovery source
+- derive transient chapter context from ordered chunk text instead of requiring
+  persisted `chapter_label` values in `chunks_text.json`
 - split chunk input into overlapping, budget-aware AI analysis windows
 - call the configured AI profile for window extraction and profile synthesis
 - collect optional operator Character Discovery rules before fresh discovery,
   append those rules to window extraction and profile synthesis prompts, and
-  preserve them in report/state metadata for compatible resumes
+  preserve them in report and state fields for compatible resumes
 - detect language-agnostic dialogue spans from quotation and dash-style direct
   speech markers
 - normalize, score, merge, filter, and persist discovered speaking characters
@@ -84,10 +86,12 @@ High-level runtime flow:
    long-running AI work. For fresh runs, it then asks for optional operator
    Character Discovery rules in a word-wrapped text box.
 4. `character_discovery_service.start_or_continue_discovery(...)` resolves
-   canonical chunking output as the discovery input, derives request budgets
-   from the selected profile context window and max output tokens, and restores
-   resumable state when the chunk fingerprint, saved operator-rule fingerprint,
-   and current checkpoint boundary are valid.
+   canonical chunking output as the discovery input, derives runtime
+   `CHAPTER_LABEL` prompt context by scanning ordered chunk text for
+   chapter/scene headings, derives request budgets from the selected profile
+   context window and max output tokens, and restores resumable state when the
+   top-level chunk fingerprint, saved operator-rule fingerprint, and current
+   checkpoint boundary are valid.
 5. The service detects direct-dialogue spans in each chunk using punctuation
    structure rather than English-only speech verbs, analyzes budgeted chunk
    windows using eight chunks as a maximum cap, normalizes candidate evidence
@@ -148,6 +152,7 @@ Inputs:
 - active project root and manifest
 - enabled AI profile payload from `settings.json`
 - canonical chunking output at `chunks_text.json`
+- transient chapter context derived at runtime from chunk text
 - optional cleaned text from `clean_text.txt`
 - prompt templates from the app-root `prompts/` directory
 - optional resumable `characters_state.json`
@@ -160,11 +165,11 @@ Outputs:
 - `log_ai_characters_<timestamp>.log`
 - updated `project.json` operation state and workflow stage
 
-Report and operation-state metadata also persist
-`additional_character_discovery_instructions` and
-`additional_character_discovery_instructions_fingerprint` so cancelled or
-failed runs continue with the original operator rules instead of silently
-switching prompt policy mid-run.
+Report and operation state also persist
+`additional_character_discovery_instructions`,
+`additional_character_discovery_instructions_fingerprint`, and
+`log_relative_path` so cancelled or failed runs continue with the original
+operator rules and append to the same root-level AI transaction log.
 
 ## 6. Data Contracts
 
@@ -174,13 +179,14 @@ Persisted character profile fields:
 - `canonical_name`
 - `aliases`
 - `gender_hint`
+- `gender_confidence`
 - `age_hint`
+- `age_confidence`
 - `voice_definition_prompt`
 - `preview_text`
 - `confidence`
 - `review_status`
 - `evidence`
-- `updated_at`
 
 Internal review statuses are persisted without adding controls to the AI
 Translation page:
@@ -197,6 +203,9 @@ Voice-definition rules:
 - `age_hint` is a flexible evidence-backed text field for exact ages or domains
   such as `child`, `teen`, `young adult`, `adult`, `middle-aged`, `old`, or
   `very old`; it stays empty when source evidence does not support age
+- `gender_confidence` and `age_confidence` store `high`, `medium`, `low`, or
+  an empty string for the matching demographic hint; they do not replace the
+  character-level `confidence` field
 - manual edits to the final prompt are preserved as the current character
   voice-design source
 - `preview_text` is an optional handoff sample later consumed by
@@ -239,37 +248,41 @@ Report fields currently include:
 - `model_settings_history`
 - `warning_count`
 - `warnings`
-- `generated_at`
 
 Operation-state invariants:
 
 - opening the Characters page before discovery lazily creates
   `characters_state.json` with `not_started` progress and zero-valued
-  character-discovery metadata counters; it does not create
-  `characters_profile.json` or `characters_report.json`
+  compact character-discovery state; it does not create
+  `characters_profile.json`, `characters_report.json`, or an AI log
 - `mode` is `ai_assisted`
-- resume checkpoints are reused when the chunk fingerprint still matches; the
-  remaining discovery or synthesis work uses the currently selected enabled AI
-  profile and records the current model name, context window, max output tokens,
-  and temperature in `model_settings` plus `model_settings_history`
+- `characters_state.json` uses the shared compact operation envelope; phase,
+  profile id, token usage, prompt-rule fingerprint, and log filename live in
+  `metadata`
+- `metadata.log_relative_path` is a top-level project-root-relative log
+  filename such as `log_ai_characters_<timestamp>.log`; compatible resumes
+  append to that file
+- checkpoints are stored in `resume_checkpoint` and are reused when the chunk
+  fingerprint still matches; the remaining discovery or synthesis work uses
+  the currently selected enabled AI profile
 - discovery-window checkpoints store `next_discovery_start_chunk_index` so
   remaining windows can be rebuilt from the current profile budget after a
   cancellation; checkpoints missing that boundary are ignored
-- discovery-window candidate payloads use only the current window schema:
-  `canonical_name`, `aliases`, `age_hint`, `confidence`, and `evidence`; final
-  `gender_hint` and `voice_definition_prompt` fields are produced only by the
-  synthesis pass
+- synthesis progress is derived from the number of persisted
+  `synthesized_profiles`; no separate `synthesis_progress_count` is stored
+- discovery-window candidate payloads use the current window schema:
+  `canonical_name`, `aliases`, `gender_hint`, `gender_confidence`, `age_hint`,
+  `age_confidence`, `confidence`, and `evidence`; final
+  `voice_definition_prompt` is produced by the synthesis pass
 - completed discovery disables the page start action until reset
 - reset preserves upstream translation artifacts and existing narrator profiles
   or samples, then clears dependent character voice, speech, audio block, and
   assembly data
-- manual add, edit, or delete operations update the persisted operation-state
-  `metadata.character_count` when a state file already exists
 - manual add preserves downstream Speech Blocks, Audio Blocks, and Audio
   Assembly while adding or refreshing the matching Character Voices target
 - manual edit unapproves only Speech Blocks assigned to the edited character,
-  marks the matching voice target stale when voice-definition source fields
-  change, resets only affected Audio Blocks, and resets Audio Assembly
+  clears the matching character voice sample when voice-definition source
+  fields change, resets only affected Audio Blocks, and resets Audio Assembly
 - manual delete removes the matching Character Voices target, moves assigned
   Speech Blocks to Narrator without deleting them, unapproves those blocks,
   resets only their Audio Blocks, and resets Audio Assembly

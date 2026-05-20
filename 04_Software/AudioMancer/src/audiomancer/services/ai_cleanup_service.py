@@ -15,7 +15,7 @@
          resumable window-based progress plus AI transaction logs.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-07
-@version 0.9.0
+@version 0.9.2
 """
 
 # IMPORTS
@@ -149,23 +149,19 @@ def clean_text(
     @exception  ValueError Raised on missing profile data or unusable cleanup output.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-12
-    @version    0.6.1
+    @version    0.6.2
     """
     resolved_project_root = Path(project_root)
     source_document = manifest.get("source_document")
     if not isinstance(source_document, dict):
         raise ValueError("No imported source is available for AI-assisted cleanup.")
-    extracted_relative_path = manifest.get("extracted_text_relative_path")
-    if not isinstance(extracted_relative_path, str) or not extracted_relative_path.strip():
-        raise FileNotFoundError("AI-assisted cleanup requires extracted text first.")
-
     profile_id = str(ai_profile_payload.get("id", "")).strip()
     model_name = str(ai_profile_payload.get("model_name", "")).strip()
     base_url = str(ai_profile_payload.get("base_url", "")).strip()
     if not profile_id or not model_name or not base_url:
         raise ValueError("AI-assisted cleanup requires a valid enabled AI profile.")
 
-    extracted_path = resolved_project_root / extracted_relative_path
+    extracted_path = resolved_project_root / config.EXTRACTED_TEXT_FILE_NAME
     if not extracted_path.is_file():
         raise FileNotFoundError(f"Extracted text is missing: {extracted_path}")
 
@@ -386,13 +382,6 @@ def clean_text(
     )
     warnings = _build_cleanup_warnings(detected_language, chapter_count, warning_details)
     report_payload: CleanupReportPayload = {
-        "input_relative_path": relative_to_project(resolved_project_root, input_snapshot_path),
-        "cleaned_text_relative_path": relative_to_project(resolved_project_root, output_path),
-        "cleaned_text_metadata_relative_path": relative_to_project(
-            resolved_project_root,
-            cleanup_metadata_service.cleanup_metadata_path(resolved_project_root),
-        ),
-        "cleaned_at": _utc_now_iso(),
         "detected_language": detected_language,
         "warnings": warnings,
         "warning_details": warning_details,
@@ -426,7 +415,7 @@ def clean_text(
         progress_current=total_windows,
         progress_total=total_windows,
         started_at=started_at,
-        completed_at=report_payload["cleaned_at"],
+        completed_at=None,
         warnings=warnings,
         profile_id=profile_id,
         log_relative_path=log_relative_path,
@@ -1257,22 +1246,16 @@ def _build_operation_state(
     @version    0.4.0
     """
     additional_cleanup_instructions_fingerprint = _compute_prompt_fingerprint(additional_cleanup_instructions)
-    artifact_paths: list[str] = [log_relative_path]
-    if report_path is not None and report_path.is_file():
-        artifact_paths.append(relative_to_project(project_root, report_path))
-    output_paths = [relative_to_project(project_root, output_path)] if output_path.is_file() else []
-    if metadata_path is not None and metadata_path.is_file():
-        output_paths.append(relative_to_project(project_root, metadata_path))
+    _ = project_root
+    _ = input_snapshot_path
+    _ = output_path
+    _ = report_path
+    _ = metadata_path
     return build_operation_state_payload(
         status=status,
-        input_paths=[relative_to_project(project_root, input_snapshot_path)],
-        output_paths=output_paths,
-        artifact_paths=artifact_paths,
         progress_current=progress_current,
         progress_total=progress_total,
         mode="ai_assisted",
-        started_at=started_at,
-        completed_at=completed_at,
         warning_count=len(warnings),
         metadata={
             "warnings": list(warnings),

@@ -14,7 +14,7 @@
          orchestration service.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-29
-@version 0.2.0
+@version 0.3.1
 """
 
 # IMPORTS
@@ -24,11 +24,9 @@ from pathlib import Path
 from audiomancer import config
 from audiomancer.services import speech_blocks_normalization_service, token_usage_service
 from audiomancer.services.operation_runtime_service import (
-    build_operation_output_path,
     build_operation_state_payload,
     relative_to_project,
 )
-from audiomancer.services.time_service import utc_now_iso as _utc_now_iso
 
 # CONSTANTS
 
@@ -67,14 +65,15 @@ def rebuild_report(
     @param[in]  warning_records Current warning entry list.
     @param[in]  token_usage Current cumulative token-usage payload.
     @param[in]  budget_metadata Optional context-budget metadata.
-    @param[in]  updated_at Optional report timestamp override.
+    @param[in]  updated_at Ignored legacy report timestamp override.
     @return     Rebuilt Speech Blocks report payload.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-29
-    @version    0.1.0
+    @version    0.2.0
     """
     _ = warning_records
+    _ = updated_at
     approved_count = approved_block_count(speech_blocks)
     total_block_count = len(speech_blocks)
     warning_entries = warning_records_from_blocks(speech_blocks)
@@ -98,7 +97,6 @@ def rebuild_report(
         "total_block_count": total_block_count,
         "warning_count": len(warning_entries),
         "warnings": warning_entries,
-        "updated_at": updated_at or _utc_now_iso(),
         "token_usage": token_usage_service.coerce_token_usage(token_usage),
     }
     if budget_metadata is not None:
@@ -185,9 +183,8 @@ def build_operation_state(
     @version    0.1.0
     """
     _ = warning_records
-    input_path = source_chunks_input_path(project_root, source_kind)
-    output_path = build_operation_output_path(project_root, "speech_blocks", config.SPEECH_BLOCKS_OUTPUT_FILE_NAME)
-    report_path = build_operation_output_path(project_root, "speech_blocks", config.SPEECH_BLOCKS_REPORT_FILE_NAME)
+    _ = started_at
+    _ = completed_at
     processed_chunk_count = len({str(block.get("chunk_id", "")).strip() for block in speech_blocks})
     warning_entries = warning_records_from_blocks(speech_blocks)
     metadata_payload: dict[str, object] = {
@@ -218,25 +215,19 @@ def build_operation_state(
     if next_chunk_index is not None:
         resume_checkpoint = {
             "next_chunk_index": next_chunk_index,
+            "run_token": started_at,
             "source_snapshot_fingerprint": input_fingerprint,
             "source_language": source_language,
             "ai_profile_id": profile_id,
+            "log_relative_path": relative_to_project(project_root, log_path),
         }
         if budget_metadata is not None:
             resume_checkpoint["budget_metadata"] = dict(budget_metadata)
     return build_operation_state_payload(
         status=status,
-        input_paths=[relative_to_project(project_root, input_path)],
-        output_paths=[relative_to_project(project_root, output_path)],
-        artifact_paths=[
-            relative_to_project(project_root, report_path),
-            relative_to_project(project_root, log_path),
-        ],
         progress_current=processed_chunk_count,
         progress_total=len(source_chunks),
         mode="ai_assisted",
-        started_at=started_at,
-        completed_at=completed_at,
         warning_count=len(warning_entries),
         metadata=metadata_payload,
         resume_checkpoint=resume_checkpoint,

@@ -14,7 +14,7 @@
          targeted downstream invalidation when upstream voice inputs change.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-23
-@version 0.8.1
+@version 0.8.2
 """
 
 # IMPORTS
@@ -1001,32 +1001,6 @@ def _has_fully_generated_run(project_root: str | Path, report: dict[str, object]
     return all(
         audio_blocks_service.is_generated(audio_by_speech_block_id.get(block_id, {})) for block_id in approved_block_ids
     )
-
-
-def _cancel_active_operation(window: "MainWindow") -> None:
-    """
-    @brief      Mark the active Audio Blocks operation for cancellation.
-    @param[in]  window Active main window instance.
-    @return     None.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-23
-    @version    0.1.0
-    """
-    workflow_controller_service.cancel_active_operation(window)
-
-
-def _is_cancel_requested(window: "MainWindow") -> bool:
-    """
-    @brief      Check whether the current Audio Blocks operation should cancel.
-    @param[in]  window Active main window instance.
-    @return     True when cancellation was requested.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-23
-    @version    0.1.1
-    """
-    return workflow_controller_service.is_cancel_requested(window)
 
 
 def _confirm_generation(window: "MainWindow", language: str) -> bool:

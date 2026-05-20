@@ -31,7 +31,8 @@ The service owns:
 - compatibility retry when one backend rejects `max_tokens` and requests
   `max_completion_tokens`
 - response extraction from OpenAI-compatible `choices[].message.content`
-- conservative local JSON repair and one follow-up JSON-repair request
+- conservative local JSON repair and one follow-up JSON-repair request for
+  non-empty malformed assistant content
 - cooperative cancellation while waiting for provider responses
 - normalized token-usage extraction from the response `usage` object
 - append-only AI transaction logging for request, response, and failure events
@@ -70,7 +71,9 @@ Main flow:
 5. `_parse_json_content(...)` strips fences, trims surrounding text, and
    attempts one conservative local repair pass for malformed JSON content.
 6. `_repair_json_response_with_model(...)` sends one follow-up repair request
-   only when the assistant text is still not parseable as JSON.
+   only when non-empty assistant text is still not parseable as JSON. Empty
+   assistant content fails directly so reasoning-only local model responses do
+   not trigger a second prompt with an empty malformed-JSON block.
 7. `token_usage_service.normalize_provider_usage(...)` extracts
    `prompt_tokens`, `completion_tokens`, and `total_tokens` when the backend
    reports them.

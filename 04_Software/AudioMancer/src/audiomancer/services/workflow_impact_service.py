@@ -14,7 +14,7 @@
          deletion helpers used by staged v2 downstream invalidation work.
 @author Eng. Dan Dumitru Pasare
 @date 2026-05-04
-@version 0.1.2
+@version 0.1.3
 """
 
 # IMPORTS
@@ -34,31 +34,10 @@ from audiomancer.services.time_service import utc_now_iso
 _WORKFLOW_IMPACT_LOGGER = get_component_logger("operation_runtime")
 
 # @brief Canonical operation order used by the v2 workflow-impact layer.
-WORKFLOW_OPERATION_ORDER = (
-    "extraction",
-    "cleanup",
-    "chunking",
-    "translation",
-    "character_discovery",
-    "narrator_definition",
-    "character_voices",
-    "speech_blocks",
-    "audio_blocks",
-    "audio_assembly",
-)
+WORKFLOW_OPERATION_ORDER = config.WORKFLOW_OPERATION_ORDER
 
 # @brief Workflow stage promoted by each completed operation.
-OPERATION_STAGE_BY_KIND = {
-    "cleanup": "text_cleanup_ready",
-    "chunking": "text_chunking_ready",
-    "translation": "translation_ready",
-    "character_discovery": "character_discovery_ready",
-    "narrator_definition": "narrator_definition_ready",
-    "character_voices": "character_voices_ready",
-    "speech_blocks": "speech_blocks_ready",
-    "audio_blocks": "audio_blocks_ready",
-    "audio_assembly": "audio_assembly_ready",
-}
+OPERATION_STAGE_BY_KIND = config.OPERATION_STAGE_BY_KIND
 
 # @brief Stable identity fields that must survive local v2 edit operations.
 STABLE_IDENTITY_FIELDS = frozenset(("chunk_id", "speech_block_id", "voice_target_id"))

@@ -16,7 +16,7 @@
          `80_audio_blocks` workflow artifacts.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-23
-@version 0.16.0
+@version 0.18.1
 """
 
 # IMPORTS
@@ -39,7 +39,6 @@ from audiomancer.services import (
 )
 from audiomancer.services.logging_service import get_component_logger, trace_function
 from audiomancer.services.operation_runtime_service import (
-    build_operation_output_path,
     build_operation_state_payload,
     load_operation_state_payload,
     load_optional_json_artifact,
@@ -57,7 +56,6 @@ from audiomancer.services.operation_runtime_service import (
 from audiomancer.services.operation_runtime_service import (
     try_resolve_project_relative_path as _safe_project_artifact_path,
 )
-from audiomancer.services.persistence_service import write_json_atomic
 from audiomancer.services.time_service import utc_now_iso as _utc_now_iso
 
 # CONSTANTS
@@ -241,9 +239,6 @@ def has_persisted_audio_blocks(project_root: str | Path) -> bool:
     if isinstance(operation_state, dict):
         has_runtime_state = str(operation_state.get("status", "")).strip() != AUDIO_BLOCKS_STAGE_NOT_STARTED or any(
             (
-                bool(operation_state.get("input_paths")),
-                bool(operation_state.get("output_paths")),
-                bool(operation_state.get("artifact_paths")),
                 int(operation_state.get("progress_current", 0) or 0) > 0,
                 int(operation_state.get("progress_total", 0) or 0) > 0,
             )
@@ -809,10 +804,7 @@ def invalidate_audio_for_speech_block(project_root: str | Path, speech_block_id:
     for block in audio_blocks:
         if str(block.get("speech_block_id", "")).strip() != str(speech_block_id).strip():
             continue
-        _delete_audio_block_artifacts(
-            resolved_project_root,
-            _enrich_audio_block_from_metadata(resolved_project_root, block),
-        )
+        _delete_audio_block_artifacts(resolved_project_root, block)
         block.update(_cleared_audio_fields())
         changed = True
         break
@@ -841,8 +833,7 @@ def reconcile_after_speech_blocks_resplit(project_root: str | Path, changed_chun
     if not existing_audio_blocks:
         return load_audio_blocks_report(resolved_project_root) or _persist_report_update(resolved_project_root, [])
     existing_by_speech_block_id = {
-        str(block.get("speech_block_id", "")).strip(): _enrich_audio_block_from_metadata(resolved_project_root, block)
-        for block in existing_audio_blocks
+        str(block.get("speech_block_id", "")).strip(): dict(block) for block in existing_audio_blocks
     }
     reconciled_blocks: list[AudioBlockPayload] = []
     for speech_block in speech_blocks:
@@ -888,7 +879,7 @@ def reconcile_after_speech_blocks_resplit(project_root: str | Path, changed_chun
         if old_block_id not in {str(block.get("speech_block_id", "")).strip() for block in speech_blocks}:
             _delete_audio_block_artifacts(
                 resolved_project_root,
-                _enrich_audio_block_from_metadata(resolved_project_root, old_block),
+                old_block,
             )
     return _persist_report_update(resolved_project_root, reconciled_blocks)
 
@@ -930,7 +921,7 @@ def remove_audio_blocks_for_chunks(
     audio_blocks = load_audio_blocks(resolved_project_root)
     if not audio_blocks:
         return load_audio_blocks_report(resolved_project_root), workflow_impact_service.ArtifactDeletionSummary()
-    enriched_audio_blocks = [_enrich_audio_block_from_metadata(resolved_project_root, block) for block in audio_blocks]
+    enriched_audio_blocks = [dict(block) for block in audio_blocks]
     artifact_summary = workflow_impact_service.delete_audio_block_artifacts(
         resolved_project_root,
         enriched_audio_blocks,
@@ -982,7 +973,7 @@ def remove_audio_blocks_for_speech_blocks(
             _persist_report_update(resolved_project_root, [], preserved_clone_profiles),
             workflow_impact_service.ArtifactDeletionSummary(),
         )
-    enriched_audio_blocks = [_enrich_audio_block_from_metadata(resolved_project_root, block) for block in audio_blocks]
+    enriched_audio_blocks = [dict(block) for block in audio_blocks]
     artifact_summary = workflow_impact_service.delete_audio_block_artifacts(
         resolved_project_root,
         enriched_audio_blocks,
@@ -1130,7 +1121,6 @@ def reset_audio_blocks(project_root: str | Path) -> None:
         project_root,
         "audio_blocks",
         include_current=True,
-        keep_input_snapshots=False,
     )
 
 
@@ -1655,7 +1645,7 @@ def _generate_audio_block(
     force_restart: bool = False,
 ) -> AudioBlockPayload:
     """
-    @brief      Generate one WAV plus metadata pair for the selected speech block and reusable clone prompt.
+    @brief      Generate one WAV and canonical Audio Blocks metadata for the selected speech block.
     @param[in]  project_root Active project root folder.
     @param[in]  audio_block Persisted Audio Blocks entry to regenerate.
     @param[in]  clone_profile Persisted reusable clone-prompt payload.
@@ -1669,7 +1659,7 @@ def _generate_audio_block(
     @exception  OperationCancelledError Raised when cancellation is requested.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-24
-    @version    0.5.0
+    @version    0.6.0
     """
     base_url = str(runtime_settings.get("base_url", "")).strip()
     runtime_api_key = str(runtime_settings.get("runtime_api_key", ""))
@@ -1678,7 +1668,7 @@ def _generate_audio_block(
     if voice_clone_prompt in (None, ""):
         raise RuntimeError("Audio Blocks could not resolve the required reusable clone prompt for generation.")
     split_plan = _plan_audio_block_splits(str(audio_block.get("text", "")), generation_context)
-    audio_path, metadata_path = _audio_artifact_paths(
+    audio_path, _metadata_path = _audio_artifact_paths(
         project_root,
         str(audio_block.get("chunk_id", "")).strip(),
         int(audio_block.get("sequence_index", 0)),
@@ -1749,7 +1739,7 @@ def _generate_audio_block(
                 {
                     **dict(audio_block),
                     "audio_relative_path": relative_to_project(project_root, audio_path),
-                    "metadata_relative_path": relative_to_project(project_root, metadata_path),
+                    "metadata_relative_path": None,
                     "split_part_count": len(split_plan["parts"]),
                     "split_strategy": split_plan["strategy"],
                     "model_token_budget": int(generation_context.get("model_token_budget", 0)),
@@ -1765,37 +1755,19 @@ def _generate_audio_block(
         _stitch_wav_parts(part_paths, audio_path)
     generated_at = _utc_now_iso()
     audio_duration_seconds = _wav_duration_seconds(audio_path)
-    metadata_payload = {
-        "speech_block_id": str(audio_block.get("speech_block_id", "")).strip(),
-        "chunk_id": str(audio_block.get("chunk_id", "")).strip(),
-        "speaker_id": str(audio_block.get("speaker_id", "")).strip(),
-        "voice_target_id": str(audio_block.get("voice_target_id", "")).strip(),
-        "voice_language": str(generation_context.get("voice_language", "")).strip(),
-        "prompt_format": _optional_string(clone_profile.get("prompt_format")),
-        "generated": generated_at,
-        "audio_duration_seconds": audio_duration_seconds,
-        "runtime_result_summary": runtime_result_summary,
-        "split_part_count": len(split_plan["parts"]),
-        "split_strategy": split_plan["strategy"],
-        "model_token_budget": int(generation_context.get("model_token_budget", 0)),
-        "model_audio_seconds_budget": float(generation_context.get("model_audio_seconds_budget", 0.0)),
-        "generated_part_relative_paths": [relative_to_project(project_root, path) for path in part_paths],
-        "generation_fingerprint": _build_audio_block_fingerprint(audio_block, generation_context),
-        "split_plan_fingerprint": _split_plan_fingerprint(split_plan),
-    }
-    write_json_atomic(metadata_path, metadata_payload)
     _AUDIO_BLOCKS_LOGGER.info(
-        "Generated audio block chunk_id=%s sequence_index=%s audio_path=%s metadata_path=%s",
+        "Generated audio block chunk_id=%s sequence_index=%s audio_path=%s",
         str(audio_block.get("chunk_id", "")).strip(),
         int(audio_block.get("sequence_index", 0)),
         relative_to_project(project_root, audio_path),
-        relative_to_project(project_root, metadata_path),
     )
     return {
         **dict(audio_block),
         "audio_relative_path": relative_to_project(project_root, audio_path),
-        "metadata_relative_path": relative_to_project(project_root, metadata_path),
+        "metadata_relative_path": None,
         "audio_duration_seconds": audio_duration_seconds,
+        "voice_language": str(generation_context.get("voice_language", "")).strip(),
+        "prompt_format": _optional_string(clone_profile.get("prompt_format")),
         "split_part_count": len(split_plan["parts"]),
         "split_strategy": split_plan["strategy"],
         "model_token_budget": int(generation_context.get("model_token_budget", 0)),
@@ -2039,7 +2011,7 @@ def _remap_audio_block_artifacts(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-24
-    @version    0.2.0
+    @version    0.3.0
     """
     remapped_block = dict(old_block)
     remapped_block.update(
@@ -2061,8 +2033,7 @@ def _remap_audio_block_artifacts(
     if not is_generated(remapped_block) or bool(remapped_block.get("metadata_only", False)):
         return remapped_block
     old_audio_relative_path = _optional_string(old_block.get("audio_relative_path"))
-    old_metadata_relative_path = _optional_string(old_block.get("metadata_relative_path"))
-    new_audio_path, new_metadata_path = _audio_artifact_paths(
+    new_audio_path, _metadata_path = _audio_artifact_paths(
         project_root,
         str(new_block.get("chunk_id", "")).strip(),
         int(new_block.get("sequence_index", 0)),
@@ -2076,29 +2047,7 @@ def _remap_audio_block_artifacts(
                 new_audio_path.unlink()
             old_audio_path.rename(new_audio_path)
             remapped_block["audio_relative_path"] = relative_to_project(project_root, new_audio_path)
-    if old_metadata_relative_path:
-        old_metadata_path = _safe_project_artifact_path(project_root, old_metadata_relative_path)
-        if old_metadata_path is None:
-            return remapped_block
-        if old_metadata_path.is_file():
-            metadata_payload = json.loads(old_metadata_path.read_text(encoding="utf-8"))
-            if not isinstance(metadata_payload, dict):
-                metadata_payload = {}
-            metadata_payload.update(
-                {
-                    "speech_block_id": str(new_block.get("speech_block_id", "")).strip(),
-                    "chunk_id": str(new_block.get("chunk_id", "")).strip(),
-                    "speaker_id": str(new_block.get("speaker_id", "")).strip(),
-                    "voice_target_id": str(new_block.get("voice_target_id", "")).strip(),
-                }
-            )
-            new_metadata_path.parent.mkdir(parents=True, exist_ok=True)
-            if old_metadata_path != new_metadata_path:
-                if new_metadata_path.is_file():
-                    new_metadata_path.unlink()
-                old_metadata_path.unlink()
-            write_json_atomic(new_metadata_path, metadata_payload)
-            remapped_block["metadata_relative_path"] = relative_to_project(project_root, new_metadata_path)
+    remapped_block["metadata_relative_path"] = None
     return remapped_block
 
 
@@ -2283,7 +2232,7 @@ def _merge_existing_audio_blocks(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-23
-    @version    0.5.0
+    @version    0.6.0
     """
     existing_by_id = {
         str(block.get("speech_block_id", "")).strip(): _normalize_persisted_audio_block(block)
@@ -2297,8 +2246,6 @@ def _merge_existing_audio_blocks(
             block["generation_fingerprint"] = current_fingerprint
         if existing_block is None:
             continue
-        if project_root is not None:
-            existing_block = _enrich_audio_block_from_metadata(project_root, existing_block)
         if current_fingerprint and str(existing_block.get("generation_fingerprint", "") or "") != current_fingerprint:
             if _audio_block_has_reusable_audio(existing_block, project_root):
                 existing_block["generation_fingerprint"] = current_fingerprint
@@ -2420,7 +2367,6 @@ def _persist_report_update(
         regenerated_prompt_count=_metadata_int(existing_state, "regenerated_prompt_count", 0),
         current_phase=str(metadata.get("current_phase", _GENERATE_PHASE)).strip() or _GENERATE_PHASE,
     )
-    report_updated_at = _operation_optional_string(report.get("updated_at")) or _utc_now_iso()
     final_status = (
         AUDIO_BLOCKS_STAGE_COMPLETED
         if str(report.get("audio_blocks_stage_status", "")).strip() == AUDIO_BLOCKS_STAGE_COMPLETED
@@ -2432,8 +2378,8 @@ def _persist_report_update(
         audio_blocks,
         current_clone_profiles,
         status=final_status,
-        started_at=_operation_optional_string(existing_state.get("started_at")) or report_updated_at,
-        completed_at=report_updated_at if final_status == AUDIO_BLOCKS_STAGE_COMPLETED else None,
+        started_at=_resolve_started_at(existing_state),
+        completed_at=None,
         voice_language=voice_language,
         input_fingerprint=_operation_optional_string(metadata.get("input_fingerprint")) or "",
         current_phase=str(metadata.get("current_phase", _GENERATE_PHASE)).strip() or _GENERATE_PHASE,
@@ -2504,11 +2450,10 @@ def _persist_split_checkpoint(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-24
-    @version    0.2.0
+    @version    0.3.0
     """
     checkpoint_blocks = list(audio_blocks)
     checkpoint_blocks[active_block_index] = _normalize_persisted_audio_block(dict(checkpoint_block))
-    _write_audio_block_metadata_from_payload(project_root, checkpoint_block)
     report = _rebuild_report(
         checkpoint_blocks,
         str(generation_context["voice_language"]),
@@ -2634,7 +2579,7 @@ def _rebuild_report(
     @param[in]  voice_language Selected character-voices voice language.
     @param[in]  speech_blocks Current Speech Blocks payload list.
     @param[in]  warning_records Current warning entry list.
-    @param[in]  updated_at Optional report timestamp override.
+    @param[in]  updated_at Ignored legacy report timestamp override.
     @param[in]  prompt_count Current persisted prompt count.
     @param[in]  reused_prompt_count Count of reusable prompts reused from persisted project data.
     @param[in]  regenerated_prompt_count Count of reusable prompts freshly created in the current run.
@@ -2643,8 +2588,9 @@ def _rebuild_report(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-23
-    @version    0.2.0
+    @version    0.3.0
     """
+    _ = updated_at
     total_block_count = len(speech_blocks)
     generated_block_count = _generated_count(audio_blocks)
     approved_block_count = _approved_count(audio_blocks)
@@ -2668,7 +2614,6 @@ def _rebuild_report(
         "current_phase": str(current_phase).strip() if current_phase else None,
         "warning_count": len(warning_records),
         "warnings": list(warning_records),
-        "updated_at": updated_at or _utc_now_iso(),
     }
 
 
@@ -2697,8 +2642,8 @@ def _build_operation_state(
     @param[in]  audio_blocks Current Audio Blocks payload list.
     @param[in]  clone_profiles Current persisted direct-clone source profile list.
     @param[in]  status Persisted operation status token.
-    @param[in]  started_at Operation start timestamp.
-    @param[in]  completed_at Operation completion timestamp or `None`.
+    @param[in]  started_at Runtime token preserved only inside the resume checkpoint.
+    @param[in]  completed_at Ignored legacy completion timestamp.
     @param[in]  voice_language Selected character-voices voice language.
     @param[in]  input_fingerprint Stable validated input fingerprint.
     @param[in]  current_phase Current resumable phase token.
@@ -2712,48 +2657,27 @@ def _build_operation_state(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-24
-    @version    0.3.0
+    @version    0.5.0
     """
-    input_path = _speech_blocks_snapshot_path(project_root)
-    output_path = build_operation_output_path(project_root, "audio_blocks", config.AUDIO_BLOCKS_OUTPUT_FILE_NAME)
-    report_path = build_operation_output_path(project_root, "audio_blocks", config.AUDIO_BLOCKS_REPORT_FILE_NAME)
-    clone_path = build_operation_output_path(
-        project_root,
-        "audio_blocks",
-        config.AUDIO_BLOCKS_VOICE_CLONE_PROFILES_FILE_NAME,
-    )
-    artifact_paths = [relative_to_project(project_root, report_path), relative_to_project(project_root, clone_path)]
-    generated_root = _generated_audio_root(project_root)
-    if generated_root.is_dir():
-        artifact_paths.extend(relative_to_project(project_root, path) for path in sorted(generated_root.rglob("*")))
+    _ = project_root
+    _ = completed_at
     return build_operation_state_payload(
         status=status,
-        input_paths=[relative_to_project(project_root, input_path)],
-        output_paths=[relative_to_project(project_root, output_path)],
-        artifact_paths=artifact_paths,
         progress_current=_generated_count(audio_blocks),
         progress_total=len(speech_blocks),
         mode=_MODE,
-        started_at=started_at,
-        completed_at=completed_at,
         warning_count=0,
         metadata={
             "voice_language": voice_language,
             "input_fingerprint": input_fingerprint,
-            "speech_block_count": len(speech_blocks),
-            "generated_block_count": _generated_count(audio_blocks),
-            "approved_block_count": _approved_count(audio_blocks),
-            "clone_profile_count": len(clone_profiles),
             "prompt_count": len(clone_profiles),
             "reused_prompt_count": max(int(reused_prompt_count), 0),
             "regenerated_prompt_count": max(int(regenerated_prompt_count), 0),
             "current_phase": current_phase,
             "current_block_id": current_block_id,
-            "model_id": _first_clone_model_id(clone_profiles),
-            "model_token_budget": _first_present(audio_blocks, "model_token_budget"),
-            "model_audio_seconds_budget": _first_present(audio_blocks, "model_audio_seconds_budget"),
         },
         resume_checkpoint={
+            "run_token": started_at,
             "next_profile_index": max(next_profile_index, 0),
             "next_speech_block_index": max(next_speech_block_index, 0),
             "next_split_part_index": max(next_split_part_index, 0),
@@ -2949,13 +2873,13 @@ def _approved_count(audio_blocks: list[AudioBlockPayload]) -> int:
 
 def _compact_audio_block_payload(audio_block: AudioBlockPayload) -> AudioBlockPayload:
     """
-    @brief      Build the compact persisted Audio Blocks index payload.
+    @brief      Build one persisted Audio Blocks payload with canonical generation metadata.
     @param[in]  audio_block Rich in-memory Audio Blocks payload.
-    @return     Minimal persisted Audio Blocks index payload.
+    @return     Persisted Audio Blocks payload.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-17
-    @version    0.1.0
+    @version    0.2.0
     """
     payload: AudioBlockPayload = {
         "speech_block_id": str(audio_block.get("speech_block_id", "")).strip(),
@@ -2963,11 +2887,25 @@ def _compact_audio_block_payload(audio_block: AudioBlockPayload) -> AudioBlockPa
         "speaker_id": str(audio_block.get("speaker_id", "")).strip(),
         "voice_target_id": str(audio_block.get("voice_target_id", "")).strip(),
         "audio_relative_path": _optional_string(audio_block.get("audio_relative_path")),
-        "metadata_relative_path": _optional_string(audio_block.get("metadata_relative_path")),
         "audio_duration_seconds": _optional_float(audio_block.get("audio_duration_seconds")),
         "generated": generated_at(audio_block),
         "approved": approved_at(audio_block),
+        "voice_language": _optional_string(audio_block.get("voice_language")),
+        "prompt_format": _optional_string(audio_block.get("prompt_format")),
+        "runtime_result_summary": str(audio_block.get("runtime_result_summary", "")).strip(),
+        "split_part_count": _optional_int(audio_block.get("split_part_count"), 1),
+        "split_strategy": str(audio_block.get("split_strategy", "single")).strip() or "single",
+        "model_token_budget": audio_block.get("model_token_budget"),
+        "model_audio_seconds_budget": audio_block.get("model_audio_seconds_budget"),
+        "generated_part_relative_paths": list(audio_block.get("generated_part_relative_paths", []))
+        if isinstance(audio_block.get("generated_part_relative_paths"), list)
+        else [],
+        "generation_fingerprint": _optional_string(audio_block.get("generation_fingerprint")),
+        "split_plan_fingerprint": _optional_string(audio_block.get("split_plan_fingerprint")),
     }
+    warning_flags = _normalize_warning_flags(audio_block.get("warning_flags"))
+    if warning_flags:
+        payload["warning_flags"] = warning_flags
     if bool(audio_block.get("metadata_only", False)):
         content_kind = str(audio_block.get("content_kind", "")).strip()
         payload["content_kind"] = content_kind
@@ -2983,7 +2921,7 @@ def _attach_current_speech_block_fields(
     """
     @brief      Attach derived Speech Blocks fields needed for ordering and display.
     @param[in]  project_root Active project root folder.
-    @param[in]  audio_blocks Compact Audio Blocks payloads.
+    @param[in]  audio_blocks Persisted Audio Blocks payloads.
     @return     Audio Blocks payloads enriched from current Speech Blocks when available.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
@@ -3027,97 +2965,6 @@ def _attach_current_speech_block_fields(
     return enriched_blocks
 
 
-def _enrich_audio_block_from_metadata(project_root: Path, audio_block: AudioBlockPayload) -> AudioBlockPayload:
-    """
-    @brief      Merge generation sidecar metadata into one Audio Blocks entry when available.
-    @param[in]  project_root Active project root folder.
-    @param[in]  audio_block Audio Blocks index payload.
-    @return     Audio Blocks payload enriched with generation metadata.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-17
-    @version    0.1.0
-    """
-    metadata_payload = _load_audio_block_metadata(project_root, audio_block)
-    if not metadata_payload:
-        return dict(audio_block)
-    enriched = dict(audio_block)
-    for field_name in (
-        "runtime_result_summary",
-        "split_part_count",
-        "split_strategy",
-        "model_token_budget",
-        "model_audio_seconds_budget",
-        "generated_part_relative_paths",
-        "generation_fingerprint",
-        "split_plan_fingerprint",
-    ):
-        if field_name in metadata_payload:
-            enriched[field_name] = metadata_payload.get(field_name)
-    if enriched.get("audio_duration_seconds") is None:
-        enriched["audio_duration_seconds"] = _optional_float(metadata_payload.get("audio_duration_seconds"))
-    if generated_at(enriched) is None:
-        enriched["generated"] = _status_timestamp(
-            metadata_payload.get("generated"),
-            metadata_payload.get("generated_at"),
-        )
-    return _normalize_persisted_audio_block(enriched)
-
-
-def _load_audio_block_metadata(project_root: Path, audio_block: AudioBlockPayload) -> dict[str, object]:
-    """
-    @brief      Load one generated Audio Block sidecar metadata payload.
-    @param[in]  project_root Active project root folder.
-    @param[in]  audio_block Audio Blocks index payload.
-    @return     Sidecar metadata mapping, or an empty mapping.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-17
-    @version    0.1.0
-    """
-    metadata_path = _safe_project_artifact_path(project_root, audio_block.get("metadata_relative_path"))
-    if metadata_path is None or not metadata_path.is_file():
-        return {}
-    payload = load_optional_json_artifact(metadata_path)
-    return dict(payload) if isinstance(payload, dict) else {}
-
-
-def _write_audio_block_metadata_from_payload(project_root: Path, audio_block: AudioBlockPayload) -> None:
-    """
-    @brief      Persist generation metadata for one in-progress or completed Audio Block.
-    @param[in]  project_root Active project root folder.
-    @param[in]  audio_block Rich Audio Blocks payload containing a metadata path.
-    @return     None.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-17
-    @version    0.1.0
-    """
-    metadata_path = _safe_project_artifact_path(project_root, audio_block.get("metadata_relative_path"))
-    if metadata_path is None:
-        return
-    metadata_payload = {
-        "speech_block_id": str(audio_block.get("speech_block_id", "")).strip(),
-        "chunk_id": str(audio_block.get("chunk_id", "")).strip(),
-        "speaker_id": str(audio_block.get("speaker_id", "")).strip(),
-        "voice_target_id": str(audio_block.get("voice_target_id", "")).strip(),
-        "generated": generated_at(audio_block),
-        "audio_duration_seconds": _optional_float(audio_block.get("audio_duration_seconds")),
-        "runtime_result_summary": str(audio_block.get("runtime_result_summary", "")).strip(),
-        "split_part_count": _optional_int(audio_block.get("split_part_count"), 1),
-        "split_strategy": str(audio_block.get("split_strategy", "single")).strip() or "single",
-        "generated_part_relative_paths": list(audio_block.get("generated_part_relative_paths", []))
-        if isinstance(audio_block.get("generated_part_relative_paths"), list)
-        else [],
-        "model_token_budget": audio_block.get("model_token_budget"),
-        "model_audio_seconds_budget": audio_block.get("model_audio_seconds_budget"),
-        "generation_fingerprint": _optional_string(audio_block.get("generation_fingerprint")),
-        "split_plan_fingerprint": _optional_string(audio_block.get("split_plan_fingerprint")),
-    }
-    metadata_path.parent.mkdir(parents=True, exist_ok=True)
-    write_json_atomic(metadata_path, metadata_payload)
-
-
 def _normalize_persisted_audio_block(payload: dict[str, object]) -> AudioBlockPayload:
     """
     @brief      Normalize one persisted Audio Blocks payload.
@@ -3126,7 +2973,7 @@ def _normalize_persisted_audio_block(payload: dict[str, object]) -> AudioBlockPa
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-23
-    @version    0.6.0
+    @version    0.7.0
     """
     generated_timestamp = _status_timestamp(payload.get("generated"), payload.get("generated_at"))
     approved_timestamp = _status_timestamp(payload.get("approved"), payload.get("approved_at"))
@@ -3158,6 +3005,8 @@ def _normalize_persisted_audio_block(payload: dict[str, object]) -> AudioBlockPa
         "approved": approved_timestamp,
         "approved_at": None,
         "generated_at": generated_timestamp,
+        "voice_language": _optional_string(payload.get("voice_language")),
+        "prompt_format": _optional_string(payload.get("prompt_format")),
         "runtime_result_summary": str(payload.get("runtime_result_summary", "")).strip(),
         "split_part_count": _optional_int(payload.get("split_part_count"), 1),
         "split_strategy": str(payload.get("split_strategy", "single")).strip() or "single",
@@ -3332,17 +3181,19 @@ def _active_model_id_from_status(status_payload: dict[str, object]) -> str | Non
 
 def _resolve_started_at(existing_state: dict[str, object]) -> str:
     """
-    @brief      Resolve the stable operation start timestamp for one Audio Blocks run.
+    @brief      Resolve the runtime token for one Audio Blocks run.
     @param[in]  existing_state Existing operation-state payload.
-    @return     Stable operation start timestamp.
+    @return     Stable runtime token.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-23
-    @version    0.2.0
+    @version    0.3.0
     """
-    started_at_value = existing_state.get("started_at", "") if isinstance(existing_state, dict) else ""
-    started_at = "" if started_at_value in (None, "") else str(started_at_value).strip()
-    return started_at or _utc_now_iso()
+    resume_checkpoint = existing_state.get("resume_checkpoint", {}) if isinstance(existing_state, dict) else {}
+    if not isinstance(resume_checkpoint, dict):
+        resume_checkpoint = {}
+    run_token = str(resume_checkpoint.get("run_token", "") or "").strip()
+    return run_token or _utc_now_iso()
 
 
 def _resume_checkpoint_field(existing_state: dict[str, object], field_name: str, fallback: int) -> int:
@@ -3389,41 +3240,6 @@ def _metadata_int(existing_state: dict[str, object], field_name: str, fallback: 
         return int(metadata.get(field_name, fallback))
     except (TypeError, ValueError):
         return fallback
-
-
-def _first_present(items: list[dict[str, object]], field_name: str) -> object:
-    """
-    @brief      Return the first non-empty field value from a list of payloads.
-    @param[in]  items Payload list to inspect.
-    @param[in]  field_name Field name to resolve.
-    @return     First non-empty value, or `None`.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.1.0
-    """
-    for item in items:
-        value = item.get(field_name)
-        if value not in (None, ""):
-            return value
-    return None
-
-
-def _first_clone_model_id(clone_profiles: list[VoiceCloneProfilePayload]) -> str | None:
-    """
-    @brief      Resolve the first persisted clone-model identifier from clone profiles.
-    @param[in]  clone_profiles Current clone profile list.
-    @return     Clone-model identifier or `None`.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
-    @version    0.1.0
-    """
-    for profile in clone_profiles:
-        model_id = _optional_string(profile.get("clone_model_id"))
-        if model_id:
-            return model_id
-    return None
 
 
 def _normalize_warning_flags(value: object) -> list[str]:

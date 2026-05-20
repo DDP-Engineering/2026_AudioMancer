@@ -14,7 +14,7 @@
          sample preview playback, and project-local narrator profile editing.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-18
-@version 3.18.1
+@version 3.19.0
 """
 
 # IMPORTS
@@ -31,7 +31,6 @@ from audiomancer.services import (
     narrator_definition_service,
     narrator_profile_generation_service,
     project_workspace_service,
-    time_service,
     tts_budget_service,
     ui_state_service,
     voice_sample_import_service,
@@ -1338,21 +1337,15 @@ def _sync_manifest_summary(
             )
         else:
             narrator_definition_service.clear_selected_narrator_sample_artifacts(window._current_project_root)
-        timestamp = (
-            str(selected_metadata.get("selected_at", "")).strip() if isinstance(selected_metadata, dict) else ""
-        ) or time_service.utc_now_iso()
+        _ = selected_metadata
         updated_manifest["operations"]["narrator_definition"] = (
             project_workspace_service.project_manifest_operation_summary(
                 "narrator_definition",
                 {
-                    "folder_relative_path": config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH,
                     "status": "completed",
                     "progress_current": 1,
                     "progress_total": 1,
                     "mode": "manual",
-                    "started_at": timestamp,
-                    "completed_at": timestamp,
-                    "updated_at": timestamp,
                     "warning_count": 0,
                 },
             )

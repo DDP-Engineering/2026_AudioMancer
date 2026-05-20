@@ -16,7 +16,7 @@
          UI-driven cancellation responsive during provider waits.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-22
-@version 0.8.1
+@version 0.8.2
 """
 
 # IMPORTS
@@ -24,7 +24,6 @@
 import json
 from pathlib import Path
 import threading
-import time
 from urllib import error, parse, request
 
 from audiomancer import config
@@ -97,7 +96,7 @@ def chat_json(
     @exception  OperationCancelledError Raised when cooperative cancellation is requested.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-11
-    @version    0.6.1
+    @version    0.6.2
     """
     request_payload = {
         "model": str(profile_payload.get("model_name", "")).strip(),
@@ -168,6 +167,8 @@ def chat_json(
                 parsed_payload = _parse_json_content(raw_content)
                 normalized_usage = token_usage_service.normalize_provider_usage(raw_payload)
             except ValueError as parse_error:
+                if not raw_content.strip():
+                    raise
                 (
                     parsed_payload,
                     repair_body,
@@ -253,7 +254,7 @@ def _request_chat_completion_with_cancellation(
     @return     Helper result.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.1.1
+    @version    0.1.2
     """
     _LLM_PROVIDER_LOGGER.debug(
         "Starting cancellable AI provider request base_url=%s",
@@ -290,7 +291,6 @@ def _request_chat_completion_with_cancellation(
             _LLM_PROVIDER_LOGGER.info("AI provider request cancelled while waiting for model response.")
             raise OperationCancelledError("AI-assisted cleanup cancelled while waiting for the model response.")
         request_thread.join(timeout=0.05)
-        time.sleep(0.01)
     if "error" in error_holder:
         raise error_holder["error"]
     payload = result_holder.get("payload")

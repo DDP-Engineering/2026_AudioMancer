@@ -12,6 +12,145 @@ All notable changes to this project will be documented in this file.
 
 No notable changes yet.
 
+## [1.2.2] - 2026-05-19
+
+### Changed
+
+- Audio Blocks now stores per-block generation metadata directly in
+  `audio_blocks.json` instead of writing separate WAV-adjacent JSON sidecars,
+  reducing duplicated metadata while preserving generated-audio playback,
+  approval state, prompt reuse, split-part resume, and operation resumability.
+- `audio_blocks_state.json` now keeps only resume-critical operation metadata;
+  prompt counts, generated counts, selected model names, and block totals are
+  derived from canonical Audio Blocks/report data instead of duplicated into
+  state metadata.
+- Audio Blocks, operation-runtime, and software documentation were updated to
+  describe the compact metadata contract and current resume data boundaries.
+- Project package metadata and `audiomancer.__version__` were updated to
+  `1.2.2`.
+- Offline English and Romanian help bundles were updated to version `1.2.2`.
+
+## [1.2.1] - 2026-05-19
+
+### Changed
+
+- AI Translation now always uses the configured AI profile when Start
+  Translation is pressed, including when the source and target languages match.
+  Same-language translation is now an AI-assisted rewrite/adaptation path
+  instead of a source-text pass-through.
+- Removed the same-language pass-through helper and `pass_through` translation
+  operation mode.
+- Translation chunk records no longer persist `translated_at` or `approved_at`;
+  resume continues to use chunk text/status plus `translation_state.json`
+  checkpoints, token usage, prompt-rule fingerprints, and AI log metadata.
+- `translation_state.json` no longer duplicates the per-chunk translated text
+  records stored in `translated_text.json`.
+- LLM JSON parsing now fails fast on empty assistant content instead of sending
+  an empty malformed-JSON repair request back to the model.
+- Character Discovery now persists separate `gender_confidence` and
+  `age_confidence` fields while preserving existing evidence records and using
+  `confidence` only for speaking-character identity confidence.
+- Character Discovery prompts now instruct the LLM to estimate age and
+  sex/gender from direct evidence first and conservative local book context
+  when direct evidence is missing.
+- Characters page editing now shows and saves the new demographic confidence
+  fields with English and Romanian runtime labels.
+- Project package metadata and `audiomancer.__version__` were updated to
+  `1.2.1`.
+- Offline English and Romanian help bundles were updated to version `1.2.1`.
+
+## [1.2.0] - 2026-05-18
+
+### Changed
+
+- Operation state payloads now use the compact shared envelope only:
+  `status`, progress fields, `mode`, `warning_count`, `metadata`, and
+  `resume_checkpoint`.
+- Extraction, cleanup, chunking, character discovery, narrator profile
+  generation, speech blocks, audio blocks, and audio assembly reports no
+  longer persist operation audit timestamps or fixed path mirrors.
+- Resume behavior is preserved through checkpoints, input and prompt-rule
+  fingerprints, token usage metadata, partial output artifacts, and explicit
+  AI log path metadata.
+- Narrator profiles, narrator samples, character profiles, and character voice
+  targets no longer persist audit timestamp fields or `stale`; `editable`
+  remains in character voice targets to protect read-only narrator behavior.
+- Project-open and manifest healing now validate completion from status,
+  counters, reports, and existing artifacts instead of audit timestamps or
+  generic path arrays.
+- Project package metadata and `audiomancer.__version__` were updated to
+  `1.2.0`.
+- Offline English and Romanian help bundles were updated to version `1.2.0`.
+
+## [1.1.6] - 2026-05-18
+
+### Changed
+
+- Narator Voice now persists compact narrator profile and sample metadata,
+  removing duplicated profile-kind, origin, provider, selection, sample-path,
+  validation, runtime-summary, and generation metadata fields while preserving
+  selected narrator behavior.
+- AI narrator profile generation keeps resume checkpoints, reports, token
+  usage, and AI transaction logs in the operation sidecars instead of
+  duplicating provenance into each generated profile.
+- Legacy narrator profile samples, selected-sample metadata, and existing
+  display-name-based narrator WAV files remain readable and normalize into the
+  compact sample contract on load.
+- Same-narrator Character Voices, project-open operation evidence, Audio
+  Blocks, and export readiness now consume the compact narrator sample
+  contract with legacy fallbacks where needed.
+- Narator Voice now gives the profile-list pane a slightly smaller initial
+  width and protects the `Generate Sample` button label from clipping.
+- Repository agent instructions now forbid writing the current application
+  version in README files; version-sensitive references belong in the
+  changelog, project metadata, and synchronized help files.
+- Project package metadata and `audiomancer.__version__` were updated to
+  `1.1.6`.
+- Offline English and Romanian help bundles were updated to version `1.1.6`.
+
+## [1.1.5] - 2026-05-18
+
+### Changed
+
+- AI Translation now persists compact operation state by removing duplicated
+  path-list, source-count, and pass-through operator metadata while preserving
+  chunk-record resume, AI log reuse, token usage, and saved operator prompt
+  rules.
+- Speech Blocks export source chunk counts now fall back to current
+  `translated_text.json` or `chunks_text.json` artifacts instead of removed
+  operation-state metadata.
+- Offline English and Romanian help bundles were updated to version `1.1.5`.
+
+## [1.1.4] - 2026-05-17
+
+### Changed
+
+- Character Discovery now persists compact operation state with a top-level
+  `checkpoint` and root-level `log_relative_path`, removing duplicated path,
+  metadata, and synthesis-progress fields while preserving resumable AI logs.
+
+## [1.1.3] - 2026-05-17
+
+### Changed
+
+- Text Chunking now persists smaller chunk artifacts by removing duplicated
+  `chapter_label` values from `chunks_text.json`; chapter counts and
+  Character Discovery prompt context are derived from ordered chunk text at
+  runtime.
+- Chunking operation state is now more compact: resume-only AI fields,
+  completed-window progress, committed break ids, log path, selected strategy,
+  profile id, and extra instruction fingerprints live only in
+  `resume_checkpoint` while completed audit data remains in
+  `chunking_report.json`.
+- Manual chunk edit, insert, and delete operations now update
+  `chunks_text.json` and `chunking_report.json` while keeping
+  `chunking_state.json` compact after the operation completes.
+- `project.json` now stores only compact operation summaries and no longer
+  persists extraction shortcut paths or operation folder paths.
+- Deterministic and AI cleanup now resolve the canonical root-level
+  `extracted_text.txt` artifact directly instead of reading manifest shortcut
+  paths.
+
 ## [1.1.2] - 2026-05-17
 
 ### Changed

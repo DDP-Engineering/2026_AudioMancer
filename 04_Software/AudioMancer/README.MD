@@ -10,8 +10,6 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
 This folder contains the Python 3.12/PySide6 desktop application package for
 AudioMancer.
 
-Current package version: `1.1.2`
-
 Component behavior, service contracts, persistence formats, UI workflows, and
 runtime architecture are documented under `../../05_SoftwareDocu/`. Keep this
 README focused on local setup, execution, validation, and packaging entry
@@ -22,8 +20,10 @@ points.
 - `pyproject.toml` - package metadata, dependencies, tooling configuration, and
   the `audiomancer` console entry point.
 - `uv.lock` - locked development environment.
-- `settings.json` - app-root settings scaffold. API-key fields must remain
-  blank in committed files.
+- `settings.example.json` - committed app-root settings scaffold. Copy it to
+  `settings.json` and fill in operator-local endpoints and API keys.
+- `settings.json` - operator-local settings; gitignored and never committed.
+  API-key fields must remain blank in any committed example scaffold.
 - `src/audiomancer/` - application package.
 - `src/audiomancer/assets/` - packaged static assets such as the application
   icon.

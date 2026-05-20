@@ -147,8 +147,11 @@ Persisted output records include:
 - `chunk_ids`
 - `duration_seconds`
 - `generated`
-- `generated_at`
 - `output_format`
+
+Audio Assembly report and state payloads do not persist operation audit
+timestamps. Output paths remain domain data because the generated audiobook
+files are not fixed to a single canonical artifact name.
 
 Current invariants:
 

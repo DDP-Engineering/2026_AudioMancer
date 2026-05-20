@@ -109,12 +109,14 @@ def test_build_operation_state_shapes_paths_metadata_and_resume_checkpoint(tmp_p
         budget_metadata={"text_budget_tokens": 10},
     )
 
-    assert state["input_paths"] == [config.CHUNK_ARTIFACT_FILE_NAME]
-    assert state["output_paths"] == [config.SPEECH_BLOCKS_OUTPUT_FILE_NAME]
+    assert "input_paths" not in state
+    assert "output_paths" not in state
+    assert "artifact_paths" not in state
     assert state["progress_current"] == 1
     assert state["warning_count"] == 1
     assert state["metadata"]["source_chunks"] == source_chunks
     assert state["resume_checkpoint"]["next_chunk_index"] == 1
+    assert str(state["resume_checkpoint"]["log_relative_path"]).endswith("log_ai_transactions.log")
     assert state["resume_checkpoint"]["budget_metadata"] == {"text_budget_tokens": 10}
 
 
