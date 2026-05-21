@@ -544,12 +544,18 @@ def test_validate_settings_repairs_tts_audio_timeouts_and_preview_limit() -> Non
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-18
-    @version    1.1.0
+    @version    1.2.0
     """
     candidate_settings = settings_service.build_default_settings()
     candidate_settings["tts_audio_preview_timeout_seconds"] = 0
     candidate_settings["tts_audio_generation_timeout_seconds"] = "bad"
     candidate_settings["tts_preview_text_character_limit"] = -1
+    candidate_settings["scene_ambience_guidance_scale"] = "bad"
+    candidate_settings["scene_ambience_max_blocks_per_sequence"] = 0
+    candidate_settings["scene_ambience_num_inference_steps"] = 0
+    candidate_settings["scene_ambience_seed"] = -2
+    candidate_settings["scene_ambience_generation_enabled"] = True
+    candidate_settings["scene_ambience_audio_generation_enabled"] = True
 
     validated_settings = settings_service.validate_settings(candidate_settings)
 
@@ -559,6 +565,15 @@ def test_validate_settings_repairs_tts_audio_timeouts_and_preview_limit() -> Non
         == config.DEFAULT_TTS_AUDIO_GENERATION_TIMEOUT_SECONDS
     )
     assert validated_settings["tts_preview_text_character_limit"] == config.DEFAULT_TTS_PREVIEW_TEXT_CHARACTER_LIMIT
+    assert validated_settings["scene_ambience_guidance_scale"] == config.DEFAULT_SCENE_AMBIENCE_GUIDANCE_SCALE
+    assert (
+        validated_settings["scene_ambience_max_blocks_per_sequence"]
+        == config.DEFAULT_SCENE_AMBIENCE_MAX_BLOCKS_PER_SEQUENCE
+    )
+    assert validated_settings["scene_ambience_num_inference_steps"] == config.DEFAULT_SCENE_AMBIENCE_NUM_INFERENCE_STEPS
+    assert validated_settings["scene_ambience_seed"] == config.DEFAULT_SCENE_AMBIENCE_SEED
+    assert "scene_ambience_generation_enabled" not in validated_settings
+    assert "scene_ambience_audio_generation_enabled" not in validated_settings
 
 
 def test_validate_settings_repairs_invalid_urls() -> None:

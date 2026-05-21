@@ -10,7 +10,64 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
-No notable changes yet.
+## [1.3.0] - 2026-05-21
+
+### Added
+
+- Added Scene Ambience Speech Blocks as the replacement for the old
+  `background_noise` concept, including opener, closer, and scene-change
+  placement support with `sound_prompt`, `negative_prompt`, per-block
+  duration, and ambience-position metadata.
+- Added Speech Blocks and TTS Settings controls for enabling Scene Ambience
+  analysis, selecting placement policy, setting a soft maximum sequence
+  duration, and limiting the maximum number of ambience blocks per sequence.
+- Added Audio Blocks support for optional Scene Ambience sound generation
+  through VoiceWeaver `sound_prompt` models, with runtime capability discovery,
+  confirmation prompts, and generated WAV download support.
+- Added an Audio Assembly `Include Scene Ambience` option so final sequential
+  audiobook composition can include or skip generated ambience WAV blocks.
+
+### Changed
+
+- Speech Blocks generation now performs a second per-chunk ambience pass only
+  when Scene Ambience is enabled, and ambience blocks participate in approval
+  and review like other generated Speech Blocks.
+- Scene Ambience LLM prompts now request concrete layered Foley-style sound
+  prompts with timing variation and anti-beep negative prompts, and
+  normalization defensively splits composed ambience prompts into individual
+  sound-source blocks before persistence.
+- Scene Ambience Speech Blocks now omit the old sound-type field; the prompt,
+  negative prompt, duration, and sequence order are the editable contract.
+- TTS Settings now stores Scene Ambience sound-model parameters
+  `scene_ambience_guidance_scale`, `scene_ambience_num_inference_steps`, and
+  `scene_ambience_seed`, and Audio Blocks forwards them to VoiceWeaver
+  `/v1/sound/prompt`.
+- Scene Ambience duration now starts from the TTS Settings sequence limit during
+  Speech Blocks creation, then each generated ambience block carries its own
+  duration into VoiceWeaver sound generation.
+- Audio Assembly settings are now arranged in two columns and persist the
+  Scene Ambience inclusion policy in `project.json.audio_assembly_settings`.
+- Audio Blocks and Speech Blocks header/control layouts were tightened so long
+  labels and larger UI fonts fit better across the workflow pages.
+- TTS Settings runtime audio limit controls now use a compact two-column
+  layout with better-sized numeric inputs.
+- Removed duplicate Scene Ambience enable toggles from TTS Settings; Speech
+  Blocks and Audio Blocks keep their workflow-local enable selectors.
+- Project package metadata and `audiomancer.__version__` were updated to
+  `1.3.0`.
+- Offline English and Romanian help bundles were updated to version `1.3.0`
+  with refreshed TTS Settings, Speech Blocks, and Audio Blocks screenshots.
+
+### Fixed
+
+- Fixed VoiceWeaver Stable Audio WAV serialization for `float16` generated
+  audio by converting it to a supported WAV dtype before writing.
+- Fixed Speech Blocks metadata-row sizing so Speaker and Content Kind controls
+  stay inside the Speech Blocks panel without overlapping adjacent panes.
+- Fixed Speech Blocks selected-block audio controls so approved Scene Ambience
+  blocks can generate and play audio from the Speech Blocks page.
+- Fixed duplicate `Scene Ambience` labels in the Speech Blocks list so each
+  ambience row shows the content type only once.
 
 ## [1.2.2] - 2026-05-19
 

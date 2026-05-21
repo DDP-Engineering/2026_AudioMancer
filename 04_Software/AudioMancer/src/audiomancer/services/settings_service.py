@@ -14,7 +14,7 @@
          settings file to the application root.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-22
-@version 0.10.0
+@version 0.10.1
 """
 
 # IMPORTS
@@ -345,6 +345,18 @@ def _validate_settings_internal(settings_payload: object) -> tuple[dict[str, Any
             repair_tracker=repairs_made,
         )
 
+    for deprecated_field_name in (
+        "scene_ambience_generation_enabled",
+        "scene_ambience_audio_generation_enabled",
+    ):
+        if deprecated_field_name in normalized_settings:
+            normalized_settings.pop(deprecated_field_name, None)
+            _log_settings_repair(
+                f"Removed deprecated '{deprecated_field_name}' setting; workflow pages own this selector state.",
+                deprecated_field_name,
+                repair_tracker=repairs_made,
+            )
+
     normalized_ui_themes = ui_theme_service.normalize_theme_collection(normalized_settings.get("ui_themes"))
     if normalized_settings.get("ui_themes") != normalized_ui_themes:
         _log_settings_repair(
@@ -388,6 +400,14 @@ def _validate_settings_internal(settings_payload: object) -> tuple[dict[str, Any
             )
             normalized_settings[field_name] = defaults[field_name]
 
+    if normalized_settings["scene_ambience_placement"] not in config.SCENE_AMBIENCE_PLACEMENT_OPTIONS:
+        _log_settings_repair(
+            "Repaired invalid 'scene_ambience_placement' using the default value.",
+            "scene_ambience_placement",
+            repair_tracker=repairs_made,
+        )
+        normalized_settings["scene_ambience_placement"] = defaults["scene_ambience_placement"]
+
     for field_name in (
         "tts_runtime_base_url",
         "tts_runtime_api_key",
@@ -423,6 +443,9 @@ def _validate_settings_internal(settings_payload: object) -> tuple[dict[str, Any
         "tts_audio_preview_timeout_seconds",
         "tts_audio_generation_timeout_seconds",
         "tts_preview_text_character_limit",
+        "scene_ambience_duration_seconds",
+        "scene_ambience_max_blocks_per_sequence",
+        "scene_ambience_num_inference_steps",
     ):
         if not isinstance(normalized_settings[field_name], int) or normalized_settings[field_name] <= 0:
             _log_settings_repair(
@@ -431,6 +454,30 @@ def _validate_settings_internal(settings_payload: object) -> tuple[dict[str, Any
                 repair_tracker=repairs_made,
             )
             normalized_settings[field_name] = defaults[field_name]
+
+    if (
+        not isinstance(normalized_settings["scene_ambience_guidance_scale"], int | float)
+        or float(normalized_settings["scene_ambience_guidance_scale"]) <= 0
+    ):
+        _log_settings_repair(
+            "Repaired invalid 'scene_ambience_guidance_scale' using the default value.",
+            "scene_ambience_guidance_scale",
+            repair_tracker=repairs_made,
+        )
+        normalized_settings["scene_ambience_guidance_scale"] = defaults["scene_ambience_guidance_scale"]
+    else:
+        normalized_settings["scene_ambience_guidance_scale"] = float(
+            normalized_settings["scene_ambience_guidance_scale"]
+        )
+
+    scene_ambience_seed = normalized_settings["scene_ambience_seed"]
+    if scene_ambience_seed is not None and (not isinstance(scene_ambience_seed, int) or scene_ambience_seed < 0):
+        _log_settings_repair(
+            "Repaired invalid 'scene_ambience_seed' using the default value.",
+            "scene_ambience_seed",
+            repair_tracker=repairs_made,
+        )
+        normalized_settings["scene_ambience_seed"] = defaults["scene_ambience_seed"]
 
     normalized_settings["tts_runtime_discovered_models"] = _normalize_tts_runtime_models(
         normalized_settings.get("tts_runtime_discovered_models")
@@ -625,7 +672,7 @@ def build_default_settings() -> dict[str, Any]:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.7.0
+    @version    0.7.1
     """
     return {
         "language": config.DEFAULT_LANGUAGE,
@@ -650,6 +697,12 @@ def build_default_settings() -> dict[str, Any]:
         "tts_audio_preview_timeout_seconds": config.DEFAULT_TTS_AUDIO_PREVIEW_TIMEOUT_SECONDS,
         "tts_audio_generation_timeout_seconds": config.DEFAULT_TTS_AUDIO_GENERATION_TIMEOUT_SECONDS,
         "tts_preview_text_character_limit": config.DEFAULT_TTS_PREVIEW_TEXT_CHARACTER_LIMIT,
+        "scene_ambience_placement": config.DEFAULT_SCENE_AMBIENCE_PLACEMENT,
+        "scene_ambience_duration_seconds": config.DEFAULT_SCENE_AMBIENCE_DURATION_SECONDS,
+        "scene_ambience_max_blocks_per_sequence": config.DEFAULT_SCENE_AMBIENCE_MAX_BLOCKS_PER_SEQUENCE,
+        "scene_ambience_guidance_scale": config.DEFAULT_SCENE_AMBIENCE_GUIDANCE_SCALE,
+        "scene_ambience_num_inference_steps": config.DEFAULT_SCENE_AMBIENCE_NUM_INFERENCE_STEPS,
+        "scene_ambience_seed": config.DEFAULT_SCENE_AMBIENCE_SEED,
     }
 
 

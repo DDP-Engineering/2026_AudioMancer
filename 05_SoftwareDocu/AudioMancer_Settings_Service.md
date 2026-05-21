@@ -65,6 +65,9 @@ Validation currently covers:
 - UI theme settings: selected `ui_theme_id`, normalized custom `ui_themes`
   with separate UI-control and text-window font payloads, and removal of the
   deprecated top-level `ui_text_scale` field
+- Scene Ambience settings: generation enablement, audio-generation enablement,
+  placement policy, soft maximum sequence duration, maximum blocks per
+  sequence, guidance scale, inference-step count, and optional seed
 
 ## 4. Dependencies
 
@@ -117,6 +120,8 @@ Current deterministic behavior:
   migration path such as `ui_text_scale`
 - invalid non-empty AI or TTS runtime base URLs heal back to their defaults
   instead of remaining in one broken-but-persisted state
+- invalid Scene Ambience placement, duration/count, guidance, step, or seed
+  values heal back to their configured defaults
 - normalized payloads are written back when healing is required
 
 ## 7. Workflow Integration

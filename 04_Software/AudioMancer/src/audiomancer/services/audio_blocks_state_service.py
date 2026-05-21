@@ -21,6 +21,7 @@
 
 from pathlib import Path
 
+from audiomancer import config
 from audiomancer.services import (
     ai_translation_service,
     audio_blocks_service,
@@ -63,6 +64,7 @@ def build_audio_blocks_state(
     if not isinstance(operation_metadata, dict):
         operation_metadata = {}
     merged_blocks = _merge_audio_block_state(project_root, speech_blocks, audio_blocks, operation_state)
+    scene_ambience_audio_enabled = _scene_ambience_audio_enabled(settings_payload)
     current_block = _resolve_current_block(merged_blocks, operation_state)
     current_block_id = None if current_block is None else str(current_block.get("speech_block_id", "")).strip()
     generated_count = sum(1 for block in merged_blocks if audio_blocks_service.is_generated(block))
@@ -128,6 +130,7 @@ def build_audio_blocks_state(
             speech_blocks,
             merged_blocks,
             resolved_stage_status,
+            scene_ambience_audio_enabled,
         ),
         "can_reset": audio_blocks_service.has_persisted_audio_blocks(project_root),
         "can_approve_all": any(
@@ -137,6 +140,7 @@ def build_audio_blocks_state(
         "can_regenerate_selected": current_block is not None,
         "can_approve_selected": current_block is not None and audio_blocks_service.is_generated(current_block),
         "selected_text_character_limit": _selected_text_character_limit(settings_payload, merged_blocks),
+        "scene_ambience_audio_enabled": scene_ambience_audio_enabled,
     }
 
 
@@ -144,6 +148,7 @@ def _can_start_or_continue_generation(
     speech_blocks: list[dict[str, object]],
     audio_blocks: list[dict[str, object]],
     stage_status: str,
+    scene_ambience_audio_enabled: bool = False,
 ) -> bool:
     """
     @brief      Return whether Audio Blocks generation still has approved source work to process.
@@ -164,6 +169,11 @@ def _can_start_or_continue_generation(
     for speech_block in speech_blocks:
         speech_block_id = str(speech_block.get("speech_block_id", "")).strip()
         if (
+            not scene_ambience_audio_enabled
+            and str(speech_block.get("content_kind", "")).strip() == speech_blocks_service.CONTENT_KIND_SCENE_AMBIENCE
+        ):
+            continue
+        if (
             speech_block_id
             and bool(speech_block.get("approved", False))
             and not generated_by_speech_block_id.get(
@@ -173,6 +183,26 @@ def _can_start_or_continue_generation(
         ):
             return True
     return False
+
+
+def _scene_ambience_audio_enabled(settings_payload: dict[str, object] | None) -> bool:
+    """
+    @brief      Resolve the default Audio Blocks scene-ambience audio selector state.
+    @param[in]  settings_payload Persisted application settings payload.
+    @return     True when Scene Ambience audio generation is enabled by default.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-20
+    @version    0.1.0
+    """
+    if not isinstance(settings_payload, dict):
+        return config.DEFAULT_SCENE_AMBIENCE_AUDIO_GENERATION_ENABLED
+    return bool(
+        settings_payload.get(
+            "scene_ambience_audio_generation_enabled",
+            config.DEFAULT_SCENE_AMBIENCE_AUDIO_GENERATION_ENABLED,
+        )
+    )
 
 
 def build_audio_blocks_notes(
@@ -303,6 +333,7 @@ def _empty_state(language: str, settings_payload: dict[str, object] | None = Non
         "can_regenerate_selected": False,
         "can_approve_selected": False,
         "selected_text_character_limit": _selected_text_character_limit(settings_payload, []),
+        "scene_ambience_audio_enabled": _scene_ambience_audio_enabled(settings_payload),
     }
 
 
@@ -411,7 +442,7 @@ def _merge_audio_block_state(
                 "metadata_only": bool(persisted_audio_block.get("metadata_only", False))
                 or str(speech_block.get("content_kind", "")).strip()
                 in {
-                    speech_blocks_service.CONTENT_KIND_BACKGROUND_NOISE,
+                    speech_blocks_service.CONTENT_KIND_SCENE_AMBIENCE,
                     speech_blocks_service.CONTENT_KIND_PAUSE,
                     speech_blocks_service.CONTENT_KIND_INDICATION,
                 },

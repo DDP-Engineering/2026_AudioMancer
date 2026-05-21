@@ -94,11 +94,16 @@ broader validation baseline is tracked in `../../HowToTest.md`.
 ## Runtime Files
 
 - Each app launch writes a log under `Logs/` in this folder.
+- VoiceWeaver generation diagnostics, including Scene Ambience sound-prompt
+  requests and Audio Blocks checkpoints, are written through the shared runtime
+  log.
 - Project workflow artifacts are written inside the selected project root.
 - Generated Audio Blocks media is written under each project `audio_blocks/`
-  folder.
+  folder, including generated Scene Ambience prompt audio when that path is
+  enabled.
 - Final Audio Assembly outputs are written under each project `audiobook/`
-  folder.
+  folder; assembly settings decide whether generated Scene Ambience blocks are
+  included in the final sequential output.
 
 Detailed artifact contracts belong in `../../05_SoftwareDocu/`.
 

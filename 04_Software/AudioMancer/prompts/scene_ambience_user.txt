@@ -1,0 +1,31 @@
+Source language: {source_language}
+
+Chunk id: {chunk_id}
+
+Placement policy: {placement_policy}
+Maximum sequence duration seconds: {duration_seconds}
+Maximum blocks per sequence: {max_blocks_per_sequence}
+
+Chunk text:
+{chunk_text}
+
+Ordered speech blocks:
+{speech_blocks_json}
+
+Analyze the acoustic scene and return one JSON object with `scene_ambience_blocks`.
+
+Rules:
+- Allowed ambience positions are: {allowed_positions}
+- Return ordered individual sound blocks; do not combine unrelated sounds into one prompt.
+- Write each sound_prompt as concrete sound design for one simple sound source or closely related sound type, not as a generic scene description.
+- Never put multiple acoustic sources in one sound_prompt separated by commas, semicolons, or "and".
+- Create as many separate scene_ambience_blocks as there are useful distinct simple sound sources, up to {max_blocks_per_sequence}; do not force a fixed count.
+- Use multiple sequential blocks when possible: HVAC airflow, fans, transformer buzz, relay clicks, material creaks, footsteps, weather, distant machinery, impacts, fire, water, wind, room tone, crowd distance, or battlefield ambience.
+- Include timing and motion language: occasional, intermittent, sparse, irregular, distant, muffled, fading, shifting, approaching, receding, or low-volume.
+- Make prompts realistic, subtle, layered, and non-musical unless the source text explicitly requires stylized sound.
+- Avoid wording that may produce one continuous low beep, pure tone, generic hum, alarm, or single drone.
+- Keep generated sound non-verbal. Put "continuous beep, pure sine wave, single tone, alarm, music, melody, speech, voices, dialogue, singing, loud bass drone, harsh buzzing, distorted, low quality" in negative_prompt unless the scene specifically requires one of those elements.
+- For each ambience position or scene-change point, create no more than {max_blocks_per_sequence} blocks.
+- For each ambience position or scene-change point, keep the sum of duration_seconds around or below {duration_seconds} seconds.
+- For scene_change cues, set after_speech_block_id to the speech block id immediately before the acoustic change when this can be inferred.
+- For scene_change cues, describe only the new or changed acoustic layer, not a full scene reset.

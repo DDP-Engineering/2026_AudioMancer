@@ -25,6 +25,9 @@ approval-aware UI model.
   Blocks already have generated audio
 - expose generated/approved counts and resumable operation metadata
 - surface selected text character limits from cached VoiceWeaver budget data
+- expose whether Scene Ambience audio generation is enabled so the page can
+  treat `scene_ambience` rows as generated sound targets or metadata-only
+  placeholders
 
 It does not generate audio, mutate approvals, delete artifacts, or synchronize
 `project.json`; those behaviors stay in `audio_blocks_service.py` and
@@ -99,11 +102,17 @@ The page-state payload includes stable keys such as:
 - `can_approve_all`
 - `can_approve_selected`
 - `selected_text_character_limit`
+- `scene_ambience_audio_enabled`
 
 Merged block rows preserve generated-audio fields from `audio_blocks.json` and
 derive review/source fields from `speech_blocks.json`. The page uses persisted
 `audio_duration_seconds` and does not open WAV files during normal state
 loading.
+
+Scene Ambience rows are metadata-only only when Scene Ambience audio generation
+is disabled. When enabled, approved `scene_ambience` Speech Blocks participate
+in generated/approved counts like other Audio Blocks, while still using their
+prompt, negative prompt, and per-block duration instead of spoken text.
 
 ## 7. Workflow Integration
 

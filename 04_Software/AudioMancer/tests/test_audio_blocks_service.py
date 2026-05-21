@@ -14,7 +14,7 @@
          normalization.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-23
-@version 1.9.3
+@version 1.9.4
 """
 
 # IMPORTS
@@ -1723,6 +1723,258 @@ def test_audio_blocks_model_budget_prefers_runtime_effective_parameters() -> Non
 
     assert budget["model_token_budget"] == 128
     assert budget["model_budget_source"] == "runtime_effective"
+
+
+def test_audio_blocks_service_generates_scene_ambience_audio_after_spoken_blocks(monkeypatch, tmp_path) -> None:
+    """
+    @brief      Verify Scene Ambience Audio uses sound_prompt after spoken chunk audio generation.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-20
+    @version    0.1.0
+    """
+    project_root, manifest = _create_audio_blocks_project(tmp_path, "AudioBlocksSceneAmbience")
+    speech_blocks_path = (
+        project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.SPEECH_BLOCKS_OUTPUT_FILE_NAME
+    )
+    speech_blocks = json.loads(speech_blocks_path.read_text(encoding="utf-8"))
+    speech_blocks.append(
+        {
+            "speech_block_id": "0001-000003",
+            "sequence_index": 3,
+            "chunk_id": "chunk-0001",
+            "source_language": "en",
+            "speaker_kind": speech_blocks_service.SPEAKER_KIND_OPERATION,
+            "speaker_id": speech_blocks_service.CONTENT_KIND_SCENE_AMBIENCE,
+            "speaker_display_name": "Scene Ambience",
+            "content_kind": speech_blocks_service.CONTENT_KIND_SCENE_AMBIENCE,
+            "text": "rain in trenches",
+            "sound_prompt": "rain in trenches",
+            "negative_prompt": "speech",
+            "duration_seconds": 5,
+            "ambience_position": "closer",
+            "approved": True,
+            "approved_at": "2026-04-23T12:04:00+00:00",
+            "warning_flags": [],
+        }
+    )
+    speech_blocks_path.write_text(json.dumps(speech_blocks, indent=2) + "\n", encoding="utf-8")
+    runtime_settings = _runtime_settings()
+    runtime_settings["generate_scene_ambience_audio"] = True
+    runtime_settings["discovered_models"].append(
+        {
+            "model_id": "StableAudioOpen",
+            "backend_name": "stable-audio-open",
+            "status": "healthy",
+            "supported_generation_modes": ["sound_prompt"],
+        }
+    )
+    generation_order: list[str] = []
+    wait_payloads = [
+        {
+            "operation": {
+                "status": "completed",
+                "result": {"voice_clone_prompt": {"format": "qwen_voice_clone_prompt_v1", "speaker": "narrator"}},
+            },
+            "result": {},
+        },
+        {
+            "operation": {
+                "status": "completed",
+                "result": {"voice_clone_prompt": {"format": "qwen_voice_clone_prompt_v1", "speaker": "alice"}},
+            },
+            "result": {},
+        },
+        {"operation": {"status": "completed"}, "result": {"available": True, "summary": "Narrator ready."}},
+        {"operation": {"status": "completed"}, "result": {"available": True, "summary": "Alice ready."}},
+        {"active_model": {"model_id": "StableAudioOpen"}, "operation": {"status": "completed"}, "result": {}},
+        {"operation": {"status": "completed"}, "result": {"available": True, "summary": "Rain ready."}},
+    ]
+    audio_payloads = [_wav_bytes("narrator"), _wav_bytes("alice")]
+    monkeypatch.setattr(
+        audio_blocks_service.voiceweaver_runtime_service,
+        "read_status",
+        lambda *_args, **_kwargs: {
+            "active_model": {
+                "model_id": "Qwen3-TTS-12Hz-1.7B-Base",
+                "effective_model_parameters": {"max_new_tokens": 512},
+            },
+            "operation": {"status": "idle"},
+        },
+    )
+    monkeypatch.setattr(
+        audio_blocks_service.voiceweaver_runtime_service,
+        "load_model",
+        lambda _base_url, _api_key, model_id, **_kwargs: (
+            generation_order.append(f"load:{model_id}") or {"status": "running"}
+        ),
+    )
+    monkeypatch.setattr(
+        audio_blocks_service.voiceweaver_runtime_service,
+        "create_voice_clone_prompt",
+        lambda *_args, **_kwargs: {"status": "running"},
+    )
+    monkeypatch.setattr(
+        audio_blocks_service.voiceweaver_runtime_service,
+        "generate_voice_clone_from_prompt",
+        lambda *_args, **_kwargs: generation_order.append("tts") or {"status": "running"},
+    )
+    monkeypatch.setattr(
+        audio_blocks_service.voiceweaver_runtime_service,
+        "generate_sound_prompt",
+        lambda *_args, **_kwargs: generation_order.append("sound") or {"status": "running"},
+    )
+    monkeypatch.setattr(
+        audio_blocks_service.voiceweaver_runtime_service,
+        "wait_for_terminal_operation",
+        lambda *_args, **_kwargs: wait_payloads.pop(0),
+    )
+    monkeypatch.setattr(
+        audio_blocks_service.voiceweaver_runtime_service,
+        "download_generated_voice",
+        lambda *_args, **_kwargs: audio_payloads.pop(0),
+    )
+    monkeypatch.setattr(
+        audio_blocks_service.voiceweaver_runtime_service,
+        "download_generated_audio",
+        lambda *_args, **_kwargs: _wav_bytes("rain"),
+    )
+
+    audio_blocks_service.start_or_continue_generation(project_root, manifest, runtime_settings)
+
+    generated_blocks = audio_blocks_service.load_audio_blocks(project_root)
+    ambience_block = generated_blocks[-1]
+    assert generation_order == ["tts", "tts", "load:StableAudioOpen", "sound"]
+    assert ambience_block["content_kind"] == speech_blocks_service.CONTENT_KIND_SCENE_AMBIENCE
+    assert ambience_block["prompt_format"] == "sound_prompt"
+    assert ambience_block["audio_relative_path"]
+
+
+def test_audio_blocks_service_regenerates_scene_ambience_without_tts_reset_guard(monkeypatch, tmp_path) -> None:
+    """
+    @brief      Verify selected Scene Ambience regeneration bypasses stale TTS run fingerprint checks.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-20
+    @version    0.1.0
+    """
+    project_root, manifest = _create_audio_blocks_project(tmp_path, "AudioBlocksSceneAmbienceRegenerate")
+    speech_blocks_path = (
+        project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.SPEECH_BLOCKS_OUTPUT_FILE_NAME
+    )
+    speech_blocks = json.loads(speech_blocks_path.read_text(encoding="utf-8"))
+    speech_blocks.append(
+        {
+            "speech_block_id": "0001-000003",
+            "sequence_index": 3,
+            "chunk_id": "chunk-0001",
+            "source_language": "en",
+            "speaker_kind": speech_blocks_service.SPEAKER_KIND_OPERATION,
+            "speaker_id": speech_blocks_service.CONTENT_KIND_SCENE_AMBIENCE,
+            "speaker_display_name": "Scene Ambience",
+            "content_kind": speech_blocks_service.CONTENT_KIND_SCENE_AMBIENCE,
+            "text": "distant rain on metal trench covers",
+            "sound_prompt": "distant rain on metal trench covers",
+            "negative_prompt": "voice, speech",
+            "duration_seconds": 6,
+            "ambience_position": "scene_change",
+            "approved": True,
+            "approved_at": "2026-04-23T12:04:00+00:00",
+            "warning_flags": [],
+        }
+    )
+    speech_blocks_path.write_text(json.dumps(speech_blocks, indent=2) + "\n", encoding="utf-8")
+    stale_state = {
+        "folder_relative_path": config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH,
+        "status": "completed",
+        "input_paths": [],
+        "output_paths": [],
+        "artifact_paths": [],
+        "progress_current": 2,
+        "progress_total": 2,
+        "mode": "tts_generation",
+        "started_at": "2026-04-23T12:00:00+00:00",
+        "completed_at": "2026-04-23T12:10:00+00:00",
+        "updated_at": "2026-04-23T12:10:00+00:00",
+        "warning_count": 0,
+        "metadata": {"voice_language": "en", "input_fingerprint": "stale-tts-fingerprint"},
+        "resume_checkpoint": {"next_profile_index": 0, "next_speech_block_index": 2},
+    }
+    (project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.AUDIO_BLOCKS_STATE_FILE_NAME).write_text(
+        json.dumps(stale_state, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    runtime_settings = _runtime_settings()
+    runtime_settings["scene_ambience_guidance_scale"] = 8.5
+    runtime_settings["scene_ambience_duration_seconds"] = 11
+    runtime_settings["scene_ambience_num_inference_steps"] = 75
+    runtime_settings["scene_ambience_seed"] = 321
+    runtime_settings["discovered_models"].append(
+        {
+            "model_id": "StableAudioOpen",
+            "backend_name": "stable-audio-open",
+            "status": "healthy",
+            "supported_generation_modes": ["sound_prompt"],
+        }
+    )
+    sound_requests: list[tuple[tuple[object, ...], dict[str, object]]] = []
+    monkeypatch.setattr(
+        audio_blocks_service.voiceweaver_runtime_service,
+        "read_status",
+        lambda *_args, **_kwargs: {"active_model": {"model_id": "StableAudioOpen"}, "operation": {"status": "idle"}},
+    )
+    monkeypatch.setattr(
+        audio_blocks_service.voiceweaver_runtime_service,
+        "load_model",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(AssertionError("TTS model loading was not expected")),
+    )
+    monkeypatch.setattr(
+        audio_blocks_service.voiceweaver_runtime_service,
+        "generate_sound_prompt",
+        lambda *args, **kwargs: sound_requests.append((args, kwargs)) or {"status": "running"},
+    )
+    monkeypatch.setattr(
+        audio_blocks_service.voiceweaver_runtime_service,
+        "wait_for_terminal_operation",
+        lambda *_args, **_kwargs: {
+            "operation": {"status": "completed"},
+            "result": {"available": True, "summary": "Scene ambience ready."},
+        },
+    )
+    monkeypatch.setattr(
+        audio_blocks_service.voiceweaver_runtime_service,
+        "download_generated_audio",
+        lambda *_args, **_kwargs: _wav_bytes("ambience"),
+    )
+
+    report = audio_blocks_service.regenerate_audio_block(
+        project_root,
+        manifest,
+        "0001-000003",
+        runtime_settings,
+    )
+
+    regenerated_blocks = audio_blocks_service.load_audio_blocks(project_root)
+    ambience_block = regenerated_blocks[-1]
+    assert report["generated_block_count"] == 1
+    assert sound_requests
+    assert sound_requests[0][0][2] == "distant rain on metal trench covers"
+    assert sound_requests[0][1]["negative_prompt"] == "voice, speech"
+    assert sound_requests[0][1]["duration_seconds"] == 6.0
+    assert sound_requests[0][1]["guidance_scale"] == 8.5
+    assert sound_requests[0][1]["num_inference_steps"] == 75
+    assert sound_requests[0][1]["seed"] == 321
+    assert ambience_block["content_kind"] == speech_blocks_service.CONTENT_KIND_SCENE_AMBIENCE
+    assert ambience_block["duration_seconds"] == 6.0
+    assert ambience_block["prompt_format"] == "sound_prompt"
+    assert ambience_block["runtime_result_summary"] == "Scene ambience ready."
+    assert (project_root / str(ambience_block["audio_relative_path"])).read_bytes() == _wav_bytes("ambience")
 
 
 def _create_audio_blocks_project(tmp_path, name: str):

@@ -13,7 +13,7 @@
          bounded approval navigation, and selected-row action enablement.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-23
-@version 0.6.1
+@version 0.6.3
 """
 
 # IMPORTS
@@ -109,6 +109,52 @@ def test_audio_blocks_page_renders_source_list_markers_and_selected_details(qtbo
     assert page._character_count_edit.text() == "12 / 180"
     assert page._selected_playback_button.isEnabled() is True
     assert page._audiobook_playback_button.isEnabled() is True
+
+
+def test_audio_blocks_page_places_scene_ambience_selector_on_progress_row(qtbot) -> None:
+    """
+    @brief      Verify the Scene Ambience Audio selector is beside the progress indicator, not in the button row.
+    @param[in]  qtbot Qt test helper fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-20
+    @version    0.1.2
+    """
+    page = AudioBlocksPage()
+    qtbot.addWidget(page)
+    page.resize(1100, 720)
+    page.show()
+    page.set_project_active(True)
+    page.set_audio_blocks_state(
+        full_source_text="Narration.",
+        speech_blocks=[],
+        current_block_id=None,
+        current_block_speaker="",
+        current_block_text="",
+        notes=["Ready."],
+        status_lines=["Generated audio: 0/0"],
+        progress_current=0,
+        progress_total=0,
+        progress_percent=0,
+        stage_status="not_started",
+        can_start_or_continue=False,
+        can_reset=False,
+        can_approve_all=False,
+        can_regenerate_selected=False,
+        can_approve_selected=False,
+        scene_ambience_audio_enabled=True,
+    )
+    qtbot.wait(0)
+
+    assert page._progress_bar.minimumWidth() >= 520
+    assert page._progress_bar.maximumWidth() >= 920
+    assert page._scene_ambience_audio_combo.minimumWidth() >= 230
+    assert abs(page._scene_ambience_audio_combo.geometry().top() - page._progress_bar.geometry().top()) <= 1
+    assert page._scene_ambience_audio_combo.geometry().left() > page._progress_bar.geometry().right()
+    assert page._scene_ambience_audio_combo.geometry().left() - page._progress_bar.geometry().right() <= 12
+    assert page._scene_ambience_audio_combo.geometry().top() > page._start_button.geometry().bottom()
+    assert page.scene_ambience_audio_enabled() is True
 
 
 def test_audio_blocks_page_applies_translated_labels_and_tracks_selected_row_actions(qtbot) -> None:

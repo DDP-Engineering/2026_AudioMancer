@@ -14,7 +14,7 @@
          controls for the Speech Blocks workflow.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-24
-@version 0.7.8
+@version 0.8.5
 """
 
 # IMPORTS
@@ -22,6 +22,8 @@
 from PySide6.QtCore import QTimer, Signal
 from PySide6.QtWidgets import (
     QComboBox,
+    QDoubleSpinBox,
+    QFormLayout,
     QGridLayout,
     QGroupBox,
     QHBoxLayout,
@@ -30,6 +32,7 @@ from PySide6.QtWidgets import (
     QListWidget,
     QPlainTextEdit,
     QPushButton,
+    QSizePolicy,
     QSplitter,
     QVBoxLayout,
     QWidget,
@@ -40,6 +43,17 @@ from audiomancer.services import speech_blocks_service, ui_state_service
 # CONSTANTS
 
 _CHUNK_ACTION_TOP_MARGIN_PX = 2
+_SOURCE_ACTION_CONTROL_MIN_WIDTH_PX = 180
+_SPEAKER_LABEL_WIDTH_PX = 58
+_SPEAKER_COMBO_MIN_WIDTH_PX = 88
+_SPEAKER_COMBO_MAX_WIDTH_PX = 104
+_CONTENT_KIND_LABEL_WIDTH_PX = 88
+_CONTENT_KIND_COMBO_MIN_WIDTH_PX = 126
+_CONTENT_KIND_COMBO_MAX_WIDTH_PX = 150
+_AI_PROFILE_COMBO_MIN_WIDTH_PX = 260
+_GENERATE_HEADER_BUTTON_MIN_WIDTH_PX = 140
+_RESET_HEADER_BUTTON_MIN_WIDTH_PX = 96
+_APPROVE_ALL_HEADER_BUTTON_MIN_WIDTH_PX = 132
 
 
 class SpeechBlocksPage(QWidget):
@@ -59,7 +73,7 @@ class SpeechBlocksPage(QWidget):
     insert_block_requested = Signal(str, str)
     delete_block_requested = Signal(str)
     edit_started = Signal(str)
-    save_block_requested = Signal(str, str, str, str)
+    save_block_requested = Signal(str, str, str, object)
     approve_block_requested = Signal(str)
     generate_audio_selected_requested = Signal(str)
     selected_audio_playback_toggle_requested = Signal(str)
@@ -72,7 +86,7 @@ class SpeechBlocksPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-24
-        @version    0.6.6
+        @version    0.7.2
         """
         super().__init__(parent)
         self._current_language = "en"
@@ -90,6 +104,7 @@ class SpeechBlocksPage(QWidget):
         self._can_reset = False
         self._can_approve_all = False
         self._can_resplit_selected = False
+        self._scene_ambience_enabled = False
         self._selected_text_character_limit = 0
         self._current_chunk_id: str | None = None
         self._current_block_id: str | None = None
@@ -103,15 +118,20 @@ class SpeechBlocksPage(QWidget):
         self._profile_label = QLabel("AI Profile")
         header_row.addWidget(self._profile_label)
         self._profile_combo = QComboBox(self)
+        self._profile_combo.setMinimumWidth(_AI_PROFILE_COMBO_MIN_WIDTH_PX)
+        self._profile_combo.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         self._profile_combo.addItem("(none)", None)
-        header_row.addWidget(self._profile_combo)
-        self._generate_button = QPushButton("Generate Speech Blocks")
+        header_row.addWidget(self._profile_combo, 1)
+        self._generate_button = QPushButton("Generate All")
+        self._generate_button.setMinimumWidth(_GENERATE_HEADER_BUTTON_MIN_WIDTH_PX)
         self._generate_button.clicked.connect(self._emit_generate_requested)
         header_row.addWidget(self._generate_button)
-        self._reset_generation_button = QPushButton("Reset Speech Blocks")
+        self._reset_generation_button = QPushButton("Reset")
+        self._reset_generation_button.setMinimumWidth(_RESET_HEADER_BUTTON_MIN_WIDTH_PX)
         self._reset_generation_button.clicked.connect(self.reset_generation_requested.emit)
         header_row.addWidget(self._reset_generation_button)
-        self._approve_all_button = QPushButton("Approve All Speech Blocks")
+        self._approve_all_button = QPushButton("Approve All")
+        self._approve_all_button.setMinimumWidth(_APPROVE_ALL_HEADER_BUTTON_MIN_WIDTH_PX)
         self._approve_all_button.clicked.connect(self.approve_all_requested.emit)
         header_row.addWidget(self._approve_all_button)
         layout.addLayout(header_row)
@@ -165,13 +185,25 @@ class SpeechBlocksPage(QWidget):
         self._lower_splitter = QSplitter(self)
         self._lower_splitter.setChildrenCollapsible(False)
         self._source_group = QGroupBox("Selected Chunk", self)
-        source_layout = QVBoxLayout(self._source_group)
+        self._source_layout = QVBoxLayout(self._source_group)
         self._source_text_edit = QPlainTextEdit(self)
         self._source_text_edit.setReadOnly(True)
-        source_layout.addWidget(self._source_text_edit)
-        self._resplit_button = QPushButton("Re-Split Selected Chunk")
+        self._source_layout.addWidget(self._source_text_edit)
+        self._source_action_row = QHBoxLayout()
+        self._source_action_row.setContentsMargins(0, 0, 2, 0)
+        self._resplit_button = QPushButton("Split Chunk")
+        self._resplit_button.setMinimumWidth(_SOURCE_ACTION_CONTROL_MIN_WIDTH_PX)
+        self._resplit_button.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         self._resplit_button.clicked.connect(self._emit_resplit_selected)
-        source_layout.addWidget(self._resplit_button)
+        self._source_action_row.addWidget(self._resplit_button, 1)
+        self._scene_ambience_combo = QComboBox(self)
+        self._scene_ambience_combo.setMinimumWidth(_SOURCE_ACTION_CONTROL_MIN_WIDTH_PX)
+        self._scene_ambience_combo.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        self._scene_ambience_combo.addItem("Scene Ambience Off", False)
+        self._scene_ambience_combo.addItem("Scene Ambience On", True)
+        self._scene_ambience_combo.currentIndexChanged.connect(self._handle_scene_ambience_combo_changed)
+        self._source_action_row.addWidget(self._scene_ambience_combo, 1)
+        self._source_layout.addLayout(self._source_action_row)
         self._lower_splitter.addWidget(self._source_group)
 
         self._blocks_group = QGroupBox("Speech Blocks", self)
@@ -180,20 +212,59 @@ class SpeechBlocksPage(QWidget):
         self._speech_block_list.currentRowChanged.connect(self._show_selected_block)
         blocks_layout.addWidget(self._speech_block_list, 6)
         meta_row = QHBoxLayout()
+        meta_row.setContentsMargins(0, 0, 0, 0)
         self._speaker_label = QLabel("Speaker")
+        self._speaker_label.setFixedWidth(_SPEAKER_LABEL_WIDTH_PX)
         meta_row.addWidget(self._speaker_label)
         self._speaker_combo = QComboBox(self)
-        meta_row.addWidget(self._speaker_combo, 4)
+        self._speaker_combo.setMinimumWidth(_SPEAKER_COMBO_MIN_WIDTH_PX)
+        self._speaker_combo.setMaximumWidth(_SPEAKER_COMBO_MAX_WIDTH_PX)
+        self._speaker_combo.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
+        meta_row.addWidget(self._speaker_combo)
+        self._warning_label = QLabel("")
+        self._warning_label.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Fixed)
+        meta_row.addWidget(self._warning_label)
+        meta_row.addStretch(1)
         self._content_kind_label = QLabel("Content Kind")
+        self._content_kind_label.setFixedWidth(_CONTENT_KIND_LABEL_WIDTH_PX)
         meta_row.addWidget(self._content_kind_label)
         self._content_kind_combo = QComboBox(self)
-        meta_row.addWidget(self._content_kind_combo, 3)
-        self._warning_label = QLabel("")
-        meta_row.addWidget(self._warning_label, 2)
+        self._content_kind_combo.setMinimumWidth(_CONTENT_KIND_COMBO_MIN_WIDTH_PX)
+        self._content_kind_combo.setMaximumWidth(_CONTENT_KIND_COMBO_MAX_WIDTH_PX)
+        self._content_kind_combo.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
+        self._content_kind_combo.currentIndexChanged.connect(self._refresh_block_detail_editor)
+        meta_row.addWidget(self._content_kind_combo)
         blocks_layout.addLayout(meta_row)
         self._speech_block_text_edit = QPlainTextEdit(self)
         self._speech_block_text_edit.textChanged.connect(self._update_selected_text_character_count)
         blocks_layout.addWidget(self._speech_block_text_edit, 5)
+        self._ambience_detail_widget = QWidget(self)
+        ambience_detail_layout = QFormLayout(self._ambience_detail_widget)
+        ambience_detail_layout.setContentsMargins(0, 0, 0, 0)
+        ambience_detail_layout.setSpacing(4)
+        self._ambient_prompt_side_widget = QWidget(self)
+        ambient_prompt_side_layout = QVBoxLayout(self._ambient_prompt_side_widget)
+        ambient_prompt_side_layout.setContentsMargins(0, 0, 0, 0)
+        ambient_prompt_side_layout.setSpacing(6)
+        self._ambient_prompt_label = QLabel("Prompt", self)
+        ambient_prompt_side_layout.addWidget(self._ambient_prompt_label)
+        ambient_prompt_side_layout.addStretch(1)
+        self._ambient_duration_label = QLabel("Duration (s)", self)
+        self._ambient_duration_spin = QDoubleSpinBox(self)
+        self._ambient_duration_spin.setRange(0.1, 300.0)
+        self._ambient_duration_spin.setDecimals(1)
+        self._ambient_duration_spin.setSingleStep(0.5)
+        self._ambient_duration_spin.setMaximumWidth(128)
+        ambient_prompt_side_layout.addWidget(self._ambient_duration_label)
+        ambient_prompt_side_layout.addWidget(self._ambient_duration_spin)
+        self._ambient_prompt_edit = QPlainTextEdit(self)
+        self._ambient_prompt_edit.textChanged.connect(self._update_selected_text_character_count)
+        ambience_detail_layout.addRow(self._ambient_prompt_side_widget, self._ambient_prompt_edit)
+        self._ambient_negative_prompt_label = QLabel("Negative Prompt", self)
+        self._ambient_negative_prompt_edit = QPlainTextEdit(self)
+        ambience_detail_layout.addRow(self._ambient_negative_prompt_label, self._ambient_negative_prompt_edit)
+        blocks_layout.addWidget(self._ambience_detail_widget, 5)
+        self._ambience_detail_widget.hide()
         self._lower_splitter.addWidget(self._blocks_group)
         self._lower_splitter.setStretchFactor(0, 1)
         self._lower_splitter.setStretchFactor(1, 1)
@@ -235,7 +306,7 @@ class SpeechBlocksPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-05-01
-        @version    0.1.1
+        @version    0.1.3
         """
         super().resizeEvent(event)
         self._apply_chunk_action_top_margin()
@@ -308,6 +379,7 @@ class SpeechBlocksPage(QWidget):
         can_reset: bool = False,
         can_approve_all: bool = False,
         can_resplit_selected: bool = False,
+        scene_ambience_enabled: bool = False,
         selected_text_character_limit: int = 0,
         **_extra_state,
     ) -> None:
@@ -350,6 +422,8 @@ class SpeechBlocksPage(QWidget):
         self._can_reset = can_reset
         self._can_approve_all = can_approve_all
         self._can_resplit_selected = can_resplit_selected
+        self._scene_ambience_enabled = bool(scene_ambience_enabled)
+        self._set_scene_ambience_combo_enabled_value(self._scene_ambience_enabled)
         self._selected_text_character_limit = max(0, int(selected_text_character_limit))
         current_block_id = self._current_block_id
         current_review_position = self.review_position()
@@ -438,6 +512,17 @@ class SpeechBlocksPage(QWidget):
         @version    0.1.0
         """
         return self._current_block_id
+
+    def scene_ambience_enabled(self) -> bool:
+        """
+        @brief      Return whether Scene Ambience analysis is enabled on the Speech Blocks page.
+        @return     True when Scene Ambience analysis should run.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-20
+        @version    0.1.0
+        """
+        return bool(self._scene_ambience_combo.currentData())
 
     def source_scroll_position(self) -> int:
         """
@@ -614,7 +699,13 @@ class SpeechBlocksPage(QWidget):
         self._blocks_group.setTitle(ui_state_service.translate("speech_blocks.blocks_group", language))
         self._speaker_label.setText(ui_state_service.translate("speech_blocks.detail_speaker", language))
         self._content_kind_label.setText(ui_state_service.translate("speech_blocks.detail_content_kind", language))
+        self._ambient_prompt_label.setText(ui_state_service.translate("speech_blocks.ambient_prompt", language))
+        self._ambient_negative_prompt_label.setText(
+            ui_state_service.translate("speech_blocks.ambient_negative_prompt", language)
+        )
+        self._ambient_duration_label.setText(ui_state_service.translate("speech_blocks.ambient_duration", language))
         self._resplit_button.setText(ui_state_service.translate("speech_blocks.resplit_selected", language))
+        self._refresh_scene_ambience_combo_labels()
         self._edit_button.setText(ui_state_service.translate("speech_blocks.edit_block", language))
         self._save_button.setText(ui_state_service.translate("speech_blocks.save_block", language))
         self._approve_block_button.setText(ui_state_service.translate(self._approval_button_label_key(), language))
@@ -661,6 +752,57 @@ class SpeechBlocksPage(QWidget):
         for content_kind, label in self._content_kind_options:
             self._content_kind_combo.addItem(label, content_kind)
         self._content_kind_combo.blockSignals(False)
+
+    def _refresh_scene_ambience_combo_labels(self) -> None:
+        """
+        @brief      Refresh Scene Ambience selector labels for the active UI language.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-20
+        @version    0.1.0
+        """
+        current_value = self.scene_ambience_enabled()
+        self._scene_ambience_combo.blockSignals(True)
+        self._scene_ambience_combo.clear()
+        selector_label = ui_state_service.translate("speech_blocks.scene_ambience_selector", self._current_language)
+        disabled_label = ui_state_service.translate("speech_blocks.scene_ambience_disabled", self._current_language)
+        enabled_label = ui_state_service.translate("speech_blocks.scene_ambience_enabled", self._current_language)
+        self._scene_ambience_combo.addItem(
+            f"{selector_label}: {disabled_label}",
+            False,
+        )
+        self._scene_ambience_combo.addItem(
+            f"{selector_label}: {enabled_label}",
+            True,
+        )
+        self._scene_ambience_combo.setCurrentIndex(1 if current_value else 0)
+        self._scene_ambience_combo.blockSignals(False)
+
+    def _set_scene_ambience_combo_enabled_value(self, enabled: bool) -> None:
+        """
+        @brief      Set Scene Ambience selector value without emitting UI signals.
+        @param[in]  enabled New Scene Ambience enablement value.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-20
+        @version    0.1.0
+        """
+        self._scene_ambience_combo.blockSignals(True)
+        self._scene_ambience_combo.setCurrentIndex(1 if enabled else 0)
+        self._scene_ambience_combo.blockSignals(False)
+
+    def _handle_scene_ambience_combo_changed(self) -> None:
+        """
+        @brief      Track Scene Ambience selector state changes.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-20
+        @version    0.1.0
+        """
+        self._scene_ambience_enabled = self.scene_ambience_enabled()
 
     def _apply_control_state(self) -> None:
         """
@@ -712,6 +854,7 @@ class SpeechBlocksPage(QWidget):
             and self._current_chunk_id is not None
             and self.current_profile_id() is not None
         )
+        self._scene_ambience_combo.setEnabled(self._project_active and not self._busy)
         self._chunk_list.setEnabled(self._project_active and not self._busy)
         self._insert_block_button.setEnabled(can_insert_block and not self._editing)
         self._delete_block_button.setEnabled(can_edit_selected and not self._editing)
@@ -721,6 +864,14 @@ class SpeechBlocksPage(QWidget):
         )
         self._content_kind_combo.setEnabled(can_edit_selected and self._editing)
         self._speech_block_text_edit.setReadOnly(not (can_edit_selected and self._editing))
+        ambience_editor_enabled = (
+            can_edit_selected
+            and self._editing
+            and str(self._content_kind_combo.currentData() or "") == speech_blocks_service.CONTENT_KIND_SCENE_AMBIENCE
+        )
+        self._ambient_prompt_edit.setReadOnly(not ambience_editor_enabled)
+        self._ambient_negative_prompt_edit.setReadOnly(not ambience_editor_enabled)
+        self._ambient_duration_spin.setEnabled(ambience_editor_enabled)
         self._edit_button.setEnabled(can_edit_selected and not self._editing)
         self._generate_audio_button.setEnabled(can_generate_audio_selected)
         self._save_button.setEnabled(can_edit_selected and self._editing)
@@ -740,17 +891,13 @@ class SpeechBlocksPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-05-01
-        @version    0.1.0
+        @version    0.1.1
         """
         required_attributes = ("_lower_splitter", "_source_group", "_blocks_group")
         if not all(hasattr(self, attribute_name) for attribute_name in required_attributes):
             return
-        splitter_width = self._lower_splitter.width()
-        if splitter_width <= 0:
-            return
-        minimum_pane_width = splitter_width // 3
-        self._source_group.setMinimumWidth(minimum_pane_width)
-        self._blocks_group.setMinimumWidth(minimum_pane_width)
+        self._source_group.setMinimumWidth(0)
+        self._blocks_group.setMinimumWidth(0)
 
     def _emit_generate_requested(self) -> None:
         """
@@ -803,6 +950,23 @@ class SpeechBlocksPage(QWidget):
         chunk_id = self.selected_chunk_id()
         if chunk_id is not None:
             self.resplit_selected_requested.emit(chunk_id)
+
+    def _refresh_block_detail_editor(self) -> None:
+        """
+        @brief      Show the editor matching the selected content kind.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-21
+        @version    0.1.0
+        """
+        is_scene_ambience = (
+            str(self._content_kind_combo.currentData() or "") == speech_blocks_service.CONTENT_KIND_SCENE_AMBIENCE
+        )
+        self._speech_block_text_edit.setVisible(not is_scene_ambience)
+        self._ambience_detail_widget.setVisible(is_scene_ambience)
+        self._update_selected_text_character_count()
+        self._apply_control_state()
 
     def _emit_insert_block(self) -> None:
         """
@@ -880,6 +1044,10 @@ class SpeechBlocksPage(QWidget):
         self._set_combo_value(self._speaker_combo, str(selected_block.get("speaker_id", "")))
         self._set_combo_value(self._content_kind_combo, str(selected_block.get("content_kind", "")))
         self._speech_block_text_edit.setPlainText(str(selected_block.get("text", "")))
+        self._ambient_prompt_edit.setPlainText(str(selected_block.get("sound_prompt", selected_block.get("text", ""))))
+        self._ambient_negative_prompt_edit.setPlainText(str(selected_block.get("negative_prompt", "")))
+        self._ambient_duration_spin.setValue(float(selected_block.get("duration_seconds", 1.0) or 1.0))
+        self._refresh_block_detail_editor()
         self._update_selected_text_character_count()
         self._warning_label.setText(_format_warning_label(selected_block, self._current_language))
         self._apply_control_state()
@@ -895,6 +1063,10 @@ class SpeechBlocksPage(QWidget):
         """
         self._current_block_id = None
         self._speech_block_text_edit.clear()
+        self._ambient_prompt_edit.clear()
+        self._ambient_negative_prompt_edit.clear()
+        self._ambient_duration_spin.setValue(1.0)
+        self._refresh_block_detail_editor()
         self._update_selected_text_character_count()
         self._warning_label.clear()
 
@@ -925,11 +1097,28 @@ class SpeechBlocksPage(QWidget):
         if block_id is None:
             return
         self._editing = False
+        edit_payload: object
+        selected_content_kind = str(self._content_kind_combo.currentData() or "")
+        if selected_content_kind == speech_blocks_service.CONTENT_KIND_SCENE_AMBIENCE:
+            edit_payload = {
+                "sound_prompt": self._ambient_prompt_edit.toPlainText(),
+                "negative_prompt": self._ambient_negative_prompt_edit.toPlainText(),
+                "duration_seconds": self._ambient_duration_spin.value(),
+            }
+        else:
+            edit_payload = self._speech_block_text_edit.toPlainText()
         self.save_block_requested.emit(
             block_id,
-            str(self._speaker_combo.currentData() or ""),
-            str(self._content_kind_combo.currentData() or ""),
-            self._speech_block_text_edit.toPlainText(),
+            selected_content_kind
+            if selected_content_kind
+            in {
+                speech_blocks_service.CONTENT_KIND_SCENE_AMBIENCE,
+                speech_blocks_service.CONTENT_KIND_PAUSE,
+                speech_blocks_service.CONTENT_KIND_INDICATION,
+            }
+            else str(self._speaker_combo.currentData() or ""),
+            selected_content_kind,
+            edit_payload,
         )
         self._apply_control_state()
 
@@ -955,7 +1144,10 @@ class SpeechBlocksPage(QWidget):
         @date       2026-05-05
         @version    0.1.0
         """
-        selected_length = len(self._speech_block_text_edit.toPlainText())
+        if str(self._content_kind_combo.currentData() or "") == speech_blocks_service.CONTENT_KIND_SCENE_AMBIENCE:
+            selected_length = len(self._ambient_prompt_edit.toPlainText())
+        else:
+            selected_length = len(self._speech_block_text_edit.toPlainText())
         if self._selected_text_character_limit <= 0:
             self._character_count_edit.setText(f"{selected_length} / -")
             return
@@ -1162,13 +1354,23 @@ def _format_speech_block_list_item(speech_block: dict[str, object]) -> str:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-24
-    @version    0.2.0
+    @version    0.2.1
     """
-    preview = str(speech_block.get("text", ""))
-    if len(preview) > 52:
-        preview = preview[:49] + "..."
     warning_marker = "!" if speech_block.get("warning_flags", []) else " "
     approval_marker = "ok" if bool(speech_block.get("approved", False)) else "--"
+    if str(speech_block.get("content_kind", "")).strip() == speech_blocks_service.CONTENT_KIND_SCENE_AMBIENCE:
+        duration = float(speech_block.get("duration_seconds", 0.0) or 0.0)
+        sound_prompt = speech_block.get("sound_prompt", speech_block.get("text", ""))
+        preview = f"Scene Ambience | {sound_prompt}"
+        if duration > 0.0:
+            preview = f"{preview} | {duration:.1f}s"
+        if len(preview) > 70:
+            preview = preview[:67] + "..."
+        return f"[{approval_marker}] [{warning_marker}] {speech_block.get('speech_block_id', '')} | {preview}"
+    else:
+        preview = str(speech_block.get("text", ""))
+    if len(preview) > 52:
+        preview = preview[:49] + "..."
     return (
         f"[{approval_marker}] [{warning_marker}] {speech_block.get('speech_block_id', '')} | "
         f"{speech_block.get('speaker_display_name', '')} | {preview}"

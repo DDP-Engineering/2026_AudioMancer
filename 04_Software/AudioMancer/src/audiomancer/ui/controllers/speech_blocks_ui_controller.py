@@ -78,7 +78,10 @@ def handle_generate_requested(window: "MainWindow", profile_id: str) -> None:
         )
         return
 
+    scene_ambience_enabled = _scene_ambience_enabled_from_page(window)
     if not _confirm_generation(window, current_language):
+        return
+    if scene_ambience_enabled and not _confirm_scene_ambience_speech_blocks(window, current_language):
         return
     additional_speech_block_instructions = None
     if not _is_resuming_speech_blocks_generation(window):
@@ -99,6 +102,7 @@ def handle_generate_requested(window: "MainWindow", profile_id: str) -> None:
                 progress_callback=progress_callback,
                 cancel_requested=cancel_requested,
                 additional_speech_block_instructions=additional_speech_block_instructions,
+                scene_ambience_enabled=scene_ambience_enabled,
             )
         ),
     )
@@ -307,7 +311,7 @@ def handle_save_block_requested(
     speech_block_id: str,
     speaker_id: str,
     content_kind: str,
-    text: str,
+    edit_payload: object,
 ) -> None:
     """
     @brief      Save one manually edited Speech Block.
@@ -315,7 +319,7 @@ def handle_save_block_requested(
     @param[in]  speech_block_id Selected Speech Block identifier.
     @param[in]  speaker_id Selected speaker identifier.
     @param[in]  content_kind Selected content-kind token.
-    @param[in]  text Edited Speech Block text.
+    @param[in]  edit_payload Edited Speech Block text or Scene Ambience field payload.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
@@ -328,7 +332,7 @@ def handle_save_block_requested(
     original_block = _speech_block_by_id(window, speech_block_id)
     if original_block is None:
         return
-    audio_affecting_change = _speech_block_audio_fields_changed(original_block, speaker_id, content_kind, text)
+    audio_affecting_change = _speech_block_audio_fields_changed(original_block, speaker_id, content_kind, edit_payload)
     source_scroll_position = window._speech_blocks_page.source_scroll_position()
     if not audio_affecting_change:
         window._speech_blocks_page.restore_source_scroll_position(source_scroll_position)
@@ -343,7 +347,7 @@ def handle_save_block_requested(
             speech_block_id,
             speaker_id,
             content_kind,
-            text,
+            edit_payload,
         )
     except ValueError as error:
         QMessageBox.warning(
@@ -385,7 +389,10 @@ def handle_resplit_selected_requested(window: "MainWindow", chunk_id: str) -> No
             ui_state_service.translate("project.error_missing_speech_blocks_profile", current_language),
         )
         return
+    scene_ambience_enabled = _scene_ambience_enabled_from_page(window)
     if not _confirm_speech_blocks_resplit(window, current_language):
+        return
+    if scene_ambience_enabled and not _confirm_scene_ambience_speech_blocks(window, current_language):
         return
     additional_speech_block_instructions = prompt_ai_speech_blocks_instructions(window, current_language)
     if additional_speech_block_instructions is None:
@@ -404,6 +411,7 @@ def handle_resplit_selected_requested(window: "MainWindow", chunk_id: str) -> No
                 progress_callback=progress_callback,
                 cancel_requested=cancel_requested,
                 additional_speech_block_instructions=additional_speech_block_instructions,
+                scene_ambience_enabled=scene_ambience_enabled,
             )
         ),
         success_message_key="status.speech_blocks_resplit",
@@ -583,6 +591,22 @@ def _resolve_ai_profile(settings_payload: dict[str, object] | None, profile_id: 
     return workflow_controller_service.resolve_enabled_ai_profile(settings_payload, profile_id)
 
 
+def _scene_ambience_enabled_from_page(window: "MainWindow") -> bool:
+    """
+    @brief      Resolve the current Speech Blocks page Scene Ambience selector value.
+    @param[in]  window Active main window instance.
+    @return     True when Scene Ambience generation is enabled on the page.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-21
+    @version    0.1.0
+    """
+    page = getattr(window, "_speech_blocks_page", None)
+    if page is None or not hasattr(page, "scene_ambience_enabled"):
+        return False
+    return bool(page.scene_ambience_enabled())
+
+
 def _reset_speech_blocks_and_downstream(window: "MainWindow") -> None:
     """
     @brief      Reset Speech Blocks and downstream runtime data.
@@ -634,25 +658,39 @@ def _speech_block_audio_fields_changed(
     original_block: dict[str, object],
     speaker_id: str,
     content_kind: str,
-    text: str,
+    edit_payload: object,
 ) -> bool:
     """
     @brief      Return whether one edited Speech Block changes generated-audio inputs.
     @param[in]  original_block Persisted Speech Block payload before the save.
     @param[in]  speaker_id Requested speaker identifier.
     @param[in]  content_kind Requested content-kind token.
-    @param[in]  text Requested speech text.
+    @param[in]  edit_payload Requested speech text or Scene Ambience field payload.
     @return     True when the Audio Block for this Speech Block must reset.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-04
     @version    0.1.0
     """
+    if str(content_kind).strip() == speech_blocks_service.CONTENT_KIND_SCENE_AMBIENCE:
+        payload = edit_payload if isinstance(edit_payload, dict) else {"sound_prompt": str(edit_payload)}
+        return any(
+            (
+                str(original_block.get("speaker_id", "")).strip() != str(speaker_id).strip(),
+                str(original_block.get("content_kind", "")).strip() != str(content_kind).strip(),
+                str(original_block.get("sound_prompt", original_block.get("text", ""))).strip()
+                != str(payload.get("sound_prompt", "")).strip(),
+                str(original_block.get("negative_prompt", "")).strip()
+                != str(payload.get("negative_prompt", "")).strip(),
+                float(original_block.get("duration_seconds", 0.0) or 0.0)
+                != float(payload.get("duration_seconds", 0.0) or 0.0),
+            )
+        )
     return any(
         (
             str(original_block.get("speaker_id", "")).strip() != str(speaker_id).strip(),
             str(original_block.get("content_kind", "")).strip() != str(content_kind).strip(),
-            str(original_block.get("text", "")) != str(text),
+            str(original_block.get("text", "")) != str(edit_payload),
         )
     )
 
@@ -879,6 +917,29 @@ def _confirm_generation(window: "MainWindow", language: str) -> bool:
             window,
             ui_state_service.translate("dialog.confirm_speech_blocks_title", language),
             ui_state_service.translate("project.confirm_speech_blocks", language),
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        == QMessageBox.StandardButton.Yes
+    )
+
+
+def _confirm_scene_ambience_speech_blocks(window: "MainWindow", language: str) -> bool:
+    """
+    @brief      Ask before enabling extra Scene Ambience LLM analysis.
+    @param[in]  window Active main window instance.
+    @param[in]  language Current UI language code.
+    @return     True when the operator confirms scene ambience analysis.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-20
+    @version    0.1.0
+    """
+    return (
+        QMessageBox.question(
+            window,
+            ui_state_service.translate("dialog.confirm_scene_ambience_speech_blocks_title", language),
+            ui_state_service.translate("project.confirm_scene_ambience_speech_blocks", language),
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.No,
         )

@@ -13,7 +13,7 @@
          using one minimal root-level `project.json` manifest contract.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-20
-@version    2.1.1
+@version    2.1.2
 """
 
 # IMPORTS
@@ -576,7 +576,7 @@ def _filter_noncompleted_artifact_warnings(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-11
-    @version    0.1.0
+    @version    0.1.1
     """
     operations = manifest.get("operations")
     if not isinstance(operations, dict):
@@ -1644,6 +1644,7 @@ def _default_audio_assembly_settings() -> dict[str, object]:
         "output_format": config.DEFAULT_AUDIO_ASSEMBLY_OUTPUT_FORMAT,
         "inter_block_silence_ms": config.DEFAULT_AUDIO_ASSEMBLY_INTER_BLOCK_SILENCE_MS,
         "inter_chunk_silence_ms": config.DEFAULT_AUDIO_ASSEMBLY_INTER_CHUNK_SILENCE_MS,
+        "include_scene_ambience": config.DEFAULT_AUDIO_ASSEMBLY_INCLUDE_SCENE_AMBIENCE,
     }
 
 
@@ -1655,7 +1656,7 @@ def _normalize_audio_assembly_settings(value: object) -> dict[str, object]:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.1.0
+    @version    0.1.1
     """
     defaults = _default_audio_assembly_settings()
     payload = value if isinstance(value, dict) else {}
@@ -1686,6 +1687,7 @@ def _normalize_audio_assembly_settings(value: object) -> dict[str, object]:
             60_000,
             int(defaults["inter_chunk_silence_ms"]),
         ),
+        "include_scene_ambience": bool(payload.get("include_scene_ambience", defaults["include_scene_ambience"])),
     }
 
 

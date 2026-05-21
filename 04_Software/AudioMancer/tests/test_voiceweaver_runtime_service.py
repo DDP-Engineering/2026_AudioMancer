@@ -179,11 +179,18 @@ def test_build_capability_matrix_ignores_unhealthy_models() -> None:
                 "status": "healthy",
                 "supported_generation_modes": ["clone"],
             },
+            {
+                "model_id": "sound_good",
+                "status": "healthy",
+                "supported_generation_modes": ["sound_prompt"],
+            },
         ]
     )
 
     assert capability_matrix["preset_voice_available"] is False
     assert capability_matrix["generate_and_clone_available"] is True
+    assert capability_matrix["sound_prompt_available"] is True
+    assert [model["model_id"] for model in capability_matrix["sound_prompt_models"]] == ["sound_good"]
 
 
 def test_voiceweaver_runtime_service_generation_payloads_use_current_contract(monkeypatch) -> None:
@@ -347,6 +354,81 @@ def test_voiceweaver_runtime_service_clone_prompt_wrappers_use_documented_contra
             44,
         )
     ]
+
+
+def test_voiceweaver_runtime_service_sound_prompt_wrappers_use_documented_contract(monkeypatch) -> None:
+    """
+    @brief      Verify sound prompt helpers target the documented VoiceWeaver REST payloads.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-20
+    @version    0.1.0
+    """
+    observed_json_calls: list[tuple[str, str, dict[str, object], int]] = []
+    observed_byte_urls: list[str] = []
+
+    def _fake_post_json_endpoint(base_url, runtime_api_key, endpoint, payload, timeout_seconds):
+        """
+        @brief      Provide the fake post json endpoint test helper.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-20
+        @version    0.1.0
+        """
+        _ = runtime_api_key
+        observed_json_calls.append((str(base_url), str(endpoint), dict(payload or {}), int(timeout_seconds)))
+        return {"status": "running"}
+
+    def _fake_read_bytes(url, headers, timeout_seconds):
+        """
+        @brief      Provide the fake read bytes test helper.
+        @return     Fake WAV bytes.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-20
+        @version    0.1.0
+        """
+        _ = headers
+        _ = timeout_seconds
+        observed_byte_urls.append(str(url))
+        return b"RIFF....WAVE"
+
+    monkeypatch.setattr(voiceweaver_runtime_service, "_post_json_endpoint", _fake_post_json_endpoint)
+    monkeypatch.setattr(voiceweaver_runtime_service, "_read_bytes", _fake_read_bytes)
+
+    voiceweaver_runtime_service.generate_sound_prompt(
+        "http://127.0.0.1:8059",
+        "",
+        "Rain in trenches",
+        negative_prompt="speech",
+        duration_seconds=5,
+        guidance_scale=7,
+        num_inference_steps=50,
+        seed=123,
+        timeout_seconds=66,
+    )
+    audio_bytes = voiceweaver_runtime_service.download_generated_audio("http://127.0.0.1:8059")
+
+    assert observed_json_calls == [
+        (
+            "http://127.0.0.1:8059",
+            "/v1/sound/prompt",
+            {
+                "prompt": "Rain in trenches",
+                "negative_prompt": "speech",
+                "duration_seconds": 5.0,
+                "guidance_scale": 7.0,
+                "num_inference_steps": 50,
+                "seed": 123,
+            },
+            66,
+        )
+    ]
+    assert observed_byte_urls == ["http://127.0.0.1:8059/v1/audio"]
+    assert audio_bytes == b"RIFF....WAVE"
 
 
 def test_voiceweaver_runtime_service_direct_clone_omits_romanian_language(monkeypatch) -> None:

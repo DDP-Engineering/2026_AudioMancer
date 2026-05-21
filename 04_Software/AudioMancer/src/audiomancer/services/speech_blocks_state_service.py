@@ -14,7 +14,7 @@
          current operation state, and enabled AI profile settings.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 0.7.0
+@version 0.7.1
 """
 
 # IMPORTS
@@ -112,6 +112,7 @@ def build_speech_blocks_state(
             "can_reset": False,
             "can_approve_all": False,
             "can_resplit_selected": False,
+            "scene_ambience_enabled": _scene_ambience_enabled(settings_payload),
             "selected_text_character_limit": _selected_text_character_limit(settings_payload),
         }
 
@@ -160,8 +161,29 @@ def build_speech_blocks_state(
         "can_reset": bool(speech_blocks),
         "can_approve_all": any(not bool(block.get("approved", False)) for block in speech_blocks),
         "can_resplit_selected": bool(source_chunks),
+        "scene_ambience_enabled": _scene_ambience_enabled(settings_payload),
         "selected_text_character_limit": _selected_text_character_limit(settings_payload),
     }
+
+
+def _scene_ambience_enabled(settings_payload: dict[str, object] | None) -> bool:
+    """
+    @brief      Resolve the default Speech Blocks scene-ambience selector state.
+    @param[in]  settings_payload Persisted application settings payload.
+    @return     True when Scene Ambience generation is enabled by default.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-20
+    @version    0.1.0
+    """
+    if not isinstance(settings_payload, dict):
+        return config.DEFAULT_SCENE_AMBIENCE_GENERATION_ENABLED
+    return bool(
+        settings_payload.get(
+            "scene_ambience_generation_enabled",
+            config.DEFAULT_SCENE_AMBIENCE_GENERATION_ENABLED,
+        )
+    )
 
 
 def _selected_text_character_limit(settings_payload: dict[str, object] | None) -> int:
@@ -333,12 +355,13 @@ def _is_metadata_only_speech_block(speech_block: dict[str, object], audio_block:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-04
-    @version    0.1.0
+    @version    0.2.0
     """
+    if str(speech_block.get("content_kind", "")).strip() == speech_blocks_service.CONTENT_KIND_SCENE_AMBIENCE:
+        return False
     if bool(audio_block.get("metadata_only", False)):
         return True
     return str(speech_block.get("content_kind", "")).strip() in {
-        speech_blocks_service.CONTENT_KIND_BACKGROUND_NOISE,
         speech_blocks_service.CONTENT_KIND_PAUSE,
         speech_blocks_service.CONTENT_KIND_INDICATION,
     }
@@ -523,8 +546,8 @@ def _content_kind_options(language: str) -> list[tuple[str, str]]:
             ui_state_service.translate("speech_blocks.content_dialogue", language),
         ),
         (
-            speech_blocks_service.CONTENT_KIND_BACKGROUND_NOISE,
-            ui_state_service.translate("speech_blocks.content_background_noise", language),
+            speech_blocks_service.CONTENT_KIND_SCENE_AMBIENCE,
+            ui_state_service.translate("speech_blocks.content_scene_ambience", language),
         ),
         (
             speech_blocks_service.CONTENT_KIND_PAUSE,

@@ -50,8 +50,10 @@ available, and returns one dictionary passed directly to
 
 The selected-audio merge is read-only. It matches Audio Blocks by stable
 `speech_block_id`, checks the generated file path from `audio_relative_path`,
-and marks metadata-only content kinds so the Speech Blocks page does not expose
-audio generation for pause, indication, or background-noise rows.
+and marks only current metadata-only rows so the Speech Blocks page does not
+expose audio generation for pause or indication rows. Scene Ambience rows stay
+eligible for selected-block audio generation when Scene Ambience audio is
+enabled downstream.
 
 ## 4. Dependencies
 
@@ -120,7 +122,8 @@ Audio preview fields are derived without changing persisted Speech Blocks:
 - `audio_generated` is true when the matching Audio Block is marked generated
 - `audio_approved` mirrors the matching Audio Block approval flag
 - `audio_metadata_only` is true for Audio Blocks metadata-only rows or Speech
-  Block content kinds `background_noise`, `pause`, and `indication`
+  Block content kinds currently skipped by audio generation, such as `pause`
+  and `indication`
 - `audio_can_play` is true only when the matching Audio Block is generated and
   its `audio_relative_path` points to an existing project-local file
 
@@ -183,4 +186,5 @@ uv run pytest tests/test_speech_blocks_page.py
 - Audio preview state is refreshed when the page state is rebuilt, not through a
   file watcher.
 - Metadata-only handling is intentionally aligned with current Audio Blocks
-  behavior and should be updated if richer sound-design blocks are introduced.
+  behavior; Scene Ambience rows should remain selectable for audio generation
+  whenever the sound-prompt path is enabled.

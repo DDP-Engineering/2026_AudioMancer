@@ -13,15 +13,16 @@
          generated-output inspection, and local preview playback controls.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-25
-@version 0.3.2
+@version 0.3.3
 """
 
 # IMPORTS
 
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
+    QCheckBox,
     QComboBox,
-    QFormLayout,
+    QGridLayout,
     QGroupBox,
     QHBoxLayout,
     QLabel,
@@ -63,7 +64,7 @@ class AudioAssemblyPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-25
-        @version    0.4.2
+        @version    0.4.3
         """
         super().__init__(parent)
         self._current_language = "en"
@@ -90,7 +91,7 @@ class AudioAssemblyPage(QWidget):
         layout.addLayout(header_row)
 
         self._settings_group = QGroupBox("Output Settings", self)
-        settings_layout = QFormLayout(self._settings_group)
+        settings_layout = QGridLayout(self._settings_group)
         self._output_mode_combo = QComboBox(self)
         self._output_mode_combo.addItem("Per text chunk", audio_assembly_service.OUTPUT_MODE_PER_CHUNK)
         self._output_mode_combo.addItem("Time limit", audio_assembly_service.OUTPUT_MODE_TIME_LIMIT)
@@ -111,16 +112,26 @@ class AudioAssemblyPage(QWidget):
         self._inter_chunk_gap_spin.setRange(0, 60_000)
         self._inter_chunk_gap_spin.setSuffix(" ms")
         self._inter_chunk_gap_spin.valueChanged.connect(self._handle_settings_changed)
+        self._include_scene_ambience_checkbox = QCheckBox("Include Scene Ambience", self)
+        self._include_scene_ambience_checkbox.stateChanged.connect(self._handle_settings_changed)
         self._output_mode_label = QLabel("Output Mode", self)
         self._max_duration_label = QLabel("Max Duration", self)
         self._output_format_label = QLabel("Output Format", self)
         self._inter_block_gap_label = QLabel("Inter-Block Silence", self)
         self._inter_chunk_gap_label = QLabel("Inter-Chunk Silence", self)
-        settings_layout.addRow(self._output_mode_label, self._output_mode_combo)
-        settings_layout.addRow(self._max_duration_label, self._max_duration_spin)
-        settings_layout.addRow(self._output_format_label, self._output_format_combo)
-        settings_layout.addRow(self._inter_block_gap_label, self._inter_block_gap_spin)
-        settings_layout.addRow(self._inter_chunk_gap_label, self._inter_chunk_gap_spin)
+        settings_layout.addWidget(self._output_mode_label, 0, 0)
+        settings_layout.addWidget(self._output_mode_combo, 0, 1)
+        settings_layout.addWidget(self._inter_block_gap_label, 0, 2)
+        settings_layout.addWidget(self._inter_block_gap_spin, 0, 3)
+        settings_layout.addWidget(self._max_duration_label, 1, 0)
+        settings_layout.addWidget(self._max_duration_spin, 1, 1)
+        settings_layout.addWidget(self._inter_chunk_gap_label, 1, 2)
+        settings_layout.addWidget(self._inter_chunk_gap_spin, 1, 3)
+        settings_layout.addWidget(self._output_format_label, 2, 0)
+        settings_layout.addWidget(self._output_format_combo, 2, 1)
+        settings_layout.addWidget(self._include_scene_ambience_checkbox, 2, 2, 1, 2)
+        settings_layout.setColumnStretch(1, 1)
+        settings_layout.setColumnStretch(3, 1)
         layout.addWidget(self._settings_group, 0)
 
         progress_row = QHBoxLayout()
@@ -288,7 +299,7 @@ class AudioAssemblyPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-25
-        @version    0.3.0
+        @version    0.3.1
         """
         self._loading_state = True
         self._stage_status = stage_status
@@ -303,6 +314,7 @@ class AudioAssemblyPage(QWidget):
         self._output_format_combo.setCurrentIndex(0)
         self._inter_block_gap_spin.setValue(int(normalized_settings["inter_block_silence_ms"]))
         self._inter_chunk_gap_spin.setValue(int(normalized_settings["inter_chunk_silence_ms"]))
+        self._include_scene_ambience_checkbox.setChecked(bool(normalized_settings["include_scene_ambience"]))
         self._progress_bar.setValue(max(0, min(int(progress_percent), 100)))
         self._progress_label.setText(f"{progress_current}/{progress_total}")
         self._status_edit.setPlainText("\n".join([*notes, "", *status_lines]).strip())
@@ -326,7 +338,7 @@ class AudioAssemblyPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-25
-        @version    0.1.0
+        @version    0.1.1
         """
         row = self._output_list.currentRow()
         if row < 0 or row >= len(self._outputs):
@@ -363,6 +375,7 @@ class AudioAssemblyPage(QWidget):
                 "output_format": self._output_format_combo.currentData(),
                 "inter_block_silence_ms": self._inter_block_gap_spin.value(),
                 "inter_chunk_silence_ms": self._inter_chunk_gap_spin.value(),
+                "include_scene_ambience": self._include_scene_ambience_checkbox.isChecked(),
             }
         )
 
@@ -374,7 +387,7 @@ class AudioAssemblyPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-25
-        @version    0.3.0
+        @version    0.3.1
         """
         self._current_language = language
         self._title_label.setText(f"<h2>{ui_state_service.translate('audio_assembly.title', language)}</h2>")
@@ -386,6 +399,9 @@ class AudioAssemblyPage(QWidget):
         self._output_format_label.setText(ui_state_service.translate("audio_assembly.output_format", language))
         self._inter_block_gap_label.setText(ui_state_service.translate("audio_assembly.inter_block_silence", language))
         self._inter_chunk_gap_label.setText(ui_state_service.translate("audio_assembly.inter_chunk_silence", language))
+        self._include_scene_ambience_checkbox.setText(
+            ui_state_service.translate("audio_assembly.include_scene_ambience", language)
+        )
         per_chunk_index = self._output_mode_combo.findData(audio_assembly_service.OUTPUT_MODE_PER_CHUNK)
         time_limit_index = self._output_mode_combo.findData(audio_assembly_service.OUTPUT_MODE_TIME_LIMIT)
         whole_book_index = self._output_mode_combo.findData(audio_assembly_service.OUTPUT_MODE_WHOLE_BOOK)
@@ -473,14 +489,14 @@ class AudioAssemblyPage(QWidget):
         if not self._updating_playback_slider:
             self.playback_seek_requested.emit(max(0, int(self._playback_slider.value())))
 
-    def _handle_settings_changed(self) -> None:
+    def _handle_settings_changed(self, *_args) -> None:
         """
         @brief      Persist UI setting changes and refresh dependent controls.
         @return     None.
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-25
-        @version    0.2.0
+        @version    0.2.1
         """
         self._max_duration_spin.setEnabled(
             self._output_mode_combo.currentData() == audio_assembly_service.OUTPUT_MODE_TIME_LIMIT

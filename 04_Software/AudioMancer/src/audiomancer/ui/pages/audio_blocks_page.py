@@ -13,13 +13,14 @@
          review controls for the Audio Blocks workflow.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-23
-@version 0.5.3
+@version 0.5.5
 """
 
 # IMPORTS
 
 from PySide6.QtCore import QSignalBlocker, Qt, Signal
 from PySide6.QtWidgets import (
+    QComboBox,
     QGroupBox,
     QHBoxLayout,
     QLabel,
@@ -28,12 +29,19 @@ from PySide6.QtWidgets import (
     QPlainTextEdit,
     QProgressBar,
     QPushButton,
+    QSizePolicy,
     QSplitter,
     QVBoxLayout,
     QWidget,
 )
 
 from audiomancer.services import audio_blocks_service, speech_blocks_service, ui_state_service
+
+# CONSTANTS
+
+_PROGRESS_BAR_MIN_WIDTH_PX = 520
+_PROGRESS_BAR_MAX_WIDTH_PX = 920
+_SCENE_AMBIENCE_AUDIO_COMBO_MIN_WIDTH_PX = 230
 
 
 class AudioBlocksPage(QWidget):
@@ -62,7 +70,7 @@ class AudioBlocksPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-23
-        @version    0.5.2
+        @version    0.5.4
         """
         super().__init__(parent)
         self._current_language = "en"
@@ -70,6 +78,7 @@ class AudioBlocksPage(QWidget):
         self._busy = False
         self._selected_playback_active = False
         self._audiobook_playback_active = False
+        self._scene_ambience_audio_enabled = False
         self._stage_status = audio_blocks_service.AUDIO_BLOCKS_STAGE_NOT_STARTED
         self._speech_blocks: list[dict[str, object]] = []
         self._current_block_id: str | None = None
@@ -83,24 +92,36 @@ class AudioBlocksPage(QWidget):
         self._start_button = QPushButton("Start Audio Generation")
         self._start_button.clicked.connect(self.start_generation_requested.emit)
         header_row.addWidget(self._start_button)
-        self._audiobook_playback_button = QPushButton("Play Audiobook")
-        self._audiobook_playback_button.clicked.connect(self.audiobook_playback_toggle_requested.emit)
-        header_row.addWidget(self._audiobook_playback_button)
         self._reset_button = QPushButton("Reset Audio Generation")
         self._reset_button.clicked.connect(self.reset_generation_requested.emit)
         header_row.addWidget(self._reset_button)
         self._approve_all_button = QPushButton("Approve All Generation")
         self._approve_all_button.clicked.connect(self.approve_all_requested.emit)
         header_row.addWidget(self._approve_all_button)
+        self._audiobook_playback_button = QPushButton("Play Audiobook")
+        self._audiobook_playback_button.clicked.connect(self.audiobook_playback_toggle_requested.emit)
+        header_row.addWidget(self._audiobook_playback_button)
         layout.addLayout(header_row)
 
         self._progress_label = QLabel("0/0")
         layout.addWidget(self._progress_label)
+        progress_row = QHBoxLayout()
         self._progress_bar = QProgressBar(self)
         self._progress_bar.setRange(0, 100)
         self._progress_bar.setValue(0)
         self._progress_bar.setFormat("%p%")
-        layout.addWidget(self._progress_bar)
+        self._progress_bar.setMinimumWidth(_PROGRESS_BAR_MIN_WIDTH_PX)
+        self._progress_bar.setMaximumWidth(_PROGRESS_BAR_MAX_WIDTH_PX)
+        self._progress_bar.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        progress_row.addWidget(self._progress_bar, 1)
+        self._scene_ambience_audio_combo = QComboBox(self)
+        self._scene_ambience_audio_combo.setMinimumWidth(_SCENE_AMBIENCE_AUDIO_COMBO_MIN_WIDTH_PX)
+        self._scene_ambience_audio_combo.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
+        self._scene_ambience_audio_combo.addItem("Scene Ambience Audio Off", False)
+        self._scene_ambience_audio_combo.addItem("Scene Ambience Audio On", True)
+        self._scene_ambience_audio_combo.currentIndexChanged.connect(self._handle_scene_ambience_audio_combo_changed)
+        progress_row.addWidget(self._scene_ambience_audio_combo)
+        layout.addLayout(progress_row)
 
         self._main_splitter = QSplitter(self)
         self._main_splitter.setChildrenCollapsible(False)
@@ -241,6 +262,7 @@ class AudioBlocksPage(QWidget):
         can_regenerate_selected: bool,
         can_approve_selected: bool,
         selected_text_character_limit: int = 0,
+        scene_ambience_audio_enabled: bool = False,
         **_extra_state,
     ) -> None:
         """
@@ -276,6 +298,8 @@ class AudioBlocksPage(QWidget):
         self._can_approve_all = can_approve_all
         self._can_regenerate_selected = can_regenerate_selected
         self._can_approve_selected = can_approve_selected
+        self._scene_ambience_audio_enabled = bool(scene_ambience_audio_enabled)
+        self._set_scene_ambience_audio_combo_enabled_value(self._scene_ambience_audio_enabled)
         if self._source_text_edit.toPlainText() != full_source_text:
             self._source_text_edit.setPlainText(full_source_text)
         self._progress_bar.setValue(max(0, min(int(progress_percent), 100)))
@@ -368,6 +392,17 @@ class AudioBlocksPage(QWidget):
         """
         return self._current_block_id
 
+    def scene_ambience_audio_enabled(self) -> bool:
+        """
+        @brief      Return whether Scene Ambience Audio generation is enabled.
+        @return     True when Scene Ambience blocks should be rendered to WAV.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-20
+        @version    0.1.0
+        """
+        return bool(self._scene_ambience_audio_combo.currentData())
+
     def select_block_id(self, speech_block_id: str) -> None:
         """
         @brief      Select one speech block row by identifier.
@@ -412,6 +447,7 @@ class AudioBlocksPage(QWidget):
         """
         self._current_language = language
         self._title_label.setText(f"<h2>{ui_state_service.translate('audio_blocks.title', language)}</h2>")
+        self._refresh_scene_ambience_audio_combo_labels()
         self._start_button.setText(ui_state_service.translate("audio_blocks.start_generation", language))
         self._audiobook_playback_button.setText(
             ui_state_service.translate(self._audiobook_playback_label_key(), language)
@@ -431,6 +467,66 @@ class AudioBlocksPage(QWidget):
         if current_row >= 0:
             self._show_selected_block(current_row)
 
+    def _refresh_scene_ambience_audio_combo_labels(self) -> None:
+        """
+        @brief      Refresh Scene Ambience Audio selector labels for the active UI language.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-20
+        @version    0.1.0
+        """
+        current_value = self.scene_ambience_audio_enabled()
+        self._scene_ambience_audio_combo.blockSignals(True)
+        self._scene_ambience_audio_combo.clear()
+        selector_label = ui_state_service.translate(
+            "audio_blocks.scene_ambience_audio_selector",
+            self._current_language,
+        )
+        disabled_label = ui_state_service.translate(
+            "audio_blocks.scene_ambience_audio_disabled",
+            self._current_language,
+        )
+        enabled_label = ui_state_service.translate(
+            "audio_blocks.scene_ambience_audio_enabled",
+            self._current_language,
+        )
+        self._scene_ambience_audio_combo.addItem(
+            f"{selector_label}: {disabled_label}",
+            False,
+        )
+        self._scene_ambience_audio_combo.addItem(
+            f"{selector_label}: {enabled_label}",
+            True,
+        )
+        self._scene_ambience_audio_combo.setCurrentIndex(1 if current_value else 0)
+        self._scene_ambience_audio_combo.blockSignals(False)
+
+    def _set_scene_ambience_audio_combo_enabled_value(self, enabled: bool) -> None:
+        """
+        @brief      Set Scene Ambience Audio selector value without emitting UI signals.
+        @param[in]  enabled New Scene Ambience Audio enablement value.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-20
+        @version    0.1.0
+        """
+        self._scene_ambience_audio_combo.blockSignals(True)
+        self._scene_ambience_audio_combo.setCurrentIndex(1 if enabled else 0)
+        self._scene_ambience_audio_combo.blockSignals(False)
+
+    def _handle_scene_ambience_audio_combo_changed(self) -> None:
+        """
+        @brief      Track Scene Ambience Audio selector state changes.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-20
+        @version    0.1.0
+        """
+        self._scene_ambience_audio_enabled = self.scene_ambience_audio_enabled()
+
     def _apply_control_state(self) -> None:
         """
         @brief      Apply the current Audio Blocks page button and widget states.
@@ -442,6 +538,7 @@ class AudioBlocksPage(QWidget):
         """
         selected_block = self._current_display_block()
         self._start_button.setEnabled(self._project_active and not self._busy and self._can_start_or_continue)
+        self._scene_ambience_audio_combo.setEnabled(self._project_active and not self._busy)
         self._audiobook_playback_button.setEnabled(
             self._project_active
             and any(bool(block.get("can_play", False)) for block in self._speech_blocks)

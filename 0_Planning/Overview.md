@@ -207,8 +207,8 @@ This stage should support:
   needs operator correction
 - narrator voice generation for narration Speech Blocks
 - character voice generation for dialogue or character-linked Speech Blocks
-- metadata-only Speech Blocks such as pause, indication, and background-noise
-  markers without treating them as narrator or character speech
+- operation Speech Blocks such as pause, indication, and Scene Ambience markers
+  without treating them as narrator or character speech
 - use of personalized synthetic voices
 - use of real cloned voices where supported
 - generation of only the currently approved Speech Blocks so partial review can
@@ -223,11 +223,15 @@ text for the TTS budget instead of forcing dialogue speaker splits.
 
 The current implementation generates WAV files through the Audio Blocks workflow
 under `audio_blocks/`, keeps unapproved Speech Blocks pending, stores
-metadata-only operation blocks without VoiceWeaver generation, and advances only
-after generated audio is explicitly approved. The Speech Blocks review page can
-invoke selected-block audio regeneration through a compact `Generate Audio`
-button and Play/Stop preview through the same Audio Blocks controller path so
-operators can check formatting before moving to the Audio Blocks page.
+pause and indication operation blocks without VoiceWeaver generation, and can
+generate approved Scene Ambience prompt blocks through the sound-prompt runtime
+path when that setting is enabled. The Speech Blocks review page can invoke
+selected-block audio regeneration through a compact `Generate Audio` button and
+Play/Stop preview through the same Audio Blocks controller path so operators
+can check formatting before moving to the Audio Blocks page.
+Audio Blocks and VoiceWeaver runtime calls also write concise diagnostic log
+records for generation start, accepted sound-prompt requests, and completed
+generated files.
 
 Application-level Settings, AI Settings, and TTS Settings should use consistent
 dialog semantics: Cancel discards unsaved edits, Save persists while keeping the
@@ -248,6 +252,7 @@ The current implementation supports these Audio Assembly output modes:
 The assembly stage supports:
 
 - combining generated Speech Block audio in canonical order
+- optionally including generated Scene Ambience sound blocks in canonical order
 - converting metadata-only pause blocks into silence
 - deterministic output naming
 - project-local `audiobook/` deliverables

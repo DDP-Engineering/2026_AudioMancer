@@ -70,8 +70,16 @@ Expected covered behavior:
 - Speech Block edit/reset/delete resets only that block's Audio Block
 - Speech Block insert and approval preserve generated Audio Blocks and reset
   Assembly only
+- Speech Blocks generation with Scene Ambience disabled preserves the existing
+  narration/dialogue workflow
+- Speech Blocks generation with Scene Ambience enabled creates opener, closer,
+  and scene-change metadata blocks according to the selected policy and resumes
+  from the next unfinished chunk after cancellation
 - Audio Block selected reset/regeneration preserves unrelated Audio Blocks and
   resets Assembly
+- Audio Blocks generation skips Scene Ambience when ambience audio is disabled
+  and generates approved Scene Ambience WAV files through a sound-capable
+  VoiceWeaver model when enabled
 - Audio Block approval/unapproval preserves generated audio and resets Assembly
   only
 - Audio Assembly settings changes preserve approved Audio Blocks and reset only
@@ -107,7 +115,13 @@ Use a small sample book and an offline or local AI/TTS setup when available.
 7. Change one character voice prompt or regenerate one character sample.
    Confirm unrelated character audio remains.
 8. Edit one Speech Block. Confirm only that block's Audio Block is reset.
-9. Unapprove one Audio Block. Confirm generated audio remains and only Audio
+9. Enable Scene Ambience in Speech Blocks, accept the confirmation, generate a
+   small chunk set, and confirm Scene Ambience opener/closer/scene-change
+   blocks can be reviewed and approved.
+10. Enable Scene Ambience Audio in Audio Blocks, accept the confirmation, and
+   confirm spoken audio is generated before Scene Ambience audio for the same
+   chunk when a sound-capable VoiceWeaver model is available.
+11. Unapprove one Audio Block. Confirm generated audio remains and only Audio
    Assembly resets.
-10. Change one Audio Assembly setting. Confirm approved Audio Blocks remain and
+12. Change one Audio Assembly setting. Confirm approved Audio Blocks remain and
    only assembly outputs/state/report are reset.

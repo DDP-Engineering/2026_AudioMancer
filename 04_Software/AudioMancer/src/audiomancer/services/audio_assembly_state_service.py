@@ -14,14 +14,14 @@
          audiobook output records.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-25
-@version 0.1.0
+@version 0.1.1
 """
 
 # IMPORTS
 
 from pathlib import Path
 
-from audiomancer.services import audio_assembly_service, audio_blocks_service, ui_state_service
+from audiomancer.services import audio_assembly_service, audio_blocks_service, speech_blocks_service, ui_state_service
 
 
 def build_audio_assembly_state(
@@ -38,7 +38,7 @@ def build_audio_assembly_state(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.1.0
+    @version    0.1.1
     """
     if project_root is None or manifest is None:
         return _empty_state(language)
@@ -47,8 +47,10 @@ def build_audio_assembly_state(
     report = audio_assembly_service.load_audio_assembly_report(project_root)
     operation_state = audio_assembly_service.load_operation_state(project_root)
     outputs = audio_assembly_service.load_generated_outputs(project_root)
-    total_blocks = len(audio_blocks)
-    approved_blocks = sum(1 for block in audio_blocks if bool(block.get("approved", False)))
+    include_scene_ambience = bool(settings["include_scene_ambience"])
+    assembly_blocks = _filter_assembly_policy_blocks(audio_blocks, include_scene_ambience)
+    total_blocks = len(assembly_blocks)
+    approved_blocks = sum(1 for block in assembly_blocks if bool(block.get("approved", False)))
     generated_outputs = len(outputs)
     planned_outputs = int(report.get("planned_output_count", generated_outputs) if isinstance(report, dict) else 0)
     progress_current = generated_outputs if operation_state is None else int(operation_state.get("progress_current", 0))
@@ -149,6 +151,29 @@ def _build_notes(
     if status == audio_assembly_service.AUDIO_ASSEMBLY_STAGE_COMPLETED:
         return [ui_state_service.translate("audio_assembly.note_completed", language)]
     return [ui_state_service.translate("audio_assembly.note_ready", language)]
+
+
+def _filter_assembly_policy_blocks(
+    audio_blocks: list[dict[str, object]],
+    include_scene_ambience: bool,
+) -> list[dict[str, object]]:
+    """
+    @brief      Filter Audio Blocks by Audio Assembly Scene Ambience inclusion policy.
+    @param[in]  audio_blocks Full Audio Blocks payload.
+    @param[in]  include_scene_ambience True when Scene Ambience blocks count toward assembly.
+    @return     Blocks relevant for current Audio Assembly readiness and status.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-20
+    @version    0.1.0
+    """
+    if include_scene_ambience:
+        return list(audio_blocks)
+    return [
+        block
+        for block in audio_blocks
+        if str(block.get("content_kind", "")).strip() != speech_blocks_service.CONTENT_KIND_SCENE_AMBIENCE
+    ]
 
 
 def _stage_status(report: dict[str, object] | None, operation_state: dict[str, object] | None) -> str:

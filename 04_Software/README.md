@@ -20,3 +20,9 @@ Implementation sources and runnable software artifacts.
   bundled into release archives as `help/en/` plus `help/ro/`.
   Current validation guidance and the full regression baseline are documented
   in `../HowToTest.md` and `AudioMancer/README.MD`.
+  Speech Blocks, Audio Blocks, and Audio Assembly currently include the Scene
+  Ambience path, where ambience prompts are stored as ordered individual Speech
+  Blocks, generated through the sound-prompt runtime path when enabled, and
+  optionally included in final WAV assembly.
+  Runtime generation diagnostics are logged through the shared application
+  logging service and workflow artifacts remain project-local.

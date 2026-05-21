@@ -80,13 +80,13 @@ Supported content kinds:
 
 - `narration`
 - `dialogue`
-- `background_noise`
+- `scene_ambience`
 - `pause`
 - `indication`
 
 Metadata-only operation kinds:
 
-- `background_noise`
+- `scene_ambience`
 - `pause`
 - `indication`
 

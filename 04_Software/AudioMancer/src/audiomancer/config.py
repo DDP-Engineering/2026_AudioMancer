@@ -13,7 +13,7 @@
          file support used by the current AudioMancer implementation scaffold.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 1.41.0
+@version 1.41.2
 """
 
 # IMPORTS
@@ -546,6 +546,39 @@ DEFAULT_TTS_SPLIT_SAFETY_FACTOR = 0.85
 # @brief Approximate spoken-word rate used to convert audio token budget into text guidance.
 DEFAULT_TTS_WORDS_PER_AUDIO_SECOND = 2.5
 
+# @brief Default Scene Ambience Speech Blocks generation enablement.
+DEFAULT_SCENE_AMBIENCE_GENERATION_ENABLED = False
+
+# @brief Scene Ambience placement options used by Speech Blocks generation.
+SCENE_AMBIENCE_PLACEMENT_OPTIONS = (
+    "openers",
+    "closers",
+    "openers_and_closers",
+    "scene_changes",
+    "openers_closers_and_scene_changes",
+)
+
+# @brief Default Scene Ambience placement policy.
+DEFAULT_SCENE_AMBIENCE_PLACEMENT = "openers_and_closers"
+
+# @brief Default maximum generated Scene Ambience sequence duration in seconds.
+DEFAULT_SCENE_AMBIENCE_DURATION_SECONDS = 10
+
+# @brief Default maximum generated Scene Ambience blocks in one ambience sequence.
+DEFAULT_SCENE_AMBIENCE_MAX_BLOCKS_PER_SEQUENCE = 6
+
+# @brief Default Stable Audio guidance scale for Scene Ambience sound generation.
+DEFAULT_SCENE_AMBIENCE_GUIDANCE_SCALE = 7.0
+
+# @brief Default Stable Audio inference-step count for Scene Ambience sound generation.
+DEFAULT_SCENE_AMBIENCE_NUM_INFERENCE_STEPS = 100
+
+# @brief Default Stable Audio seed for Scene Ambience sound generation; None lets the runtime randomize.
+DEFAULT_SCENE_AMBIENCE_SEED = None
+
+# @brief Default Audio Blocks sound-generation enablement for Scene Ambience blocks.
+DEFAULT_SCENE_AMBIENCE_AUDIO_GENERATION_ENABLED = False
+
 # AI Workflow Defaults
 # @brief Default maximum cleanup-unit count sent in one AI cleanup request window.
 DEFAULT_AI_CLEANUP_MAX_WINDOW_UNITS = 24
@@ -689,6 +722,9 @@ DEFAULT_AUDIO_ASSEMBLY_INTER_BLOCK_SILENCE_MS = 250
 
 # @brief Default silence between adjacent source chunks in the same output.
 DEFAULT_AUDIO_ASSEMBLY_INTER_CHUNK_SILENCE_MS = 1000
+
+# @brief Default inclusion policy for generated Scene Ambience audio during Audio Assembly.
+DEFAULT_AUDIO_ASSEMBLY_INCLUDE_SCENE_AMBIENCE = True
 
 
 # Logging Defaults

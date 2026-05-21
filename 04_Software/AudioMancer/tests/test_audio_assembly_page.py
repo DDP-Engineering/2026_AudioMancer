@@ -13,7 +13,7 @@
          and playback button state on the Audio Assembly page.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-25
-@version 0.4.0
+@version 0.4.1
 """
 
 # IMPORTS
@@ -44,6 +44,47 @@ def test_audio_assembly_page_time_limit_enables_duration_control(qtbot) -> None:
         page._output_mode_combo.findData(audio_assembly_service.OUTPUT_MODE_WHOLE_BOOK)
     )
     assert page._max_duration_spin.isEnabled() is False
+
+
+def test_audio_assembly_page_uses_two_column_settings_and_scene_ambience_option(qtbot) -> None:
+    """
+    @brief      Verify settings render in two columns and emit the Scene Ambience inclusion setting.
+    @param[in]  qtbot Qt test helper fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-20
+    @version    0.1.0
+    """
+    page = AudioAssemblyPage()
+    qtbot.addWidget(page)
+    page.set_project_active(True)
+    page.set_audio_assembly_state(
+        settings={
+            **audio_assembly_service.default_audio_assembly_settings(),
+            "include_scene_ambience": False,
+        },
+        outputs=[],
+        current_output_key=None,
+        notes=["Ready."],
+        status_lines=[],
+        progress_current=0,
+        progress_total=0,
+        progress_percent=0,
+        stage_status=audio_assembly_service.AUDIO_ASSEMBLY_STAGE_NOT_STARTED,
+        can_generate=True,
+        can_reset=False,
+        can_play_selected=False,
+    )
+
+    assert page._include_scene_ambience_checkbox.isChecked() is False
+    assert page.current_settings_payload()["include_scene_ambience"] is False
+    assert page._settings_group.layout().itemAtPosition(0, 0).widget() is page._output_mode_label
+    assert page._settings_group.layout().itemAtPosition(0, 2).widget() is page._inter_block_gap_label
+
+    page._include_scene_ambience_checkbox.setChecked(True)
+
+    assert page.current_settings_payload()["include_scene_ambience"] is True
 
 
 def test_audio_assembly_page_renders_outputs_progress_and_playback_state(qtbot) -> None:
@@ -257,6 +298,7 @@ def test_audio_assembly_page_localizes_mode_and_output_rows(qtbot) -> None:
         )
         == "Audiobook intreg"
     )
+    assert page._include_scene_ambience_checkbox.text() == "Include Ambienta Scena"
     assert "blocuri audio" in page._output_list.item(0).text()
 
 

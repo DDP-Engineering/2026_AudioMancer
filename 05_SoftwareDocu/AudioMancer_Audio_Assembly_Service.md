@@ -20,6 +20,8 @@ deliverables under the project-root `audiobook/` folder.
   assembly outputs when changed settings make existing outputs stale
 - validate that all Audio Blocks are approved and reference compatible WAV files
 - compose output files for per-chunk, time-limited, or whole-book delivery
+- optionally include or skip generated `scene_ambience` audio blocks in the
+  final sequential assembly
 - add configurable silence gaps between blocks and between chunks or output files
 - convert metadata-only pause Audio Blocks into silence inside the composed WAV
   output
@@ -57,7 +59,8 @@ The workflow is split across:
 High-level flow:
 
 1. The page emits the selected settings when the operator changes output mode,
-   duration limit, output format, or silence-gap controls.
+   duration limit, output format, silence-gap controls, or the Scene Ambience
+   inclusion option.
 2. The controller persists normalized settings under
    `project.json.audio_assembly_settings`. If generated assembly output already
    exists and the normalized settings changed, the controller asks for
@@ -66,9 +69,10 @@ High-level flow:
 3. Pressing `Generate Audio` shows a long-operation confirmation and starts the
    shared threaded operation runner with operation kind `audio_assembly`.
 4. `audio_assembly_service.start_or_continue_composition(...)` loads approved
-   Audio Blocks, validates that generated WAV files exist for playable blocks,
-   checks that WAV parameters are compatible, preserves metadata-only pause
-   blocks as silence, and builds an input/settings fingerprint.
+   Audio Blocks, applies the Scene Ambience inclusion policy, validates that
+   generated WAV files exist for playable blocks, checks that WAV parameters
+   are compatible, preserves metadata-only pause blocks as silence, and builds
+   an input/settings fingerprint.
 5. If existing operation state belongs to different inputs or settings, the
    service rejects continuation and requires an explicit reset.
 6. The service builds an output plan according to the selected mode and skips
@@ -129,6 +133,8 @@ Persisted settings in `project.json.audio_assembly_settings`:
 - `output_format`: currently locked to `wav`
 - `inter_block_silence_ms`: integer, default `250`
 - `inter_chunk_silence_ms`: integer, default `1000`
+- `include_scene_ambience`: boolean, default `true`; when `false`, generated
+  `scene_ambience` WAV blocks are skipped during composition
 
 Output modes:
 
@@ -159,10 +165,12 @@ Current invariants:
 - metadata-only pause Audio Blocks are included as silence using
   the current `pause_duration_ms` field, or `1000 ms` when that field is
   missing or invalid; pause text is not parsed as a compatibility fallback
+- generated `scene_ambience` Audio Blocks are sequential contributors only when
+  `include_scene_ambience` is enabled; when disabled, they are ignored for
+  readiness counts, WAV validation, output planning, and final composition
 - an explicit pause block replaces adjacent automatic inter-block silence for
   that pause position, so the pause duration is not double-counted
-- metadata-only indication and background-noise Audio Blocks are skipped by the
-  current composer
+- metadata-only indication Audio Blocks are skipped by the current composer
 - time-limited planning uses the same automatic silence-gap rules as WAV
   composition, so published part durations do not exceed the configured limit
   except when one individual block is already longer than the limit
@@ -217,6 +225,7 @@ manifest = audio_assembly_service.save_audio_assembly_settings(
         "output_format": "wav",
         "inter_block_silence_ms": 250,
         "inter_chunk_silence_ms": 1000,
+        "include_scene_ambience": True,
     },
 )
 
@@ -236,6 +245,8 @@ Operator path:
 - adjust duration and silence-gap settings as needed; changing settings after
   output exists asks for confirmation and resets only the existing Audio
   Assembly output
+- choose whether generated Scene Ambience sound blocks should be included in
+  the final sequential audiobook output
 - press `Generate Audio` and confirm the long-running operation
 - if interrupted, press `Generate Audio` again to continue completed-output
   resume when the inputs and settings still match

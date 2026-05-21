@@ -13,7 +13,7 @@
          stale-input protection, and generated-output reset behavior.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-25
-@version 0.5.1
+@version 0.5.2
 """
 
 # IMPORTS
@@ -113,6 +113,54 @@ def test_audio_assembly_service_writes_pause_blocks_as_silence(tmp_path) -> None
     with wave.open(str(output_path), "rb") as wav_file:
         assert wav_file.getnframes() == (2400 * 3) + 12_000
     assert report["outputs"][0]["block_count"] == 4
+
+
+def test_audio_assembly_service_can_skip_scene_ambience_blocks(tmp_path) -> None:
+    """
+    @brief      Verify Audio Assembly excludes generated Scene Ambience blocks when configured.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-20
+    @version    0.1.0
+    """
+    project_root, manifest = _create_project_with_audio_blocks(tmp_path)
+    payload_path = project_root / config.AUDIO_BLOCKS_OUTPUT_FILE_NAME
+    payload = json.loads(payload_path.read_text(encoding="utf-8"))
+    ambience_audio_path = project_root / config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME / "0001_000002_ambience.wav"
+    _write_wav(ambience_audio_path, 2400)
+    payload.insert(
+        1,
+        {
+            **payload[0],
+            "speech_block_id": "0001-000002-ambience",
+            "sequence_index": 2,
+            "speaker_id": "scene_ambience",
+            "speaker_display_name": "Scene Ambience",
+            "normalized_speaker_name": "scene_ambience",
+            "content_kind": "scene_ambience",
+            "text": "Rain in distant trenches.",
+            "audio_relative_path": ambience_audio_path.relative_to(project_root).as_posix(),
+        },
+    )
+    payload[2]["sequence_index"] = 3
+    payload_path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+    manifest["audio_assembly_settings"] = {
+        **audio_assembly_service.default_audio_assembly_settings(),
+        "output_mode": audio_assembly_service.OUTPUT_MODE_WHOLE_BOOK,
+        "inter_block_silence_ms": 0,
+        "inter_chunk_silence_ms": 0,
+        "include_scene_ambience": False,
+    }
+
+    report = audio_assembly_service.start_or_continue_composition(project_root, manifest)
+
+    assert report["settings"]["include_scene_ambience"] is False
+    assert report["outputs"][0]["block_count"] == 3
+    output_path = project_root / str(report["outputs"][0]["audio_relative_path"])
+    with wave.open(str(output_path), "rb") as wav_file:
+        assert wav_file.getnframes() == 2400 * 3
 
 
 def test_audio_assembly_service_missing_pause_duration_uses_default(tmp_path) -> None:
@@ -477,6 +525,7 @@ def test_project_manifest_normalizes_audio_assembly_settings(tmp_path) -> None:
             "output_format": "wav",
             "inter_block_silence_ms": "400",
             "inter_chunk_silence_ms": "1200",
+            "include_scene_ambience": False,
         },
     )
 
@@ -486,6 +535,7 @@ def test_project_manifest_normalizes_audio_assembly_settings(tmp_path) -> None:
         "output_format": "wav",
         "inter_block_silence_ms": 400,
         "inter_chunk_silence_ms": 1200,
+        "include_scene_ambience": False,
     }
 
 

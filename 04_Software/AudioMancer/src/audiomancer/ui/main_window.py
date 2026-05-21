@@ -14,7 +14,7 @@
          so the window remains a thin coordinator.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 1.47.4
+@version 1.47.5
 """
 
 # IMPORTS
@@ -999,13 +999,13 @@ class MainWindow(QMainWindow):
             lambda speech_block_id: speech_blocks_ui_controller.handle_edit_started(self, speech_block_id)
         )
         self._speech_blocks_page.save_block_requested.connect(
-            lambda speech_block_id, speaker_id, content_kind, text: (
+            lambda speech_block_id, speaker_id, content_kind, edit_payload: (
                 speech_blocks_ui_controller.handle_save_block_requested(
                     self,
                     speech_block_id,
                     speaker_id,
                     content_kind,
-                    text,
+                    edit_payload,
                 )
             )
         )
@@ -1104,7 +1104,7 @@ class MainWindow(QMainWindow):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-16
-        @version    0.6.4
+        @version    0.6.5
         """
         current_language = ui_state_service.current_language_from_settings(self._settings_payload)
 
@@ -1153,7 +1153,8 @@ class MainWindow(QMainWindow):
         self._tts_settings_dialog.setWindowTitle(
             ui_state_service.translate("dialog.tts_settings_title", current_language)
         )
-        self._tts_settings_dialog.resize(1040, 460)
+        self._tts_settings_dialog.setMinimumSize(900, 500)
+        self._tts_settings_dialog.resize(1040, 540)
         tts_layout = QVBoxLayout(self._tts_settings_dialog)
         self._tts_settings_page = TtsSettingsPage(self._tts_settings_dialog)
         self._tts_settings_page._test_connection_button.clicked.connect(

@@ -15,7 +15,7 @@ This document describes the public REST API exposed by the local
 It is intended for:
 
 - external developers building applications that connect to VoiceWeaver
-- UI developers building a separate browser or desktop interface
+- UI developers building a separate browser, desktop, or CLI interface
 - AI coding agents that need enough contract detail to generate a working
   client integration
 
@@ -24,12 +24,13 @@ The current runtime API is model-first and operation-based:
 - discover local models
 - load one model
 - query runtime status and loaded-model capabilities
-- run one voice generation operation at a time
+- run one voice or sound generation operation at a time
 - poll status until completion
-- download the generated `voice.wav`
+- download the latest generated audio
 
-The currently implemented adapter set is Qwen-only. The API remains shaped so
-future local adapters can be added without changing the top-level workflow.
+The currently implemented adapter set includes Qwen voice models and Stable
+Audio Open prompt-to-sound generation. The API remains shaped so future local
+adapters can be added without changing the top-level workflow.
 
 There are no job ids, queues, artifact ids, or background-worker contracts in
 the simplified API.
@@ -52,6 +53,13 @@ Example:
 
 ```text
 http://127.0.0.1:8059/v1/status
+```
+
+The runtime no longer serves a built-in browser page. For local smoke testing
+without HTTP, operators can run:
+
+```powershell
+uv run voiceweaver test-voice --output outputs\local_voice_test.wav
 ```
 
 ## 3. Authentication
@@ -80,9 +88,9 @@ When auth is enabled, send:
 Authorization: Bearer voiceweaver-dev-key
 ```
 
-Health and the local browser UI are public. Versioned runtime routes under
-`/v1`, including `/v1/server`, `/v1/model-catalog`, and the download-control
-endpoints, are protected only when effective auth is enabled.
+Health is public. Versioned runtime routes under `/v1`, including `/v1/server`,
+are protected only when effective auth is enabled. The shipped runtime is
+headless and does not serve a browser UI at `/`.
 
 For `POST /v1/voice/clone`, the multipart form fields `sample_text`,
 `language`, and `text` are required and must be non-empty strings.
@@ -95,16 +103,10 @@ and `language` are required and must be non-empty strings.
 ```text
 GET  /v1/health
 GET  /v1/server
-GET  /v1/model-catalog
 GET  /v1/models
 POST /v1/models/load
 POST /v1/models/unload
-DELETE /v1/models/{model_id}
 POST /v1/models/rescan
-POST /v1/models/download
-GET  /v1/models/download
-GET  /v1/models/download/status
-POST /v1/models/download/cancel
 GET  /v1/status
 POST /v1/voice/design
 POST /v1/voice/clone-prompt
@@ -112,7 +114,9 @@ POST /v1/voice/clone
 POST /v1/voice/clone-from-prompt
 POST /v1/voice/custom
 POST /v1/voice/preset
+POST /v1/sound/prompt
 GET  /v1/voice
+GET  /v1/audio
 ```
 
 Primary integration flow:
@@ -121,9 +125,9 @@ Primary integration flow:
 GET /v1/models
 POST /v1/models/load
 GET /v1/status
-POST /v1/voice/<mode>
+POST /v1/voice/<mode> or POST /v1/sound/prompt
 GET /v1/status until operation.status is completed or failed
-GET /v1/voice
+GET /v1/voice or GET /v1/audio
 ```
 
 ## 5. Runtime Model
@@ -137,7 +141,10 @@ Rules:
 - only one load, unload, or generation operation can run at a time
 - concurrent mutating requests return `busy`
 - `GET /v1/status` is the single polling endpoint
-- `GET /v1/voice` downloads the latest completed generation audio
+- `GET /v1/voice` downloads the latest completed generated voice audio for
+  backward compatibility
+- `GET /v1/audio` downloads the latest completed generated audio regardless
+  of whether the operation was voice or sound generation
 - reusable `voice_clone_prompt` artifacts are returned to the client and are
   never assigned runtime-owned profile ids
 - clone-prompt creation stores its terminal artifact in
@@ -194,13 +201,18 @@ definition
 clone
 custom_voice
 preset
+sound_prompt
 ```
 
 `preset` is retained for future non-Qwen adapters. Qwen CustomVoice uses
 `custom_voice`, not `preset`.
 
-Today only the Qwen adapter is registered in the runtime. `OmniVoice` and
-`VoxCPM2` remain future adapter targets, not active REST-backed backends.
+Stable Audio Open uses `sound_prompt`. It is sound generation, not TTS, and
+does not require `language`.
+
+Today the Qwen and Stable Audio adapters are registered in the runtime.
+`OmniVoice` and `VoxCPM2` remain future adapter targets, not active
+REST-backed backends.
 
 ## 7. Shared Response Models
 
@@ -289,9 +301,13 @@ Notes:
 
 - `supported_presets` is also used today to report Qwen CustomVoice speakers.
 - `generation_parameter_ranges` reports client-facing override guidance for
-  generated-output budgets such as Qwen `max_new_tokens`.
+  generated-output budgets such as Qwen `max_new_tokens` and Stable Audio
+  `duration_seconds`, `guidance_scale`, `num_inference_steps`, and `seed`.
 - `status` is `healthy` or `unhealthy` for discovered models.
 - unhealthy models may have empty capabilities and an `issues` array.
+- Stable Audio Open models report `backend_name = "stable_audio"`,
+  `supported_generation_modes = ["sound_prompt"]`, and no supported
+  languages.
 
 ### 7.3 Runtime Device Diagnostics
 
@@ -375,7 +391,10 @@ generate_voice_design
 generate_voice_clone
 generate_custom_voice
 generate_voice_preset
+generate_sound_prompt
 ```
+
+For `sound_prompt` operations, `inputs.language` is `null`.
 
 ## 8. Endpoint Details
 
@@ -410,6 +429,11 @@ Side effects:
 - runtime startup rebuilds `outputs/models_available.json`
 - `GET /v1/models` rewrites `outputs/models_available.json`
 
+Model inventory is local-only. The runtime does not search online, download
+models, or delete model folders. To add a model after delivery, copy a valid
+model folder into `04_Software/VoiceWeaver/models/` and call `GET /v1/models`
+or `POST /v1/models/rescan`.
+
 Request:
 
 ```http
@@ -421,7 +445,7 @@ Response:
 ```json
 {
   "service": "VoiceWeaver",
-  "runtime_version": "1.1.0",
+  "runtime_version": "1.4.0",
   "models": [
     {
       "model_id": "Qwen3-TTS-12Hz-0.6B-Base",
@@ -615,12 +639,12 @@ Response when idle and no model is loaded:
 ```json
 {
   "service": "VoiceWeaver",
-  "runtime_version": "1.1.0",
+  "runtime_version": "1.4.0",
   "active_model": null,
   "capabilities": {
     "service": "VoiceWeaver",
     "runtime_name": "VoiceWeaver",
-    "runtime_version": "1.1.0",
+    "runtime_version": "1.4.0",
     "api_version": "v1",
     "active_model": null,
     "status": "idle",
@@ -678,7 +702,7 @@ Response after completed generation:
 ```json
 {
   "service": "VoiceWeaver",
-  "runtime_version": "1.1.0",
+  "runtime_version": "1.4.0",
   "active_model": {
     "model_id": "Qwen3-TTS-12Hz-1.7B-CustomVoice",
     "backend_name": "qwen",
@@ -710,7 +734,7 @@ Response after completed generation:
   "capabilities": {
     "service": "VoiceWeaver",
     "runtime_name": "VoiceWeaver",
-    "runtime_version": "1.1.0",
+    "runtime_version": "1.4.0",
     "api_version": "v1",
     "active_model": "Qwen3-TTS-12Hz-1.7B-CustomVoice",
     "status": "ready",
@@ -839,7 +863,8 @@ Client guidance:
 
 - poll every 0.5 to 2 seconds during running operations
 - stop polling when `operation.status` is `completed` or `failed`
-- download audio only when `result.available` is `true`
+- download audio only when `result.available` is `true`; new clients should
+  use the route advertised by `result.download_url`
 - inspect `operation.error` when status is `failed`
 
 ### 8.7 POST /v1/voice/design
@@ -1257,12 +1282,104 @@ Request body:
 Current implementation note:
 
 - the route exists in the API surface
-- the shipped browser UI does not expose a dedicated preset-generation form
+- clients may call the route directly when a loaded model reports `preset`
+  capability
 - the registered Qwen adapter does not currently report `preset` capability
 
-### 8.13 GET /v1/voice
+### 8.13 POST /v1/sound/prompt
 
-Downloads the generated WAV file.
+Runs Stable Audio Open prompt-to-sound generation.
+
+Use when the loaded model supports:
+
+```json
+["sound_prompt"]
+```
+
+Stable Audio model family:
+
+```text
+stable-audio-open-1.0
+```
+
+Request body:
+
+```json
+{
+  "prompt": "A hammer hitting a wooden surface.",
+  "negative_prompt": "low quality, distorted",
+  "duration_seconds": 10.0,
+  "seed": 123,
+  "guidance_scale": 7.0,
+  "num_inference_steps": 100
+}
+```
+
+Required fields:
+
+- `prompt`
+
+Optional fields:
+
+- `negative_prompt`
+- `duration_seconds`, default `10.0`
+- `seed`
+- `guidance_scale`, default `7.0`
+- `num_inference_steps`, default `100`
+
+Behavior notes:
+
+- `prompt` must be non-empty.
+- `language` is not part of this request; the stored operation input uses
+  `language = null`.
+- the adapter forwards `duration_seconds` to Stable Audio as
+  `audio_end_in_s`.
+- when `seed` is provided, the adapter creates a seeded `torch.Generator`.
+- v1 generates one WAV output per request.
+- completed results use `result.file_name = "audio.wav"` and
+  `result.download_url = "/v1/audio"`.
+
+PowerShell:
+
+```powershell
+(iwr http://127.0.0.1:8059/v1/sound/prompt `
+  -UseBasicParsing `
+  -Method Post `
+  -Headers @{ "Content-Type" = "application/json" } `
+  -Body '{"prompt":"A hammer hitting a wooden surface","negative_prompt":"low quality, distorted","duration_seconds":5,"guidance_scale":7,"num_inference_steps":50,"seed":123}').Content
+```
+
+curl:
+
+```bash
+curl -X POST http://127.0.0.1:8059/v1/sound/prompt \
+  -H "Content-Type: application/json" \
+  -d '{"prompt":"A hammer hitting a wooden surface","duration_seconds":5,"guidance_scale":7,"num_inference_steps":50,"seed":123}'
+```
+
+Python:
+
+```python
+import requests
+
+base_url = "http://127.0.0.1:8059"
+payload = {
+    "prompt": "A hammer hitting a wooden surface.",
+    "negative_prompt": "low quality, distorted",
+    "duration_seconds": 5,
+    "guidance_scale": 7,
+    "num_inference_steps": 50,
+    "seed": 123,
+}
+response = requests.post(f"{base_url}/v1/sound/prompt", json=payload, timeout=600)
+response.raise_for_status()
+print(response.json())
+```
+
+### 8.14 GET /v1/voice
+
+Downloads the latest generated WAV file through the backward-compatible voice
+artifact route.
 
 Request:
 
@@ -1313,7 +1430,64 @@ with open("voice.wav", "wb") as output_file:
     output_file.write(response.content)
 ```
 
-### 8.14 GET /v1/server
+### 8.15 GET /v1/audio
+
+Downloads the latest generated audio file through the generic artifact route.
+
+This is the preferred route for new clients. For voice generation it returns
+the same latest audio payload as `/v1/voice`. For Stable Audio prompt-to-sound
+generation it returns the latest generated sound as `audio.wav`.
+
+Request:
+
+```http
+GET /v1/audio
+```
+
+Success after Stable Audio generation:
+
+```text
+HTTP 200
+Content-Type: audio/wav
+Content-Disposition: attachment; filename="audio.wav"
+```
+
+Failure when no audio is available:
+
+```json
+{
+  "error_code": "not_found",
+  "message": "No generated audio is available yet.",
+  "details": null,
+  "unsupported_capability": null
+}
+```
+
+PowerShell:
+
+```powershell
+iwr http://127.0.0.1:8059/v1/audio -UseBasicParsing -OutFile .\audio.wav
+```
+
+curl:
+
+```bash
+curl -o audio.wav http://127.0.0.1:8059/v1/audio
+```
+
+Python:
+
+```python
+import requests
+
+base_url = "http://127.0.0.1:8059"
+response = requests.get(f"{base_url}/v1/audio", timeout=60)
+response.raise_for_status()
+with open("audio.wav", "wb") as output_file:
+    output_file.write(response.content)
+```
+
+### 8.16 GET /v1/server
 
 Returns runtime identity and API configuration details.
 
@@ -1328,7 +1502,7 @@ Response:
 ```json
 {
   "service": "VoiceWeaver",
-  "runtime_version": "1.1.0",
+  "runtime_version": "1.4.0",
   "api_version": "v1",
   "host": "127.0.0.1",
   "port": 8059,
@@ -1341,132 +1515,7 @@ Response:
 }
 ```
 
-### 8.15 GET /v1/model-catalog
-
-Returns the static catalog of supported downloadable models.
-
-Request:
-
-```http
-GET /v1/model-catalog
-```
-
-Response:
-
-```json
-{
-  "service": "VoiceWeaver",
-  "api_version": "v1",
-  "catalog": [
-    {
-      "model_id": "Qwen3-TTS-12Hz-1.7B-Base",
-      "display_name": "Qwen 1.7B Base Model",
-      "backend_name": "qwen",
-      "source": "huggingface",
-      "repository_id": "Qwen/Qwen3-TTS-12Hz-1.7B",
-      "target_folder": "Qwen3-TTS-12Hz-1.7B-Base",
-      "supported_generation_modes": ["clone"],
-      "requires_auth": false,
-      "size_hint": "large",
-      "license_note": "Review upstream model license before use."
-    }
-  ]
-}
-```
-
-### 8.16 POST /v1/models/download
-
-Starts a background model download workflow.
-
-Request body:
-
-```json
-{
-  "model_id": "Qwen3-TTS-12Hz-1.7B-VoiceDesign"
-}
-```
-
-Response:
-
-```json
-{
-  "download_id": "b76f8f6c-8a71-4d31-a998-83e509414ef1",
-  "model_id": "Qwen3-TTS-12Hz-1.7B-VoiceDesign",
-  "status": "resolving",
-  "progress_percent": 0,
-  "stage": "Preparing download.",
-  "bytes_downloaded": null,
-  "bytes_total": null,
-  "current_file": null,
-  "started_at": "2026-04-17T09:00:00+00:00",
-  "updated_at": "2026-04-17T09:00:00+00:00",
-  "error": null
-}
-```
-
-Current implementation note:
-
-- the shipped implementation currently runs a simulated background download
-  flow while the real Hugging Face transfer integration is still pending
-
-### 8.17 GET /v1/models/download/status
-
-Returns the current or most recent download status snapshot.
-
-Request:
-
-```http
-GET /v1/models/download/status
-```
-
-Compatibility note:
-
-- `GET /v1/models/download` remains available and returns the same payload
-
-### 8.18 POST /v1/models/download/cancel
-
-Cancels the active background model download command.
-
-Request:
-
-```http
-POST /v1/models/download/cancel
-```
-
-Response:
-
-```text
-HTTP 204 No Content
-```
-
-Compatibility note:
-
-- the legacy `DELETE /v1/models/download` alias remains available for existing
-  clients
-
-### 8.19 DELETE /v1/models/{model_id}
-
-Deletes one installed local model directory and refreshes runtime discovery.
-
-Request:
-
-```http
-DELETE /v1/models/Qwen3-TTS-12Hz-1.7B-Base
-```
-
-Response:
-
-```text
-HTTP 204 No Content
-```
-
-Failure cases:
-
-- `model_not_found` when the directory does not exist
-- `model_in_use` when the target model is currently loaded
-- `invalid_request` when the model identifier is not path-safe
-
-### 8.20 POST /v1/models/rescan
+### 8.17 POST /v1/models/rescan
 
 Forces the runtime to rescan the local `models/` directory immediately.
 
@@ -1480,6 +1529,7 @@ Response:
 
 - returns the same list shape as `GET /v1/models`
 - rewrites `outputs/models_available.json` with the refreshed discovery result
+- does not search online and does not download or delete model files
 
 ## 9. Full Integration Examples
 
@@ -1590,6 +1640,58 @@ with open("voice.wav", "wb") as output_file:
     output_file.write(audio.content)
 ```
 
+### 9.3 Python: Discover, Load Stable Audio, Generate Sound, Download
+
+```python
+import time
+import requests
+
+BASE_URL = "http://127.0.0.1:8059"
+
+
+def request_json(method, path, **kwargs):
+    response = requests.request(method, f"{BASE_URL}{path}", timeout=600, **kwargs)
+    if not response.ok:
+        raise RuntimeError(response.json())
+    return response.json()
+
+
+models = request_json("GET", "/v1/models")
+sound_model = next(
+    model for model in models["models"]
+    if "sound_prompt" in model["supported_generation_modes"]
+)
+
+request_json("POST", "/v1/models/load", json={"model_id": sound_model["model_id"]})
+
+request_json(
+    "POST",
+    "/v1/sound/prompt",
+    json={
+        "prompt": "A hammer hitting a wooden surface.",
+        "negative_prompt": "low quality, distorted",
+        "duration_seconds": 5,
+        "guidance_scale": 7,
+        "num_inference_steps": 50,
+        "seed": 123,
+    },
+)
+
+while True:
+    status = request_json("GET", "/v1/status")
+    if status["operation"]["status"] in {"completed", "failed"}:
+        break
+    time.sleep(1)
+
+if status["operation"]["status"] == "failed":
+    raise RuntimeError(status["operation"]["error"])
+
+audio = requests.get(f"{BASE_URL}/v1/audio", timeout=60)
+audio.raise_for_status()
+with open("audio.wav", "wb") as output_file:
+    output_file.write(audio.content)
+```
+
 ## 10. AI Agent Integration Instructions
 
 An AI agent building a client should follow these rules:
@@ -1608,15 +1710,19 @@ An AI agent building a client should follow these rules:
   stored reusable prompt artifact.
 - Use `/v1/voice/custom` for `custom_voice`.
 - Use `/v1/voice/preset` only for `preset`.
+- Use `/v1/sound/prompt` for `sound_prompt`.
 - Poll `GET /v1/status` until `operation.status` is `completed` or `failed`.
 - If status is `failed`, surface `operation.error.message` to the user.
-- Download `GET /v1/voice` only when `result.available` is `true`.
+- Download `GET /v1/audio` only when `result.available` is `true`.
+- Existing voice clients may keep using `GET /v1/voice` for generated voice
+  output.
 - Do not invent job ids, artifact ids, queues, or separate result endpoints.
 - Do not treat `voice_clone_prompt` as a server-owned profile or assume the
   runtime persists it between restarts.
 - Do not call removed endpoints such as `/v1/results/latest`,
   `/v1/operations/current`, `/v1/models/active`, or `/v1/models/capabilities`.
-- Expect generation operations to take time and make the UI non-blocking.
+- Expect generation operations to take time and keep client interfaces
+  non-blocking.
 - Treat `busy` as retryable after the current operation reaches a terminal
   state.
 
@@ -1632,7 +1738,7 @@ startup
   -> render only supported generation forms
   -> submit generation request
   -> poll status until completed or failed
-  -> if completed and result.available, download /v1/voice
+  -> if completed and result.available, download /v1/audio
 ```
 
 ## 11. Validation Checklist For Client Developers
@@ -1649,14 +1755,17 @@ Minimum manual validation:
 - a supported generation request completes or returns a clear failure
 - `GET /v1/voice` returns `404` before generation
 - `GET /v1/voice` downloads `voice.wav` after successful generation
+- `GET /v1/audio` downloads the latest generated audio after successful
+  generation
+- loading Stable Audio Open reports `sound_prompt`
+- `POST /v1/sound/prompt` rejects an empty prompt
 
 ## 12. Limitations
 
 - Only one model can be loaded at a time.
 - Only one mutating operation can run at a time.
 - There is no queue.
-- Model-download cancellation is available, but generation/load/unload
-  operation cancellation is not.
+- Generation/load/unload operation cancellation is not exposed.
 - Generation result history is not exposed through REST; only the current or
   most recent operation is exposed.
 - `supported_presets` currently also carries Qwen CustomVoice speaker ids.
@@ -1664,3 +1773,7 @@ Minimum manual validation:
 - Model-specific parameter validation is adapter-dependent. Clients may send
   `model_parameters`, but unsupported parameters may be ignored by the adapter
   until stricter validation is added.
+- Stable Audio Open v1 exposes one output per request. `num_outputs` is not
+  part of the REST contract.
+- Stable Audio Open can be slow and memory-intensive on CPU; CUDA-capable
+  Torch is recommended for real generation.
