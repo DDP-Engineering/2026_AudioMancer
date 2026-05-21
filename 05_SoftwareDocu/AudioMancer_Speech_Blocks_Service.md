@@ -39,6 +39,9 @@ continuous narrator-only blocks under the TTS text budget.
   narrator-plus-character mode the model owns final block boundaries, while in
   same-narrator mode the model selects candidate boundary IDs and AudioMancer
   builds exact spans deterministically
+- normalize each Scene Ambience model response into individual sound-source
+  Speech Blocks and defensively split comma-, semicolon-, `and`-, or
+  `plus`-composed ambience prompts before persistence
 - assign speech block IDs in `CCCC-BBBBBB` format, for example
   `0001-000001`
 - persist only current source span, speaker, content kind, and text values for
@@ -57,7 +60,7 @@ continuous narrator-only blocks under the TTS text budget.
   project uses separate character voices
 - expose only `Narrator` and disable speaker reassignment in `same_narrator`
   projects, because the narrator voice plays all speech blocks
-- expose content kinds `Narration`, `Dialogue`, `Background Noise`, `Pause`,
+- expose content kinds `Narration`, `Dialogue`, `Scene Ambience`, `Pause`,
   and `Indication`
 - support selected-block edit and save operations, with generated-audio impact
   confirmation shown when Edit is pressed rather than when Save is pressed
@@ -96,7 +99,7 @@ It does not:
 - migrate old Speech Blocks or Audio Blocks artifacts
 - own audio generation; selected-block audio preview actions are delegated to
   the Audio Blocks controller and service
-- send `Pause`, `Background Noise`, or `Indication` blocks to VoiceWeaver
+- send `Pause` or `Indication` blocks to VoiceWeaver
 - own character discovery, narrator selection, or voice sample generation
 
 ## 3. Implementation Overview
@@ -152,7 +155,7 @@ High-level flow:
    non-operation blocks that still exceed the safe TTS budget are split locally
    as a safety net, preferring paragraph and sentence boundaries before hard
    word/character splits. Hard fallback splits add `tts_hard_split`; operation
-   rows such as `pause`, `background_noise`, and `indication` are never split.
+   rows such as `pause`, `scene_ambience`, and `indication` are never split.
 6. The current `speech_blocks_report.json`, `speech_blocks_state.json`, and
    transaction log metadata are rewritten after every chunk with the current
    budget metadata so cancellation can resume from the next chunk even when the
@@ -305,8 +308,15 @@ Current invariants:
   stopping the entire Speech Blocks run
 - narrator-only blocks that exceed the resolved safe TTS budget are retained and
   flagged with `tts_budget_exceeded`
-- `background_noise`, `pause`, and `indication` are metadata-only content kinds
+- `scene_ambience`, `pause`, and `indication` are operation content kinds
   for Audio Blocks
+- Scene Ambience second-pass prompts ask the LLM for ordered individual
+  sound-design blocks; each persisted `scene_ambience` block stores one prompt,
+  negative prompt, and duration, with sequence order carried by the normal
+  `sequence_index`
+- Scene Ambience duration settings are treated as a soft maximum for one
+  ambience sequence, while `scene_ambience_max_blocks_per_sequence` limits how
+  many individual sound blocks the LLM may create for that sequence
 - pause text may include a millisecond duration; when no valid duration exists,
   downstream audio composition uses `1000 ms`
 - block ordering never crosses chunk boundaries
@@ -317,8 +327,9 @@ Current invariants:
   the chunk list even when no Speech Blocks remain for that chunk
 - warning flags are cleared when the operator starts editing a block, without
   unapproving the block
-- selected-block text, speaker, content-kind, and delete changes reset
-  generated Audio Blocks data for the affected `speech_block_id` only
+- selected-block text, speaker, content-kind, Scene Ambience prompt fields,
+  duration, and delete changes reset generated Audio Blocks data for the
+  affected `speech_block_id` only
 - selected-block approval, unapproval, and manual insert preserve generated
   Audio Blocks and reset only Audio Assembly
 - selected-chunk re-splits reset generated Audio Blocks data for the affected
@@ -464,7 +475,7 @@ Operator path:
   replace only that block's Audio Block from the Speech Blocks page
 - press `Play` or `Stop` on a selected Speech Block with generated audio to
   preview the exact Audio Block without leaving Speech Blocks review
-- press `Re-Split Selected Chunk` when only the selected chunk needs a new AI
+- press `Split Chunk` when only the selected chunk needs a new AI
   split
 - press `Approve All Speech Blocks` after review
 - if interrupted, start generation again to continue from the saved checkpoint
@@ -513,6 +524,9 @@ uv run ruff format <changed_python_files>
 - prosody and detailed delivery hints are not stored
 - `Pause` blocks are metadata-only in Speech Blocks and are rendered as silence
   by Audio Assembly; invalid or missing durations fall back to `1000 ms`
-- `Background Noise` and `Indication` remain metadata-only markers skipped by
-  generated speech audio until a richer sound-design layer is implemented
+- `Scene Ambience` blocks are sequential sound cues ordered by `sequence_index`;
+  they are not grouped by a separate ambience identifier, mixed under
+  narration, or ducked as ambience-bed automation
+- `Indication` blocks remain metadata-only markers skipped by generated speech
+  audio until a richer non-spoken instruction layer is implemented
 - Audio Assembly is implemented as the next downstream WAV composition stage

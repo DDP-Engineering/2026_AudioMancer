@@ -13,7 +13,7 @@
          build helpers so the main window can coordinate runtime persistence.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-18
-@version 1.4.1
+@version 1.5.0
 """
 
 # IMPORTS
@@ -21,6 +21,8 @@
 import copy
 
 from PySide6.QtWidgets import (
+    QComboBox,
+    QDoubleSpinBox,
     QFormLayout,
     QGroupBox,
     QHBoxLayout,
@@ -37,6 +39,13 @@ from PySide6.QtWidgets import (
 from audiomancer import config
 from audiomancer.services import ui_state_service, voiceweaver_runtime_service
 
+# CONSTANTS
+
+_RUNTIME_LIMIT_LABEL_MIN_WIDTH_PX = 200
+_RUNTIME_LIMIT_FORM_FIELD_SPACING_PX = 16
+_RUNTIME_LIMIT_COLUMN_SPACING_PX = 44
+_AMBIENCE_LIMITS_LEFT_MARGIN_PX = 12
+
 
 class TtsSettingsPage(QWidget):
     """
@@ -44,7 +53,7 @@ class TtsSettingsPage(QWidget):
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-18
-    @version    1.3.1
+    @version    1.4.0
     """
 
     def __init__(self, parent=None) -> None:
@@ -55,7 +64,7 @@ class TtsSettingsPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-18
-        @version    1.3.1
+        @version    1.4.0
         """
         super().__init__(parent)
         self._current_language = config.DEFAULT_LANGUAGE
@@ -113,25 +122,90 @@ class TtsSettingsPage(QWidget):
         self._planning_status_label = QLabel("", self)
         self._planning_status_label.setWordWrap(True)
         planning_layout.addWidget(self._planning_status_label)
-        planning_form = QFormLayout()
+
+        self._planning_columns_layout = QHBoxLayout()
+        self._planning_columns_layout.setSpacing(_RUNTIME_LIMIT_COLUMN_SPACING_PX)
+        self._numeric_limits_column = QWidget(self)
+        numeric_limits_form = QFormLayout(self._numeric_limits_column)
+        numeric_limits_form.setContentsMargins(0, 0, 0, 0)
+        numeric_limits_form.setHorizontalSpacing(_RUNTIME_LIMIT_FORM_FIELD_SPACING_PX)
+        numeric_limits_form.setFieldGrowthPolicy(QFormLayout.FieldGrowthPolicy.FieldsStayAtSizeHint)
+        self._ambience_limits_column = QWidget(self)
+        ambience_limits_form = QFormLayout(self._ambience_limits_column)
+        ambience_limits_form.setContentsMargins(_AMBIENCE_LIMITS_LEFT_MARGIN_PX, 0, 0, 0)
+        ambience_limits_form.setHorizontalSpacing(_RUNTIME_LIMIT_FORM_FIELD_SPACING_PX)
+        ambience_limits_form.setFieldGrowthPolicy(QFormLayout.FieldGrowthPolicy.FieldsStayAtSizeHint)
+
         self._preview_timeout_label = QLabel("Audio Preview Timeout (s)", self)
+        self._configure_runtime_limit_label(self._preview_timeout_label)
         self._preview_timeout_spin = QSpinBox(self)
         self._preview_timeout_spin.setRange(10, 3600)
         self._preview_timeout_spin.setValue(config.DEFAULT_TTS_AUDIO_PREVIEW_TIMEOUT_SECONDS)
-        planning_form.addRow(self._preview_timeout_label, self._preview_timeout_spin)
+        self._configure_limit_spinbox(self._preview_timeout_spin)
+        numeric_limits_form.addRow(self._preview_timeout_label, self._preview_timeout_spin)
         self._generation_timeout_label = QLabel("Audio Generation Timeout (s)", self)
+        self._configure_runtime_limit_label(self._generation_timeout_label)
         self._generation_timeout_spin = QSpinBox(self)
         self._generation_timeout_spin.setRange(30, 7200)
         self._generation_timeout_spin.setValue(config.DEFAULT_TTS_AUDIO_GENERATION_TIMEOUT_SECONDS)
-        planning_form.addRow(self._generation_timeout_label, self._generation_timeout_spin)
+        self._configure_limit_spinbox(self._generation_timeout_spin)
+        numeric_limits_form.addRow(self._generation_timeout_label, self._generation_timeout_spin)
         self._preview_text_limit_label = QLabel("Preview Text Limit (chars)", self)
+        self._configure_runtime_limit_label(self._preview_text_limit_label)
         self._preview_text_limit_spin = QSpinBox(self)
         self._preview_text_limit_spin.setRange(64, 8192)
         self._preview_text_limit_spin.setValue(config.DEFAULT_TTS_PREVIEW_TEXT_CHARACTER_LIMIT)
-        planning_form.addRow(self._preview_text_limit_label, self._preview_text_limit_spin)
-        planning_layout.addLayout(planning_form)
+        self._configure_limit_spinbox(self._preview_text_limit_spin)
+        numeric_limits_form.addRow(self._preview_text_limit_label, self._preview_text_limit_spin)
+        self._scene_ambience_placement_label = QLabel("Scene Ambience Placement", self)
+        self._scene_ambience_placement_combo = QComboBox(self)
+        self._scene_ambience_placement_combo.setMinimumWidth(260)
+        self._scene_ambience_placement_combo.setMaximumWidth(420)
+        self._scene_ambience_placement_combo.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
+        for placement in config.SCENE_AMBIENCE_PLACEMENT_OPTIONS:
+            self._scene_ambience_placement_combo.addItem(placement, placement)
+        ambience_limits_form.addRow(self._scene_ambience_placement_label, self._scene_ambience_placement_combo)
+        self._scene_ambience_duration_label = QLabel("Scene Ambience Duration (s)", self)
+        self._scene_ambience_duration_spin = QSpinBox(self)
+        self._scene_ambience_duration_spin.setRange(1, 120)
+        self._scene_ambience_duration_spin.setValue(config.DEFAULT_SCENE_AMBIENCE_DURATION_SECONDS)
+        self._configure_limit_spinbox(self._scene_ambience_duration_spin)
+        ambience_limits_form.addRow(self._scene_ambience_duration_label, self._scene_ambience_duration_spin)
+        self._scene_ambience_max_blocks_label = QLabel("Scene Ambience Max Blocks", self)
+        self._scene_ambience_max_blocks_spin = QSpinBox(self)
+        self._scene_ambience_max_blocks_spin.setRange(1, 24)
+        self._scene_ambience_max_blocks_spin.setValue(config.DEFAULT_SCENE_AMBIENCE_MAX_BLOCKS_PER_SEQUENCE)
+        self._configure_limit_spinbox(self._scene_ambience_max_blocks_spin)
+        ambience_limits_form.addRow(self._scene_ambience_max_blocks_label, self._scene_ambience_max_blocks_spin)
+        self._scene_ambience_guidance_label = QLabel("Scene Ambience Guidance", self)
+        self._scene_ambience_guidance_spin = QDoubleSpinBox(self)
+        self._scene_ambience_guidance_spin.setRange(0.1, 30.0)
+        self._scene_ambience_guidance_spin.setSingleStep(0.5)
+        self._scene_ambience_guidance_spin.setDecimals(1)
+        self._scene_ambience_guidance_spin.setValue(config.DEFAULT_SCENE_AMBIENCE_GUIDANCE_SCALE)
+        self._configure_limit_spinbox(self._scene_ambience_guidance_spin)
+        ambience_limits_form.addRow(self._scene_ambience_guidance_label, self._scene_ambience_guidance_spin)
+        self._scene_ambience_steps_label = QLabel("Scene Ambience Steps", self)
+        self._scene_ambience_steps_spin = QSpinBox(self)
+        self._scene_ambience_steps_spin.setRange(1, 300)
+        self._scene_ambience_steps_spin.setValue(config.DEFAULT_SCENE_AMBIENCE_NUM_INFERENCE_STEPS)
+        self._configure_limit_spinbox(self._scene_ambience_steps_spin)
+        ambience_limits_form.addRow(self._scene_ambience_steps_label, self._scene_ambience_steps_spin)
+        self._scene_ambience_seed_label = QLabel("Scene Ambience Seed", self)
+        self._scene_ambience_seed_spin = QSpinBox(self)
+        self._scene_ambience_seed_spin.setRange(-1, 2_147_483_647)
+        self._scene_ambience_seed_spin.setSpecialValueText("Random")
+        self._scene_ambience_seed_spin.setValue(-1)
+        self._configure_limit_spinbox(self._scene_ambience_seed_spin)
+        ambience_limits_form.addRow(self._scene_ambience_seed_label, self._scene_ambience_seed_spin)
+        self._numeric_limits_column.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
+        self._ambience_limits_column.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        self._planning_columns_layout.addWidget(self._numeric_limits_column, 0)
+        self._planning_columns_layout.addWidget(self._ambience_limits_column, 1)
+        planning_layout.addLayout(self._planning_columns_layout)
         self._planning_group.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         layout.addWidget(self._planning_group)
+        layout.addStretch(1)
 
         button_row = QHBoxLayout()
         button_row.addStretch(1)
@@ -159,7 +233,7 @@ class TtsSettingsPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-18
-        @version    1.3.0
+        @version    1.4.0
         """
         self._project_active = project_active
         self._base_url_edit.setText(
@@ -192,6 +266,49 @@ class TtsSettingsPage(QWidget):
                 )
             )
         )
+        scene_ambience_placement = str(
+            settings_payload.get(
+                "scene_ambience_placement",
+                config.DEFAULT_SCENE_AMBIENCE_PLACEMENT,
+            )
+        ).strip()
+        if scene_ambience_placement not in config.SCENE_AMBIENCE_PLACEMENT_OPTIONS:
+            scene_ambience_placement = config.DEFAULT_SCENE_AMBIENCE_PLACEMENT
+        self._set_combo_value(self._scene_ambience_placement_combo, scene_ambience_placement)
+        self._scene_ambience_duration_spin.setValue(
+            int(
+                settings_payload.get(
+                    "scene_ambience_duration_seconds",
+                    config.DEFAULT_SCENE_AMBIENCE_DURATION_SECONDS,
+                )
+            )
+        )
+        self._scene_ambience_max_blocks_spin.setValue(
+            int(
+                settings_payload.get(
+                    "scene_ambience_max_blocks_per_sequence",
+                    config.DEFAULT_SCENE_AMBIENCE_MAX_BLOCKS_PER_SEQUENCE,
+                )
+            )
+        )
+        self._scene_ambience_guidance_spin.setValue(
+            float(
+                settings_payload.get(
+                    "scene_ambience_guidance_scale",
+                    config.DEFAULT_SCENE_AMBIENCE_GUIDANCE_SCALE,
+                )
+            )
+        )
+        self._scene_ambience_steps_spin.setValue(
+            int(
+                settings_payload.get(
+                    "scene_ambience_num_inference_steps",
+                    config.DEFAULT_SCENE_AMBIENCE_NUM_INFERENCE_STEPS,
+                )
+            )
+        )
+        scene_ambience_seed = settings_payload.get("scene_ambience_seed", config.DEFAULT_SCENE_AMBIENCE_SEED)
+        self._scene_ambience_seed_spin.setValue(-1 if scene_ambience_seed is None else int(scene_ambience_seed))
         self._active_model_id = (
             None
             if settings_payload.get("tts_runtime_active_model_id") in (None, "")
@@ -249,7 +366,7 @@ class TtsSettingsPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-17
-        @version    1.1.1
+        @version    1.2.0
         """
         merged_settings = copy.deepcopy(existing_settings_payload)
         merged_settings["tts_runtime_base_url"] = self._base_url_edit.text().strip()
@@ -262,6 +379,17 @@ class TtsSettingsPage(QWidget):
         merged_settings["tts_audio_preview_timeout_seconds"] = self._preview_timeout_spin.value()
         merged_settings["tts_audio_generation_timeout_seconds"] = self._generation_timeout_spin.value()
         merged_settings["tts_preview_text_character_limit"] = self._preview_text_limit_spin.value()
+        merged_settings.pop("scene_ambience_generation_enabled", None)
+        merged_settings.pop("scene_ambience_audio_generation_enabled", None)
+        merged_settings["scene_ambience_placement"] = str(
+            self._scene_ambience_placement_combo.currentData() or config.DEFAULT_SCENE_AMBIENCE_PLACEMENT
+        )
+        merged_settings["scene_ambience_duration_seconds"] = self._scene_ambience_duration_spin.value()
+        merged_settings["scene_ambience_max_blocks_per_sequence"] = self._scene_ambience_max_blocks_spin.value()
+        merged_settings["scene_ambience_guidance_scale"] = self._scene_ambience_guidance_spin.value()
+        merged_settings["scene_ambience_num_inference_steps"] = self._scene_ambience_steps_spin.value()
+        seed_value = self._scene_ambience_seed_spin.value()
+        merged_settings["scene_ambience_seed"] = None if seed_value < 0 else seed_value
         return merged_settings
 
     def build_tts_plan_payload(self) -> dict[str, object] | None:
@@ -283,7 +411,7 @@ class TtsSettingsPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-17
-        @version    1.1.0
+        @version    1.2.0
         """
         self._current_language = language
         self._runtime_group.setTitle(ui_state_service.translate("tts_settings.runtime_group", language))
@@ -295,12 +423,99 @@ class TtsSettingsPage(QWidget):
         self._preview_timeout_label.setText(ui_state_service.translate("tts_settings.preview_timeout", language))
         self._generation_timeout_label.setText(ui_state_service.translate("tts_settings.generation_timeout", language))
         self._preview_text_limit_label.setText(ui_state_service.translate("tts_settings.preview_text_limit", language))
+        self._scene_ambience_placement_label.setText(
+            ui_state_service.translate("tts_settings.scene_ambience_placement", language)
+        )
+        self._scene_ambience_duration_label.setText(
+            ui_state_service.translate("tts_settings.scene_ambience_duration", language)
+        )
+        self._scene_ambience_max_blocks_label.setText(
+            ui_state_service.translate("tts_settings.scene_ambience_max_blocks", language)
+        )
+        self._scene_ambience_guidance_label.setText(
+            ui_state_service.translate("tts_settings.scene_ambience_guidance", language)
+        )
+        self._scene_ambience_steps_label.setText(
+            ui_state_service.translate("tts_settings.scene_ambience_steps", language)
+        )
+        self._scene_ambience_seed_label.setText(
+            ui_state_service.translate("tts_settings.scene_ambience_seed", language)
+        )
+        self._refresh_scene_ambience_placement_labels()
         self._cancel_button.setText(ui_state_service.translate("tts_settings.cancel", language))
         self._save_button.setText(ui_state_service.translate("tts_settings.save", language))
         self._ok_button.setText(ui_state_service.translate("tts_settings.ok", language))
         self._runtime_status_label.setText(self._build_runtime_status_text())
         self._rebuild_model_list()
         self._apply_planning_state()
+
+    def _set_combo_value(self, combo: QComboBox, value: str) -> None:
+        """
+        @brief      Select one combo-box item by stored data.
+        @param[in]  combo Target combo box.
+        @param[in]  value Stored item value.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-20
+        @version    0.1.0
+        """
+        for index in range(combo.count()):
+            if str(combo.itemData(index)) == value:
+                combo.setCurrentIndex(index)
+                return
+
+    def _configure_limit_spinbox(self, spinbox: QSpinBox) -> None:
+        """
+        @brief      Configure compact numeric controls for runtime limits.
+        @param[in]  spinbox Target spin box.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-20
+        @version    0.1.0
+        """
+        spinbox.setMinimumWidth(88)
+        spinbox.setMaximumWidth(104)
+        spinbox.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
+
+    def _configure_runtime_limit_label(self, label: QLabel) -> None:
+        """
+        @brief      Reserve label width so larger fonts do not crowd numeric fields.
+        @param[in]  label Target label.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-20
+        @version    0.1.0
+        """
+        label.setMinimumWidth(_RUNTIME_LIMIT_LABEL_MIN_WIDTH_PX)
+
+    def _refresh_scene_ambience_placement_labels(self) -> None:
+        """
+        @brief      Refresh localized Scene Ambience placement combo labels.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-20
+        @version    0.1.0
+        """
+        current_value = str(
+            self._scene_ambience_placement_combo.currentData() or config.DEFAULT_SCENE_AMBIENCE_PLACEMENT
+        )
+        self._scene_ambience_placement_combo.blockSignals(True)
+        self._scene_ambience_placement_combo.clear()
+        for placement in config.SCENE_AMBIENCE_PLACEMENT_OPTIONS:
+            placement_label = ui_state_service.translate(
+                f"tts_settings.scene_ambience_placement_{placement}",
+                self._current_language,
+            )
+            self._scene_ambience_placement_combo.addItem(
+                placement_label,
+                placement,
+            )
+        self._set_combo_value(self._scene_ambience_placement_combo, current_value)
+        self._scene_ambience_placement_combo.blockSignals(False)
 
     def _load_project_plan(self, project_plan_payload: dict[str, object]) -> None:
         """

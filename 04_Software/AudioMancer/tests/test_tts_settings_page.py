@@ -13,10 +13,12 @@
          discovered-model rendering, and runtime limit persistence.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-17
-@version 1.3.2
+@version 1.4.0
 """
 
 # IMPORTS
+
+from PySide6.QtWidgets import QSizePolicy
 
 from audiomancer.ui.pages.tts_settings_page import TtsSettingsPage
 
@@ -42,6 +44,10 @@ def test_tts_settings_page_loads_runtime_limits_without_project_plan(qtbot, defa
     settings_payload["tts_audio_preview_timeout_seconds"] = 75
     settings_payload["tts_audio_generation_timeout_seconds"] = 420
     settings_payload["tts_preview_text_character_limit"] = 640
+    settings_payload["scene_ambience_max_blocks_per_sequence"] = 4
+    settings_payload["scene_ambience_guidance_scale"] = 8.5
+    settings_payload["scene_ambience_num_inference_steps"] = 80
+    settings_payload["scene_ambience_seed"] = 1234
 
     page.load_state(
         settings_payload,
@@ -54,10 +60,20 @@ def test_tts_settings_page_loads_runtime_limits_without_project_plan(qtbot, defa
     assert page._preview_timeout_spin.value() == 75
     assert page._generation_timeout_spin.value() == 420
     assert page._preview_text_limit_spin.value() == 640
+    assert page._scene_ambience_max_blocks_spin.value() == 4
+    assert page._scene_ambience_guidance_spin.value() == 8.5
+    assert page._scene_ambience_steps_spin.value() == 80
+    assert page._scene_ambience_seed_spin.value() == 1234
     assert page.build_tts_plan_payload() is None
     assert page.build_settings(default_settings_payload)["tts_audio_preview_timeout_seconds"] == 75
     assert page.build_settings(default_settings_payload)["tts_audio_generation_timeout_seconds"] == 420
     assert page.build_settings(default_settings_payload)["tts_preview_text_character_limit"] == 640
+    assert page.build_settings(default_settings_payload)["scene_ambience_guidance_scale"] == 8.5
+    assert page.build_settings(default_settings_payload)["scene_ambience_max_blocks_per_sequence"] == 4
+    assert page.build_settings(default_settings_payload)["scene_ambience_num_inference_steps"] == 80
+    assert page.build_settings(default_settings_payload)["scene_ambience_seed"] == 1234
+    assert "scene_ambience_generation_enabled" not in page.build_settings(default_settings_payload)
+    assert "scene_ambience_audio_generation_enabled" not in page.build_settings(default_settings_payload)
     assert page._cancel_button.text() == "Cancel"
     assert page._save_button.text() == "Save"
     assert page._ok_button.text() == "OK"
@@ -119,6 +135,53 @@ def test_tts_settings_page_keeps_runtime_limits_available_without_project(qtbot)
     assert page._planning_group.isEnabled() is True
     assert hasattr(page, "_voice_assignment_combo") is False
     assert page.build_tts_plan_payload() is None
+
+
+def test_tts_settings_page_uses_compact_runtime_limit_controls(qtbot) -> None:
+    """
+    @brief      Verify numeric runtime controls do not expand across the dialog.
+    @param[in]  qtbot Qt test helper fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-20
+    @version    0.2.0
+    """
+    page = TtsSettingsPage()
+    qtbot.addWidget(page)
+    page.resize(1100, 650)
+    page.show()
+    page.load_state({}, {}, False)
+    qtbot.wait(0)
+
+    compact_spinboxes = (
+        page._preview_timeout_spin,
+        page._generation_timeout_spin,
+        page._preview_text_limit_spin,
+        page._scene_ambience_duration_spin,
+        page._scene_ambience_max_blocks_spin,
+        page._scene_ambience_guidance_spin,
+        page._scene_ambience_steps_spin,
+        page._scene_ambience_seed_spin,
+    )
+    for spinbox in compact_spinboxes:
+        assert spinbox.maximumWidth() <= 104
+        assert spinbox.sizePolicy().horizontalPolicy() == QSizePolicy.Policy.Fixed
+
+    numeric_labels = (
+        page._preview_timeout_label,
+        page._generation_timeout_label,
+        page._preview_text_limit_label,
+    )
+    for label in numeric_labels:
+        assert label.minimumWidth() >= 200
+
+    assert page._planning_columns_layout.spacing() >= 44
+    assert page._ambience_limits_column.geometry().left() > page._numeric_limits_column.geometry().right()
+    assert page._scene_ambience_placement_combo.maximumWidth() <= 420
+    assert hasattr(page, "_scene_ambience_enabled_checkbox") is False
+    assert hasattr(page, "_scene_ambience_audio_enabled_checkbox") is False
+    assert page._ok_button.geometry().bottom() >= page.height() - 40
 
 
 def _minimum_qwen_models() -> list[dict[str, object]]:

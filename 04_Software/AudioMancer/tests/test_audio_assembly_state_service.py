@@ -13,7 +13,7 @@
          project-less state defaults for the Audio Assembly page.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-27
-@version 0.1.0
+@version 0.1.1
 """
 
 # IMPORTS
@@ -74,6 +74,44 @@ def test_build_audio_assembly_state_reports_completed_outputs(tmp_path) -> None:
     assert state["can_generate"] is True
     assert state["can_reset"] is True
     assert state["can_play_selected"] is True
+
+
+def test_build_audio_assembly_state_ignores_scene_ambience_when_excluded(tmp_path) -> None:
+    """
+    @brief      Verify excluded Scene Ambience blocks do not block Audio Assembly readiness.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-20
+    @version    0.1.0
+    """
+    project_root, manifest = project_workspace_service.create_project("AudioAssemblySceneAmbienceState", tmp_path)
+    manifest["audio_assembly_settings"] = {
+        **audio_assembly_service.default_audio_assembly_settings(),
+        "include_scene_ambience": False,
+    }
+    project_workspace_service.save_manifest(manifest, project_root)
+    _write_audio_blocks(project_root)
+    payload_path = project_root / config.AUDIO_BLOCKS_OUTPUT_FILE_NAME
+    payload = json.loads(payload_path.read_text(encoding="utf-8"))
+    payload.append(
+        {
+            **payload[0],
+            "speech_block_id": "0001-000002-ambience",
+            "sequence_index": 2,
+            "speaker_id": "scene_ambience",
+            "speaker_display_name": "Scene Ambience",
+            "content_kind": "scene_ambience",
+            "approved": False,
+        }
+    )
+    payload_path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+
+    state = audio_assembly_state_service.build_audio_assembly_state(project_root, manifest, "en")
+
+    assert state["can_generate"] is True
+    assert any("Approved audio blocks: 1/1" in status_line for status_line in state["status_lines"])
 
 
 def test_build_audio_assembly_state_returns_empty_state_without_project() -> None:

@@ -14,7 +14,7 @@
          generation through root-level state and report artifacts.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-25
-@version 0.6.1
+@version 0.6.2
 """
 
 # IMPORTS
@@ -87,7 +87,7 @@ def default_audio_assembly_settings() -> AudioAssemblySettings:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.1.0
+    @version    0.1.1
     """
     return {
         "output_mode": config.DEFAULT_AUDIO_ASSEMBLY_OUTPUT_MODE,
@@ -95,6 +95,7 @@ def default_audio_assembly_settings() -> AudioAssemblySettings:
         "output_format": config.DEFAULT_AUDIO_ASSEMBLY_OUTPUT_FORMAT,
         "inter_block_silence_ms": config.DEFAULT_AUDIO_ASSEMBLY_INTER_BLOCK_SILENCE_MS,
         "inter_chunk_silence_ms": config.DEFAULT_AUDIO_ASSEMBLY_INTER_CHUNK_SILENCE_MS,
+        "include_scene_ambience": config.DEFAULT_AUDIO_ASSEMBLY_INCLUDE_SCENE_AMBIENCE,
     }
 
 
@@ -107,7 +108,7 @@ def normalize_audio_assembly_settings(value: object) -> AudioAssemblySettings:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.1.0
+    @version    0.1.1
     """
     defaults = default_audio_assembly_settings()
     payload = value if isinstance(value, dict) else {}
@@ -138,6 +139,7 @@ def normalize_audio_assembly_settings(value: object) -> AudioAssemblySettings:
             60_000,
             int(defaults["inter_chunk_silence_ms"]),
         ),
+        "include_scene_ambience": bool(payload.get("include_scene_ambience", defaults["include_scene_ambience"])),
     }
 
 
@@ -156,7 +158,7 @@ def save_audio_assembly_settings(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.1.0
+    @version    0.1.1
     """
     updated_manifest = dict(manifest)
     updated_manifest["audio_assembly_settings"] = normalize_audio_assembly_settings(settings)
@@ -282,7 +284,10 @@ def start_or_continue_composition(
     """
     resolved_project_root = Path(project_root)
     settings = normalize_audio_assembly_settings(manifest.get("audio_assembly_settings"))
-    approved_blocks = _load_approved_audio_blocks(resolved_project_root)
+    approved_blocks = _load_approved_audio_blocks(
+        resolved_project_root,
+        include_scene_ambience=bool(settings["include_scene_ambience"]),
+    )
     input_fingerprint = _build_input_fingerprint(resolved_project_root, approved_blocks, settings)
     existing_state = load_operation_state(resolved_project_root) or {}
     if _requires_manual_reset(existing_state, input_fingerprint):
@@ -385,7 +390,7 @@ def start_or_continue_composition(
 # LOCAL HELPERS
 
 
-def _load_approved_audio_blocks(project_root: Path) -> list[dict[str, object]]:
+def _load_approved_audio_blocks(project_root: Path, include_scene_ambience: bool) -> list[dict[str, object]]:
     """
     @brief      Load and validate approved Audio Blocks for composition.
     @param[in]  project_root Active project root folder.
@@ -393,15 +398,23 @@ def _load_approved_audio_blocks(project_root: Path) -> list[dict[str, object]]:
     @exception  ValueError Raised when prerequisites are not satisfied.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.3.0
+    @version    0.3.1
     """
     audio_blocks = speech_blocks_service.sort_speech_blocks(audio_blocks_service.load_audio_blocks(project_root))
     if not audio_blocks:
         raise ValueError("Generate and approve Audio Blocks before running Audio Assembly.")
-    unapproved = [block for block in audio_blocks if not audio_blocks_service.is_approved(block)]
+    candidate_blocks = [
+        block for block in audio_blocks if _is_included_scene_ambience_block(block, include_scene_ambience)
+    ]
+    unapproved = [block for block in candidate_blocks if not audio_blocks_service.is_approved(block)]
     if unapproved:
         raise ValueError("Approve every generated Audio Block before running Audio Assembly.")
-    playable_blocks = [block for block in audio_blocks if not bool(block.get("metadata_only", False))]
+    playable_blocks = [
+        block
+        for block in candidate_blocks
+        if not bool(block.get("metadata_only", False))
+        and _is_included_scene_ambience_block(block, include_scene_ambience)
+    ]
     if not playable_blocks:
         raise ValueError("Audio Assembly requires at least one generated speech audio block.")
     for block in playable_blocks:
@@ -426,11 +439,15 @@ def _build_output_plan(
     @exception  ValueError Raised when no playable blocks exist.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.3.0
+    @version    0.3.1
     """
     playable_blocks = [
-        _enrich_block_duration(project_root, block) for block in audio_blocks if _is_assembly_block(block)
+        _enrich_block_duration(project_root, block)
+        for block in audio_blocks
+        if _is_assembly_block(block, bool(settings["include_scene_ambience"]))
     ]
+    if not playable_blocks:
+        raise ValueError("Audio Assembly requires at least one generated speech audio block.")
     output_mode = str(settings["output_mode"])
     if output_mode == OUTPUT_MODE_PER_CHUNK:
         return _with_reference_audio_path(_plan_per_chunk_outputs(playable_blocks), playable_blocks)
@@ -771,8 +788,13 @@ def _build_report(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.1.0
+    @version    0.1.1
     """
+    included_audio_block_count = sum(
+        1
+        for block in audio_blocks
+        if _is_included_scene_ambience_block(block, bool(settings["include_scene_ambience"]))
+    )
     planned_count = len(output_plan)
     completed_count = len(outputs)
     if planned_count > 0 and completed_count >= planned_count:
@@ -786,7 +808,7 @@ def _build_report(
         "operation_status": status,
         "settings": normalize_audio_assembly_settings(settings),
         "input_fingerprint": input_fingerprint,
-        "total_audio_block_count": len(audio_blocks),
+        "total_audio_block_count": included_audio_block_count,
         "composed_audio_block_count": sum(int(output.get("block_count", 0)) for output in outputs),
         "planned_output_count": planned_count,
         "generated_output_count": completed_count,
@@ -928,7 +950,7 @@ def _audio_path(project_root: Path, audio_block: dict[str, object]) -> Path | No
     return _safe_project_artifact_path(project_root, audio_block.get("audio_relative_path"))
 
 
-def _is_assembly_block(audio_block: dict[str, object]) -> bool:
+def _is_assembly_block(audio_block: dict[str, object], include_scene_ambience: bool) -> bool:
     """
     @brief      Return whether one Audio Block contributes to final composition.
     @param[in]  audio_block Audio Block payload.
@@ -936,9 +958,38 @@ def _is_assembly_block(audio_block: dict[str, object]) -> bool:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
+    @version    0.1.1
+    """
+    if _is_scene_ambience_block(audio_block):
+        return bool(include_scene_ambience) and bool(str(audio_block.get("audio_relative_path", "") or "").strip())
+    return bool(str(audio_block.get("audio_relative_path", "") or "").strip()) or _is_pause_block(audio_block)
+
+
+def _is_included_scene_ambience_block(audio_block: dict[str, object], include_scene_ambience: bool) -> bool:
+    """
+    @brief      Return whether one block passes the Scene Ambience inclusion policy.
+    @param[in]  audio_block Audio Block payload.
+    @param[in]  include_scene_ambience True when Scene Ambience audio should be included.
+    @return     False only for Scene Ambience blocks excluded by settings.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-20
     @version    0.1.0
     """
-    return bool(str(audio_block.get("audio_relative_path", "") or "").strip()) or _is_pause_block(audio_block)
+    return bool(include_scene_ambience) or not _is_scene_ambience_block(audio_block)
+
+
+def _is_scene_ambience_block(audio_block: dict[str, object]) -> bool:
+    """
+    @brief      Return whether one Audio Block is generated Scene Ambience.
+    @param[in]  audio_block Audio Block payload.
+    @return     True for Scene Ambience content-kind blocks.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-20
+    @version    0.1.0
+    """
+    return str(audio_block.get("content_kind", "")).strip() == speech_blocks_service.CONTENT_KIND_SCENE_AMBIENCE
 
 
 def _is_pause_block(audio_block: dict[str, object]) -> bool:
@@ -1098,6 +1149,7 @@ def _build_input_fingerprint(
                 "file_sha1": _file_sha1(_audio_path(project_root, block)) if _audio_path(project_root, block) else None,
             }
             for block in audio_blocks
+            if _is_included_scene_ambience_block(block, bool(settings["include_scene_ambience"]))
         ],
     }
     return hashlib.sha1(  # noqa: S324

@@ -36,6 +36,8 @@ narrator sample and reusable narrator clone prompt.
   audio, regardless of whether that Audio Block is approved
 - persist resumable operation state, report data, reusable prompt metadata, and
   generated artifacts after each meaningful step
+- log Scene Ambience generation start and completion with chunk, sequence, and
+  project-relative output path diagnostics
 - support responsive cancellation and restart-safe continuation from the saved
   checkpoint, including checkpoints inside split Audio Blocks
 - support per-block approval toggling, per-block regeneration, and approve-all
@@ -43,8 +45,10 @@ narrator sample and reusable narrator clone prompt.
 - allow incremental generation when only some Speech Blocks are approved; the
   remaining unapproved Speech Blocks stay pending until they are approved and
   generation is run again
-- represent `pause`, `background_noise`, and `indication` Speech Blocks as
-  metadata-only Audio Blocks that do not call VoiceWeaver
+- represent `pause`, `indication`, and Scene Ambience rows with disabled audio
+  generation as metadata-only Audio Blocks that do not call VoiceWeaver
+- generate approved Scene Ambience rows through the VoiceWeaver sound-prompt
+  path when Scene Ambience audio generation is enabled
 - build page state, notes, progress, selected-block details, and selected text
   character budget for the `Audio Blocks` page
 - coordinate confirmation popups, modal progress, explicit reset-only
@@ -116,27 +120,31 @@ High-level flow:
    `model_parameters={"max_new_tokens": resolved_budget}`. Long blocks are
    split by paragraph/sentence, then clause punctuation, then word groups, and
    the completed part WAVs are stitched with Python `wave`.
-8. After each generated block, and after each completed split part, the service rewrites
+8. Scene Ambience rows follow the same stable ordering and approval flow, but
+   use `sound_prompt`, `negative_prompt`, and the block's own
+   `duration_seconds` with the runtime sound-prompt endpoint rather than the
+   clone-prompt TTS endpoint.
+9. After each generated block, and after each completed split part, the service rewrites
    `audio_blocks.json`, `audio_blocks_report.json`, `voice_clone_profiles.json`,
    and `audio_blocks_state.json`. Per-block generation metadata is stored in
    the `audio_blocks.json` entry rather than in a WAV-adjacent JSON sidecar.
-9. Operators can later approve or unapprove one generated block through the
+10. Operators can later approve or unapprove one generated block through the
    selected approval toggle, approve all generated blocks, or regenerate one
    selected block, which clears only that block approval.
-10. If only a subset of Speech Blocks was approved, the operation state remains
+11. If only a subset of Speech Blocks was approved, the operation state remains
     `in_progress`, generated blocks are kept, and the operator can approve more
     Speech Blocks and continue later.
-11. Audio Blocks approval changes preserve generated WAV files and reset only
+12. Audio Blocks approval changes preserve generated WAV files and reset only
     Audio Assembly outputs because final assembly eligibility changes. Approval
     advances the selected row to the next Audio Block when one exists, while
     unapproval keeps the same row selected. Selected regeneration replaces only
     that block, clears its approval, preserves unrelated Audio Blocks, and
     resets Audio Assembly.
-12. Speech Blocks edits, resets, approvals, inserts, deletes, and selected-chunk
+13. Speech Blocks edits, resets, approvals, inserts, deletes, and selected-chunk
     re-splits reset generated Audio Blocks data only for the affected source
     chunk, deleting that chunk's generated WAV and split-part files while
     preserving other chunks.
-13. The service syncs `project.json.operations["audio_blocks"]` after
+14. The service syncs `project.json.operations["audio_blocks"]` after
     generation, report refresh, and approval changes. It advances
     `project.json.current_stage` to `audio_blocks_ready` only when every speech
     block has generated audio and is approved.
@@ -184,6 +192,12 @@ Inputs:
   start/continue action is enabled in the UI; unapproved blocks are skipped
   until they are approved
 - runtime connection settings and discovered models from `settings.json`
+- Scene Ambience sound-generation defaults from `settings.json`, including
+  `scene_ambience_guidance_scale`, `scene_ambience_num_inference_steps`, and
+  optional `scene_ambience_seed`
+- each approved Scene Ambience Speech Block supplies its own
+  `duration_seconds`; Audio Blocks does not replace it with the global Scene
+  Ambience sequence-duration setting
 
 Romanian remains a valid selected voice language in AudioMancer metadata, but
 VoiceWeaver TTS calls omit the outbound `language` field for `ro` so the
@@ -273,10 +287,10 @@ Current invariants:
 - the Audio Blocks page enables start/continue only when at least one approved
   Speech Block still lacks generated audio; after all generated Audio Blocks
   are approved, reset is the explicit restart path
-- metadata-only `pause`, `background_noise`, and `indication` blocks persist an
-  explicit `special_block_status`; `pause` is implemented, while
-  `background_noise` and `indication` are represented as `not_implemented`
-  until downstream behavior is added
+- metadata-only `pause`, disabled `scene_ambience`, and `indication` blocks persist an
+  explicit `special_block_status`; `pause` is implemented as silence, disabled
+  `scene_ambience` is skipped by policy, and `indication` is represented as
+  `not_implemented` until downstream behavior is added
 - pause blocks retain a millisecond duration for Audio Assembly silence
   insertion; the downstream default is `1000 ms`
 - spoken Audio Blocks require explicit operator approval; metadata-only pause

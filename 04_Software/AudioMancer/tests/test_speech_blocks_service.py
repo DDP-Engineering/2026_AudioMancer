@@ -15,7 +15,7 @@
          chunk-based generation, and narrator-only segmentation.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-24
-@version 0.13.3
+@version 0.13.6
 """
 
 # IMPORTS
@@ -64,7 +64,7 @@ def test_resolve_source_chunks_requires_fully_approved_translation(tmp_path) -> 
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.1.0
+    @version    0.2.0
     """
     project_root, manifest = _create_chunked_project(tmp_path, "SpeechBlocksTranslationApproval")
     manifest["original_language"] = "en"
@@ -222,6 +222,184 @@ def test_start_or_continue_generation_creates_artifacts_and_normalizes_blocks(mo
     state = speech_blocks_service.load_operation_state(project_root)
     assert state is not None
     assert state["metadata"]["budget_metadata"] == report["budget_metadata"]
+
+
+def test_start_or_continue_generation_adds_scene_ambience_blocks(monkeypatch, tmp_path) -> None:
+    """
+    @brief      Verify enabled Scene Ambience analysis inserts opener, scene-change, and closer blocks.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-20
+    @version    0.1.0
+    """
+    project_root, manifest = _create_chunked_project(tmp_path, "SpeechBlocksSceneAmbience")
+    _write_source_chunks(
+        project_root,
+        [{"chunk_id": "chunk-0001", "sequence_index": 1, "text": "Rain falls. The shelling starts."}],
+    )
+    character_voices_service.save_selected_voice_language(project_root, "en")
+    monkeypatch.setattr(speech_blocks_service.prompt_template_service, "validate_required_prompts", lambda _names: None)
+
+    responses = [
+        {
+            "payload": {
+                "speech_blocks": [
+                    {
+                        "speaker_id": "narrator",
+                        "content_kind": "narration",
+                        "source_text": "Rain falls.",
+                        "text": "Rain falls.",
+                        "warning_flags": [],
+                    },
+                    {
+                        "speaker_id": "narrator",
+                        "content_kind": "narration",
+                        "source_text": " The shelling starts.",
+                        "text": "The shelling starts.",
+                        "warning_flags": [],
+                    },
+                ]
+            },
+            "usage": {"input_tokens": 10, "output_tokens": 5, "total_tokens": 15, "usage_available": True},
+        },
+        {
+            "payload": {
+                "scene_ambience_blocks": [
+                    {
+                        "ambience_position": "opener",
+                        "sound_prompt": "steady rain in muddy trenches",
+                        "negative_prompt": "speech",
+                        "duration_seconds": 4,
+                    },
+                    {
+                        "ambience_position": "scene_change",
+                        "after_speech_block_id": "0001-000002",
+                        "sound_prompt": "distant artillery begins under heavy rain",
+                        "negative_prompt": "speech",
+                        "duration_seconds": 6,
+                    },
+                    {
+                        "ambience_position": "closer",
+                        "sound_prompt": "rain fading into distant thunder",
+                        "negative_prompt": "speech",
+                        "duration_seconds": 3,
+                    },
+                ]
+            },
+            "usage": {"input_tokens": 8, "output_tokens": 4, "total_tokens": 12, "usage_available": True},
+        },
+    ]
+    captured_requests: list[tuple[str, str]] = []
+
+    def _fake_chat_json(_profile, system_prompt, user_prompt, **_kwargs):
+        """
+        @brief      Capture Speech Blocks and Scene Ambience prompts while returning fixture responses.
+        @param[in]  _profile Ignored AI profile payload.
+        @param[in]  system_prompt Rendered system prompt.
+        @param[in]  user_prompt Rendered user prompt.
+        @param[in]  _kwargs Ignored keyword request arguments.
+        @return     Fake LLM response payload.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-20
+        @version    0.1.0
+        """
+        captured_requests.append((str(system_prompt), str(user_prompt)))
+        return responses.pop(0)
+
+    monkeypatch.setattr(speech_blocks_service.llm_provider_service, "chat_json", _fake_chat_json)
+
+    report = speech_blocks_service.start_or_continue_generation(
+        project_root,
+        manifest,
+        _profile_payload(),
+        settings_payload={
+            "scene_ambience_placement": "openers_closers_and_scene_changes",
+            "scene_ambience_duration_seconds": 5,
+            "scene_ambience_max_blocks_per_sequence": 6,
+        },
+        scene_ambience_enabled=True,
+    )
+
+    speech_blocks = speech_blocks_service.load_speech_blocks(project_root)
+    assert [block["content_kind"] for block in speech_blocks] == [
+        speech_blocks_service.CONTENT_KIND_SCENE_AMBIENCE,
+        speech_blocks_service.CONTENT_KIND_NARRATION,
+        speech_blocks_service.CONTENT_KIND_NARRATION,
+        speech_blocks_service.CONTENT_KIND_SCENE_AMBIENCE,
+        speech_blocks_service.CONTENT_KIND_SCENE_AMBIENCE,
+    ]
+    assert [block.get("ambience_position") for block in speech_blocks if block["content_kind"] == "scene_ambience"] == [
+        "opener",
+        "scene_change",
+        "closer",
+    ]
+    assert speech_blocks[0]["text"] == "steady rain in muddy trenches"
+    assert speech_blocks[0]["sound_prompt"] == speech_blocks[0]["text"]
+    assert all("ambient_sound_type" not in block for block in speech_blocks)
+    assert [block["duration_seconds"] for block in speech_blocks if block["content_kind"] == "scene_ambience"] == [
+        4.0,
+        5.0,
+        3.0,
+    ]
+    assert all("ambience_group_id" not in block for block in speech_blocks)
+    assert report["token_usage"]["total_tokens"] == 27
+    assert len(captured_requests) == 2
+    ambience_system_prompt, ambience_user_prompt = captured_requests[1]
+    assert "production-ready sound-design prompts" in ambience_system_prompt
+    assert "concrete physical sound sources" in ambience_system_prompt
+    assert "continuous beep, pure sine wave, single tone, alarm" in ambience_system_prompt
+    assert "Return ordered individual sound blocks" in ambience_user_prompt
+    assert "Maximum blocks per sequence: 6" in ambience_user_prompt
+    assert "occasional, intermittent, sparse, irregular" in ambience_user_prompt
+    assert "describe only the new or changed acoustic layer" in ambience_user_prompt
+
+
+def test_scene_ambience_normalization_splits_composed_sound_prompts() -> None:
+    """
+    @brief      Verify composed Scene Ambience prompts become separate sound-source blocks.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-21
+    @version    0.1.0
+    """
+    speech_blocks = speech_blocks_service._normalize_scene_ambience_response(
+        {
+            "scene_ambience_blocks": [
+                {
+                    "ambience_position": "opener",
+                    "sound_prompt": (
+                        "low-volume indoor room tone of a quiet office, "
+                        "subtle hum of an air conditioning unit, "
+                        "occasional soft electronic whirring from computer hardware"
+                    ),
+                    "negative_prompt": "speech",
+                    "duration_seconds": 6,
+                }
+            ]
+        },
+        "chunk-0001",
+        "en",
+        {
+            "allowed_positions": ["opener"],
+            "duration_seconds": 10,
+            "max_blocks_per_sequence": 6,
+        },
+    )
+
+    assert [block["sound_prompt"] for block in speech_blocks] == [
+        "low-volume indoor room tone of a quiet office",
+        "subtle hum of an air conditioning unit",
+        "occasional soft electronic whirring from computer hardware",
+    ]
+    assert [block["duration_seconds"] for block in speech_blocks] == [2.0, 2.0, 2.0]
+    assert all(block["content_kind"] == speech_blocks_service.CONTENT_KIND_SCENE_AMBIENCE for block in speech_blocks)
+    assert all("ambience_group_id" not in block for block in speech_blocks)
+    assert all("ambient_sound_type" not in block for block in speech_blocks)
 
 
 def test_start_generation_appends_and_persists_operator_speech_block_rules(monkeypatch, tmp_path) -> None:
@@ -737,14 +915,21 @@ def test_same_narrator_edit_forces_narration_but_preserves_operations(tmp_path) 
         project_root,
         "0001-000001",
         "unknown-character",
-        speech_blocks_service.CONTENT_KIND_BACKGROUND_NOISE,
-        "Wind against the shutters.",
+        speech_blocks_service.CONTENT_KIND_SCENE_AMBIENCE,
+        {
+            "sound_prompt": "Wind against the shutters.",
+            "negative_prompt": "speech, music",
+            "duration_seconds": 3.5,
+        },
     )
     speech_blocks = speech_blocks_service.load_speech_blocks(project_root)
     assert speech_blocks[0]["speaker_kind"] == speech_blocks_service.SPEAKER_KIND_OPERATION
-    assert speech_blocks[0]["speaker_id"] == speech_blocks_service.CONTENT_KIND_BACKGROUND_NOISE
-    assert speech_blocks[0]["speaker_display_name"] == "Background Noise"
-    assert speech_blocks[0]["content_kind"] == speech_blocks_service.CONTENT_KIND_BACKGROUND_NOISE
+    assert speech_blocks[0]["speaker_id"] == speech_blocks_service.CONTENT_KIND_SCENE_AMBIENCE
+    assert speech_blocks[0]["speaker_display_name"] == "Scene Ambience"
+    assert speech_blocks[0]["content_kind"] == speech_blocks_service.CONTENT_KIND_SCENE_AMBIENCE
+    assert speech_blocks[0]["sound_prompt"] == "Wind against the shutters."
+    assert speech_blocks[0]["negative_prompt"] == "speech, music"
+    assert speech_blocks[0]["duration_seconds"] == 3.5
 
 
 def test_null_like_started_at_creates_timestamped_speech_blocks_log(tmp_path) -> None:
@@ -829,17 +1014,17 @@ def test_approve_all_and_edit_preserve_warning_cleared_state(tmp_path) -> None:
         project_root,
         "0001-000001",
         "narrator",
-        speech_blocks_service.CONTENT_KIND_BACKGROUND_NOISE,
+        speech_blocks_service.CONTENT_KIND_SCENE_AMBIENCE,
         "Wind against the shutters.",
     )
     edited_blocks = speech_blocks_service.load_speech_blocks(project_root)
     assert edited_report["warning_count"] == 0
     assert edited_blocks[0]["warning_flags"] == []
     assert edited_blocks[0]["approved"] is False
-    assert edited_blocks[0]["content_kind"] == speech_blocks_service.CONTENT_KIND_BACKGROUND_NOISE
+    assert edited_blocks[0]["content_kind"] == speech_blocks_service.CONTENT_KIND_SCENE_AMBIENCE
     assert edited_blocks[0]["speaker_kind"] == speech_blocks_service.SPEAKER_KIND_OPERATION
-    assert edited_blocks[0]["speaker_id"] == speech_blocks_service.CONTENT_KIND_BACKGROUND_NOISE
-    assert edited_blocks[0]["speaker_display_name"] == "Background Noise"
+    assert edited_blocks[0]["speaker_id"] == speech_blocks_service.CONTENT_KIND_SCENE_AMBIENCE
+    assert edited_blocks[0]["speaker_display_name"] == "Scene Ambience"
     assert edited_blocks[0]["text"] == "Wind against the shutters."
 
 

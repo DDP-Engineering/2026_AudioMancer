@@ -13,7 +13,7 @@
          pages are created without workflow functionality.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-16
-@version 1.7.3
+@version 1.7.4
 """
 
 # IMPORTS
@@ -653,7 +653,7 @@ def test_main_window_saves_tts_settings_dialog_payload(monkeypatch, qtbot, tmp_p
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-16
-    @version    0.1.1
+    @version    0.1.2
     """
     project_root, manifest = project_workspace_service.create_project("TtsSaveProject", tmp_path)
     persisted_payload = dict(default_settings_payload)
@@ -696,6 +696,12 @@ def test_main_window_saves_tts_settings_dialog_payload(monkeypatch, qtbot, tmp_p
     window = MainWindow(settings_payload=dict(persisted_payload))
     qtbot.addWidget(window)
     window._activate_project(project_root, manifest)
+    ui_settings_reapply_calls = []
+    monkeypatch.setattr(
+        settings_ui_controller,
+        "apply_current_ui_settings",
+        lambda _window: ui_settings_reapply_calls.append(True),
+    )
 
     window.show_tts_settings_dialog()
     window._tts_settings_page._base_url_edit.setText("http://127.0.0.1:9000")
@@ -720,6 +726,7 @@ def test_main_window_saves_tts_settings_dialog_payload(monkeypatch, qtbot, tmp_p
     assert persisted_payload["tts_runtime_base_url"] == "http://127.0.0.1:9000"
     assert persisted_payload["tts_runtime_probe_succeeded"] is True
     assert window._tts_settings_dialog.isVisible() is True
+    assert ui_settings_reapply_calls == []
     assert saved_tts_plans
     assert saved_tts_plans[0][0] == project_root
     assert saved_tts_plans[0][1]["voice_assignment_mode"] == config.DEFAULT_TTS_VOICE_ASSIGNMENT_MODE
@@ -730,6 +737,7 @@ def test_main_window_saves_tts_settings_dialog_payload(monkeypatch, qtbot, tmp_p
     assert len(saved_payloads) == 2
     assert persisted_payload["tts_runtime_base_url"] == "http://127.0.0.1:9001"
     assert window._tts_settings_dialog.isVisible() is False
+    assert ui_settings_reapply_calls == []
 
 
 def test_settings_dialog_reopens_with_translated_labels(monkeypatch, qtbot, default_settings_payload) -> None:

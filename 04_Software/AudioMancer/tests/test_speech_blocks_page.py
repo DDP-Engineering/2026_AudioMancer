@@ -14,7 +14,7 @@
          preservation, translated labels, and generation button enablement.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-24
-@version 0.7.6
+@version 0.8.2
 """
 
 # IMPORTS
@@ -68,7 +68,7 @@ def test_speech_blocks_page_renders_chunks_and_read_only_block_details(qtbot) ->
         content_kind_options=[
             (speech_blocks_service.CONTENT_KIND_NARRATION, "Narration"),
             (speech_blocks_service.CONTENT_KIND_DIALOGUE, "Dialogue"),
-            (speech_blocks_service.CONTENT_KIND_BACKGROUND_NOISE, "Background Noise"),
+            (speech_blocks_service.CONTENT_KIND_SCENE_AMBIENCE, "Scene Ambience"),
             (speech_blocks_service.CONTENT_KIND_PAUSE, "Pause"),
         ],
         can_reset=True,
@@ -88,6 +88,29 @@ def test_speech_blocks_page_renders_chunks_and_read_only_block_details(qtbot) ->
     assert page._speech_block_text_edit.toPlainText() == "Hello there."
     assert page._character_count_edit.isReadOnly() is True
     assert page._character_count_edit.text() == "12 / 180"
+
+
+def test_speech_blocks_page_header_uses_compact_buttons_and_wider_profile(qtbot) -> None:
+    """
+    @brief      Verify compact Speech Blocks header labels leave room for the AI profile selector.
+    @param[in]  qtbot Qt test helper fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-20
+    @version    0.1.1
+    """
+    page = SpeechBlocksPage()
+    qtbot.addWidget(page)
+    page.apply_language("en")
+
+    assert page._generate_button.text() == "Generate All"
+    assert page._reset_generation_button.text() == "Reset"
+    assert page._approve_all_button.text() == "Approve All"
+    assert page._profile_combo.minimumWidth() >= 260
+    assert page._generate_button.minimumWidth() >= 140
+    assert page._reset_generation_button.minimumWidth() >= 96
+    assert page._approve_all_button.minimumWidth() >= 132
 
 
 def test_speech_blocks_page_selected_audio_controls_emit_and_track_playback(qtbot) -> None:
@@ -162,6 +185,149 @@ def test_speech_blocks_page_selected_audio_controls_emit_and_track_playback(qtbo
     page.set_selected_audio_playback_active(False)
 
     assert page._selected_audio_playback_button.text() == "Play"
+
+
+def test_speech_blocks_page_enables_selected_audio_controls_for_scene_ambience(qtbot) -> None:
+    """
+    @brief      Verify Scene Ambience blocks expose the same selected audio actions as spoken blocks.
+    @param[in]  qtbot Qt test helper fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-20
+    @version    0.1.1
+    """
+    page = SpeechBlocksPage()
+    qtbot.addWidget(page)
+    page.set_project_active(True)
+    page.set_ai_profiles([("Profile One", "profile-1")], "profile-1")
+    page.set_speech_blocks_state(
+        source_chunks=[{"chunk_id": "chunk-0001", "sequence_index": 1, "text": "A quiet room."}],
+        speech_blocks=[
+            {
+                "speech_block_id": "0001-000001",
+                "sequence_index": 1,
+                "chunk_id": "chunk-0001",
+                "source_language": "en",
+                "speaker_kind": speech_blocks_service.SPEAKER_KIND_OPERATION,
+                "speaker_id": speech_blocks_service.CONTENT_KIND_SCENE_AMBIENCE,
+                "speaker_display_name": "Scene Ambience",
+                "content_kind": speech_blocks_service.CONTENT_KIND_SCENE_AMBIENCE,
+                "text": "Quiet room tone with sparse interface clicks.",
+                "warning_flags": [],
+                "approved": True,
+                "audio_can_play": True,
+                "audio_metadata_only": False,
+            }
+        ],
+        notes=["Ready."],
+        selected_profile_id="profile-1",
+        stage_status="completed",
+        selected_source_language="en",
+        processed_chunk_count=1,
+        total_chunk_count=1,
+        speaker_catalog=[{"speaker_id": "narrator", "display_name": "Narrator", "speaker_kind": "narrator"}],
+        content_kind_options=[(speech_blocks_service.CONTENT_KIND_SCENE_AMBIENCE, "Scene Ambience")],
+        can_reset=True,
+    )
+
+    assert page._generate_audio_button.isEnabled() is True
+    assert page._selected_audio_playback_button.isEnabled() is True
+
+
+def test_speech_blocks_page_selected_chunk_actions_fill_row_evenly(qtbot) -> None:
+    """
+    @brief      Verify selected-chunk action controls align under the chunk editor and use equal width.
+    @param[in]  qtbot Qt test helper fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-20
+    @version    0.2.0
+    """
+    page = SpeechBlocksPage()
+    qtbot.addWidget(page)
+    page.resize(1000, 720)
+    page.show()
+    page.set_project_active(True)
+    page.set_ai_profiles([("Profile One", "profile-1")], "profile-1")
+    page.set_speech_blocks_state(
+        source_chunks=[{"chunk_id": "chunk-0001", "sequence_index": 1, "text": "Narration."}],
+        speech_blocks=[],
+        notes=["Ready."],
+        selected_profile_id="profile-1",
+        stage_status="not_started",
+        selected_source_language="en",
+        processed_chunk_count=0,
+        total_chunk_count=1,
+    )
+    qtbot.wait(0)
+
+    assert page._resplit_button.minimumWidth() >= 180
+    assert page._scene_ambience_combo.minimumWidth() >= 180
+    assert page._resplit_button.geometry().left() == page._source_text_edit.geometry().left()
+    assert abs(page._scene_ambience_combo.geometry().right() - page._source_text_edit.geometry().right()) <= 2
+    assert abs(page._resplit_button.width() - page._scene_ambience_combo.width()) <= 1
+
+
+def test_speech_blocks_page_metadata_controls_align_to_list_edges(qtbot) -> None:
+    """
+    @brief      Verify speaker and content-kind controls anchor under the speech-block list edges.
+    @param[in]  qtbot Qt test helper fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-20
+    @version    0.1.1
+    """
+    page = SpeechBlocksPage()
+    qtbot.addWidget(page)
+    page.resize(1000, 720)
+    page.show()
+    page.set_project_active(True)
+    page.set_ai_profiles([("Profile One", "profile-1")], "profile-1")
+    page.set_speech_blocks_state(
+        source_chunks=[{"chunk_id": "chunk-0001", "sequence_index": 1, "text": "Narration."}],
+        speech_blocks=[
+            {
+                "speech_block_id": "0001-000001",
+                "sequence_index": 1,
+                "chunk_id": "chunk-0001",
+                "source_language": "en",
+                "speaker_kind": "narrator",
+                "speaker_id": "narrator",
+                "speaker_display_name": "Narrator",
+                "content_kind": speech_blocks_service.CONTENT_KIND_SCENE_AMBIENCE,
+                "text": "Quiet room tone.",
+                "warning_flags": [],
+            }
+        ],
+        notes=["Ready."],
+        selected_profile_id="profile-1",
+        stage_status="completed",
+        selected_source_language="en",
+        processed_chunk_count=1,
+        total_chunk_count=1,
+        speaker_catalog=[{"speaker_id": "narrator", "display_name": "Narrator", "speaker_kind": "narrator"}],
+        content_kind_options=[
+            (speech_blocks_service.CONTENT_KIND_NARRATION, "Narration"),
+            (speech_blocks_service.CONTENT_KIND_SCENE_AMBIENCE, "Scene Ambience"),
+        ],
+    )
+    qtbot.wait(0)
+
+    assert page._speaker_label.geometry().left() == page._speech_block_list.geometry().left()
+    assert page._speaker_label.width() <= 58
+    assert page._speaker_combo.minimumWidth() <= 88
+    assert page._speaker_combo.maximumWidth() <= 104
+    assert page._speaker_combo.geometry().right() < page._content_kind_label.geometry().left()
+    assert page._content_kind_label.width() <= 88
+    assert page._content_kind_combo.minimumWidth() <= 126
+    assert page._content_kind_combo.maximumWidth() <= 150
+    assert page._content_kind_combo.currentText() == "Scene Ambience"
+    content_kind_right_offset = page._content_kind_combo.geometry().right() - page._speech_block_list.geometry().right()
+    assert content_kind_right_offset <= 0
+    assert page._source_group.geometry().right() < page._blocks_group.geometry().left()
 
 
 def test_speech_blocks_page_same_narrator_edit_shows_only_disabled_narrator(qtbot) -> None:
@@ -338,9 +504,9 @@ def test_speech_blocks_page_list_shows_operation_name_for_metadata_block(qtbot) 
                 "sequence_index": 1,
                 "chunk_id": "chunk-0001",
                 "speaker_kind": speech_blocks_service.SPEAKER_KIND_OPERATION,
-                "speaker_id": speech_blocks_service.CONTENT_KIND_BACKGROUND_NOISE,
-                "speaker_display_name": "Background Noise",
-                "content_kind": speech_blocks_service.CONTENT_KIND_BACKGROUND_NOISE,
+                "speaker_id": speech_blocks_service.CONTENT_KIND_SCENE_AMBIENCE,
+                "speaker_display_name": "Scene Ambience",
+                "content_kind": speech_blocks_service.CONTENT_KIND_SCENE_AMBIENCE,
                 "text": "Wind.",
                 "warning_flags": [],
             }
@@ -352,10 +518,10 @@ def test_speech_blocks_page_list_shows_operation_name_for_metadata_block(qtbot) 
         processed_chunk_count=1,
         total_chunk_count=1,
         speaker_catalog=[{"speaker_id": "narrator", "display_name": "Narrator", "speaker_kind": "narrator"}],
-        content_kind_options=[(speech_blocks_service.CONTENT_KIND_BACKGROUND_NOISE, "Background Noise")],
+        content_kind_options=[(speech_blocks_service.CONTENT_KIND_SCENE_AMBIENCE, "Scene Ambience")],
     )
 
-    assert "Background Noise" in page._speech_block_list.item(0).text()
+    assert page._speech_block_list.item(0).text().count("Scene Ambience") == 1
 
 
 def test_speech_blocks_page_edit_enables_fields_and_save_returns_to_indicators(qtbot) -> None:
@@ -403,7 +569,7 @@ def test_speech_blocks_page_edit_enables_fields_and_save_returns_to_indicators(q
         content_kind_options=[
             (speech_blocks_service.CONTENT_KIND_NARRATION, "Narration"),
             (speech_blocks_service.CONTENT_KIND_DIALOGUE, "Dialogue"),
-            (speech_blocks_service.CONTENT_KIND_BACKGROUND_NOISE, "Background Noise"),
+            (speech_blocks_service.CONTENT_KIND_SCENE_AMBIENCE, "Scene Ambience"),
             (speech_blocks_service.CONTENT_KIND_PAUSE, "Pause"),
         ],
         selected_text_character_limit=120,
@@ -444,6 +610,77 @@ def test_speech_blocks_page_edit_enables_fields_and_save_returns_to_indicators(q
     assert page._content_kind_combo.isEnabled() is False
     assert page._speech_block_text_edit.isReadOnly() is True
     assert page._save_button.isEnabled() is False
+
+
+def test_speech_blocks_page_edits_scene_ambience_fields(qtbot) -> None:
+    """
+    @brief      Verify Scene Ambience blocks expose dedicated edit fields.
+    @param[in]  qtbot Qt test helper fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-21
+    @version    0.1.0
+    """
+    page = SpeechBlocksPage()
+    qtbot.addWidget(page)
+    page.show()
+    page.set_project_active(True)
+    page.set_ai_profiles([("Profile One", "profile-1")], "profile-1")
+    page.set_speech_blocks_state(
+        source_chunks=[{"chunk_id": "chunk-0001", "sequence_index": 1, "text": "Airport terminal."}],
+        speech_blocks=[
+            {
+                "speech_block_id": "0001-000001",
+                "sequence_index": 1,
+                "chunk_id": "chunk-0001",
+                "source_language": "en",
+                "speaker_kind": "operation",
+                "speaker_id": speech_blocks_service.CONTENT_KIND_SCENE_AMBIENCE,
+                "speaker_display_name": "Scene Ambience",
+                "content_kind": speech_blocks_service.CONTENT_KIND_SCENE_AMBIENCE,
+                "text": "distant aircraft takeoff",
+                "sound_prompt": "distant aircraft takeoff",
+                "negative_prompt": "speech",
+                "duration_seconds": 2.0,
+                "warning_flags": [],
+            }
+        ],
+        notes=["Ready."],
+        selected_profile_id="profile-1",
+        stage_status="in_progress",
+        selected_source_language="en",
+        processed_chunk_count=1,
+        total_chunk_count=1,
+        speaker_catalog=[{"speaker_id": "narrator", "display_name": "Narrator", "speaker_kind": "narrator"}],
+        content_kind_options=[(speech_blocks_service.CONTENT_KIND_SCENE_AMBIENCE, "Scene Ambience")],
+        selected_text_character_limit=120,
+    )
+    qtbot.wait(0)
+    saved_payloads: list[tuple[object, ...]] = []
+    page.save_block_requested.connect(lambda *payload: saved_payloads.append(tuple(payload)))
+
+    assert page._speech_block_text_edit.isVisible() is False
+    assert page._ambience_detail_widget.isVisible() is True
+    assert page._ambient_prompt_edit.toPlainText() == "distant aircraft takeoff"
+    assert page._character_count_edit.text() == "24 / 120"
+
+    page.begin_editing_selected_block()
+    page._ambient_prompt_edit.setPlainText("indistinct airport crowd murmur")
+    page._ambient_negative_prompt_edit.setPlainText("clear speech, singing")
+    page._ambient_duration_spin.setValue(1.5)
+    page._save_button.click()
+
+    assert saved_payloads[0][:3] == (
+        "0001-000001",
+        speech_blocks_service.CONTENT_KIND_SCENE_AMBIENCE,
+        speech_blocks_service.CONTENT_KIND_SCENE_AMBIENCE,
+    )
+    assert saved_payloads[0][3] == {
+        "sound_prompt": "indistinct airport crowd murmur",
+        "negative_prompt": "clear speech, singing",
+        "duration_seconds": 1.5,
+    }
 
 
 def test_speech_blocks_page_approve_selected_emits_only_selected_block(qtbot) -> None:
@@ -826,8 +1063,9 @@ def test_speech_blocks_page_applies_translated_labels(qtbot) -> None:
 
     assert "Blocuri Vorbire" in page._title_label.text()
     assert page._profile_label.text() == "Profil AI"
-    assert page._generate_button.text() == "Genereaza Blocuri Vorbire"
-    assert page._reset_generation_button.text() == "Reseteaza Blocurile de Vorbire"
+    assert page._generate_button.text() == "Genereaza Tot"
+    assert page._reset_generation_button.text() == "Reset"
+    assert page._approve_all_button.text() == "Aproba Tot"
     assert page._approve_block_button.text() == "Aproba"
     assert page._chunk_group.title() == "Lista Segmentelor"
     assert page._status_group.title() == "Stare Blocuri Vorbire"

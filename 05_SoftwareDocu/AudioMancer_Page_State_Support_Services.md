@@ -32,7 +32,8 @@ flags, notes, preview text, selected targets, and reset-state calculations.
 - derive Characters and Character Voices page state from persisted reports,
   narrator profiles, selected language, and VoiceWeaver readiness
 - derive Audio Assembly page state from audio-block approval and assembly
-  report artifacts
+  report artifacts, including whether generated Scene Ambience blocks count
+  toward readiness and final output
 
 They do not own widget construction, signal wiring, long-running operation
 execution, or low-level project persistence.
@@ -104,6 +105,8 @@ include:
 - `can_start`, `can_reset`, `can_generate`, and similar enablement flags
 - preview text and warning/note lines
 - selected character, narrator, language, and audio assembly summary values
+- Audio Assembly Scene Ambience inclusion state and readiness counts after the
+  current inclusion filter is applied
 
 Manual cleanup edits persist the edited text and reset downstream operations
 through the shared operation-runtime reset policy.

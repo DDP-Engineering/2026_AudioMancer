@@ -31,6 +31,7 @@ The public artifact shape is:
   "tokenizer_type": "qwen3_tts_tokenizer_12hz",
   "tts_model_type": "base",
   "prompt": {
+    "ref_text": "This is the transcript of the reference sample.",
     "ref_code": {
       "encoding": "base64",
       "dtype": "int64",
@@ -51,6 +52,8 @@ The public artifact shape is:
 
 Notes:
 
+- `ref_text` stores the transcript associated with the reusable prompt and is
+  used to rebuild the Qwen reference token ids during replay
 - `ref_code` may be `null`
 - `encoding` is always `base64`
 - `shape` is the tensor shape needed to rebuild the tensor
@@ -75,7 +78,7 @@ When the client later submits `voice_clone_prompt` back to
 1. validates the outer artifact shape
 2. base64-decodes each tensor payload
 3. rebuilds the tensors from `dtype` and `shape`
-4. reconstructs the Qwen `voice_clone_prompt` dictionary using single-item lists
+4. rebuilds a single-item Qwen prompt object that preserves `ref_text`
 5. calls Qwen `generate_voice_clone(..., voice_clone_prompt=...)`
 
 The runtime does not recompute prompt features from the original reference

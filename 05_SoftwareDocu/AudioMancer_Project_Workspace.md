@@ -189,6 +189,11 @@ Current `operations` map keys:
 - `translation`
 - `character_discovery`
 
+Current `audio_assembly_settings` include the Scene Ambience inclusion flag.
+The workspace service normalizes that flag with the other assembly settings so
+operators can include or skip generated `scene_ambience` Audio Blocks without
+changing upstream Speech Blocks or Audio Blocks artifacts.
+
 Each compact operation entry stores:
 
 - `status`

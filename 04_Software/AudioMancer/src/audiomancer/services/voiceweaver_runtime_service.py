@@ -14,7 +14,7 @@
          by the TTS Settings dialog and Narrator workflow.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-23
-@version 0.11.0
+@version 0.11.1
 """
 
 # IMPORTS
@@ -48,7 +48,7 @@ def _build_request_headers(runtime_api_key: str) -> dict[str, str]:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-16
-    @version    0.1.0
+    @version    0.2.0
     """
     headers = {"Accept": "application/json"}
     normalized_api_key = str(runtime_api_key or "").strip()
@@ -445,6 +445,11 @@ def build_capability_matrix(discovered_models: list[VoiceWeaverModelPayload]) ->
         for model in healthy_models
         if "clone" in _normalize_generation_modes(model.get("supported_generation_modes"))
     ]
+    sound_prompt_models = [
+        model
+        for model in healthy_models
+        if "sound_prompt" in _normalize_generation_modes(model.get("supported_generation_modes"))
+    ]
     voice_designer_models = list(definition_models)
     base_models = list(clone_models)
     qwen_voice_designer_models = [model for model in voice_designer_models if _is_qwen_model(model)]
@@ -461,6 +466,8 @@ def build_capability_matrix(discovered_models: list[VoiceWeaverModelPayload]) ->
         "base_models": base_models,
         "qwen_voice_designer_models": qwen_voice_designer_models,
         "qwen_base_models": qwen_base_models,
+        "sound_prompt_models": sound_prompt_models,
+        "sound_prompt_available": bool(sound_prompt_models),
         "minimum_qwen_ready": not missing_qwen_capabilities,
         "missing_qwen_capabilities": missing_qwen_capabilities,
         "preset_voice_available": False,
@@ -989,6 +996,69 @@ def generate_voice_clone_from_prompt(
     return response_payload
 
 
+def generate_sound_prompt(
+    base_url: str,
+    runtime_api_key: str,
+    prompt: str,
+    negative_prompt: str = "",
+    duration_seconds: float | int | None = None,
+    guidance_scale: float | int | None = None,
+    num_inference_steps: int | None = None,
+    seed: int | None = None,
+    timeout_seconds: int = config.DEFAULT_TTS_CONNECT_TIMEOUT_SECONDS,
+) -> dict[str, object]:
+    """
+    @brief      Start one VoiceWeaver prompt-based sound generation request.
+    @param[in]  base_url Operator-configured runtime base URL.
+    @param[in]  runtime_api_key Optional operator-configured bearer token.
+    @param[in]  prompt Sound generation prompt.
+    @param[in]  negative_prompt Optional sound generation negative prompt.
+    @param[in]  duration_seconds Optional requested output duration in seconds.
+    @param[in]  guidance_scale Optional model guidance scale.
+    @param[in]  num_inference_steps Optional model step count.
+    @param[in]  seed Optional deterministic model seed.
+    @param[in]  timeout_seconds Request timeout in seconds.
+    @return     Runtime operation payload returned by `/v1/sound/prompt`.
+    @exception  RuntimeError Raised when the runtime request fails.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-20
+    @version    0.1.0
+    """
+    normalized_prompt = str(prompt).strip()
+    if not normalized_prompt:
+        raise RuntimeError("VoiceWeaver sound generation requires a non-empty prompt.")
+    payload: dict[str, object] = {"prompt": normalized_prompt}
+    normalized_negative_prompt = str(negative_prompt).strip()
+    if normalized_negative_prompt:
+        payload["negative_prompt"] = normalized_negative_prompt
+    if duration_seconds is not None:
+        payload["duration_seconds"] = float(duration_seconds)
+    if guidance_scale is not None:
+        payload["guidance_scale"] = float(guidance_scale)
+    if num_inference_steps is not None:
+        payload["num_inference_steps"] = int(num_inference_steps)
+    if seed is not None:
+        payload["seed"] = int(seed)
+    _VOICEWEAVER_RUNTIME_LOGGER.info(
+        "Submitting sound-prompt generation request duration_seconds=%s guidance_scale=%s steps=%s seed_set=%s",
+        payload.get("duration_seconds"),
+        payload.get("guidance_scale"),
+        payload.get("num_inference_steps"),
+        seed is not None,
+    )
+    response_payload = _post_json_endpoint(
+        base_url,
+        runtime_api_key,
+        "/v1/sound/prompt",
+        payload,
+        timeout_seconds,
+    )
+    if not isinstance(response_payload, dict):
+        raise RuntimeError("VoiceWeaver returned an invalid sound-prompt response payload.")
+    _VOICEWEAVER_RUNTIME_LOGGER.info("VoiceWeaver accepted sound-prompt generation request.")
+    return response_payload
+
+
 def wait_for_terminal_operation(
     base_url: str,
     runtime_api_key: str = "",
@@ -1075,6 +1145,31 @@ def download_generated_voice(
     headers = _build_request_headers(runtime_api_key)
     try:
         return _read_bytes(_endpoint_url(base_url, "/v1/voice"), headers, timeout_seconds)
+    except error.HTTPError as exception:
+        raise RuntimeError(_runtime_error_message(exception)) from exception
+    except error.URLError as exception:
+        raise RuntimeError(f"Connection failed: {getattr(exception, 'reason', exception)}.") from exception
+
+
+def download_generated_audio(
+    base_url: str,
+    runtime_api_key: str = "",
+    timeout_seconds: int = config.DEFAULT_LLM_REQUEST_TIMEOUT_SECONDS,
+) -> bytes:
+    """
+    @brief      Download the latest generated sound WAV bytes from VoiceWeaver.
+    @param[in]  base_url Operator-configured runtime base URL.
+    @param[in]  runtime_api_key Optional operator-configured bearer token.
+    @param[in]  timeout_seconds Request timeout in seconds.
+    @return     Downloaded WAV bytes.
+    @exception  RuntimeError Raised when the runtime request fails.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-20
+    @version    0.1.0
+    """
+    headers = _build_request_headers(runtime_api_key)
+    try:
+        return _read_bytes(_endpoint_url(base_url, "/v1/audio"), headers, timeout_seconds)
     except error.HTTPError as exception:
         raise RuntimeError(_runtime_error_message(exception)) from exception
     except error.URLError as exception:

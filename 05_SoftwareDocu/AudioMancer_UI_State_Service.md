@@ -140,9 +140,11 @@ impact confirmations, Audio Blocks selected reset/regeneration and
 approval-change confirmations, Audio Assembly settings-change confirmation, and
 the related result/status messages. Current Character Voices entries cover both
 single-sample generation and the confirmed batch action that regenerates all
-current character samples. Current settings-dialog entries also cover the
-Settings `Apply`/`OK` flow and the AI Settings plus TTS Settings `Save`/`OK`
-flow in both English and Romanian.
+current character samples. Current Scene Ambience entries cover Speech Blocks
+enablement, TTS Settings duration/count and sound-generation labels, Audio
+Blocks audio enablement, and Audio Assembly inclusion labels. Current
+settings-dialog entries also cover the Settings `Apply`/`OK` flow and the AI
+Settings plus TTS Settings `Save`/`OK` flow in both English and Romanian.
 
 Because all operator-facing labels are centralized here, UI text changes must
 update both English and Romanian catalog entries in the same implementation

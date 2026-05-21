@@ -14,7 +14,7 @@
          theme runtime adapter.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 0.54.2
+@version 0.54.4
 """
 
 # ruff: noqa: E501
@@ -300,6 +300,20 @@ _UI_STRINGS = {
         "tts_settings.preview_timeout": "Audio Preview Timeout (s)",
         "tts_settings.generation_timeout": "Audio Generation Timeout (s)",
         "tts_settings.preview_text_limit": "Preview Text Limit (chars)",
+        "tts_settings.scene_ambience_enabled": "Scene Ambience Generation",
+        "tts_settings.scene_ambience_placement": "Scene Ambience Placement",
+        "tts_settings.scene_ambience_duration": "Scene Ambience Max Sequence Duration (s)",
+        "tts_settings.scene_ambience_max_blocks": "Scene Ambience Max Blocks",
+        "tts_settings.scene_ambience_guidance": "Scene Ambience Guidance",
+        "tts_settings.scene_ambience_steps": "Scene Ambience Steps",
+        "tts_settings.scene_ambience_seed": "Scene Ambience Seed",
+        "tts_settings.scene_ambience_placement_openers": "Openers",
+        "tts_settings.scene_ambience_placement_closers": "Closers",
+        "tts_settings.scene_ambience_placement_openers_and_closers": "Openers and closers",
+        "tts_settings.scene_ambience_placement_scene_changes": "Scene changes",
+        "tts_settings.scene_ambience_placement_openers_closers_and_scene_changes": (
+            "Openers, closers, and scene changes"
+        ),
         "tts_settings.plan_no_project": "Runtime audio limits are global and apply to preview and generation.",
         "tts_settings.plan_probe_required": "Test the VoiceWeaver connection first so AudioMancer can verify the required Qwen3 TTS models.",
         "tts_settings.plan_missing_qwen": "The required Qwen3 TTS capabilities are missing: {missing_capabilities}.",
@@ -600,9 +614,9 @@ _UI_STRINGS = {
         "character_voices.error_generation_missing_audio": "VoiceWeaver finished the request but did not report any downloadable audio.",
         "speech_blocks.title": "Speech Blocks",
         "speech_blocks.ai_profile": "AI Profile",
-        "speech_blocks.generate": "Generate Speech Blocks",
-        "speech_blocks.reset_generation": "Reset Speech Blocks",
-        "speech_blocks.approve_all": "Approve All Speech Blocks",
+        "speech_blocks.generate": "Generate All",
+        "speech_blocks.reset_generation": "Reset",
+        "speech_blocks.approve_all": "Approve All",
         "speech_blocks.chunk_list_group": "Chunk List",
         "speech_blocks.selected_group": "Selected Chunk",
         "speech_blocks.blocks_group": "Speech Blocks",
@@ -628,12 +642,18 @@ _UI_STRINGS = {
         "speech_blocks.detail_none": "(none)",
         "speech_blocks.content_narration": "Narration",
         "speech_blocks.content_dialogue": "Dialogue",
-        "speech_blocks.content_background_noise": "Background Noise",
+        "speech_blocks.content_scene_ambience": "Scene Ambience",
         "speech_blocks.content_pause": "Pause",
         "speech_blocks.content_indication": "Indication",
+        "speech_blocks.ambient_prompt": "Prompt",
+        "speech_blocks.ambient_negative_prompt": "Negative Prompt",
+        "speech_blocks.ambient_duration": "Duration (s)",
         "speech_blocks.insert_block": "Insert",
         "speech_blocks.delete_block": "Delete",
-        "speech_blocks.resplit_selected": "Re-Split Selected Chunk",
+        "speech_blocks.resplit_selected": "Split Chunk",
+        "speech_blocks.scene_ambience_selector": "Scene Ambience",
+        "speech_blocks.scene_ambience_disabled": "Off",
+        "speech_blocks.scene_ambience_enabled": "On",
         "speech_blocks.edit_block": "Edit",
         "speech_blocks.save_block": "Save",
         "speech_blocks.approve_block": "Approve",
@@ -641,6 +661,9 @@ _UI_STRINGS = {
         "speech_blocks.generate_audio_selected": "Generate Audio",
         "speech_blocks.warning_indicator": "Warning: {warning_flags}",
         "audio_blocks.title": "Audio Blocks",
+        "audio_blocks.scene_ambience_audio_selector": "Scene Ambience Audio",
+        "audio_blocks.scene_ambience_audio_disabled": "Off",
+        "audio_blocks.scene_ambience_audio_enabled": "On",
         "audio_blocks.start_generation": "Start Audio Generation",
         "audio_blocks.play_audiobook": "Play Audiobook",
         "audio_blocks.stop_audiobook": "Stop Audiobook",
@@ -750,6 +773,7 @@ _UI_STRINGS = {
         "audio_assembly.output_format": "Output Format",
         "audio_assembly.inter_block_silence": "Inter-Block Silence",
         "audio_assembly.inter_chunk_silence": "Inter-Chunk Silence",
+        "audio_assembly.include_scene_ambience": "Include Scene Ambience",
         "audio_assembly.generate": "Generate Audio",
         "audio_assembly.reset": "Reset Audio Assembly",
         "audio_assembly.play_audio": "Play Audio",
@@ -902,6 +926,10 @@ _UI_STRINGS = {
             "Continuing will erase the Speech Blocks for the selected chunk and send a new AI request. "
             "AI operations can take a long time and may consume paid tokens. Continue?"
         ),
+        "project.confirm_scene_ambience_speech_blocks": (
+            "Scene Ambience analysis adds extra LLM calls for each chunk, can take more time, and can be "
+            "cancelled and resumed at the next unfinished chunk. Continue?"
+        ),
         "project.confirm_delete_speech_block": (
             "Continuing will delete the selected Speech Block, remove only its generated Audio Block data, renumber "
             "the chunk sequence, and reset Audio Assembly. Continue?"
@@ -918,6 +946,10 @@ _UI_STRINGS = {
         "project.confirm_audio_blocks": (
             "Audio generation can take a long time because it prepares reusable voice prompts and then "
             "generates each speech block one by one. The run can be interrupted and resumed later. Continue?"
+        ),
+        "project.confirm_scene_ambience_audio_blocks": (
+            "Scene Ambience sound generation can take significant time and requires a healthy VoiceWeaver model "
+            "that supports sound_prompt. Continue?"
         ),
         "project.confirm_audio_blocks_rerun": (
             "Continuing will delete the current generated audio blocks, reusable voice-prompt metadata, and Audio "
@@ -984,10 +1016,12 @@ _UI_STRINGS = {
         "dialog.confirm_speech_blocks_title": "Start Speech Blocks Generation",
         "dialog.confirm_speech_blocks_rerun_title": "Confirm Speech Blocks Rerun",
         "dialog.confirm_speech_blocks_resplit_title": "Confirm Selected Chunk Re-Split",
+        "dialog.confirm_scene_ambience_speech_blocks_title": "Enable Scene Ambience Analysis",
         "dialog.confirm_delete_speech_block_title": "Delete Speech Block",
         "dialog.confirm_speech_block_audio_reset_title": "Confirm Speech Block Audio Reset",
         "dialog.confirm_speech_block_sequence_change_title": "Confirm Speech Block Sequence Change",
         "dialog.confirm_audio_blocks_title": "Start Audio Generation",
+        "dialog.confirm_scene_ambience_audio_blocks_title": "Enable Scene Ambience Audio",
         "dialog.confirm_audio_blocks_rerun_title": "Confirm Audio Generation Rerun",
         "dialog.confirm_audio_blocks_reset_title": "Confirm Audio Generation Reset",
         "dialog.confirm_audio_blocks_invalidation_title": "Confirm Audio Blocks Reset",
@@ -1285,6 +1319,20 @@ _UI_STRINGS = {
         "tts_settings.preview_timeout": "Timeout Preview Audio (s)",
         "tts_settings.generation_timeout": "Timeout Generare Audio (s)",
         "tts_settings.preview_text_limit": "Limita Text Previzualizare (caractere)",
+        "tts_settings.scene_ambience_enabled": "Generare Ambienta Scena",
+        "tts_settings.scene_ambience_placement": "Pozitionare Ambienta Scena",
+        "tts_settings.scene_ambience_duration": "Durata Max Secventa Ambienta (s)",
+        "tts_settings.scene_ambience_max_blocks": "Nr. Max Blocuri Ambienta",
+        "tts_settings.scene_ambience_guidance": "Ghidaj Ambienta Scena",
+        "tts_settings.scene_ambience_steps": "Pasi Ambienta Scena",
+        "tts_settings.scene_ambience_seed": "Seed Ambienta Scena",
+        "tts_settings.scene_ambience_placement_openers": "Deschideri",
+        "tts_settings.scene_ambience_placement_closers": "Inchideri",
+        "tts_settings.scene_ambience_placement_openers_and_closers": "Deschideri si inchideri",
+        "tts_settings.scene_ambience_placement_scene_changes": "Schimbari de scena",
+        "tts_settings.scene_ambience_placement_openers_closers_and_scene_changes": (
+            "Deschideri, inchideri si schimbari de scena"
+        ),
         "tts_settings.plan_no_project": "Limitele audio runtime sunt globale si se aplica la previzualizare si generare.",
         "tts_settings.plan_probe_required": "Testeaza mai intai conexiunea VoiceWeaver pentru ca AudioMancer sa poata verifica modelele Qwen3 TTS necesare.",
         "tts_settings.plan_missing_qwen": "Capabilitatile Qwen3 TTS necesare lipsesc: {missing_capabilities}.",
@@ -1586,9 +1634,9 @@ _UI_STRINGS = {
         "character_voices.error_generation_missing_audio": "VoiceWeaver a terminat cererea, dar nu a raportat niciun audio descarcabil.",
         "speech_blocks.title": "Blocuri Vorbire",
         "speech_blocks.ai_profile": "Profil AI",
-        "speech_blocks.generate": "Genereaza Blocuri Vorbire",
-        "speech_blocks.reset_generation": "Reseteaza Blocurile de Vorbire",
-        "speech_blocks.approve_all": "Aproba Toate Blocurile de Vorbire",
+        "speech_blocks.generate": "Genereaza Tot",
+        "speech_blocks.reset_generation": "Reset",
+        "speech_blocks.approve_all": "Aproba Tot",
         "speech_blocks.chunk_list_group": "Lista Segmentelor",
         "speech_blocks.selected_group": "Segment Selectat",
         "speech_blocks.blocks_group": "Blocuri Vorbire",
@@ -1614,12 +1662,18 @@ _UI_STRINGS = {
         "speech_blocks.detail_none": "(niciunul)",
         "speech_blocks.content_narration": "Naratiune",
         "speech_blocks.content_dialogue": "Dialog",
-        "speech_blocks.content_background_noise": "Zgomot de Fundal",
+        "speech_blocks.content_scene_ambience": "Ambienta Scena",
         "speech_blocks.content_pause": "Pauza",
         "speech_blocks.content_indication": "Indicatie",
+        "speech_blocks.ambient_prompt": "Prompt",
+        "speech_blocks.ambient_negative_prompt": "Prompt Negativ",
+        "speech_blocks.ambient_duration": "Durata (s)",
         "speech_blocks.insert_block": "Insereaza",
         "speech_blocks.delete_block": "Sterge",
-        "speech_blocks.resplit_selected": "Resegmenteaza Segmentul Selectat",
+        "speech_blocks.resplit_selected": "Imparte Segment",
+        "speech_blocks.scene_ambience_selector": "Ambienta Scena",
+        "speech_blocks.scene_ambience_disabled": "Oprit",
+        "speech_blocks.scene_ambience_enabled": "Pornit",
         "speech_blocks.edit_block": "Editeaza",
         "speech_blocks.save_block": "Salveaza",
         "speech_blocks.approve_block": "Aproba",
@@ -1627,6 +1681,9 @@ _UI_STRINGS = {
         "speech_blocks.generate_audio_selected": "Genereaza Audio",
         "speech_blocks.warning_indicator": "Avertisment: {warning_flags}",
         "audio_blocks.title": "Blocuri Audio",
+        "audio_blocks.scene_ambience_audio_selector": "Audio Ambienta Scena",
+        "audio_blocks.scene_ambience_audio_disabled": "Oprit",
+        "audio_blocks.scene_ambience_audio_enabled": "Pornit",
         "audio_blocks.start_generation": "Porneste Generarea Audio",
         "audio_blocks.play_audiobook": "Reda Audiobook",
         "audio_blocks.stop_audiobook": "Opreste Audiobook",
@@ -1743,6 +1800,7 @@ _UI_STRINGS = {
         "audio_assembly.output_format": "Format Iesire",
         "audio_assembly.inter_block_silence": "Pauza Intre Blocuri",
         "audio_assembly.inter_chunk_silence": "Pauza Intre Segmente",
+        "audio_assembly.include_scene_ambience": "Include Ambienta Scena",
         "audio_assembly.generate": "Genereaza Audio",
         "audio_assembly.reset": "Reseteaza Asamblarea Audio",
         "audio_assembly.play_audio": "Reda Audio",
@@ -1894,6 +1952,10 @@ _UI_STRINGS = {
             "Continuarea va sterge blocurile de vorbire pentru segmentul selectat si va trimite o noua cerere AI. "
             "Operatiile AI pot dura mult si pot consuma tokeni platiti. Continui?"
         ),
+        "project.confirm_scene_ambience_speech_blocks": (
+            "Analiza Ambienta Scena adauga apeluri LLM suplimentare pentru fiecare segment, poate dura mai mult "
+            "si poate fi anulata si reluata de la urmatorul segment neterminat. Continui?"
+        ),
         "project.confirm_delete_speech_block": (
             "Continuarea va sterge blocul de vorbire selectat, va elimina doar datele Blocului Audio generat pentru "
             "el, va renumerota secventa segmentului si va reseta Asamblarea Audio. Continui?"
@@ -1910,6 +1972,10 @@ _UI_STRINGS = {
         "project.confirm_audio_blocks": (
             "Generarea audio poate dura mult deoarece pregateste prompturi vocale reutilizabile si apoi "
             "genereaza fiecare bloc de vorbire pe rand. Rularea poate fi intrerupta si reluata mai tarziu. Continui?"
+        ),
+        "project.confirm_scene_ambience_audio_blocks": (
+            "Generarea audio pentru Ambienta Scena poate dura semnificativ si necesita un model VoiceWeaver sanatos "
+            "care suporta sound_prompt. Continui?"
         ),
         "project.confirm_audio_blocks_rerun": (
             "Continuarea va sterge blocurile audio generate curent, metadatele prompturilor vocale reutilizabile si datele "
@@ -1980,10 +2046,12 @@ _UI_STRINGS = {
         "dialog.confirm_speech_blocks_title": "Porneste Generarea Blocurilor de Vorbire",
         "dialog.confirm_speech_blocks_rerun_title": "Confirma Rerularea Blocurilor de Vorbire",
         "dialog.confirm_speech_blocks_resplit_title": "Confirma Resegmentarea Segmentului Selectat",
+        "dialog.confirm_scene_ambience_speech_blocks_title": "Activeaza Analiza Ambienta Scena",
         "dialog.confirm_delete_speech_block_title": "Sterge Bloc Vorbire",
         "dialog.confirm_speech_block_audio_reset_title": "Confirma Resetarea Audio a Blocului de Vorbire",
         "dialog.confirm_speech_block_sequence_change_title": "Confirma Schimbarea Secventei Blocurilor de Vorbire",
         "dialog.confirm_audio_blocks_title": "Porneste Generarea Audio",
+        "dialog.confirm_scene_ambience_audio_blocks_title": "Activeaza Audio Ambienta Scena",
         "dialog.confirm_audio_blocks_rerun_title": "Confirma Rerularea Generarii Audio",
         "dialog.confirm_audio_blocks_reset_title": "Confirma Resetarea Generarii Audio",
         "dialog.confirm_audio_blocks_invalidation_title": "Confirma Resetarea Blocurilor Audio",

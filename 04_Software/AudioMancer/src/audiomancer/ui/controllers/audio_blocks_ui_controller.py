@@ -14,7 +14,7 @@
          targeted downstream invalidation when upstream voice inputs change.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-23
-@version 0.8.2
+@version 0.8.4
 """
 
 # IMPORTS
@@ -70,8 +70,9 @@ def handle_start_generation_requested(window: "MainWindow") -> None:
         )
         return
 
+    scene_ambience_audio_enabled = window._audio_blocks_page.scene_ambience_audio_enabled()
     report = audio_blocks_service.load_audio_blocks_report(window._current_project_root)
-    if _has_fully_generated_run(window._current_project_root, report):
+    if _has_fully_generated_run(window._current_project_root, report, scene_ambience_audio_enabled):
         return
 
     probe_result = tts_runtime_ui_support.probe_runtime_and_persist_cache(window)
@@ -82,8 +83,10 @@ def handle_start_generation_requested(window: "MainWindow") -> None:
             str(probe_result.get("message", "")),
         )
         return
-    runtime_settings = _runtime_settings(window, probe_result)
+    runtime_settings = _runtime_settings(window, probe_result, scene_ambience_audio_enabled)
     if not _confirm_generation(window, current_language):
+        return
+    if scene_ambience_audio_enabled and not _confirm_scene_ambience_audio_blocks(window, current_language):
         return
 
     _start_operation(
@@ -220,7 +223,8 @@ def handle_regenerate_selected_requested(window: "MainWindow", speech_block_id: 
             str(probe_result.get("message", "")),
         )
         return
-    runtime_settings = _runtime_settings(window, probe_result)
+    scene_ambience_audio_enabled = window._audio_blocks_page.scene_ambience_audio_enabled()
+    runtime_settings = _runtime_settings(window, probe_result, scene_ambience_audio_enabled)
     speech_blocks_review_position = _speech_blocks_review_position(window)
     _start_operation(
         window,
@@ -345,7 +349,7 @@ def handle_media_status_changed(window: "MainWindow", media_status: QMediaPlayer
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-24
-    @version    0.1.0
+    @version    0.2.0
     """
     if media_status != QMediaPlayer.MediaStatus.EndOfMedia:
         return
@@ -364,7 +368,7 @@ def confirm_audio_blocks_invalidation(window: "MainWindow", language: str) -> bo
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-23
-    @version    0.1.0
+    @version    0.1.1
     """
     return _confirm_persisted_audio_blocks_invalidation(
         window,
@@ -949,7 +953,11 @@ def _confirm_question(window: "MainWindow", language: str, title_key: str, messa
     )
 
 
-def _runtime_settings(window: "MainWindow", probe_result: dict[str, object]) -> dict[str, object]:
+def _runtime_settings(
+    window: "MainWindow",
+    probe_result: dict[str, object],
+    scene_ambience_audio_enabled: bool = False,
+) -> dict[str, object]:
     """
     @brief      Build the runtime-settings payload required by the Audio Blocks service.
     @param[in]  window Active main window instance.
@@ -965,15 +973,40 @@ def _runtime_settings(window: "MainWindow", probe_result: dict[str, object]) -> 
         config.DEFAULT_TTS_AUDIO_GENERATION_TIMEOUT_SECONDS,
     )
     timeout_seconds = timeout_value if isinstance(timeout_value, int) and timeout_value > 0 else 300
+    scene_ambience_seed = window._settings_payload.get("scene_ambience_seed", config.DEFAULT_SCENE_AMBIENCE_SEED)
     return {
         "base_url": str(window._settings_payload.get("tts_runtime_base_url", "")).strip(),
         "runtime_api_key": str(window._settings_payload.get("tts_runtime_api_key", "")),
         "timeout_seconds": timeout_seconds,
         "discovered_models": list(probe_result.get("discovered_models", [])),
+        "generate_scene_ambience_audio": bool(scene_ambience_audio_enabled),
+        "scene_ambience_duration_seconds": float(
+            window._settings_payload.get(
+                "scene_ambience_duration_seconds",
+                config.DEFAULT_SCENE_AMBIENCE_DURATION_SECONDS,
+            )
+        ),
+        "scene_ambience_guidance_scale": float(
+            window._settings_payload.get(
+                "scene_ambience_guidance_scale",
+                config.DEFAULT_SCENE_AMBIENCE_GUIDANCE_SCALE,
+            )
+        ),
+        "scene_ambience_num_inference_steps": int(
+            window._settings_payload.get(
+                "scene_ambience_num_inference_steps",
+                config.DEFAULT_SCENE_AMBIENCE_NUM_INFERENCE_STEPS,
+            )
+        ),
+        "scene_ambience_seed": scene_ambience_seed if isinstance(scene_ambience_seed, int) else None,
     }
 
 
-def _has_fully_generated_run(project_root: str | Path, report: dict[str, object] | None) -> bool:
+def _has_fully_generated_run(
+    project_root: str | Path,
+    report: dict[str, object] | None,
+    scene_ambience_audio_enabled: bool = False,
+) -> bool:
     """
     @brief      Return whether Audio Blocks already generated every speech-block WAV for the current inputs.
     @param[in]  project_root Active project root folder.
@@ -994,7 +1027,12 @@ def _has_fully_generated_run(project_root: str | Path, report: dict[str, object]
     approved_block_ids = [
         str(block.get("speech_block_id", "")).strip()
         for block in speech_blocks
-        if bool(block.get("approved", False)) and str(block.get("speech_block_id", "")).strip()
+        if bool(block.get("approved", False))
+        and str(block.get("speech_block_id", "")).strip()
+        and (
+            scene_ambience_audio_enabled
+            or str(block.get("content_kind", "")).strip() != speech_blocks_service.CONTENT_KIND_SCENE_AMBIENCE
+        )
     ]
     if not approved_block_ids:
         return False
@@ -1019,6 +1057,29 @@ def _confirm_generation(window: "MainWindow", language: str) -> bool:
             window,
             ui_state_service.translate("dialog.confirm_audio_blocks_title", language),
             ui_state_service.translate("project.confirm_audio_blocks", language),
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        == QMessageBox.StandardButton.Yes
+    )
+
+
+def _confirm_scene_ambience_audio_blocks(window: "MainWindow", language: str) -> bool:
+    """
+    @brief      Ask before enabling Scene Ambience sound generation.
+    @param[in]  window Active main window instance.
+    @param[in]  language Current UI language code.
+    @return     True when the operator confirms ambience sound generation.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-20
+    @version    0.1.0
+    """
+    return (
+        QMessageBox.question(
+            window,
+            ui_state_service.translate("dialog.confirm_scene_ambience_audio_blocks_title", language),
+            ui_state_service.translate("project.confirm_scene_ambience_audio_blocks", language),
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.No,
         )

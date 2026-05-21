@@ -13,7 +13,7 @@
          and operator note rendering for resumable and warning-bearing state.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 0.5.0
+@version 0.5.1
 """
 
 # IMPORTS
@@ -24,6 +24,7 @@ from audiomancer import config
 from audiomancer.services import (
     character_voices_service,
     project_workspace_service,
+    speech_blocks_service,
     speech_blocks_state_service,
     tts_budget_service,
 )
@@ -199,6 +200,112 @@ def test_build_speech_blocks_state_loads_persisted_blocks_and_summary(tmp_path) 
     )
     assert any("Generated 1 speech blocks from 1/2 chunks." in note for note in state["notes"])
     assert any("Input tokens: 30 | Output tokens: 10 | Total: 40" in note for note in state["notes"])
+
+
+def test_build_speech_blocks_state_allows_scene_ambience_selected_audio_generation(tmp_path) -> None:
+    """
+    @brief      Verify Scene Ambience blocks remain eligible for selected audio generation.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-20
+    @version    0.1.0
+    """
+    project_root, manifest = _create_chunked_project(tmp_path, "SpeechBlocksSceneAmbienceState")
+    character_voices_service.save_selected_voice_language(project_root, "en")
+    speech_blocks_root = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH
+    speech_blocks_root.mkdir(parents=True, exist_ok=True)
+    (speech_blocks_root / "input_source_chunks.json").write_text(
+        json.dumps(
+            [{"chunk_id": "chunk-0001", "sequence_index": 1, "text": "A quiet room."}],
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    (speech_blocks_root / config.SPEECH_BLOCKS_OUTPUT_FILE_NAME).write_text(
+        json.dumps(
+            [
+                {
+                    "speech_block_id": "0001-000001",
+                    "sequence_index": 1,
+                    "chunk_id": "chunk-0001",
+                    "source_language": "en",
+                    "speaker_kind": speech_blocks_service.SPEAKER_KIND_OPERATION,
+                    "speaker_id": speech_blocks_service.CONTENT_KIND_SCENE_AMBIENCE,
+                    "speaker_display_name": "Scene Ambience",
+                    "content_kind": speech_blocks_service.CONTENT_KIND_SCENE_AMBIENCE,
+                    "text": "Quiet room tone with sparse interface clicks.",
+                    "sound_prompt": "Quiet room tone with sparse interface clicks.",
+                    "negative_prompt": "continuous beep, speech",
+                    "duration_seconds": 8,
+                    "ambience_position": "opener",
+                    "approved": True,
+                    "warning_flags": [],
+                }
+            ],
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    (speech_blocks_root / config.SPEECH_BLOCKS_REPORT_FILE_NAME).write_text(
+        json.dumps(
+            {
+                "source_language": "en",
+                "source_kind": "original",
+                "ai_profile_id": "profile-1",
+                "speech_blocks_stage_status": "completed",
+                "processed_chunk_count": 1,
+                "total_chunk_count": 1,
+                "speech_block_count": 1,
+                "warning_count": 0,
+                "warnings": [],
+                "updated_at": "2026-05-20T12:10:00+00:00",
+            },
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    audio_root = speech_blocks_root / config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME
+    audio_root.mkdir(parents=True, exist_ok=True)
+    (audio_root / "0001_000001_scene_ambience.wav").write_bytes(b"RIFF")
+    (speech_blocks_root / config.AUDIO_BLOCKS_OUTPUT_FILE_NAME).write_text(
+        json.dumps(
+            [
+                {
+                    "speech_block_id": "0001-000001",
+                    "sequence_index": 1,
+                    "chunk_id": "chunk-0001",
+                    "speaker_id": speech_blocks_service.CONTENT_KIND_SCENE_AMBIENCE,
+                    "speaker_display_name": "Scene Ambience",
+                    "content_kind": speech_blocks_service.CONTENT_KIND_SCENE_AMBIENCE,
+                    "metadata_only": True,
+                    "audio_relative_path": "audio_blocks/0001_000001_scene_ambience.wav",
+                    "generated": True,
+                    "approved": False,
+                }
+            ],
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    state = speech_blocks_state_service.build_speech_blocks_state(
+        project_root,
+        manifest,
+        "en",
+        {
+            "llm_profiles": [{"id": "profile-1", "label": "Speech Blocks Profile", "enabled": True}],
+            "default_speech_blocks_profile_id": "profile-1",
+        },
+    )
+
+    assert state["speech_blocks"][0]["audio_metadata_only"] is False
+    assert state["speech_blocks"][0]["audio_can_play"] is True
 
 
 def test_build_speech_blocks_notes_show_resume_and_warning_entries() -> None:

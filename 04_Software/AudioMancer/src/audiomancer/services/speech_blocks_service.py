@@ -15,7 +15,7 @@
          based operation state plus AI transaction logging.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 0.19.1
+@version 0.19.3
 """
 
 # IMPORTS
@@ -73,7 +73,7 @@ SPEAKER_KIND_CHARACTER = speech_blocks_normalization_service.SPEAKER_KIND_CHARAC
 SPEAKER_KIND_OPERATION = speech_blocks_normalization_service.SPEAKER_KIND_OPERATION
 CONTENT_KIND_NARRATION = speech_blocks_normalization_service.CONTENT_KIND_NARRATION
 CONTENT_KIND_DIALOGUE = speech_blocks_normalization_service.CONTENT_KIND_DIALOGUE
-CONTENT_KIND_BACKGROUND_NOISE = speech_blocks_normalization_service.CONTENT_KIND_BACKGROUND_NOISE
+CONTENT_KIND_SCENE_AMBIENCE = speech_blocks_normalization_service.CONTENT_KIND_SCENE_AMBIENCE
 CONTENT_KIND_PAUSE = speech_blocks_normalization_service.CONTENT_KIND_PAUSE
 CONTENT_KIND_INDICATION = speech_blocks_normalization_service.CONTENT_KIND_INDICATION
 
@@ -293,6 +293,7 @@ def start_or_continue_generation(
     progress_callback=None,
     cancel_requested=None,
     additional_speech_block_instructions: str | None = None,
+    scene_ambience_enabled: bool | None = None,
 ) -> SpeechBlocksReportPayload:
     """
     @brief      Run Speech Blocks generation for the active project.
@@ -324,13 +325,19 @@ def start_or_continue_generation(
     voice_assignment_mode = _voice_assignment_mode(manifest)
     prompt_names = _prompt_names_for_mode(voice_assignment_mode)
     prompt_template_service.validate_required_prompts(list(prompt_names))
+    scene_ambience_settings = _resolve_scene_ambience_settings(settings_payload, scene_ambience_enabled)
+    if bool(scene_ambience_settings["enabled"]):
+        prompt_template_service.validate_required_prompts(["scene_ambience_system", "scene_ambience_user"])
     tts_budget = _resolve_narrator_only_budget(settings_payload)
     existing_state = load_operation_state(resolved_project_root) or {}
     additional_speech_block_instructions = _resolve_additional_speech_block_instructions(
         additional_speech_block_instructions,
         existing_state,
     )
-    additional_speech_block_instructions_fingerprint = _compute_prompt_fingerprint(additional_speech_block_instructions)
+    additional_speech_block_instructions_fingerprint = _compute_generation_rules_fingerprint(
+        additional_speech_block_instructions,
+        scene_ambience_settings,
+    )
 
     speaker_catalog = _speaker_catalog(character_discovery_service.load_character_profiles(resolved_project_root))
     system_prompt = prompt_template_service.render_prompt(prompt_names[0], {})
@@ -380,6 +387,7 @@ def start_or_continue_generation(
                 token_usage,
                 budget_metadata,
                 additional_speech_block_instructions,
+                scene_ambience_settings=scene_ambience_settings,
             )
         )
 
@@ -398,6 +406,7 @@ def start_or_continue_generation(
             token_usage,
             budget_metadata,
             additional_speech_block_instructions,
+            scene_ambience_settings=scene_ambience_settings,
         ),
         _build_operation_state_with_prompt_rules(
             resolved_project_root,
@@ -416,6 +425,7 @@ def start_or_continue_generation(
             next_chunk_index=start_chunk_index,
             budget_metadata=budget_metadata,
             additional_speech_block_instructions=additional_speech_block_instructions,
+            scene_ambience_settings=scene_ambience_settings,
         ),
     )
     _emit_progress(
@@ -455,6 +465,26 @@ def start_or_continue_generation(
             "Speech Blocks generation cancelled while waiting for the model response.",
         )
         token_usage = token_usage_service.merge_token_usage(token_usage, chunk_token_usage)
+        if bool(scene_ambience_settings["enabled"]):
+            ambience_blocks, ambience_token_usage = _generate_scene_ambience_blocks(
+                ai_profile_payload,
+                source_chunk,
+                source_language,
+                chunk_blocks,
+                scene_ambience_settings,
+                log_path,
+                {
+                    "operation_kind": "speech_blocks",
+                    "stage_label": "scene_ambience_chunk",
+                    "profile_id": profile_id,
+                    "chunk_index": chunk_index + 1,
+                    "chunk_total": len(source_chunks),
+                    "chunk_id": str(source_chunk.get("chunk_id", "")),
+                },
+                cancel_requested,
+            )
+            token_usage = token_usage_service.merge_token_usage(token_usage, ambience_token_usage)
+            chunk_blocks = _insert_scene_ambience_blocks(chunk_blocks, ambience_blocks)
         all_blocks.extend(chunk_blocks)
         warning_entries.extend(chunk_warnings)
         report = _rebuild_report_with_prompt_rules(
@@ -468,6 +498,7 @@ def start_or_continue_generation(
             token_usage,
             budget_metadata,
             additional_speech_block_instructions,
+            scene_ambience_settings=scene_ambience_settings,
         )
         _persist_state(
             resolved_project_root,
@@ -491,6 +522,7 @@ def start_or_continue_generation(
                 next_chunk_index=chunk_index + 1,
                 budget_metadata=budget_metadata,
                 additional_speech_block_instructions=additional_speech_block_instructions,
+                scene_ambience_settings=scene_ambience_settings,
             ),
         )
         _emit_progress(
@@ -513,6 +545,7 @@ def start_or_continue_generation(
         token_usage,
         budget_metadata,
         additional_speech_block_instructions,
+        scene_ambience_settings=scene_ambience_settings,
         updated_at=completed_at,
     )
     completed_state = _build_operation_state_with_prompt_rules(
@@ -532,6 +565,7 @@ def start_or_continue_generation(
         next_chunk_index=None,
         budget_metadata=budget_metadata,
         additional_speech_block_instructions=additional_speech_block_instructions,
+        scene_ambience_settings=scene_ambience_settings,
     )
     _persist_state(
         resolved_project_root,
@@ -565,7 +599,7 @@ def speaker_catalog_entries(project_root: str | Path) -> list[dict[str, object]]
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-24
-    @version    0.1.0
+    @version    0.1.1
     """
     return list(_speaker_catalog(character_discovery_service.load_character_profiles(Path(project_root))).values())
 
@@ -596,7 +630,7 @@ def sort_speech_blocks(speech_blocks: list[dict[str, object]]) -> list[dict[str,
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.1.0
+    @version    0.2.0
     """
     return sorted(speech_blocks, key=speech_block_book_sort_key)
 
@@ -904,7 +938,7 @@ def update_speech_block(
     speech_block_id: str,
     speaker_id: str,
     content_kind: str,
-    text: str,
+    edit_payload: object,
 ) -> SpeechBlocksReportPayload:
     """
     @brief      Save one manually edited Speech Block and clear its warning indicator.
@@ -912,7 +946,7 @@ def update_speech_block(
     @param[in]  speech_block_id Target Speech Block identifier.
     @param[in]  speaker_id Selected speaker identifier.
     @param[in]  content_kind Selected content-kind token.
-    @param[in]  text Edited block text.
+    @param[in]  edit_payload Edited text or Scene Ambience field payload.
     @return     Updated Speech Blocks report payload.
     @exception  ValueError Raised when the block or speaker is unknown.
     @author     Eng. Dan Dumitru Pasare
@@ -943,8 +977,20 @@ def update_speech_block(
     selected_block["speaker_kind"] = str(speaker_entry.get("speaker_kind", SPEAKER_KIND_NARRATOR))
     selected_block["speaker_id"] = str(speaker_entry.get("speaker_id", _NARRATOR_SPEAKER_ID))
     selected_block["speaker_display_name"] = str(speaker_entry.get("display_name", _NARRATOR_DISPLAY_NAME))
-    selected_block["content_kind"] = normalized_content_kind
-    selected_block["text"] = str(text)
+    if normalized_content_kind == CONTENT_KIND_SCENE_AMBIENCE:
+        ambience_payload = _normalize_scene_ambience_edit_payload(edit_payload, selected_block)
+        selected_block["content_kind"] = CONTENT_KIND_SCENE_AMBIENCE
+        selected_block["text"] = str(ambience_payload["sound_prompt"])
+        selected_block["sound_prompt"] = str(ambience_payload["sound_prompt"])
+        selected_block["negative_prompt"] = str(ambience_payload["negative_prompt"])
+        selected_block["duration_seconds"] = float(ambience_payload["duration_seconds"])
+        if str(selected_block.get("ambience_position", "")).strip() not in {"opener", "closer", "scene_change"}:
+            selected_block["ambience_position"] = "scene_change"
+    else:
+        selected_block["content_kind"] = normalized_content_kind
+        selected_block["text"] = str(edit_payload)
+        for field_name in ("sound_prompt", "negative_prompt", "duration_seconds"):
+            selected_block.pop(field_name, None)
     selected_block["warning_flags"] = []
     selected_block["approved"] = False
     selected_block["approved_at"] = None
@@ -961,6 +1007,7 @@ def regenerate_chunk_speech_blocks(
     progress_callback=None,
     cancel_requested=None,
     additional_speech_block_instructions: str | None = None,
+    scene_ambience_enabled: bool | None = None,
 ) -> SpeechBlocksReportPayload:
     """
     @brief      Re-run Speech Blocks splitting for one selected source chunk.
@@ -992,6 +1039,7 @@ def regenerate_chunk_speech_blocks(
     voice_assignment_mode = _voice_assignment_mode(manifest)
     prompt_names = _prompt_names_for_mode(voice_assignment_mode)
     tts_budget = _resolve_narrator_only_budget(settings_payload)
+    scene_ambience_settings = _resolve_scene_ambience_settings(settings_payload, scene_ambience_enabled)
     selected_chunk = next(
         (chunk for chunk in source_chunks if str(chunk.get("chunk_id", "")).strip() == chunk_id),
         None,
@@ -999,6 +1047,8 @@ def regenerate_chunk_speech_blocks(
     if selected_chunk is None:
         raise ValueError("The selected chunk was not found.")
     prompt_template_service.validate_required_prompts(list(prompt_names))
+    if bool(scene_ambience_settings["enabled"]):
+        prompt_template_service.validate_required_prompts(["scene_ambience_system", "scene_ambience_user"])
     existing_report = load_speech_blocks_report(resolved_project_root)
     existing_state = load_operation_state(resolved_project_root) or {}
     additional_speech_block_instructions = _resolve_additional_speech_block_instructions(
@@ -1046,6 +1096,24 @@ def regenerate_chunk_speech_blocks(
         "Speech Blocks re-splitting cancelled while waiting for the model response.",
     )
     token_usage = token_usage_service.merge_token_usage(token_usage, chunk_token_usage)
+    if bool(scene_ambience_settings["enabled"]):
+        ambience_blocks, ambience_token_usage = _generate_scene_ambience_blocks(
+            ai_profile_payload,
+            dict(selected_chunk),
+            source_language,
+            new_blocks,
+            scene_ambience_settings,
+            log_path,
+            {
+                "operation_kind": "speech_blocks",
+                "stage_label": "scene_ambience_chunk_resplit",
+                "profile_id": profile_id,
+                "chunk_id": str(selected_chunk.get("chunk_id", "")),
+            },
+            cancel_requested,
+        )
+        token_usage = token_usage_service.merge_token_usage(token_usage, ambience_token_usage)
+        new_blocks = _insert_scene_ambience_blocks(new_blocks, ambience_blocks)
     existing_blocks = [
         block
         for block in load_speech_blocks(resolved_project_root)
@@ -1065,6 +1133,7 @@ def regenerate_chunk_speech_blocks(
         token_usage,
         budget_metadata,
         additional_speech_block_instructions,
+        scene_ambience_settings=scene_ambience_settings,
         updated_at=completed_at,
     )
     resplit_state = _build_operation_state_with_prompt_rules(
@@ -1084,6 +1153,7 @@ def regenerate_chunk_speech_blocks(
         next_chunk_index=None,
         budget_metadata=budget_metadata,
         additional_speech_block_instructions=additional_speech_block_instructions,
+        scene_ambience_settings=scene_ambience_settings,
     )
     _persist_state(
         resolved_project_root,
@@ -1282,6 +1352,92 @@ def _resolve_additional_speech_block_instructions(
     return _normalized_additional_speech_block_instructions(metadata.get("additional_speech_block_instructions"))
 
 
+def _resolve_scene_ambience_settings(
+    settings_payload: dict[str, object] | None,
+    enabled_override: bool | None = None,
+) -> dict[str, object]:
+    """
+    @brief      Resolve scene-ambience generation settings for Speech Blocks.
+    @param[in]  settings_payload Optional application settings payload.
+    @param[in]  enabled_override Optional page-level enablement override.
+    @return     Normalized scene-ambience settings payload.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-20
+    @version    0.1.0
+    """
+    payload = settings_payload if isinstance(settings_payload, dict) else {}
+    enabled = bool(payload.get("scene_ambience_generation_enabled", config.DEFAULT_SCENE_AMBIENCE_GENERATION_ENABLED))
+    if enabled_override is not None:
+        enabled = bool(enabled_override)
+    placement = str(
+        payload.get(
+            "scene_ambience_placement",
+            payload.get("placement_policy", config.DEFAULT_SCENE_AMBIENCE_PLACEMENT),
+        )
+    ).strip()
+    if placement not in config.SCENE_AMBIENCE_PLACEMENT_OPTIONS:
+        placement = config.DEFAULT_SCENE_AMBIENCE_PLACEMENT
+    duration_seconds = _positive_float(
+        payload.get("scene_ambience_duration_seconds", payload.get("duration_seconds")),
+        float(config.DEFAULT_SCENE_AMBIENCE_DURATION_SECONDS),
+    )
+    max_blocks_per_sequence = _positive_int(
+        payload.get("scene_ambience_max_blocks_per_sequence", payload.get("max_blocks_per_sequence")),
+        int(config.DEFAULT_SCENE_AMBIENCE_MAX_BLOCKS_PER_SEQUENCE),
+    )
+    allowed_positions = _scene_ambience_allowed_positions(placement)
+    return {
+        "enabled": enabled,
+        "placement_policy": placement,
+        "duration_seconds": duration_seconds,
+        "max_blocks_per_sequence": max_blocks_per_sequence,
+        "allowed_positions": allowed_positions,
+    }
+
+
+def _scene_ambience_allowed_positions(placement_policy: str) -> list[str]:
+    """
+    @brief      Resolve allowed scene-ambience positions from one placement policy.
+    @param[in]  placement_policy Persisted scene-ambience placement token.
+    @return     Ordered allowed ambience-position tokens.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-20
+    @version    0.1.0
+    """
+    return {
+        "openers": ["opener"],
+        "closers": ["closer"],
+        "openers_and_closers": ["opener", "closer"],
+        "scene_changes": ["scene_change"],
+        "openers_closers_and_scene_changes": ["opener", "closer", "scene_change"],
+    }.get(str(placement_policy).strip(), ["opener", "closer"])
+
+
+def _compute_generation_rules_fingerprint(
+    additional_speech_block_instructions: str,
+    scene_ambience_settings: dict[str, object],
+) -> str:
+    """
+    @brief      Compute one stable fingerprint for prompt rules and scene ambience policy.
+    @param[in]  additional_speech_block_instructions Operator-supplied prompt rules.
+    @param[in]  scene_ambience_settings Normalized scene-ambience generation settings.
+    @return     SHA-256 fingerprint for resumable Speech Blocks runs.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-20
+    @version    0.1.0
+    """
+    if not bool(scene_ambience_settings.get("enabled", False)):
+        return _compute_prompt_fingerprint(additional_speech_block_instructions)
+    fingerprint_payload = {
+        "additional_speech_block_instructions": additional_speech_block_instructions,
+        "scene_ambience": dict(scene_ambience_settings),
+    }
+    return _compute_prompt_fingerprint(json.dumps(fingerprint_payload, ensure_ascii=False, sort_keys=True))
+
+
 def _restore_persisted_additional_speech_block_instructions(
     report: dict[str, object] | None,
     operation_state: dict[str, object] | None,
@@ -1311,6 +1467,33 @@ def _restore_persisted_additional_speech_block_instructions(
             if restored_metadata_value:
                 return restored_metadata_value
     return ""
+
+
+def _restore_persisted_scene_ambience_settings(
+    report: dict[str, object] | None,
+    operation_state: dict[str, object] | None,
+) -> dict[str, object]:
+    """
+    @brief      Restore persisted Scene Ambience generation settings from report or state.
+    @param[in]  report Speech Blocks report payload.
+    @param[in]  operation_state Speech Blocks operation-state payload.
+    @return     Normalized Scene Ambience generation settings.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-21
+    @version    0.1.0
+    """
+    for candidate in (
+        report.get("scene_ambience_generation") if isinstance(report, dict) else None,
+        (
+            dict(operation_state.get("metadata", {})).get("scene_ambience_generation")
+            if isinstance(operation_state, dict) and isinstance(operation_state.get("metadata"), dict)
+            else None
+        ),
+    ):
+        if isinstance(candidate, dict):
+            return _resolve_scene_ambience_settings(candidate, bool(candidate.get("enabled", False)))
+    return _resolve_scene_ambience_settings(None, False)
 
 
 def _normalized_additional_speech_block_instructions(value: object) -> str:
@@ -1514,6 +1697,298 @@ def _generate_budgeted_chunk_blocks(
         combined_warnings,
         chunk_token_usage,
     )
+
+
+def _generate_scene_ambience_blocks(
+    ai_profile_payload: dict[str, object],
+    source_chunk: dict[str, object],
+    source_language: str,
+    speech_blocks: list[SpeechBlockPayload],
+    scene_ambience_settings: dict[str, object],
+    log_path: Path,
+    log_context: dict[str, object],
+    cancel_requested,
+) -> tuple[list[SpeechBlockPayload], TokenUsagePayload]:
+    """
+    @brief      Generate prompt-based scene ambience blocks for one completed source chunk.
+    @param[in]  ai_profile_payload Selected validated AI profile payload.
+    @param[in]  source_chunk Source chunk payload.
+    @param[in]  source_language Active source language code.
+    @param[in]  speech_blocks Chunk-local narration and dialogue Speech Blocks.
+    @param[in]  scene_ambience_settings Normalized scene-ambience policy payload.
+    @param[in]  log_path Operation-local AI transaction log path.
+    @param[in]  log_context Base AI transaction log context.
+    @param[in]  cancel_requested Optional zero-argument cancellation callback.
+    @return     Scene ambience blocks and provider token usage.
+    @exception  OperationCancelledError Raised when the operator cancels the run.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-20
+    @version    0.1.0
+    """
+    if not speech_blocks:
+        return [], token_usage_service.empty_token_usage()
+    system_prompt = prompt_template_service.render_prompt("scene_ambience_system", {})
+    user_prompt = _scene_ambience_user_prompt(
+        source_chunk,
+        source_language,
+        speech_blocks,
+        scene_ambience_settings,
+    )
+    try:
+        response_result = llm_provider_service.chat_json(
+            ai_profile_payload,
+            system_prompt,
+            user_prompt,
+            log_path=log_path,
+            log_context={**dict(log_context), "response_contract": "scene_ambience_blocks"},
+            cancel_requested=cancel_requested,
+        )
+    except OperationCancelledError as error:
+        raise OperationCancelledError(
+            "Speech Blocks generation cancelled while waiting for scene ambience analysis."
+        ) from error
+    return (
+        _normalize_scene_ambience_response(
+            dict(response_result.get("payload", {})),
+            str(source_chunk.get("chunk_id", "")).strip(),
+            source_language,
+            scene_ambience_settings,
+        ),
+        token_usage_service.restore_token_usage(response_result.get("usage")),
+    )
+
+
+def _scene_ambience_user_prompt(
+    source_chunk: dict[str, object],
+    source_language: str,
+    speech_blocks: list[SpeechBlockPayload],
+    scene_ambience_settings: dict[str, object],
+) -> str:
+    """
+    @brief      Render the scene-ambience chunk prompt.
+    @param[in]  source_chunk Source chunk payload.
+    @param[in]  source_language Active source language code.
+    @param[in]  speech_blocks Chunk-local Speech Blocks.
+    @param[in]  scene_ambience_settings Normalized scene-ambience policy payload.
+    @return     Rendered scene-ambience prompt text.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-20
+    @version    0.1.0
+    """
+    compact_blocks = [
+        {
+            "speech_block_id": str(block.get("speech_block_id", "")).strip(),
+            "sequence_index": int(block.get("sequence_index", 0)),
+            "speaker": str(block.get("speaker_display_name", "")).strip(),
+            "content_kind": str(block.get("content_kind", "")).strip(),
+            "text": str(block.get("text", "")),
+        }
+        for block in speech_blocks
+    ]
+    allowed_positions = list(scene_ambience_settings.get("allowed_positions", []))
+    return prompt_template_service.render_prompt(
+        "scene_ambience_user",
+        {
+            "source_language": narrator_definition_service.narrator_language_label(source_language),
+            "chunk_id": str(source_chunk.get("chunk_id", "")),
+            "chunk_text": str(source_chunk.get("text", "")),
+            "placement_policy": str(scene_ambience_settings.get("placement_policy", "")),
+            "duration_seconds": str(float(scene_ambience_settings.get("duration_seconds", 10.0))),
+            "max_blocks_per_sequence": str(int(scene_ambience_settings.get("max_blocks_per_sequence", 6))),
+            "allowed_positions": ", ".join(allowed_positions),
+            "speech_blocks_json": json.dumps(compact_blocks, indent=2, ensure_ascii=False),
+        },
+    )
+
+
+def _normalize_scene_ambience_response(
+    payload: dict[str, object],
+    chunk_id: str,
+    source_language: str,
+    scene_ambience_settings: dict[str, object],
+) -> list[SpeechBlockPayload]:
+    """
+    @brief      Normalize one scene-ambience LLM response into operation Speech Blocks.
+    @param[in]  payload Raw JSON response payload.
+    @param[in]  chunk_id Current source chunk identifier.
+    @param[in]  source_language Active source language code.
+    @param[in]  scene_ambience_settings Normalized scene-ambience policy payload.
+    @return     Normalized scene-ambience Speech Blocks.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-20
+    @version    0.1.0
+    """
+    raw_blocks = payload.get("scene_ambience_blocks", [])
+    if not isinstance(raw_blocks, list):
+        return []
+    allowed_positions = {str(item) for item in scene_ambience_settings.get("allowed_positions", [])}
+    max_sequence_duration = float(scene_ambience_settings.get("duration_seconds", 10.0))
+    max_blocks_per_sequence = int(scene_ambience_settings.get("max_blocks_per_sequence", 6))
+    normalized_blocks: list[SpeechBlockPayload] = []
+    sequence_counts: dict[tuple[str, str], int] = {}
+    for raw_block in raw_blocks:
+        if not isinstance(raw_block, dict):
+            continue
+        ambience_position = str(raw_block.get("ambience_position", "")).strip()
+        if ambience_position not in allowed_positions:
+            continue
+        after_speech_block_id = str(raw_block.get("after_speech_block_id", "")).strip()
+        sound_prompt = str(raw_block.get("sound_prompt", raw_block.get("text", ""))).strip()
+        if not sound_prompt:
+            continue
+        sequence_key = (ambience_position, after_speech_block_id if ambience_position == "scene_change" else "")
+        duration_seconds = _positive_float(raw_block.get("duration_seconds"), max_sequence_duration)
+        negative_prompt = str(raw_block.get("negative_prompt", "")).strip()
+        if not negative_prompt:
+            negative_prompt = "speech, voices, dialogue, singing, music, low quality, distorted"
+        remaining_slots = max_blocks_per_sequence - sequence_counts.get(sequence_key, 0)
+        if remaining_slots <= 0:
+            continue
+        split_prompts = _split_composed_scene_ambience_prompt(sound_prompt)[:remaining_slots]
+        if not split_prompts:
+            continue
+        split_duration = duration_seconds / len(split_prompts)
+        for split_prompt in split_prompts:
+            sequence_counts[sequence_key] = sequence_counts.get(sequence_key, 0) + 1
+            normalized_blocks.append(
+                {
+                    "speech_block_id": "",
+                    "sequence_index": 0,
+                    "chunk_id": chunk_id,
+                    "source_language": source_language,
+                    "speaker_kind": SPEAKER_KIND_OPERATION,
+                    "speaker_id": CONTENT_KIND_SCENE_AMBIENCE,
+                    "speaker_display_name": _operation_display_name(CONTENT_KIND_SCENE_AMBIENCE),
+                    "content_kind": CONTENT_KIND_SCENE_AMBIENCE,
+                    "source_text": "",
+                    "text": split_prompt,
+                    "sound_prompt": split_prompt,
+                    "negative_prompt": negative_prompt,
+                    "duration_seconds": split_duration,
+                    "ambience_position": ambience_position,
+                    "after_speech_block_id": after_speech_block_id,
+                    "warning_flags": [],
+                    "approved": False,
+                    "approved_at": None,
+                }
+            )
+    return _normalize_scene_ambience_sequence_durations(normalized_blocks, max_sequence_duration)
+
+
+def _split_composed_scene_ambience_prompt(sound_prompt: str) -> list[str]:
+    """
+    @brief      Split one composed Scene Ambience prompt into simple sound-source prompts.
+    @param[in]  sound_prompt Candidate sound prompt.
+    @return     One or more simple sound prompts.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-21
+    @version    0.1.0
+    """
+    normalized_prompt = " ".join(str(sound_prompt).strip().split())
+    if not normalized_prompt:
+        return []
+    separators = (
+        r"\s*;\s*",
+        r"\s*,\s*(?=(?:a |an |the |low-volume |subtle |soft |occasional |intermittent |sparse |"
+        r"irregular |distant |muffled |fading |shifting |approaching |receding |quiet |faint |"
+        r"very faint |steady |sudden |heavy |rapid |rhythmic ))",
+        r"\s+(?:and|plus)\s+(?=(?:a |an |the |low-volume |subtle |soft |occasional |intermittent |"
+        r"sparse |irregular |distant |muffled |fading |shifting |approaching |receding |quiet |"
+        r"faint |very faint |steady |sudden |heavy |rapid |rhythmic ))",
+    )
+    parts = [normalized_prompt]
+    for separator in separators:
+        split_parts: list[str] = []
+        for part in parts:
+            split_parts.extend(re.split(separator, part, flags=re.IGNORECASE))
+        parts = split_parts
+    normalized_parts: list[str] = []
+    for part in parts:
+        normalized_part = " ".join(str(part).strip(" .").split())
+        if normalized_part and normalized_part not in normalized_parts:
+            normalized_parts.append(normalized_part)
+    return normalized_parts or [normalized_prompt]
+
+
+def _insert_scene_ambience_blocks(
+    speech_blocks: list[SpeechBlockPayload],
+    scene_ambience_blocks: list[SpeechBlockPayload],
+) -> list[SpeechBlockPayload]:
+    """
+    @brief      Insert scene ambience blocks at chunk-local opener, closer, and scene-change positions.
+    @param[in]  speech_blocks Chunk-local spoken Speech Blocks.
+    @param[in]  scene_ambience_blocks Scene ambience operation Speech Blocks.
+    @return     Renumbered chunk-local Speech Blocks including scene ambience.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-20
+    @version    0.1.0
+    """
+    if not scene_ambience_blocks:
+        return speech_blocks
+    opener_blocks = [
+        dict(block) for block in scene_ambience_blocks if str(block.get("ambience_position", "")) == "opener"
+    ]
+    closer_blocks = [
+        dict(block) for block in scene_ambience_blocks if str(block.get("ambience_position", "")) == "closer"
+    ]
+    scene_change_blocks = [
+        dict(block) for block in scene_ambience_blocks if str(block.get("ambience_position", "")) == "scene_change"
+    ]
+    ordered_blocks: list[SpeechBlockPayload] = [*opener_blocks]
+    pending_scene_changes = list(scene_change_blocks)
+    for speech_block in speech_blocks:
+        ordered_blocks.append(dict(speech_block))
+        speech_block_id = str(speech_block.get("speech_block_id", "")).strip()
+        matching_changes = [
+            block
+            for block in pending_scene_changes
+            if str(block.get("after_speech_block_id", "")).strip() == speech_block_id
+        ]
+        ordered_blocks.extend(matching_changes)
+        pending_scene_changes = [block for block in pending_scene_changes if block not in matching_changes]
+    ordered_blocks.extend(pending_scene_changes)
+    ordered_blocks.extend(closer_blocks)
+    chunk_id = str(speech_blocks[0].get("chunk_id", "") if speech_blocks else "").strip()
+    return _renumber_single_chunk_blocks(chunk_id, ordered_blocks)
+
+
+def _normalize_scene_ambience_sequence_durations(
+    scene_ambience_blocks: list[SpeechBlockPayload],
+    max_sequence_duration: float,
+) -> list[SpeechBlockPayload]:
+    """
+    @brief      Keep Scene Ambience sequence durations within the configured soft maximum.
+    @param[in]  scene_ambience_blocks Normalized Scene Ambience Speech Blocks.
+    @param[in]  max_sequence_duration Soft maximum duration per ambience sequence.
+    @return     Scene Ambience Speech Blocks with scaled durations when needed.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-21
+    @version    0.1.0
+    """
+    if max_sequence_duration <= 0.0:
+        return scene_ambience_blocks
+    grouped_indexes: dict[tuple[str, str], list[int]] = {}
+    for index, block in enumerate(scene_ambience_blocks):
+        ambience_position = str(block.get("ambience_position", "")).strip()
+        after_id = str(block.get("after_speech_block_id", "")).strip() if ambience_position == "scene_change" else ""
+        grouped_indexes.setdefault((ambience_position, after_id), []).append(index)
+    normalized_blocks = [dict(block) for block in scene_ambience_blocks]
+    for indexes in grouped_indexes.values():
+        total_duration = sum(float(normalized_blocks[index].get("duration_seconds", 0.0) or 0.0) for index in indexes)
+        if total_duration <= max_sequence_duration * 1.1:
+            continue
+        scale_factor = max_sequence_duration / total_duration
+        for index in indexes:
+            normalized_blocks[index]["duration_seconds"] = max(
+                0.1,
+                round(float(normalized_blocks[index].get("duration_seconds", 0.0) or 0.0) * scale_factor, 3),
+            )
+    return normalized_blocks
 
 
 def _generate_narrator_boundary_response(
@@ -1828,6 +2303,73 @@ def _estimate_text_tokens(text: str) -> int:
     return ai_budget_service.estimate_text_tokens(text)
 
 
+def _positive_float(value: object, fallback: float) -> float:
+    """
+    @brief      Normalize one positive float with fallback.
+    @param[in]  value Candidate float value.
+    @param[in]  fallback Fallback float value.
+    @return     Positive float value.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-20
+    @version    0.1.0
+    """
+    try:
+        normalized_value = float(value)
+    except (TypeError, ValueError):
+        return float(fallback)
+    return normalized_value if normalized_value > 0.0 else float(fallback)
+
+
+def _positive_int(value: object, fallback: int) -> int:
+    """
+    @brief      Normalize one positive integer with fallback.
+    @param[in]  value Candidate integer value.
+    @param[in]  fallback Fallback integer value.
+    @return     Positive integer value.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-21
+    @version    0.1.0
+    """
+    try:
+        normalized_value = int(value)
+    except (TypeError, ValueError):
+        return int(fallback)
+    return normalized_value if normalized_value > 0 else int(fallback)
+
+
+def _normalize_scene_ambience_edit_payload(
+    edit_payload: object,
+    existing_block: SpeechBlockPayload,
+) -> dict[str, object]:
+    """
+    @brief      Normalize dedicated Scene Ambience edit fields.
+    @param[in]  edit_payload Edited Scene Ambience payload.
+    @param[in]  existing_block Existing Speech Block payload used for field fallback.
+    @return     Normalized Scene Ambience edit payload.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-21
+    @version    0.1.0
+    """
+    payload = edit_payload if isinstance(edit_payload, dict) else {"sound_prompt": str(edit_payload)}
+    sound_prompt = str(payload.get("sound_prompt", payload.get("text", ""))).strip()
+    if not sound_prompt:
+        sound_prompt = str(existing_block.get("sound_prompt", existing_block.get("text", ""))).strip()
+    return {
+        "sound_prompt": sound_prompt,
+        "negative_prompt": str(payload.get("negative_prompt", "")).strip(),
+        "duration_seconds": _positive_float(
+            payload.get("duration_seconds"),
+            _positive_float(
+                existing_block.get("duration_seconds"),
+                float(config.DEFAULT_SCENE_AMBIENCE_DURATION_SECONDS),
+            ),
+        ),
+    }
+
+
 def _normalize_persisted_speech_block(payload: dict[str, object]) -> SpeechBlockPayload:
     """
     @brief      Normalize one persisted Speech Blocks payload.
@@ -1854,7 +2396,7 @@ def _normalize_persisted_speech_block(payload: dict[str, object]) -> SpeechBlock
         speaker_display_name = str(operation_entry["display_name"])
     text = str(payload.get("text", ""))
     source_text = str(payload.get("source_text", text))
-    return {
+    normalized_payload: SpeechBlockPayload = {
         "speech_block_id": speech_block_id,
         "sequence_index": sequence_index,
         "chunk_id": chunk_id,
@@ -1869,6 +2411,24 @@ def _normalize_persisted_speech_block(payload: dict[str, object]) -> SpeechBlock
         "approved": bool(payload.get("approved", False)),
         "approved_at": None if payload.get("approved_at") in (None, "") else str(payload.get("approved_at")),
     }
+    if content_kind == CONTENT_KIND_SCENE_AMBIENCE:
+        sound_prompt = str(payload.get("sound_prompt", text)).strip() or text
+        normalized_payload.update(
+            {
+                "text": sound_prompt,
+                "sound_prompt": sound_prompt,
+                "negative_prompt": str(payload.get("negative_prompt", "")).strip(),
+                "duration_seconds": _positive_float(
+                    payload.get("duration_seconds"),
+                    float(config.DEFAULT_SCENE_AMBIENCE_DURATION_SECONDS),
+                ),
+                "ambience_position": str(payload.get("ambience_position", "scene_change")).strip()
+                if str(payload.get("ambience_position", "")).strip() in {"opener", "closer", "scene_change"}
+                else "scene_change",
+                "after_speech_block_id": str(payload.get("after_speech_block_id", "")).strip(),
+            }
+        )
+    return normalized_payload
 
 
 def _persist_state(
@@ -1908,6 +2468,7 @@ def _rebuild_report_with_prompt_rules(
     token_usage: dict[str, object],
     budget_metadata: BudgetMetadataPayload | None,
     additional_speech_block_instructions: str,
+    scene_ambience_settings: dict[str, object] | None = None,
     updated_at: str | None = None,
 ) -> SpeechBlocksReportPayload:
     """
@@ -1943,7 +2504,12 @@ def _rebuild_report_with_prompt_rules(
     )
     normalized_instructions = _normalized_additional_speech_block_instructions(additional_speech_block_instructions)
     report["additional_speech_block_instructions"] = normalized_instructions
-    report["additional_speech_block_instructions_fingerprint"] = _compute_prompt_fingerprint(normalized_instructions)
+    scene_settings = scene_ambience_settings or _resolve_scene_ambience_settings(None, False)
+    report["scene_ambience_generation"] = dict(scene_settings)
+    report["additional_speech_block_instructions_fingerprint"] = _compute_generation_rules_fingerprint(
+        normalized_instructions,
+        scene_settings,
+    )
     return report
 
 
@@ -1964,6 +2530,7 @@ def _build_operation_state_with_prompt_rules(
     next_chunk_index: int | None,
     budget_metadata: BudgetMetadataPayload | None,
     additional_speech_block_instructions: str,
+    scene_ambience_settings: dict[str, object] | None = None,
 ) -> OperationStatePayload:
     """
     @brief      Build Speech Blocks operation state with operator prompt-rule metadata.
@@ -2006,12 +2573,22 @@ def _build_operation_state_with_prompt_rules(
         next_chunk_index=next_chunk_index,
         budget_metadata=budget_metadata,
     )
+    state["started_at"] = started_at
+    state["completed_at"] = completed_at
+    state["artifact_paths"] = [
+        config.SPEECH_BLOCKS_OUTPUT_FILE_NAME,
+        config.SPEECH_BLOCKS_REPORT_FILE_NAME,
+        config.SPEECH_BLOCKS_STATE_FILE_NAME,
+        str(log_path.name),
+    ]
     normalized_instructions = _normalized_additional_speech_block_instructions(additional_speech_block_instructions)
-    instruction_fingerprint = _compute_prompt_fingerprint(normalized_instructions)
     metadata = state.get("metadata", {})
     metadata = dict(metadata) if isinstance(metadata, dict) else {}
     metadata["additional_speech_block_instructions"] = normalized_instructions
+    scene_settings = scene_ambience_settings or _resolve_scene_ambience_settings(None, False)
+    instruction_fingerprint = _compute_generation_rules_fingerprint(normalized_instructions, scene_settings)
     metadata["additional_speech_block_instructions_fingerprint"] = instruction_fingerprint
+    metadata["scene_ambience_generation"] = dict(scene_settings)
     state["metadata"] = metadata
     resume_checkpoint = state.get("resume_checkpoint")
     if isinstance(resume_checkpoint, dict):
@@ -2051,6 +2628,7 @@ def _persist_report_update(
         report,
         operation_state,
     )
+    scene_ambience_settings = _restore_persisted_scene_ambience_settings(report, operation_state)
     input_fingerprint = str(metadata.get("source_snapshot_fingerprint", "")).strip()
     if not input_fingerprint and source_chunks and source_language and source_kind:
         input_fingerprint = _build_source_fingerprint(source_chunks, source_language, source_kind)
@@ -2069,6 +2647,7 @@ def _persist_report_update(
         token_usage,
         budget_metadata,
         additional_speech_block_instructions,
+        scene_ambience_settings=scene_ambience_settings,
     )
     stage_status = str(updated_report.get("speech_blocks_stage_status", "")).strip()
     if stage_status == SPEECH_BLOCKS_STAGE_COMPLETED:
@@ -2094,6 +2673,7 @@ def _persist_report_update(
         next_chunk_index=None,
         budget_metadata=budget_metadata,
         additional_speech_block_instructions=additional_speech_block_instructions,
+        scene_ambience_settings=scene_ambience_settings,
     )
     _persist_state(
         project_root,

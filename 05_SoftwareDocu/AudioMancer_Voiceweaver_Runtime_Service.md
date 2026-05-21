@@ -26,6 +26,9 @@ The combined TTS Settings and runtime UI behavior is documented separately in
   wrappers
 - submit voice design, direct clone, clone-prompt, and clone-from-prompt
   generation requests
+- submit sound-prompt generation requests for approved Scene Ambience blocks
+- log sound-prompt request submission and acceptance without recording prompt
+  text or runtime API keys
 - poll until runtime operations reach a terminal state
 - download generated voice bytes
 - map runtime failures into stable result payloads for callers
@@ -67,6 +70,8 @@ Inputs:
 - language codes and preview text
 - voice-description prompts
 - WAV sample bytes for clone workflows
+- sound prompts, negative prompts, duration, guidance, inference-step count,
+  and optional seed for Scene Ambience generation
 - progress/cancel callbacks for polling operations
 
 Outputs:
@@ -123,6 +128,14 @@ probe = voiceweaver_runtime_service.probe_runtime(base_url, runtime_api_key="")
 voiceweaver_runtime_service.load_model(base_url, runtime_api_key, model_id)
 status = voiceweaver_runtime_service.wait_for_terminal_operation(base_url, runtime_api_key)
 audio = voiceweaver_runtime_service.download_generated_voice(base_url, runtime_api_key)
+ambience = voiceweaver_runtime_service.generate_sound_prompt(
+    base_url,
+    runtime_api_key,
+    model_id,
+    prompt="low-volume room tone",
+    negative_prompt="speech, music",
+    duration_seconds=3.0,
+)
 ```
 
 ## 9. Validation And Tests

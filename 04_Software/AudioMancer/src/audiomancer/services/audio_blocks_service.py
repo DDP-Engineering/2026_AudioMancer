@@ -16,7 +16,7 @@
          `80_audio_blocks` workflow artifacts.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-23
-@version 0.18.1
+@version 0.18.5
 """
 
 # IMPORTS
@@ -156,7 +156,7 @@ def is_generated(audio_block: dict[str, object]) -> bool:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-17
-    @version    0.1.0
+    @version    0.2.0
     """
     return generated_at(audio_block) is not None
 
@@ -169,7 +169,7 @@ def is_approved(audio_block: dict[str, object]) -> bool:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-17
-    @version    0.1.0
+    @version    0.1.1
     """
     return approved_at(audio_block) is not None
 
@@ -182,7 +182,7 @@ def generated_at(audio_block: dict[str, object]) -> str | None:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-17
-    @version    0.1.0
+    @version    0.1.1
     """
     return _status_timestamp(audio_block.get("generated"), audio_block.get("generated_at"))
 
@@ -195,7 +195,7 @@ def approved_at(audio_block: dict[str, object]) -> str | None:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-17
-    @version    0.1.0
+    @version    0.1.1
     """
     return _status_timestamp(audio_block.get("approved"), audio_block.get("approved_at"))
 
@@ -264,7 +264,7 @@ def has_persisted_audio_for_speech_block(project_root: str | Path, speech_block_
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-04
-    @version    0.1.0
+    @version    0.2.0
     """
     normalized_speech_block_id = str(speech_block_id).strip()
     if not normalized_speech_block_id:
@@ -407,7 +407,11 @@ def start_or_continue_generation(
         str(generation_context["voice_language"]),
         str(generation_context["clone_model_id"]),
         manifest,
-        loaded_model_budget,
+        {
+            **loaded_model_budget,
+            "generate_scene_ambience_audio": bool(generation_context.get("generate_scene_ambience_audio", False)),
+            "sound_model_id": str(generation_context.get("sound_model_id", "")).strip(),
+        },
     )
     if _requires_manual_reset(existing_state, generation_context["input_fingerprint"]):
         existing_state = {}
@@ -437,7 +441,15 @@ def start_or_continue_generation(
             generation_context=generation_context,
             project_root=resolved_project_root,
         )
-    block_index = _first_incomplete_block_index(existing_blocks, resolved_project_root)
+    generation_order_indices = _audio_generation_order_indices(
+        existing_blocks,
+        bool(generation_context.get("generate_scene_ambience_audio", False)),
+    )
+    block_index = _first_incomplete_generation_order_index(
+        existing_blocks,
+        generation_order_indices,
+        resolved_project_root,
+    )
     existing_blocks = [_apply_model_budget_to_block(block, generation_context) for block in existing_blocks]
 
     for current_profile_index in range(profile_index, len(generation_context["voice_targets"])):
@@ -532,7 +544,13 @@ def start_or_continue_generation(
     clone_profiles_by_id = {
         str(profile.get("voice_target_id", "")).strip(): profile for profile in existing_clone_profiles
     }
-    for current_block_index in range(block_index, len(existing_blocks)):
+    active_generation_model_id = str(generation_context["clone_model_id"]).strip()
+    generation_order_indices = _audio_generation_order_indices(
+        existing_blocks,
+        bool(generation_context.get("generate_scene_ambience_audio", False)),
+    )
+    for current_order_index in range(block_index, len(generation_order_indices)):
+        current_block_index = generation_order_indices[current_order_index]
         try:
             raise_if_cancelled(cancel_requested)
         except operation_runtime_service.OperationCancelledError:
@@ -545,7 +563,7 @@ def start_or_continue_generation(
                 _GENERATE_PHASE,
                 None,
                 len(generation_context["voice_targets"]),
-                current_block_index,
+                current_order_index,
                 reused_prompt_count,
                 regenerated_prompt_count,
             )
@@ -558,9 +576,129 @@ def start_or_continue_generation(
             continue
         if _audio_block_has_reusable_audio(current_block, resolved_project_root):
             continue
+        if str(current_block.get("content_kind", "")).strip() == speech_blocks_service.CONTENT_KIND_SCENE_AMBIENCE:
+            try:
+                _ensure_sound_model_loaded(
+                    runtime_settings,
+                    str(generation_context.get("sound_model_id", "")),
+                    progress_callback,
+                    len(generation_context["speech_blocks"]),
+                    _generated_count(existing_blocks),
+                    cancel_requested=cancel_requested,
+                )
+                generated_block = _generate_scene_ambience_audio_block(
+                    resolved_project_root,
+                    current_block,
+                    generation_context,
+                    runtime_settings,
+                    cancel_requested=cancel_requested,
+                )
+                active_generation_model_id = str(generation_context.get("sound_model_id", "")).strip()
+            except operation_runtime_service.OperationCancelledError:
+                _persist_cancelled_state(
+                    resolved_project_root,
+                    generation_context,
+                    existing_blocks,
+                    existing_clone_profiles,
+                    started_at,
+                    _GENERATE_PHASE,
+                    current_block_id,
+                    len(generation_context["voice_targets"]),
+                    current_order_index,
+                    reused_prompt_count,
+                    regenerated_prompt_count,
+                )
+                raise
+            existing_blocks[current_block_index] = generated_block
+            report = _rebuild_report(
+                existing_blocks,
+                generation_context["voice_language"],
+                generation_context["speech_blocks"],
+                warning_records=[],
+                prompt_count=len(existing_clone_profiles),
+                reused_prompt_count=reused_prompt_count,
+                regenerated_prompt_count=regenerated_prompt_count,
+                current_phase=_GENERATE_PHASE,
+            )
+            _persist_state(
+                resolved_project_root,
+                generation_context["speech_blocks"],
+                existing_blocks,
+                existing_clone_profiles,
+                report,
+                _build_operation_state(
+                    resolved_project_root,
+                    generation_context["speech_blocks"],
+                    existing_blocks,
+                    existing_clone_profiles,
+                    status="running",
+                    started_at=started_at,
+                    completed_at=None,
+                    voice_language=generation_context["voice_language"],
+                    input_fingerprint=generation_context["input_fingerprint"],
+                    current_phase=_GENERATE_PHASE,
+                    current_block_id=current_block_id,
+                    next_profile_index=len(generation_context["voice_targets"]),
+                    next_speech_block_index=current_order_index + 1,
+                    reused_prompt_count=reused_prompt_count,
+                    regenerated_prompt_count=regenerated_prompt_count,
+                ),
+            )
+            _emit_progress(
+                progress_callback,
+                _generated_count(existing_blocks),
+                len(generation_context["speech_blocks"]),
+                "Generated Scene Ambience audio.",
+            )
+            continue
+        clone_model_id = str(generation_context["clone_model_id"]).strip()
+        if active_generation_model_id != clone_model_id:
+            _ensure_clone_model_loaded(
+                runtime_settings,
+                clone_model_id,
+                dict(generation_context.get("clone_model_payload", {})),
+                progress_callback,
+                len(generation_context["speech_blocks"]),
+                _generated_count(existing_blocks),
+                cancel_requested=cancel_requested,
+            )
+            active_generation_model_id = clone_model_id
         clone_profile = clone_profiles_by_id.get(str(current_block.get("voice_target_id", "")).strip())
         if clone_profile is None:
             raise RuntimeError(f"Missing clone profile for voice target '{current_block.get('voice_target_id', '')}'.")
+
+        def _checkpoint_current_spoken_block(
+            checkpoint_block: AudioBlockPayload,
+            next_split_part_index: int,
+            active_block_index: int = current_block_index,
+            active_order_index: int = current_order_index,
+        ) -> None:
+            """
+            @brief      Persist a resumable checkpoint for the active spoken Speech Block.
+            @param[in]  checkpoint_block Partially generated Audio Block payload.
+            @param[in]  next_split_part_index Next TTS split part to generate.
+            @param[in]  active_block_index Current generated-block index.
+            @param[in]  active_order_index Current speech-block generation order index.
+            @return     None.
+            @exception  None
+            @author     Eng. Dan Dumitru Pasare
+            @date       2026-05-21
+            @version    0.1.0
+            """
+            _persist_split_checkpoint(
+                resolved_project_root,
+                generation_context,
+                existing_blocks,
+                existing_clone_profiles,
+                checkpoint_block,
+                active_block_index,
+                next_split_part_index,
+                started_at,
+                reused_prompt_count,
+                regenerated_prompt_count,
+                next_generation_order_index=active_order_index,
+            )
+
         try:
             generated_block = _generate_audio_block(
                 resolved_project_root,
@@ -569,22 +707,7 @@ def start_or_continue_generation(
                 generation_context,
                 runtime_settings,
                 cancel_requested=cancel_requested,
-                checkpoint_callback=(
-                    lambda checkpoint_block, next_split_part_index, active_block_index=current_block_index: (
-                        _persist_split_checkpoint(
-                            resolved_project_root,
-                            generation_context,
-                            existing_blocks,
-                            existing_clone_profiles,
-                            checkpoint_block,
-                            active_block_index,
-                            next_split_part_index,
-                            started_at,
-                            reused_prompt_count,
-                            regenerated_prompt_count,
-                        )
-                    )
-                ),
+                checkpoint_callback=_checkpoint_current_spoken_block,
             )
         except operation_runtime_service.OperationCancelledError:
             latest_state = load_operation_state(resolved_project_root) or {}
@@ -601,7 +724,7 @@ def start_or_continue_generation(
                 _GENERATE_PHASE,
                 current_block_id,
                 len(generation_context["voice_targets"]),
-                current_block_index,
+                current_order_index,
                 reused_prompt_count,
                 regenerated_prompt_count,
                 _resume_checkpoint_field(latest_state, "next_split_part_index", 0),
@@ -637,7 +760,7 @@ def start_or_continue_generation(
                 current_phase=_GENERATE_PHASE,
                 current_block_id=current_block_id,
                 next_profile_index=len(generation_context["voice_targets"]),
-                next_speech_block_index=current_block_index + 1,
+                next_speech_block_index=current_order_index + 1,
                 reused_prompt_count=reused_prompt_count,
                 regenerated_prompt_count=regenerated_prompt_count,
             ),
@@ -1012,7 +1135,7 @@ def regenerate_audio_block(
     @exception  OperationCancelledError Raised when the operator cancels the run.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-23
-    @version    0.2.2
+    @version    0.2.3
     """
     resolved_project_root = Path(project_root)
     generation_context = _resolve_generation_context(resolved_project_root, manifest, runtime_settings)
@@ -1033,6 +1156,52 @@ def regenerate_audio_block(
     if target_index is None:
         raise ValueError("The selected audio block was not found.")
 
+    if (
+        str(audio_blocks[target_index].get("content_kind", "")).strip()
+        == speech_blocks_service.CONTENT_KIND_SCENE_AMBIENCE
+    ):
+        if not bool(generation_context.get("generate_scene_ambience_audio", False)):
+            runtime_settings = {**runtime_settings, "generate_scene_ambience_audio": True}
+            generation_context = _resolve_generation_context(resolved_project_root, manifest, runtime_settings)
+        audio_blocks = _merge_existing_audio_blocks(
+            generation_context["speech_blocks"],
+            audio_blocks,
+            str(generation_context.get("voice_assignment_mode", config.DEFAULT_TTS_VOICE_ASSIGNMENT_MODE)),
+            generation_context=generation_context,
+            project_root=resolved_project_root,
+        )
+        target_index = next(
+            (
+                index
+                for index, block in enumerate(audio_blocks)
+                if str(block.get("speech_block_id", "")).strip() == target_block_id
+            ),
+            None,
+        )
+        if target_index is None:
+            raise ValueError("The selected audio block was not found.")
+        audio_blocks = [_apply_model_budget_to_block(block, generation_context) for block in audio_blocks]
+        _ensure_sound_model_loaded(
+            runtime_settings,
+            str(generation_context.get("sound_model_id", "")),
+            progress_callback,
+            len(audio_blocks),
+            _generated_count(audio_blocks),
+            cancel_requested=cancel_requested,
+        )
+        audio_blocks[target_index] = _generate_scene_ambience_audio_block(
+            resolved_project_root,
+            dict(audio_blocks[target_index]),
+            generation_context,
+            runtime_settings,
+            cancel_requested=cancel_requested,
+        )
+        return _persist_report_update(
+            resolved_project_root,
+            audio_blocks,
+            load_voice_clone_profiles(resolved_project_root),
+        )
+
     loaded_model_budget = _ensure_clone_model_loaded(
         runtime_settings,
         str(generation_context["clone_model_id"]),
@@ -1049,7 +1218,11 @@ def regenerate_audio_block(
         str(generation_context["voice_language"]),
         str(generation_context["clone_model_id"]),
         manifest,
-        loaded_model_budget,
+        {
+            **loaded_model_budget,
+            "generate_scene_ambience_audio": bool(generation_context.get("generate_scene_ambience_audio", False)),
+            "sound_model_id": str(generation_context.get("sound_model_id", "")).strip(),
+        },
     )
     if _requires_manual_reset(
         load_operation_state(resolved_project_root) or {},
@@ -1149,6 +1322,12 @@ def _resolve_generation_context(
     approved_speech_blocks = [block for block in speech_blocks if _speech_block_is_approved(block)]
     if not approved_speech_blocks:
         raise ValueError("Approve at least one Speech Block before starting Audio Blocks.")
+    generate_scene_ambience_audio = bool(runtime_settings.get("generate_scene_ambience_audio", False))
+    approved_scene_ambience_blocks = [
+        block
+        for block in approved_speech_blocks
+        if str(block.get("content_kind", "")).strip() == speech_blocks_service.CONTENT_KIND_SCENE_AMBIENCE
+    ]
     speech_audio_blocks = [block for block in approved_speech_blocks if not _is_metadata_only_speech_block(block)]
     base_url = str(runtime_settings.get("base_url", "")).strip()
     timeout_seconds = int(runtime_settings.get("timeout_seconds", config.DEFAULT_LLM_REQUEST_TIMEOUT_SECONDS))
@@ -1162,6 +1341,13 @@ def _resolve_generation_context(
     )
     if clone_model is None:
         raise ValueError("Cannot generate Audio Blocks because the required Qwen3 TTS base clone model is missing.")
+    sound_model = None
+    if generate_scene_ambience_audio:
+        sound_model = _first_model(capability_matrix.get("sound_prompt_models", []))
+        if sound_model is None and approved_scene_ambience_blocks:
+            raise ValueError(
+                "Scene Ambience Audio was requested, but VoiceWeaver has no healthy sound_prompt model available."
+            )
     clone_model_id = str(clone_model.get("model_id", "")).strip()
     if not clone_model_id or timeout_seconds <= 0:
         raise ValueError("Audio Blocks generation requires a valid runtime model and timeout configuration.")
@@ -1228,13 +1414,18 @@ def _resolve_generation_context(
             f"{missing_summary}"
         )
     model_budget = _resolve_model_budget({}, clone_model)
+    fingerprint_budget = {
+        **model_budget,
+        "generate_scene_ambience_audio": generate_scene_ambience_audio,
+        "sound_model_id": "" if sound_model is None else str(sound_model.get("model_id", "")).strip(),
+    }
     input_fingerprint = _build_input_fingerprint(
         speech_blocks,
         voice_targets,
         voice_language,
         clone_model_id,
         manifest,
-        model_budget,
+        fingerprint_budget,
     )
     return {
         "speech_blocks": speech_blocks,
@@ -1242,6 +1433,9 @@ def _resolve_generation_context(
         "voice_language": voice_language,
         "clone_model_id": clone_model_id,
         "clone_model_payload": clone_model,
+        "sound_model_id": "" if sound_model is None else str(sound_model.get("model_id", "")).strip(),
+        "sound_model_payload": {} if sound_model is None else dict(sound_model),
+        "generate_scene_ambience_audio": generate_scene_ambience_audio,
         "voice_assignment_mode": voice_assignment_mode,
         "original_language": str(manifest.get("original_language", "")).strip(),
         **model_budget,
@@ -1278,6 +1472,8 @@ def _build_input_fingerprint(
         "original_language": manifest.get("original_language"),
         "voice_language": voice_language,
         "clone_model_id": clone_model_id,
+        "generate_scene_ambience_audio": bool(model_budget.get("generate_scene_ambience_audio", False)),
+        "sound_model_id": str(model_budget.get("sound_model_id", "")).strip(),
         "model_token_budget": int(model_budget.get("model_token_budget", 0)),
         "model_audio_seconds_budget": float(model_budget.get("model_audio_seconds_budget", 0.0)),
         "model_budget_source": str(model_budget.get("model_budget_source", "")),
@@ -1291,6 +1487,10 @@ def _build_input_fingerprint(
                 "content_kind": str(block.get("content_kind", "")),
                 "approved": bool(block.get("approved", False)),
                 "text": str(block.get("text", "")),
+                "sound_prompt": str(block.get("sound_prompt", "")),
+                "negative_prompt": str(block.get("negative_prompt", "")),
+                "duration_seconds": block.get("duration_seconds"),
+                "ambience_position": str(block.get("ambience_position", "")),
             }
             for block in speech_blocks
         ],
@@ -1547,6 +1747,71 @@ def _ensure_clone_model_loaded(
     return _resolve_model_budget(loaded_status, clone_model_payload)
 
 
+def _ensure_sound_model_loaded(
+    runtime_settings: dict[str, object],
+    sound_model_id: str,
+    progress_callback,
+    progress_total: int,
+    progress_current: int,
+    cancel_requested=None,
+) -> None:
+    """
+    @brief      Ensure the configured VoiceWeaver sound_prompt model is active.
+    @param[in]  runtime_settings Runtime connection plus discovered-model settings.
+    @param[in]  sound_model_id Active sound model identifier.
+    @param[in]  progress_callback Optional modal progress callback.
+    @param[in]  progress_total Total speech-block count.
+    @param[in]  progress_current Already generated speech-block count.
+    @param[in]  cancel_requested Optional zero-argument cancellation callback.
+    @return     None.
+    @exception  RuntimeError Raised when VoiceWeaver fails to load the requested model.
+    @exception  OperationCancelledError Raised when cancellation is requested.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-20
+    @version    0.1.0
+    """
+    normalized_sound_model_id = str(sound_model_id).strip()
+    if not normalized_sound_model_id:
+        raise RuntimeError(
+            "Scene Ambience Audio was requested, but no healthy VoiceWeaver sound_prompt model is available."
+        )
+    base_url = str(runtime_settings.get("base_url", "")).strip()
+    runtime_api_key = str(runtime_settings.get("runtime_api_key", ""))
+    timeout_seconds = int(runtime_settings.get("timeout_seconds", config.DEFAULT_LLM_REQUEST_TIMEOUT_SECONDS))
+    _emit_progress(progress_callback, progress_current, progress_total, "Loading scene ambience sound model...")
+    raise_if_cancelled(cancel_requested)
+    initial_status = voiceweaver_runtime_service.read_status(
+        base_url,
+        runtime_api_key,
+        timeout_seconds=timeout_seconds,
+    )
+    raise_if_cancelled(cancel_requested)
+    if _runtime_operation_is_busy(initial_status):
+        raise RuntimeError(
+            "VoiceWeaver is still busy with a previous operation. Wait for the current runtime operation to finish, "
+            "then start Audio Blocks again."
+        )
+    if _active_model_id_from_status(initial_status) == normalized_sound_model_id:
+        return
+    voiceweaver_runtime_service.load_model(
+        base_url,
+        runtime_api_key,
+        normalized_sound_model_id,
+        timeout_seconds=timeout_seconds,
+    )
+    final_status = voiceweaver_runtime_service.wait_for_terminal_operation(
+        base_url,
+        runtime_api_key,
+        timeout_seconds=timeout_seconds,
+        cancel_requested=cancel_requested,
+    )
+    final_operation = final_status.get("operation", {})
+    if not isinstance(final_operation, dict) or str(final_operation.get("status", "")).strip().lower() != "completed":
+        raise RuntimeError(voiceweaver_runtime_service.operation_failed_message(final_status))
+    if _active_model_id_from_status(final_status) != normalized_sound_model_id:
+        raise RuntimeError(f"VoiceWeaver did not activate the requested sound model '{normalized_sound_model_id}'.")
+
+
 def _prepare_clone_profile(
     generation_context: dict[str, object],
     voice_target: dict[str, object],
@@ -1780,6 +2045,122 @@ def _generate_audio_block(
         "approved_at": None,
         "generated_at": generated_at,
         "runtime_result_summary": runtime_result_summary,
+        "warning_flags": _normalize_warning_flags(audio_block.get("warning_flags")),
+    }
+
+
+def _generate_scene_ambience_audio_block(
+    project_root: Path,
+    audio_block: AudioBlockPayload,
+    generation_context: dict[str, object],
+    runtime_settings: dict[str, object],
+    cancel_requested=None,
+) -> AudioBlockPayload:
+    """
+    @brief      Generate one Scene Ambience WAV and canonical Audio Blocks metadata.
+    @param[in]  project_root Active project root folder.
+    @param[in]  audio_block Persisted Scene Ambience Audio Blocks entry.
+    @param[in]  generation_context Validated generation-context payload.
+    @param[in]  runtime_settings Runtime connection plus discovered-model settings.
+    @param[in]  cancel_requested Optional zero-argument cancellation callback.
+    @return     Updated Audio Blocks payload.
+    @exception  RuntimeError Raised when VoiceWeaver does not expose downloadable audio.
+    @exception  OperationCancelledError Raised when cancellation is requested.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-20
+    @version    0.1.0
+    """
+    base_url = str(runtime_settings.get("base_url", "")).strip()
+    runtime_api_key = str(runtime_settings.get("runtime_api_key", ""))
+    timeout_seconds = int(runtime_settings.get("timeout_seconds", config.DEFAULT_LLM_REQUEST_TIMEOUT_SECONDS))
+    sound_prompt = str(audio_block.get("sound_prompt", audio_block.get("text", ""))).strip()
+    if not sound_prompt:
+        raise RuntimeError("Scene Ambience Audio generation requires a non-empty sound prompt.")
+    duration_seconds = _optional_float(audio_block.get("duration_seconds")) or float(
+        config.DEFAULT_SCENE_AMBIENCE_DURATION_SECONDS
+    )
+    guidance_scale = _optional_float(runtime_settings.get("scene_ambience_guidance_scale"))
+    if guidance_scale is None:
+        guidance_scale = config.DEFAULT_SCENE_AMBIENCE_GUIDANCE_SCALE
+    seed_value = runtime_settings.get("scene_ambience_seed")
+    seed = None if seed_value is None else _optional_int(seed_value, config.DEFAULT_SCENE_AMBIENCE_SEED)
+    audio_path, _metadata_path = _audio_artifact_paths(
+        project_root,
+        str(audio_block.get("chunk_id", "")).strip(),
+        int(audio_block.get("sequence_index", 0)),
+        str(audio_block.get("normalized_speaker_name", "")),
+    )
+    audio_path.parent.mkdir(parents=True, exist_ok=True)
+    _delete_audio_block_artifacts(project_root, audio_block)
+    raise_if_cancelled(cancel_requested)
+    _AUDIO_BLOCKS_LOGGER.info(
+        "Generating Scene Ambience audio block chunk_id=%s sequence_index=%s duration_seconds=%.2f",
+        str(audio_block.get("chunk_id", "")).strip(),
+        int(audio_block.get("sequence_index", 0)),
+        duration_seconds,
+    )
+    voiceweaver_runtime_service.generate_sound_prompt(
+        base_url,
+        runtime_api_key,
+        sound_prompt,
+        negative_prompt=str(audio_block.get("negative_prompt", "")).strip(),
+        duration_seconds=duration_seconds,
+        guidance_scale=guidance_scale,
+        num_inference_steps=_optional_int(
+            runtime_settings.get("scene_ambience_num_inference_steps"),
+            config.DEFAULT_SCENE_AMBIENCE_NUM_INFERENCE_STEPS,
+        ),
+        seed=seed,
+        timeout_seconds=timeout_seconds,
+    )
+    final_status = voiceweaver_runtime_service.wait_for_terminal_operation(
+        base_url,
+        runtime_api_key,
+        timeout_seconds=timeout_seconds,
+        cancel_requested=cancel_requested,
+    )
+    final_operation = final_status.get("operation", {})
+    if not isinstance(final_operation, dict) or str(final_operation.get("status", "")).strip().lower() != "completed":
+        raise RuntimeError(voiceweaver_runtime_service.operation_failed_message(final_status))
+    final_result = final_status.get("result", {})
+    if not isinstance(final_result, dict) or not bool(final_result.get("available", False)):
+        raise RuntimeError("VoiceWeaver finished the sound request but did not report downloadable audio.")
+    audio_bytes = voiceweaver_runtime_service.download_generated_audio(
+        base_url,
+        runtime_api_key,
+        timeout_seconds=timeout_seconds,
+    )
+    _validate_wav_bytes(audio_bytes)
+    audio_path.write_bytes(audio_bytes)
+    generated_at = _utc_now_iso()
+    _AUDIO_BLOCKS_LOGGER.info(
+        "Generated Scene Ambience audio block chunk_id=%s sequence_index=%s audio_path=%s",
+        str(audio_block.get("chunk_id", "")).strip(),
+        int(audio_block.get("sequence_index", 0)),
+        relative_to_project(project_root, audio_path),
+    )
+    return {
+        **dict(audio_block),
+        "duration_seconds": duration_seconds,
+        "metadata_only": False,
+        "special_block_status": None,
+        "audio_relative_path": relative_to_project(project_root, audio_path),
+        "metadata_relative_path": None,
+        "audio_duration_seconds": _wav_duration_seconds(audio_path),
+        "voice_language": None,
+        "prompt_format": "sound_prompt",
+        "split_part_count": 1,
+        "split_strategy": "single",
+        "model_token_budget": None,
+        "model_audio_seconds_budget": None,
+        "generated_part_relative_paths": [],
+        "generation_fingerprint": _build_audio_block_fingerprint(audio_block, generation_context),
+        "split_plan_fingerprint": None,
+        "generated": generated_at,
+        "approved": None,
+        "approved_at": None,
+        "generated_at": generated_at,
+        "runtime_result_summary": str(final_result.get("summary", "")).strip(),
         "warning_flags": _normalize_warning_flags(audio_block.get("warning_flags")),
     }
 
@@ -2089,12 +2470,18 @@ def _build_audio_block_fingerprint(
         "special_block_status": str(audio_block.get("special_block_status", "") or "").strip(),
         "pause_duration_ms": _optional_int(audio_block.get("pause_duration_ms"), None),
         "text": str(audio_block.get("text", "")),
+        "sound_prompt": str(audio_block.get("sound_prompt", "")),
+        "negative_prompt": str(audio_block.get("negative_prompt", "")),
+        "duration_seconds": _optional_float(audio_block.get("duration_seconds")),
+        "ambience_position": str(audio_block.get("ambience_position", "")).strip(),
         "voice_target_id": voice_target_id,
         "voice_source_kind": str(audio_block.get("voice_source_kind", "")).strip(),
         "voice_assignment_mode": str(generation_context.get("voice_assignment_mode", "")).strip(),
         "original_language": str(generation_context.get("original_language", "")).strip(),
         "voice_language": str(generation_context.get("voice_language", "")).strip(),
         "clone_model_id": str(generation_context.get("clone_model_id", "")).strip(),
+        "generate_scene_ambience_audio": bool(generation_context.get("generate_scene_ambience_audio", False)),
+        "sound_model_id": str(generation_context.get("sound_model_id", "")).strip(),
         "model_token_budget": int(generation_context.get("model_token_budget", 0)),
         "model_audio_seconds_budget": float(generation_context.get("model_audio_seconds_budget", 0.0)),
         "split_audio_seconds_budget": float(generation_context.get("split_audio_seconds_budget", 0.0)),
@@ -2122,7 +2509,7 @@ def _special_block_status(content_kind: str) -> str | None:
     if normalized_kind == speech_blocks_service.CONTENT_KIND_PAUSE:
         return _SPECIAL_BLOCK_STATUS_IMPLEMENTED
     if normalized_kind in {
-        speech_blocks_service.CONTENT_KIND_BACKGROUND_NOISE,
+        speech_blocks_service.CONTENT_KIND_SCENE_AMBIENCE,
         speech_blocks_service.CONTENT_KIND_INDICATION,
     }:
         return _SPECIAL_BLOCK_STATUS_NOT_IMPLEMENTED
@@ -2193,6 +2580,12 @@ def _initialize_audio_blocks(
                 "pause_duration_ms": pause_duration_ms,
                 "speech_block_approved": speech_block_approved,
                 "text": str(speech_block.get("text", "")),
+                "sound_prompt": str(speech_block.get("sound_prompt", speech_block.get("text", ""))).strip()
+                if content_kind == speech_blocks_service.CONTENT_KIND_SCENE_AMBIENCE
+                else "",
+                "negative_prompt": str(speech_block.get("negative_prompt", "")).strip(),
+                "duration_seconds": _optional_float(speech_block.get("duration_seconds")),
+                "ambience_position": str(speech_block.get("ambience_position", "")).strip(),
                 "voice_target_id": _voice_target_id_for_block(speech_block, voice_assignment_mode),
                 "voice_source_kind": _voice_source_kind_for_block(speech_block, voice_assignment_mode),
                 "audio_relative_path": None,
@@ -2274,6 +2667,12 @@ def _merge_existing_audio_blocks(
                 "approved_at": None,
                 "generated_at": None,
                 "runtime_result_summary": str(existing_block.get("runtime_result_summary", "")),
+                "sound_prompt": existing_block.get("sound_prompt") or block.get("sound_prompt"),
+                "negative_prompt": existing_block.get("negative_prompt") or block.get("negative_prompt"),
+                "duration_seconds": existing_block.get("duration_seconds")
+                if existing_block.get("duration_seconds") is not None
+                else block.get("duration_seconds"),
+                "ambience_position": existing_block.get("ambience_position") or block.get("ambience_position"),
                 "split_part_count": int(existing_block.get("split_part_count", 1)),
                 "split_strategy": str(existing_block.get("split_strategy", "single")).strip() or "single",
                 "model_token_budget": existing_block.get("model_token_budget"),
@@ -2286,7 +2685,47 @@ def _merge_existing_audio_blocks(
                 "warning_flags": _normalize_warning_flags(existing_block.get("warning_flags")),
             }
         )
-    return merged_blocks
+    return _apply_scene_ambience_audio_policy(merged_blocks, generation_context)
+
+
+def _apply_scene_ambience_audio_policy(
+    audio_blocks: list[AudioBlockPayload],
+    generation_context: dict[str, object] | None,
+) -> list[AudioBlockPayload]:
+    """
+    @brief      Apply Scene Ambience Audio generation policy to merged Audio Blocks.
+    @param[in]  audio_blocks Current Audio Blocks payload list.
+    @param[in]  generation_context Optional validated generation context.
+    @return     Updated Audio Blocks payload list.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-20
+    @version    0.1.0
+    """
+    if not generation_context:
+        return audio_blocks
+    generate_scene_ambience_audio = bool(generation_context.get("generate_scene_ambience_audio", False))
+    updated_blocks: list[AudioBlockPayload] = []
+    for audio_block in audio_blocks:
+        block = dict(audio_block)
+        if str(block.get("content_kind", "")).strip() != speech_blocks_service.CONTENT_KIND_SCENE_AMBIENCE:
+            updated_blocks.append(block)
+            continue
+        if generate_scene_ambience_audio:
+            block["metadata_only"] = False
+            block["special_block_status"] = None
+            if not _optional_string(block.get("audio_relative_path")):
+                block["generated"] = None
+                block["approved"] = None
+                block["generated_at"] = None
+                block["approved_at"] = None
+                block["runtime_result_summary"] = ""
+        else:
+            block["metadata_only"] = True
+            block["special_block_status"] = _SPECIAL_BLOCK_STATUS_NOT_IMPLEMENTED
+            block["runtime_result_summary"] = _metadata_only_summary(_SPECIAL_BLOCK_STATUS_NOT_IMPLEMENTED)
+        updated_blocks.append(block)
+    return updated_blocks
 
 
 def _audio_block_has_reusable_audio(audio_block: AudioBlockPayload, project_root: Path | None = None) -> bool:
@@ -2433,6 +2872,7 @@ def _persist_split_checkpoint(
     started_at: str,
     reused_prompt_count: int,
     regenerated_prompt_count: int,
+    next_generation_order_index: int | None = None,
 ) -> None:
     """
     @brief      Persist a resumable checkpoint after one split part finishes.
@@ -2483,7 +2923,9 @@ def _persist_split_checkpoint(
             current_phase=_GENERATE_PHASE,
             current_block_id=str(checkpoint_block.get("speech_block_id", "")).strip(),
             next_profile_index=len(generation_context["voice_targets"]),
-            next_speech_block_index=active_block_index,
+            next_speech_block_index=active_block_index
+            if next_generation_order_index is None
+            else next_generation_order_index,
             reused_prompt_count=reused_prompt_count,
             regenerated_prompt_count=regenerated_prompt_count,
             next_split_part_index=next_split_part_index,
@@ -2806,7 +3248,7 @@ def _is_metadata_only_speech_block(speech_block: dict[str, object]) -> bool:
     @version    0.2.0
     """
     return str(speech_block.get("content_kind", "")).strip() in {
-        speech_blocks_service.CONTENT_KIND_BACKGROUND_NOISE,
+        speech_blocks_service.CONTENT_KIND_SCENE_AMBIENCE,
         speech_blocks_service.CONTENT_KIND_PAUSE,
         speech_blocks_service.CONTENT_KIND_INDICATION,
     }
@@ -2856,6 +3298,74 @@ def _first_incomplete_block_index(audio_blocks: list[AudioBlockPayload], project
         ):
             return index
     return len(audio_blocks)
+
+
+def _audio_generation_order_indices(
+    audio_blocks: list[AudioBlockPayload],
+    generate_scene_ambience_audio: bool,
+) -> list[int]:
+    """
+    @brief      Build the Audio Blocks generation order with spoken blocks before ambience in each chunk.
+    @param[in]  audio_blocks Current Audio Blocks payload list.
+    @param[in]  generate_scene_ambience_audio True when ambience WAV generation is enabled.
+    @return     Ordered list indexes to visit during generation.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-20
+    @version    0.1.0
+    """
+    if not generate_scene_ambience_audio:
+        return list(range(len(audio_blocks)))
+    chunk_order: list[str] = []
+    indexes_by_chunk: dict[str, list[int]] = {}
+    for index, audio_block in enumerate(audio_blocks):
+        chunk_id = str(audio_block.get("chunk_id", "")).strip()
+        if chunk_id not in indexes_by_chunk:
+            indexes_by_chunk[chunk_id] = []
+            chunk_order.append(chunk_id)
+        indexes_by_chunk[chunk_id].append(index)
+    ordered_indices: list[int] = []
+    for chunk_id in chunk_order:
+        chunk_indices = indexes_by_chunk[chunk_id]
+        ordered_indices.extend(
+            index
+            for index in chunk_indices
+            if str(audio_blocks[index].get("content_kind", "")).strip()
+            != speech_blocks_service.CONTENT_KIND_SCENE_AMBIENCE
+        )
+        ordered_indices.extend(
+            index
+            for index in chunk_indices
+            if str(audio_blocks[index].get("content_kind", "")).strip()
+            == speech_blocks_service.CONTENT_KIND_SCENE_AMBIENCE
+        )
+    return ordered_indices
+
+
+def _first_incomplete_generation_order_index(
+    audio_blocks: list[AudioBlockPayload],
+    generation_order_indices: list[int],
+    project_root: Path | None = None,
+) -> int:
+    """
+    @brief      Resolve the first generation-order position that still needs generated audio.
+    @param[in]  audio_blocks Current Audio Blocks payload list.
+    @param[in]  generation_order_indices Ordered list indexes to inspect.
+    @param[in]  project_root Optional active project root for WAV validation.
+    @return     Zero-based generation-order position, or order length when complete.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-20
+    @version    0.1.0
+    """
+    for order_index, block_index in enumerate(generation_order_indices):
+        block = audio_blocks[block_index]
+        if bool(block.get("speech_block_approved", False)) and not _audio_block_has_reusable_audio(
+            block,
+            project_root,
+        ):
+            return order_index
+    return len(generation_order_indices)
 
 
 def _approved_count(audio_blocks: list[AudioBlockPayload]) -> int:
@@ -2911,6 +3421,12 @@ def _compact_audio_block_payload(audio_block: AudioBlockPayload) -> AudioBlockPa
         payload["content_kind"] = content_kind
         if content_kind == speech_blocks_service.CONTENT_KIND_PAUSE:
             payload["pause_duration_ms"] = _optional_int(audio_block.get("pause_duration_ms"), None)
+    if str(audio_block.get("content_kind", "")).strip() == speech_blocks_service.CONTENT_KIND_SCENE_AMBIENCE:
+        payload["content_kind"] = speech_blocks_service.CONTENT_KIND_SCENE_AMBIENCE
+        payload["sound_prompt"] = str(audio_block.get("sound_prompt", audio_block.get("text", ""))).strip()
+        payload["negative_prompt"] = str(audio_block.get("negative_prompt", "")).strip()
+        payload["duration_seconds"] = _optional_float(audio_block.get("duration_seconds"))
+        payload["ambience_position"] = str(audio_block.get("ambience_position", "")).strip()
     return payload
 
 
@@ -2926,7 +3442,7 @@ def _attach_current_speech_block_fields(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-17
-    @version    0.1.0
+    @version    0.1.1
     """
     speech_blocks_by_id = {
         str(block.get("speech_block_id", "")).strip(): dict(block)
@@ -2954,12 +3470,21 @@ def _attach_current_speech_block_fields(
                 "metadata_only": bool(audio_block.get("metadata_only", False))
                 or content_kind
                 in {
-                    speech_blocks_service.CONTENT_KIND_BACKGROUND_NOISE,
+                    speech_blocks_service.CONTENT_KIND_SCENE_AMBIENCE,
                     speech_blocks_service.CONTENT_KIND_PAUSE,
                     speech_blocks_service.CONTENT_KIND_INDICATION,
                 },
                 "speech_block_approved": _speech_block_is_approved(speech_block),
                 "text": str(speech_block.get("text", "")),
+                "sound_prompt": str(speech_block.get("sound_prompt", speech_block.get("text", ""))).strip()
+                if content_kind == speech_blocks_service.CONTENT_KIND_SCENE_AMBIENCE
+                else "",
+                "negative_prompt": str(speech_block.get("negative_prompt", "")).strip(),
+                "duration_seconds": _optional_float(audio_block.get("duration_seconds"))
+                if content_kind == speech_blocks_service.CONTENT_KIND_SCENE_AMBIENCE
+                and audio_block.get("duration_seconds") is not None
+                else _optional_float(speech_block.get("duration_seconds")),
+                "ambience_position": str(speech_block.get("ambience_position", "")).strip(),
             }
         )
     return enriched_blocks
@@ -2979,7 +3504,7 @@ def _normalize_persisted_audio_block(payload: dict[str, object]) -> AudioBlockPa
     approved_timestamp = _status_timestamp(payload.get("approved"), payload.get("approved_at"))
     content_kind = str(payload.get("content_kind", speech_blocks_service.CONTENT_KIND_NARRATION)).strip()
     metadata_only = bool(payload.get("metadata_only", False)) or content_kind in {
-        speech_blocks_service.CONTENT_KIND_BACKGROUND_NOISE,
+        speech_blocks_service.CONTENT_KIND_SCENE_AMBIENCE,
         speech_blocks_service.CONTENT_KIND_PAUSE,
         speech_blocks_service.CONTENT_KIND_INDICATION,
     }
@@ -2996,6 +3521,10 @@ def _normalize_persisted_audio_block(payload: dict[str, object]) -> AudioBlockPa
         "pause_duration_ms": _optional_int(payload.get("pause_duration_ms"), None),
         "speech_block_approved": bool(payload.get("speech_block_approved", True)),
         "text": str(payload.get("text", "")),
+        "sound_prompt": str(payload.get("sound_prompt", payload.get("text", ""))).strip(),
+        "negative_prompt": str(payload.get("negative_prompt", "")).strip(),
+        "duration_seconds": _optional_float(payload.get("duration_seconds")),
+        "ambience_position": str(payload.get("ambience_position", "")).strip(),
         "voice_target_id": str(payload.get("voice_target_id", "")).strip(),
         "voice_source_kind": str(payload.get("voice_source_kind", "")).strip(),
         "audio_relative_path": _optional_string(payload.get("audio_relative_path")),

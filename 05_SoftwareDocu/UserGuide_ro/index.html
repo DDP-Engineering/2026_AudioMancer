@@ -9,14 +9,14 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Ghid AudioMancer v1.2.2</title>
+    <title>Ghid AudioMancer v1.3.0</title>
     <link rel="stylesheet" href="assets/styles/help.css">
 </head>
 <body>
     <div class="layout">
         <nav class="toc" aria-label="Cuprins">
             <h1>Ajutor AudioMancer</h1>
-            <p>Versiune 1.2.2<br>Ghid offline pentru Windows si Ubuntu.</p>
+            <p>Ghid offline pentru Windows si Ubuntu.</p>
             <a href="#welcome">Bun venit</a>
             <a href="#requirements">Ce este necesar</a>
             <a href="#install">Instalare si pornire</a>
@@ -43,8 +43,8 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
             <section id="welcome">
                 <h2>Bun venit</h2>
                 <div class="version-box">
-                    <p><strong>Versiune ajutor:</strong> 1.2.2</p>
-                    <p><strong>Versiune aplicatie:</strong> 1.2.2</p>
+                    <p><strong>Versiune ajutor:</strong> 1.3.0</p>
+                    <p><strong>Versiune aplicatie:</strong> 1.3.0</p>
                     <p><strong>Creator:</strong> Eng. Dipl. Dan Dumitru Pasare</p>
                     <p><strong>Contact:</strong> pasaredan1979@gmail.com</p>
                 </div>
@@ -55,43 +55,33 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                 </p>
                 <p>
                     Lucreaza paginile din bara stanga de sus in jos. Apasa butoanele de generare, aprobare sau salvare
-                    numai dupa ce ai verificat textul si sunetul afisat. Versiunea 1.2.2 pastreaza cat mai mult din
-                    munca deja facuta: editarile locale de segment, traducere, personaj, voce, Bloc de vorbire sau Bloc
-                    audio reseteaza numai inregistrarile afectate, iar regenerarile complete din amonte sterg datele
+                    numai dupa ce ai verificat textul si sunetul afisat. AudioMancer pastreaza cat mai mult din munca
+                    deja facuta: editarile locale de segment, traducere, personaj, voce, Bloc de vorbire sau Bloc audio
+                    reseteaza numai inregistrarile afectate, iar regenerarile complete din amonte sterg datele
                     dependente.
                 </p>
                 <p>
-                    In versiunea 1.2.2, AudioMancer pastreaza metadate compacte pentru starile si rapoartele
-                    operatiilor, dar mentine punctele de reluare, utilizarea tokenilor si jurnalele tranzactiilor AI.
-                    Blocurile audio pastreaza acum detaliile de generare pentru fiecare bloc in indexul principal de
-                    Blocuri audio, nu in fisiere JSON langa WAV-uri, reducand metadatele duplicate dar pastrand
-                    reutilizarea prompturilor, reluarea pe parti, redarea audio generata si aprobarile. Voce narator
-                    si Voci personaje pastreaza metadate compacte pentru profiluri si mostre fara
-                    marcaje temporale de audit. Traducere AI foloseste acum profilul AI configurat chiar si cand
-                    limba tinta este aceeasi cu limba sursa, astfel incat o rulare in aceeasi limba poate rescrie sau
-                    normaliza textul in loc sa il copieze. Inregistrarile de traducere nu mai pastreaza marcaje
-                    temporale pe fiecare segment tradus sau aprobat. Descoperirea personajelor pastreaza acum
-                    campuri de incredere separate pentru gen si varsta, fara sa schimbe inregistrarile de evidenta.
-                    Setari include teme vizuale pentru interfata, teme luminoase si intunecate
-                    incluse, teme personalizate, font separat pentru controalele interfetei si pentru ferestrele mari
-                    de text, plus import si export de teme in format JSON. Segmentare text poate porni manual
-                    segmentarea din textul curatat inainte sa
-                    existe segmente generate, poate insera sau sterge segmentul selectat, Blocuri de vorbire poate
-                    genera si reda audio pentru blocul selectat direct din pagina, iar regulile selective de reset
-                    pastreaza segmentele traduse, vocile, Blocurile de vorbire si Blocurile audio neafectate.
-                    Voce narator si Voci personaje pot importa esantioane WAV validate, impreuna cu textul introdus
-                    de operator, pentru clonarea vocilor cu Qwen TTS Base. Descoperirea personajelor transmite acum
-                    si indicatia de varsta catre promptul de definitie vocala, pentru ca vocile generate sa nu para
-                    prea tinere cand varsta din sursa este neclara. Setari AI si Setari TTS folosesc acum acelasi flux
-                    <strong>Anuleaza</strong>, <strong>Salveaza</strong> si <strong>OK</strong>.
+                    Scene Ambience poate adauga intr-o scena blocuri sonore individuale ordonate. Fiecare bloc
+                    ambiental are prompt, prompt negativ si durata proprie, astfel incat poti construi atmosfera din
+                    surse sonore simple, nu dintr-un singur prompt complex. Blocurile de vorbire pot genera si reda
+                    audio pentru blocul selectat direct din pagina, Blocurile audio pot genera WAV pentru narator,
+                    personaje si Scene Ambience, iar Asamblarea audio poate include sau sari peste ambience in
+                    audiobook-ul final.
+                </p>
+                <p>
+                    Setari include teme luminoase si intunecate, teme personalizate, font separat pentru controalele
+                    interfetei si pentru ferestrele mari de text, plus import si export de teme in format JSON. Voce
+                    narator si Voci personaje pot importa esantioane WAV validate impreuna cu textul introdus de
+                    operator. Setari AI si Setari TTS folosesc acelasi flux <strong>Anuleaza</strong>,
+                    <strong>Salveaza</strong> si <strong>OK</strong>.
                 </p>
                 <div class="note">
                     AudioMancer pastreaza fiecare carte intr-un dosar de proiect. Nu muta fisierele proiectului cat timp
                     aplicatia este deschisa.
                 </div>
                 <div class="warning">
-                    Toate operatiile de generare din flux pot fi intrerupte si reluate mai tarziu din starea salvata a
-                    proiectului. Revino pe aceeasi pagina si porneste operatia din nou pentru continuare sau regenerare.
+                    Operatiile lungi de generare pot fi intrerupte si continuate mai tarziu. Revino pe aceeasi pagina
+                    si porneste operatia din nou pentru continuare sau regenerare.
                 </div>
                 <figure>
                     <img src="assets/screenshots/home-project.png" alt="Panoul Acasa">
@@ -109,7 +99,7 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                     <li><strong>VoiceWeaver este obligatoriu pentru audio.</strong> Instaleaza VoiceWeaver pe acelasi calculator sau pe un calculator din aceeasi retea.</li>
                     <li><strong>OpenAI</strong> poate fi folosit pentru curatare, segmentare, traducere, personaje si blocuri de vorbire.</li>
                     <li><strong>LM Studio</strong> poate fi folosit pentru aceleasi etape text, daca modelul local este incarcat si serverul API este pornit.</li>
-                    <li>OpenAI si LM Studio nu genereaza audio direct in AudioMancer 1.2.2; ele pregatesc textul si structura pentru VoiceWeaver.</li>
+                    <li>OpenAI si LM Studio nu genereaza audio direct in AudioMancer; ele pregatesc textul si structura pentru VoiceWeaver.</li>
                 </ul>
                 <div class="warning">
                     Daca VoiceWeaver nu este instalat sau nu poate fi accesat in retea, paginile text pot functiona, dar
@@ -284,13 +274,22 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                 <h2>Setari TTS</h2>
                 <p>
                     Setarile TTS configureaza conexiunea cu VoiceWeaver. Introdu adresa calculatorului unde ruleaza
-                    VoiceWeaver, portul API si optiunile implicite pentru vocile folosite in proiect. Apasa
+                    VoiceWeaver, portul API si optiunile implicite pentru vocile folosite in proiect. Aici setezi si
+                    valorile implicite pentru generarea Scene Ambience dupa ce Blocurile de vorbire creeaza prompturile
+                    ambientale. Apasa
                     <strong>Salveaza</strong> pentru a pastra modificarile fara inchiderea ferestrei sau
                     <strong>OK</strong> pentru a salva si inchide.
                 </p>
+                <ul>
+                    <li>Foloseste <strong>Test Connection</strong> pentru a descoperi modelele VoiceWeaver disponibile.</li>
+                    <li>Alege politica <strong>Scene Ambience Placement</strong>: inceput, final, schimbari de scena sau combinatii.</li>
+                    <li>Seteaza durata maxima soft pentru o secventa ambientala si numarul maxim de blocuri ambientale pe secventa.</li>
+                    <li>Seteaza guidance, numarul de pasi si seed-ul pentru modelul sound-prompt. Valoarea <strong>Random</strong> foloseste seed aleator.</li>
+                    <li>Activarea sau dezactivarea Scene Ambience ramane locala pe paginile Blocuri de vorbire si Blocuri audio.</li>
+                </ul>
                 <figure>
                     <img src="assets/screenshots/tts-settings-dialog.png" alt="Fereastra Setari TTS">
-                    <figcaption>Setarile TTS trebuie sa indice catre serviciul VoiceWeaver accesibil local sau in retea.</figcaption>
+                    <figcaption>Setarile TTS indica serviciul VoiceWeaver si pastreaza limitele plus parametrii Scene Ambience.</figcaption>
                 </figure>
             </section>
 
@@ -312,7 +311,7 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                 <h2>Exemplu flux manual</h2>
                 <p>
                     Acest exemplu arata un flux aproape complet manual. Foloseste-l cand vrei ca AudioMancer sa
-                    administreze fisierele proiectului, starea de verificare, vocile, audio generat si exporturile, dar
+                    administreze fisierele proiectului, progresul verificarii, vocile, audio generat si exporturile, dar
                     vrei sa decizi manual segmentele de text si Blocurile de vorbire.
                 </p>
                 <ol>
@@ -320,11 +319,11 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                     <li>Deschide <strong>Curatare text</strong>, ruleaza curatarea determinista, editeaza manual textul curatat daca este nevoie, apoi aproba rezultatul.</li>
                     <li>Deschide <strong>Segmentare text</strong>. Pentru o structura complet manuala, foloseste <strong>Insert</strong> pentru primul segment, introdu sau lipeste textul dorit si salveaza. Selecteaza un segment si apasa din nou <strong>Insert</strong> pentru a adauga urmatorul segment dupa cel curent.</li>
                     <li>Foloseste <strong>Edit</strong>, <strong>Save</strong> si <strong>Delete</strong> in Segmentare text pana cand lista de segmente corespunde ordinii dorite a cartii.</li>
-                    <li>Ruleaza <strong>Traducere AI</strong> numai cand limba audiobook-ului difera de limba sursa. Altfel, aproba segmentele pass-through.</li>
+                    <li>Ruleaza <strong>Traducere AI</strong> cand vrei o traducere sau o rescriere/adaptare AI in aceeasi limba. Daca nu este nevoie de traducere, continua numai dupa aprobarea segmentelor existente.</li>
                     <li>Deschide <strong>Personaje</strong>. Ruleaza descoperirea sau adauga/editeaza manual personajele. Confirma nume, aliasuri, indiciu de gen, indiciu de varsta, prompt de definitie vocala si dovezi, apoi aproba lista.</li>
                     <li>Deschide <strong>Voce narator</strong>. Genereaza sau editeaza profilul naratorului, creeaza sau importa mostra WAV, ascult-o si selecteaz-o.</li>
                     <li>Deschide <strong>Voci personaje</strong> cand proiectul foloseste voci de personaje. Genereaza sau importa mostrele disponibile; poti continua si daca numai o parte dintre personaje au deja mostre utilizabile.</li>
-                    <li>Deschide <strong>Blocuri de vorbire</strong>. Selecteaza primul segment sursa, apasa <strong>Insert</strong>, alege vorbitorul si tipul de continut, introdu textul si salveaza. Continua sa inserezi dupa blocul selectat pana cand segmentul contine naratiunea, dialogul, pauzele si metadatele dorite.</li>
+                    <li>Deschide <strong>Blocuri de vorbire</strong>. Selecteaza primul segment sursa, apasa <strong>Insert</strong>, alege vorbitorul si tipul de continut, introdu textul si salveaza. Continua sa inserezi dupa blocul selectat pana cand segmentul contine naratiunea, dialogul, pauzele, ambience-ul si indicatiile dorite.</li>
                     <li>Foloseste <strong>Edit</strong>, <strong>Delete</strong>, <strong>Approve</strong>, <strong>Generate Audio</strong> si <strong>Play/Stop</strong> pe Blocurile de vorbire selectate pentru verificare pe rand, fara pierderea selectiei curente.</li>
                     <li>Deschide <strong>Blocuri audio</strong> pentru a genera orice blocuri vorbite aprobate ramase, asculta fisierele WAV, regenereaza blocurile slabe, apoi aproba audio.</li>
                     <li>Deschide <strong>Asamblare audio</strong>, alege metoda de compunere, genereaza iesirea WAV finala si verifica fisierele cu controalele de redare.</li>
@@ -349,7 +348,7 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                     <li>Editeaza direct textul curatat pentru corectii manuale, imbunatatiri sau repararea OCR. Confirma mesajul de impact inainte de editare deoarece salvarile pot afecta datele etapelor urmatoare.</li>
                     <li>Aproba textul curatat numai dupa verificare; aprobarea deblocheaza Segmentare text.</li>
                     <li>Trage separatorul dintre previzualizarea textului extras si textului curatat; fiecare previzualizare pastreaza cel putin o treime din latimea paginii.</li>
-                    <li>Intrerupe operatia si reia mai tarziu din starea salvata.</li>
+                    <li>Intrerupe operatia si continua mai tarziu din acelasi proiect.</li>
                 </ul>
                 <figure>
                     <img src="assets/screenshots/text-cleanup.png" alt="Pagina Curatare text">
@@ -374,7 +373,7 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                     <li>Confirma inserarile si stergerile numai dupa ce citesti mesajul de impact. AudioMancer pastreaza traducerile, Blocurile de vorbire si Blocurile audio neafectate unde este posibil, dar reseteaza Asamblarea audio deoarece ordinea continutului final s-a schimbat.</li>
                     <li>Aproba segmentele pentru a debloca traducerea, personajele si Blocurile de vorbire.</li>
                     <li>Trage separatorul dintre zona de referinta/lista si previzualizarea segmentului selectat; fiecare parte pastreaza cel putin o treime din latimea paginii.</li>
-                    <li>Intrerupe segmentarea si reia mai tarziu din starea salvata.</li>
+                    <li>Intrerupe segmentarea si continua mai tarziu din acelasi proiect.</li>
                 </ul>
                 <figure>
                     <img src="assets/screenshots/text-chunking.png" alt="Pagina Segmentare text">
@@ -398,7 +397,7 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                     <li>Editeaza manual textul tradus inainte de aprobare.</li>
                     <li>Aproba segmente individuale dupa verificare.</li>
                     <li>Reporneste traducerea cand schimbi profilul AI sau vrei o noua varianta literara.</li>
-                    <li>Intrerupe traducerea si reia mai tarziu; starea segmentelor este salvata in proiect.</li>
+                    <li>Intrerupe traducerea si continua mai tarziu din acelasi proiect.</li>
                 </ul>
                 <figure>
                     <img src="assets/screenshots/ai-translation.png" alt="Pagina Traducere AI">
@@ -421,7 +420,7 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                     <li>Regeneraza definitii de voce dedicate cand descrierea nu este suficient de buna.</li>
                     <li>Aproba lista de personaje inainte de lucrul cu vocile.</li>
                     <li>Trage separatorul dintre zona de lucru cu personaje si dovezi; fiecare parte pastreaza cel putin o treime din latimea paginii.</li>
-                    <li>Intrerupe descoperirea personajelor si reia mai tarziu.</li>
+                    <li>Intrerupe descoperirea personajelor si continua mai tarziu.</li>
                 </ul>
                 <figure>
                     <img src="assets/screenshots/characters.png" alt="Pagina Personaje">
@@ -489,13 +488,17 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                 <h2>Blocuri de vorbire</h2>
                 <p>
                     Blocurile de vorbire transforma segmentele aprobate in unitati pregatite pentru audio. Verifica
-                    vorbitorul, textul, contorul de caractere, pauzele si indicatiile inainte de a aproba blocurile.
-                    Poti genera si asculta audio pentru blocul selectat fara sa treci pe pagina Blocuri audio.
+                    vorbitorul, textul, contorul de caractere, pauzele, indicatiile si blocurile Scene Ambience inainte
+                    de a aproba blocurile. Poti genera si asculta audio pentru blocul selectat fara sa treci pe pagina
+                    Blocuri audio.
                 </p>
                 <ul>
                     <li>Genereaza Blocuri de vorbire pentru fiecare segment aprobat.</li>
+                    <li>Foloseste selectorul Scene Ambience de pe pagina inainte de generare sau reimpartirea segmentului selectat pentru a decide daca acea rulare creeaza blocuri ambientale.</li>
                     <li>Adauga reguli optionale pentru Blocuri de vorbire in caseta de prompt cu incadrare automata inainte de generare noua sau reimpartirea segmentului selectat.</li>
-                    <li>Inspecteaza vorbitorul, tipul blocului, textul, durata pauzelor, indicatiile si metadatele.</li>
+                    <li>Inspecteaza vorbitorul, tipul blocului, textul, durata pauzelor, indicatiile si campurile Scene Ambience.</li>
+                    <li>Scene Ambience este salvat ca blocuri separate ordonate. Fiecare bloc ambiental trebuie sa descrie o singura sursa sonora simpla sau un tip de sunet strans legat, nu un mix compus.</li>
+                    <li>Editeaza promptul, promptul negativ si durata unui bloc Scene Ambience in aceeasi zona de detalii folosita pentru blocurile de narator si personaje.</li>
                     <li>Editeaza blocurile selectate cand textul sau atribuirea vorbitorului trebuie corectate. Daca blocul selectat are deja audio generat, avertismentul de impact apare cand apesi <strong>Edit</strong>, inainte ca editorul sa fie deblocat.</li>
                     <li>Foloseste contorul blocului selectat pentru a compara lungimea textului curent cu limita modelului TTS activ.</li>
                     <li>Insereaza sau sterge blocuri pentru a repara dialogul, pauzele sau fluxul narativ. Inserarea selecteaza blocul inserat; stergerea selecteaza urmatorul bloc ramas sau randul anterior cand blocul sters era ultimul.</li>
@@ -506,35 +509,40 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                     <li>Editarea, stergerea, reimpartirea sau schimbarea vorbitorului reseteaza numai Blocul audio afectat. Inserarea, aprobarea sau dezaprobarea unui Bloc de vorbire pastreaza Blocurile audio generate si reseteaza Asamblarea audio.</li>
                     <li>Reseteaza Blocurile de vorbire cand se schimba textul, traducerea, personajele sau modul de voce.</li>
                     <li>Trage separatorul dintre Segment selectat si Blocuri de vorbire; fiecare panou de jos pastreaza cel putin o treime din latimea paginii.</li>
-                    <li>Intrerupe generarea si reia mai tarziu fara pierderea blocurilor aprobate.</li>
+                    <li>Intrerupe generarea si continua mai tarziu fara pierderea blocurilor aprobate.</li>
                 </ul>
                 <figure>
                     <img src="assets/screenshots/speech-blocks.png" alt="Pagina Blocuri de vorbire">
-                    <figcaption>Blocurile aprobate devin intrarea pentru generarea audio.</figcaption>
+                    <figcaption>Blocurile aprobate definesc text vorbit, pauze, indicatii si prompturi individuale Scene Ambience.</figcaption>
                 </figure>
             </section>
 
             <section id="audio-blocks">
                 <h2>Blocuri audio</h2>
                 <p>
-                    Pagina Blocuri audio trimite blocurile aprobate catre VoiceWeaver si salveaza fisiere WAV. Daca
-                    textul, vocea sau parametrii se schimba, AudioMancer marcheaza fisierele vechi ca neactualizate.
+                    Pagina Blocuri audio trimite blocurile aprobate catre VoiceWeaver si salveaza fisiere WAV.
+                    Blocurile vorbite folosesc vocea naratorului sau a personajului. Blocurile Scene Ambience aprobate
+                    pot fi generate prin ruta sound-prompt cand selectorul Scene Ambience Audio este pornit. Daca
+                    textul, vocea, promptul, durata sau parametrii se schimba, AudioMancer marcheaza fisierele vechi
+                    ca neactualizate.
                 </p>
                 <ul>
                     <li>Genereaza WAV pentru Blocurile de vorbire aprobate si vorbite.</li>
+                    <li>Foloseste selectorul Scene Ambience Audio pentru a include sau sari peste blocurile ambientale aprobate in generarea Blocurilor audio.</li>
+                    <li>Genereaza WAV-uri Scene Ambience din promptul, promptul negativ si durata individuala a fiecarui bloc ambiental.</li>
                     <li>Foloseste <strong>Start Audio Generation</strong> pentru a continua dupa adaugarea sau stergerea Blocurilor de vorbire. Blocurile audio deja generate sunt sarite chiar daca nu sunt inca aprobate; se genereaza numai blocurile aprobate curente fara audio.</li>
-                    <li>Nu trimite la TTS blocurile doar-metadate: pauza, indicatie si background-noise.</li>
-                    <li>Imparte intern textul prea lung si reuneste partile valide intr-un singur bloc audio.</li>
+                    <li>Nu trimite la TTS blocurile de pauza si indicatie.</li>
+                    <li>Imparte textul prea lung cand este nevoie si reuneste partile valide intr-un singur bloc audio.</li>
                     <li>Previzualizeaza audio generat cu controale Play/Stop.</li>
                     <li>Regenereaza blocuri selectate dupa corectii de text, prompt sau voce. O regenerare pentru un singur bloc nu atinge celelalte Blocuri audio.</li>
                     <li>Aproba audio numai dupa ascultare.</li>
                     <li>Reseteaza blocurile audio cand intrarile anterioare devin neactualizate.</li>
                     <li>Trage separatorul dintre Text sursa si zona de verificare blocuri; fiecare parte pastreaza cel putin o treime din latimea paginii.</li>
-                    <li>Intrerupe generarea si reia mai tarziu din starea salvata.</li>
+                    <li>Intrerupe generarea si continua mai tarziu din acelasi proiect.</li>
                 </ul>
                 <figure>
                     <img src="assets/screenshots/audio-blocks.png" alt="Pagina Blocuri audio">
-                    <figcaption>Genereaza si verifica fiecare bloc audio inainte de asamblarea finala.</figcaption>
+                    <figcaption>Genereaza si verifica blocurile vorbite si Scene Ambience inainte de asamblarea finala.</figcaption>
                 </figure>
             </section>
 
@@ -553,7 +561,7 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                     <li>Configureaza pauza intre blocuri si pauza intre segmente.</li>
                     <li>Genereaza fisiere WAV finale in dosarul <code>audiobook/</code> al proiectului.</li>
                     <li>Reseteaza si regenereaza asamblarea cand setarile sau blocurile audio aprobate se schimba.</li>
-                    <li>Intrerupe asamblarea si reia mai tarziu cand starea salvata inca se potriveste intrarilor curente.</li>
+                    <li>Intrerupe asamblarea si continua mai tarziu cand intrarile curente inca se potrivesc.</li>
                 </ul>
                 <figure>
                     <img src="assets/screenshots/audio-assembly.png" alt="Pagina Asamblare audio">

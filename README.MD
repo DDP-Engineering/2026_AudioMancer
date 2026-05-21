@@ -35,15 +35,19 @@ AudioMancer supports a reviewed audiobook-preparation workflow that includes:
 - AI translation
 - character discovery
 - narrator and character voice preparation
-- speech block editing and approval
-- audio block generation
-- WAV audio assembly
+- speech block editing and approval, including optional Scene Ambience sound
+  cues as individual ordered blocks
+- audio block generation for spoken text and approved Scene Ambience prompts
+- WAV audio assembly with optional Scene Ambience inclusion
 - text, project, voice-sample, and audio-output exports
 
 The application is designed so operators can combine AI-assisted steps with
 manual review and manual editing. The workflow pages preserve completed work
 where possible and reset only affected downstream artifacts when source text,
 chunks, voices, speech blocks, audio blocks, or assembly settings change.
+Runtime diagnostics for generation workflows are written through the shared
+logging service so VoiceWeaver calls, Scene Ambience generation, and long
+operation checkpoints can be reviewed after a run.
 
 ## Repository Layout
 

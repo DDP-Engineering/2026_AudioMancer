@@ -14,7 +14,7 @@
          normalization.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-16
-@version 0.4.1
+@version 0.4.2
 """
 
 # IMPORTS
@@ -27,7 +27,7 @@ from audiomancer.services import (
     ui_state_service,
     voiceweaver_runtime_service,
 )
-from audiomancer.ui.controllers import audio_blocks_ui_controller, misc_ui_controller, settings_ui_controller
+from audiomancer.ui.controllers import audio_blocks_ui_controller, misc_ui_controller
 
 
 def show_tts_settings_dialog(window) -> None:
@@ -38,7 +38,7 @@ def show_tts_settings_dialog(window) -> None:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-16
-    @version    0.1.0
+    @version    0.1.1
     """
     project_plan_payload = None
     if window._current_project_root is not None:
@@ -99,7 +99,6 @@ def _persist_tts_settings_from_dialog(window, *, close_dialog: bool) -> None:
         )
         if global_voice_model_changed:
             audio_blocks_ui_controller.invalidate_all_audio_blocks_after_voice_settings_change(window)
-    settings_ui_controller.apply_current_ui_settings(window)
     window.show_project_state(window._current_project_root, window._current_manifest)
     if close_dialog:
         window._tts_settings_dialog.close()

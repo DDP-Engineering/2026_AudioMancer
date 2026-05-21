@@ -30,14 +30,14 @@ SPEAKER_KIND_CHARACTER = "character"
 SPEAKER_KIND_OPERATION = "operation"
 CONTENT_KIND_NARRATION = "narration"
 CONTENT_KIND_DIALOGUE = "dialogue"
-CONTENT_KIND_BACKGROUND_NOISE = "background_noise"
+CONTENT_KIND_SCENE_AMBIENCE = "scene_ambience"
 CONTENT_KIND_PAUSE = "pause"
 CONTENT_KIND_INDICATION = "indication"
 
 SPEECH_BLOCK_CONTENT_KINDS = (
     CONTENT_KIND_NARRATION,
     CONTENT_KIND_DIALOGUE,
-    CONTENT_KIND_BACKGROUND_NOISE,
+    CONTENT_KIND_SCENE_AMBIENCE,
     CONTENT_KIND_PAUSE,
     CONTENT_KIND_INDICATION,
 )
@@ -151,7 +151,7 @@ def is_operation_content_kind(content_kind: str) -> bool:
     @version    0.1.0
     """
     return str(content_kind).strip() in {
-        CONTENT_KIND_BACKGROUND_NOISE,
+        CONTENT_KIND_SCENE_AMBIENCE,
         CONTENT_KIND_PAUSE,
         CONTENT_KIND_INDICATION,
     }
@@ -186,7 +186,7 @@ def operation_display_name(content_kind: str) -> str:
     @version    0.1.0
     """
     return {
-        CONTENT_KIND_BACKGROUND_NOISE: "Background Noise",
+        CONTENT_KIND_SCENE_AMBIENCE: "Scene Ambience",
         CONTENT_KIND_PAUSE: "Pause",
         CONTENT_KIND_INDICATION: "Indication",
     }.get(str(content_kind).strip(), "Operation")

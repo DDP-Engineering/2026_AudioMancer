@@ -46,7 +46,8 @@ def test_content_kind_and_operation_entry_normalization() -> None:
     @date       2026-04-29
     @version    0.1.0
     """
-    assert speech_blocks_normalization_service.normalize_content_kind("Background Noise") == "background_noise"
+    assert speech_blocks_normalization_service.normalize_content_kind("Scene Ambience") == "scene_ambience"
+    assert speech_blocks_normalization_service.normalize_content_kind("Background Noise") == "narration"
     assert speech_blocks_normalization_service.normalize_content_kind("unsupported") == "narration"
     assert speech_blocks_normalization_service.is_operation_content_kind("pause")
 
