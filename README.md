@@ -23,19 +23,26 @@ Download AudioMancer from the current GitHub Release (`v1.3.0`):
 - [AudioMancer_Windows_x64.zip](https://github.com/DDP-Engineering/2026_AudioMancer/releases/latest/download/AudioMancer_Windows_x64.zip)
 - [SHA256SUMS.txt](https://github.com/DDP-Engineering/2026_AudioMancer/releases/latest/download/SHA256SUMS.txt)
 
-Download VoiceWeaver from the `v1.0.0` release if you do not already have the runtime package locally:
+Download VoiceWeaver from the 1.0.0 release if you do not already have the runtime package locally:
 
-- [VoiceWeaver-v1.2.2-windows-x64-cuda-models-2.zip.part001](https://github.com/DDP-Engineering/2026_AudioMancer/releases/download/v1.0.0/VoiceWeaver-v1.2.2-windows-x64-cuda-models-2.zip.part001)
-- [VoiceWeaver-v1.2.2-windows-x64-cuda-models-2.zip.part002](https://github.com/DDP-Engineering/2026_AudioMancer/releases/download/v1.0.0/VoiceWeaver-v1.2.2-windows-x64-cuda-models-2.zip.part002)
-- [VoiceWeaver-v1.2.2-windows-x64-cuda-models-2.zip.part003](https://github.com/DDP-Engineering/2026_AudioMancer/releases/download/v1.0.0/VoiceWeaver-v1.2.2-windows-x64-cuda-models-2.zip.part003)
-- [VoiceWeaver-v1.2.2-windows-x64-cuda-models-2.zip.part004](https://github.com/DDP-Engineering/2026_AudioMancer/releases/download/v1.0.0/VoiceWeaver-v1.2.2-windows-x64-cuda-models-2.zip.part004)
-- [VoiceWeaver-v1.2.2-windows-x64-cuda-models-2.zip.part005](https://github.com/DDP-Engineering/2026_AudioMancer/releases/download/v1.0.0/VoiceWeaver-v1.2.2-windows-x64-cuda-models-2.zip.part005)
-- [VoiceWeaver-v1.2.2-windows-x64-cuda-models-2.zip.part006](https://github.com/DDP-Engineering/2026_AudioMancer/releases/download/v1.0.0/VoiceWeaver-v1.2.2-windows-x64-cuda-models-2.zip.part006)
-- [VoiceWeaver-v1.2.2-windows-x64-cuda-models-2.zip.part007](https://github.com/DDP-Engineering/2026_AudioMancer/releases/download/v1.0.0/VoiceWeaver-v1.2.2-windows-x64-cuda-models-2.zip.part007)
-- [VoiceWeaver-v1.2.2-windows-x64-cuda-models-2.zip.part008](https://github.com/DDP-Engineering/2026_AudioMancer/releases/download/v1.0.0/VoiceWeaver-v1.2.2-windows-x64-cuda-models-2.zip.part008)
+- [VoiceWeaver-v1.5.0-windows-x64-cuda.zip.part001](https://github.com/DDP-Engineering/2026_AudioMancer/releases/download/v1.0.0/VoiceWeaver-v1.5.0-windows-x64-cuda.zip.part001)
+- [VoiceWeaver-v1.5.0-windows-x64-cuda.zip.part002](https://github.com/DDP-Engineering/2026_AudioMancer/releases/download/v1.0.0/VoiceWeaver-v1.5.0-windows-x64-cuda.zip.part002)
+- [VoiceWeaver-v1.5.0-windows-x64-cuda.zip.part003](https://github.com/DDP-Engineering/2026_AudioMancer/releases/download/v1.0.0/VoiceWeaver-v1.5.0-windows-x64-cuda.zip.part003)
+- [VoiceWeaver-v1.5.0-windows-x64-cuda.zip.part004](https://github.com/DDP-Engineering/2026_AudioMancer/releases/download/v1.0.0/VoiceWeaver-v1.5.0-windows-x64-cuda.zip.part004)
+- [VoiceWeaver-v1.5.0-windows-x64-cuda.zip.part005](https://github.com/DDP-Engineering/2026_AudioMancer/releases/download/v1.0.0/VoiceWeaver-v1.5.0-windows-x64-cuda.zip.part005)
+- [VoiceWeaver-v1.5.0-windows-x64-cuda.zip.part006](https://github.com/DDP-Engineering/2026_AudioMancer/releases/download/v1.0.0/VoiceWeaver-v1.5.0-windows-x64-cuda.zip.part006)
+- [VoiceWeaver-v1.5.0-windows-x64-cuda.zip.part007](https://github.com/DDP-Engineering/2026_AudioMancer/releases/download/v1.0.0/VoiceWeaver-v1.5.0-windows-x64-cuda.zip.part007)
+- [VoiceWeaver-v1.5.0-windows-x64-cuda.zip.part008](https://github.com/DDP-Engineering/2026_AudioMancer/releases/download/v1.0.0/VoiceWeaver-v1.5.0-windows-x64-cuda.zip.part008)
+- [VoiceWeaver-v1.5.0-windows-x64-cuda.zip.part009](https://github.com/DDP-Engineering/2026_AudioMancer/releases/download/v1.0.0/VoiceWeaver-v1.5.0-windows-x64-cuda.zip.part009)
+- [VoiceWeaver-v1.5.0-windows-x64-cuda.zip.part010](https://github.com/DDP-Engineering/2026_AudioMancer/releases/download/v1.0.0/VoiceWeaver-v1.5.0-windows-x64-cuda.zip.part010)
+- [VoiceWeaver-v1.5.0-windows-x64-cuda.zip.part011](https://github.com/DDP-Engineering/2026_AudioMancer/releases/download/v1.0.0/VoiceWeaver-v1.5.0-windows-x64-cuda.zip.part011)
+- [VoiceWeaver-v1.5.0-windows-x64-cuda.zip.part012](https://github.com/DDP-Engineering/2026_AudioMancer/releases/download/v1.0.0/VoiceWeaver-v1.5.0-windows-x64-cuda.zip.part012)
+- [VoiceWeaver-v1.5.0-windows-x64-cuda.zip.part013](https://github.com/DDP-Engineering/2026_AudioMancer/releases/download/v1.0.0/VoiceWeaver-v1.5.0-windows-x64-cuda.zip.part013)
+- [VoiceWeaver-v1.5.0-windows-x64-cuda.zip.part014](https://github.com/DDP-Engineering/2026_AudioMancer/releases/download/v1.0.0/VoiceWeaver-v1.5.0-windows-x64-cuda.zip.part014)
+- [VoiceWeaver-v1.5.0-windows-x64-cuda.zip.part015](https://github.com/DDP-Engineering/2026_AudioMancer/releases/download/v1.0.0/VoiceWeaver-v1.5.0-windows-x64-cuda.zip.part015)
 - [VoiceWeaver SHA256SUMS.txt](https://github.com/DDP-Engineering/2026_AudioMancer/releases/download/v1.0.0/SHA256SUMS.txt)
 
-VoiceWeaver is split into numbered release assets because the full Windows package can be larger than one GitHub release asset. Download all eight parts before reassembly.
+VoiceWeaver is split into numbered release assets because the full Windows package can be larger than one GitHub release asset. Download all 15 parts before reassembly.
 
 ## Install AudioMancer
 
@@ -45,7 +52,7 @@ VoiceWeaver is split into numbered release assets because the full Windows packa
 
 ## Install VoiceWeaver
 
-1. Download all eight VoiceWeaver `.partNNN` files from the `v1.0.0` release.
+1. Download all 15 VoiceWeaver `.partNNN` files from the `v1.0.0` release.
 2. Put all parts in one folder.
 3. Reassemble the VoiceWeaver ZIP with PowerShell.
 4. Extract the VoiceWeaver ZIP to a normal folder, for example `C:\VoiceWeaver`.
@@ -57,7 +64,7 @@ VoiceWeaver is split into numbered release assets because the full Windows packa
 Run this from the folder containing all VoiceWeaver parts:
 
 ```powershell
-$outputZip = "VoiceWeaver-v1.2.2-windows-x64-cuda-models-2.zip"
+$outputZip = "VoiceWeaver-v1.5.0-windows-x64-cuda.zip"
 $parts = Get-ChildItem "$outputZip.part*" | Sort-Object Name
 $out = [IO.File]::Create($outputZip)
 foreach ($part in $parts) {
@@ -79,7 +86,7 @@ The current VoiceWeaver package contains:
 Expected reassembled VoiceWeaver ZIP SHA256:
 
 ```text
-a7ebe2dd594586da8b321aedd41ea8ddd12a4ee68a353c1e48b8dd6c5ee3aa5a
+393cdf6f57907d8b6651b4bf2069b8a19956b6d4830d568c0b5c0a06b0054aa2
 ```
 
 Expected AudioMancer ZIP SHA256:
