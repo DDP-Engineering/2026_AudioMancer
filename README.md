@@ -23,7 +23,7 @@ Download AudioMancer from the current GitHub Release (`v1.3.0`):
 - [AudioMancer_Windows_x64.zip](https://github.com/DDP-Engineering/2026_AudioMancer/releases/latest/download/AudioMancer_Windows_x64.zip)
 - [SHA256SUMS.txt](https://github.com/DDP-Engineering/2026_AudioMancer/releases/latest/download/SHA256SUMS.txt)
 
-Download VoiceWeaver from the 1.0.0 release if you do not already have the runtime package locally:
+Download VoiceWeaver from the `v1.0.0` release if you do not already have the runtime package locally:
 
 - [VoiceWeaver-v1.5.0-windows-x64-cuda.zip.part001](https://github.com/DDP-Engineering/2026_AudioMancer/releases/download/v1.0.0/VoiceWeaver-v1.5.0-windows-x64-cuda.zip.part001)
 - [VoiceWeaver-v1.5.0-windows-x64-cuda.zip.part002](https://github.com/DDP-Engineering/2026_AudioMancer/releases/download/v1.0.0/VoiceWeaver-v1.5.0-windows-x64-cuda.zip.part002)
@@ -78,10 +78,7 @@ Get-FileHash -Algorithm SHA256 $outputZip
 
 ## Current VoiceWeaver Package
 
-The current VoiceWeaver package contains:
-
-- `Qwen3-TTS-12Hz-1.7B-Base`
-- `Qwen3-TTS-12Hz-1.7B-VoiceDesign`
+The current VoiceWeaver package is `VoiceWeaver-v1.5.0-windows-x64-cuda.zip`.
 
 Expected reassembled VoiceWeaver ZIP SHA256:
 
