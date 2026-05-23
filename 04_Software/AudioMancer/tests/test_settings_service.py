@@ -13,7 +13,7 @@
          persisted settings self-healing, and validated save behavior.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-22
-@version 0.7.0
+@version 0.7.1
 """
 
 # IMPORTS
@@ -544,7 +544,7 @@ def test_validate_settings_repairs_tts_audio_timeouts_and_preview_limit() -> Non
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-18
-    @version    1.2.0
+    @version    1.2.1
     """
     candidate_settings = settings_service.build_default_settings()
     candidate_settings["tts_audio_preview_timeout_seconds"] = 0
@@ -572,6 +572,7 @@ def test_validate_settings_repairs_tts_audio_timeouts_and_preview_limit() -> Non
     )
     assert validated_settings["scene_ambience_num_inference_steps"] == config.DEFAULT_SCENE_AMBIENCE_NUM_INFERENCE_STEPS
     assert validated_settings["scene_ambience_seed"] == config.DEFAULT_SCENE_AMBIENCE_SEED
+    assert validated_settings["scene_ambience_placement"] == "none"
     assert "scene_ambience_generation_enabled" not in validated_settings
     assert "scene_ambience_audio_generation_enabled" not in validated_settings
 

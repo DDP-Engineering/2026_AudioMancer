@@ -14,7 +14,7 @@
          settings file to the application root.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-22
-@version 0.10.1
+@version 0.10.2
 """
 
 # IMPORTS
@@ -307,7 +307,7 @@ def _validate_settings_internal(settings_payload: object) -> tuple[dict[str, Any
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-23
-    @version    0.2.0
+    @version    0.2.1
     """
     repairs_made: list[bool] = []
     defaults = build_default_settings()
@@ -352,7 +352,7 @@ def _validate_settings_internal(settings_payload: object) -> tuple[dict[str, Any
         if deprecated_field_name in normalized_settings:
             normalized_settings.pop(deprecated_field_name, None)
             _log_settings_repair(
-                f"Removed deprecated '{deprecated_field_name}' setting; workflow pages own this selector state.",
+                f"Removed deprecated '{deprecated_field_name}' setting; Scene Ambience placement now owns enablement.",
                 deprecated_field_name,
                 repair_tracker=repairs_made,
             )

@@ -13,7 +13,7 @@
          file support used by the current AudioMancer implementation scaffold.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 1.41.2
+@version 1.41.4
 """
 
 # IMPORTS
@@ -551,15 +551,13 @@ DEFAULT_SCENE_AMBIENCE_GENERATION_ENABLED = False
 
 # @brief Scene Ambience placement options used by Speech Blocks generation.
 SCENE_AMBIENCE_PLACEMENT_OPTIONS = (
-    "openers",
-    "closers",
+    "none",
     "openers_and_closers",
-    "scene_changes",
     "openers_closers_and_scene_changes",
 )
 
 # @brief Default Scene Ambience placement policy.
-DEFAULT_SCENE_AMBIENCE_PLACEMENT = "openers_and_closers"
+DEFAULT_SCENE_AMBIENCE_PLACEMENT = "none"
 
 # @brief Default maximum generated Scene Ambience sequence duration in seconds.
 DEFAULT_SCENE_AMBIENCE_DURATION_SECONDS = 10

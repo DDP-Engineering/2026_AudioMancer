@@ -136,10 +136,10 @@ High-level flow:
     Speech Blocks and continue later.
 12. Audio Blocks approval changes preserve generated WAV files and reset only
     Audio Assembly outputs because final assembly eligibility changes. Approval
-    advances the selected row to the next Audio Block when one exists, while
-    unapproval keeps the same row selected. Selected regeneration replaces only
-    that block, clears its approval, preserves unrelated Audio Blocks, and
-    resets Audio Assembly.
+    advances the selected row to the next generated pending Audio Block when
+    one exists, including Scene Ambience rows, while unapproval keeps the same
+    row selected. Selected regeneration replaces only that block, clears its
+    approval, preserves unrelated Audio Blocks, and resets Audio Assembly.
 13. Speech Blocks edits, resets, approvals, inserts, deletes, and selected-chunk
     re-splits reset generated Audio Blocks data only for the affected source
     chunk, deleting that chunk's generated WAV and split-part files while
@@ -396,7 +396,8 @@ Operator path:
 - regenerate one selected block when the source Speech Block and voice target
   are still valid but the generated audio should be replaced
 - after selected-block approval, the page advances the speech-block list to
-  the next row when one exists and keeps the final row selected at the end
+  the next generated pending Audio Block when one exists, including Scene
+  Ambience rows, and keeps the final row selected at the end
 - the selected detail action row shows current speech-block text characters
   against the active TTS budget
 - if interrupted, press `Start Audio Generation` again to continue from the

@@ -14,7 +14,7 @@
          Speech Blocks workflow.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 0.8.7
+@version 0.8.8
 """
 
 # IMPORTS
@@ -48,7 +48,7 @@ def handle_generate_requested(window: "MainWindow", profile_id: str) -> None:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-13
-    @version    0.4.0
+    @version    0.4.1
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._active_operation_kind is not None:
@@ -78,7 +78,7 @@ def handle_generate_requested(window: "MainWindow", profile_id: str) -> None:
         )
         return
 
-    scene_ambience_enabled = _scene_ambience_enabled_from_page(window)
+    scene_ambience_enabled = _scene_ambience_enabled_from_settings(window._settings_payload)
     if not _confirm_generation(window, current_language):
         return
     if scene_ambience_enabled and not _confirm_scene_ambience_speech_blocks(window, current_language):
@@ -102,7 +102,6 @@ def handle_generate_requested(window: "MainWindow", profile_id: str) -> None:
                 progress_callback=progress_callback,
                 cancel_requested=cancel_requested,
                 additional_speech_block_instructions=additional_speech_block_instructions,
-                scene_ambience_enabled=scene_ambience_enabled,
             )
         ),
     )
@@ -142,7 +141,7 @@ def handle_approve_all_requested(window: "MainWindow") -> None:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-13
-    @version    0.3.0
+    @version    0.3.1
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._current_project_root is None or window._current_manifest is None:
@@ -374,7 +373,7 @@ def handle_resplit_selected_requested(window: "MainWindow", chunk_id: str) -> No
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-13
-    @version    0.3.0
+    @version    0.3.1
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._active_operation_kind is not None:
@@ -389,7 +388,7 @@ def handle_resplit_selected_requested(window: "MainWindow", chunk_id: str) -> No
             ui_state_service.translate("project.error_missing_speech_blocks_profile", current_language),
         )
         return
-    scene_ambience_enabled = _scene_ambience_enabled_from_page(window)
+    scene_ambience_enabled = _scene_ambience_enabled_from_settings(window._settings_payload)
     if not _confirm_speech_blocks_resplit(window, current_language):
         return
     if scene_ambience_enabled and not _confirm_scene_ambience_speech_blocks(window, current_language):
@@ -411,7 +410,6 @@ def handle_resplit_selected_requested(window: "MainWindow", chunk_id: str) -> No
                 progress_callback=progress_callback,
                 cancel_requested=cancel_requested,
                 additional_speech_block_instructions=additional_speech_block_instructions,
-                scene_ambience_enabled=scene_ambience_enabled,
             )
         ),
         success_message_key="status.speech_blocks_resplit",
@@ -591,20 +589,20 @@ def _resolve_ai_profile(settings_payload: dict[str, object] | None, profile_id: 
     return workflow_controller_service.resolve_enabled_ai_profile(settings_payload, profile_id)
 
 
-def _scene_ambience_enabled_from_page(window: "MainWindow") -> bool:
+def _scene_ambience_enabled_from_settings(settings_payload: dict[str, object] | None) -> bool:
     """
-    @brief      Resolve the current Speech Blocks page Scene Ambience selector value.
-    @param[in]  window Active main window instance.
-    @return     True when Scene Ambience generation is enabled on the page.
+    @brief      Resolve whether TTS settings enable Speech Blocks Scene Ambience generation.
+    @param[in]  settings_payload Persisted application settings payload.
+    @return     True when the configured placement is not `none`.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-21
-    @version    0.1.0
+    @version    0.2.0
     """
-    page = getattr(window, "_speech_blocks_page", None)
-    if page is None or not hasattr(page, "scene_ambience_enabled"):
+    if not isinstance(settings_payload, dict):
         return False
-    return bool(page.scene_ambience_enabled())
+    placement = str(settings_payload.get("scene_ambience_placement", config.DEFAULT_SCENE_AMBIENCE_PLACEMENT)).strip()
+    return placement in config.SCENE_AMBIENCE_PLACEMENT_OPTIONS and placement != "none"
 
 
 def _reset_speech_blocks_and_downstream(window: "MainWindow") -> None:

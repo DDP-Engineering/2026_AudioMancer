@@ -13,7 +13,7 @@
          discovered-model rendering, and runtime limit persistence.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-17
-@version 1.4.0
+@version 1.4.2
 """
 
 # IMPORTS
@@ -32,7 +32,7 @@ def test_tts_settings_page_loads_runtime_limits_without_project_plan(qtbot, defa
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-17
-    @version    1.3.1
+    @version    1.3.3
     """
     page = TtsSettingsPage()
     qtbot.addWidget(page)
@@ -64,6 +64,14 @@ def test_tts_settings_page_loads_runtime_limits_without_project_plan(qtbot, defa
     assert page._scene_ambience_guidance_spin.value() == 8.5
     assert page._scene_ambience_steps_spin.value() == 80
     assert page._scene_ambience_seed_spin.value() == 1234
+    assert [page._scene_ambience_placement_combo.itemData(index) for index in range(3)] == [
+        "none",
+        "openers_and_closers",
+        "openers_closers_and_scene_changes",
+    ]
+    assert page._scene_ambience_placement_combo.count() == 3
+    assert page._scene_ambience_placement_combo.itemData(0) == "none"
+    assert page._scene_ambience_placement_combo.currentData() == "none"
     assert page.build_tts_plan_payload() is None
     assert page.build_settings(default_settings_payload)["tts_audio_preview_timeout_seconds"] == 75
     assert page.build_settings(default_settings_payload)["tts_audio_generation_timeout_seconds"] == 420
@@ -72,6 +80,7 @@ def test_tts_settings_page_loads_runtime_limits_without_project_plan(qtbot, defa
     assert page.build_settings(default_settings_payload)["scene_ambience_max_blocks_per_sequence"] == 4
     assert page.build_settings(default_settings_payload)["scene_ambience_num_inference_steps"] == 80
     assert page.build_settings(default_settings_payload)["scene_ambience_seed"] == 1234
+    assert page.build_settings(default_settings_payload)["scene_ambience_placement"] == "none"
     assert "scene_ambience_generation_enabled" not in page.build_settings(default_settings_payload)
     assert "scene_ambience_audio_generation_enabled" not in page.build_settings(default_settings_payload)
     assert page._cancel_button.text() == "Cancel"

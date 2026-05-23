@@ -13,7 +13,7 @@
          bounded approval navigation, and selected-row action enablement.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-23
-@version 0.6.3
+@version 0.6.4
 """
 
 # IMPORTS
@@ -109,6 +109,81 @@ def test_audio_blocks_page_renders_source_list_markers_and_selected_details(qtbo
     assert page._character_count_edit.text() == "12 / 180"
     assert page._selected_playback_button.isEnabled() is True
     assert page._audiobook_playback_button.isEnabled() is True
+
+
+def test_audio_blocks_page_advances_to_next_pending_generated_scene_ambience_row(qtbot) -> None:
+    """
+    @brief      Verify approval navigation prefers the next generated pending row, including Scene Ambience.
+    @param[in]  qtbot Qt test helper fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-22
+    @version    0.1.0
+    """
+    page = AudioBlocksPage()
+    qtbot.addWidget(page)
+    page.set_project_active(True)
+    page.set_audio_blocks_state(
+        full_source_text="Narration.\n\nScene change.\n\nMore narration.",
+        speech_blocks=[
+            {
+                "speech_block_id": "0001-000001",
+                "sequence_index": 1,
+                "speaker_display_name": "Narrator",
+                "text": "Narration.",
+                "generated": True,
+                "approved": False,
+                "audio_file_name": "000001_narrator.wav",
+                "audio_duration_seconds": 1.0,
+                "can_play": True,
+                "is_current": True,
+            },
+            {
+                "speech_block_id": "0001-000002",
+                "sequence_index": 2,
+                "speaker_display_name": "Alice",
+                "text": "Already checked.",
+                "generated": True,
+                "approved": True,
+                "audio_file_name": "000002_alice.wav",
+                "audio_duration_seconds": 1.0,
+                "can_play": True,
+                "is_current": False,
+            },
+            {
+                "speech_block_id": "0001-000003",
+                "sequence_index": 3,
+                "speaker_display_name": "Scene Ambience",
+                "text": "distant muffled sound of a single book being closed",
+                "content_kind": "scene_ambience",
+                "generated": True,
+                "approved": False,
+                "audio_file_name": "000003_scene_ambience.wav",
+                "audio_duration_seconds": 1.5,
+                "can_play": True,
+                "is_current": False,
+            },
+        ],
+        current_block_id="0001-000001",
+        current_block_speaker="Narrator",
+        current_block_text="Narration.",
+        notes=["Ready."],
+        status_lines=["Generated audio: 3/3"],
+        progress_current=3,
+        progress_total=3,
+        progress_percent=100,
+        stage_status="in_progress",
+        can_start_or_continue=True,
+        can_reset=True,
+        can_approve_all=True,
+        can_regenerate_selected=True,
+        can_approve_selected=True,
+    )
+
+    page.advance_to_next_block()
+
+    assert page.selected_block_id() == "0001-000003"
 
 
 def test_audio_blocks_page_places_scene_ambience_selector_on_progress_row(qtbot) -> None:

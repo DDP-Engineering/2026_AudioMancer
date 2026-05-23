@@ -133,7 +133,8 @@ High-level flow:
    `translated_text.json`.
 3. The controller confirms that the operator wants to start or continue one AI
    run, asks for optional operator Speech Blocks rules on fresh runs, and warns
-   about time plus token usage.
+   about time plus token usage. Scene Ambience generation is enabled only when
+   `TTS Settings` stores a `scene_ambience_placement` value other than `none`.
 4. `speech_blocks_service.start_or_continue_generation(...)` validates the
    selected prompt files, builds request budget metadata from the selected AI
    profile and prompt shell, restores resumable state when the saved checkpoint
@@ -163,9 +164,10 @@ High-level flow:
 7. Finished full generation disables `Generate Speech Blocks`, enables
    `Reset Speech Blocks`, resets downstream Audio Blocks plus Audio Assembly
    data, and leaves Speech Blocks in review until all blocks are approved.
-8. `Approve All Speech Blocks` marks every block approved, advances the
-   manifest and Home-page operation summary to completed `speech_blocks_ready`,
-   and resets Audio Assembly without deleting generated Audio Blocks.
+8. `Approve All Speech Blocks` marks every block approved, clears any reviewed
+   warning flags, advances the manifest and Home-page operation summary to
+   completed `speech_blocks_ready`, and resets Audio Assembly without deleting
+   generated Audio Blocks.
 9. Pressing Edit on one block asks for confirmation when that exact Speech
    Block already has generated audio, then unlocks the editor only after the
    operator accepts the impact prompt. Save commits the edit without asking
@@ -177,7 +179,8 @@ High-level flow:
     preserves existing generated Audio Blocks, selects the inserted block,
     preserves the selected chunk review context, and resets Audio Assembly
     because playback order changed.
-11. Re-splitting one chunk asks for optional operator Speech Blocks rules,
+11. Re-splitting one chunk uses the Scene Ambience placement from `TTS Settings`,
+    asks for optional operator Speech Blocks rules,
     replaces only that chunk's Speech Blocks, rebuilds that chunk's local
     sequence indexes and block IDs, marks new blocks unapproved, rolls Speech
     Blocks back from complete, and asks Audio Blocks to delete/remap only the

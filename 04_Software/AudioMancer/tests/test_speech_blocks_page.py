@@ -14,7 +14,7 @@
          preservation, translated labels, and generation button enablement.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-24
-@version 0.8.2
+@version 0.8.3
 """
 
 # IMPORTS
@@ -237,13 +237,13 @@ def test_speech_blocks_page_enables_selected_audio_controls_for_scene_ambience(q
 
 def test_speech_blocks_page_selected_chunk_actions_fill_row_evenly(qtbot) -> None:
     """
-    @brief      Verify selected-chunk action controls align under the chunk editor and use equal width.
+    @brief      Verify selected-chunk action controls align under the chunk editor.
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-20
-    @version    0.2.0
+    @version    0.3.0
     """
     page = SpeechBlocksPage()
     qtbot.addWidget(page)
@@ -264,10 +264,9 @@ def test_speech_blocks_page_selected_chunk_actions_fill_row_evenly(qtbot) -> Non
     qtbot.wait(0)
 
     assert page._resplit_button.minimumWidth() >= 180
-    assert page._scene_ambience_combo.minimumWidth() >= 180
     assert page._resplit_button.geometry().left() == page._source_text_edit.geometry().left()
-    assert abs(page._scene_ambience_combo.geometry().right() - page._source_text_edit.geometry().right()) <= 2
-    assert abs(page._resplit_button.width() - page._scene_ambience_combo.width()) <= 1
+    assert abs(page._resplit_button.geometry().right() - page._source_text_edit.geometry().right()) <= 2
+    assert hasattr(page, "_scene_ambience_combo") is False
 
 
 def test_speech_blocks_page_metadata_controls_align_to_list_edges(qtbot) -> None:

@@ -14,7 +14,7 @@
          controls for the Speech Blocks workflow.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-24
-@version 0.8.5
+@version 0.8.6
 """
 
 # IMPORTS
@@ -86,7 +86,7 @@ class SpeechBlocksPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-24
-        @version    0.7.2
+        @version    0.7.3
         """
         super().__init__(parent)
         self._current_language = "en"
@@ -104,7 +104,6 @@ class SpeechBlocksPage(QWidget):
         self._can_reset = False
         self._can_approve_all = False
         self._can_resplit_selected = False
-        self._scene_ambience_enabled = False
         self._selected_text_character_limit = 0
         self._current_chunk_id: str | None = None
         self._current_block_id: str | None = None
@@ -196,13 +195,6 @@ class SpeechBlocksPage(QWidget):
         self._resplit_button.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         self._resplit_button.clicked.connect(self._emit_resplit_selected)
         self._source_action_row.addWidget(self._resplit_button, 1)
-        self._scene_ambience_combo = QComboBox(self)
-        self._scene_ambience_combo.setMinimumWidth(_SOURCE_ACTION_CONTROL_MIN_WIDTH_PX)
-        self._scene_ambience_combo.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
-        self._scene_ambience_combo.addItem("Scene Ambience Off", False)
-        self._scene_ambience_combo.addItem("Scene Ambience On", True)
-        self._scene_ambience_combo.currentIndexChanged.connect(self._handle_scene_ambience_combo_changed)
-        self._source_action_row.addWidget(self._scene_ambience_combo, 1)
         self._source_layout.addLayout(self._source_action_row)
         self._lower_splitter.addWidget(self._source_group)
 
@@ -379,7 +371,6 @@ class SpeechBlocksPage(QWidget):
         can_reset: bool = False,
         can_approve_all: bool = False,
         can_resplit_selected: bool = False,
-        scene_ambience_enabled: bool = False,
         selected_text_character_limit: int = 0,
         **_extra_state,
     ) -> None:
@@ -406,7 +397,7 @@ class SpeechBlocksPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-24
-        @version    0.4.0
+        @version    0.4.1
         """
         _ = selected_source_language
         _ = approved_block_count
@@ -422,8 +413,6 @@ class SpeechBlocksPage(QWidget):
         self._can_reset = can_reset
         self._can_approve_all = can_approve_all
         self._can_resplit_selected = can_resplit_selected
-        self._scene_ambience_enabled = bool(scene_ambience_enabled)
-        self._set_scene_ambience_combo_enabled_value(self._scene_ambience_enabled)
         self._selected_text_character_limit = max(0, int(selected_text_character_limit))
         current_block_id = self._current_block_id
         current_review_position = self.review_position()
@@ -512,17 +501,6 @@ class SpeechBlocksPage(QWidget):
         @version    0.1.0
         """
         return self._current_block_id
-
-    def scene_ambience_enabled(self) -> bool:
-        """
-        @brief      Return whether Scene Ambience analysis is enabled on the Speech Blocks page.
-        @return     True when Scene Ambience analysis should run.
-        @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-20
-        @version    0.1.0
-        """
-        return bool(self._scene_ambience_combo.currentData())
 
     def source_scroll_position(self) -> int:
         """
@@ -684,7 +662,7 @@ class SpeechBlocksPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-24
-        @version    0.4.2
+        @version    0.4.3
         """
         self._current_language = language
         self._title_label.setText(f"<h2>{ui_state_service.translate('speech_blocks.title', language)}</h2>")
@@ -705,7 +683,6 @@ class SpeechBlocksPage(QWidget):
         )
         self._ambient_duration_label.setText(ui_state_service.translate("speech_blocks.ambient_duration", language))
         self._resplit_button.setText(ui_state_service.translate("speech_blocks.resplit_selected", language))
-        self._refresh_scene_ambience_combo_labels()
         self._edit_button.setText(ui_state_service.translate("speech_blocks.edit_block", language))
         self._save_button.setText(ui_state_service.translate("speech_blocks.save_block", language))
         self._approve_block_button.setText(ui_state_service.translate(self._approval_button_label_key(), language))
@@ -753,57 +730,6 @@ class SpeechBlocksPage(QWidget):
             self._content_kind_combo.addItem(label, content_kind)
         self._content_kind_combo.blockSignals(False)
 
-    def _refresh_scene_ambience_combo_labels(self) -> None:
-        """
-        @brief      Refresh Scene Ambience selector labels for the active UI language.
-        @return     None.
-        @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-20
-        @version    0.1.0
-        """
-        current_value = self.scene_ambience_enabled()
-        self._scene_ambience_combo.blockSignals(True)
-        self._scene_ambience_combo.clear()
-        selector_label = ui_state_service.translate("speech_blocks.scene_ambience_selector", self._current_language)
-        disabled_label = ui_state_service.translate("speech_blocks.scene_ambience_disabled", self._current_language)
-        enabled_label = ui_state_service.translate("speech_blocks.scene_ambience_enabled", self._current_language)
-        self._scene_ambience_combo.addItem(
-            f"{selector_label}: {disabled_label}",
-            False,
-        )
-        self._scene_ambience_combo.addItem(
-            f"{selector_label}: {enabled_label}",
-            True,
-        )
-        self._scene_ambience_combo.setCurrentIndex(1 if current_value else 0)
-        self._scene_ambience_combo.blockSignals(False)
-
-    def _set_scene_ambience_combo_enabled_value(self, enabled: bool) -> None:
-        """
-        @brief      Set Scene Ambience selector value without emitting UI signals.
-        @param[in]  enabled New Scene Ambience enablement value.
-        @return     None.
-        @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-20
-        @version    0.1.0
-        """
-        self._scene_ambience_combo.blockSignals(True)
-        self._scene_ambience_combo.setCurrentIndex(1 if enabled else 0)
-        self._scene_ambience_combo.blockSignals(False)
-
-    def _handle_scene_ambience_combo_changed(self) -> None:
-        """
-        @brief      Track Scene Ambience selector state changes.
-        @return     None.
-        @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-20
-        @version    0.1.0
-        """
-        self._scene_ambience_enabled = self.scene_ambience_enabled()
-
     def _apply_control_state(self) -> None:
         """
         @brief      Apply the current Speech Blocks page button and widget states.
@@ -811,7 +737,7 @@ class SpeechBlocksPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-24
-        @version    0.6.1
+        @version    0.6.2
         """
         selected_block = self._current_display_block()
         generated_all_chunks = (
@@ -854,7 +780,6 @@ class SpeechBlocksPage(QWidget):
             and self._current_chunk_id is not None
             and self.current_profile_id() is not None
         )
-        self._scene_ambience_combo.setEnabled(self._project_active and not self._busy)
         self._chunk_list.setEnabled(self._project_active and not self._busy)
         self._insert_block_button.setEnabled(can_insert_block and not self._editing)
         self._delete_block_button.setEnabled(can_edit_selected and not self._editing)

@@ -15,7 +15,7 @@
          chunk-based generation, and narrator-only segmentation.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-24
-@version 0.13.6
+@version 0.13.10
 """
 
 # IMPORTS
@@ -226,14 +226,14 @@ def test_start_or_continue_generation_creates_artifacts_and_normalizes_blocks(mo
 
 def test_start_or_continue_generation_adds_scene_ambience_blocks(monkeypatch, tmp_path) -> None:
     """
-    @brief      Verify enabled Scene Ambience analysis inserts opener, scene-change, and closer blocks.
+    @brief      Verify Scene Ambience placement settings insert opener, scene-change, and closer blocks.
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-20
-    @version    0.1.0
+    @version    0.2.0
     """
     project_root, manifest = _create_chunked_project(tmp_path, "SpeechBlocksSceneAmbience")
     _write_source_chunks(
@@ -321,7 +321,6 @@ def test_start_or_continue_generation_adds_scene_ambience_blocks(monkeypatch, tm
             "scene_ambience_duration_seconds": 5,
             "scene_ambience_max_blocks_per_sequence": 6,
         },
-        scene_ambience_enabled=True,
     )
 
     speech_blocks = speech_blocks_service.load_speech_blocks(project_root)
@@ -356,6 +355,23 @@ def test_start_or_continue_generation_adds_scene_ambience_blocks(monkeypatch, tm
     assert "Maximum blocks per sequence: 6" in ambience_user_prompt
     assert "occasional, intermittent, sparse, irregular" in ambience_user_prompt
     assert "describe only the new or changed acoustic layer" in ambience_user_prompt
+
+
+def test_scene_ambience_none_placement_disables_generation() -> None:
+    """
+    @brief      Verify the TTS Settings `none` placement disables Scene Ambience generation.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-22
+    @version    0.1.0
+    """
+    settings = speech_blocks_service._resolve_scene_ambience_settings(  # noqa: SLF001
+        {"scene_ambience_placement": "none"}
+    )
+
+    assert settings["enabled"] is False
+    assert settings["allowed_positions"] == []
 
 
 def test_scene_ambience_normalization_splits_composed_sound_prompts() -> None:
@@ -660,6 +676,58 @@ def test_speech_blocks_resume_accepts_changed_profile_and_budget_metadata(tmp_pa
         "en",
         len(source_chunks),
         speech_blocks_service._compute_prompt_fingerprint(""),  # noqa: SLF001
+    )
+
+    assert restored == ([], [], 1)
+
+
+def test_speech_blocks_resume_accepts_changed_scene_ambience_settings(tmp_path) -> None:
+    """
+    @brief      Verify Speech Blocks resume is not invalidated by Scene Ambience setting changes.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-22
+    @version    0.1.0
+    """
+    project_root, manifest = _create_chunked_project(tmp_path, "SpeechBlocksAmbienceResume")
+    source_resolution = speech_blocks_service.resolve_source_chunks(project_root, manifest)
+    source_chunks = list(source_resolution["source_chunks"])
+    input_fingerprint = speech_blocks_service._build_source_fingerprint(source_chunks, "en", "original")  # noqa: SLF001
+    current_scene_settings = speech_blocks_service._resolve_scene_ambience_settings(  # noqa: SLF001
+        {"scene_ambience_placement": "openers_and_closers"}
+    )
+
+    restored = speech_blocks_service._restore_resume_state(  # noqa: SLF001
+        project_root,
+        {
+            "status": "running",
+            "metadata": {
+                "source_snapshot_fingerprint": input_fingerprint,
+                "source_language": "en",
+                "additional_speech_block_instructions_fingerprint": (
+                    speech_blocks_service._compute_generation_rules_fingerprint("", current_scene_settings)  # noqa: SLF001
+                ),
+                "scene_ambience_generation": {
+                    "enabled": False,
+                    "placement_policy": "none",
+                    "duration_seconds": 10,
+                    "max_blocks_per_sequence": 6,
+                    "allowed_positions": [],
+                },
+            },
+            "resume_checkpoint": {
+                "next_chunk_index": 1,
+                "source_snapshot_fingerprint": input_fingerprint,
+                "source_language": "en",
+            },
+        },
+        None,
+        input_fingerprint,
+        "en",
+        len(source_chunks),
+        speech_blocks_service._compute_generation_rules_fingerprint("", current_scene_settings),  # noqa: SLF001
     )
 
     assert restored == ([], [], 1)
@@ -1000,15 +1068,18 @@ def test_approve_all_and_edit_preserve_warning_cleared_state(tmp_path) -> None:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-24
-    @version    0.1.0
+    @version    0.1.1
     """
     project_root, _manifest = _create_chunked_project(tmp_path, "SpeechBlocksApprovalEdit")
     _seed_review_speech_blocks(project_root)
 
     approved_report = speech_blocks_service.approve_all_speech_blocks(project_root)
+    approved_blocks = speech_blocks_service.load_speech_blocks(project_root)
     assert approved_report["approved_block_count"] == 2
     assert approved_report["total_block_count"] == 2
+    assert approved_report["warning_count"] == 0
     assert approved_report["speech_blocks_stage_status"] == speech_blocks_service.SPEECH_BLOCKS_STAGE_COMPLETED
+    assert approved_blocks[0]["warning_flags"] == []
 
     edited_report = speech_blocks_service.update_speech_block(
         project_root,
@@ -1036,7 +1107,7 @@ def test_approve_selected_speech_block_only_marks_target_block(tmp_path) -> None
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-24
-    @version    0.1.0
+    @version    0.1.1
     """
     project_root, _manifest = _create_chunked_project(tmp_path, "SpeechBlocksSelectedApproval")
     _seed_review_speech_blocks(project_root)
@@ -1046,9 +1117,11 @@ def test_approve_selected_speech_block_only_marks_target_block(tmp_path) -> None
 
     assert report["approved_block_count"] == 1
     assert report["total_block_count"] == 2
+    assert report["warning_count"] == 0
     assert report["speech_blocks_stage_status"] == speech_blocks_service.SPEECH_BLOCKS_STAGE_IN_PROGRESS
     assert speech_blocks[0]["approved"] is True
     assert speech_blocks[0]["approved_at"] is not None
+    assert speech_blocks[0]["warning_flags"] == []
     assert speech_blocks[1]["approved"] is False
     assert speech_blocks[1]["approved_at"] is None
 

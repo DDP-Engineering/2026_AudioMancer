@@ -14,7 +14,7 @@
          current operation state, and enabled AI profile settings.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 0.7.1
+@version 0.7.2
 """
 
 # IMPORTS
@@ -92,7 +92,7 @@ def build_speech_blocks_state(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.5.0
+    @version    0.5.1
     """
     if project_root is None or manifest is None:
         return {
@@ -112,7 +112,6 @@ def build_speech_blocks_state(
             "can_reset": False,
             "can_approve_all": False,
             "can_resplit_selected": False,
-            "scene_ambience_enabled": _scene_ambience_enabled(settings_payload),
             "selected_text_character_limit": _selected_text_character_limit(settings_payload),
         }
 
@@ -161,29 +160,8 @@ def build_speech_blocks_state(
         "can_reset": bool(speech_blocks),
         "can_approve_all": any(not bool(block.get("approved", False)) for block in speech_blocks),
         "can_resplit_selected": bool(source_chunks),
-        "scene_ambience_enabled": _scene_ambience_enabled(settings_payload),
         "selected_text_character_limit": _selected_text_character_limit(settings_payload),
     }
-
-
-def _scene_ambience_enabled(settings_payload: dict[str, object] | None) -> bool:
-    """
-    @brief      Resolve the default Speech Blocks scene-ambience selector state.
-    @param[in]  settings_payload Persisted application settings payload.
-    @return     True when Scene Ambience generation is enabled by default.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-20
-    @version    0.1.0
-    """
-    if not isinstance(settings_payload, dict):
-        return config.DEFAULT_SCENE_AMBIENCE_GENERATION_ENABLED
-    return bool(
-        settings_payload.get(
-            "scene_ambience_generation_enabled",
-            config.DEFAULT_SCENE_AMBIENCE_GENERATION_ENABLED,
-        )
-    )
 
 
 def _selected_text_character_limit(settings_payload: dict[str, object] | None) -> int:

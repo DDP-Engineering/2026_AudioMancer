@@ -249,7 +249,7 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                     <li>Enter the VoiceWeaver runtime base URL.</li>
                     <li>Use <strong>Test Connection</strong> so AudioMancer can discover available models and limits.</li>
                     <li>Adjust preview and generation timeouts if your runtime is slow.</li>
-                    <li>Set <strong>Scene Ambience Placement</strong> to choose whether ambience is proposed at openers, closers, scene changes, or a combination.</li>
+                    <li>Set <strong>Scene Ambience Placement</strong> to <strong>None</strong>, <strong>Openers and closers</strong>, or <strong>Openers, closers, and scene changes</strong>.</li>
                     <li>Set the soft maximum Scene Ambience sequence duration and maximum blocks per sequence. The LLM may use fewer blocks when fewer distinct sound sources are useful.</li>
                     <li>Adjust Scene Ambience guidance, inference steps, and seed for the sound-prompt model. Use <strong>Random</strong> seed when repeatability is not required.</li>
                     <li>Click <strong>Save</strong> to persist without closing the dialog, or <strong>OK</strong> to persist and close.</li>
@@ -257,8 +257,8 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                 <p>
                     The audiobook language and narration mode are selected on the Home page and then locked for the
                     project. TTS Settings stays focused on runtime connection, discovered models, text limits,
-                    generation timeouts, and Scene Ambience sound-model defaults. Scene Ambience On/Off remains a
-                    workflow-local selector on the Speech Blocks and Audio Blocks pages.
+                    generation timeouts, and Scene Ambience sound-model defaults. Speech Blocks ambience enablement
+                    comes from the Scene Ambience Placement setting.
                 </p>
                 <figure>
                     <img src="assets/screenshots/tts-settings-dialog.png" alt="TTS Settings dialog">
@@ -489,7 +489,7 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                 </p>
                 <ul>
                     <li>Generate Speech Blocks per approved text chunk.</li>
-                    <li>Use the page-level Scene Ambience selector before generation or selected-chunk re-splitting to decide whether ambience blocks are created for that run.</li>
+                    <li>Use <strong>TTS Settings</strong> Scene Ambience Placement before generation or selected-chunk re-splitting to decide whether ambience blocks are created.</li>
                     <li>Add optional operator Speech Blocks rules in the word-wrapped prompt box before fresh generation or selected-chunk re-splitting.</li>
                     <li>Inspect speaker, block type, text, pause duration, indication, and Scene Ambience prompt fields.</li>
                     <li>Scene Ambience is stored as separate ordered Speech Blocks. Each ambience block should describe one simple sound source or closely related sound type, not a composed ambience mix.</li>

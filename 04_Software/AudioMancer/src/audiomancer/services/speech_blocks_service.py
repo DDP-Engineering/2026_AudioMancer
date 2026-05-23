@@ -15,7 +15,7 @@
          based operation state plus AI transaction logging.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 0.19.3
+@version 0.19.7
 """
 
 # IMPORTS
@@ -877,7 +877,7 @@ def approve_all_speech_blocks(project_root: str | Path) -> SpeechBlocksReportPay
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-24
-    @version    0.1.0
+    @version    0.1.1
     """
     resolved_project_root = Path(project_root)
     speech_blocks = load_speech_blocks(resolved_project_root)
@@ -885,6 +885,7 @@ def approve_all_speech_blocks(project_root: str | Path) -> SpeechBlocksReportPay
     for block in speech_blocks:
         block["approved"] = True
         block["approved_at"] = approved_at
+        block["warning_flags"] = []
     return _persist_report_update(resolved_project_root, speech_blocks)
 
 
@@ -898,7 +899,7 @@ def approve_speech_block(project_root: str | Path, speech_block_id: str) -> Spee
     @exception  ValueError Raised when the block is unknown.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-24
-    @version    0.1.0
+    @version    0.1.1
     """
     resolved_project_root = Path(project_root)
     speech_blocks = load_speech_blocks(resolved_project_root)
@@ -907,6 +908,7 @@ def approve_speech_block(project_root: str | Path, speech_block_id: str) -> Spee
         raise ValueError("The selected Speech Block was not found.")
     selected_block["approved"] = True
     selected_block["approved_at"] = _utc_now_iso()
+    selected_block["warning_flags"] = []
     return _persist_report_update(resolved_project_root, speech_blocks)
 
 
@@ -1364,12 +1366,9 @@ def _resolve_scene_ambience_settings(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-20
-    @version    0.1.0
+    @version    0.2.0
     """
     payload = settings_payload if isinstance(settings_payload, dict) else {}
-    enabled = bool(payload.get("scene_ambience_generation_enabled", config.DEFAULT_SCENE_AMBIENCE_GENERATION_ENABLED))
-    if enabled_override is not None:
-        enabled = bool(enabled_override)
     placement = str(
         payload.get(
             "scene_ambience_placement",
@@ -1378,6 +1377,9 @@ def _resolve_scene_ambience_settings(
     ).strip()
     if placement not in config.SCENE_AMBIENCE_PLACEMENT_OPTIONS:
         placement = config.DEFAULT_SCENE_AMBIENCE_PLACEMENT
+    enabled = placement != "none"
+    if enabled_override is not None:
+        enabled = bool(enabled_override)
     duration_seconds = _positive_float(
         payload.get("scene_ambience_duration_seconds", payload.get("duration_seconds")),
         float(config.DEFAULT_SCENE_AMBIENCE_DURATION_SECONDS),
@@ -1404,15 +1406,13 @@ def _scene_ambience_allowed_positions(placement_policy: str) -> list[str]:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-20
-    @version    0.1.0
+    @version    0.3.0
     """
     return {
-        "openers": ["opener"],
-        "closers": ["closer"],
+        "none": [],
         "openers_and_closers": ["opener", "closer"],
-        "scene_changes": ["scene_change"],
         "openers_closers_and_scene_changes": ["opener", "closer", "scene_change"],
-    }.get(str(placement_policy).strip(), ["opener", "closer"])
+    }.get(str(placement_policy).strip(), [])
 
 
 def _compute_generation_rules_fingerprint(
@@ -1420,22 +1420,17 @@ def _compute_generation_rules_fingerprint(
     scene_ambience_settings: dict[str, object],
 ) -> str:
     """
-    @brief      Compute one stable fingerprint for prompt rules and scene ambience policy.
+    @brief      Compute one stable fingerprint for operator prompt rules.
     @param[in]  additional_speech_block_instructions Operator-supplied prompt rules.
-    @param[in]  scene_ambience_settings Normalized scene-ambience generation settings.
+    @param[in]  scene_ambience_settings Ignored legacy scene-ambience settings parameter.
     @return     SHA-256 fingerprint for resumable Speech Blocks runs.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-20
-    @version    0.1.0
+    @version    0.2.0
     """
-    if not bool(scene_ambience_settings.get("enabled", False)):
-        return _compute_prompt_fingerprint(additional_speech_block_instructions)
-    fingerprint_payload = {
-        "additional_speech_block_instructions": additional_speech_block_instructions,
-        "scene_ambience": dict(scene_ambience_settings),
-    }
-    return _compute_prompt_fingerprint(json.dumps(fingerprint_payload, ensure_ascii=False, sort_keys=True))
+    _ = scene_ambience_settings
+    return _compute_prompt_fingerprint(additional_speech_block_instructions)
 
 
 def _restore_persisted_additional_speech_block_instructions(

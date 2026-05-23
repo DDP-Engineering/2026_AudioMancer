@@ -32,6 +32,8 @@ It separates:
   whether they end at the host root or already include `/v1`
 - persist runtime connection fields and the most recent discovery cache in
   `settings.json`
+- persist the Scene Ambience placement policy used by Speech Blocks generation;
+  `none` disables ambience block creation
 - expose one static `TTS Settings` dialog beside `AI Settings`
 - classify fixed Qwen3 narrator-generation readiness from the discovered
   runtime models

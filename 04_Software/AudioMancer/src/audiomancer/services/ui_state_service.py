@@ -14,7 +14,7 @@
          theme runtime adapter.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 0.54.4
+@version 0.54.6
 """
 
 # ruff: noqa: E501
@@ -307,10 +307,8 @@ _UI_STRINGS = {
         "tts_settings.scene_ambience_guidance": "Scene Ambience Guidance",
         "tts_settings.scene_ambience_steps": "Scene Ambience Steps",
         "tts_settings.scene_ambience_seed": "Scene Ambience Seed",
-        "tts_settings.scene_ambience_placement_openers": "Openers",
-        "tts_settings.scene_ambience_placement_closers": "Closers",
+        "tts_settings.scene_ambience_placement_none": "None",
         "tts_settings.scene_ambience_placement_openers_and_closers": "Openers and closers",
-        "tts_settings.scene_ambience_placement_scene_changes": "Scene changes",
         "tts_settings.scene_ambience_placement_openers_closers_and_scene_changes": (
             "Openers, closers, and scene changes"
         ),
@@ -651,9 +649,6 @@ _UI_STRINGS = {
         "speech_blocks.insert_block": "Insert",
         "speech_blocks.delete_block": "Delete",
         "speech_blocks.resplit_selected": "Split Chunk",
-        "speech_blocks.scene_ambience_selector": "Scene Ambience",
-        "speech_blocks.scene_ambience_disabled": "Off",
-        "speech_blocks.scene_ambience_enabled": "On",
         "speech_blocks.edit_block": "Edit",
         "speech_blocks.save_block": "Save",
         "speech_blocks.approve_block": "Approve",
@@ -1326,10 +1321,8 @@ _UI_STRINGS = {
         "tts_settings.scene_ambience_guidance": "Ghidaj Ambienta Scena",
         "tts_settings.scene_ambience_steps": "Pasi Ambienta Scena",
         "tts_settings.scene_ambience_seed": "Seed Ambienta Scena",
-        "tts_settings.scene_ambience_placement_openers": "Deschideri",
-        "tts_settings.scene_ambience_placement_closers": "Inchideri",
+        "tts_settings.scene_ambience_placement_none": "Fara",
         "tts_settings.scene_ambience_placement_openers_and_closers": "Deschideri si inchideri",
-        "tts_settings.scene_ambience_placement_scene_changes": "Schimbari de scena",
         "tts_settings.scene_ambience_placement_openers_closers_and_scene_changes": (
             "Deschideri, inchideri si schimbari de scena"
         ),
@@ -1671,9 +1664,6 @@ _UI_STRINGS = {
         "speech_blocks.insert_block": "Insereaza",
         "speech_blocks.delete_block": "Sterge",
         "speech_blocks.resplit_selected": "Imparte Segment",
-        "speech_blocks.scene_ambience_selector": "Ambienta Scena",
-        "speech_blocks.scene_ambience_disabled": "Oprit",
-        "speech_blocks.scene_ambience_enabled": "Pornit",
         "speech_blocks.edit_block": "Editeaza",
         "speech_blocks.save_block": "Salveaza",
         "speech_blocks.approve_block": "Aproba",

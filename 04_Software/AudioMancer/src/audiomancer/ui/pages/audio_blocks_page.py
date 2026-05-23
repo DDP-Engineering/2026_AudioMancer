@@ -421,16 +421,23 @@ class AudioBlocksPage(QWidget):
 
     def advance_to_next_block(self) -> None:
         """
-        @brief      Move the Audio Blocks speech-block selection one row forward when possible.
+        @brief      Move the Audio Blocks selection to the next pending generated row when possible.
         @return     None.
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-25
-        @version    0.1.0
+        @version    0.2.0
         """
         current_row = self._speech_block_list.currentRow()
         if current_row < 0:
             return
+        for next_row in range(current_row + 1, len(self._speech_blocks)):
+            candidate_block = self._speech_blocks[next_row]
+            if audio_blocks_service.is_generated(candidate_block) and not audio_blocks_service.is_approved(
+                candidate_block
+            ):
+                self._speech_block_list.setCurrentRow(next_row)
+                return
         next_row = current_row + 1
         if next_row < self._speech_block_list.count():
             self._speech_block_list.setCurrentRow(next_row)

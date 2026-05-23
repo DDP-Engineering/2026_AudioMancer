@@ -44,7 +44,7 @@ The public executable-only delivery project is:
 
 - GitHub repository: `https://github.com/DDP-Engineering/2026_AudioMancer`
 - GitHub Pages download page: `https://ddp-engineering.github.io/2026_AudioMancer/`
-- Current release page: `https://github.com/DDP-Engineering/2026_AudioMancer/releases/tag/v1.0.13`
+- Current release page: `https://github.com/DDP-Engineering/2026_AudioMancer/releases/tag/v1.3.0`
 
 Publish only when the project owner gives specific, clear instructions to
 publish. Do not publish automatically after packaging, testing, documentation
@@ -69,7 +69,6 @@ large runtime package for every AudioMancer-only release. When publishing a new
 VoiceWeaver runtime package, publish all parts together and publish
 `SHA256SUMS.txt` with:
 
-- the AudioMancer delivery archive hash
 - the original reassembled VoiceWeaver archive hash
 - every published VoiceWeaver part hash
 

@@ -65,9 +65,9 @@ Validation currently covers:
 - UI theme settings: selected `ui_theme_id`, normalized custom `ui_themes`
   with separate UI-control and text-window font payloads, and removal of the
   deprecated top-level `ui_text_scale` field
-- Scene Ambience settings: generation enablement, audio-generation enablement,
-  placement policy, soft maximum sequence duration, maximum blocks per
-  sequence, guidance scale, inference-step count, and optional seed
+- Scene Ambience settings: placement policy, soft maximum sequence duration,
+  maximum blocks per sequence, guidance scale, inference-step count, and
+  optional seed; placement `none` disables Speech Blocks ambience generation
 
 ## 4. Dependencies
 

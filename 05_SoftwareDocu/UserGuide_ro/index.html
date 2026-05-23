@@ -282,10 +282,10 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                 </p>
                 <ul>
                     <li>Foloseste <strong>Test Connection</strong> pentru a descoperi modelele VoiceWeaver disponibile.</li>
-                    <li>Alege politica <strong>Scene Ambience Placement</strong>: inceput, final, schimbari de scena sau combinatii.</li>
+                    <li>Alege <strong>None</strong>, <strong>Deschideri si inchideri</strong> sau <strong>Deschideri, inchideri si schimbari de scena</strong>.</li>
                     <li>Seteaza durata maxima soft pentru o secventa ambientala si numarul maxim de blocuri ambientale pe secventa.</li>
                     <li>Seteaza guidance, numarul de pasi si seed-ul pentru modelul sound-prompt. Valoarea <strong>Random</strong> foloseste seed aleator.</li>
-                    <li>Activarea sau dezactivarea Scene Ambience ramane locala pe paginile Blocuri de vorbire si Blocuri audio.</li>
+                    <li>Activarea Scene Ambience pentru Blocuri de vorbire este controlata de politica Scene Ambience Placement.</li>
                 </ul>
                 <figure>
                     <img src="assets/screenshots/tts-settings-dialog.png" alt="Fereastra Setari TTS">
@@ -494,7 +494,7 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                 </p>
                 <ul>
                     <li>Genereaza Blocuri de vorbire pentru fiecare segment aprobat.</li>
-                    <li>Foloseste selectorul Scene Ambience de pe pagina inainte de generare sau reimpartirea segmentului selectat pentru a decide daca acea rulare creeaza blocuri ambientale.</li>
+                    <li>Foloseste politica Scene Ambience Placement din Setari TTS inainte de generare sau reimpartirea segmentului selectat pentru a decide daca se creeaza blocuri ambientale.</li>
                     <li>Adauga reguli optionale pentru Blocuri de vorbire in caseta de prompt cu incadrare automata inainte de generare noua sau reimpartirea segmentului selectat.</li>
                     <li>Inspecteaza vorbitorul, tipul blocului, textul, durata pauzelor, indicatiile si campurile Scene Ambience.</li>
                     <li>Scene Ambience este salvat ca blocuri separate ordonate. Fiecare bloc ambiental trebuie sa descrie o singura sursa sonora simpla sau un tip de sunet strans legat, nu un mix compus.</li>

@@ -62,6 +62,13 @@ without HTTP, operators can run:
 uv run voiceweaver test-voice --output outputs\local_voice_test.wav
 ```
 
+Packaged deliveries also include offline operator controls beside the headless
+API server. Windows packages provide `VoiceWeaver Control Panel.cmd`,
+`Start VoiceWeaver.cmd`, `Stop VoiceWeaver.cmd`, `VoiceWeaver Status.cmd`, and
+`Generate Test Voice.cmd`. Ubuntu packages provide matching `.sh` scripts. The
+control scripts do not add REST endpoints; they start, stop, status-check, or
+run local CLI generation against the same packaged runtime.
+
 ## 3. Authentication
 
 Authentication is host-aware.
@@ -88,6 +95,13 @@ When auth is enabled, send:
 Authorization: Bearer voiceweaver-dev-key
 ```
 
+`voiceweaver-dev-key` is a shared default intended for trusted
+internal-network use. Operators can override it by setting the
+`VOICEWEAVER_API_KEY` environment variable before starting the runtime; when
+set, only that value is accepted. The effective auth decision is resolved from
+the host the runtime actually binds, so starting with `--host 0.0.0.0` enforces
+authorization in `auto` mode.
+
 Health is public. Versioned runtime routes under `/v1`, including `/v1/server`,
 are protected only when effective auth is enabled. The shipped runtime is
 headless and does not serve a browser UI at `/`.
@@ -97,6 +111,10 @@ For `POST /v1/voice/clone`, the multipart form fields `sample_text`,
 
 For `POST /v1/voice/clone-prompt`, the multipart form fields `sample_text`
 and `language` are required and must be non-empty strings.
+
+For `POST /v1/voice/clone` and `POST /v1/voice/clone-prompt`, the uploaded
+`voice_sample` file is limited to 64 MiB. Larger uploads are rejected with
+HTTP `413` and error code `payload_too_large` before generation starts.
 
 ## 4. Endpoint Summary
 
@@ -153,6 +171,11 @@ Rules:
   after clone-prompt creation
 - loading, unloading, startup, and new generation delete any previous
   generated `voice.wav`
+- `operation_history.jsonl` is a session log: it is recreated at runtime
+  startup and is not preserved across restarts
+- runtime state files are written atomically, so an interrupted runtime never
+  leaves a truncated `current_operation.json`, `models_available.json`, or
+  `voice.wav`
 - model unload performs Python garbage collection and clears CUDA cache when
   the Qwen runtime has `torch` available
 - `GET /v1/status` includes `device_diagnostics` so clients can distinguish
@@ -192,6 +215,17 @@ Known Qwen mapping:
 Qwen3-TTS-*-Base        -> clone
 Qwen3-TTS-*-CustomVoice -> custom_voice
 Qwen3-TTS-*-VoiceDesign -> definition
+```
+
+A model folder may also include an optional `voiceweaver_model.json` manifest.
+When that file declares a `supported_generation_modes` list, the runtime uses
+those modes instead of the folder-name heuristic above. Only modes the adapter
+implements are accepted; unknown entries are ignored:
+
+```json
+{
+  "supported_generation_modes": ["clone"]
+}
 ```
 
 Generic supported modes:
@@ -245,6 +279,7 @@ missing_runtime_dependencies
 adapter_method_missing
 synthesis_failed
 audio_serialization_failed
+payload_too_large
 busy
 not_found
 unexpected_error
@@ -256,6 +291,7 @@ HTTP status behavior:
 - `401` for auth errors
 - `404` for unavailable generated audio
 - `409` for `busy`
+- `413` for an uploaded `voice_sample` that exceeds the runtime size limit
 - `200` for successful runtime operations, including failed operation objects
   returned by an operation that started and then failed internally
 
@@ -389,6 +425,7 @@ unload_model
 create_voice_clone_prompt
 generate_voice_design
 generate_voice_clone
+generate_voice_clone_from_prompt
 generate_custom_voice
 generate_voice_preset
 generate_sound_prompt
@@ -445,7 +482,7 @@ Response:
 ```json
 {
   "service": "VoiceWeaver",
-  "runtime_version": "1.4.0",
+  "runtime_version": "1.5.0",
   "models": [
     {
       "model_id": "Qwen3-TTS-12Hz-0.6B-Base",
@@ -639,12 +676,12 @@ Response when idle and no model is loaded:
 ```json
 {
   "service": "VoiceWeaver",
-  "runtime_version": "1.4.0",
+  "runtime_version": "1.5.0",
   "active_model": null,
   "capabilities": {
     "service": "VoiceWeaver",
     "runtime_name": "VoiceWeaver",
-    "runtime_version": "1.4.0",
+    "runtime_version": "1.5.0",
     "api_version": "v1",
     "active_model": null,
     "status": "idle",
@@ -702,7 +739,7 @@ Response after completed generation:
 ```json
 {
   "service": "VoiceWeaver",
-  "runtime_version": "1.4.0",
+  "runtime_version": "1.5.0",
   "active_model": {
     "model_id": "Qwen3-TTS-12Hz-1.7B-CustomVoice",
     "backend_name": "qwen",
@@ -734,7 +771,7 @@ Response after completed generation:
   "capabilities": {
     "service": "VoiceWeaver",
     "runtime_name": "VoiceWeaver",
-    "runtime_version": "1.4.0",
+    "runtime_version": "1.5.0",
     "api_version": "v1",
     "active_model": "Qwen3-TTS-12Hz-1.7B-CustomVoice",
     "status": "ready",
@@ -969,6 +1006,8 @@ model_parameters_json: JSON object string, optional
 Behavior notes:
 
 - VoiceWeaver calls the official Qwen `create_voice_clone_prompt(...)` API
+- the uploaded `voice_sample` file is limited to 64 MiB; larger uploads return
+  HTTP `413` with error code `payload_too_large`
 - the reusable `voice_clone_prompt` artifact is returned to the client
 - VoiceWeaver does not create a server-owned profile id, prompt id, or delete
   API for reusable prompts
@@ -1049,6 +1088,8 @@ Behavior note:
 - when provided, `model_parameters_json` is merged with the loaded model
   defaults and the effective values are forwarded to the adapter generation call
 - `text` must be non-empty
+- the uploaded `voice_sample` file is limited to 64 MiB; larger uploads return
+  HTTP `413` with error code `payload_too_large`
 
 PowerShell:
 
@@ -1102,8 +1143,8 @@ print(response.json())
 
 Implementation note:
 
-- the runtime writes the uploaded sample to `outputs/_temp_*_reference.wav`
-  during generation
+- the runtime writes the uploaded sample to a private operating-system
+  temporary file during generation, not the operator-visible `outputs/` folder
 - the temp file is deleted after Qwen completes or fails
 - clients do not need to manage this temp file
 
@@ -1502,7 +1543,7 @@ Response:
 ```json
 {
   "service": "VoiceWeaver",
-  "runtime_version": "1.4.0",
+  "runtime_version": "1.5.0",
   "api_version": "v1",
   "host": "127.0.0.1",
   "port": 8059,
