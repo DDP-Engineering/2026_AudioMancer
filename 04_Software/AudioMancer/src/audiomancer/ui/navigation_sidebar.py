@@ -12,8 +12,8 @@
 @details Copies the page registration and selection structure used by the
          DDP_Audiomancer main-window shell.
 @author Eng. Dan Dumitru Pasare
-@date 2026-04-05
-@version 0.3.0
+@date 2026-05-23
+@version 0.3.1
 """
 
 # IMPORTS
@@ -44,12 +44,12 @@ class NavigationSidebar(QListWidget):
         @return     None.
         @exception  None
         @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-05
-        @version    0.2.0
+        @date       2026-05-23
+        @version    0.2.1
         """
         super().__init__(parent)
         self.setAlternatingRowColors(True)
-        self.setFixedWidth(176)
+        self.setFixedWidth(160)
         self.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Expanding)
         self.itemSelectionChanged.connect(self._emit_selected_page)
         self._page_labels: dict[str, str] = {}

@@ -13,7 +13,7 @@
          signaling, and evidence preview behavior for discovered characters.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-08
-@version 0.8.7
+@version 0.8.9
 """
 
 # IMPORTS
@@ -32,7 +32,7 @@ def test_characters_page_fields_are_read_only_by_default(qtbot) -> None:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-02
-    @version    0.6.0
+    @version    0.6.2
     """
     page = _build_page(qtbot)
 
@@ -47,6 +47,14 @@ def test_characters_page_fields_are_read_only_by_default(qtbot) -> None:
     assert page._gender_confidence_edit.parentWidget() == page._gender_row_widget
     assert page._age_hint_edit.parentWidget() == page._age_row_widget
     assert page._age_confidence_edit.parentWidget() == page._age_row_widget
+    assert page._gender_row_widget.maximumHeight() == 30
+    assert page._age_row_widget.maximumHeight() == 30
+    assert page._gender_row_widget.layout().stretch(page._gender_row_widget.layout().count() - 1) == 1
+    assert page._age_row_widget.layout().stretch(page._age_row_widget.layout().count() - 1) == 1
+    assert page._gender_confidence_label.minimumWidth() == page._age_confidence_label.minimumWidth()
+    assert page._gender_confidence_label.maximumWidth() == page._age_confidence_label.maximumWidth()
+    assert page._gender_hint_edit.maximumWidth() == 360
+    assert page._age_hint_edit.maximumWidth() == 360
     assert page._list_group.minimumHeight() == page._list_group.maximumHeight()
     assert page._list_group.minimumHeight() > page._character_actions_widget.sizeHint().height()
     assert hasattr(page, "_summary_label") is False

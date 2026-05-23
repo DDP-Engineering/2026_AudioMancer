@@ -13,12 +13,13 @@
          discovered-model rendering, and runtime limit persistence.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-17
-@version 1.4.2
+@version 1.4.6
 """
 
 # IMPORTS
 
-from PySide6.QtWidgets import QSizePolicy
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QSizePolicy, QStyle, QStyleOptionSpinBox
 
 from audiomancer.ui.pages.tts_settings_page import TtsSettingsPage
 
@@ -191,6 +192,67 @@ def test_tts_settings_page_uses_compact_runtime_limit_controls(qtbot) -> None:
     assert hasattr(page, "_scene_ambience_enabled_checkbox") is False
     assert hasattr(page, "_scene_ambience_audio_enabled_checkbox") is False
     assert page._ok_button.geometry().bottom() >= page.height() - 40
+
+
+def test_tts_settings_page_numeric_increment_arrows_change_values(qtbot) -> None:
+    """
+    @brief      Verify compact TTS numeric controls use their actual arrow boxes.
+    @param[in]  qtbot Qt test helper fixture.
+    @return     None.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-23
+    @version    0.4.0
+    """
+    page = TtsSettingsPage()
+    qtbot.addWidget(page)
+    page.show()
+    page.load_state({}, {}, False)
+    qtbot.wait(0)
+
+    spinboxes = (
+        page._preview_timeout_spin,
+        page._generation_timeout_spin,
+        page._preview_text_limit_spin,
+        page._scene_ambience_duration_spin,
+        page._scene_ambience_max_blocks_spin,
+        page._scene_ambience_guidance_spin,
+        page._scene_ambience_steps_spin,
+        page._scene_ambience_seed_spin,
+    )
+    for spinbox in spinboxes:
+        old_value = spinbox.value()
+        option = QStyleOptionSpinBox()
+        spinbox.initStyleOption(option)
+        up_button_rect = spinbox.style().subControlRect(
+            QStyle.ComplexControl.CC_SpinBox,
+            option,
+            QStyle.SubControl.SC_SpinBoxUp,
+            spinbox,
+        )
+        down_button_rect = spinbox.style().subControlRect(
+            QStyle.ComplexControl.CC_SpinBox,
+            option,
+            QStyle.SubControl.SC_SpinBoxDown,
+            spinbox,
+        )
+
+        qtbot.mouseClick(
+            spinbox,
+            Qt.MouseButton.LeftButton,
+            pos=up_button_rect.center(),
+        )
+
+        assert spinbox.value() > old_value
+
+        incremented_value = spinbox.value()
+        qtbot.mouseClick(
+            spinbox,
+            Qt.MouseButton.LeftButton,
+            pos=down_button_rect.center(),
+        )
+
+        assert spinbox.value() < incremented_value
 
 
 def _minimum_qwen_models() -> list[dict[str, object]]:

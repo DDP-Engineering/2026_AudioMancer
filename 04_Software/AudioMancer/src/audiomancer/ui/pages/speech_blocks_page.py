@@ -14,12 +14,12 @@
          controls for the Speech Blocks workflow.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-24
-@version 0.8.6
+@version 0.8.9
 """
 
 # IMPORTS
 
-from PySide6.QtCore import QTimer, Signal
+from PySide6.QtCore import Qt, QTimer, Signal
 from PySide6.QtWidgets import (
     QComboBox,
     QDoubleSpinBox,
@@ -54,6 +54,9 @@ _AI_PROFILE_COMBO_MIN_WIDTH_PX = 260
 _GENERATE_HEADER_BUTTON_MIN_WIDTH_PX = 140
 _RESET_HEADER_BUTTON_MIN_WIDTH_PX = 96
 _APPROVE_ALL_HEADER_BUTTON_MIN_WIDTH_PX = 132
+_LOWER_SOURCE_MIN_WIDTH_PX = 480
+_LOWER_SOURCE_MIN_WIDTH_FRACTION = 0.40
+_LOWER_SOURCE_MIN_WIDTH_FLOOR_PX = 300
 
 
 class SpeechBlocksPage(QWidget):
@@ -86,7 +89,7 @@ class SpeechBlocksPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-24
-        @version    0.7.3
+        @version    0.7.4
         """
         super().__init__(parent)
         self._current_language = "en"
@@ -140,6 +143,7 @@ class SpeechBlocksPage(QWidget):
         self._chunk_group = QGroupBox("Chunk List", self)
         chunk_layout = QVBoxLayout(self._chunk_group)
         self._chunk_list = QListWidget(self)
+        self._chunk_list.setTextElideMode(Qt.TextElideMode.ElideRight)
         self._chunk_list.currentRowChanged.connect(self._show_selected_chunk)
         chunk_layout.addWidget(self._chunk_list)
         self._chunk_actions_grid_layout = QGridLayout()
@@ -298,7 +302,7 @@ class SpeechBlocksPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-05-01
-        @version    0.1.3
+        @version    0.1.4
         """
         super().resizeEvent(event)
         self._apply_chunk_action_top_margin()
@@ -811,17 +815,24 @@ class SpeechBlocksPage(QWidget):
 
     def _apply_lower_splitter_minimums(self) -> None:
         """
-        @brief      Set each Speech Blocks lower pane minimum width to one third of the lower splitter width.
+        @brief      Keep the selected-chunk pane from being dragged too far left.
         @return     None.
         @exception  None
         @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-01
-        @version    0.1.1
+        @date       2026-05-23
+        @version    0.1.2
         """
         required_attributes = ("_lower_splitter", "_source_group", "_blocks_group")
         if not all(hasattr(self, attribute_name) for attribute_name in required_attributes):
             return
-        self._source_group.setMinimumWidth(0)
+        splitter_width = self._lower_splitter.width()
+        if splitter_width <= 0:
+            return
+        source_minimum_width = max(
+            _LOWER_SOURCE_MIN_WIDTH_FLOOR_PX,
+            min(_LOWER_SOURCE_MIN_WIDTH_PX, int(splitter_width * _LOWER_SOURCE_MIN_WIDTH_FRACTION)),
+        )
+        self._source_group.setMinimumWidth(source_minimum_width)
         self._blocks_group.setMinimumWidth(0)
 
     def _emit_generate_requested(self) -> None:
@@ -1262,12 +1273,10 @@ def _format_chunk_list_item(source_chunk: dict[str, object], block_count_by_chun
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.1.0
+    @version    0.1.1
     """
     chunk_id = str(source_chunk.get("chunk_id", ""))
-    preview = str(source_chunk.get("text", ""))
-    if len(preview) > 86:
-        preview = preview[:83] + "..."
+    preview = " ".join(str(source_chunk.get("text", "")).split())
     return f"[{block_count_by_chunk.get(chunk_id, 0)}] {chunk_id} | {preview}"
 
 

@@ -982,7 +982,7 @@ def _sync_manifest_stage(window: "MainWindow") -> None:
     @return     None.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.2.0
+    @version    0.2.1
     """
     if window._current_project_root is None or window._current_manifest is None:
         return
@@ -991,19 +991,19 @@ def _sync_manifest_stage(window: "MainWindow") -> None:
         return
     current_stage_rank = config.PROJECT_WORKFLOW_STAGES.index(current_stage)
     narrator_stage_rank = config.PROJECT_WORKFLOW_STAGES.index("narrator_definition_ready")
+    voice_targets = list(window._character_voices_page._targets)  # noqa: SLF001
+    if not voice_targets and (window._current_project_root / config.CHARACTER_VOICES_TARGETS_FILE_NAME).is_file():
+        voice_targets = character_voices_service.load_voice_plan(window._current_project_root)
     desired_stage = (
         "character_voices_ready"
-        if character_voices_service.character_voices_is_ready(
-            window._current_project_root,
-            list(window._character_voices_page._targets),  # noqa: SLF001
-        )
+        if character_voices_service.character_voices_is_ready(window._current_project_root, voice_targets)
         else "narrator_definition_ready"
     )
     if current_stage_rank < narrator_stage_rank and desired_stage == "narrator_definition_ready":
         return
     operation_summary = character_voices_service.character_voices_operation_summary(
         window._current_project_root,
-        list(window._character_voices_page._targets),  # noqa: SLF001
+        voice_targets,
     )
     current_operation_summary = dict(
         window._current_manifest.get("operations", {}).get("character_voices", {})

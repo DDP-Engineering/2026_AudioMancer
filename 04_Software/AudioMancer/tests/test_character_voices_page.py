@@ -13,7 +13,7 @@
          bottom status rendering for the Character Voices page.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-20
-@version 1.5.0
+@version 1.5.1
 """
 
 # IMPORTS
@@ -193,11 +193,12 @@ def test_character_voices_page_batch_button_enables_for_current_character_target
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-01
-    @version    0.2.0
+    @version    0.2.1
     """
     page = CharacterVoicesPage()
     qtbot.addWidget(page)
     page.apply_language("en")
+    page.set_ai_profiles([("Profile One", "profile-1")], "profile-1")
     page.set_project_active(True)
     page.set_character_voices_state(
         targets=[
@@ -241,6 +242,10 @@ def test_character_voices_page_batch_button_enables_for_current_character_target
     page.generate_missing_samples_requested.connect(lambda: emitted.append(True))
 
     assert page._generate_missing_samples_button.text() == "Generate Character Samples"
+    assert page._ai_profile_label.text() == "AI Profile"
+    assert page._ai_profile_combo.currentData() == "profile-1"
+    assert page.current_ai_profile_id() == "profile-1"
+    assert page._ai_profile_combo.isEnabled() is True
     assert page._generate_missing_samples_button.isEnabled() is True
 
     page._generate_missing_samples_button.click()

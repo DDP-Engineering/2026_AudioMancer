@@ -13,7 +13,7 @@
          selection rules, same-narrator shaping, and missing-sample warnings.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-20
-@version 1.3.0
+@version 1.3.1
 """
 
 # IMPORTS
@@ -28,6 +28,32 @@ from audiomancer.services import (
     narrator_definition_service,
     project_workspace_service,
 )
+
+
+def test_character_voices_profile_state_uses_enabled_profiles() -> None:
+    """
+    @brief      Verify Character Voices AI profile selector state uses enabled profiles only.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-23
+    @version    0.1.0
+    """
+    profile_state = character_voices_state_service.build_character_voices_profile_state(
+        {
+            "llm_profiles": [
+                {"id": "disabled-profile", "label": "Disabled Profile", "enabled": False},
+                {"id": "profile-1", "label": "Profile One", "enabled": True},
+                {"id": "profile-2", "label": "Profile Two", "enabled": True},
+            ],
+        },
+        "profile-2",
+    )
+
+    assert profile_state == {
+        "entries": [("Profile One", "profile-1"), ("Profile Two", "profile-2")],
+        "selected_profile_id": "profile-2",
+    }
 
 
 def test_state_contains_narrator_first_and_approved_translated_language(tmp_path) -> None:

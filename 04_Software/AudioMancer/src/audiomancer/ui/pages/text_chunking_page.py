@@ -14,7 +14,7 @@
          with local text search.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-24
-@version 0.5.4
+@version 0.5.5
 """
 
 # IMPORTS
@@ -66,7 +66,7 @@ class TextChunkingPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-24
-        @version    0.5.2
+        @version    0.5.3
         """
         super().__init__(parent)
         self._chunks: list[dict[str, object]] = []
@@ -132,6 +132,7 @@ class TextChunkingPage(QWidget):
         chunk_list_layout = QVBoxLayout(chunk_list_group)
         self._chunk_list = QListWidget(self)
         self._chunk_list.setMinimumHeight(132)
+        self._chunk_list.setTextElideMode(Qt.TextElideMode.ElideRight)
         self._chunk_list.currentRowChanged.connect(self._show_selected_chunk)
         chunk_list_layout.addWidget(self._chunk_list)
         left_layout.addWidget(chunk_list_group, 3)
@@ -217,7 +218,7 @@ class TextChunkingPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-07
-        @version    0.1.1
+        @version    0.1.2
         """
         self._project_active = is_active
         self._apply_button_state()
@@ -243,7 +244,7 @@ class TextChunkingPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-07
-        @version    0.1.0
+        @version    0.1.1
         """
         self._chunks = list(chunks)
         self._editing_chunk = False
@@ -255,9 +256,7 @@ class TextChunkingPage(QWidget):
             self.set_default_ai_strategy(selected_strategy)
         self._chunk_list.clear()
         for chunk in self._chunks:
-            chunk_text = str(chunk.get("text", ""))
-            preview = chunk_text if len(chunk_text) <= 80 else chunk_text[:77] + "..."
-            self._chunk_list.addItem(f"{chunk.get('chunk_id', '')} | {preview}")
+            self._chunk_list.addItem(_format_chunk_list_item(chunk))
         self._status_edit.setPlainText("\n".join(notes))
         if self._chunks:
             self._chunk_list.setCurrentRow(0)
@@ -684,7 +683,7 @@ class TextChunkingPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-24
-        @version    0.1.0
+        @version    0.1.2
         """
         row = self._chunk_list.currentRow()
         if not self._editing_chunk or row < 0 or row >= len(self._chunks):
@@ -694,8 +693,7 @@ class TextChunkingPage(QWidget):
         chunk_id = str(self._chunks[row].get("chunk_id", ""))
         edited_text = self._chunk_text_edit.toPlainText()
         self._chunks[row]["text"] = edited_text
-        preview = edited_text if len(edited_text) <= 80 else edited_text[:77] + "..."
-        self._chunk_list.item(row).setText(f"{chunk_id} | {preview}")
+        self._chunk_list.item(row).setText(_format_chunk_list_item(self._chunks[row]))
         self.save_chunk_requested.emit(chunk_id, edited_text)
         self._apply_button_state()
 
@@ -709,6 +707,22 @@ class TextChunkingPage(QWidget):
         @version    0.1.0
         """
         return str(getattr(self, "_language", config.DEFAULT_LANGUAGE))
+
+
+def _format_chunk_list_item(chunk: dict[str, object]) -> str:
+    """
+    @brief      Format one chunk as a single-line list preview.
+    @param[in]  chunk Chunk payload with chunk id and text.
+    @return     Single-line chunk-list label.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-23
+    @version    0.1.0
+    """
+    chunk_text = str(chunk.get("text", ""))
+    preview_line = next((line.strip() for line in chunk_text.splitlines() if line.strip()), "")
+    preview = " ".join(preview_line.split())
+    return f"{chunk.get('chunk_id', '')} | {preview}"
 
 
 # END OF FILE

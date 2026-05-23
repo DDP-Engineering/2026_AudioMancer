@@ -13,8 +13,8 @@
          helpers so the main window can coordinate persistence through the
          settings service.
 @author Eng. Dan Dumitru Pasare
-@date 2026-04-21
-@version 0.9.3
+@date 2026-05-23
+@version 0.9.4
 """
 
 # IMPORTS
@@ -87,8 +87,8 @@ class AiSettingsPage(QWidget):
         @return     None.
         @exception  None
         @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-21
-        @version    0.8.3
+        @date       2026-05-23
+        @version    0.8.4
         """
         super().__init__(parent)
         self._profiles: list[dict[str, object]] = []
@@ -124,7 +124,11 @@ class AiSettingsPage(QWidget):
 
         editor_container = QWidget(self)
         editor_layout = QVBoxLayout(editor_container)
-        form_layout = QFormLayout()
+        top_form_layout = QFormLayout()
+        top_form_layout.setContentsMargins(0, 0, 0, 0)
+        top_form_layout.setFieldGrowthPolicy(QFormLayout.FieldGrowthPolicy.ExpandingFieldsGrow)
+        bottom_form_layout = QFormLayout()
+        bottom_form_layout.setContentsMargins(0, 0, 0, 0)
 
         self._label_edit = QLineEdit(self)
         profile_name_row = QHBoxLayout()
@@ -203,12 +207,12 @@ class AiSettingsPage(QWidget):
         numeric_settings_grid.setColumnStretch(1, 1)
         numeric_settings_grid.setColumnStretch(3, 1)
 
-        form_layout.addRow(self._profile_name_label, profile_name_row)
-        form_layout.addRow(self._backend_kind_label, backend_row)
-        form_layout.addRow(self._base_url_label, self._base_url_edit)
-        form_layout.addRow(self._api_key_label, self._api_key_edit)
-        form_layout.addRow(self._model_name_label, model_name_row)
-        form_layout.addRow(numeric_settings_grid)
+        top_form_layout.addRow(self._profile_name_label, profile_name_row)
+        top_form_layout.addRow(self._backend_kind_label, backend_row)
+        top_form_layout.addRow(self._base_url_label, self._base_url_edit)
+        top_form_layout.addRow(self._api_key_label, self._api_key_edit)
+        top_form_layout.addRow(self._model_name_label, model_name_row)
+        bottom_form_layout.addRow(numeric_settings_grid)
 
         self._default_cleanup_combo = QComboBox(self)
         self._default_chunking_combo = QComboBox(self)
@@ -232,17 +236,18 @@ class AiSettingsPage(QWidget):
         )
         self._default_speech_blocks_label = QLabel("Default Speech Blocks Profile", self)
 
-        form_layout.addRow(self._default_cleanup_label, self._default_cleanup_combo)
-        form_layout.addRow(self._default_chunking_label, self._default_chunking_combo)
-        form_layout.addRow(self._default_strategy_label, self._default_strategy_combo)
-        form_layout.addRow(self._default_translation_label, self._default_translation_combo)
-        form_layout.addRow(self._default_narrator_generation_label, self._default_narrator_generation_combo)
-        form_layout.addRow(
+        bottom_form_layout.addRow(self._default_cleanup_label, self._default_cleanup_combo)
+        bottom_form_layout.addRow(self._default_chunking_label, self._default_chunking_combo)
+        bottom_form_layout.addRow(self._default_strategy_label, self._default_strategy_combo)
+        bottom_form_layout.addRow(self._default_translation_label, self._default_translation_combo)
+        bottom_form_layout.addRow(self._default_narrator_generation_label, self._default_narrator_generation_combo)
+        bottom_form_layout.addRow(
             self._default_character_label,
             self._default_character_combo,
         )
-        form_layout.addRow(self._default_speech_blocks_label, self._default_speech_blocks_combo)
-        editor_layout.addLayout(form_layout)
+        bottom_form_layout.addRow(self._default_speech_blocks_label, self._default_speech_blocks_combo)
+        editor_layout.addLayout(top_form_layout)
+        editor_layout.addLayout(bottom_form_layout)
 
         content_row.addWidget(editor_container, 2)
         layout.addLayout(content_row, 1)

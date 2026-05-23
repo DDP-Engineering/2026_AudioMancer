@@ -13,8 +13,8 @@
          behavior to dedicated UI controllers and page-specific state services
          so the window remains a thin coordinator.
 @author Eng. Dan Dumitru Pasare
-@date 2026-04-21
-@version 1.47.5
+@date 2026-05-23
+@version 1.47.6
 """
 
 # IMPORTS
@@ -524,9 +524,12 @@ class MainWindow(QMainWindow):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-26
-        @version    0.1.0
+        @version    0.1.1
         """
         self._character_voices_page.set_project_active(project_root is not None)
+        self._character_voices_page.set_ai_profiles(
+            **character_voices_state_service.build_character_voices_profile_state(self._settings_payload)
+        )
         self._character_voices_page.set_character_voices_state(
             **character_voices_state_service.build_character_voices_state(
                 project_root,
@@ -1103,14 +1106,15 @@ class MainWindow(QMainWindow):
         @return     None.
         @exception  None
         @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-16
-        @version    0.6.5
+        @date       2026-05-23
+        @version    0.6.6
         """
         current_language = ui_state_service.current_language_from_settings(self._settings_payload)
 
         self._settings_dialog = QDialog(self)
         self._settings_dialog.setWindowTitle(ui_state_service.translate("dialog.settings_title", current_language))
-        self._settings_dialog.resize(840, 620)
+        self._settings_dialog.setMinimumSize(640, 480)
+        self._settings_dialog.resize(800, 600)
         settings_layout = QVBoxLayout(self._settings_dialog)
         self._settings_page = SettingsPage(self._settings_dialog)
         self._settings_page._cancel_button.clicked.connect(self._settings_dialog.close)
@@ -1133,7 +1137,8 @@ class MainWindow(QMainWindow):
         self._ai_settings_dialog.setWindowTitle(
             ui_state_service.translate("dialog.ai_settings_title", current_language)
         )
-        self._ai_settings_dialog.resize(920, 640)
+        self._ai_settings_dialog.setMinimumSize(640, 480)
+        self._ai_settings_dialog.resize(800, 600)
         ai_layout = QVBoxLayout(self._ai_settings_dialog)
         self._ai_settings_page = AiSettingsPage(self._ai_settings_dialog)
         self._ai_settings_page._connect_button.clicked.connect(
@@ -1153,8 +1158,8 @@ class MainWindow(QMainWindow):
         self._tts_settings_dialog.setWindowTitle(
             ui_state_service.translate("dialog.tts_settings_title", current_language)
         )
-        self._tts_settings_dialog.setMinimumSize(900, 500)
-        self._tts_settings_dialog.resize(1040, 540)
+        self._tts_settings_dialog.setMinimumSize(640, 480)
+        self._tts_settings_dialog.resize(800, 600)
         tts_layout = QVBoxLayout(self._tts_settings_dialog)
         self._tts_settings_page = TtsSettingsPage(self._tts_settings_dialog)
         self._tts_settings_page._test_connection_button.clicked.connect(

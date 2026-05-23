@@ -14,10 +14,12 @@
          workflow.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-07
-@version 0.4.3
+@version 0.4.4
 """
 
 # IMPORTS
+
+from PySide6.QtCore import Qt
 
 from audiomancer.services import ai_translation_service
 from audiomancer.ui.pages.ai_translation_page import AiTranslationPage
@@ -112,6 +114,8 @@ def test_ai_translation_page_renders_selected_chunk_and_review_actions(qtbot) ->
     assert page._chunk_list_group.maximumHeight() == 176
     assert page._chunk_list_group.layout().indexOf(page._translation_actions_widget) >= 0
     assert page._start_button.parentWidget() == page._translation_actions_widget
+    assert page._chunk_list.textElideMode() == Qt.TextElideMode.ElideRight
+    assert page._chunk_list.item(0).text() == "[Translated] chunk-0001 | Original text"
     assert page._source_text_edit.toPlainText() == "Original text"
     assert page._translated_text_edit.toPlainText() == "Translated text"
     assert page._approve_all_button.isEnabled() is True
@@ -224,6 +228,43 @@ def test_ai_translation_page_advances_to_next_chunk_with_limit(qtbot) -> None:
 
     assert page.selected_chunk_id() == "chunk-0002"
     assert page._chunk_list.currentRow() == 1
+
+
+def test_ai_translation_page_keeps_single_line_chunk_list_preview(qtbot) -> None:
+    """
+    @brief      Verify AI translation chunk rows show one source-text line with width-aware eliding.
+    @param[in]  qtbot Qt test helper fixture.
+    @return     None.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-23
+    @version    0.1.0
+    """
+    page = AiTranslationPage()
+    qtbot.addWidget(page)
+    source_text = (
+        "This source preview is intentionally longer than sixty characters so the list can use available width.\n"
+        "This second source line belongs in the original chunk preview, not the chunk list."
+    )
+
+    page.set_translation_state(
+        source_chunks=[{"chunk_id": "chunk-0001", "sequence_index": 1, "text": source_text}],
+        translated_chunks=[],
+        notes=["ready"],
+        original_language="English",
+        target_language="ro",
+        selected_profile_id=None,
+        stage_status=ai_translation_service.TRANSLATION_STAGE_NOT_STARTED,
+        translated_count=0,
+        approved_count=0,
+        total_count=1,
+    )
+    expected_preview = (
+        "[Pending] chunk-0001 | This source preview is intentionally longer than sixty characters so the list can "
+        "use available width."
+    )
+
+    assert page._chunk_list.item(0).text() == expected_preview
 
 
 # END OF FILE
