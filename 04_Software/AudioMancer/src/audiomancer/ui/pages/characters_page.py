@@ -15,7 +15,7 @@
          speaking characters.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-08
-@version 0.8.7
+@version 0.8.9
 """
 
 # IMPORTS
@@ -74,7 +74,7 @@ class CharactersPage(QWidget):
             @exception  None
             @author     Eng. Dan Dumitru Pasare
             @date       2026-04-08
-        @version    0.8.6
+        @version    0.8.8
         """
         super().__init__(parent)
         self._project_active = False
@@ -210,20 +210,33 @@ class CharactersPage(QWidget):
         self._confidence_label = QLabel("Confidence", self)
 
         self._gender_row_widget = QWidget(self)
+        self._gender_row_widget.setMaximumHeight(30)
         gender_row_layout = QHBoxLayout(self._gender_row_widget)
         gender_row_layout.setContentsMargins(0, 0, 0, 0)
         gender_row_layout.setSpacing(8)
-        gender_row_layout.addWidget(self._gender_hint_edit, 1)
+        self._gender_hint_edit.setMinimumWidth(220)
+        self._gender_hint_edit.setMaximumWidth(360)
+        self._gender_confidence_edit.setMinimumWidth(220)
+        self._gender_confidence_edit.setMaximumWidth(360)
+        gender_row_layout.addWidget(self._gender_hint_edit)
         gender_row_layout.addWidget(self._gender_confidence_label)
-        gender_row_layout.addWidget(self._gender_confidence_edit, 1)
+        gender_row_layout.addWidget(self._gender_confidence_edit)
+        gender_row_layout.addStretch(1)
 
         self._age_row_widget = QWidget(self)
+        self._age_row_widget.setMaximumHeight(30)
         age_row_layout = QHBoxLayout(self._age_row_widget)
         age_row_layout.setContentsMargins(0, 0, 0, 0)
         age_row_layout.setSpacing(8)
-        age_row_layout.addWidget(self._age_hint_edit, 1)
+        self._age_hint_edit.setMinimumWidth(220)
+        self._age_hint_edit.setMaximumWidth(360)
+        self._age_confidence_edit.setMinimumWidth(220)
+        self._age_confidence_edit.setMaximumWidth(360)
+        age_row_layout.addWidget(self._age_hint_edit)
         age_row_layout.addWidget(self._age_confidence_label)
-        age_row_layout.addWidget(self._age_confidence_edit, 1)
+        age_row_layout.addWidget(self._age_confidence_edit)
+        age_row_layout.addStretch(1)
+        self._align_demographic_confidence_labels()
 
         editor_layout.addRow(self._canonical_name_label, self._canonical_name_edit)
         editor_layout.addRow(self._aliases_label, self._aliases_edit)
@@ -637,7 +650,7 @@ class CharactersPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-08
-        @version    0.5.0
+        @version    0.5.1
         """
         self._title_label.setText(f"<h2>{ui_state_service.translate('characters.title', language)}</h2>")
         self._ui_language = language
@@ -662,12 +675,31 @@ class CharactersPage(QWidget):
         self._voice_definition_prompt_label.setText(
             ui_state_service.translate("characters.voice_definition_prompt", language)
         )
+        self._align_demographic_confidence_labels()
         self._apply_character_list_height()
         if self._profile_combo.count() == 1 and self._profile_combo.currentData() is None:
             self._profile_combo.setItemText(
                 0,
                 ui_state_service.translate("ai_settings.none", language),
             )
+
+    def _align_demographic_confidence_labels(self) -> None:
+        """
+        @brief      Keep Gender Confidence and Age Confidence controls column-aligned.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-23
+        @version    0.1.0
+        """
+        confidence_label_width = max(
+            self._gender_confidence_label.sizeHint().width(),
+            self._age_confidence_label.sizeHint().width(),
+        )
+        self._gender_confidence_label.setMinimumWidth(confidence_label_width)
+        self._gender_confidence_label.setMaximumWidth(confidence_label_width)
+        self._age_confidence_label.setMinimumWidth(confidence_label_width)
+        self._age_confidence_label.setMaximumWidth(confidence_label_width)
 
     def _install_evidence_find_context_menu(self, editor: QPlainTextEdit) -> None:
         """

@@ -12,8 +12,8 @@
 @details Copies the DDP_Audiomancer dashboard layout so the main window uses
          the same first-page structure without implementing import behavior.
 @author Eng. Dan Dumitru Pasare
-@date 2026-05-14
-@version 0.12.1
+@date 2026-05-23
+@version 0.12.2
 """
 
 # IMPORTS
@@ -94,8 +94,8 @@ class HomeProjectPage(QWidget):
         @return     None.
         @exception  None
         @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-14
-        @version    0.11.1
+        @date       2026-05-23
+        @version    0.11.2
         """
         super().__init__(parent)
         self._project_active = False
@@ -127,6 +127,10 @@ class HomeProjectPage(QWidget):
         summary_layout.setHorizontalSpacing(10)
         summary_layout.setVerticalSpacing(3)
         self._name_label = QLabel("Project: none")
+        project_name_font = QFont(self.font())
+        project_name_font.setBold(True)
+        project_name_font.setPointSizeF(max(project_name_font.pointSizeF(), 1.0) * 1.25)
+        self._name_label.setFont(project_name_font)
         self._path_label = QLabel("Path: none")
         self._path_label.setWordWrap(True)
         self._source_label = QLabel("Source: none")

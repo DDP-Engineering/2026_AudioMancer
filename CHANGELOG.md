@@ -10,6 +10,33 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [1.3.1] - 2026-05-23
+
+### Changed
+
+- Text Chunking, AI Translation, and Speech Blocks chunk lists now use
+  full-width one-line row previews with edge elision instead of hard-truncated
+  preview text.
+- Characters profile controls were tightened so labels and fields remain
+  aligned when the application window is expanded.
+- Narator Voice controls were shortened, the profile wording was removed from
+  the action buttons, and the vertical splitter range was widened.
+- Character Voices now shows an AI Profile selector beside Generate Character
+  Samples for consistency with the narrator and character workflows.
+- Speech Blocks and Audio Blocks splitter and header layouts were retuned so
+  panes, selectors, and progress controls resize more predictably on wide
+  windows.
+- Project package metadata and `audiomancer.__version__` were updated to
+  `1.3.1`.
+- Offline English and Romanian help bundles were updated to version `1.3.1`.
+
+### Fixed
+
+- Fixed repeated project-repair prompts caused by Character Voices activation
+  syncing manifest metadata before persisted voice targets had been loaded.
+- Fixed Audio Blocks progress and Scene Ambience selector sizing so they stay
+  anchored and expand correctly when the window is maximized.
+
 ## [1.3.0] - 2026-05-21
 
 ### Added

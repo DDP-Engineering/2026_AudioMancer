@@ -12,14 +12,15 @@
 @details Presents application settings, including runtime language, completion
          beep, and editable custom UI themes.
 @author Eng. Dan Dumitru Pasare
-@date 2026-05-14
-@version 0.10.0
+@date 2026-05-23
+@version 0.10.1
 """
 
 # IMPORTS
 
 import copy
 
+from PySide6.QtCore import Qt
 from PySide6.QtGui import QColor, QFont
 from PySide6.QtWidgets import (
     QCheckBox,
@@ -78,8 +79,8 @@ class SettingsPage(QWidget):
         @return     None.
         @exception  None
         @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-14
-        @version    0.10.0
+        @date       2026-05-23
+        @version    0.10.1
         """
         super().__init__(parent)
 
@@ -151,7 +152,7 @@ class SettingsPage(QWidget):
         self._theme_font_size_spin.setRange(ui_theme_service.MIN_FONT_POINT_SIZE, ui_theme_service.MAX_FONT_POINT_SIZE)
         self._theme_font_size_spin.setSingleStep(0.5)
         self._theme_font_size_spin.setDecimals(1)
-        self._theme_font_size_spin.setMaximumWidth(92)
+        self._theme_font_size_spin.setMaximumWidth(120)
         self._theme_font_size_label = QLabel("UI font size", self)
         editor_form.addRow(self._theme_font_size_label, self._theme_font_size_spin)
 
@@ -167,7 +168,7 @@ class SettingsPage(QWidget):
         )
         self._theme_text_font_size_spin.setSingleStep(0.5)
         self._theme_text_font_size_spin.setDecimals(1)
-        self._theme_text_font_size_spin.setMaximumWidth(92)
+        self._theme_text_font_size_spin.setMaximumWidth(120)
         self._theme_text_font_size_label = QLabel("Text font size", self)
         editor_form.addRow(self._theme_text_font_size_label, self._theme_text_font_size_spin)
 
@@ -191,8 +192,11 @@ class SettingsPage(QWidget):
         editor_row.addLayout(left_editor_column, 0)
 
         color_grid = QGridLayout()
+        color_grid.setColumnStretch(0, 1)
+        color_grid.setColumnStretch(1, 0)
         for row_index, (role_name, role_label) in enumerate(_EDITABLE_COLOR_ROLES):
             label = QLabel(role_label, self)
+            label.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
             button = QPushButton("#000000", self)
             button.setMinimumWidth(150)
             button.clicked.connect(lambda _checked=False, color_role=role_name: self._choose_color(color_role))

@@ -14,7 +14,7 @@
          preview controls for the fixed Qwen3-backed narrator workflow.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-17
-@version 3.12.6
+@version 3.12.9
 """
 
 # IMPORTS
@@ -39,9 +39,10 @@ from PySide6.QtWidgets import (
 from audiomancer import config
 from audiomancer.services import ui_state_service
 
-_PROFILE_PANE_INITIAL_WIDTH = 236
-_PROFILE_PANE_MAXIMUM_WIDTH = 248
-_PROFILE_PANE_MINIMUM_WIDTH = 212
+_PROFILE_PANE_INITIAL_WIDTH = 400
+_PROFILE_PANE_MAXIMUM_WIDTH = 560
+_PROFILE_PANE_MINIMUM_WIDTH = 220
+_PROFILE_PANE_MAXIMUM_WIDTH_FRACTION = 0.55
 
 
 class NaratorVoicePage(QWidget):
@@ -72,7 +73,7 @@ class NaratorVoicePage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-17
-        @version    1.9.5
+        @version    1.9.6
         """
         super().__init__(parent)
         self._project_active = False
@@ -112,7 +113,7 @@ class NaratorVoicePage(QWidget):
         self._ai_profile_combo = QComboBox(self)
         self._ai_profile_combo.addItem("(none)", None)
         title_row.addWidget(self._ai_profile_combo)
-        self._generate_profiles_button = QPushButton("Generate Narator Profiles", self)
+        self._generate_profiles_button = QPushButton("Generate Narators", self)
         self._generate_profiles_button.clicked.connect(self._emit_generate_profiles)
         title_row.addWidget(self._generate_profiles_button)
         header_layout.addLayout(title_row)
@@ -122,7 +123,7 @@ class NaratorVoicePage(QWidget):
         self._main_splitter = QSplitter(self)
         self._main_splitter.setChildrenCollapsible(False)
 
-        self._profiles_group = QGroupBox("Narator Voice Profiles", self)
+        self._profiles_group = QGroupBox("Narator Voices", self)
         profiles_layout = QVBoxLayout(self._profiles_group)
         profiles_action_row = QHBoxLayout()
         self._select_profile_button = QPushButton("Select", self._profiles_group)
@@ -167,13 +168,13 @@ class NaratorVoicePage(QWidget):
         self._preview_budget_label = QLabel("Preview budget: 0/0 safe words", self)
         preview_layout.addWidget(self._preview_budget_label)
         actions_row = QHBoxLayout()
-        self._create_profile_button = QPushButton("Create Profile", self)
+        self._create_profile_button = QPushButton("Create", self)
         self._create_profile_button.clicked.connect(self._emit_create_profile)
-        self._edit_profile_button = QPushButton("Edit Profile", self)
+        self._edit_profile_button = QPushButton("Edit", self)
         self._edit_profile_button.clicked.connect(self._emit_edit_profile)
-        self._save_profile_button = QPushButton("Save Profile", self)
+        self._save_profile_button = QPushButton("Save", self)
         self._save_profile_button.clicked.connect(self._emit_save_profile)
-        self._delete_profile_button = QPushButton("Delete Profile", self)
+        self._delete_profile_button = QPushButton("Delete", self)
         self._delete_profile_button.clicked.connect(self._emit_delete_profile)
         self._generate_sample_button = QPushButton("Generate Sample", self)
         self._generate_sample_button.setMinimumWidth(self._generate_sample_button.sizeHint().width() + 12)
@@ -602,7 +603,7 @@ class NaratorVoicePage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-05-01
-        @version    0.4.0
+        @version    0.4.1
         """
         required_attributes = ("_main_splitter", "_profiles_group", "_editor_container")
         if not all(hasattr(self, attribute_name) for attribute_name in required_attributes):
@@ -611,7 +612,11 @@ class NaratorVoicePage(QWidget):
         if splitter_width <= 0:
             return
         self._profiles_group.setMinimumWidth(_PROFILE_PANE_MINIMUM_WIDTH)
-        self._profiles_group.setMaximumWidth(_PROFILE_PANE_MAXIMUM_WIDTH)
+        maximum_profile_width = max(
+            _PROFILE_PANE_MAXIMUM_WIDTH,
+            int(splitter_width * _PROFILE_PANE_MAXIMUM_WIDTH_FRACTION),
+        )
+        self._profiles_group.setMaximumWidth(maximum_profile_width)
         self._editor_container.setMinimumWidth(splitter_width // 3)
 
     def _preview_label_key(self) -> str:

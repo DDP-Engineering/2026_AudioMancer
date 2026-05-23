@@ -13,7 +13,7 @@
          review controls for the Audio Blocks workflow.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-23
-@version 0.5.5
+@version 0.5.6
 """
 
 # IMPORTS
@@ -40,7 +40,6 @@ from audiomancer.services import audio_blocks_service, speech_blocks_service, ui
 # CONSTANTS
 
 _PROGRESS_BAR_MIN_WIDTH_PX = 520
-_PROGRESS_BAR_MAX_WIDTH_PX = 920
 _SCENE_AMBIENCE_AUDIO_COMBO_MIN_WIDTH_PX = 230
 
 
@@ -70,7 +69,7 @@ class AudioBlocksPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-23
-        @version    0.5.4
+        @version    0.5.5
         """
         super().__init__(parent)
         self._current_language = "en"
@@ -111,7 +110,6 @@ class AudioBlocksPage(QWidget):
         self._progress_bar.setValue(0)
         self._progress_bar.setFormat("%p%")
         self._progress_bar.setMinimumWidth(_PROGRESS_BAR_MIN_WIDTH_PX)
-        self._progress_bar.setMaximumWidth(_PROGRESS_BAR_MAX_WIDTH_PX)
         self._progress_bar.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         progress_row.addWidget(self._progress_bar, 1)
         self._scene_ambience_audio_combo = QComboBox(self)

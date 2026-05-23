@@ -14,10 +14,12 @@
          preservation, translated labels, and generation button enablement.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-24
-@version 0.8.3
+@version 0.8.6
 """
 
 # IMPORTS
+
+from PySide6.QtCore import Qt
 
 from audiomancer.services import speech_blocks_service
 from audiomancer.ui.pages.speech_blocks_page import SpeechBlocksPage
@@ -78,6 +80,7 @@ def test_speech_blocks_page_renders_chunks_and_read_only_block_details(qtbot) ->
     assert page._generate_button.isEnabled() is False
     assert page._reset_generation_button.isEnabled() is True
     assert page._chunk_list.count() == 1
+    assert page._chunk_list.textElideMode() == Qt.TextElideMode.ElideRight
     assert page._speech_block_list.count() == 1
     assert page._source_text_edit.toPlainText() == 'Narration. "Hello there."'
     assert page._source_text_edit.isReadOnly() is True
@@ -88,6 +91,39 @@ def test_speech_blocks_page_renders_chunks_and_read_only_block_details(qtbot) ->
     assert page._speech_block_text_edit.toPlainText() == "Hello there."
     assert page._character_count_edit.isReadOnly() is True
     assert page._character_count_edit.text() == "12 / 180"
+
+
+def test_speech_blocks_page_chunk_list_uses_one_line_full_preview(qtbot) -> None:
+    """
+    @brief      Verify chunk-list rows keep the full flattened preview and let the view elide it.
+    @param[in]  qtbot Qt test helper fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-23
+    @version    0.1.0
+    """
+    page = SpeechBlocksPage()
+    qtbot.addWidget(page)
+    long_preview = "First sentence.\nSecond sentence with enough words to exceed the old fixed preview limit."
+
+    page.set_project_active(True)
+    page.set_ai_profiles([("Profile One", "profile-1")], "profile-1")
+    page.set_speech_blocks_state(
+        source_chunks=[{"chunk_id": "chunk-0001", "sequence_index": 1, "text": long_preview}],
+        speech_blocks=[],
+        notes=["Ready."],
+        selected_profile_id="profile-1",
+        stage_status="not_started",
+        selected_source_language="en",
+        processed_chunk_count=0,
+        total_chunk_count=1,
+    )
+
+    row_text = page._chunk_list.item(0).text()
+
+    assert "\n" not in row_text
+    assert "Second sentence with enough words to exceed the old fixed preview limit." in row_text
 
 
 def test_speech_blocks_page_header_uses_compact_buttons_and_wider_profile(qtbot) -> None:
@@ -267,6 +303,25 @@ def test_speech_blocks_page_selected_chunk_actions_fill_row_evenly(qtbot) -> Non
     assert page._resplit_button.geometry().left() == page._source_text_edit.geometry().left()
     assert abs(page._resplit_button.geometry().right() - page._source_text_edit.geometry().right()) <= 2
     assert hasattr(page, "_scene_ambience_combo") is False
+
+
+def test_speech_blocks_page_selected_chunk_pane_keeps_minimum_width(qtbot) -> None:
+    """
+    @brief      Verify the lower splitter keeps a usable minimum width for the selected chunk pane.
+    @param[in]  qtbot Qt test helper fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-23
+    @version    0.1.0
+    """
+    page = SpeechBlocksPage()
+    qtbot.addWidget(page)
+    page.resize(1400, 780)
+    page.show()
+    qtbot.wait(0)
+
+    assert page._source_group.minimumWidth() >= 480
 
 
 def test_speech_blocks_page_metadata_controls_align_to_list_edges(qtbot) -> None:

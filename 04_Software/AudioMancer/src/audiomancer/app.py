@@ -12,8 +12,8 @@
 @details Creates the Qt application instance, opens the main window, and
          starts the event loop for the initial UI scaffold.
 @author Eng. Dan Dumitru Pasare
-@date 2026-04-04
-@version 0.1.4
+@date 2026-05-23
+@version 0.1.5
 @example
     uv run audiomancer
 """
@@ -26,6 +26,7 @@ from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QApplication
 
 from . import config
+from .services import ui_state_service, ui_theme_service
 from .services.logging_service import get_component_logger, initialize_logging, shutdown_logging
 from .services.settings_service import load_settings
 from .ui.main_window import MainWindow
@@ -43,8 +44,8 @@ def main() -> int:
     @return     Process exit code returned by QApplication.exec().
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-04
-    @version    0.1.4
+    @date       2026-05-23
+    @version    0.1.5
     """
     log_file_path = initialize_logging()
     logger = get_component_logger("app")
@@ -58,6 +59,19 @@ def main() -> int:
         application = QApplication(sys.argv)
         application.setApplicationName(APPLICATION_NAME)
         application.setWindowIcon(QIcon(str(config.APP_ICON_PATH)))
+
+        # Apply the persisted UI theme to the QApplication BEFORE the main
+        # window is constructed. QApplication.setFont() does not retroactively
+        # re-layout widgets that were already built with the previous default
+        # font, so applying the theme only after MainWindow creation leaves
+        # the operator-chosen font and palette invisible at startup. Doing it
+        # here means every widget built by MainWindow inherits the themed
+        # font, palette and stylesheet from the moment of construction.
+        startup_theme = ui_theme_service.theme_by_id(
+            settings_payload.get("ui_theme_id", config.DEFAULT_UI_THEME_ID),
+            settings_payload.get("ui_themes", []),
+        )
+        ui_state_service.apply_theme(application, startup_theme, None)
 
         window = MainWindow(settings_payload=settings_payload)
         window.show()

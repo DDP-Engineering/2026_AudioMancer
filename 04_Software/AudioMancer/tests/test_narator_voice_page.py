@@ -13,7 +13,7 @@
          sample-dependent button enablement, and bottom status rendering.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-18
-@version 3.6.4
+@version 3.6.7
 """
 
 # IMPORTS
@@ -32,7 +32,7 @@ def test_narator_voice_page_places_select_button_in_profiles_group(qtbot) -> Non
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-17
-    @version    1.4.0
+    @version    1.4.3
     """
     page = NaratorVoicePage()
     qtbot.addWidget(page)
@@ -42,8 +42,17 @@ def test_narator_voice_page_places_select_button_in_profiles_group(qtbot) -> Non
     assert page._select_profile_button.parentWidget() is page._profiles_group
     assert page._import_sample_button.parentWidget() is page._profiles_group
     assert page._import_sample_button.text() == "Import Sample"
-    assert page._profiles_group.minimumWidth() >= 212
-    assert page._profiles_group.maximumWidth() <= 248
+    assert page._profiles_group.title() == "Narator Voices"
+    assert page._create_profile_button.text() == "Create"
+    assert page._edit_profile_button.text() == "Edit"
+    assert page._save_profile_button.text() == "Save"
+    assert page._delete_profile_button.text() == "Delete"
+    assert page._generate_profiles_button.text() == "Generate Narators"
+    assert page._profiles_group.minimumWidth() == 220
+    assert page._profiles_group.maximumWidth() == 560
+    page._main_splitter.resize(1600, 600)
+    page._apply_main_splitter_minimums()
+    assert page._profiles_group.maximumWidth() == 880
     assert page._generate_sample_button.minimumWidth() > page._generate_sample_button.sizeHint().width()
     assert hasattr(page, "_setup_group") is False
     assert hasattr(page, "_profile_name_label") is False
@@ -172,7 +181,7 @@ def test_narator_voice_page_preview_toggle_updates_label_and_select_enablement(q
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-17
-    @version    1.1.1
+    @version    1.1.2
     """
     page = NaratorVoicePage()
     qtbot.addWidget(page)
@@ -208,8 +217,9 @@ def test_narator_voice_page_preview_toggle_updates_label_and_select_enablement(q
     )
 
     assert page._select_profile_button.isEnabled() is True
+    assert page._preview_toggle_button.text() == "Play"
     page.set_preview_active(True)
-    assert page._preview_toggle_button.text() == "Stop play"
+    assert page._preview_toggle_button.text() == "Stop"
 
 
 def test_narator_voice_page_status_panel_keeps_language_value_internal(qtbot) -> None:

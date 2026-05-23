@@ -13,12 +13,12 @@
          chunk review, manual edits, approval controls, and progress display.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-07
-@version 0.6.5
+@version 0.6.6
 """
 
 # IMPORTS
 
-from PySide6.QtCore import Signal
+from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
     QComboBox,
     QGroupBox,
@@ -61,7 +61,7 @@ class AiTranslationPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-07
-        @version    0.4.3
+        @version    0.4.4
         """
         super().__init__(parent)
         self._project_active = False
@@ -100,6 +100,7 @@ class AiTranslationPage(QWidget):
         chunk_list_layout = QHBoxLayout(self._chunk_list_group)
         chunk_list_layout.setContentsMargins(6, 12, 6, 6)
         self._chunk_list = QListWidget(self)
+        self._chunk_list.setTextElideMode(Qt.TextElideMode.ElideRight)
         self._chunk_list.currentRowChanged.connect(self._show_selected_chunk)
         chunk_list_layout.addWidget(self._chunk_list, 1)
         self._chunk_list_group.setMinimumHeight(150)
@@ -643,7 +644,7 @@ def _format_chunk_list_item(chunk: dict[str, object]) -> str:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-07
-    @version    0.1.0
+    @version    0.1.1
     """
     if bool(chunk.get("approved", False)):
         status_label = "Approved"
@@ -652,7 +653,8 @@ def _format_chunk_list_item(chunk: dict[str, object]) -> str:
     else:
         status_label = "Pending"
     source_text = str(chunk.get("source_text", ""))
-    preview = source_text if len(source_text) <= 60 else source_text[:57] + "..."
+    preview_line = next((line.strip() for line in source_text.splitlines() if line.strip()), "")
+    preview = " ".join(preview_line.split())
     return f"[{status_label}] {chunk.get('chunk_id', '')} | {preview}"
 
 

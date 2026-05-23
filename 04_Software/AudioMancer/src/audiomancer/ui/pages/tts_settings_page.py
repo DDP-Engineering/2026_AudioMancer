@@ -12,15 +12,17 @@
 @details Renders the operator-facing TTS Settings dialog and exposes load or
          build helpers so the main window can coordinate runtime persistence.
 @author Eng. Dan Dumitru Pasare
-@date 2026-04-18
-@version 1.5.0
+@date 2026-05-23
+@version 1.6.4
 """
 
 # IMPORTS
 
 import copy
 
+from PySide6.QtCore import QEvent, Qt
 from PySide6.QtWidgets import (
+    QAbstractSpinBox,
     QComboBox,
     QDoubleSpinBox,
     QFormLayout,
@@ -32,6 +34,8 @@ from PySide6.QtWidgets import (
     QPushButton,
     QSizePolicy,
     QSpinBox,
+    QStyle,
+    QStyleOptionSpinBox,
     QVBoxLayout,
     QWidget,
 )
@@ -45,6 +49,8 @@ _RUNTIME_LIMIT_LABEL_MIN_WIDTH_PX = 200
 _RUNTIME_LIMIT_FORM_FIELD_SPACING_PX = 16
 _RUNTIME_LIMIT_COLUMN_SPACING_PX = 44
 _AMBIENCE_LIMITS_LEFT_MARGIN_PX = 12
+_RUNTIME_LIMIT_CONTROL_MAX_WIDTH_PX = 104
+_SCENE_AMBIENCE_PLACEMENT_MAX_WIDTH_PX = 420
 
 
 class TtsSettingsPage(QWidget):
@@ -53,7 +59,7 @@ class TtsSettingsPage(QWidget):
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-18
-    @version    1.4.0
+    @version    1.4.1
     """
 
     def __init__(self, parent=None) -> None:
@@ -63,8 +69,8 @@ class TtsSettingsPage(QWidget):
         @return     None.
         @exception  None
         @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-18
-        @version    1.4.0
+        @date       2026-05-23
+        @version    1.4.2
         """
         super().__init__(parent)
         self._current_language = config.DEFAULT_LANGUAGE
@@ -129,12 +135,14 @@ class TtsSettingsPage(QWidget):
         numeric_limits_form = QFormLayout(self._numeric_limits_column)
         numeric_limits_form.setContentsMargins(0, 0, 0, 0)
         numeric_limits_form.setHorizontalSpacing(_RUNTIME_LIMIT_FORM_FIELD_SPACING_PX)
-        numeric_limits_form.setFieldGrowthPolicy(QFormLayout.FieldGrowthPolicy.FieldsStayAtSizeHint)
+        numeric_limits_form.setFieldGrowthPolicy(QFormLayout.FieldGrowthPolicy.AllNonFixedFieldsGrow)
+        numeric_limits_form.setRowWrapPolicy(QFormLayout.RowWrapPolicy.WrapLongRows)
         self._ambience_limits_column = QWidget(self)
         ambience_limits_form = QFormLayout(self._ambience_limits_column)
         ambience_limits_form.setContentsMargins(_AMBIENCE_LIMITS_LEFT_MARGIN_PX, 0, 0, 0)
         ambience_limits_form.setHorizontalSpacing(_RUNTIME_LIMIT_FORM_FIELD_SPACING_PX)
-        ambience_limits_form.setFieldGrowthPolicy(QFormLayout.FieldGrowthPolicy.FieldsStayAtSizeHint)
+        ambience_limits_form.setFieldGrowthPolicy(QFormLayout.FieldGrowthPolicy.AllNonFixedFieldsGrow)
+        ambience_limits_form.setRowWrapPolicy(QFormLayout.RowWrapPolicy.WrapLongRows)
 
         self._preview_timeout_label = QLabel("Audio Preview Timeout (s)", self)
         self._configure_runtime_limit_label(self._preview_timeout_label)
@@ -159,9 +167,9 @@ class TtsSettingsPage(QWidget):
         numeric_limits_form.addRow(self._preview_text_limit_label, self._preview_text_limit_spin)
         self._scene_ambience_placement_label = QLabel("Scene Ambience Placement", self)
         self._scene_ambience_placement_combo = QComboBox(self)
-        self._scene_ambience_placement_combo.setMinimumWidth(260)
-        self._scene_ambience_placement_combo.setMaximumWidth(420)
-        self._scene_ambience_placement_combo.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
+        self._scene_ambience_placement_combo.setMinimumWidth(140)
+        self._scene_ambience_placement_combo.setMaximumWidth(_SCENE_AMBIENCE_PLACEMENT_MAX_WIDTH_PX)
+        self._scene_ambience_placement_combo.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         for placement in config.SCENE_AMBIENCE_PLACEMENT_OPTIONS:
             self._scene_ambience_placement_combo.addItem(placement, placement)
         ambience_limits_form.addRow(self._scene_ambience_placement_label, self._scene_ambience_placement_combo)
@@ -198,9 +206,9 @@ class TtsSettingsPage(QWidget):
         self._scene_ambience_seed_spin.setValue(-1)
         self._configure_limit_spinbox(self._scene_ambience_seed_spin)
         ambience_limits_form.addRow(self._scene_ambience_seed_label, self._scene_ambience_seed_spin)
-        self._numeric_limits_column.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
+        self._numeric_limits_column.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         self._ambience_limits_column.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
-        self._planning_columns_layout.addWidget(self._numeric_limits_column, 0)
+        self._planning_columns_layout.addWidget(self._numeric_limits_column, 1)
         self._planning_columns_layout.addWidget(self._ambience_limits_column, 1)
         planning_layout.addLayout(self._planning_columns_layout)
         self._planning_group.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
@@ -232,16 +240,19 @@ class TtsSettingsPage(QWidget):
         @return     None.
         @exception  None
         @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-18
-        @version    1.4.0
+        @date       2026-05-23
+        @version    1.5.0
         """
         self._project_active = project_active
         self._base_url_edit.setText(
             str(settings_payload.get("tts_runtime_base_url", config.DEFAULT_TTS_RUNTIME_BASE_URL))
         )
         self._api_key_edit.setText(str(settings_payload.get("tts_runtime_api_key", "")))
-        self._probe_succeeded = bool(settings_payload.get("tts_runtime_probe_succeeded", False))
-        self._probe_message = str(settings_payload.get("tts_runtime_probe_message", ""))
+        # Dialog always opens with a fresh "Not connected" state — the operator must
+        # re-run Test Connection in each session so the displayed status reflects the
+        # live runtime and not a stale flag persisted from a previous session.
+        self._probe_succeeded = False
+        self._probe_message = ""
         self._preview_timeout_spin.setValue(
             int(
                 settings_payload.get(
@@ -465,19 +476,60 @@ class TtsSettingsPage(QWidget):
                 combo.setCurrentIndex(index)
                 return
 
-    def _configure_limit_spinbox(self, spinbox: QSpinBox) -> None:
+    def _configure_limit_spinbox(self, spinbox: QAbstractSpinBox) -> None:
         """
         @brief      Configure compact numeric controls for runtime limits.
         @param[in]  spinbox Target spin box.
         @return     None.
         @exception  None
         @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-20
-        @version    0.1.0
+        @date       2026-05-23
+        @version    0.2.1
         """
         spinbox.setMinimumWidth(88)
-        spinbox.setMaximumWidth(104)
+        spinbox.setMaximumWidth(_RUNTIME_LIMIT_CONTROL_MAX_WIDTH_PX)
+        spinbox.setButtonSymbols(QAbstractSpinBox.ButtonSymbols.UpDownArrows)
         spinbox.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
+        spinbox.installEventFilter(self)
+
+    def eventFilter(self, watched: object, event: object) -> bool:
+        """
+        @brief      Keep compact spin-box arrow clicks aligned to the real Qt arrow boxes.
+        @param[in]  watched Object receiving the event.
+        @param[in]  event Event delivered to the object.
+        @return     True when the event was handled locally.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-23
+        @version    0.3.0
+        """
+        if isinstance(watched, QAbstractSpinBox) and event.type() == QEvent.Type.MouseButtonPress:
+            if event.button() != Qt.MouseButton.LeftButton or not watched.isEnabled():
+                return False
+            click_position = event.position().toPoint()
+            style_option = QStyleOptionSpinBox()
+            watched.initStyleOption(style_option)
+            up_button_rect = watched.style().subControlRect(
+                QStyle.ComplexControl.CC_SpinBox,
+                style_option,
+                QStyle.SubControl.SC_SpinBoxUp,
+                watched,
+            )
+            down_button_rect = watched.style().subControlRect(
+                QStyle.ComplexControl.CC_SpinBox,
+                style_option,
+                QStyle.SubControl.SC_SpinBoxDown,
+                watched,
+            )
+            if up_button_rect.contains(click_position):
+                watched.stepBy(1)
+                watched.selectAll()
+                return True
+            if down_button_rect.contains(click_position):
+                watched.stepBy(-1)
+                watched.selectAll()
+                return True
+        return super().eventFilter(watched, event)
 
     def _configure_runtime_limit_label(self, label: QLabel) -> None:
         """

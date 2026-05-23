@@ -13,7 +13,7 @@
          bounded approval navigation, and selected-row action enablement.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-23
-@version 0.6.4
+@version 0.6.5
 """
 
 # IMPORTS
@@ -188,13 +188,13 @@ def test_audio_blocks_page_advances_to_next_pending_generated_scene_ambience_row
 
 def test_audio_blocks_page_places_scene_ambience_selector_on_progress_row(qtbot) -> None:
     """
-    @brief      Verify the Scene Ambience Audio selector is beside the progress indicator, not in the button row.
+    @brief      Verify the Scene Ambience Audio selector anchors right and the progress indicator expands.
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-20
-    @version    0.1.2
+    @version    0.1.3
     """
     page = AudioBlocksPage()
     qtbot.addWidget(page)
@@ -223,11 +223,11 @@ def test_audio_blocks_page_places_scene_ambience_selector_on_progress_row(qtbot)
     qtbot.wait(0)
 
     assert page._progress_bar.minimumWidth() >= 520
-    assert page._progress_bar.maximumWidth() >= 920
     assert page._scene_ambience_audio_combo.minimumWidth() >= 230
     assert abs(page._scene_ambience_audio_combo.geometry().top() - page._progress_bar.geometry().top()) <= 1
     assert page._scene_ambience_audio_combo.geometry().left() > page._progress_bar.geometry().right()
     assert page._scene_ambience_audio_combo.geometry().left() - page._progress_bar.geometry().right() <= 12
+    assert page._scene_ambience_audio_combo.geometry().right() >= page.width() - 24
     assert page._scene_ambience_audio_combo.geometry().top() > page._start_button.geometry().bottom()
     assert page.scene_ambience_audio_enabled() is True
 

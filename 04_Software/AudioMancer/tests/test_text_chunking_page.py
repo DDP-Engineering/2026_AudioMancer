@@ -13,7 +13,7 @@
          selected chunk preview editing and search behavior.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-24
-@version 0.4.4
+@version 0.4.5
 """
 
 # IMPORTS
@@ -33,7 +33,7 @@ def test_text_chunking_page_renders_chunks_and_selected_preview(qtbot) -> None:
     @exception  None.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-07
-    @version    0.3.0
+    @version    0.3.1
     """
     page = TextChunkingPage()
     qtbot.addWidget(page)
@@ -62,6 +62,8 @@ def test_text_chunking_page_renders_chunks_and_selected_preview(qtbot) -> None:
     assert page._chunk_list.count() == 1
     assert page._chunk_list.currentRow() == 0
     assert page._chunk_text_edit.toPlainText() == "Paragraph text"
+    assert page._chunk_list.textElideMode() == Qt.TextElideMode.ElideRight
+    assert page._chunk_list.item(0).text() == "chunk-0001 | Paragraph text"
     assert page._insert_chunk_button.isEnabled() is True
     assert page._delete_chunk_button.isEnabled() is False
     assert page._edit_chunk_button.isEnabled() is True
@@ -79,7 +81,7 @@ def test_text_chunking_page_keeps_selectors_readable_while_busy(qtbot) -> None:
     @exception  None.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-07
-    @version    0.1.0
+    @version    0.1.1
     """
     page = TextChunkingPage()
     qtbot.addWidget(page)
@@ -98,6 +100,44 @@ def test_text_chunking_page_keeps_selectors_readable_while_busy(qtbot) -> None:
     assert page._ai_chunk_button.isEnabled() is False
     assert page._profile_combo.isEnabled() is True
     assert page._strategy_combo.isEnabled() is True
+
+
+def test_text_chunking_page_keeps_full_chunk_list_preview_text(qtbot) -> None:
+    """
+    @brief      Verify chunk list items retain full text so wide windows can reveal longer previews.
+    @param[in]  qtbot Qt test helper fixture.
+    @return     None.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-23
+    @version    0.1.0
+    """
+    page = TextChunkingPage()
+    qtbot.addWidget(page)
+    chunk_text = (
+        "This chunk preview is intentionally longer than eighty characters so the list can use all available width.\n"
+        "This second line belongs in the selected chunk preview, not the chunk list."
+    )
+
+    page.set_processing_state(
+        cleaned_text="clean text",
+        chunks=[
+            {
+                "chunk_id": "chunk-0001",
+                "sequence_index": 1,
+                "text": chunk_text,
+            }
+        ],
+        notes=["ready"],
+        can_chunk=True,
+    )
+
+    expected_preview = (
+        "chunk-0001 | This chunk preview is intentionally longer than eighty characters so the list can use all "
+        "available width."
+    )
+
+    assert page._chunk_list.item(0).text() == expected_preview
 
 
 def test_text_chunking_page_enables_ai_button_when_profiles_exist(qtbot) -> None:
