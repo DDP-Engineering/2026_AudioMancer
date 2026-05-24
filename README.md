@@ -18,7 +18,7 @@ AI help is optional. You can use AI for cleanup, chunking, translation, characte
 
 Use the current GitHub Release page for both AudioMancer and the VoiceWeaver runtime package:
 
-- [AudioMancer v1.3.0 Windows release](https://github.com/DDP-Engineering/2026_AudioMancer/releases/tag/v1.3.0)
+- [AudioMancer v1.3.1 Windows release](https://github.com/DDP-Engineering/2026_AudioMancer/releases/tag/v1.3.1)
 
 The release page includes:
 
@@ -28,13 +28,13 @@ The release page includes:
 
 ## Install AudioMancer
 
-1. Download `AudioMancer_Windows_x64.zip` from the v1.3.0 release page.
+1. Download `AudioMancer_Windows_x64.zip` from the v1.3.1 release page.
 2. Extract it to a normal folder, for example `C:\AudioMancer`.
 3. Start AudioMancer with `AudioMancer.exe` or `Start-AudioMancer.cmd`.
 
 ## Install VoiceWeaver
 
-1. Open the [AudioMancer v1.3.0 release page](https://github.com/DDP-Engineering/2026_AudioMancer/releases/tag/v1.3.0).
+1. Open the [AudioMancer v1.3.1 release page](https://github.com/DDP-Engineering/2026_AudioMancer/releases/tag/v1.3.1).
 2. Download the VoiceWeaver runtime package parts linked in the VoiceWeaver section.
 3. Put all parts in one folder.
 4. Reassemble the VoiceWeaver ZIP with PowerShell.
