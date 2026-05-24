@@ -14,50 +14,33 @@ It can help you:
 
 AI help is optional. You can use AI for cleanup, chunking, translation, character discovery, and speech blocks, then review and edit the result. You can also do the same work manually.
 
-## Windows Downloads
+## Downloads
 
-AudioMancer is currently tested on Windows.
+Use the current GitHub Release page for both AudioMancer and the VoiceWeaver runtime package:
 
-Download AudioMancer from the current GitHub Release (`v1.3.0`):
+- [AudioMancer v1.3.0 Windows release](https://github.com/DDP-Engineering/2026_AudioMancer/releases/tag/v1.3.0)
 
-- [AudioMancer_Windows_x64.zip](https://github.com/DDP-Engineering/2026_AudioMancer/releases/latest/download/AudioMancer_Windows_x64.zip)
-- [SHA256SUMS.txt](https://github.com/DDP-Engineering/2026_AudioMancer/releases/latest/download/SHA256SUMS.txt)
+The release page includes:
 
-Download VoiceWeaver from the `v1.0.0` release if you do not already have the runtime package locally:
-
-- [VoiceWeaver-v1.5.0-windows-x64-cuda.zip.part001](https://github.com/DDP-Engineering/2026_AudioMancer/releases/download/v1.0.0/VoiceWeaver-v1.5.0-windows-x64-cuda.zip.part001)
-- [VoiceWeaver-v1.5.0-windows-x64-cuda.zip.part002](https://github.com/DDP-Engineering/2026_AudioMancer/releases/download/v1.0.0/VoiceWeaver-v1.5.0-windows-x64-cuda.zip.part002)
-- [VoiceWeaver-v1.5.0-windows-x64-cuda.zip.part003](https://github.com/DDP-Engineering/2026_AudioMancer/releases/download/v1.0.0/VoiceWeaver-v1.5.0-windows-x64-cuda.zip.part003)
-- [VoiceWeaver-v1.5.0-windows-x64-cuda.zip.part004](https://github.com/DDP-Engineering/2026_AudioMancer/releases/download/v1.0.0/VoiceWeaver-v1.5.0-windows-x64-cuda.zip.part004)
-- [VoiceWeaver-v1.5.0-windows-x64-cuda.zip.part005](https://github.com/DDP-Engineering/2026_AudioMancer/releases/download/v1.0.0/VoiceWeaver-v1.5.0-windows-x64-cuda.zip.part005)
-- [VoiceWeaver-v1.5.0-windows-x64-cuda.zip.part006](https://github.com/DDP-Engineering/2026_AudioMancer/releases/download/v1.0.0/VoiceWeaver-v1.5.0-windows-x64-cuda.zip.part006)
-- [VoiceWeaver-v1.5.0-windows-x64-cuda.zip.part007](https://github.com/DDP-Engineering/2026_AudioMancer/releases/download/v1.0.0/VoiceWeaver-v1.5.0-windows-x64-cuda.zip.part007)
-- [VoiceWeaver-v1.5.0-windows-x64-cuda.zip.part008](https://github.com/DDP-Engineering/2026_AudioMancer/releases/download/v1.0.0/VoiceWeaver-v1.5.0-windows-x64-cuda.zip.part008)
-- [VoiceWeaver-v1.5.0-windows-x64-cuda.zip.part009](https://github.com/DDP-Engineering/2026_AudioMancer/releases/download/v1.0.0/VoiceWeaver-v1.5.0-windows-x64-cuda.zip.part009)
-- [VoiceWeaver-v1.5.0-windows-x64-cuda.zip.part010](https://github.com/DDP-Engineering/2026_AudioMancer/releases/download/v1.0.0/VoiceWeaver-v1.5.0-windows-x64-cuda.zip.part010)
-- [VoiceWeaver-v1.5.0-windows-x64-cuda.zip.part011](https://github.com/DDP-Engineering/2026_AudioMancer/releases/download/v1.0.0/VoiceWeaver-v1.5.0-windows-x64-cuda.zip.part011)
-- [VoiceWeaver-v1.5.0-windows-x64-cuda.zip.part012](https://github.com/DDP-Engineering/2026_AudioMancer/releases/download/v1.0.0/VoiceWeaver-v1.5.0-windows-x64-cuda.zip.part012)
-- [VoiceWeaver-v1.5.0-windows-x64-cuda.zip.part013](https://github.com/DDP-Engineering/2026_AudioMancer/releases/download/v1.0.0/VoiceWeaver-v1.5.0-windows-x64-cuda.zip.part013)
-- [VoiceWeaver-v1.5.0-windows-x64-cuda.zip.part014](https://github.com/DDP-Engineering/2026_AudioMancer/releases/download/v1.0.0/VoiceWeaver-v1.5.0-windows-x64-cuda.zip.part014)
-- [VoiceWeaver-v1.5.0-windows-x64-cuda.zip.part015](https://github.com/DDP-Engineering/2026_AudioMancer/releases/download/v1.0.0/VoiceWeaver-v1.5.0-windows-x64-cuda.zip.part015)
-- [VoiceWeaver SHA256SUMS.txt](https://github.com/DDP-Engineering/2026_AudioMancer/releases/download/v1.0.0/SHA256SUMS.txt)
-
-VoiceWeaver is split into numbered release assets because the full Windows package can be larger than one GitHub release asset. Download all 15 parts before reassembly.
+- `AudioMancer_Windows_x64.zip`
+- `SHA256SUMS.txt`
+- VoiceWeaver runtime package links and checksum information
 
 ## Install AudioMancer
 
-1. Download `AudioMancer_Windows_x64.zip`.
+1. Download `AudioMancer_Windows_x64.zip` from the v1.3.0 release page.
 2. Extract it to a normal folder, for example `C:\AudioMancer`.
 3. Start AudioMancer with `AudioMancer.exe` or `Start-AudioMancer.cmd`.
 
 ## Install VoiceWeaver
 
-1. Download all 15 VoiceWeaver `.partNNN` files from the `v1.0.0` release.
-2. Put all parts in one folder.
-3. Reassemble the VoiceWeaver ZIP with PowerShell.
-4. Extract the VoiceWeaver ZIP to a normal folder, for example `C:\VoiceWeaver`.
-5. Start VoiceWeaver with its Windows start file.
-6. Check that the local health address works: `http://127.0.0.1:8059/v1/health`.
+1. Open the [AudioMancer v1.3.0 release page](https://github.com/DDP-Engineering/2026_AudioMancer/releases/tag/v1.3.0).
+2. Download the VoiceWeaver runtime package parts linked in the VoiceWeaver section.
+3. Put all parts in one folder.
+4. Reassemble the VoiceWeaver ZIP with PowerShell.
+5. Extract the VoiceWeaver ZIP to a normal folder, for example `C:\VoiceWeaver`.
+6. Start VoiceWeaver with its Windows start file.
+7. Check that the local health address works: `http://127.0.0.1:8059/v1/health`.
 
 ## Reassemble VoiceWeaver On Windows
 
@@ -76,24 +59,6 @@ $out.Dispose()
 Get-FileHash -Algorithm SHA256 $outputZip
 ```
 
-## Current VoiceWeaver Package
-
-The current VoiceWeaver package is `VoiceWeaver-v1.5.0-windows-x64-cuda.zip`.
-
-Expected reassembled VoiceWeaver ZIP SHA256:
-
-```text
-393cdf6f57907d8b6651b4bf2069b8a19956b6d4830d568c0b5c0a06b0054aa2
-```
-
-Expected AudioMancer ZIP SHA256:
-
-```text
-3b44497c75be18ba232fd5cc6a3d6342f344140fc6e2b16391772969a4c1ed10
-```
-
-Use the `v1.3.0` `SHA256SUMS.txt` for AudioMancer and the `v1.0.0` `SHA256SUMS.txt` for VoiceWeaver parts.
-
 ## Connect AudioMancer To VoiceWeaver
 
 1. Start VoiceWeaver first.
@@ -103,27 +68,6 @@ Use the `v1.3.0` `SHA256SUMS.txt` for AudioMancer and the `v1.0.0` `SHA256SUMS.t
 5. Leave `API Key` empty for normal local use.
 6. Press `Test Connection`.
 7. Save the TTS settings.
-
-## AI Setup
-
-AudioMancer can use local AI models or online OpenAI-compatible models.
-
-For local AI with LM Studio:
-
-1. Start the LM Studio local server.
-2. In AudioMancer, open `AI Settings`.
-3. Set `Backend Kind` to `lmstudio`.
-4. Set `Base URL` to `http://localhost:1234/v1`.
-5. Set `Model Name` to the model name shown by LM Studio.
-6. Save the profile and select it as the default for the workflow steps you want to run locally.
-
-For online AI:
-
-1. In AudioMancer, open `AI Settings`.
-2. Set `Backend Kind` to `openai_compatible`.
-3. Set the provider base URL, for example `https://api.openai.com/v1`.
-4. Add your API key.
-5. Set the model name and save the profile.
 
 ## Distribution Scope
 
