@@ -1,0 +1,4 @@
+interface:
+  display_name: "Public Deployment"
+  short_description: "Publish and maintain AudioMancer public releases."
+  default_prompt: "Use this skill to publish or maintain the public AudioMancer release, VoiceWeaver runtime links, GitHub Pages download page, and public README."
