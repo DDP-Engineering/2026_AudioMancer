@@ -10,6 +10,26 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [1.3.2] - 2026-05-25
+
+### Changed
+
+- Speech Blocks speaker and content-kind selectors now expand with the
+  available window width so longer speaker labels remain visible.
+- Speech Blocks editing, saving, approval, insertion, deletion, and generation
+  actions now preserve the selected-chunk text cursor, selection, and scroll
+  position instead of moving the operator's reading position.
+- Speech Blocks edit and save handling now avoids unnecessary status rewrites
+  and duplicate manifest summary refreshes.
+- Project package metadata and `audiomancer.__version__` were updated to
+  `1.3.2`.
+- Offline English and Romanian help bundles were updated to version `1.3.2`.
+
+### Fixed
+
+- Fixed the local development environment metadata so `uv run pytest` can start
+  normally again after the local pytest installation became inconsistent.
+
 ## [1.3.1] - 2026-05-23
 
 ### Changed
