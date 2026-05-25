@@ -14,12 +14,13 @@
          controls for the Speech Blocks workflow.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-24
-@version 0.8.9
+@version 0.8.11
 """
 
 # IMPORTS
 
 from PySide6.QtCore import Qt, QTimer, Signal
+from PySide6.QtGui import QTextCursor
 from PySide6.QtWidgets import (
     QComboBox,
     QDoubleSpinBox,
@@ -46,10 +47,8 @@ _CHUNK_ACTION_TOP_MARGIN_PX = 2
 _SOURCE_ACTION_CONTROL_MIN_WIDTH_PX = 180
 _SPEAKER_LABEL_WIDTH_PX = 58
 _SPEAKER_COMBO_MIN_WIDTH_PX = 88
-_SPEAKER_COMBO_MAX_WIDTH_PX = 104
 _CONTENT_KIND_LABEL_WIDTH_PX = 88
 _CONTENT_KIND_COMBO_MIN_WIDTH_PX = 126
-_CONTENT_KIND_COMBO_MAX_WIDTH_PX = 150
 _AI_PROFILE_COMBO_MIN_WIDTH_PX = 260
 _GENERATE_HEADER_BUTTON_MIN_WIDTH_PX = 140
 _RESET_HEADER_BUTTON_MIN_WIDTH_PX = 96
@@ -89,7 +88,7 @@ class SpeechBlocksPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-24
-        @version    0.7.4
+        @version    0.7.5
         """
         super().__init__(parent)
         self._current_language = "en"
@@ -214,9 +213,8 @@ class SpeechBlocksPage(QWidget):
         meta_row.addWidget(self._speaker_label)
         self._speaker_combo = QComboBox(self)
         self._speaker_combo.setMinimumWidth(_SPEAKER_COMBO_MIN_WIDTH_PX)
-        self._speaker_combo.setMaximumWidth(_SPEAKER_COMBO_MAX_WIDTH_PX)
-        self._speaker_combo.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
-        meta_row.addWidget(self._speaker_combo)
+        self._speaker_combo.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        meta_row.addWidget(self._speaker_combo, 2)
         self._warning_label = QLabel("")
         self._warning_label.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Fixed)
         meta_row.addWidget(self._warning_label)
@@ -226,10 +224,9 @@ class SpeechBlocksPage(QWidget):
         meta_row.addWidget(self._content_kind_label)
         self._content_kind_combo = QComboBox(self)
         self._content_kind_combo.setMinimumWidth(_CONTENT_KIND_COMBO_MIN_WIDTH_PX)
-        self._content_kind_combo.setMaximumWidth(_CONTENT_KIND_COMBO_MAX_WIDTH_PX)
-        self._content_kind_combo.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
+        self._content_kind_combo.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         self._content_kind_combo.currentIndexChanged.connect(self._refresh_block_detail_editor)
-        meta_row.addWidget(self._content_kind_combo)
+        meta_row.addWidget(self._content_kind_combo, 1)
         blocks_layout.addLayout(meta_row)
         self._speech_block_text_edit = QPlainTextEdit(self)
         self._speech_block_text_edit.textChanged.connect(self._update_selected_text_character_count)
@@ -517,6 +514,23 @@ class SpeechBlocksPage(QWidget):
         """
         return int(self._source_text_edit.verticalScrollBar().value())
 
+    def source_text_position(self) -> dict[str, int]:
+        """
+        @brief      Return the selected-chunk text cursor, selection, and scroll position.
+        @return     Source text position payload suitable for later restoration.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-25
+        @version    0.1.0
+        """
+        cursor = self._source_text_edit.textCursor()
+        return {
+            "source_scroll": int(self._source_text_edit.verticalScrollBar().value()),
+            "source_horizontal_scroll": int(self._source_text_edit.horizontalScrollBar().value()),
+            "source_cursor_position": int(cursor.position()),
+            "source_anchor_position": int(cursor.anchor()),
+        }
+
     def review_position(self) -> dict[str, object]:
         """
         @brief      Return the current Speech Blocks review selection and scroll positions.
@@ -530,6 +544,7 @@ class SpeechBlocksPage(QWidget):
             "chunk_id": self.selected_chunk_id(),
             "block_id": self.selected_block_id(),
             "source_scroll": self.source_scroll_position(),
+            "source_text_position": self.source_text_position(),
             "chunk_list_scroll": int(self._chunk_list.verticalScrollBar().value()),
             "block_list_scroll": int(self._speech_block_list.verticalScrollBar().value()),
         }
@@ -570,6 +585,19 @@ class SpeechBlocksPage(QWidget):
         self._restore_source_scroll_position(scroll_position)
         QTimer.singleShot(0, lambda: self._restore_source_scroll_position(scroll_position))
 
+    def restore_source_text_position(self, text_position: dict[str, object]) -> None:
+        """
+        @brief      Restore selected-chunk text cursor, selection, and scroll position.
+        @param[in]  text_position Payload returned by `source_text_position`.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-25
+        @version    0.1.0
+        """
+        self._restore_source_text_position(text_position)
+        QTimer.singleShot(0, lambda: self._restore_source_text_position(text_position))
+
     def restore_review_position(self, review_position: dict[str, object]) -> None:
         """
         @brief      Restore the Speech Blocks review selection and scroll positions.
@@ -586,18 +614,20 @@ class SpeechBlocksPage(QWidget):
             self.select_speech_block(block_id)
         elif chunk_id:
             self._select_chunk_by_id(chunk_id)
-        source_scroll_position = int(review_position.get("source_scroll", 0) or 0)
+        source_text_position = review_position.get("source_text_position")
+        if not isinstance(source_text_position, dict):
+            source_text_position = {"source_scroll": int(review_position.get("source_scroll", 0) or 0)}
         chunk_list_scroll_position = int(review_position.get("chunk_list_scroll", 0) or 0)
         block_list_scroll_position = int(review_position.get("block_list_scroll", 0) or 0)
         self._restore_review_scroll_positions(
-            source_scroll_position,
+            source_text_position,
             chunk_list_scroll_position,
             block_list_scroll_position,
         )
         QTimer.singleShot(
             0,
             lambda: self._restore_review_scroll_positions(
-                source_scroll_position,
+                source_text_position,
                 chunk_list_scroll_position,
                 block_list_scroll_position,
             ),
@@ -1197,24 +1227,51 @@ class SpeechBlocksPage(QWidget):
         bounded_position = max(scroll_bar.minimum(), min(scroll_position, scroll_bar.maximum()))
         scroll_bar.setValue(bounded_position)
 
+    def _restore_source_text_position(self, text_position: dict[str, object]) -> None:
+        """
+        @brief      Restore selected-chunk text cursor, selection, and scroll values after refresh.
+        @param[in]  text_position Source text position payload.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-25
+        @version    0.1.0
+        """
+        text = self._source_text_edit.toPlainText()
+        maximum_position = len(text)
+        cursor_position = max(0, min(int(text_position.get("source_cursor_position", 0) or 0), maximum_position))
+        anchor_position = max(
+            0,
+            min(int(text_position.get("source_anchor_position", cursor_position) or 0), maximum_position),
+        )
+        cursor = self._source_text_edit.textCursor()
+        cursor.setPosition(anchor_position)
+        cursor.setPosition(cursor_position, QTextCursor.MoveMode.KeepAnchor)
+        self._source_text_edit.setTextCursor(cursor)
+        self._restore_source_scroll_position(int(text_position.get("source_scroll", 0) or 0))
+        self._restore_scroll_bar_position(
+            self._source_text_edit.horizontalScrollBar(),
+            int(text_position.get("source_horizontal_scroll", 0) or 0),
+        )
+
     def _restore_review_scroll_positions(
         self,
-        source_scroll_position: int,
+        source_text_position: dict[str, object],
         chunk_list_scroll_position: int,
         block_list_scroll_position: int,
     ) -> None:
         """
         @brief      Restore all Speech Blocks review scroll positions after a refresh.
-        @param[in]  source_scroll_position Selected-chunk text scroll value.
+        @param[in]  source_text_position Selected-chunk text cursor, selection, and scroll values.
         @param[in]  chunk_list_scroll_position Chunk-list scroll value.
         @param[in]  block_list_scroll_position Speech-block-list scroll value.
         @return     None.
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-05-16
-        @version    0.1.0
+        @version    0.2.0
         """
-        self._restore_source_scroll_position(source_scroll_position)
+        self._restore_source_text_position(source_text_position)
         self._restore_scroll_bar_position(self._chunk_list.verticalScrollBar(), chunk_list_scroll_position)
         self._restore_scroll_bar_position(self._speech_block_list.verticalScrollBar(), block_list_scroll_position)
 

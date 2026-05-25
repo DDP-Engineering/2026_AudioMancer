@@ -14,7 +14,7 @@
          Speech Blocks workflow.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 0.8.8
+@version 0.8.10
 """
 
 # IMPORTS
@@ -48,7 +48,7 @@ def handle_generate_requested(window: "MainWindow", profile_id: str) -> None:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-13
-    @version    0.4.1
+    @version    0.4.3
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._active_operation_kind is not None:
@@ -89,6 +89,7 @@ def handle_generate_requested(window: "MainWindow", profile_id: str) -> None:
         if additional_speech_block_instructions is None:
             return
 
+    speech_blocks_review_position = _speech_blocks_review_position(window)
     _start_operation(
         window,
         operation_name=ui_state_service.translate("speech_blocks.generate", current_language),
@@ -104,6 +105,7 @@ def handle_generate_requested(window: "MainWindow", profile_id: str) -> None:
                 additional_speech_block_instructions=additional_speech_block_instructions,
             )
         ),
+        preserved_speech_blocks_review_position=speech_blocks_review_position,
     )
 
 
@@ -164,13 +166,14 @@ def handle_approve_block_requested(window: "MainWindow", speech_block_id: str) -
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-24
-    @version    0.5.0
+    @version    0.5.1
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._current_project_root is None or window._current_manifest is None:
         return
     selected_block = _speech_block_by_id(window, speech_block_id)
     was_approved = bool(selected_block.get("approved", False)) if isinstance(selected_block, dict) else False
+    source_text_position = _source_text_position(window)
     try:
         if was_approved:
             speech_blocks_service.unapprove_speech_block(window._current_project_root, speech_block_id)
@@ -191,6 +194,7 @@ def handle_approve_block_requested(window: "MainWindow", speech_block_id: str) -
     else:
         window._speech_blocks_page.advance_to_next_block()
         message_key = "status.speech_block_approved"
+    _restore_source_text_position(window, source_text_position)
     misc_ui_controller.show_message(
         window,
         ui_state_service.translate(message_key, current_language),
@@ -207,13 +211,14 @@ def handle_insert_block_requested(window: "MainWindow", chunk_id: str, after_spe
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.4.0
+    @version    0.4.1
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._current_project_root is None or window._current_manifest is None:
         return
     if not _confirm_speech_block_sequence_change(window, current_language):
         return
+    source_text_position = _source_text_position(window)
     try:
         _report, inserted_block_id = speech_blocks_service.insert_speech_block(
             window._current_project_root,
@@ -231,6 +236,7 @@ def handle_insert_block_requested(window: "MainWindow", chunk_id: str, after_spe
     _reset_audio_assembly_after_speech_blocks_change(window)
     window._speech_blocks_page.select_speech_block(inserted_block_id)
     window._speech_blocks_page.begin_editing_selected_block()
+    _restore_source_text_position(window, source_text_position)
     misc_ui_controller.show_message(
         window,
         ui_state_service.translate("status.speech_block_inserted", current_language),
@@ -246,14 +252,14 @@ def handle_delete_block_requested(window: "MainWindow", speech_block_id: str) ->
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.3.1
+    @version    0.3.2
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._current_project_root is None or window._current_manifest is None:
         return
     if not _confirm_delete_speech_block(window, current_language):
         return
-    source_scroll_position = window._speech_blocks_page.source_scroll_position()
+    source_text_position = _source_text_position(window)
     replacement_block_id = window._speech_blocks_page.replacement_block_id_after_delete(speech_block_id)
     try:
         speech_blocks_service.delete_speech_block(window._current_project_root, speech_block_id)
@@ -268,7 +274,7 @@ def handle_delete_block_requested(window: "MainWindow", speech_block_id: str) ->
     _reset_audio_block_after_speech_block_change(window, speech_block_id)
     if replacement_block_id is not None:
         window._speech_blocks_page.select_speech_block(replacement_block_id)
-    window._speech_blocks_page.restore_source_scroll_position(source_scroll_position)
+    _restore_source_text_position(window, source_text_position)
     misc_ui_controller.show_message(
         window,
         ui_state_service.translate("status.speech_block_deleted", current_language),
@@ -284,7 +290,7 @@ def handle_edit_started(window: "MainWindow", speech_block_id: str) -> None:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-24
-    @version    0.2.1
+    @version    0.2.3
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._current_project_root is None or window._current_manifest is None:
@@ -301,8 +307,11 @@ def handle_edit_started(window: "MainWindow", speech_block_id: str) -> None:
         return
     if not _confirm_speech_block_audio_reset_if_needed(window, speech_block_id, current_language):
         return
-    speech_blocks_service.clear_speech_block_warning_flags(window._current_project_root, speech_block_id)
+    source_text_position = _source_text_position(window)
+    if selected_block.get("warning_flags"):
+        speech_blocks_service.clear_speech_block_warning_flags(window._current_project_root, speech_block_id)
     window._speech_blocks_page.begin_editing_selected_block()
+    _restore_source_text_position(window, source_text_position)
 
 
 def handle_save_block_requested(
@@ -323,7 +332,7 @@ def handle_save_block_requested(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-24
-    @version    0.4.1
+    @version    0.4.4
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._current_project_root is None or window._current_manifest is None:
@@ -332,9 +341,9 @@ def handle_save_block_requested(
     if original_block is None:
         return
     audio_affecting_change = _speech_block_audio_fields_changed(original_block, speaker_id, content_kind, edit_payload)
-    source_scroll_position = window._speech_blocks_page.source_scroll_position()
+    source_text_position = _source_text_position(window)
     if not audio_affecting_change:
-        window._speech_blocks_page.restore_source_scroll_position(source_scroll_position)
+        _restore_source_text_position(window, source_text_position)
         misc_ui_controller.show_message(
             window,
             ui_state_service.translate("status.speech_block_saved", current_language),
@@ -355,9 +364,9 @@ def handle_save_block_requested(
             str(error),
         )
         return
-    _sync_manifest_after_speech_blocks_update(window)
+    window._current_manifest = project_workspace_service.load_manifest(window._current_project_root)
     _reset_audio_block_after_speech_block_change(window, speech_block_id)
-    window._speech_blocks_page.restore_source_scroll_position(source_scroll_position)
+    _restore_source_text_position(window, source_text_position)
     misc_ui_controller.show_message(
         window,
         ui_state_service.translate("status.speech_block_saved", current_language),
@@ -373,7 +382,7 @@ def handle_resplit_selected_requested(window: "MainWindow", chunk_id: str) -> No
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-13
-    @version    0.3.1
+    @version    0.3.3
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._active_operation_kind is not None:
@@ -396,6 +405,7 @@ def handle_resplit_selected_requested(window: "MainWindow", chunk_id: str) -> No
     additional_speech_block_instructions = prompt_ai_speech_blocks_instructions(window, current_language)
     if additional_speech_block_instructions is None:
         return
+    speech_blocks_review_position = _speech_blocks_review_position(window)
     _start_operation(
         window,
         operation_name=ui_state_service.translate("speech_blocks.resplit_selected", current_language),
@@ -414,6 +424,7 @@ def handle_resplit_selected_requested(window: "MainWindow", chunk_id: str) -> No
         ),
         success_message_key="status.speech_blocks_resplit",
         changed_chunk_id=chunk_id,
+        preserved_speech_blocks_review_position=speech_blocks_review_position,
     )
 
 
@@ -424,6 +435,7 @@ def _start_operation(
     worker_callable,
     success_message_key: str = "status.speech_blocks_generated",
     changed_chunk_id: str | None = None,
+    preserved_speech_blocks_review_position: dict[str, object] | None = None,
 ) -> None:
     """
     @brief      Start one Speech Blocks operation on a worker thread.
@@ -431,11 +443,12 @@ def _start_operation(
     @param[in]  operation_name Operator-facing operation label.
     @param[in]  initial_message Initial progress-dialog message text.
     @param[in]  worker_callable Callable that performs the operation.
+    @param[in]  preserved_speech_blocks_review_position Optional Speech Blocks review position to restore.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.3.0
+    @version    0.3.1
     """
     workflow_controller_service.start_operation(
         window,
@@ -449,6 +462,7 @@ def _start_operation(
             result_payload,
             success_message_key,
             changed_chunk_id,
+            preserved_speech_blocks_review_position,
         ),
         failure_handler=lambda error: _handle_speech_blocks_failure(window, error),
         cancel_handler=lambda message: _handle_speech_blocks_cancelled(window, message),
@@ -460,6 +474,7 @@ def _handle_speech_blocks_success(
     result_payload: object,
     success_message_key: str,
     changed_chunk_id: str | None,
+    preserved_speech_blocks_review_position: dict[str, object] | None,
 ) -> None:
     """
     @brief      Refresh Speech Blocks UI state after a successful worker run.
@@ -467,11 +482,12 @@ def _handle_speech_blocks_success(
     @param[in]  result_payload Worker result payload.
     @param[in]  success_message_key UI string key emitted after success.
     @param[in]  changed_chunk_id Optional chunk id that was regenerated.
+    @param[in]  preserved_speech_blocks_review_position Optional Speech Blocks review position to restore.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-24
-    @version    0.1.0
+    @version    0.1.1
     """
     _ = result_payload
     _sync_manifest_after_speech_blocks_update(window)
@@ -479,6 +495,8 @@ def _handle_speech_blocks_success(
         _reconcile_audio_blocks_after_resplit(window, changed_chunk_id)
     else:
         _reset_downstream_after_speech_blocks_structure_change(window)
+    if preserved_speech_blocks_review_position is not None:
+        window._speech_blocks_page.restore_review_position(preserved_speech_blocks_review_position)
     misc_ui_controller.show_message(
         window,
         ui_state_service.translate(success_message_key, current_language_from_window(window)),
@@ -650,6 +668,58 @@ def _speech_block_by_id(window: "MainWindow", speech_block_id: str) -> dict[str,
         ),
         None,
     )
+
+
+def _source_text_position(window: "MainWindow") -> dict[str, object]:
+    """
+    @brief      Capture selected-chunk text cursor, selection, and scroll state.
+    @param[in]  window Active main window instance.
+    @return     Source text position payload.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-25
+    @version    0.1.0
+    """
+    if hasattr(window._speech_blocks_page, "source_text_position"):
+        return dict(window._speech_blocks_page.source_text_position())
+    if not hasattr(window._speech_blocks_page, "source_scroll_position"):
+        return {}
+    return {"source_scroll": int(window._speech_blocks_page.source_scroll_position())}
+
+
+def _speech_blocks_review_position(window: "MainWindow") -> dict[str, object] | None:
+    """
+    @brief      Capture Speech Blocks review position when the page exposes it.
+    @param[in]  window Active main window instance.
+    @return     Review-position payload or `None`.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-25
+    @version    0.1.0
+    """
+    page = getattr(window, "_speech_blocks_page", None)
+    if page is None or not hasattr(page, "review_position"):
+        return None
+    return dict(page.review_position())
+
+
+def _restore_source_text_position(window: "MainWindow", text_position: dict[str, object]) -> None:
+    """
+    @brief      Restore selected-chunk text cursor, selection, and scroll state.
+    @param[in]  window Active main window instance.
+    @param[in]  text_position Source text position payload.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-25
+    @version    0.1.0
+    """
+    if hasattr(window._speech_blocks_page, "restore_source_text_position"):
+        window._speech_blocks_page.restore_source_text_position(text_position)
+        return
+    if not hasattr(window._speech_blocks_page, "restore_source_scroll_position"):
+        return
+    window._speech_blocks_page.restore_source_scroll_position(int(text_position.get("source_scroll", 0) or 0))
 
 
 def _speech_block_audio_fields_changed(

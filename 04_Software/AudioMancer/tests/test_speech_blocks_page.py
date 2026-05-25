@@ -14,12 +14,14 @@
          preservation, translated labels, and generation button enablement.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-24
-@version 0.8.6
+@version 0.8.7
 """
 
 # IMPORTS
 
 from PySide6.QtCore import Qt
+from PySide6.QtGui import QTextCursor
+from PySide6.QtWidgets import QSizePolicy
 
 from audiomancer.services import speech_blocks_service
 from audiomancer.ui.pages.speech_blocks_page import SpeechBlocksPage
@@ -324,15 +326,61 @@ def test_speech_blocks_page_selected_chunk_pane_keeps_minimum_width(qtbot) -> No
     assert page._source_group.minimumWidth() >= 480
 
 
+def test_speech_blocks_page_restores_selected_chunk_text_selection(qtbot) -> None:
+    """
+    @brief      Verify selected-chunk text selection and scroll can be restored after UI refreshes.
+    @param[in]  qtbot Qt test helper fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-25
+    @version    0.1.0
+    """
+    page = SpeechBlocksPage()
+    qtbot.addWidget(page)
+    page.resize(1000, 720)
+    page.show()
+    page.set_project_active(True)
+    page.set_ai_profiles([("Profile One", "profile-1")], "profile-1")
+    source_text = "\n".join(f"Line {index:03d} with enough words for scrolling." for index in range(80))
+    page.set_speech_blocks_state(
+        source_chunks=[{"chunk_id": "chunk-0001", "sequence_index": 1, "text": source_text}],
+        speech_blocks=[],
+        notes=["Ready."],
+        selected_profile_id="profile-1",
+        stage_status="not_started",
+        selected_source_language="en",
+        processed_chunk_count=0,
+        total_chunk_count=1,
+    )
+    qtbot.wait(0)
+    cursor = page._source_text_edit.textCursor()
+    cursor.setPosition(10)
+    cursor.setPosition(35, QTextCursor.MoveMode.KeepAnchor)
+    page._source_text_edit.setTextCursor(cursor)
+    page._source_text_edit.verticalScrollBar().setValue(12)
+    text_position = page.source_text_position()
+
+    page._source_text_edit.moveCursor(QTextCursor.MoveOperation.Start)
+    page._source_text_edit.verticalScrollBar().setValue(0)
+    page.restore_source_text_position(text_position)
+    qtbot.wait(0)
+    restored_cursor = page._source_text_edit.textCursor()
+
+    assert restored_cursor.anchor() == 10
+    assert restored_cursor.position() == 35
+    assert page._source_text_edit.verticalScrollBar().value() == 12
+
+
 def test_speech_blocks_page_metadata_controls_align_to_list_edges(qtbot) -> None:
     """
-    @brief      Verify speaker and content-kind controls anchor under the speech-block list edges.
+    @brief      Verify speaker and content-kind controls expand within the speech-block list edges.
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-20
-    @version    0.1.1
+    @version    0.1.2
     """
     page = SpeechBlocksPage()
     qtbot.addWidget(page)
@@ -373,11 +421,13 @@ def test_speech_blocks_page_metadata_controls_align_to_list_edges(qtbot) -> None
     assert page._speaker_label.geometry().left() == page._speech_block_list.geometry().left()
     assert page._speaker_label.width() <= 58
     assert page._speaker_combo.minimumWidth() <= 88
-    assert page._speaker_combo.maximumWidth() <= 104
+    assert page._speaker_combo.maximumWidth() > 104
+    assert page._speaker_combo.sizePolicy().horizontalPolicy() == QSizePolicy.Policy.Expanding
     assert page._speaker_combo.geometry().right() < page._content_kind_label.geometry().left()
     assert page._content_kind_label.width() <= 88
     assert page._content_kind_combo.minimumWidth() <= 126
-    assert page._content_kind_combo.maximumWidth() <= 150
+    assert page._content_kind_combo.maximumWidth() > 150
+    assert page._content_kind_combo.sizePolicy().horizontalPolicy() == QSizePolicy.Policy.Expanding
     assert page._content_kind_combo.currentText() == "Scene Ambience"
     content_kind_right_offset = page._content_kind_combo.geometry().right() - page._speech_block_list.geometry().right()
     assert content_kind_right_offset <= 0
