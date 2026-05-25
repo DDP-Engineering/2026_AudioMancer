@@ -456,12 +456,12 @@
             manually by the user.
           </p>
           <div class="actions">
-            <a class="button primary" href="https://github.com/DDP-Engineering/2026_AudioMancer/releases/tag/v1.3.1">Download Windows Release</a>
+            <a class="button primary" href="https://github.com/DDP-Engineering/2026_AudioMancer/releases/tag/v1.3.1">Download Current Release</a>
             <a class="button secondary" href="#install">Installation Steps</a>
           </div>
           <div class="meta-row">
-            <span>Windows tested</span>
-            <span>Portable ZIP install</span>
+            <span>Windows and Linux packages</span>
+            <span>Portable ZIP or AppImage install</span>
             <span>Local or online AI</span>
           </div>
         </div>
@@ -469,7 +469,7 @@
         <aside class="product-panel" aria-label="AudioMancer workflow preview">
           <div class="panel-header">
             <p class="panel-title">Simple Workflow</p>
-            <span class="status">Windows release</span>
+            <span class="status">Windows + Linux release</span>
           </div>
           <div class="workflow">
             <div class="workflow-item">
@@ -567,9 +567,10 @@
       <div class="shell split">
         <div>
           <div class="section-head">
-            <h2>Install AudioMancer on Windows.</h2>
+            <h2>Install AudioMancer on Windows or Linux.</h2>
             <p>
-              The current public package is tested on Windows. It is portable: download it, extract it, and start the app.
+              The current public release includes a Windows portable ZIP, a preferred Linux AppImage, and a Linux portable
+              fallback ZIP.
             </p>
           </div>
           <div class="actions">
@@ -586,6 +587,19 @@
             <li>Extract the ZIP to a normal folder, for example <code>C:\AudioMancer</code>.</li>
             <li>Start the app with <code>AudioMancer.exe</code> or <code>Start-AudioMancer.cmd</code>.</li>
             <li>In the app, create a new project and choose the book language, output language, and voice mode.</li>
+          </ol>
+          <h3>Linux steps</h3>
+          <ol>
+            <li>Open the GitHub Release page.</li>
+            <li>Download <code>AudioMancer_Linux_x64.AppImage</code>.</li>
+            <li>Download <code>SHA256SUMS.txt</code> if you want to verify the file.</li>
+            <li>Install it locally with:
+              <pre>mkdir -p ~/Applications
+cp AudioMancer_Linux_x64.AppImage ~/Applications/AudioMancer.AppImage
+chmod +x ~/Applications/AudioMancer.AppImage
+~/Applications/AudioMancer.AppImage</pre>
+            </li>
+            <li>Use <code>AudioMancer_Linux_x64.zip</code> only as a portable fallback/debug folder.</li>
           </ol>
         </div>
       </div>

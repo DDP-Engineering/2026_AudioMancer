@@ -1,6 +1,6 @@
 # AudioMancer
 
-AudioMancer is a Windows desktop app for book translation and audiobook preparation.
+AudioMancer is a desktop app for book translation and audiobook preparation.
 
 It can help you:
 
@@ -12,25 +12,45 @@ It can help you:
 - generate local voice audio through VoiceWeaver
 - assemble final WAV audiobook files
 
-AI help is optional. You can use AI for cleanup, chunking, translation, character discovery, and speech blocks, then review and edit the result. You can also do the same work manually.
+AI help is optional. You can use AI for cleanup, chunking, translation,
+character discovery, and speech blocks, then review and edit the result. You can
+also do the same work manually.
 
 ## Downloads
 
-Use the current GitHub Release page for both AudioMancer and the VoiceWeaver runtime package:
+Use the current GitHub Release page for AudioMancer and the VoiceWeaver runtime
+package:
 
-- [AudioMancer v1.3.1 Windows release](https://github.com/DDP-Engineering/2026_AudioMancer/releases/tag/v1.3.1)
+- [AudioMancer v1.3.1 Windows and Linux release](https://github.com/DDP-Engineering/2026_AudioMancer/releases/tag/v1.3.1)
 
 The release page includes:
 
 - `AudioMancer_Windows_x64.zip`
+- `AudioMancer_Linux_x64.AppImage`
+- `AudioMancer_Linux_x64.zip`
 - `SHA256SUMS.txt`
 - VoiceWeaver runtime package links and checksum information
 
-## Install AudioMancer
+## Install AudioMancer On Windows
 
 1. Download `AudioMancer_Windows_x64.zip` from the v1.3.1 release page.
 2. Extract it to a normal folder, for example `C:\AudioMancer`.
 3. Start AudioMancer with `AudioMancer.exe` or `Start-AudioMancer.cmd`.
+
+## Install AudioMancer On Ubuntu/Linux
+
+Prefer the AppImage:
+
+```bash
+mkdir -p ~/Applications
+cp AudioMancer_Linux_x64.AppImage ~/Applications/AudioMancer.AppImage
+chmod +x ~/Applications/AudioMancer.AppImage
+~/Applications/AudioMancer.AppImage
+```
+
+The Linux zip is a portable fallback/debug folder. To use it, extract the full
+`AudioMancer_Linux_x64.zip` archive and run `./AudioMancer` or
+`./start-audiomancer.sh` from inside the extracted folder.
 
 ## Install VoiceWeaver
 
@@ -71,8 +91,10 @@ Get-FileHash -Algorithm SHA256 $outputZip
 
 ## Distribution Scope
 
-This public repository is used for executable release delivery and the download webpage. It does not host the application source code.
+This public repository is used for executable release delivery and the download
+webpage. It does not host the application source code.
 
 ## License
 
-AudioMancer and VoiceWeaver are distributed under the license files included in each release archive.
+AudioMancer and VoiceWeaver are distributed under the license files included in
+each release archive.
