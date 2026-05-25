@@ -32,7 +32,7 @@ uv run pytest tests/test_characters_ui_controller.py tests/test_character_discov
 uv run pytest tests/test_voice_sample_import_service.py tests/test_character_voices_ui_controller.py tests/test_narator_voice_ui_controller.py
 uv run pytest tests/test_speech_blocks_service.py tests/test_speech_blocks_ui_controller.py
 uv run pytest tests/test_audio_blocks_service.py tests/test_audio_blocks_page.py tests/test_audio_blocks_ui_controller.py
-uv run pytest tests/test_audio_assembly_service.py tests/test_audio_assembly_ui_controller.py
+uv run pytest tests/test_audio_assembly_service.py tests/test_audio_assembly_page.py tests/test_audio_assembly_ui_controller.py
 ```
 
 Documentation audit:
@@ -84,6 +84,8 @@ Expected covered behavior:
   only
 - Audio Assembly settings changes preserve approved Audio Blocks and reset only
   assembly outputs/state/report
+- Audio Assembly groups generated Scene Ambience prompt WAVs into on-demand
+  Scene Mix previews and uses the same mixed segments in final assembly
 
 Known broad reset that remains documented:
 
@@ -125,3 +127,6 @@ Use a small sample book and an offline or local AI/TTS setup when available.
    Assembly resets.
 12. Change one Audio Assembly setting. Confirm approved Audio Blocks remain and
    only assembly outputs/state/report are reset.
+13. On Audio Assembly, select a Scene Mix Preview, generate it, play it, then
+    assemble audio and confirm the final audiobook uses one mixed ambience
+    segment for that scene.

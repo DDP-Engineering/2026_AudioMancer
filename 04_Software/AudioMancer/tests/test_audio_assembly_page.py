@@ -13,7 +13,7 @@
          and playback button state on the Audio Assembly page.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-25
-@version 0.4.1
+@version 0.5.0
 """
 
 # IMPORTS
@@ -134,6 +134,62 @@ def test_audio_assembly_page_renders_outputs_progress_and_playback_state(qtbot) 
     assert page._playback_duration_label.text() == "01:15"
     page.set_playback_active(True)
     assert page._playback_button.text() == "Stop Playing"
+
+
+def test_audio_assembly_page_renders_scene_mix_previews(qtbot) -> None:
+    """
+    @brief      Verify Scene Ambience mix preview rows and buttons render from page state.
+    @param[in]  qtbot Qt test helper fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-25
+    @version    0.1.0
+    """
+    page = AudioAssemblyPage()
+    qtbot.addWidget(page)
+    page.set_project_active(True)
+    page.set_audio_assembly_state(
+        settings=audio_assembly_service.default_audio_assembly_settings(),
+        outputs=[],
+        current_output_key=None,
+        notes=["Ready."],
+        status_lines=[],
+        progress_current=0,
+        progress_total=0,
+        progress_percent=0,
+        stage_status=audio_assembly_service.AUDIO_ASSEMBLY_STAGE_NOT_STARTED,
+        can_generate=True,
+        can_reset=True,
+        can_play_selected=False,
+        scene_mix_groups=[
+            {
+                "group_key": "scene_mix:chunk-0001:opener:",
+                "label": "chunk-0001 opener scene mix",
+                "block_count": 2,
+                "duration_seconds": 10.0,
+                "can_generate_preview": True,
+                "can_play_preview": True,
+            }
+        ],
+        current_scene_mix_key="scene_mix:chunk-0001:opener:",
+        can_generate_scene_mix=True,
+        can_play_scene_mix=True,
+    )
+    generated: list[str] = []
+    played: list[str] = []
+    page.scene_mix_generate_requested.connect(generated.append)
+    page.scene_mix_playback_toggle_requested.connect(played.append)
+
+    assert page._scene_mix_list.count() == 1
+    assert page._scene_mix_generate_button.isEnabled() is True
+    assert page._scene_mix_playback_button.isEnabled() is True
+    assert page._playback_slider.maximum() == 10_000
+    page._scene_mix_generate_button.click()
+    page._scene_mix_playback_button.click()
+
+    assert generated == ["scene_mix:chunk-0001:opener:"]
+    assert played == ["scene_mix:chunk-0001:opener:"]
 
 
 def test_audio_assembly_page_updates_and_emits_playback_progress(qtbot) -> None:

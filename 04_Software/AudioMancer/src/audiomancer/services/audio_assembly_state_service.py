@@ -11,10 +11,11 @@
 @brief Audio Assembly page state helpers for AudioMancer.
 @details Builds operator-facing Audio Assembly state from project settings,
          approved Audio Blocks, resumable composition state, and generated
-         audiobook output records.
+         audiobook output records, including on-demand Scene Ambience mix
+         previews.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-25
-@version 0.1.1
+@version 0.2.0
 """
 
 # IMPORTS
@@ -38,7 +39,7 @@ def build_audio_assembly_state(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.1.1
+    @version    0.2.0
     """
     if project_root is None or manifest is None:
         return _empty_state(language)
@@ -47,6 +48,7 @@ def build_audio_assembly_state(
     report = audio_assembly_service.load_audio_assembly_report(project_root)
     operation_state = audio_assembly_service.load_operation_state(project_root)
     outputs = audio_assembly_service.load_generated_outputs(project_root)
+    scene_mix_groups = audio_assembly_service.list_scene_mix_groups(project_root)
     include_scene_ambience = bool(settings["include_scene_ambience"])
     assembly_blocks = _filter_assembly_policy_blocks(audio_blocks, include_scene_ambience)
     total_blocks = len(assembly_blocks)
@@ -77,7 +79,9 @@ def build_audio_assembly_state(
     return {
         "settings": settings,
         "outputs": outputs,
+        "scene_mix_groups": scene_mix_groups,
         "current_output_key": outputs[0]["output_key"] if outputs else None,
+        "current_scene_mix_key": scene_mix_groups[0]["group_key"] if scene_mix_groups else None,
         "notes": notes,
         "status_lines": status_lines,
         "progress_current": progress_current,
@@ -87,6 +91,8 @@ def build_audio_assembly_state(
         "can_generate": bool(audio_blocks) and total_blocks == approved_blocks,
         "can_reset": audio_assembly_service.has_persisted_audio_assembly(project_root),
         "can_play_selected": bool(outputs),
+        "can_generate_scene_mix": any(bool(group.get("can_generate_preview", False)) for group in scene_mix_groups),
+        "can_play_scene_mix": any(bool(group.get("can_play_preview", False)) for group in scene_mix_groups),
     }
 
 
@@ -98,12 +104,14 @@ def _empty_state(language: str) -> dict[str, object]:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.1.0
+    @version    0.2.0
     """
     return {
         "settings": audio_assembly_service.default_audio_assembly_settings(),
         "outputs": [],
+        "scene_mix_groups": [],
         "current_output_key": None,
+        "current_scene_mix_key": None,
         "notes": [ui_state_service.translate("audio_assembly.note_no_project", language)],
         "status_lines": [],
         "progress_current": 0,
@@ -113,6 +121,8 @@ def _empty_state(language: str) -> dict[str, object]:
         "can_generate": False,
         "can_reset": False,
         "can_play_selected": False,
+        "can_generate_scene_mix": False,
+        "can_play_scene_mix": False,
     }
 
 

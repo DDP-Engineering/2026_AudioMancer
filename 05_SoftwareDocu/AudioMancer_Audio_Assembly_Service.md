@@ -21,7 +21,11 @@ deliverables under the project-root `audiobook/` folder.
 - validate that all Audio Blocks are approved and reference compatible WAV files
 - compose output files for per-chunk, time-limited, or whole-book delivery
 - optionally include or skip generated `scene_ambience` audio blocks in the
-  final sequential assembly
+  final assembly
+- group related generated `scene_ambience` prompt WAVs and mix them into one
+  Scene Mix preview or final ambience segment
+- generate on-demand Scene Mix preview WAV files for operator review before
+  final assembly
 - add configurable silence gaps between blocks and between chunks or output files
 - convert metadata-only pause Audio Blocks into silence inside the composed WAV
   output
@@ -44,8 +48,9 @@ normalize volume, edit pitch, write chapter metadata, or embed cover art.
 The workflow is split across:
 
 - `04_Software/AudioMancer/src/audiomancer/services/audio_assembly_service.py`
-  for settings normalization, WAV validation, composition, resumable state,
-  report persistence, output inspection, and reset behavior
+  for settings normalization, WAV validation, Scene Ambience mix grouping,
+  Scene Mix preview generation, composition, resumable state, report
+  persistence, output inspection, and reset behavior
 - `04_Software/AudioMancer/src/audiomancer/services/audio_assembly_state_service.py`
   for page-state shaping, notes, status lines, progress, and readiness checks
 - `04_Software/AudioMancer/src/audiomancer/ui/pages/audio_assembly_page.py`
@@ -71,7 +76,8 @@ High-level flow:
 4. `audio_assembly_service.start_or_continue_composition(...)` loads approved
    Audio Blocks, applies the Scene Ambience inclusion policy, validates that
    generated WAV files exist for playable blocks, checks that WAV parameters
-   are compatible, preserves metadata-only pause blocks as silence, and builds
+   are compatible, replaces related Scene Ambience prompt blocks with grouped
+   mix segments, preserves metadata-only pause blocks as silence, and builds
    an input/settings fingerprint.
 5. If existing operation state belongs to different inputs or settings, the
    service rejects continuation and requires an explicit reset.
@@ -136,6 +142,12 @@ Persisted settings in `project.json.audio_assembly_settings`:
 - `include_scene_ambience`: boolean, default `true`; when `false`, generated
   `scene_ambience` WAV blocks are skipped during composition
 
+Scene Mix preview records are derived from the current Audio Blocks payload and
+are not persisted in `audio_assembly_report.json`. Preview WAV files are written
+under `audiobook/scene_mix_previews/` with deterministic names based on group
+identity and source fingerprints. Audio Assembly reset deletes those preview
+files together with final audiobook outputs.
+
 Output modes:
 
 - `per_chunk` writes one `chunk-000N.wav` file per source chunk
@@ -165,9 +177,13 @@ Current invariants:
 - metadata-only pause Audio Blocks are included as silence using
   the current `pause_duration_ms` field, or `1000 ms` when that field is
   missing or invalid; pause text is not parsed as a compatibility fallback
-- generated `scene_ambience` Audio Blocks are sequential contributors only when
-  `include_scene_ambience` is enabled; when disabled, they are ignored for
-  readiness counts, WAV validation, output planning, and final composition
+- generated `scene_ambience` Audio Blocks are grouped by `chunk_id`,
+  `ambience_position`, and `after_speech_block_id`, then mixed into one
+  composition segment per group when `include_scene_ambience` is enabled; when
+  disabled, they are ignored for readiness counts, WAV validation, output
+  planning, and final composition
+- Scene Mix previews use the same mixing helper as final Audio Assembly, so the
+  reviewed preview matches the segment inserted into final outputs
 - an explicit pause block replaces adjacent automatic inter-block silence for
   that pause position, so the pause duration is not double-counted
 - metadata-only indication Audio Blocks are skipped by the current composer

@@ -14,7 +14,7 @@
          theme runtime adapter.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 0.54.8
+@version 0.54.9
 """
 
 # ruff: noqa: E501
@@ -762,6 +762,7 @@ _UI_STRINGS = {
         ),
         "audio_assembly.title": "Audio Assembly",
         "audio_assembly.settings_group": "Output Settings",
+        "audio_assembly.scene_mix_group": "Scene Mix Previews",
         "audio_assembly.outputs_group": "Generated Audiobook Files",
         "audio_assembly.status_group": "Audio Assembly Status",
         "audio_assembly.output_mode": "Output Mode",
@@ -773,6 +774,8 @@ _UI_STRINGS = {
         "audio_assembly.generate": "Generate Audio",
         "audio_assembly.reset": "Reset Audio Assembly",
         "audio_assembly.play_audio": "Play Audio",
+        "audio_assembly.generate_scene_mix": "Generate / Refresh Scene Mix",
+        "audio_assembly.play_scene_mix": "Play Scene Mix",
         "audio_assembly.stop_playing": "Stop Playing",
         "audio_assembly.rewind_10s": "-10s",
         "audio_assembly.forward_10s": "+10s",
@@ -792,7 +795,12 @@ _UI_STRINGS = {
         "audio_assembly.status_duration": "Total composed duration: {duration}",
         "audio_assembly.status_mode": "Output mode: {mode}",
         "audio_assembly.error_missing_audio": "The selected audiobook file is missing.",
+        "audio_assembly.error_missing_scene_mix": "The selected scene mix preview is missing.",
         "audio_assembly.output_item": "{file_name} | {duration} | {block_count} audio blocks",
+        "audio_assembly.scene_mix_item": "{label} | {duration} | {block_count} sounds | {status}",
+        "audio_assembly.scene_mix_ready": "ready",
+        "audio_assembly.scene_mix_not_ready": "needs generated audio",
+        "audio_assembly.scene_mix_generated": "preview ready",
         "home.title": "Home / Project",
         "home.summary_group": "Project Summary",
         "home.exports_group": "Exports",
@@ -1042,6 +1050,7 @@ _UI_STRINGS = {
         "status.audio_assembly_generated": "Audio Assembly completed.",
         "status.audio_assembly_reset": "Audio Assembly data was reset.",
         "status.audio_assembly_settings_saved_reset": "Audio Assembly settings saved and existing assembly output reset.",
+        "status.audio_assembly_scene_mix_generated": "Scene mix preview generated.",
         "dialog.confirm_audio_assembly_settings_change_title": "Confirm Assembly Settings Change",
         "dialog.character_discovery_info_title": "Character Discovery Information",
         "dialog.character_add_title": "Add Character",
@@ -1785,6 +1794,7 @@ _UI_STRINGS = {
         ),
         "audio_assembly.title": "Asamblare Audio",
         "audio_assembly.settings_group": "Setari Iesire",
+        "audio_assembly.scene_mix_group": "Previzualizari Mix Scena",
         "audio_assembly.outputs_group": "Fisiere Audiobook Generate",
         "audio_assembly.status_group": "Status Asamblare Audio",
         "audio_assembly.output_mode": "Mod Iesire",
@@ -1796,6 +1806,8 @@ _UI_STRINGS = {
         "audio_assembly.generate": "Genereaza Audio",
         "audio_assembly.reset": "Reseteaza Asamblarea Audio",
         "audio_assembly.play_audio": "Reda Audio",
+        "audio_assembly.generate_scene_mix": "Genereaza / Reimprospateaza Mix Scena",
+        "audio_assembly.play_scene_mix": "Reda Mix Scena",
         "audio_assembly.stop_playing": "Opreste Redarea",
         "audio_assembly.rewind_10s": "-10s",
         "audio_assembly.forward_10s": "+10s",
@@ -1815,7 +1827,12 @@ _UI_STRINGS = {
         "audio_assembly.status_duration": "Durata compusa totala: {duration}",
         "audio_assembly.status_mode": "Mod iesire: {mode}",
         "audio_assembly.error_missing_audio": "Fisierul audiobook selectat lipseste.",
+        "audio_assembly.error_missing_scene_mix": "Previzualizarea mixului de scena selectat lipseste.",
         "audio_assembly.output_item": "{file_name} | {duration} | {block_count} blocuri audio",
+        "audio_assembly.scene_mix_item": "{label} | {duration} | {block_count} sunete | {status}",
+        "audio_assembly.scene_mix_ready": "pregatit",
+        "audio_assembly.scene_mix_not_ready": "necesita audio generat",
+        "audio_assembly.scene_mix_generated": "previzualizare pregatita",
         "home.title": "Acasa / Proiect",
         "home.summary_group": "Rezumat Proiect",
         "home.exports_group": "Exporturi",
@@ -2070,6 +2087,7 @@ _UI_STRINGS = {
         "status.audio_assembly_settings_saved_reset": (
             "Setarile Asamblarii Audio au fost salvate si iesirea de asamblare existenta a fost resetata."
         ),
+        "status.audio_assembly_scene_mix_generated": "Previzualizarea mixului de scena a fost generata.",
         "dialog.confirm_audio_assembly_settings_change_title": "Confirma Schimbarea Setarilor Asamblarii",
         "dialog.character_discovery_info_title": "Informatii Descoperire Personaje",
         "dialog.character_add_title": "Adauga Personaj",

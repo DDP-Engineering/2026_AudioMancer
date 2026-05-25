@@ -10,11 +10,12 @@
 @file audio_assembly_ui_controller.py
 @brief Audio Assembly page UI controller for AudioMancer.
 @details Handles final audiobook composition confirmation, settings persistence,
-         threaded operation lifecycle, generated-output playback, and manifest
-         synchronization for the Audio Assembly workflow.
+         threaded operation lifecycle, Scene Ambience mix previews,
+         generated-output playback, and manifest synchronization for the Audio
+         Assembly workflow.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-25
-@version 0.5.1
+@version 0.6.0
 """
 
 # IMPORTS
@@ -163,6 +164,64 @@ def handle_playback_restart_requested(window: "MainWindow", output_key: str) -> 
     _start_audio_assembly_playback(window, output_key, current_language)
 
 
+def handle_scene_mix_generate_requested(window: "MainWindow", group_key: str) -> None:
+    """
+    @brief      Generate or refresh one Scene Ambience mix preview.
+    @param[in]  window Active main window instance.
+    @param[in]  group_key Selected Scene Ambience mix key.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-25
+    @version    0.1.0
+    """
+    current_language = ui_state_service.current_language_from_settings(window._settings_payload)
+    if window._active_operation_kind is not None:
+        return
+    if window._current_project_root is None or window._current_manifest is None:
+        QMessageBox.warning(
+            window,
+            ui_state_service.translate("dialog.project_error_title", current_language),
+            ui_state_service.translate("project.error_no_active_project", current_language),
+        )
+        return
+    try:
+        audio_assembly_service.generate_scene_mix_preview(window._current_project_root, group_key)
+    except (OSError, RuntimeError, ValueError) as error:
+        QMessageBox.warning(
+            window,
+            ui_state_service.translate("dialog.project_error_title", current_language),
+            str(error),
+        )
+        return
+    window.show_project_state(
+        window._current_project_root,
+        project_workspace_service.load_manifest(window._current_project_root),
+    )
+    misc_ui_controller.show_message(
+        window,
+        ui_state_service.translate("status.audio_assembly_scene_mix_generated", current_language),
+    )
+
+
+def handle_scene_mix_playback_toggle_requested(window: "MainWindow", group_key: str) -> None:
+    """
+    @brief      Start or stop playback of one generated Scene Ambience mix preview.
+    @param[in]  window Active main window instance.
+    @param[in]  group_key Selected Scene Ambience mix key.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-25
+    @version    0.1.0
+    """
+    current_language = ui_state_service.current_language_from_settings(window._settings_payload)
+    if _is_audio_assembly_playback_active(window):
+        _stop_audio_assembly_playback(window)
+        return
+    _start_scene_mix_playback(window, group_key, current_language)
+
+
 def _start_audio_assembly_playback(window: "MainWindow", output_key: str, current_language: str) -> None:
     """
     @brief      Start playback of one generated Audio Assembly output from the beginning.
@@ -194,6 +253,43 @@ def _start_audio_assembly_playback(window: "MainWindow", output_key: str, curren
         window._audio_assembly_audio_player.setSource(QUrl.fromLocalFile(str(output_path)))
         window._audio_assembly_page.set_playback_active(True)
         window._audio_assembly_page.set_playback_progress(0, _output_duration_ms(output_record))
+        window._audio_assembly_audio_player.setPosition(0)
+        window._audio_assembly_audio_player.play()
+    finally:
+        window._audio_assembly_playback_starting = False
+
+
+def _start_scene_mix_playback(window: "MainWindow", group_key: str, current_language: str) -> None:
+    """
+    @brief      Start playback of one generated Scene Ambience mix preview.
+    @param[in]  window Active main window instance.
+    @param[in]  group_key Selected Scene Ambience mix key.
+    @param[in]  current_language Runtime UI language code.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-25
+    @version    0.1.0
+    """
+    normalized_group_key = str(group_key).strip()
+    if window._current_project_root is None:
+        return
+    group_record = _scene_mix_by_key(window, normalized_group_key)
+    output_path = _scene_mix_audio_path(window, group_record)
+    if output_path is None:
+        QMessageBox.warning(
+            window,
+            ui_state_service.translate("dialog.project_error_title", current_language),
+            ui_state_service.translate("audio_assembly.error_missing_scene_mix", current_language),
+        )
+        return
+    _stop_other_audio_previews(window)
+    window._audio_assembly_playback_output_key = f"scene_mix:{normalized_group_key}"
+    window._audio_assembly_playback_starting = True
+    try:
+        window._audio_assembly_audio_player.setSource(QUrl.fromLocalFile(str(output_path)))
+        window._audio_assembly_page.set_playback_active(True)
+        window._audio_assembly_page.set_playback_progress(0, _output_duration_ms(group_record))
         window._audio_assembly_audio_player.setPosition(0)
         window._audio_assembly_audio_player.play()
     finally:
@@ -530,6 +626,44 @@ def _confirm_audio_assembly_settings_change(window: "MainWindow", language: str)
     )
 
 
+def _scene_mix_by_key(window: "MainWindow", group_key: str) -> dict[str, object] | None:
+    """
+    @brief      Find one Scene Ambience mix group by key.
+    @param[in]  window Active main window instance.
+    @param[in]  group_key Scene Ambience mix group key.
+    @return     Group record or `None`.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-25
+    @version    0.1.0
+    """
+    if window._current_project_root is None:
+        return None
+    normalized_group_key = str(group_key).strip()
+    return next(
+        (
+            group
+            for group in audio_assembly_service.list_scene_mix_groups(window._current_project_root)
+            if str(group.get("group_key", "")).strip() == normalized_group_key
+        ),
+        None,
+    )
+
+
+def _scene_mix_audio_path(window: "MainWindow", group_record: dict[str, object] | None) -> Path | None:
+    """
+    @brief      Resolve one Scene Ambience mix record to an existing audio file.
+    @param[in]  window Active main window instance.
+    @param[in]  group_record Optional Scene Ambience mix record.
+    @return     Absolute audio path or `None`.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-25
+    @version    0.1.0
+    """
+    return _project_audio_path_from_record(window, group_record)
+
+
 def _output_by_key(window: "MainWindow", output_key: str) -> dict[str, object] | None:
     """
     @brief      Find one generated Audio Assembly output by key.
@@ -563,11 +697,25 @@ def _output_audio_path(window: "MainWindow", output_record: dict[str, object] | 
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.2.0
+    @version    0.3.0
     """
-    if window._current_project_root is None or not isinstance(output_record, dict):
+    return _project_audio_path_from_record(window, output_record)
+
+
+def _project_audio_path_from_record(window: "MainWindow", record: dict[str, object] | None) -> Path | None:
+    """
+    @brief      Resolve a record audio path under the active project.
+    @param[in]  window Active main window instance.
+    @param[in]  record Optional record containing `audio_relative_path`.
+    @return     Existing absolute path or `None`.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-25
+    @version    0.1.0
+    """
+    if window._current_project_root is None or not isinstance(record, dict):
         return None
-    relative_path = str(output_record.get("audio_relative_path", "")).strip()
+    relative_path = str(record.get("audio_relative_path", "")).strip()
     if not relative_path:
         return None
     audio_path = operation_runtime_service.try_resolve_project_relative_path(

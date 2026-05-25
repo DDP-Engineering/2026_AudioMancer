@@ -14,7 +14,7 @@
          so the window remains a thin coordinator.
 @author Eng. Dan Dumitru Pasare
 @date 2026-05-23
-@version 1.47.6
+@version 1.47.7
 """
 
 # IMPORTS
@@ -730,7 +730,7 @@ class MainWindow(QMainWindow):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-07
-        @version    0.22.1
+        @version    0.22.2
         """
         current_language = ui_state_service.current_language_from_settings(self._settings_payload)
         home_page = HomeProjectPage(self)
@@ -1079,6 +1079,12 @@ class MainWindow(QMainWindow):
         )
         self._audio_assembly_page.playback_skip_requested.connect(
             lambda delta_ms: audio_assembly_ui_controller.handle_playback_skip_requested(self, delta_ms)
+        )
+        self._audio_assembly_page.scene_mix_generate_requested.connect(
+            lambda group_key: audio_assembly_ui_controller.handle_scene_mix_generate_requested(self, group_key)
+        )
+        self._audio_assembly_page.scene_mix_playback_toggle_requested.connect(
+            lambda group_key: audio_assembly_ui_controller.handle_scene_mix_playback_toggle_requested(self, group_key)
         )
 
         pages = {

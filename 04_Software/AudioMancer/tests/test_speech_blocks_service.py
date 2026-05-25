@@ -15,7 +15,7 @@
          chunk-based generation, and narrator-only segmentation.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-24
-@version 0.13.10
+@version 0.13.11
 """
 
 # IMPORTS
@@ -340,9 +340,9 @@ def test_start_or_continue_generation_adds_scene_ambience_blocks(monkeypatch, tm
     assert speech_blocks[0]["sound_prompt"] == speech_blocks[0]["text"]
     assert all("ambient_sound_type" not in block for block in speech_blocks)
     assert [block["duration_seconds"] for block in speech_blocks if block["content_kind"] == "scene_ambience"] == [
-        4.0,
         5.0,
-        3.0,
+        5.0,
+        5.0,
     ]
     assert all("ambience_group_id" not in block for block in speech_blocks)
     assert report["token_usage"]["total_tokens"] == 27
@@ -412,7 +412,7 @@ def test_scene_ambience_normalization_splits_composed_sound_prompts() -> None:
         "subtle hum of an air conditioning unit",
         "occasional soft electronic whirring from computer hardware",
     ]
-    assert [block["duration_seconds"] for block in speech_blocks] == [2.0, 2.0, 2.0]
+    assert [block["duration_seconds"] for block in speech_blocks] == [10.0, 10.0, 10.0]
     assert all(block["content_kind"] == speech_blocks_service.CONTENT_KIND_SCENE_AMBIENCE for block in speech_blocks)
     assert all("ambience_group_id" not in block for block in speech_blocks)
     assert all("ambient_sound_type" not in block for block in speech_blocks)

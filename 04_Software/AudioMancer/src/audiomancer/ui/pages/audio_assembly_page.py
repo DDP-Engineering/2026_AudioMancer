@@ -10,10 +10,11 @@
 @file audio_assembly_page.py
 @brief Audio Assembly workflow page for AudioMancer.
 @details Provides final WAV audiobook composition settings, progress display,
-         generated-output inspection, and local preview playback controls.
+         generated-output inspection, Scene Ambience mix previews, and local
+         playback controls.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-25
-@version 0.3.3
+@version 0.4.0
 """
 
 # IMPORTS
@@ -55,6 +56,8 @@ class AudioAssemblyPage(QWidget):
     playback_restart_requested = Signal(str)
     playback_seek_requested = Signal(int)
     playback_skip_requested = Signal(int)
+    scene_mix_generate_requested = Signal(str)
+    scene_mix_playback_toggle_requested = Signal(str)
 
     def __init__(self, parent=None) -> None:
         """
@@ -76,6 +79,7 @@ class AudioAssemblyPage(QWidget):
         self._playback_position_ms = 0
         self._playback_duration_ms = 0
         self._outputs: list[dict[str, object]] = []
+        self._scene_mix_groups: list[dict[str, object]] = []
 
         layout = QVBoxLayout(self)
         header_row = QHBoxLayout()
@@ -143,6 +147,22 @@ class AudioAssemblyPage(QWidget):
         self._progress_bar.setFormat("%p%")
         progress_row.addWidget(self._progress_bar, 1)
         layout.addLayout(progress_row)
+
+        self._scene_mix_group = QGroupBox("Scene Mix Previews", self)
+        scene_mix_layout = QVBoxLayout(self._scene_mix_group)
+        self._scene_mix_list = QListWidget(self)
+        self._scene_mix_list.currentRowChanged.connect(self._handle_scene_mix_selection_changed)
+        scene_mix_layout.addWidget(self._scene_mix_list)
+        scene_mix_action_row = QHBoxLayout()
+        self._scene_mix_generate_button = QPushButton("Generate / Refresh Scene Mix", self)
+        self._scene_mix_generate_button.clicked.connect(self._emit_scene_mix_generate)
+        scene_mix_action_row.addWidget(self._scene_mix_generate_button)
+        self._scene_mix_playback_button = QPushButton("Play Scene Mix", self)
+        self._scene_mix_playback_button.clicked.connect(self._emit_scene_mix_playback_toggle)
+        scene_mix_action_row.addWidget(self._scene_mix_playback_button)
+        scene_mix_action_row.addStretch(1)
+        scene_mix_layout.addLayout(scene_mix_action_row)
+        layout.addWidget(self._scene_mix_group, 0)
 
         self._outputs_group = QGroupBox("Generated Audiobook Files", self)
         outputs_layout = QVBoxLayout(self._outputs_group)
@@ -280,12 +300,18 @@ class AudioAssemblyPage(QWidget):
         can_generate: bool,
         can_reset: bool,
         can_play_selected: bool,
+        scene_mix_groups: list[dict[str, object]] | None = None,
+        current_scene_mix_key: str | None = None,
+        can_generate_scene_mix: bool = False,
+        can_play_scene_mix: bool = False,
     ) -> None:
         """
         @brief      Refresh the Audio Assembly page from controller-provided state.
         @param[in]  settings Current normalized Audio Assembly settings.
         @param[in]  outputs Generated output record list.
+        @param[in]  scene_mix_groups Scene Ambience mix-preview group records.
         @param[in]  current_output_key Preferred selected output key.
+        @param[in]  current_scene_mix_key Preferred selected Scene Ambience mix key.
         @param[in]  notes Operator-facing note lines.
         @param[in]  status_lines Operator-facing status lines.
         @param[in]  progress_current Current generated output count.
@@ -295,18 +321,23 @@ class AudioAssemblyPage(QWidget):
         @param[in]  can_generate Controller-resolved generate enablement.
         @param[in]  can_reset Controller-resolved reset enablement.
         @param[in]  can_play_selected Controller-resolved playback enablement.
+        @param[in]  can_generate_scene_mix Controller-resolved preview generation enablement.
+        @param[in]  can_play_scene_mix Controller-resolved preview playback enablement.
         @return     None.
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-25
-        @version    0.3.1
+        @version    0.4.0
         """
         self._loading_state = True
         self._stage_status = stage_status
         self._can_generate = can_generate
         self._can_reset = can_reset
         self._can_play_selected = can_play_selected
+        self._can_generate_scene_mix = can_generate_scene_mix
+        self._can_play_scene_mix = can_play_scene_mix
         self._outputs = list(outputs)
+        self._scene_mix_groups = list(scene_mix_groups or [])
         normalized_settings = audio_assembly_service.normalize_audio_assembly_settings(settings)
         mode_index = self._output_mode_combo.findData(normalized_settings["output_mode"])
         self._output_mode_combo.setCurrentIndex(max(0, mode_index))
@@ -318,6 +349,14 @@ class AudioAssemblyPage(QWidget):
         self._progress_bar.setValue(max(0, min(int(progress_percent), 100)))
         self._progress_label.setText(f"{progress_current}/{progress_total}")
         self._status_edit.setPlainText("\n".join([*notes, "", *status_lines]).strip())
+        self._scene_mix_list.clear()
+        selected_scene_index = 0
+        for index, group in enumerate(self._scene_mix_groups):
+            if str(group.get("group_key", "")) == str(current_scene_mix_key or ""):
+                selected_scene_index = index
+            self._scene_mix_list.addItem(_format_scene_mix_item(group, self._current_language))
+        if self._scene_mix_groups:
+            self._scene_mix_list.setCurrentRow(selected_scene_index)
         self._output_list.clear()
         selected_index = 0
         for index, output in enumerate(self._outputs):
@@ -327,7 +366,10 @@ class AudioAssemblyPage(QWidget):
         if self._outputs:
             self._output_list.setCurrentRow(selected_index)
         if not self._playback_active:
-            self.set_playback_progress(0, _selected_output_duration_ms(self._outputs, selected_index))
+            duration_ms = _selected_output_duration_ms(self._outputs, selected_index)
+            if duration_ms <= 0:
+                duration_ms = _selected_scene_mix_duration_ms(self._scene_mix_groups, selected_scene_index)
+            self.set_playback_progress(0, duration_ms)
         self._loading_state = False
         self._apply_control_state()
 
@@ -344,6 +386,20 @@ class AudioAssemblyPage(QWidget):
         if row < 0 or row >= len(self._outputs):
             return None
         return str(self._outputs[row].get("output_key", "")).strip() or None
+
+    def selected_scene_mix_key(self) -> str | None:
+        """
+        @brief      Return the currently selected Scene Ambience mix key.
+        @return     Selected Scene Ambience mix key or `None`.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-25
+        @version    0.1.0
+        """
+        row = self._scene_mix_list.currentRow()
+        if row < 0 or row >= len(self._scene_mix_groups):
+            return None
+        return str(self._scene_mix_groups[row].get("group_key", "")).strip() or None
 
     def output_key_for_row(self, row: int) -> str | None:
         """
@@ -387,11 +443,12 @@ class AudioAssemblyPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-25
-        @version    0.3.1
+        @version    0.4.0
         """
         self._current_language = language
         self._title_label.setText(f"<h2>{ui_state_service.translate('audio_assembly.title', language)}</h2>")
         self._settings_group.setTitle(ui_state_service.translate("audio_assembly.settings_group", language))
+        self._scene_mix_group.setTitle(ui_state_service.translate("audio_assembly.scene_mix_group", language))
         self._outputs_group.setTitle(ui_state_service.translate("audio_assembly.outputs_group", language))
         self._status_group.setTitle(ui_state_service.translate("audio_assembly.status_group", language))
         self._output_mode_label.setText(ui_state_service.translate("audio_assembly.output_mode", language))
@@ -422,6 +479,10 @@ class AudioAssemblyPage(QWidget):
             )
         self._generate_button.setText(ui_state_service.translate("audio_assembly.generate", language))
         self._reset_button.setText(ui_state_service.translate("audio_assembly.reset", language))
+        self._scene_mix_generate_button.setText(
+            ui_state_service.translate("audio_assembly.generate_scene_mix", language)
+        )
+        self._scene_mix_playback_button.setText(ui_state_service.translate("audio_assembly.play_scene_mix", language))
         self._rewind_button.setText(ui_state_service.translate("audio_assembly.rewind_10s", language))
         self._forward_button.setText(ui_state_service.translate("audio_assembly.forward_10s", language))
         self._apply_control_state()
@@ -449,6 +510,32 @@ class AudioAssemblyPage(QWidget):
         output_key = self.selected_output_key()
         if output_key:
             self.playback_toggle_requested.emit(output_key)
+
+    def _emit_scene_mix_generate(self) -> None:
+        """
+        @brief      Emit Scene Ambience mix generation for the selected group.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-25
+        @version    0.1.0
+        """
+        group_key = self.selected_scene_mix_key()
+        if group_key:
+            self.scene_mix_generate_requested.emit(group_key)
+
+    def _emit_scene_mix_playback_toggle(self) -> None:
+        """
+        @brief      Emit Scene Ambience mix playback for the selected group.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-25
+        @version    0.1.0
+        """
+        group_key = self.selected_scene_mix_key()
+        if group_key:
+            self.scene_mix_playback_toggle_requested.emit(group_key)
 
     def _emit_playback_restart(self, item) -> None:
         """
@@ -519,6 +606,23 @@ class AudioAssemblyPage(QWidget):
             self.set_playback_progress(0, _selected_output_duration_ms(self._outputs, self._output_list.currentRow()))
         self._apply_control_state()
 
+    def _handle_scene_mix_selection_changed(self, *_args) -> None:
+        """
+        @brief      Refresh controls after the selected Scene Ambience mix changes.
+        @param[in]  *_args Optional Qt signal arguments.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-25
+        @version    0.1.0
+        """
+        if not self._loading_state and not self._playback_active:
+            self.set_playback_progress(
+                0,
+                _selected_scene_mix_duration_ms(self._scene_mix_groups, self._scene_mix_list.currentRow()),
+            )
+        self._apply_control_state()
+
     def _apply_control_state(self, *_args) -> None:
         """
         @brief      Update Audio Assembly button and settings enablement.
@@ -527,7 +631,7 @@ class AudioAssemblyPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-25
-        @version    0.1.0
+        @version    0.2.0
         """
         self._max_duration_spin.setEnabled(
             self._project_active
@@ -548,7 +652,24 @@ class AudioAssemblyPage(QWidget):
             and self.selected_output_key() is not None
         )
         self._playback_button.setEnabled(can_play)
-        can_seek = can_play and self._playback_active and self._playback_duration_ms > 0
+        selected_scene_mix = self._current_scene_mix_group()
+        can_generate_scene_mix = (
+            self._project_active
+            and not self._busy
+            and bool(getattr(self, "_can_generate_scene_mix", False))
+            and selected_scene_mix is not None
+            and bool(selected_scene_mix.get("can_generate_preview", False))
+        )
+        can_play_scene_mix = (
+            self._project_active
+            and not self._busy
+            and bool(getattr(self, "_can_play_scene_mix", False))
+            and selected_scene_mix is not None
+            and bool(selected_scene_mix.get("can_play_preview", False))
+        )
+        self._scene_mix_generate_button.setEnabled(can_generate_scene_mix)
+        self._scene_mix_playback_button.setEnabled(can_play_scene_mix)
+        can_seek = (can_play or can_play_scene_mix) and self._playback_active and self._playback_duration_ms > 0
         self._rewind_button.setEnabled(can_seek)
         self._playback_slider.setEnabled(can_seek)
         self._forward_button.setEnabled(can_seek)
@@ -557,13 +678,34 @@ class AudioAssemblyPage(QWidget):
             if self._playback_active
             else ui_state_service.translate("audio_assembly.play_audio", self._current_language)
         )
+        self._scene_mix_playback_button.setText(
+            ui_state_service.translate("audio_assembly.stop_playing", self._current_language)
+            if self._playback_active
+            else ui_state_service.translate("audio_assembly.play_scene_mix", self._current_language)
+        )
+
+    def _current_scene_mix_group(self) -> dict[str, object] | None:
+        """
+        @brief      Return the currently selected Scene Ambience mix group.
+        @return     Selected group record or `None`.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-05-25
+        @version    0.1.0
+        """
+        row = self._scene_mix_list.currentRow()
+        if row < 0 or row >= len(self._scene_mix_groups):
+            return None
+        return self._scene_mix_groups[row]
 
 
 def _empty_page_state() -> dict[str, object]:
     return {
         "settings": audio_assembly_service.default_audio_assembly_settings(),
         "outputs": [],
+        "scene_mix_groups": [],
         "current_output_key": None,
+        "current_scene_mix_key": None,
         "notes": [],
         "status_lines": [],
         "progress_current": 0,
@@ -573,6 +715,8 @@ def _empty_page_state() -> dict[str, object]:
         "can_generate": False,
         "can_reset": False,
         "can_play_selected": False,
+        "can_generate_scene_mix": False,
+        "can_play_scene_mix": False,
     }
 
 
@@ -597,6 +741,35 @@ def _format_output_item(output: dict[str, object], language: str) -> str:
     )
 
 
+def _format_scene_mix_item(group: dict[str, object], language: str) -> str:
+    """
+    @brief      Format one Scene Ambience mix group for the preview list.
+    @param[in]  group Scene Ambience mix group.
+    @param[in]  language Runtime UI language code.
+    @return     Display text for the scene mix row.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-25
+    @version    0.1.0
+    """
+    duration_seconds = int(float(group.get("duration_seconds", 0.0) or 0.0))
+    minutes = duration_seconds // 60
+    seconds = duration_seconds % 60
+    status_key = (
+        "audio_assembly.scene_mix_ready"
+        if bool(group.get("can_generate_preview", False))
+        else "audio_assembly.scene_mix_not_ready"
+    )
+    if bool(group.get("can_play_preview", False)):
+        status_key = "audio_assembly.scene_mix_generated"
+    return ui_state_service.translate("audio_assembly.scene_mix_item", language).format(
+        label=str(group.get("label", "")),
+        duration=f"{minutes:02d}:{seconds:02d}",
+        block_count=int(group.get("block_count", 0)),
+        status=ui_state_service.translate(status_key, language),
+    )
+
+
 def _selected_output_duration_ms(outputs: list[dict[str, object]], selected_index: int) -> int:
     """
     @brief      Resolve the selected output duration to milliseconds.
@@ -611,6 +784,22 @@ def _selected_output_duration_ms(outputs: list[dict[str, object]], selected_inde
     if selected_index < 0 or selected_index >= len(outputs):
         return 0
     return max(0, int(float(outputs[selected_index].get("duration_seconds", 0.0) or 0.0) * 1000))
+
+
+def _selected_scene_mix_duration_ms(groups: list[dict[str, object]], selected_index: int) -> int:
+    """
+    @brief      Resolve the selected Scene Ambience mix duration to milliseconds.
+    @param[in]  groups Scene Ambience mix groups.
+    @param[in]  selected_index Current selected group index.
+    @return     Non-negative selected group duration in milliseconds.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-25
+    @version    0.1.0
+    """
+    if selected_index < 0 or selected_index >= len(groups):
+        return 0
+    return max(0, int(float(groups[selected_index].get("duration_seconds", 0.0) or 0.0) * 1000))
 
 
 def _format_playback_time(position_ms: int) -> str:

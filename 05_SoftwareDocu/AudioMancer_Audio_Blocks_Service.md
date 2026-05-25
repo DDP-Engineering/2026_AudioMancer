@@ -121,8 +121,8 @@ High-level flow:
    split by paragraph/sentence, then clause punctuation, then word groups, and
    the completed part WAVs are stitched with Python `wave`.
 8. Scene Ambience rows follow the same stable ordering and approval flow, but
-   use `sound_prompt`, `negative_prompt`, and the block's own
-   `duration_seconds` with the runtime sound-prompt endpoint rather than the
+   use `sound_prompt`, `negative_prompt`, and the fixed Scene Ambience duration
+   from `TTS Settings` with the runtime sound-prompt endpoint rather than the
    clone-prompt TTS endpoint.
 9. After each generated block, and after each completed split part, the service rewrites
    `audio_blocks.json`, `audio_blocks_report.json`, `voice_clone_profiles.json`,
@@ -278,6 +278,9 @@ Current invariants:
   block status, and source voice sample inputs
 - generated output ordering is source chunk order, then chunk-local
   `sequence_index`
+- generated Scene Ambience duration is normalized to the current `TTS Settings`
+  Scene Ambience duration so multiple prompt WAVs can later be mixed together
+  in Audio Assembly
 - `normalized_speaker_name` is ASCII-safe and derived through
   `normalize_speaker_name(...)`
 - one referenced voice target produces one reusable client-owned clone-prompt

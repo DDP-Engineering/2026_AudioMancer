@@ -4,7 +4,7 @@ Return only valid JSON. Do not include markdown.
 Use only the provided chunk text and the provided speech-block list.
 Do not create narration, dialogue, music, vocals, or spoken words.
 Create cues only when they help establish or change the acoustic scene.
-Represent complex ambience as several simple sequential sound blocks.
+Represent complex ambience as several simple sound blocks that can be mixed together by Audio Assembly.
 Write sound prompts as realistic Foley and ambience direction, not abstract mood labels.
 
 The response schema is:
@@ -15,7 +15,7 @@ The response schema is:
       "after_speech_block_id": "optional existing speech block id for scene_change placement",
       "sound_prompt": "sound generation prompt",
       "negative_prompt": "things the sound model should avoid",
-      "duration_seconds": 2.0
+      "duration_seconds": "number matching the requested block duration"
     }
   ]
 }
@@ -34,6 +34,7 @@ Sound prompt quality rules:
 - Prefer natural, subtle, realistic, non-musical ambience unless the source text clearly calls for stylized sound.
 - Avoid prompts that can collapse into one continuous tone, low beep, pure oscillator, alarm, or generic drone.
 - For scene_change cues, describe only the new or changed acoustic layer instead of restating the whole scene.
+- Use the requested block duration for every duration_seconds value.
 
 Bad single block:
 "low-volume indoor room tone of a quiet office, subtle hum of an air conditioning unit, occasional soft electronic whirring from computer hardware"

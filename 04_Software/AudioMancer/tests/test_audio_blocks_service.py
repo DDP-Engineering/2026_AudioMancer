@@ -14,7 +14,7 @@
          normalization.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-23
-@version 1.9.4
+@version 1.9.5
 """
 
 # IMPORTS
@@ -1966,12 +1966,12 @@ def test_audio_blocks_service_regenerates_scene_ambience_without_tts_reset_guard
     assert sound_requests
     assert sound_requests[0][0][2] == "distant rain on metal trench covers"
     assert sound_requests[0][1]["negative_prompt"] == "voice, speech"
-    assert sound_requests[0][1]["duration_seconds"] == 6.0
+    assert sound_requests[0][1]["duration_seconds"] == 11.0
     assert sound_requests[0][1]["guidance_scale"] == 8.5
     assert sound_requests[0][1]["num_inference_steps"] == 75
     assert sound_requests[0][1]["seed"] == 321
     assert ambience_block["content_kind"] == speech_blocks_service.CONTENT_KIND_SCENE_AMBIENCE
-    assert ambience_block["duration_seconds"] == 6.0
+    assert ambience_block["duration_seconds"] == 11.0
     assert ambience_block["prompt_format"] == "sound_prompt"
     assert ambience_block["runtime_result_summary"] == "Scene ambience ready."
     assert (project_root / str(ambience_block["audio_relative_path"])).read_bytes() == _wav_bytes("ambience")

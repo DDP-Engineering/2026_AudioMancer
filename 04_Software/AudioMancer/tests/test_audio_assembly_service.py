@@ -13,7 +13,7 @@
          stale-input protection, and generated-output reset behavior.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-25
-@version 0.5.2
+@version 0.6.0
 """
 
 # IMPORTS
@@ -161,6 +161,84 @@ def test_audio_assembly_service_can_skip_scene_ambience_blocks(tmp_path) -> None
     output_path = project_root / str(report["outputs"][0]["audio_relative_path"])
     with wave.open(str(output_path), "rb") as wav_file:
         assert wav_file.getnframes() == 2400 * 3
+
+
+def test_audio_assembly_service_lists_and_generates_scene_mix_preview(tmp_path) -> None:
+    """
+    @brief      Verify Scene Ambience groups can be preview-mixed on demand.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-25
+    @version    0.1.0
+    """
+    project_root, _manifest = _create_project_with_audio_blocks(tmp_path)
+    _insert_scene_ambience_blocks(project_root, approved=True, with_audio=True)
+
+    groups = audio_assembly_service.list_scene_mix_groups(project_root)
+    preview_group = audio_assembly_service.generate_scene_mix_preview(project_root, groups[0]["group_key"])
+    refreshed_groups = audio_assembly_service.list_scene_mix_groups(project_root)
+
+    assert len(groups) == 1
+    assert groups[0]["block_count"] == 2
+    assert groups[0]["can_generate_preview"] is True
+    assert preview_group["can_play_preview"] is True
+    preview_path = project_root / str(preview_group["audio_relative_path"])
+    assert preview_path.is_file()
+    assert refreshed_groups[0]["can_play_preview"] is True
+    with wave.open(str(preview_path), "rb") as wav_file:
+        assert wav_file.getnframes() == 2400
+
+
+def test_audio_assembly_service_scene_mix_group_not_ready_without_approved_audio(tmp_path) -> None:
+    """
+    @brief      Verify incomplete Scene Ambience groups are listed but not previewable.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-25
+    @version    0.1.0
+    """
+    project_root, _manifest = _create_project_with_audio_blocks(tmp_path)
+    _insert_scene_ambience_blocks(project_root, approved=False, with_audio=False)
+
+    groups = audio_assembly_service.list_scene_mix_groups(project_root)
+
+    assert len(groups) == 1
+    assert groups[0]["can_generate_preview"] is False
+    assert groups[0]["can_play_preview"] is False
+    with pytest.raises(ValueError, match="Generate and approve every source"):
+        audio_assembly_service.generate_scene_mix_preview(project_root, groups[0]["group_key"])
+
+
+def test_audio_assembly_service_final_assembly_uses_mixed_scene_ambience_group(tmp_path) -> None:
+    """
+    @brief      Verify final assembly inserts one mixed Scene Ambience segment per group.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-25
+    @version    0.1.0
+    """
+    project_root, manifest = _create_project_with_audio_blocks(tmp_path)
+    _insert_scene_ambience_blocks(project_root, approved=True, with_audio=True)
+    manifest["audio_assembly_settings"] = {
+        **audio_assembly_service.default_audio_assembly_settings(),
+        "output_mode": audio_assembly_service.OUTPUT_MODE_WHOLE_BOOK,
+        "inter_block_silence_ms": 0,
+        "inter_chunk_silence_ms": 0,
+        "include_scene_ambience": True,
+    }
+
+    report = audio_assembly_service.start_or_continue_composition(project_root, manifest)
+
+    output_path = project_root / str(report["outputs"][0]["audio_relative_path"])
+    with wave.open(str(output_path), "rb") as wav_file:
+        assert wav_file.getnframes() == 2400 * 4
+    assert report["outputs"][0]["block_count"] == 5
 
 
 def test_audio_assembly_service_missing_pause_duration_uses_default(tmp_path) -> None:
@@ -600,6 +678,55 @@ def _create_project_with_audio_blocks(tmp_path, frame_count: int = 2400):
         encoding="utf-8",
     )
     return project_root, project_workspace_service.load_manifest(project_root)
+
+
+def _insert_scene_ambience_blocks(project_root, approved: bool, with_audio: bool) -> None:
+    """
+    @brief      Insert two Scene Ambience Audio Blocks into the first chunk.
+    @param[in]  project_root Active project root.
+    @param[in]  approved Whether the inserted blocks are approved.
+    @param[in]  with_audio Whether the inserted blocks reference generated WAV files.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-25
+    @version    0.1.0
+    """
+    payload_path = project_root / config.AUDIO_BLOCKS_OUTPUT_FILE_NAME
+    payload = json.loads(payload_path.read_text(encoding="utf-8"))
+    ambience_audio_root = project_root / config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME
+    ambience_blocks = []
+    for offset, prompt in enumerate(("quiet library room tone", "intermittent page turns"), start=1):
+        audio_path = ambience_audio_root / f"0001_00000{offset + 1}_scene_ambience_{offset}.wav"
+        if with_audio:
+            _write_wav(audio_path, 2400)
+        ambience_blocks.append(
+            {
+                **payload[0],
+                "speech_block_id": f"0001-00000{offset + 1}-ambience",
+                "sequence_index": offset + 1,
+                "speaker_id": "scene_ambience",
+                "speaker_display_name": "Scene Ambience",
+                "normalized_speaker_name": "scene_ambience",
+                "content_kind": "scene_ambience",
+                "text": prompt,
+                "sound_prompt": prompt,
+                "negative_prompt": "speech, music",
+                "duration_seconds": 0.1,
+                "ambience_position": "opener",
+                "after_speech_block_id": "",
+                "audio_relative_path": audio_path.relative_to(project_root).as_posix() if with_audio else None,
+                "audio_duration_seconds": 0.1 if with_audio else None,
+                "approved": "2026-04-25T00:00:00+00:00" if approved else None,
+                "approved_at": "2026-04-25T00:00:00+00:00" if approved else None,
+                "generated": "2026-04-25T00:00:00+00:00" if with_audio else None,
+                "generated_at": "2026-04-25T00:00:00+00:00" if with_audio else None,
+            }
+        )
+    payload[1]["sequence_index"] = 4
+    payload[2]["sequence_index"] = 1
+    payload[1:1] = ambience_blocks
+    payload_path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
 
 
 def _write_wav(path, frame_count: int) -> None:

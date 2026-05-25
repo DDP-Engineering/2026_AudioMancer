@@ -9,7 +9,7 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Ghid AudioMancer v1.3.2</title>
+    <title>Ghid AudioMancer v1.4.0</title>
     <link rel="stylesheet" href="assets/styles/help.css">
 </head>
 <body>
@@ -43,8 +43,8 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
             <section id="welcome">
                 <h2>Bun venit</h2>
                 <div class="version-box">
-                    <p><strong>Versiune ajutor:</strong> 1.3.2</p>
-                    <p><strong>Versiune aplicatie:</strong> 1.3.2</p>
+                    <p><strong>Versiune ajutor:</strong> 1.4.0</p>
+                    <p><strong>Versiune aplicatie:</strong> 1.4.0</p>
                     <p><strong>Creator:</strong> Eng. Dipl. Dan Dumitru Pasare</p>
                     <p><strong>Contact:</strong> pasaredan1979@gmail.com</p>
                 </div>
@@ -62,11 +62,11 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                 </p>
                 <p>
                     Scene Ambience poate adauga intr-o scena blocuri sonore individuale ordonate. Fiecare bloc
-                    ambiental are prompt, prompt negativ si durata proprie, astfel incat poti construi atmosfera din
-                    surse sonore simple, nu dintr-un singur prompt complex. Blocurile de vorbire pot genera si reda
-                    audio pentru blocul selectat direct din pagina, Blocurile audio pot genera WAV pentru narator,
-                    personaje si Scene Ambience, iar Asamblarea audio poate include sau sari peste ambience in
-                    audiobook-ul final.
+                    ambiental are prompt si prompt negativ, iar durata foloseste setarea Scene Ambience din Setari TTS,
+                    astfel incat poti construi atmosfera din surse sonore simple, nu dintr-un singur prompt complex.
+                    Blocurile de vorbire pot genera si reda audio pentru blocul selectat direct din pagina, Blocurile
+                    audio pot genera WAV pentru narator, personaje si Scene Ambience, iar Asamblarea audio poate
+                    previzualiza si include ambience mixat in audiobook-ul final.
                 </p>
                 <p>
                     Setari include teme luminoase si intunecate, teme personalizate, font separat pentru controalele
@@ -283,7 +283,7 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                 <ul>
                     <li>Foloseste <strong>Test Connection</strong> pentru a descoperi modelele VoiceWeaver disponibile.</li>
                     <li>Alege <strong>None</strong>, <strong>Deschideri si inchideri</strong> sau <strong>Deschideri, inchideri si schimbari de scena</strong>.</li>
-                    <li>Seteaza durata maxima soft pentru o secventa ambientala si numarul maxim de blocuri ambientale pe secventa.</li>
+                    <li>Seteaza durata blocurilor Scene Ambience si numarul maxim de blocuri ambientale pe secventa.</li>
                     <li>Seteaza guidance, numarul de pasi si seed-ul pentru modelul sound-prompt. Valoarea <strong>Random</strong> foloseste seed aleator.</li>
                     <li>Activarea Scene Ambience pentru Blocuri de vorbire este controlata de politica Scene Ambience Placement.</li>
                 </ul>
@@ -498,7 +498,7 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                     <li>Adauga reguli optionale pentru Blocuri de vorbire in caseta de prompt cu incadrare automata inainte de generare noua sau reimpartirea segmentului selectat.</li>
                     <li>Inspecteaza vorbitorul, tipul blocului, textul, durata pauzelor, indicatiile si campurile Scene Ambience.</li>
                     <li>Scene Ambience este salvat ca blocuri separate ordonate. Fiecare bloc ambiental trebuie sa descrie o singura sursa sonora simpla sau un tip de sunet strans legat, nu un mix compus.</li>
-                    <li>Editeaza promptul, promptul negativ si durata unui bloc Scene Ambience in aceeasi zona de detalii folosita pentru blocurile de narator si personaje.</li>
+                    <li>Editeaza promptul, promptul negativ si durata unui bloc Scene Ambience in aceeasi zona de detalii folosita pentru blocurile de narator si personaje. Generarea Blocurilor audio normalizeaza durata sunetului la durata Scene Ambience din Setari TTS.</li>
                     <li>Editeaza blocurile selectate cand textul sau atribuirea vorbitorului trebuie corectate. Daca blocul selectat are deja audio generat, avertismentul de impact apare cand apesi <strong>Edit</strong>, inainte ca editorul sa fie deblocat.</li>
                     <li>Foloseste contorul blocului selectat pentru a compara lungimea textului curent cu limita modelului TTS activ.</li>
                     <li>Insereaza sau sterge blocuri pentru a repara dialogul, pauzele sau fluxul narativ. Inserarea selecteaza blocul inserat; stergerea selecteaza urmatorul bloc ramas sau randul anterior cand blocul sters era ultimul.</li>
@@ -529,7 +529,7 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                 <ul>
                     <li>Genereaza WAV pentru Blocurile de vorbire aprobate si vorbite.</li>
                     <li>Foloseste selectorul Scene Ambience Audio pentru a include sau sari peste blocurile ambientale aprobate in generarea Blocurilor audio.</li>
-                    <li>Genereaza WAV-uri Scene Ambience din promptul, promptul negativ si durata individuala a fiecarui bloc ambiental.</li>
+                    <li>Genereaza WAV-uri Scene Ambience din prompt si prompt negativ, folosind durata Scene Ambience din Setari TTS.</li>
                     <li>Foloseste <strong>Start Audio Generation</strong> pentru a continua dupa adaugarea sau stergerea Blocurilor de vorbire. Blocurile audio deja generate sunt sarite chiar daca nu sunt inca aprobate; se genereaza numai blocurile aprobate curente fara audio.</li>
                     <li>Nu trimite la TTS blocurile de pauza si indicatie.</li>
                     <li>Imparte textul prea lung cand este nevoie si reuneste partile valide intr-un singur bloc audio.</li>
@@ -552,6 +552,12 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                     Asamblarea audio combina blocurile WAV aprobate in fisiere finale lungi. Poti asculta fisierele
                     generate direct in pagina, poti derula cu bara de progres si poti folosi butoanele de salt rapid.
                 </p>
+                <p>
+                    Scene Mix Previews listeaza grupurile Scene Ambience disponibile. Genereaza sau actualizeaza mixul
+                    selectat pentru a suprapune WAV-urile aprobate intr-un singur pat ambiental, apoi reda scena mixata
+                    inainte de asamblarea finala. Asamblarea finala foloseste acelasi mix cand
+                    <strong>Include Scene Ambience</strong> este activ.
+                </p>
                 <ul>
                     <li>Apasa <strong>Play</strong> pentru a porni fisierul selectat; butonul devine <strong>Stop</strong> in timpul redarii.</li>
                     <li>Foloseste <strong>-10s</strong> si <strong>+10s</strong> pentru derulare rapida.</li>
@@ -559,6 +565,7 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                     <li>Dublu-click pe un fisier generat opreste redarea curenta si porneste acel fisier de la inceput.</li>
                     <li>Alege modul de iesire: pe segment, parti limitate ca durata sau audiobook intreg.</li>
                     <li>Configureaza pauza intre blocuri si pauza intre segmente.</li>
+                    <li>Genereaza si reda previzualizari Scene Mix pentru grupurile Scene Ambience aprobate.</li>
                     <li>Genereaza fisiere WAV finale in dosarul <code>audiobook/</code> al proiectului.</li>
                     <li>Reseteaza si regenereaza asamblarea cand setarile sau blocurile audio aprobate se schimba.</li>
                     <li>Intrerupe asamblarea si continua mai tarziu cand intrarile curente inca se potrivesc.</li>
