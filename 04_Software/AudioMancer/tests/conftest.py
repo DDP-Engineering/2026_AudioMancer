@@ -13,7 +13,7 @@
          setup to reduce boilerplate across test files.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 1.3.2
+@version 1.4.0
 """
 
 # IMPORTS

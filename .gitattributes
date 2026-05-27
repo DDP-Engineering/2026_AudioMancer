@@ -38,3 +38,5 @@
 *.pptx binary
 *.xlsx binary
 /01_Documentation/DDP_VoiceMancer_pre-release.mp4 filter=lfs diff=lfs merge=lfs -text
+/07_Delivery/AudioMancer_Linux_x64.AppImage filter=lfs diff=lfs merge=lfs -text
+/07_Delivery/AudioMancer_Linux_x64.zip filter=lfs diff=lfs merge=lfs -text

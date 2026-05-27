@@ -11,14 +11,18 @@
 @brief WAV audiobook composition helpers for AudioMancer.
 @details Builds final audiobook WAV deliverables from approved Audio Blocks,
          persists per-project assembly settings, and supports resumable output
-         generation through root-level state and report artifacts.
+         generation through root-level state and report artifacts. Scene
+         Ambience prompt WAVs can be mixed into grouped ambience beds for
+         preview and final assembly.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-25
-@version 0.6.2
+@version 0.7.1
 """
 
 # IMPORTS
 
+import audioop
+from contextlib import ExitStack, suppress
 from functools import partial
 import hashlib
 import json
@@ -63,6 +67,8 @@ OUTPUT_FORMAT_WAV = "wav"
 
 _MODE = "audio_composition"
 _TEMP_SUFFIX = ".tmp"
+_SCENE_MIX_PREVIEW_FOLDER_NAME = "scene_mix_previews"
+_SCENE_MIX_KEY_PREFIX = "scene_mix"
 _WAV_COPY_FRAME_CHUNK_SIZE = 65_536
 _WAV_SAMPLE_WIDTH_BY_FORMAT = {
     1: 1,
@@ -74,6 +80,7 @@ _WAV_SAMPLE_WIDTH_BY_FORMAT = {
 AudioAssemblySettings = dict[str, object]
 AudioAssemblyReport = dict[str, object]
 AudioAssemblyState = dict[str, object]
+SceneMixGroup = dict[str, object]
 
 
 # PUBLIC API
@@ -215,6 +222,79 @@ def load_generated_outputs(project_root: str | Path) -> list[dict[str, object]]:
     if not isinstance(outputs, list):
         return []
     return [_normalize_output_record(output) for output in outputs if isinstance(output, dict)]
+
+
+@trace_function(_AUDIO_ASSEMBLY_LOGGER)
+def list_scene_mix_groups(project_root: str | Path) -> list[SceneMixGroup]:
+    """
+    @brief      Build current Scene Ambience mix-preview groups.
+    @param[in]  project_root Active project root folder.
+    @return     Ordered Scene Ambience group records.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-25
+    @version    0.1.0
+    """
+    resolved_project_root = Path(project_root)
+    audio_blocks = speech_blocks_service.sort_speech_blocks(
+        audio_blocks_service.load_audio_blocks(resolved_project_root)
+    )
+    return _scene_mix_groups_from_blocks(resolved_project_root, audio_blocks, include_blocks=False)
+
+
+@trace_function(_AUDIO_ASSEMBLY_LOGGER)
+def generate_scene_mix_preview(
+    project_root: str | Path,
+    group_key: str,
+    progress_callback=None,
+    cancel_requested=None,
+) -> SceneMixGroup:
+    """
+    @brief      Generate or refresh one selected Scene Ambience mix-preview WAV.
+    @param[in]  project_root Active project root folder.
+    @param[in]  group_key Stable Scene Ambience group key.
+    @param[in]  progress_callback Optional progress callback for modal UI updates.
+    @param[in]  cancel_requested Optional zero-argument cancellation callback.
+    @return     Refreshed Scene Ambience group record.
+    @exception  ValueError Raised when the group is unavailable or incomplete.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-25
+    @version    0.2.0
+    """
+    resolved_project_root = Path(project_root)
+    _emit_progress(progress_callback, 0, 3, "Preparing Scene Mix preview.")
+    groups = _scene_mix_groups_from_blocks(
+        resolved_project_root,
+        speech_blocks_service.sort_speech_blocks(audio_blocks_service.load_audio_blocks(resolved_project_root)),
+        include_blocks=True,
+    )
+    target_group = next((group for group in groups if str(group.get("group_key", "")) == str(group_key).strip()), None)
+    if target_group is None:
+        raise ValueError("The selected Scene Ambience mix is no longer available.")
+    if not bool(target_group.get("can_generate_preview", False)):
+        raise ValueError("Generate and approve every source Scene Ambience Audio Block before previewing the mix.")
+    _emit_progress(progress_callback, 1, 3, f"Mixing {target_group.get('label', 'Scene Mix preview')}.")
+    _write_scene_mix_group(
+        resolved_project_root,
+        target_group,
+        progress_callback=progress_callback,
+        progress_start=1,
+        progress_end=2,
+        progress_total=3,
+        cancel_requested=cancel_requested,
+    )
+    _emit_progress(progress_callback, 2, 3, "Refreshing Scene Mix preview.")
+    refreshed_groups = _scene_mix_groups_from_blocks(
+        resolved_project_root,
+        speech_blocks_service.sort_speech_blocks(audio_blocks_service.load_audio_blocks(resolved_project_root)),
+        include_blocks=False,
+    )
+    refreshed_group = next(
+        (group for group in refreshed_groups if str(group.get("group_key", "")) == str(group_key).strip()),
+        _strip_scene_mix_blocks(target_group),
+    )
+    _emit_progress(progress_callback, 3, 3, "Scene Mix preview completed.")
+    return refreshed_group
 
 
 @trace_function(_AUDIO_ASSEMBLY_LOGGER)
@@ -425,6 +505,164 @@ def _load_approved_audio_blocks(project_root: Path, include_scene_ambience: bool
     return audio_blocks
 
 
+def _build_composition_blocks(
+    project_root: Path,
+    audio_blocks: list[dict[str, object]],
+    include_scene_ambience: bool,
+) -> list[dict[str, object]]:
+    """
+    @brief      Build ordered final-composition blocks with mixed Scene Ambience groups.
+    @param[in]  project_root Active project root folder.
+    @param[in]  audio_blocks Approved Audio Blocks.
+    @param[in]  include_scene_ambience True when Scene Ambience contributes to output.
+    @return     Ordered blocks for output planning and WAV composition.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-25
+    @version    0.1.0
+    """
+    blocks = [
+        _enrich_block_duration(project_root, block)
+        for block in audio_blocks
+        if _is_assembly_block(block, include_scene_ambience)
+    ]
+    if not include_scene_ambience:
+        return blocks
+    scene_blocks_by_key: dict[str, list[dict[str, object]]] = {}
+    for block in blocks:
+        if _is_scene_ambience_block(block):
+            scene_blocks_by_key.setdefault(_scene_mix_group_key(block), []).append(block)
+    grouped_blocks: list[dict[str, object]] = []
+    emitted_scene_keys: set[str] = set()
+    for block in blocks:
+        if not _is_scene_ambience_block(block):
+            grouped_blocks.append(block)
+            continue
+        group_key = _scene_mix_group_key(block)
+        if group_key in emitted_scene_keys:
+            continue
+        grouped_blocks.append(_scene_mix_virtual_block(project_root, scene_blocks_by_key[group_key]))
+        emitted_scene_keys.add(group_key)
+    return grouped_blocks
+
+
+def _scene_mix_groups_from_blocks(
+    project_root: Path,
+    audio_blocks: list[dict[str, object]],
+    *,
+    include_blocks: bool,
+) -> list[SceneMixGroup]:
+    """
+    @brief      Convert Scene Ambience Audio Blocks into preview group records.
+    @param[in]  project_root Active project root folder.
+    @param[in]  audio_blocks Current Audio Blocks payloads.
+    @param[in]  include_blocks True to include source block payloads.
+    @return     Ordered Scene Ambience mix group records.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-25
+    @version    0.1.0
+    """
+    groups_by_key: dict[str, list[dict[str, object]]] = {}
+    for block in audio_blocks:
+        if not _is_scene_ambience_block(block):
+            continue
+        groups_by_key.setdefault(_scene_mix_group_key(block), []).append(dict(block))
+    groups = []
+    for blocks in groups_by_key.values():
+        group = _scene_mix_group_record(project_root, blocks, include_blocks=include_blocks)
+        if group["block_count"] > 0:
+            groups.append(group)
+    return groups
+
+
+def _scene_mix_group_record(
+    project_root: Path,
+    source_blocks: list[dict[str, object]],
+    *,
+    include_blocks: bool,
+) -> SceneMixGroup:
+    """
+    @brief      Build one Scene Ambience mix group record.
+    @param[in]  project_root Active project root folder.
+    @param[in]  source_blocks Source Scene Ambience Audio Blocks.
+    @param[in]  include_blocks True to include source block payloads.
+    @return     Scene Ambience group record.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-25
+    @version    0.1.0
+    """
+    ordered_blocks = speech_blocks_service.sort_speech_blocks([dict(block) for block in source_blocks])
+    first_block = ordered_blocks[0] if ordered_blocks else {}
+    duration_seconds = _scene_mix_duration_seconds(project_root, ordered_blocks)
+    output_path = _scene_mix_output_path(project_root, ordered_blocks, duration_seconds)
+    source_paths = [_audio_path(project_root, block) for block in ordered_blocks]
+    has_source_audio = all(path is not None and path.is_file() for path in source_paths)
+    is_approved = all(audio_blocks_service.is_approved(block) for block in ordered_blocks)
+    group: SceneMixGroup = {
+        "group_key": _scene_mix_group_key(first_block),
+        "label": _scene_mix_label(first_block),
+        "chunk_id": str(first_block.get("chunk_id", "")).strip(),
+        "ambience_position": str(first_block.get("ambience_position", "")).strip(),
+        "after_speech_block_id": str(first_block.get("after_speech_block_id", "")).strip(),
+        "speech_block_ids": [str(block.get("speech_block_id", "")).strip() for block in ordered_blocks],
+        "block_count": len(ordered_blocks),
+        "duration_seconds": duration_seconds,
+        "audio_relative_path": relative_to_project(project_root, output_path),
+        "can_generate_preview": bool(ordered_blocks) and is_approved and has_source_audio,
+        "can_play_preview": output_path.is_file(),
+        "generated": output_path.is_file(),
+        "output_format": OUTPUT_FORMAT_WAV,
+    }
+    if include_blocks:
+        group["_source_blocks"] = ordered_blocks
+    return group
+
+
+def _strip_scene_mix_blocks(group: SceneMixGroup) -> SceneMixGroup:
+    """
+    @brief      Return one Scene Ambience group record without private source blocks.
+    @param[in]  group Scene Ambience group record.
+    @return     Public group record.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-25
+    @version    0.1.0
+    """
+    public_group = dict(group)
+    public_group.pop("_source_blocks", None)
+    return public_group
+
+
+def _scene_mix_virtual_block(project_root: Path, source_blocks: list[dict[str, object]]) -> dict[str, object]:
+    """
+    @brief      Build one virtual Audio Block representing a mixed Scene Ambience group.
+    @param[in]  project_root Active project root folder.
+    @param[in]  source_blocks Source Scene Ambience Audio Blocks.
+    @return     Virtual Audio Block consumed by final composition.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-25
+    @version    0.1.0
+    """
+    group = _scene_mix_group_record(project_root, source_blocks, include_blocks=True)
+    first_block = dict(source_blocks[0])
+    return {
+        **first_block,
+        "speech_block_id": str(group["group_key"]),
+        "speaker_display_name": str(group["label"]),
+        "text": str(group["label"]),
+        "audio_relative_path": str(group["audio_relative_path"]),
+        "duration_seconds": float(group["duration_seconds"]),
+        "audio_duration_seconds": float(group["duration_seconds"]),
+        "scene_mix_group_key": str(group["group_key"]),
+        "scene_mix_source_blocks": list(group.get("_source_blocks", [])),
+        "scene_mix_source_block_count": int(group["block_count"]),
+        "metadata_only": False,
+    }
+
+
 def _build_output_plan(
     project_root: Path,
     audio_blocks: list[dict[str, object]],
@@ -439,13 +677,9 @@ def _build_output_plan(
     @exception  ValueError Raised when no playable blocks exist.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.3.1
+    @version    0.4.0
     """
-    playable_blocks = [
-        _enrich_block_duration(project_root, block)
-        for block in audio_blocks
-        if _is_assembly_block(block, bool(settings["include_scene_ambience"]))
-    ]
+    playable_blocks = _build_composition_blocks(project_root, audio_blocks, bool(settings["include_scene_ambience"]))
     if not playable_blocks:
         raise ValueError("Audio Assembly requires at least one generated speech audio block.")
     output_mode = str(settings["output_mode"])
@@ -650,7 +884,7 @@ def _compose_output_file(
     @exception  RuntimeError Raised when source WAV files are invalid.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.4.0
+    @version    0.5.1
     """
     output_root = project_root / config.AUDIOBOOK_OUTPUT_FOLDER_NAME
     output_root.mkdir(parents=True, exist_ok=True)
@@ -659,12 +893,12 @@ def _compose_output_file(
     if temp_path.is_file():
         temp_path.unlink()
     blocks = [dict(block) for block in output_item.get("blocks", []) if isinstance(block, dict)]
+    blocks = [_materialize_scene_mix_block(project_root, block, cancel_requested) for block in blocks]
     reference_params = _reference_wav_params(
         project_root,
         blocks,
         str(output_item.get("reference_audio_relative_path", "")),
     )
-    expected_params = (reference_params[:3], reference_params[4:])
     total_frames = 0
     with wave.open(str(temp_path), "wb") as output_wav:
         output_wav.setparams(reference_params)
@@ -686,10 +920,9 @@ def _compose_output_file(
             assert source_path is not None
             with wave.open(str(source_path), "rb") as source_wav:
                 params = source_wav.getparams()
-                comparable_params = params[:3], params[4:]
-                if comparable_params != expected_params:
-                    raise RuntimeError("Audio Assembly found incompatible source WAV parameters.")
-                total_frames += _copy_wav_frames(source_wav, output_wav, cancel_requested)
+                if params.sampwidth not in _WAV_SAMPLE_WIDTH_BY_FORMAT:
+                    raise RuntimeError("Audio Assembly supports uncompressed PCM WAV source files only.")
+                total_frames += _copy_or_convert_wav_frames(source_wav, output_wav, reference_params, cancel_requested)
                 previous_block = block
     if output_path.is_file():
         output_path.unlink()
@@ -700,12 +933,396 @@ def _compose_output_file(
         "output_key": str(output_item["output_key"]),
         "file_name": output_path.name,
         "audio_relative_path": relative_to_project(project_root, output_path),
-        "block_count": len(blocks),
+        "block_count": sum(_composition_block_count(block) for block in blocks),
         "chunk_ids": list(output_item.get("chunk_ids", [])),
         "duration_seconds": duration_seconds,
         "generated": True,
         "output_format": OUTPUT_FORMAT_WAV,
     }
+
+
+def _materialize_scene_mix_block(
+    project_root: Path,
+    block: dict[str, object],
+    cancel_requested=None,
+) -> dict[str, object]:
+    """
+    @brief      Ensure one virtual Scene Ambience mix block has a WAV source.
+    @param[in]  project_root Active project root folder.
+    @param[in]  block Composition block.
+    @param[in]  cancel_requested Optional cancellation callback.
+    @return     Composition block with a materialized audio path.
+    @exception  RuntimeError Raised when Scene Ambience sources cannot be mixed.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-25
+    @version    0.1.0
+    """
+    if not _is_scene_mix_virtual_block(block):
+        return block
+    source_blocks = [dict(item) for item in block.get("scene_mix_source_blocks", []) if isinstance(item, dict)]
+    if not source_blocks:
+        raise RuntimeError("Audio Assembly cannot mix Scene Ambience without source audio blocks.")
+    group = _scene_mix_group_record(project_root, source_blocks, include_blocks=True)
+    output_path = _write_scene_mix_group(project_root, group, cancel_requested=cancel_requested)
+    materialized_block = dict(block)
+    materialized_block["audio_relative_path"] = relative_to_project(project_root, output_path)
+    materialized_block["duration_seconds"] = _wav_duration_seconds(output_path)
+    materialized_block["audio_duration_seconds"] = materialized_block["duration_seconds"]
+    return materialized_block
+
+
+def _write_scene_mix_group(
+    project_root: Path,
+    group: SceneMixGroup,
+    progress_callback=None,
+    progress_start: int = 0,
+    progress_end: int = 1,
+    progress_total: int = 1,
+    cancel_requested=None,
+) -> Path:
+    """
+    @brief      Mix one Scene Ambience group into its deterministic WAV path.
+    @param[in]  project_root Active project root folder.
+    @param[in]  group Scene Ambience group record with source blocks.
+    @param[in]  progress_callback Optional progress callback.
+    @param[in]  progress_start Completed progress units before mixing starts.
+    @param[in]  progress_end Completed progress units after mixing ends.
+    @param[in]  progress_total Total progress units for the parent operation.
+    @param[in]  cancel_requested Optional cancellation callback.
+    @return     Generated scene mix WAV path.
+    @exception  RuntimeError Raised when source WAV files are missing or invalid.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-25
+    @version    0.2.0
+    """
+    source_blocks = [dict(item) for item in group.get("_source_blocks", []) if isinstance(item, dict)]
+    source_paths = [_audio_path(project_root, block) for block in source_blocks]
+    if not source_paths or any(path is None or not path.is_file() for path in source_paths):
+        raise RuntimeError("Scene Ambience mix requires generated source WAV files.")
+    output_path = _safe_project_artifact_path(project_root, group.get("audio_relative_path"))
+    if output_path is None:
+        output_path = _scene_mix_output_path(project_root, source_blocks, float(group.get("duration_seconds", 0.0)))
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    temp_path = output_path.with_name(output_path.name + _TEMP_SUFFIX)
+    if temp_path.is_file():
+        temp_path.unlink()
+    assert all(path is not None for path in source_paths)
+    _mix_wav_sources(
+        [path for path in source_paths if path is not None],
+        temp_path,
+        float(group.get("duration_seconds", 0.0) or 0.0),
+        progress_callback=progress_callback,
+        progress_start=progress_start,
+        progress_end=progress_end,
+        progress_total=progress_total,
+        progress_message=f"Mixing {group.get('label', 'Scene Mix preview')}.",
+        cancel_requested=cancel_requested,
+    )
+    if output_path.is_file():
+        output_path.unlink()
+    temp_path.replace(output_path)
+    return output_path
+
+
+def _mix_wav_sources(
+    source_paths: list[Path],
+    output_path: Path,
+    duration_seconds: float,
+    progress_callback=None,
+    progress_start: int = 0,
+    progress_end: int = 1,
+    progress_total: int = 1,
+    progress_message: str = "Mixing Scene Mix preview.",
+    cancel_requested=None,
+) -> None:
+    """
+    @brief      Overlay compatible PCM WAV sources into one fixed-duration WAV.
+    @param[in]  source_paths Source WAV files.
+    @param[in]  output_path Destination WAV file path.
+    @param[in]  duration_seconds Target mix duration in seconds.
+    @param[in]  progress_callback Optional progress callback.
+    @param[in]  progress_start Completed progress units before mixing starts.
+    @param[in]  progress_end Completed progress units after mixing ends.
+    @param[in]  progress_total Total progress units for the parent operation.
+    @param[in]  progress_message Operator-facing progress message.
+    @param[in]  cancel_requested Optional cancellation callback.
+    @return     None.
+    @exception  RuntimeError Raised when source WAV files are incompatible.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-25
+    @version    0.2.0
+    """
+    if not source_paths:
+        raise RuntimeError("Scene Ambience mix requires at least one source WAV.")
+    with ExitStack() as stack:
+        sources = [stack.enter_context(wave.open(str(path), "rb")) for path in source_paths]
+        reference_params = sources[0].getparams()
+        expected_params = reference_params[:3], reference_params[4:]
+        if reference_params.sampwidth not in _WAV_SAMPLE_WIDTH_BY_FORMAT:
+            raise RuntimeError("Audio Assembly supports uncompressed PCM WAV source files only.")
+        for source_wav in sources[1:]:
+            params = source_wav.getparams()
+            if params.sampwidth not in _WAV_SAMPLE_WIDTH_BY_FORMAT:
+                raise RuntimeError("Audio Assembly supports uncompressed PCM WAV source files only.")
+            if (params[:3], params[4:]) != expected_params:
+                raise RuntimeError("Audio Assembly found incompatible source WAV parameters.")
+        target_frames = _scene_mix_target_frames(sources, reference_params.framerate, duration_seconds)
+        last_progress_unit = -1
+        with wave.open(str(output_path), "wb") as output_wav:
+            output_wav.setparams(reference_params)
+            remaining_frames = target_frames
+            while remaining_frames > 0:
+                raise_if_cancelled(cancel_requested)
+                written_frames = target_frames - remaining_frames
+                progress_unit = progress_start
+                if target_frames > 0 and progress_end > progress_start:
+                    progress_unit = progress_start + int(
+                        ((progress_end - progress_start) * written_frames) / target_frames
+                    )
+                if progress_unit != last_progress_unit:
+                    _emit_progress(progress_callback, progress_unit, progress_total, progress_message)
+                    last_progress_unit = progress_unit
+                frame_count = min(remaining_frames, _WAV_COPY_FRAME_CHUNK_SIZE)
+                chunks = [_read_or_pad_wav_frames(source_wav, frame_count, reference_params) for source_wav in sources]
+                output_wav.writeframes(_mix_pcm_chunks(chunks, frame_count, reference_params))
+                remaining_frames -= frame_count
+        _emit_progress(progress_callback, progress_end, progress_total, progress_message)
+
+
+def _scene_mix_target_frames(sources: list[wave.Wave_read], frame_rate: int, duration_seconds: float) -> int:
+    """
+    @brief      Resolve the fixed frame count for one Scene Ambience mix.
+    @param[in]  sources Open source WAV readers.
+    @param[in]  frame_rate Mix frame rate.
+    @param[in]  duration_seconds Requested target duration.
+    @return     Target frame count.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-25
+    @version    0.1.0
+    """
+    if frame_rate > 0 and duration_seconds > 0.0:
+        return max(1, int(round(frame_rate * duration_seconds)))
+    return max((int(source.getnframes()) for source in sources), default=1)
+
+
+def _read_or_pad_wav_frames(source_wav: wave.Wave_read, frame_count: int, params) -> bytes:
+    """
+    @brief      Read WAV frames and pad short sources with silence.
+    @param[in]  source_wav Open source WAV reader.
+    @param[in]  frame_count Requested frame count.
+    @param[in]  params Reference WAV parameters.
+    @return     Exactly `frame_count` frames of PCM bytes.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-25
+    @version    0.1.0
+    """
+    frame_size = max(int(params.nchannels) * int(params.sampwidth), 1)
+    data = source_wav.readframes(frame_count)
+    expected_size = frame_count * frame_size
+    if len(data) >= expected_size:
+        return data[:expected_size]
+    silence_byte = b"\x80" if int(params.sampwidth) == 1 else b"\x00"
+    return data + (silence_byte * (expected_size - len(data)))
+
+
+def _mix_pcm_chunks(chunks: list[bytes], frame_count: int, params) -> bytes:
+    """
+    @brief      Mix same-format PCM chunks with conservative gain reduction.
+    @param[in]  chunks Source PCM chunks.
+    @param[in]  frame_count Number of frames in each chunk.
+    @param[in]  params Reference WAV parameters.
+    @return     Mixed PCM byte chunk.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-25
+    @version    0.1.0
+    """
+    channels = int(params.nchannels)
+    sample_width = int(params.sampwidth)
+    sample_count = frame_count * channels
+    scale = 1.0 / max(len(chunks), 1)
+    output = bytearray()
+    for sample_index in range(sample_count):
+        mixed_value = 0
+        offset = sample_index * sample_width
+        for chunk in chunks:
+            mixed_value += _decode_pcm_sample(chunk[offset : offset + sample_width], sample_width)
+        output.extend(_encode_pcm_sample(int(round(mixed_value * scale)), sample_width))
+    return bytes(output)
+
+
+def _decode_pcm_sample(sample_bytes: bytes, sample_width: int) -> int:
+    """
+    @brief      Decode one PCM sample to a signed integer.
+    @param[in]  sample_bytes Raw PCM sample bytes.
+    @param[in]  sample_width Sample width in bytes.
+    @return     Signed sample value.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-25
+    @version    0.1.0
+    """
+    if sample_width == 1:
+        return int.from_bytes(sample_bytes or b"\x80", "little", signed=False) - 128
+    return int.from_bytes(sample_bytes.ljust(sample_width, b"\x00"), "little", signed=True)
+
+
+def _encode_pcm_sample(sample_value: int, sample_width: int) -> bytes:
+    """
+    @brief      Encode one signed integer as a clipped PCM sample.
+    @param[in]  sample_value Signed sample value.
+    @param[in]  sample_width Sample width in bytes.
+    @return     Raw PCM sample bytes.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-25
+    @version    0.1.0
+    """
+    if sample_width == 1:
+        return int(max(0, min(sample_value + 128, 255))).to_bytes(1, "little", signed=False)
+    minimum = -(1 << (8 * sample_width - 1))
+    maximum = (1 << (8 * sample_width - 1)) - 1
+    return int(max(minimum, min(sample_value, maximum))).to_bytes(sample_width, "little", signed=True)
+
+
+def _scene_mix_group_key(block: dict[str, object]) -> str:
+    """
+    @brief      Build one stable Scene Ambience group key.
+    @param[in]  block Scene Ambience Audio Block payload.
+    @return     Stable group key.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-25
+    @version    0.1.0
+    """
+    chunk_id = str(block.get("chunk_id", "")).strip()
+    position = str(block.get("ambience_position", "")).strip() or "scene"
+    after_id = str(block.get("after_speech_block_id", "")).strip() if position == "scene_change" else ""
+    return f"{_SCENE_MIX_KEY_PREFIX}:{chunk_id}:{position}:{after_id}"
+
+
+def _scene_mix_label(block: dict[str, object]) -> str:
+    """
+    @brief      Build an operator-facing Scene Ambience mix label.
+    @param[in]  block Scene Ambience Audio Block payload.
+    @return     Display label.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-25
+    @version    0.1.0
+    """
+    chunk_id = str(block.get("chunk_id", "")).strip() or "chunk"
+    position = str(block.get("ambience_position", "")).strip() or "scene"
+    after_id = str(block.get("after_speech_block_id", "")).strip()
+    if position == "scene_change" and after_id:
+        return f"{chunk_id} scene mix after {after_id}"
+    return f"{chunk_id} {position.replace('_', ' ')} scene mix"
+
+
+def _scene_mix_duration_seconds(project_root: Path, source_blocks: list[dict[str, object]]) -> float:
+    """
+    @brief      Resolve one Scene Ambience group duration.
+    @param[in]  project_root Active project root folder.
+    @param[in]  source_blocks Source Scene Ambience blocks.
+    @return     Target group duration in seconds.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-25
+    @version    0.1.0
+    """
+    durations: list[float] = []
+    for block in source_blocks:
+        with suppress(TypeError, ValueError):
+            durations.append(float(block.get("duration_seconds", 0.0) or 0.0))
+        audio_path = _audio_path(project_root, block)
+        if audio_path is not None and audio_path.is_file():
+            durations.append(_wav_duration_seconds(audio_path))
+    return max([duration for duration in durations if duration > 0.0], default=0.0)
+
+
+def _scene_mix_output_path(project_root: Path, source_blocks: list[dict[str, object]], duration_seconds: float) -> Path:
+    """
+    @brief      Build the deterministic output path for one Scene Ambience mix.
+    @param[in]  project_root Active project root folder.
+    @param[in]  source_blocks Source Scene Ambience blocks.
+    @param[in]  duration_seconds Target group duration.
+    @return     Scene mix WAV path.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-25
+    @version    0.1.0
+    """
+    first_block = source_blocks[0] if source_blocks else {}
+    group_digest = hashlib.sha1(_scene_mix_group_key(first_block).encode("utf-8")).hexdigest()[:10]  # noqa: S324
+    source_digest = _scene_mix_source_fingerprint(project_root, source_blocks, duration_seconds)[:10]
+    return (
+        project_root
+        / config.AUDIOBOOK_OUTPUT_FOLDER_NAME
+        / _SCENE_MIX_PREVIEW_FOLDER_NAME
+        / f"scene_mix_{group_digest}_{source_digest}.wav"
+    )
+
+
+def _scene_mix_source_fingerprint(
+    project_root: Path,
+    source_blocks: list[dict[str, object]],
+    duration_seconds: float,
+) -> str:
+    """
+    @brief      Build a fingerprint for Scene Ambience mix source audio.
+    @param[in]  project_root Active project root folder.
+    @param[in]  source_blocks Source Scene Ambience blocks.
+    @param[in]  duration_seconds Target group duration.
+    @return     SHA-1 hex digest.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-25
+    @version    0.1.0
+    """
+    payload = {
+        "duration_seconds": duration_seconds,
+        "sources": [
+            {
+                "speech_block_id": str(block.get("speech_block_id", "")).strip(),
+                "audio_relative_path": str(block.get("audio_relative_path", "")).strip(),
+                "file_sha1": _file_sha1(_audio_path(project_root, block)),
+            }
+            for block in source_blocks
+        ],
+    }
+    return hashlib.sha1(  # noqa: S324
+        json.dumps(payload, ensure_ascii=False, sort_keys=True).encode("utf-8")
+    ).hexdigest()
+
+
+def _is_scene_mix_virtual_block(block: dict[str, object]) -> bool:
+    """
+    @brief      Return whether one block is a virtual Scene Ambience mix.
+    @param[in]  block Composition block.
+    @return     True when the block represents a mixed Scene Ambience group.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-25
+    @version    0.1.0
+    """
+    return bool(str(block.get("scene_mix_group_key", "")).strip())
+
+
+def _composition_block_count(block: dict[str, object]) -> int:
+    """
+    @brief      Resolve how many source Audio Blocks one composition block represents.
+    @param[in]  block Composition block.
+    @return     Source Audio Block count.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-25
+    @version    0.1.0
+    """
+    if _is_scene_mix_virtual_block(block):
+        return _bounded_int(block.get("scene_mix_source_block_count", 1), 1, 1_000_000, 1)
+    return 1
 
 
 def _write_silence(output_wav: wave.Wave_write, gap_ms: int, params) -> int:
@@ -760,6 +1377,116 @@ def _copy_wav_frames(source_wav, output_wav: wave.Wave_write, cancel_requested=N
         if frames_read <= 0:
             break
     return copied_frames
+
+
+def _copy_or_convert_wav_frames(
+    source_wav,
+    output_wav: wave.Wave_write,
+    target_params,
+    cancel_requested=None,
+) -> int:
+    """
+    @brief      Copy or convert source WAV frames to the output WAV format.
+    @param[in]  source_wav Active source WAV reader.
+    @param[in]  output_wav Active output WAV writer.
+    @param[in]  target_params Output WAV parameters.
+    @param[in]  cancel_requested Optional cancellation callback.
+    @return     Number of output frames written.
+    @exception  RuntimeError Raised when source conversion is unsupported.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-27
+    @version    0.1.0
+    """
+    source_params = source_wav.getparams()
+    if (source_params[:3], source_params[4:]) == (target_params[:3], target_params[4:]):
+        return _copy_wav_frames(source_wav, output_wav, cancel_requested)
+    if (
+        source_params.sampwidth not in _WAV_SAMPLE_WIDTH_BY_FORMAT
+        or target_params.sampwidth not in _WAV_SAMPLE_WIDTH_BY_FORMAT
+    ):
+        raise RuntimeError("Audio Assembly supports uncompressed PCM WAV source files only.")
+    rate_state = None
+    remaining_frames = int(source_wav.getnframes())
+    output_frame_size = max(int(target_params.nchannels) * int(target_params.sampwidth), 1)
+    source_frame_size = max(int(source_params.nchannels) * int(source_params.sampwidth), 1)
+    written_frames = 0
+    while remaining_frames > 0:
+        raise_if_cancelled(cancel_requested)
+        frames_to_read = min(remaining_frames, _WAV_COPY_FRAME_CHUNK_SIZE)
+        frame_data = source_wav.readframes(frames_to_read)
+        if not frame_data:
+            break
+        converted_data, rate_state = _convert_wav_frame_chunk(frame_data, source_params, target_params, rate_state)
+        if converted_data:
+            output_wav.writeframes(converted_data)
+            written_frames += len(converted_data) // output_frame_size
+        frames_read = len(frame_data) // source_frame_size
+        remaining_frames -= frames_read
+        if frames_read <= 0:
+            break
+    return written_frames
+
+
+def _convert_wav_frame_chunk(frame_data: bytes, source_params, target_params, rate_state) -> tuple[bytes, object]:
+    """
+    @brief      Convert one PCM frame chunk between compatible WAV layouts.
+    @param[in]  frame_data Source PCM bytes.
+    @param[in]  source_params Source WAV parameters.
+    @param[in]  target_params Target WAV parameters.
+    @param[in]  rate_state Running resampler state from `audioop.ratecv`.
+    @return     Tuple of converted PCM bytes and updated rate-conversion state.
+    @exception  RuntimeError Raised when channel conversion is unsupported.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-27
+    @version    0.1.0
+    """
+    converted_data = frame_data
+    current_sample_width = int(source_params.sampwidth)
+    current_channels = int(source_params.nchannels)
+    target_sample_width = int(target_params.sampwidth)
+    target_channels = int(target_params.nchannels)
+    if current_sample_width != target_sample_width:
+        converted_data = audioop.lin2lin(converted_data, current_sample_width, target_sample_width)
+        current_sample_width = target_sample_width
+    converted_data = _convert_wav_channels(
+        converted_data,
+        current_sample_width,
+        current_channels,
+        target_channels,
+    )
+    current_channels = target_channels
+    if int(source_params.framerate) != int(target_params.framerate):
+        converted_data, rate_state = audioop.ratecv(
+            converted_data,
+            current_sample_width,
+            current_channels,
+            int(source_params.framerate),
+            int(target_params.framerate),
+            rate_state,
+        )
+    return converted_data, rate_state
+
+
+def _convert_wav_channels(frame_data: bytes, sample_width: int, source_channels: int, target_channels: int) -> bytes:
+    """
+    @brief      Convert PCM frame data between mono and stereo channel layouts.
+    @param[in]  frame_data Source PCM bytes.
+    @param[in]  sample_width Sample width in bytes.
+    @param[in]  source_channels Source channel count.
+    @param[in]  target_channels Target channel count.
+    @return     PCM bytes with the target channel count.
+    @exception  RuntimeError Raised when the channel conversion is unsupported.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-27
+    @version    0.1.0
+    """
+    if source_channels == target_channels:
+        return frame_data
+    if source_channels == 1 and target_channels == 2:
+        return audioop.tostereo(frame_data, sample_width, 1.0, 1.0)
+    if source_channels == 2 and target_channels == 1:
+        return audioop.tomono(frame_data, sample_width, 0.5, 0.5)
+    raise RuntimeError("Audio Assembly supports WAV channel conversion only between mono and stereo.")
 
 
 def _build_report(
@@ -1103,21 +1830,15 @@ def _validate_compatible_wav_inputs(project_root: Path, audio_blocks: list[dict[
     @exception  RuntimeError Raised when WAV parameters are unsupported or incompatible.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.1.0
+    @version    0.1.1
     """
-    expected_params = None
     for block in audio_blocks:
         audio_path = _audio_path(project_root, block)
         assert audio_path is not None
         with wave.open(str(audio_path), "rb") as wav_file:
             params = wav_file.getparams()
-            comparable_params = params[:3], params[4:]
             if params.sampwidth not in _WAV_SAMPLE_WIDTH_BY_FORMAT:
                 raise RuntimeError("Audio Assembly supports uncompressed PCM WAV source files only.")
-            if expected_params is None:
-                expected_params = comparable_params
-            elif comparable_params != expected_params:
-                raise RuntimeError("Audio Assembly found incompatible source WAV parameters.")
 
 
 def _build_input_fingerprint(

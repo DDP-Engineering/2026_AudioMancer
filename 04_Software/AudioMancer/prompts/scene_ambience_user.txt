@@ -3,7 +3,7 @@ Source language: {source_language}
 Chunk id: {chunk_id}
 
 Placement policy: {placement_policy}
-Maximum sequence duration seconds: {duration_seconds}
+Scene ambience block duration seconds: {duration_seconds}
 Maximum blocks per sequence: {max_blocks_per_sequence}
 
 Chunk text:
@@ -26,6 +26,6 @@ Rules:
 - Avoid wording that may produce one continuous low beep, pure tone, generic hum, alarm, or single drone.
 - Keep generated sound non-verbal. Put "continuous beep, pure sine wave, single tone, alarm, music, melody, speech, voices, dialogue, singing, loud bass drone, harsh buzzing, distorted, low quality" in negative_prompt unless the scene specifically requires one of those elements.
 - For each ambience position or scene-change point, create no more than {max_blocks_per_sequence} blocks.
-- For each ambience position or scene-change point, keep the sum of duration_seconds around or below {duration_seconds} seconds.
+- Set duration_seconds to {duration_seconds} for every scene_ambience_block; the final Audio Assembly will mix related blocks together.
 - For scene_change cues, set after_speech_block_id to the speech block id immediately before the acoustic change when this can be inferred.
 - For scene_change cues, describe only the new or changed acoustic layer, not a full scene reset.

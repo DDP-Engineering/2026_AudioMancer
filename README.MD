@@ -38,7 +38,7 @@ AudioMancer supports a reviewed audiobook-preparation workflow that includes:
 - speech block editing and approval, including optional Scene Ambience sound
   cues as individual ordered blocks
 - audio block generation for spoken text and approved Scene Ambience prompts
-- WAV audio assembly with optional Scene Ambience inclusion
+- WAV audio assembly with optional mixed Scene Ambience inclusion and preview
 - text, project, voice-sample, and audio-output exports
 
 The application is designed so operators can combine AI-assisted steps with

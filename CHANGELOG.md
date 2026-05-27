@@ -10,6 +10,45 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- Added modal progress and cancellation support while generating Audio Assembly
+  Scene Mix previews.
+
+### Fixed
+
+- Fixed Audio Assembly with Scene Ambience enabled when sound-model WAVs and
+  TTS WAVs use different channel counts or sample rates, such as stereo
+  44.1 kHz ambience beside mono 24 kHz narration.
+
+## [1.4.0] - 2026-05-25
+
+### Added
+
+- Added Audio Assembly Scene Mix previews for Scene Ambience groups so operators
+  can generate, refresh, and play a mixed ambience bed before creating final
+  audiobook output.
+- Added reusable Audio Assembly service support for listing Scene Ambience mix
+  groups, checking preview readiness, generating deterministic preview WAV
+  files, and reusing the same mixer for final assembly.
+- Added focused service, page, controller, Audio Blocks, and Speech Blocks tests
+  for fixed Scene Ambience duration, preview availability, preview playback, and
+  final mixed Scene Ambience assembly.
+
+### Changed
+
+- Scene Ambience prompt WAVs now use the fixed Scene Ambience duration from TTS
+  Settings, and related ambience prompt WAVs are overlaid into one mixed segment
+  per scene group during final Audio Assembly.
+- Audio Assembly now inserts mixed Scene Ambience segments when
+  `Include Scene Ambience` is enabled, while keeping narration, dialogue,
+  pauses, and indications in the existing sequential composition flow.
+- Scene Ambience prompt instructions now describe the configured duration
+  contract instead of showing a hardcoded `10.0` duration example.
+- Project package metadata and `audiomancer.__version__` were updated to
+  `1.4.0`.
+- Offline English and Romanian help bundles were updated to version `1.4.0`.
+
 ## [1.3.2] - 2026-05-25
 
 ### Changed

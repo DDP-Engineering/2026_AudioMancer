@@ -16,7 +16,7 @@
          `80_audio_blocks` workflow artifacts.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-23
-@version 0.18.5
+@version 0.18.6
 """
 
 # IMPORTS
@@ -411,6 +411,9 @@ def start_or_continue_generation(
             **loaded_model_budget,
             "generate_scene_ambience_audio": bool(generation_context.get("generate_scene_ambience_audio", False)),
             "sound_model_id": str(generation_context.get("sound_model_id", "")).strip(),
+            "scene_ambience_duration_seconds": _optional_float(
+                generation_context.get("scene_ambience_duration_seconds")
+            ),
         },
     )
     if _requires_manual_reset(existing_state, generation_context["input_fingerprint"]):
@@ -1222,6 +1225,9 @@ def regenerate_audio_block(
             **loaded_model_budget,
             "generate_scene_ambience_audio": bool(generation_context.get("generate_scene_ambience_audio", False)),
             "sound_model_id": str(generation_context.get("sound_model_id", "")).strip(),
+            "scene_ambience_duration_seconds": _optional_float(
+                generation_context.get("scene_ambience_duration_seconds")
+            ),
         },
     )
     if _requires_manual_reset(
@@ -1314,7 +1320,7 @@ def _resolve_generation_context(
     @exception  ValueError Raised when prerequisites or runtime settings are invalid.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-23
-    @version    0.5.0
+    @version    0.5.1
     """
     speech_blocks = speech_blocks_service.sort_speech_blocks(speech_blocks_service.load_speech_blocks(project_root))
     if not speech_blocks:
@@ -1323,6 +1329,9 @@ def _resolve_generation_context(
     if not approved_speech_blocks:
         raise ValueError("Approve at least one Speech Block before starting Audio Blocks.")
     generate_scene_ambience_audio = bool(runtime_settings.get("generate_scene_ambience_audio", False))
+    scene_ambience_duration_seconds = _optional_float(runtime_settings.get("scene_ambience_duration_seconds")) or float(
+        config.DEFAULT_SCENE_AMBIENCE_DURATION_SECONDS
+    )
     approved_scene_ambience_blocks = [
         block
         for block in approved_speech_blocks
@@ -1418,6 +1427,7 @@ def _resolve_generation_context(
         **model_budget,
         "generate_scene_ambience_audio": generate_scene_ambience_audio,
         "sound_model_id": "" if sound_model is None else str(sound_model.get("model_id", "")).strip(),
+        "scene_ambience_duration_seconds": scene_ambience_duration_seconds,
     }
     input_fingerprint = _build_input_fingerprint(
         speech_blocks,
@@ -1436,6 +1446,7 @@ def _resolve_generation_context(
         "sound_model_id": "" if sound_model is None else str(sound_model.get("model_id", "")).strip(),
         "sound_model_payload": {} if sound_model is None else dict(sound_model),
         "generate_scene_ambience_audio": generate_scene_ambience_audio,
+        "scene_ambience_duration_seconds": scene_ambience_duration_seconds,
         "voice_assignment_mode": voice_assignment_mode,
         "original_language": str(manifest.get("original_language", "")).strip(),
         **model_budget,
@@ -1466,7 +1477,7 @@ def _build_input_fingerprint(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-23
-    @version    0.2.1
+    @version    0.2.2
     """
     fingerprint_payload = {
         "original_language": manifest.get("original_language"),
@@ -1474,6 +1485,7 @@ def _build_input_fingerprint(
         "clone_model_id": clone_model_id,
         "generate_scene_ambience_audio": bool(model_budget.get("generate_scene_ambience_audio", False)),
         "sound_model_id": str(model_budget.get("sound_model_id", "")).strip(),
+        "scene_ambience_duration_seconds": _optional_float(model_budget.get("scene_ambience_duration_seconds")),
         "model_token_budget": int(model_budget.get("model_token_budget", 0)),
         "model_audio_seconds_budget": float(model_budget.get("model_audio_seconds_budget", 0.0)),
         "model_budget_source": str(model_budget.get("model_budget_source", "")),
@@ -2068,7 +2080,7 @@ def _generate_scene_ambience_audio_block(
     @exception  OperationCancelledError Raised when cancellation is requested.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-20
-    @version    0.1.0
+    @version    0.1.1
     """
     base_url = str(runtime_settings.get("base_url", "")).strip()
     runtime_api_key = str(runtime_settings.get("runtime_api_key", ""))
@@ -2076,8 +2088,10 @@ def _generate_scene_ambience_audio_block(
     sound_prompt = str(audio_block.get("sound_prompt", audio_block.get("text", ""))).strip()
     if not sound_prompt:
         raise RuntimeError("Scene Ambience Audio generation requires a non-empty sound prompt.")
-    duration_seconds = _optional_float(audio_block.get("duration_seconds")) or float(
-        config.DEFAULT_SCENE_AMBIENCE_DURATION_SECONDS
+    duration_seconds = (
+        _optional_float(runtime_settings.get("scene_ambience_duration_seconds"))
+        or _optional_float(audio_block.get("duration_seconds"))
+        or float(config.DEFAULT_SCENE_AMBIENCE_DURATION_SECONDS)
     )
     guidance_scale = _optional_float(runtime_settings.get("scene_ambience_guidance_scale"))
     if guidance_scale is None:
@@ -2444,7 +2458,7 @@ def _build_audio_block_fingerprint(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-27
-    @version    0.1.0
+    @version    0.1.1
     """
     if not isinstance(generation_context, dict):
         return None
@@ -2482,6 +2496,7 @@ def _build_audio_block_fingerprint(
         "clone_model_id": str(generation_context.get("clone_model_id", "")).strip(),
         "generate_scene_ambience_audio": bool(generation_context.get("generate_scene_ambience_audio", False)),
         "sound_model_id": str(generation_context.get("sound_model_id", "")).strip(),
+        "scene_ambience_duration_seconds": _optional_float(generation_context.get("scene_ambience_duration_seconds")),
         "model_token_budget": int(generation_context.get("model_token_budget", 0)),
         "model_audio_seconds_budget": float(generation_context.get("model_audio_seconds_budget", 0.0)),
         "split_audio_seconds_budget": float(generation_context.get("split_audio_seconds_budget", 0.0)),
@@ -2700,7 +2715,7 @@ def _apply_scene_ambience_audio_policy(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-20
-    @version    0.1.0
+    @version    0.1.1
     """
     if not generation_context:
         return audio_blocks
@@ -2711,6 +2726,11 @@ def _apply_scene_ambience_audio_policy(
         if str(block.get("content_kind", "")).strip() != speech_blocks_service.CONTENT_KIND_SCENE_AMBIENCE:
             updated_blocks.append(block)
             continue
+        fixed_duration_seconds = _optional_float(
+            generation_context.get("scene_ambience_duration_seconds")
+        ) or _optional_float(block.get("duration_seconds"))
+        if fixed_duration_seconds is not None:
+            block["duration_seconds"] = fixed_duration_seconds
         if generate_scene_ambience_audio:
             block["metadata_only"] = False
             block["special_block_status"] = None

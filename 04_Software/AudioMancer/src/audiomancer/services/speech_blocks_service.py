@@ -15,7 +15,7 @@
          based operation state plus AI transaction logging.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 0.19.7
+@version 0.19.8
 """
 
 # IMPORTS
@@ -1813,7 +1813,7 @@ def _normalize_scene_ambience_response(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-20
-    @version    0.1.0
+    @version    0.1.1
     """
     raw_blocks = payload.get("scene_ambience_blocks", [])
     if not isinstance(raw_blocks, list):
@@ -1834,7 +1834,6 @@ def _normalize_scene_ambience_response(
         if not sound_prompt:
             continue
         sequence_key = (ambience_position, after_speech_block_id if ambience_position == "scene_change" else "")
-        duration_seconds = _positive_float(raw_block.get("duration_seconds"), max_sequence_duration)
         negative_prompt = str(raw_block.get("negative_prompt", "")).strip()
         if not negative_prompt:
             negative_prompt = "speech, voices, dialogue, singing, music, low quality, distorted"
@@ -1844,7 +1843,6 @@ def _normalize_scene_ambience_response(
         split_prompts = _split_composed_scene_ambience_prompt(sound_prompt)[:remaining_slots]
         if not split_prompts:
             continue
-        split_duration = duration_seconds / len(split_prompts)
         for split_prompt in split_prompts:
             sequence_counts[sequence_key] = sequence_counts.get(sequence_key, 0) + 1
             normalized_blocks.append(
@@ -1861,7 +1859,7 @@ def _normalize_scene_ambience_response(
                     "text": split_prompt,
                     "sound_prompt": split_prompt,
                     "negative_prompt": negative_prompt,
-                    "duration_seconds": split_duration,
+                    "duration_seconds": max_sequence_duration,
                     "ambience_position": ambience_position,
                     "after_speech_block_id": after_speech_block_id,
                     "warning_flags": [],
@@ -1869,7 +1867,7 @@ def _normalize_scene_ambience_response(
                     "approved_at": None,
                 }
             )
-    return _normalize_scene_ambience_sequence_durations(normalized_blocks, max_sequence_duration)
+    return normalized_blocks
 
 
 def _split_composed_scene_ambience_prompt(sound_prompt: str) -> list[str]:
