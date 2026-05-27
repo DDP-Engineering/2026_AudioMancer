@@ -13,7 +13,7 @@
          stale-input protection, and generated-output reset behavior.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-25
-@version 0.6.0
+@version 0.6.2
 """
 
 # IMPORTS
@@ -175,9 +175,16 @@ def test_audio_assembly_service_lists_and_generates_scene_mix_preview(tmp_path) 
     """
     project_root, _manifest = _create_project_with_audio_blocks(tmp_path)
     _insert_scene_ambience_blocks(project_root, approved=True, with_audio=True)
+    progress_events: list[tuple[int, int, int, str]] = []
 
     groups = audio_assembly_service.list_scene_mix_groups(project_root)
-    preview_group = audio_assembly_service.generate_scene_mix_preview(project_root, groups[0]["group_key"])
+    preview_group = audio_assembly_service.generate_scene_mix_preview(
+        project_root,
+        groups[0]["group_key"],
+        progress_callback=lambda current, total, percent, message: progress_events.append(
+            (current, total, percent, message)
+        ),
+    )
     refreshed_groups = audio_assembly_service.list_scene_mix_groups(project_root)
 
     assert len(groups) == 1
@@ -187,6 +194,8 @@ def test_audio_assembly_service_lists_and_generates_scene_mix_preview(tmp_path) 
     preview_path = project_root / str(preview_group["audio_relative_path"])
     assert preview_path.is_file()
     assert refreshed_groups[0]["can_play_preview"] is True
+    assert progress_events[0][:3] == (0, 3, 0)
+    assert progress_events[-1][:3] == (3, 3, 100)
     with wave.open(str(preview_path), "rb") as wav_file:
         assert wav_file.getnframes() == 2400
 
@@ -237,6 +246,44 @@ def test_audio_assembly_service_final_assembly_uses_mixed_scene_ambience_group(t
 
     output_path = project_root / str(report["outputs"][0]["audio_relative_path"])
     with wave.open(str(output_path), "rb") as wav_file:
+        assert wav_file.getnframes() == 2400 * 4
+    assert report["outputs"][0]["block_count"] == 5
+
+
+def test_audio_assembly_service_final_assembly_converts_scene_mix_wav_params(tmp_path) -> None:
+    """
+    @brief      Verify final assembly accepts Scene Ambience mixes with different WAV parameters.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-27
+    @version    0.1.0
+    """
+    project_root, manifest = _create_project_with_audio_blocks(tmp_path)
+    _insert_scene_ambience_blocks(
+        project_root,
+        approved=True,
+        with_audio=True,
+        wav_channels=2,
+        wav_frame_rate=44_100,
+        wav_frame_count=4410,
+    )
+    manifest["audio_assembly_settings"] = {
+        **audio_assembly_service.default_audio_assembly_settings(),
+        "output_mode": audio_assembly_service.OUTPUT_MODE_WHOLE_BOOK,
+        "inter_block_silence_ms": 0,
+        "inter_chunk_silence_ms": 0,
+        "include_scene_ambience": True,
+    }
+
+    report = audio_assembly_service.start_or_continue_composition(project_root, manifest)
+
+    output_path = project_root / str(report["outputs"][0]["audio_relative_path"])
+    with wave.open(str(output_path), "rb") as wav_file:
+        assert wav_file.getnchannels() == 1
+        assert wav_file.getsampwidth() == 2
+        assert wav_file.getframerate() == 24_000
         assert wav_file.getnframes() == 2400 * 4
     assert report["outputs"][0]["block_count"] == 5
 
@@ -680,12 +727,22 @@ def _create_project_with_audio_blocks(tmp_path, frame_count: int = 2400):
     return project_root, project_workspace_service.load_manifest(project_root)
 
 
-def _insert_scene_ambience_blocks(project_root, approved: bool, with_audio: bool) -> None:
+def _insert_scene_ambience_blocks(
+    project_root,
+    approved: bool,
+    with_audio: bool,
+    wav_channels: int = 1,
+    wav_frame_rate: int = 24_000,
+    wav_frame_count: int = 2400,
+) -> None:
     """
     @brief      Insert two Scene Ambience Audio Blocks into the first chunk.
     @param[in]  project_root Active project root.
     @param[in]  approved Whether the inserted blocks are approved.
     @param[in]  with_audio Whether the inserted blocks reference generated WAV files.
+    @param[in]  wav_channels Generated source WAV channel count.
+    @param[in]  wav_frame_rate Generated source WAV frame rate.
+    @param[in]  wav_frame_count Generated source WAV frame count.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
@@ -699,7 +756,7 @@ def _insert_scene_ambience_blocks(project_root, approved: bool, with_audio: bool
     for offset, prompt in enumerate(("quiet library room tone", "intermittent page turns"), start=1):
         audio_path = ambience_audio_root / f"0001_00000{offset + 1}_scene_ambience_{offset}.wav"
         if with_audio:
-            _write_wav(audio_path, 2400)
+            _write_wav(audio_path, wav_frame_count, channels=wav_channels, frame_rate=wav_frame_rate)
         ambience_blocks.append(
             {
                 **payload[0],
@@ -729,22 +786,24 @@ def _insert_scene_ambience_blocks(project_root, approved: bool, with_audio: bool
     payload_path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
 
 
-def _write_wav(path, frame_count: int) -> None:
+def _write_wav(path, frame_count: int, channels: int = 1, frame_rate: int = 24_000) -> None:
     """
     @brief      Write one small mono PCM WAV test file.
     @param[in]  path Destination WAV path.
     @param[in]  frame_count Number of silent frames to write.
+    @param[in]  channels Number of channels to write.
+    @param[in]  frame_rate WAV frame rate.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.1.0
+    @version    0.2.0
     """
     with wave.open(str(path), "wb") as wav_file:
-        wav_file.setnchannels(1)
+        wav_file.setnchannels(channels)
         wav_file.setsampwidth(2)
-        wav_file.setframerate(24_000)
-        wav_file.writeframes(b"\x00\x00" * frame_count)
+        wav_file.setframerate(frame_rate)
+        wav_file.writeframes(b"\x00\x00" * frame_count * channels)
 
 
 # END OF FILE

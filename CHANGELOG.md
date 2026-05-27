@@ -10,6 +10,17 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- Added modal progress and cancellation support while generating Audio Assembly
+  Scene Mix previews.
+
+### Fixed
+
+- Fixed Audio Assembly with Scene Ambience enabled when sound-model WAVs and
+  TTS WAVs use different channel counts or sample rates, such as stereo
+  44.1 kHz ambience beside mono 24 kHz narration.
+
 ## [1.4.0] - 2026-05-25
 
 ### Added

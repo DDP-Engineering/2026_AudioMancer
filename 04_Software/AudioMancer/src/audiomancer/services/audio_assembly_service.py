@@ -16,11 +16,12 @@
          preview and final assembly.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-25
-@version 0.7.0
+@version 0.7.1
 """
 
 # IMPORTS
 
+import audioop
 from contextlib import ExitStack, suppress
 from functools import partial
 import hashlib
@@ -242,19 +243,26 @@ def list_scene_mix_groups(project_root: str | Path) -> list[SceneMixGroup]:
 
 
 @trace_function(_AUDIO_ASSEMBLY_LOGGER)
-def generate_scene_mix_preview(project_root: str | Path, group_key: str, cancel_requested=None) -> SceneMixGroup:
+def generate_scene_mix_preview(
+    project_root: str | Path,
+    group_key: str,
+    progress_callback=None,
+    cancel_requested=None,
+) -> SceneMixGroup:
     """
     @brief      Generate or refresh one selected Scene Ambience mix-preview WAV.
     @param[in]  project_root Active project root folder.
     @param[in]  group_key Stable Scene Ambience group key.
+    @param[in]  progress_callback Optional progress callback for modal UI updates.
     @param[in]  cancel_requested Optional zero-argument cancellation callback.
     @return     Refreshed Scene Ambience group record.
     @exception  ValueError Raised when the group is unavailable or incomplete.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-25
-    @version    0.1.0
+    @version    0.2.0
     """
     resolved_project_root = Path(project_root)
+    _emit_progress(progress_callback, 0, 3, "Preparing Scene Mix preview.")
     groups = _scene_mix_groups_from_blocks(
         resolved_project_root,
         speech_blocks_service.sort_speech_blocks(audio_blocks_service.load_audio_blocks(resolved_project_root)),
@@ -265,16 +273,28 @@ def generate_scene_mix_preview(project_root: str | Path, group_key: str, cancel_
         raise ValueError("The selected Scene Ambience mix is no longer available.")
     if not bool(target_group.get("can_generate_preview", False)):
         raise ValueError("Generate and approve every source Scene Ambience Audio Block before previewing the mix.")
-    _write_scene_mix_group(resolved_project_root, target_group, cancel_requested=cancel_requested)
+    _emit_progress(progress_callback, 1, 3, f"Mixing {target_group.get('label', 'Scene Mix preview')}.")
+    _write_scene_mix_group(
+        resolved_project_root,
+        target_group,
+        progress_callback=progress_callback,
+        progress_start=1,
+        progress_end=2,
+        progress_total=3,
+        cancel_requested=cancel_requested,
+    )
+    _emit_progress(progress_callback, 2, 3, "Refreshing Scene Mix preview.")
     refreshed_groups = _scene_mix_groups_from_blocks(
         resolved_project_root,
         speech_blocks_service.sort_speech_blocks(audio_blocks_service.load_audio_blocks(resolved_project_root)),
         include_blocks=False,
     )
-    return next(
+    refreshed_group = next(
         (group for group in refreshed_groups if str(group.get("group_key", "")) == str(group_key).strip()),
         _strip_scene_mix_blocks(target_group),
     )
+    _emit_progress(progress_callback, 3, 3, "Scene Mix preview completed.")
+    return refreshed_group
 
 
 @trace_function(_AUDIO_ASSEMBLY_LOGGER)
@@ -864,7 +884,7 @@ def _compose_output_file(
     @exception  RuntimeError Raised when source WAV files are invalid.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.5.0
+    @version    0.5.1
     """
     output_root = project_root / config.AUDIOBOOK_OUTPUT_FOLDER_NAME
     output_root.mkdir(parents=True, exist_ok=True)
@@ -879,7 +899,6 @@ def _compose_output_file(
         blocks,
         str(output_item.get("reference_audio_relative_path", "")),
     )
-    expected_params = (reference_params[:3], reference_params[4:])
     total_frames = 0
     with wave.open(str(temp_path), "wb") as output_wav:
         output_wav.setparams(reference_params)
@@ -901,10 +920,9 @@ def _compose_output_file(
             assert source_path is not None
             with wave.open(str(source_path), "rb") as source_wav:
                 params = source_wav.getparams()
-                comparable_params = params[:3], params[4:]
-                if comparable_params != expected_params:
-                    raise RuntimeError("Audio Assembly found incompatible source WAV parameters.")
-                total_frames += _copy_wav_frames(source_wav, output_wav, cancel_requested)
+                if params.sampwidth not in _WAV_SAMPLE_WIDTH_BY_FORMAT:
+                    raise RuntimeError("Audio Assembly supports uncompressed PCM WAV source files only.")
+                total_frames += _copy_or_convert_wav_frames(source_wav, output_wav, reference_params, cancel_requested)
                 previous_block = block
     if output_path.is_file():
         output_path.unlink()
@@ -956,18 +974,26 @@ def _materialize_scene_mix_block(
 def _write_scene_mix_group(
     project_root: Path,
     group: SceneMixGroup,
+    progress_callback=None,
+    progress_start: int = 0,
+    progress_end: int = 1,
+    progress_total: int = 1,
     cancel_requested=None,
 ) -> Path:
     """
     @brief      Mix one Scene Ambience group into its deterministic WAV path.
     @param[in]  project_root Active project root folder.
     @param[in]  group Scene Ambience group record with source blocks.
+    @param[in]  progress_callback Optional progress callback.
+    @param[in]  progress_start Completed progress units before mixing starts.
+    @param[in]  progress_end Completed progress units after mixing ends.
+    @param[in]  progress_total Total progress units for the parent operation.
     @param[in]  cancel_requested Optional cancellation callback.
     @return     Generated scene mix WAV path.
     @exception  RuntimeError Raised when source WAV files are missing or invalid.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-25
-    @version    0.1.0
+    @version    0.2.0
     """
     source_blocks = [dict(item) for item in group.get("_source_blocks", []) if isinstance(item, dict)]
     source_paths = [_audio_path(project_root, block) for block in source_blocks]
@@ -985,6 +1011,11 @@ def _write_scene_mix_group(
         [path for path in source_paths if path is not None],
         temp_path,
         float(group.get("duration_seconds", 0.0) or 0.0),
+        progress_callback=progress_callback,
+        progress_start=progress_start,
+        progress_end=progress_end,
+        progress_total=progress_total,
+        progress_message=f"Mixing {group.get('label', 'Scene Mix preview')}.",
         cancel_requested=cancel_requested,
     )
     if output_path.is_file():
@@ -997,6 +1028,11 @@ def _mix_wav_sources(
     source_paths: list[Path],
     output_path: Path,
     duration_seconds: float,
+    progress_callback=None,
+    progress_start: int = 0,
+    progress_end: int = 1,
+    progress_total: int = 1,
+    progress_message: str = "Mixing Scene Mix preview.",
     cancel_requested=None,
 ) -> None:
     """
@@ -1004,12 +1040,17 @@ def _mix_wav_sources(
     @param[in]  source_paths Source WAV files.
     @param[in]  output_path Destination WAV file path.
     @param[in]  duration_seconds Target mix duration in seconds.
+    @param[in]  progress_callback Optional progress callback.
+    @param[in]  progress_start Completed progress units before mixing starts.
+    @param[in]  progress_end Completed progress units after mixing ends.
+    @param[in]  progress_total Total progress units for the parent operation.
+    @param[in]  progress_message Operator-facing progress message.
     @param[in]  cancel_requested Optional cancellation callback.
     @return     None.
     @exception  RuntimeError Raised when source WAV files are incompatible.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-25
-    @version    0.1.0
+    @version    0.2.0
     """
     if not source_paths:
         raise RuntimeError("Scene Ambience mix requires at least one source WAV.")
@@ -1026,15 +1067,26 @@ def _mix_wav_sources(
             if (params[:3], params[4:]) != expected_params:
                 raise RuntimeError("Audio Assembly found incompatible source WAV parameters.")
         target_frames = _scene_mix_target_frames(sources, reference_params.framerate, duration_seconds)
+        last_progress_unit = -1
         with wave.open(str(output_path), "wb") as output_wav:
             output_wav.setparams(reference_params)
             remaining_frames = target_frames
             while remaining_frames > 0:
                 raise_if_cancelled(cancel_requested)
+                written_frames = target_frames - remaining_frames
+                progress_unit = progress_start
+                if target_frames > 0 and progress_end > progress_start:
+                    progress_unit = progress_start + int(
+                        ((progress_end - progress_start) * written_frames) / target_frames
+                    )
+                if progress_unit != last_progress_unit:
+                    _emit_progress(progress_callback, progress_unit, progress_total, progress_message)
+                    last_progress_unit = progress_unit
                 frame_count = min(remaining_frames, _WAV_COPY_FRAME_CHUNK_SIZE)
                 chunks = [_read_or_pad_wav_frames(source_wav, frame_count, reference_params) for source_wav in sources]
                 output_wav.writeframes(_mix_pcm_chunks(chunks, frame_count, reference_params))
                 remaining_frames -= frame_count
+        _emit_progress(progress_callback, progress_end, progress_total, progress_message)
 
 
 def _scene_mix_target_frames(sources: list[wave.Wave_read], frame_rate: int, duration_seconds: float) -> int:
@@ -1325,6 +1377,116 @@ def _copy_wav_frames(source_wav, output_wav: wave.Wave_write, cancel_requested=N
         if frames_read <= 0:
             break
     return copied_frames
+
+
+def _copy_or_convert_wav_frames(
+    source_wav,
+    output_wav: wave.Wave_write,
+    target_params,
+    cancel_requested=None,
+) -> int:
+    """
+    @brief      Copy or convert source WAV frames to the output WAV format.
+    @param[in]  source_wav Active source WAV reader.
+    @param[in]  output_wav Active output WAV writer.
+    @param[in]  target_params Output WAV parameters.
+    @param[in]  cancel_requested Optional cancellation callback.
+    @return     Number of output frames written.
+    @exception  RuntimeError Raised when source conversion is unsupported.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-27
+    @version    0.1.0
+    """
+    source_params = source_wav.getparams()
+    if (source_params[:3], source_params[4:]) == (target_params[:3], target_params[4:]):
+        return _copy_wav_frames(source_wav, output_wav, cancel_requested)
+    if (
+        source_params.sampwidth not in _WAV_SAMPLE_WIDTH_BY_FORMAT
+        or target_params.sampwidth not in _WAV_SAMPLE_WIDTH_BY_FORMAT
+    ):
+        raise RuntimeError("Audio Assembly supports uncompressed PCM WAV source files only.")
+    rate_state = None
+    remaining_frames = int(source_wav.getnframes())
+    output_frame_size = max(int(target_params.nchannels) * int(target_params.sampwidth), 1)
+    source_frame_size = max(int(source_params.nchannels) * int(source_params.sampwidth), 1)
+    written_frames = 0
+    while remaining_frames > 0:
+        raise_if_cancelled(cancel_requested)
+        frames_to_read = min(remaining_frames, _WAV_COPY_FRAME_CHUNK_SIZE)
+        frame_data = source_wav.readframes(frames_to_read)
+        if not frame_data:
+            break
+        converted_data, rate_state = _convert_wav_frame_chunk(frame_data, source_params, target_params, rate_state)
+        if converted_data:
+            output_wav.writeframes(converted_data)
+            written_frames += len(converted_data) // output_frame_size
+        frames_read = len(frame_data) // source_frame_size
+        remaining_frames -= frames_read
+        if frames_read <= 0:
+            break
+    return written_frames
+
+
+def _convert_wav_frame_chunk(frame_data: bytes, source_params, target_params, rate_state) -> tuple[bytes, object]:
+    """
+    @brief      Convert one PCM frame chunk between compatible WAV layouts.
+    @param[in]  frame_data Source PCM bytes.
+    @param[in]  source_params Source WAV parameters.
+    @param[in]  target_params Target WAV parameters.
+    @param[in]  rate_state Running resampler state from `audioop.ratecv`.
+    @return     Tuple of converted PCM bytes and updated rate-conversion state.
+    @exception  RuntimeError Raised when channel conversion is unsupported.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-27
+    @version    0.1.0
+    """
+    converted_data = frame_data
+    current_sample_width = int(source_params.sampwidth)
+    current_channels = int(source_params.nchannels)
+    target_sample_width = int(target_params.sampwidth)
+    target_channels = int(target_params.nchannels)
+    if current_sample_width != target_sample_width:
+        converted_data = audioop.lin2lin(converted_data, current_sample_width, target_sample_width)
+        current_sample_width = target_sample_width
+    converted_data = _convert_wav_channels(
+        converted_data,
+        current_sample_width,
+        current_channels,
+        target_channels,
+    )
+    current_channels = target_channels
+    if int(source_params.framerate) != int(target_params.framerate):
+        converted_data, rate_state = audioop.ratecv(
+            converted_data,
+            current_sample_width,
+            current_channels,
+            int(source_params.framerate),
+            int(target_params.framerate),
+            rate_state,
+        )
+    return converted_data, rate_state
+
+
+def _convert_wav_channels(frame_data: bytes, sample_width: int, source_channels: int, target_channels: int) -> bytes:
+    """
+    @brief      Convert PCM frame data between mono and stereo channel layouts.
+    @param[in]  frame_data Source PCM bytes.
+    @param[in]  sample_width Sample width in bytes.
+    @param[in]  source_channels Source channel count.
+    @param[in]  target_channels Target channel count.
+    @return     PCM bytes with the target channel count.
+    @exception  RuntimeError Raised when the channel conversion is unsupported.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-27
+    @version    0.1.0
+    """
+    if source_channels == target_channels:
+        return frame_data
+    if source_channels == 1 and target_channels == 2:
+        return audioop.tostereo(frame_data, sample_width, 1.0, 1.0)
+    if source_channels == 2 and target_channels == 1:
+        return audioop.tomono(frame_data, sample_width, 0.5, 0.5)
+    raise RuntimeError("Audio Assembly supports WAV channel conversion only between mono and stereo.")
 
 
 def _build_report(
@@ -1668,21 +1830,15 @@ def _validate_compatible_wav_inputs(project_root: Path, audio_blocks: list[dict[
     @exception  RuntimeError Raised when WAV parameters are unsupported or incompatible.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.1.0
+    @version    0.1.1
     """
-    expected_params = None
     for block in audio_blocks:
         audio_path = _audio_path(project_root, block)
         assert audio_path is not None
         with wave.open(str(audio_path), "rb") as wav_file:
             params = wav_file.getparams()
-            comparable_params = params[:3], params[4:]
             if params.sampwidth not in _WAV_SAMPLE_WIDTH_BY_FORMAT:
                 raise RuntimeError("Audio Assembly supports uncompressed PCM WAV source files only.")
-            if expected_params is None:
-                expected_params = comparable_params
-            elif comparable_params != expected_params:
-                raise RuntimeError("Audio Assembly found incompatible source WAV parameters.")
 
 
 def _build_input_fingerprint(

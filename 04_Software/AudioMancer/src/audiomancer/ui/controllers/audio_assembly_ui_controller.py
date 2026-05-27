@@ -15,7 +15,7 @@
          Assembly workflow.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-25
-@version 0.6.0
+@version 0.6.1
 """
 
 # IMPORTS
@@ -173,7 +173,7 @@ def handle_scene_mix_generate_requested(window: "MainWindow", group_key: str) ->
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-25
-    @version    0.1.0
+    @version    0.2.0
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._active_operation_kind is not None:
@@ -185,22 +185,24 @@ def handle_scene_mix_generate_requested(window: "MainWindow", group_key: str) ->
             ui_state_service.translate("project.error_no_active_project", current_language),
         )
         return
-    try:
-        audio_assembly_service.generate_scene_mix_preview(window._current_project_root, group_key)
-    except (OSError, RuntimeError, ValueError) as error:
-        QMessageBox.warning(
-            window,
-            ui_state_service.translate("dialog.project_error_title", current_language),
-            str(error),
-        )
-        return
-    window.show_project_state(
-        window._current_project_root,
-        project_workspace_service.load_manifest(window._current_project_root),
-    )
-    misc_ui_controller.show_message(
+    _stop_audio_assembly_playback(window)
+    operation_runner_controller.start_threaded_operation(
         window,
-        ui_state_service.translate("status.audio_assembly_scene_mix_generated", current_language),
+        "audio_assembly_scene_mix",
+        ui_state_service.translate("audio_assembly.generate_scene_mix", current_language),
+        ui_state_service.translate("progress.scene_mix_preview", current_language),
+        lambda project_root, _manifest, progress_callback=None, cancel_requested=None: (
+            audio_assembly_service.generate_scene_mix_preview(
+                project_root,
+                group_key,
+                progress_callback=progress_callback,
+                cancel_requested=cancel_requested,
+            )
+        ),
+        set_busy=lambda is_busy: window._audio_assembly_page.set_busy(is_busy),
+        success_handler=lambda result_payload: _handle_scene_mix_success(window, result_payload),
+        failure_handler=lambda error: _handle_failure(window, error),
+        cancel_handler=lambda message: _handle_cancelled(window, message),
     )
 
 
@@ -401,6 +403,30 @@ def _handle_success(window: "MainWindow", result_payload: object) -> None:
     misc_ui_controller.show_message(
         window,
         ui_state_service.translate("status.audio_assembly_generated", current_language_from_window(window)),
+    )
+
+
+def _handle_scene_mix_success(window: "MainWindow", result_payload: object) -> None:
+    """
+    @brief      Refresh state after successful Scene Mix preview generation.
+    @param[in]  window Active main window instance.
+    @param[in]  result_payload Worker result payload.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-05-27
+    @version    0.1.0
+    """
+    _ = result_payload
+    if window._current_project_root is None:
+        return
+    window.show_project_state(
+        window._current_project_root,
+        project_workspace_service.load_manifest(window._current_project_root),
+    )
+    misc_ui_controller.show_message(
+        window,
+        ui_state_service.translate("status.audio_assembly_scene_mix_generated", current_language_from_window(window)),
     )
 
 

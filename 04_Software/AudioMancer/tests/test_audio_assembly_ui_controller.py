@@ -13,7 +13,7 @@
          playback, and reset synchronization for the Audio Assembly controller.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-25
-@version 0.5.0
+@version 0.5.1
 """
 
 # IMPORTS
@@ -211,7 +211,7 @@ def test_audio_assembly_ui_controller_generates_and_plays_scene_mix_preview(monk
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-25
-    @version    0.1.0
+    @version    0.2.0
     """
     window = _controller_window(tmp_path)
     output_root = window._current_project_root / config.AUDIOBOOK_OUTPUT_FOLDER_NAME / "scene_mix_previews"
@@ -224,10 +224,42 @@ def test_audio_assembly_ui_controller_generates_and_plays_scene_mix_preview(monk
         "duration_seconds": 1.5,
     }
     generated: list[str] = []
+    observed: dict[str, object] = {}
+
+    def _fake_start_threaded_operation(
+        _window,
+        operation_kind,
+        operation_name,
+        initial_message,
+        worker_callable,
+        **kwargs,
+    ) -> None:
+        observed.update(
+            {
+                "operation_kind": operation_kind,
+                "operation_name": operation_name,
+                "initial_message": initial_message,
+            }
+        )
+        result = worker_callable(
+            window._current_project_root,
+            window._current_manifest,
+            progress_callback=lambda *_args: None,
+            cancel_requested=lambda: False,
+        )
+        kwargs["success_handler"](result)
+
+    monkeypatch.setattr(
+        audio_assembly_ui_controller.operation_runner_controller,
+        "start_threaded_operation",
+        _fake_start_threaded_operation,
+    )
     monkeypatch.setattr(
         audio_assembly_ui_controller.audio_assembly_service,
         "generate_scene_mix_preview",
-        lambda _project_root, group_key: generated.append(group_key) or group,
+        lambda _project_root, group_key, progress_callback=None, cancel_requested=None: (
+            generated.append(group_key) or group
+        ),
     )
     monkeypatch.setattr(
         audio_assembly_ui_controller.audio_assembly_service,
@@ -239,6 +271,8 @@ def test_audio_assembly_ui_controller_generates_and_plays_scene_mix_preview(monk
     audio_assembly_ui_controller.handle_scene_mix_generate_requested(window, group["group_key"])
     audio_assembly_ui_controller.handle_scene_mix_playback_toggle_requested(window, group["group_key"])
 
+    assert observed["operation_kind"] == "audio_assembly_scene_mix"
+    assert observed["initial_message"] == "Scene Mix preview generation in progress..."
     assert generated == ["scene_mix:chunk-0001:opener:"]
     assert window._audio_assembly_audio_player.play_count == 1
     assert window._audio_assembly_audio_player.source.toLocalFile() == preview_path.as_posix()

@@ -14,7 +14,7 @@
          theme runtime adapter.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 0.54.9
+@version 0.55.0
 """
 
 # ruff: noqa: E501
@@ -1015,6 +1015,7 @@ _UI_STRINGS = {
         "progress.audio_blocks": "Audio Blocks generation in progress...",
         "progress.audio_block_regeneration": "Selected audio block regeneration in progress...",
         "progress.audio_assembly": "Audio Assembly composition in progress...",
+        "progress.scene_mix_preview": "Scene Mix preview generation in progress...",
         "progress.project_snapshot": "Project ZIP export in progress...",
         "dialog.confirm_translation_reset_title": "Confirm Translation Reset",
         "dialog.confirm_speech_blocks_title": "Start Speech Blocks Generation",
@@ -2050,6 +2051,7 @@ _UI_STRINGS = {
         "progress.audio_blocks": "Generarea blocurilor audio este in curs...",
         "progress.audio_block_regeneration": "Regenerarea blocului audio selectat este in curs...",
         "progress.audio_assembly": "Asamblarea Audio este in curs...",
+        "progress.scene_mix_preview": "Generarea previzualizarii Scene Mix este in curs...",
         "progress.project_snapshot": "Exportul ZIP al proiectului este in curs...",
         "dialog.confirm_translation_reset_title": "Confirma Resetarea Traducerii",
         "dialog.confirm_speech_blocks_title": "Porneste Generarea Blocurilor de Vorbire",

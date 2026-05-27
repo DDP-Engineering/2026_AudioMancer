@@ -18,7 +18,7 @@ deliverables under the project-root `audiobook/` folder.
 
 - persist per-project Audio Assembly options in `project.json` and reset only
   assembly outputs when changed settings make existing outputs stale
-- validate that all Audio Blocks are approved and reference compatible WAV files
+- validate that all Audio Blocks are approved and reference readable PCM WAV files
 - compose output files for per-chunk, time-limited, or whole-book delivery
 - optionally include or skip generated `scene_ambience` audio blocks in the
   final assembly
@@ -26,6 +26,8 @@ deliverables under the project-root `audiobook/` folder.
   Scene Mix preview or final ambience segment
 - generate on-demand Scene Mix preview WAV files for operator review before
   final assembly
+- run on-demand Scene Mix preview generation through the shared modal progress
+  workflow with cancellation support
 - add configurable silence gaps between blocks and between chunks or output files
 - convert metadata-only pause Audio Blocks into silence inside the composed WAV
   output
@@ -54,12 +56,14 @@ The workflow is split across:
 - `04_Software/AudioMancer/src/audiomancer/services/audio_assembly_state_service.py`
   for page-state shaping, notes, status lines, progress, and readiness checks
 - `04_Software/AudioMancer/src/audiomancer/ui/pages/audio_assembly_page.py`
-  for the operator-facing settings, generated-output list, operation progress
-  bar, playback position slider, status panel, and playback controls
+  for the operator-facing settings, Scene Mix preview list, generated-output
+  list, operation progress bar, playback position slider, status panel, and
+  playback controls
 - `04_Software/AudioMancer/src/audiomancer/ui/controllers/audio_assembly_ui_controller.py`
   for settings persistence, long-running confirmation, threaded composition,
-  generated-output playback, double-click restart, seek/skip handling, reset
-  handling, and manifest synchronization
+  threaded Scene Mix preview generation, generated-output playback,
+  double-click restart, seek/skip handling, reset handling, and manifest
+  synchronization
 
 High-level flow:
 
@@ -75,10 +79,10 @@ High-level flow:
    shared threaded operation runner with operation kind `audio_assembly`.
 4. `audio_assembly_service.start_or_continue_composition(...)` loads approved
    Audio Blocks, applies the Scene Ambience inclusion policy, validates that
-   generated WAV files exist for playable blocks, checks that WAV parameters
-   are compatible, replaces related Scene Ambience prompt blocks with grouped
-   mix segments, preserves metadata-only pause blocks as silence, and builds
-   an input/settings fingerprint.
+   generated WAV files exist for playable blocks, verifies readable PCM WAV
+   sources, replaces related Scene Ambience prompt blocks with grouped mix
+   segments, preserves metadata-only pause blocks as silence, and builds an
+   input/settings fingerprint.
 5. If existing operation state belongs to different inputs or settings, the
    service rejects continuation and requires an explicit reset.
 6. The service builds an output plan according to the selected mode and skips
@@ -184,6 +188,8 @@ Current invariants:
   planning, and final composition
 - Scene Mix previews use the same mixing helper as final Audio Assembly, so the
   reviewed preview matches the segment inserted into final outputs
+- Scene Mix preview generation runs as a cancellable threaded operation and
+  reports progress while preparing, mixing, and refreshing the preview list
 - an explicit pause block replaces adjacent automatic inter-block silence for
   that pause position, so the pause duration is not double-counted
 - metadata-only indication Audio Blocks are skipped by the current composer
@@ -192,8 +198,9 @@ Current invariants:
   except when one individual block is already longer than the limit
 - approved Audio Blocks are assembled in canonical book order: source chunk
   order, then chunk-local `sequence_index`
-- all source WAV files in a run must share compatible channel count, sample
-  width, frame rate, compression type, and compression name
+- source WAV files must be readable uncompressed PCM; final composition converts
+  mono/stereo and sample-rate differences to the output file's reference WAV
+  parameters while writing
 - persisted resume requires non-default state to contain the current
   input/settings fingerprint in `audio_assembly_state.json`
 - missing or mismatched fingerprints require explicit reset
@@ -263,6 +270,9 @@ Operator path:
   Assembly output
 - choose whether generated Scene Ambience sound blocks should be included in
   the final sequential audiobook output
+- for each ready Scene Mix preview row, use `Generate / Refresh Scene Mix` to
+  build the mixed ambience preview through the modal progress dialog, then use
+  `Play Scene Mix` to review it with the Audio Assembly media controls
 - press `Generate Audio` and confirm the long-running operation
 - if interrupted, press `Generate Audio` again to continue completed-output
   resume when the inputs and settings still match
