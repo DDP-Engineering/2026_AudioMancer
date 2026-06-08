@@ -18,44 +18,32 @@ also do the same work manually.
 
 ## Downloads
 
-Use the current GitHub Release page for AudioMancer and the VoiceWeaver runtime
+Use the current GitHub Release pages for AudioMancer and the VoiceWeaver runtime
 package:
 
-- [AudioMancer v1.3.1 Windows and Linux release](https://github.com/DDP-Engineering/2026_AudioMancer/releases/tag/v1.3.1)
+- [AudioMancer v1.4.1 Windows release](https://github.com/DDP-Engineering/2026_AudioMancer/releases/tag/v1.4.1)
+- [VoiceWeaver v1.5.0 Windows runtime release](https://github.com/DDP-Engineering/2026_AudioMancer/releases/tag/v1.0.0)
 
-The release page includes:
+The AudioMancer release page includes:
 
 - `AudioMancer_Windows_x64.zip`
-- `AudioMancer_Linux_x64.AppImage`
-- `AudioMancer_Linux_x64.zip`
 - `SHA256SUMS.txt`
-- VoiceWeaver runtime package links and checksum information
+- release notes and checksum information
+
+The VoiceWeaver runtime release page includes all multipart runtime package
+files and checksum information.
 
 ## Install AudioMancer On Windows
 
-1. Download `AudioMancer_Windows_x64.zip` from the v1.3.1 release page.
-2. Extract it to a normal folder, for example `C:\AudioMancer`.
-3. Start AudioMancer with `AudioMancer.exe` or `Start-AudioMancer.cmd`.
-
-## Install AudioMancer On Ubuntu/Linux
-
-Prefer the AppImage:
-
-```bash
-mkdir -p ~/Applications
-cp AudioMancer_Linux_x64.AppImage ~/Applications/AudioMancer.AppImage
-chmod +x ~/Applications/AudioMancer.AppImage
-~/Applications/AudioMancer.AppImage
-```
-
-The Linux zip is a portable fallback/debug folder. To use it, extract the full
-`AudioMancer_Linux_x64.zip` archive and run `./AudioMancer` or
-`./start-audiomancer.sh` from inside the extracted folder.
+1. Download `AudioMancer_Windows_x64.zip` from the v1.4.1 release page.
+2. Download `SHA256SUMS.txt` if you want to verify the ZIP.
+3. Extract it to a normal folder, for example `C:\AudioMancer`.
+4. Start AudioMancer with `AudioMancer.exe` or `Start-AudioMancer.cmd`.
 
 ## Install VoiceWeaver
 
-1. Open the [AudioMancer v1.3.1 release page](https://github.com/DDP-Engineering/2026_AudioMancer/releases/tag/v1.3.1).
-2. Download the VoiceWeaver runtime package parts linked in the VoiceWeaver section.
+1. Open the [VoiceWeaver v1.5.0 Windows runtime release](https://github.com/DDP-Engineering/2026_AudioMancer/releases/tag/v1.0.0).
+2. Download all 15 VoiceWeaver runtime package parts.
 3. Put all parts in one folder.
 4. Reassemble the VoiceWeaver ZIP with PowerShell.
 5. Extract the VoiceWeaver ZIP to a normal folder, for example `C:\VoiceWeaver`.
@@ -78,6 +66,10 @@ foreach ($part in $parts) {
 $out.Dispose()
 Get-FileHash -Algorithm SHA256 $outputZip
 ```
+
+Expected VoiceWeaver ZIP SHA256:
+
+`393cdf6f57907d8b6651b4bf2069b8a19956b6d4830d568c0b5c0a06b0054aa2`
 
 ## Connect AudioMancer To VoiceWeaver
 
