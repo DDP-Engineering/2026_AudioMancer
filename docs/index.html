@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>AudioMancer - Book Translation And Audiobook Desktop App</title>
-  <meta name="description" content="AudioMancer is a Windows and Linux desktop app for turning books into translated text, speech blocks, character voices, and audiobook audio. Work can be AI-assisted or done manually.">
+  <meta name="description" content="AudioMancer is a Windows desktop app for turning books into translated text, speech blocks, character voices, and audiobook audio. Work can be AI-assisted or done manually.">
   <style>
     :root {
       color-scheme: light;
@@ -457,13 +457,13 @@
             manually by the user.
           </p>
           <div class="actions">
-            <a class="button primary" href="https://github.com/DDP-Engineering/2026_AudioMancer/releases/tag/v1.3.1">Download Current Release</a>
+            <a class="button primary" href="https://github.com/DDP-Engineering/2026_AudioMancer/releases/tag/v1.4.1">Download Windows Release</a>
             <a class="button secondary" href="https://youtube.com/playlist?list=PLmfmdZiRyZpmsgOZ_zEEB06OFKkILMgte&si=njtsWG64fFNkc0m7">Watch Feature Videos</a>
             <a class="button secondary" href="#install">Installation Steps</a>
           </div>
           <div class="meta-row">
-            <span>Windows and Linux packages</span>
-            <span>Portable ZIP or AppImage install</span>
+            <span>Windows tested</span>
+            <span>Portable ZIP install</span>
             <span>Local or online AI</span>
           </div>
         </div>
@@ -471,7 +471,7 @@
         <aside class="product-panel" aria-label="AudioMancer workflow preview">
           <div class="panel-header">
             <p class="panel-title">Simple Workflow</p>
-            <span class="status">Windows + Linux release</span>
+            <span class="status">Windows release</span>
           </div>
           <div class="workflow">
             <div class="workflow-item">
@@ -597,16 +597,13 @@
       <div class="shell split">
         <div>
           <div class="section-head">
-            <h2>Install AudioMancer on Windows or Linux.</h2>
+            <h2>Install AudioMancer on Windows.</h2>
             <p>
-              The current public release includes a Windows portable ZIP, a preferred Linux AppImage, and a Linux portable
-              fallback ZIP.
+              The current public package is tested on Windows. It is portable: download it, extract it, and start the app.
             </p>
           </div>
           <div class="actions">
-            <a class="button primary" href="https://github.com/DDP-Engineering/2026_AudioMancer/releases/latest/download/AudioMancer_Windows_x64.zip">Download Windows ZIP</a>
-            <a class="button primary" href="https://github.com/DDP-Engineering/2026_AudioMancer/releases/latest/download/AudioMancer_Linux_x64.AppImage">Download Linux AppImage</a>
-            <a class="button secondary" href="https://github.com/DDP-Engineering/2026_AudioMancer/releases/tag/v1.3.1">Open Release Page</a>
+            <a class="button primary" href="https://github.com/DDP-Engineering/2026_AudioMancer/releases/tag/v1.4.1">Open Release Page</a>
             <a class="button secondary" href="https://github.com/DDP-Engineering/2026_AudioMancer/releases/latest/download/SHA256SUMS.txt">Download SHA256SUMS.txt</a>
           </div>
         </div>
@@ -619,19 +616,6 @@
             <li>Extract the ZIP to a normal folder, for example <code>C:\AudioMancer</code>.</li>
             <li>Start the app with <code>AudioMancer.exe</code> or <code>Start-AudioMancer.cmd</code>.</li>
             <li>In the app, create a new project and choose the book language, output language, and voice mode.</li>
-          </ol>
-          <h3>Linux steps</h3>
-          <ol>
-            <li>Open the GitHub Release page.</li>
-            <li>Download <code>AudioMancer_Linux_x64.AppImage</code>.</li>
-            <li>Download <code>SHA256SUMS.txt</code> if you want to verify the file.</li>
-            <li>Install it locally with:
-              <pre>mkdir -p ~/Applications
-cp AudioMancer_Linux_x64.AppImage ~/Applications/AudioMancer.AppImage
-chmod +x ~/Applications/AudioMancer.AppImage
-~/Applications/AudioMancer.AppImage</pre>
-            </li>
-            <li>Use <code>AudioMancer_Linux_x64.zip</code> only as a portable fallback/debug folder.</li>
           </ol>
         </div>
       </div>
@@ -648,14 +632,14 @@ chmod +x ~/Applications/AudioMancer.AppImage
             </p>
           </div>
           <div class="notice">
-            The current VoiceWeaver package links are maintained on the AudioMancer v1.3.1 release page. Use that
-            release page for both AudioMancer and VoiceWeaver downloads.
+            The current VoiceWeaver package links are maintained on the separate VoiceWeaver runtime release page.
+            Use the AudioMancer release page for the app and the VoiceWeaver runtime release for voice generation.
           </div>
         </div>
         <div class="download-box">
           <h3>VoiceWeaver steps</h3>
           <ol>
-            <li>Open the <a href="https://github.com/DDP-Engineering/2026_AudioMancer/releases/tag/v1.3.1">AudioMancer v1.3.1 release</a>.</li>
+            <li>Open the <a href="https://github.com/DDP-Engineering/2026_AudioMancer/releases/tag/v1.0.0">VoiceWeaver v1.5.0 Windows runtime release</a>.</li>
             <li>Download all 15 VoiceWeaver package parts linked in the VoiceWeaver runtime section.</li>
             <li>Put all <code>.partNNN</code> files in the same folder.</li>
             <li>Join the parts into one VoiceWeaver ZIP with the PowerShell command below.</li>
@@ -703,7 +687,7 @@ Get-FileHash -Algorithm SHA256 $outputZip</pre>
           <div class="notice">
             The expected joined VoiceWeaver ZIP SHA256 is
             <code>393cdf6f57907d8b6651b4bf2069b8a19956b6d4830d568c0b5c0a06b0054aa2</code>.
-            Use the checksum information on the v1.3.1 release page to verify the VoiceWeaver package.
+            Use the checksum information on the VoiceWeaver runtime release page to verify the VoiceWeaver package.
           </div>
         </div>
       </div>
