@@ -27,8 +27,8 @@ or text-window font-size logic.
 - apply the selected language to the main-window shell when supported
 - log invalid language and theme-application decisions
 
-It does not own settings persistence, help-file content, workflow state, or
-page-specific layout behavior.
+It does not own settings persistence, help-file content, workflow state,
+configured mouse-wheel handling, or page-specific layout behavior.
 
 ## 3. Implementation Overview
 
@@ -144,7 +144,9 @@ current character samples. Current Scene Ambience entries cover Speech Blocks
 enablement, TTS Settings duration/count and sound-generation labels, Audio
 Blocks audio enablement, and Audio Assembly inclusion labels. Current
 settings-dialog entries also cover the Settings `Apply`/`OK` flow and the AI
-Settings plus TTS Settings `Save`/`OK` flow in both English and Romanian.
+Settings plus TTS Settings `Save`/`OK` flow in both English and Romanian. The
+Settings catalog also includes the shared scroll-step label used by the
+settings-backed UI scroll service.
 
 Because all operator-facing labels are centralized here, UI text changes must
 update both English and Romanian catalog entries in the same implementation
@@ -175,7 +177,7 @@ button.setText(strings["speech_blocks.save_block"])
 
 Documentation audit status:
 
-- reviewed against the current implementation on 2026-05-15
+- reviewed against the current implementation on 2026-06-08
 
 Focused tests:
 

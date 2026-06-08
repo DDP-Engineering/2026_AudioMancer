@@ -15,7 +15,8 @@ Implementation-focused software documentation and component notes.
 - `AudioMancer_App_Shell.md` documents the desktop application shell, Home workflow progress presenter, project navigation, settings dialogs, and page-hosting responsibilities.
 - `AudioMancer_Config_And_Settings.md` documents the adapted configuration and settings scaffold.
 - `AudioMancer_Settings_Service.md` documents the shared settings lifecycle implementation.
-- `AudioMancer_UI_State_Service.md` documents the shared runtime UI string catalog, language application, text-size scaling behavior, and compact Speech Blocks selected-audio labels.
+- `AudioMancer_UI_State_Service.md` documents the shared runtime UI string catalog, language application, text-size scaling behavior, Settings scroll-step label coverage, and compact Speech Blocks selected-audio labels.
+- `AudioMancer_UI_Scroll_Service.md` documents the Settings-backed global Qt mouse-wheel scroll-step event filter used by common text editors, lists, and scroll areas.
 - `AudioMancer_UI_Theme_Service.md` documents the Qt-independent theme schema helper, built-in theme catalog, custom theme validation, and import/export payload behavior.
 - `AudioMancer_UI_Themes.md` documents the Settings-backed UI theme schema, built-in and custom themes, JSON import/export behavior, and runtime theme application path.
 - `AudioMancer_Persistence_Service.md` documents the shared atomic text and JSON write helpers used by critical project, settings, and operation state persistence paths.

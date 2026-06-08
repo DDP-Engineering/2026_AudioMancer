@@ -13,7 +13,7 @@
          the Speech Blocks workflow.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 0.6.2
+@version 0.6.3
 """
 
 # IMPORTS
@@ -356,25 +356,31 @@ def test_speech_blocks_ui_controller_edit_decline_keeps_editor_locked(monkeypatc
 
 def test_speech_blocks_ui_controller_save_restores_chunk_text_scroll(monkeypatch, tmp_path) -> None:
     """
-    @brief      Verify saving an edited block restores the selected chunk text scroll position.
+    @brief      Verify saving an edited block restores the selected chunk text position.
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.3.2
+    @version    0.3.3
     """
     project_root = tmp_path / "SpeechBlocksSaveScroll"
     project_root.mkdir()
-    restore_calls: list[int] = []
+    source_position = {
+        "source_scroll": 37,
+        "source_horizontal_scroll": 5,
+        "source_cursor_position": 13,
+        "source_anchor_position": 4,
+    }
+    restore_calls: list[dict[str, object]] = []
     window = SimpleNamespace(
         _settings_payload={"language": "en"},
         _current_project_root=project_root,
         _current_manifest={"current_stage": "speech_blocks_ready"},
         _speech_blocks_page=SimpleNamespace(
-            source_scroll_position=lambda: 37,
-            restore_source_scroll_position=lambda position: restore_calls.append(int(position)),
+            source_text_position=lambda: dict(source_position),
+            restore_source_text_position=lambda position: restore_calls.append(dict(position)),
         ),
     )
     monkeypatch.setattr(speech_blocks_ui_controller.speech_blocks_service, "update_speech_block", lambda *args: {})
@@ -413,7 +419,7 @@ def test_speech_blocks_ui_controller_save_restores_chunk_text_scroll(monkeypatch
         "Edited text.",
     )
 
-    assert restore_calls == [37]
+    assert restore_calls == [source_position]
     assert window._current_manifest["loaded_after_save"] is True
 
 
@@ -436,7 +442,12 @@ def test_speech_blocks_ui_controller_insert_resets_downstream_and_selects_new_bl
         _current_project_root=project_root,
         _current_manifest={"current_stage": "audio_blocks_ready"},
         _speech_blocks_page=SimpleNamespace(
-            source_text_position=lambda: {"source_scroll": 24, "source_cursor_position": 8},
+            source_text_position=lambda: {
+                "source_scroll": 24,
+                "source_horizontal_scroll": 3,
+                "source_cursor_position": 8,
+                "source_anchor_position": 2,
+            },
             select_speech_block=lambda speech_block_id: page_calls.append(("select", speech_block_id)),
             begin_editing_selected_block=lambda: page_calls.append(("edit", "")),
             restore_source_text_position=lambda position: page_calls.append(("restore_source", dict(position))),
@@ -473,7 +484,15 @@ def test_speech_blocks_ui_controller_insert_resets_downstream_and_selects_new_bl
     assert page_calls == [
         ("select", "0001-000002"),
         ("edit", ""),
-        ("restore_source", {"source_scroll": 24, "source_cursor_position": 8}),
+        (
+            "restore_source",
+            {
+                "source_scroll": 24,
+                "source_horizontal_scroll": 3,
+                "source_cursor_position": 8,
+                "source_anchor_position": 2,
+            },
+        ),
     ]
 
 
@@ -496,7 +515,12 @@ def test_speech_blocks_ui_controller_delete_confirms_and_resets_downstream(monke
         _current_project_root=project_root,
         _current_manifest={"current_stage": "audio_blocks_ready"},
         _speech_blocks_page=SimpleNamespace(
-            source_text_position=lambda: {"source_scroll": 42, "source_cursor_position": 12},
+            source_text_position=lambda: {
+                "source_scroll": 42,
+                "source_horizontal_scroll": 7,
+                "source_cursor_position": 12,
+                "source_anchor_position": 6,
+            },
             replacement_block_id_after_delete=lambda speech_block_id: (
                 page_calls.append(("replacement_for", speech_block_id)) or "0001-000002"
             ),
@@ -535,7 +559,15 @@ def test_speech_blocks_ui_controller_delete_confirms_and_resets_downstream(monke
     assert page_calls == [
         ("replacement_for", "0001-000001"),
         ("select", "0001-000002"),
-        ("restore_source", {"source_scroll": 42, "source_cursor_position": 12}),
+        (
+            "restore_source",
+            {
+                "source_scroll": 42,
+                "source_horizontal_scroll": 7,
+                "source_cursor_position": 12,
+                "source_anchor_position": 6,
+            },
+        ),
     ]
 
 
@@ -558,7 +590,12 @@ def test_speech_blocks_ui_controller_approve_preserves_audio_blocks_and_resets_a
         _current_project_root=project_root,
         _current_manifest={"current_stage": "audio_blocks_ready"},
         _speech_blocks_page=SimpleNamespace(
-            source_text_position=lambda: {"source_scroll": 14, "source_cursor_position": 4},
+            source_text_position=lambda: {
+                "source_scroll": 14,
+                "source_horizontal_scroll": 2,
+                "source_cursor_position": 4,
+                "source_anchor_position": 1,
+            },
             advance_to_next_block=lambda: page_calls.append("advance"),
             restore_source_text_position=lambda position: page_calls.append(("restore_source", dict(position))),
         ),
@@ -591,7 +628,18 @@ def test_speech_blocks_ui_controller_approve_preserves_audio_blocks_and_resets_a
 
     assert service_calls == [(project_root, "0001-000001")]
     assert reset_calls == ["sync", "assembly"]
-    assert page_calls == ["advance", ("restore_source", {"source_scroll": 14, "source_cursor_position": 4})]
+    assert page_calls == [
+        "advance",
+        (
+            "restore_source",
+            {
+                "source_scroll": 14,
+                "source_horizontal_scroll": 2,
+                "source_cursor_position": 4,
+                "source_anchor_position": 1,
+            },
+        ),
+    ]
 
 
 def test_speech_blocks_ui_controller_approval_toggle_unapproves_without_advancing(monkeypatch, tmp_path) -> None:
@@ -613,7 +661,12 @@ def test_speech_blocks_ui_controller_approval_toggle_unapproves_without_advancin
         _current_project_root=project_root,
         _current_manifest={"current_stage": "speech_blocks_ready"},
         _speech_blocks_page=SimpleNamespace(
-            source_text_position=lambda: {"source_scroll": 9, "source_cursor_position": 3},
+            source_text_position=lambda: {
+                "source_scroll": 9,
+                "source_horizontal_scroll": 4,
+                "source_cursor_position": 3,
+                "source_anchor_position": 1,
+            },
             advance_to_next_block=lambda: page_calls.append("advance"),
             select_speech_block=lambda block_id: page_calls.append(f"select:{block_id}"),
             restore_source_text_position=lambda position: page_calls.append(("restore_source", dict(position))),
@@ -652,7 +705,18 @@ def test_speech_blocks_ui_controller_approval_toggle_unapproves_without_advancin
 
     assert service_calls == [(project_root, "0001-000001")]
     assert reset_calls == ["sync", "assembly"]
-    assert page_calls == ["select:0001-000001", ("restore_source", {"source_scroll": 9, "source_cursor_position": 3})]
+    assert page_calls == [
+        "select:0001-000001",
+        (
+            "restore_source",
+            {
+                "source_scroll": 9,
+                "source_horizontal_scroll": 4,
+                "source_cursor_position": 3,
+                "source_anchor_position": 1,
+            },
+        ),
+    ]
 
 
 def test_speech_blocks_ui_controller_explicit_reset_clears_speech_blocks_and_downstream(

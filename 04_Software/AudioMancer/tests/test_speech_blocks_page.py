@@ -14,14 +14,14 @@
          preservation, translated labels, and generation button enablement.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-24
-@version 0.8.7
+@version 0.8.8
 """
 
 # IMPORTS
 
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QTextCursor
-from PySide6.QtWidgets import QSizePolicy
+from PySide6.QtWidgets import QPlainTextEdit, QSizePolicy
 
 from audiomancer.services import speech_blocks_service
 from audiomancer.ui.pages.speech_blocks_page import SpeechBlocksPage
@@ -971,21 +971,26 @@ def test_speech_blocks_page_advances_visible_block_selection_with_limit(qtbot) -
 
 def test_speech_blocks_page_refresh_preserves_block_selection_and_source_scroll(qtbot) -> None:
     """
-    @brief      Verify state refresh keeps selected Speech Block and selected-chunk scroll position.
+    @brief      Verify state refresh keeps selected Speech Block and selected-chunk text position.
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-24
-    @version    0.1.0
+    @version    0.1.1
     """
     page = SpeechBlocksPage()
     qtbot.addWidget(page)
     page.resize(900, 700)
     page.show()
+    page._source_text_edit.setLineWrapMode(QPlainTextEdit.LineWrapMode.NoWrap)
     page.set_project_active(True)
     page.set_ai_profiles([("Profile One", "profile-1")], "profile-1")
-    source_text = "\n".join(f"Line {line_number}" for line_number in range(80))
+    source_text = (
+        ("Opening source line with enough words for horizontal scrolling. " * 8)
+        + "\n"
+        + "\n".join(f"Line {line_number}" for line_number in range(80))
+    )
     speech_blocks = [
         {
             "speech_block_id": "0001-000001",
@@ -1027,9 +1032,18 @@ def test_speech_blocks_page_refresh_preserves_block_selection_and_source_scroll(
         content_kind_options=[(speech_blocks_service.CONTENT_KIND_NARRATION, "Narration")],
     )
     page._speech_block_list.setCurrentRow(1)
+    source_cursor = page._source_text_edit.textCursor()
+    source_cursor.setPosition(28)
+    source_cursor.setPosition(116, QTextCursor.MoveMode.KeepAnchor)
+    page._source_text_edit.setTextCursor(source_cursor)
     source_scroll_bar = page._source_text_edit.verticalScrollBar()
     source_scroll_bar.setValue(source_scroll_bar.maximum())
     saved_scroll_position = source_scroll_bar.value()
+    source_horizontal_scroll_bar = page._source_text_edit.horizontalScrollBar()
+    source_horizontal_scroll_bar.setValue(source_horizontal_scroll_bar.maximum())
+    saved_horizontal_scroll_position = source_horizontal_scroll_bar.value()
+    saved_cursor_position = page._source_text_edit.textCursor().position()
+    saved_anchor_position = page._source_text_edit.textCursor().anchor()
 
     refreshed_blocks = [dict(block) for block in speech_blocks]
     refreshed_blocks[1]["text"] = "Edited second block."
@@ -1045,11 +1059,14 @@ def test_speech_blocks_page_refresh_preserves_block_selection_and_source_scroll(
         speaker_catalog=[{"speaker_id": "narrator", "display_name": "Narrator", "speaker_kind": "narrator"}],
         content_kind_options=[(speech_blocks_service.CONTENT_KIND_NARRATION, "Narration")],
     )
-    qtbot.wait(0)
+    qtbot.wait(35)
 
     assert page.selected_block_id() == "0001-000002"
     assert page._speech_block_list.currentRow() == 1
     assert source_scroll_bar.value() == saved_scroll_position
+    assert source_horizontal_scroll_bar.value() == saved_horizontal_scroll_position
+    assert page._source_text_edit.textCursor().position() == saved_cursor_position
+    assert page._source_text_edit.textCursor().anchor() == saved_anchor_position
 
 
 def test_speech_blocks_page_resolves_delete_replacement_from_visible_block_order(qtbot) -> None:

@@ -13,7 +13,7 @@
          starts the event loop for the initial UI scaffold.
 @author Eng. Dan Dumitru Pasare
 @date 2026-05-23
-@version 0.1.5
+@version 0.1.6
 @example
     uv run audiomancer
 """
@@ -26,7 +26,7 @@ from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QApplication
 
 from . import config
-from .services import ui_state_service, ui_theme_service
+from .services import ui_scroll_service, ui_state_service, ui_theme_service
 from .services.logging_service import get_component_logger, initialize_logging, shutdown_logging
 from .services.settings_service import load_settings
 from .ui.main_window import MainWindow
@@ -45,7 +45,7 @@ def main() -> int:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-23
-    @version    0.1.5
+    @version    0.1.6
     """
     log_file_path = initialize_logging()
     logger = get_component_logger("app")
@@ -59,6 +59,15 @@ def main() -> int:
         application = QApplication(sys.argv)
         application.setApplicationName(APPLICATION_NAME)
         application.setWindowIcon(QIcon(str(config.APP_ICON_PATH)))
+        ui_scroll_service.install_global_scroll_step_filter(
+            application,
+            int(
+                settings_payload.get(
+                    "ui_scroll_steps_per_wheel_notch",
+                    config.DEFAULT_UI_SCROLL_STEPS_PER_WHEEL_NOTCH,
+                )
+            ),
+        )
 
         # Apply the persisted UI theme to the QApplication BEFORE the main
         # window is constructed. QApplication.setFont() does not retroactively

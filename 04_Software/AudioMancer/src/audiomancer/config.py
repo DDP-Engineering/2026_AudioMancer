@@ -13,7 +13,7 @@
          file support used by the current AudioMancer implementation scaffold.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 1.41.4
+@version 1.41.5
 """
 
 # IMPORTS
@@ -460,6 +460,15 @@ UI_THEME_SCHEMA_VERSION = 1
 
 # @brief Default flag controlling whether the app plays a completion beep.
 DEFAULT_PLAY_COMPLETION_BEEP = False
+
+# @brief Default mouse-wheel scroll steps per physical wheel notch.
+DEFAULT_UI_SCROLL_STEPS_PER_WHEEL_NOTCH = 1
+
+# @brief Minimum accepted mouse-wheel scroll steps per physical wheel notch.
+MIN_UI_SCROLL_STEPS_PER_WHEEL_NOTCH = 1
+
+# @brief Maximum accepted mouse-wheel scroll steps per physical wheel notch.
+MAX_UI_SCROLL_STEPS_PER_WHEEL_NOTCH = 5
 
 # @brief Default initial main-window width.
 DEFAULT_MAIN_WINDOW_WIDTH = 1040

@@ -13,7 +13,7 @@
          generation for the operator-facing settings dialog.
 @author Eng. Dan Dumitru Pasare
 @date 2026-05-14
-@version 0.6.0
+@version 0.6.1
 """
 
 # IMPORTS
@@ -33,7 +33,7 @@ def test_settings_page_loads_and_builds_merged_settings(qtbot) -> None:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-05
-    @version    0.3.0
+    @version    0.3.1
     """
     page = SettingsPage()
     qtbot.addWidget(page)
@@ -43,6 +43,7 @@ def test_settings_page_loads_and_builds_merged_settings(qtbot) -> None:
         "ui_theme_id": config.DEFAULT_UI_THEME_ID,
         "ui_themes": [],
         "play_completion_beep": False,
+        "ui_scroll_steps_per_wheel_notch": 1,
         "llm_profiles": [{"id": "kept"}],
     }
 
@@ -52,15 +53,18 @@ def test_settings_page_loads_and_builds_merged_settings(qtbot) -> None:
             "ui_theme_id": config.DEFAULT_UI_THEME_ID,
             "ui_themes": [],
             "play_completion_beep": True,
+            "ui_scroll_steps_per_wheel_notch": 4,
         }
     )
 
     assert page._language_combo.currentText() == "ro"
     assert page._language_combo.minimumWidth() >= 96
     assert page._completion_beep_checkbox.isChecked() is True
+    assert page._scroll_steps_spin.value() == 4
 
     page._language_combo.setCurrentText("en")
     page._completion_beep_checkbox.setChecked(False)
+    page._scroll_steps_spin.setValue(2)
 
     rebuilt = page.build_settings(existing_settings)
 
@@ -69,6 +73,7 @@ def test_settings_page_loads_and_builds_merged_settings(qtbot) -> None:
     assert rebuilt["ui_theme_id"] == config.DEFAULT_UI_THEME_ID
     assert rebuilt["ui_themes"] == []
     assert rebuilt["play_completion_beep"] is False
+    assert rebuilt["ui_scroll_steps_per_wheel_notch"] == 2
     assert rebuilt["llm_profiles"] == [{"id": "kept"}]
 
 

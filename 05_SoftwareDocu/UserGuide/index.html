@@ -9,7 +9,7 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>AudioMancer User Guide v1.4.1</title>
+    <title>AudioMancer User Guide v1.4.2</title>
     <link rel="stylesheet" href="assets/styles/help.css">
 </head>
 <body>
@@ -43,8 +43,8 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
             <section id="welcome">
                 <h2>Welcome</h2>
                 <div class="version-box">
-                    <p><strong>Help version:</strong> 1.4.1</p>
-                    <p><strong>Application version:</strong> 1.4.1</p>
+                    <p><strong>Help version:</strong> 1.4.2</p>
+                    <p><strong>Application version:</strong> 1.4.2</p>
                     <p><strong>Creator:</strong> Eng. Dipl. Dan Dumitru Pasare</p>
                     <p><strong>Contact:</strong> pasaredan1979@gmail.com</p>
                 </div>
@@ -70,10 +70,10 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                 </p>
                 <p>
                     Settings includes light and dark themes, editable custom themes, separate font controls for
-                    interface controls and long text windows, and portable theme JSON import/export. Narator Voice and
-                    Character Voices can import validated WAV samples with operator-entered sample text. AI Settings
-                    and TTS Settings use a consistent <strong>Cancel</strong>, <strong>Save</strong>, and
-                    <strong>OK</strong> flow.
+                    interface controls and long text windows, configurable mouse-wheel scroll steps, and portable theme
+                    JSON import/export. Narator Voice and Character Voices can import validated WAV samples with
+                    operator-entered sample text. AI Settings and TTS Settings use a consistent
+                    <strong>Cancel</strong>, <strong>Save</strong>, and <strong>OK</strong> flow.
                 </p>
                 <div class="warning">
                     Current AudioMancer audio generation requires VoiceWeaver. OpenAI or LM Studio profiles are used
@@ -149,12 +149,13 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                 <h2>Settings</h2>
                 <p>
                     Open <strong>Settings</strong> from the top toolbar before starting a long project. This dialog
-                    controls the interface language, completion beep, and runtime UI theme.
+                    controls the interface language, completion beep, mouse-wheel scroll steps, and runtime UI theme.
                 </p>
                 <ol>
                     <li>Choose the interface language.</li>
                     <li>Select one of the built-in themes, such as <strong>Default Light</strong>, <strong>Default Dark</strong>, or <strong>Dark Contrast</strong>.</li>
                     <li>Enable or disable the completion beep.</li>
+                    <li>Set <strong>Scroll steps</strong> from <strong>1</strong> to <strong>5</strong> to control how many lines common text and list panes move per mouse-wheel notch. The default is <strong>1</strong>.</li>
                     <li>Use <strong>Apply</strong> to save and refresh the running interface without closing Settings, or use <strong>OK</strong> to save and close.</li>
                 </ol>
                 <h3>Custom Themes</h3>
@@ -178,7 +179,7 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                 </p>
                 <figure>
                     <img src="assets/screenshots/settings-dialog.png" alt="Settings dialog">
-                    <figcaption>The Settings dialog controls language, completion beep behavior, built-in themes, custom themes, fonts, color roles, and theme import/export.</figcaption>
+                    <figcaption>The Settings dialog controls language, completion beep behavior, scroll steps, built-in themes, custom themes, fonts, color roles, and theme import/export.</figcaption>
                 </figure>
             </section>
 
@@ -498,7 +499,7 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                     <li>Edit selected blocks manually when attribution or text needs correction. If the selected block already has generated audio, the impact warning appears when you press <strong>Edit</strong>, before the editor unlocks.</li>
                     <li>Use the selected-block character counter to compare current text length against the active TTS model limit.</li>
                     <li>Insert or delete blocks to repair dialogue, pauses, or narration flow. Insert selects the inserted block; delete selects the next remaining block, or the previous row when the deleted block was last.</li>
-                    <li>Edit keeps the active Speech Block selected and preserves the selected chunk plus its text scroll position.</li>
+                    <li>Edit, save, insert, delete, approval changes, generation refreshes, and selected-chunk re-splitting preserve the selected-chunk text cursor, highlighted range, horizontal scroll, and vertical scroll. Insert still selects the inserted block; delete still selects the next or previous remaining block.</li>
                     <li>Re-split selected chunks when the structure is not usable.</li>
                     <li>Approve individual blocks or use approve-all after review. On an approved block, the same selected-block button changes to <strong>Unapprove</strong> and keeps that row selected.</li>
                     <li>Use <strong>Generate Audio</strong> and <strong>Play/Stop</strong> on a selected approved block to preview exactly how the current Speech Block will sound without leaving the page.</li>

@@ -14,7 +14,7 @@
          controls for the Speech Blocks workflow.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-24
-@version 0.8.11
+@version 0.8.12
 """
 
 # IMPORTS
@@ -38,6 +38,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
+from shiboken6 import isValid
 
 from audiomancer.services import speech_blocks_service, ui_state_service
 
@@ -56,6 +57,7 @@ _APPROVE_ALL_HEADER_BUTTON_MIN_WIDTH_PX = 132
 _LOWER_SOURCE_MIN_WIDTH_PX = 480
 _LOWER_SOURCE_MIN_WIDTH_FRACTION = 0.40
 _LOWER_SOURCE_MIN_WIDTH_FLOOR_PX = 300
+_DEFERRED_SCROLL_RESTORE_DELAY_MS = 25
 
 
 class SpeechBlocksPage(QWidget):
@@ -580,10 +582,14 @@ class SpeechBlocksPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-25
-        @version    0.3.0
+        @version    0.3.1
         """
         self._restore_source_scroll_position(scroll_position)
         QTimer.singleShot(0, lambda: self._restore_source_scroll_position(scroll_position))
+        QTimer.singleShot(
+            _DEFERRED_SCROLL_RESTORE_DELAY_MS,
+            lambda: self._restore_source_scroll_position(scroll_position),
+        )
 
     def restore_source_text_position(self, text_position: dict[str, object]) -> None:
         """
@@ -593,10 +599,14 @@ class SpeechBlocksPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-05-25
-        @version    0.1.0
+        @version    0.1.1
         """
         self._restore_source_text_position(text_position)
         QTimer.singleShot(0, lambda: self._restore_source_text_position(text_position))
+        QTimer.singleShot(
+            _DEFERRED_SCROLL_RESTORE_DELAY_MS,
+            lambda: self._restore_source_text_position(text_position),
+        )
 
     def restore_review_position(self, review_position: dict[str, object]) -> None:
         """
@@ -606,7 +616,7 @@ class SpeechBlocksPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-05-16
-        @version    0.1.0
+        @version    0.1.1
         """
         block_id = str(review_position.get("block_id", "") or "").strip()
         chunk_id = str(review_position.get("chunk_id", "") or "").strip()
@@ -626,6 +636,14 @@ class SpeechBlocksPage(QWidget):
         )
         QTimer.singleShot(
             0,
+            lambda: self._restore_review_scroll_positions(
+                source_text_position,
+                chunk_list_scroll_position,
+                block_list_scroll_position,
+            ),
+        )
+        QTimer.singleShot(
+            _DEFERRED_SCROLL_RESTORE_DELAY_MS,
             lambda: self._restore_review_scroll_positions(
                 source_text_position,
                 chunk_list_scroll_position,
@@ -1221,8 +1239,10 @@ class SpeechBlocksPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-24
-        @version    0.1.0
+        @version    0.1.1
         """
+        if not isValid(self) or not isValid(self._source_text_edit):
+            return
         scroll_bar = self._source_text_edit.verticalScrollBar()
         bounded_position = max(scroll_bar.minimum(), min(scroll_position, scroll_bar.maximum()))
         scroll_bar.setValue(bounded_position)
@@ -1235,8 +1255,10 @@ class SpeechBlocksPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-05-25
-        @version    0.1.0
+        @version    0.1.1
         """
+        if not isValid(self) or not isValid(self._source_text_edit):
+            return
         text = self._source_text_edit.toPlainText()
         maximum_position = len(text)
         cursor_position = max(0, min(int(text_position.get("source_cursor_position", 0) or 0), maximum_position))
@@ -1269,8 +1291,15 @@ class SpeechBlocksPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-05-16
-        @version    0.2.0
+        @version    0.2.1
         """
+        if (
+            not isValid(self)
+            or not isValid(self._source_text_edit)
+            or not isValid(self._chunk_list)
+            or not isValid(self._speech_block_list)
+        ):
+            return
         self._restore_source_text_position(source_text_position)
         self._restore_scroll_bar_position(self._chunk_list.verticalScrollBar(), chunk_list_scroll_position)
         self._restore_scroll_bar_position(self._speech_block_list.verticalScrollBar(), block_list_scroll_position)

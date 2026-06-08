@@ -13,7 +13,7 @@
          beep, and editable custom UI themes.
 @author Eng. Dan Dumitru Pasare
 @date 2026-05-23
-@version 0.10.1
+@version 0.10.2
 """
 
 # IMPORTS
@@ -37,6 +37,7 @@ from PySide6.QtWidgets import (
     QPlainTextEdit,
     QPushButton,
     QScrollArea,
+    QSpinBox,
     QVBoxLayout,
     QWidget,
 )
@@ -69,7 +70,7 @@ class SettingsPage(QWidget):
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-14
-    @version    0.10.0
+    @version    0.10.1
     """
 
     def __init__(self, parent=None) -> None:
@@ -80,7 +81,7 @@ class SettingsPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-05-23
-        @version    0.10.1
+        @version    0.10.2
         """
         super().__init__(parent)
 
@@ -112,6 +113,17 @@ class SettingsPage(QWidget):
         )
         self._completion_beep_checkbox.setChecked(config.DEFAULT_PLAY_COMPLETION_BEEP)
         selector_row.addWidget(self._completion_beep_checkbox)
+        selector_row.addSpacing(24)
+        self._scroll_steps_label = QLabel("Scroll steps", self)
+        self._scroll_steps_spin = QSpinBox(self)
+        self._scroll_steps_spin.setRange(
+            config.MIN_UI_SCROLL_STEPS_PER_WHEEL_NOTCH,
+            config.MAX_UI_SCROLL_STEPS_PER_WHEEL_NOTCH,
+        )
+        self._scroll_steps_spin.setValue(config.DEFAULT_UI_SCROLL_STEPS_PER_WHEEL_NOTCH)
+        self._scroll_steps_spin.setMaximumWidth(72)
+        selector_row.addWidget(self._scroll_steps_label)
+        selector_row.addWidget(self._scroll_steps_spin)
         selector_row.addStretch(1)
         layout.addLayout(selector_row)
 
@@ -616,7 +628,7 @@ class SettingsPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-05-14
-        @version    0.4.0
+        @version    0.4.1
         """
         self._language_combo.setCurrentText(str(settings_payload.get("language", config.DEFAULT_LANGUAGE)))
         self._completion_beep_checkbox.setChecked(
@@ -624,6 +636,14 @@ class SettingsPage(QWidget):
                 settings_payload.get(
                     "play_completion_beep",
                     config.DEFAULT_PLAY_COMPLETION_BEEP,
+                )
+            )
+        )
+        self._scroll_steps_spin.setValue(
+            int(
+                settings_payload.get(
+                    "ui_scroll_steps_per_wheel_notch",
+                    config.DEFAULT_UI_SCROLL_STEPS_PER_WHEEL_NOTCH,
                 )
             )
         )
@@ -643,7 +663,7 @@ class SettingsPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-05-14
-        @version    0.4.0
+        @version    0.4.1
         """
         self._commit_selected_custom_theme()
         selected_theme = self._selected_theme_payload()
@@ -653,6 +673,7 @@ class SettingsPage(QWidget):
         merged_settings["ui_theme_id"] = str(selected_theme["theme_id"])
         merged_settings["ui_themes"] = ui_theme_service.normalize_theme_collection(copy.deepcopy(self._custom_themes))
         merged_settings["play_completion_beep"] = self._completion_beep_checkbox.isChecked()
+        merged_settings["ui_scroll_steps_per_wheel_notch"] = self._scroll_steps_spin.value()
         return merged_settings
 
     def apply_language(self, language: str) -> None:
@@ -663,10 +684,11 @@ class SettingsPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-05-14
-        @version    0.3.0
+        @version    0.3.1
         """
         self._language_label.setText(ui_state_service.translate("settings.language", language))
         self._completion_beep_checkbox.setText(ui_state_service.translate("settings.play_beep", language))
+        self._scroll_steps_label.setText(ui_state_service.translate("settings.scroll_steps", language))
         self._theme_group.setTitle(ui_state_service.translate("settings.theme_group", language))
         self._theme_label.setText(ui_state_service.translate("settings.theme", language))
         self._theme_new_button.setText(ui_state_service.translate("settings.theme_new", language))

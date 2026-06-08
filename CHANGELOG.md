@@ -10,6 +10,26 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [1.4.2] - 2026-06-08
+
+### Added
+
+- Added a Settings control for application-wide mouse-wheel scroll steps with
+  validated values from `1` to `5` and default `1`.
+- Added a shared UI scroll-step service so text editors, lists, and scroll
+  areas use the configured wheel-step count at startup and after Settings
+  Apply/OK.
+
+### Changed
+
+- Speech Blocks operations now preserve the selected-chunk text cursor,
+  highlighted range, horizontal scroll, and vertical scroll after edit, save,
+  insert, delete, approve/unapprove, generation refreshes, and selected-chunk
+  re-splitting.
+- Project package metadata and `audiomancer.__version__` were updated to
+  `1.4.2`.
+- Offline English and Romanian help bundles were updated to version `1.4.2`.
+
 ## [1.4.1] - 2026-06-08
 
 ### Added

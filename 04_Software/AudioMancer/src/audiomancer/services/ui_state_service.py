@@ -14,7 +14,7 @@
          theme runtime adapter.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 0.55.1
+@version 0.55.2
 """
 
 # ruff: noqa: E501
@@ -195,6 +195,7 @@ _UI_STRINGS = {
         "sidebar.audio_assembly": "Audio Assembly",
         "settings.language": "Language",
         "settings.play_beep": "Play completion beep",
+        "settings.scroll_steps": "Scroll steps",
         "settings.cancel": "Cancel",
         "settings.apply": "Apply",
         "settings.ok": "OK",
@@ -1220,6 +1221,7 @@ _UI_STRINGS = {
         "sidebar.audio_assembly": "Asamblare Audio",
         "settings.language": "Limba",
         "settings.play_beep": "Reda semnalul sonor la finalizare",
+        "settings.scroll_steps": "Pasi derulare",
         "settings.cancel": "Anuleaza",
         "settings.apply": "Aplica",
         "settings.ok": "OK",

@@ -13,7 +13,7 @@
          Qt application and main window correctly.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-04
-@version 0.1.4
+@version 0.1.5
 """
 
 # IMPORTS
@@ -131,7 +131,7 @@ def test_main_creates_application_and_shows_window(monkeypatch) -> None:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-04
-    @version    0.1.3
+    @version    0.1.4
     """
     created = {}
 
@@ -245,7 +245,10 @@ def test_main_creates_application_and_shows_window(monkeypatch) -> None:
         @version    0.1.0
         """
         created["load_settings_called"] = True
-        created["loaded_settings_payload"] = {"language": "en"}
+        created["loaded_settings_payload"] = {
+            "language": "en",
+            "ui_scroll_steps_per_wheel_notch": 3,
+        }
         return created["loaded_settings_payload"]
 
     monkeypatch.setattr(app_module, "initialize_logging", _initialize_logging)
@@ -255,6 +258,19 @@ def test_main_creates_application_and_shows_window(monkeypatch) -> None:
     monkeypatch.setattr(app_module, "QApplication", _create_application)
     monkeypatch.setattr(app_module, "QIcon", lambda _path: object())
     monkeypatch.setattr(app_module, "MainWindow", _create_window)
+    monkeypatch.setattr(
+        app_module.ui_state_service,
+        "apply_theme",
+        lambda application, theme_payload, scale: created.setdefault(
+            "theme_application",
+            (application, theme_payload, scale),
+        ),
+    )
+    monkeypatch.setattr(
+        app_module.ui_scroll_service,
+        "install_global_scroll_step_filter",
+        lambda application, scroll_steps: created.setdefault("scroll_filter", (application, scroll_steps)),
+    )
 
     exit_code = app_module.main()
 
@@ -263,8 +279,13 @@ def test_main_creates_application_and_shows_window(monkeypatch) -> None:
     assert created["load_settings_called"] is True
     assert created["shutdown_logging_called"] is True
     assert created["logger_request"] == ("app", None)
-    assert created["window_settings_payload"] == {"language": "en"}
+    assert created["window_settings_payload"] == {
+        "language": "en",
+        "ui_scroll_steps_per_wheel_notch": 3,
+    }
+    assert created["scroll_filter"] == (created["application"], 3)
     assert created["application"].application_name == app_module.APPLICATION_NAME
+    assert created["theme_application"][0] is created["application"]
     assert created["application"].exec_called is True
     assert created["window"].show_called is True
 

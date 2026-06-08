@@ -13,7 +13,7 @@
          persisted settings self-healing, and validated save behavior.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-22
-@version 0.7.1
+@version 0.7.2
 """
 
 # IMPORTS
@@ -43,20 +43,21 @@ def test_committed_settings_scaffold_matches_valid_settings_schema() -> None:
     assert validated_settings == committed_settings
 
 
-def test_build_default_settings_includes_theme_fields() -> None:
+def test_build_default_settings_includes_theme_and_scroll_fields() -> None:
     """
-    @brief      Verify default settings include theme persistence fields.
+    @brief      Verify default settings include theme and scroll persistence fields.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-13
-    @version    0.2.0
+    @version    0.2.1
     """
     default_settings = settings_service.build_default_settings()
 
     assert "ui_text_scale" not in default_settings
     assert default_settings["ui_theme_id"] == config.DEFAULT_UI_THEME_ID
     assert default_settings["ui_themes"] == []
+    assert default_settings["ui_scroll_steps_per_wheel_notch"] == config.DEFAULT_UI_SCROLL_STEPS_PER_WHEEL_NOTCH
 
 
 def test_load_settings_creates_default_file_when_missing(tmp_path, monkeypatch) -> None:
@@ -118,6 +119,7 @@ def test_load_settings_self_heals_missing_and_invalid_values(tmp_path, monkeypat
     invalid_settings["default_speech_blocks_profile_id"] = "missing_profile"
     invalid_settings["default_character_extraction_profile_id"] = "missing_profile"
     invalid_settings["play_completion_beep"] = "no"
+    invalid_settings["ui_scroll_steps_per_wheel_notch"] = 6
     settings_path.write_text(json.dumps(invalid_settings, indent=2), encoding="utf-8")
 
     loaded_settings = settings_service.load_settings()
@@ -141,8 +143,48 @@ def test_load_settings_self_heals_missing_and_invalid_values(tmp_path, monkeypat
         == defaults["default_character_extraction_profile_id"]
     )
     assert loaded_settings["play_completion_beep"] == defaults["play_completion_beep"]
+    assert loaded_settings["ui_scroll_steps_per_wheel_notch"] == defaults["ui_scroll_steps_per_wheel_notch"]
     assert loaded_settings["llm_profiles"] == defaults["llm_profiles"]
     assert json.loads(settings_path.read_text(encoding="utf-8")) == loaded_settings
+
+
+def test_validate_settings_preserves_valid_scroll_steps() -> None:
+    """
+    @brief      Verify valid UI scroll-step settings survive validation.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-08
+    @version    0.1.0
+    """
+    for scroll_steps in range(
+        config.MIN_UI_SCROLL_STEPS_PER_WHEEL_NOTCH,
+        config.MAX_UI_SCROLL_STEPS_PER_WHEEL_NOTCH + 1,
+    ):
+        candidate_settings = settings_service.build_default_settings()
+        candidate_settings["ui_scroll_steps_per_wheel_notch"] = scroll_steps
+
+        validated_settings = settings_service.validate_settings(candidate_settings)
+
+        assert validated_settings["ui_scroll_steps_per_wheel_notch"] == scroll_steps
+
+
+def test_validate_settings_repairs_invalid_scroll_steps() -> None:
+    """
+    @brief      Verify invalid UI scroll-step settings repair to the default.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-08
+    @version    0.1.0
+    """
+    for scroll_steps in (0, 6, "three"):
+        candidate_settings = settings_service.build_default_settings()
+        candidate_settings["ui_scroll_steps_per_wheel_notch"] = scroll_steps
+
+        validated_settings = settings_service.validate_settings(candidate_settings)
+
+        assert validated_settings["ui_scroll_steps_per_wheel_notch"] == config.DEFAULT_UI_SCROLL_STEPS_PER_WHEEL_NOTCH
 
 
 def test_load_settings_migrates_missing_theme_fields_and_removes_legacy_text_scale(tmp_path, monkeypatch) -> None:

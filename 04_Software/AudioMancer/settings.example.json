@@ -51,6 +51,7 @@
   "default_ai_chunking_strategy": "scene",
   "default_character_extraction_profile_id": "llm_profile_example_local",
   "play_completion_beep": true,
+  "ui_scroll_steps_per_wheel_notch": 1,
   "ui_text_scale": "normal",
   "tts_runtime_base_url": "http://YOUR_TTS_RUNTIME_HOST:8059",
   "tts_runtime_api_key": "",

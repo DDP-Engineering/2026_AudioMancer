@@ -14,7 +14,7 @@
          settings file to the application root.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-22
-@version 0.10.2
+@version 0.10.3
 """
 
 # IMPORTS
@@ -307,7 +307,7 @@ def _validate_settings_internal(settings_payload: object) -> tuple[dict[str, Any
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-23
-    @version    0.2.1
+    @version    0.2.2
     """
     repairs_made: list[bool] = []
     defaults = build_default_settings()
@@ -399,6 +399,18 @@ def _validate_settings_internal(settings_payload: object) -> tuple[dict[str, Any
                 repair_tracker=repairs_made,
             )
             normalized_settings[field_name] = defaults[field_name]
+
+    if (
+        not isinstance(normalized_settings["ui_scroll_steps_per_wheel_notch"], int)
+        or normalized_settings["ui_scroll_steps_per_wheel_notch"] < config.MIN_UI_SCROLL_STEPS_PER_WHEEL_NOTCH
+        or normalized_settings["ui_scroll_steps_per_wheel_notch"] > config.MAX_UI_SCROLL_STEPS_PER_WHEEL_NOTCH
+    ):
+        _log_settings_repair(
+            "Repaired invalid 'ui_scroll_steps_per_wheel_notch' using the default value.",
+            "ui_scroll_steps_per_wheel_notch",
+            repair_tracker=repairs_made,
+        )
+        normalized_settings["ui_scroll_steps_per_wheel_notch"] = defaults["ui_scroll_steps_per_wheel_notch"]
 
     if normalized_settings["scene_ambience_placement"] not in config.SCENE_AMBIENCE_PLACEMENT_OPTIONS:
         _log_settings_repair(
@@ -672,7 +684,7 @@ def build_default_settings() -> dict[str, Any]:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.7.1
+    @version    0.7.2
     """
     return {
         "language": config.DEFAULT_LANGUAGE,
@@ -685,6 +697,7 @@ def build_default_settings() -> dict[str, Any]:
         "default_ai_chunking_strategy": "scene",
         "default_character_extraction_profile_id": None,
         "play_completion_beep": True,
+        "ui_scroll_steps_per_wheel_notch": config.DEFAULT_UI_SCROLL_STEPS_PER_WHEEL_NOTCH,
         "ui_theme_id": config.DEFAULT_UI_THEME_ID,
         "ui_themes": [],
         "tts_runtime_base_url": config.DEFAULT_TTS_RUNTIME_BASE_URL,

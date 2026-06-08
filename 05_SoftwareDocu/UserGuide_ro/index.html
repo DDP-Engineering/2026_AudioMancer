@@ -9,7 +9,7 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Ghid AudioMancer v1.4.1</title>
+    <title>Ghid AudioMancer v1.4.2</title>
     <link rel="stylesheet" href="assets/styles/help.css">
 </head>
 <body>
@@ -43,8 +43,8 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
             <section id="welcome">
                 <h2>Bun venit</h2>
                 <div class="version-box">
-                    <p><strong>Versiune ajutor:</strong> 1.4.1</p>
-                    <p><strong>Versiune aplicatie:</strong> 1.4.1</p>
+                    <p><strong>Versiune ajutor:</strong> 1.4.2</p>
+                    <p><strong>Versiune aplicatie:</strong> 1.4.2</p>
                     <p><strong>Creator:</strong> Eng. Dipl. Dan Dumitru Pasare</p>
                     <p><strong>Contact:</strong> pasaredan1979@gmail.com</p>
                 </div>
@@ -70,10 +70,10 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                 </p>
                 <p>
                     Setari include teme luminoase si intunecate, teme personalizate, font separat pentru controalele
-                    interfetei si pentru ferestrele mari de text, plus import si export de teme in format JSON. Voce
-                    narator si Voci personaje pot importa esantioane WAV validate impreuna cu textul introdus de
-                    operator. Setari AI si Setari TTS folosesc acelasi flux <strong>Anuleaza</strong>,
-                    <strong>Salveaza</strong> si <strong>OK</strong>.
+                    interfetei si pentru ferestrele mari de text, pasi configurabili pentru rotita mouse-ului, plus
+                    import si export de teme in format JSON. Voce narator si Voci personaje pot importa esantioane WAV
+                    validate impreuna cu textul introdus de operator. Setari AI si Setari TTS folosesc acelasi flux
+                    <strong>Anuleaza</strong>, <strong>Salveaza</strong> si <strong>OK</strong>.
                 </p>
                 <div class="note">
                     AudioMancer pastreaza fiecare carte intr-un dosar de proiect. Nu muta fisierele proiectului cat timp
@@ -144,13 +144,15 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
             <section id="settings">
                 <h2>Setari</h2>
                 <p>
-                    Fereastra Setari controleaza limba interfetei, sunetul de finalizare si tema vizuala folosita in
-                    timpul rularii. Schimbarea limbii actualizeaza interfata si ghidul de ajutor corespunzator.
+                    Fereastra Setari controleaza limba interfetei, sunetul de finalizare, pasii de derulare ai rotitei
+                    mouse-ului si tema vizuala folosita in timpul rularii. Schimbarea limbii actualizeaza interfata si
+                    ghidul de ajutor corespunzator.
                 </p>
                 <ol>
                     <li>Alege limba interfetei.</li>
                     <li>Alege o tema inclusa, de exemplu <strong>Default Light</strong>, <strong>Default Dark</strong> sau <strong>Dark Contrast</strong>.</li>
                     <li>Activeaza sau dezactiveaza sunetul de finalizare.</li>
+                    <li>Seteaza <strong>Pasi derulare</strong> intre <strong>1</strong> si <strong>5</strong> pentru cate linii se misca panourile comune de text si liste la fiecare pas al rotitei mouse-ului. Valoarea implicita este <strong>1</strong>.</li>
                     <li>Foloseste <strong>Apply</strong> pentru salvare si actualizare fara inchiderea ferestrei, sau <strong>OK</strong> pentru salvare si inchidere.</li>
                 </ol>
                 <h3>Teme personalizate</h3>
@@ -174,7 +176,7 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                 </p>
                 <figure>
                     <img src="assets/screenshots/settings-dialog.png" alt="Fereastra Setari">
-                    <figcaption>Setarile controleaza limba, sunetul de finalizare, temele incluse, temele personalizate, fonturile, culorile si importul/exportul de teme.</figcaption>
+                    <figcaption>Setarile controleaza limba, sunetul de finalizare, pasii de derulare, temele incluse, temele personalizate, fonturile, culorile si importul/exportul de teme.</figcaption>
                 </figure>
             </section>
 
@@ -502,7 +504,7 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                     <li>Editeaza blocurile selectate cand textul sau atribuirea vorbitorului trebuie corectate. Daca blocul selectat are deja audio generat, avertismentul de impact apare cand apesi <strong>Edit</strong>, inainte ca editorul sa fie deblocat.</li>
                     <li>Foloseste contorul blocului selectat pentru a compara lungimea textului curent cu limita modelului TTS activ.</li>
                     <li>Insereaza sau sterge blocuri pentru a repara dialogul, pauzele sau fluxul narativ. Inserarea selecteaza blocul inserat; stergerea selecteaza urmatorul bloc ramas sau randul anterior cand blocul sters era ultimul.</li>
-                    <li>Editarea pastreaza Blocul de vorbire activ selectat si pastreaza segmentul selectat impreuna cu pozitia de derulare a textului.</li>
+                    <li>Editarea, salvarea, inserarea, stergerea, schimbarea aprobarii, reimprospatarea dupa generare si reimpartirea segmentului selectat pastreaza cursorul, selectia marcata si pozitiile de derulare orizontala si verticala din textul segmentului selectat. Inserarea selecteaza in continuare blocul inserat, iar stergerea selecteaza urmatorul sau anteriorul bloc ramas.</li>
                     <li>Reimparte segmentele selectate cand structura nu este utilizabila.</li>
                     <li>Aproba blocuri individuale sau foloseste aprobare globala dupa verificare. Pe un bloc aprobat, acelasi buton pentru blocul selectat devine <strong>Dezaproba</strong> si pastreaza randul selectat.</li>
                     <li>Foloseste <strong>Generate Audio</strong> si <strong>Play/Stop</strong> pe blocul aprobat selectat pentru a previzualiza sunetul fara sa parasesti pagina.</li>

@@ -65,6 +65,9 @@ Validation currently covers:
 - UI theme settings: selected `ui_theme_id`, normalized custom `ui_themes`
   with separate UI-control and text-window font payloads, and removal of the
   deprecated top-level `ui_text_scale` field
+- UI scroll settings: `ui_scroll_steps_per_wheel_notch`, validated as an
+  integer from `1` to `5` and repaired to the default `1` when missing or
+  invalid
 - Scene Ambience settings: placement policy, soft maximum sequence duration,
   maximum blocks per sequence, guidance scale, inference-step count, and
   optional seed; placement `none` disables Speech Blocks ambience generation
@@ -120,6 +123,8 @@ Current deterministic behavior:
   migration path such as `ui_text_scale`
 - invalid non-empty AI or TTS runtime base URLs heal back to their defaults
   instead of remaining in one broken-but-persisted state
+- invalid scroll-step values outside `1..5`, or non-integer values, heal back
+  to the configured default
 - invalid Scene Ambience placement, duration/count, guidance, step, or seed
   values heal back to their configured defaults
 - normalized payloads are written back when healing is required
@@ -164,7 +169,7 @@ save_settings(updated_settings_payload)
 
 Documentation audit status:
 
-- reviewed against the current implementation on 2026-05-06
+- reviewed against the current implementation on 2026-06-08
 
 Automated tests:
 
@@ -180,11 +185,13 @@ Covered behaviors:
 - preservation of unknown extra keys
 - validated save behavior
 - startup integration
+- scroll-step defaulting and validation
 
 Minimum validation after a change:
 
 - `python -m py_compile` for changed Python files
-- focused `pytest` run for settings service, config contract, and bootstrap tests
+- focused `pytest` run for settings service, Settings page, config contract,
+  bootstrap, and scroll-service tests
 
 ## 10. Limitations And Future Work
 

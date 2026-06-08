@@ -13,7 +13,7 @@
          runtime language and UI-theme changes to the shell.
 @author Eng. Dan Dumitru Pasare
 @date 2026-05-14
-@version 0.5.0
+@version 0.5.1
 """
 
 # IMPORTS
@@ -24,7 +24,7 @@ from pathlib import Path
 from PySide6.QtWidgets import QApplication, QFileDialog, QMessageBox
 
 from audiomancer import config
-from audiomancer.services import persistence_service, settings_service, ui_state_service
+from audiomancer.services import persistence_service, settings_service, ui_scroll_service, ui_state_service
 from audiomancer.ui.controllers import misc_ui_controller
 
 # CONSTANTS
@@ -207,8 +207,17 @@ def apply_current_ui_settings(window) -> None:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.1.0
+    @version    0.1.1
     """
+    ui_scroll_service.install_global_scroll_step_filter(
+        QApplication.instance(),
+        int(
+            window._settings_payload.get(
+                "ui_scroll_steps_per_wheel_notch",
+                config.DEFAULT_UI_SCROLL_STEPS_PER_WHEEL_NOTCH,
+            )
+        ),
+    )
     ui_state_service.apply_ui_settings(
         QApplication.instance(),
         window,
