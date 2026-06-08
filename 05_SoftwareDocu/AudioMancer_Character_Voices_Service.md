@@ -31,8 +31,8 @@ locked on the Home page before the later `Speech Blocks`,
 - keep the manifest stage and compact Character Voices operation summary aligned
   with Character Voices readiness for the Home workflow row
 - apply v2 downstream impact when one voice target changes by preserving Speech
-  Blocks, deleting only matching Audio Blocks and reusable clone-prompt
-  metadata, and resetting Audio Assembly
+  Blocks and Audio Block rows, clearing only matching generated audio plus
+  reusable clone-prompt metadata, and resetting Audio Assembly
 
 It does not:
 
@@ -81,8 +81,8 @@ High-level flow:
    each character slot during state build and per-character editing/generation
    stays disabled.
 6. `Edit Voice Prompt` confirms v2 downstream impact, deletes the stored
-   character sample, removes generated Audio Blocks for that target only, resets
-   Audio Assembly, and enters explicit edit mode.
+   character sample, clears generated audio on Audio Blocks for that target
+   only, resets Audio Assembly, and enters explicit edit mode.
 7. `Import Sample` accepts one operator-selected WAV for the selected character
    target, validates that it is readable, non-silent, and at least three seconds
    long, asks for the exact spoken sample text, then stores the WAV and
@@ -248,8 +248,9 @@ Current rules:
 - batch sample generation processes every current character target and replaces
   any existing character sample for those targets
 - sample import, prompt edit, single sample regeneration, and batch character
-  sample generation preserve Speech Blocks and reset only Audio Blocks whose
-  `voice_target_id` matches the affected character targets
+  sample generation preserve Speech Blocks and Audio Block rows, then clear
+  only generated audio whose `voice_target_id` matches the affected character
+  targets
 - `same_narrator` mode disables prompt editing and generation but keeps
   preview available by copying narrator-derived samples into every character
   target slot

@@ -15,7 +15,7 @@
          based operation state plus AI transaction logging.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 0.19.8
+@version 0.19.9
 """
 
 # IMPORTS
@@ -731,6 +731,44 @@ def mark_speech_blocks_for_character_review(
             updated_block["approved_at"] = None
             if normalized_display_name:
                 updated_block["speaker_display_name"] = normalized_display_name
+        updated_blocks.append(updated_block)
+    if not affected_block_ids:
+        return load_speech_blocks_report(resolved_project_root), ()
+    return _persist_report_update(resolved_project_root, updated_blocks), tuple(affected_block_ids)
+
+
+@trace_function(_SPEECH_BLOCKS_LOGGER)
+def update_character_speech_block_display_name(
+    project_root: str | Path,
+    character_id: str,
+    display_name: str | None = None,
+) -> tuple[SpeechBlocksReportPayload | None, tuple[str, ...]]:
+    """
+    @brief      Update persisted Speech Block speaker names for one character without changing review state.
+    @param[in]  project_root Active project root folder.
+    @param[in]  character_id Character identifier whose display name changed.
+    @param[in]  display_name Optional refreshed speaker display name.
+    @return     Updated report, if Speech Blocks existed, plus affected block ids.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-08
+    @version    0.1.0
+    """
+    normalized_character_id = str(character_id).strip()
+    normalized_display_name = None if display_name is None else str(display_name).strip()
+    if not normalized_character_id or not normalized_display_name:
+        return load_speech_blocks_report(project_root), ()
+    resolved_project_root = Path(project_root)
+    speech_blocks = load_speech_blocks(resolved_project_root)
+    if not speech_blocks:
+        return load_speech_blocks_report(resolved_project_root), ()
+    affected_block_ids: list[str] = []
+    updated_blocks: list[SpeechBlockPayload] = []
+    for block in speech_blocks:
+        updated_block = dict(block)
+        if _is_character_speech_block(updated_block, normalized_character_id):
+            affected_block_ids.append(str(updated_block.get("speech_block_id", "")).strip())
+            updated_block["speaker_display_name"] = normalized_display_name
         updated_blocks.append(updated_block)
     if not affected_block_ids:
         return load_speech_blocks_report(resolved_project_root), ()

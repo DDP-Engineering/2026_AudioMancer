@@ -14,7 +14,7 @@
          for the Characters page.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-11
-@version 0.17.1
+@version 0.17.2
 """
 
 # IMPORTS
@@ -650,7 +650,7 @@ def _sync_manifest_after_character_edit(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-04
-    @version    0.2.0
+    @version    0.3.0
     """
     if (
         window._current_project_root is None
@@ -666,7 +666,7 @@ def _sync_manifest_after_character_edit(
     if _voice_definition_source_changed(previous_profile, updated_profile):
         voice_target_ids = (character_voices_service.mark_character_voice_target_stale(project_root, character_id),)
     _update_character_save_progress(progress_callback, 50, "progress.character_save_speech_blocks")
-    _speech_report, affected_speech_block_ids = speech_blocks_service.mark_speech_blocks_for_character_review(
+    _speech_report, _renamed_speech_block_ids = speech_blocks_service.update_character_speech_block_display_name(
         project_root,
         character_id,
         display_name=display_name,
@@ -674,11 +674,12 @@ def _sync_manifest_after_character_edit(
     _update_character_save_progress(progress_callback, 70, "progress.character_save_audio_blocks")
     _audio_report, artifact_summary = audio_blocks_service.remove_audio_blocks_for_speech_blocks(
         project_root,
-        affected_speech_block_ids,
+        (),
         voice_target_ids=voice_target_ids,
         collect_preserved_paths=False,
+        preserve_invalidated_blocks=True,
     )
-    reset_assembly = bool(affected_speech_block_ids or voice_target_ids or artifact_summary.deleted_count)
+    reset_assembly = bool(voice_target_ids or artifact_summary.deleted_count)
     if reset_assembly:
         workflow_impact_service.reset_audio_assembly_outputs(project_root)
     current_stage = (

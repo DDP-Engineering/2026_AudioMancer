@@ -14,7 +14,7 @@
          normalization.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-23
-@version 1.9.5
+@version 1.9.7
 """
 
 # IMPORTS
@@ -898,6 +898,178 @@ def test_audio_blocks_service_removes_audio_and_clone_profiles_for_voice_target(
     assert deletion_summary.deleted_count >= 2
     assert not character_audio_path.exists()
     assert narrator_audio_path.exists()
+
+
+def test_audio_blocks_service_preserves_invalidated_voice_target_rows(tmp_path) -> None:
+    """
+    @brief      Verify voice-target invalidation can clear generated audio while preserving affected rows.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-08
+    @version    0.1.0
+    """
+    project_root, _manifest = _create_audio_blocks_project(tmp_path, "AudioBlocksVoiceTargetRowPreservation")
+    _seed_generated_audio_blocks(project_root)
+    audio_blocks = audio_blocks_service.load_audio_blocks(project_root)
+    character_block = next(block for block in audio_blocks if str(block["speaker_id"]) == "alice")
+    narrator_block = next(block for block in audio_blocks if str(block["speaker_id"]) == "narrator")
+    character_audio_path = project_root / str(character_block["audio_relative_path"])
+    narrator_audio_path = project_root / str(narrator_block["audio_relative_path"])
+    character_target_id = str(character_block["voice_target_id"])
+    clone_profiles_path = (
+        project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.AUDIO_BLOCKS_VOICE_CLONE_PROFILES_FILE_NAME
+    )
+    clone_profiles = json.loads(clone_profiles_path.read_text(encoding="utf-8"))
+    clone_profiles.append(
+        {
+            "voice_target_id": character_target_id,
+            "display_name": "Alice",
+            "source_sample_relative_path": "voice_samples/alice.wav",
+            "source_sample_fingerprint": "old-alice",
+            "source_model_id": "qwen-designer",
+            "voice_language": "en",
+            "sample_text": "Alice preview line.",
+            "voice_clone_prompt": {"format": "qwen_voice_clone_prompt_v1", "speaker": "alice"},
+            "prompt_format": "qwen_voice_clone_prompt_v1",
+            "generated_at": "2026-04-23T12:09:00+00:00",
+            "clone_model_id": "old-model",
+        }
+    )
+    clone_profiles_path.write_text(json.dumps(clone_profiles, indent=2) + "\n", encoding="utf-8")
+
+    report, deletion_summary = audio_blocks_service.remove_audio_blocks_for_speech_blocks(
+        project_root,
+        (),
+        voice_target_ids=(character_target_id,),
+        preserve_invalidated_blocks=True,
+    )
+
+    updated_blocks = audio_blocks_service.load_audio_blocks(project_root)
+    preserved_profiles = audio_blocks_service.load_voice_clone_profiles(project_root)
+    updated_character_block = next(block for block in updated_blocks if str(block["speaker_id"]) == "alice")
+    updated_narrator_block = next(block for block in updated_blocks if str(block["speaker_id"]) == "narrator")
+    assert [block["speech_block_id"] for block in updated_blocks] == [
+        narrator_block["speech_block_id"],
+        character_block["speech_block_id"],
+    ]
+    assert audio_blocks_service.is_generated(updated_character_block) is False
+    assert audio_blocks_service.is_approved(updated_character_block) is False
+    assert updated_character_block["audio_relative_path"] is None
+    assert updated_character_block["metadata_relative_path"] is None
+    assert updated_character_block["generated_part_relative_paths"] == []
+    assert updated_character_block["generation_fingerprint"] is None
+    assert updated_character_block["split_plan_fingerprint"] is None
+    assert updated_narrator_block["audio_relative_path"] == narrator_block["audio_relative_path"]
+    assert [profile["voice_target_id"] for profile in preserved_profiles] == ["narrator"]
+    assert report is not None
+    assert report["generated_block_count"] == 1
+    assert deletion_summary.deleted_count >= 2
+    assert not character_audio_path.exists()
+    assert narrator_audio_path.exists()
+
+
+def test_audio_blocks_service_regenerates_invalidated_voice_target_row_with_stale_state(
+    monkeypatch,
+    tmp_path,
+) -> None:
+    """
+    @brief      Verify selected regeneration allows a preserved invalidated row after voice sample changes.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-08
+    @version    0.1.0
+    """
+    project_root, manifest = _create_audio_blocks_project(tmp_path, "AudioBlocksInvalidatedVoiceTargetRegenerate")
+    _seed_generated_audio_blocks(project_root)
+    state_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.AUDIO_BLOCKS_STATE_FILE_NAME
+    operation_state = json.loads(state_path.read_text(encoding="utf-8"))
+    operation_state["metadata"]["input_fingerprint"] = "stale-before-character-sample-change"
+    state_path.write_text(json.dumps(operation_state, indent=2) + "\n", encoding="utf-8")
+
+    audio_blocks = audio_blocks_service.load_audio_blocks(project_root)
+    character_block = next(block for block in audio_blocks if str(block["speaker_id"]) == "alice")
+    character_target_id = str(character_block["voice_target_id"])
+    audio_blocks_service.remove_audio_blocks_for_speech_blocks(
+        project_root,
+        (),
+        voice_target_ids=(character_target_id,),
+        preserve_invalidated_blocks=True,
+    )
+
+    wait_payloads = [
+        {
+            "active_model": {"model_id": "Qwen3-TTS-12Hz-1.7B-Base"},
+            "operation": {"status": "completed"},
+            "result": {},
+        },
+        {
+            "operation": {
+                "status": "completed",
+                "result": {"voice_clone_prompt": {"format": "qwen_voice_clone_prompt_v1", "speaker": "alice"}},
+            },
+            "result": {},
+        },
+        {"operation": {"status": "completed"}, "result": {"available": True, "summary": "Alice regenerated."}},
+    ]
+    observed_generate_requests: list[str] = []
+    monkeypatch.setattr(
+        audio_blocks_service.voiceweaver_runtime_service,
+        "read_status",
+        lambda *_args, **_kwargs: {"active_model": None, "operation": {"status": "idle"}},
+    )
+    monkeypatch.setattr(
+        audio_blocks_service.voiceweaver_runtime_service,
+        "load_model",
+        lambda *_args, **_kwargs: {"status": "running"},
+    )
+    monkeypatch.setattr(
+        audio_blocks_service.voiceweaver_runtime_service,
+        "create_voice_clone_prompt",
+        lambda *_args, **_kwargs: {"status": "running"},
+    )
+    monkeypatch.setattr(
+        audio_blocks_service.voiceweaver_runtime_service,
+        "generate_voice_clone_from_prompt",
+        lambda _base_url, _api_key, _voice_clone_prompt, _language, text, **_kwargs: (
+            observed_generate_requests.append(text),
+            {"status": "running"},
+        )[1],
+    )
+    monkeypatch.setattr(
+        audio_blocks_service.voiceweaver_runtime_service,
+        "wait_for_terminal_operation",
+        lambda *_args, **_kwargs: wait_payloads.pop(0),
+    )
+    monkeypatch.setattr(
+        audio_blocks_service.voiceweaver_runtime_service,
+        "download_generated_voice",
+        lambda *_args, **_kwargs: _wav_bytes("alice-regenerated"),
+    )
+
+    report = audio_blocks_service.regenerate_audio_block(
+        project_root,
+        manifest,
+        str(character_block["speech_block_id"]),
+        _runtime_settings(),
+    )
+
+    regenerated_blocks = audio_blocks_service.load_audio_blocks(project_root)
+    regenerated_character_block = next(block for block in regenerated_blocks if str(block["speaker_id"]) == "alice")
+    regenerated_narrator_block = next(block for block in regenerated_blocks if str(block["speaker_id"]) == "narrator")
+    assert report["generated_block_count"] == 2
+    assert observed_generate_requests == ["Hello there."]
+    assert audio_blocks_service.is_generated(regenerated_character_block) is True
+    assert audio_blocks_service.is_approved(regenerated_character_block) is False
+    assert regenerated_character_block["runtime_result_summary"] == "Alice regenerated."
+    assert (project_root / str(regenerated_character_block["audio_relative_path"])).read_bytes() == _wav_bytes(
+        "alice-regenerated"
+    )
+    assert audio_blocks_service.is_generated(regenerated_narrator_block) is True
 
 
 def test_audio_blocks_service_detects_persisted_audio_for_exact_speech_block(tmp_path) -> None:

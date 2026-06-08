@@ -16,7 +16,7 @@
          `80_audio_blocks` workflow artifacts.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-23
-@version 0.18.6
+@version 0.18.8
 """
 
 # IMPORTS
@@ -1065,6 +1065,7 @@ def remove_audio_blocks_for_speech_blocks(
     speech_block_ids: list[str] | tuple[str, ...] | set[str],
     voice_target_ids: list[str] | tuple[str, ...] | set[str] | None = None,
     collect_preserved_paths: bool = True,
+    preserve_invalidated_blocks: bool = False,
 ) -> tuple[AudioBlocksReportPayload | None, workflow_impact_service.ArtifactDeletionSummary]:
     """
     @brief      Remove Audio Blocks and generated files for selected Speech Blocks or voice targets.
@@ -1072,11 +1073,12 @@ def remove_audio_blocks_for_speech_blocks(
     @param[in]  speech_block_ids Speech Block identifiers whose audio must reset.
     @param[in]  voice_target_ids Optional voice target identifiers whose audio must reset.
     @param[in]  collect_preserved_paths True to check and report unaffected generated files.
+    @param[in]  preserve_invalidated_blocks True to keep affected rows with generated-audio fields cleared.
     @return     Updated report, if Audio Blocks existed, plus artifact deletion summary.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-04
-    @version    0.3.0
+    @version    0.4.0
     """
     normalized_speech_block_ids = {
         str(speech_block_id).strip() for speech_block_id in speech_block_ids if str(speech_block_id).strip()
@@ -1107,6 +1109,20 @@ def remove_audio_blocks_for_speech_blocks(
         voice_target_ids=normalized_voice_target_ids,
         collect_preserved_paths=collect_preserved_paths,
     )
+    if preserve_invalidated_blocks:
+        updated_blocks: list[AudioBlockPayload] = []
+        for block in audio_blocks:
+            if _audio_block_matches_invalidation(
+                block,
+                normalized_speech_block_ids,
+                normalized_voice_target_ids,
+            ):
+                cleared_block = dict(block)
+                cleared_block.update(_cleared_audio_fields())
+                updated_blocks.append(cleared_block)
+                continue
+            updated_blocks.append(block)
+        return _persist_report_update(resolved_project_root, updated_blocks, preserved_clone_profiles), artifact_summary
     preserved_blocks = [
         block
         for block in audio_blocks
@@ -1138,7 +1154,7 @@ def regenerate_audio_block(
     @exception  OperationCancelledError Raised when the operator cancels the run.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-23
-    @version    0.2.3
+    @version    0.2.4
     """
     resolved_project_root = Path(project_root)
     generation_context = _resolve_generation_context(resolved_project_root, manifest, runtime_settings)
@@ -1230,7 +1246,8 @@ def regenerate_audio_block(
             ),
         },
     )
-    if _requires_manual_reset(
+    selected_block_needs_generation = not is_generated(audio_blocks[target_index])
+    if not selected_block_needs_generation and _requires_manual_reset(
         load_operation_state(resolved_project_root) or {},
         generation_context["input_fingerprint"],
     ):
@@ -2365,6 +2382,28 @@ def _delete_audio_block_artifacts(project_root: Path, audio_block: AudioBlockPay
                 artifact_path.unlink()
 
 
+def _audio_block_matches_invalidation(
+    audio_block: AudioBlockPayload,
+    speech_block_ids: set[str],
+    voice_target_ids: set[str],
+) -> bool:
+    """
+    @brief      Return whether one Audio Block should be invalidated by exact Speech Block or voice target ids.
+    @param[in]  audio_block Candidate Audio Blocks payload.
+    @param[in]  speech_block_ids Affected Speech Block identifiers.
+    @param[in]  voice_target_ids Affected voice target identifiers.
+    @return     True when the block matches either affected identity set.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-08
+    @version    0.1.0
+    """
+    return (
+        str(audio_block.get("speech_block_id", "")).strip() in speech_block_ids
+        or str(audio_block.get("voice_target_id", "")).strip() in voice_target_ids
+    )
+
+
 def _cleared_audio_fields() -> dict[str, object]:
     """
     @brief      Build cleared generated-audio fields for one invalidated Audio Block.
@@ -3409,7 +3448,7 @@ def _compact_audio_block_payload(audio_block: AudioBlockPayload) -> AudioBlockPa
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-17
-    @version    0.2.0
+    @version    0.3.0
     """
     payload: AudioBlockPayload = {
         "speech_block_id": str(audio_block.get("speech_block_id", "")).strip(),
@@ -3417,6 +3456,7 @@ def _compact_audio_block_payload(audio_block: AudioBlockPayload) -> AudioBlockPa
         "speaker_id": str(audio_block.get("speaker_id", "")).strip(),
         "voice_target_id": str(audio_block.get("voice_target_id", "")).strip(),
         "audio_relative_path": _optional_string(audio_block.get("audio_relative_path")),
+        "metadata_relative_path": _optional_string(audio_block.get("metadata_relative_path")),
         "audio_duration_seconds": _optional_float(audio_block.get("audio_duration_seconds")),
         "generated": generated_at(audio_block),
         "approved": approved_at(audio_block),

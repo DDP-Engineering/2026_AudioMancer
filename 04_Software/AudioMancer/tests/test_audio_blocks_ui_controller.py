@@ -14,7 +14,7 @@
          generated audio blocks.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-23
-@version 0.6.4
+@version 0.6.5
 """
 
 # IMPORTS
@@ -581,7 +581,7 @@ def test_audio_blocks_ui_controller_voice_target_invalidation_preserves_unrelate
     qtbot, tmp_path, default_settings_payload
 ) -> None:
     """
-    @brief      Verify voice-target invalidation resets only matching Audio Blocks plus Audio Assembly.
+    @brief      Verify voice-target invalidation clears only matching generated audio plus Audio Assembly.
     @param[in]  qtbot Qt test helper fixture.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @param[in]  default_settings_payload Fixture supplying valid baseline settings.
@@ -589,7 +589,7 @@ def test_audio_blocks_ui_controller_voice_target_invalidation_preserves_unrelate
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-04
-    @version    0.1.0
+    @version    0.2.0
     """
     project_root = _create_project(tmp_path, "AudioBlocksControllerVoiceTargetInvalidation")
     _seed_audio_blocks_run(project_root, approved=True)
@@ -614,7 +614,15 @@ def test_audio_blocks_ui_controller_voice_target_invalidation_preserves_unrelate
         )
     )
     updated_manifest = project_workspace_service.load_manifest(project_root)
-    assert [block["speech_block_id"] for block in output_payload] == ["0001-000001"]
+    assert [block["speech_block_id"] for block in output_payload] == ["0001-000001", "0001-000002"]
+    narrator_block = next(block for block in output_payload if block["speech_block_id"] == "0001-000001")
+    alice_block = next(block for block in output_payload if block["speech_block_id"] == "0001-000002")
+    assert narrator_block["audio_relative_path"] is not None
+    assert alice_block["audio_relative_path"] is None
+    assert alice_block["metadata_relative_path"] is None
+    assert alice_block["generated"] is None
+    assert alice_block["approved"] is None
+    assert alice_block["generation_fingerprint"] is None
     assert speech_blocks_path.exists()
     assert (project_root / config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME / "0001_000001_narrator.wav").exists()
     assert not (project_root / config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME / "0001_000002_alice.wav").exists()
@@ -663,6 +671,7 @@ def test_audio_blocks_ui_controller_voice_target_invalidation_can_skip_preserved
     )
 
     assert captured_kwargs[0]["collect_preserved_paths"] is False
+    assert captured_kwargs[0]["preserve_invalidated_blocks"] is True
     assert (55, "progress.narator_voice_change_audio_blocks") in progress_updates
     assert (75, "progress.narator_voice_change_audio_assembly") in progress_updates
 

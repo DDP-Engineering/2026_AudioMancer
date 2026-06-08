@@ -10,13 +10,27 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [1.4.1] - 2026-06-08
+
 ### Added
 
 - Added modal progress and cancellation support while generating Audio Assembly
   Scene Mix previews.
 
+### Changed
+
+- Character voice-definition and sample changes now preserve existing Speech
+  Blocks and Audio Block rows, clearing only generated audio for Audio Blocks
+  that use the changed voice target.
+- Project package metadata and `audiomancer.__version__` were updated to
+  `1.4.1`.
+- Offline English and Romanian help bundles were updated to version `1.4.1`.
+
 ### Fixed
 
+- Fixed selected Audio Block regeneration after one character voice sample is
+  regenerated so a stale Audio Blocks run fingerprint does not force a full
+  Audio Blocks reset when the selected row has already been invalidated.
 - Fixed Audio Assembly with Scene Ambience enabled when sound-model WAVs and
   TTS WAVs use different channel counts or sample rates, such as stereo
   44.1 kHz ambience beside mono 24 kHz narration.

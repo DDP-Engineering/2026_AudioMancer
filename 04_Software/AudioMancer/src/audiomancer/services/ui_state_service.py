@@ -14,7 +14,7 @@
          theme runtime adapter.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 0.55.0
+@version 0.55.1
 """
 
 # ruff: noqa: E501
@@ -540,7 +540,7 @@ _UI_STRINGS = {
         "progress.narator_voice_generate_profiles": "Generating narator profiles...",
         "progress.narator_voice_change_prepare": "Preparing narator voice change...",
         "progress.narator_voice_change_profile": "Saving narator voice profile...",
-        "progress.narator_voice_change_audio_blocks": "Resetting affected Audio Blocks...",
+        "progress.narator_voice_change_audio_blocks": "Clearing affected generated audio...",
         "progress.narator_voice_change_audio_assembly": "Resetting Audio Assembly...",
         "progress.narator_voice_change_manifest": "Saving project workflow state...",
         "progress.narator_voice_change_refresh": "Refreshing project state...",
@@ -976,13 +976,13 @@ _UI_STRINGS = {
             "Audio Blocks and reset downstream Audio Assembly outputs. Continue?"
         ),
         "project.confirm_single_voice_target_invalidation": (
-            "This voice-target change preserves Speech Blocks and resets only Audio Blocks that use this voice. "
-            "Reusable prompts for the voice and Audio Assembly data will also be reset. Continue?"
+            "This voice-target change preserves Speech Blocks and Audio Block rows, and clears only generated audio "
+            "that uses this voice. Reusable prompts for the voice and Audio Assembly data will also be reset. Continue?"
         ),
         "project.confirm_narrator_voice_invalidation": (
-            "This narrator voice change preserves Speech Blocks and resets only Audio Blocks that use the Narrator "
-            "voice. In same-narrator projects, all spoken Audio Blocks are affected. Audio Assembly data will also "
-            "be reset. Continue?"
+            "This narrator voice change preserves Speech Blocks and Audio Block rows, and clears only generated "
+            "audio that uses the Narrator voice. In same-narrator projects, all spoken Audio Blocks are affected. "
+            "Audio Assembly data will also be reset. Continue?"
         ),
         "project.confirm_global_voice_settings_invalidation": (
             "This global voice setting change preserves Speech Blocks but resets all generated Audio Blocks, reusable "
@@ -1007,7 +1007,7 @@ _UI_STRINGS = {
         "progress.character_save_profile": "Saving character profile...",
         "progress.character_save_character_voices": "Synchronizing Character Voices...",
         "progress.character_save_speech_blocks": "Updating Speech Blocks...",
-        "progress.character_save_audio_blocks": "Resetting affected Audio Blocks...",
+        "progress.character_save_audio_blocks": "Clearing affected generated audio...",
         "progress.character_save_manifest": "Saving project workflow state...",
         "progress.character_save_refresh": "Refreshing project state...",
         "progress.speech_blocks": "Speech Blocks generation in progress...",
@@ -1565,7 +1565,7 @@ _UI_STRINGS = {
         "progress.narator_voice_generate_profiles": "Se genereaza profilurile naratorului...",
         "progress.narator_voice_change_prepare": "Se pregateste schimbarea vocii naratorului...",
         "progress.narator_voice_change_profile": "Se salveaza profilul vocii naratorului...",
-        "progress.narator_voice_change_audio_blocks": "Se reseteaza Blocurile Audio afectate...",
+        "progress.narator_voice_change_audio_blocks": "Se sterge audio-ul generat afectat...",
         "progress.narator_voice_change_audio_assembly": "Se reseteaza Asamblarea Audio...",
         "progress.narator_voice_change_manifest": "Se salveaza starea fluxului proiectului...",
         "progress.narator_voice_change_refresh": "Se reimprospateaza starea proiectului...",
@@ -2009,14 +2009,14 @@ _UI_STRINGS = {
             "Blocurile Audio generate si va reseta iesirile Asamblarii Audio din aval. Continui?"
         ),
         "project.confirm_single_voice_target_invalidation": (
-            "Aceasta schimbare de tinta vocala pastreaza Blocurile de Vorbire si reseteaza doar Blocurile Audio "
-            "care folosesc aceasta voce. Prompturile reutilizabile pentru voce si datele Asamblarii Audio vor fi "
-            "resetate. Continui?"
+            "Aceasta schimbare de tinta vocala pastreaza Blocurile de Vorbire si randurile Blocurilor Audio, si "
+            "sterge doar audio-ul generat care foloseste aceasta voce. Prompturile reutilizabile pentru voce si "
+            "datele Asamblarii Audio vor fi resetate. Continui?"
         ),
         "project.confirm_narrator_voice_invalidation": (
-            "Aceasta schimbare a vocii Naratorului pastreaza Blocurile de Vorbire si reseteaza doar Blocurile Audio "
-            "care folosesc vocea Naratorului. In proiectele cu acelasi narator, toate Blocurile Audio vorbite sunt "
-            "afectate. Datele Asamblarii Audio vor fi resetate. Continui?"
+            "Aceasta schimbare a vocii Naratorului pastreaza Blocurile de Vorbire si randurile Blocurilor Audio, "
+            "si sterge doar audio-ul generat care foloseste vocea Naratorului. In proiectele cu acelasi narator, "
+            "toate Blocurile Audio vorbite sunt afectate. Datele Asamblarii Audio vor fi resetate. Continui?"
         ),
         "project.confirm_global_voice_settings_invalidation": (
             "Aceasta schimbare globala de voce pastreaza Blocurile de Vorbire, dar reseteaza toate Blocurile Audio "
@@ -2041,7 +2041,7 @@ _UI_STRINGS = {
         "progress.character_save_profile": "Se salveaza profilul personajului...",
         "progress.character_save_character_voices": "Se sincronizeaza Vocile Personajelor...",
         "progress.character_save_speech_blocks": "Se actualizeaza Blocurile de Vorbire...",
-        "progress.character_save_audio_blocks": "Se reseteaza Blocurile Audio afectate...",
+        "progress.character_save_audio_blocks": "Se sterge audio-ul generat afectat...",
         "progress.character_save_manifest": "Se salveaza starea fluxului proiectului...",
         "progress.character_save_refresh": "Se reimprospateaza starea proiectului...",
         "progress.speech_blocks": "Generarea blocurilor de vorbire este in curs...",

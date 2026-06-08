@@ -13,7 +13,7 @@
          discovery start and reset behavior for the Characters page controller.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-08
-@version 0.12.0
+@version 0.12.1
 """
 
 # IMPORTS
@@ -317,13 +317,16 @@ def test_character_ui_controller_delete_flow_confirms_and_removes(monkeypatch, q
     assert window._current_manifest["narrator_language"] == "en"
 
 
-def test_character_ui_controller_edit_marks_assigned_blocks_for_review(monkeypatch, qtbot, tmp_path) -> None:
+def test_character_ui_controller_edit_preserves_speech_approval_for_voice_definition_change(
+    qtbot,
+    tmp_path,
+) -> None:
     """
-    @brief      Validate character ui controller edit selectively invalidates assigned speech and audio blocks.
+    @brief      Validate character voice-definition edits preserve Speech Blocks and clear only matching audio.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-04
+    @date       2026-06-08
     @version    0.1.0
     """
     project_root, _manifest = _create_project(tmp_path, "CharacterControllerEdit")
@@ -340,16 +343,26 @@ def test_character_ui_controller_edit_marks_assigned_blocks_for_review(monkeypat
     alice_block = next(block for block in speech_blocks if block["speech_block_id"] == "0001-000001")
     narrator_block = next(block for block in speech_blocks if block["speech_block_id"] == "0001-000002")
     assert alice_block["speaker_display_name"] == "Alice Renamed"
-    assert alice_block["approved"] is False
+    assert alice_block["approved"] is True
     assert narrator_block["approved"] is True
     audio_blocks = audio_blocks_service.load_audio_blocks(project_root)
-    assert {block["speech_block_id"] for block in audio_blocks} == {"0001-000002"}
+    assert {block["speech_block_id"] for block in audio_blocks} == {"0001-000001", "0001-000002"}
+    alice_audio_block = next(block for block in audio_blocks if block["speech_block_id"] == "0001-000001")
+    narrator_audio_block = next(block for block in audio_blocks if block["speech_block_id"] == "0001-000002")
+    assert audio_blocks_service.is_generated(alice_audio_block) is False
+    assert alice_audio_block["audio_relative_path"] is None
+    assert alice_audio_block["metadata_relative_path"] is None
+    assert alice_audio_block["generation_fingerprint"] is None
+    assert audio_blocks_service.is_generated(narrator_audio_block) is True
     voice_target = character_voices_service.voice_target_by_id(
         project_root,
         character_voices_service.character_target_id("alice"),
     )
     assert voice_target is not None
-    assert voice_target["stale"] is True
+    assert (
+        character_voices_service.has_target_sample(project_root, character_voices_service.character_target_id("alice"))
+        is False
+    )
     assert window._current_manifest["operations"]["audio_assembly"]["status"] == "not_started"
 
 

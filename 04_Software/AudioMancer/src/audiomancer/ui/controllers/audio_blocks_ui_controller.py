@@ -14,7 +14,7 @@
          targeted downstream invalidation when upstream voice inputs change.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-23
-@version 0.8.4
+@version 0.8.5
 """
 
 # IMPORTS
@@ -452,7 +452,7 @@ def invalidate_audio_blocks_for_voice_targets(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-04
-    @version    0.2.0
+    @version    0.3.0
     """
     if window._current_project_root is None or window._current_manifest is None:
         return
@@ -479,6 +479,7 @@ def invalidate_audio_blocks_for_voice_targets(
         (),
         voice_target_ids=normalized_voice_target_ids,
         collect_preserved_paths=collect_preserved_paths,
+        preserve_invalidated_blocks=True,
     )
     _emit_voice_invalidation_progress(progress_callback, 75, "progress.narator_voice_change_audio_assembly")
     workflow_impact_service.reset_audio_assembly_outputs(window._current_project_root)

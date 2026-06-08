@@ -55,7 +55,8 @@ narrator sample and reusable narrator clone prompt.
   completed-run restarts, and manifest synchronization through the page
   controller
 - invalidate persisted Audio Blocks data when upstream narrator, character,
-  language, or Speech Blocks inputs change
+  language, or Speech Blocks inputs change, preserving affected rows when only
+  their voice-target audio must be regenerated
 
 It does not:
 
@@ -143,7 +144,9 @@ High-level flow:
 13. Speech Blocks edits, resets, approvals, inserts, deletes, and selected-chunk
     re-splits reset generated Audio Blocks data only for the affected source
     chunk, deleting that chunk's generated WAV and split-part files while
-    preserving other chunks.
+    preserving other chunks. Voice-target invalidation keeps the affected Audio
+    Block rows but clears their generated fields, approval, WAV paths, split
+    paths, and fingerprints.
 14. The service syncs `project.json.operations["audio_blocks"]` after
     generation, report refresh, and approval changes. It advances
     `project.json.current_stage` to `audio_blocks_ready` only when every speech
@@ -303,8 +306,8 @@ Current invariants:
 - `unapprove_audio_block(...)` clears the compact `approved` timestamp; it does
   not delete the generated WAV or canonical per-block metadata
 - `remove_audio_blocks_for_speech_blocks(...)` is used by upstream selective
-  invalidation to remove only exact `speech_block_id` matches and their
-  generated artifacts
+  invalidation to remove exact `speech_block_id` matches, or preserve matching
+  rows with generated fields cleared when invalidating by voice target
 - `audio_blocks_stage_status` becomes `completed` only when generated and
   approved counts both match the total speech-block count
 - mismatched operation input fingerprints require an explicit reset and are
@@ -349,13 +352,18 @@ Downstream integrations:
 - selected approval/unapproval, selected regeneration, and generation success
   reset only Audio Assembly outputs/state/report while preserving upstream
   Speech Blocks, voice targets, and unrelated Audio Blocks
+- selected regeneration is allowed for a preserved invalidated row whose
+  generated audio was cleared by voice-target invalidation, even when the
+  previous Audio Blocks operation-state fingerprint belongs to the older voice
+  sample
 
 Current invalidation points:
 
 - narrator profile selection, selected-sample regeneration, selected-profile
   edit, and selected-profile deletion
 - Narator Voice selected-sample changes, Character Voices prompt edit start,
-  and target sample regeneration
+  and target sample regeneration; voice-target changes preserve Speech Blocks
+  and Audio Block rows while clearing only matching generated audio
 - Speech Blocks rerun or reset through its own controller
 - selected Audio Blocks regeneration
 - Audio Blocks approval or unapproval when Audio Assembly outputs already exist

@@ -80,6 +80,9 @@ continuous narrator-only blocks under the TTS text budget.
 - reset Speech Blocks plus downstream Audio Blocks and Audio Assembly artifacts
 - reset only exact affected Audio Blocks by stable `speech_block_id` after
   selected-block text, speaker, content-kind, or delete changes
+- refresh a character's persisted `speaker_display_name` without clearing
+  Speech Block approval when only the character voice/profile display data
+  changed
 - reset only Audio Assembly after Speech Block insert, approval, or order
   changes that do not alter existing Audio Blocks
 - persist resumable chunk-based operation state, report data, and AI
@@ -247,6 +250,8 @@ Outputs:
   generation or Speech Blocks reset
 - selective removal of affected Audio Blocks and generated files for exact
   `speech_block_id` values after local Speech Block audio-input changes
+- display-name refresh for character-owned Speech Blocks without review-state
+  reset after character profile edits
 - assembly-only reset after local order or approval changes
 
 ## 6. Data Contracts

@@ -15,7 +15,7 @@
          chunk-based generation, and narrator-only segmentation.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-24
-@version 0.13.11
+@version 0.13.12
 """
 
 # IMPORTS
@@ -1150,6 +1150,44 @@ def test_unapprove_selected_speech_block_only_clears_target_block(tmp_path) -> N
     assert speech_blocks[0]["approved_at"] is not None
     assert speech_blocks[1]["approved"] is False
     assert speech_blocks[1]["approved_at"] is None
+
+
+def test_update_character_speech_block_display_name_preserves_approval(tmp_path) -> None:
+    """
+    @brief      Verify character display-name refreshes do not revoke Speech Block approval.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-08
+    @version    0.1.0
+    """
+    project_root, _manifest = _create_chunked_project(tmp_path, "SpeechBlocksCharacterDisplayName")
+    _seed_review_speech_blocks(project_root)
+    speech_blocks_path = (
+        project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.SPEECH_BLOCKS_OUTPUT_FILE_NAME
+    )
+    speech_blocks = json.loads(speech_blocks_path.read_text(encoding="utf-8"))
+    speech_blocks[0]["speaker_kind"] = speech_blocks_service.SPEAKER_KIND_CHARACTER
+    speech_blocks[0]["speaker_id"] = "alice"
+    speech_blocks[0]["speaker_display_name"] = "Alice"
+    speech_blocks[0]["approved"] = True
+    speech_blocks[0]["approved_at"] = "2026-04-24T12:00:00+00:00"
+    speech_blocks_path.write_text(json.dumps(speech_blocks, indent=2) + "\n", encoding="utf-8")
+
+    report, affected_ids = speech_blocks_service.update_character_speech_block_display_name(
+        project_root,
+        "alice",
+        display_name="Alice Renamed",
+    )
+
+    updated_blocks = speech_blocks_service.load_speech_blocks(project_root)
+    assert report is not None
+    assert affected_ids == ("0001-000001",)
+    assert updated_blocks[0]["speaker_display_name"] == "Alice Renamed"
+    assert updated_blocks[0]["approved"] is True
+    assert updated_blocks[0]["approved_at"] == "2026-04-24T12:00:00+00:00"
+    assert updated_blocks[1]["speaker_display_name"] == "Narrator"
 
 
 def test_regenerate_selected_chunk_replaces_chunk_and_renumbers_following_blocks(monkeypatch, tmp_path) -> None:
