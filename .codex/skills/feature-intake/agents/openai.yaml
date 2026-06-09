@@ -1,0 +1,9 @@
+# Copyright (c) 2026 DDP Engineering
+# This software is licensed under the GNU Affero General Public License v3.0
+# (AGPL-3.0) with additional Non-Commercial restriction.
+# See the LICENSE.txt and LICENSE_NC.txt files for full license details.
+
+interface:
+  display_name: "Feature Intake"
+  short_description: "Classify a change and plan requirement and test impact"
+  default_prompt: "Use $feature-intake to classify the requested AudioMancer change, run req_impact.py to map impacted requirements and tests, and produce a requirements-first Change Plan before coding."
