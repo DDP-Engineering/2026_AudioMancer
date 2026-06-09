@@ -9,11 +9,11 @@
 """
 @file test_main_window_lifecycle.py
 @brief Qt window tests for the copied AudioMancer main-window shell.
-@details Validates that the DDP_Audiomancer-style toolbar, sidebar, and stacked
-         pages are created without workflow functionality.
+@details Validates that the DDP_Audiomancer-style toolbar, navigation strip, and
+         stacked pages are created without workflow functionality.
 @author Eng. Dan Dumitru Pasare
-@date 2026-04-16
-@version 1.7.4
+@date 2026-06-09
+@version 1.8.0
 """
 
 # IMPORTS
@@ -25,12 +25,14 @@ from PySide6.QtWidgets import (
     QDialog,
     QGroupBox,
     QLabel,
+    QListView,
     QListWidget,
     QPlainTextEdit,
     QPushButton,
     QStackedWidget,
     QStatusBar,
     QToolBar,
+    QVBoxLayout,
 )
 
 from audiomancer import config
@@ -99,6 +101,37 @@ def test_main_window_can_be_created(qtbot, default_settings_payload) -> None:
     assert not any(label.text() == "Interface Text Size" for label in window.findChildren(QLabel))
     assert window._sidebar.item(1).flags() == main_window_module.Qt.ItemFlag.NoItemFlags
     assert window._operation_progress_dialog is None
+
+
+def test_main_window_navigation_is_a_horizontal_top_strip(qtbot, default_settings_payload) -> None:
+    """
+    @brief      Verify workflow navigation renders as a horizontal strip above the page stack.
+    @details    Covers REQ-AUDIO-UX-032: navigation tabs sit under the toolbar,
+                share the workflow-page left/right margins so their ends align with
+                the page content, and the page stack takes the remaining space.
+    @param[in]  qtbot Qt test helper fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-09
+    @version    0.2.0
+    """
+    window = MainWindow(settings_payload=dict(default_settings_payload))
+    qtbot.addWidget(window)
+
+    assert window._sidebar.flow() == QListView.Flow.LeftToRight
+    layout = window.centralWidget().layout()
+    assert isinstance(layout, QVBoxLayout)
+    navigation_row = layout.itemAt(0).layout()
+    assert navigation_row is not None
+    assert navigation_row.indexOf(window._sidebar) == 0
+    assert layout.indexOf(window._stack) == 1
+    # The navigation strip is inset by the same left/right margin the workflow
+    # pages use, so its ends align with the page content below it.
+    page_margins = window._text_cleanup_page.layout().contentsMargins()
+    navigation_margins = navigation_row.contentsMargins()
+    assert navigation_margins.left() == page_margins.left()
+    assert navigation_margins.right() == page_margins.right()
 
 
 def test_main_window_show_message_does_not_create_status_bar(qtbot, default_settings_payload) -> None:
@@ -533,7 +566,7 @@ def test_main_window_applies_settings_without_closing(monkeypatch, qtbot, defaul
     assert window.windowTitle() == ("AudioMancer | Transforma cuvintele scrise intr-o experienta audio reala!")
     assert window._action_settings.text() == "Setari"
     assert window._action_tts_settings.text() == "Setari TTS"
-    assert window._sidebar.item(0).text() == "Acasa / Proiect"
+    assert window._sidebar.item(0).text() == "Proiect"
     assert window._settings_page._apply_button.text() == "Aplica"
     assert window._settings_page._ok_button.text() == "OK"
     assert QApplication.instance().font().pointSizeF() > starting_font_size

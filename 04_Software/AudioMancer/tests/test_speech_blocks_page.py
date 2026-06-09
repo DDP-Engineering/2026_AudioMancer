@@ -158,8 +158,8 @@ def test_speech_blocks_page_selected_audio_controls_emit_and_track_playback(qtbo
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-04
-    @version    0.2.3
+    @date       2026-06-09
+    @version    0.2.4
     """
     page = SpeechBlocksPage()
     qtbot.addWidget(page)
@@ -207,6 +207,8 @@ def test_speech_blocks_page_selected_audio_controls_emit_and_track_playback(qtbo
     )[0]
     assert generate_row == play_row
     assert page._chunk_actions_column_layout.contentsMargins().top() == 2
+    # The Chunk List frame caps at the action-button column height so their bottoms align.
+    assert page._chunk_group.maximumHeight() == page._chunk_actions_column.sizeHint().height()
 
     with qtbot.waitSignal(page.generate_audio_selected_requested) as generation_signal:
         page._generate_audio_button.click()
@@ -1189,7 +1191,6 @@ def test_speech_blocks_page_applies_translated_labels(qtbot) -> None:
     assert page._approve_all_button.text() == "Aproba Tot"
     assert page._approve_block_button.text() == "Aproba"
     assert page._chunk_group.title() == "Lista Segmentelor"
-    assert page._status_group.title() == "Stare Blocuri Vorbire"
 
 
 # END OF FILE

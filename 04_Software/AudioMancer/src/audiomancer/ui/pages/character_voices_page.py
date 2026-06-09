@@ -62,8 +62,8 @@ class CharacterVoicesPage(QWidget):
         @return     None.
         @exception  None
         @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-20
-        @version    1.1.2
+        @date       2026-06-09
+        @version    1.1.3
         """
         super().__init__(parent)
         self._project_active = False
@@ -186,8 +186,9 @@ class CharacterVoicesPage(QWidget):
         layout.addWidget(self._main_splitter, 1)
         self._apply_main_splitter_minimums()
 
-        self._status_group = QGroupBox("Character Voices Status", self)
+        self._status_group = QWidget(self)
         status_layout = QVBoxLayout(self._status_group)
+        status_layout.setContentsMargins(0, 0, 0, 0)
         self._status_edit = QPlainTextEdit(self)
         self._status_edit.setReadOnly(True)
         self._status_edit.setProperty(
@@ -195,8 +196,7 @@ class CharacterVoicesPage(QWidget):
             ui_state_service.CONTROL_TEXT_FONT_ROLE_VALUE,
         )
         status_layout.addWidget(self._status_edit)
-        self._status_group.setMinimumHeight(96)
-        self._status_group.setMaximumHeight(112)
+        self._status_group.setFixedHeight(ui_state_service.operator_status_pane_height(self._status_edit))
         layout.addWidget(self._status_group, 0)
 
         self.set_project_active(False)
@@ -485,8 +485,8 @@ class CharacterVoicesPage(QWidget):
         @return     None.
         @exception  None
         @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-20
-        @version    1.1.0
+        @date       2026-06-09
+        @version    1.1.1
         """
         self._ui_language = language
         self._title_label.setText(f"<h2>{ui_state_service.translate('character_voices.title', language)}</h2>")
@@ -501,7 +501,6 @@ class CharacterVoicesPage(QWidget):
         self._translated_language_group.setTitle(self._language_indicator_title("character_voices.translated_language"))
         self._assignment_mode_group.setTitle(ui_state_service.translate("character_voices.assignment_mode", language))
         self._voice_language_group.setTitle(ui_state_service.translate("character_voices.voice_language", language))
-        self._status_group.setTitle(ui_state_service.translate("character_voices.status_group", language))
         self._import_sample_button.setText(ui_state_service.translate("character_voices.import_sample", language))
         self._edit_prompt_button.setText(ui_state_service.translate("character_voices.edit_prompt", language))
         self._save_prompt_button.setText(ui_state_service.translate("character_voices.save_prompt", language))

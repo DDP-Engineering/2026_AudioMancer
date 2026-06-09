@@ -60,7 +60,6 @@ def test_characters_page_fields_are_read_only_by_default(qtbot) -> None:
     assert hasattr(page, "_summary_label") is False
     assert page._evidence_splitter.orientation() == Qt.Orientation.Vertical
     assert page._evidence_splitter.count() == 2
-    assert page._status_group.title() == "Character Discovery Status"
     assert page._status_edit.toPlainText() == "Completed."
 
 

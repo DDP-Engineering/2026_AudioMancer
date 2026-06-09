@@ -18,6 +18,7 @@
 
 # IMPORTS
 
+from audiomancer.services import ui_state_service
 from audiomancer.ui.pages.audio_blocks_page import AudioBlocksPage
 
 
@@ -102,8 +103,9 @@ def test_audio_blocks_page_renders_source_list_markers_and_selected_details(qtbo
     assert page._approval_status_label.text() == "Status: Pending"
     assert page._block_text_edit.toPlainText() == "Hello there."
     assert page._progress_bar.value() == 50
-    assert page._status_group.minimumHeight() == 96
-    assert page._status_group.maximumHeight() == 112
+    expected_status_height = ui_state_service.operator_status_pane_height(page._status_edit)
+    assert page._status_group.minimumHeight() == expected_status_height
+    assert page._status_group.maximumHeight() == expected_status_height
     assert page._approve_button.isEnabled() is True
     assert page._approve_button.text() == "Approve"
     assert page._character_count_edit.text() == "12 / 180"
@@ -295,7 +297,6 @@ def test_audio_blocks_page_applies_translated_labels_and_tracks_selected_row_act
     assert page._start_button.text() == "Porneste Generarea Audio"
     assert page._audiobook_playback_button.text() == "Reda Audiobook"
     assert page._blocks_group.title() == "Blocuri Vorbire"
-    assert page._status_group.title() == "Stare Blocuri Audio"
     assert page._approve_button.text() == "Dezaproba"
     assert page._approve_button.isEnabled() is True
     assert page._character_count_edit.text() == "11 / 120"

@@ -8,8 +8,6 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
-Add-Type -AssemblyName System.IO.Compression.FileSystem
-
 # Run each release step with a visible label so packaging failures identify the
 # stage that failed in the PowerShell output.
 function Invoke-Step {
@@ -37,12 +35,11 @@ function New-ZipArchiveFromDirectory {
         Remove-Item -LiteralPath $DestinationArchive -Force
     }
 
-    [System.IO.Compression.ZipFile]::CreateFromDirectory(
-        $SourceDirectory,
-        $DestinationArchive,
-        [System.IO.Compression.CompressionLevel]::Optimal,
-        $true
-    )
+    # Compress-Archive is an approved cmdlet that also works under PowerShell
+    # ConstrainedLanguage mode. Passing the staging directory itself (not its
+    # contents) keeps the base folder as the archive root, matching the previous
+    # CreateFromDirectory includeBaseDirectory behavior.
+    Compress-Archive -Path $SourceDirectory -DestinationPath $DestinationArchive -CompressionLevel Optimal -Force
 }
 
 # Copy settings into a delivery package without operator-local secrets or
@@ -104,7 +101,9 @@ function Copy-CleanSettingsFile {
         $settingsPayload.tts_runtime_active_model_id = $null
     }
     if ($settingsPayload.PSObject.Properties.Name -contains 'tts_runtime_device_diagnostics') {
-        $settingsPayload.tts_runtime_device_diagnostics = [pscustomobject]@{}
+        # Use a plain empty hashtable (serializes to {}) instead of a
+        # [pscustomobject] cast, which PowerShell ConstrainedLanguage mode blocks.
+        $settingsPayload.tts_runtime_device_diagnostics = @{}
     }
 
     $settingsPayload |
@@ -135,12 +134,12 @@ if (-not (Test-Path $changelogPath)) {
 # The archive filename is stable, but release notes still include the app
 # version read from pyproject.toml.
 $pyprojectContent = Get-Content $pyprojectPath -Raw
-$versionMatch = [regex]::Match($pyprojectContent, '(?m)^version = "([^"]+)"')
-if (-not $versionMatch.Success) {
+# Use the -match operator (ConstrainedLanguage-safe) instead of [regex]::Match.
+if (-not ($pyprojectContent -match '(?m)^version = "([^"]+)"')) {
     throw "Could not read project version from $pyprojectPath"
 }
 
-$appVersion = $versionMatch.Groups[1].Value
+$appVersion = $matches[1]
 $artifactBaseName = 'AudioMancer_Windows_x64'
 $archivePath = Join-Path $deliveryRoot "$artifactBaseName.zip"
 $stagingRoot = Join-Path $scriptRoot '.packaging_tmp'

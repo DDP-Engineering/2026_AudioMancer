@@ -12,8 +12,8 @@
 @details Verifies translated string lookup and application-wide text-scale
          changes used by the settings-backed runtime UI behavior.
 @author Eng. Dan Dumitru Pasare
-@date 2026-04-05
-@version 0.6.2
+@date 2026-06-09
+@version 0.7.0
 """
 
 # IMPORTS
@@ -94,7 +94,32 @@ def test_translate_returns_expected_english_and_romanian_strings() -> None:
     """
     assert ui_state_service.translate("toolbar.settings", "en") == "Settings"
     assert ui_state_service.translate("toolbar.settings", "ro") == "Setari"
-    assert ui_state_service.translate("sidebar.text_chunking", "ro") == "Segmentare Text"
+    assert ui_state_service.translate("sidebar.text_chunking", "ro") == "Segmentare"
+
+
+def test_operator_status_pane_height_scales_with_line_count(qtbot) -> None:
+    """
+    @brief      Verify the operator-status pane height follows the requested row count.
+    @details    Covers REQ-AUDIO-UX-032: the status pane uses a compact, font-aware
+                three-row height derived from the reference widget font metrics.
+    @param[in]  qtbot Qt test helper fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-09
+    @version    0.1.0
+    """
+    widget = QWidget()
+    qtbot.addWidget(widget)
+
+    line_height = widget.fontMetrics().lineSpacing()
+    three_rows = ui_state_service.operator_status_pane_height(widget, 3)
+
+    assert three_rows == int(line_height * 3 + 4 * 2 + 2 * 2)
+    assert three_rows < ui_state_service.operator_status_pane_height(widget, 5)
+    assert ui_state_service.operator_status_pane_height(widget, 0) == ui_state_service.operator_status_pane_height(
+        widget, 1
+    )
 
 
 def test_v2_selective_impact_strings_cover_supported_languages() -> None:

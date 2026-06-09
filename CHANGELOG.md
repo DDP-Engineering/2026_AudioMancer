@@ -10,6 +10,33 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [1.5.0] - 2026-06-09
+
+### Added
+
+- Added a shared `operator_status_pane_height` UI helper that sizes operator
+  status panes to a compact, font-aware text-row count.
+
+### Changed
+
+- Replaced the left-hand workflow navigation sidebar with a horizontal
+  navigation tab strip under the toolbar, using shortened page labels, so the
+  workflow pages occupy the full window width.
+- Aligned the navigation tab strip to the workflow pages' left/right margins so
+  its ends line up with the page content below it.
+- Reworked the operator status panes across all workflow pages into compact,
+  undecorated containers without a group-box title or frame, sized to a
+  font-aware three-row height to maximize the text and list editors.
+- Speech Blocks Chunk List frame height now matches the action-button column so
+  their bottom edges align.
+- Audio Blocks page removed the "Generated blocks" count label to give the
+  source and block panes more vertical space.
+- Audio Assembly Scene Mix Previews action buttons moved to the right of the
+  previews list and stacked vertically.
+- Project package metadata and `audiomancer.__version__` were updated to
+  `1.5.0`.
+- Offline English and Romanian help bundles were updated to version `1.5.0`.
+
 ## [1.4.2] - 2026-06-08
 
 ### Added

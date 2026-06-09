@@ -63,8 +63,8 @@ class TextCleanupPage(QWidget):
         @return     None.
         @exception  None
         @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-24
-        @version    0.7.3
+        @date       2026-06-09
+        @version    0.7.4
         """
         super().__init__(parent)
         self._project_active = False
@@ -142,8 +142,9 @@ class TextCleanupPage(QWidget):
         self._preview_splitter.setStretchFactor(1, 1)
         layout.addWidget(self._preview_splitter, 6)
 
-        status_group = QGroupBox("Cleanup Status", self)
+        status_group = QWidget(self)
         status_layout = QVBoxLayout(status_group)
+        status_layout.setContentsMargins(0, 0, 0, 0)
         self._status_edit = QPlainTextEdit(self)
         self._status_edit.setReadOnly(True)
         self._status_edit.setProperty(
@@ -151,8 +152,7 @@ class TextCleanupPage(QWidget):
             ui_state_service.CONTROL_TEXT_FONT_ROLE_VALUE,
         )
         status_layout.addWidget(self._status_edit)
-        status_group.setMinimumHeight(96)
-        status_group.setMaximumHeight(112)
+        status_group.setFixedHeight(ui_state_service.operator_status_pane_height(self._status_edit))
         layout.addWidget(status_group, 0)
 
         self._extracted_group = extracted_group
@@ -383,8 +383,8 @@ class TextCleanupPage(QWidget):
         @return     None.
         @exception  None
         @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-06
-        @version    0.5.1
+        @date       2026-06-09
+        @version    0.5.2
         """
         self._language = language
         self._title_label.setText(f"<h2>{ui_state_service.translate('text_cleanup.title', language)}</h2>")
@@ -396,7 +396,6 @@ class TextCleanupPage(QWidget):
         self._save_cleaned_button.setText(ui_state_service.translate("text_cleanup.save_cleaned", language))
         self._extracted_group.setTitle(ui_state_service.translate("text_cleanup.extracted_group", language))
         self._cleaned_group.setTitle(ui_state_service.translate("text_cleanup.cleaned_group", language))
-        self._status_group.setTitle(ui_state_service.translate("text_cleanup.status_group", language))
         if not self._has_ai_profiles:
             self._ai_profile_combo.setItemText(
                 0,

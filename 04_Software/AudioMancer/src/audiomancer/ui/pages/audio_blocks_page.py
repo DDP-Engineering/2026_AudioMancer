@@ -68,8 +68,8 @@ class AudioBlocksPage(QWidget):
         @return     None.
         @exception  None
         @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-23
-        @version    0.5.5
+        @date       2026-06-09
+        @version    0.5.7
         """
         super().__init__(parent)
         self._current_language = "en"
@@ -102,8 +102,6 @@ class AudioBlocksPage(QWidget):
         header_row.addWidget(self._audiobook_playback_button)
         layout.addLayout(header_row)
 
-        self._progress_label = QLabel("0/0")
-        layout.addWidget(self._progress_label)
         progress_row = QHBoxLayout()
         self._progress_bar = QProgressBar(self)
         self._progress_bar.setRange(0, 100)
@@ -180,8 +178,9 @@ class AudioBlocksPage(QWidget):
         layout.addWidget(self._main_splitter, 1)
         self._apply_main_splitter_minimums()
 
-        self._status_group = QGroupBox("Audio Blocks Status", self)
+        self._status_group = QWidget(self)
         status_layout = QVBoxLayout(self._status_group)
+        status_layout.setContentsMargins(0, 0, 0, 0)
         self._status_edit = QPlainTextEdit(self)
         self._status_edit.setReadOnly(True)
         self._status_edit.setProperty(
@@ -189,8 +188,7 @@ class AudioBlocksPage(QWidget):
             ui_state_service.CONTROL_TEXT_FONT_ROLE_VALUE,
         )
         status_layout.addWidget(self._status_edit)
-        self._status_group.setMinimumHeight(96)
-        self._status_group.setMaximumHeight(112)
+        self._status_group.setFixedHeight(ui_state_service.operator_status_pane_height(self._status_edit))
         layout.addWidget(self._status_group)
 
         self.apply_language(self._current_language)
@@ -285,8 +283,8 @@ class AudioBlocksPage(QWidget):
         @return     None.
         @exception  None
         @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-23
-        @version    0.4.1
+        @date       2026-06-09
+        @version    0.4.2
         """
         self._speech_blocks = speech_blocks_service.sort_speech_blocks(speech_blocks)
         self._stage_status = stage_status
@@ -301,12 +299,6 @@ class AudioBlocksPage(QWidget):
         if self._source_text_edit.toPlainText() != full_source_text:
             self._source_text_edit.setPlainText(full_source_text)
         self._progress_bar.setValue(max(0, min(int(progress_percent), 100)))
-        self._progress_label.setText(
-            ui_state_service.translate("audio_blocks.progress_label", self._current_language).format(
-                progress_current=progress_current,
-                progress_total=progress_total,
-            )
-        )
         self._status_edit.setPlainText("\n".join([*notes, "", *status_lines]).strip())
         previously_selected_id = self._current_block_id
         self._speech_block_list.setUpdatesEnabled(False)
@@ -447,8 +439,8 @@ class AudioBlocksPage(QWidget):
         @return     None.
         @exception  None
         @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-23
-        @version    0.1.0
+        @date       2026-06-09
+        @version    0.1.1
         """
         self._current_language = language
         self._title_label.setText(f"<h2>{ui_state_service.translate('audio_blocks.title', language)}</h2>")
@@ -467,7 +459,6 @@ class AudioBlocksPage(QWidget):
             ui_state_service.translate(self._selected_playback_label_key(), language)
         )
         self._approve_button.setText(ui_state_service.translate(self._approval_button_label_key(), language))
-        self._status_group.setTitle(ui_state_service.translate("audio_blocks.status_group", language))
         current_row = self._speech_block_list.currentRow()
         if current_row >= 0:
             self._show_selected_block(current_row)

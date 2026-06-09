@@ -14,7 +14,7 @@
          theme runtime adapter.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 0.55.2
+@version 0.57.0
 """
 
 # ruff: noqa: E501
@@ -183,13 +183,13 @@ _UI_STRINGS = {
         "status.theme_exported": "Theme exported.",
         "status.theme_deleted": "Theme deleted.",
         "status.operation_cancelled": "Operation cancelled.",
-        "sidebar.home": "Home / Project",
-        "sidebar.text_cleanup": "Text Cleanup",
-        "sidebar.text_chunking": "Text Chunking",
-        "sidebar.ai_translation": "AI Translation",
+        "sidebar.home": "Project",
+        "sidebar.text_cleanup": "Cleanup",
+        "sidebar.text_chunking": "Chunking",
+        "sidebar.ai_translation": "Translation",
         "sidebar.characters": "Characters",
-        "sidebar.narator_voice": "Narator Voice",
-        "sidebar.character_voices": "Character Voices",
+        "sidebar.narator_voice": "Narator",
+        "sidebar.character_voices": "Voices",
         "sidebar.speech_blocks": "Speech Blocks",
         "sidebar.audio_blocks": "Audio Blocks",
         "sidebar.audio_assembly": "Audio Assembly",
@@ -1209,13 +1209,13 @@ _UI_STRINGS = {
         "status.theme_exported": "Tema a fost exportata.",
         "status.theme_deleted": "Tema a fost stearsa.",
         "status.operation_cancelled": "Operatia a fost anulata.",
-        "sidebar.home": "Acasa / Proiect",
-        "sidebar.text_cleanup": "Curatare Text",
-        "sidebar.text_chunking": "Segmentare Text",
-        "sidebar.ai_translation": "Traducere AI",
+        "sidebar.home": "Proiect",
+        "sidebar.text_cleanup": "Curatare",
+        "sidebar.text_chunking": "Segmentare",
+        "sidebar.ai_translation": "Traducere",
         "sidebar.characters": "Personaje",
-        "sidebar.narator_voice": "Voce Narator",
-        "sidebar.character_voices": "Voci Personaje",
+        "sidebar.narator_voice": "Narator",
+        "sidebar.character_voices": "Voci",
         "sidebar.speech_blocks": "Blocuri Vorbire",
         "sidebar.audio_blocks": "Blocuri Audio",
         "sidebar.audio_assembly": "Asamblare Audio",
@@ -2170,6 +2170,27 @@ def current_language_from_settings(
     if not isinstance(settings_payload, dict):
         return _DEFAULT_LANGUAGE
     return str(settings_payload.get("language", _DEFAULT_LANGUAGE))
+
+
+def operator_status_pane_height(reference_widget: QWidget, line_count: int = 3) -> int:
+    """
+    @brief      Compute the fixed pixel height for an operator-status pane.
+    @details    Sizes the pane to show `line_count` text rows using the reference
+                widget font metrics plus the default plain-text document margin and
+                frame, so the status pane stays compact and follows the active UI
+                font scale instead of a hard-coded pixel band.
+    @param[in]  reference_widget Widget whose font metrics drive the row height.
+    @param[in]  line_count Number of text rows the pane should display.
+    @return     Fixed pane height in pixels.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-09
+    @version    0.1.0
+    """
+    line_height = reference_widget.fontMetrics().lineSpacing()
+    document_margin = 4
+    frame = 2
+    return int(line_height * max(line_count, 1) + document_margin * 2 + frame * 2)
 
 
 # HELPER FUNCTIONS

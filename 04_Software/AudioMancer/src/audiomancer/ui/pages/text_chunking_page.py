@@ -65,8 +65,8 @@ class TextChunkingPage(QWidget):
         @return     None.
         @exception  None
         @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-24
-        @version    0.5.3
+        @date       2026-06-09
+        @version    0.5.4
         """
         super().__init__(parent)
         self._chunks: list[dict[str, object]] = []
@@ -166,8 +166,9 @@ class TextChunkingPage(QWidget):
         self._preview_splitter.setStretchFactor(1, 2)
         layout.addWidget(self._preview_splitter, 7)
 
-        status_group = QGroupBox("Chunking Status", self)
+        status_group = QWidget(self)
         status_layout = QVBoxLayout(status_group)
+        status_layout.setContentsMargins(0, 0, 0, 0)
         self._status_edit = QPlainTextEdit(self)
         self._status_edit.setReadOnly(True)
         self._status_edit.setProperty(
@@ -179,8 +180,7 @@ class TextChunkingPage(QWidget):
             "Deterministic and AI-assisted chunk generation will populate the chunk list and selected preview."
         )
         status_layout.addWidget(self._status_edit)
-        status_group.setMinimumHeight(96)
-        status_group.setMaximumHeight(112)
+        status_group.setFixedHeight(ui_state_service.operator_status_pane_height(self._status_edit))
         layout.addWidget(status_group, 0)
         self._cleaned_group = cleaned_group
         self._chunk_list_group = chunk_list_group
@@ -467,8 +467,8 @@ class TextChunkingPage(QWidget):
         @return     None.
         @exception  None
         @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-05
-        @version    0.3.1
+        @date       2026-06-09
+        @version    0.3.2
         """
         self._language = language
         self._title_label.setText(f"<h2>{ui_state_service.translate('text_chunking.title', language)}</h2>")
@@ -483,7 +483,6 @@ class TextChunkingPage(QWidget):
         self._delete_chunk_button.setText(ui_state_service.translate("text_chunking.delete_chunk", language))
         self._edit_chunk_button.setText(ui_state_service.translate("text_chunking.edit_chunk", language))
         self._save_chunk_button.setText(ui_state_service.translate("text_chunking.save_chunk", language))
-        self._status_group.setTitle(ui_state_service.translate("text_chunking.status_group", language))
         if not self._has_ai_profiles:
             self._profile_combo.setItemText(
                 0,

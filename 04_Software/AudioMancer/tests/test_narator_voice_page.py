@@ -21,6 +21,7 @@
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QLineEdit
 
+from audiomancer.services import ui_state_service
 from audiomancer.ui.pages.narator_voice_page import NaratorVoicePage
 
 
@@ -111,8 +112,9 @@ def test_narator_voice_page_prompt_and_preview_editors_expose_scrollbars_and_lim
     assert page._designer_group.maximumHeight() > 1000
     assert page._preview_text_edit.maximumHeight() > 1000
     assert page._preview_group.maximumHeight() > 1000
-    assert page._status_group.minimumHeight() == 96
-    assert page._status_group.maximumHeight() == 112
+    expected_status_height = ui_state_service.operator_status_pane_height(page._status_edit)
+    assert page._status_group.minimumHeight() == expected_status_height
+    assert page._status_group.maximumHeight() == expected_status_height
     assert page._preview_text_edit.toPlainText() == "abcde"
 
     page.begin_edit_mode()

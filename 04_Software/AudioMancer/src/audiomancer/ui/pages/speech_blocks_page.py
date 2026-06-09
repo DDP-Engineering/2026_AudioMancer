@@ -89,8 +89,8 @@ class SpeechBlocksPage(QWidget):
         @return     None.
         @exception  None
         @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-24
-        @version    0.7.5
+        @date       2026-06-09
+        @version    0.7.7
         """
         super().__init__(parent)
         self._current_language = "en"
@@ -182,8 +182,11 @@ class SpeechBlocksPage(QWidget):
         self._apply_chunk_action_top_margin()
         chunk_row.addWidget(self._chunk_group, 1)
         chunk_row.addWidget(self._chunk_actions_column)
-        self._chunk_group.setMinimumHeight(94)
-        self._chunk_group.setMaximumHeight(130)
+        # Cap the Chunk List frame height at the action-button column height so the
+        # list grows to align its bottom edge with the buttons instead of leaving a gap.
+        chunk_actions_height = self._chunk_actions_column.sizeHint().height()
+        self._chunk_group.setMinimumHeight(min(94, chunk_actions_height))
+        self._chunk_group.setMaximumHeight(chunk_actions_height)
         body_content_layout.addLayout(chunk_row)
 
         self._lower_splitter = QSplitter(self)
@@ -267,8 +270,9 @@ class SpeechBlocksPage(QWidget):
         layout.addLayout(body_content_layout, 1)
         self._apply_lower_splitter_minimums()
 
-        self._status_group = QGroupBox("Speech Blocks Status", self)
+        self._status_group = QWidget(self)
         status_layout = QVBoxLayout(self._status_group)
+        status_layout.setContentsMargins(0, 0, 0, 0)
         self._status_edit = QPlainTextEdit(self)
         self._status_edit.setReadOnly(True)
         self._status_edit.setProperty(
@@ -276,8 +280,7 @@ class SpeechBlocksPage(QWidget):
             ui_state_service.CONTROL_TEXT_FONT_ROLE_VALUE,
         )
         status_layout.addWidget(self._status_edit)
-        self._status_group.setMinimumHeight(96)
-        self._status_group.setMaximumHeight(112)
+        self._status_group.setFixedHeight(ui_state_service.operator_status_pane_height(self._status_edit))
         layout.addWidget(self._status_group)
 
         self.apply_language(self._current_language)
@@ -713,8 +716,8 @@ class SpeechBlocksPage(QWidget):
         @return     None.
         @exception  None
         @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-24
-        @version    0.4.3
+        @date       2026-06-09
+        @version    0.4.4
         """
         self._current_language = language
         self._title_label.setText(f"<h2>{ui_state_service.translate('speech_blocks.title', language)}</h2>")
@@ -744,7 +747,6 @@ class SpeechBlocksPage(QWidget):
         self._selected_audio_playback_button.setText(
             ui_state_service.translate(self._selected_audio_playback_label_key(), language)
         )
-        self._status_group.setTitle(ui_state_service.translate("speech_blocks.status_group", language))
         if self._profile_combo.count() > 0 and self._profile_combo.itemData(0) in (None, ""):
             self._profile_combo.setItemText(0, ui_state_service.translate("ai_settings.none", language))
         self._apply_chunk_action_top_margin()

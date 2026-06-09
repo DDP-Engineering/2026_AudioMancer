@@ -20,8 +20,9 @@
 
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QTextCursor
-from PySide6.QtWidgets import QMessageBox
+from PySide6.QtWidgets import QGroupBox, QMessageBox, QWidget
 
+from audiomancer.services import ui_state_service
 from audiomancer.ui.pages.text_cleanup_page import TextCleanupPage
 
 
@@ -82,8 +83,8 @@ def test_text_cleanup_page_updates_previews_and_status(qtbot) -> None:
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.3.0
+    @date       2026-06-09
+    @version    0.4.0
     """
     page = TextCleanupPage()
     qtbot.addWidget(page)
@@ -101,7 +102,17 @@ def test_text_cleanup_page_updates_previews_and_status(qtbot) -> None:
     assert page._extracted_text_edit.toPlainText() == "Raw paragraph"
     assert page._cleaned_text_edit.toPlainText() == "Clean paragraph"
     assert page._status_edit.toPlainText() == "Warning A\nWarning B"
-    assert page._status_group.maximumHeight() == 112
+    # Status pane is an undecorated, flush, three-row container: no group-box title
+    # or frame, a fixed font-aware three-row height, and its text edit fills the band
+    # with zero internal margins (REQ-AUDIO-UX-032).
+    expected_status_height = ui_state_service.operator_status_pane_height(page._status_edit)
+    assert page._status_group.minimumHeight() == expected_status_height
+    assert page._status_group.maximumHeight() == expected_status_height
+    assert expected_status_height == ui_state_service.operator_status_pane_height(page._status_edit, 3)
+    assert type(page._status_group) is QWidget
+    assert not isinstance(page._status_group, QGroupBox)
+    assert page._status_group.layout().contentsMargins().bottom() == 0
+    assert page._status_group.layout().contentsMargins().top() == 0
 
 
 def test_text_cleanup_page_allows_cleaned_text_edit_and_save(monkeypatch, qtbot) -> None:
