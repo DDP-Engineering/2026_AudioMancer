@@ -52,6 +52,22 @@ documentation header in the same change.
 - Keep repository instructions in `AGENTS.md` and broad style rules in
   documentation files.
 
+## Requirements Traceability Rules
+
+- Keep active requirements under `0_Planning/Requirements/`, using one
+  Markdown register file per requirement type.
+- When behavior changes, update the relevant requirement file in the same
+  change.
+- Preserve `Created On` for existing requirements. Set it only when a new
+  requirement ID is introduced.
+- Update `Last Updated` only when that requirement row is materially changed.
+- Link each active requirement to at least one automated test or an explicit
+  manual verification method.
+- When adding or changing tests, mention relevant requirement IDs in the test
+  docstring when practical.
+- When requirements are added or updated, state the changed requirement IDs in
+  the final summary.
+
 ## GitHub Delivery Rules
 
 - Do not commit generated delivery archives, such as Windows or Linux zip files,

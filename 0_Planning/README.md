@@ -10,6 +10,8 @@ Planning notes, architecture drafts, and project decisions.
 
 ## Current Documents
 
+- `Requirements/` contains the active requirements registers and traceability
+  links to automated tests or manual verification.
 - `Overview.md` summarizes the intended product workflow and the current
   implementation direction.
 - `OpenAI TTS Provider Integration.md` tracks the planned online TTS provider
