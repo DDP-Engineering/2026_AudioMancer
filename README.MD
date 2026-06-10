@@ -48,6 +48,8 @@ chunks, voices, speech blocks, audio blocks, or assembly settings change.
 Runtime diagnostics for generation workflows are written through the shared
 logging service so VoiceWeaver calls, Scene Ambience generation, and long
 operation checkpoints can be reviewed after a run.
+Long text-chunking runs keep resumable checkpoints and atomic project artifacts
+without changing the completed chunk output.
 
 ## Repository Layout
 

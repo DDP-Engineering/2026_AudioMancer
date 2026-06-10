@@ -14,7 +14,7 @@
          correctly.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-24
-@version 0.4.1
+@version 0.4.2
 """
 
 # IMPORTS
@@ -362,13 +362,13 @@ def test_text_chunking_ui_controller_ai_chunk_request_uses_selected_profile_and_
     assert chunking_call_kwargs[0]["additional_chunking_instructions"] == "Keep prologues separate."
 
 
-def test_text_chunking_ui_controller_ai_chunk_resume_skips_confirmation(
+def test_text_chunking_ui_controller_ai_chunk_cancelled_resume_skips_confirmation(
     monkeypatch,
     qtbot,
     tmp_path,
 ) -> None:
     """
-    @brief      Verify interrupted AI chunking resumes without rerun confirmation.
+    @brief      Verify REQ-AUDIO-FUNC-001 cancelled AI chunking resumes without rerun confirmation.
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @param[in]  qtbot Qt test helper fixture.
     @param[in]  tmp_path Pytest temporary directory fixture.
@@ -376,7 +376,7 @@ def test_text_chunking_ui_controller_ai_chunk_resume_skips_confirmation(
     @exception  None.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-07
-    @version    0.1.0
+    @version    0.2.0
     """
     project_root, manifest = project_workspace_service.create_project(
         "ControllerAiChunkResumeProject",
@@ -392,7 +392,7 @@ def test_text_chunking_ui_controller_ai_chunk_resume_skips_confirmation(
     manifest["operations"]["cleanup"]["status"] = "completed"
     manifest["operations"]["cleanup"]["output_paths"] = [config.CLEANED_TEXT_FILE_NAME]
     manifest["operations"]["chunking"] = {
-        "status": "running",
+        "status": "cancelled",
         "mode": "ai_assisted",
         "metadata": {
             "ai_profile_id": "profile_1",

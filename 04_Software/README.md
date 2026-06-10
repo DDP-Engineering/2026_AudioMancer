@@ -25,4 +25,6 @@ Implementation sources and runnable software artifacts.
   Blocks, generated through the sound-prompt runtime path when enabled, and
   optionally included in final WAV assembly.
   Runtime generation diagnostics are logged through the shared application
-  logging service and workflow artifacts remain project-local.
+  logging service and workflow artifacts remain project-local. Text chunking
+  keeps deterministic and AI-assisted checkpoint artifacts resumable and uses
+  atomic JSON persistence for chunking state, reports, and chunk output.

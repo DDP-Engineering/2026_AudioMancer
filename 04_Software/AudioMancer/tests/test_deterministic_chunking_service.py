@@ -13,7 +13,7 @@
          counting, and resumable cancellation state for deterministic chunking.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-11
-@version 0.2.1
+@version 0.3.0
 """
 
 # IMPORTS
@@ -200,13 +200,13 @@ def test_chunking_falls_back_when_cleanup_metadata_is_missing(tmp_path) -> None:
 
 def test_chunking_persists_resumable_state_after_cancellation(tmp_path) -> None:
     """
-    @brief      Verify one cancelled chunking run leaves resumable state on disk.
+    @brief      Verify REQ-AUDIO-FUNC-017 cancelled chunking leaves resumable terminal state on disk.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-07
-    @version    0.1.0
+    @version    0.2.0
     """
     project_root, manifest = project_workspace_service.create_project("ChunkCancel", tmp_path)
     source_path = project_root / "story.txt"
@@ -246,9 +246,93 @@ def test_chunking_persists_resumable_state_after_cancellation(tmp_path) -> None:
         )
 
     state_payload = json.loads((project_root / config.CHUNKING_STATE_FILE_NAME).read_text(encoding="utf-8"))
-    assert state_payload["status"] == "running"
+    assert state_payload["status"] == "cancelled"
     assert state_payload["progress_current"] < state_payload["progress_total"]
     assert state_payload["resume_checkpoint"] is not None
+
+
+def test_chunking_batches_checkpoints_without_full_chapter_rescans(tmp_path, monkeypatch) -> None:
+    """
+    @brief      Verify REQ-AUDIO-NFR-015 deterministic chunking avoids per-paragraph persistence and full rescans.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-10
+    @version    0.1.0
+    """
+    project_root, manifest = project_workspace_service.create_project("ChunkBatching", tmp_path)
+    source_path = project_root / "story.txt"
+    source_path.write_text("placeholder", encoding="utf-8")
+    manifest["source_document"] = {
+        "original_name": "story.txt",
+        "stored_relative_path": "story.txt",
+        "file_type": "txt",
+        "imported_at": "2026-06-10T12:00:00+00:00",
+        "size_bytes": source_path.stat().st_size,
+    }
+    manifest["operations"]["cleanup"]["status"] = "completed"
+    (project_root / config.CLEANED_TEXT_FILE_NAME).write_text(
+        "\n\n".join(f"Paragraph {index}." for index in range(1, 7)) + "\n",
+        encoding="utf-8",
+    )
+    chunk_write_count = {"value": 0}
+    original_write_chunk_payload = deterministic_chunking_service._write_chunk_payload
+
+    def _counting_write_chunk_payload(output_path, chunks) -> None:
+        """
+        @brief      Count chunk-artifact writes while preserving real persistence.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-06-10
+        @version    0.1.0
+        """
+        chunk_write_count["value"] += 1
+        original_write_chunk_payload(output_path, chunks)
+
+    def _unexpected_full_chapter_scan(_chunks):
+        """
+        @brief      Fail when deterministic chunking falls back to full chapter rescans.
+        @return     None.
+        @exception  AssertionError Always raised.
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-06-10
+        @version    0.1.0
+        """
+        raise AssertionError("deterministic chunking should use incremental chapter counts")
+
+    monkeypatch.setattr(deterministic_chunking_service, "_write_chunk_payload", _counting_write_chunk_payload)
+    monkeypatch.setattr(deterministic_chunking_service, "_chapter_count_from_chunks", _unexpected_full_chapter_scan)
+
+    report_payload = deterministic_chunking_service.chunk_text(project_root, manifest)
+
+    assert report_payload["chunk_count"] == 6
+    assert chunk_write_count["value"] == 1
+
+
+def test_incremental_chapter_count_matches_full_scan() -> None:
+    """
+    @brief      Verify REQ-AUDIO-NFR-015 incremental chapter counting preserves full-scan semantics.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-10
+    @version    0.1.0
+    """
+    chunks = [
+        {"text": "Chapter I\nOpening."},
+        {"text": "Chapter I\nContinued."},
+        {"text": "Paragraph."},
+        {"text": "Scene 2\nA change."},
+        {"text": "II"},
+    ]
+
+    incremental_count, last_label = deterministic_chunking_service._chapter_count_state_from_chunks(chunks)
+
+    assert incremental_count == deterministic_chunking_service._chapter_count_from_chunks(chunks)
+    assert last_label == "II"
 
 
 def test_chunking_resumes_after_interruption(tmp_path) -> None:
@@ -326,6 +410,22 @@ def test_chunking_resumes_after_interruption(tmp_path) -> None:
     assert report_payload["chunk_count"] == 2
     assert len(chunks) == 2
     assert chunks[1]["chunk_id"] == "chunk-0002"
+
+
+def test_load_chunks_returns_empty_for_malformed_artifact(tmp_path) -> None:
+    """
+    @brief      Verify REQ-AUDIO-FUNC-017 malformed chunk artifacts degrade to an empty chunk list.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-10
+    @version    0.1.0
+    """
+    project_root, _manifest = project_workspace_service.create_project("ChunkMalformed", tmp_path)
+    (project_root / config.CHUNK_ARTIFACT_FILE_NAME).write_text("{not-json", encoding="utf-8")
+
+    assert deterministic_chunking_service.load_chunks(project_root) == []
 
 
 def test_chunking_rejects_empty_cleaned_text(tmp_path) -> None:

@@ -148,6 +148,8 @@ The chunking stage must:
 - preserve ordering and source traceability
 - support deterministic chunking and AI-assisted chunking
 - keep chunk metadata explicit and reviewable
+- keep long chunking runs resumable through bounded checkpoints and atomic
+  artifact persistence
 
 Chunks are the main working unit for later translation, character analysis, and
 narration preparation.

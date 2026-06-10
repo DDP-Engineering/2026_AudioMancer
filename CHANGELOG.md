@@ -10,6 +10,23 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [1.5.3] - 2026-06-10
+
+### Changed
+
+- Improved deterministic and AI-assisted text chunking persistence so large
+  runs avoid redundant chunk rewrites and full chapter rescans while keeping
+  completed chunk artifacts unchanged.
+- Project package metadata and `audiomancer.__version__` were updated to
+  `1.5.3`.
+- Offline English and Romanian help bundles were updated to version `1.5.3`.
+
+### Fixed
+
+- Chunking cancellation, failure, and malformed JSON recovery now persist
+  resumable terminal state and use atomic JSON writes for chunking artifacts,
+  reports, and state files.
+
 ## [1.5.2] - 2026-06-10
 
 ### Fixed
