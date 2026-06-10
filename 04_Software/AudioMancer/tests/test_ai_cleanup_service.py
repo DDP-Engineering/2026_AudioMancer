@@ -14,7 +14,7 @@
          persists resumable state, and creates one AI transaction log file.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-11
-@version 0.4.3
+@version 0.4.4
 """
 
 # IMPORTS
@@ -52,8 +52,8 @@ def test_ai_cleanup_writes_cleanup_artifacts_and_log(
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-02
-    @version    0.2.0
+    @date       2026-06-09
+    @version    0.2.1
     """
     project_root, manifest = mock_extracted_project
 
@@ -98,7 +98,7 @@ def test_ai_cleanup_writes_cleanup_artifacts_and_log(
     assert (cleanup_root / config.CLEANUP_REPORT_FILE_NAME).is_file()
     assert (cleanup_root / config.CLEANUP_STATE_FILE_NAME).is_file()
     assert report_payload["cleanup_mode"] == "ai_assisted"
-    assert report_payload["cleaned_text_metadata_relative_path"] == config.CLEANED_TEXT_METADATA_FILE_NAME
+    assert "cleaned_text_metadata_relative_path" not in report_payload
     assert report_payload["ai_profile_id"] == "profile_1"
     assert report_payload["model_settings"]["model_name"] == "qwen3-8b"
     assert report_payload["model_settings"]["temperature"] == 0.2

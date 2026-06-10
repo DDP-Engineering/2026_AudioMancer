@@ -10,6 +10,25 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [1.5.1] - 2026-06-10
+
+### Changed
+
+- Restored the fixed-width vertical workflow-navigation sidebar on the left of
+  the page stack with the original full page labels, replacing the horizontal
+  top navigation tab strip introduced in `1.5.0`. The compact undecorated
+  three-row operator status panes and the other `1.5.0` page-layout
+  improvements (Speech Blocks chunk-list alignment, Audio Blocks label removal,
+  Audio Assembly Scene Mix button column) are kept; page content scales back
+  proportionally through the existing stretch factors and dynamic splitter
+  minimum guardrails.
+- Narator Voice `Generate Sample` no longer carries an inflated fixed minimum
+  width, so it shrinks with the other action-row buttons when the splitter
+  narrows the editor pane.
+- Project package metadata and `audiomancer.__version__` were updated to
+  `1.5.1`.
+- Offline English and Romanian help bundles were updated to version `1.5.1`.
+
 ## [1.5.0] - 2026-06-09
 
 ### Added

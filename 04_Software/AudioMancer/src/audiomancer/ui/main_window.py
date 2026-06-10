@@ -123,13 +123,13 @@ class MainWindow(QMainWindow):
     """
 
     PAGE_ORDER = (
-        ("home", "Project"),
-        ("text_cleanup", "Cleanup"),
-        ("text_chunking", "Chunking"),
-        ("ai_translation", "Translation"),
+        ("home", "Home / Project"),
+        ("text_cleanup", "Text Cleanup"),
+        ("text_chunking", "Text Chunking"),
+        ("ai_translation", "AI Translation"),
         ("characters", "Characters"),
-        ("narator_voice", "Narator"),
-        ("character_voices", "Voices"),
+        ("narator_voice", "Narator Voice"),
+        ("character_voices", "Character Voices"),
         ("speech_blocks", "Speech Blocks"),
         ("audio_blocks", "Audio Blocks"),
         ("audio_assembly", "Audio Assembly"),
@@ -147,8 +147,8 @@ class MainWindow(QMainWindow):
         @return     None.
         @exception  None
         @author     Eng. Dan Dumitru Pasare
-        @date       2026-06-09
-        @version    0.21.0
+        @date       2026-06-10
+        @version    0.22.0
         """
         super().__init__(parent)
         self.setWindowTitle(misc_ui_controller.build_window_title())
@@ -222,14 +222,8 @@ class MainWindow(QMainWindow):
         self._build_dialogs()
 
         central_widget = QWidget(self)
-        central_layout = QVBoxLayout(central_widget)
-        # Inset the navigation tab strip by the same left/right margin the workflow
-        # pages use so its ends align with the page content below it.
-        page_margins = self._text_cleanup_page.layout().contentsMargins()
-        navigation_row = QHBoxLayout()
-        navigation_row.setContentsMargins(page_margins.left(), 0, page_margins.right(), 0)
-        navigation_row.addWidget(self._sidebar)
-        central_layout.addLayout(navigation_row)
+        central_layout = QHBoxLayout(central_widget)
+        central_layout.addWidget(self._sidebar)
         central_layout.addWidget(self._stack, 1)
         self.setCentralWidget(central_widget)
 

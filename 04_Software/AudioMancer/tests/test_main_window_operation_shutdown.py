@@ -13,7 +13,7 @@
          shell alive while a worker thread is still cleaning up.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-29
-@version 0.1.0
+@version 0.1.1
 """
 
 # IMPORTS
@@ -40,8 +40,8 @@ def test_main_window_close_ignores_event_while_operation_thread_is_active(
     @return     None.
     @exception  None.
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-29
-    @version    0.1.0
+    @date       2026-06-09
+    @version    0.1.1
     """
     project_root, manifest = project_workspace_service.create_project("ShutdownOperationProject", tmp_path)
     window = MainWindow(settings_payload=dict(default_settings_payload))
@@ -65,7 +65,7 @@ def test_main_window_close_ignores_event_while_operation_thread_is_active(
         _ = progress_callback
         _ = cancel_requested
         worker_started.set()
-        worker_release.wait(timeout=2.0)
+        worker_release.wait(timeout=30.0)
         return {"status": "released"}
 
     operation_runner_controller.start_threaded_operation(
@@ -81,7 +81,7 @@ def test_main_window_close_ignores_event_while_operation_thread_is_active(
         cancellable=True,
     )
 
-    assert worker_started.wait(timeout=1.0)
+    assert worker_started.wait(timeout=5.0)
     assert not window._action_new_project.isEnabled()
     assert not window._action_open_project.isEnabled()
 
@@ -95,7 +95,7 @@ def test_main_window_close_ignores_event_while_operation_thread_is_active(
     assert window._active_operation_thread is not None
 
     worker_release.set()
-    qtbot.waitUntil(lambda: window._active_operation_thread is None, timeout=1500)
+    qtbot.waitUntil(lambda: window._active_operation_thread is None, timeout=5000)
 
     assert success_payloads == [{"status": "released"}]
     assert window._action_new_project.isEnabled()

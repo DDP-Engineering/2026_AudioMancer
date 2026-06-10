@@ -13,7 +13,7 @@
          bounded approval navigation, and selected-row action enablement.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-23
-@version 0.6.5
+@version 0.6.6
 """
 
 # IMPORTS
@@ -195,8 +195,8 @@ def test_audio_blocks_page_places_scene_ambience_selector_on_progress_row(qtbot)
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-20
-    @version    0.1.3
+    @date       2026-06-09
+    @version    0.1.4
     """
     page = AudioBlocksPage()
     qtbot.addWidget(page)
@@ -222,11 +222,14 @@ def test_audio_blocks_page_places_scene_ambience_selector_on_progress_row(qtbot)
         can_approve_selected=False,
         scene_ambience_audio_enabled=True,
     )
+    page.layout().activate()
     qtbot.wait(0)
 
     assert page._progress_bar.minimumWidth() >= 520
     assert page._scene_ambience_audio_combo.minimumWidth() >= 230
-    assert abs(page._scene_ambience_audio_combo.geometry().top() - page._progress_bar.geometry().top()) <= 1
+    assert (
+        abs(page._scene_ambience_audio_combo.geometry().center().y() - page._progress_bar.geometry().center().y()) <= 1
+    )
     assert page._scene_ambience_audio_combo.geometry().left() > page._progress_bar.geometry().right()
     assert page._scene_ambience_audio_combo.geometry().left() - page._progress_bar.geometry().right() <= 12
     assert page._scene_ambience_audio_combo.geometry().right() >= page.width() - 24

@@ -9,11 +9,11 @@
 """
 @file test_main_window_lifecycle.py
 @brief Qt window tests for the copied AudioMancer main-window shell.
-@details Validates that the DDP_Audiomancer-style toolbar, navigation strip, and
-         stacked pages are created without workflow functionality.
+@details Validates that the DDP_Audiomancer-style toolbar, navigation sidebar,
+         and stacked pages are created without workflow functionality.
 @author Eng. Dan Dumitru Pasare
-@date 2026-06-09
-@version 1.8.0
+@date 2026-06-10
+@version 1.9.0
 """
 
 # IMPORTS
@@ -24,6 +24,7 @@ from PySide6.QtWidgets import (
     QApplication,
     QDialog,
     QGroupBox,
+    QHBoxLayout,
     QLabel,
     QListView,
     QListWidget,
@@ -32,7 +33,6 @@ from PySide6.QtWidgets import (
     QStackedWidget,
     QStatusBar,
     QToolBar,
-    QVBoxLayout,
 )
 
 from audiomancer import config
@@ -56,8 +56,8 @@ def test_main_window_can_be_created(qtbot, default_settings_payload) -> None:
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.4.4
+    @date       2026-06-09
+    @version    0.4.5
     """
     window = MainWindow(
         settings_payload={
@@ -82,14 +82,14 @@ def test_main_window_can_be_created(qtbot, default_settings_payload) -> None:
     assert window._settings_dialog.height() <= main_window_module.WINDOW_HEIGHT
     assert any(group_box.title() == "Project Summary" for group_box in window.findChildren(QGroupBox))
     assert any(group_box.title() == "Workflow Progress" for group_box in window.findChildren(QGroupBox))
-    assert any(group_box.title() == "Narator Voice Profiles" for group_box in window.findChildren(QGroupBox))
+    assert any(group_box.title() == "Narator Voices" for group_box in window.findChildren(QGroupBox))
     assert any(group_box.title() == "Voice Designer Prompt" for group_box in window.findChildren(QGroupBox))
     assert any(button.text() == "Deterministic Cleanup" for button in window.findChildren(QPushButton))
     assert any(button.text() == "Deterministic Chunking" for button in window.findChildren(QPushButton))
     assert any(button.text() == "Start Translation" for button in window.findChildren(QPushButton))
     assert any(button.text() == "Start Discovery" for button in window.findChildren(QPushButton))
     assert any(button.text() == "Preview" for button in window.findChildren(QPushButton))
-    assert any(button.text() == "Delete Profile" for button in window.findChildren(QPushButton))
+    assert any(button.text() == "Delete" for button in window.findChildren(QPushButton))
     assert any(button.text() == "Save" for button in window.findChildren(QPushButton))
     assert any(button.text() == "OK" for button in window.findChildren(QPushButton))
     assert window._tts_settings_page._save_button.text() == "Save"
@@ -103,35 +103,30 @@ def test_main_window_can_be_created(qtbot, default_settings_payload) -> None:
     assert window._operation_progress_dialog is None
 
 
-def test_main_window_navigation_is_a_horizontal_top_strip(qtbot, default_settings_payload) -> None:
+def test_main_window_navigation_is_a_left_vertical_sidebar(qtbot, default_settings_payload) -> None:
     """
-    @brief      Verify workflow navigation renders as a horizontal strip above the page stack.
-    @details    Covers REQ-AUDIO-UX-032: navigation tabs sit under the toolbar,
-                share the workflow-page left/right margins so their ends align with
-                the page content, and the page stack takes the remaining space.
+    @brief      Verify workflow navigation renders as a fixed-width vertical left sidebar.
+    @details    Covers REQ-AUDIO-UX-032: the sidebar list sits left of the page
+                stack with a fixed 160 px width and vertical top-to-bottom flow,
+                and the page stack takes the remaining window space.
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-09
-    @version    0.2.0
+    @date       2026-06-10
+    @version    0.3.0
     """
     window = MainWindow(settings_payload=dict(default_settings_payload))
     qtbot.addWidget(window)
 
-    assert window._sidebar.flow() == QListView.Flow.LeftToRight
+    assert window._sidebar.flow() == QListView.Flow.TopToBottom
+    assert window._sidebar.minimumWidth() == 160
+    assert window._sidebar.maximumWidth() == 160
     layout = window.centralWidget().layout()
-    assert isinstance(layout, QVBoxLayout)
-    navigation_row = layout.itemAt(0).layout()
-    assert navigation_row is not None
-    assert navigation_row.indexOf(window._sidebar) == 0
+    assert isinstance(layout, QHBoxLayout)
+    assert layout.indexOf(window._sidebar) == 0
     assert layout.indexOf(window._stack) == 1
-    # The navigation strip is inset by the same left/right margin the workflow
-    # pages use, so its ends align with the page content below it.
-    page_margins = window._text_cleanup_page.layout().contentsMargins()
-    navigation_margins = navigation_row.contentsMargins()
-    assert navigation_margins.left() == page_margins.left()
-    assert navigation_margins.right() == page_margins.right()
+    assert layout.stretch(layout.indexOf(window._stack)) == 1
 
 
 def test_main_window_show_message_does_not_create_status_bar(qtbot, default_settings_payload) -> None:
@@ -566,7 +561,7 @@ def test_main_window_applies_settings_without_closing(monkeypatch, qtbot, defaul
     assert window.windowTitle() == ("AudioMancer | Transforma cuvintele scrise intr-o experienta audio reala!")
     assert window._action_settings.text() == "Setari"
     assert window._action_tts_settings.text() == "Setari TTS"
-    assert window._sidebar.item(0).text() == "Proiect"
+    assert window._sidebar.item(0).text() == "Acasa / Proiect"
     assert window._settings_page._apply_button.text() == "Aplica"
     assert window._settings_page._ok_button.text() == "OK"
     assert QApplication.instance().font().pointSizeF() > starting_font_size

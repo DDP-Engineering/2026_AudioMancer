@@ -94,7 +94,7 @@ def test_translate_returns_expected_english_and_romanian_strings() -> None:
     """
     assert ui_state_service.translate("toolbar.settings", "en") == "Settings"
     assert ui_state_service.translate("toolbar.settings", "ro") == "Setari"
-    assert ui_state_service.translate("sidebar.text_chunking", "ro") == "Segmentare"
+    assert ui_state_service.translate("sidebar.text_chunking", "ro") == "Segmentare Text"
 
 
 def test_operator_status_pane_height_scales_with_line_count(qtbot) -> None:

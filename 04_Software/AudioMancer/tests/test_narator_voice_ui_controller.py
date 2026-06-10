@@ -13,7 +13,7 @@
          explicit narrator selection, and Qwen3-backed sample generation.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-18
-@version 3.6.1
+@version 3.6.2
 """
 
 # IMPORTS
@@ -128,8 +128,8 @@ def test_narator_voice_ui_controller_select_profile_with_sample_updates_manifest
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-17
-    @version    1.3.0
+    @date       2026-06-09
+    @version    1.3.1
     """
     project_root, _manifest = _create_project(tmp_path, "NarratorControllerSelect")
     created_profile = narrator_definition_service.create_custom_profile(
@@ -188,7 +188,7 @@ def test_narator_voice_ui_controller_select_profile_with_sample_updates_manifest
     narrator_operation = updated_manifest["operations"]["narrator_definition"]
     selected_metadata = json.loads(selected_metadata_path.read_text(encoding="utf-8"))
     assert narrator_operation["status"] == "completed"
-    assert narrator_operation["updated_at"] == selected_metadata["selected_at"]
+    assert "updated_at" not in narrator_operation
     assert project_workspace_service.open_project(project_root)["status"] == "ok"
     assert selected_audio_path.read_bytes() == b"RIFF-selected"
     assert selected_metadata["profile_id"] == created_profile["profile_id"]
@@ -255,15 +255,15 @@ def test_narator_voice_ui_controller_select_profile_without_sample_updates_manif
 
 def test_narator_voice_select_profile_with_audio_blocks_shows_progress(monkeypatch, qtbot, tmp_path) -> None:
     """
-    @brief      Verify selecting a narrator with generated audio uses synchronous progress and fast cleanup.
+    @brief      Verify selecting a narrator with generated audio uses synchronous progress and clears affected rows.
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @param[in]  qtbot Qt test helper fixture.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-11
-    @version    0.1.0
+    @date       2026-06-09
+    @version    0.2.0
     """
     project_root, _manifest = _create_project(tmp_path, "NarratorControllerSelectProgress")
     created_profile = narrator_definition_service.create_custom_profile(
@@ -337,7 +337,12 @@ def test_narator_voice_select_profile_with_audio_blocks_shows_progress(monkeypat
     assert process_calls
     assert window._operation_progress_dialog is None
     assert window._narator_voice_page._busy is False
-    assert [block["speech_block_id"] for block in output_payload] == ["0001-000002"]
+    assert [block["speech_block_id"] for block in output_payload] == ["0001-000001", "0001-000002"]
+    narrator_block = next(block for block in output_payload if block["speech_block_id"] == "0001-000001")
+    alice_block = next(block for block in output_payload if block["speech_block_id"] == "0001-000002")
+    assert narrator_block["audio_relative_path"] is None
+    assert narrator_block["generated"] is None
+    assert alice_block["audio_relative_path"] is not None
     assert not (project_root / config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME / "0001-000001.wav").exists()
     assert (project_root / config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME / "0001-000002.wav").is_file()
 
@@ -636,8 +641,8 @@ def test_narator_voice_generate_profiles_resolves_selected_ai_profile_and_starts
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-11
-    @version    0.1.0
+    @date       2026-06-09
+    @version    0.1.1
     """
     project_root, _manifest = _create_project(tmp_path, "NarratorControllerGenerateProfiles")
     settings_payload = {
@@ -742,7 +747,7 @@ def test_narator_voice_generate_profiles_resolves_selected_ai_profile_and_starts
     narator_voice_ui_controller.handle_generate_profiles_requested(window, "profile_1")
 
     assert captured["operation_kind"] == "narrator_definition"
-    assert captured["operation_name"] == "Generate Narator Profiles"
+    assert captured["operation_name"] == "Generate Narators"
     assert captured["initial_message"] == "Generating narator profiles..."
     assert captured["cancellable"] is True
     assert captured["project_root"] == project_root

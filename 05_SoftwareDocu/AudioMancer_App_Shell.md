@@ -11,8 +11,8 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
 
 Defines the runnable desktop application shell for `AudioMancer`.
 
-It hosts the project-aware main window, toolbar, the top horizontal
-workflow-navigation tab strip, workflow pages, settings dialogs, runtime
+It hosts the project-aware main window, toolbar, the left vertical
+workflow-navigation sidebar, workflow pages, settings dialogs, runtime
 language switching, Home workflow progress, and the current end-to-end workflow
 surfaces through Audio Assembly.
 
@@ -42,9 +42,10 @@ The initial shell consists of:
   and source-summary presenter
 - `audiomancer.services.logging_service` as the per-run logging bootstrap
 - `audiomancer.ui.main_window.MainWindow` as the first UI root
-- the navigation tab strip, status-bar, and page widgets under `audiomancer.ui`
-- a main window layout with a toolbar, a top horizontal navigation tab strip
-  placed under the toolbar, full-width stacked workflow pages, and dialogs
+- the navigation sidebar, status-bar, and page widgets under `audiomancer.ui`
+- a main window layout with a toolbar, a fixed-width vertical navigation
+  sidebar on the left, stacked workflow pages filling the remaining width, and
+  dialogs
 - toolbar-driven `New Project` and `Open Project` actions that activate the
   first persisted project workflow
 - a settings dialog that loads and saves the persisted language,

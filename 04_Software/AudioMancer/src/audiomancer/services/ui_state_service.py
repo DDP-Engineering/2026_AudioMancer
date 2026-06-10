@@ -14,7 +14,7 @@
          theme runtime adapter.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 0.57.0
+@version 0.57.1
 """
 
 # ruff: noqa: E501
@@ -183,13 +183,13 @@ _UI_STRINGS = {
         "status.theme_exported": "Theme exported.",
         "status.theme_deleted": "Theme deleted.",
         "status.operation_cancelled": "Operation cancelled.",
-        "sidebar.home": "Project",
-        "sidebar.text_cleanup": "Cleanup",
-        "sidebar.text_chunking": "Chunking",
-        "sidebar.ai_translation": "Translation",
+        "sidebar.home": "Home / Project",
+        "sidebar.text_cleanup": "Text Cleanup",
+        "sidebar.text_chunking": "Text Chunking",
+        "sidebar.ai_translation": "AI Translation",
         "sidebar.characters": "Characters",
-        "sidebar.narator_voice": "Narator",
-        "sidebar.character_voices": "Voices",
+        "sidebar.narator_voice": "Narator Voice",
+        "sidebar.character_voices": "Character Voices",
         "sidebar.speech_blocks": "Speech Blocks",
         "sidebar.audio_blocks": "Audio Blocks",
         "sidebar.audio_assembly": "Audio Assembly",
@@ -1209,13 +1209,13 @@ _UI_STRINGS = {
         "status.theme_exported": "Tema a fost exportata.",
         "status.theme_deleted": "Tema a fost stearsa.",
         "status.operation_cancelled": "Operatia a fost anulata.",
-        "sidebar.home": "Proiect",
-        "sidebar.text_cleanup": "Curatare",
-        "sidebar.text_chunking": "Segmentare",
-        "sidebar.ai_translation": "Traducere",
+        "sidebar.home": "Acasa / Proiect",
+        "sidebar.text_cleanup": "Curatare Text",
+        "sidebar.text_chunking": "Segmentare Text",
+        "sidebar.ai_translation": "Traducere AI",
         "sidebar.characters": "Personaje",
-        "sidebar.narator_voice": "Narator",
-        "sidebar.character_voices": "Voci",
+        "sidebar.narator_voice": "Voce Narator",
+        "sidebar.character_voices": "Voci Personaje",
         "sidebar.speech_blocks": "Blocuri Vorbire",
         "sidebar.audio_blocks": "Blocuri Audio",
         "sidebar.audio_assembly": "Asamblare Audio",

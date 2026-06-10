@@ -72,8 +72,8 @@ class NaratorVoicePage(QWidget):
         @return     None.
         @exception  None
         @author     Eng. Dan Dumitru Pasare
-        @date       2026-06-09
-        @version    1.9.7
+        @date       2026-06-10
+        @version    1.9.8
         """
         super().__init__(parent)
         self._project_active = False
@@ -177,7 +177,6 @@ class NaratorVoicePage(QWidget):
         self._delete_profile_button = QPushButton("Delete", self)
         self._delete_profile_button.clicked.connect(self._emit_delete_profile)
         self._generate_sample_button = QPushButton("Generate Sample", self)
-        self._generate_sample_button.setMinimumWidth(self._generate_sample_button.sizeHint().width() + 12)
         self._generate_sample_button.clicked.connect(self._emit_generate_sample)
         self._preview_toggle_button = QPushButton("Preview", self)
         self._preview_toggle_button.clicked.connect(self.preview_toggle_requested.emit)

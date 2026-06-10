@@ -8,19 +8,19 @@
 # -----------------------------------------------------------------------------
 """
 @file navigation_sidebar.py
-@brief Top workflow-navigation tab strip for AudioMancer.
-@details Renders the workflow pages as a horizontal, tab-like strip placed under
-         the main toolbar while preserving the page registration and selection
-         contract used by the main-window shell.
+@brief Sidebar navigation widget for AudioMancer.
+@details Renders the workflow pages as a vertical left-hand sidebar list while
+         preserving the page registration and selection contract used by the
+         main-window shell.
 @author Eng. Dan Dumitru Pasare
-@date 2026-06-09
-@version 0.4.0
+@date 2026-06-10
+@version 0.5.0
 """
 
 # IMPORTS
 
 from PySide6.QtCore import Qt, Signal
-from PySide6.QtWidgets import QListView, QListWidget, QListWidgetItem, QSizePolicy
+from PySide6.QtWidgets import QListWidget, QListWidgetItem, QSizePolicy
 
 from audiomancer.services import ui_state_service
 
@@ -29,55 +29,49 @@ from audiomancer.services import ui_state_service
 
 class NavigationSidebar(QListWidget):
     """
-    @brief      Horizontal navigation tab strip that emits the selected page identifier.
+    @brief      Sidebar widget that emits the selected page identifier.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-09
-    @version    0.3.0
+    @date       2026-06-10
+    @version    0.4.0
     """
 
     page_selected = Signal(str)
 
     def __init__(self, parent=None) -> None:
         """
-        @brief      Initialize the horizontal navigation tab strip.
+        @brief      Initialize the sidebar widget.
         @param[in]  parent Optional parent widget.
         @return     None.
         @exception  None
         @author     Eng. Dan Dumitru Pasare
-        @date       2026-06-09
-        @version    0.3.0
+        @date       2026-06-10
+        @version    0.4.0
         """
         super().__init__(parent)
-        self.setAlternatingRowColors(False)
-        self.setFlow(QListView.Flow.LeftToRight)
-        self.setWrapping(False)
-        self.setResizeMode(QListView.ResizeMode.Adjust)
-        self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
-        self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        self.setAlternatingRowColors(True)
+        self.setFixedWidth(160)
+        self.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Expanding)
         self.itemSelectionChanged.connect(self._emit_selected_page)
         self._page_labels: dict[str, str] = {}
 
     def add_page(self, page_id: str, label: str, enabled: bool) -> None:
         """
-        @brief      Register one page entry in the navigation tab strip.
+        @brief      Register one page entry in the sidebar.
         @param[in]  page_id Internal page identifier.
         @param[in]  label Human-readable page label.
         @param[in]  enabled Initial enabled state.
         @return     None.
         @exception  None
         @author     Eng. Dan Dumitru Pasare
-        @date       2026-06-09
-        @version    0.2.0
+        @date       2026-06-10
+        @version    0.3.0
         """
         item = QListWidgetItem(label)
         item.setData(Qt.ItemDataRole.UserRole, page_id)
-        item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
         self.addItem(item)
         self._page_labels[page_id] = label
         self.set_page_enabled(page_id, enabled)
-        self._apply_strip_height()
 
     def set_page_label(self, page_id: str, label: str) -> None:
         """
@@ -171,25 +165,6 @@ class NavigationSidebar(QListWidget):
             if item.data(Qt.ItemDataRole.UserRole) == page_id:
                 return item
         return None
-
-    def _apply_strip_height(self) -> None:
-        """
-        @brief      Constrain the strip to a single tab-height row.
-        @details    Derives the height from the first row's size hint so the
-                    strip follows the active UI font scale, and reserves room for
-                    the horizontal scrollbar that appears on narrow windows.
-        @return     None.
-        @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-06-09
-        @version    0.1.0
-        """
-        row_height = self.sizeHintForRow(0)
-        if row_height <= 0:
-            return
-        frame = 2 * self.frameWidth()
-        scrollbar = self.horizontalScrollBar().sizeHint().height()
-        self.setFixedHeight(row_height + frame + scrollbar + 4)
 
 
 # END OF FILE
