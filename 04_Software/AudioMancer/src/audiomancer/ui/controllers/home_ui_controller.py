@@ -13,7 +13,7 @@
          and source import workflows owned by the Home page.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-06
-@version 0.9.5
+@version 0.9.6
 """
 
 # IMPORTS
@@ -25,6 +25,7 @@ from PySide6.QtWidgets import QFileDialog, QInputDialog, QMessageBox
 
 from audiomancer import config
 from audiomancer.services import (
+    audio_blocks_service,
     home_presenter_service,
     import_service,
     project_export_service,
@@ -590,9 +591,10 @@ def activate_project(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.2.1
+    @version    0.2.2
     """
     window.stop_all_audio_playback()
+    audio_blocks_service.reconcile_audio_playability(project_root)
     window.set_project_active(True)
     window._current_page_id = "home"
     home_page = window._page_registry.get("home")

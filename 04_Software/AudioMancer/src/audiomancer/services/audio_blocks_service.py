@@ -16,7 +16,7 @@
          `80_audio_blocks` workflow artifacts.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-23
-@version 0.18.8
+@version 0.18.9
 """
 
 # IMPORTS
@@ -148,6 +148,36 @@ def load_audio_blocks(project_root: str | Path) -> list[AudioBlockPayload]:
     )
 
 
+@trace_function(_AUDIO_BLOCKS_LOGGER)
+def reconcile_audio_playability(project_root: str | Path) -> bool:
+    """
+    @brief      Refresh persisted Audio Blocks playability flags from current project-local files.
+    @param[in]  project_root Active project root folder.
+    @return     True when the Audio Blocks artifact was updated.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-10
+    @version    0.1.0
+    """
+    resolved_project_root = Path(project_root)
+    audio_blocks = load_audio_blocks(resolved_project_root)
+    if not audio_blocks:
+        return False
+    changed = False
+    reconciled_blocks: list[AudioBlockPayload] = []
+    for audio_block in audio_blocks:
+        reconciled_block = dict(audio_block)
+        audio_can_play = _filesystem_audio_can_play(resolved_project_root, reconciled_block)
+        if bool(reconciled_block.get("audio_can_play", False)) != audio_can_play:
+            reconciled_block["audio_can_play"] = audio_can_play
+            changed = True
+        reconciled_blocks.append(reconciled_block)
+    if not changed:
+        return False
+    _persist_report_update(resolved_project_root, reconciled_blocks)
+    return True
+
+
 def is_generated(audio_block: dict[str, object]) -> bool:
     """
     @brief      Return whether one Audio Blocks entry has generated output.
@@ -159,6 +189,19 @@ def is_generated(audio_block: dict[str, object]) -> bool:
     @version    0.2.0
     """
     return generated_at(audio_block) is not None
+
+
+def audio_can_play(audio_block: dict[str, object]) -> bool:
+    """
+    @brief      Return the persisted playability flag for one Audio Blocks entry.
+    @param[in]  audio_block Audio Blocks payload.
+    @return     True when the entry is marked playable without filesystem probing.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-10
+    @version    0.1.0
+    """
+    return _persisted_audio_can_play(audio_block)
 
 
 def is_approved(audio_block: dict[str, object]) -> bool:
@@ -2058,6 +2101,7 @@ def _generate_audio_block(
     return {
         **dict(audio_block),
         "audio_relative_path": relative_to_project(project_root, audio_path),
+        "audio_can_play": True,
         "metadata_relative_path": None,
         "audio_duration_seconds": audio_duration_seconds,
         "voice_language": str(generation_context.get("voice_language", "")).strip(),
@@ -2176,6 +2220,7 @@ def _generate_scene_ambience_audio_block(
         "metadata_only": False,
         "special_block_status": None,
         "audio_relative_path": relative_to_project(project_root, audio_path),
+        "audio_can_play": True,
         "metadata_relative_path": None,
         "audio_duration_seconds": _wav_duration_seconds(audio_path),
         "voice_language": None,
@@ -2411,10 +2456,11 @@ def _cleared_audio_fields() -> dict[str, object]:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-24
-    @version    0.2.0
+    @version    0.2.1
     """
     return {
         "audio_relative_path": None,
+        "audio_can_play": False,
         "metadata_relative_path": None,
         "audio_duration_seconds": None,
         "generated": None,
@@ -2465,6 +2511,7 @@ def _remap_audio_block_artifacts(
         }
     )
     if not is_generated(remapped_block) or bool(remapped_block.get("metadata_only", False)):
+        remapped_block["audio_can_play"] = _persisted_audio_can_play(remapped_block)
         return remapped_block
     old_audio_relative_path = _optional_string(old_block.get("audio_relative_path"))
     new_audio_path, _metadata_path = _audio_artifact_paths(
@@ -2482,6 +2529,7 @@ def _remap_audio_block_artifacts(
             old_audio_path.rename(new_audio_path)
             remapped_block["audio_relative_path"] = relative_to_project(project_root, new_audio_path)
     remapped_block["metadata_relative_path"] = None
+    remapped_block["audio_can_play"] = _persisted_audio_can_play(remapped_block)
     return remapped_block
 
 
@@ -2778,9 +2826,11 @@ def _apply_scene_ambience_audio_policy(
                 block["approved"] = None
                 block["generated_at"] = None
                 block["approved_at"] = None
+                block["audio_can_play"] = False
                 block["runtime_result_summary"] = ""
         else:
             block["metadata_only"] = True
+            block["audio_can_play"] = _persisted_audio_can_play(block)
             block["special_block_status"] = _SPECIAL_BLOCK_STATUS_NOT_IMPLEMENTED
             block["runtime_result_summary"] = _metadata_only_summary(_SPECIAL_BLOCK_STATUS_NOT_IMPLEMENTED)
         updated_blocks.append(block)
@@ -3448,7 +3498,7 @@ def _compact_audio_block_payload(audio_block: AudioBlockPayload) -> AudioBlockPa
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-17
-    @version    0.3.0
+    @version    0.3.1
     """
     payload: AudioBlockPayload = {
         "speech_block_id": str(audio_block.get("speech_block_id", "")).strip(),
@@ -3456,6 +3506,7 @@ def _compact_audio_block_payload(audio_block: AudioBlockPayload) -> AudioBlockPa
         "speaker_id": str(audio_block.get("speaker_id", "")).strip(),
         "voice_target_id": str(audio_block.get("voice_target_id", "")).strip(),
         "audio_relative_path": _optional_string(audio_block.get("audio_relative_path")),
+        "audio_can_play": _persisted_audio_can_play(audio_block),
         "metadata_relative_path": _optional_string(audio_block.get("metadata_relative_path")),
         "audio_duration_seconds": _optional_float(audio_block.get("audio_duration_seconds")),
         "generated": generated_at(audio_block),
@@ -3558,7 +3609,7 @@ def _normalize_persisted_audio_block(payload: dict[str, object]) -> AudioBlockPa
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-23
-    @version    0.7.0
+    @version    0.7.1
     """
     generated_timestamp = _status_timestamp(payload.get("generated"), payload.get("generated_at"))
     approved_timestamp = _status_timestamp(payload.get("approved"), payload.get("approved_at"))
@@ -3588,6 +3639,7 @@ def _normalize_persisted_audio_block(payload: dict[str, object]) -> AudioBlockPa
         "voice_target_id": str(payload.get("voice_target_id", "")).strip(),
         "voice_source_kind": str(payload.get("voice_source_kind", "")).strip(),
         "audio_relative_path": _optional_string(payload.get("audio_relative_path")),
+        "audio_can_play": _persisted_audio_can_play(payload),
         "metadata_relative_path": _optional_string(payload.get("metadata_relative_path")),
         "audio_duration_seconds": _optional_float(payload.get("audio_duration_seconds")),
         "generated": generated_timestamp,
@@ -3608,6 +3660,47 @@ def _normalize_persisted_audio_block(payload: dict[str, object]) -> AudioBlockPa
         "split_plan_fingerprint": _optional_string(payload.get("split_plan_fingerprint")),
         "warning_flags": _normalize_warning_flags(payload.get("warning_flags")),
     }
+
+
+def _persisted_audio_can_play(audio_block: dict[str, object]) -> bool:
+    """
+    @brief      Resolve persisted Audio Blocks playability without touching the filesystem.
+    @param[in]  audio_block Candidate Audio Blocks payload.
+    @return     True when the record should be considered playable by state builders.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-10
+    @version    0.1.0
+    """
+    if "audio_can_play" in audio_block:
+        return bool(audio_block.get("audio_can_play", False))
+    if not generated_at(audio_block):
+        return False
+    if bool(audio_block.get("metadata_only", False)):
+        return True
+    return _optional_string(audio_block.get("audio_relative_path")) is not None
+
+
+def _filesystem_audio_can_play(project_root: Path, audio_block: dict[str, object]) -> bool:
+    """
+    @brief      Verify one Audio Blocks playability flag from current project-local files.
+    @param[in]  project_root Active project root folder.
+    @param[in]  audio_block Candidate Audio Blocks payload.
+    @return     True when the generated audio entry is playable.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-10
+    @version    0.1.0
+    """
+    if not is_generated(audio_block):
+        return False
+    if bool(audio_block.get("metadata_only", False)):
+        return True
+    audio_relative_path = _optional_string(audio_block.get("audio_relative_path"))
+    if not audio_relative_path:
+        return False
+    audio_path = _safe_project_artifact_path(project_root, audio_relative_path)
+    return audio_path is not None and _is_valid_wav_path(audio_path)
 
 
 def _normalize_voice_clone_profile(payload: dict[str, object]) -> VoiceCloneProfilePayload:

@@ -17,8 +17,8 @@ approval-aware UI model.
 
 ## 2. Responsibilities
 
-- load and merge Speech Blocks with persisted Audio Blocks without opening
-  every generated WAV during page refresh
+- load and merge Speech Blocks with persisted Audio Blocks without opening or
+  probing every generated WAV during page refresh
 - resolve the selected/current block and full source-text preview
 - build localized notes, status lines, progress values, and button enablement,
   including disabling start/continue only when all current approved Speech
@@ -48,6 +48,11 @@ The service loads current artifacts, merges block state by
 `speech_block_id`, computes progress and readiness, resolves the current block
 from operation state, and returns a dictionary consumed directly by
 `AudioBlocksPage.set_audio_blocks_state(...)`.
+
+Merged row playability comes from `audio_blocks.json` through the persisted
+`audio_can_play` flag. The state service does not call `Path.is_file()` per
+row during normal refreshes; stale file flags are handled by Audio Blocks
+playability reconciliation when the project is activated.
 
 Start/continue readiness is based on remaining approved source work, not only
 on whether approved Speech Blocks exist or whether an older report was marked
@@ -107,7 +112,8 @@ The page-state payload includes stable keys such as:
 Merged block rows preserve generated-audio fields from `audio_blocks.json` and
 derive review/source fields from `speech_blocks.json`. The page uses persisted
 `audio_duration_seconds` and does not open WAV files during normal state
-loading.
+loading. The `can_play` field mirrors the persisted Audio Blocks
+`audio_can_play` flag.
 
 Scene Ambience rows are metadata-only only when Scene Ambience audio generation
 is disabled. When enabled, approved `scene_ambience` Speech Blocks participate
@@ -147,6 +153,7 @@ Focused tests:
 - `tests/test_audio_blocks_state_service.py`
 - `tests/test_audio_blocks_page.py`
 - `tests/test_audio_blocks_ui_controller.py`
+- `tests/test_blocks_performance_baseline.py`
 
 Minimum validation after changes:
 

@@ -14,7 +14,7 @@
          current operation state, and enabled AI profile settings.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 0.7.2
+@version 0.7.3
 """
 
 # IMPORTS
@@ -306,7 +306,7 @@ def _merge_audio_preview_state(project_root: Path, speech_blocks: list[dict[str,
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-04
-    @version    0.1.0
+    @version    0.1.1
     """
     audio_blocks_by_id = {
         str(audio_block.get("speech_block_id", "")).strip(): audio_block
@@ -354,15 +354,14 @@ def _audio_path_for_block(project_root: Path, audio_block: dict[str, object]) ->
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-04
-    @version    0.1.0
+    @version    0.1.1
     """
-    if not bool(audio_block.get("generated", False)):
+    if not audio_blocks_service.audio_can_play(audio_block):
         return None
     relative_path = str(audio_block.get("audio_relative_path", "")).strip()
     if not relative_path:
         return None
-    audio_path = project_root / relative_path
-    return audio_path if audio_path.is_file() else None
+    return project_root / relative_path
 
 
 def _speech_blocks_stage_status(report: dict[str, object] | None, operation_state: dict[str, object] | None) -> str:

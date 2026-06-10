@@ -10,6 +10,23 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [1.5.2] - 2026-06-10
+
+### Fixed
+
+- Fixed the Speech Blocks header layout so the page title, AI Profile selector,
+  Generate All, Reset, and Approve All controls stay on one startup row without
+  overlapping or clipping their labels.
+- Fixed `02_Tools/make_synthetic_project.py` so it runs as a standalone offline
+  tool without importing the AudioMancer desktop application package or requiring
+  PySide6.
+
+### Changed
+
+- Project package metadata and `audiomancer.__version__` were updated to
+  `1.5.2`.
+- Offline English and Romanian help bundles were updated to version `1.5.2`.
+
 ## [1.5.1] - 2026-06-10
 
 ### Changed

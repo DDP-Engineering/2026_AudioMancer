@@ -14,7 +14,7 @@
          so the window remains a thin coordinator.
 @author Eng. Dan Dumitru Pasare
 @date 2026-05-23
-@version 1.47.7
+@version 1.47.8
 """
 
 # IMPORTS
@@ -292,7 +292,25 @@ class MainWindow(QMainWindow):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-16
-        @version    0.11.0
+        @version    0.11.1
+        """
+        current_language = self.refresh_project_summary(project_root, manifest)
+        self._refresh_current_page_state(project_root, manifest, current_language)
+
+    def refresh_project_summary(
+        self,
+        project_root: Path | None,
+        manifest: dict[str, object] | None,
+    ) -> str:
+        """
+        @brief      Refresh shell-level project labels and Home workflow status state only.
+        @param[in]  project_root Active project root or `None`.
+        @param[in]  manifest Active project manifest or `None`.
+        @return     Current UI language code.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-06-10
+        @version    0.1.0
         """
         self._current_project_root = project_root
         self._current_manifest = manifest
@@ -325,7 +343,7 @@ class MainWindow(QMainWindow):
             )
         )
         self._home_page.set_export_states(project_export_service.build_export_states(project_root, manifest))
-        self._refresh_current_page_state(project_root, manifest, current_language)
+        return current_language
 
     def _refresh_current_page_state(
         self,

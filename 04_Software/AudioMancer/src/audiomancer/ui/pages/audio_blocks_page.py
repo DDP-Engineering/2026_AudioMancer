@@ -13,7 +13,7 @@
          review controls for the Audio Blocks workflow.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-23
-@version 0.5.6
+@version 0.5.8
 """
 
 # IMPORTS
@@ -69,7 +69,7 @@ class AudioBlocksPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-06-09
-        @version    0.5.7
+        @version    0.5.8
         """
         super().__init__(parent)
         self._current_language = "en"
@@ -94,7 +94,7 @@ class AudioBlocksPage(QWidget):
         self._reset_button = QPushButton("Reset Audio Generation")
         self._reset_button.clicked.connect(self.reset_generation_requested.emit)
         header_row.addWidget(self._reset_button)
-        self._approve_all_button = QPushButton("Approve All Generation")
+        self._approve_all_button = QPushButton("Approve All")
         self._approve_all_button.clicked.connect(self.approve_all_requested.emit)
         header_row.addWidget(self._approve_all_button)
         self._audiobook_playback_button = QPushButton("Play Audiobook")
@@ -328,6 +328,71 @@ class AudioBlocksPage(QWidget):
         self._speech_block_list.setUpdatesEnabled(True)
         self._apply_control_state()
 
+    def update_audio_block_item(self, audio_block: dict[str, object]) -> None:
+        """
+        @brief      Refresh one Audio Blocks row without rebuilding sibling items.
+        @param[in]  audio_block Updated Audio Blocks display payload.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-06-10
+        @version    0.1.0
+        """
+        normalized_id = str(audio_block.get("speech_block_id", "")).strip()
+        if not normalized_id:
+            return
+        for index, existing_block in enumerate(self._speech_blocks):
+            if str(existing_block.get("speech_block_id", "")).strip() == normalized_id:
+                self._speech_blocks[index] = dict(audio_block)
+                row = index
+                break
+        else:
+            self._speech_blocks.append(dict(audio_block))
+            self._speech_blocks = speech_blocks_service.sort_speech_blocks(self._speech_blocks)
+            row = self._visible_block_row(normalized_id)
+        if row >= 0:
+            item = self._speech_block_list.item(row)
+            if item is not None:
+                item.setText(_format_audio_block_list_item(audio_block, self._current_language))
+            if self._current_block_id == normalized_id:
+                self._show_selected_block(row)
+        self._apply_control_state()
+
+    def set_review_summary(
+        self,
+        notes: list[str],
+        status_lines: list[str],
+        progress_current: int,
+        progress_total: int,
+        progress_percent: int,
+        can_approve_all: bool | None = None,
+        can_reset: bool | None = None,
+    ) -> None:
+        """
+        @brief      Refresh Audio Blocks notes, progress, and high-level action flags only.
+        @param[in]  notes Operator-facing page notes.
+        @param[in]  status_lines Operator-facing status lines.
+        @param[in]  progress_current Current generated-block count.
+        @param[in]  progress_total Total speech-block count.
+        @param[in]  progress_percent Integer progress percent.
+        @param[in]  can_approve_all Optional approve-all enablement flag.
+        @param[in]  can_reset Optional reset enablement flag.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-06-10
+        @version    0.1.0
+        """
+        _ = progress_current
+        _ = progress_total
+        self._progress_bar.setValue(max(0, min(int(progress_percent), 100)))
+        self._status_edit.setPlainText("\n".join([*notes, "", *status_lines]).strip())
+        if can_approve_all is not None:
+            self._can_approve_all = bool(can_approve_all)
+        if can_reset is not None:
+            self._can_reset = bool(can_reset)
+        self._apply_control_state()
+
     def set_busy(self, is_busy: bool) -> None:
         """
         @brief      Disable page actions while a blocking Audio Blocks task runs.
@@ -408,6 +473,22 @@ class AudioBlocksPage(QWidget):
             if str(speech_block.get("speech_block_id", "")).strip() == normalized_block_id:
                 self._speech_block_list.setCurrentRow(row)
                 return
+
+    def _visible_block_row(self, speech_block_id: str) -> int:
+        """
+        @brief      Return the visible Audio Blocks row for one Speech Block id.
+        @param[in]  speech_block_id Speech Block identifier.
+        @return     Zero-based visible row, or `-1` when not visible.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-06-10
+        @version    0.1.0
+        """
+        normalized_block_id = str(speech_block_id).strip()
+        for row, speech_block in enumerate(self._speech_blocks):
+            if str(speech_block.get("speech_block_id", "")).strip() == normalized_block_id:
+                return row
+        return -1
 
     def advance_to_next_block(self) -> None:
         """

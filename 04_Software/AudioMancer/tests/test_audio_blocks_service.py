@@ -14,7 +14,7 @@
          normalization.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-23
-@version 1.9.7
+@version 1.9.8
 """
 
 # IMPORTS
@@ -155,6 +155,7 @@ def test_audio_blocks_service_generates_clone_prompts_and_ordered_wavs(monkeypat
     audio_blocks = audio_blocks_service.load_audio_blocks(project_root)
     assert [audio_blocks_service.is_generated(block) for block in audio_blocks] == [True, True]
     assert [audio_blocks_service.is_approved(block) for block in audio_blocks] == [False, False]
+    assert [audio_blocks_service.audio_can_play(block) for block in audio_blocks] == [True, True]
     assert all(isinstance(block["generated"], str) for block in audio_blocks)
     assert observed_prompt_requests == [
         ("selected-narrator", "Narrator preview line.", "en"),
@@ -647,6 +648,7 @@ def test_audio_blocks_service_preserves_existing_audio_when_block_fingerprint_ch
 
     assert audio_blocks_service.is_generated(merged_blocks[0]) is True
     assert audio_blocks_service.is_approved(merged_blocks[0]) is True
+    assert audio_blocks_service.audio_can_play(merged_blocks[0]) is True
     assert merged_blocks[0]["audio_relative_path"] == audio_path.relative_to(project_root).as_posix()
     assert merged_blocks[0]["generation_fingerprint"] != "stale-fingerprint"
     assert audio_path.exists()
@@ -957,11 +959,13 @@ def test_audio_blocks_service_preserves_invalidated_voice_target_rows(tmp_path) 
     assert audio_blocks_service.is_generated(updated_character_block) is False
     assert audio_blocks_service.is_approved(updated_character_block) is False
     assert updated_character_block["audio_relative_path"] is None
+    assert updated_character_block["audio_can_play"] is False
     assert updated_character_block["metadata_relative_path"] is None
     assert updated_character_block["generated_part_relative_paths"] == []
     assert updated_character_block["generation_fingerprint"] is None
     assert updated_character_block["split_plan_fingerprint"] is None
     assert updated_narrator_block["audio_relative_path"] == narrator_block["audio_relative_path"]
+    assert updated_narrator_block["audio_can_play"] is True
     assert [profile["voice_target_id"] for profile in preserved_profiles] == ["narrator"]
     assert report is not None
     assert report["generated_block_count"] == 1
@@ -2147,6 +2151,36 @@ def test_audio_blocks_service_regenerates_scene_ambience_without_tts_reset_guard
     assert ambience_block["prompt_format"] == "sound_prompt"
     assert ambience_block["runtime_result_summary"] == "Scene ambience ready."
     assert (project_root / str(ambience_block["audio_relative_path"])).read_bytes() == _wav_bytes("ambience")
+
+
+def test_audio_blocks_service_normalizes_legacy_playability_and_reconciles_missing_files(tmp_path) -> None:
+    """
+    @brief      Verify legacy generated rows gain playability flags and reconciliation heals stale flags.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-10
+    @version    0.1.0
+    """
+    project_root, _manifest = _create_audio_blocks_project(tmp_path, "AudioBlocksLegacyPlayability")
+    _seed_generated_audio_blocks(project_root)
+    audio_blocks_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.AUDIO_BLOCKS_OUTPUT_FILE_NAME
+
+    legacy_blocks = audio_blocks_service.load_audio_blocks(project_root)
+
+    assert "audio_can_play" not in json.loads(audio_blocks_path.read_text(encoding="utf-8"))[0]
+    assert [audio_blocks_service.audio_can_play(block) for block in legacy_blocks] == [True, True]
+
+    stale_blocks = [dict(block) for block in legacy_blocks]
+    first_audio_path = project_root / str(stale_blocks[0]["audio_relative_path"])
+    first_audio_path.unlink()
+    stale_blocks[0]["audio_can_play"] = True
+    audio_blocks_path.write_text(json.dumps(stale_blocks, indent=2) + "\n", encoding="utf-8")
+
+    assert audio_blocks_service.reconcile_audio_playability(project_root) is True
+    reconciled_blocks = audio_blocks_service.load_audio_blocks(project_root)
+    assert [audio_blocks_service.audio_can_play(block) for block in reconciled_blocks] == [False, True]
 
 
 def _create_audio_blocks_project(tmp_path, name: str):

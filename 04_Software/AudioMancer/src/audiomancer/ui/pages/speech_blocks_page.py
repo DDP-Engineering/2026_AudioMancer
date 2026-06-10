@@ -14,7 +14,7 @@
          controls for the Speech Blocks workflow.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-24
-@version 0.8.12
+@version 0.8.15
 """
 
 # IMPORTS
@@ -50,10 +50,11 @@ _SPEAKER_LABEL_WIDTH_PX = 58
 _SPEAKER_COMBO_MIN_WIDTH_PX = 88
 _CONTENT_KIND_LABEL_WIDTH_PX = 88
 _CONTENT_KIND_COMBO_MIN_WIDTH_PX = 126
-_AI_PROFILE_COMBO_MIN_WIDTH_PX = 260
-_GENERATE_HEADER_BUTTON_MIN_WIDTH_PX = 140
-_RESET_HEADER_BUTTON_MIN_WIDTH_PX = 96
-_APPROVE_ALL_HEADER_BUTTON_MIN_WIDTH_PX = 132
+_AI_PROFILE_COMBO_MIN_WIDTH_PX = 220
+_AI_PROFILE_COMBO_MAX_WIDTH_PX = 300
+_GENERATE_HEADER_BUTTON_MIN_WIDTH_PX = 112
+_RESET_HEADER_BUTTON_MIN_WIDTH_PX = 80
+_APPROVE_ALL_HEADER_BUTTON_MIN_WIDTH_PX = 108
 _LOWER_SOURCE_MIN_WIDTH_PX = 480
 _LOWER_SOURCE_MIN_WIDTH_FRACTION = 0.40
 _LOWER_SOURCE_MIN_WIDTH_FLOOR_PX = 300
@@ -90,7 +91,7 @@ class SpeechBlocksPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-06-09
-        @version    0.7.7
+        @version    0.7.9
         """
         super().__init__(parent)
         self._current_language = "en"
@@ -122,9 +123,11 @@ class SpeechBlocksPage(QWidget):
         header_row.addWidget(self._profile_label)
         self._profile_combo = QComboBox(self)
         self._profile_combo.setMinimumWidth(_AI_PROFILE_COMBO_MIN_WIDTH_PX)
+        self._profile_combo.setMaximumWidth(_AI_PROFILE_COMBO_MAX_WIDTH_PX)
         self._profile_combo.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         self._profile_combo.addItem("(none)", None)
         header_row.addWidget(self._profile_combo, 1)
+
         self._generate_button = QPushButton("Generate All")
         self._generate_button.setMinimumWidth(_GENERATE_HEADER_BUTTON_MIN_WIDTH_PX)
         self._generate_button.clicked.connect(self._emit_generate_requested)
@@ -446,6 +449,135 @@ class SpeechBlocksPage(QWidget):
             self.restore_review_position(current_review_position)
         else:
             self._show_selected_chunk(-1)
+        self._apply_control_state()
+
+    def update_speech_block_item(self, speech_block: dict[str, object]) -> None:
+        """
+        @brief      Refresh one Speech Block row without rebuilding sibling items.
+        @param[in]  speech_block Updated Speech Block display payload.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-06-10
+        @version    0.1.0
+        """
+        normalized_id = str(speech_block.get("speech_block_id", "")).strip()
+        if not normalized_id:
+            return
+        for index, existing_block in enumerate(self._speech_blocks):
+            if str(existing_block.get("speech_block_id", "")).strip() == normalized_id:
+                self._speech_blocks[index] = dict(speech_block)
+                break
+        else:
+            self._speech_blocks.append(dict(speech_block))
+            self._speech_blocks = speech_blocks_service.sort_speech_blocks(self._speech_blocks)
+        self.refresh_chunk_count(str(speech_block.get("chunk_id", "")).strip())
+        visible_row = self._visible_block_row(normalized_id)
+        if visible_row >= 0:
+            item = self._speech_block_list.item(visible_row)
+            if item is not None:
+                item.setText(_format_speech_block_list_item(speech_block))
+            if self._current_block_id == normalized_id:
+                self._show_selected_block(visible_row)
+        self._apply_control_state()
+
+    def insert_speech_block_item(self, speech_block: dict[str, object], row: int | None = None) -> None:
+        """
+        @brief      Insert one Speech Block row without rebuilding the whole page.
+        @param[in]  speech_block Inserted Speech Block display payload.
+        @param[in]  row Optional visible row override inside the selected chunk.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-06-10
+        @version    0.1.0
+        """
+        normalized_id = str(speech_block.get("speech_block_id", "")).strip()
+        if not normalized_id:
+            return
+        self._speech_blocks = speech_blocks_service.sort_speech_blocks([*self._speech_blocks, dict(speech_block)])
+        self.refresh_chunk_count(str(speech_block.get("chunk_id", "")).strip())
+        if str(speech_block.get("chunk_id", "")).strip() != self._current_chunk_id:
+            return
+        insert_row = self._visible_insertion_row(speech_block) if row is None else max(0, int(row))
+        self._speech_block_list.insertItem(insert_row, _format_speech_block_list_item(speech_block))
+        self._speech_block_list.setCurrentRow(insert_row)
+
+    def remove_speech_block_item(self, speech_block_id: str) -> None:
+        """
+        @brief      Remove one Speech Block row without rebuilding the whole page.
+        @param[in]  speech_block_id Removed Speech Block identifier.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-06-10
+        @version    0.1.0
+        """
+        normalized_id = str(speech_block_id).strip()
+        removed_chunk_id = ""
+        visible_row = self._visible_block_row(normalized_id)
+        remaining_blocks: list[dict[str, object]] = []
+        for block in self._speech_blocks:
+            if str(block.get("speech_block_id", "")).strip() == normalized_id:
+                removed_chunk_id = str(block.get("chunk_id", "")).strip()
+                continue
+            remaining_blocks.append(block)
+        self._speech_blocks = remaining_blocks
+        self.refresh_chunk_count(removed_chunk_id)
+        if visible_row >= 0:
+            self._speech_block_list.takeItem(visible_row)
+        if self._current_block_id == normalized_id:
+            replacement_row = min(visible_row, self._speech_block_list.count() - 1)
+            if replacement_row >= 0:
+                self._speech_block_list.setCurrentRow(replacement_row)
+            else:
+                self._clear_block_details()
+        self._apply_control_state()
+
+    def refresh_chunk_count(self, chunk_id: str | None) -> None:
+        """
+        @brief      Refresh one chunk-list row count label.
+        @param[in]  chunk_id Source chunk identifier to refresh.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-06-10
+        @version    0.1.0
+        """
+        normalized_chunk_id = str(chunk_id or "").strip()
+        if not normalized_chunk_id:
+            return
+        block_count_by_chunk = _block_count_by_chunk(self._speech_blocks)
+        for row, chunk in enumerate(self._source_chunks):
+            if str(chunk.get("chunk_id", "")).strip() != normalized_chunk_id:
+                continue
+            item = self._chunk_list.item(row)
+            if item is not None:
+                item.setText(_format_chunk_list_item(chunk, block_count_by_chunk))
+            return
+
+    def set_review_summary(
+        self,
+        notes: list[str],
+        can_approve_all: bool | None = None,
+        can_reset: bool | None = None,
+    ) -> None:
+        """
+        @brief      Refresh Speech Blocks notes and high-level action flags only.
+        @param[in]  notes Operator-facing page notes.
+        @param[in]  can_approve_all Optional approve-all enablement flag.
+        @param[in]  can_reset Optional reset enablement flag.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-06-10
+        @version    0.1.0
+        """
+        self._status_edit.setPlainText("\n".join(notes))
+        if can_approve_all is not None:
+            self._can_approve_all = bool(can_approve_all)
+        if can_reset is not None:
+            self._can_reset = bool(can_reset)
         self._apply_control_state()
 
     def set_busy(self, is_busy: bool) -> None:
@@ -1216,6 +1348,38 @@ class SpeechBlocksPage(QWidget):
             if str(block.get("speech_block_id", "")).strip() == speech_block_id:
                 self._speech_block_list.setCurrentRow(index)
                 return
+
+    def _visible_block_row(self, speech_block_id: str) -> int:
+        """
+        @brief      Return the visible row for one Speech Block id in the selected chunk.
+        @param[in]  speech_block_id Speech Block identifier.
+        @return     Zero-based visible row, or `-1` when not visible.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-06-10
+        @version    0.1.0
+        """
+        normalized_id = str(speech_block_id).strip()
+        for row, block in enumerate(self._blocks_for_current_chunk()):
+            if str(block.get("speech_block_id", "")).strip() == normalized_id:
+                return row
+        return -1
+
+    def _visible_insertion_row(self, speech_block: dict[str, object]) -> int:
+        """
+        @brief      Resolve the visible insertion row for one Speech Block in the selected chunk.
+        @param[in]  speech_block Speech Block payload.
+        @return     Zero-based insertion row.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-06-10
+        @version    0.1.0
+        """
+        normalized_id = str(speech_block.get("speech_block_id", "")).strip()
+        for row, block in enumerate(self._blocks_for_current_chunk()):
+            if str(block.get("speech_block_id", "")).strip() == normalized_id:
+                return row
+        return self._speech_block_list.count()
 
     def _select_chunk_by_id(self, chunk_id: str) -> None:
         """

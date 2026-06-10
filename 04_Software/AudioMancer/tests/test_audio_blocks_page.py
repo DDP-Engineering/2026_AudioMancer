@@ -13,7 +13,7 @@
          bounded approval navigation, and selected-row action enablement.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-23
-@version 0.6.6
+@version 0.6.8
 """
 
 # IMPORTS
@@ -108,6 +108,7 @@ def test_audio_blocks_page_renders_source_list_markers_and_selected_details(qtbo
     assert page._status_group.maximumHeight() == expected_status_height
     assert page._approve_button.isEnabled() is True
     assert page._approve_button.text() == "Approve"
+    assert page._approve_all_button.text() == "Approve All"
     assert page._character_count_edit.text() == "12 / 180"
     assert page._selected_playback_button.isEnabled() is True
     assert page._audiobook_playback_button.isEnabled() is True
@@ -298,6 +299,7 @@ def test_audio_blocks_page_applies_translated_labels_and_tracks_selected_row_act
 
     assert "Blocuri Audio" in page._title_label.text()
     assert page._start_button.text() == "Porneste Generarea Audio"
+    assert page._approve_all_button.text() == "Aproba Tot"
     assert page._audiobook_playback_button.text() == "Reda Audiobook"
     assert page._blocks_group.title() == "Blocuri Vorbire"
     assert page._approve_button.text() == "Dezaproba"
@@ -386,6 +388,86 @@ def test_audio_blocks_page_advances_block_selection_with_limit(qtbot) -> None:
 
     assert page.selected_block_id() == "0001-000002"
     assert page._speech_block_list.currentRow() == 1
+
+
+def test_audio_blocks_page_single_item_update_preserves_sibling_items(qtbot) -> None:
+    """
+    @brief      Verify one Audio Blocks row can refresh without recreating sibling list items.
+    @param[in]  qtbot Qt test helper fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-10
+    @version    0.1.0
+    """
+    page = AudioBlocksPage()
+    qtbot.addWidget(page)
+    page.set_project_active(True)
+    page.set_audio_blocks_state(
+        full_source_text="First.\nSecond.",
+        speech_blocks=[
+            _audio_block("0001-000001", "Narrator", "First.", generated=True, approved=False),
+            _audio_block("0001-000002", "Alice", "Second.", generated=True, approved=False),
+        ],
+        current_block_id="0001-000001",
+        current_block_speaker="Narrator",
+        current_block_text="First.",
+        notes=["Ready."],
+        status_lines=["Generated audio: 2/2"],
+        progress_current=2,
+        progress_total=2,
+        progress_percent=100,
+        stage_status="in_progress",
+        can_start_or_continue=True,
+        can_reset=True,
+        can_approve_all=True,
+        can_regenerate_selected=True,
+        can_approve_selected=True,
+    )
+    first_item = page._speech_block_list.item(0)
+    second_item = page._speech_block_list.item(1)
+
+    page.update_audio_block_item(_audio_block("0001-000002", "Alice", "Second.", generated=True, approved=True))
+
+    assert page._speech_block_list.item(0) is first_item
+    assert page._speech_block_list.item(1) is second_item
+    assert "[approved]" in second_item.text()
+
+
+def _audio_block(
+    speech_block_id: str,
+    speaker_display_name: str,
+    text: str,
+    *,
+    generated: bool,
+    approved: bool,
+) -> dict[str, object]:
+    """
+    @brief      Build one compact Audio Blocks page test row.
+    @param[in]  speech_block_id Speech Block identifier.
+    @param[in]  speaker_display_name Display speaker name.
+    @param[in]  text Speech Block text.
+    @param[in]  generated True when generated audio is available.
+    @param[in]  approved True when the audio row is approved.
+    @return     Audio Blocks page row payload.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-10
+    @version    0.1.0
+    """
+    sequence_index = int(speech_block_id.rsplit("-", maxsplit=1)[-1])
+    return {
+        "speech_block_id": speech_block_id,
+        "sequence_index": sequence_index,
+        "speaker_display_name": speaker_display_name,
+        "text": text,
+        "generated": generated,
+        "approved": approved,
+        "audio_file_name": f"{sequence_index:06d}.wav" if generated else "",
+        "audio_duration_seconds": 1.0 if generated else 0.0,
+        "can_play": generated,
+        "is_current": sequence_index == 1,
+    }
 
 
 # END OF FILE

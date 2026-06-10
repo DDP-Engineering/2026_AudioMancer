@@ -25,6 +25,8 @@ generation, manual block editing, and Audio Blocks generation.
 - merge selected-audio preview flags from `audio_blocks.json` so the Speech
   Blocks page can enable per-block `Generate Audio` and `Play`/`Stop`
   shortcuts
+- read the persisted Audio Blocks playability flag instead of probing every
+  generated WAV path while building large Speech Blocks page payloads
 
 It does not:
 
@@ -49,11 +51,12 @@ available, and returns one dictionary passed directly to
 `SpeechBlocksPage.set_speech_blocks_state(...)`.
 
 The selected-audio merge is read-only. It matches Audio Blocks by stable
-`speech_block_id`, checks the generated file path from `audio_relative_path`,
-and marks only current metadata-only rows so the Speech Blocks page does not
-expose audio generation for pause or indication rows. Scene Ambience rows stay
-eligible for selected-block audio generation when Scene Ambience audio is
-enabled downstream.
+`speech_block_id`, reads the persisted `audio_can_play` flag, and marks only
+current metadata-only rows so the Speech Blocks page does not expose audio
+generation for pause or indication rows. Scene Ambience rows stay eligible for
+selected-block audio generation when Scene Ambience audio is enabled
+downstream. Project-open reconciliation in the Audio Blocks service is
+responsible for healing stale playability flags when files are missing.
 
 ## 4. Dependencies
 
@@ -124,8 +127,8 @@ Audio preview fields are derived without changing persisted Speech Blocks:
 - `audio_metadata_only` is true for Audio Blocks metadata-only rows or Speech
   Block content kinds currently skipped by audio generation, such as `pause`
   and `indication`
-- `audio_can_play` is true only when the matching Audio Block is generated and
-  its `audio_relative_path` points to an existing project-local file
+- `audio_can_play` mirrors the matching Audio Block persisted playability flag;
+  normal page-state builds do not call `Path.is_file()` per row
 
 ## 7. Workflow Integration
 
@@ -164,6 +167,7 @@ Documentation audit status:
 Focused automated coverage:
 
 - `04_Software/AudioMancer/tests/test_speech_blocks_state_service.py`
+- `04_Software/AudioMancer/tests/test_blocks_performance_baseline.py`
 - selected UI behavior in
   `04_Software/AudioMancer/tests/test_speech_blocks_page.py`
 - controller wiring behavior in

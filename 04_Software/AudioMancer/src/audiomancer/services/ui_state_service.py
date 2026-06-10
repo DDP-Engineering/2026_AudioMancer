@@ -14,7 +14,7 @@
          theme runtime adapter.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 0.57.1
+@version 0.57.2
 """
 
 # ruff: noqa: E501
@@ -665,7 +665,7 @@ _UI_STRINGS = {
         "audio_blocks.play_audiobook": "Play Audiobook",
         "audio_blocks.stop_audiobook": "Stop Audiobook",
         "audio_blocks.reset_generation": "Reset Audio Generation",
-        "audio_blocks.approve_all": "Approve All Generation",
+        "audio_blocks.approve_all": "Approve All",
         "audio_blocks.source_group": "Source Text",
         "audio_blocks.blocks_group": "Speech Blocks",
         "audio_blocks.selected_group": "Selected Block",
@@ -1692,7 +1692,7 @@ _UI_STRINGS = {
         "audio_blocks.play_audiobook": "Reda Audiobook",
         "audio_blocks.stop_audiobook": "Opreste Audiobook",
         "audio_blocks.reset_generation": "Reseteaza Generarea Audio",
-        "audio_blocks.approve_all": "Aproba Toata Generarea",
+        "audio_blocks.approve_all": "Aproba Tot",
         "audio_blocks.source_group": "Text Sursa",
         "audio_blocks.blocks_group": "Blocuri Vorbire",
         "audio_blocks.selected_group": "Bloc Selectat",

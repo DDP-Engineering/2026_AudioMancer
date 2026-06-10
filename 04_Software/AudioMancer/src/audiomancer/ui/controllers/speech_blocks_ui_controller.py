@@ -14,7 +14,7 @@
          Speech Blocks workflow.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 0.8.10
+@version 0.8.11
 """
 
 # IMPORTS
@@ -29,6 +29,7 @@ from audiomancer.services import (
     audio_blocks_service,
     project_workspace_service,
     speech_blocks_service,
+    speech_blocks_state_service,
     text_cleanup_state_service,
     ui_state_service,
     workflow_impact_service,
@@ -166,12 +167,14 @@ def handle_approve_block_requested(window: "MainWindow", speech_block_id: str) -
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-24
-    @version    0.5.1
+    @version    0.5.2
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._current_project_root is None or window._current_manifest is None:
         return
     selected_block = _speech_block_by_id(window, speech_block_id)
+    current_display_block = getattr(window._speech_blocks_page, "_current_display_block", None)
+    selected_display_block = current_display_block() if callable(current_display_block) else selected_block
     was_approved = bool(selected_block.get("approved", False)) if isinstance(selected_block, dict) else False
     source_text_position = _source_text_position(window)
     try:
@@ -186,8 +189,13 @@ def handle_approve_block_requested(window: "MainWindow", speech_block_id: str) -
             str(error),
         )
         return
-    _sync_manifest_after_speech_blocks_update(window)
-    _reset_audio_assembly_after_speech_blocks_change(window)
+    _sync_manifest_after_speech_blocks_update(window, refresh_page=False)
+    _reset_audio_assembly_after_speech_blocks_change(window, refresh_page=False)
+    updated_block = _speech_block_by_id(window, speech_block_id)
+    update_block_item = getattr(window._speech_blocks_page, "update_speech_block_item", None)
+    if updated_block is not None and callable(update_block_item):
+        update_block_item(_speech_block_display_payload(selected_display_block or selected_block, updated_block))
+    _refresh_speech_blocks_review_summary(window)
     if was_approved:
         window._speech_blocks_page.select_speech_block(str(speech_block_id).strip())
         message_key = "status.speech_block_unapproved"
@@ -290,7 +298,7 @@ def handle_edit_started(window: "MainWindow", speech_block_id: str) -> None:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-24
-    @version    0.2.3
+    @version    0.2.4
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._current_project_root is None or window._current_manifest is None:
@@ -305,11 +313,18 @@ def handle_edit_started(window: "MainWindow", speech_block_id: str) -> None:
     )
     if selected_block is None:
         return
+    current_display_block = getattr(window._speech_blocks_page, "_current_display_block", None)
+    selected_display_block = current_display_block() if callable(current_display_block) else selected_block
     if not _confirm_speech_block_audio_reset_if_needed(window, speech_block_id, current_language):
         return
     source_text_position = _source_text_position(window)
     if selected_block.get("warning_flags"):
         speech_blocks_service.clear_speech_block_warning_flags(window._current_project_root, speech_block_id)
+        updated_block = _speech_block_by_id(window, speech_block_id)
+        update_block_item = getattr(window._speech_blocks_page, "update_speech_block_item", None)
+        if updated_block is not None and callable(update_block_item):
+            update_block_item(_speech_block_display_payload(selected_display_block or selected_block, updated_block))
+        _refresh_speech_blocks_review_summary(window)
     window._speech_blocks_page.begin_editing_selected_block()
     _restore_source_text_position(window, source_text_position)
 
@@ -332,7 +347,7 @@ def handle_save_block_requested(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-24
-    @version    0.4.4
+    @version    0.4.5
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._current_project_root is None or window._current_manifest is None:
@@ -365,7 +380,12 @@ def handle_save_block_requested(
         )
         return
     window._current_manifest = project_workspace_service.load_manifest(window._current_project_root)
-    _reset_audio_block_after_speech_block_change(window, speech_block_id)
+    _reset_audio_block_after_speech_block_change(window, speech_block_id, refresh_page=False)
+    updated_block = _speech_block_by_id(window, speech_block_id)
+    update_block_item = getattr(window._speech_blocks_page, "update_speech_block_item", None)
+    if updated_block is not None and callable(update_block_item):
+        update_block_item(_speech_block_display_payload(original_block, updated_block, clear_audio=True))
+    _refresh_speech_blocks_review_summary(window)
     _restore_source_text_position(window, source_text_position)
     misc_ui_controller.show_message(
         window,
@@ -541,7 +561,7 @@ def _handle_speech_blocks_cancelled(window: "MainWindow", message: str) -> None:
     )
 
 
-def _sync_manifest_after_speech_blocks_update(window: "MainWindow") -> None:
+def _sync_manifest_after_speech_blocks_update(window: "MainWindow", refresh_page: bool = True) -> None:
     """
     @brief      Persist the latest Speech Blocks summary and advance only after approval.
     @param[in]  window Active main window instance.
@@ -549,7 +569,7 @@ def _sync_manifest_after_speech_blocks_update(window: "MainWindow") -> None:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.2.0
+    @version    0.2.1
     """
     assert window._current_project_root is not None
     assert window._current_manifest is not None
@@ -570,10 +590,11 @@ def _sync_manifest_after_speech_blocks_update(window: "MainWindow") -> None:
     elif _stage_rank(str(updated_manifest.get("current_stage", "")).strip()) > _stage_rank("character_voices_ready"):
         updated_manifest["current_stage"] = "character_voices_ready"
     project_workspace_service.save_manifest(updated_manifest, window._current_project_root)
-    window.show_project_state(
-        window._current_project_root,
-        project_workspace_service.load_manifest(window._current_project_root),
-    )
+    reloaded_manifest = project_workspace_service.load_manifest(window._current_project_root)
+    if refresh_page:
+        window.show_project_state(window._current_project_root, reloaded_manifest)
+    else:
+        window.refresh_project_summary(window._current_project_root, reloaded_manifest)
 
 
 def _sync_manifest_from_disk(window: "MainWindow") -> None:
@@ -670,6 +691,74 @@ def _speech_block_by_id(window: "MainWindow", speech_block_id: str) -> dict[str,
     )
 
 
+def _speech_block_display_payload(
+    previous_block: dict[str, object] | None,
+    updated_block: dict[str, object],
+    clear_audio: bool = False,
+) -> dict[str, object]:
+    """
+    @brief      Merge persisted Speech Block fields into the current page display payload.
+    @param[in]  previous_block Previous page or persisted Speech Block payload.
+    @param[in]  updated_block Updated persisted Speech Block payload.
+    @param[in]  clear_audio True when downstream audio state was invalidated.
+    @return     Page display payload for one Speech Block row.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-10
+    @version    0.1.0
+    """
+    display_block = {**dict(previous_block or {}), **dict(updated_block)}
+    if clear_audio:
+        display_block.update(
+            {
+                "audio_generated": False,
+                "audio_approved": False,
+                "audio_metadata_only": False,
+                "audio_can_play": False,
+            }
+        )
+    return display_block
+
+
+def _refresh_speech_blocks_review_summary(window: "MainWindow") -> None:
+    """
+    @brief      Refresh Speech Blocks notes and high-level review controls without rebuilding lists.
+    @param[in]  window Active main window instance.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-10
+    @version    0.1.0
+    """
+    if window._current_project_root is None or window._current_manifest is None:
+        return
+    set_review_summary = getattr(window._speech_blocks_page, "set_review_summary", None)
+    if not callable(set_review_summary):
+        return
+    current_language = ui_state_service.current_language_from_settings(window._settings_payload)
+    report = speech_blocks_service.load_speech_blocks_report(window._current_project_root)
+    operation_state = speech_blocks_service.load_operation_state(window._current_project_root)
+    source_chunks = list(getattr(window._speech_blocks_page, "_source_chunks", []))
+    profile_state = speech_blocks_state_service.build_speech_blocks_profile_state(
+        window._settings_payload,
+        None if report is None else str(report.get("ai_profile_id", "")).strip() or None,
+    )
+    speech_blocks = list(getattr(window._speech_blocks_page, "_speech_blocks", []))
+    notes = speech_blocks_state_service.build_speech_blocks_notes(
+        window._current_manifest,
+        source_chunks,
+        report,
+        operation_state,
+        bool(profile_state["entries"]),
+        current_language,
+    )
+    set_review_summary(
+        notes,
+        can_approve_all=any(not bool(block.get("approved", False)) for block in speech_blocks),
+        can_reset=bool(speech_blocks),
+    )
+
+
 def _source_text_position(window: "MainWindow") -> dict[str, object]:
     """
     @brief      Capture selected-chunk text cursor, selection, and scroll state.
@@ -763,7 +852,11 @@ def _speech_block_audio_fields_changed(
     )
 
 
-def _reset_audio_block_after_speech_block_change(window: "MainWindow", speech_block_id: str) -> None:
+def _reset_audio_block_after_speech_block_change(
+    window: "MainWindow",
+    speech_block_id: str,
+    refresh_page: bool = True,
+) -> None:
     """
     @brief      Reset only one stale Audio Block and downstream Audio Assembly.
     @param[in]  window Active main window instance.
@@ -772,7 +865,7 @@ def _reset_audio_block_after_speech_block_change(window: "MainWindow", speech_bl
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-04
-    @version    0.1.0
+    @version    0.1.1
     """
     if window._current_project_root is None or not str(speech_block_id).strip():
         return
@@ -782,10 +875,10 @@ def _reset_audio_block_after_speech_block_change(window: "MainWindow", speech_bl
         (str(speech_block_id).strip(),),
     )
     workflow_impact_service.reset_audio_assembly_outputs(window._current_project_root)
-    _sync_audio_blocks_manifest_summary(window)
+    _sync_audio_blocks_manifest_summary(window, refresh_page=refresh_page)
 
 
-def _reset_audio_assembly_after_speech_blocks_change(window: "MainWindow") -> None:
+def _reset_audio_assembly_after_speech_blocks_change(window: "MainWindow", refresh_page: bool = True) -> None:
     """
     @brief      Reset only Audio Assembly after Speech Blocks order or approval changes.
     @param[in]  window Active main window instance.
@@ -793,13 +886,13 @@ def _reset_audio_assembly_after_speech_blocks_change(window: "MainWindow") -> No
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-04
-    @version    0.1.0
+    @version    0.1.1
     """
     if window._current_project_root is None:
         return
     _stop_audio_playback_before_selective_reset(window)
     workflow_impact_service.reset_audio_assembly_outputs(window._current_project_root)
-    _sync_audio_blocks_manifest_summary(window)
+    _sync_audio_blocks_manifest_summary(window, refresh_page=refresh_page)
 
 
 def _stop_audio_playback_before_selective_reset(window: "MainWindow") -> None:
@@ -891,7 +984,7 @@ def _reset_downstream_after_speech_blocks_structure_change(window: "MainWindow")
     )
 
 
-def _sync_audio_blocks_manifest_summary(window: "MainWindow") -> None:
+def _sync_audio_blocks_manifest_summary(window: "MainWindow", refresh_page: bool = True) -> None:
     """
     @brief      Refresh the compact Audio Blocks manifest summary after Speech Block changes.
     @param[in]  window Active main window instance.
@@ -899,7 +992,7 @@ def _sync_audio_blocks_manifest_summary(window: "MainWindow") -> None:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-24
-    @version    0.3.0
+    @version    0.3.1
     """
     if window._current_project_root is None or window._current_manifest is None:
         return
@@ -935,10 +1028,11 @@ def _sync_audio_blocks_manifest_summary(window: "MainWindow") -> None:
     elif _stage_rank(str(updated_manifest.get("current_stage", "")).strip()) > _stage_rank("speech_blocks_ready"):
         updated_manifest["current_stage"] = "speech_blocks_ready"
     project_workspace_service.save_manifest(updated_manifest, window._current_project_root)
-    window.show_project_state(
-        window._current_project_root,
-        project_workspace_service.load_manifest(window._current_project_root),
-    )
+    reloaded_manifest = project_workspace_service.load_manifest(window._current_project_root)
+    if refresh_page:
+        window.show_project_state(window._current_project_root, reloaded_manifest)
+    else:
+        window.refresh_project_summary(window._current_project_root, reloaded_manifest)
 
 
 def _speech_blocks_manifest_operation_summary(

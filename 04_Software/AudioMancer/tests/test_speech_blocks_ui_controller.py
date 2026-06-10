@@ -13,7 +13,7 @@
          the Speech Blocks workflow.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 0.6.3
+@version 0.6.4
 """
 
 # IMPORTS
@@ -407,7 +407,7 @@ def test_speech_blocks_ui_controller_save_restores_chunk_text_scroll(monkeypatch
     monkeypatch.setattr(
         speech_blocks_ui_controller,
         "_reset_audio_block_after_speech_block_change",
-        lambda *_args: None,
+        lambda *_args, **_kwargs: None,
     )
     monkeypatch.setattr(speech_blocks_ui_controller.misc_ui_controller, "show_message", lambda *args, **kwargs: None)
 
@@ -463,7 +463,7 @@ def test_speech_blocks_ui_controller_insert_resets_downstream_and_selects_new_bl
     monkeypatch.setattr(
         speech_blocks_ui_controller,
         "_sync_manifest_after_speech_blocks_update",
-        lambda _window: reset_calls.append("sync"),
+        lambda _window, **_kwargs: reset_calls.append("sync"),
     )
     monkeypatch.setattr(
         speech_blocks_ui_controller,
@@ -473,7 +473,7 @@ def test_speech_blocks_ui_controller_insert_resets_downstream_and_selects_new_bl
     monkeypatch.setattr(
         speech_blocks_ui_controller,
         "_reset_audio_assembly_after_speech_blocks_change",
-        lambda _window: reset_calls.append("assembly"),
+        lambda _window, **_kwargs: reset_calls.append("assembly"),
     )
     monkeypatch.setattr(speech_blocks_ui_controller.misc_ui_controller, "show_message", lambda *args, **kwargs: None)
 
@@ -543,12 +543,12 @@ def test_speech_blocks_ui_controller_delete_confirms_and_resets_downstream(monke
     monkeypatch.setattr(
         speech_blocks_ui_controller,
         "_sync_manifest_after_speech_blocks_update",
-        lambda _window: reset_calls.append("sync"),
+        lambda _window, **_kwargs: reset_calls.append("sync"),
     )
     monkeypatch.setattr(
         speech_blocks_ui_controller,
         "_reset_audio_block_after_speech_block_change",
-        lambda _window, speech_block_id: reset_calls.append(f"reset:{speech_block_id}"),
+        lambda _window, speech_block_id, **_kwargs: reset_calls.append(f"reset:{speech_block_id}"),
     )
     monkeypatch.setattr(speech_blocks_ui_controller.misc_ui_controller, "show_message", lambda *args, **kwargs: None)
 
@@ -596,6 +596,7 @@ def test_speech_blocks_ui_controller_approve_preserves_audio_blocks_and_resets_a
                 "source_cursor_position": 4,
                 "source_anchor_position": 1,
             },
+            set_speech_blocks_state=lambda *args, **kwargs: page_calls.append(("full_rebuild", args, kwargs)),
             advance_to_next_block=lambda: page_calls.append("advance"),
             restore_source_text_position=lambda position: page_calls.append(("restore_source", dict(position))),
         ),
@@ -610,12 +611,12 @@ def test_speech_blocks_ui_controller_approve_preserves_audio_blocks_and_resets_a
     monkeypatch.setattr(
         speech_blocks_ui_controller,
         "_sync_manifest_after_speech_blocks_update",
-        lambda _window: reset_calls.append("sync"),
+        lambda _window, **_kwargs: reset_calls.append("sync"),
     )
     monkeypatch.setattr(
         speech_blocks_ui_controller,
         "_reset_audio_assembly_after_speech_blocks_change",
-        lambda _window: reset_calls.append("assembly"),
+        lambda _window, **_kwargs: reset_calls.append("assembly"),
     )
     monkeypatch.setattr(
         speech_blocks_ui_controller,
@@ -628,6 +629,7 @@ def test_speech_blocks_ui_controller_approve_preserves_audio_blocks_and_resets_a
 
     assert service_calls == [(project_root, "0001-000001")]
     assert reset_calls == ["sync", "assembly"]
+    assert not any(call[0] == "full_rebuild" for call in page_calls if isinstance(call, tuple))
     assert page_calls == [
         "advance",
         (
@@ -692,12 +694,12 @@ def test_speech_blocks_ui_controller_approval_toggle_unapproves_without_advancin
     monkeypatch.setattr(
         speech_blocks_ui_controller,
         "_sync_manifest_after_speech_blocks_update",
-        lambda _window: reset_calls.append("sync"),
+        lambda _window, **_kwargs: reset_calls.append("sync"),
     )
     monkeypatch.setattr(
         speech_blocks_ui_controller,
         "_reset_audio_assembly_after_speech_blocks_change",
-        lambda _window: reset_calls.append("assembly"),
+        lambda _window, **_kwargs: reset_calls.append("assembly"),
     )
     monkeypatch.setattr(speech_blocks_ui_controller.misc_ui_controller, "show_message", lambda *args, **kwargs: None)
 
