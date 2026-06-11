@@ -14,19 +14,23 @@
          compact per-profile sample artifact set.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-20
-@version 3.17.0
+@version 3.18.0
 """
 
 # IMPORTS
 
+from contextlib import suppress
 import json
+import os
 from pathlib import Path
+import tempfile
 from uuid import uuid4
 
 from audiomancer import config
 from audiomancer.services import project_workspace_service, voice_sample_import_service, voiceweaver_runtime_service
 from audiomancer.services.logging_service import get_component_logger
 from audiomancer.services.operation_runtime_service import optional_string as _optional_string
+from audiomancer.services.persistence_service import write_json_atomic
 
 # CONSTANTS
 
@@ -245,12 +249,12 @@ def load_profiles(project_root: str | Path) -> list[dict[str, object]]:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-20
-    @version    2.0.0
+    @version    2.1.0
     """
     profile_path = _profiles_path(project_root)
     if not profile_path.is_file():
         ensure_narrator_definition_files(project_root)
-    payload = json.loads(profile_path.read_text(encoding="utf-8"))
+    payload = _read_json_or_default(profile_path, [], "narrator profiles")
     normalized_profiles = (
         [_normalize_profile(profile) for profile in payload if isinstance(profile, dict)]
         if isinstance(payload, list)
@@ -268,12 +272,12 @@ def load_selected_profile_state(project_root: str | Path) -> dict[str, object]:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-18
-    @version    1.5.0
+    @version    1.6.0
     """
     ensure_narrator_definition_files(project_root)
     profiles = load_profiles(project_root)
     selection_path = _selection_path(project_root)
-    payload = json.loads(selection_path.read_text(encoding="utf-8")) if selection_path.is_file() else {}
+    payload = _read_json_or_default(selection_path, {}, "selected narrator profile state")
     normalized_state, normalized_profiles = _normalize_selected_state(payload, profiles)
     _write_json(_profiles_path(project_root), normalized_profiles)
     _write_json(selection_path, normalized_state)
@@ -730,12 +734,12 @@ def store_profile_sample(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-17
-    @version    1.7.0
+    @version    1.8.0
     """
     ensure_narrator_definition_files(project_root)
     profile_id = str(profile.get("profile_id", "")).strip()
-    delete_profile_sample(project_root, profile_id)
-    audio_path, _metadata_path = profile_sample_paths(project_root, profile_id)
+    previous_audio_path, _metadata_path = profile_sample_paths(project_root, profile_id)
+    audio_path = _current_profile_sample_audio_path(project_root, profile_id)
     metadata_payload = {
         "source_kind": NARRATOR_SAMPLE_SOURCE_VOICE_DESIGNER,
         "preview_text": str(preview_text).strip(),
@@ -747,12 +751,13 @@ def store_profile_sample(
         ),
     }
     _ = runtime_result_summary
-    audio_path.write_bytes(audio_bytes)
+    _write_bytes_atomic(audio_path, audio_bytes)
     _update_profile_sample_metadata(
         project_root,
         profile_id,
         metadata_payload=metadata_payload,
     )
+    _remove_replaced_sample_audio(previous_audio_path, audio_path)
     return metadata_payload
 
 
@@ -772,7 +777,7 @@ def import_profile_sample(
     @exception  ValueError Raised when the sample path or transcript is invalid.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-15
-    @version    0.2.0
+    @version    0.3.0
     """
     ensure_narrator_definition_files(project_root)
     normalized_preview_text = str(preview_text or "").strip()
@@ -781,8 +786,8 @@ def import_profile_sample(
     source_path = Path(source_audio_path)
     voice_sample_import_service.validate_imported_wav_sample(source_path)
     profile_id = str(profile.get("profile_id", "")).strip()
-    delete_profile_sample(project_root, profile_id)
-    audio_path, _metadata_path = profile_sample_paths(project_root, profile_id)
+    previous_audio_path, _metadata_path = profile_sample_paths(project_root, profile_id)
+    audio_path = _current_profile_sample_audio_path(project_root, profile_id)
     metadata_payload = {
         "source_kind": voice_sample_import_service.IMPORTED_SAMPLE_SOURCE,
         "preview_text": normalized_preview_text,
@@ -790,12 +795,13 @@ def import_profile_sample(
         "source_model_id": None,
         "source_file_name": source_path.name,
     }
-    audio_path.write_bytes(source_path.read_bytes())
+    _write_bytes_atomic(audio_path, source_path.read_bytes())
     _update_profile_sample_metadata(
         project_root,
         profile_id,
         metadata_payload=metadata_payload,
     )
+    _remove_replaced_sample_audio(previous_audio_path, audio_path)
     return metadata_payload
 
 
@@ -839,12 +845,12 @@ def load_selected_narrator_sample_metadata(project_root: str | Path) -> dict[str
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.3.0
+    @version    0.4.0
     """
     ensure_narrator_definition_files(project_root)
     _audio_path, metadata_path = selected_narrator_sample_paths(project_root)
     if metadata_path.is_file():
-        payload = json.loads(metadata_path.read_text(encoding="utf-8"))
+        payload = _read_json_or_default(metadata_path, None, "selected narrator sample metadata")
         if isinstance(payload, dict) and str(payload.get("preview_text", "")).strip():
             selected_sample = _normalize_sample_payload(payload)
             if isinstance(selected_sample, dict):
@@ -914,7 +920,7 @@ def copy_selected_narrator_sample(project_root: str | Path, profile_id: str) -> 
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-17
-    @version    1.6.0
+    @version    1.7.0
     """
     ensure_narrator_definition_files(project_root)
     normalized_profile_id = str(profile_id).strip()
@@ -929,7 +935,7 @@ def copy_selected_narrator_sample(project_root: str | Path, profile_id: str) -> 
         **dict(profile_metadata),
     }
     selected_audio_path, selected_metadata_path = selected_narrator_sample_paths(project_root)
-    selected_audio_path.write_bytes(profile_audio_path.read_bytes())
+    _write_bytes_atomic(selected_audio_path, profile_audio_path.read_bytes())
     _write_json(selected_metadata_path, selected_metadata)
     return selected_metadata
 
@@ -1266,6 +1272,109 @@ def _first_model(model_entries: list[dict[str, object]]) -> dict[str, object] | 
     return None if not model_entries else dict(model_entries[0])
 
 
+def _read_json_or_default(path: Path, default_payload: object, artifact_label: str) -> object:
+    """
+    @brief      Read one JSON artifact, falling back to a default on missing or malformed data.
+    @param[in]  path JSON artifact path.
+    @param[in]  default_payload Payload returned when the artifact is unavailable.
+    @param[in]  artifact_label Human-readable artifact label for diagnostics.
+    @return     Parsed JSON payload or the supplied default payload.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-11
+    @version    0.1.0
+    """
+    if not path.is_file():
+        return default_payload
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as error:
+        _NARRATOR_DEFINITION_LOGGER.warning(
+            "Ignoring unreadable %s artifact at %s: %s",
+            artifact_label,
+            path,
+            error,
+        )
+        return default_payload
+
+
+def _current_profile_sample_audio_path(project_root: str | Path, profile_id: str) -> Path:
+    """
+    @brief      Resolve the current profile-id-based sample WAV path for a narrator profile.
+    @param[in]  project_root Active project root folder.
+    @param[in]  profile_id Target narrator-profile identifier.
+    @return     Current profile sample WAV path.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-11
+    @version    0.1.0
+    """
+    return Path(project_root) / f"audio_narator_{_normalized_audio_name(profile_id)}.wav"
+
+
+def _write_bytes_atomic(target_path: str | Path, payload: bytes) -> None:
+    """
+    @brief      Write bytes through a same-directory temporary file and atomic replacement.
+    @param[in]  target_path Final file path to replace.
+    @param[in]  payload Complete byte payload to persist.
+    @return     None.
+    @exception  OSError Raised when the temporary write or replacement fails.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-11
+    @version    0.1.0
+    """
+    resolved_path = Path(target_path)
+    resolved_path.parent.mkdir(parents=True, exist_ok=True)
+    temporary_path: Path | None = None
+    try:
+        file_descriptor, temporary_name = tempfile.mkstemp(
+            dir=resolved_path.parent,
+            prefix=f".{resolved_path.name}.",
+            suffix=".tmp",
+        )
+        temporary_path = Path(temporary_name)
+        with os.fdopen(file_descriptor, "wb") as temporary_file:
+            temporary_file.write(payload)
+            temporary_file.flush()
+            os.fsync(temporary_file.fileno())
+        os.replace(temporary_path, resolved_path)
+    except OSError:
+        if temporary_path is not None:
+            _unlink_temporary_file(temporary_path)
+        raise
+
+
+def _remove_replaced_sample_audio(previous_audio_path: Path, current_audio_path: Path) -> None:
+    """
+    @brief      Remove a replaced legacy sample WAV after the new sample has been committed.
+    @param[in]  previous_audio_path Existing sample path before replacement.
+    @param[in]  current_audio_path Current committed sample path.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-11
+    @version    0.1.0
+    """
+    if previous_audio_path == current_audio_path:
+        return
+    with suppress(OSError):
+        previous_audio_path.unlink(missing_ok=True)
+
+
+def _unlink_temporary_file(temporary_path: Path) -> None:
+    """
+    @brief      Best-effort cleanup for temporary byte persistence files.
+    @param[in]  temporary_path Temporary file path to remove.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-11
+    @version    0.1.0
+    """
+    with suppress(OSError):
+        temporary_path.unlink(missing_ok=True)
+
+
 def _write_json(path: Path, payload: object) -> None:
     """
     @brief      Write the json.
@@ -1274,9 +1383,9 @@ def _write_json(path: Path, payload: object) -> None:
     @return     None.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.1.0
+    @version    0.2.0
     """
-    path.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    write_json_atomic(path, payload)
 
 
 # END OF FILE

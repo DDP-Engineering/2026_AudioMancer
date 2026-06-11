@@ -31,3 +31,6 @@ Implementation sources and runnable software artifacts.
   AI Translation likewise uses atomic translated-artifact persistence,
   read-only steady-state synchronization, and terminal cancel/failure state
   records for interrupted runs.
+  Narrator voice preparation uses atomic profile/sample persistence,
+  cooperative VoiceWeaver cancellation, non-destructive sample replacement, and
+  terminal cancel/failure checkpoints for interrupted narrator AI analysis.

@@ -14,7 +14,7 @@
          sample preview playback, and project-local narrator profile editing.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-18
-@version 3.19.0
+@version 3.20.0
 """
 
 # IMPORTS
@@ -36,6 +36,7 @@ from audiomancer.services import (
     voice_sample_import_service,
     voiceweaver_runtime_service,
 )
+from audiomancer.services.operation_runtime_service import raise_if_cancelled
 from audiomancer.ui.controllers import (
     audio_blocks_ui_controller,
     misc_ui_controller,
@@ -1017,9 +1018,8 @@ def _generate_and_store_sample(
     @exception  RuntimeError Raised when VoiceWeaver fails or does not expose downloadable audio.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-18
-    @version    1.4.0
+    @version    1.5.0
     """
-    _ = cancel_requested
     _emit_sample_progress(
         progress_callback,
         2,
@@ -1028,6 +1028,7 @@ def _generate_and_store_sample(
     probe_result = tts_runtime_ui_support.probe_runtime_and_persist_cache_from_settings(settings_payload)
     if not bool(probe_result.get("success", False)):
         raise RuntimeError(str(probe_result.get("message", "")))
+    raise_if_cancelled(cancel_requested)
     capability_matrix = dict(probe_result.get("capability_matrix", {}))
     if not bool(capability_matrix.get("minimum_qwen_ready", False)):
         raise RuntimeError(
@@ -1054,10 +1055,6 @@ def _generate_and_store_sample(
         )
     if not bool(generation_request.get("can_generate", False)):
         raise RuntimeError(str(generation_request.get("unavailable_reason", "")))
-    narrator_definition_service.delete_profile_sample(
-        project_root,
-        str(profile_payload.get("profile_id", "")).strip(),
-    )
     base_url = str(settings_payload.get("tts_runtime_base_url", "")).strip()
     runtime_api_key = str(settings_payload.get("tts_runtime_api_key", ""))
     preview_timeout_seconds = tts_runtime_ui_support.preview_timeout_seconds_from_settings(settings_payload)
@@ -1075,6 +1072,7 @@ def _generate_and_store_sample(
         progress_messages["prepare"],
     )
     if active_model_id != model_id:
+        raise_if_cancelled(cancel_requested)
         _emit_sample_progress(
             progress_callback,
             25,
@@ -1095,6 +1093,7 @@ def _generate_and_store_sample(
                 progress_messages["load_model"],
             ),
             timeout_seconds=preview_timeout_seconds,
+            cancel_requested=cancel_requested,
         )
         tts_runtime_ui_support.persist_runtime_status_from_settings(settings_payload, load_status)
         load_operation = load_status.get("operation", {})
@@ -1104,6 +1103,7 @@ def _generate_and_store_sample(
         if active_model_id != model_id:
             raise RuntimeError(f"VoiceWeaver did not activate the requested model '{model_id}'.")
 
+    raise_if_cancelled(cancel_requested)
     _emit_sample_progress(
         progress_callback,
         35,
@@ -1133,6 +1133,7 @@ def _generate_and_store_sample(
             progress_messages["generate"],
         ),
         timeout_seconds=preview_timeout_seconds,
+        cancel_requested=cancel_requested,
     )
     tts_runtime_ui_support.persist_runtime_status_from_settings(settings_payload, final_status)
     final_operation = final_status.get("operation", {})
@@ -1142,6 +1143,7 @@ def _generate_and_store_sample(
     if not isinstance(final_result, dict) or not bool(final_result.get("available", False)):
         raise RuntimeError(progress_messages["generation_missing_audio"])
 
+    raise_if_cancelled(cancel_requested)
     _emit_sample_progress(
         progress_callback,
         95,

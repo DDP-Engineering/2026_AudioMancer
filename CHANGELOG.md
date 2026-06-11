@@ -10,6 +10,22 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [1.5.6] - 2026-06-11
+
+### Fixed
+
+- Narrator sample generation now passes cancellation through VoiceWeaver
+  polling, preserves the previous profile sample when generation fails or is
+  cancelled, writes narrator JSON and WAV artifacts atomically, tolerates
+  malformed narrator JSON as recoverable missing data, and persists
+  `cancelled` / `failed` narrator profile-generation checkpoints.
+
+### Changed
+
+- Project package metadata and `audiomancer.__version__` were updated to
+  `1.5.6`.
+- Offline English and Romanian help bundles were updated to version `1.5.6`.
+
 ## [1.5.5] - 2026-06-11
 
 ### Fixed

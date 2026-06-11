@@ -27,6 +27,8 @@ does not select a narrator profile.
   and profile-generation prompts
 - resume compatible unfinished runs from persisted style observations and
   cumulative token usage
+- persist `cancelled` or `failed` terminal operation states with the resumable
+  checkpoint when an interrupted run does not complete
 - validate profile count, gender allocation, names, prompt text, preview text,
   and preview character limits before persistence
 - append generated profiles to `audio_profiles.json` only after full
@@ -84,7 +86,9 @@ Processing flow:
    summary, then ask the AI for strict JSON narrator profiles using the
    requested count, deterministic gender allocation, and any operator-supplied
    profile rules.
-8. Validate the full response before writing any profile data.
+8. Validate the full response before writing any profile data; invalid final
+   responses persist a `failed` state while keeping completed style
+   observations available for resume.
 9. Append generated profiles and persist report/state with cumulative token
    usage and source fingerprint metadata.
 
@@ -199,7 +203,7 @@ Report/state metadata includes:
 - `additional_profile_instructions`
 - `additional_profile_instructions_fingerprint`
 
-Running-state `resume_checkpoint` includes:
+Running, cancelled, and failed-state `resume_checkpoint` includes:
 
 - `input_fingerprint`
 - `profile_id`
@@ -232,6 +236,11 @@ Gender allocation:
 - even counts split evenly between male and female profiles
 - odd counts split evenly and assign the extra profile randomly to male or
   female; the selected extra gender is written in `gender_allocation`
+
+Successful runs write `status = "completed"` and clear the resume checkpoint.
+Cancelled or failed runs keep the checkpoint and write `status = "cancelled"`
+or `status = "failed"`, so a compatible retry can continue from the next
+unfinished style window or replay only the final synthesis request.
 
 ## 7. Workflow Integration
 
@@ -298,6 +307,7 @@ Focused automated coverage:
 Documentation audit status:
 
 - compact generated-profile metadata contract reviewed on 2026-05-18
+- failed and cancelled terminal checkpoint behavior reviewed on 2026-06-11
 
 Minimum validation after changes:
 

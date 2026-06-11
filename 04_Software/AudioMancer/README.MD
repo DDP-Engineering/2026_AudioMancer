@@ -103,6 +103,10 @@ broader validation baseline is tracked in `../../HowToTest.md`.
 - AI Translation writes translated chunks, reports, and operation state
   atomically; unchanged page-state builds are read-only, and interrupted runs
   persist terminal cancel/failure state.
+- Narrator voice preparation writes profile metadata and sample artifacts
+  atomically, preserves previous samples when new VoiceWeaver generation fails
+  or is cancelled, and records terminal cancel/failure state for interrupted AI
+  narrator-profile generation.
 - Generated Audio Blocks media is written under each project `audio_blocks/`
   folder, including generated Scene Ambience prompt audio when that path is
   enabled.

@@ -53,6 +53,9 @@ without changing the completed chunk output.
 AI Translation uses atomic translated-artifact persistence, read-only
 steady-state page synchronization, and terminal cancel/failure state records to
 protect completed LLM output during interrupted runs.
+Narrator voice preparation uses atomic narrator metadata/sample persistence,
+cooperative VoiceWeaver cancellation, and terminal failed/cancelled checkpoints
+so interrupted runs preserve prior usable samples and resumable AI analysis.
 
 ## Repository Layout
 

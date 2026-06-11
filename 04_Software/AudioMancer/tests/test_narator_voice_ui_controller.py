@@ -13,7 +13,7 @@
          explicit narrator selection, and Qwen3-backed sample generation.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-18
-@version 3.6.2
+@version 3.7.0
 """
 
 # IMPORTS
@@ -628,6 +628,224 @@ def test_narator_voice_generate_sample_reprobes_runtime_and_stores_audio(monkeyp
     }
 
 
+def test_narator_voice_generate_sample_passes_cancel_to_voiceweaver_waits(monkeypatch, tmp_path) -> None:
+    """
+    @brief      Verify REQ-AUDIO-FUNC-024 sample generation passes cooperative cancellation to runtime polls.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-11
+    @version    0.1.0
+    """
+    project_root, _manifest = _create_project(tmp_path, "NarratorControllerGenerateCancelWire")
+    profile = narrator_definition_service.create_custom_profile(
+        project_root,
+        "Generated Narrator",
+        "English",
+        "Generated prompt.",
+        "Preview text.",
+    )
+
+    def cancel_callback() -> bool:
+        """
+        @brief      Return the non-cancelled state for runtime wait callback identity checks.
+        @return     False.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-06-11
+        @version    0.1.0
+        """
+        return False
+
+    observed_cancel_callbacks = []
+    monkeypatch.setattr(
+        narator_voice_ui_controller.tts_runtime_ui_support,
+        "probe_runtime_and_persist_cache_from_settings",
+        lambda _settings_payload: _sample_probe_result(),
+    )
+    monkeypatch.setattr(
+        narator_voice_ui_controller.tts_runtime_ui_support,
+        "persist_runtime_status_from_settings",
+        lambda *_args, **_kwargs: None,
+    )
+    monkeypatch.setattr(
+        narator_voice_ui_controller.tts_budget_service,
+        "resolve_cached_tts_budget",
+        lambda _models: {},
+    )
+    monkeypatch.setattr(
+        narator_voice_ui_controller.tts_budget_service,
+        "estimated_safe_word_count",
+        lambda _payload: 200,
+    )
+    monkeypatch.setattr(
+        narator_voice_ui_controller.tts_budget_service,
+        "estimated_word_count",
+        lambda _text: 10,
+    )
+    monkeypatch.setattr(
+        narator_voice_ui_controller.voiceweaver_runtime_service,
+        "read_status",
+        lambda *_args, **_kwargs: {"active_model": None, "device_diagnostics": {}, "operation": {"status": "idle"}},
+    )
+    monkeypatch.setattr(
+        narator_voice_ui_controller.voiceweaver_runtime_service,
+        "load_model",
+        lambda *_args, **_kwargs: {"status": "running"},
+    )
+    monkeypatch.setattr(
+        narator_voice_ui_controller.voiceweaver_runtime_service,
+        "generate_voice_design",
+        lambda *_args, **_kwargs: {"success": True},
+    )
+
+    def _wait_for_terminal_operation(*_args, **kwargs):
+        """
+        @brief      Capture cancellation callbacks passed to VoiceWeaver runtime polling.
+        @return     Fake terminal runtime status.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-06-11
+        @version    0.1.0
+        """
+        observed_cancel_callbacks.append(kwargs.get("cancel_requested"))
+        result_available = len(observed_cancel_callbacks) > 1
+        return {
+            "active_model": {"model_id": "qwen-designer"},
+            "operation": {"status": "completed", "progress_percent": 100, "stage": "completed"},
+            "result": {"available": result_available, "summary": "Narator voice sample ready."},
+            "device_diagnostics": {},
+        }
+
+    monkeypatch.setattr(
+        narator_voice_ui_controller.voiceweaver_runtime_service,
+        "wait_for_terminal_operation",
+        _wait_for_terminal_operation,
+    )
+    monkeypatch.setattr(
+        narator_voice_ui_controller.voiceweaver_runtime_service,
+        "download_generated_voice",
+        lambda *_args, **_kwargs: b"RIFF-generated",
+    )
+
+    narator_voice_ui_controller._generate_and_store_sample(
+        project_root,
+        _default_settings_payload(),
+        _sample_progress_messages(),
+        profile,
+        "Preview text for narrator sample generation.",
+        progress_callback=None,
+        cancel_requested=cancel_callback,
+    )
+
+    assert observed_cancel_callbacks == [cancel_callback, cancel_callback]
+
+
+def test_narator_voice_generate_sample_failure_preserves_previous_sample(monkeypatch, tmp_path) -> None:
+    """
+    @brief      Verify REQ-AUDIO-FUNC-024 failed sample generation preserves the previous profile sample.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-11
+    @version    0.1.0
+    """
+    project_root, _manifest = _create_project(tmp_path, "NarratorControllerGenerateFailurePreserves")
+    profile = narrator_definition_service.create_custom_profile(
+        project_root,
+        "Generated Narrator",
+        "English",
+        "Generated prompt.",
+        "Preview text.",
+    )
+    narrator_definition_service.store_profile_sample(
+        project_root,
+        profile,
+        "Previous sample text.",
+        {
+            "generation_mode": "definition",
+            "model_id": "qwen-designer",
+            "source_model_id": "qwen-designer",
+            "language": "en",
+        },
+        "Previous generated sample.",
+        b"RIFF-previous",
+    )
+    profile_audio_path, _metadata_path = narrator_definition_service.profile_sample_paths(
+        project_root,
+        profile["profile_id"],
+    )
+    monkeypatch.setattr(
+        narator_voice_ui_controller.tts_runtime_ui_support,
+        "probe_runtime_and_persist_cache_from_settings",
+        lambda _settings_payload: _sample_probe_result(),
+    )
+    monkeypatch.setattr(
+        narator_voice_ui_controller.tts_runtime_ui_support,
+        "persist_runtime_status_from_settings",
+        lambda *_args, **_kwargs: None,
+    )
+    monkeypatch.setattr(
+        narator_voice_ui_controller.tts_budget_service,
+        "resolve_cached_tts_budget",
+        lambda _models: {},
+    )
+    monkeypatch.setattr(
+        narator_voice_ui_controller.tts_budget_service,
+        "estimated_safe_word_count",
+        lambda _payload: 200,
+    )
+    monkeypatch.setattr(
+        narator_voice_ui_controller.tts_budget_service,
+        "estimated_word_count",
+        lambda _text: 10,
+    )
+    monkeypatch.setattr(
+        narator_voice_ui_controller.voiceweaver_runtime_service,
+        "read_status",
+        lambda *_args, **_kwargs: {
+            "active_model": {"model_id": "qwen-designer"},
+            "device_diagnostics": {},
+            "operation": {"status": "idle"},
+        },
+    )
+    monkeypatch.setattr(
+        narator_voice_ui_controller.voiceweaver_runtime_service,
+        "generate_voice_design",
+        lambda *_args, **_kwargs: {"success": True},
+    )
+    monkeypatch.setattr(
+        narator_voice_ui_controller.voiceweaver_runtime_service,
+        "wait_for_terminal_operation",
+        lambda *_args, **_kwargs: {
+            "active_model": {"model_id": "qwen-designer"},
+            "operation": {"status": "failed", "progress_percent": 100, "stage": "failed"},
+            "result": {"available": False, "summary": None},
+            "device_diagnostics": {},
+        },
+    )
+
+    with pytest.raises(RuntimeError):
+        narator_voice_ui_controller._generate_and_store_sample(
+            project_root,
+            _default_settings_payload(),
+            _sample_progress_messages(),
+            profile,
+            "Preview text for narrator sample generation.",
+            progress_callback=None,
+            cancel_requested=lambda: False,
+        )
+
+    assert profile_audio_path.read_bytes() == b"RIFF-previous"
+    sample_metadata = narrator_definition_service.load_profile_sample_metadata(project_root, profile["profile_id"])
+    assert sample_metadata is not None
+    assert sample_metadata["preview_text"] == "Previous sample text."
+
+
 def test_narator_voice_generate_profiles_resolves_selected_ai_profile_and_starts_worker(
     monkeypatch,
     qtbot,
@@ -1014,6 +1232,48 @@ def _write_generated_audio_blocks(project_root) -> None:
         json.dumps({"audio_blocks_stage_status": "completed", "voice_language": "en"}, indent=2) + "\n",
         encoding="utf-8",
     )
+
+
+def _sample_progress_messages() -> dict[str, str]:
+    """
+    @brief      Provide worker-safe sample generation progress messages for tests.
+    @return     Progress message mapping.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-11
+    @version    0.1.0
+    """
+    return {
+        "prepare": "Preparing narator sample generation...",
+        "qwen_capabilities_missing": "Missing capabilities: {missing_capabilities}",
+        "preview_text_over_budget": "Preview text has {word_count} words; safe limit is {safe_word_count}.",
+        "load_model": "Loading voice generation model...",
+        "generate": "Generating narator voice sample...",
+        "generation_missing_audio": "VoiceWeaver did not return downloadable audio.",
+        "download": "Downloading narator voice sample...",
+    }
+
+
+def _sample_probe_result() -> dict[str, object]:
+    """
+    @brief      Provide a ready VoiceWeaver probe result for sample-generation tests.
+    @return     Runtime probe payload.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-11
+    @version    0.1.0
+    """
+    discovered_models = _minimum_qwen_models()
+    return {
+        "success": True,
+        "message": "Connection successful. Discovered 2 models.",
+        "discovered_models": discovered_models,
+        "active_model_id": None,
+        "device_diagnostics": {},
+        "capability_matrix": narator_voice_ui_controller.voiceweaver_runtime_service.build_capability_matrix(
+            discovered_models
+        ),
+    }
 
 
 def _default_settings_payload() -> dict[str, object]:

@@ -28,8 +28,13 @@ runtime-aware state shaping used by the Narator Voice page.
   for narrator samples, generated profile suggestions, and preview defaults
 - persist one generated or imported narrator WAV per narrator profile so
   multiple profiles can be previewed later without regenerating audio
+- replace generated or imported profile samples only after the new WAV payload
+  is available, so failed VoiceWeaver generation keeps the previous sample
+  playable
 - localize the default narrator preview text for supported voice languages
 - store compact per-profile sample metadata in each profile's `sample` payload
+- write narrator profile, selection, and selected-sample metadata atomically and
+  treat malformed JSON as missing data with a warning
 - keep explicit selection state in `narator.json` and the selected-sample copy
   in `narator_sample.json`
 - derive Narator Voice page enablement for `Generate Sample`, `Select`, and
@@ -88,10 +93,12 @@ High-level flow:
    per-profile sample, clears explicit selection when necessary, and only then
    unlocks the page editor.
 6. `Generate Sample` re-probes runtime readiness, requires the fixed Qwen3 TTS
-   Base and Voice Designer capability set (`base`, `voice_designer`), waits for
-   model-load completion before submitting Voice Designer generation, stores or
-   replaces only the current profile's `audio_narator_<profile>.wav`, keeps
-   other profile samples intact, and uses the saved TTS preview timeout.
+   Base and Voice Designer capability set (`base`, `voice_designer`), passes
+   the shared cancel callback through model-load and generation polling, waits
+   for model-load completion before submitting Voice Designer generation, stores
+   or replaces only the current profile's `audio_narator_<profile>.wav`, keeps
+   other profile samples intact, preserves the previous sample on failed or
+   cancelled generation, and uses the saved TTS preview timeout.
 7. `Import Sample` accepts one operator-selected WAV for the inspected profile,
    validates that it is readable, non-silent, and at least three seconds long,
    asks for the exact spoken sample text, then stores the WAV and transcript in
@@ -217,6 +224,11 @@ discoverable until a later sample replacement writes the current
 profile-id-based path, and legacy selected-sample JSON remains readable by
 downstream workflows through the compact selected-sample return shape.
 
+Malformed narrator profile, selection, or selected-sample JSON is treated as a
+missing artifact with a logged warning. The service repairs profile and
+selection files through the normal normalized write path instead of propagating
+JSON decoding errors to the Narator Voice page.
+
 ## 7. Workflow Integration
 
 This workflow sits after Character Discovery in the current stage order, but it
@@ -329,6 +341,8 @@ Documentation audit status:
 - compact narrator profile/sample metadata contract reviewed on 2026-05-18
 - legacy narrator sample read-compatibility reviewed on 2026-05-18
 - legacy selected-sample normalization reviewed on 2026-05-18
+- narrator sample cancellation wiring, non-destructive sample replacement, and
+  malformed narrator JSON recovery reviewed on 2026-06-11
 
 Focused automated coverage includes:
 
