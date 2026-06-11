@@ -34,3 +34,7 @@ Implementation sources and runnable software artifacts.
   Narrator voice preparation uses atomic profile/sample persistence,
   cooperative VoiceWeaver cancellation, non-destructive sample replacement, and
   terminal cancel/failure checkpoints for interrupted narrator AI analysis.
+  Character Voices uses matching atomic target/sample persistence,
+  cooperative VoiceWeaver cancellation, non-destructive failed generation, and
+  read-only unchanged state refreshes for narrator-copied character samples
+  while preserving full-current-target batch regeneration.

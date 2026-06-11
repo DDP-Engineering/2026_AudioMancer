@@ -56,6 +56,10 @@ protect completed LLM output during interrupted runs.
 Narrator voice preparation uses atomic narrator metadata/sample persistence,
 cooperative VoiceWeaver cancellation, and terminal failed/cancelled checkpoints
 so interrupted runs preserve prior usable samples and resumable AI analysis.
+Character Voices uses matching atomic target/sample persistence, cooperative
+VoiceWeaver cancellation, non-destructive failed generation, and read-only
+unchanged same-narrator refreshes while preserving full-current-target batch
+regeneration.
 
 ## Repository Layout
 

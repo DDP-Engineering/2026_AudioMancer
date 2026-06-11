@@ -79,7 +79,8 @@ High-level flow:
    and an age-neutral adult instruction when age is not specified.
 5. In `same_narrator` mode, narrator-derived character samples are copied into
    each character slot during state build and per-character editing/generation
-   stays disabled.
+   stays disabled. Unchanged copied samples are detected by metadata plus WAV
+   byte equality and are not rewritten during later page refreshes.
 6. `Edit Voice Prompt` confirms v2 downstream impact, deletes the stored
    character sample, clears generated audio on Audio Blocks for that target
    only, resets Audio Assembly, and enters explicit edit mode.
@@ -89,8 +90,10 @@ High-level flow:
    transcript in the same per-target sample slot used by generated samples.
    The read-only Narator Voice row cannot import samples from this page.
 8. `Generate Sample` verifies the fixed Qwen3 capability set, waits for model
-   load completion when needed, and stores one WAV plus metadata for the
-   selected character target.
+   load completion when needed, supports cooperative cancellation during
+   runtime polling, and stores one WAV plus metadata for the selected character
+   target. Failed or cancelled runtime work leaves the previous stored sample
+   and metadata intact.
 9. `Generate Character Samples` confirms once, selects every current character
    target, then regenerates samples sequentially in the shared modal progress
    dialog. Existing character samples are replaced by the same per-target
@@ -211,6 +214,18 @@ selected-sample source keys (`generation_mode`, `sample_source`). Character
 Voices writes its own target metadata using the Character Voices contract above
 and does not persist sample audit timestamps or `stale`; changing a character
 voice prompt clears the affected sample instead.
+
+Persistence contract:
+
+- `characters_voice.json` is written through same-directory atomic replacement.
+- Character sample WAV files are written through temporary files followed by
+  atomic replacement.
+- Page-state refreshes avoid manifest, target-file, and copied-WAV writes when
+  the persisted data already matches the derived Character Voices state.
+- Successful sample generation and import still replace the current target
+  sample; failed or cancelled generation does not delete the previous sample.
+- The batch command remains a full-current-target regeneration command rather
+  than a missing-only resume operation.
 
 ## 7. Workflow Integration
 

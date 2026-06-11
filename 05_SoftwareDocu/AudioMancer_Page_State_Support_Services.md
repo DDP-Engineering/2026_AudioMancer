@@ -31,6 +31,8 @@ flags, notes, preview text, selected targets, and reset-state calculations.
 - derive AI Translation page state from chunking and translation artifacts
 - derive Characters and Character Voices page state from persisted reports,
   narrator profiles, selected language, and VoiceWeaver readiness
+- keep unchanged Character Voices refreshes read-only, including same-narrator
+  copied sample state that already matches the selected narrator sample
 - build the Characters page `source_chunk_map` from the already-loaded chunk
   artifact without invoking Character Discovery input enrichment or
   dialogue-span detection during page refresh

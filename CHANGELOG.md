@@ -10,6 +10,24 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [1.5.7] - 2026-06-11
+
+### Fixed
+
+- Character Voices sample generation now passes cancellation through
+  VoiceWeaver polling, preserves previous character samples when generation
+  fails or is cancelled, writes Character Voices JSON and WAV artifacts
+  atomically, and avoids redundant same-narrator copied-sample writes during
+  unchanged page refreshes.
+
+### Changed
+
+- Character Voices page-state refreshes now avoid unchanged manifest and target
+  rewrites while preserving full-current-target batch regeneration behavior.
+- Project package metadata and `audiomancer.__version__` were updated to
+  `1.5.7`.
+- Offline English and Romanian help bundles were updated to version `1.5.7`.
+
 ## [1.5.6] - 2026-06-11
 
 ### Fixed

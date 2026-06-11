@@ -107,6 +107,9 @@ broader validation baseline is tracked in `../../HowToTest.md`.
   atomically, preserves previous samples when new VoiceWeaver generation fails
   or is cancelled, and records terminal cancel/failure state for interrupted AI
   narrator-profile generation.
+- Character Voices writes targets and samples atomically, keeps unchanged
+  same-narrator page refreshes read-only, and preserves previous character
+  samples when new VoiceWeaver generation fails or is cancelled.
 - Generated Audio Blocks media is written under each project `audio_blocks/`
   folder, including generated Scene Ambience prompt audio when that path is
   enabled.

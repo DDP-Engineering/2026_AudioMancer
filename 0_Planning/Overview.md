@@ -197,6 +197,16 @@ This stage should consolidate:
 - explicit sex/gender and age-domain handoff text for character voice-design
   prompts so TTS voice design has stable vocal anchors
 
+Current narrator preparation also preserves previous usable samples when a new
+VoiceWeaver sample run fails or is cancelled, writes narrator metadata and WAV
+artifacts atomically, and records failed/cancelled AI narrator-profile
+generation checkpoints for compatible resume.
+
+Character Voices applies the same persistence posture for character target
+metadata and samples: unchanged same-narrator refreshes stay read-only, failed
+or cancelled sample generation preserves the previous sample, and batch
+generation continues to regenerate all current character targets.
+
 This is not the final step. It prepares the canonical generation plan used by
 later audio synthesis and assembly stages.
 
