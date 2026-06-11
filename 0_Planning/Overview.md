@@ -177,6 +177,8 @@ The translation workflow must:
 - preserve source-to-translation alignment
 - support partial progress, edits, approvals, and retranslation
 - keep translation state explicit and reviewable
+- protect completed translated output with atomic project artifacts and
+  recoverable cancel/failure state during interrupted runs
 
 ### 5.8 Voice And Narration Preparation
 

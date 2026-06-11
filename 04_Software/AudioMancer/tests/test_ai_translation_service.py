@@ -13,7 +13,7 @@
          review-state updates, and approval helpers.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-07
-@version 0.7.0
+@version 0.8.0
 """
 
 # IMPORTS
@@ -23,7 +23,7 @@ import json
 import pytest
 
 from audiomancer import config
-from audiomancer.services import ai_translation_service, project_workspace_service
+from audiomancer.services import ai_translation_service, operation_runtime_service, project_workspace_service
 
 
 def test_ai_translation_service_creates_translation_artifacts(monkeypatch, tmp_path) -> None:
@@ -280,6 +280,223 @@ def test_ai_translation_service_resume_preserves_completed_chunks(monkeypatch, t
     _assert_simplified_translation_state(operation_state)
     assert operation_state["metadata"]["log_relative_path"] == "log_ai_translation_20260407.log"
     assert calls == [str(existing_log_path)]
+
+
+def test_ai_translation_service_uses_single_checkpoint_for_one_resumed_chunk(monkeypatch, tmp_path) -> None:
+    """
+    @brief      Verify REQ-AUDIO-FUNC-004 keeps one atomic chunk checkpoint during resume.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-10
+    @version    0.1.0
+    """
+    project_root, manifest = _create_chunked_project(tmp_path, "TranslationSingleCheckpointProject")
+    source_chunks, translated_chunks, _report = ai_translation_service.ensure_translation_records(
+        project_root,
+        "ro",
+        "profile-1",
+    )
+    translated_chunks[0]["translated_text"] = "Existing translation"
+    translated_chunks[0]["status"] = ai_translation_service.TRANSLATED_CHUNK_STATUS_TRANSLATED
+    report = ai_translation_service._rebuild_report(translated_chunks, "ro", "profile-1")
+    ai_translation_service._persist_translation_state(
+        project_root,
+        source_chunks,
+        translated_chunks,
+        report,
+        operation_state=ai_translation_service._refresh_operation_state(
+            project_root,
+            source_chunks,
+            translated_chunks,
+            report,
+            ai_translation_service.load_operation_state(project_root),
+            "profile-1",
+            "ro",
+            {},
+        ),
+    )
+    monkeypatch.setattr(
+        ai_translation_service.prompt_template_service,
+        "validate_required_prompts",
+        lambda _names: None,
+    )
+    monkeypatch.setattr(
+        ai_translation_service.prompt_template_service,
+        "render_prompt",
+        lambda _name, variables: f"prompt {variables}",
+    )
+    monkeypatch.setattr(
+        ai_translation_service.llm_provider_service,
+        "chat_json",
+        lambda *_args, **_kwargs: {"payload": {"translated_text": "New translation"}, "usage": {}},
+    )
+    original_write_json_atomic = ai_translation_service.write_json_atomic
+    translated_artifact_writes = []
+
+    def spy_write_json_atomic(path, payload, **kwargs):
+        if path.name == config.TRANSLATED_CHUNKS_FILE_NAME:
+            translated_artifact_writes.append(path)
+        original_write_json_atomic(path, payload, **kwargs)
+
+    monkeypatch.setattr(ai_translation_service, "write_json_atomic", spy_write_json_atomic)
+
+    ai_translation_service.start_or_continue_translation(project_root, manifest, _profile_payload(), "ro")
+
+    assert len(translated_artifact_writes) == 3
+
+
+def test_ai_translation_service_review_action_writes_artifact_once(monkeypatch, tmp_path) -> None:
+    """
+    @brief      Verify REQ-AUDIO-FUNC-004 review approval avoids precondition rewrite churn.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-10
+    @version    0.1.0
+    """
+    project_root, _manifest = _create_chunked_project(tmp_path, "TranslationReviewWriteCountProject")
+    source_chunks, translated_chunks, _report = ai_translation_service.ensure_translation_records(
+        project_root,
+        "ro",
+        "profile-1",
+    )
+    translated_chunks[0]["translated_text"] = "Translated one"
+    translated_chunks[0]["status"] = ai_translation_service.TRANSLATED_CHUNK_STATUS_TRANSLATED
+    report = ai_translation_service._rebuild_report(translated_chunks, "ro", "profile-1")
+    ai_translation_service._persist_translation_state(
+        project_root,
+        source_chunks,
+        translated_chunks,
+        report,
+        operation_state=ai_translation_service._refresh_operation_state(
+            project_root,
+            source_chunks,
+            translated_chunks,
+            report,
+            ai_translation_service.load_operation_state(project_root),
+            "profile-1",
+            "ro",
+            {},
+        ),
+    )
+    original_write_json_atomic = ai_translation_service.write_json_atomic
+    translated_artifact_writes = []
+
+    def spy_write_json_atomic(path, payload, **kwargs):
+        if path.name == config.TRANSLATED_CHUNKS_FILE_NAME:
+            translated_artifact_writes.append(path)
+        original_write_json_atomic(path, payload, **kwargs)
+
+    monkeypatch.setattr(ai_translation_service, "write_json_atomic", spy_write_json_atomic)
+
+    ai_translation_service.approve_chunk(project_root, "chunk-0001", "ro", "profile-1")
+
+    assert len(translated_artifact_writes) == 1
+
+
+def test_ai_translation_service_tolerates_malformed_translation_json(tmp_path) -> None:
+    """
+    @brief      Verify REQ-AUDIO-FUNC-004 treats malformed translation artifacts as recoverable.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-10
+    @version    0.1.0
+    """
+    project_root, _manifest = _create_chunked_project(tmp_path, "TranslationMalformedJsonProject")
+    (project_root / config.TRANSLATED_CHUNKS_FILE_NAME).write_text("[", encoding="utf-8")
+    (project_root / config.TRANSLATION_REPORT_FILE_NAME).write_text("{", encoding="utf-8")
+    (project_root / config.TRANSLATION_STATE_FILE_NAME).write_text("{", encoding="utf-8")
+
+    source_chunks, translated_chunks, report = ai_translation_service.ensure_translation_records(
+        project_root,
+        "ro",
+        "profile-1",
+    )
+
+    assert len(source_chunks) == 2
+    assert len(translated_chunks) == 2
+    assert report["translation_stage_status"] == ai_translation_service.TRANSLATION_STAGE_NOT_STARTED
+    assert ai_translation_service.load_operation_state(project_root)["status"] == "not_started"
+
+
+def test_ai_translation_service_persists_cancelled_state(monkeypatch, tmp_path) -> None:
+    """
+    @brief      Verify REQ-AUDIO-FUNC-004 persists cancellation terminal state.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-10
+    @version    0.1.0
+    """
+    project_root, manifest = _create_chunked_project(tmp_path, "TranslationCancelledStateProject")
+    monkeypatch.setattr(
+        ai_translation_service.prompt_template_service,
+        "validate_required_prompts",
+        lambda _names: None,
+    )
+    monkeypatch.setattr(
+        ai_translation_service.prompt_template_service,
+        "render_prompt",
+        lambda _name, variables: f"prompt {variables}",
+    )
+
+    with pytest.raises(operation_runtime_service.OperationCancelledError):
+        ai_translation_service.start_or_continue_translation(
+            project_root,
+            manifest,
+            _profile_payload(),
+            "ro",
+            cancel_requested=lambda: True,
+        )
+
+    operation_state = ai_translation_service.load_operation_state(project_root)
+    assert operation_state["status"] == "cancelled"
+    assert operation_state["resume_checkpoint"]["next_untranslated_chunk_id"] == "chunk-0001"
+
+
+def test_ai_translation_service_persists_failed_state(monkeypatch, tmp_path) -> None:
+    """
+    @brief      Verify REQ-AUDIO-FUNC-004 persists failure terminal state.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-10
+    @version    0.1.0
+    """
+    project_root, manifest = _create_chunked_project(tmp_path, "TranslationFailedStateProject")
+    monkeypatch.setattr(
+        ai_translation_service.prompt_template_service,
+        "validate_required_prompts",
+        lambda _names: None,
+    )
+    monkeypatch.setattr(
+        ai_translation_service.prompt_template_service,
+        "render_prompt",
+        lambda _name, variables: f"prompt {variables}",
+    )
+
+    def fail_chat_json(*_args, **_kwargs):
+        raise RuntimeError("provider unavailable")
+
+    monkeypatch.setattr(ai_translation_service.llm_provider_service, "chat_json", fail_chat_json)
+
+    with pytest.raises(RuntimeError, match="provider unavailable"):
+        ai_translation_service.start_or_continue_translation(project_root, manifest, _profile_payload(), "ro")
+
+    operation_state = ai_translation_service.load_operation_state(project_root)
+    assert operation_state["status"] == "failed"
+    assert operation_state["resume_checkpoint"]["next_untranslated_chunk_id"] == "chunk-0001"
 
 
 def test_ai_translation_start_same_language_uses_llm(monkeypatch, tmp_path) -> None:

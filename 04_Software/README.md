@@ -28,3 +28,6 @@ Implementation sources and runnable software artifacts.
   logging service and workflow artifacts remain project-local. Text chunking
   keeps deterministic and AI-assisted checkpoint artifacts resumable and uses
   atomic JSON persistence for chunking state, reports, and chunk output.
+  AI Translation likewise uses atomic translated-artifact persistence,
+  read-only steady-state synchronization, and terminal cancel/failure state
+  records for interrupted runs.

@@ -24,8 +24,11 @@ the `AI Translation` UI.
 - split oversized chunk text into budgeted translation segments before model
   calls
 - persist translated chunk records, operation state, report data, and AI logs
+  through atomic JSON writes for the translation artifact, report, and state
 - keep translation operation state compact by storing resume-critical metadata
   instead of duplicated input, output, and artifact path lists
+- keep steady-state page display and review preconditions read-only when
+  translation records are already synchronized with source chunks
 - support selected-chunk edit, retranslate, approve, approve-all, and reset
 - reset downstream character, character-voice, speech, audio, and audiobook
   artifacts when translation is fully reset, while preserving existing Narator
@@ -67,8 +70,8 @@ High-level flow:
 4. The controller offers an optional word-wrapped prompt box for operator
    translation rules before a fresh full translation run or selected chunk
    retranslation.
-5. The service translates one chunk at a time, persists progress
-   after each chunk, and appends provider transaction metadata.
+5. The service translates one chunk at a time, persists one atomic checkpoint
+   after each completed chunk, and appends provider transaction metadata.
 6. The generated-translation phase ends with `translation_stage_status =
    translated`.
 7. Review remains incomplete until translated chunks are approved.
@@ -146,6 +149,12 @@ Invariants:
   Translation; resume uses `translated_text.json` to skip completed chunks,
   `metadata.log_relative_path` to keep appending to the same AI transaction log,
   and persisted token-usage and prompt-rule metadata for continuity
+- translated chunk, report, and operation-state JSON writes are atomic; malformed
+  persisted JSON is logged and treated as missing data so page state and resume
+  paths can recover without an unhandled decode error
+- running translation and selected-chunk retranslation persist `cancelled` or
+  `failed` operation states with the current resume checkpoint before reraising
+  the interruption or error
 - `project.json.operations["translation"]` remains a compact Home summary with
   status, progress, mode, and warning count only
 - approval is required before downstream character and voice workflows consume
@@ -200,6 +209,11 @@ Focused automated coverage includes:
 - `04_Software/AudioMancer/tests/test_ai_translation_ui_controller.py`
 - `04_Software/AudioMancer/tests/test_ai_translation_page.py`
 
+Focused persistence and recovery coverage verifies single chunk checkpoints,
+single review-action artifact writes, read-only unchanged page-state builds,
+malformed translation JSON recovery, and persisted `cancelled` / `failed`
+terminal states.
+
 Minimum validation after changes:
 
 ```powershell
@@ -211,3 +225,5 @@ uv run pytest tests/test_ai_translation_service.py tests/test_ai_translation_sta
 
 - The service relies on language codes and labels already supported by
   `config.TRANSLATION_LANGUAGE_OPTIONS`.
+- Segment-level recovery inside one oversized chunk remains future work; the
+  current durable checkpoint commits completed chunks atomically.

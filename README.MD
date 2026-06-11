@@ -50,6 +50,9 @@ logging service so VoiceWeaver calls, Scene Ambience generation, and long
 operation checkpoints can be reviewed after a run.
 Long text-chunking runs keep resumable checkpoints and atomic project artifacts
 without changing the completed chunk output.
+AI Translation uses atomic translated-artifact persistence, read-only
+steady-state page synchronization, and terminal cancel/failure state records to
+protect completed LLM output during interrupted runs.
 
 ## Repository Layout
 

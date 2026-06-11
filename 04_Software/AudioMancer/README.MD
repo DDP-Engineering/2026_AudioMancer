@@ -100,6 +100,9 @@ broader validation baseline is tracked in `../../HowToTest.md`.
 - Project workflow artifacts are written inside the selected project root.
 - Text chunking writes chunk artifacts, reports, and operation state atomically;
   cancelled or failed chunking runs keep resumable terminal state.
+- AI Translation writes translated chunks, reports, and operation state
+  atomically; unchanged page-state builds are read-only, and interrupted runs
+  persist terminal cancel/failure state.
 - Generated Audio Blocks media is written under each project `audio_blocks/`
   folder, including generated Scene Ambience prompt audio when that path is
   enabled.

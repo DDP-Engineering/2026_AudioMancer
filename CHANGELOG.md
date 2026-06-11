@@ -10,6 +10,22 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [1.5.4] - 2026-06-11
+
+### Fixed
+
+- AI Translation now writes translated chunks, reports, and operation state
+  atomically, avoids duplicate per-chunk and review precondition rewrites,
+  keeps unchanged page-state builds read-only, tolerates malformed translation
+  JSON as recoverable missing data, and persists `cancelled` / `failed`
+  terminal states for interrupted translation runs.
+
+### Changed
+
+- Project package metadata and `audiomancer.__version__` were updated to
+  `1.5.4`.
+- Offline English and Romanian help bundles were updated to version `1.5.4`.
+
 ## [1.5.3] - 2026-06-10
 
 ### Changed
