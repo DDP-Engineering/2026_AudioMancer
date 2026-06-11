@@ -14,7 +14,7 @@
          profile behavior.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-08
-@version 0.4.0
+@version 0.4.1
 """
 
 # IMPORTS
@@ -83,6 +83,42 @@ def test_build_character_state_exposes_manual_maintenance_flags(tmp_path) -> Non
     assert any("Discovered 1 speaking characters" in note for note in state["notes"])
     assert any("Input tokens: 140 | Output tokens: 35 | Total: 175" in note for note in state["notes"])
     assert any("fresh discovery rerun replaces" in note for note in state["notes"])
+
+
+def test_build_character_state_uses_loaded_chunks_without_discovery_enrichment(monkeypatch, tmp_path) -> None:
+    """
+    @brief      Verify REQ-AUDIO-FUNC-013 page state avoids discovery chunk enrichment during refresh.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-11
+    @version    0.1.0
+    """
+    project_root, manifest = _create_project(tmp_path, "CharacterDiscoveryStateNoDiscoveryEnrichment")
+    monkeypatch.setattr(
+        character_discovery_state_service.character_discovery_service,
+        "load_input_chunks",
+        lambda _project_root: (_ for _ in ()).throw(AssertionError("load_input_chunks should not be called")),
+    )
+    monkeypatch.setattr(
+        character_discovery_state_service.character_discovery_service,
+        "_detect_dialogue_spans",
+        lambda _text: (_ for _ in ()).throw(AssertionError("_detect_dialogue_spans should not be called")),
+    )
+
+    state = character_discovery_state_service.build_character_discovery_state(
+        project_root,
+        manifest,
+        "en",
+        {
+            "llm_profiles": [{"id": "profile-1", "label": "Profile One", "enabled": True}],
+            "default_character_extraction_profile_id": "profile-1",
+        },
+    )
+
+    assert state["source_chunk_map"] == {"chunk-0001": '"Hello there," said Alice.'}
 
 
 def test_build_character_state_requires_ai_profile_to_start(tmp_path) -> None:

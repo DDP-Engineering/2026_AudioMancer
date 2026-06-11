@@ -38,10 +38,17 @@ controller aligned with the project manifest.
   diagnostics
 - derive and persist one final voice-definition prompt for each character
   profile
+- persist profiles, reports, and operation state through atomic JSON
+  replacements so interrupted writes do not destroy completed AI output or
+  manual edits
+- tolerate malformed profile or report JSON as missing data with a logged
+  warning, allowing the Characters page and downstream consumers to keep
+  loading
 - persist `characters_state.json`, `characters_report.json`, one
   `characters_profile.json` output, and one per-run AI transaction log
 - expose Character Discovery page state, notes, and default AI-profile
-  selection
+  selection from the already-loaded chunk artifact without recomputing
+  discovery dialogue spans during page refresh
 - handle page-level start, resume, reset, guarded manual add or edit or save
   or delete behavior, and unsaved-change prompts
 
@@ -90,8 +97,9 @@ High-level runtime flow:
    `CHAPTER_LABEL` prompt context by scanning ordered chunk text for
    chapter/scene headings, derives request budgets from the selected profile
    context window and max output tokens, and restores resumable state when the
-   top-level chunk fingerprint, saved operator-rule fingerprint, and current
-   checkpoint boundary are valid.
+   top-level chunk fingerprint, saved operator-rule fingerprint, current
+   checkpoint boundary, and resumable `running`, `failed`, or `cancelled`
+   status are valid.
 5. The service detects direct-dialogue spans in each chunk using punctuation
    structure rather than English-only speech verbs, analyzes budgeted chunk
    windows using eight chunks as a maximum cap, normalizes candidate evidence
@@ -101,7 +109,8 @@ High-level runtime flow:
    when needed, and runs one synthesis pass per merged character.
 6. The service writes `characters_profile.json`, `characters_report.json`,
    `characters_state.json`, and one `log_ai_characters_<timestamp>.log`
-   transaction log at the project root.
+   transaction log at the project root. JSON profile, report, and state writes
+   are atomic.
 7. The controller syncs `operations["character_discovery"]` into
    `project.json`, sets `current_stage` to `character_discovery_ready`, and
    reloads the window state.
@@ -164,6 +173,10 @@ Outputs:
 - `characters_state.json`
 - `log_ai_characters_<timestamp>.log`
 - updated `project.json` operation state and workflow stage
+
+Profile and report loaders treat unreadable or malformed JSON as absent data
+and log a warning instead of raising into page-state or downstream consumers.
+The next successful write replaces those artifacts atomically.
 
 Report and operation state also persist
 `additional_character_discovery_instructions`,

@@ -14,7 +14,7 @@
          for the Characters page.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-11
-@version 0.17.2
+@version 0.17.3
 """
 
 # IMPORTS
@@ -1151,11 +1151,11 @@ def _is_resuming_character_discovery(window: "MainWindow") -> bool:
     """
     @brief      Return whether Character Discovery can resume saved AI work.
     @param[in]  window Active main window instance.
-    @return     True when a running or failed AI Character Discovery operation is present.
+    @return     True when a running, failed, or cancelled AI Character Discovery operation is present.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-13
-    @version    0.1.0
+    @version    0.1.1
     """
     if window._current_project_root is None:
         return False
@@ -1165,7 +1165,7 @@ def _is_resuming_character_discovery(window: "MainWindow") -> bool:
     is_ai_mode = (
         str(operation_state.get("mode", "")) == character_discovery_service.CHARACTER_DISCOVERY_MODE_AI_ASSISTED
     )
-    is_resumable_status = str(operation_state.get("status", "")) in {"running", "failed"}
+    is_resumable_status = str(operation_state.get("status", "")) in {"running", "failed", "cancelled"}
     return is_ai_mode and is_resumable_status
 
 

@@ -14,7 +14,7 @@
          discovery workflow.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-08
-@version 0.15.0
+@version 0.15.1
 """
 
 # IMPORTS
@@ -445,6 +445,196 @@ def test_start_discovery_resumes_from_saved_synthesis_checkpoint(monkeypatch, tm
     resumed_profile = character_discovery_service.load_character_profiles(project_root)[0]
     assert resumed_profile["gender_hint"] == "female"
     assert "Clear and calm" in resumed_profile["voice_definition_prompt"]
+
+
+def test_character_discovery_tolerates_malformed_profiles_and_report(tmp_path) -> None:
+    """
+    @brief      Verify REQ-AUDIO-FUNC-012 malformed Character Discovery artifacts degrade to missing data.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-11
+    @version    0.1.0
+    """
+    project_root, _manifest = _create_character_project(tmp_path, "CharacterDiscoveryMalformedArtifacts")
+    discovery_root = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH
+    (discovery_root / config.CHARACTER_PROFILE_FILE_NAME).write_text('{"broken": ', encoding="utf-8")
+    (discovery_root / config.CHARACTER_DISCOVERY_REPORT_FILE_NAME).write_text('{"broken": ', encoding="utf-8")
+
+    assert character_discovery_service.load_character_profiles(project_root) == []
+    assert character_discovery_service.load_character_discovery_report(project_root) is None
+
+
+def test_start_discovery_persists_cancelled_state_and_resumes_synthesis(monkeypatch, tmp_path) -> None:
+    """
+    @brief      Verify REQ-AUDIO-FUNC-012 cancelled synthesis persists a resumable checkpoint without repeating windows.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-11
+    @version    0.1.0
+    """
+    project_root, manifest = _create_character_project(tmp_path, "CharacterDiscoveryCancelledResume")
+    _patch_character_discovery_prompt_rendering(monkeypatch)
+    call_stages: list[str] = []
+
+    def _cancel_during_synthesis(*_args, **kwargs):
+        """
+        @brief      Provide a fake model that cancels during profile synthesis.
+        @return     Fake model response for discovery windows.
+        @exception  OperationCancelledError Raised for the synthesis call.
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-06-11
+        @version    0.1.0
+        """
+        stage_label = str(kwargs["log_context"]["stage_label"])
+        call_stages.append(stage_label)
+        if stage_label == "character_profile_synthesis":
+            raise character_discovery_service.OperationCancelledError("cancelled")
+        return _window_response_payload()
+
+    monkeypatch.setattr(character_discovery_service.llm_provider_service, "chat_json", _cancel_during_synthesis)
+
+    with pytest.raises(character_discovery_service.OperationCancelledError):
+        character_discovery_service.start_or_continue_discovery(
+            project_root,
+            manifest,
+            _profile_payload("profile-1"),
+            progress_callback=lambda *_args: None,
+            cancel_requested=lambda: False,
+        )
+
+    cancelled_state = character_discovery_service.load_operation_state(project_root)
+    assert cancelled_state is not None
+    assert cancelled_state["status"] == "cancelled"
+    assert cancelled_state["metadata"]["phase"] == "synthesis"
+    assert cancelled_state["resume_checkpoint"]["completed_window_count"] == 1
+    assert len(cancelled_state["resume_checkpoint"]["raw_candidates"]) == 1
+    assert len(cancelled_state["resume_checkpoint"]["synthesized_profiles"]) == 0
+
+    resumed_stages: list[str] = []
+
+    def _resume_synthesis(*_args, **kwargs):
+        """
+        @brief      Provide a fake model that records resumed synthesis calls.
+        @return     Fake synthesis payload.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-06-11
+        @version    0.1.0
+        """
+        resumed_stages.append(str(kwargs["log_context"]["stage_label"]))
+        return _synthesis_response_payload()
+
+    monkeypatch.setattr(character_discovery_service.llm_provider_service, "chat_json", _resume_synthesis)
+
+    report = character_discovery_service.start_or_continue_discovery(
+        project_root,
+        manifest,
+        _profile_payload("profile-1"),
+        progress_callback=lambda *_args: None,
+        cancel_requested=lambda: False,
+    )
+
+    assert call_stages == ["character_discovery_window", "character_profile_synthesis"]
+    assert resumed_stages == ["character_profile_synthesis"]
+    assert report["character_count"] == 1
+
+
+def test_start_discovery_persists_failed_state(monkeypatch, tmp_path) -> None:
+    """
+    @brief      Verify REQ-AUDIO-FUNC-012 synthesis failures persist a failed checkpoint.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-11
+    @version    0.1.0
+    """
+    project_root, manifest = _create_character_project(tmp_path, "CharacterDiscoveryFailedState")
+    _patch_character_discovery_prompt_rendering(monkeypatch)
+
+    def _fail_during_synthesis(*_args, **kwargs):
+        """
+        @brief      Provide a fake model that fails during profile synthesis.
+        @return     Fake model response for discovery windows.
+        @exception  RuntimeError Raised for the synthesis call.
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-06-11
+        @version    0.1.0
+        """
+        if str(kwargs["log_context"]["stage_label"]) == "character_profile_synthesis":
+            raise RuntimeError("model failed")
+        return _window_response_payload()
+
+    monkeypatch.setattr(character_discovery_service.llm_provider_service, "chat_json", _fail_during_synthesis)
+
+    with pytest.raises(RuntimeError, match="model failed"):
+        character_discovery_service.start_or_continue_discovery(
+            project_root,
+            manifest,
+            _profile_payload("profile-1"),
+            progress_callback=lambda *_args: None,
+            cancel_requested=lambda: False,
+        )
+
+    failed_state = character_discovery_service.load_operation_state(project_root)
+    assert failed_state is not None
+    assert failed_state["status"] == "failed"
+    assert failed_state["metadata"]["phase"] == "synthesis"
+    assert failed_state["resume_checkpoint"]["completed_window_count"] == 1
+
+
+def test_start_discovery_builds_windows_once(monkeypatch, tmp_path) -> None:
+    """
+    @brief      Verify REQ-AUDIO-NFR-017 discovery startup avoids duplicate full-window construction.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-11
+    @version    0.1.0
+    """
+    project_root, manifest = _create_character_project(tmp_path, "CharacterDiscoverySingleWindowBuild")
+    _patch_character_discovery_prompt_rendering(monkeypatch)
+    original_build_chunk_windows = character_discovery_service._build_chunk_windows  # noqa: SLF001
+    build_call_count = 0
+
+    def _count_build_chunk_windows(*args, **kwargs):
+        """
+        @brief      Count request-window construction calls.
+        @return     Original window construction result.
+        @exception  ValueError Propagated from original window construction.
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-06-11
+        @version    0.1.0
+        """
+        nonlocal build_call_count
+        build_call_count += 1
+        return original_build_chunk_windows(*args, **kwargs)
+
+    responses = iter([_window_response_payload(), _synthesis_response_payload()])
+    monkeypatch.setattr(character_discovery_service, "_build_chunk_windows", _count_build_chunk_windows)
+    monkeypatch.setattr(
+        character_discovery_service.llm_provider_service,
+        "chat_json",
+        lambda *_args, **_kwargs: next(responses),
+    )
+
+    character_discovery_service.start_or_continue_discovery(
+        project_root,
+        manifest,
+        _profile_payload("profile-1"),
+        progress_callback=lambda *_args: None,
+        cancel_requested=lambda: False,
+    )
+
+    assert build_call_count == 1
 
 
 def test_manual_add_update_delete_and_reset(tmp_path) -> None:
@@ -1003,6 +1193,34 @@ def test_merge_character_candidates_reports_rejected_non_dialogue_candidates() -
     ]
 
 
+def test_group_character_candidates_matches_legacy_first_match_order() -> None:
+    """
+    @brief      Verify REQ-AUDIO-NFR-017 indexed identity grouping preserves legacy first-match semantics.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-11
+    @version    0.1.0
+    """
+    candidates = [
+        {"canonical_name": "Alice", "aliases": ["A"]},
+        {"canonical_name": "Beth", "aliases": ["B"]},
+        {"canonical_name": "Bridge", "aliases": ["B", "A"]},
+        {"canonical_name": "Beatrice", "aliases": ["B"]},
+        {"canonical_name": "Cara", "aliases": ["C"]},
+    ]
+
+    legacy_groups = _legacy_group_character_candidates_by_identity(candidates)
+    indexed_groups = character_discovery_service._group_character_candidates_by_identity(candidates)  # noqa: SLF001
+
+    assert indexed_groups == legacy_groups
+    assert [[str(candidate["canonical_name"]) for candidate in group] for group in indexed_groups] == [
+        ["Alice", "Bridge", "Beatrice"],
+        ["Beth"],
+        ["Cara"],
+    ]
+
+
 def test_validate_manual_character_name_rejects_duplicates_and_invalid_names() -> None:
     """
     @brief      Validate validate manual character name rejects duplicates and invalid names.
@@ -1264,6 +1482,122 @@ def test_synthesis_candidate_payload_is_trimmed_to_budget_metadata() -> None:
 
     assert len(payload["evidence"]) <= 12
     assert payload["evidence"][0]["chunk_id"] == "chunk-0001"
+
+
+def _patch_character_discovery_prompt_rendering(monkeypatch) -> None:
+    """
+    @brief      Patch prompt rendering for focused Character Discovery service tests.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-11
+    @version    0.1.0
+    """
+    monkeypatch.setattr(
+        character_discovery_service.prompt_template_service,
+        "validate_required_prompts",
+        lambda _prompt_names: None,
+    )
+    monkeypatch.setattr(
+        character_discovery_service.prompt_template_service,
+        "render_prompt",
+        lambda prompt_name, payload: f"{prompt_name}:{sorted(payload.keys())}",
+    )
+
+
+def _window_response_payload() -> dict[str, object]:
+    """
+    @brief      Build a focused fake Character Discovery window response.
+    @return     Fake model response payload.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-11
+    @version    0.1.0
+    """
+    return {
+        "payload": {
+            "characters": [
+                {
+                    "canonical_name": "Alice",
+                    "aliases": ["Al"],
+                    "confidence": "high",
+                    "evidence": [
+                        {
+                            "chunk_id": "chunk-0001",
+                            "source_excerpt": '"Hello there," said Alice.',
+                            "reason": "Alice speaks in direct dialogue.",
+                        }
+                    ],
+                }
+            ]
+        },
+        "usage": {"input_tokens": 60, "output_tokens": 15, "total_tokens": 75, "usage_available": True},
+    }
+
+
+def _synthesis_response_payload() -> dict[str, object]:
+    """
+    @brief      Build a focused fake Character Discovery synthesis response.
+    @return     Fake model response payload.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-11
+    @version    0.1.0
+    """
+    return {
+        "payload": {
+            "canonical_name": "Alice",
+            "aliases": ["Al"],
+            "voice_definition_prompt": "Create a consistent spoken voice for Alice. Clear and calm.",
+            "preview_text": "Hello there, said Alice with a calm and friendly voice today.",
+            "confidence": "high",
+        },
+        "usage": {"input_tokens": 40, "output_tokens": 20, "total_tokens": 60, "usage_available": True},
+    }
+
+
+def _legacy_group_character_candidates_by_identity(
+    candidates: list[dict[str, object]],
+) -> list[list[dict[str, object]]]:
+    """
+    @brief      Preserve the prior identity-grouping algorithm for equivalence tests.
+    @param[in]  candidates Candidate payload list.
+    @return     Identity groups from the legacy scan algorithm.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-11
+    @version    0.1.0
+    """
+    groups: list[list[dict[str, object]]] = []
+    for candidate in candidates:
+        alias_keys = {character_discovery_service._normalize_identity(str(candidate.get("canonical_name", "")))}  # noqa: SLF001
+        alias_keys.update(
+            character_discovery_service._normalize_identity(alias)  # noqa: SLF001
+            for alias in list(candidate.get("aliases", []))
+        )
+        alias_keys.discard("")
+        target_group = None
+        for group in groups:
+            group_alias_keys: set[str] = set()
+            for group_candidate in group:
+                group_alias_keys.add(
+                    character_discovery_service._normalize_identity(  # noqa: SLF001
+                        str(group_candidate.get("canonical_name", ""))
+                    )
+                )
+                group_alias_keys.update(
+                    character_discovery_service._normalize_identity(alias)  # noqa: SLF001
+                    for alias in list(group_candidate.get("aliases", []))
+                )
+            if alias_keys.intersection(group_alias_keys):
+                target_group = group
+                break
+        if target_group is None:
+            groups.append([dict(candidate)])
+        else:
+            target_group.append(dict(candidate))
+    return groups
 
 
 def _create_character_project(tmp_path, project_name: str):

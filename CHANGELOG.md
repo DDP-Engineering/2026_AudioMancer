@@ -10,6 +10,23 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [1.5.5] - 2026-06-11
+
+### Fixed
+
+- Character Discovery now writes profiles and reports atomically, tolerates
+  malformed profile/report JSON as recoverable missing data, persists
+  `cancelled` / `failed` terminal checkpoints for interrupted runs, avoids
+  redundant discovery-span work during Characters page refresh, removes
+  duplicate startup window construction, and preserves identity grouping with
+  indexed alias lookup.
+
+### Changed
+
+- Project package metadata and `audiomancer.__version__` were updated to
+  `1.5.5`.
+- Offline English and Romanian help bundles were updated to version `1.5.5`.
+
 ## [1.5.4] - 2026-06-11
 
 ### Fixed

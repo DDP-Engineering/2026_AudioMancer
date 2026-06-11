@@ -13,7 +13,7 @@
          discovery start and reset behavior for the Characters page controller.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-08
-@version 0.12.1
+@version 0.12.2
 """
 
 # IMPORTS
@@ -109,6 +109,49 @@ def test_character_ui_controller_resume_uses_current_selected_profile(monkeypatc
 
     assert used_profiles[0]["id"] == "profile-2"
     assert used_profiles[0]["model_name"] == "qwen3-14b"
+
+
+def test_character_ui_controller_cancelled_state_resumes_without_prompt(monkeypatch, qtbot, tmp_path) -> None:
+    """
+    @brief      Verify REQ-AUDIO-FUNC-012 cancelled Character Discovery state is treated as resumable.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  qtbot Qt test helper fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-11
+    @version    0.1.0
+    """
+    project_root, _manifest = _create_project(tmp_path, "CharacterControllerCancelledResume")
+    state_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.CHARACTER_DISCOVERY_STATE_FILE_NAME
+    state_payload = json.loads(state_path.read_text(encoding="utf-8"))
+    state_payload["status"] = "cancelled"
+    state_payload["resume_checkpoint"] = {
+        "completed_window_count": 1,
+        "next_discovery_start_chunk_index": 1,
+        "raw_candidates": [],
+        "merged_candidates": [],
+        "rejected_candidates": [],
+        "synthesized_profiles": [],
+    }
+    state_path.write_text(json.dumps(state_payload, indent=2) + "\n", encoding="utf-8")
+    window = _build_window(qtbot, project_root)
+    start_calls = []
+    monkeypatch.setattr(
+        characters_ui_controller,
+        "_start_operation",
+        lambda _window, **kwargs: start_calls.append(kwargs),
+    )
+    monkeypatch.setattr(
+        characters_ui_controller,
+        "prompt_ai_character_discovery_instructions",
+        lambda _window, _language: (_ for _ in ()).throw(AssertionError("fresh prompt should not be shown")),
+    )
+
+    characters_ui_controller.handle_start_discovery_requested(window, "profile-1")
+
+    assert len(start_calls) == 1
 
 
 def test_character_ui_controller_passes_extra_prompt_to_discovery(monkeypatch, qtbot, tmp_path) -> None:

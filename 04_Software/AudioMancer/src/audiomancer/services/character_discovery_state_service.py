@@ -14,7 +14,7 @@
          and settings.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-08
-@version 0.5.1
+@version 0.5.2
 """
 
 # IMPORTS
@@ -86,7 +86,7 @@ def build_character_discovery_state(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-08
-    @version    0.1.2
+    @version    0.1.3
     """
     if project_root is None or manifest is None:
         return {
@@ -109,10 +109,9 @@ def build_character_discovery_state(
     operation_state = character_discovery_service.load_operation_state(project_root)
     report = character_discovery_service.load_character_discovery_report(project_root)
     profiles = character_discovery_service.load_character_profiles(project_root)
-    input_chunks = character_discovery_service.load_input_chunks(project_root)
     source_chunk_map = {
         str(chunk.get("chunk_id", "")): str(chunk.get("text", ""))
-        for chunk in (input_chunks or source_chunks)
+        for chunk in source_chunks
         if str(chunk.get("chunk_id", "")).strip()
     }
     persisted_profile_id = _persisted_profile_id(report, operation_state)
@@ -181,7 +180,7 @@ def build_character_discovery_notes(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-08
-    @version    0.1.1
+    @version    0.1.2
     """
     if home_presenter_service.source_document_name(manifest) is None:
         return [ui_state_service.translate("characters.note_no_source", language)]
@@ -217,7 +216,7 @@ def build_character_discovery_notes(
                 progress_total=progress_total,
             )
         )
-    elif stage_status == "failed":
+    elif stage_status in {"failed", "cancelled"}:
         progress_current = 0 if operation_state is None else int(operation_state.get("progress_current", 0))
         progress_total = (
             len(source_chunks)
@@ -267,11 +266,11 @@ def _character_discovery_stage_status(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-08
-    @version    0.2.0
+    @version    0.2.1
     """
     if isinstance(operation_state, dict):
         operation_status = str(operation_state.get("status", ""))
-        if operation_status in {"running", "failed"}:
+        if operation_status in {"running", "failed", "cancelled"}:
             return operation_status
         if operation_status == "completed":
             return character_discovery_service.CHARACTER_DISCOVERY_STAGE_COMPLETED
