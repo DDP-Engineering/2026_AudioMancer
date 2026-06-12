@@ -14,7 +14,7 @@
          shared by long-running workflow operations.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-22
-@version 0.15.0
+@version 0.15.1
 """
 
 # IMPORTS
@@ -26,9 +26,13 @@ from pathlib import Path, PureWindowsPath
 import re
 
 from audiomancer import config
+from audiomancer.services.logging_service import get_component_logger
 from audiomancer.services.persistence_service import write_json_atomic
 
 # CONSTANTS
+
+# @brief Component logger used by shared operation runtime helpers.
+_OPERATION_RUNTIME_LOGGER = get_component_logger("operation_runtime")
 
 # @brief Stable execution order used for downstream reset calculations.
 _OPERATION_ORDER = config.WORKFLOW_OPERATION_ORDER
@@ -346,17 +350,15 @@ def load_operation_state_payload(
     @param[in]  operation_kind Stable workflow operation token.
     @param[in]  state_file_name Operation-state artifact file name.
     @return     Persisted operation-state payload or `None`.
-    @exception  OSError Raised when the state file cannot be read.
-    @exception  json.JSONDecodeError Raised when the state file is not valid JSON.
-    @exception  TypeError Raised when the state payload is not dictionary-compatible.
+    @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-29
-    @version    0.1.0
+    @version    0.2.0
     """
     state_path = resolve_operation_path(project_root, operation_kind, state_file_name)
     if not state_path.is_file():
         return None
-    return dict(json.loads(state_path.read_text(encoding="utf-8")))
+    return _load_operation_state_path(state_path)
 
 
 def load_operation_state_file(state_path: str | Path) -> dict[str, object] | None:
@@ -364,17 +366,12 @@ def load_operation_state_file(state_path: str | Path) -> dict[str, object] | Non
     @brief      Load one optional operation-state payload from an exact path.
     @param[in]  state_path Candidate operation-state file path.
     @return     Persisted operation-state payload or `None`.
-    @exception  OSError Raised when the state file cannot be read.
-    @exception  json.JSONDecodeError Raised when the state file is not valid JSON.
-    @exception  TypeError Raised when the state payload is not dictionary-compatible.
+    @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-29
-    @version    0.1.0
+    @version    0.2.0
     """
-    payload = load_optional_json_artifact(state_path)
-    if payload is None:
-        return None
-    return dict(payload)
+    return _load_operation_state_path(Path(state_path))
 
 
 def load_optional_json_artifact(artifact_path: str | Path) -> object | None:
@@ -764,6 +761,33 @@ def _normalized_operation_kind_set(operation_kinds: Iterable[str] | None) -> fro
     if operation_kinds is None:
         return frozenset()
     return frozenset(str(operation_kind).strip() for operation_kind in operation_kinds if str(operation_kind).strip())
+
+
+def _load_operation_state_path(state_path: Path) -> dict[str, object] | None:
+    """
+    @brief      Load one operation-state file, tolerating corrupt or partial JSON.
+    @param[in]  state_path Candidate operation-state file path.
+    @return     Persisted operation-state payload or `None`.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-12
+    @version    0.1.0
+    """
+    if not state_path.is_file():
+        return None
+    try:
+        payload = json.loads(state_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exception:
+        _OPERATION_RUNTIME_LOGGER.warning(
+            "Ignoring unreadable operation state file %s: %s",
+            state_path,
+            exception,
+        )
+        return None
+    if not isinstance(payload, dict):
+        _OPERATION_RUNTIME_LOGGER.warning("Ignoring non-object operation state file %s.", state_path)
+        return None
+    return dict(payload)
 
 
 def raise_if_cancelled(cancel_requested) -> None:

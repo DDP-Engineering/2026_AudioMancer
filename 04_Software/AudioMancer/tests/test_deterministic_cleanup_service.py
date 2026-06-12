@@ -13,7 +13,7 @@
          resumable cancellation state for deterministic text cleanup.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-06
-@version 0.2.2
+@version 0.2.3
 """
 
 # IMPORTS
@@ -248,6 +248,191 @@ def test_cleanup_persists_resumable_state_after_cancellation(tmp_path) -> None:
     assert state_payload["progress_current"] < state_payload["progress_total"]
     assert state_payload["resume_checkpoint"] is not None
     assert manifest_payload["operations"]["cleanup"]["status"] == "cancelled"
+
+
+def test_cleanup_tolerates_corrupt_state_and_restarts(tmp_path) -> None:
+    """
+    @brief      Verify corrupt cleanup state is ignored so deterministic cleanup can restart.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-12
+    @version    0.1.0
+    """
+    project_root, manifest = _build_cleanup_project(tmp_path, "CleanupCorruptState")
+    (project_root / config.EXTRACTED_TEXT_FILE_NAME).write_text("Chapter I\n\nStory paragraph.\n", encoding="utf-8")
+    (project_root / config.CLEANUP_STATE_FILE_NAME).write_text("{", encoding="utf-8")
+
+    report_payload = deterministic_cleanup_service.clean_text(project_root, manifest)
+
+    state_payload = json.loads((project_root / config.CLEANUP_STATE_FILE_NAME).read_text(encoding="utf-8"))
+    assert report_payload["paragraph_count"] == 2
+    assert state_payload["status"] == "completed"
+
+
+def test_cleanup_persists_failed_state_after_mid_run_error(tmp_path, monkeypatch) -> None:
+    """
+    @brief      Verify unexpected deterministic cleanup errors persist a failed resumable state.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-12
+    @version    0.1.0
+    """
+    project_root, manifest = _build_cleanup_project(tmp_path, "CleanupFailedState")
+    (project_root / config.EXTRACTED_TEXT_FILE_NAME).write_text(
+        "Page one text.\n\n\f\n\nPage two text.\n",
+        encoding="utf-8",
+    )
+    original_builder = deterministic_cleanup_service._build_page_paragraphs
+    call_count = {"value": 0}
+
+    def _failing_builder(*args, **kwargs):
+        """
+        @brief      Fail after one cleanup segment to exercise failed-state persistence.
+        @return     Original builder result before the injected failure.
+        @exception  RuntimeError Raised on the second segment.
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-06-12
+        @version    0.1.0
+        """
+        call_count["value"] += 1
+        if call_count["value"] > 1:
+            raise RuntimeError("forced cleanup failure")
+        return original_builder(*args, **kwargs)
+
+    monkeypatch.setattr(deterministic_cleanup_service, "_build_page_paragraphs", _failing_builder)
+
+    with pytest.raises(RuntimeError, match="forced cleanup failure"):
+        deterministic_cleanup_service.clean_text(project_root, manifest)
+
+    state_payload = json.loads((project_root / config.CLEANUP_STATE_FILE_NAME).read_text(encoding="utf-8"))
+    manifest_payload = project_workspace_service.load_manifest(project_root)
+    assert state_payload["status"] == "failed"
+    assert state_payload["resume_checkpoint"]["input_fingerprint"]
+    assert manifest_payload["operations"]["cleanup"]["status"] == "failed"
+
+
+def test_cleanup_resume_matches_uninterrupted_run(tmp_path) -> None:
+    """
+    @brief      Verify a checkpointed deterministic cleanup resume matches an uninterrupted run.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-12
+    @version    0.1.0
+    """
+    extracted_text = "\n\n\f\n\n".join(f"Book Title\n{index}\nParagraph {index} continues." for index in range(1, 22))
+    uninterrupted_root, uninterrupted_manifest = _build_cleanup_project(tmp_path, "CleanupUninterrupted")
+    resumed_root, resumed_manifest = _build_cleanup_project(tmp_path, "CleanupResumed")
+    (uninterrupted_root / config.EXTRACTED_TEXT_FILE_NAME).write_text(extracted_text, encoding="utf-8")
+    (resumed_root / config.EXTRACTED_TEXT_FILE_NAME).write_text(extracted_text, encoding="utf-8")
+
+    deterministic_cleanup_service.clean_text(uninterrupted_root, uninterrupted_manifest)
+
+    def _cancel_after_checkpoint(progress_current, _progress_total, _percent, _message) -> None:
+        """
+        @brief      Cancel after the first persisted checkpoint can exist.
+        @param[in]  progress_current Current progress count.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-06-12
+        @version    0.1.0
+        """
+        if progress_current >= 10:
+            should_cancel["value"] = True
+
+    should_cancel = {"value": False}
+    with pytest.raises(operation_runtime_service.OperationCancelledError):
+        deterministic_cleanup_service.clean_text(
+            resumed_root,
+            resumed_manifest,
+            progress_callback=_cancel_after_checkpoint,
+            cancel_requested=lambda: should_cancel["value"],
+        )
+    deterministic_cleanup_service.clean_text(resumed_root, resumed_manifest)
+
+    for file_name in (
+        config.CLEANED_TEXT_FILE_NAME,
+        config.CLEANED_TEXT_METADATA_FILE_NAME,
+        config.CLEANUP_REPORT_FILE_NAME,
+    ):
+        assert (resumed_root / file_name).read_text(encoding="utf-8") == (uninterrupted_root / file_name).read_text(
+            encoding="utf-8"
+        )
+
+
+def test_cleanup_plain_text_uses_pseudo_segments_without_output_change(tmp_path) -> None:
+    """
+    @brief      Verify unpaged text cleanup gains granular progress without changing output.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-12
+    @version    0.1.0
+    """
+    project_root, manifest = _build_cleanup_project(tmp_path, "CleanupPlainPseudoSegments")
+    extracted_text = "\n\n".join(f"Plain paragraph {index}." for index in range(1, 61)) + "\n"
+    (project_root / config.EXTRACTED_TEXT_FILE_NAME).write_text(extracted_text, encoding="utf-8")
+    progress_totals: list[int] = []
+
+    deterministic_cleanup_service.clean_text(
+        project_root,
+        manifest,
+        progress_callback=lambda _current, total, _percent, _message: progress_totals.append(total),
+    )
+
+    output_text = (project_root / config.CLEANED_TEXT_FILE_NAME).read_text(encoding="utf-8")
+    assert max(progress_totals) > 1
+    assert output_text == extracted_text
+
+
+def test_cleanup_batches_pseudo_segment_checkpoints(tmp_path, monkeypatch) -> None:
+    """
+    @brief      Verify non-PDF cleanup checkpoints are bounded by segment cadence.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-12
+    @version    0.1.0
+    """
+    project_root, manifest = _build_cleanup_project(tmp_path, "CleanupCheckpointCadence")
+    paragraphs = [f"Paragraph {index} has normal text." for index in range(1200)]
+    (project_root / config.EXTRACTED_TEXT_FILE_NAME).write_text("\n\n".join(paragraphs), encoding="utf-8")
+    original_write_json_atomic = deterministic_cleanup_service.write_json_atomic
+    state_writes: list[dict[str, object]] = []
+
+    def _record_json_write(target_path, payload):
+        """
+        @brief      Record cleanup-state writes while preserving atomic persistence.
+        @param[in]  target_path Target JSON path.
+        @param[in]  payload JSON payload being written.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-06-12
+        @version    0.1.0
+        """
+        if target_path.name == config.CLEANUP_STATE_FILE_NAME:
+            state_writes.append(dict(payload))
+        original_write_json_atomic(target_path, payload)
+
+    monkeypatch.setattr(deterministic_cleanup_service, "write_json_atomic", _record_json_write)
+
+    report_payload = deterministic_cleanup_service.clean_text(project_root, manifest)
+
+    assert report_payload["paragraph_count"] == len(paragraphs)
+    assert len(state_writes) < state_writes[-1]["progress_total"]
+    assert [payload["progress_current"] for payload in state_writes] == [0, 10, 20, 24]
+    assert state_writes[-1]["status"] == "completed"
 
 
 def test_cleanup_removes_separator_marks_and_heals_false_phrase_breaks(tmp_path) -> None:

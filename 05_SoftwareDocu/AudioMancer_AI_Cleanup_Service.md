@@ -39,7 +39,7 @@ per-run AI transaction log.
   malformed-JSON repair pass when the assistant content is not valid JSON
 - persist canonical `clean_text.txt`, structure-only
   `clean_text_metadata.json`, `cleanup_report.json`, and
-  `cleanup_state.json`
+  `cleanup_state.json` through atomic persistence helpers
 - append project-local AI transaction records to
   `log_ai_cleanup_<timestamp>.log`
 - allow the operator to manually edit and save the shared cleaned-text output
@@ -98,8 +98,8 @@ High-level flow:
    medium-confidence removable artifacts, rebuilds the cleaned text, writes the
    shared cleanup artifacts, stores `mode="ai_assisted"` in the cleanup
    operation state, and syncs the compact cleanup summary into
-   `project.json.operations.cleanup` during running, cancelled, and completed
-   transitions.
+   `project.json.operations.cleanup` during initial running, cancelled,
+   failed, and completed transitions.
 8. On success, the service advances the workflow stage to
    `text_chunking_ready` and persists the detected original language in
    `project.json`.
@@ -183,6 +183,10 @@ Current AI cleanup operation-state invariants:
 - incomplete running or cancelled state keeps the classifications, input
   fingerprint, model settings, additional-instruction fingerprint, token
   usage, warning details, and AI log path needed to continue
+- malformed or truncated cleanup state loads as no usable checkpoint and starts
+  a clean AI cleanup run with a logged warning instead of crashing the next run
+- provider or cleanup failures persist `status="failed"` with the latest
+  resumable checkpoint and compact manifest summary before re-raising
 - completed state removes resume-only classifications by writing
   `resume_checkpoint: null`; final model settings, token usage, warning
   details, and AI log path remain in `cleanup_report.json` and operation
@@ -262,6 +266,10 @@ Automated tests:
 - `04_Software/AudioMancer/tests/test_text_cleanup_page.py`
 - `04_Software/AudioMancer/tests/test_text_cleanup_state_service.py`
 - `04_Software/AudioMancer/tests/test_text_cleanup_ui_controller.py`
+
+Documentation audit status: reviewed against the current implementation on
+2026-06-12 for atomic persistence, corrupt-state restart, and failed terminal
+cleanup state behavior.
 
 Minimum validation after a change:
 

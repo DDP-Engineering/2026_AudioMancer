@@ -21,7 +21,15 @@
 from pathlib import Path
 
 from audiomancer import config
-from audiomancer.services import operation_runtime_service, project_workspace_service, settings_service
+from audiomancer.services import (
+    audio_assembly_service,
+    cleanup_metadata_service,
+    operation_runtime_service,
+    project_workspace_service,
+    settings_service,
+    text_cleanup_state_service,
+    text_extraction_service,
+)
 
 # PUBLIC API
 
@@ -139,6 +147,189 @@ def test_operation_state_artifact_save_uses_atomic_json_writer(monkeypatch, tmp_
 
     assert output_path == project_root / config.CLEANUP_STATE_FILE_NAME
     assert write_calls == [(output_path, payload)]
+
+
+def test_cleanup_metadata_uses_atomic_json_writer(monkeypatch, tmp_path) -> None:
+    """
+    @brief      Verify cleanup metadata sidecar persistence routes through the atomic JSON writer.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-12
+    @version    0.1.0
+    """
+    project_root = tmp_path / "AtomicCleanupMetadata"
+    write_calls: list[tuple[Path, object]] = []
+
+    def _capture_atomic_write(target_path: str | Path, payload: object) -> None:
+        """
+        @brief      Capture one atomic writer call.
+        @param[in]  target_path Requested target path.
+        @param[in]  payload JSON payload passed to the writer.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-06-12
+        @version    0.1.0
+        """
+        write_calls.append((Path(target_path), payload))
+
+    monkeypatch.setattr(cleanup_metadata_service, "write_json_atomic", _capture_atomic_write)
+
+    cleanup_metadata_service.write_cleanup_metadata(
+        project_root,
+        None,
+        project_root / config.CLEANED_TEXT_FILE_NAME,
+        [{"paragraph_id": "paragraph-0001", "text": "Story paragraph."}],
+        "deterministic",
+    )
+
+    assert len(write_calls) == 1
+    assert write_calls[0][0] == project_root / config.CLEANED_TEXT_METADATA_FILE_NAME
+    assert write_calls[0][1]["cleanup_mode"] == "deterministic"
+
+
+def test_manual_cleaned_text_edit_uses_atomic_writers(monkeypatch, tmp_path) -> None:
+    """
+    @brief      Verify manual cleaned-text edits use atomic text and state writers.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-12
+    @version    0.1.0
+    """
+    project_root, manifest = project_workspace_service.create_project("AtomicManualCleanup", tmp_path)
+    cleaned_path = project_root / config.CLEANED_TEXT_FILE_NAME
+    cleaned_path.write_text("Old text.\n", encoding="utf-8")
+    text_calls: list[tuple[Path, str]] = []
+    json_calls: list[tuple[Path, object]] = []
+
+    def _capture_text_write(target_path: str | Path, text: str, *, encoding: str = "utf-8") -> None:
+        """
+        @brief      Capture and perform one atomic text writer call.
+        @param[in]  target_path Requested target path.
+        @param[in]  text Text payload.
+        @param[in]  encoding Text encoding.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-06-12
+        @version    0.1.0
+        """
+        text_calls.append((Path(target_path), text))
+        Path(target_path).write_text(text, encoding=encoding)
+
+    def _capture_json_write(target_path: str | Path, payload: object) -> None:
+        """
+        @brief      Capture and perform one atomic JSON writer call.
+        @param[in]  target_path Requested target path.
+        @param[in]  payload JSON payload passed to the writer.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-06-12
+        @version    0.1.0
+        """
+        json_calls.append((Path(target_path), payload))
+        operation_runtime_service.write_json_atomic(target_path, payload)
+
+    monkeypatch.setattr(text_cleanup_state_service, "write_text_atomic", _capture_text_write)
+    monkeypatch.setattr(text_cleanup_state_service, "write_json_atomic", _capture_json_write)
+
+    text_cleanup_state_service.save_cleaned_text_edit(project_root, manifest, "Edited text.\n")
+
+    assert text_calls[0] == (cleaned_path, "Edited text.\n")
+    assert any(path == project_root / config.CLEANUP_STATE_FILE_NAME for path, _payload in json_calls)
+
+
+def test_audio_assembly_state_uses_atomic_json_writer(monkeypatch, tmp_path) -> None:
+    """
+    @brief      Verify Audio Assembly report and state persistence route through the atomic JSON writer.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-12
+    @version    0.1.0
+    """
+    project_root = tmp_path / "AtomicAssembly"
+    report = {"operation_status": "running"}
+    state = {"status": "running"}
+    write_calls: list[tuple[Path, object]] = []
+
+    def _capture_atomic_write(target_path: str | Path, payload: object) -> None:
+        """
+        @brief      Capture one atomic writer call.
+        @param[in]  target_path Requested target path.
+        @param[in]  payload JSON payload passed to the writer.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-06-12
+        @version    0.1.0
+        """
+        write_calls.append((Path(target_path), payload))
+
+    monkeypatch.setattr(audio_assembly_service, "write_json_atomic", _capture_atomic_write)
+
+    audio_assembly_service._persist_state(project_root, report, state)
+
+    assert write_calls == [
+        (project_root / config.AUDIO_ASSEMBLY_REPORT_FILE_NAME, report),
+        (project_root / config.AUDIO_ASSEMBLY_STATE_FILE_NAME, state),
+    ]
+
+
+def test_text_extraction_running_state_uses_atomic_json_writer(monkeypatch, tmp_path) -> None:
+    """
+    @brief      Verify Text Extraction running state persistence routes through the atomic JSON writer.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-12
+    @version    0.1.0
+    """
+    state_path = tmp_path / config.EXTRACTION_STATE_FILE_NAME
+    input_path = tmp_path / "story.txt"
+    output_path = tmp_path / config.EXTRACTED_TEXT_FILE_NAME
+    write_calls: list[tuple[Path, object]] = []
+
+    def _capture_atomic_write(target_path: str | Path, payload: object) -> None:
+        """
+        @brief      Capture one atomic writer call.
+        @param[in]  target_path Requested target path.
+        @param[in]  payload JSON payload passed to the writer.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-06-12
+        @version    0.1.0
+        """
+        write_calls.append((Path(target_path), payload))
+
+    monkeypatch.setattr(text_extraction_service, "write_json_atomic", _capture_atomic_write)
+
+    text_extraction_service._write_running_state(
+        state_path,
+        input_path,
+        output_path,
+        "run-token",
+        1,
+        2,
+        ["warning"],
+        "txt",
+        None,
+    )
+
+    assert write_calls[0][0] == state_path
+    assert write_calls[0][1]["status"] == "running"
 
 
 # END OF FILE

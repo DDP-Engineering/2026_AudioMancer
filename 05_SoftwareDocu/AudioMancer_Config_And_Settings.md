@@ -132,6 +132,11 @@ window, and they skip the local cleanup-unit, chunking-paragraph, and
 character-discovery chunk-count caps.
 `DEFAULT_AUDIO_ASSEMBLY_*` constants define the WAV-only Audio Assembly
 defaults for output mode, max duration, output format, and silence gaps.
+`DEFAULT_TTS_OPERATION_TIMEOUT_SECONDS` is the shared VoiceWeaver operation
+timeout alias and intentionally matches
+`DEFAULT_TTS_AUDIO_GENERATION_TIMEOUT_SECONDS` so runtime polling and audio
+download defaults keep the same current behavior while using clearer naming at
+the call sites.
 - AI cleanup and chunking profile defaults
 - notification and UI text-scale preferences
 

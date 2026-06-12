@@ -50,6 +50,10 @@ logging service so VoiceWeaver calls, Scene Ambience generation, and long
 operation checkpoints can be reviewed after a run.
 Long text-chunking runs keep resumable checkpoints and atomic project artifacts
 without changing the completed chunk output.
+Text cleanup now follows the same safety-first persistence model: deterministic
+and AI cleanup writes critical artifacts atomically, tolerates malformed
+operation state by restarting cleanly, and records terminal failed/cancelled
+states with resumable checkpoints where possible.
 AI Translation uses atomic translated-artifact persistence, read-only
 steady-state page synchronization, and terminal cancel/failure state records to
 protect completed LLM output during interrupted runs.
@@ -79,6 +83,9 @@ regeneration.
 - `05_SoftwareDocu/UserGuide/` contains the English offline help bundle.
 - `05_SoftwareDocu/UserGuide_ro/` contains the Romanian offline help bundle.
 - `CHANGELOG.md` contains detailed version history.
+- Current release metadata is maintained in the application package metadata
+  and package `__version__`; README files intentionally avoid embedding the
+  current application version.
 - `HowToTest.md` summarizes the broader validation baseline.
 
 ## Development

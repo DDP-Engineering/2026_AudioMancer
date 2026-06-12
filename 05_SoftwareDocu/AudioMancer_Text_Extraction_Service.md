@@ -19,9 +19,9 @@ through the shared modal operation runner.
 ## 2. Responsibilities
 
 - extract raw text from the currently supported source formats
-- normalize extracted text and persist it as `extracted_text.txt`
-- persist extraction metadata as `extraction_report.json`
-- persist resumable operation state as `extraction_state.json`
+- normalize extracted text and persist it as `extracted_text.txt` atomically
+- persist extraction metadata as `extraction_report.json` atomically
+- persist resumable operation state as `extraction_state.json` atomically
 - support resume for interrupted extraction when the saved checkpoint is safe
 - clear known extraction and downstream runtime artifacts for a confirmed rerun
   of a completed extraction
@@ -61,8 +61,8 @@ High-level flow:
 5. `text_extraction_service.extract_text(...)` resolves the imported source
    from `project.json`.
 6. The service extracts text units, updates `extraction_state.json` while the
-   work is in progress, emits unit-based progress callbacks, then writes
-   `extracted_text.txt` and `extraction_report.json`.
+   work is in progress, emits unit-based progress callbacks, then atomically
+   writes `extracted_text.txt` and `extraction_report.json`.
 7. `MainWindow` drives the extraction run through the reusable modal progress
    dialog, including cooperative cancellation.
 8. `MainWindow` stores the compact extraction summary and warning count in
@@ -126,6 +126,9 @@ Current extraction operation-state fields:
 The extracted text path is derived from configuration. Resume uses the
 checkpoint plus the partially written output artifact rather than persisted
 generic path arrays or operation audit timestamps.
+Malformed or truncated extraction state loads as no usable state through the
+shared operation runtime loader, logs a warning, and lets the next extraction
+restart cleanly.
 
 Supported extraction formats in the current implementation:
 

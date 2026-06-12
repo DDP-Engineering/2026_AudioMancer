@@ -54,6 +54,8 @@ The final application should follow these principles:
 - clear step-by-step operator workflow
 - simple and maintainable code structure
 - explicit artifacts and reports for every major processing stage
+- release metadata kept in the package metadata and changelog rather than
+  duplicated throughout planning files
 - safe resume and recovery for long-running operations
 - operator review before downstream use of generated data
 - readable review panes that keep practical minimum widths when the operator
@@ -137,6 +139,11 @@ The cleanup stage must:
 - preserve meaningful text structure
 - avoid destructive cleanup decisions without traceable logic
 - support deterministic cleanup and AI-assisted cleanup where useful
+- persist cleanup output, reports, metadata, and operation state atomically
+- tolerate malformed cleanup state by restarting cleanly instead of blocking
+  the next run
+- keep deterministic resume tied to an input fingerprint and bounded
+  checkpoints without changing uninterrupted cleanup output
 
 The cleaned text must become the canonical base for downstream operations.
 

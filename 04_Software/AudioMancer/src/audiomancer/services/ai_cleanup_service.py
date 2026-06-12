@@ -15,13 +15,12 @@
          resumable window-based progress plus AI transaction logs.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-07
-@version 0.9.2
+@version 0.9.3
 """
 
 # IMPORTS
 
 import hashlib
-import json
 from pathlib import Path
 import re
 
@@ -48,6 +47,7 @@ from audiomancer.services.operation_runtime_service import (
 from audiomancer.services.operation_runtime_service import (
     emit_progress_update as _emit_progress,
 )
+from audiomancer.services.persistence_service import write_json_atomic, write_text_atomic
 from audiomancer.services.time_service import utc_now_iso as _utc_now_iso
 
 # CONSTANTS
@@ -149,7 +149,7 @@ def clean_text(
     @exception  ValueError Raised on missing profile data or unusable cleanup output.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-12
-    @version    0.6.2
+    @version    0.6.3
     """
     resolved_project_root = Path(project_root)
     source_document = manifest.get("source_document")
@@ -234,7 +234,7 @@ def clean_text(
         log_path = resolved_project_root / log_relative_path
     log_path.parent.mkdir(parents=True, exist_ok=True)
     if not log_path.exists():
-        log_path.write_text("", encoding="utf-8")
+        write_text_atomic(log_path, "")
 
     _write_running_state(
         state_path,
@@ -354,6 +354,29 @@ def clean_text(
             completed_at=_utc_now_iso(),
         )
         raise
+    except Exception:
+        _write_running_state(
+            state_path,
+            resolved_project_root,
+            input_snapshot_path,
+            output_path,
+            started_at,
+            last_progress_current,
+            total_windows,
+            profile_id,
+            log_relative_path,
+            input_fingerprint,
+            classifications,
+            warning_details,
+            token_usage,
+            budget_metadata,
+            model_settings,
+            model_settings_history,
+            additional_cleanup_instructions,
+            status="failed",
+            completed_at=_utc_now_iso(),
+        )
+        raise
 
     kept_units = [unit for unit in units if classifications.get(unit["unit_id"], "unknown") in _KEEP_LABELS]
     cleaned_paragraphs = [
@@ -365,7 +388,7 @@ def clean_text(
         raise ValueError("AI-assisted cleanup removed all usable text.")
 
     cleaned_text = "\n\n".join(cleaned_paragraphs).strip() + "\n"
-    output_path.write_text(cleaned_text, encoding="utf-8")
+    write_text_atomic(output_path, cleaned_text)
     metadata_payload = cleanup_metadata_service.write_minimal_cleanup_metadata(
         resolved_project_root,
         cleaned_text,
@@ -401,10 +424,7 @@ def clean_text(
         "additional_cleanup_instructions": additional_cleanup_instructions,
         "additional_cleanup_instructions_fingerprint": additional_cleanup_instructions_fingerprint,
     }
-    report_path.write_text(
-        json.dumps(report_payload, indent=2, ensure_ascii=False) + "\n",
-        encoding="utf-8",
-    )
+    write_json_atomic(report_path, report_payload)
     completed_state = _build_operation_state(
         resolved_project_root,
         input_snapshot_path,
@@ -431,10 +451,7 @@ def clean_text(
         model_settings_history=model_settings_history,
         additional_cleanup_instructions=additional_cleanup_instructions,
     )
-    state_path.write_text(
-        json.dumps(completed_state, indent=2, ensure_ascii=False) + "\n",
-        encoding="utf-8",
-    )
+    write_json_atomic(state_path, completed_state)
     project_workspace_service.sync_manifest_operation_summary(
         resolved_project_root,
         "cleanup",
@@ -1141,7 +1158,7 @@ def _write_running_state(
     @return     None.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-12
-    @version    0.5.0
+    @version    0.5.1
     """
     warning_messages = _warning_messages_from_details(warning_details)
     running_state = _build_operation_state(
@@ -1170,11 +1187,9 @@ def _write_running_state(
         model_settings_history=model_settings_history,
         additional_cleanup_instructions=additional_cleanup_instructions,
     )
-    state_path.write_text(
-        json.dumps(running_state, indent=2, ensure_ascii=False) + "\n",
-        encoding="utf-8",
-    )
-    project_workspace_service.sync_manifest_operation_summary(project_root, "cleanup", running_state)
+    write_json_atomic(state_path, running_state)
+    if status != "running" or progress_current == 0:
+        project_workspace_service.sync_manifest_operation_summary(project_root, "cleanup", running_state)
 
 
 def _warning_messages_from_details(warning_details: list[dict[str, object]]) -> list[str]:

@@ -31,6 +31,8 @@ The combined TTS Settings and runtime UI behavior is documented separately in
   text or runtime API keys
 - poll until runtime operations reach a terminal state
 - download generated voice bytes
+- use the shared TTS operation timeout alias for operation polling and
+  generated-audio downloads
 - map runtime failures into stable result payloads for callers
 
 It does not own Qt widgets, persisted settings validation, narrator profiles,
@@ -103,6 +105,10 @@ Generation-mode aliases are folded into the current REST contract:
 
 Romanian requests omit the outbound `language` field so VoiceWeaver can infer
 pronunciation from the text.
+
+`DEFAULT_TTS_OPERATION_TIMEOUT_SECONDS` aliases the current audio-generation
+timeout value and is used by operation polling and generated-audio download
+defaults without changing existing timeout duration.
 
 ## 7. Workflow Integration
 

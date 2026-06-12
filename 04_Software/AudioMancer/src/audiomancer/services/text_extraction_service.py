@@ -14,7 +14,7 @@
          maintains resumable extraction state in `00_extraction`.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-06
-@version 0.5.3
+@version 0.5.4
 """
 
 # IMPORTS
@@ -43,6 +43,7 @@ from audiomancer.services.operation_runtime_service import (
     reset_operation_data,
     resolve_project_relative_path,
 )
+from audiomancer.services.persistence_service import write_json_atomic, write_text_atomic
 from audiomancer.services.time_service import utc_now_iso as _utc_now_iso
 
 # CONSTANTS
@@ -178,7 +179,7 @@ def extract_text(
     @exception  OperationCancelledError Raised when the operator cancels the run.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.3.5
+    @version    0.3.6
     """
     resolved_project_root = Path(project_root)
     source_document = _source_document_from_manifest(manifest)
@@ -233,7 +234,7 @@ def extract_text(
         raise ValueError("Source did not contain extractable text.")
 
     final_text = normalized_text + "\n"
-    output_path.write_text(final_text, encoding="utf-8")
+    write_text_atomic(output_path, final_text)
 
     report_payload: ExtractionReportPayload = {
         "source_relative_path": _relative_to_project(resolved_project_root, input_snapshot_path),
@@ -244,10 +245,7 @@ def extract_text(
         "word_count": len(normalized_text.split()),
         "line_count": len(normalized_text.splitlines()),
     }
-    report_path.write_text(
-        json.dumps(report_payload, indent=2, ensure_ascii=False) + "\n",
-        encoding="utf-8",
-    )
+    write_json_atomic(report_path, report_payload)
 
     completed_state = _build_operation_state(
         status="completed",
@@ -269,10 +267,7 @@ def extract_text(
         },
         resume_checkpoint=None,
     )
-    state_path.write_text(
-        json.dumps(completed_state, indent=2, ensure_ascii=False) + "\n",
-        encoding="utf-8",
-    )
+    write_json_atomic(state_path, completed_state)
     project_workspace_service.sync_manifest_operation_summary(
         resolved_project_root,
         "extraction",
@@ -291,7 +286,7 @@ def load_operation_state(project_root: str | Path) -> OperationStatePayload | No
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.2.0
+    @version    0.2.1
     """
     state_path = Path(project_root) / _EXTRACTION_FOLDER_NAME / _EXTRACTION_STATE_NAME
     return load_operation_state_file(state_path)
@@ -593,10 +588,7 @@ def _write_running_state(
         },
         resume_checkpoint={"next_unit_index": progress_current, "run_token": run_token},
     )
-    state_path.write_text(
-        json.dumps(running_state, indent=2, ensure_ascii=False) + "\n",
-        encoding="utf-8",
-    )
+    write_json_atomic(state_path, running_state)
     _ = progress_callback
 
 

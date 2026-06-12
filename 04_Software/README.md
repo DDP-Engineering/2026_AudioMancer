@@ -20,6 +20,8 @@ Implementation sources and runnable software artifacts.
   bundled into release archives as `help/en/` plus `help/ro/`.
   Current validation guidance and the full regression baseline are documented
   in `../HowToTest.md` and `AudioMancer/README.MD`.
+  Current release metadata is owned by the application package metadata and
+  package `__version__`, while version history remains in the changelog.
   Speech Blocks, Audio Blocks, and Audio Assembly currently include the Scene
   Ambience path, where ambience prompts are stored as ordered individual Speech
   Blocks, generated through the sound-prompt runtime path when enabled, and
@@ -28,6 +30,9 @@ Implementation sources and runnable software artifacts.
   logging service and workflow artifacts remain project-local. Text chunking
   keeps deterministic and AI-assisted checkpoint artifacts resumable and uses
   atomic JSON persistence for chunking state, reports, and chunk output.
+  Text cleanup now uses atomic artifact/state persistence, corrupt-state
+  restart tolerance, fingerprinted deterministic checkpoints, and terminal
+  failed/cancelled state records while preserving uninterrupted cleanup output.
   AI Translation likewise uses atomic translated-artifact persistence,
   read-only steady-state synchronization, and terminal cancel/failure state
   records for interrupted runs.

@@ -27,6 +27,8 @@ file naming/validation consistent across the application.
 - build and resolve root-level operation artifact paths
 - write and load operation JSON artifacts
 - build shared operation-state payload envelopes
+- treat malformed or unreadable operation-state files as no usable state while
+  logging a warning
 - calculate progress percentages and emit progress update payloads
 - reset known downstream operation artifacts without deleting unrelated files
 - build deterministic generated-audio paths and WAV filenames
@@ -109,6 +111,10 @@ audit timestamps are intentionally not persisted. Fixed artifact names are
 derived from configuration, while AI transaction logs remain explicit through
 `metadata.log_relative_path`, `metadata.ai_log_relative_path`, or matching
 resume-checkpoint fields.
+
+Operation-state loading is crash tolerant: missing, malformed, truncated, or
+non-dictionary JSON state files return `None` and log a warning, allowing the
+owning workflow to restart cleanly or follow its existing reset policy.
 
 Generated audio filenames combine chunk/block identity, sequence indexes, and a
 normalized speaker name. WAV validation rejects empty, malformed, or non-WAV

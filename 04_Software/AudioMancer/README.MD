@@ -19,6 +19,8 @@ points.
 
 - `pyproject.toml` - package metadata, dependencies, tooling configuration, and
   the `audiomancer` console entry point.
+- `src/audiomancer/__init__.py` - package release metadata exposed to the app
+  shell and import tests.
 - `uv.lock` - locked development environment.
 - `settings.example.json` - committed app-root settings scaffold. Copy it to
   `settings.json` and fill in operator-local endpoints and API keys.
@@ -98,6 +100,10 @@ broader validation baseline is tracked in `../../HowToTest.md`.
   requests and Audio Blocks checkpoints, are written through the shared runtime
   log.
 - Project workflow artifacts are written inside the selected project root.
+- Cleanup, extraction, manual cleaned-text edits, and Audio Assembly state/report
+  writes use the shared atomic persistence path for critical project artifacts.
+- Malformed operation state is treated as no usable checkpoint so the next run
+  can restart or follow the workflow reset path instead of crashing on load.
 - Text chunking writes chunk artifacts, reports, and operation state atomically;
   cancelled or failed chunking runs keep resumable terminal state.
 - AI Translation writes translated chunks, reports, and operation state

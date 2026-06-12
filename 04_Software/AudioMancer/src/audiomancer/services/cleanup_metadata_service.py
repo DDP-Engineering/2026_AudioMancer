@@ -14,7 +14,7 @@
          provenance without changing the operator-editable text file.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-26
-@version 0.2.0
+@version 0.2.1
 """
 
 # IMPORTS
@@ -24,6 +24,7 @@ from pathlib import Path
 
 from audiomancer import config
 from audiomancer.services.operation_runtime_service import resolve_operation_path
+from audiomancer.services.persistence_service import write_json_atomic
 
 # CONSTANTS
 
@@ -139,7 +140,7 @@ def write_cleanup_metadata(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-26
-    @version    0.3.0
+    @version    0.3.1
     """
     _ = input_path
     _ = cleaned_text_path
@@ -155,10 +156,7 @@ def write_cleanup_metadata(
         "weak_boundary_count": sum(1 for record in paragraph_records if record.get("boundary_confidence") == "weak"),
         "paragraphs": [_metadata_record_without_text(record) for record in paragraph_records],
     }
-    metadata_path.write_text(
-        json.dumps(metadata_payload, indent=2, ensure_ascii=False) + "\n",
-        encoding="utf-8",
-    )
+    write_json_atomic(metadata_path, metadata_payload)
     return metadata_payload
 
 

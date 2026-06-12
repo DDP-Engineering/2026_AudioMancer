@@ -14,7 +14,7 @@
          by the TTS Settings dialog and Narrator workflow.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-23
-@version 0.11.1
+@version 0.11.2
 """
 
 # IMPORTS
@@ -1063,7 +1063,7 @@ def wait_for_terminal_operation(
     base_url: str,
     runtime_api_key: str = "",
     poll_interval_seconds: float = 0.5,
-    timeout_seconds: int = config.DEFAULT_LLM_REQUEST_TIMEOUT_SECONDS,
+    timeout_seconds: int = config.DEFAULT_TTS_OPERATION_TIMEOUT_SECONDS,
     progress_callback=None,
     cancel_requested=None,
 ) -> dict[str, object]:
@@ -1080,7 +1080,7 @@ def wait_for_terminal_operation(
     @exception  OperationCancelledError Raised when cancellation is requested.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-24
-    @version    1.2.0
+    @version    1.2.1
     """
     deadline = time.monotonic() + timeout_seconds
     last_status_payload: dict[str, object] | None = None
@@ -1129,7 +1129,7 @@ def _sleep_with_cancel(delay_seconds: float, cancel_requested) -> None:
 def download_generated_voice(
     base_url: str,
     runtime_api_key: str = "",
-    timeout_seconds: int = config.DEFAULT_LLM_REQUEST_TIMEOUT_SECONDS,
+    timeout_seconds: int = config.DEFAULT_TTS_OPERATION_TIMEOUT_SECONDS,
 ) -> bytes:
     """
     @brief      Download the latest generated WAV bytes from VoiceWeaver.
@@ -1140,7 +1140,7 @@ def download_generated_voice(
     @exception  RuntimeError Raised when the runtime request fails.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-16
-    @version    1.0.0
+    @version    1.0.1
     """
     headers = _build_request_headers(runtime_api_key)
     try:
@@ -1154,7 +1154,7 @@ def download_generated_voice(
 def download_generated_audio(
     base_url: str,
     runtime_api_key: str = "",
-    timeout_seconds: int = config.DEFAULT_LLM_REQUEST_TIMEOUT_SECONDS,
+    timeout_seconds: int = config.DEFAULT_TTS_OPERATION_TIMEOUT_SECONDS,
 ) -> bytes:
     """
     @brief      Download the latest generated sound WAV bytes from VoiceWeaver.
@@ -1165,7 +1165,7 @@ def download_generated_audio(
     @exception  RuntimeError Raised when the runtime request fails.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-20
-    @version    0.1.0
+    @version    0.1.1
     """
     headers = _build_request_headers(runtime_api_key)
     try:

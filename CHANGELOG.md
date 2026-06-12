@@ -10,6 +10,36 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [1.5.8] - 2026-06-12
+
+### Fixed
+
+- Cleanup, extraction, cleanup metadata, manual cleaned-text edits, and Audio
+  Assembly state/report writes now use atomic persistence for the critical
+  project artifacts touched by the cleanup safety bundle.
+- Malformed or truncated operation-state files now load as no usable state with
+  a warning, allowing deterministic cleanup, AI cleanup, extraction, and Audio
+  Assembly to restart or follow their normal reset path instead of crashing the
+  next run.
+- Deterministic and AI cleanup now persist terminal failed state where possible
+  while preserving resumable checkpoints for interrupted work.
+
+### Changed
+
+- Deterministic cleanup now uses input-fingerprinted checkpoints, bounded
+  checkpoint cadence, and non-PDF pseudo-segments for granular cancel/resume
+  progress without changing uninterrupted cleanup output.
+- The shared LLM provider now reports cooperative cancellation with a neutral
+  cancellation message rather than treating it as provider failure.
+- The threaded operation runner now schedules the operation UI bridge for
+  deferred Qt deletion after finish cleanup.
+- VoiceWeaver operation polling and generated-audio download defaults now use
+  `DEFAULT_TTS_OPERATION_TIMEOUT_SECONDS`, an alias for the existing audio
+  generation timeout value.
+- Project package metadata and `audiomancer.__version__` were updated to
+  `1.5.8`.
+- Offline English and Romanian help bundles were updated to version `1.5.8`.
+
 ## [1.5.7] - 2026-06-11
 
 ### Fixed

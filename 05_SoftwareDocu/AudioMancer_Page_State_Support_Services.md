@@ -113,8 +113,9 @@ include:
 - Audio Assembly Scene Ambience inclusion state and readiness counts after the
   current inclusion filter is applied
 
-Manual cleanup edits persist the edited text and reset downstream operations
-through the shared operation-runtime reset policy.
+Manual cleanup edits atomically persist the edited text and compact cleanup
+state, then reset downstream operations through the shared operation-runtime
+reset policy.
 
 ## 7. Workflow Integration
 

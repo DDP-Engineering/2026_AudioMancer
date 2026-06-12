@@ -407,7 +407,7 @@ def test_chat_json_can_cancel_while_waiting_for_model_response(monkeypatch) -> N
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.1.0
+    @version    0.1.1
     """
 
     def _slow_request(_profile_payload, _request_payload):
@@ -448,7 +448,7 @@ def test_chat_json_can_cancel_while_waiting_for_model_response(monkeypatch) -> N
             cancel_requested=lambda: (time.monotonic() - started_at) >= 0.05,
         )
     except OperationCancelledError as error:
-        assert "waiting for the model response" in str(error)
+        assert str(error) == "AI operation cancelled while waiting for the model response."
     else:  # pragma: no cover - defensive assertion path.
         raise AssertionError("Expected AI request cancellation while waiting for the model response.")
 

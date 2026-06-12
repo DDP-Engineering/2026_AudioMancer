@@ -24,8 +24,8 @@ or TTS-sized units, and shape chunking/Speech Blocks operation reports.
 
 ## 2. Responsibilities
 
-- build and persist cleaned-text paragraph structure/provenance with stable
-  paragraph IDs and no duplicated paragraph text
+- build and atomically persist cleaned-text paragraph structure/provenance with
+  stable paragraph IDs and no duplicated paragraph text
 - classify text lines, scripts, language hints, chapter labels, sentence
   endings, and dialogue line breaks
 - produce deterministic one-paragraph chunk artifacts for local chunking
@@ -104,7 +104,8 @@ Outputs:
 
 ## 6. Data Contracts
 
-Cleanup metadata records preserve paragraph ordering, paragraph IDs,
+Cleanup metadata records are written through the shared atomic JSON helper and
+preserve paragraph ordering, paragraph IDs,
 `source_start_line`/`source_end_line` spans in canonical `clean_text.txt`,
 source page numbers where available, warnings, and timestamps. They do not
 persist paragraph `text`; `cleanup_metadata_service.load_or_build_paragraph_records(...)`
