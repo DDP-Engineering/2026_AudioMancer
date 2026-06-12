@@ -21,7 +21,7 @@ also do the same work manually.
 Use the current GitHub Release pages for AudioMancer and the VoiceWeaver runtime
 package:
 
-- [AudioMancer v1.4.1 Windows release](https://github.com/DDP-Engineering/2026_AudioMancer/releases/tag/v1.4.1)
+- [AudioMancer v1.5.8 Windows release](https://github.com/DDP-Engineering/2026_AudioMancer/releases/tag/v1.5.8)
 - [VoiceWeaver v1.5.0 Windows runtime release](https://github.com/DDP-Engineering/2026_AudioMancer/releases/tag/v1.0.0)
 
 The AudioMancer release page includes:
@@ -35,7 +35,7 @@ files and checksum information.
 
 ## Install AudioMancer On Windows
 
-1. Download `AudioMancer_Windows_x64.zip` from the v1.4.1 release page.
+1. Download `AudioMancer_Windows_x64.zip` from the v1.5.8 release page.
 2. Download `SHA256SUMS.txt` if you want to verify the ZIP.
 3. Extract it to a normal folder, for example `C:\AudioMancer`.
 4. Start AudioMancer with `AudioMancer.exe` or `Start-AudioMancer.cmd`.
