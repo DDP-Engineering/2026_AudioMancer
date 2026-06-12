@@ -17,6 +17,9 @@ venv/
 env/
 ENV/
 .pytest_cache/
+.pt*/
+.uv_cache/
+.uv-cache/
 .mypy_cache/
 .ruff_cache/
 .hypothesis/
