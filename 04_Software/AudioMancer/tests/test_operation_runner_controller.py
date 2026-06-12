@@ -13,7 +13,7 @@
          operation cleanup without showing real modal progress dialogs.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-24
-@version 0.2.0
+@version 0.2.1
 """
 
 # IMPORTS
@@ -83,12 +83,27 @@ def test_threaded_operation_success_reports_progress_and_cleans_up(monkeypatch, 
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-24
-    @version    0.1.0
+    @version    0.1.1
     """
     window = _build_runner_window(qtbot, tmp_path)
     events = _patch_progress_dialog(monkeypatch)
     busy_states: list[bool] = []
+    deleted_bridges: list[object] = []
     results: list[object] = []
+
+    def _record_delete_later(bridge) -> None:
+        """
+        @brief      Record UI bridge deferred deletion requests.
+        @param[in]  bridge Operation UI bridge instance.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-06-12
+        @version    0.1.0
+        """
+        deleted_bridges.append(bridge)
+
+    monkeypatch.setattr(operation_runner_controller.ThreadedOperationUiBridge, "deleteLater", _record_delete_later)
 
     def worker(project_root, manifest, progress_callback=None, cancel_requested=None):
         """
@@ -122,6 +137,7 @@ def test_threaded_operation_success_reports_progress_and_cleans_up(monkeypatch, 
 
     assert busy_states == [True, False]
     assert results == [{"ok": True}]
+    assert len(deleted_bridges) == 1
     assert ("update", 50, "half") in events
     assert ("finish",) in events
     _assert_runner_state_cleared(window)

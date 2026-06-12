@@ -9,11 +9,11 @@
 """
 @file test_main_window_lifecycle.py
 @brief Qt window tests for the copied AudioMancer main-window shell.
-@details Validates that the DDP_Audiomancer-style toolbar, sidebar, and stacked
-         pages are created without workflow functionality.
+@details Validates that the DDP_Audiomancer-style toolbar, navigation sidebar,
+         and stacked pages are created without workflow functionality.
 @author Eng. Dan Dumitru Pasare
-@date 2026-04-16
-@version 1.7.4
+@date 2026-06-10
+@version 1.9.0
 """
 
 # IMPORTS
@@ -24,7 +24,9 @@ from PySide6.QtWidgets import (
     QApplication,
     QDialog,
     QGroupBox,
+    QHBoxLayout,
     QLabel,
+    QListView,
     QListWidget,
     QPlainTextEdit,
     QPushButton,
@@ -54,8 +56,8 @@ def test_main_window_can_be_created(qtbot, default_settings_payload) -> None:
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-06
-    @version    0.4.4
+    @date       2026-06-09
+    @version    0.4.5
     """
     window = MainWindow(
         settings_payload={
@@ -80,14 +82,14 @@ def test_main_window_can_be_created(qtbot, default_settings_payload) -> None:
     assert window._settings_dialog.height() <= main_window_module.WINDOW_HEIGHT
     assert any(group_box.title() == "Project Summary" for group_box in window.findChildren(QGroupBox))
     assert any(group_box.title() == "Workflow Progress" for group_box in window.findChildren(QGroupBox))
-    assert any(group_box.title() == "Narator Voice Profiles" for group_box in window.findChildren(QGroupBox))
+    assert any(group_box.title() == "Narator Voices" for group_box in window.findChildren(QGroupBox))
     assert any(group_box.title() == "Voice Designer Prompt" for group_box in window.findChildren(QGroupBox))
     assert any(button.text() == "Deterministic Cleanup" for button in window.findChildren(QPushButton))
     assert any(button.text() == "Deterministic Chunking" for button in window.findChildren(QPushButton))
     assert any(button.text() == "Start Translation" for button in window.findChildren(QPushButton))
     assert any(button.text() == "Start Discovery" for button in window.findChildren(QPushButton))
     assert any(button.text() == "Preview" for button in window.findChildren(QPushButton))
-    assert any(button.text() == "Delete Profile" for button in window.findChildren(QPushButton))
+    assert any(button.text() == "Delete" for button in window.findChildren(QPushButton))
     assert any(button.text() == "Save" for button in window.findChildren(QPushButton))
     assert any(button.text() == "OK" for button in window.findChildren(QPushButton))
     assert window._tts_settings_page._save_button.text() == "Save"
@@ -99,6 +101,32 @@ def test_main_window_can_be_created(qtbot, default_settings_payload) -> None:
     assert not any(label.text() == "Interface Text Size" for label in window.findChildren(QLabel))
     assert window._sidebar.item(1).flags() == main_window_module.Qt.ItemFlag.NoItemFlags
     assert window._operation_progress_dialog is None
+
+
+def test_main_window_navigation_is_a_left_vertical_sidebar(qtbot, default_settings_payload) -> None:
+    """
+    @brief      Verify workflow navigation renders as a fixed-width vertical left sidebar.
+    @details    Covers REQ-AUDIO-UX-032: the sidebar list sits left of the page
+                stack with a fixed 160 px width and vertical top-to-bottom flow,
+                and the page stack takes the remaining window space.
+    @param[in]  qtbot Qt test helper fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-10
+    @version    0.3.0
+    """
+    window = MainWindow(settings_payload=dict(default_settings_payload))
+    qtbot.addWidget(window)
+
+    assert window._sidebar.flow() == QListView.Flow.TopToBottom
+    assert window._sidebar.minimumWidth() == 160
+    assert window._sidebar.maximumWidth() == 160
+    layout = window.centralWidget().layout()
+    assert isinstance(layout, QHBoxLayout)
+    assert layout.indexOf(window._sidebar) == 0
+    assert layout.indexOf(window._stack) == 1
+    assert layout.stretch(layout.indexOf(window._stack)) == 1
 
 
 def test_main_window_show_message_does_not_create_status_bar(qtbot, default_settings_payload) -> None:

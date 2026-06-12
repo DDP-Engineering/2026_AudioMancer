@@ -30,6 +30,19 @@ Omit `--changed-only` for a full scan.
 The logging audit is intentionally conservative: it reports candidates for
 engineering review instead of editing code automatically.
 
+## Synthetic Projects
+
+`make_synthetic_project.py` creates disposable large AudioMancer projects for
+manual responsiveness checks and the opt-in performance test harness.
+
+Run it from the repository root:
+
+```powershell
+python 02_Tools/make_synthetic_project.py --blocks 3000 --chunks 150 --out .tmp\LargeBook
+```
+
+The tool refuses to overwrite a non-empty output folder.
+
 ## Packaging
 
 Release packaging automation is implemented directly in this folder:

@@ -14,7 +14,7 @@
          generation report/state sidecars without generating narrator audio.
 @author Eng. Dan Dumitru Pasare
 @date 2026-05-11
-@version 0.4.1
+@version 0.4.2
 """
 
 # IMPORTS
@@ -175,7 +175,7 @@ def generate_narrator_profiles(
     @exception  OperationCancelledError Raised when the operator cancels the run.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-13
-    @version    0.3.0
+    @version    0.4.0
     """
     _ = manifest
     resolved_project_root = Path(project_root)
@@ -280,10 +280,50 @@ def generate_narrator_profiles(
         token_usage=token_usage,
     )
 
+    def _write_interrupted_state(status: str) -> None:
+        """
+        @brief      Persist the current resumable checkpoint after an interrupted run.
+        @param[in]  status Terminal interrupted status to persist.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-06-11
+        @version    0.1.0
+        """
+        _write_operation_state(
+            state_path,
+            resolved_project_root,
+            input_path=source_path,
+            report_path=None,
+            status=status,
+            progress_current=len(observations),
+            progress_total=total_progress,
+            started_at=started_at,
+            completed_at=None,
+            profile_id=profile_id,
+            source_token=source_token,
+            source_unit_count=len(source_units),
+            requested_count=requested_count,
+            generated_profile_ids=[],
+            gender_allocation=allocation,
+            input_fingerprint=input_fingerprint,
+            log_path=log_path,
+            token_usage=token_usage,
+            budget_metadata=budget_metadata,
+            model_settings=model_settings,
+            style_observations=observations,
+            total_window_count=len(windows),
+            additional_profile_instructions=additional_profile_instructions,
+        )
+
     for window_index, window_units in enumerate(windows, start=1):
         if window_index <= completed_window_count:
             continue
-        raise_if_cancelled(cancel_requested)
+        try:
+            raise_if_cancelled(cancel_requested)
+        except OperationCancelledError:
+            _write_interrupted_state("cancelled")
+            raise
         user_prompt = _render_narrator_profile_prompt(
             "narrator_profile_style_window_user",
             {
@@ -307,11 +347,19 @@ def generate_narrator_profiles(
                 cancel_requested=cancel_requested,
             )
         except OperationCancelledError as error:
+            _write_interrupted_state("cancelled")
             raise OperationCancelledError(
                 "Narrator profile generation cancelled while waiting for the model response."
             ) from error
-        token_usage = token_usage_service.merge_token_usage(token_usage, response_result.get("usage"))
-        observations.append(_normalize_style_observation(response_result.get("payload"), window_index))
+        except Exception:
+            _write_interrupted_state("failed")
+            raise
+        try:
+            token_usage = token_usage_service.merge_token_usage(token_usage, response_result.get("usage"))
+            observations.append(_normalize_style_observation(response_result.get("payload"), window_index))
+        except Exception:
+            _write_interrupted_state("failed")
+            raise
         _write_operation_state(
             state_path,
             resolved_project_root,
@@ -345,7 +393,11 @@ def generate_narrator_profiles(
             token_usage=token_usage,
         )
 
-    raise_if_cancelled(cancel_requested)
+    try:
+        raise_if_cancelled(cancel_requested)
+    except OperationCancelledError:
+        _write_interrupted_state("cancelled")
+        raise
     style_summary = _build_style_observation_summary(observations)
     user_prompt = _render_narrator_profile_prompt(
         "narrator_profile_generation_user",
@@ -374,19 +426,27 @@ def generate_narrator_profiles(
             cancel_requested=cancel_requested,
         )
     except OperationCancelledError as error:
+        _write_interrupted_state("cancelled")
         raise OperationCancelledError(
             "Narrator profile generation cancelled while waiting for the model response."
         ) from error
-    token_usage = token_usage_service.merge_token_usage(token_usage, response_result.get("usage"))
-    raw_response_payload = response_result.get("payload", {})
-    response_payload = dict(raw_response_payload) if isinstance(raw_response_payload, dict) else {}
-    validated_profiles = _validated_generated_profiles(
-        response_payload,
-        requested_count,
-        allocation,
-        normalized_voice_language,
-        preview_text_character_limit,
-    )
+    except Exception:
+        _write_interrupted_state("failed")
+        raise
+    try:
+        token_usage = token_usage_service.merge_token_usage(token_usage, response_result.get("usage"))
+        raw_response_payload = response_result.get("payload", {})
+        response_payload = dict(raw_response_payload) if isinstance(raw_response_payload, dict) else {}
+        validated_profiles = _validated_generated_profiles(
+            response_payload,
+            requested_count,
+            allocation,
+            normalized_voice_language,
+            preview_text_character_limit,
+        )
+    except Exception:
+        _write_interrupted_state("failed")
+        raise
     generation_metadata = {
         "generated_by": "ai_narrator_profile_generation",
         "ai_profile_id": profile_id,

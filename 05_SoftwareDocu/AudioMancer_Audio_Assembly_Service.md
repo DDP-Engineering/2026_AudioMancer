@@ -32,8 +32,8 @@ deliverables under the project-root `audiobook/` folder.
 - convert metadata-only pause Audio Blocks into silence inside the composed WAV
   output
 - write output files through temporary paths before publishing final WAV files
-- persist resumable composition state in `audio_assembly_state.json`
-- persist generated-output metadata in `audio_assembly_report.json`
+- persist resumable composition state in `audio_assembly_state.json` atomically
+- persist generated-output metadata in `audio_assembly_report.json` atomically
 - support completed-output resume when inputs and settings still match
 - reset generated audiobook files, report data, and operation state
 - build page state, status notes, progress values, and generated-output records
@@ -89,7 +89,7 @@ High-level flow:
    already completed output records when the fingerprint still matches.
 7. Each output file is written as `<final_name>.tmp`, then renamed to the final
    `.wav` path after the file is complete.
-8. The service updates `audio_assembly_report.json` and
+8. The service atomically updates `audio_assembly_report.json` and
    `audio_assembly_state.json` after each completed output file.
 9. The controller refreshes `project.json.operations["audio_assembly"]` and
    advances `project.json.current_stage` to `audio_assembly_ready` when the
@@ -174,6 +174,9 @@ Persisted output records include:
 Audio Assembly report and state payloads do not persist operation audit
 timestamps. Output paths remain domain data because the generated audiobook
 files are not fixed to a single canonical artifact name.
+Malformed or truncated operation state loads as no usable state through the
+shared operation runtime loader, logs a warning, and requires the normal
+fingerprint/reset path rather than crashing the page.
 
 Current invariants:
 

@@ -13,7 +13,7 @@
          notes, and ready-for-assembly summaries.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-23
-@version 0.6.0
+@version 0.6.1
 """
 
 # IMPORTS
@@ -504,6 +504,61 @@ def test_build_audio_blocks_state_keeps_reset_disabled_for_default_metadata(tmp_
     assert state["reused_prompt_count"] == 0
     assert state["regenerated_prompt_count"] == 0
     assert state["can_reset"] is False
+
+
+def test_merge_audio_block_state_uses_persisted_playability_without_file_checks(monkeypatch, tmp_path) -> None:
+    """
+    @brief      Verify Audio Blocks display rows do not stat generated audio paths during state merge.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-10
+    @version    0.1.0
+    """
+
+    def fail_is_file(_path) -> bool:
+        """
+        @brief      Fail if state merging probes one row on disk.
+        @param[in]  _path Ignored filesystem path.
+        @return     No return; always raises.
+        @exception  AssertionError Always raised when called.
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-06-10
+        @version    0.1.0
+        """
+        raise AssertionError("Path.is_file should not be called for persisted audio block flags")
+
+    monkeypatch.setattr(Path, "is_file", fail_is_file)
+
+    merged_blocks = audio_blocks_state_service._merge_audio_block_state(  # noqa: SLF001
+        tmp_path,
+        [
+            {
+                "speech_block_id": "0001-000001",
+                "sequence_index": 1,
+                "chunk_id": "chunk-0001",
+                "content_kind": speech_blocks_service.CONTENT_KIND_NARRATION,
+                "speaker_display_name": "Narrator",
+                "text": "Narration.",
+            }
+        ],
+        [
+            {
+                "speech_block_id": "0001-000001",
+                "generated": True,
+                "approved": False,
+                "audio_relative_path": "artifacts/audio_blocks/0001_000001_narrator.wav",
+                "audio_duration_seconds": 1.25,
+                "audio_can_play": True,
+            }
+        ],
+        None,
+    )
+
+    assert merged_blocks[0]["can_play"] is True
+    assert merged_blocks[0]["audio_file_name"] == "0001_000001_narrator.wav"
 
 
 def _create_audio_blocks_project(tmp_path, name: str):

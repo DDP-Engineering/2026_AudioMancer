@@ -75,6 +75,9 @@ continuous narrator-only blocks under the TTS text budget.
   without changing approval state or downstream audio inputs
 - approve or unapprove the selected speech block, approve all speech blocks,
   and report approval counts
+- persist selected approve, unapprove, and warning-clear review changes through
+  a compact JSON update path that keeps resume-critical metadata and generation
+  fingerprints while avoiding large source-snapshot rewrites
 - regenerate one selected chunk and rebuild only that chunk's local sequence
   indexes plus fresh replacement block IDs
 - reset Speech Blocks plus downstream Audio Blocks and Audio Assembly artifacts
@@ -125,7 +128,9 @@ The workflow is split across:
   for prerequisite validation, confirmation popups, modal progress,
   cancellation, explicit reset, approve-all, selected-block approval toggle,
   selected-block edit/save, selected-chunk re-splitting, downstream Audio Blocks reconciliation, and
-  manifest synchronization
+  manifest synchronization. Selected approve, unapprove, edit-save, and
+  warning-clear refreshes update the visible row and review notes in place
+  instead of rebuilding the full Speech Blocks page.
 
 High-level flow:
 
@@ -192,6 +197,10 @@ High-level flow:
     `Generate Audio` asks the Audio Blocks controller to generate only the
     selected approved spoken block, and `Play`/`Stop` reuses the selected Audio
     Block local WAV player when a generated file exists.
+13. Selected manual review actions refresh the Home summary, the affected
+    Speech Blocks row, and the selected detail panel incrementally. Full page
+    rebuilds are still used for project open, full generation, reset, and
+    selected chunk re-splitting where chunk or row ordering changes broadly.
 
 ## 4. Dependencies
 

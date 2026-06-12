@@ -13,7 +13,7 @@
          file support used by the current AudioMancer implementation scaffold.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 1.41.5
+@version 1.41.6
 """
 
 # IMPORTS
@@ -527,6 +527,9 @@ DEFAULT_TTS_AUDIO_PREVIEW_TIMEOUT_SECONDS = 60
 
 # @brief Default timeout in seconds for long-form audio generation requests.
 DEFAULT_TTS_AUDIO_GENERATION_TIMEOUT_SECONDS = 300
+
+# @brief Default timeout in seconds for polling long-running TTS operations.
+DEFAULT_TTS_OPERATION_TIMEOUT_SECONDS = DEFAULT_TTS_AUDIO_GENERATION_TIMEOUT_SECONDS
 
 # @brief Default maximum narrator preview text length for TTS samples.
 DEFAULT_TTS_PREVIEW_TEXT_CHARACTER_LIMIT = 512

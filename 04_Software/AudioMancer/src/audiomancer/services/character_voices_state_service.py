@@ -14,7 +14,7 @@
          voices targets, and cached VoiceWeaver runtime discovery data.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-20
-@version 1.5.1
+@version 1.6.0
 """
 
 # IMPORTS
@@ -88,7 +88,7 @@ def build_character_voices_state(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-20
-    @version    1.4.0
+    @version    1.5.0
     """
     if project_root is None or manifest is None:
         return {
@@ -157,10 +157,12 @@ def build_character_voices_state(
             if str(target.get("target_kind", "")).strip() == character_voices_service.TARGET_KIND_CHARACTER
         ]
         character_voices_service.sync_same_narrator_samples(project_root, character_targets, selected_voice_language)
+        voice_targets = character_voices_service.load_voice_plan(project_root)
     target_entries = [
         _build_target_entry(
             project_root,
             target_payload,
+            voice_targets,
             assignment_mode,
             selected_voice_language,
             discovered_models,
@@ -397,6 +399,7 @@ def build_status_lines(
 def _build_target_entry(
     project_root: Path,
     target_payload: dict[str, object],
+    voice_targets: list[dict[str, object]],
     assignment_mode: str,
     selected_voice_language: str,
     discovered_models: list[dict[str, object]],
@@ -406,6 +409,7 @@ def _build_target_entry(
     @brief      Build the target entry.
     @param[in]  project_root Active project root folder.
     @param[in]  target_payload Payload for `target_payload`.
+    @param[in]  voice_targets Already-loaded Character Voices target payloads.
     @param[in]  assignment_mode Value for `assignment_mode`.
     @param[in]  selected_voice_language Value for `selected_voice_language`.
     @param[in]  discovered_models Value for `discovered_models`.
@@ -413,7 +417,7 @@ def _build_target_entry(
     @return     Derived helper result.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.3.0
+    @version    0.4.0
     """
     target_kind = str(target_payload.get("target_kind", "")).strip()
     target_id = str(target_payload.get("target_id", "")).strip()
@@ -454,8 +458,8 @@ def _build_target_entry(
             "sample_metadata": sample_metadata,
         }
 
-    sample_metadata = character_voices_service.load_target_sample_metadata(project_root, target_id)
-    has_sample = character_voices_service.has_target_sample(project_root, target_id)
+    sample_metadata = character_voices_service.load_target_sample_metadata(project_root, target_id, voice_targets)
+    has_sample = character_voices_service.has_target_sample(project_root, target_id, voice_targets)
     runtime_available = character_voices_service.sample_runtime_available(sample_metadata, discovered_models)
     generation_request = character_voices_service.voice_target_generation_request(
         target_payload,

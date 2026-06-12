@@ -12,7 +12,7 @@
 @details Verifies that the package imports and keeps release version metadata aligned.
 @author Eng. Dan Dumitru Pasare
 @date 2026-05-14
-@version 1.1.2
+@version 1.1.5
 """
 
 # IMPORTS
@@ -25,7 +25,7 @@ import audiomancer
 # CONSTANTS
 
 APP_ROOT = Path(__file__).resolve().parents[1]
-EXPECTED_VERSION = "1.4.0"
+EXPECTED_VERSION = "1.5.8"
 
 # PUBLIC API
 

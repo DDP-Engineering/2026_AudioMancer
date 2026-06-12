@@ -14,7 +14,7 @@
          targeted downstream invalidation when upstream voice inputs change.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-23
-@version 0.8.5
+@version 0.8.6
 """
 
 # IMPORTS
@@ -30,6 +30,7 @@ from audiomancer import config
 from audiomancer.services import (
     audio_assembly_service,
     audio_blocks_service,
+    audio_blocks_state_service,
     project_workspace_service,
     speech_blocks_service,
     text_cleanup_state_service,
@@ -163,7 +164,7 @@ def handle_approve_selected_requested(window: "MainWindow", speech_block_id: str
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-23
-    @version    0.4.0
+    @version    0.4.1
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._current_project_root is None or window._current_manifest is None:
@@ -184,7 +185,8 @@ def handle_approve_selected_requested(window: "MainWindow", speech_block_id: str
             str(error),
         )
         return
-    _reset_audio_assembly_after_audio_blocks_change(window)
+    _reset_audio_assembly_after_audio_blocks_change(window, refresh_page=False)
+    _refresh_audio_blocks_incremental_state(window, speech_block_id)
     if was_approved:
         window._audio_blocks_page.select_block_id(str(speech_block_id).strip())
         message_key = "status.audio_block_unapproved"
@@ -774,7 +776,7 @@ def _reset_audio_blocks_and_downstream(window: "MainWindow") -> None:
     window._current_manifest = project_workspace_service.load_manifest(window._current_project_root)
 
 
-def _reset_audio_assembly_after_audio_blocks_change(window: "MainWindow") -> None:
+def _reset_audio_assembly_after_audio_blocks_change(window: "MainWindow", refresh_page: bool = True) -> None:
     """
     @brief      Clear only Audio Assembly outputs after an Audio Blocks state change.
     @param[in]  window Active main window instance.
@@ -782,17 +784,18 @@ def _reset_audio_assembly_after_audio_blocks_change(window: "MainWindow") -> Non
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-04
-    @version    0.1.0
+    @version    0.1.1
     """
     if window._current_project_root is None or window._current_manifest is None:
         return
     _stop_audio_blocks_and_assembly_playback(window)
     workflow_impact_service.reset_audio_assembly_outputs(window._current_project_root)
     _sync_manifest_after_selective_audio_invalidation(window)
-    window.show_project_state(
-        window._current_project_root,
-        project_workspace_service.load_manifest(window._current_project_root),
-    )
+    reloaded_manifest = project_workspace_service.load_manifest(window._current_project_root)
+    if refresh_page:
+        window.show_project_state(window._current_project_root, reloaded_manifest)
+    else:
+        window.refresh_project_summary(window._current_project_root, reloaded_manifest)
 
 
 def _sync_manifest_after_selective_audio_invalidation(window: "MainWindow") -> None:
@@ -1142,6 +1145,48 @@ def _audio_block_by_id(window: "MainWindow", speech_block_id: str) -> dict[str, 
             if str(speech_block.get("speech_block_id", "")).strip() == normalized_block_id
         ),
         None,
+    )
+
+
+def _refresh_audio_blocks_incremental_state(window: "MainWindow", speech_block_id: str) -> None:
+    """
+    @brief      Refresh one Audio Blocks row plus notes and progress without rebuilding the list widget.
+    @param[in]  window Active main window instance.
+    @param[in]  speech_block_id Changed Speech Block identifier.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-10
+    @version    0.1.0
+    """
+    if window._current_project_root is None or window._current_manifest is None:
+        return
+    current_language = ui_state_service.current_language_from_settings(window._settings_payload)
+    state = audio_blocks_state_service.build_audio_blocks_state(
+        window._current_project_root,
+        window._current_manifest,
+        current_language,
+        window._settings_payload,
+    )
+    normalized_block_id = str(speech_block_id).strip()
+    updated_block = next(
+        (
+            block
+            for block in state.get("speech_blocks", [])
+            if isinstance(block, dict) and str(block.get("speech_block_id", "")).strip() == normalized_block_id
+        ),
+        None,
+    )
+    if isinstance(updated_block, dict):
+        window._audio_blocks_page.update_audio_block_item(updated_block)
+    window._audio_blocks_page.set_review_summary(
+        list(state.get("notes", [])),
+        list(state.get("status_lines", [])),
+        int(state.get("progress_current", 0)),
+        int(state.get("progress_total", 0)),
+        int(state.get("progress_percent", 0)),
+        can_approve_all=bool(state.get("can_approve_all", False)),
+        can_reset=bool(state.get("can_reset", False)),
     )
 
 

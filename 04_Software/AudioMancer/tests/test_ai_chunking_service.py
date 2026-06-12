@@ -13,7 +13,7 @@
          persists resumable state, and rebuilds chunk spans from AI boundaries.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-07
-@version 0.5.2
+@version 0.6.0
 """
 
 # IMPORTS
@@ -564,14 +564,14 @@ def test_ai_chunking_uses_cleanup_metadata_paragraph_ids(tmp_path, monkeypatch) 
 
 def test_ai_chunking_resumes_from_saved_window_checkpoint(tmp_path, monkeypatch) -> None:
     """
-    @brief      Verify interrupted AI chunking resumes from the next unfinished window.
+    @brief      Verify REQ-AUDIO-FUNC-001 interrupted AI chunking resumes from the next unfinished window.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-07
-    @version    0.1.1
+    @version    0.2.0
     """
     monkeypatch.setattr(
         config,
@@ -657,7 +657,7 @@ def test_ai_chunking_resumes_from_saved_window_checkpoint(tmp_path, monkeypatch)
         )
 
     state_payload = json.loads((project_root / config.CHUNKING_STATE_FILE_NAME).read_text(encoding="utf-8"))
-    assert state_payload["status"] == "running"
+    assert state_payload["status"] == "cancelled"
     assert state_payload["progress_current"] == 1
 
     monkeypatch.setattr(
@@ -697,6 +697,89 @@ def test_ai_chunking_resumes_from_saved_window_checkpoint(tmp_path, monkeypatch)
     completed_state = json.loads((project_root / config.CHUNKING_STATE_FILE_NAME).read_text(encoding="utf-8"))
     assert completed_state["status"] == "completed"
     assert completed_state["progress_current"] == 2
+
+
+def test_ai_running_state_reuses_prebuilt_chunks(tmp_path, monkeypatch) -> None:
+    """
+    @brief      Verify REQ-AUDIO-NFR-015 AI checkpoint state does not rebuild already prepared chunks.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-10
+    @version    0.1.0
+    """
+    project_root, _manifest = project_workspace_service.create_project("AiChunkPrebuiltState", tmp_path)
+    state_path = project_root / config.CHUNKING_STATE_FILE_NAME
+    input_path = project_root / config.CLEANED_TEXT_FILE_NAME
+    output_path = project_root / config.CHUNK_ARTIFACT_FILE_NAME
+    input_path.write_text("Chapter I\n\nParagraph one.\n", encoding="utf-8")
+    chunks = [
+        {
+            "chunk_id": "chunk-0001",
+            "sequence_index": 1,
+            "text": "Chapter I\n\nParagraph one.",
+            "source_start_line": 1,
+            "source_end_line": 3,
+            "chunking_mode": "ai_assisted",
+            "semantic_strategy": "paragraph",
+        }
+    ]
+
+    def _unexpected_chunk_rebuild(*_args, **_kwargs):
+        """
+        @brief      Fail when state persistence rebuilds chunks that were supplied by the caller.
+        @return     None.
+        @exception  AssertionError Always raised.
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-06-10
+        @version    0.1.0
+        """
+        raise AssertionError("state persistence should reuse prebuilt chunks")
+
+    monkeypatch.setattr(ai_chunking_service, "_build_chunks_from_break_ids", _unexpected_chunk_rebuild)
+
+    ai_chunking_service._write_running_state(
+        state_path=state_path,
+        project_root=project_root,
+        input_snapshot_path=input_path,
+        output_path=output_path,
+        report_path=None,
+        started_at="2026-06-10T12:00:00+00:00",
+        progress_current=1,
+        progress_total=1,
+        warnings=[],
+        paragraph_records=[],
+        committed_break_ids=[],
+        profile_id="profile_1",
+        semantic_strategy="paragraph",
+        input_fingerprint="fingerprint",
+        log_relative_path="ai_chunking.log",
+        token_usage={"usage_available": False},
+        budget_metadata={
+            "context_window": 4096,
+            "max_output_tokens": 512,
+            "prompt_budget_tokens": 20,
+            "text_budget_tokens": 2000,
+            "safety_margin_tokens": 409,
+            "strategy_paragraph_cap": 20,
+        },
+        profile_runtime_metadata={
+            "model_name": "qwen3-8b",
+            "context_window": 4096,
+            "max_output_tokens": 512,
+            "temperature": 0.2,
+        },
+        profile_usage_history=[],
+        completed_unit_count=1,
+        additional_chunking_instructions="",
+        chunks=chunks,
+    )
+
+    state_payload = json.loads(state_path.read_text(encoding="utf-8"))
+    assert state_payload["metadata"]["chunk_count"] == 1
+    assert state_payload["metadata"]["detected_chapter_count"] == 1
 
 
 def test_ai_chunking_restarts_when_checkpoint_lacks_completed_unit_count(tmp_path, monkeypatch) -> None:

@@ -14,7 +14,7 @@
          generated audio blocks.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-23
-@version 0.6.5
+@version 0.6.6
 """
 
 # IMPORTS
@@ -247,6 +247,12 @@ def test_audio_blocks_ui_controller_approval_resets_only_audio_assembly(
     _seed_audio_blocks_run(project_root, approved=False)
     _seed_audio_assembly_run(project_root)
     window = _build_window(qtbot, project_root, default_settings_payload)
+    full_rebuild_calls = []
+    monkeypatch.setattr(
+        window._audio_blocks_page,
+        "set_audio_blocks_state",
+        lambda *args, **kwargs: full_rebuild_calls.append((args, kwargs)),
+    )
     monkeypatch.setattr(audio_blocks_ui_controller.misc_ui_controller, "show_message", lambda *args, **kwargs: None)
     monkeypatch.setattr(
         audio_blocks_ui_controller.QMessageBox,
@@ -273,6 +279,7 @@ def test_audio_blocks_ui_controller_approval_resets_only_audio_assembly(
     assert alice_audio_path.exists()
     assert not (project_root / config.AUDIOBOOK_OUTPUT_FOLDER_NAME / "audiobook.wav").exists()
     assert updated_manifest["operations"]["audio_assembly"]["status"] == "not_started"
+    assert full_rebuild_calls == []
 
 
 def test_audio_blocks_ui_controller_approval_toggle_unapproves_without_advancing(

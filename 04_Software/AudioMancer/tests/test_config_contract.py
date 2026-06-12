@@ -36,7 +36,7 @@ def test_config_exposes_expected_identity_and_window_defaults() -> None:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.2.5
+    @version    0.2.6
     """
     assert config.APP_NAME == "AudioMancer"
     assert config.PACKAGE_NAME == "audiomancer"
@@ -71,6 +71,7 @@ def test_config_exposes_expected_identity_and_window_defaults() -> None:
     assert config.SPEECH_BLOCKS_OUTPUT_FILE_NAME == "speech_blocks.json"
     assert config.AUDIO_BLOCKS_GENERATED_AUDIO_FOLDER_NAME == "audio_blocks"
     assert config.DEFAULT_TTS_PREVIEW_TEXT_CHARACTER_LIMIT == 512
+    assert config.DEFAULT_TTS_OPERATION_TIMEOUT_SECONDS == config.DEFAULT_TTS_AUDIO_GENERATION_TIMEOUT_SECONDS
     assert "ai_chunking" in config.AVAILABLE_LOG_COMPONENTS
     assert "text_extraction" in config.AVAILABLE_LOG_COMPONENTS
 

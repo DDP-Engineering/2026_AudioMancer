@@ -16,7 +16,7 @@
          preview and final assembly.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-25
-@version 0.7.1
+@version 0.7.2
 """
 
 # IMPORTS
@@ -49,6 +49,7 @@ from audiomancer.services.operation_runtime_service import (
 from audiomancer.services.operation_runtime_service import (
     try_resolve_project_relative_path as _safe_project_artifact_path,
 )
+from audiomancer.services.persistence_service import write_json_atomic
 from audiomancer.services.time_service import utc_now_iso as _utc_now_iso
 
 # CONSTANTS
@@ -196,7 +197,7 @@ def load_audio_assembly_report(project_root: str | Path) -> AudioAssemblyReport 
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.1.0
+    @version    0.1.1
     """
     report_path = resolve_operation_path(project_root, "audio_assembly", config.AUDIO_ASSEMBLY_REPORT_FILE_NAME)
     if not report_path.is_file():
@@ -1591,13 +1592,13 @@ def _persist_state(project_root: Path, report: AudioAssemblyReport, operation_st
     @date       2026-04-25
     @version    0.1.0
     """
-    build_operation_output_path(project_root, "audio_assembly", config.AUDIO_ASSEMBLY_REPORT_FILE_NAME).write_text(
-        json.dumps(report, indent=2, ensure_ascii=False) + "\n",
-        encoding="utf-8",
+    write_json_atomic(
+        build_operation_output_path(project_root, "audio_assembly", config.AUDIO_ASSEMBLY_REPORT_FILE_NAME),
+        report,
     )
-    build_operation_output_path(project_root, "audio_assembly", config.AUDIO_ASSEMBLY_STATE_FILE_NAME).write_text(
-        json.dumps(operation_state, indent=2, ensure_ascii=False) + "\n",
-        encoding="utf-8",
+    write_json_atomic(
+        build_operation_output_path(project_root, "audio_assembly", config.AUDIO_ASSEMBLY_STATE_FILE_NAME),
+        operation_state,
     )
 
 

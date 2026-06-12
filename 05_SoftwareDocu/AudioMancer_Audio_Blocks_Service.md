@@ -42,6 +42,12 @@ narrator sample and reusable narrator clone prompt.
   checkpoint, including checkpoints inside split Audio Blocks
 - support per-block approval toggling, per-block regeneration, and approve-all
   updates without regenerating missing audio
+- persist `audio_can_play` on generated, stitched, regenerated, remapped,
+  invalidated, and legacy-normalized Audio Blocks so UI state builds do not
+  need to check every WAV path on every refresh
+- reconcile generated-audio playability once on project activation or explicit
+  healing by scanning persisted project-local audio paths and updating stale
+  flags
 - allow incremental generation when only some Speech Blocks are approved; the
   remaining unapproved Speech Blocks stay pending until they are approved and
   generation is run again
@@ -81,7 +87,9 @@ The workflow is split across:
 - `04_Software/AudioMancer/src/audiomancer/ui/controllers/audio_blocks_ui_controller.py`
   for runtime probing, confirmations, modal progress lifecycle, approval
   toggling, local generated-WAV playback, reset behavior, manifest
-  synchronization, and upstream invalidation
+  synchronization, and upstream invalidation. Selected approval toggles refresh
+  the affected Audio Blocks row, notes, and Home summary without rebuilding the
+  full Audio Blocks list.
 - `04_Software/AudioMancer/src/audiomancer/services/voiceweaver_runtime_service.py`
   for the documented `create_voice_clone_prompt(...)` and
   `generate_voice_clone_from_prompt(...)` runtime wrappers used by the service
@@ -127,8 +135,9 @@ High-level flow:
    clone-prompt TTS endpoint.
 9. After each generated block, and after each completed split part, the service rewrites
    `audio_blocks.json`, `audio_blocks_report.json`, `voice_clone_profiles.json`,
-   and `audio_blocks_state.json`. Per-block generation metadata is stored in
-   the `audio_blocks.json` entry rather than in a WAV-adjacent JSON sidecar.
+   and `audio_blocks_state.json`. Per-block generation metadata and the
+   persisted `audio_can_play` flag are stored in the `audio_blocks.json` entry
+   rather than in a WAV-adjacent JSON sidecar.
 10. Operators can later approve or unapprove one generated block through the
    selected approval toggle, approve all generated blocks, or regenerate one
    selected block, which clears only that block approval.
@@ -151,6 +160,9 @@ High-level flow:
     generation, report refresh, and approval changes. It advances
     `project.json.current_stage` to `audio_blocks_ready` only when every speech
     block has generated audio and is approved.
+15. Project activation runs a single reconciliation pass for generated-audio
+    playability. Normal state refreshes trust the persisted flag and avoid
+    per-row filesystem probes.
 
 ## 4. Dependencies
 
@@ -218,6 +230,8 @@ Outputs:
 - updated compact manifest summary for `operations["audio_blocks"]`, written by
   the backend Audio Blocks service
 - updated manifest stage `audio_blocks_ready` after full generation plus approval
+- persisted `audio_can_play` flags in each Audio Blocks row, used by Speech
+  Blocks and Audio Blocks page-state builders
 
 ## 6. Data Contracts
 

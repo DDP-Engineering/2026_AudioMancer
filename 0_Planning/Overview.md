@@ -18,9 +18,7 @@ generate audiobooks with personalized character voices or real voice-based
 narration in a clear, efficient, and maintainable workflow.
 
 The application should also provide offline end-user help for non-technical
-book readers. The current English and Romanian help bundles are maintained
-under `05_SoftwareDocu/UserGuide/` and `05_SoftwareDocu/UserGuide_ro/`, then
-delivered as local HTML.
+book readers.
 
 ## 2. Final Product Vision
 
@@ -107,18 +105,8 @@ The application must support:
 - preserving imported source artifacts
 - validating format and basic integrity
 
-Current implementation supports:
-
-- `TXT`
-- `PDF`
-- `RTF`
-- `DOCX`
-- `ODT`
-- `Markdown`
-- `EPUB`
-
-Other formats should be added only when the import and extraction path remains
-simple and reliable.
+Supported formats should be added only when the import and extraction path
+remains simple and reliable.
 
 ### 5.3 Text Extraction
 
@@ -190,8 +178,7 @@ This stage should consolidate:
 - real-voice assignment data where supported
 - pronunciation or style notes where needed
 - narration-oriented metadata required by downstream generation
-- explicit sex/gender and age-domain handoff text for character voice-design
-  prompts so TTS voice design has stable vocal anchors
+- explicit voice-design handoff text where stable vocal anchors are needed
 
 This is not the final step. It prepares the canonical generation plan used by
 later audio synthesis and assembly stages.
@@ -221,18 +208,6 @@ for the whole book, and narrator plus one or more character voices. Same-narrato
 projects should preserve continuous phrases and emotional flow by segmenting
 text for the TTS budget instead of forcing dialogue speaker splits.
 
-The current implementation generates WAV files through the Audio Blocks workflow
-under `audio_blocks/`, keeps unapproved Speech Blocks pending, stores
-pause and indication operation blocks without VoiceWeaver generation, and can
-generate approved Scene Ambience prompt blocks through the sound-prompt runtime
-path when that setting is enabled. The Speech Blocks review page can invoke
-selected-block audio regeneration through a compact `Generate Audio` button and
-Play/Stop preview through the same Audio Blocks controller path so operators
-can check formatting before moving to the Audio Blocks page.
-Audio Blocks and VoiceWeaver runtime calls also write concise diagnostic log
-records for generation start, accepted sound-prompt requests, and completed
-generated files.
-
 Application-level Settings, AI Settings, and TTS Settings should use consistent
 dialog semantics: Cancel discards unsaved edits, Save persists while keeping the
 dialog open, and OK persists then closes where the dialog supports Apply-style
@@ -240,26 +215,17 @@ workflows.
 
 ### 5.10 Export And Assembly
 
-The application supports a first WAV-only assembly stage for final audiobook
-outputs.
-
-The current implementation supports these Audio Assembly output modes:
-
-- one audio file for the whole book
-- split audio files by configured time limit
-- one audio file per source text chunk
+The application should support an assembly stage for final audiobook outputs.
 
 The assembly stage supports:
 
 - combining generated Speech Block audio in canonical order
-- optionally including generated Scene Ambience sound blocks in canonical order
-- converting metadata-only pause blocks into silence
+- optionally including generated ambience or operation sound blocks in
+  canonical order
+- converting pause operation blocks into silence
 - deterministic output naming
-- project-local `audiobook/` deliverables
-- `audio_assembly_state.json` and `audio_assembly_report.json`
-- completed-output resume when the source Audio Blocks and settings fingerprint
-  still match
-- local generated-output playback from the Audio Assembly page
+- project-local deliverables
+- local generated-output playback
 
 MP3 encoding, chapter metadata, silence trimming, volume normalization, pitch
 changes, and cover-art embedding remain future work.

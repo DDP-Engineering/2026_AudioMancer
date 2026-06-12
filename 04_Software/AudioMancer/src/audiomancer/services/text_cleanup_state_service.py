@@ -14,13 +14,12 @@
          including manual cleaned-text edits.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-24
-@version 0.13.1
+@version 0.13.2
 """
 
 # IMPORTS
 
 from collections.abc import Iterable
-import json
 from pathlib import Path
 
 from audiomancer import config
@@ -34,6 +33,7 @@ from audiomancer.services import (
     text_extraction_service,
     ui_state_service,
 )
+from audiomancer.services.persistence_service import write_json_atomic, write_text_atomic
 
 # PUBLIC API
 
@@ -140,12 +140,12 @@ def save_cleaned_text_edit(project_root: Path, manifest: dict[str, object], clea
     @exception  ValueError Raised when the cleaned text artifact does not exist yet.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-24
-    @version    0.4.0
+    @version    0.4.1
     """
     cleaned_text_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.CLEANED_TEXT_FILE_NAME
     if not cleaned_text_path.is_file():
         raise ValueError("No cleaned text is available to edit.")
-    cleaned_text_path.write_text(cleaned_text, encoding="utf-8")
+    write_text_atomic(cleaned_text_path, cleaned_text)
     metadata_payload = cleanup_metadata_service.write_minimal_cleanup_metadata(
         project_root,
         cleaned_text,
@@ -380,7 +380,7 @@ def _build_token_usage_notes(
     @return     Derived helper result.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.2.0
+    @version    0.2.1
     """
     return ai_state_note_service.build_token_usage_notes(report_payload, operation_state, language)
 
@@ -543,10 +543,7 @@ def _write_manual_cleanup_state(
         },
         resume_checkpoint=None,
     )
-    state_path.write_text(
-        json.dumps(state_payload, indent=2, ensure_ascii=False) + "\n",
-        encoding="utf-8",
-    )
+    write_json_atomic(state_path, state_payload)
     return state_payload
 
 

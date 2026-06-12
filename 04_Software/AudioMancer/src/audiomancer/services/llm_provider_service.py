@@ -16,7 +16,7 @@
          UI-driven cancellation responsive during provider waits.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-22
-@version 0.8.2
+@version 0.8.3
 """
 
 # IMPORTS
@@ -96,7 +96,7 @@ def chat_json(
     @exception  OperationCancelledError Raised when cooperative cancellation is requested.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-11
-    @version    0.6.2
+    @version    0.6.3
     """
     request_payload = {
         "model": str(profile_payload.get("model_name", "")).strip(),
@@ -219,6 +219,8 @@ def chat_json(
                 "payload": parsed_payload,
                 "usage": normalized_usage,
             }
+        except OperationCancelledError:
+            raise
         except Exception as error_object:
             last_error = error_object
             _append_ai_log(
@@ -269,7 +271,7 @@ def _request_chat_completion_with_cancellation(
         @return     None.
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-21
-        @version    0.1.0
+        @version    0.1.1
         """
         try:
             result_holder["payload"] = _request_chat_completion(
@@ -289,7 +291,7 @@ def _request_chat_completion_with_cancellation(
     while request_thread.is_alive():
         if callable(cancel_requested) and bool(cancel_requested()):
             _LLM_PROVIDER_LOGGER.info("AI provider request cancelled while waiting for model response.")
-            raise OperationCancelledError("AI-assisted cleanup cancelled while waiting for the model response.")
+            raise OperationCancelledError("AI operation cancelled while waiting for the model response.")
         request_thread.join(timeout=0.05)
     if "error" in error_holder:
         raise error_holder["error"]

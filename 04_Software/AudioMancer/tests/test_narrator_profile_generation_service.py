@@ -13,7 +13,7 @@
          selection, validation, persistence, resume, and cancellation contracts.
 @author Eng. Dan Dumitru Pasare
 @date 2026-05-11
-@version 0.3.0
+@version 0.4.0
 """
 
 # IMPORTS
@@ -198,7 +198,7 @@ def test_narrator_profile_generation_invalid_response_leaves_profiles_unchanged(
     mock_prompt_environment,
 ) -> None:
     """
-    @brief      Verify invalid AI output is rejected before profile writes occur.
+    @brief      Verify REQ-AUDIO-FUNC-026 invalid AI output is rejected and persists failed state.
     @param[in]  tmp_path Temporary path fixture.
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @param[in]  mock_prompt_environment Prompt-root fixture.
@@ -206,7 +206,7 @@ def test_narrator_profile_generation_invalid_response_leaves_profiles_unchanged(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-11
-    @version    0.1.0
+    @version    0.2.0
     """
     _write_narrator_prompts(mock_prompt_environment)
     project_root = tmp_path / "project"
@@ -238,6 +238,10 @@ def test_narrator_profile_generation_invalid_response_leaves_profiles_unchanged(
 
     assert (project_root / config.NARRATOR_PROFILE_FILE_NAME).read_text(encoding="utf-8") == before_payload
     assert not (project_root / config.NARRATOR_PROFILE_GENERATION_REPORT_FILE_NAME).exists()
+    state_payload = narrator_profile_generation_service.load_operation_state(project_root)
+    assert state_payload is not None
+    assert state_payload["status"] == "failed"
+    assert state_payload["resume_checkpoint"]["completed_window_count"] == 1
 
 
 def test_narrator_profile_generation_rejects_short_preview_text(
@@ -376,7 +380,7 @@ def test_narrator_profile_generation_cancellation_leaves_profiles_unchanged(
     mock_prompt_environment,
 ) -> None:
     """
-    @brief      Verify cancellation before AI generation does not append profiles.
+    @brief      Verify REQ-AUDIO-FUNC-026 cancellation before AI generation persists cancelled state.
     @param[in]  tmp_path Temporary path fixture.
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @param[in]  mock_prompt_environment Prompt-root fixture.
@@ -384,7 +388,7 @@ def test_narrator_profile_generation_cancellation_leaves_profiles_unchanged(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-11
-    @version    0.2.0
+    @version    0.3.0
     """
     _write_narrator_prompts(mock_prompt_environment)
     project_root = tmp_path / "project"
@@ -405,6 +409,10 @@ def test_narrator_profile_generation_cancellation_leaves_profiles_unchanged(
         )
 
     assert (project_root / config.NARRATOR_PROFILE_FILE_NAME).read_text(encoding="utf-8") == before_payload
+    state_payload = narrator_profile_generation_service.load_operation_state(project_root)
+    assert state_payload is not None
+    assert state_payload["status"] == "cancelled"
+    assert state_payload["resume_checkpoint"]["completed_window_count"] == 0
 
 
 def test_narrator_profile_generation_resumes_after_completed_style_window(

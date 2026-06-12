@@ -26,7 +26,8 @@ service calls execute on a dedicated `QThread`.
 - preserve the existing single-active-operation guard
 - expose cooperative cancellation through a `threading.Event`
 - support bounded shutdown cancellation when the main window is closed
-- clear `MainWindow` operation bookkeeping after the thread finishes
+- clear `MainWindow` operation bookkeeping after the thread finishes and
+  schedule the UI bridge for deferred Qt deletion
 
 It does not own service-level artifacts, retry policy, provider polling,
 VoiceWeaver request behavior, or operation-specific manifest synchronization.
@@ -59,7 +60,8 @@ Runtime flow:
 6. The UI thread updates the modal progress dialog and invokes the supplied
    terminal handler.
 7. When the worker finishes, the thread quits and the runner clears
-   `_active_operation_*`, `_operation_cancel_event`, and progress-dialog state.
+   `_active_operation_*`, `_operation_cancel_event`, and progress-dialog state,
+   then calls `deleteLater()` on the operation UI bridge.
 8. `MainWindow.closeEvent(...)` calls
    `cancel_active_operation_for_shutdown(...)` before accepting application
    shutdown. The helper requests cooperative cancellation and processes Qt
@@ -109,6 +111,7 @@ Outputs and state changes:
 - `_active_operation_worker`
 - `MainWindow` New Project and Open Project action enabled state
 - controller-specific success, failure, or cancellation side effects
+- deferred deletion of the operation UI bridge after finish cleanup
 
 ## 6. Data Contracts
 

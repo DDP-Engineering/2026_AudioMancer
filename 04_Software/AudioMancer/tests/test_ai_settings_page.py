@@ -13,7 +13,7 @@
          and merged settings payload generation.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 0.5.4
+@version 0.5.5
 """
 
 # IMPORTS
@@ -30,15 +30,15 @@ def test_ai_settings_page_default_selectors_are_stacked_in_workflow_order(qtbot)
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-25
-    @version    0.2.1
+    @date       2026-06-09
+    @version    0.2.2
     """
     page = AiSettingsPage()
     qtbot.addWidget(page)
 
     editor_container = page._default_cleanup_combo.parentWidget()
     editor_layout = editor_container.layout()
-    form_layout = editor_layout.itemAt(0).layout()
+    form_layout = editor_layout.itemAt(1).layout()
 
     assert isinstance(form_layout, QFormLayout)
 
@@ -83,15 +83,15 @@ def test_ai_settings_page_numeric_profile_options_use_two_column_grid(qtbot) -> 
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-11
-    @version    0.1.0
+    @date       2026-06-09
+    @version    0.1.1
     """
     page = AiSettingsPage()
     qtbot.addWidget(page)
 
     editor_container = page._default_cleanup_combo.parentWidget()
     editor_layout = editor_container.layout()
-    form_layout = editor_layout.itemAt(0).layout()
+    form_layout = editor_layout.itemAt(1).layout()
     numeric_layout = None
     for index in range(form_layout.count()):
         candidate = form_layout.itemAt(index)

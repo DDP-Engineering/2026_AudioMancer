@@ -66,8 +66,8 @@ class AudioAssemblyPage(QWidget):
         @return     None.
         @exception  None
         @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-25
-        @version    0.4.3
+        @date       2026-06-09
+        @version    0.4.5
         """
         super().__init__(parent)
         self._current_language = "en"
@@ -149,19 +149,19 @@ class AudioAssemblyPage(QWidget):
         layout.addLayout(progress_row)
 
         self._scene_mix_group = QGroupBox("Scene Mix Previews", self)
-        scene_mix_layout = QVBoxLayout(self._scene_mix_group)
+        scene_mix_layout = QHBoxLayout(self._scene_mix_group)
         self._scene_mix_list = QListWidget(self)
         self._scene_mix_list.currentRowChanged.connect(self._handle_scene_mix_selection_changed)
-        scene_mix_layout.addWidget(self._scene_mix_list)
-        scene_mix_action_row = QHBoxLayout()
+        scene_mix_layout.addWidget(self._scene_mix_list, 1)
+        scene_mix_action_column = QVBoxLayout()
         self._scene_mix_generate_button = QPushButton("Generate / Refresh Scene Mix", self)
         self._scene_mix_generate_button.clicked.connect(self._emit_scene_mix_generate)
-        scene_mix_action_row.addWidget(self._scene_mix_generate_button)
+        scene_mix_action_column.addWidget(self._scene_mix_generate_button)
         self._scene_mix_playback_button = QPushButton("Play Scene Mix", self)
         self._scene_mix_playback_button.clicked.connect(self._emit_scene_mix_playback_toggle)
-        scene_mix_action_row.addWidget(self._scene_mix_playback_button)
-        scene_mix_action_row.addStretch(1)
-        scene_mix_layout.addLayout(scene_mix_action_row)
+        scene_mix_action_column.addWidget(self._scene_mix_playback_button)
+        scene_mix_action_column.addStretch(1)
+        scene_mix_layout.addLayout(scene_mix_action_column)
         layout.addWidget(self._scene_mix_group, 0)
 
         self._outputs_group = QGroupBox("Generated Audiobook Files", self)
@@ -192,14 +192,14 @@ class AudioAssemblyPage(QWidget):
         outputs_layout.addLayout(playback_row)
         layout.addWidget(self._outputs_group, 1)
 
-        self._status_group = QGroupBox("Audio Assembly Status", self)
+        self._status_group = QWidget(self)
         status_layout = QVBoxLayout(self._status_group)
+        status_layout.setContentsMargins(0, 0, 0, 0)
         self._status_edit = QPlainTextEdit(self)
         self._status_edit.setReadOnly(True)
         self._apply_status_edit_font_role()
         status_layout.addWidget(self._status_edit)
-        self._status_group.setMinimumHeight(96)
-        self._status_group.setMaximumHeight(132)
+        self._status_group.setFixedHeight(ui_state_service.operator_status_pane_height(self._status_edit))
         layout.addWidget(self._status_group, 0)
 
         self.apply_language(self._current_language)
@@ -442,15 +442,14 @@ class AudioAssemblyPage(QWidget):
         @return     None.
         @exception  None
         @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-25
-        @version    0.4.0
+        @date       2026-06-09
+        @version    0.4.1
         """
         self._current_language = language
         self._title_label.setText(f"<h2>{ui_state_service.translate('audio_assembly.title', language)}</h2>")
         self._settings_group.setTitle(ui_state_service.translate("audio_assembly.settings_group", language))
         self._scene_mix_group.setTitle(ui_state_service.translate("audio_assembly.scene_mix_group", language))
         self._outputs_group.setTitle(ui_state_service.translate("audio_assembly.outputs_group", language))
-        self._status_group.setTitle(ui_state_service.translate("audio_assembly.status_group", language))
         self._output_mode_label.setText(ui_state_service.translate("audio_assembly.output_mode", language))
         self._max_duration_label.setText(ui_state_service.translate("audio_assembly.max_duration", language))
         self._output_format_label.setText(ui_state_service.translate("audio_assembly.output_format", language))

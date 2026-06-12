@@ -74,6 +74,10 @@ High-level flow:
 6. The Narator Voice workflow later reuses the same service to load models, poll
    `/v1/status` until the load reaches a terminal state, submit generation,
    poll again, and download `/v1/voice`.
+7. Runtime operation polling and generated-audio downloads use
+   `DEFAULT_TTS_OPERATION_TIMEOUT_SECONDS`, an alias for the existing audio
+   generation timeout value, so timeout behavior stays unchanged while the
+   VoiceWeaver call sites read as operation-level waits.
 
 ## 4. Dependencies
 
@@ -120,6 +124,10 @@ Global `settings.json` fields:
 - `tts_runtime_device_diagnostics`
 - `tts_audio_preview_timeout_seconds`
 - `tts_audio_generation_timeout_seconds`
+
+`DEFAULT_TTS_OPERATION_TIMEOUT_SECONDS` aliases
+`DEFAULT_TTS_AUDIO_GENERATION_TIMEOUT_SECONDS` for VoiceWeaver operation
+polling and generated-audio download defaults.
 
 Normalized discovered-model payloads keep:
 

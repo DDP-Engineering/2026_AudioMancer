@@ -14,7 +14,7 @@
          preservation, translated labels, and generation button enablement.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-24
-@version 0.8.8
+@version 0.8.11
 """
 
 # IMPORTS
@@ -130,25 +130,50 @@ def test_speech_blocks_page_chunk_list_uses_one_line_full_preview(qtbot) -> None
 
 def test_speech_blocks_page_header_uses_compact_buttons_and_wider_profile(qtbot) -> None:
     """
-    @brief      Verify compact Speech Blocks header labels leave room for the AI profile selector.
+    @brief      Verify Speech Blocks header controls fit on one visible row.
+    @details    Covers REQ-AUDIO-UX-033.
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-20
-    @version    0.1.1
+    @date       2026-06-10
+    @version    0.2.0
     """
     page = SpeechBlocksPage()
     qtbot.addWidget(page)
+    page.resize(840, 600)
+    page.show()
+    qtbot.waitExposed(page)
     page.apply_language("en")
+    page.layout().activate()
 
     assert page._generate_button.text() == "Generate All"
     assert page._reset_generation_button.text() == "Reset"
     assert page._approve_all_button.text() == "Approve All"
-    assert page._profile_combo.minimumWidth() >= 260
-    assert page._generate_button.minimumWidth() >= 140
-    assert page._reset_generation_button.minimumWidth() >= 96
-    assert page._approve_all_button.minimumWidth() >= 132
+    assert page._profile_combo.minimumWidth() >= 220
+    assert page._generate_button.minimumWidth() >= 112
+    assert page._reset_generation_button.minimumWidth() >= 80
+    assert page._approve_all_button.minimumWidth() >= 108
+
+    header_widgets = [
+        page._title_label,
+        page._profile_label,
+        page._profile_combo,
+        page._generate_button,
+        page._reset_generation_button,
+        page._approve_all_button,
+    ]
+    title_geometry = page._title_label.geometry()
+    for widget in header_widgets[1:]:
+        widget_geometry = widget.geometry()
+        assert title_geometry.top() <= widget_geometry.center().y() <= title_geometry.bottom()
+
+    for previous_widget, next_widget in zip(header_widgets[:-1], header_widgets[1:], strict=True):
+        assert previous_widget.geometry().right() <= next_widget.geometry().left()
+
+    for button in (page._generate_button, page._reset_generation_button, page._approve_all_button):
+        label_width = button.fontMetrics().horizontalAdvance(button.text())
+        assert button.width() >= label_width + 20
 
 
 def test_speech_blocks_page_selected_audio_controls_emit_and_track_playback(qtbot) -> None:
@@ -158,8 +183,8 @@ def test_speech_blocks_page_selected_audio_controls_emit_and_track_playback(qtbo
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-04
-    @version    0.2.3
+    @date       2026-06-09
+    @version    0.2.4
     """
     page = SpeechBlocksPage()
     qtbot.addWidget(page)
@@ -207,6 +232,8 @@ def test_speech_blocks_page_selected_audio_controls_emit_and_track_playback(qtbo
     )[0]
     assert generate_row == play_row
     assert page._chunk_actions_column_layout.contentsMargins().top() == 2
+    # The Chunk List frame caps at the action-button column height so their bottoms align.
+    assert page._chunk_group.maximumHeight() == page._chunk_actions_column.sizeHint().height()
 
     with qtbot.waitSignal(page.generate_audio_selected_requested) as generation_signal:
         page._generate_audio_button.click()
@@ -1189,7 +1216,71 @@ def test_speech_blocks_page_applies_translated_labels(qtbot) -> None:
     assert page._approve_all_button.text() == "Aproba Tot"
     assert page._approve_block_button.text() == "Aproba"
     assert page._chunk_group.title() == "Lista Segmentelor"
-    assert page._status_group.title() == "Stare Blocuri Vorbire"
+
+
+def test_speech_blocks_page_single_item_update_preserves_sibling_items(qtbot) -> None:
+    """
+    @brief      Verify single Speech Block refresh updates one row without recreating siblings.
+    @param[in]  qtbot Qt test helper fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-10
+    @version    0.1.0
+    """
+    page = SpeechBlocksPage()
+    qtbot.addWidget(page)
+    page.set_project_active(True)
+    page.set_speech_blocks_state(
+        source_chunks=[{"chunk_id": "chunk-0001", "sequence_index": 1, "text": "Chunk text."}],
+        speech_blocks=[
+            _speech_block("0001-000001", "First block.", approved=False),
+            _speech_block("0001-000002", "Second block.", approved=False),
+        ],
+        notes=["Ready."],
+        selected_profile_id=None,
+        stage_status="in_progress",
+        selected_source_language="en",
+        processed_chunk_count=1,
+        total_chunk_count=1,
+    )
+    first_item = page._speech_block_list.item(0)
+    second_item = page._speech_block_list.item(1)
+
+    page.update_speech_block_item(_speech_block("0001-000002", "Second block changed.", approved=True))
+
+    assert page._speech_block_list.count() == 2
+    assert page._speech_block_list.item(0) is first_item
+    assert page._speech_block_list.item(1) is second_item
+    assert "Second block changed." in page._speech_block_list.item(1).text()
+    assert page._speech_blocks[1]["approved"] is True
+
+
+def _speech_block(speech_block_id: str, text: str, approved: bool) -> dict[str, object]:
+    """
+    @brief      Build one minimal Speech Blocks page payload.
+    @param[in]  speech_block_id Speech Block identifier.
+    @param[in]  text Display text.
+    @param[in]  approved Approval flag.
+    @return     Speech Block display payload.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-10
+    @version    0.1.0
+    """
+    return {
+        "speech_block_id": speech_block_id,
+        "sequence_index": int(speech_block_id.rsplit("-", maxsplit=1)[-1]),
+        "chunk_id": "chunk-0001",
+        "source_language": "en",
+        "speaker_kind": "narrator",
+        "speaker_id": "narrator",
+        "speaker_display_name": "Narrator",
+        "content_kind": speech_blocks_service.CONTENT_KIND_NARRATION,
+        "text": text,
+        "warning_flags": [],
+        "approved": approved,
+    }
 
 
 # END OF FILE

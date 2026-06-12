@@ -215,7 +215,12 @@ shapes that lack `completed_unit_count` are treated as incompatible and restart
 from the beginning. The chunking state and report persist the selected profile
 id, model name, context window, max output tokens, temperature, current budget
 metadata, and ordered profile settings history when resumed segments use
-different model settings.
+different model settings. Deterministic chunking checkpoints the root-level
+chunk artifact and state at bounded paragraph/time intervals instead of after
+every paragraph; cancellation or failure persists the latest in-memory chunks
+with a terminal `cancelled` or `failed` state and a resume checkpoint. Chunking
+JSON artifacts are written through the shared atomic writer, and malformed
+chunking state is treated as incompatible so the next run restarts cleanly.
 
 Default operation-state files are lazy page metadata. Opening a workflow page
 may create a `not_started` state file with zero progress, operation-specific

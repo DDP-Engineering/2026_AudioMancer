@@ -10,10 +10,11 @@
 @file test_character_voices_ui_controller.py
 @brief Character Voices UI controller tests for AudioMancer.
 @details Verifies destructive prompt-edit handling and missing narrator-sample
-         page-entry warnings for the Character Voices workflow.
+         page-entry warnings, cooperative cancellation, and non-destructive
+         replacement for the Character Voices workflow.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-20
-@version 1.7.4
+@version 1.8.0
 """
 
 # IMPORTS
@@ -21,11 +22,13 @@
 from types import SimpleNamespace
 
 from PySide6.QtWidgets import QMessageBox
+import pytest
 
 from audiomancer.services import (
     character_discovery_service,
     character_voices_service,
     narrator_definition_service,
+    operation_runtime_service,
     project_workspace_service,
 )
 from audiomancer.ui.controllers import character_voices_ui_controller
@@ -617,6 +620,188 @@ def test_character_voices_ui_controller_batch_targets_only_generatable_character
     assert [target_payload["target_id"] for target_payload in target_payloads] == ["character_bob"]
 
 
+def test_character_sample_generation_cancel_during_model_load(monkeypatch, tmp_path) -> None:
+    """
+    @brief      Verify REQ-AUDIO-UX-010 wires cancellation into Character Voices runtime polling.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  OperationCancelledError Expected cancellation signal.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-11
+    @version    0.1.0
+    """
+    project_root = _create_project_with_character_and_selected_narrator(tmp_path, "CharacterVoicesCancel")
+    target_payload = character_voices_service.voice_target_by_id(project_root, "character_alice")
+    assert target_payload is not None
+    settings_payload = _default_settings_payload()
+    observed_cancel_callbacks: list[object] = []
+    cancel_checks = iter((False, False, True))
+    monkeypatch.setattr(
+        character_voices_ui_controller.tts_runtime_ui_support,
+        "probe_runtime_and_persist_cache_from_settings",
+        lambda *_args, **_kwargs: {
+            "success": True,
+            "discovered_models": [],
+            "capability_matrix": {"minimum_qwen_ready": True},
+        },
+    )
+    monkeypatch.setattr(
+        character_voices_service,
+        "voice_target_generation_request",
+        lambda *_args, **_kwargs: {
+            "can_generate": True,
+            "language": "en",
+            "generation_mode": "definition",
+            "model_id": "qwen-designer",
+            "source_model_id": "qwen-designer",
+            "model_parameters": {},
+        },
+    )
+    monkeypatch.setattr(
+        character_voices_ui_controller.voiceweaver_runtime_service,
+        "read_status",
+        lambda *_args, **_kwargs: {"active_model": "qwen-base"},
+    )
+    monkeypatch.setattr(
+        character_voices_ui_controller.tts_runtime_ui_support,
+        "persist_runtime_status_from_settings",
+        lambda *_args, **_kwargs: None,
+    )
+    monkeypatch.setattr(
+        character_voices_ui_controller.voiceweaver_runtime_service,
+        "load_model",
+        lambda *_args, **_kwargs: None,
+    )
+
+    def _cancel_aware_wait(*_args, **kwargs):
+        """
+        @brief      Assert runtime polling receives and honors the cancellation callback.
+        @return     Completed status when cancellation is not supplied.
+        @exception  OperationCancelledError Raised when cancellation is requested.
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-06-11
+        @version    0.1.0
+        """
+        observed_cancel_callbacks.append(kwargs.get("cancel_requested"))
+        if callable(kwargs.get("cancel_requested")) and kwargs["cancel_requested"]():
+            raise operation_runtime_service.OperationCancelledError("Character sample generation cancelled.")
+        return {"active_model": "qwen-designer", "operation": {"status": "completed"}}
+
+    monkeypatch.setattr(
+        character_voices_ui_controller.voiceweaver_runtime_service,
+        "wait_for_terminal_operation",
+        _cancel_aware_wait,
+    )
+
+    with pytest.raises(operation_runtime_service.OperationCancelledError):
+        character_voices_ui_controller._generate_and_store_sample(
+            project_root,
+            settings_payload,
+            _sample_progress_messages(),
+            target_payload,
+            "en",
+            "Preview text.",
+            None,
+            lambda: next(cancel_checks, True),
+        )
+
+    assert observed_cancel_callbacks and callable(observed_cancel_callbacks[0])
+
+
+def test_failed_character_sample_generation_preserves_existing_sample(monkeypatch, tmp_path) -> None:
+    """
+    @brief      Verify REQ-AUDIO-UX-010 failed Character Voices generation keeps the previous sample intact.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  RuntimeError Expected runtime generation failure.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-11
+    @version    0.1.0
+    """
+    project_root = _create_project_with_character_and_selected_narrator(tmp_path, "CharacterVoicesFailurePreserves")
+    target_payload = character_voices_service.voice_target_by_id(project_root, "character_alice")
+    assert target_payload is not None
+    character_voices_service.store_target_sample(
+        project_root,
+        target_payload,
+        "en",
+        "Original preview.",
+        {
+            "generation_mode": "definition",
+            "source_model_id": "qwen-designer",
+        },
+        "Original sample ready.",
+        b"RIFF-original",
+    )
+    audio_path, _metadata_path = character_voices_service.target_sample_paths(project_root, "character_alice")
+    original_metadata = character_voices_service.load_target_sample_metadata(project_root, "character_alice")
+    monkeypatch.setattr(
+        character_voices_ui_controller.tts_runtime_ui_support,
+        "probe_runtime_and_persist_cache_from_settings",
+        lambda *_args, **_kwargs: {
+            "success": True,
+            "discovered_models": [],
+            "capability_matrix": {"minimum_qwen_ready": True},
+        },
+    )
+    monkeypatch.setattr(
+        character_voices_service,
+        "voice_target_generation_request",
+        lambda *_args, **_kwargs: {
+            "can_generate": True,
+            "language": "en",
+            "generation_mode": "definition",
+            "model_id": "qwen-designer",
+            "source_model_id": "qwen-designer",
+            "model_parameters": {},
+        },
+    )
+    monkeypatch.setattr(
+        character_voices_ui_controller.voiceweaver_runtime_service,
+        "read_status",
+        lambda *_args, **_kwargs: {"active_model": "qwen-designer"},
+    )
+    monkeypatch.setattr(
+        character_voices_ui_controller.tts_runtime_ui_support,
+        "persist_runtime_status_from_settings",
+        lambda *_args, **_kwargs: None,
+    )
+
+    def _fail_generation(*_args, **_kwargs) -> None:
+        """
+        @brief      Simulate a runtime generation failure after generation starts.
+        @return     None.
+        @exception  RuntimeError Always raised.
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-06-11
+        @version    0.1.0
+        """
+        raise RuntimeError("runtime failed")
+
+    monkeypatch.setattr(
+        character_voices_ui_controller.voiceweaver_runtime_service,
+        "generate_voice_design",
+        _fail_generation,
+    )
+
+    with pytest.raises(RuntimeError, match="runtime failed"):
+        character_voices_ui_controller._generate_and_store_sample(
+            project_root,
+            _default_settings_payload(),
+            _sample_progress_messages(),
+            target_payload,
+            "en",
+            "Preview text.",
+            None,
+            lambda: False,
+        )
+
+    assert audio_path.read_bytes() == b"RIFF-original"
+    assert character_voices_service.load_target_sample_metadata(project_root, "character_alice") == original_metadata
+
+
 def test_character_voices_progress_messages_hide_model_id(monkeypatch, qtbot, tmp_path) -> None:
     """
     @brief      Verify Character Voices generation progress text does not disclose the concrete runtime model id.
@@ -756,6 +941,27 @@ def _build_window(qtbot, project_root):
         "en",
     )
     return window
+
+
+def _sample_progress_messages() -> dict[str, str]:
+    """
+    @brief      Provide worker-safe Character Voices progress strings for direct helper tests.
+    @return     Progress and error message payload.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-11
+    @version    0.1.0
+    """
+    return {
+        "prepare": "Preparing character sample...",
+        "load_model": "Loading voice generation model...",
+        "generate": "Generating character sample...",
+        "download": "Downloading character sample...",
+        "batch_prepare": "Preparing character samples...",
+        "batch_target": "Generating {current}/{total}: {target_name}",
+        "qwen_capabilities_missing": "Missing capabilities: {missing_capabilities}.",
+        "generation_missing_audio": "Missing generated audio.",
+    }
 
 
 def _default_settings_payload() -> dict[str, object]:

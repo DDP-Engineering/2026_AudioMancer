@@ -13,15 +13,17 @@
          and operator note rendering for resumable and warning-bearing state.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 0.5.1
+@version 0.5.2
 """
 
 # IMPORTS
 
 import json
+from pathlib import Path
 
 from audiomancer import config
 from audiomancer.services import (
+    audio_blocks_service,
     character_voices_service,
     project_workspace_service,
     speech_blocks_service,
@@ -483,6 +485,58 @@ def test_build_speech_blocks_state_filters_speaker_catalog_for_same_narrator(mon
     assert state["speaker_catalog"] == [
         {"speaker_id": "narrator", "display_name": "Narrator", "speaker_kind": "narrator"}
     ]
+
+
+def test_merge_audio_preview_state_uses_persisted_playability_without_file_checks(monkeypatch, tmp_path) -> None:
+    """
+    @brief      Verify Speech Blocks preview state does not stat every generated audio row.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-10
+    @version    0.1.0
+    """
+
+    def fail_is_file(_path) -> bool:
+        """
+        @brief      Fail if state building falls back to per-row file probes.
+        @param[in]  _path Ignored filesystem path.
+        @return     No return; always raises.
+        @exception  AssertionError Always raised when called.
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-06-10
+        @version    0.1.0
+        """
+        raise AssertionError("Path.is_file should not be called for persisted audio preview flags")
+
+    monkeypatch.setattr(Path, "is_file", fail_is_file)
+    monkeypatch.setattr(
+        audio_blocks_service,
+        "load_audio_blocks",
+        lambda _project_root: [
+            {
+                "speech_block_id": "0001-000001",
+                "generated": True,
+                "approved": False,
+                "audio_relative_path": "artifacts/audio_blocks/0001_000001_narrator.wav",
+                "audio_can_play": True,
+            }
+        ],
+    )
+
+    merged_blocks = speech_blocks_state_service._merge_audio_preview_state(  # noqa: SLF001
+        tmp_path,
+        [
+            {
+                "speech_block_id": "0001-000001",
+                "content_kind": speech_blocks_service.CONTENT_KIND_NARRATION,
+            }
+        ],
+    )
+
+    assert merged_blocks[0]["audio_can_play"] is True
 
 
 def _create_chunked_project(tmp_path, name: str):

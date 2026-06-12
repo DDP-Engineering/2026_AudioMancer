@@ -231,6 +231,22 @@ def test_load_operation_state_file_accepts_missing_and_dict_payloads(tmp_path) -
     }
 
 
+def test_load_operation_state_file_tolerates_malformed_json(tmp_path) -> None:
+    """
+    @brief      Verify corrupt operation state is treated as absent for clean restart.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-12
+    @version    0.1.0
+    """
+    state_path = tmp_path / "operation_state.json"
+    state_path.write_text("{", encoding="utf-8")
+
+    assert operation_runtime_service.load_operation_state_file(state_path) is None
+
+
 def test_project_artifact_helpers_handle_missing_and_malformed_inputs(tmp_path) -> None:
     """
     @brief      Verify shared project artifact probes normalize missing, corrupt, and text artifacts.

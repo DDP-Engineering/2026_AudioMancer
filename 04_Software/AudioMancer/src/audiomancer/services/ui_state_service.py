@@ -14,7 +14,7 @@
          theme runtime adapter.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 0.55.2
+@version 0.57.2
 """
 
 # ruff: noqa: E501
@@ -665,7 +665,7 @@ _UI_STRINGS = {
         "audio_blocks.play_audiobook": "Play Audiobook",
         "audio_blocks.stop_audiobook": "Stop Audiobook",
         "audio_blocks.reset_generation": "Reset Audio Generation",
-        "audio_blocks.approve_all": "Approve All Generation",
+        "audio_blocks.approve_all": "Approve All",
         "audio_blocks.source_group": "Source Text",
         "audio_blocks.blocks_group": "Speech Blocks",
         "audio_blocks.selected_group": "Selected Block",
@@ -1692,7 +1692,7 @@ _UI_STRINGS = {
         "audio_blocks.play_audiobook": "Reda Audiobook",
         "audio_blocks.stop_audiobook": "Opreste Audiobook",
         "audio_blocks.reset_generation": "Reseteaza Generarea Audio",
-        "audio_blocks.approve_all": "Aproba Toata Generarea",
+        "audio_blocks.approve_all": "Aproba Tot",
         "audio_blocks.source_group": "Text Sursa",
         "audio_blocks.blocks_group": "Blocuri Vorbire",
         "audio_blocks.selected_group": "Bloc Selectat",
@@ -2170,6 +2170,27 @@ def current_language_from_settings(
     if not isinstance(settings_payload, dict):
         return _DEFAULT_LANGUAGE
     return str(settings_payload.get("language", _DEFAULT_LANGUAGE))
+
+
+def operator_status_pane_height(reference_widget: QWidget, line_count: int = 3) -> int:
+    """
+    @brief      Compute the fixed pixel height for an operator-status pane.
+    @details    Sizes the pane to show `line_count` text rows using the reference
+                widget font metrics plus the default plain-text document margin and
+                frame, so the status pane stays compact and follows the active UI
+                font scale instead of a hard-coded pixel band.
+    @param[in]  reference_widget Widget whose font metrics drive the row height.
+    @param[in]  line_count Number of text rows the pane should display.
+    @return     Fixed pane height in pixels.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-09
+    @version    0.1.0
+    """
+    line_height = reference_widget.fontMetrics().lineSpacing()
+    document_margin = 4
+    frame = 2
+    return int(line_height * max(line_count, 1) + document_margin * 2 + frame * 2)
 
 
 # HELPER FUNCTIONS

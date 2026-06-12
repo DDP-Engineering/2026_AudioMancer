@@ -14,7 +14,7 @@
          playback, and page-entry narrator-sample warnings.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 1.10.2
+@version 1.11.0
 """
 
 # IMPORTS
@@ -619,9 +619,8 @@ def _generate_and_store_sample(
     @return     None.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.2.0
+    @version    0.3.0
     """
-    _ = cancel_requested
     _emit_sample_progress(
         progress_callback,
         2,
@@ -630,6 +629,7 @@ def _generate_and_store_sample(
     probe_result = tts_runtime_ui_support.probe_runtime_and_persist_cache_from_settings(settings_payload)
     if not bool(probe_result.get("success", False)):
         raise RuntimeError(str(probe_result.get("message", "")))
+    operation_runtime_service.raise_if_cancelled(cancel_requested)
     capability_matrix = dict(probe_result.get("capability_matrix", {}))
     if not bool(capability_matrix.get("minimum_qwen_ready", False)):
         raise RuntimeError(
@@ -645,10 +645,6 @@ def _generate_and_store_sample(
     )
     if not bool(generation_request.get("can_generate", False)):
         raise RuntimeError(str(generation_request.get("unavailable_reason", "")))
-    character_voices_service.delete_target_sample(
-        project_root,
-        str(target_payload.get("target_id", "")).strip(),
-    )
     base_url = str(settings_payload.get("tts_runtime_base_url", "")).strip()
     runtime_api_key = str(settings_payload.get("tts_runtime_api_key", ""))
     preview_timeout_seconds = tts_runtime_ui_support.preview_timeout_seconds_from_settings(settings_payload)
@@ -666,6 +662,7 @@ def _generate_and_store_sample(
         progress_messages["prepare"],
     )
     if active_model_id != model_id:
+        operation_runtime_service.raise_if_cancelled(cancel_requested)
         _emit_sample_progress(
             progress_callback,
             25,
@@ -686,6 +683,7 @@ def _generate_and_store_sample(
                 progress_messages["load_model"],
             ),
             timeout_seconds=preview_timeout_seconds,
+            cancel_requested=cancel_requested,
         )
         tts_runtime_ui_support.persist_runtime_status_from_settings(settings_payload, load_status)
         load_operation = load_status.get("operation", {})
@@ -695,6 +693,7 @@ def _generate_and_store_sample(
         if active_model_id != model_id:
             raise RuntimeError(f"VoiceWeaver did not activate the requested model '{model_id}'.")
 
+    operation_runtime_service.raise_if_cancelled(cancel_requested)
     _emit_sample_progress(
         progress_callback,
         35,
@@ -720,6 +719,7 @@ def _generate_and_store_sample(
             progress_messages["generate"],
         ),
         timeout_seconds=preview_timeout_seconds,
+        cancel_requested=cancel_requested,
     )
     tts_runtime_ui_support.persist_runtime_status_from_settings(settings_payload, final_status)
     final_operation = final_status.get("operation", {})
@@ -729,6 +729,7 @@ def _generate_and_store_sample(
     if not isinstance(final_result, dict) or not bool(final_result.get("available", False)):
         raise RuntimeError(progress_messages["generation_missing_audio"])
 
+    operation_runtime_service.raise_if_cancelled(cancel_requested)
     _emit_sample_progress(
         progress_callback,
         95,

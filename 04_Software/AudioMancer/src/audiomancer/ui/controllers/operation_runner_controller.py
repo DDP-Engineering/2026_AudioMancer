@@ -14,7 +14,7 @@
          operation finalization callbacks.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-24
-@version 0.4.0
+@version 0.4.1
 """
 
 # IMPORTS
@@ -339,7 +339,7 @@ def request_operation_cancel(window: "MainWindow") -> None:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-24
-    @version    0.1.2
+    @version    0.1.3
     """
     if window._active_operation_kind is None:
         return
@@ -476,6 +476,9 @@ def _clear_threaded_operation(window: "MainWindow", set_busy) -> None:
     window._operation_cancel_event = None
     window._active_operation_thread = None
     window._active_operation_worker = None
+    ui_bridge = getattr(window, "_active_operation_ui_bridge", None)
+    if ui_bridge is not None:
+        ui_bridge.deleteLater()
     window._active_operation_ui_bridge = None
 
 

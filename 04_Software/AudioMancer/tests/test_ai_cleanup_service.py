@@ -14,7 +14,7 @@
          persists resumable state, and creates one AI transaction log file.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-11
-@version 0.4.3
+@version 0.4.4
 """
 
 # IMPORTS
@@ -52,8 +52,8 @@ def test_ai_cleanup_writes_cleanup_artifacts_and_log(
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-02
-    @version    0.2.0
+    @date       2026-06-09
+    @version    0.2.1
     """
     project_root, manifest = mock_extracted_project
 
@@ -98,7 +98,7 @@ def test_ai_cleanup_writes_cleanup_artifacts_and_log(
     assert (cleanup_root / config.CLEANUP_REPORT_FILE_NAME).is_file()
     assert (cleanup_root / config.CLEANUP_STATE_FILE_NAME).is_file()
     assert report_payload["cleanup_mode"] == "ai_assisted"
-    assert report_payload["cleaned_text_metadata_relative_path"] == config.CLEANED_TEXT_METADATA_FILE_NAME
+    assert "cleaned_text_metadata_relative_path" not in report_payload
     assert report_payload["ai_profile_id"] == "profile_1"
     assert report_payload["model_settings"]["model_name"] == "qwen3-8b"
     assert report_payload["model_settings"]["temperature"] == 0.2
@@ -755,7 +755,8 @@ def test_ai_cleanup_resumes_with_new_model_settings(
             encoding="utf-8"
         )
     )
-    assert interrupted_manifest["operations"]["cleanup"]["status"] == "running"
+    assert interrupted_manifest["operations"]["cleanup"]["status"] == "failed"
+    assert interrupted_state["status"] == "failed"
     assert interrupted_state["resume_checkpoint"]["classifications"]
 
     captured_prompts: list[str] = []
@@ -898,6 +899,50 @@ def test_ai_cleanup_restarts_when_extracted_text_changes(
     assert captured_prompts
     assert "unit_id: unit-0001" in captured_prompts[0]
     assert len(report_payload["model_settings_history"]) == 1
+
+
+def test_ai_cleanup_tolerates_corrupt_state_and_restarts(
+    mock_extracted_project, mock_prompt_environment, monkeypatch
+) -> None:
+    """
+    @brief      Validate AI cleanup treats corrupt state as absent and restarts cleanly.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-12
+    @version    0.1.0
+    """
+    project_root, manifest = mock_extracted_project
+    extracted_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.EXTRACTED_TEXT_FILE_NAME
+    extracted_path.write_text("Replacement paragraph one.\n\nReplacement paragraph two.\n", encoding="utf-8")
+    (project_root / config.CLEANUP_STATE_FILE_NAME).write_text("{", encoding="utf-8")
+
+    def _fake_chat_json(_profile, _system_prompt, _user_prompt, **_kwargs):
+        """
+        @brief      Provide the fake chat json test helper.
+        @return     Fake AI cleanup response payload.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-06-12
+        @version    0.1.0
+        """
+        return {
+            "payload": {
+                "results": [
+                    {"unit_id": "unit-0001", "artifact_type": "story", "action": "keep", "confidence": "high"},
+                    {"unit_id": "unit-0002", "artifact_type": "story", "action": "keep", "confidence": "high"},
+                ]
+            },
+            "usage": {"input_tokens": 10, "output_tokens": 2, "total_tokens": 12, "usage_available": True},
+        }
+
+    monkeypatch.setattr(ai_cleanup_service.llm_provider_service, "chat_json", _fake_chat_json)
+
+    report_payload = ai_cleanup_service.clean_text(project_root, manifest, _MOCK_PROFILE)
+
+    assert report_payload["paragraph_count"] == 2
+    state_payload = json.loads((project_root / config.CLEANUP_STATE_FILE_NAME).read_text(encoding="utf-8"))
+    assert state_payload["status"] == "completed"
 
 
 # END OF FILE

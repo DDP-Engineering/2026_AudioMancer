@@ -21,6 +21,7 @@
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QLineEdit
 
+from audiomancer.services import ui_state_service
 from audiomancer.ui.pages.narator_voice_page import NaratorVoicePage
 
 
@@ -31,8 +32,8 @@ def test_narator_voice_page_places_select_button_in_profiles_group(qtbot) -> Non
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-17
-    @version    1.4.3
+    @date       2026-06-10
+    @version    1.5.0
     """
     page = NaratorVoicePage()
     qtbot.addWidget(page)
@@ -53,7 +54,10 @@ def test_narator_voice_page_places_select_button_in_profiles_group(qtbot) -> Non
     page._main_splitter.resize(1600, 600)
     page._apply_main_splitter_minimums()
     assert page._profiles_group.maximumWidth() == 880
-    assert page._generate_sample_button.minimumWidth() > page._generate_sample_button.sizeHint().width()
+    # The Generate Sample button must shrink with its action-row siblings when the
+    # splitter narrows the editor pane, so it carries no inflated fixed minimum width.
+    assert page._generate_sample_button.minimumWidth() == 0
+    assert page._generate_sample_button.minimumSizeHint().width() <= page._generate_sample_button.sizeHint().width()
     assert hasattr(page, "_setup_group") is False
     assert hasattr(page, "_profile_name_label") is False
     assert hasattr(page, "_summary_label") is False
@@ -111,8 +115,9 @@ def test_narator_voice_page_prompt_and_preview_editors_expose_scrollbars_and_lim
     assert page._designer_group.maximumHeight() > 1000
     assert page._preview_text_edit.maximumHeight() > 1000
     assert page._preview_group.maximumHeight() > 1000
-    assert page._status_group.minimumHeight() == 96
-    assert page._status_group.maximumHeight() == 112
+    expected_status_height = ui_state_service.operator_status_pane_height(page._status_edit)
+    assert page._status_group.minimumHeight() == expected_status_height
+    assert page._status_group.maximumHeight() == expected_status_height
     assert page._preview_text_edit.toPlainText() == "abcde"
 
     page.begin_edit_mode()

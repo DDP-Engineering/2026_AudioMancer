@@ -19,6 +19,8 @@ points.
 
 - `pyproject.toml` - package metadata, dependencies, tooling configuration, and
   the `audiomancer` console entry point.
+- `src/audiomancer/__init__.py` - package release metadata exposed to the app
+  shell and import tests.
 - `uv.lock` - locked development environment.
 - `settings.example.json` - committed app-root settings scaffold. Copy it to
   `settings.json` and fill in operator-local endpoints and API keys.
@@ -94,18 +96,9 @@ broader validation baseline is tracked in `../../HowToTest.md`.
 ## Runtime Files
 
 - Each app launch writes a log under `Logs/` in this folder.
-- VoiceWeaver generation diagnostics, including Scene Ambience sound-prompt
-  requests and Audio Blocks checkpoints, are written through the shared runtime
-  log.
 - Project workflow artifacts are written inside the selected project root.
-- Generated Audio Blocks media is written under each project `audio_blocks/`
-  folder, including generated Scene Ambience prompt audio when that path is
-  enabled.
-- Final Audio Assembly outputs are written under each project `audiobook/`
-  folder; assembly settings decide whether generated Scene Ambience blocks are
-  included in the final sequential output.
-
-Detailed artifact contracts belong in `../../05_SoftwareDocu/`.
+- Detailed artifact and workflow contracts belong in
+  `../../05_SoftwareDocu/`.
 
 ## Packaging
 

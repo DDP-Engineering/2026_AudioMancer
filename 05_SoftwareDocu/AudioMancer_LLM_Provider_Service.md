@@ -33,7 +33,8 @@ The service owns:
 - response extraction from OpenAI-compatible `choices[].message.content`
 - conservative local JSON repair and one follow-up JSON-repair request for
   non-empty malformed assistant content
-- cooperative cancellation while waiting for provider responses
+- cooperative cancellation while waiting for provider responses, surfaced as a
+  neutral operator cancellation instead of a provider failure
 - normalized token-usage extraction from the response `usage` object
 - append-only AI transaction logging for request, response, and failure events
 - transient-only retry classification so permanent HTTP failures surface
@@ -62,7 +63,8 @@ Main flow:
    `{"type": "json_schema", ...}` payload because their local servers support
    schema-oriented structured output.
 2. `_request_chat_completion_with_cancellation(...)` runs the blocking HTTP
-   request in one worker thread so the caller can cancel cooperatively.
+   request in one worker thread so the caller can cancel cooperatively. The
+   cancellation exception is propagated without retry or failure logging.
 3. `_request_chat_completion(...)` posts JSON to the resolved endpoint,
    preserves already-complete `/chat/completions` URLs, reports unsupported
    `response_format` failures back to `chat_json(...)`, and retries once with
@@ -118,7 +120,8 @@ The service can raise:
 
 - `RuntimeError` for HTTP, transport, or provider failures
 - `ValueError` for empty, invalid, or non-object JSON content
-- `OperationCancelledError` when cancellation is requested during the wait
+- `OperationCancelledError` with a neutral cancellation message when
+  cancellation is requested during the wait
 
 ## 6. Data Contracts
 

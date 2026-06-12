@@ -72,8 +72,8 @@ class NaratorVoicePage(QWidget):
         @return     None.
         @exception  None
         @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-17
-        @version    1.9.6
+        @date       2026-06-10
+        @version    1.9.8
         """
         super().__init__(parent)
         self._project_active = False
@@ -177,7 +177,6 @@ class NaratorVoicePage(QWidget):
         self._delete_profile_button = QPushButton("Delete", self)
         self._delete_profile_button.clicked.connect(self._emit_delete_profile)
         self._generate_sample_button = QPushButton("Generate Sample", self)
-        self._generate_sample_button.setMinimumWidth(self._generate_sample_button.sizeHint().width() + 12)
         self._generate_sample_button.clicked.connect(self._emit_generate_sample)
         self._preview_toggle_button = QPushButton("Preview", self)
         self._preview_toggle_button.clicked.connect(self.preview_toggle_requested.emit)
@@ -199,8 +198,9 @@ class NaratorVoicePage(QWidget):
         layout.addWidget(self._main_splitter, 1)
         self._apply_main_splitter_minimums()
 
-        self._status_group = QGroupBox("Narator Voice Status", self)
+        self._status_group = QWidget(self)
         status_layout = QVBoxLayout(self._status_group)
+        status_layout.setContentsMargins(0, 0, 0, 0)
         self._status_edit = QPlainTextEdit(self)
         self._status_edit.setReadOnly(True)
         self._status_edit.setProperty(
@@ -208,8 +208,7 @@ class NaratorVoicePage(QWidget):
             ui_state_service.CONTROL_TEXT_FONT_ROLE_VALUE,
         )
         status_layout.addWidget(self._status_edit)
-        self._status_group.setMinimumHeight(96)
-        self._status_group.setMaximumHeight(112)
+        self._status_group.setFixedHeight(ui_state_service.operator_status_pane_height(self._status_edit))
         layout.addWidget(self._status_group, 0)
 
         self.set_project_active(False)
@@ -500,15 +499,14 @@ class NaratorVoicePage(QWidget):
         @return     None.
         @exception  None
         @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-17
-        @version    1.5.0
+        @date       2026-06-09
+        @version    1.5.1
         """
         self._ui_language = language
         self._title_label.setText(f"<h2>{ui_state_service.translate('narator_voice.title', language)}</h2>")
         self._profiles_group.setTitle(ui_state_service.translate("narator_voice.profiles_group", language))
         self._designer_group.setTitle(ui_state_service.translate("narator_voice.designer_group", language))
         self._preview_group.setTitle(ui_state_service.translate("narator_voice.preview_group", language))
-        self._status_group.setTitle(ui_state_service.translate("narator_voice.status_group", language))
         self._select_profile_button.setText(ui_state_service.translate("narator_voice.select_profile", language))
         self._import_sample_button.setText(ui_state_service.translate("narator_voice.import_sample", language))
         self._ai_profile_label.setText(ui_state_service.translate("narator_voice.ai_profile", language))

@@ -14,7 +14,7 @@
          Blocks output, and the resumable runtime operation state.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-23
-@version 0.6.0
+@version 0.6.1
 """
 
 # IMPORTS
@@ -409,7 +409,7 @@ def _merge_audio_block_state(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-23
-    @version    0.5.0
+    @version    0.5.1
     """
     audio_by_id = {str(block.get("speech_block_id", "")).strip(): dict(block) for block in audio_blocks}
     current_block_id = None
@@ -423,7 +423,7 @@ def _merge_audio_block_state(
         persisted_audio_block = audio_by_id.get(speech_block_id, {})
         speaker_display_name = str(speech_block.get("speaker_display_name", "")).strip() or "Narrator"
         audio_relative_path = persisted_audio_block.get("audio_relative_path")
-        audio_path = _resolve_existing_audio_path(project_root, audio_relative_path)
+        audio_file_name = _resolve_persisted_audio_file_name(persisted_audio_block, audio_relative_path)
         duration_seconds = _resolve_audio_duration_seconds(persisted_audio_block)
         merged_blocks.append(
             {
@@ -448,9 +448,9 @@ def _merge_audio_block_state(
                 },
                 "special_block_status": str(persisted_audio_block.get("special_block_status", "") or ""),
                 "audio_relative_path": audio_relative_path,
-                "audio_file_name": "" if audio_path is None else audio_path.name,
+                "audio_file_name": audio_file_name,
                 "audio_duration_seconds": duration_seconds,
-                "can_play": audio_path is not None,
+                "can_play": audio_blocks_service.audio_can_play(persisted_audio_block),
                 "runtime_result_summary": str(persisted_audio_block.get("runtime_result_summary", "")),
                 "is_current": speech_block_id == current_block_id,
             }
@@ -518,22 +518,23 @@ def _source_chunks_are_resolvable(project_root: Path, manifest: dict[str, object
     return total_chunk_count > 0 and total_chunk_count == approved_chunk_count
 
 
-def _resolve_existing_audio_path(project_root: Path, audio_relative_path: object) -> Path | None:
+def _resolve_persisted_audio_file_name(audio_block: dict[str, object], audio_relative_path: object) -> str:
     """
-    @brief      Resolve one persisted Audio Blocks WAV path when it exists.
-    @param[in]  project_root Active project root folder.
+    @brief      Resolve one display file name from persisted Audio Blocks playability state.
+    @param[in]  audio_block Persisted Audio Blocks payload.
     @param[in]  audio_relative_path Persisted project-relative audio path.
-    @return     Existing absolute audio path or `None`.
+    @return     Display file name, or an empty string when no playable audio is recorded.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-24
+    @date       2026-06-10
     @version    0.1.0
     """
+    if not audio_blocks_service.audio_can_play(audio_block):
+        return ""
     normalized_relative_path = str(audio_relative_path or "").strip()
     if not normalized_relative_path:
-        return None
-    audio_path = project_root / normalized_relative_path
-    return audio_path if audio_path.is_file() else None
+        return ""
+    return Path(normalized_relative_path).name
 
 
 def _resolve_current_block(

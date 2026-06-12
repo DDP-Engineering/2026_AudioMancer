@@ -36,6 +36,7 @@ chunk edit, insert, or delete affects only specific stable `chunk_id` values.
 - reset Audio Assembly outputs after chunk-local changes
 - refresh chunking metadata, operation state, impact metadata, and manifest
   summaries
+- present failed or cancelled chunking runs as resumable instead of ready
 
 It does not own deterministic chunk generation, AI chunk generation, actual AI
 translation, character profile synthesis, speech-block generation, TTS
@@ -90,6 +91,7 @@ Internal dependencies:
 - `audiomancer.services.deterministic_chunking_service`
 - `audiomancer.services.home_presenter_service`
 - `audiomancer.services.operation_runtime_service`
+- `audiomancer.services.persistence_service`
 - `audiomancer.services.project_workspace_service`
 - `audiomancer.services.speech_blocks_service`
 - `audiomancer.services.text_cleanup_state_service`
@@ -167,9 +169,12 @@ Metadata rules:
 
 - persisted chunk records do not store `chapter_label`; chapter counts are
   derived by scanning chunk text for chapter or scene heading lines
+- failed or cancelled chunking states are shown as resumable until the operator
+  completes or reruns chunking
 - `chunking_report.json` records manual adjustment and audit metadata
 - `chunking_state.json` stays compact after manual edits and does not duplicate
   the chunk list in `metadata.chunks`
+- manual chunk, report, and state JSON rewrites use shared atomic persistence
 - `last_workflow_impact` records affected chunks, reset operation kinds,
   assembly reset, deleted generated files, and timestamp
 - no complex v1 metadata migration is attempted

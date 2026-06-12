@@ -10,14 +10,15 @@
 @file test_character_voices_service.py
 @brief Focused tests for the AudioMancer Character Voices persistence helpers.
 @details Verifies deterministic prompt derivation, selected voice-language
-         persistence, and narrator-copy sample sync behavior.
+         persistence, atomic sample writes, and narrator-copy sample sync behavior.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-20
-@version 1.8.0
+@version 1.9.0
 """
 
 # IMPORTS
 
+import json
 from pathlib import Path
 import wave
 
@@ -152,6 +153,50 @@ def test_selected_voice_language_persists(tmp_path) -> None:
     assert character_voices_service.load_selected_voice_language(project_root) == "ro"
 
 
+def test_character_voices_targets_use_atomic_json_writer(monkeypatch, tmp_path) -> None:
+    """
+    @brief      Verify REQ-AUDIO-FUNC-014 persists Character Voices target JSON atomically.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-11
+    @version    0.1.0
+    """
+    project_root, _manifest = project_workspace_service.create_project("CharacterVoicesAtomicJson", tmp_path)
+    character_voices_service.ensure_character_voices_files(project_root)
+    observed_paths: list[Path] = []
+
+    def _capture_atomic_write(target_path, payload, **_kwargs) -> None:
+        """
+        @brief      Capture one atomic Character Voices JSON write.
+        @param[in]  target_path Candidate JSON target path.
+        @param[in]  payload JSON payload.
+        @return     None.
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-06-11
+        @version    0.1.0
+        """
+        observed_paths.append(Path(target_path))
+        Path(target_path).write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+
+    monkeypatch.setattr(character_voices_service, "write_json_atomic", _capture_atomic_write, raising=False)
+
+    character_voices_service.save_voice_targets(
+        project_root,
+        [
+            {
+                "target_id": "character_alice",
+                "target_kind": character_voices_service.TARGET_KIND_CHARACTER,
+                "display_name": "Alice",
+            }
+        ],
+    )
+
+    assert observed_paths == [project_root / "characters_voice.json"]
+
+
 def test_preview_text_covers_qwen3_tts_languages_with_chinese() -> None:
     """
     @brief      Verify deterministic preview text exists for every supported voice language.
@@ -239,6 +284,59 @@ def test_import_target_sample_persists_character_sample_metadata(tmp_path) -> No
     assert metadata["preview_text"] == "This is the exact Alice sample text."
     assert character_voices_service.has_target_sample(project_root, target_payload["target_id"]) is True
     assert character_voices_service.sample_runtime_available(metadata, []) is True
+
+
+def test_character_sample_audio_uses_atomic_byte_writer(monkeypatch, tmp_path) -> None:
+    """
+    @brief      Verify REQ-AUDIO-FUNC-014 persists generated character sample WAV bytes atomically.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-11
+    @version    0.1.0
+    """
+    project_root, _manifest = _create_project_with_selected_narrator(tmp_path, "CharacterVoicesAtomicBytes")
+    target_payload = character_voices_service.sync_voice_plan(
+        project_root,
+        [{"character_id": "alice", "canonical_name": "Alice"}],
+        narrator_definition_service.profile_by_id(
+            project_root,
+            narrator_definition_service.load_selected_profile_state(project_root)["selected_profile_id"],
+        ),
+    )[1]
+    observed_payloads: list[bytes] = []
+
+    def _capture_byte_write(target_path, payload) -> None:
+        """
+        @brief      Capture one atomic byte persistence request while writing the payload for assertions.
+        @param[in]  target_path Final sample path.
+        @param[in]  payload Complete WAV payload.
+        @return     None.
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-06-11
+        @version    0.1.0
+        """
+        observed_payloads.append(bytes(payload))
+        Path(target_path).write_bytes(payload)
+
+    monkeypatch.setattr(character_voices_service, "_write_bytes_atomic", _capture_byte_write, raising=False)
+
+    character_voices_service.store_target_sample(
+        project_root,
+        target_payload,
+        "en",
+        "Preview text.",
+        {
+            "generation_mode": "definition",
+            "source_model_id": "qwen-designer",
+        },
+        "Character sample ready.",
+        b"RIFF-character",
+    )
+
+    assert observed_payloads == [b"RIFF-character"]
 
 
 def test_sync_voice_plan_uses_character_discovery_preview_text(tmp_path) -> None:
@@ -359,6 +457,57 @@ def test_same_narrator_sync_copies_selected_narrator_sample_to_each_character(tm
         assert metadata["sample_source"] == character_voices_service.SAMPLE_SOURCE_COPIED_NARRATOR
         assert metadata["copied_from_target_id"] == character_voices_service.TARGET_ID_NARRATOR
         assert metadata["voice_language"] == "en"
+
+
+def test_same_narrator_sync_skips_unchanged_copied_samples(monkeypatch, tmp_path) -> None:
+    """
+    @brief      Verify REQ-AUDIO-FUNC-014 leaves unchanged same-narrator copied samples untouched.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-11
+    @version    0.1.0
+    """
+    project_root, _manifest = _create_project_with_selected_narrator(tmp_path, "CharacterVoicesCopySteady")
+    character_targets = [
+        {
+            "target_id": "character_alice",
+            "target_kind": character_voices_service.TARGET_KIND_CHARACTER,
+            "display_name": "Alice",
+            "prompt_text": "Prompt one.",
+        }
+    ]
+    character_voices_service.save_voice_targets(project_root, character_targets)
+    character_voices_service.sync_same_narrator_samples(project_root, character_targets, "en")
+
+    def _fail_byte_write(*_args, **_kwargs) -> None:
+        """
+        @brief      Fail when an unchanged same-narrator sync rewrites WAV bytes.
+        @return     None.
+        @exception  AssertionError Always raised.
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-06-11
+        @version    0.1.0
+        """
+        raise AssertionError("unchanged same-narrator sync rewrote audio")
+
+    def _fail_json_write(*_args, **_kwargs) -> None:
+        """
+        @brief      Fail when an unchanged same-narrator sync rewrites target JSON.
+        @return     None.
+        @exception  AssertionError Always raised.
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-06-11
+        @version    0.1.0
+        """
+        raise AssertionError("unchanged same-narrator sync rewrote metadata")
+
+    monkeypatch.setattr(character_voices_service, "_write_bytes_atomic", _fail_byte_write, raising=False)
+    monkeypatch.setattr(character_voices_service, "write_json_atomic", _fail_json_write, raising=False)
+
+    character_voices_service.sync_same_narrator_samples(project_root, character_targets, "en")
 
 
 def _create_project_with_selected_narrator(tmp_path, name: str):

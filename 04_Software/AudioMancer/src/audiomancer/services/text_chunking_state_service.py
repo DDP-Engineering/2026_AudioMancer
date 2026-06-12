@@ -19,7 +19,6 @@
 
 # IMPORTS
 
-import json
 from pathlib import Path
 
 from audiomancer import config
@@ -38,6 +37,7 @@ from audiomancer.services import (
     workflow_impact_service,
 )
 from audiomancer.services.logging_service import get_component_logger
+from audiomancer.services.persistence_service import write_json_atomic
 
 # CONSTANTS
 
@@ -348,11 +348,11 @@ def _write_chunk_artifact(project_root: Path, chunks: list[dict[str, object]]) -
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-04
-    @version    0.1.0
+    @version    0.2.0
     """
     chunk_artifact_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.CHUNK_ARTIFACT_FILE_NAME
     chunk_artifact_path.parent.mkdir(parents=True, exist_ok=True)
-    chunk_artifact_path.write_text(json.dumps(chunks, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    write_json_atomic(chunk_artifact_path, chunks)
 
 
 def _write_manual_chunking_metadata(
@@ -369,7 +369,7 @@ def _write_manual_chunking_metadata(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-04
-    @version    0.1.0
+    @version    0.2.0
     """
     existing_report = deterministic_chunking_service.load_chunking_report(project_root) or {}
     existing_state = deterministic_chunking_service.load_operation_state(project_root) or {}
@@ -390,7 +390,7 @@ def _write_manual_chunking_metadata(
         report["chunking_mode"] = "manual"
     report_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.CHUNKING_REPORT_FILE_NAME
     report_path.parent.mkdir(parents=True, exist_ok=True)
-    report_path.write_text(json.dumps(report, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    write_json_atomic(report_path, report)
     metadata = {
         "warnings": warnings,
         "chunk_count": len(chunks),
@@ -409,7 +409,7 @@ def _write_manual_chunking_metadata(
     )
     state_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.CHUNKING_STATE_FILE_NAME
     state_path.parent.mkdir(parents=True, exist_ok=True)
-    state_path.write_text(json.dumps(state, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    write_json_atomic(state_path, state)
     _TEXT_CHUNKING_STATE_LOGGER.info(
         "Refreshed manual chunking metadata: chunk_count=%s affected_chunks=%s reason=%s",
         len(chunks),
@@ -685,7 +685,7 @@ def build_text_chunking_notes(
             )
         return notes
 
-    if chunking_status == "failed":
+    if chunking_status in {"failed", "cancelled"}:
         progress_current = (
             0
             if not isinstance(chunking_operation_state, dict)

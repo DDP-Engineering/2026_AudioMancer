@@ -13,7 +13,7 @@
          executes resumable translation over canonical chunking output.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-07
-@version 0.12.1
+@version 0.13.0
 """
 
 # IMPORTS
@@ -35,6 +35,7 @@ from audiomancer.services import (
 from audiomancer.services.logging_service import get_component_logger, trace_function
 from audiomancer.services.operation_runtime_service import (
     NARRATOR_PROFILE_PRESERVED_OPERATION_KINDS,
+    OperationCancelledError,
     build_operation_output_path,
     raise_if_cancelled,
     relative_to_project,
@@ -44,6 +45,7 @@ from audiomancer.services.operation_runtime_service import (
 from audiomancer.services.operation_runtime_service import (
     emit_progress_update as _emit_progress,
 )
+from audiomancer.services.persistence_service import write_json_atomic
 from audiomancer.services.time_service import utc_now_iso as _utc_now_iso
 
 # CONSTANTS
@@ -84,7 +86,7 @@ def load_operation_state(project_root: str | Path) -> dict[str, object] | None:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-07
-    @version    0.1.1
+    @version    0.2.0
     """
     state_path = resolve_operation_path(
         project_root,
@@ -93,7 +95,8 @@ def load_operation_state(project_root: str | Path) -> dict[str, object] | None:
     )
     if not state_path.is_file():
         return None
-    return dict(json.loads(state_path.read_text(encoding="utf-8")))
+    payload = _load_json_payload(state_path, None, "translation operation state")
+    return dict(payload) if isinstance(payload, dict) else None
 
 
 @trace_function(_AI_TRANSLATION_LOGGER)
@@ -105,7 +108,7 @@ def load_translation_report(project_root: str | Path) -> dict[str, object] | Non
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-07
-    @version    0.2.0
+    @version    0.3.0
     """
     report_path = resolve_operation_path(
         project_root,
@@ -114,7 +117,8 @@ def load_translation_report(project_root: str | Path) -> dict[str, object] | Non
     )
     if not report_path.is_file():
         return None
-    return dict(json.loads(report_path.read_text(encoding="utf-8")))
+    payload = _load_json_payload(report_path, None, "translation report")
+    return dict(payload) if isinstance(payload, dict) else None
 
 
 @trace_function(_AI_TRANSLATION_LOGGER)
@@ -126,7 +130,7 @@ def load_translated_chunks(project_root: str | Path) -> list[dict[str, object]]:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-07
-    @version    0.1.0
+    @version    0.2.0
     """
     translated_path = resolve_operation_path(
         project_root,
@@ -135,7 +139,7 @@ def load_translated_chunks(project_root: str | Path) -> list[dict[str, object]]:
     )
     if not translated_path.is_file():
         return []
-    payload = json.loads(translated_path.read_text(encoding="utf-8"))
+    payload = _load_json_payload(translated_path, [], "translated chunks")
     if not isinstance(payload, list):
         return []
     return [dict(item) for item in payload if isinstance(item, dict)]
@@ -185,7 +189,7 @@ def sync_translation_after_chunk_change(
     @exception  ValueError When chunking output is missing.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-04
-    @version    0.1.0
+    @version    0.2.0
     """
     resolved_project_root = Path(project_root)
     source_chunks = deterministic_chunking_service.load_chunks(resolved_project_root)
@@ -218,7 +222,7 @@ def _sync_translation_records(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-04
-    @version    0.1.0
+    @version    0.2.0
     """
     invalidated_ids = {str(chunk_id).strip() for chunk_id in invalidated_chunk_ids or [] if str(chunk_id).strip()}
     existing_by_id = {
@@ -244,7 +248,10 @@ def _sync_translation_records(
         existing_chunk["target_language"] = target_language
         if profile_id not in (None, ""):
             existing_chunk["translation_profile_id"] = profile_id
-        translated_chunks.append(_normalize_translated_chunk(existing_chunk, target_language))
+        normalized_chunk = _normalize_translated_chunk(existing_chunk, target_language)
+        translated_chunks.append(normalized_chunk)
+        if _normalize_translated_chunk(existing_by_id[chunk_id], target_language) != normalized_chunk:
+            synchronized = True
     if len(existing_by_id) != len(translated_chunks) or invalidated_ids:
         synchronized = True
     existing_operation_state = load_operation_state(project_root)
@@ -256,27 +263,36 @@ def _sync_translation_records(
         warnings=(
             ["Source chunk set changed since translation started. Translation records were synchronized."]
             if synchronized
-            else []
+            else list((existing_report or {}).get("warnings", []))
         ),
         token_usage=_restore_persisted_token_usage(existing_report, existing_operation_state),
         budget_metadata=_restore_persisted_budget_metadata(existing_report, existing_operation_state),
     )
-    _persist_translation_state(
+    operation_state = _refresh_operation_state(
         project_root,
         source_chunks,
         translated_chunks,
         report,
-        operation_state=_refresh_operation_state(
+        existing_operation_state,
+        profile_id,
+        target_language,
+        _restore_persisted_token_usage(existing_report, existing_operation_state),
+    )
+    if (
+        synchronized
+        or existing_report is None
+        or existing_operation_state is None
+        or _normalize_report_payload(existing_report) != _normalize_report_payload(report)
+        or _normalize_operation_state_payload(existing_operation_state)
+        != _normalize_operation_state_payload(operation_state)
+    ):
+        _persist_translation_state(
             project_root,
             source_chunks,
             translated_chunks,
             report,
-            existing_operation_state,
-            profile_id,
-            target_language,
-            _restore_persisted_token_usage(existing_report, existing_operation_state),
-        ),
-    )
+            operation_state=operation_state,
+        )
     return source_chunks, translated_chunks, report
 
 
@@ -356,47 +372,76 @@ def start_or_continue_translation(
         "AI translation in progress...",
         token_usage,
     )
-    for chunk in translated_chunks:
-        raise_if_cancelled(cancel_requested)
-        if str(chunk.get("translated_text", "")).strip():
-            continue
-        translated_text, token_usage = _translate_text_in_budgeted_segments(
-            project_root,
-            manifest,
-            ai_profile_payload,
-            str(chunk.get("source_text", "")),
-            target_language,
-            system_prompt,
-            int(chunk.get("sequence_index", 0)),
-            len(translated_chunks),
-            log_path,
-            token_usage,
-            budget_metadata,
-            additional_translation_instructions,
-            progress_callback=progress_callback,
-            translated_chunk_count=_translated_count(translated_chunks),
-            cancel_requested=cancel_requested,
-        )
-        if not translated_text.strip():
-            raise ValueError(f"AI translation returned an empty translated_text for {chunk.get('chunk_id', '')}.")
-        chunk["translated_text"] = translated_text
-        chunk["approved"] = False
-        chunk["translation_profile_id"] = profile_id
-        chunk["target_language"] = target_language
-        chunk["status"] = TRANSLATED_CHUNK_STATUS_TRANSLATED
-        report = _rebuild_report(
-            translated_chunks,
-            target_language,
-            profile_id,
-            warnings=list(report.get("warnings", [])),
-            token_usage=token_usage,
-            budget_metadata=budget_metadata,
-            additional_translation_instructions=additional_translation_instructions,
-        )
-        _write_running_state(
+    try:
+        for chunk in translated_chunks:
+            raise_if_cancelled(cancel_requested)
+            if str(chunk.get("translated_text", "")).strip():
+                continue
+            translated_text, token_usage = _translate_text_in_budgeted_segments(
+                project_root,
+                manifest,
+                ai_profile_payload,
+                str(chunk.get("source_text", "")),
+                target_language,
+                system_prompt,
+                int(chunk.get("sequence_index", 0)),
+                len(translated_chunks),
+                log_path,
+                token_usage,
+                budget_metadata,
+                additional_translation_instructions,
+                progress_callback=progress_callback,
+                translated_chunk_count=_translated_count(translated_chunks),
+                cancel_requested=cancel_requested,
+            )
+            if not translated_text.strip():
+                raise ValueError(f"AI translation returned an empty translated_text for {chunk.get('chunk_id', '')}.")
+            chunk["translated_text"] = translated_text
+            chunk["approved"] = False
+            chunk["translation_profile_id"] = profile_id
+            chunk["target_language"] = target_language
+            chunk["status"] = TRANSLATED_CHUNK_STATUS_TRANSLATED
+            report = _rebuild_report(
+                translated_chunks,
+                target_language,
+                profile_id,
+                warnings=list(report.get("warnings", [])),
+                token_usage=token_usage,
+                budget_metadata=budget_metadata,
+                additional_translation_instructions=additional_translation_instructions,
+            )
+            _persist_translation_state(
+                project_root,
+                source_chunks,
+                translated_chunks,
+                report,
+                operation_state=_build_running_operation_state(
+                    project_root,
+                    translated_chunks,
+                    report,
+                    started_at,
+                    target_language,
+                    profile_id,
+                    log_path,
+                    token_usage,
+                    budget_metadata,
+                    additional_translation_instructions,
+                ),
+            )
+            _emit_progress(
+                progress_callback,
+                _translated_count(translated_chunks),
+                len(translated_chunks),
+                "AI translation in progress...",
+                token_usage,
+            )
+    except OperationCancelledError:
+        _persist_terminal_translation_state(
             project_root,
             source_chunks,
             translated_chunks,
+            report,
+            "cancelled",
             started_at,
             target_language,
             profile_id,
@@ -405,16 +450,23 @@ def start_or_continue_translation(
             budget_metadata,
             additional_translation_instructions,
         )
-        _persist_translation_state(
-            project_root, source_chunks, translated_chunks, report, operation_state=load_operation_state(project_root)
-        )
-        _emit_progress(
-            progress_callback,
-            _translated_count(translated_chunks),
-            len(translated_chunks),
-            "AI translation in progress...",
+        raise
+    except Exception:
+        _persist_terminal_translation_state(
+            project_root,
+            source_chunks,
+            translated_chunks,
+            report,
+            "failed",
+            started_at,
+            target_language,
+            profile_id,
+            log_path,
             token_usage,
+            budget_metadata,
+            additional_translation_instructions,
         )
+        raise
     completed_at = _utc_now_iso()
     report = _rebuild_report(
         translated_chunks,
@@ -476,7 +528,7 @@ def retranslate_chunk(
     @exception  ValueError When the selected chunk is unknown or translation is empty.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-12
-    @version    0.5.0
+    @version    0.6.0
     """
     project_root = Path(project_root)
     profile_id = str(ai_profile_payload.get("id", "")).strip()
@@ -520,54 +572,93 @@ def retranslate_chunk(
         budget_metadata,
         additional_translation_instructions,
     )
-    translated_text, token_usage = _translate_text_in_budgeted_segments(
-        project_root,
-        manifest,
-        ai_profile_payload,
-        str(selected.get("source_text", "")),
-        target_language,
-        system_prompt,
-        int(selected.get("sequence_index", 0)),
-        len(translated_chunks),
-        log_path,
-        token_usage,
-        budget_metadata,
-        additional_translation_instructions,
-        progress_callback=progress_callback,
-        translated_chunk_count=max(0, _translated_count(translated_chunks)),
-        cancel_requested=cancel_requested,
-    )
-    if not translated_text.strip():
-        raise ValueError(f"AI translation returned an empty translated_text for {selected.get('chunk_id', '')}.")
-    selected["translated_text"] = translated_text
-    selected["approved"] = False
-    selected["translation_profile_id"] = profile_id
-    selected["target_language"] = target_language
-    selected["status"] = TRANSLATED_CHUNK_STATUS_TRANSLATED
-    report = _rebuild_report(
-        translated_chunks,
-        target_language,
-        profile_id,
-        warnings=list(report.get("warnings", [])),
-        token_usage=token_usage,
-        budget_metadata=budget_metadata,
-        additional_translation_instructions=additional_translation_instructions,
-    )
-    operation_state = _build_operation_state(
-        project_root,
-        report,
-        status=_operation_status_from_report(report),
-        started_at=started_at,
-        completed_at=None,
-        profile_id=profile_id,
-        target_language=target_language,
-        log_path=log_path,
-        resume_checkpoint=None,
-        token_usage=token_usage,
-        budget_metadata=budget_metadata,
-        additional_translation_instructions=additional_translation_instructions,
-    )
-    _persist_translation_state(project_root, source_chunks, translated_chunks, report, operation_state=operation_state)
+    try:
+        translated_text, token_usage = _translate_text_in_budgeted_segments(
+            project_root,
+            manifest,
+            ai_profile_payload,
+            str(selected.get("source_text", "")),
+            target_language,
+            system_prompt,
+            int(selected.get("sequence_index", 0)),
+            len(translated_chunks),
+            log_path,
+            token_usage,
+            budget_metadata,
+            additional_translation_instructions,
+            progress_callback=progress_callback,
+            translated_chunk_count=max(0, _translated_count(translated_chunks)),
+            cancel_requested=cancel_requested,
+        )
+        if not translated_text.strip():
+            raise ValueError(f"AI translation returned an empty translated_text for {selected.get('chunk_id', '')}.")
+        selected["translated_text"] = translated_text
+        selected["approved"] = False
+        selected["translation_profile_id"] = profile_id
+        selected["target_language"] = target_language
+        selected["status"] = TRANSLATED_CHUNK_STATUS_TRANSLATED
+        report = _rebuild_report(
+            translated_chunks,
+            target_language,
+            profile_id,
+            warnings=list(report.get("warnings", [])),
+            token_usage=token_usage,
+            budget_metadata=budget_metadata,
+            additional_translation_instructions=additional_translation_instructions,
+        )
+        operation_state = _build_operation_state(
+            project_root,
+            report,
+            status=_operation_status_from_report(report),
+            started_at=started_at,
+            completed_at=None,
+            profile_id=profile_id,
+            target_language=target_language,
+            log_path=log_path,
+            resume_checkpoint=None,
+            token_usage=token_usage,
+            budget_metadata=budget_metadata,
+            additional_translation_instructions=additional_translation_instructions,
+        )
+        _persist_translation_state(
+            project_root,
+            source_chunks,
+            translated_chunks,
+            report,
+            operation_state=operation_state,
+        )
+    except OperationCancelledError:
+        _persist_terminal_translation_state(
+            project_root,
+            source_chunks,
+            translated_chunks,
+            report,
+            "cancelled",
+            started_at,
+            target_language,
+            profile_id,
+            log_path,
+            token_usage,
+            budget_metadata,
+            additional_translation_instructions,
+        )
+        raise
+    except Exception:
+        _persist_terminal_translation_state(
+            project_root,
+            source_chunks,
+            translated_chunks,
+            report,
+            "failed",
+            started_at,
+            target_language,
+            profile_id,
+            log_path,
+            token_usage,
+            budget_metadata,
+            additional_translation_instructions,
+        )
+        raise
     _emit_progress(
         progress_callback,
         1,
@@ -1042,6 +1133,51 @@ def _translated_count(translated_chunks: list[dict[str, object]]) -> int:
     return sum(1 for chunk in translated_chunks if str(chunk.get("translated_text", "")).strip())
 
 
+def _load_json_payload(path: Path, default_value: object, description: str) -> object:
+    """
+    @brief      Load optional JSON while treating malformed content as missing data.
+    @param[in]  path JSON artifact path.
+    @param[in]  default_value Value returned when loading fails.
+    @param[in]  description Human-readable artifact description for logging.
+    @return     Loaded JSON payload or the provided default value.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-10
+    @version    0.1.0
+    """
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, TypeError, json.JSONDecodeError) as error:
+        _AI_TRANSLATION_LOGGER.warning("Ignored unreadable %s file: %s", description, error)
+        return default_value
+
+
+def _normalize_report_payload(payload: dict[str, object] | None) -> dict[str, object] | None:
+    """
+    @brief      Normalize one report payload for stable write-skip comparisons.
+    @param[in]  payload Translation report payload or `None`.
+    @return     Normalized report payload or `None`.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-10
+    @version    0.1.0
+    """
+    return None if payload is None else json.loads(json.dumps(payload, sort_keys=True, ensure_ascii=False))
+
+
+def _normalize_operation_state_payload(payload: dict[str, object] | None) -> dict[str, object] | None:
+    """
+    @brief      Normalize one operation-state payload for stable write-skip comparisons.
+    @param[in]  payload Translation operation-state payload or `None`.
+    @return     Normalized operation-state payload or `None`.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-10
+    @version    0.1.0
+    """
+    return None if payload is None else json.loads(json.dumps(payload, sort_keys=True, ensure_ascii=False))
+
+
 def _persist_translation_state(
     project_root: Path,
     source_chunks: list[dict[str, object]],
@@ -1060,7 +1196,7 @@ def _persist_translation_state(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-07
-    @version    0.1.0
+    @version    0.2.0
     """
     _ = source_chunks
     translated_path = build_operation_output_path(
@@ -1068,29 +1204,20 @@ def _persist_translation_state(
         "translation",
         config.TRANSLATED_CHUNKS_FILE_NAME,
     )
-    translated_path.write_text(
-        json.dumps(translated_chunks, indent=2, ensure_ascii=False) + "\n",
-        encoding="utf-8",
-    )
+    write_json_atomic(translated_path, translated_chunks)
     report_path = build_operation_output_path(
         project_root,
         "translation",
         config.TRANSLATION_REPORT_FILE_NAME,
     )
-    report_path.write_text(
-        json.dumps(report, indent=2, ensure_ascii=False) + "\n",
-        encoding="utf-8",
-    )
+    write_json_atomic(report_path, report)
     if operation_state is not None:
         state_path = build_operation_output_path(
             project_root,
             "translation",
             config.TRANSLATION_STATE_FILE_NAME,
         )
-        state_path.write_text(
-            json.dumps(operation_state, indent=2, ensure_ascii=False) + "\n",
-            encoding="utf-8",
-        )
+        write_json_atomic(state_path, operation_state)
 
 
 def _write_running_state(
@@ -1120,7 +1247,7 @@ def _write_running_state(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-12
-    @version    0.4.0
+    @version    0.5.0
     """
     report = _rebuild_report(
         translated_chunks,
@@ -1130,7 +1257,126 @@ def _write_running_state(
         budget_metadata=budget_metadata,
         additional_translation_instructions=additional_translation_instructions,
     )
+    operation_state = _build_running_operation_state(
+        project_root,
+        translated_chunks,
+        report,
+        started_at,
+        target_language,
+        profile_id,
+        log_path,
+        token_usage,
+        budget_metadata,
+        additional_translation_instructions,
+    )
+    _persist_translation_state(
+        project_root,
+        source_chunks,
+        translated_chunks,
+        report,
+        operation_state,
+    )
+
+
+def _persist_terminal_translation_state(
+    project_root: Path,
+    source_chunks: list[dict[str, object]],
+    translated_chunks: list[dict[str, object]],
+    report: dict[str, object],
+    status: str,
+    started_at: str,
+    target_language: str,
+    profile_id: str,
+    log_path: Path,
+    token_usage: TokenUsagePayload,
+    budget_metadata: BudgetMetadataPayload,
+    additional_translation_instructions: str,
+) -> None:
+    """
+    @brief      Persist a terminal translation state after cancellation or failure.
+    @param[in]  project_root Active project root path.
+    @param[in]  source_chunks Source chunk payloads.
+    @param[in]  translated_chunks Current translated chunk payloads.
+    @param[in]  report Previous translation report payload.
+    @param[in]  status Terminal operation status token.
+    @param[in]  started_at Operation start timestamp.
+    @param[in]  target_language Active target language code.
+    @param[in]  profile_id Active translation profile identifier.
+    @param[in]  log_path Operation-local AI transaction log path.
+    @param[in]  token_usage Current cumulative token usage payload.
+    @param[in]  budget_metadata Context-budget metadata.
+    @param[in]  additional_translation_instructions Optional operator-supplied translation rules.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-10
+    @version    0.1.0
+    """
+    terminal_report = _rebuild_report(
+        translated_chunks,
+        target_language,
+        profile_id,
+        warnings=list(report.get("warnings", [])),
+        token_usage=token_usage,
+        budget_metadata=budget_metadata,
+        additional_translation_instructions=additional_translation_instructions,
+    )
     operation_state = _build_operation_state(
+        project_root,
+        terminal_report,
+        status=status,
+        started_at=started_at,
+        completed_at=_utc_now_iso(),
+        profile_id=profile_id,
+        target_language=target_language,
+        log_path=log_path,
+        token_usage=token_usage,
+        resume_checkpoint={
+            "next_untranslated_chunk_id": _next_untranslated_chunk_id(translated_chunks),
+            "translated_chunk_count": terminal_report["translated_chunk_count"],
+            "total_chunk_count": terminal_report["total_chunk_count"],
+            "budget_metadata": dict(budget_metadata),
+            "additional_translation_instructions_fingerprint": _compute_prompt_fingerprint(
+                additional_translation_instructions
+            ),
+        },
+        budget_metadata=budget_metadata,
+        additional_translation_instructions=additional_translation_instructions,
+    )
+    _persist_translation_state(project_root, source_chunks, translated_chunks, terminal_report, operation_state)
+
+
+def _build_running_operation_state(
+    project_root: Path,
+    translated_chunks: list[dict[str, object]],
+    report: dict[str, object],
+    started_at: str,
+    target_language: str,
+    profile_id: str,
+    log_path: Path,
+    token_usage: TokenUsagePayload,
+    budget_metadata: BudgetMetadataPayload,
+    additional_translation_instructions: str,
+) -> dict[str, object]:
+    """
+    @brief      Build the persisted running translation operation state.
+    @param[in]  project_root Active project root path.
+    @param[in]  translated_chunks Current translated chunk payloads.
+    @param[in]  report Current translation report payload.
+    @param[in]  started_at Operation start timestamp.
+    @param[in]  target_language Active target language code.
+    @param[in]  profile_id Active translation profile identifier.
+    @param[in]  log_path Operation-local AI transaction log path.
+    @param[in]  token_usage Current cumulative token usage payload.
+    @param[in]  budget_metadata Context-budget metadata.
+    @param[in]  additional_translation_instructions Optional operator-supplied translation rules.
+    @return     Persisted running operation state payload.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-10
+    @version    0.1.0
+    """
+    return _build_operation_state(
         project_root,
         report,
         status="running",
@@ -1151,13 +1397,6 @@ def _write_running_state(
         },
         budget_metadata=budget_metadata,
         additional_translation_instructions=additional_translation_instructions,
-    )
-    _persist_translation_state(
-        project_root,
-        source_chunks,
-        translated_chunks,
-        report,
-        operation_state,
     )
 
 
@@ -1530,6 +1769,7 @@ def _resolve_additional_translation_instructions(
         return _normalized_additional_translation_instructions(additional_translation_instructions)
     if existing_state.get("mode") != "ai_assisted" or str(existing_state.get("status", "")) not in {
         "running",
+        "cancelled",
         "failed",
     }:
         return ""

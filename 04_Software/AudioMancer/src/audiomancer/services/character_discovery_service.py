@@ -15,7 +15,7 @@
          operation state.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-22
-@version 0.18.2
+@version 0.18.3
 """
 
 # IMPORTS
@@ -140,14 +140,18 @@ def load_character_profiles(project_root: str | Path) -> list[CharacterProfilePa
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-22
-    @version    0.5.0
+    @version    0.5.1
     """
     output_path = resolve_operation_path(
         project_root,
         "character_discovery",
         config.CHARACTER_PROFILE_FILE_NAME,
     )
-    payload = load_optional_json_artifact(output_path)
+    try:
+        payload = load_optional_json_artifact(output_path)
+    except (OSError, json.JSONDecodeError, TypeError) as error:
+        _CHARACTER_DISCOVERY_LOGGER.warning("Ignoring unreadable character profiles artifact: %s", error)
+        return []
     if not isinstance(payload, list):
         return []
     return [_normalize_character_profile(item) for item in payload if isinstance(item, dict)]
@@ -203,15 +207,21 @@ def load_character_discovery_report(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-22
-    @version    0.4.0
+    @version    0.4.1
     """
     report_path = resolve_operation_path(
         project_root,
         "character_discovery",
         config.CHARACTER_DISCOVERY_REPORT_FILE_NAME,
     )
-    payload = load_optional_json_artifact(report_path)
+    try:
+        payload = load_optional_json_artifact(report_path)
+    except (OSError, json.JSONDecodeError, TypeError) as error:
+        _CHARACTER_DISCOVERY_LOGGER.warning("Ignoring unreadable character discovery report artifact: %s", error)
+        return None
     if payload is None:
+        return None
+    if not isinstance(payload, dict):
         return None
     return dict(payload)
 
@@ -255,7 +265,7 @@ def start_or_continue_discovery(
     @exception  OperationCancelledError Raised when the operator cancels the run.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-13
-    @version    0.6.0
+    @version    0.6.1
     """
     resolved_project_root = Path(project_root)
     source_chunks, input_source = _resolve_discovery_input_chunks(resolved_project_root)
@@ -309,15 +319,6 @@ def start_or_continue_discovery(
     )
 
     input_fingerprint = _build_input_fingerprint(source_chunks)
-    current_full_windows = _build_chunk_windows(
-        source_chunks,
-        config.DEFAULT_CHARACTER_DISCOVERY_WINDOW_SIZE,
-        config.DEFAULT_CHARACTER_DISCOVERY_WINDOW_OVERLAP,
-        budget_metadata,
-    )
-    if not current_full_windows:
-        raise ValueError("Character discovery requires at least one chunk window.")
-
     resume_checkpoint = existing_state.get("resume_checkpoint") if isinstance(existing_state, dict) else {}
     if not isinstance(resume_checkpoint, dict):
         resume_checkpoint = {}
@@ -354,6 +355,8 @@ def start_or_continue_discovery(
             budget_metadata,
         )
     )
+    if not merged_candidates and not windows:
+        raise ValueError("Character discovery requires at least one chunk window.")
     discovery_progress_total = completed_window_count + len(windows)
     token_usage = (
         _restore_token_usage(existing_state)
@@ -408,52 +411,93 @@ def start_or_continue_discovery(
         token_usage=token_usage,
     )
 
-    for relative_window_index, window_records in enumerate(windows):
-        raise_if_cancelled(cancel_requested)
-        progress_window_index = completed_window_count + relative_window_index
-        user_prompt = _append_additional_character_discovery_instructions(
-            prompt_template_service.render_prompt(
-                "character_discovery_window_user",
-                {"units_block": _build_units_block(window_records)},
-            ),
-            additional_character_discovery_instructions,
-        )
-        try:
-            response_result = llm_provider_service.chat_json(
-                ai_profile_payload,
-                system_prompt,
-                user_prompt,
-                log_path=log_path,
-                log_context={
-                    "operation_kind": "character_discovery",
-                    "stage_label": "character_discovery_window",
-                    "profile_id": profile_id,
-                    "window_index": progress_window_index + 1,
-                    "window_total": discovery_progress_total,
-                },
-                cancel_requested=cancel_requested,
+    discovery_progress_current = completed_window_count
+    discovery_checkpoint = {
+        "completed_window_count": completed_window_count,
+        "next_discovery_start_chunk_index": next_discovery_start_chunk_index,
+        "raw_candidates": list(raw_candidates),
+        "merged_candidates": [],
+        "rejected_candidates": [],
+        "synthesized_profiles": [],
+    }
+    try:
+        for relative_window_index, window_records in enumerate(windows):
+            raise_if_cancelled(cancel_requested)
+            progress_window_index = completed_window_count + relative_window_index
+            user_prompt = _append_additional_character_discovery_instructions(
+                prompt_template_service.render_prompt(
+                    "character_discovery_window_user",
+                    {"units_block": _build_units_block(window_records)},
+                ),
+                additional_character_discovery_instructions,
             )
-        except OperationCancelledError as error:
-            raise OperationCancelledError(
-                "Character discovery cancelled while waiting for the model response."
-            ) from error
-        response_payload = dict(response_result.get("payload", {}))
-        token_usage = token_usage_service.merge_token_usage(
-            token_usage,
-            response_result.get("usage"),
-        )
-        raw_candidates.extend(
-            _normalize_window_candidates(
-                response_payload.get("characters", []),
-                chunk_map,
+            try:
+                response_result = llm_provider_service.chat_json(
+                    ai_profile_payload,
+                    system_prompt,
+                    user_prompt,
+                    log_path=log_path,
+                    log_context={
+                        "operation_kind": "character_discovery",
+                        "stage_label": "character_discovery_window",
+                        "profile_id": profile_id,
+                        "window_index": progress_window_index + 1,
+                        "window_total": discovery_progress_total,
+                    },
+                    cancel_requested=cancel_requested,
+                )
+            except OperationCancelledError as error:
+                raise OperationCancelledError(
+                    "Character discovery cancelled while waiting for the model response."
+                ) from error
+            response_payload = dict(response_result.get("payload", {}))
+            token_usage = token_usage_service.merge_token_usage(
+                token_usage,
+                response_result.get("usage"),
             )
-        )
-        next_discovery_start_chunk_index = _next_chunk_index_after_window(source_chunks, window_records)
+            raw_candidates.extend(
+                _normalize_window_candidates(
+                    response_payload.get("characters", []),
+                    chunk_map,
+                )
+            )
+            next_discovery_start_chunk_index = _next_chunk_index_after_window(source_chunks, window_records)
+            discovery_progress_current = progress_window_index + 1
+            discovery_checkpoint = {
+                "completed_window_count": discovery_progress_current,
+                "next_discovery_start_chunk_index": next_discovery_start_chunk_index,
+                "raw_candidates": list(raw_candidates),
+                "merged_candidates": [],
+                "rejected_candidates": [],
+                "synthesized_profiles": [],
+            }
+            _write_operation_state(
+                state_path=state_path,
+                status="running",
+                phase="discovery",
+                progress_current=discovery_progress_current,
+                progress_total=discovery_progress_total,
+                run_token=run_token,
+                profile_id=profile_id,
+                input_fingerprint=input_fingerprint,
+                log_relative_path=log_relative_path,
+                token_usage=token_usage,
+                additional_character_discovery_instructions=additional_character_discovery_instructions,
+                checkpoint=discovery_checkpoint,
+            )
+            _emit_progress(
+                progress_callback,
+                discovery_progress_current,
+                discovery_progress_total,
+                "Character discovery in progress...",
+                token_usage=token_usage,
+            )
+    except OperationCancelledError:
         _write_operation_state(
             state_path=state_path,
-            status="running",
+            status="cancelled",
             phase="discovery",
-            progress_current=progress_window_index + 1,
+            progress_current=discovery_progress_current,
             progress_total=discovery_progress_total,
             run_token=run_token,
             profile_id=profile_id,
@@ -461,22 +505,25 @@ def start_or_continue_discovery(
             log_relative_path=log_relative_path,
             token_usage=token_usage,
             additional_character_discovery_instructions=additional_character_discovery_instructions,
-            checkpoint={
-                "completed_window_count": progress_window_index + 1,
-                "next_discovery_start_chunk_index": next_discovery_start_chunk_index,
-                "raw_candidates": list(raw_candidates),
-                "merged_candidates": [],
-                "rejected_candidates": [],
-                "synthesized_profiles": [],
-            },
+            checkpoint=discovery_checkpoint,
         )
-        _emit_progress(
-            progress_callback,
-            progress_window_index + 1,
-            discovery_progress_total,
-            "Character discovery in progress...",
+        raise
+    except Exception:
+        _write_operation_state(
+            state_path=state_path,
+            status="failed",
+            phase="discovery",
+            progress_current=discovery_progress_current,
+            progress_total=discovery_progress_total,
+            run_token=run_token,
+            profile_id=profile_id,
+            input_fingerprint=input_fingerprint,
+            log_relative_path=log_relative_path,
             token_usage=token_usage,
+            additional_character_discovery_instructions=additional_character_discovery_instructions,
+            checkpoint=discovery_checkpoint,
         )
+        raise
 
     if not merged_candidates:
         merged_candidates, rejected_candidates = _merge_character_candidates_with_rejections(raw_candidates)
@@ -502,55 +549,96 @@ def start_or_continue_discovery(
             "synthesized_profiles": list(synthesized_profiles),
         },
     )
-    for profile_index in range(len(synthesized_profiles), len(merged_candidates)):
-        raise_if_cancelled(cancel_requested)
-        candidate = _budgeted_synthesis_candidate_payload(
-            dict(merged_candidates[profile_index]),
-            budget_metadata,
-        )
-        user_prompt = _append_additional_character_discovery_instructions(
-            prompt_template_service.render_prompt(
-                "character_profile_synthesis_user",
-                {
-                    "character_payload": json.dumps(
-                        candidate,
-                        indent=2,
-                        ensure_ascii=False,
-                    )
-                },
-            ),
-            additional_character_discovery_instructions,
-        )
-        try:
-            response_result = llm_provider_service.chat_json(
-                ai_profile_payload,
-                system_prompt,
-                user_prompt,
-                log_path=log_path,
-                log_context={
-                    "operation_kind": "character_discovery",
-                    "stage_label": "character_profile_synthesis",
-                    "profile_id": profile_id,
-                    "window_index": profile_index + 1,
-                    "window_total": max(len(merged_candidates), 1),
-                },
-                cancel_requested=cancel_requested,
+    synthesis_progress_current = discovery_progress_total + len(synthesized_profiles)
+    synthesis_checkpoint = {
+        "completed_window_count": discovery_progress_total,
+        "next_discovery_start_chunk_index": len(source_chunks),
+        "raw_candidates": list(raw_candidates),
+        "merged_candidates": list(merged_candidates),
+        "rejected_candidates": list(rejected_candidates),
+        "synthesized_profiles": list(synthesized_profiles),
+    }
+    try:
+        for profile_index in range(len(synthesized_profiles), len(merged_candidates)):
+            raise_if_cancelled(cancel_requested)
+            candidate = _budgeted_synthesis_candidate_payload(
+                dict(merged_candidates[profile_index]),
+                budget_metadata,
             )
-        except OperationCancelledError as error:
-            raise OperationCancelledError(
-                "Character discovery cancelled while waiting for the model response."
-            ) from error
-        response_payload = dict(response_result.get("payload", {}))
-        token_usage = token_usage_service.merge_token_usage(
-            token_usage,
-            response_result.get("usage"),
-        )
-        synthesized_profiles.append(_build_profile_from_synthesis(response_payload, candidate))
+            user_prompt = _append_additional_character_discovery_instructions(
+                prompt_template_service.render_prompt(
+                    "character_profile_synthesis_user",
+                    {
+                        "character_payload": json.dumps(
+                            candidate,
+                            indent=2,
+                            ensure_ascii=False,
+                        )
+                    },
+                ),
+                additional_character_discovery_instructions,
+            )
+            try:
+                response_result = llm_provider_service.chat_json(
+                    ai_profile_payload,
+                    system_prompt,
+                    user_prompt,
+                    log_path=log_path,
+                    log_context={
+                        "operation_kind": "character_discovery",
+                        "stage_label": "character_profile_synthesis",
+                        "profile_id": profile_id,
+                        "window_index": profile_index + 1,
+                        "window_total": max(len(merged_candidates), 1),
+                    },
+                    cancel_requested=cancel_requested,
+                )
+            except OperationCancelledError as error:
+                raise OperationCancelledError(
+                    "Character discovery cancelled while waiting for the model response."
+                ) from error
+            response_payload = dict(response_result.get("payload", {}))
+            token_usage = token_usage_service.merge_token_usage(
+                token_usage,
+                response_result.get("usage"),
+            )
+            synthesized_profiles.append(_build_profile_from_synthesis(response_payload, candidate))
+            synthesis_progress_current = discovery_progress_total + len(synthesized_profiles)
+            synthesis_checkpoint = {
+                "completed_window_count": discovery_progress_total,
+                "next_discovery_start_chunk_index": len(source_chunks),
+                "raw_candidates": list(raw_candidates),
+                "merged_candidates": list(merged_candidates),
+                "rejected_candidates": list(rejected_candidates),
+                "synthesized_profiles": list(synthesized_profiles),
+            }
+            _write_operation_state(
+                state_path=state_path,
+                status="running",
+                phase="synthesis",
+                progress_current=synthesis_progress_current,
+                progress_total=total_progress,
+                run_token=run_token,
+                profile_id=profile_id,
+                input_fingerprint=input_fingerprint,
+                log_relative_path=log_relative_path,
+                token_usage=token_usage,
+                additional_character_discovery_instructions=additional_character_discovery_instructions,
+                checkpoint=synthesis_checkpoint,
+            )
+            _emit_progress(
+                progress_callback,
+                synthesis_progress_current,
+                total_progress,
+                "Character profile synthesis in progress...",
+                token_usage=token_usage,
+            )
+    except OperationCancelledError:
         _write_operation_state(
             state_path=state_path,
-            status="running",
+            status="cancelled",
             phase="synthesis",
-            progress_current=discovery_progress_total + len(synthesized_profiles),
+            progress_current=synthesis_progress_current,
             progress_total=total_progress,
             run_token=run_token,
             profile_id=profile_id,
@@ -558,22 +646,25 @@ def start_or_continue_discovery(
             log_relative_path=log_relative_path,
             token_usage=token_usage,
             additional_character_discovery_instructions=additional_character_discovery_instructions,
-            checkpoint={
-                "completed_window_count": discovery_progress_total,
-                "next_discovery_start_chunk_index": len(source_chunks),
-                "raw_candidates": list(raw_candidates),
-                "merged_candidates": list(merged_candidates),
-                "rejected_candidates": list(rejected_candidates),
-                "synthesized_profiles": list(synthesized_profiles),
-            },
+            checkpoint=synthesis_checkpoint,
         )
-        _emit_progress(
-            progress_callback,
-            discovery_progress_total + len(synthesized_profiles),
-            total_progress,
-            "Character profile synthesis in progress...",
+        raise
+    except Exception:
+        _write_operation_state(
+            state_path=state_path,
+            status="failed",
+            phase="synthesis",
+            progress_current=synthesis_progress_current,
+            progress_total=total_progress,
+            run_token=run_token,
+            profile_id=profile_id,
+            input_fingerprint=input_fingerprint,
+            log_relative_path=log_relative_path,
             token_usage=token_usage,
+            additional_character_discovery_instructions=additional_character_discovery_instructions,
+            checkpoint=synthesis_checkpoint,
         )
+        raise
 
     ordered_profiles = sorted(synthesized_profiles, key=_profile_sort_key)
     report_payload = {
@@ -600,14 +691,8 @@ def start_or_continue_discovery(
         "warnings": [],
         "token_usage": token_usage,
     }
-    output_path.write_text(
-        json.dumps(ordered_profiles, indent=2, ensure_ascii=False) + "\n",
-        encoding="utf-8",
-    )
-    report_path.write_text(
-        json.dumps(report_payload, indent=2, ensure_ascii=False) + "\n",
-        encoding="utf-8",
-    )
+    write_json_atomic(output_path, ordered_profiles)
+    write_json_atomic(report_path, report_payload)
     _write_operation_state(
         state_path=state_path,
         status="completed",
@@ -858,7 +943,7 @@ def _write_character_profiles(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-08
-    @version    0.4.0
+    @version    0.4.1
     """
     output_path = build_operation_output_path(
         project_root,
@@ -866,10 +951,7 @@ def _write_character_profiles(
         config.CHARACTER_PROFILE_FILE_NAME,
     )
     persisted_profiles = [_persistable_character_profile(profile) for profile in profiles]
-    output_path.write_text(
-        json.dumps(persisted_profiles, indent=2, ensure_ascii=False) + "\n",
-        encoding="utf-8",
-    )
+    write_json_atomic(output_path, persisted_profiles)
 
 
 def _build_manual_character_profile(
@@ -1236,6 +1318,7 @@ def _resolve_additional_character_discovery_instructions(
     is_resumable_status = str(existing_state.get("status", "")) in {
         "running",
         "failed",
+        "cancelled",
     }
     if not is_ai_mode or not is_resumable_status:
         return ""
@@ -1377,9 +1460,9 @@ def _restore_resume_state(
     @return     Derived helper result.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-13
-    @version    0.7.0
+    @version    0.7.1
     """
-    if str(existing_state.get("status", "")) not in {"running", "failed"}:
+    if str(existing_state.get("status", "")) not in {"running", "failed", "cancelled"}:
         return 0, 0, [], [], [], [], None
     if str(existing_state.get("mode", "")) != CHARACTER_DISCOVERY_MODE_AI_ASSISTED:
         return 0, 0, [], [], [], [], None
@@ -1826,28 +1909,25 @@ def _group_character_candidates_by_identity(candidates: list[dict[str, object]])
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-27
-    @version    0.1.0
+    @version    0.1.1
     """
     groups: list[list[dict[str, object]]] = []
+    group_index_by_alias_key: dict[str, int] = {}
     for candidate in candidates:
         alias_keys = {_normalize_identity(str(candidate.get("canonical_name", "")))}
         alias_keys.update(_normalize_identity(alias) for alias in list(candidate.get("aliases", [])))
         alias_keys.discard("")
-        target_group = None
-        for group in groups:
-            group_alias_keys: set[str] = set()
-            for group_candidate in group:
-                group_alias_keys.add(_normalize_identity(str(group_candidate.get("canonical_name", ""))))
-                group_alias_keys.update(
-                    _normalize_identity(alias) for alias in list(group_candidate.get("aliases", []))
-                )
-            if alias_keys.intersection(group_alias_keys):
-                target_group = group
-                break
-        if target_group is None:
+        matching_group_indexes = [
+            group_index_by_alias_key[alias_key] for alias_key in alias_keys if alias_key in group_index_by_alias_key
+        ]
+        if not matching_group_indexes:
             groups.append([dict(candidate)])
+            target_group_index = len(groups) - 1
         else:
-            target_group.append(dict(candidate))
+            target_group_index = min(matching_group_indexes)
+            groups[target_group_index].append(dict(candidate))
+        for alias_key in alias_keys:
+            group_index_by_alias_key[alias_key] = target_group_index
     return groups
 
 

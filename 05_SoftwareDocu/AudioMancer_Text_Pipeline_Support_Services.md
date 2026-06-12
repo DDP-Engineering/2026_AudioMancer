@@ -24,8 +24,8 @@ or TTS-sized units, and shape chunking/Speech Blocks operation reports.
 
 ## 2. Responsibilities
 
-- build and persist cleaned-text paragraph structure/provenance with stable
-  paragraph IDs and no duplicated paragraph text
+- build and atomically persist cleaned-text paragraph structure/provenance with
+  stable paragraph IDs and no duplicated paragraph text
 - classify text lines, scripts, language hints, chapter labels, sentence
   endings, and dialogue line breaks
 - produce deterministic one-paragraph chunk artifacts for local chunking
@@ -55,10 +55,14 @@ Main public entrypoints:
 
 The deterministic path consumes cleaned text and compact paragraph metadata,
 reconstructs paragraph text from `clean_text.txt`, writes ordered chunk JSON,
-and persists operation state/report files. The AI path uses the same paragraph
-metadata but asks the configured model for safe break
+and persists operation state/report files. Deterministic chunking keeps chunks
+in memory during the run, checkpoints the artifact and running state at bounded
+paragraph/time intervals, updates chapter counts incrementally, and writes the
+same completed artifacts as an uninterrupted per-paragraph run. The AI path
+uses the same paragraph metadata but asks the configured model for safe break
 positions, appends optional operator-supplied chunking rules to each prompt,
-then commits only valid break IDs and writes AI transaction logs.
+then commits only valid break IDs, reuses the already-built chunk list for each
+window checkpoint, and writes AI transaction logs.
 
 ## 4. Dependencies
 
@@ -68,6 +72,7 @@ Internal dependencies:
 - `audiomancer.services.operation_runtime_service`
 - `audiomancer.services.llm_provider_service`
 - `audiomancer.services.prompt_template_service`
+- `audiomancer.services.persistence_service`
 - `audiomancer.services.token_usage_service`
 - `audiomancer.services.time_service`
 - `audiomancer.services.speech_blocks_normalization_service`
@@ -99,7 +104,8 @@ Outputs:
 
 ## 6. Data Contracts
 
-Cleanup metadata records preserve paragraph ordering, paragraph IDs,
+Cleanup metadata records are written through the shared atomic JSON helper and
+preserve paragraph ordering, paragraph IDs,
 `source_start_line`/`source_end_line` spans in canonical `clean_text.txt`,
 source page numbers where available, warnings, and timestamps. They do not
 persist paragraph `text`; `cleanup_metadata_service.load_or_build_paragraph_records(...)`
@@ -110,7 +116,11 @@ Chunk payloads keep stable `chunk_id` values, source paragraph references,
 chapter labels, sequence indexes, and text content. AI chunking persists token
 usage, optional operator prompt rules, their fingerprint, and profile runtime
 metadata in operation state so an interrupted run can resume with the same
-committed break IDs and original prompt rules.
+committed break IDs and original prompt rules. Chunking state, report, and
+chunk-artifact JSON writes use the shared atomic persistence helper; malformed
+state JSON restarts chunking from a clean checkpoint, and malformed chunk
+artifact JSON loads as an empty list with a warning instead of raising into the
+workflow page.
 
 Speech Blocks reports include stage status, approved counts, warning records,
 source metadata, and token-usage payloads.
@@ -139,6 +149,7 @@ Focused tests:
 - `tests/test_cleanup_text_analysis_service.py`
 - `tests/test_deterministic_chunking_service.py`
 - `tests/test_ai_chunking_service.py`
+- `tests/test_text_chunking_state_service.py`
 - `tests/test_speech_blocks_report_state_service.py`
 - `tests/test_speech_blocks_text_split_service.py`
 

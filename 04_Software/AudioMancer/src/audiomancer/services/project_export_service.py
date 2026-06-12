@@ -937,10 +937,12 @@ def _narrator_voice_archive_items(project_root: Path) -> list[tuple[dict[str, ob
     @return     Ordered narrator profile, audio path, and metadata tuples.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-16
-    @version    0.1.0
+    @date       2026-06-09
+    @version    0.2.0
     """
     items: list[tuple[dict[str, object], Path, dict[str, object]]] = []
+    if not (project_root / config.NARRATOR_PROFILE_FILE_NAME).is_file():
+        return items
     for profile in narrator_definition_service.load_profiles(project_root):
         profile_id = str(profile.get("profile_id", "")).strip()
         metadata = narrator_definition_service.load_profile_sample_metadata(project_root, profile_id)
@@ -957,10 +959,12 @@ def _character_voice_archive_items(project_root: Path) -> list[tuple[dict[str, o
     @return     Ordered character target, audio path, and metadata tuples.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-16
-    @version    0.1.0
+    @date       2026-06-09
+    @version    0.2.0
     """
     items: list[tuple[dict[str, object], Path, dict[str, object]]] = []
+    if not (project_root / config.CHARACTER_VOICES_TARGETS_FILE_NAME).is_file():
+        return items
     for target in character_voices_service.load_voice_plan(project_root):
         if str(target.get("target_kind", "")).strip() != character_voices_service.TARGET_KIND_CHARACTER:
             continue

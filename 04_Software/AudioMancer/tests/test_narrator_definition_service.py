@@ -14,7 +14,7 @@
          generation resolution.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-20
-@version 3.11.0
+@version 3.12.0
 """
 
 # IMPORTS
@@ -44,6 +44,26 @@ def test_narrator_service_starts_without_predefined_profiles(tmp_path) -> None:
 
     assert profiles == []
     assert selected_state["selected_profile_id"] is None
+
+
+def test_narrator_service_treats_torn_profile_json_as_empty_data(tmp_path) -> None:
+    """
+    @brief      Verify REQ-AUDIO-FUNC-024 handles malformed narrator profile JSON without crashing.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-11
+    @version    0.1.0
+    """
+    project_root, _manifest = project_workspace_service.create_project("NarratorTornProfileProject", tmp_path)
+    profile_path = project_root / config.NARRATOR_PROFILE_FILE_NAME
+    profile_path.write_text("[", encoding="utf-8")
+
+    profiles = narrator_definition_service.load_profiles(project_root)
+
+    assert profiles == []
+    assert json.loads(profile_path.read_text(encoding="utf-8")) == []
 
 
 def test_narrator_service_begin_profile_edit_clears_sample_and_selection(tmp_path) -> None:
@@ -205,6 +225,50 @@ def test_narrator_service_imports_profile_sample_and_marks_selected_metadata(tmp
     assert selected_metadata is not None
     assert selected_metadata["source_kind"] == "imported_sample"
     assert narrator_definition_service.sample_runtime_available(metadata, []) is True
+
+
+def test_narrator_service_treats_torn_selected_sample_metadata_as_missing(tmp_path) -> None:
+    """
+    @brief      Verify REQ-AUDIO-FUNC-024 falls back when selected narrator sample metadata is malformed.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-11
+    @version    0.1.0
+    """
+    project_root, _manifest = project_workspace_service.create_project("NarratorTornSelectedSampleProject", tmp_path)
+    profile = narrator_definition_service.create_custom_profile(
+        project_root,
+        "Sample Voice",
+        "English",
+        "Warm prompt.",
+        "Preview text.",
+    )
+    narrator_definition_service.store_profile_sample(
+        project_root,
+        profile,
+        "Profile sample text.",
+        {
+            "generation_mode": "definition",
+            "model_id": "qwen-designer",
+            "source_model_id": "qwen-designer",
+            "language": "en",
+        },
+        "Generated sample.",
+        b"RIFF-profile",
+    )
+    narrator_definition_service.select_narrator_profile(project_root, profile["profile_id"], "en")
+    _selected_audio_path, selected_metadata_path = narrator_definition_service.selected_narrator_sample_paths(
+        project_root
+    )
+    selected_metadata_path.write_text("{", encoding="utf-8")
+
+    selected_metadata = narrator_definition_service.load_selected_narrator_sample_metadata(project_root)
+
+    assert selected_metadata is not None
+    assert selected_metadata["profile_id"] == profile["profile_id"]
+    assert selected_metadata["preview_text"] == "Profile sample text."
 
 
 def test_narrator_service_store_profile_sample_preserves_other_profile_samples(tmp_path) -> None:

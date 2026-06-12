@@ -9,11 +9,12 @@
 """
 @file navigation_sidebar.py
 @brief Sidebar navigation widget for AudioMancer.
-@details Copies the page registration and selection structure used by the
-         DDP_Audiomancer main-window shell.
+@details Renders the workflow pages as a vertical left-hand sidebar list while
+         preserving the page registration and selection contract used by the
+         main-window shell.
 @author Eng. Dan Dumitru Pasare
-@date 2026-05-23
-@version 0.3.1
+@date 2026-06-10
+@version 0.5.0
 """
 
 # IMPORTS
@@ -31,8 +32,8 @@ class NavigationSidebar(QListWidget):
     @brief      Sidebar widget that emits the selected page identifier.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-04-05
-    @version    0.2.0
+    @date       2026-06-10
+    @version    0.4.0
     """
 
     page_selected = Signal(str)
@@ -44,8 +45,8 @@ class NavigationSidebar(QListWidget):
         @return     None.
         @exception  None
         @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-23
-        @version    0.2.1
+        @date       2026-06-10
+        @version    0.4.0
         """
         super().__init__(parent)
         self.setAlternatingRowColors(True)
@@ -63,8 +64,8 @@ class NavigationSidebar(QListWidget):
         @return     None.
         @exception  None
         @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-05
-        @version    0.1.0
+        @date       2026-06-10
+        @version    0.3.0
         """
         item = QListWidgetItem(label)
         item.setData(Qt.ItemDataRole.UserRole, page_id)

@@ -15,7 +15,7 @@
          Chunking page.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-24
-@version 0.8.4
+@version 0.8.5
 """
 
 # IMPORTS
@@ -107,7 +107,7 @@ def handle_ai_chunking_requested(window: "MainWindow", profile_id: str, strategy
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-12
-    @version    0.3.0
+    @version    0.3.1
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._active_operation_kind is not None:
@@ -154,14 +154,15 @@ def handle_ai_chunking_requested(window: "MainWindow", profile_id: str, strategy
         )
         return
 
+    resumable_ai_statuses = {"running", "failed", "cancelled"}
     selected_strategy = (
-        resume_strategy if chunking_status in {"running", "failed"} and chunking_mode == "ai_assisted" else strategy
+        resume_strategy if chunking_status in resumable_ai_statuses and chunking_mode == "ai_assisted" else strategy
     )
     if selected_strategy not in config.AI_CHUNKING_STRATEGY_OPTIONS:
         selected_strategy = config.DEFAULT_AI_CHUNKING_STRATEGY
 
     additional_chunking_instructions = None
-    if chunking_status in {"running", "failed"} and chunking_mode == "ai_assisted":
+    if chunking_status in resumable_ai_statuses and chunking_mode == "ai_assisted":
         pass
     else:
         additional_chunking_instructions = prompt_ai_chunking_instructions(window, current_language)
@@ -169,7 +170,7 @@ def handle_ai_chunking_requested(window: "MainWindow", profile_id: str, strategy
             return
 
     if (
-        chunking_status not in {"running", "failed"} or chunking_mode != "ai_assisted"
+        chunking_status not in resumable_ai_statuses or chunking_mode != "ai_assisted"
     ) and chunking_status == "completed":
         if not confirm_ai_chunking_rerun(window, current_language):
             return

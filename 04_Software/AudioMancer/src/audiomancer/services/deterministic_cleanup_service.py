@@ -15,16 +15,18 @@
          structure, and persists cleanup artifacts with resumable state.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-06
-@version 0.5.3
+@version 0.6.0
 """
 
 # IMPORTS
 
 from collections import Counter
 from functools import partial
+import hashlib
 import json
 from pathlib import Path
 import re
+import time
 
 from audiomancer import config
 from audiomancer.services import cleanup_metadata_service, cleanup_text_analysis_service, project_workspace_service
@@ -39,6 +41,7 @@ from audiomancer.services.operation_runtime_service import (
     raise_if_cancelled,
     resolve_project_relative_path,
 )
+from audiomancer.services.persistence_service import write_json_atomic, write_text_atomic
 from audiomancer.services.time_service import utc_now_iso as _utc_now_iso
 
 # CONSTANTS
@@ -57,6 +60,12 @@ CleanupLineParts = list[dict[str, object]]
 CleanupParagraphRecord = dict[str, object]
 # @brief Page-break separator pattern used to reconstruct extracted PDF pages.
 _PAGE_SPLIT_PATTERN = re.compile(r"\n\n\f\n\n")
+# @brief Number of non-PDF paragraph blocks grouped into one cancellable cleanup segment.
+_PSEUDO_SEGMENT_PARAGRAPH_COUNT = 50
+# @brief Maximum number of cleanup segments between resumable checkpoint writes.
+_CHECKPOINT_SEGMENT_INTERVAL = 10
+# @brief Maximum elapsed seconds between resumable checkpoint writes.
+_CHECKPOINT_TIME_INTERVAL_SECONDS = 2.0
 # @brief Conservative page-number matchers used during deterministic cleanup.
 _PAGE_NUMBER_PATTERNS = (
     re.compile(r"^(?:page\s+)?\d+(?:\s*(?:/|of)\s*\d+)?\.?$", re.IGNORECASE),
@@ -99,7 +108,7 @@ def clean_text(
     @exception  OperationCancelledError Raised when the operator cancels the run.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.3.5
+    @version    0.4.0
     """
     resolved_project_root = Path(project_root)
     source_document = manifest.get("source_document")
@@ -130,36 +139,32 @@ def clean_text(
     )
 
     input_text = extracted_path.read_text(encoding="utf-8")
-    pages = _split_pages(input_text)
-    if not any(page.strip() for page in pages):
+    input_fingerprint = _compute_input_fingerprint(input_text)
+    cleaned_pages, page_boundaries, removed_header_footer_count = _build_cleanup_segments(input_text)
+    if not any(page.strip() for page in cleaned_pages):
         raise ValueError("Extracted text does not contain any content to clean.")
 
     existing_state = load_operation_state_file(state_path) or {}
-    progress_total = len(pages)
+    progress_total = len(cleaned_pages)
     started_at = str(existing_state.get("started_at") or _utc_now_iso())
     resume_checkpoint = dict(existing_state.get("resume_checkpoint") or {})
-    start_page_index = int(resume_checkpoint.get("next_page_index", 0))
-    cleaned_pages = list(existing_state.get("metadata", {}).get("cleaned_pages") or [])
-    removed_header_footer_count = int(existing_state.get("metadata", {}).get("removed_header_footer_line_count", 0))
-    removed_page_number_count = int(existing_state.get("metadata", {}).get("removed_page_number_line_count", 0))
-    removed_separator_count = int(existing_state.get("metadata", {}).get("removed_separator_line_count", 0))
-
-    if len(cleaned_pages) != progress_total or start_page_index <= 0:
-        cleaned_pages, removed_header_footer_count = _remove_repeated_headers_and_footers(pages)
+    start_page_index = int(resume_checkpoint.get("next_page_index", 0) or 0)
+    resume_is_compatible = (
+        str(resume_checkpoint.get("input_fingerprint", "")) == input_fingerprint
+        and 0 <= start_page_index <= progress_total
+    )
+    if resume_is_compatible:
+        paragraph_records = _restore_paragraph_records(resume_checkpoint.get("paragraph_records"))
+        current_lines = _restore_current_lines(resume_checkpoint.get("current_lines"))
+        removed_page_number_count = int(resume_checkpoint.get("removed_page_number_line_count", 0) or 0)
+        removed_separator_count = int(resume_checkpoint.get("removed_separator_line_count", 0) or 0)
+    else:
         removed_page_number_count = 0
         removed_separator_count = 0
         start_page_index = 0
-        output_path.write_text("", encoding="utf-8")
-
-    paragraph_records: list[CleanupParagraphRecord] = []
-    current_lines: CleanupLineParts = []
-    if start_page_index > 0 and output_path.is_file():
-        restored_output = output_path.read_text(encoding="utf-8").strip()
-        paragraph_records = [
-            {"text": paragraph.strip(), "boundary_confidence": "strong"}
-            for paragraph in restored_output.split("\n\n")
-            if paragraph.strip()
-        ]
+        paragraph_records: list[CleanupParagraphRecord] = []
+        current_lines: CleanupLineParts = []
+        write_text_atomic(output_path, "")
 
     warnings: list[str] = []
     _write_running_state(
@@ -171,7 +176,9 @@ def clean_text(
         start_page_index,
         progress_total,
         warnings,
-        cleaned_pages,
+        input_fingerprint,
+        paragraph_records,
+        current_lines,
         removed_header_footer_count,
         removed_page_number_count,
         removed_separator_count,
@@ -184,6 +191,8 @@ def clean_text(
     )
 
     last_progress_current = start_page_index
+    last_checkpoint_progress = start_page_index
+    last_checkpoint_time = time.monotonic()
     try:
         for page_index in range(start_page_index, progress_total):
             raise_if_cancelled(cancel_requested)
@@ -192,26 +201,32 @@ def clean_text(
                 cleaned_pages[page_index + 1] if page_index + 1 < len(cleaned_pages) else None,
                 current_lines,
                 page_index,
+                page_break_semantics=page_boundaries[page_index],
             )
             removed_page_number_count += page_number_removed_count
             removed_separator_count += separator_removed_count
             paragraph_records.extend(page_paragraphs)
-            _write_partial_output(output_path, [str(record["text"]) for record in paragraph_records], current_lines)
             last_progress_current = page_index + 1
-            _write_running_state(
-                state_path,
-                resolved_project_root,
-                input_snapshot_path,
-                output_path,
-                started_at,
-                last_progress_current,
-                progress_total,
-                warnings,
-                cleaned_pages,
-                removed_header_footer_count,
-                removed_page_number_count,
-                removed_separator_count,
-            )
+            if _should_checkpoint(last_progress_current, last_checkpoint_progress, last_checkpoint_time):
+                _write_partial_output(output_path, [str(record["text"]) for record in paragraph_records], current_lines)
+                _write_running_state(
+                    state_path,
+                    resolved_project_root,
+                    input_snapshot_path,
+                    output_path,
+                    started_at,
+                    last_progress_current,
+                    progress_total,
+                    warnings,
+                    input_fingerprint,
+                    paragraph_records,
+                    current_lines,
+                    removed_header_footer_count,
+                    removed_page_number_count,
+                    removed_separator_count,
+                )
+                last_checkpoint_progress = last_progress_current
+                last_checkpoint_time = time.monotonic()
             _emit_progress(
                 progress_callback,
                 progress_current=last_progress_current,
@@ -219,6 +234,7 @@ def clean_text(
                 message="Deterministic cleanup in progress...",
             )
     except OperationCancelledError:
+        _write_partial_output(output_path, [str(record["text"]) for record in paragraph_records], current_lines)
         _write_running_state(
             state_path,
             resolved_project_root,
@@ -228,12 +244,37 @@ def clean_text(
             last_progress_current,
             progress_total,
             warnings,
-            cleaned_pages,
+            input_fingerprint,
+            paragraph_records,
+            current_lines,
             removed_header_footer_count,
             removed_page_number_count,
             removed_separator_count,
             status="cancelled",
             completed_at=_utc_now_iso(),
+            sync_manifest=True,
+        )
+        raise
+    except Exception:
+        _write_partial_output(output_path, [str(record["text"]) for record in paragraph_records], current_lines)
+        _write_running_state(
+            state_path,
+            resolved_project_root,
+            input_snapshot_path,
+            output_path,
+            started_at,
+            last_progress_current,
+            progress_total,
+            warnings,
+            input_fingerprint,
+            paragraph_records,
+            current_lines,
+            removed_header_footer_count,
+            removed_page_number_count,
+            removed_separator_count,
+            status="failed",
+            completed_at=_utc_now_iso(),
+            sync_manifest=True,
         )
         raise
 
@@ -251,7 +292,7 @@ def clean_text(
 
     paragraph_texts = [str(record["text"]) for record in paragraph_records]
     cleaned_text = "\n\n".join(paragraph_texts).strip() + "\n"
-    output_path.write_text(cleaned_text, encoding="utf-8")
+    write_text_atomic(output_path, cleaned_text)
     metadata_payload = cleanup_metadata_service.write_cleanup_metadata(
         resolved_project_root,
         input_snapshot_path,
@@ -277,10 +318,7 @@ def clean_text(
         "removed_separator_line_count": removed_separator_count,
         "detected_chapter_count": chapter_count,
     }
-    report_path.write_text(
-        json.dumps(report_payload, indent=2, ensure_ascii=False) + "\n",
-        encoding="utf-8",
-    )
+    write_json_atomic(report_path, report_payload)
     completed_state = _build_operation_state(
         resolved_project_root,
         input_snapshot_path=input_snapshot_path,
@@ -293,7 +331,7 @@ def clean_text(
         started_at=started_at,
         completed_at=None,
         warnings=warnings,
-        cleaned_pages=None,
+        input_fingerprint=input_fingerprint,
         removed_header_footer_count=removed_header_footer_count,
         removed_page_number_count=removed_page_number_count,
         removed_separator_count=removed_separator_count,
@@ -302,10 +340,7 @@ def clean_text(
         paragraph_count=len(paragraph_texts),
         chapter_count=chapter_count,
     )
-    state_path.write_text(
-        json.dumps(completed_state, indent=2, ensure_ascii=False) + "\n",
-        encoding="utf-8",
-    )
+    write_json_atomic(state_path, completed_state)
     project_workspace_service.sync_manifest_operation_summary(
         resolved_project_root,
         "cleanup",
@@ -331,7 +366,7 @@ def load_operation_state(project_root: str | Path) -> OperationStatePayload | No
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-06
-    @version    0.2.0
+    @version    0.3.0
     """
     return load_operation_state_payload(project_root, "cleanup", config.CLEANUP_STATE_FILE_NAME)
 
@@ -381,7 +416,7 @@ def _write_partial_output(
     output_text = "\n\n".join(item for item in payload_parts if item.strip())
     if output_text:
         output_text = output_text.strip() + "\n"
-    output_path.write_text(output_text, encoding="utf-8")
+    write_text_atomic(output_path, output_text)
 
 
 def _write_running_state(
@@ -393,12 +428,15 @@ def _write_running_state(
     progress_current: int,
     progress_total: int,
     warnings: list[str],
-    cleaned_pages: list[str],
+    input_fingerprint: str,
+    paragraph_records: list[CleanupParagraphRecord] | None,
+    current_lines: CleanupLineParts | None,
     removed_header_footer_count: int,
     removed_page_number_count: int,
     removed_separator_count: int,
     status: str = "running",
     completed_at: str | None = None,
+    sync_manifest: bool = False,
 ) -> None:
     """
     @brief      Write the running state.
@@ -410,16 +448,19 @@ def _write_running_state(
     @param[in]  progress_current Value for `progress_current`.
     @param[in]  progress_total Value for `progress_total`.
     @param[in]  warnings Value for `warnings`.
-    @param[in]  cleaned_pages Value for `cleaned_pages`.
+    @param[in]  input_fingerprint Fingerprint for the extracted text snapshot.
+    @param[in]  paragraph_records Checkpointed paragraph metadata records.
+    @param[in]  current_lines Checkpointed in-progress paragraph line payloads.
     @param[in]  removed_header_footer_count Value for `removed_header_footer_count`.
     @param[in]  removed_page_number_count Value for `removed_page_number_count`.
     @param[in]  removed_separator_count Value for `removed_separator_count`.
     @param[in]  status Operation status token.
     @param[in]  completed_at Optional completion timestamp for terminal incomplete states.
+    @param[in]  sync_manifest True to mirror the state into the project manifest.
     @return     None.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.2.0
+    @version    0.3.0
     """
     running_state = _build_operation_state(
         project_root,
@@ -433,20 +474,25 @@ def _write_running_state(
         started_at=started_at,
         completed_at=completed_at,
         warnings=warnings,
-        cleaned_pages=cleaned_pages,
+        input_fingerprint=input_fingerprint,
         removed_header_footer_count=removed_header_footer_count,
         removed_page_number_count=removed_page_number_count,
         removed_separator_count=removed_separator_count,
-        resume_checkpoint={"next_page_index": progress_current},
+        resume_checkpoint={
+            "next_page_index": progress_current,
+            "input_fingerprint": input_fingerprint,
+            "paragraph_records": [dict(record) for record in list(paragraph_records or [])],
+            "current_lines": [dict(line) for line in list(current_lines or [])],
+            "removed_page_number_line_count": removed_page_number_count,
+            "removed_separator_line_count": removed_separator_count,
+        },
         detected_language=None,
         paragraph_count=None,
         chapter_count=None,
     )
-    state_path.write_text(
-        json.dumps(running_state, indent=2, ensure_ascii=False) + "\n",
-        encoding="utf-8",
-    )
-    project_workspace_service.sync_manifest_operation_summary(project_root, "cleanup", running_state)
+    write_json_atomic(state_path, running_state)
+    if sync_manifest or status != "running" or progress_current == 0:
+        project_workspace_service.sync_manifest_operation_summary(project_root, "cleanup", running_state)
 
 
 def _build_operation_state(
@@ -461,7 +507,7 @@ def _build_operation_state(
     started_at: str,
     completed_at: str | None,
     warnings: list[str],
-    cleaned_pages: list[str] | None,
+    input_fingerprint: str,
     removed_header_footer_count: int,
     removed_page_number_count: int,
     removed_separator_count: int,
@@ -482,7 +528,7 @@ def _build_operation_state(
     @param[in]  started_at Value for `started_at`.
     @param[in]  completed_at Value for `completed_at`.
     @param[in]  warnings Value for `warnings`.
-    @param[in]  cleaned_pages Value for `cleaned_pages`.
+    @param[in]  input_fingerprint Fingerprint for the extracted text snapshot.
     @param[in]  removed_header_footer_count Value for `removed_header_footer_count`.
     @param[in]  removed_page_number_count Value for `removed_page_number_count`.
     @param[in]  removed_separator_count Value for `removed_separator_count`.
@@ -493,7 +539,7 @@ def _build_operation_state(
     @return     Derived helper result.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.2.0
+    @version    0.3.0
     """
     _ = report_path
     _ = metadata_path
@@ -505,9 +551,8 @@ def _build_operation_state(
         "detected_language": detected_language,
         "paragraph_count": paragraph_count,
         "detected_chapter_count": chapter_count,
+        "input_fingerprint": input_fingerprint,
     }
-    if cleaned_pages is not None:
-        metadata["cleaned_pages"] = list(cleaned_pages)
     return build_operation_state_payload(
         status=status,
         progress_current=progress_current,
@@ -531,6 +576,105 @@ def _split_pages(extracted_text: str) -> list[str]:
     normalized = extracted_text.replace("\r\n", "\n").replace("\r", "\n")
     segments = [segment for segment in _PAGE_SPLIT_PATTERN.split(normalized) if segment.strip()]
     return segments or [normalized]
+
+
+def _build_cleanup_segments(extracted_text: str) -> tuple[list[str], list[bool], int]:
+    """
+    @brief      Build cancellable cleanup segments and page-boundary flags.
+    @param[in]  extracted_text Canonical extracted text artifact content.
+    @return     Cleaned segment text, per-segment page-boundary flags, and removed header/footer count.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-12
+    @version    0.1.0
+    """
+    pages = _split_pages(extracted_text)
+    if len(pages) > 1 or "\f" in extracted_text:
+        cleaned_pages, removed_header_footer_count = _remove_repeated_headers_and_footers(pages)
+        return cleaned_pages, [True for _page in cleaned_pages], removed_header_footer_count
+    pseudo_segments = _split_pseudo_segments(extracted_text)
+    return pseudo_segments, [False for _segment in pseudo_segments], 0
+
+
+def _split_pseudo_segments(extracted_text: str) -> list[str]:
+    """
+    @brief      Split unpaged extracted text into progress-only cleanup segments.
+    @param[in]  extracted_text Canonical extracted text artifact content.
+    @return     Ordered pseudo-segment text blocks.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-12
+    @version    0.1.0
+    """
+    normalized = extracted_text.replace("\r\n", "\n").replace("\r", "\n")
+    paragraph_blocks = [block for block in re.split(r"\n{2,}", normalized) if block.strip()]
+    if not paragraph_blocks:
+        return [normalized]
+    segments: list[str] = []
+    for start_index in range(0, len(paragraph_blocks), _PSEUDO_SEGMENT_PARAGRAPH_COUNT):
+        segments.append("\n\n".join(paragraph_blocks[start_index : start_index + _PSEUDO_SEGMENT_PARAGRAPH_COUNT]))
+    return segments
+
+
+def _compute_input_fingerprint(text: str) -> str:
+    """
+    @brief      Compute the deterministic cleanup input fingerprint.
+    @param[in]  text Extracted text payload.
+    @return     SHA-256 fingerprint.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-12
+    @version    0.1.0
+    """
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
+def _restore_paragraph_records(value: object) -> list[CleanupParagraphRecord]:
+    """
+    @brief      Restore checkpointed paragraph records from operation state.
+    @param[in]  value Raw checkpoint value.
+    @return     Normalized paragraph records.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-12
+    @version    0.1.0
+    """
+    if not isinstance(value, list):
+        return []
+    return [dict(item) for item in value if isinstance(item, dict) and str(item.get("text", "")).strip()]
+
+
+def _restore_current_lines(value: object) -> CleanupLineParts:
+    """
+    @brief      Restore checkpointed in-progress paragraph line payloads.
+    @param[in]  value Raw checkpoint value.
+    @return     Normalized paragraph-line payload list.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-12
+    @version    0.1.0
+    """
+    if not isinstance(value, list):
+        return []
+    return [dict(item) for item in value if isinstance(item, dict) and str(item.get("text", "")).strip()]
+
+
+def _should_checkpoint(progress_current: int, last_checkpoint_progress: int, last_checkpoint_time: float) -> bool:
+    """
+    @brief      Return whether cleanup should persist a resumable checkpoint now.
+    @param[in]  progress_current Current completed segment count.
+    @param[in]  last_checkpoint_progress Completed segment count at the last checkpoint.
+    @param[in]  last_checkpoint_time Monotonic timestamp of the last checkpoint.
+    @return     True when interval or elapsed-time thresholds are met.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-12
+    @version    0.1.0
+    """
+    return (
+        progress_current - last_checkpoint_progress >= _CHECKPOINT_SEGMENT_INTERVAL
+        or time.monotonic() - last_checkpoint_time >= _CHECKPOINT_TIME_INTERVAL_SECONDS
+    )
 
 
 def _remove_repeated_headers_and_footers(pages: list[str]) -> tuple[list[str], int]:
@@ -584,16 +728,18 @@ def _build_page_paragraphs(
     next_page: str | None,
     carried_lines: CleanupLineParts,
     page_index: int,
+    page_break_semantics: bool = True,
 ) -> tuple[list[CleanupParagraphRecord], CleanupLineParts, int, int]:
     """
     @brief      Build the page paragraphs.
     @param[in]  page Value for `page`.
     @param[in]  next_page Value for `next_page`.
     @param[in]  carried_lines Value for `carried_lines`.
+    @param[in]  page_break_semantics True when segment boundaries are real page breaks.
     @return     Derived helper result.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.2.0
+    @version    0.3.0
     """
     paragraph_records: list[CleanupParagraphRecord] = []
     current_lines = list(carried_lines)
@@ -601,7 +747,7 @@ def _build_page_paragraphs(
     removed_separator_count = 0
     merge_with_previous_line = bool(carried_lines)
     normalized_lines = [re.sub(r"\s+", " ", raw_line).strip() for raw_line in page.split("\n")]
-    page_edge_indexes = set(_page_edge_line_indexes(normalized_lines))
+    page_edge_indexes = set(_page_edge_line_indexes(normalized_lines)) if page_break_semantics else set()
     first_content_line_seen = False
     for line_index, normalized_line in enumerate(normalized_lines):
         if not normalized_line:
@@ -626,12 +772,19 @@ def _build_page_paragraphs(
                 normalized_line,
                 merge_with_previous_line,
                 page_index,
-                starts_after_page_break=(page_index > 0 and not current_lines and not first_content_line_seen),
+                starts_after_page_break=(
+                    page_break_semantics and page_index > 0 and not current_lines and not first_content_line_seen
+                ),
             )
         )
         first_content_line_seen = True
         merge_with_previous_line = False
-    if current_lines and not _should_continue_paragraph_across_page_break(current_lines, next_page):
+    should_carry_lines = bool(current_lines) and (
+        _should_continue_paragraph_across_page_break(current_lines, next_page)
+        if page_break_semantics
+        else _should_continue_paragraph(_line_text(current_lines[-1]).strip(), _first_content_line(next_page))
+    )
+    if current_lines and not should_carry_lines:
         paragraph_records.append(_build_paragraph_record(current_lines))
         current_lines = []
     return paragraph_records, current_lines, removed_page_number_count, removed_separator_count

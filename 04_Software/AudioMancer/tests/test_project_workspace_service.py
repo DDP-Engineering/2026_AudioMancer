@@ -13,7 +13,7 @@
          validation, project-root resolution, and open validation behavior.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-20
-@version 1.1.4
+@version 1.1.5
 """
 
 # IMPORTS
@@ -766,8 +766,8 @@ def test_open_project_ignores_narrator_timestamp_drift_with_noncompleted_downstr
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-11
-    @version    0.1.0
+    @date       2026-06-09
+    @version    0.1.1
     """
     project_root, manifest = project_workspace_service.create_project("NarratorTimestampDrift", tmp_path)
     profile_id = "narrator-1"
@@ -825,7 +825,7 @@ def test_open_project_ignores_narrator_timestamp_drift_with_noncompleted_downstr
     open_result = project_workspace_service.open_project(project_root)
 
     assert open_result["status"] == "ok"
-    assert open_result["manifest"]["operations"]["narrator_definition"]["updated_at"] == "2026-05-11T10:23:10+00:00"
+    assert open_result["manifest"]["operations"]["narrator_definition"]["status"] == "completed"
     assert open_result["manifest"]["operations"]["speech_blocks"]["status"] == "review_pending"
     assert open_result["manifest"]["operations"]["audio_blocks"]["status"] == "in_progress"
 
@@ -837,8 +837,8 @@ def test_open_project_heals_completed_character_voices_manifest_summary(tmp_path
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-16
-    @version    0.1.0
+    @date       2026-06-09
+    @version    0.1.1
     """
     project_root, manifest = project_workspace_service.create_project("CharacterVoicesHeal", tmp_path)
     manifest["source_document"] = {
@@ -893,7 +893,7 @@ def test_open_project_heals_completed_character_voices_manifest_summary(tmp_path
     assert operation_summary["status"] == "completed"
     assert operation_summary["progress_current"] == 2
     assert operation_summary["progress_total"] == 2
-    assert operation_summary["updated_at"] == "2026-05-16T12:02:00+00:00"
+    assert "updated_at" not in operation_summary
 
 
 def test_open_project_does_not_heal_audio_blocks_with_traversal_audio_path(tmp_path) -> None:

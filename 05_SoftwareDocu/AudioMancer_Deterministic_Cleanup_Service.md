@@ -75,9 +75,10 @@ High-level flow:
    numbers and ornamental separator lines, heals false blank-line paragraph
    splits with script-aware continuation rules plus language-agnostic page-break
    continuation cues, rebuilds cleaned paragraphs, records paragraph provenance
-   in `clean_text_metadata.json`, writes partial `clean_text.txt`, updates
-   `cleanup_state.json` after each processed page, and syncs the compact
-   cleanup summary into `project.json.operations.cleanup`.
+   in `clean_text_metadata.json`, writes partial `clean_text.txt` atomically,
+   updates `cleanup_state.json` at bounded segment/time checkpoints, and syncs
+   the compact cleanup summary into `project.json.operations.cleanup` on
+   terminal status transitions.
 6. On success, the service stores completed cleanup state in `project.json`,
    advances the workflow stage to `text_chunking_ready`, and persists the
    detected original language.
@@ -158,8 +159,12 @@ Current cleaned-text metadata fields:
 - `paragraphs`
 
 Cleanup paths are fixed by configuration and are not mirrored in report,
-metadata, or state payloads. Operation audit timestamps are not persisted;
-resume uses `resume_checkpoint` and the partial cleaned-text artifacts.
+metadata, or state payloads. Operation audit timestamps are not persisted.
+Resume uses `resume_checkpoint`, the input fingerprint, restored paragraph
+records, and the partial cleaned-text artifact. Malformed or truncated cleanup
+state loads as no usable state, logs a warning through the shared operation
+runtime loader, and starts a clean run instead of crashing the next cleanup
+attempt.
 
 Each paragraph record stores paragraph id, cleaned-text line span, optional
 source page span, page-break flags, boundary confidence, and warning flags.
@@ -188,16 +193,20 @@ Current deterministic cleanup invariants:
   boundary is low confidence
 - deterministic cleanup is format-independent after extraction; it is strongest
   for sources such as PDFs where extraction preserved page boundaries
-- interrupted cleanup leaves partial `clean_text.txt`, deterministic
-  `metadata.cleaned_pages`, counters, and `resume_checkpoint.next_page_index`
-  in `cleanup_state.json`; cancelled runs also sync `status="cancelled"` into
-  `project.json`
-- completed cleanup removes resume-only `cleaned_pages` and persists
-  `resume_checkpoint: null`
+- unpaged text is split into internal pseudo-segments for progress,
+  cancellation, and checkpoint cadence only; uninterrupted output remains the
+  same as the unsplit input path
+- interrupted cleanup leaves atomically written partial `clean_text.txt`,
+  restored paragraph records, counters, `input_fingerprint`, and
+  `resume_checkpoint.next_page_index` in `cleanup_state.json`; cancelled and
+  failed runs also sync terminal status into `project.json`
+- deterministic resume rejects mismatched input fingerprints even when segment
+  counts match
+- completed cleanup persists `resume_checkpoint: null`
 - manual cleaned-text edits preserve the cleanup operation artifacts but reset
   chunking, translation, character discovery, voice, Speech Blocks, Audio
   Blocks, and Audio Assembly state, then write a compact completed
-  `manual_edit` cleanup state
+  `manual_edit` cleanup state using atomic text and state writes
 
 ## 7. Workflow Integration
 
@@ -259,6 +268,8 @@ Covered behaviors:
 - page-number removal
 - structure-preserving cleanup across page breaks
 - resumable cancellation state
+- corrupt-state restart, failed terminal state, fingerprinted resume, and
+  unpaged pseudo-segment output-equivalence coverage
 - page button enablement and cleanup preview updates
 - manual cleaned-text edit and save enablement
 - main-window cleanup trigger, modal progress dialog exposure, and cleanup UI

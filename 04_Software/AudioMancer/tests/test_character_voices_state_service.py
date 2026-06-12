@@ -10,10 +10,11 @@
 @file test_character_voices_state_service.py
 @brief Focused tests for the AudioMancer Character Voices page state helpers.
 @details Verifies narrator-first target ordering, translation-language
-         selection rules, same-narrator shaping, and missing-sample warnings.
+         selection rules, same-narrator shaping, read-only refreshes, and
+         missing-sample warnings.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-20
-@version 1.3.1
+@version 1.4.0
 """
 
 # IMPORTS
@@ -212,6 +213,84 @@ def test_state_missing_narrator_sample_surfaces_warning(tmp_path) -> None:
 
     assert state["missing_narrator_sample"] is True
     assert any("narator voice sample" in note.lower() for note in state["notes"])
+
+
+def test_state_refresh_is_read_only_when_character_voices_are_unchanged(monkeypatch, tmp_path) -> None:
+    """
+    @brief      Verify REQ-AUDIO-FUNC-015 builds unchanged Character Voices page state without persistence writes.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-11
+    @version    0.1.0
+    """
+    project_root, manifest = _create_project_with_narrator_and_character(
+        tmp_path,
+        "CharacterVoicesReadOnlyRefresh",
+        voice_assignment_mode="same_narrator",
+    )
+    settings_payload = {
+        "tts_runtime_probe_succeeded": True,
+        "tts_runtime_discovered_models": _minimum_qwen_models(),
+    }
+    character_voices_state_service.build_character_voices_state(
+        project_root,
+        manifest,
+        "en",
+        settings_payload,
+        inspected_target_id="character_alice",
+        initialize_defaults=True,
+    )
+
+    def _fail_manifest_save(*_args, **_kwargs) -> None:
+        """
+        @brief      Fail when an unchanged page refresh rewrites the project manifest.
+        @return     None.
+        @exception  AssertionError Always raised.
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-06-11
+        @version    0.1.0
+        """
+        raise AssertionError("unchanged Character Voices state refresh saved the manifest")
+
+    def _fail_targets_save(*_args, **_kwargs) -> None:
+        """
+        @brief      Fail when an unchanged page refresh rewrites Character Voices targets.
+        @return     None.
+        @exception  AssertionError Always raised.
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-06-11
+        @version    0.1.0
+        """
+        raise AssertionError("unchanged Character Voices state refresh saved targets")
+
+    def _fail_byte_write(*_args, **_kwargs) -> None:
+        """
+        @brief      Fail when an unchanged page refresh rewrites copied sample bytes.
+        @return     None.
+        @exception  AssertionError Always raised.
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-06-11
+        @version    0.1.0
+        """
+        raise AssertionError("unchanged Character Voices state refresh copied sample bytes")
+
+    monkeypatch.setattr(project_workspace_service, "save_manifest", _fail_manifest_save)
+    monkeypatch.setattr(character_voices_service, "save_voice_targets", _fail_targets_save)
+    monkeypatch.setattr(character_voices_service, "_write_bytes_atomic", _fail_byte_write, raising=False)
+
+    state = character_voices_state_service.build_character_voices_state(
+        project_root,
+        project_workspace_service.load_manifest(project_root),
+        "en",
+        settings_payload,
+        inspected_target_id="character_alice",
+        initialize_defaults=True,
+    )
+
+    assert state["current_target_id"] == "character_alice"
 
 
 def _create_project_with_narrator_and_character(

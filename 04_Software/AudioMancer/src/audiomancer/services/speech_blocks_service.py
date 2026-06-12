@@ -15,7 +15,7 @@
          based operation state plus AI transaction logging.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 0.19.9
+@version 0.19.10
 """
 
 # IMPORTS
@@ -45,6 +45,7 @@ from audiomancer.services.logging_service import get_component_logger, trace_fun
 from audiomancer.services.operation_runtime_service import (
     OperationCancelledError,
     build_operation_output_path,
+    build_operation_state_payload,
     load_operation_state_payload,
     load_optional_json_artifact,
     raise_if_cancelled,
@@ -895,7 +896,7 @@ def clear_speech_block_warning_flags(project_root: str | Path, speech_block_id: 
     @exception  ValueError Raised when the block is unknown.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-04
-    @version    0.1.0
+    @version    0.1.1
     """
     resolved_project_root = Path(project_root)
     speech_blocks = load_speech_blocks(resolved_project_root)
@@ -903,7 +904,7 @@ def clear_speech_block_warning_flags(project_root: str | Path, speech_block_id: 
     if selected_block is None:
         raise ValueError("The selected Speech Block was not found.")
     selected_block["warning_flags"] = []
-    return _persist_report_update(resolved_project_root, speech_blocks)
+    return _persist_compact_review_update(resolved_project_root, speech_blocks)
 
 
 @trace_function(_SPEECH_BLOCKS_LOGGER)
@@ -937,7 +938,7 @@ def approve_speech_block(project_root: str | Path, speech_block_id: str) -> Spee
     @exception  ValueError Raised when the block is unknown.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-24
-    @version    0.1.1
+    @version    0.1.2
     """
     resolved_project_root = Path(project_root)
     speech_blocks = load_speech_blocks(resolved_project_root)
@@ -947,7 +948,7 @@ def approve_speech_block(project_root: str | Path, speech_block_id: str) -> Spee
     selected_block["approved"] = True
     selected_block["approved_at"] = _utc_now_iso()
     selected_block["warning_flags"] = []
-    return _persist_report_update(resolved_project_root, speech_blocks)
+    return _persist_compact_review_update(resolved_project_root, speech_blocks)
 
 
 @trace_function(_SPEECH_BLOCKS_LOGGER)
@@ -960,7 +961,7 @@ def unapprove_speech_block(project_root: str | Path, speech_block_id: str) -> Sp
     @exception  ValueError Raised when the block is unknown.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-05
-    @version    0.1.0
+    @version    0.1.1
     """
     resolved_project_root = Path(project_root)
     speech_blocks = load_speech_blocks(resolved_project_root)
@@ -969,7 +970,7 @@ def unapprove_speech_block(project_root: str | Path, speech_block_id: str) -> Sp
         raise ValueError("The selected Speech Block was not found.")
     selected_block["approved"] = False
     selected_block["approved_at"] = None
-    return _persist_report_update(resolved_project_root, speech_blocks)
+    return _persist_compact_review_update(resolved_project_root, speech_blocks)
 
 
 @trace_function(_SPEECH_BLOCKS_LOGGER)
@@ -2626,6 +2627,193 @@ def _build_operation_state_with_prompt_rules(
         resume_checkpoint["additional_speech_block_instructions_fingerprint"] = instruction_fingerprint
         state["resume_checkpoint"] = resume_checkpoint
     return state
+
+
+def _persist_compact_review_update(
+    project_root: Path,
+    speech_blocks: list[SpeechBlockPayload],
+) -> SpeechBlocksReportPayload:
+    """
+    @brief      Persist a compact non-structural Speech Blocks review update.
+    @param[in]  project_root Active project root folder.
+    @param[in]  speech_blocks Updated Speech Blocks payload list.
+    @return     Updated report payload.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-10
+    @version    0.1.0
+    """
+    report = load_speech_blocks_report(project_root) or {}
+    operation_state = load_operation_state(project_root) or {}
+    metadata = operation_state.get("metadata", {}) if isinstance(operation_state, dict) else {}
+    if not isinstance(metadata, dict):
+        metadata = {}
+    source_language = str(report.get("source_language", metadata.get("source_language", ""))).strip()
+    source_kind = str(report.get("source_kind", metadata.get("source_kind", ""))).strip()
+    profile_id = str(report.get("ai_profile_id", metadata.get("ai_profile_id", ""))).strip()
+    token_usage = token_usage_service.restore_token_usage(report.get("token_usage"), metadata.get("token_usage"))
+    budget_metadata = _restore_persisted_budget_metadata(report, operation_state)
+    total_chunk_count = _metadata_int_value(report, metadata, "total_chunk_count", 0)
+    processed_chunk_count = _metadata_int_value(
+        report,
+        metadata,
+        "processed_chunk_count",
+        len({str(block.get("chunk_id", "")).strip() for block in speech_blocks}),
+    )
+    updated_report = _rebuild_report(
+        speech_blocks,
+        source_language,
+        source_kind,
+        profile_id,
+        total_chunk_count,
+        processed_chunk_count,
+        [],
+        token_usage,
+        budget_metadata,
+    )
+    additional_speech_block_instructions = _restore_persisted_additional_speech_block_instructions(
+        report,
+        operation_state,
+    )
+    scene_ambience_settings = _restore_persisted_scene_ambience_settings(report, operation_state)
+    updated_report["additional_speech_block_instructions"] = additional_speech_block_instructions
+    updated_report["scene_ambience_generation"] = dict(scene_ambience_settings)
+    updated_report["additional_speech_block_instructions_fingerprint"] = _compute_generation_rules_fingerprint(
+        additional_speech_block_instructions,
+        scene_ambience_settings,
+    )
+    updated_state = _build_compact_review_operation_state(
+        project_root,
+        operation_state if isinstance(operation_state, dict) else {},
+        updated_report,
+        speech_blocks,
+    )
+    write_operation_json_artifact(project_root, "speech_blocks", config.SPEECH_BLOCKS_OUTPUT_FILE_NAME, speech_blocks)
+    write_operation_json_artifact(project_root, "speech_blocks", config.SPEECH_BLOCKS_REPORT_FILE_NAME, updated_report)
+    write_operation_json_artifact(
+        project_root,
+        "speech_blocks",
+        config.SPEECH_BLOCKS_STATE_FILE_NAME,
+        updated_state,
+    )
+    project_workspace_service.sync_manifest_operation_summary(
+        project_root,
+        "speech_blocks",
+        updated_state,
+        current_stage="speech_blocks_ready"
+        if str(updated_report.get("speech_blocks_stage_status", "")).strip() == SPEECH_BLOCKS_STAGE_COMPLETED
+        else "character_voices_ready",
+    )
+    return updated_report
+
+
+def _build_compact_review_operation_state(
+    project_root: Path,
+    operation_state: OperationStatePayload,
+    report: SpeechBlocksReportPayload,
+    speech_blocks: list[SpeechBlockPayload],
+) -> OperationStatePayload:
+    """
+    @brief      Build compact Speech Blocks operation state for review-only mutations.
+    @param[in]  project_root Active project root folder.
+    @param[in]  operation_state Previous operation-state payload.
+    @param[in]  report Updated Speech Blocks report payload.
+    @param[in]  speech_blocks Updated Speech Blocks payload list.
+    @return     Compact operation-state payload without source chunk snapshots.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-10
+    @version    0.1.1
+    """
+    metadata = operation_state.get("metadata", {}) if isinstance(operation_state, dict) else {}
+    metadata = dict(metadata) if isinstance(metadata, dict) else {}
+    metadata.pop("source_chunks", None)
+    metadata.update(
+        {
+            "source_language": str(report.get("source_language", metadata.get("source_language", ""))).strip(),
+            "source_kind": str(report.get("source_kind", metadata.get("source_kind", ""))).strip(),
+            "ai_profile_id": str(report.get("ai_profile_id", metadata.get("ai_profile_id", ""))).strip(),
+            "processed_chunk_count": int(report.get("processed_chunk_count", 0)),
+            "total_chunk_count": int(report.get("total_chunk_count", 0)),
+            "speech_block_count": len(speech_blocks),
+            "approved_block_count": int(report.get("approved_block_count", 0)),
+            "total_block_count": len(speech_blocks),
+            "warnings": list(report.get("warnings", [])) if isinstance(report.get("warnings"), list) else [],
+            "token_usage": token_usage_service.coerce_token_usage(report.get("token_usage")),
+        }
+    )
+    if report.get("budget_metadata") is not None:
+        metadata["budget_metadata"] = dict(report["budget_metadata"])
+    metadata["additional_speech_block_instructions"] = str(
+        report.get("additional_speech_block_instructions", metadata.get("additional_speech_block_instructions", ""))
+    )
+    metadata["additional_speech_block_instructions_fingerprint"] = str(
+        report.get(
+            "additional_speech_block_instructions_fingerprint",
+            metadata.get("additional_speech_block_instructions_fingerprint", ""),
+        )
+    )
+    if isinstance(report.get("scene_ambience_generation"), dict):
+        metadata["scene_ambience_generation"] = dict(report["scene_ambience_generation"])
+    stage_status = str(report.get("speech_blocks_stage_status", "")).strip()
+    status = (
+        "completed"
+        if stage_status == SPEECH_BLOCKS_STAGE_COMPLETED
+        else ("not_started" if stage_status == SPEECH_BLOCKS_STAGE_NOT_STARTED else "review_pending")
+    )
+    started_at = _resolve_started_at(operation_state)
+    completed_at = _valid_runtime_value(operation_state.get("completed_at"))
+    if status == "completed" and completed_at is None:
+        completed_at = _utc_now_iso()
+    elif status != "completed":
+        completed_at = None
+    log_path = _resolve_log_path(project_root, started_at)
+    state = build_operation_state_payload(
+        status=status,
+        progress_current=int(report.get("processed_chunk_count", 0)),
+        progress_total=int(report.get("total_chunk_count", 0)),
+        mode=str(operation_state.get("mode", "ai_assisted") or "ai_assisted"),
+        warning_count=int(report.get("warning_count", 0)),
+        metadata=metadata,
+        resume_checkpoint=operation_state.get("resume_checkpoint")
+        if isinstance(operation_state.get("resume_checkpoint"), dict)
+        else None,
+    )
+    state["started_at"] = started_at
+    state["completed_at"] = completed_at
+    state["artifact_paths"] = [
+        config.SPEECH_BLOCKS_OUTPUT_FILE_NAME,
+        config.SPEECH_BLOCKS_REPORT_FILE_NAME,
+        config.SPEECH_BLOCKS_STATE_FILE_NAME,
+        str(log_path.name),
+    ]
+    return state
+
+
+def _metadata_int_value(
+    report: SpeechBlocksReportPayload,
+    metadata: dict[str, object],
+    field_name: str,
+    fallback: int,
+) -> int:
+    """
+    @brief      Resolve one integer value from report metadata with fallback.
+    @param[in]  report Persisted report payload.
+    @param[in]  metadata Persisted operation metadata.
+    @param[in]  field_name Field name to resolve.
+    @param[in]  fallback Fallback integer value.
+    @return     Non-negative integer value.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-10
+    @version    0.1.0
+    """
+    for source in (report, metadata):
+        try:
+            return max(int(source.get(field_name, fallback)), 0)
+        except (TypeError, ValueError):
+            continue
+    return max(int(fallback), 0)
 
 
 def _persist_report_update(

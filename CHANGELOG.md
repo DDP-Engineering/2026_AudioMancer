@@ -10,6 +10,183 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [1.5.8] - 2026-06-12
+
+### Fixed
+
+- Cleanup, extraction, cleanup metadata, manual cleaned-text edits, and Audio
+  Assembly state/report writes now use atomic persistence for the critical
+  project artifacts touched by the cleanup safety bundle.
+- Malformed or truncated operation-state files now load as no usable state with
+  a warning, allowing deterministic cleanup, AI cleanup, extraction, and Audio
+  Assembly to restart or follow their normal reset path instead of crashing the
+  next run.
+- Deterministic and AI cleanup now persist terminal failed state where possible
+  while preserving resumable checkpoints for interrupted work.
+
+### Changed
+
+- Deterministic cleanup now uses input-fingerprinted checkpoints, bounded
+  checkpoint cadence, and non-PDF pseudo-segments for granular cancel/resume
+  progress without changing uninterrupted cleanup output.
+- The shared LLM provider now reports cooperative cancellation with a neutral
+  cancellation message rather than treating it as provider failure.
+- The threaded operation runner now schedules the operation UI bridge for
+  deferred Qt deletion after finish cleanup.
+- VoiceWeaver operation polling and generated-audio download defaults now use
+  `DEFAULT_TTS_OPERATION_TIMEOUT_SECONDS`, an alias for the existing audio
+  generation timeout value.
+- Project package metadata and `audiomancer.__version__` were updated to
+  `1.5.8`.
+- Offline English and Romanian help bundles were updated to version `1.5.8`.
+
+## [1.5.7] - 2026-06-11
+
+### Fixed
+
+- Character Voices sample generation now passes cancellation through
+  VoiceWeaver polling, preserves previous character samples when generation
+  fails or is cancelled, writes Character Voices JSON and WAV artifacts
+  atomically, and avoids redundant same-narrator copied-sample writes during
+  unchanged page refreshes.
+
+### Changed
+
+- Character Voices page-state refreshes now avoid unchanged manifest and target
+  rewrites while preserving full-current-target batch regeneration behavior.
+- Project package metadata and `audiomancer.__version__` were updated to
+  `1.5.7`.
+- Offline English and Romanian help bundles were updated to version `1.5.7`.
+
+## [1.5.6] - 2026-06-11
+
+### Fixed
+
+- Narrator sample generation now passes cancellation through VoiceWeaver
+  polling, preserves the previous profile sample when generation fails or is
+  cancelled, writes narrator JSON and WAV artifacts atomically, tolerates
+  malformed narrator JSON as recoverable missing data, and persists
+  `cancelled` / `failed` narrator profile-generation checkpoints.
+
+### Changed
+
+- Project package metadata and `audiomancer.__version__` were updated to
+  `1.5.6`.
+- Offline English and Romanian help bundles were updated to version `1.5.6`.
+
+## [1.5.5] - 2026-06-11
+
+### Fixed
+
+- Character Discovery now writes profiles and reports atomically, tolerates
+  malformed profile/report JSON as recoverable missing data, persists
+  `cancelled` / `failed` terminal checkpoints for interrupted runs, avoids
+  redundant discovery-span work during Characters page refresh, removes
+  duplicate startup window construction, and preserves identity grouping with
+  indexed alias lookup.
+
+### Changed
+
+- Project package metadata and `audiomancer.__version__` were updated to
+  `1.5.5`.
+- Offline English and Romanian help bundles were updated to version `1.5.5`.
+
+## [1.5.4] - 2026-06-11
+
+### Fixed
+
+- AI Translation now writes translated chunks, reports, and operation state
+  atomically, avoids duplicate per-chunk and review precondition rewrites,
+  keeps unchanged page-state builds read-only, tolerates malformed translation
+  JSON as recoverable missing data, and persists `cancelled` / `failed`
+  terminal states for interrupted translation runs.
+
+### Changed
+
+- Project package metadata and `audiomancer.__version__` were updated to
+  `1.5.4`.
+- Offline English and Romanian help bundles were updated to version `1.5.4`.
+
+## [1.5.3] - 2026-06-10
+
+### Changed
+
+- Improved deterministic and AI-assisted text chunking persistence so large
+  runs avoid redundant chunk rewrites and full chapter rescans while keeping
+  completed chunk artifacts unchanged.
+- Project package metadata and `audiomancer.__version__` were updated to
+  `1.5.3`.
+- Offline English and Romanian help bundles were updated to version `1.5.3`.
+
+### Fixed
+
+- Chunking cancellation, failure, and malformed JSON recovery now persist
+  resumable terminal state and use atomic JSON writes for chunking artifacts,
+  reports, and state files.
+
+## [1.5.2] - 2026-06-10
+
+### Fixed
+
+- Fixed the Speech Blocks header layout so the page title, AI Profile selector,
+  Generate All, Reset, and Approve All controls stay on one startup row without
+  overlapping or clipping their labels.
+- Fixed `02_Tools/make_synthetic_project.py` so it runs as a standalone offline
+  tool without importing the AudioMancer desktop application package or requiring
+  PySide6.
+
+### Changed
+
+- Project package metadata and `audiomancer.__version__` were updated to
+  `1.5.2`.
+- Offline English and Romanian help bundles were updated to version `1.5.2`.
+
+## [1.5.1] - 2026-06-10
+
+### Changed
+
+- Restored the fixed-width vertical workflow-navigation sidebar on the left of
+  the page stack with the original full page labels, replacing the horizontal
+  top navigation tab strip introduced in `1.5.0`. The compact undecorated
+  three-row operator status panes and the other `1.5.0` page-layout
+  improvements (Speech Blocks chunk-list alignment, Audio Blocks label removal,
+  Audio Assembly Scene Mix button column) are kept; page content scales back
+  proportionally through the existing stretch factors and dynamic splitter
+  minimum guardrails.
+- Narator Voice `Generate Sample` no longer carries an inflated fixed minimum
+  width, so it shrinks with the other action-row buttons when the splitter
+  narrows the editor pane.
+- Project package metadata and `audiomancer.__version__` were updated to
+  `1.5.1`.
+- Offline English and Romanian help bundles were updated to version `1.5.1`.
+
+## [1.5.0] - 2026-06-09
+
+### Added
+
+- Added a shared `operator_status_pane_height` UI helper that sizes operator
+  status panes to a compact, font-aware text-row count.
+
+### Changed
+
+- Replaced the left-hand workflow navigation sidebar with a horizontal
+  navigation tab strip under the toolbar, using shortened page labels, so the
+  workflow pages occupy the full window width.
+- Aligned the navigation tab strip to the workflow pages' left/right margins so
+  its ends line up with the page content below it.
+- Reworked the operator status panes across all workflow pages into compact,
+  undecorated containers without a group-box title or frame, sized to a
+  font-aware three-row height to maximize the text and list editors.
+- Speech Blocks Chunk List frame height now matches the action-button column so
+  their bottom edges align.
+- Audio Blocks page removed the "Generated blocks" count label to give the
+  source and block panes more vertical space.
+- Audio Assembly Scene Mix Previews action buttons moved to the right of the
+  previews list and stacked vertically.
+- Project package metadata and `audiomancer.__version__` were updated to
+  `1.5.0`.
+- Offline English and Romanian help bundles were updated to version `1.5.0`.
+
 ## [1.4.2] - 2026-06-08
 
 ### Added

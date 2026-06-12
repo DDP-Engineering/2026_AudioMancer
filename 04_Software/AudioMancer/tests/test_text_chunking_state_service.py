@@ -13,7 +13,7 @@
          states and manual selected-chunk edits correctly.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-24
-@version 0.5.2
+@version 0.5.3
 """
 
 # IMPORTS
@@ -78,6 +78,34 @@ def test_build_text_chunking_notes_shows_resume_note_for_failed_ai_chunking() ->
 
     assert any("was not finalized" in note for note in notes)
     assert not any("in progress at 1/29" in note for note in notes)
+
+
+def test_build_text_chunking_notes_shows_resume_note_for_cancelled_chunking() -> None:
+    """
+    @brief      Verify REQ-AUDIO-FUNC-034 cancelled chunking shows the resumable note.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-10
+    @version    0.1.0
+    """
+    notes = text_chunking_state_service.build_text_chunking_notes(
+        manifest={"source_document": {"original_name": "story.txt"}},
+        cleaned_text="Cleaned text",
+        chunking_report_payload=None,
+        chunking_operation_state={
+            "status": "cancelled",
+            "mode": "deterministic",
+            "progress_current": 1,
+            "progress_total": 3,
+            "metadata": {},
+        },
+        has_ai_profiles=True,
+        language="en",
+    )
+
+    assert any("was not finalized" in note for note in notes)
+    assert not any("is ready" in note for note in notes)
 
 
 def test_build_text_chunking_notes_shows_persisted_token_usage_summary() -> None:

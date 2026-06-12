@@ -22,6 +22,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QTextCursor
 from PySide6.QtWidgets import QMessageBox
 
+from audiomancer.services import ui_state_service
 from audiomancer.ui.pages.text_chunking_page import TextChunkingPage
 
 
@@ -69,7 +70,7 @@ def test_text_chunking_page_renders_chunks_and_selected_preview(qtbot) -> None:
     assert page._edit_chunk_button.isEnabled() is True
     assert "Chunk artifact contains 1 chunks." in page._status_edit.toPlainText()
     assert page.current_ai_strategy() == "paragraph"
-    assert page._status_group.maximumHeight() == 112
+    assert page._status_group.maximumHeight() == ui_state_service.operator_status_pane_height(page._status_edit)
     assert page._chunk_list.minimumHeight() == 132
 
 

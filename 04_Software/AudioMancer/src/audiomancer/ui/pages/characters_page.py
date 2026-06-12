@@ -73,8 +73,8 @@ class CharactersPage(QWidget):
             @return     None.
             @exception  None
             @author     Eng. Dan Dumitru Pasare
-            @date       2026-04-08
-        @version    0.8.8
+            @date       2026-06-09
+        @version    0.8.9
         """
         super().__init__(parent)
         self._project_active = False
@@ -278,8 +278,9 @@ class CharactersPage(QWidget):
         layout.addWidget(self._main_splitter, 1)
         self._apply_main_splitter_minimums()
 
-        self._status_group = QGroupBox("Character Discovery Status", self)
+        self._status_group = QWidget(self)
         status_layout = QVBoxLayout(self._status_group)
+        status_layout.setContentsMargins(0, 0, 0, 0)
         self._status_edit = QPlainTextEdit(self)
         self._status_edit.setReadOnly(True)
         self._status_edit.setProperty(
@@ -287,8 +288,7 @@ class CharactersPage(QWidget):
             ui_state_service.CONTROL_TEXT_FONT_ROLE_VALUE,
         )
         status_layout.addWidget(self._status_edit)
-        self._status_group.setMinimumHeight(96)
-        self._status_group.setMaximumHeight(112)
+        self._status_group.setFixedHeight(ui_state_service.operator_status_pane_height(self._status_edit))
         layout.addWidget(self._status_group, 0)
 
         self.set_project_active(False)
@@ -649,8 +649,8 @@ class CharactersPage(QWidget):
         @return     None.
         @exception  None
         @author     Eng. Dan Dumitru Pasare
-        @date       2026-04-08
-        @version    0.5.1
+        @date       2026-06-09
+        @version    0.5.2
         """
         self._title_label.setText(f"<h2>{ui_state_service.translate('characters.title', language)}</h2>")
         self._ui_language = language
@@ -664,7 +664,6 @@ class CharactersPage(QWidget):
         self._list_group.setTitle(ui_state_service.translate("characters.list_group", language))
         self._editor_group.setTitle(ui_state_service.translate("characters.profile_group", language))
         self._evidence_group.setTitle(ui_state_service.translate("characters.evidence_group", language))
-        self._status_group.setTitle(ui_state_service.translate("characters.status_group", language))
         self._canonical_name_label.setText(ui_state_service.translate("characters.canonical_name", language))
         self._aliases_label.setText(ui_state_service.translate("characters.aliases", language))
         self._gender_hint_label.setText(ui_state_service.translate("characters.gender_hint", language))
