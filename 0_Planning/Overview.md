@@ -18,9 +18,7 @@ generate audiobooks with personalized character voices or real voice-based
 narration in a clear, efficient, and maintainable workflow.
 
 The application should also provide offline end-user help for non-technical
-book readers. The current English and Romanian help bundles are maintained
-under `05_SoftwareDocu/UserGuide/` and `05_SoftwareDocu/UserGuide_ro/`, then
-delivered as local HTML.
+book readers.
 
 ## 2. Final Product Vision
 
@@ -54,8 +52,6 @@ The final application should follow these principles:
 - clear step-by-step operator workflow
 - simple and maintainable code structure
 - explicit artifacts and reports for every major processing stage
-- release metadata kept in the package metadata and changelog rather than
-  duplicated throughout planning files
 - safe resume and recovery for long-running operations
 - operator review before downstream use of generated data
 - readable review panes that keep practical minimum widths when the operator
@@ -109,18 +105,8 @@ The application must support:
 - preserving imported source artifacts
 - validating format and basic integrity
 
-Current implementation supports:
-
-- `TXT`
-- `PDF`
-- `RTF`
-- `DOCX`
-- `ODT`
-- `Markdown`
-- `EPUB`
-
-Other formats should be added only when the import and extraction path remains
-simple and reliable.
+Supported formats should be added only when the import and extraction path
+remains simple and reliable.
 
 ### 5.3 Text Extraction
 
@@ -139,11 +125,6 @@ The cleanup stage must:
 - preserve meaningful text structure
 - avoid destructive cleanup decisions without traceable logic
 - support deterministic cleanup and AI-assisted cleanup where useful
-- persist cleanup output, reports, metadata, and operation state atomically
-- tolerate malformed cleanup state by restarting cleanly instead of blocking
-  the next run
-- keep deterministic resume tied to an input fingerprint and bounded
-  checkpoints without changing uninterrupted cleanup output
 
 The cleaned text must become the canonical base for downstream operations.
 
@@ -155,8 +136,6 @@ The chunking stage must:
 - preserve ordering and source traceability
 - support deterministic chunking and AI-assisted chunking
 - keep chunk metadata explicit and reviewable
-- keep long chunking runs resumable through bounded checkpoints and atomic
-  artifact persistence
 
 Chunks are the main working unit for later translation, character analysis, and
 narration preparation.
@@ -184,8 +163,6 @@ The translation workflow must:
 - preserve source-to-translation alignment
 - support partial progress, edits, approvals, and retranslation
 - keep translation state explicit and reviewable
-- protect completed translated output with atomic project artifacts and
-  recoverable cancel/failure state during interrupted runs
 
 ### 5.8 Voice And Narration Preparation
 
@@ -201,18 +178,7 @@ This stage should consolidate:
 - real-voice assignment data where supported
 - pronunciation or style notes where needed
 - narration-oriented metadata required by downstream generation
-- explicit sex/gender and age-domain handoff text for character voice-design
-  prompts so TTS voice design has stable vocal anchors
-
-Current narrator preparation also preserves previous usable samples when a new
-VoiceWeaver sample run fails or is cancelled, writes narrator metadata and WAV
-artifacts atomically, and records failed/cancelled AI narrator-profile
-generation checkpoints for compatible resume.
-
-Character Voices applies the same persistence posture for character target
-metadata and samples: unchanged same-narrator refreshes stay read-only, failed
-or cancelled sample generation preserves the previous sample, and batch
-generation continues to regenerate all current character targets.
+- explicit voice-design handoff text where stable vocal anchors are needed
 
 This is not the final step. It prepares the canonical generation plan used by
 later audio synthesis and assembly stages.
@@ -242,18 +208,6 @@ for the whole book, and narrator plus one or more character voices. Same-narrato
 projects should preserve continuous phrases and emotional flow by segmenting
 text for the TTS budget instead of forcing dialogue speaker splits.
 
-The current implementation generates WAV files through the Audio Blocks workflow
-under `audio_blocks/`, keeps unapproved Speech Blocks pending, stores
-pause and indication operation blocks without VoiceWeaver generation, and can
-generate approved Scene Ambience prompt blocks through the sound-prompt runtime
-path when that setting is enabled. The Speech Blocks review page can invoke
-selected-block audio regeneration through a compact `Generate Audio` button and
-Play/Stop preview through the same Audio Blocks controller path so operators
-can check formatting before moving to the Audio Blocks page.
-Audio Blocks and VoiceWeaver runtime calls also write concise diagnostic log
-records for generation start, accepted sound-prompt requests, and completed
-generated files.
-
 Application-level Settings, AI Settings, and TTS Settings should use consistent
 dialog semantics: Cancel discards unsaved edits, Save persists while keeping the
 dialog open, and OK persists then closes where the dialog supports Apply-style
@@ -261,26 +215,17 @@ workflows.
 
 ### 5.10 Export And Assembly
 
-The application supports a first WAV-only assembly stage for final audiobook
-outputs.
-
-The current implementation supports these Audio Assembly output modes:
-
-- one audio file for the whole book
-- split audio files by configured time limit
-- one audio file per source text chunk
+The application should support an assembly stage for final audiobook outputs.
 
 The assembly stage supports:
 
 - combining generated Speech Block audio in canonical order
-- optionally including generated Scene Ambience sound blocks in canonical order
-- converting metadata-only pause blocks into silence
+- optionally including generated ambience or operation sound blocks in
+  canonical order
+- converting pause operation blocks into silence
 - deterministic output naming
-- project-local `audiobook/` deliverables
-- `audio_assembly_state.json` and `audio_assembly_report.json`
-- completed-output resume when the source Audio Blocks and settings fingerprint
-  still match
-- local generated-output playback from the Audio Assembly page
+- project-local deliverables
+- local generated-output playback
 
 MP3 encoding, chapter metadata, silence trimming, volume normalization, pitch
 changes, and cover-art embedding remain future work.

@@ -96,34 +96,9 @@ broader validation baseline is tracked in `../../HowToTest.md`.
 ## Runtime Files
 
 - Each app launch writes a log under `Logs/` in this folder.
-- VoiceWeaver generation diagnostics, including Scene Ambience sound-prompt
-  requests and Audio Blocks checkpoints, are written through the shared runtime
-  log.
 - Project workflow artifacts are written inside the selected project root.
-- Cleanup, extraction, manual cleaned-text edits, and Audio Assembly state/report
-  writes use the shared atomic persistence path for critical project artifacts.
-- Malformed operation state is treated as no usable checkpoint so the next run
-  can restart or follow the workflow reset path instead of crashing on load.
-- Text chunking writes chunk artifacts, reports, and operation state atomically;
-  cancelled or failed chunking runs keep resumable terminal state.
-- AI Translation writes translated chunks, reports, and operation state
-  atomically; unchanged page-state builds are read-only, and interrupted runs
-  persist terminal cancel/failure state.
-- Narrator voice preparation writes profile metadata and sample artifacts
-  atomically, preserves previous samples when new VoiceWeaver generation fails
-  or is cancelled, and records terminal cancel/failure state for interrupted AI
-  narrator-profile generation.
-- Character Voices writes targets and samples atomically, keeps unchanged
-  same-narrator page refreshes read-only, and preserves previous character
-  samples when new VoiceWeaver generation fails or is cancelled.
-- Generated Audio Blocks media is written under each project `audio_blocks/`
-  folder, including generated Scene Ambience prompt audio when that path is
-  enabled.
-- Final Audio Assembly outputs are written under each project `audiobook/`
-  folder; assembly settings decide whether generated Scene Ambience blocks are
-  included in the final sequential output.
-
-Detailed artifact contracts belong in `../../05_SoftwareDocu/`.
+- Detailed artifact and workflow contracts belong in
+  `../../05_SoftwareDocu/`.
 
 ## Packaging
 

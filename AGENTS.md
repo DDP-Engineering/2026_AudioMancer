@@ -127,6 +127,17 @@ Use:
 ## Documentation Rules
 
 - Update `README.MD` when module scope or behavior changes.
+- Keep README files scoped by location:
+  - the repository-root `README.MD` is a concise product and repository
+    overview for first-time readers
+  - folder-level README files describe only what is in that folder, where to
+    find the next layer of detail, and how to use that folder
+  - application README files may include local setup, run, validation, and
+    packaging entry points
+  - detailed behavior, internal workflow contracts, artifact formats, and
+    component-specific implementation notes belong in `05_SoftwareDocu/`,
+    `HowToTest*.md`, `CHANGELOG.md`, or the relevant planning document, not
+    duplicated across multiple README files
 - Do not write the current application version in README files. Keep README
   files simple and refer version-sensitive readers to the changelog, project
   version metadata, and help-file versioning so help files can be kept in sync
@@ -145,7 +156,6 @@ Do not consider work complete until all applicable items below are satisfied:
 - `uv run ruff check <changed_python_files> --fix` has been run and output reviewed
 - `uv run ruff format <changed_python_files>` has been run
 - the final summary states what changed, what was validated, and what remains unverified
-
 
 
 
