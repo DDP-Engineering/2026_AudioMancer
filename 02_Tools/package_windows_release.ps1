@@ -31,15 +31,29 @@ function New-ZipArchiveFromDirectory {
         [string]$DestinationArchive
     )
 
-    if (Test-Path $DestinationArchive) {
-        Remove-Item -LiteralPath $DestinationArchive -Force
-    }
+    $maxAttempts = 5
+    for ($attempt = 1; $attempt -le $maxAttempts; $attempt++) {
+        if (Test-Path $DestinationArchive) {
+            Remove-Item -LiteralPath $DestinationArchive -Force
+        }
 
-    # Compress-Archive is an approved cmdlet that also works under PowerShell
-    # ConstrainedLanguage mode. Passing the staging directory itself (not its
-    # contents) keeps the base folder as the archive root, matching the previous
-    # CreateFromDirectory includeBaseDirectory behavior.
-    Compress-Archive -Path $SourceDirectory -DestinationPath $DestinationArchive -CompressionLevel Optimal -Force
+        try {
+            # Compress-Archive is an approved cmdlet that also works under
+            # PowerShell ConstrainedLanguage mode. Passing the staging directory
+            # itself (not its contents) keeps the base folder as the archive
+            # root, matching the previous CreateFromDirectory
+            # includeBaseDirectory behavior.
+            Compress-Archive -Path $SourceDirectory -DestinationPath $DestinationArchive -CompressionLevel Optimal -Force
+            return
+        }
+        catch {
+            if ($attempt -ge $maxAttempts) {
+                throw
+            }
+            Write-Warning "Zip creation attempt $attempt failed: $($_.Exception.Message)"
+            Start-Sleep -Seconds 2
+        }
+    }
 }
 
 # Copy settings into a delivery package without operator-local secrets or
