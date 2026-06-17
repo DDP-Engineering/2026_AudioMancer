@@ -1,0 +1,84 @@
+{"data": {"kind": "change", "statement": "Relax documentation audit so normal feature work requires SoftwareDocu component updates by default and broad README/HowToTest review is explicit opt-in."}, "event": "run.started", "time": "2026-06-17T20:47:43+00:00"}
+{"data": {"has_response": true, "tool_name": "Bash", "tool_use_id": "call_UCQgzxM5HOZiCT6AG5w9oVMu"}, "event": "agentic.tool", "time": "2026-06-17T20:47:46+00:00"}
+{"data": {"has_response": true, "tool_name": "Bash", "tool_use_id": "call_Fo2GpuYNOEPGb1sKqKVqyC2y"}, "event": "agentic.tool", "time": "2026-06-17T20:47:47+00:00"}
+{"data": {"stage": "requirement"}, "event": "stage.set", "time": "2026-06-17T20:48:02+00:00"}
+{"data": {"has_response": true, "tool_name": "Bash", "tool_use_id": "call_G4r5QvcB2Ejtgl6kg0WejHIP"}, "event": "agentic.tool", "time": "2026-06-17T20:48:04+00:00"}
+{"data": {"has_response": true, "tool_name": "apply_patch", "tool_use_id": "call_O4VeU9pyywN4G5YrASQerBtE"}, "event": "agentic.tool", "time": "2026-06-17T20:48:19+00:00"}
+{"data": {"stage": "check"}, "event": "stage.set", "time": "2026-06-17T20:48:30+00:00"}
+{"data": {"has_response": true, "tool_name": "Bash", "tool_use_id": "call_rEbFj9Wa5l65xGYX5y2id67Z"}, "event": "agentic.tool", "time": "2026-06-17T20:48:32+00:00"}
+{"data": {"has_response": true, "tool_name": "apply_patch", "tool_use_id": "call_vIFF2KweZPsX4mfWQ715CChb"}, "event": "agentic.tool", "time": "2026-06-17T20:49:31+00:00"}
+{"data": {"stage": "implementation"}, "event": "stage.set", "time": "2026-06-17T20:49:58+00:00"}
+{"data": {"has_response": true, "tool_name": "Bash", "tool_use_id": "call_hIHbO6YpYbuhL8hjRe0ohQMC"}, "event": "agentic.tool", "time": "2026-06-17T20:50:00+00:00"}
+{"data": {"has_response": true, "tool_name": "apply_patch", "tool_use_id": "call_s7sN13VM7z6Ysxm8uh4xog2B"}, "event": "agentic.tool", "time": "2026-06-17T20:50:36+00:00"}
+{"data": {"has_response": true, "tool_name": "Bash", "tool_use_id": "call_sUrFmoVlbvOz8cW49UpllAkL"}, "event": "agentic.tool", "time": "2026-06-17T20:51:22+00:00"}
+{"data": {"has_response": true, "tool_name": "Bash", "tool_use_id": "call_JSobpcmvYoZa8oSVYZMeUkWJ"}, "event": "agentic.tool", "time": "2026-06-17T20:51:47+00:00"}
+{"data": {"has_response": true, "tool_name": "apply_patch", "tool_use_id": "call_f4YrASWFklrbAPWYuzyl2XJv"}, "event": "agentic.tool", "time": "2026-06-17T20:52:06+00:00"}
+{"data": {"has_response": true, "tool_name": "Bash", "tool_use_id": "call_fUCkxm9yINLxXRsZSKEoOv5U"}, "event": "agentic.tool", "time": "2026-06-17T20:52:32+00:00"}
+{"data": {"has_response": true, "tool_name": "Bash", "tool_use_id": "call_W1IdbNvw37fFqCosxO6xbI6z"}, "event": "agentic.tool", "time": "2026-06-17T20:52:55+00:00"}
+{"data": {"has_response": true, "tool_name": "Bash", "tool_use_id": "call_jOkroV37bAolh72q2BSSHIry"}, "event": "agentic.tool", "time": "2026-06-17T20:53:19+00:00"}
+{"data": {"has_response": true, "tool_name": "Bash", "tool_use_id": "call_5Muu4YlsRooQg5RTjmBsZk75"}, "event": "agentic.tool", "time": "2026-06-17T20:53:21+00:00"}
+{"data": {"has_response": true, "tool_name": "Bash", "tool_use_id": "call_JSebJqEy4DwPt1LEGWQOpAqL"}, "event": "agentic.tool", "time": "2026-06-17T20:53:35+00:00"}
+{"data": {"has_response": true, "tool_name": "Bash", "tool_use_id": "call_wVfibCbl8RSDJKmWfU8FZVww"}, "event": "agentic.tool", "time": "2026-06-17T20:53:51+00:00"}
+{"data": {"has_response": true, "tool_name": "Bash", "tool_use_id": "call_BPeAZR5aLB8mik93Q5dwMl8l"}, "event": "agentic.tool", "time": "2026-06-17T20:54:11+00:00"}
+{"data": {"has_response": true, "tool_name": "Bash", "tool_use_id": "call_UkVqTMaen6JvAuMMcZTHlECe"}, "event": "agentic.tool", "time": "2026-06-17T20:55:25+00:00"}
+{"data": {"has_response": true, "tool_name": "Bash", "tool_use_id": "call_K7OTRLlvjfWwi6dcMqmJ9QUy"}, "event": "agentic.tool", "time": "2026-06-17T20:55:27+00:00"}
+{"data": {"has_response": true, "tool_name": "Bash", "tool_use_id": "call_sK9g8lqwafs7zuwie913FKRs"}, "event": "agentic.tool", "time": "2026-06-17T20:55:28+00:00"}
+{"data": {"has_response": true, "tool_name": "apply_patch", "tool_use_id": "call_SL4GFvf5l5PSZw2BID3sETq7"}, "event": "agentic.tool", "time": "2026-06-17T20:55:36+00:00"}
+{"data": {"has_response": true, "tool_name": "Bash", "tool_use_id": "call_xC03NiXnt9AtOEijLG9PjLKN"}, "event": "agentic.tool", "time": "2026-06-17T20:56:02+00:00"}
+{"data": {"has_response": true, "tool_name": "Bash", "tool_use_id": "call_dg2msIOM59tXuPcyiq38KvLi"}, "event": "agentic.tool", "time": "2026-06-17T20:56:05+00:00"}
+{"data": {"has_response": true, "tool_name": "Bash", "tool_use_id": "call_NbfswCoRDKTynxNfF6gTCkSX"}, "event": "agentic.tool", "time": "2026-06-17T20:56:20+00:00"}
+{"data": {"has_response": true, "tool_name": "Bash", "tool_use_id": "call_alEicoDffXAk3lu4Y7NDzhe1"}, "event": "agentic.tool", "time": "2026-06-17T20:56:45+00:00"}
+{"data": {"has_response": true, "tool_name": "Bash", "tool_use_id": "call_GDSz880WcCJIa8oYTfH6d3IS"}, "event": "agentic.tool", "time": "2026-06-17T20:56:49+00:00"}
+{"data": {"has_response": true, "tool_name": "Bash", "tool_use_id": "call_w9Ku8NJibdIlRK5zvh8qHsLG"}, "event": "agentic.tool", "time": "2026-06-17T20:57:26+00:00"}
+{"data": {"has_response": true, "tool_name": "Bash", "tool_use_id": "call_EIxAWusVISL7xr7HHAK7zKjw"}, "event": "agentic.tool", "time": "2026-06-17T20:57:28+00:00"}
+{"data": {"has_response": true, "tool_name": "Bash", "tool_use_id": "call_KoWu1JG1YtTBSrZvI2uDg2cn"}, "event": "agentic.tool", "time": "2026-06-17T20:57:30+00:00"}
+{"data": {"has_response": true, "tool_name": "Bash", "tool_use_id": "call_05uIqBhrUibrglH9vROyngaV"}, "event": "agentic.tool", "time": "2026-06-17T20:57:31+00:00"}
+{"data": {"has_response": true, "tool_name": "Bash", "tool_use_id": "call_GlMibzZ947aLoaxF1k5BndFS"}, "event": "agentic.tool", "time": "2026-06-17T20:57:53+00:00"}
+{"data": {"has_response": true, "tool_name": "Bash", "tool_use_id": "call_VXNob80svuucq3MtMwSGHW4z"}, "event": "agentic.tool", "time": "2026-06-17T20:57:56+00:00"}
+{"data": {"has_response": true, "tool_name": "Bash", "tool_use_id": "call_g0ygpUg8HhVFLufoa7zQfzhC"}, "event": "agentic.tool", "time": "2026-06-17T20:57:56+00:00"}
+{"data": {"has_response": true, "tool_name": "Bash", "tool_use_id": "call_cJvVFC3TMczR3gglgFcZYuj3"}, "event": "agentic.tool", "time": "2026-06-17T20:58:12+00:00"}
+{"data": {"has_response": true, "tool_name": "Bash", "tool_use_id": "call_s5YoFxX2BBm1dv4jsNEuITyT"}, "event": "agentic.tool", "time": "2026-06-17T20:58:36+00:00"}
+{"data": {"has_response": true, "tool_name": "Bash", "tool_use_id": "call_NA8ie2uRmbitqklyhZYn5L0V"}, "event": "agentic.tool", "time": "2026-06-17T20:58:38+00:00"}
+{"data": {"has_response": true, "tool_name": "Bash", "tool_use_id": "call_TfSRyQkoUhWJ6bNrQ4BmSu18"}, "event": "agentic.tool", "time": "2026-06-17T20:58:39+00:00"}
+{"data": {"has_response": true, "tool_name": "Bash", "tool_use_id": "call_QmKwUv6fM3kEoFjIAu0t3fTs"}, "event": "agentic.tool", "time": "2026-06-17T20:59:03+00:00"}
+{"data": {"has_response": true, "tool_name": "Bash", "tool_use_id": "call_PUCMduZmUs7gJx6SVfMZ96wa"}, "event": "agentic.tool", "time": "2026-06-17T20:59:06+00:00"}
+{"data": {"has_response": true, "tool_name": "Bash", "tool_use_id": "call_ZbbHiZXn0QGEWkKGWHFNoEnE"}, "event": "agentic.tool", "time": "2026-06-17T20:59:43+00:00"}
+{"data": {"has_response": true, "tool_name": "Bash", "tool_use_id": "call_yKNy3cltFIyk4rO45ay2EG6s"}, "event": "agentic.tool", "time": "2026-06-17T21:00:07+00:00"}
+{"data": {"has_response": true, "tool_name": "Bash", "tool_use_id": "call_d32eMXr5Jspu3dbeTEGCpHOb"}, "event": "agentic.tool", "time": "2026-06-17T21:00:08+00:00"}
+{"data": {"has_response": true, "tool_name": "Bash", "tool_use_id": "call_KBY1oMntkMhqaroJjzPFRLBj"}, "event": "agentic.tool", "time": "2026-06-17T21:00:09+00:00"}
+{"data": {"has_response": true, "tool_name": "Bash", "tool_use_id": "call_PbLexr28vw6bwNp5PxQCvzX7"}, "event": "agentic.tool", "time": "2026-06-17T21:01:24+00:00"}
+{"data": {"has_response": true, "tool_name": "Bash", "tool_use_id": "call_HzSvPWP8HCeGzLjetOVj79Eb"}, "event": "agentic.tool", "time": "2026-06-17T21:01:26+00:00"}
+{"data": {"has_response": true, "tool_name": "Bash", "tool_use_id": "call_Cyxt6aMCpHWEypOqBzAXrJ8V"}, "event": "agentic.tool", "time": "2026-06-17T21:01:56+00:00"}
+{"data": {"has_response": true, "tool_name": "Bash", "tool_use_id": "call_DWJUCc0jMWYNP0qwY9n0ypFz"}, "event": "agentic.tool", "time": "2026-06-17T21:01:58+00:00"}
+{"data": {"has_response": true, "tool_name": "Bash", "tool_use_id": "call_z6qx2go4gcyunFKzealUp6gX"}, "event": "agentic.tool", "time": "2026-06-17T21:02:01+00:00"}
+{"data": {"has_response": true, "tool_name": "Bash", "tool_use_id": "call_d3zs851sq5VYa0Qjf2rC4IXy"}, "event": "agentic.tool", "time": "2026-06-17T21:02:02+00:00"}
+{"data": {"command": "04_Software/AudioMancer/.venv/Scripts/python.exe -m pytest -q 04_Software/AudioMancer/tests/test_documentation_audit.py -p no:cacheprovider --basetemp .tmp/pytest-doc-audit-run", "created_at": "2026-06-17T21:02:17+00:00", "id": "E-0001", "kind": "test-run", "path": null, "result": "pass", "stage": "validation", "summary": "Documentation audit focused tests passed: 5 passed."}, "event": "evidence.recorded", "time": "2026-06-17T21:02:17+00:00"}
+{"data": {"has_response": true, "tool_name": "Bash", "tool_use_id": "call_nINLtXvflDObvwxNowCUKpzr"}, "event": "agentic.tool", "time": "2026-06-17T21:02:20+00:00"}
+{"data": {"command": "py_compile; ruff check --fix; ruff format; audit_documentation.py --changed-only; audit traceability; audit coverage; git diff --check", "created_at": "2026-06-17T21:02:30+00:00", "id": "E-0002", "kind": "gate", "path": null, "result": "pass", "stage": "validation", "summary": "py_compile, Ruff check, Ruff format, changed-only documentation audit, traceability audit, coverage audit, and diff whitespace check passed."}, "event": "evidence.recorded", "time": "2026-06-17T21:02:30+00:00"}
+{"data": {"has_response": true, "tool_name": "Bash", "tool_use_id": "call_lVmkzQkk0XsDD2Yeey6eHfHa"}, "event": "agentic.tool", "time": "2026-06-17T21:02:32+00:00"}
+{"data": {"command": "04_Software/AudioMancer/.venv/Scripts/python.exe 02_Tools/audits/audit_documentation.py --include-broad-docs", "created_at": "2026-06-17T21:02:41+00:00", "id": "E-0003", "kind": "scan", "path": null, "result": "info", "stage": "validation", "summary": "Opt-in full documentation audit with --include-broad-docs still reports five pre-existing stale component-document review findings outside this scoped change."}, "event": "evidence.recorded", "time": "2026-06-17T21:02:41+00:00"}
+{"data": {"has_response": true, "tool_name": "Bash", "tool_use_id": "call_ZvxKgkM0eO6nNLQUZnPMkSeC"}, "event": "agentic.tool", "time": "2026-06-17T21:02:43+00:00"}
+{"data": {"has_response": true, "tool_name": "Bash", "tool_use_id": "call_K0uYVK2eU4hedHIyGYTEWQ9l"}, "event": "agentic.tool", "time": "2026-06-17T21:02:56+00:00"}
+{"data": {"has_response": true, "tool_name": "Bash", "tool_use_id": "call_f2h22scfbZpB7JgXJaenhaHS"}, "event": "agentic.tool", "time": "2026-06-17T21:03:08+00:00"}
+{"data": {"has_response": true, "tool_name": "Bash", "tool_use_id": "call_sSq3U3eZxokv8lggc8GpTplR"}, "event": "agentic.tool", "time": "2026-06-17T21:03:19+00:00"}
+{"data": {"has_response": true, "tool_name": "Bash", "tool_use_id": "call_UvhJJgE9P5oOegPz24Nx87Ro"}, "event": "agentic.tool", "time": "2026-06-17T21:03:30+00:00"}
+{"data": {"has_response": true, "tool_name": "Bash", "tool_use_id": "call_xlpa2yG9o3ml4nNGGFWha2bR"}, "event": "agentic.tool", "time": "2026-06-17T21:03:41+00:00"}
+{"data": {"has_response": true, "tool_name": "Bash", "tool_use_id": "call_Z6VfKMBidEoTfW5RBL99106k"}, "event": "agentic.tool", "time": "2026-06-17T21:03:56+00:00"}
+{"data": {"has_response": true, "tool_name": "Bash", "tool_use_id": "call_HhGog6TkGS7fAOSX2hkbbFGp"}, "event": "agentic.tool", "time": "2026-06-17T21:03:58+00:00"}
+{"data": {"stage": "validation"}, "event": "stage.set", "time": "2026-06-17T21:04:10+00:00"}
+{"data": {"has_response": true, "tool_name": "Bash", "tool_use_id": "call_kAf8fUqSwGJgCE21MCObcFr2"}, "event": "agentic.tool", "time": "2026-06-17T21:04:13+00:00"}
+{"data": {"stage": "delivery"}, "event": "stage.set", "time": "2026-06-17T21:04:21+00:00"}
+{"data": {"has_response": true, "tool_name": "Bash", "tool_use_id": "call_hOtgqABEqt46m4LoQ26HKwhx"}, "event": "agentic.tool", "time": "2026-06-17T21:04:23+00:00"}
+{"data": {"has_response": true, "tool_name": "Bash", "tool_use_id": "call_dknMQ26Wi8g2IQulHveouSRx"}, "event": "agentic.tool", "time": "2026-06-17T21:04:43+00:00"}
+{"data": {"has_response": true, "tool_name": "Bash", "tool_use_id": "call_z4GbuGY6NkcRKJGww4X9IMGJ"}, "event": "agentic.tool", "time": "2026-06-17T21:04:45+00:00"}
+{"data": {"has_response": true, "tool_name": "Bash", "tool_use_id": "call_ZEMq8bTJyy5HzLHox5l8Pqwd"}, "event": "agentic.tool", "time": "2026-06-17T21:04:47+00:00"}
+{"data": {"has_response": true, "tool_name": "Bash", "tool_use_id": "call_b3lJGAeKBZIm5sY60ZSQ8bgd"}, "event": "agentic.tool", "time": "2026-06-17T21:06:26+00:00"}
+{"data": {"has_response": true, "tool_name": "Bash", "tool_use_id": "call_rHtwZWDfJfn2IIEPlSb3JQgg"}, "event": "agentic.tool", "time": "2026-06-17T21:06:28+00:00"}
+{"data": {"has_response": true, "tool_name": "Bash", "tool_use_id": "call_4Egl1GDjpRc7foPtsQcpKVkx"}, "event": "agentic.tool", "time": "2026-06-17T21:06:30+00:00"}
+{"data": {"has_response": true, "tool_name": "Bash", "tool_use_id": "call_fA6P18YAvRZ9se7Pj6eWjx9C"}, "event": "agentic.tool", "time": "2026-06-17T21:06:31+00:00"}
+{"data": {"command": null, "created_at": "2026-06-17T21:06:48+00:00", "id": "E-0004", "kind": "decision", "path": null, "result": "info", "stage": "delivery", "summary": "Human approved delivery handoff and will perform staging, commit, and delivery manually."}, "event": "evidence.recorded", "time": "2026-06-17T21:06:48+00:00"}
+{"data": {"has_response": true, "tool_name": "Bash", "tool_use_id": "call_NceMmFoTGt1ZKfRj5WxaT22T"}, "event": "agentic.tool", "time": "2026-06-17T21:06:51+00:00"}
+{"data": {"has_response": true, "tool_name": "apply_patch", "tool_use_id": "call_8MIHAXuhHdtQC25UCdbkIULG"}, "event": "agentic.tool", "time": "2026-06-17T21:06:58+00:00"}
+{"data": {"has_response": true, "tool_name": "Bash", "tool_use_id": "call_kZV5QDztOTacc9NRQX7YKVpc"}, "event": "agentic.tool", "time": "2026-06-17T21:07:19+00:00"}
+{"data": {"has_response": true, "tool_name": "Bash", "tool_use_id": "call_SZyD7gVpuCGcVq4gqnv4RyqC"}, "event": "agentic.tool", "time": "2026-06-17T21:07:23+00:00"}
+{"data": {"has_response": true, "tool_name": "Bash", "tool_use_id": "call_x3bE2apO1ibi1FBT5lePCHj1"}, "event": "agentic.tool", "time": "2026-06-17T21:07:47+00:00"}

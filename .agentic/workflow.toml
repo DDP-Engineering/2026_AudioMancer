@@ -53,6 +53,6 @@ patterns = [
 intake = [".agentic/**"]
 requirement = [".agentic/specs/**", ".agentic/requirements/**"]
 check = ["04_Software/AudioMancer/tests/**"]
-implementation = ["04_Software/AudioMancer/src/**", "04_Software/AudioMancer/tests/**", "05_SoftwareDocu/**", "HowToTest*.md", "CHANGELOG.md"]
+implementation = ["04_Software/AudioMancer/src/**", "04_Software/AudioMancer/tests/**", "02_Tools/audits/**", "05_SoftwareDocu/**", ".codex/skills/**", "HowToTest*.md", "CHANGELOG.md"]
 validation = []
 delivery = [".agentic/**", "CHANGELOG.md", "07_Delivery/**", "README.MD"]
