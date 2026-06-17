@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-  # noqa: UP009
 # -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
@@ -7,10 +9,10 @@
 """
 @file test_traceability.py
 @brief Requirement traceability and coverage gate tests.
-@details Activates REQ-AUDIO-TEST-006 and REQ-AUDIO-TEST-007 as automated gates.
-         REQ-AUDIO-TEST-006: every linked test node in the registers resolves to
+@details Activates REQ-TEST-006 and REQ-TEST-007 as automated gates.
+         REQ-TEST-006: every linked test node in the registers resolves to
          a real test and every Active requirement declares a verification method.
-         REQ-AUDIO-TEST-007: every service and controller module is covered by a
+         REQ-TEST-007: every service and controller module is covered by a
          test-linked requirement or a recorded waiver.
 @author Eng. Dan Dumitru Pasare
 @date 2026-06-09
@@ -56,7 +58,6 @@ if str(_AUDIT_TOOLS) not in sys.path:
 import audit_requirement_coverage  # noqa: E402
 import audit_traceability  # noqa: E402
 
-
 # TESTS
 
 
@@ -64,7 +65,7 @@ import audit_traceability  # noqa: E402
 def test_all_linked_requirement_tests_resolve() -> None:
     """
     @brief      Assert every linked requirement test node resolves to a test.
-    @details    Verifies REQ-AUDIO-TEST-006 link integrity.
+    @details    Verifies REQ-TEST-006 link integrity.
     @return     None.
     @exception  AssertionError Raised when a linked test node is unresolved.
     @author     Eng. Dan Dumitru Pasare
@@ -73,16 +74,14 @@ def test_all_linked_requirement_tests_resolve() -> None:
     """
     issues = audit_traceability.audit_issues(_ROOT)
     unresolved = [issue for issue in issues if issue.code == "REQ-LINK-MISSING"]
-    assert not unresolved, "\n".join(
-        f"{issue.path}:{issue.line} {issue.message}" for issue in unresolved
-    )
+    assert not unresolved, "\n".join(f"{issue.path}:{issue.line} {issue.message}" for issue in unresolved)
 
 
 @pytest.mark.service
 def test_active_requirements_declare_verification() -> None:
     """
     @brief      Assert every Active requirement declares a verification method.
-    @details    Verifies REQ-AUDIO-TEST-006 verification completeness.
+    @details    Verifies REQ-TEST-006 verification completeness.
     @return     None.
     @exception  AssertionError Raised when an Active requirement lacks verification.
     @author     Eng. Dan Dumitru Pasare
@@ -91,16 +90,14 @@ def test_active_requirements_declare_verification() -> None:
     """
     issues = audit_traceability.audit_issues(_ROOT)
     missing = [issue for issue in issues if issue.code == "REQ-NO-VERIFICATION"]
-    assert not missing, "\n".join(
-        f"{issue.path}:{issue.line} {issue.message}" for issue in missing
-    )
+    assert not missing, "\n".join(f"{issue.path}:{issue.line} {issue.message}" for issue in missing)
 
 
 @pytest.mark.service
 def test_services_and_controllers_have_test_coverage() -> None:
     """
     @brief      Assert service and controller modules carry coverage or a waiver.
-    @details    Verifies REQ-AUDIO-TEST-007 per-module coverage floor.
+    @details    Verifies REQ-TEST-007 per-module coverage floor.
     @return     None.
     @exception  AssertionError Raised when a module is uncovered and unwaived.
     @author     Eng. Dan Dumitru Pasare
@@ -108,9 +105,7 @@ def test_services_and_controllers_have_test_coverage() -> None:
     @version    0.1.0
     """
     issues = audit_requirement_coverage.coverage_issues(_ROOT)
-    assert not issues, "\n".join(
-        f"{issue.path} [{issue.code}] {issue.message}" for issue in issues
-    )
+    assert not issues, "\n".join(f"{issue.path} [{issue.code}] {issue.message}" for issue in issues)
 
 
 # END OF FILE

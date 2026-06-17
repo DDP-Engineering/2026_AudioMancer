@@ -87,7 +87,7 @@ def test_build_character_state_exposes_manual_maintenance_flags(tmp_path) -> Non
 
 def test_build_character_state_uses_loaded_chunks_without_discovery_enrichment(monkeypatch, tmp_path) -> None:
     """
-    @brief      Verify REQ-AUDIO-FUNC-013 page state avoids discovery chunk enrichment during refresh.
+    @brief      Verify REQ-FUNC-013 page state avoids discovery chunk enrichment during refresh.
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.

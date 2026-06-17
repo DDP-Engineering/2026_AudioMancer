@@ -131,7 +131,7 @@ def test_speech_blocks_page_chunk_list_uses_one_line_full_preview(qtbot) -> None
 def test_speech_blocks_page_header_uses_compact_buttons_and_wider_profile(qtbot) -> None:
     """
     @brief      Verify Speech Blocks header controls fit on one visible row.
-    @details    Covers REQ-AUDIO-UX-033.
+    @details    Covers REQ-UX-033.
     @param[in]  qtbot Qt test helper fixture.
     @return     None.
     @exception  None

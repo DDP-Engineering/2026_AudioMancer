@@ -104,7 +104,7 @@ def test_text_cleanup_page_updates_previews_and_status(qtbot) -> None:
     assert page._status_edit.toPlainText() == "Warning A\nWarning B"
     # Status pane is an undecorated, flush, three-row container: no group-box title
     # or frame, a fixed font-aware three-row height, and its text edit fills the band
-    # with zero internal margins (REQ-AUDIO-UX-032).
+    # with zero internal margins (REQ-UX-032).
     expected_status_height = ui_state_service.operator_status_pane_height(page._status_edit)
     assert page._status_group.minimumHeight() == expected_status_height
     assert page._status_group.maximumHeight() == expected_status_height

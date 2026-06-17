@@ -622,7 +622,7 @@ def test_character_voices_ui_controller_batch_targets_only_generatable_character
 
 def test_character_sample_generation_cancel_during_model_load(monkeypatch, tmp_path) -> None:
     """
-    @brief      Verify REQ-AUDIO-UX-010 wires cancellation into Character Voices runtime polling.
+    @brief      Verify REQ-UX-010 wires cancellation into Character Voices runtime polling.
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
@@ -711,7 +711,7 @@ def test_character_sample_generation_cancel_during_model_load(monkeypatch, tmp_p
 
 def test_failed_character_sample_generation_preserves_existing_sample(monkeypatch, tmp_path) -> None:
     """
-    @brief      Verify REQ-AUDIO-UX-010 failed Character Voices generation keeps the previous sample intact.
+    @brief      Verify REQ-UX-010 failed Character Voices generation keeps the previous sample intact.
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.

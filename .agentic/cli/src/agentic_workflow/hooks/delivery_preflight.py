@@ -1,0 +1,50 @@
+# Copyright (c) 2026 DDP Engineering
+# This software is licensed under the GNU Affero General Public License v3.0
+# (AGPL-3.0) with additional Non-Commercial restriction.
+# See the LICENSE.txt and LICENSE_NC.txt files for full license details.
+
+from __future__ import annotations
+
+import json
+import subprocess
+import sys
+from pathlib import Path
+
+DELIVERY_PATTERNS = ("git push", "gh pr create", "git merge")
+
+
+def main() -> int:
+    payload = json.load(sys.stdin)
+    if payload.get("hook_event_name") != "PreToolUse":
+        return 0
+    if payload.get("tool_name") != "Bash":
+        return 0
+    command = payload.get("tool_input", {}).get("command", "")
+    normalized = " ".join(command.lower().split())
+    if not any(pattern in normalized for pattern in DELIVERY_PATTERNS):
+        return 0
+    cwd = Path(payload.get("cwd") or ".").resolve()
+    result = subprocess.run(
+        [sys.executable, "-m", "agentic_workflow", "delivery-preflight"],
+        cwd=cwd,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    if result.returncode != 0:
+        print(
+            json.dumps(
+                {
+                    "hookSpecificOutput": {
+                        "hookEventName": "PreToolUse",
+                        "permissionDecision": "deny",
+                        "permissionDecisionReason": "Delivery preflight failed. Resolve blocking invariants before publishing.",
+                    }
+                }
+            )
+        )
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

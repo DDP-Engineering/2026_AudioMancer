@@ -146,7 +146,7 @@ def test_build_ai_translation_state_does_not_auto_finalize_same_language(tmp_pat
 
 def test_build_ai_translation_state_does_not_write_unchanged_records(monkeypatch, tmp_path) -> None:
     """
-    @brief      Verify REQ-AUDIO-FUNC-005 page state build stays read-only when records are synchronized.
+    @brief      Verify REQ-FUNC-005 page state build stays read-only when records are synchronized.
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
@@ -194,6 +194,12 @@ def test_build_ai_translation_state_does_not_write_unchanged_records(monkeypatch
     writes = []
 
     def fail_on_write_json_atomic(path, payload, **kwargs):
+        """
+        @brief      Fail the test if page-state construction attempts persistence.
+        @return     None.
+        @exception  AssertionError Always raised for this test double.
+        @version    0.1.0
+        """
         writes.append(path)
         raise AssertionError(f"Unexpected translation write: {path}")
 

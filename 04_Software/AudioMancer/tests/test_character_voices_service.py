@@ -155,7 +155,7 @@ def test_selected_voice_language_persists(tmp_path) -> None:
 
 def test_character_voices_targets_use_atomic_json_writer(monkeypatch, tmp_path) -> None:
     """
-    @brief      Verify REQ-AUDIO-FUNC-014 persists Character Voices target JSON atomically.
+    @brief      Verify REQ-FUNC-014 persists Character Voices target JSON atomically.
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
@@ -288,7 +288,7 @@ def test_import_target_sample_persists_character_sample_metadata(tmp_path) -> No
 
 def test_character_sample_audio_uses_atomic_byte_writer(monkeypatch, tmp_path) -> None:
     """
-    @brief      Verify REQ-AUDIO-FUNC-014 persists generated character sample WAV bytes atomically.
+    @brief      Verify REQ-FUNC-014 persists generated character sample WAV bytes atomically.
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
@@ -461,7 +461,7 @@ def test_same_narrator_sync_copies_selected_narrator_sample_to_each_character(tm
 
 def test_same_narrator_sync_skips_unchanged_copied_samples(monkeypatch, tmp_path) -> None:
     """
-    @brief      Verify REQ-AUDIO-FUNC-014 leaves unchanged same-narrator copied samples untouched.
+    @brief      Verify REQ-FUNC-014 leaves unchanged same-narrator copied samples untouched.
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.

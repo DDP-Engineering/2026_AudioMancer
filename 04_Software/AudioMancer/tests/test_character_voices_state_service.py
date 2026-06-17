@@ -217,7 +217,7 @@ def test_state_missing_narrator_sample_surfaces_warning(tmp_path) -> None:
 
 def test_state_refresh_is_read_only_when_character_voices_are_unchanged(monkeypatch, tmp_path) -> None:
     """
-    @brief      Verify REQ-AUDIO-FUNC-015 builds unchanged Character Voices page state without persistence writes.
+    @brief      Verify REQ-FUNC-015 builds unchanged Character Voices page state without persistence writes.
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.

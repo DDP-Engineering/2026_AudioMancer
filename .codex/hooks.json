@@ -1,0 +1,47 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "apply_patch|Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python .agentic/hooks/guard_write_zone.py",
+            "commandWindows": "python .agentic\\hooks\\guard_write_zone.py",
+            "statusMessage": "Checking agentic write zone"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python .agentic/hooks/secret_scan.py",
+            "commandWindows": "python .agentic\\hooks\\secret_scan.py",
+            "statusMessage": "Checking command for secrets"
+          },
+          {
+            "type": "command",
+            "command": "python .agentic/hooks/delivery_preflight.py",
+            "commandWindows": "python .agentic\\hooks\\delivery_preflight.py",
+            "statusMessage": "Checking delivery preflight"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Bash|apply_patch|Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python .agentic/hooks/post_tool_evidence.py",
+            "commandWindows": "python .agentic\\hooks\\post_tool_evidence.py",
+            "statusMessage": "Recording agentic tool evidence"
+          }
+        ]
+      }
+    ]
+  }
+}

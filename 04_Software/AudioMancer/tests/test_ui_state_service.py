@@ -100,7 +100,7 @@ def test_translate_returns_expected_english_and_romanian_strings() -> None:
 def test_operator_status_pane_height_scales_with_line_count(qtbot) -> None:
     """
     @brief      Verify the operator-status pane height follows the requested row count.
-    @details    Covers REQ-AUDIO-UX-032: the status pane uses a compact, font-aware
+    @details    Covers REQ-UX-032: the status pane uses a compact, font-aware
                 three-row height derived from the reference widget font metrics.
     @param[in]  qtbot Qt test helper fixture.
     @return     None.

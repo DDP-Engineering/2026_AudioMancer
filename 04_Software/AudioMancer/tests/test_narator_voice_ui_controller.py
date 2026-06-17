@@ -307,6 +307,12 @@ def test_narator_voice_select_profile_with_audio_blocks_shows_progress(monkeypat
         return original_create(*args, **kwargs)
 
     def _capture_remove_audio_blocks(*args, **kwargs):
+        """
+        @brief      Assert the page stays busy while downstream audio is reset.
+        @return     Wrapped audio-block removal result.
+        @exception  AssertionError Raised when busy-state expectations fail.
+        @version    0.1.0
+        """
         assert window._narator_voice_page._busy is True
         assert kwargs["collect_preserved_paths"] is False
         return original_remove_audio_blocks(*args, **kwargs)
@@ -630,7 +636,7 @@ def test_narator_voice_generate_sample_reprobes_runtime_and_stores_audio(monkeyp
 
 def test_narator_voice_generate_sample_passes_cancel_to_voiceweaver_waits(monkeypatch, tmp_path) -> None:
     """
-    @brief      Verify REQ-AUDIO-FUNC-024 sample generation passes cooperative cancellation to runtime polls.
+    @brief      Verify REQ-FUNC-024 sample generation passes cooperative cancellation to runtime polls.
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
@@ -745,7 +751,7 @@ def test_narator_voice_generate_sample_passes_cancel_to_voiceweaver_waits(monkey
 
 def test_narator_voice_generate_sample_failure_preserves_previous_sample(monkeypatch, tmp_path) -> None:
     """
-    @brief      Verify REQ-AUDIO-FUNC-024 failed sample generation preserves the previous profile sample.
+    @brief      Verify REQ-FUNC-024 failed sample generation preserves the previous profile sample.
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.

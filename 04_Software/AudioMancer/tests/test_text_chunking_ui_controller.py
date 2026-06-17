@@ -368,7 +368,7 @@ def test_text_chunking_ui_controller_ai_chunk_cancelled_resume_skips_confirmatio
     tmp_path,
 ) -> None:
     """
-    @brief      Verify REQ-AUDIO-FUNC-001 cancelled AI chunking resumes without rerun confirmation.
+    @brief      Verify REQ-FUNC-001 cancelled AI chunking resumes without rerun confirmation.
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @param[in]  qtbot Qt test helper fixture.
     @param[in]  tmp_path Pytest temporary directory fixture.

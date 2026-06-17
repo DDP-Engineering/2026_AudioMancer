@@ -9,14 +9,14 @@
 """
 @file audit_traceability.py
 @brief Audit requirement-to-test traceability for AudioMancer registers.
-@details Implements REQ-AUDIO-TEST-006. Verifies that every linked test node in
+@details Implements REQ-TEST-006. Verifies that every linked test node in
          the requirement registers resolves to a real test, and that every
          Active requirement names a resolvable automated test or an explicit
          manual verification method. Test nodes are resolved by static analysis
          by default, or by pytest collection with `--collect`.
 @author Eng. Dan Dumitru Pasare
 @date 2026-06-09
-@version 0.2.0
+@version 0.3.0
 """
 
 # IMPORTS
@@ -68,11 +68,12 @@ def _parse_node_ids(text: str) -> set[str]:
         candidate = raw_line.strip()
         if "::" not in candidate or not candidate.startswith("tests/"):
             continue
-        nodes.add(candidate)
+        node_id = f"{APP_DIR.as_posix()}/{candidate}"
+        nodes.add(node_id)
         # Also register a file::function alias so class-method node IDs match
         # function-style register links.
         if candidate.count("::") >= 2:
-            file_part = candidate.split("::", maxsplit=1)[0]
+            file_part = node_id.split("::", maxsplit=1)[0]
             last = candidate.rsplit("::", maxsplit=1)[-1]
             nodes.add(f"{file_part}::{last}")
     return nodes
@@ -86,7 +87,7 @@ def collect_pytest_nodes(app_dir: Path) -> set[str]:
     @exception  RuntimeError Raised when no pytest runner can collect tests.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-06-09
-    @version    0.1.0
+    @version    0.2.0
     """
     last_error = "no pytest runner available"
     for command in PYTEST_COLLECT_COMMANDS:
@@ -162,7 +163,11 @@ def evaluate_requirement(
                     message=f"{requirement.id} links unresolved test file {node_id}.",
                 )
             )
-    if requirement.is_active and not requirement.linked_tests and not requirement.has_manual_verification:
+    if (
+        requirement.is_active
+        and not requirement.linked_tests
+        and not requirement.has_manual_verification
+    ):
         issues.append(
             AuditIssue(
                 path=requirement.source_file,

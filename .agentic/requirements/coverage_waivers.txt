@@ -1,0 +1,28 @@
+# AudioMancer requirement coverage waivers (REQ-TEST-007)
+#
+# One repository-relative module path per line. A module listed here is exempt
+# from the per-module requirement coverage gate. Lines starting with '#' and
+# blank lines are ignored.
+#
+# Purpose: this file records pre-existing coverage gaps so the coverage gate
+# passes today while still blocking NEW untested service or controller modules.
+# Each entry is a debt to retire: add a requirement with a linked automated test
+# for the module, then delete its line here. The audit reports stale waivers
+# (code REQ-COVERAGE-STALE-WAIVER) once a waived module becomes covered, so this
+# list cannot silently rot.
+#
+# Do not add new modules here to bypass the gate. New service and controller
+# modules must ship with a requirement and a linked test.
+
+# --- Services (pre-existing gaps) ---
+04_Software/AudioMancer/src/audiomancer/services/cleanup_text_analysis_service.py
+04_Software/AudioMancer/src/audiomancer/services/time_service.py
+04_Software/AudioMancer/src/audiomancer/services/token_usage_service.py
+04_Software/AudioMancer/src/audiomancer/services/tts_budget_service.py
+
+# --- UI controllers (pre-existing gaps) ---
+04_Software/AudioMancer/src/audiomancer/ui/controllers/ai_settings_ui_controller.py
+04_Software/AudioMancer/src/audiomancer/ui/controllers/misc_ui_controller.py
+04_Software/AudioMancer/src/audiomancer/ui/controllers/settings_ui_controller.py
+04_Software/AudioMancer/src/audiomancer/ui/controllers/tts_runtime_ui_support.py
+04_Software/AudioMancer/src/audiomancer/ui/controllers/tts_settings_ui_controller.py

@@ -564,7 +564,7 @@ def test_ai_chunking_uses_cleanup_metadata_paragraph_ids(tmp_path, monkeypatch) 
 
 def test_ai_chunking_resumes_from_saved_window_checkpoint(tmp_path, monkeypatch) -> None:
     """
-    @brief      Verify REQ-AUDIO-FUNC-001 interrupted AI chunking resumes from the next unfinished window.
+    @brief      Verify REQ-FUNC-001 interrupted AI chunking resumes from the next unfinished window.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @return     None.
@@ -701,7 +701,7 @@ def test_ai_chunking_resumes_from_saved_window_checkpoint(tmp_path, monkeypatch)
 
 def test_ai_running_state_reuses_prebuilt_chunks(tmp_path, monkeypatch) -> None:
     """
-    @brief      Verify REQ-AUDIO-NFR-015 AI checkpoint state does not rebuild already prepared chunks.
+    @brief      Verify REQ-NFR-015 AI checkpoint state does not rebuild already prepared chunks.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @return     None.

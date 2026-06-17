@@ -1,0 +1,58 @@
+# Copyright (c) 2026 DDP Engineering
+# This software is licensed under the GNU Affero General Public License v3.0
+# (AGPL-3.0) with additional Non-Commercial restriction.
+# See the LICENSE.txt and LICENSE_NC.txt files for full license details.
+
+# AudioMancer workflow configuration.
+
+[source]
+roots = ["04_Software/AudioMancer/src/audiomancer"]
+
+[tests]
+roots = ["04_Software/AudioMancer/tests"]
+
+[spec]
+roots = [".agentic/specs"]
+
+[requirements]
+roots = [".agentic/requirements"]
+
+[documentation]
+roots = ["05_SoftwareDocu"]
+component_template = "05_SoftwareDocu/component_documentation_template.md"
+
+[traceability]
+language = "python"
+source_extensions = [".py"]
+coverable_roots = [
+  "04_Software/AudioMancer/src/audiomancer/services",
+  "04_Software/AudioMancer/src/audiomancer/ui/controllers"
+]
+coverable_exclude = ["__init__.py"]
+test_file_patterns = ["test_*.py", "*_test.py"]
+
+[gates]
+test = [
+  "04_Software/AudioMancer/.venv/Scripts/python.exe 02_Tools/audits/audit_traceability.py",
+  "04_Software/AudioMancer/.venv/Scripts/python.exe 02_Tools/audits/audit_requirement_coverage.py",
+  "04_Software/AudioMancer/.venv/Scripts/python.exe -m pytest -q 04_Software/AudioMancer/tests/test_traceability.py"
+]
+lint = [
+  "04_Software/AudioMancer/.venv/Scripts/python.exe 02_Tools/audits/audit_codestyle.py --changed-only"
+]
+
+[secrets]
+patterns = [
+  "sk-[A-Za-z0-9_-]{20,}",
+  "ghp_[A-Za-z0-9_]{20,}",
+  "AKIA[0-9A-Z]{16}",
+  "-----BEGIN (RSA |OPENSSH |EC )?PRIVATE KEY-----"
+]
+
+[write_zones]
+intake = [".agentic/**"]
+requirement = [".agentic/specs/**", ".agentic/requirements/**"]
+check = ["04_Software/AudioMancer/tests/**"]
+implementation = ["04_Software/AudioMancer/src/**", "04_Software/AudioMancer/tests/**", "05_SoftwareDocu/**", "HowToTest*.md", "CHANGELOG.md"]
+validation = []
+delivery = [".agentic/**", "CHANGELOG.md", "07_Delivery/**", "README.MD"]

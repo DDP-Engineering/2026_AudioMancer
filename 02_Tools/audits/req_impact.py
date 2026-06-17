@@ -14,7 +14,7 @@
          changed implementation files that no requirement currently covers.
 @author Eng. Dan Dumitru Pasare
 @date 2026-06-09
-@version 0.1.0
+@version 0.2.0
 """
 
 # IMPORTS
@@ -91,13 +91,13 @@ def _component_targets(requirement: Requirement) -> set[str]:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-06-09
-    @version    0.1.0
+    @version    0.2.0
     """
     targets: set[str] = set()
     for component in requirement.related_components:
         targets.add(_normalize(component))
     for node_id in requirement.linked_tests:
-        targets.add(_normalize(APP_DIR / linked_test_file(node_id)))
+        targets.add(_normalize(linked_test_file(node_id)))
     return targets
 
 
@@ -143,7 +143,9 @@ def analyze(changed: list[Path], requirements: list[Requirement]) -> list[FileIm
     @date       2026-06-09
     @version    0.1.0
     """
-    targets = [(requirement, _component_targets(requirement)) for requirement in requirements]
+    targets = [
+        (requirement, _component_targets(requirement)) for requirement in requirements
+    ]
     exact_components = {
         _normalize(component)
         for requirement in requirements
@@ -161,7 +163,9 @@ def analyze(changed: list[Path], requirements: list[Requirement]) -> list[FileIm
         impact.linked_tests = sorted(set(impact.linked_tests))
         # Per-module coverage requires a file-level requirement, not a broad
         # directory-level one such as the cross-cutting security or platform rows.
-        impact.uncovered = _is_coverable(changed_norm) and changed_norm not in exact_components
+        impact.uncovered = (
+            _is_coverable(changed_norm) and changed_norm not in exact_components
+        )
         impacts.append(impact)
     return impacts
 
@@ -195,7 +199,9 @@ def _render_text(impacts: list[FileImpact]) -> str:
         else:
             lines.append("  requirements: none")
     lines.append("\nSummary")
-    lines.append(f"  impacted requirements: {', '.join(sorted(all_requirements)) or 'none'}")
+    lines.append(
+        f"  impacted requirements: {', '.join(sorted(all_requirements)) or 'none'}"
+    )
     lines.append(f"  uncovered files: {', '.join(uncovered) or 'none'}")
     return "\n".join(lines)
 

@@ -16,7 +16,7 @@ repositories that use a different language or environment.
 The workflow treats three things as one contract that must always agree:
 
 - **Requirements** - plain statements of what the application must do, stored as
-  Markdown tables under `0_Planning/Requirements/` (the registers).
+  Markdown tables under `.agentic/requirements/` (the registers).
 - **Tests** - the automated checks that prove each requirement is true.
 - **Code** - the implementation under `04_Software/AudioMancer/`.
 
@@ -69,10 +69,10 @@ mechanically:
 - `audit_traceability.py` reads every register, discovers every real test in the
   suite, and reports if a requirement points at a test that no longer exists, or
   if an Active requirement has no automated test and no manual method.
-  Implements `REQ-AUDIO-TEST-006`.
+  Implements `REQ-TEST-006`.
 - `audit_requirement_coverage.py` checks that every code module under
   `services/` and `ui/controllers/` is covered by a test-linked requirement, or
-  is listed in the waiver file. Implements `REQ-AUDIO-TEST-007`.
+  is listed in the waiver file. Implements `REQ-TEST-007`.
 - `req_impact.py` answers "if I change these files, which requirements and tests
   does that touch?" This makes the check-impact-first rule practical.
 - `requirements_lib.py` is the shared parser for the register tables and the
@@ -85,8 +85,8 @@ rules can be forgotten, but the gate cannot.
 
 ## 3. Supporting Files
 
-- `0_Planning/Requirements/*.md` - the requirement registers, one file per type.
-- `0_Planning/Requirements/coverage_waivers.txt` - the recorded list of
+- `.agentic/requirements/*.md` - the requirement registers, one file per type.
+- `.agentic/requirements/coverage_waivers.txt` - the recorded list of
   pre-existing coverage gaps. It lets the coverage gate pass today while still
   blocking new untested modules. Each entry is a debt to retire: add a
   requirement and a test for the module, then delete its line. The audit reports
@@ -188,10 +188,10 @@ test looks like in a given language needs a local translation.
 
 ## 6. Related Requirements
 
-- `REQ-AUDIO-TEST-006` - linked test nodes resolve and Active requirements
+- `REQ-TEST-006` - linked test nodes resolve and Active requirements
   declare a verification method.
-- `REQ-AUDIO-TEST-007` - every service and controller module is covered by a
+- `REQ-TEST-007` - every service and controller module is covered by a
   test-linked requirement or a recorded waiver.
-- `REQ-AUDIO-TEST-008` - a clean full test run gates any release.
-- `REQ-AUDIO-TEST-009` - the documentation audit gates any release.
-- `REQ-AUDIO-TEST-010` - a deterministic end-to-end pipeline smoke test (planned).
+- `REQ-TEST-008` - a clean full test run gates any release.
+- `REQ-TEST-009` - the documentation audit gates any release.
+- `REQ-TEST-010` - a deterministic end-to-end pipeline smoke test (planned).

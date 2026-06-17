@@ -200,7 +200,7 @@ def test_chunking_falls_back_when_cleanup_metadata_is_missing(tmp_path) -> None:
 
 def test_chunking_persists_resumable_state_after_cancellation(tmp_path) -> None:
     """
-    @brief      Verify REQ-AUDIO-FUNC-017 cancelled chunking leaves resumable terminal state on disk.
+    @brief      Verify REQ-FUNC-017 cancelled chunking leaves resumable terminal state on disk.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
@@ -253,7 +253,7 @@ def test_chunking_persists_resumable_state_after_cancellation(tmp_path) -> None:
 
 def test_chunking_batches_checkpoints_without_full_chapter_rescans(tmp_path, monkeypatch) -> None:
     """
-    @brief      Verify REQ-AUDIO-NFR-015 deterministic chunking avoids per-paragraph persistence and full rescans.
+    @brief      Verify REQ-NFR-015 deterministic chunking avoids per-paragraph persistence and full rescans.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @return     None.
@@ -314,7 +314,7 @@ def test_chunking_batches_checkpoints_without_full_chapter_rescans(tmp_path, mon
 
 def test_incremental_chapter_count_matches_full_scan() -> None:
     """
-    @brief      Verify REQ-AUDIO-NFR-015 incremental chapter counting preserves full-scan semantics.
+    @brief      Verify REQ-NFR-015 incremental chapter counting preserves full-scan semantics.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
@@ -414,7 +414,7 @@ def test_chunking_resumes_after_interruption(tmp_path) -> None:
 
 def test_load_chunks_returns_empty_for_malformed_artifact(tmp_path) -> None:
     """
-    @brief      Verify REQ-AUDIO-FUNC-017 malformed chunk artifacts degrade to an empty chunk list.
+    @brief      Verify REQ-FUNC-017 malformed chunk artifacts degrade to an empty chunk list.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None

@@ -112,6 +112,12 @@ def test_ai_translation_service_adds_operator_prompt_rules(monkeypatch, tmp_path
     )
 
     def fake_chat_json(_profile_payload, _system_prompt, user_prompt, **_kwargs):
+        """
+        @brief      Capture the translation prompt and return a valid fake response.
+        @return     Fake translated text payload.
+        @exception  None
+        @version    0.1.0
+        """
         captured_prompts.append(user_prompt)
         return {
             "payload": {"translated_text": "Translated with style"},
@@ -249,6 +255,12 @@ def test_ai_translation_service_resume_preserves_completed_chunks(monkeypatch, t
     calls = []
 
     def fake_chat_json(*_args, **kwargs):
+        """
+        @brief      Record the transaction log path and return a fake translation.
+        @return     Fake translated text payload.
+        @exception  None
+        @version    0.1.0
+        """
         calls.append(str(kwargs.get("log_path", "")))
         return {
             "payload": {"translated_text": "New translation"},
@@ -284,7 +296,7 @@ def test_ai_translation_service_resume_preserves_completed_chunks(monkeypatch, t
 
 def test_ai_translation_service_uses_single_checkpoint_for_one_resumed_chunk(monkeypatch, tmp_path) -> None:
     """
-    @brief      Verify REQ-AUDIO-FUNC-004 keeps one atomic chunk checkpoint during resume.
+    @brief      Verify REQ-FUNC-004 keeps one atomic chunk checkpoint during resume.
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
@@ -337,6 +349,12 @@ def test_ai_translation_service_uses_single_checkpoint_for_one_resumed_chunk(mon
     translated_artifact_writes = []
 
     def spy_write_json_atomic(path, payload, **kwargs):
+        """
+        @brief      Record translated artifact writes and preserve persistence.
+        @return     None.
+        @exception  None
+        @version    0.1.0
+        """
         if path.name == config.TRANSLATED_CHUNKS_FILE_NAME:
             translated_artifact_writes.append(path)
         original_write_json_atomic(path, payload, **kwargs)
@@ -350,7 +368,7 @@ def test_ai_translation_service_uses_single_checkpoint_for_one_resumed_chunk(mon
 
 def test_ai_translation_service_review_action_writes_artifact_once(monkeypatch, tmp_path) -> None:
     """
-    @brief      Verify REQ-AUDIO-FUNC-004 review approval avoids precondition rewrite churn.
+    @brief      Verify REQ-FUNC-004 review approval avoids precondition rewrite churn.
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
@@ -388,6 +406,12 @@ def test_ai_translation_service_review_action_writes_artifact_once(monkeypatch, 
     translated_artifact_writes = []
 
     def spy_write_json_atomic(path, payload, **kwargs):
+        """
+        @brief      Record translated artifact writes and preserve persistence.
+        @return     None.
+        @exception  None
+        @version    0.1.0
+        """
         if path.name == config.TRANSLATED_CHUNKS_FILE_NAME:
             translated_artifact_writes.append(path)
         original_write_json_atomic(path, payload, **kwargs)
@@ -401,7 +425,7 @@ def test_ai_translation_service_review_action_writes_artifact_once(monkeypatch, 
 
 def test_ai_translation_service_tolerates_malformed_translation_json(tmp_path) -> None:
     """
-    @brief      Verify REQ-AUDIO-FUNC-004 treats malformed translation artifacts as recoverable.
+    @brief      Verify REQ-FUNC-004 treats malformed translation artifacts as recoverable.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
@@ -428,7 +452,7 @@ def test_ai_translation_service_tolerates_malformed_translation_json(tmp_path) -
 
 def test_ai_translation_service_persists_cancelled_state(monkeypatch, tmp_path) -> None:
     """
-    @brief      Verify REQ-AUDIO-FUNC-004 persists cancellation terminal state.
+    @brief      Verify REQ-FUNC-004 persists cancellation terminal state.
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
@@ -465,7 +489,7 @@ def test_ai_translation_service_persists_cancelled_state(monkeypatch, tmp_path) 
 
 def test_ai_translation_service_persists_failed_state(monkeypatch, tmp_path) -> None:
     """
-    @brief      Verify REQ-AUDIO-FUNC-004 persists failure terminal state.
+    @brief      Verify REQ-FUNC-004 persists failure terminal state.
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
@@ -487,6 +511,12 @@ def test_ai_translation_service_persists_failed_state(monkeypatch, tmp_path) -> 
     )
 
     def fail_chat_json(*_args, **_kwargs):
+        """
+        @brief      Raise a provider failure for terminal-state assertions.
+        @return     None.
+        @exception  RuntimeError Always raised for this test double.
+        @version    0.1.0
+        """
         raise RuntimeError("provider unavailable")
 
     monkeypatch.setattr(ai_translation_service.llm_provider_service, "chat_json", fail_chat_json)
@@ -525,6 +555,12 @@ def test_ai_translation_start_same_language_uses_llm(monkeypatch, tmp_path) -> N
     )
 
     def fake_chat_json(_profile_payload, _system_prompt, user_prompt, **_kwargs):
+        """
+        @brief      Capture same-language prompts and return distinct fake text.
+        @return     Fake translated text payload.
+        @exception  None
+        @version    0.1.0
+        """
         calls.append(user_prompt)
         return {
             "payload": {"translated_text": f"LLM same-language text {len(calls)}"},

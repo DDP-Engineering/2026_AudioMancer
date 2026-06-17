@@ -198,7 +198,7 @@ def test_narrator_profile_generation_invalid_response_leaves_profiles_unchanged(
     mock_prompt_environment,
 ) -> None:
     """
-    @brief      Verify REQ-AUDIO-FUNC-026 invalid AI output is rejected and persists failed state.
+    @brief      Verify REQ-FUNC-026 invalid AI output is rejected and persists failed state.
     @param[in]  tmp_path Temporary path fixture.
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @param[in]  mock_prompt_environment Prompt-root fixture.
@@ -380,7 +380,7 @@ def test_narrator_profile_generation_cancellation_leaves_profiles_unchanged(
     mock_prompt_environment,
 ) -> None:
     """
-    @brief      Verify REQ-AUDIO-FUNC-026 cancellation before AI generation persists cancelled state.
+    @brief      Verify REQ-FUNC-026 cancellation before AI generation persists cancelled state.
     @param[in]  tmp_path Temporary path fixture.
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @param[in]  mock_prompt_environment Prompt-root fixture.

@@ -48,7 +48,7 @@ def test_narrator_service_starts_without_predefined_profiles(tmp_path) -> None:
 
 def test_narrator_service_treats_torn_profile_json_as_empty_data(tmp_path) -> None:
     """
-    @brief      Verify REQ-AUDIO-FUNC-024 handles malformed narrator profile JSON without crashing.
+    @brief      Verify REQ-FUNC-024 handles malformed narrator profile JSON without crashing.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
@@ -229,7 +229,7 @@ def test_narrator_service_imports_profile_sample_and_marks_selected_metadata(tmp
 
 def test_narrator_service_treats_torn_selected_sample_metadata_as_missing(tmp_path) -> None:
     """
-    @brief      Verify REQ-AUDIO-FUNC-024 falls back when selected narrator sample metadata is malformed.
+    @brief      Verify REQ-FUNC-024 falls back when selected narrator sample metadata is malformed.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None

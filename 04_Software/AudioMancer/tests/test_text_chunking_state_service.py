@@ -82,7 +82,7 @@ def test_build_text_chunking_notes_shows_resume_note_for_failed_ai_chunking() ->
 
 def test_build_text_chunking_notes_shows_resume_note_for_cancelled_chunking() -> None:
     """
-    @brief      Verify REQ-AUDIO-FUNC-034 cancelled chunking shows the resumable note.
+    @brief      Verify REQ-FUNC-034 cancelled chunking shows the resumable note.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare

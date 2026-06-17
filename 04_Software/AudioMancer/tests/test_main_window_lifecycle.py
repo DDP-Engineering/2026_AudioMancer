@@ -106,7 +106,7 @@ def test_main_window_can_be_created(qtbot, default_settings_payload) -> None:
 def test_main_window_navigation_is_a_left_vertical_sidebar(qtbot, default_settings_payload) -> None:
     """
     @brief      Verify workflow navigation renders as a fixed-width vertical left sidebar.
-    @details    Covers REQ-AUDIO-UX-032: the sidebar list sits left of the page
+    @details    Covers REQ-UX-032: the sidebar list sits left of the page
                 stack with a fixed 160 px width and vertical top-to-bottom flow,
                 and the page stack takes the remaining window space.
     @param[in]  qtbot Qt test helper fixture.

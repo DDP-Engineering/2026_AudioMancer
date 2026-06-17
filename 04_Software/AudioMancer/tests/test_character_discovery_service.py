@@ -449,7 +449,7 @@ def test_start_discovery_resumes_from_saved_synthesis_checkpoint(monkeypatch, tm
 
 def test_character_discovery_tolerates_malformed_profiles_and_report(tmp_path) -> None:
     """
-    @brief      Verify REQ-AUDIO-FUNC-012 malformed Character Discovery artifacts degrade to missing data.
+    @brief      Verify REQ-FUNC-012 malformed Character Discovery artifacts degrade to missing data.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
     @exception  None
@@ -468,7 +468,7 @@ def test_character_discovery_tolerates_malformed_profiles_and_report(tmp_path) -
 
 def test_start_discovery_persists_cancelled_state_and_resumes_synthesis(monkeypatch, tmp_path) -> None:
     """
-    @brief      Verify REQ-AUDIO-FUNC-012 cancelled synthesis persists a resumable checkpoint without repeating windows.
+    @brief      Verify REQ-FUNC-012 cancelled synthesis persists a resumable checkpoint without repeating windows.
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
@@ -546,7 +546,7 @@ def test_start_discovery_persists_cancelled_state_and_resumes_synthesis(monkeypa
 
 def test_start_discovery_persists_failed_state(monkeypatch, tmp_path) -> None:
     """
-    @brief      Verify REQ-AUDIO-FUNC-012 synthesis failures persist a failed checkpoint.
+    @brief      Verify REQ-FUNC-012 synthesis failures persist a failed checkpoint.
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
@@ -591,7 +591,7 @@ def test_start_discovery_persists_failed_state(monkeypatch, tmp_path) -> None:
 
 def test_start_discovery_builds_windows_once(monkeypatch, tmp_path) -> None:
     """
-    @brief      Verify REQ-AUDIO-NFR-017 discovery startup avoids duplicate full-window construction.
+    @brief      Verify REQ-NFR-017 discovery startup avoids duplicate full-window construction.
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @param[in]  tmp_path Pytest temporary directory fixture.
     @return     None.
@@ -1195,7 +1195,7 @@ def test_merge_character_candidates_reports_rejected_non_dialogue_candidates() -
 
 def test_group_character_candidates_matches_legacy_first_match_order() -> None:
     """
-    @brief      Verify REQ-AUDIO-NFR-017 indexed identity grouping preserves legacy first-match semantics.
+    @brief      Verify REQ-NFR-017 indexed identity grouping preserves legacy first-match semantics.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare

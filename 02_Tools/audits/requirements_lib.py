@@ -9,12 +9,12 @@
 """
 @file requirements_lib.py
 @brief Shared parser for AudioMancer requirement register tables.
-@details Reads the Markdown requirement registers under `0_Planning/Requirements/`
+@details Reads the Markdown requirement registers under `.agentic/requirements/`
          into structured records so traceability, coverage, and impact tools can
          share one source of truth for register parsing and test-node discovery.
 @author Eng. Dan Dumitru Pasare
 @date 2026-06-09
-@version 0.2.0
+@version 0.3.0
 """
 
 # IMPORTS
@@ -27,9 +27,9 @@ from pathlib import Path
 
 # CONSTANTS
 
-REGISTER_DIR = Path("0_Planning/Requirements")
+REGISTER_DIR = Path(".agentic/requirements")
 REGISTER_README = "README.md"
-REQUIREMENT_ID_PREFIX = "REQ-AUDIO"
+REQUIREMENT_ID_PREFIX = "REQ-"
 APP_DIR = Path("04_Software/AudioMancer")
 TESTS_DIR = Path("tests")
 TEST_FILE_PREFIX = "test_"
@@ -233,9 +233,12 @@ def linked_test_file(node_id: str) -> str:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-06-09
-    @version    0.1.0
+    @version    0.2.0
     """
-    return node_id.split("::", maxsplit=1)[0]
+    file_part = node_id.split("::", maxsplit=1)[0]
+    if file_part.startswith(f"{APP_DIR.as_posix()}/"):
+        return file_part
+    return (APP_DIR / file_part).as_posix()
 
 
 def collect_defined_test_nodes(app_dir: Path) -> set[str]:
@@ -250,7 +253,7 @@ def collect_defined_test_nodes(app_dir: Path) -> set[str]:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-06-09
-    @version    0.1.0
+    @version    0.2.0
     """
     tests_root = app_dir / TESTS_DIR
     nodes: set[str] = set()
@@ -265,15 +268,18 @@ def collect_defined_test_nodes(app_dir: Path) -> set[str]:
         for item in tree.body:
             if isinstance(item, ast.FunctionDef | ast.AsyncFunctionDef):
                 if item.name.startswith(TEST_FUNCTION_PREFIX):
-                    nodes.add(f"{relative}::{item.name}")
-            elif isinstance(item, ast.ClassDef) and item.name.startswith(TEST_CLASS_PREFIX):
+                    nodes.add(f"{APP_DIR.as_posix()}/{relative}::{item.name}")
+            elif isinstance(item, ast.ClassDef) and item.name.startswith(
+                TEST_CLASS_PREFIX
+            ):
                 for member in item.body:
-                    if (
-                        isinstance(member, ast.FunctionDef | ast.AsyncFunctionDef)
-                        and member.name.startswith(TEST_FUNCTION_PREFIX)
-                    ):
-                        nodes.add(f"{relative}::{item.name}::{member.name}")
-                        nodes.add(f"{relative}::{member.name}")
+                    if isinstance(
+                        member, ast.FunctionDef | ast.AsyncFunctionDef
+                    ) and member.name.startswith(TEST_FUNCTION_PREFIX):
+                        nodes.add(
+                            f"{APP_DIR.as_posix()}/{relative}::{item.name}::{member.name}"
+                        )
+                        nodes.add(f"{APP_DIR.as_posix()}/{relative}::{member.name}")
     return nodes
 
 

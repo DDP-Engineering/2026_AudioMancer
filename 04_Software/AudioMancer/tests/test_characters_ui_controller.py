@@ -113,7 +113,7 @@ def test_character_ui_controller_resume_uses_current_selected_profile(monkeypatc
 
 def test_character_ui_controller_cancelled_state_resumes_without_prompt(monkeypatch, qtbot, tmp_path) -> None:
     """
-    @brief      Verify REQ-AUDIO-FUNC-012 cancelled Character Discovery state is treated as resumable.
+    @brief      Verify REQ-FUNC-012 cancelled Character Discovery state is treated as resumable.
     @param[in]  monkeypatch Pytest monkeypatch fixture.
     @param[in]  qtbot Qt test helper fixture.
     @param[in]  tmp_path Pytest temporary directory fixture.
@@ -436,6 +436,12 @@ def test_character_ui_controller_save_with_progress_stays_synchronous(monkeypatc
         return original_create(*args, **kwargs)
 
     def _capture_remove_audio_blocks(*args, **kwargs):
+        """
+        @brief      Assert the page stays busy while downstream audio is reset.
+        @return     Wrapped audio-block removal result.
+        @exception  AssertionError Raised when busy-state expectations fail.
+        @version    0.1.0
+        """
         assert window._characters_page._busy is True
         assert kwargs["collect_preserved_paths"] is False
         return original_remove_audio_blocks(*args, **kwargs)
@@ -479,6 +485,12 @@ def test_character_ui_controller_save_progress_clears_after_failure(monkeypatch,
     original_update_character_profile = character_discovery_service.update_character_profile
 
     def _raise_after_progress(*args, **kwargs):
+        """
+        @brief      Raise after progress setup to verify cleanup behavior.
+        @return     None.
+        @exception  RuntimeError Always raised for this test double.
+        @version    0.1.0
+        """
         _ = args
         _ = kwargs
         raise RuntimeError("progress cleanup failure")

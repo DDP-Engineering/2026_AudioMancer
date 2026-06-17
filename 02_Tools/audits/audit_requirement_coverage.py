@@ -9,7 +9,7 @@
 """
 @file audit_requirement_coverage.py
 @brief Audit per-module requirement coverage for AudioMancer.
-@details Implements REQ-AUDIO-TEST-007. Every module under `services/` and
+@details Implements REQ-TEST-007. Every module under `services/` and
          `ui/controllers/` must be named by at least one requirement that links
          an automated test, or be listed in the coverage waiver file. The waiver
          file records pre-existing gaps so the gate passes today while preventing
@@ -35,7 +35,7 @@ from requirements_lib import APP_DIR, load_requirements
 
 # CONSTANTS
 
-WAIVER_FILE = Path("0_Planning/Requirements/coverage_waivers.txt")
+WAIVER_FILE = Path(".agentic/requirements/coverage_waivers.txt")
 COVERABLE_ROOTS = (
     APP_DIR / "src" / "audiomancer" / "services",
     APP_DIR / "src" / "audiomancer" / "ui" / "controllers",

@@ -1,0 +1,25 @@
+# Copyright (c) 2026 DDP Engineering
+# This software is licensed under the GNU Affero General Public License v3.0
+# (AGPL-3.0) with additional Non-Commercial restriction.
+# See the LICENSE.txt and LICENSE_NC.txt files for full license details.
+
+# Codex project configuration for the manual agentic workflow.
+# Keep this file free of secrets.
+
+default_permissions = "agentic-workspace"
+
+[permissions.agentic-workspace]
+description = "Workspace-scoped editing for manual agentic development."
+extends = ":workspace"
+
+[permissions.agentic-workspace.filesystem.":workspace_roots"]
+"." = "write"
+".git" = "read"
+".codex" = "read"
+".agentic" = "write"
+"**/*.env" = "deny"
+"**/*.pem" = "deny"
+"**/*_rsa" = "deny"
+
+[permissions.agentic-workspace.network]
+enabled = false
