@@ -14,7 +14,7 @@
          settings file to the application root.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-22
-@version 0.10.3
+@version 0.10.4
 """
 
 # IMPORTS
@@ -307,7 +307,7 @@ def _validate_settings_internal(settings_payload: object) -> tuple[dict[str, Any
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-23
-    @version    0.2.2
+    @version    0.2.3
     """
     repairs_made: list[bool] = []
     defaults = build_default_settings()
@@ -390,6 +390,14 @@ def _validate_settings_internal(settings_payload: object) -> tuple[dict[str, Any
             repair_tracker=repairs_made,
         )
         normalized_settings["default_ai_chunking_strategy"] = defaults["default_ai_chunking_strategy"]
+
+    if normalized_settings["default_ai_chunking_context_mode"] not in config.AI_CHUNKING_CONTEXT_MODE_OPTIONS:
+        _log_settings_repair(
+            "Repaired invalid 'default_ai_chunking_context_mode' using the default value.",
+            "default_ai_chunking_context_mode",
+            repair_tracker=repairs_made,
+        )
+        normalized_settings["default_ai_chunking_context_mode"] = defaults["default_ai_chunking_context_mode"]
 
     for field_name in ("play_completion_beep",):
         if not isinstance(normalized_settings[field_name], bool):
@@ -684,7 +692,7 @@ def build_default_settings() -> dict[str, Any]:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-21
-    @version    0.7.2
+    @version    0.7.3
     """
     return {
         "language": config.DEFAULT_LANGUAGE,
@@ -695,6 +703,7 @@ def build_default_settings() -> dict[str, Any]:
         "default_narrator_profile_generation_profile_id": None,
         "default_speech_blocks_profile_id": None,
         "default_ai_chunking_strategy": "scene",
+        "default_ai_chunking_context_mode": config.DEFAULT_AI_CHUNKING_CONTEXT_MODE,
         "default_character_extraction_profile_id": None,
         "play_completion_beep": True,
         "ui_scroll_steps_per_wheel_notch": config.DEFAULT_UI_SCROLL_STEPS_PER_WHEEL_NOTCH,

@@ -202,3 +202,7 @@ Minimum validation after a change:
   deeply
 - selected LLM profile id fields are intentionally absent from the current
   settings contract
+
+## Documentation Review Notes
+
+Reviewed for the AI chunking context mode feature. The settings contract includes `default_ai_chunking_context_mode`. The settings service validates that value against the configured Balanced, Wide scene context, and Maximum context options, repairs missing or invalid values to Balanced, and preserves current behavior for older settings payloads. Validation should include settings-service and AI Settings tests when AI defaults change.

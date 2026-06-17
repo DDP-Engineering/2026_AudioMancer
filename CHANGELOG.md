@@ -10,6 +10,23 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [1.5.9] - 2026-06-17
+
+### Added
+
+- AI Settings now include a default chunking context mode with Balanced, Wide
+  scene context, and Maximum context options for AI-assisted chunking prompts.
+- AI chunking prompt construction now uses the selected context mode: Balanced
+  preserves the existing 64/96/128 paragraph caps, Wide scene context raises
+  the caps to 128/192/256, and Maximum context relies on the token budget
+  without a local paragraph cap.
+
+### Changed
+
+- Project package metadata and `audiomancer.__version__` were updated to
+  `1.5.9`.
+- Offline English and Romanian help bundles were updated to version `1.5.9`.
+
 ## [1.5.8] - 2026-06-12
 
 ### Fixed

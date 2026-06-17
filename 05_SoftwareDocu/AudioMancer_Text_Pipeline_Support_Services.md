@@ -60,9 +60,14 @@ in memory during the run, checkpoints the artifact and running state at bounded
 paragraph/time intervals, updates chapter counts incrementally, and writes the
 same completed artifacts as an uninterrupted per-paragraph run. The AI path
 uses the same paragraph metadata but asks the configured model for safe break
-positions, appends optional operator-supplied chunking rules to each prompt,
-then commits only valid break IDs, reuses the already-built chunk list for each
-window checkpoint, and writes AI transaction logs.
+positions. The selected AI chunking context mode controls the local-profile
+paragraph cap applied before token-budget checks: Balanced keeps the 64, 96,
+and 128 paragraph caps for paragraph, meaning, and scene strategies; Wide
+scene context doubles them to 128, 192, and 256; Maximum context disables the
+paragraph cap and relies only on the token budget. The path appends optional
+operator-supplied chunking rules to each prompt, then commits only valid break
+IDs, reuses the already-built chunk list for each window checkpoint, and
+writes AI transaction logs.
 
 ## 4. Dependencies
 
@@ -90,6 +95,7 @@ Inputs:
 - cleanup metadata JSON when available
 - selected AI profile, optional operator prompt rules, and prompt templates for
   AI chunking
+- default AI chunking strategy and context mode from persisted settings
 - Speech Blocks payloads and source chunk paths
 - context-budget values for AI/TTS segmentation
 
@@ -116,11 +122,13 @@ Chunk payloads keep stable `chunk_id` values, source paragraph references,
 chapter labels, sequence indexes, and text content. AI chunking persists token
 usage, optional operator prompt rules, their fingerprint, and profile runtime
 metadata in operation state so an interrupted run can resume with the same
-committed break IDs and original prompt rules. Chunking state, report, and
-chunk-artifact JSON writes use the shared atomic persistence helper; malformed
-state JSON restarts chunking from a clean checkpoint, and malformed chunk
-artifact JSON loads as an empty list with a warning instead of raising into the
-workflow page.
+committed break IDs and original prompt rules. The context mode influences
+window construction for local-profile chunking prompts; `openai_compatible`
+profiles retain their direct online text-context fraction and no local
+paragraph cap. Chunking state, report, and chunk-artifact JSON writes use the
+shared atomic persistence helper; malformed state JSON restarts chunking from
+a clean checkpoint, and malformed chunk artifact JSON loads as an empty list
+with a warning instead of raising into the workflow page.
 
 Speech Blocks reports include stage status, approved counts, warning records,
 source metadata, and token-usage payloads.
@@ -165,3 +173,7 @@ Minimum validation after changes:
   before committing them.
 - Text splitting uses conservative budget units rather than provider-specific
   tokenizers.
+
+## Documentation Review Notes
+
+Reviewed for the AI chunking context mode feature. The AI chunking path now receives the persisted chunking context mode from the Text Chunking UI controller. Balanced keeps the existing 64, 96, and 128 paragraph caps for paragraph, meaning, and scene strategies. Wide scene context uses 128, 192, and 256. Maximum context disables the local paragraph cap and relies on the token budget. `openai_compatible` profiles continue to use their direct online text-context fraction without a local paragraph cap. Validation should include `tests/test_ai_chunking_service.py::test_ai_chunking_context_modes_control_paragraph_caps`.

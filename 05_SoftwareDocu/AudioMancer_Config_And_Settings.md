@@ -108,7 +108,8 @@ The settings scaffold currently includes fields for:
 - language and recent projects
 - default project and runtime-model paths
 - provider profile placeholders
-- LLM profile storage with no default selected profile-id fields
+- LLM profile storage, default AI profile selections, default AI chunking
+  strategy, and default AI chunking context mode
 
 `TRANSLATION_LANGUAGE_OPTIONS` includes the non-Chinese Qwen3-TTS language
 set plus Romanian: English, Romanian, Japanese, Korean, German, French,
@@ -121,12 +122,15 @@ AI cleanup, chunking, translation, character-discovery, and Speech Blocks
 request-window budgets are derived from the selected profile context window,
 max output tokens, estimated prompt budget, and configured safety margins. AI
 cleanup keeps a maximum cleanup-unit cap per request, AI chunking strategy
-defaults act as paragraph caps, AI translation uses the computed text budget to
-split oversized source chunks, character discovery uses its fixed chunk-window
-size as a maximum cap while guarding final synthesis payload size, and Speech
-Blocks uses the computed text budget to split oversized source chunks before
-AI-owned block generation. For `openai_compatible` profiles, cleanup,
-chunking, character discovery, and Speech Blocks instead use
+defaults act as Balanced paragraph caps, and the persisted
+`default_ai_chunking_context_mode` can widen those paragraph caps or disable
+them for local-profile AI chunking while preserving the token budget. AI
+translation uses the computed text budget to split oversized source chunks,
+character discovery uses its fixed chunk-window size as a maximum cap while
+guarding final synthesis payload size, and Speech Blocks uses the computed
+text budget to split oversized source chunks before AI-owned block generation.
+For `openai_compatible` profiles, cleanup, chunking, character discovery, and
+Speech Blocks instead use
 `DEFAULT_ONLINE_AI_TEXT_CONTEXT_FRACTION` against the selected profile context
 window, and they skip the local cleanup-unit, chunking-paragraph, and
 character-discovery chunk-count caps.
@@ -138,6 +142,7 @@ timeout alias and intentionally matches
 download defaults keep the same current behavior while using clearer naming at
 the call sites.
 - AI cleanup and chunking profile defaults
+- default AI chunking context mode, repaired to Balanced when missing or invalid
 - notification and UI text-scale preferences
 
 ## 7. Workflow Integration

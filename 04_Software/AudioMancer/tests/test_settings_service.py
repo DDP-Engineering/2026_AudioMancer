@@ -13,7 +13,7 @@
          persisted settings self-healing, and validated save behavior.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-22
-@version 0.7.2
+@version 0.7.3
 """
 
 # IMPORTS
@@ -58,6 +58,34 @@ def test_build_default_settings_includes_theme_and_scroll_fields() -> None:
     assert default_settings["ui_theme_id"] == config.DEFAULT_UI_THEME_ID
     assert default_settings["ui_themes"] == []
     assert default_settings["ui_scroll_steps_per_wheel_notch"] == config.DEFAULT_UI_SCROLL_STEPS_PER_WHEEL_NOTCH
+
+
+def test_validate_settings_repairs_invalid_chunking_context_mode() -> None:
+    """
+    @brief      Verify S-0001 and REQ-DATA-005 validate the chunking context mode setting.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-17
+    @version    0.1.0
+    """
+    default_settings = settings_service.build_default_settings()
+
+    assert default_settings["default_ai_chunking_context_mode"] == config.AI_CHUNKING_CONTEXT_MODE_BALANCED
+
+    valid_settings = copy.deepcopy(default_settings)
+    valid_settings["default_ai_chunking_context_mode"] = config.AI_CHUNKING_CONTEXT_MODE_WIDE_SCENE
+    assert (
+        settings_service.validate_settings(valid_settings)["default_ai_chunking_context_mode"]
+        == config.AI_CHUNKING_CONTEXT_MODE_WIDE_SCENE
+    )
+
+    invalid_settings = copy.deepcopy(default_settings)
+    invalid_settings["default_ai_chunking_context_mode"] = "whole-book"
+    assert (
+        settings_service.validate_settings(invalid_settings)["default_ai_chunking_context_mode"]
+        == config.AI_CHUNKING_CONTEXT_MODE_BALANCED
+    )
 
 
 def test_load_settings_creates_default_file_when_missing(tmp_path, monkeypatch) -> None:

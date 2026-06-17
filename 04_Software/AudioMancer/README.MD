@@ -110,3 +110,11 @@ Packaging automation lives outside this application package:
 
 Delivery archives are staged under `../../07_Delivery/` and published through
 the project release flow. Generated archives must not be committed.
+
+## Documentation Review Notes
+
+Reviewed for the AI chunking context mode feature. When changing AI Settings or AI chunking behavior, include the focused settings, translation-catalog, settings-page, chunking-service, and text-chunking controller tests in validation.
+
+Reviewed for the 1.5.9 release sync. Keep the package metadata, lockfile,
+`audiomancer.__version__`, version smoke test, and offline help bundle versions
+aligned for release bookkeeping.

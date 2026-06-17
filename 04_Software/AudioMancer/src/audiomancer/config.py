@@ -611,6 +611,25 @@ DEFAULT_AI_CHUNKING_STRATEGY = "paragraph"
 # @brief Supported semantic AI chunking strategies.
 AI_CHUNKING_STRATEGY_OPTIONS = ("paragraph", "meaning", "scene")
 
+# @brief Balanced AI chunking context mode token.
+AI_CHUNKING_CONTEXT_MODE_BALANCED = "balanced"
+
+# @brief Wide-scene AI chunking context mode token.
+AI_CHUNKING_CONTEXT_MODE_WIDE_SCENE = "wide_scene"
+
+# @brief Maximum AI chunking context mode token.
+AI_CHUNKING_CONTEXT_MODE_MAXIMUM = "maximum"
+
+# @brief Default AI chunking context mode.
+DEFAULT_AI_CHUNKING_CONTEXT_MODE = AI_CHUNKING_CONTEXT_MODE_BALANCED
+
+# @brief Supported AI chunking context modes.
+AI_CHUNKING_CONTEXT_MODE_OPTIONS = (
+    AI_CHUNKING_CONTEXT_MODE_BALANCED,
+    AI_CHUNKING_CONTEXT_MODE_WIDE_SCENE,
+    AI_CHUNKING_CONTEXT_MODE_MAXIMUM,
+)
+
 # @brief Default paragraph cap per AI chunk-boundary request for paragraph strategy.
 DEFAULT_AI_CHUNKING_PARAGRAPH_WINDOW_SIZE = 64
 
@@ -625,6 +644,13 @@ AI_CHUNKING_WINDOW_SIZE_BY_STRATEGY = {
     "paragraph": DEFAULT_AI_CHUNKING_PARAGRAPH_WINDOW_SIZE,
     "meaning": DEFAULT_AI_CHUNKING_MEANING_WINDOW_SIZE,
     "scene": DEFAULT_AI_CHUNKING_SCENE_WINDOW_SIZE,
+}
+
+# @brief Wider strategy-specific paragraph caps used by the wide-scene AI chunking context mode.
+AI_CHUNKING_WIDE_WINDOW_SIZE_BY_STRATEGY = {
+    "paragraph": DEFAULT_AI_CHUNKING_PARAGRAPH_WINDOW_SIZE * 2,
+    "meaning": DEFAULT_AI_CHUNKING_MEANING_WINDOW_SIZE * 2,
+    "scene": DEFAULT_AI_CHUNKING_SCENE_WINDOW_SIZE * 2,
 }
 
 # @brief Minimum estimated text-token budget required for one AI chunking request.

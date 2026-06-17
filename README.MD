@@ -68,3 +68,11 @@ published through the configured GitHub Releases delivery flow.
 AudioMancer is licensed under the GNU Affero General Public License v3.0
 (AGPL-3.0) with an additional Non-Commercial restriction. See `LICENSE.txt` and
 `LICENSE_NC.txt` for full license details.
+
+## Documentation Review Notes
+
+Reviewed for the AI chunking context mode feature. AI Settings now include controls that let operators keep balanced prompt windows, widen scene context, or rely on the model token budget for large-scene AI chunking runs.
+
+Reviewed for the 1.5.9 release sync. Version-specific details remain in
+`CHANGELOG.md`, package metadata, and the offline help bundles rather than in
+this overview.

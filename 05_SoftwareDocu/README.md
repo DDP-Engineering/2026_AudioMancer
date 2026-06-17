@@ -74,3 +74,10 @@ application version is exposed through the application package metadata and
 - `AudioMancer_Voiceweaver_Runtime_Service.md`
 - `AudioMancer_Voice_Sample_Import_Service.md`
 - `AudioMancer_TTS_Budget_Service.md`
+
+## Documentation Review Notes
+
+Reviewed for the AI chunking context mode feature. Relevant component documents are `AudioMancer_Config_And_Settings.md`, `AudioMancer_Settings_Service.md`, `AudioMancer_UI_State_Service.md`, and `AudioMancer_Text_Pipeline_Support_Services.md`.
+
+Reviewed for the 1.5.9 release sync. Offline help bundle versions are maintained
+in `UserGuide/index.html` and `UserGuide_ro/index.html`.

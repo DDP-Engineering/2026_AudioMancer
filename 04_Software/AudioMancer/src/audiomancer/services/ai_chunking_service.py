@@ -80,6 +80,7 @@ def chunk_text(
     progress_callback=None,
     cancel_requested=None,
     additional_chunking_instructions: str | None = None,
+    chunking_context_mode: str | None = None,
 ) -> ChunkingReportPayload:
     """
     @brief      Run AI-assisted chunking for one active project.
@@ -90,13 +91,14 @@ def chunk_text(
     @param[in]  progress_callback Optional progress callback for the modal popup.
     @param[in]  cancel_requested Optional zero-argument cancellation callback.
     @param[in]  additional_chunking_instructions Optional operator-supplied chunking rules.
+    @param[in]  chunking_context_mode Optional AI chunking context mode token.
     @return     Chunking report payload for the persisted AI chunking artifacts.
     @exception  FileNotFoundError Raised when the cleaned input is missing.
     @exception  ValueError Raised on missing profile data or unusable cleaned text.
     @exception  OperationCancelledError Raised when the operator cancels the run.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-12
-    @version    0.7.0
+    @version    0.7.1
     """
     resolved_project_root = Path(project_root)
     source_document = manifest.get("source_document")
@@ -158,6 +160,7 @@ def chunk_text(
         semantic_strategy,
         system_prompt,
         additional_chunking_instructions,
+        chunking_context_mode=chunking_context_mode,
     )
     profile_runtime_metadata = _build_profile_runtime_metadata(ai_profile_payload)
     input_fingerprint = _compute_input_fingerprint(input_text)
@@ -583,6 +586,7 @@ def _build_budget_metadata(
     semantic_strategy: str,
     system_prompt: str,
     additional_chunking_instructions: str,
+    chunking_context_mode: str | None = None,
 ) -> BudgetMetadataPayload:
     """
     @brief      Build context-window budget metadata for AI chunking.
@@ -590,11 +594,12 @@ def _build_budget_metadata(
     @param[in]  semantic_strategy Selected semantic strategy token.
     @param[in]  system_prompt Rendered system prompt.
     @param[in]  additional_chunking_instructions Optional operator-supplied chunking rules.
+    @param[in]  chunking_context_mode Optional AI chunking context mode token.
     @return     Context-budget metadata used for request-window construction.
     @exception  ValueError Raised when context and output settings leave too little input room.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-12
-    @version    0.3.0
+    @version    0.3.1
     """
     prompt_user_shell = _render_chunking_user_prompt(
         {
@@ -614,8 +619,16 @@ def _build_budget_metadata(
         "and max output tokens leave too little room for chunking input",
         online_text_context_fraction=config.DEFAULT_ONLINE_AI_TEXT_CONTEXT_FRACTION,
     )
-    if ai_budget_service.uses_online_text_budget(ai_profile_payload):
+    if (
+        ai_budget_service.uses_online_text_budget(ai_profile_payload)
+        or chunking_context_mode == config.AI_CHUNKING_CONTEXT_MODE_MAXIMUM
+    ):
         strategy_paragraph_cap = 0
+    elif chunking_context_mode == config.AI_CHUNKING_CONTEXT_MODE_WIDE_SCENE:
+        strategy_paragraph_cap = config.AI_CHUNKING_WIDE_WINDOW_SIZE_BY_STRATEGY.get(
+            semantic_strategy,
+            config.AI_CHUNKING_WIDE_WINDOW_SIZE_BY_STRATEGY[config.DEFAULT_AI_CHUNKING_STRATEGY],
+        )
     else:
         strategy_paragraph_cap = config.AI_CHUNKING_WINDOW_SIZE_BY_STRATEGY.get(
             semantic_strategy,

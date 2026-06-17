@@ -21,3 +21,10 @@ Implementation sources and runnable software artifacts.
 - `../05_SoftwareDocu/` contains component and workflow documentation.
 - `../HowToTest.md` contains the broader validation baseline.
 - `../CHANGELOG.md` contains version history.
+
+## Documentation Review Notes
+
+Reviewed for the AI chunking context mode feature. The `AudioMancer/` application settings now include the selected AI chunking strategy and context mode used by AI-assisted chunking prompts.
+
+Reviewed for the 1.5.9 release sync. Application version metadata is maintained
+inside the `AudioMancer/` package files and lockfile.

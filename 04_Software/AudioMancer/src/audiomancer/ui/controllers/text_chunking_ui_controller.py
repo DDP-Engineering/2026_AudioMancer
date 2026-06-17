@@ -15,7 +15,7 @@
          Chunking page.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-24
-@version 0.8.5
+@version 0.8.6
 """
 
 # IMPORTS
@@ -107,7 +107,7 @@ def handle_ai_chunking_requested(window: "MainWindow", profile_id: str, strategy
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-12
-    @version    0.3.1
+    @version    0.3.2
     """
     current_language = ui_state_service.current_language_from_settings(window._settings_payload)
     if window._active_operation_kind is not None:
@@ -160,6 +160,14 @@ def handle_ai_chunking_requested(window: "MainWindow", profile_id: str, strategy
     )
     if selected_strategy not in config.AI_CHUNKING_STRATEGY_OPTIONS:
         selected_strategy = config.DEFAULT_AI_CHUNKING_STRATEGY
+    selected_context_mode = str(
+        window._settings_payload.get(
+            "default_ai_chunking_context_mode",
+            config.DEFAULT_AI_CHUNKING_CONTEXT_MODE,
+        )
+    )
+    if selected_context_mode not in config.AI_CHUNKING_CONTEXT_MODE_OPTIONS:
+        selected_context_mode = config.DEFAULT_AI_CHUNKING_CONTEXT_MODE
 
     additional_chunking_instructions = None
     if chunking_status in resumable_ai_statuses and chunking_mode == "ai_assisted":
@@ -190,6 +198,7 @@ def handle_ai_chunking_requested(window: "MainWindow", profile_id: str, strategy
                 progress_callback=progress_callback,
                 cancel_requested=cancel_requested,
                 additional_chunking_instructions=additional_chunking_instructions,
+                chunking_context_mode=selected_context_mode,
             )
         ),
         success_handler=lambda result_payload: handle_chunking_success(window, result_payload),

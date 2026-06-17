@@ -13,13 +13,14 @@
          and merged settings payload generation.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-21
-@version 0.5.5
+@version 0.5.6
 """
 
 # IMPORTS
 
 from PySide6.QtWidgets import QFormLayout, QGridLayout
 
+from audiomancer import config
 from audiomancer.ui.pages.ai_settings_page import AiSettingsPage
 
 
@@ -205,6 +206,39 @@ def test_ai_settings_page_loads_profiles_and_builds_merged_settings(qtbot) -> No
     assert rebuilt["default_ai_translation_profile_id"] == "profile_a"
     assert rebuilt["default_narrator_profile_generation_profile_id"] == "profile_a"
     assert rebuilt["default_speech_blocks_profile_id"] == "profile_a"
+
+
+def test_ai_settings_page_loads_and_builds_chunking_context_mode(qtbot) -> None:
+    """
+    @brief      Verify S-0001 and REQ-UX-034 persist the AI chunking context mode selector.
+    @param[in]  qtbot Qt test helper fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-17
+    @version    0.1.0
+    """
+    page = AiSettingsPage()
+    qtbot.addWidget(page)
+
+    page.load_settings(
+        {
+            "language": "en",
+            "llm_profiles": [],
+            "default_ai_chunking_strategy": "scene",
+            "default_ai_chunking_context_mode": config.AI_CHUNKING_CONTEXT_MODE_WIDE_SCENE,
+        }
+    )
+
+    assert page._default_context_mode_label.text() == "Chunking Context Mode"
+    assert page._default_context_mode_combo.currentData() == config.AI_CHUNKING_CONTEXT_MODE_WIDE_SCENE
+
+    page._default_context_mode_combo.setCurrentIndex(
+        page._default_context_mode_combo.findData(config.AI_CHUNKING_CONTEXT_MODE_MAXIMUM)
+    )
+    rebuilt = page.build_settings({"language": "en"})
+
+    assert rebuilt["default_ai_chunking_context_mode"] == config.AI_CHUNKING_CONTEXT_MODE_MAXIMUM
 
 
 def test_ai_settings_page_adds_and_removes_profiles(qtbot) -> None:

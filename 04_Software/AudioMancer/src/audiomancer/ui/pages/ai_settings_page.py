@@ -14,7 +14,7 @@
          settings service.
 @author Eng. Dan Dumitru Pasare
 @date 2026-05-23
-@version 0.9.4
+@version 0.9.5
 """
 
 # IMPORTS
@@ -88,7 +88,7 @@ class AiSettingsPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-05-23
-        @version    0.8.4
+        @version    0.8.5
         """
         super().__init__(parent)
         self._profiles: list[dict[str, object]] = []
@@ -219,6 +219,8 @@ class AiSettingsPage(QWidget):
         self._default_strategy_combo = QComboBox(self)
         for strategy in config.AI_CHUNKING_STRATEGY_OPTIONS:
             self._default_strategy_combo.addItem(strategy.title(), strategy)
+        self._default_context_mode_combo = QComboBox(self)
+        self._reload_context_mode_combo(config.DEFAULT_LANGUAGE)
 
         self._default_translation_combo = QComboBox(self)
         self._default_narrator_generation_combo = QComboBox(self)
@@ -228,6 +230,7 @@ class AiSettingsPage(QWidget):
         self._default_cleanup_label = QLabel("Default Cleanup Profile", self)
         self._default_chunking_label = QLabel("Default Chunking Profile", self)
         self._default_strategy_label = QLabel("Default AI Chunking Strategy", self)
+        self._default_context_mode_label = QLabel("Chunking Context Mode", self)
         self._default_translation_label = QLabel("Default Translation Profile", self)
         self._default_narrator_generation_label = QLabel("Default Narator Generation Profile", self)
         self._default_character_label = QLabel(
@@ -239,6 +242,7 @@ class AiSettingsPage(QWidget):
         bottom_form_layout.addRow(self._default_cleanup_label, self._default_cleanup_combo)
         bottom_form_layout.addRow(self._default_chunking_label, self._default_chunking_combo)
         bottom_form_layout.addRow(self._default_strategy_label, self._default_strategy_combo)
+        bottom_form_layout.addRow(self._default_context_mode_label, self._default_context_mode_combo)
         bottom_form_layout.addRow(self._default_translation_label, self._default_translation_combo)
         bottom_form_layout.addRow(self._default_narrator_generation_label, self._default_narrator_generation_combo)
         bottom_form_layout.addRow(
@@ -275,6 +279,7 @@ class AiSettingsPage(QWidget):
                 "default_narrator_profile_generation_profile_id": None,
                 "default_speech_blocks_profile_id": None,
                 "default_ai_chunking_strategy": config.DEFAULT_AI_CHUNKING_STRATEGY,
+                "default_ai_chunking_context_mode": config.DEFAULT_AI_CHUNKING_CONTEXT_MODE,
                 "default_character_extraction_profile_id": None,
             }
         )
@@ -287,7 +292,7 @@ class AiSettingsPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-21
-        @version    0.4.0
+        @version    0.4.1
         """
         source_profiles = settings_payload.get("llm_profiles", [])
         if not isinstance(source_profiles, list):
@@ -332,6 +337,10 @@ class AiSettingsPage(QWidget):
             settings_payload.get("default_ai_chunking_strategy"),
         )
         self._set_optional_combo(
+            self._default_context_mode_combo,
+            settings_payload.get("default_ai_chunking_context_mode", config.DEFAULT_AI_CHUNKING_CONTEXT_MODE),
+        )
+        self._set_optional_combo(
             self._default_character_combo,
             settings_payload.get("default_character_extraction_profile_id"),
         )
@@ -349,7 +358,7 @@ class AiSettingsPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-21
-        @version    0.4.0
+        @version    0.4.1
         """
         self._sync_editor_to_current_profile()
         merged_settings = copy.deepcopy(existing_settings_payload)
@@ -367,6 +376,9 @@ class AiSettingsPage(QWidget):
         )
         merged_settings["default_ai_chunking_strategy"] = (
             self._optional_combo_value(self._default_strategy_combo) or config.DEFAULT_AI_CHUNKING_STRATEGY
+        )
+        merged_settings["default_ai_chunking_context_mode"] = (
+            self._optional_combo_value(self._default_context_mode_combo) or config.DEFAULT_AI_CHUNKING_CONTEXT_MODE
         )
         merged_settings["default_character_extraction_profile_id"] = self._optional_combo_value(
             self._default_character_combo
@@ -715,6 +727,37 @@ class AiSettingsPage(QWidget):
         value = combo.currentData()
         return None if value in (None, "") else str(value)
 
+    def _reload_context_mode_combo(self, language: str) -> None:
+        """
+        @brief      Rebuild the chunking context-mode selector labels for one language.
+        @param[in]  language Active UI language.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-06-17
+        @version    0.1.0
+        """
+        current_mode = self._optional_combo_value(self._default_context_mode_combo)
+        self._default_context_mode_combo.blockSignals(True)
+        self._default_context_mode_combo.clear()
+        self._default_context_mode_combo.addItem(
+            ui_state_service.translate("ai_settings.context_mode_balanced", language),
+            config.AI_CHUNKING_CONTEXT_MODE_BALANCED,
+        )
+        self._default_context_mode_combo.addItem(
+            ui_state_service.translate("ai_settings.context_mode_wide_scene", language),
+            config.AI_CHUNKING_CONTEXT_MODE_WIDE_SCENE,
+        )
+        self._default_context_mode_combo.addItem(
+            ui_state_service.translate("ai_settings.context_mode_maximum", language),
+            config.AI_CHUNKING_CONTEXT_MODE_MAXIMUM,
+        )
+        self._default_context_mode_combo.blockSignals(False)
+        self._set_optional_combo(
+            self._default_context_mode_combo,
+            current_mode or config.DEFAULT_AI_CHUNKING_CONTEXT_MODE,
+        )
+
     def _add_profile(self) -> None:
         """
         @brief      Append one new editable profile to the in-memory list.
@@ -766,7 +809,7 @@ class AiSettingsPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-21
-        @version    0.6.1
+        @version    0.6.2
         """
         self._current_language = language
         self._title_label.setText(f"<h2>{ui_state_service.translate('ai_settings.title', language)}</h2>")
@@ -793,6 +836,10 @@ class AiSettingsPage(QWidget):
             ui_state_service.translate("ai_settings.default_speech_blocks", language)
         )
         self._default_strategy_label.setText(ui_state_service.translate("ai_settings.default_strategy", language))
+        self._default_context_mode_label.setText(
+            ui_state_service.translate("ai_settings.default_context_mode", language)
+        )
+        self._reload_context_mode_combo(language)
         self._default_character_label.setText(ui_state_service.translate("ai_settings.default_character", language))
         self._add_profile_button.setText(ui_state_service.translate("ai_settings.add_profile", language))
         self._remove_profile_button.setText(ui_state_service.translate("ai_settings.remove_profile", language))

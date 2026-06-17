@@ -306,3 +306,10 @@ The UI should make it easy to understand:
 - what can be rerun safely
 - what downstream data will be invalidated by rerunning an earlier stage
 - what expensive downstream work will be preserved after local manual edits
+
+## 10. Documentation Review Notes
+
+Reviewed for the AI chunking context mode feature. The Text Chunking stage supports operator control over how much paragraph context AI chunking may use when larger scenes need wider prompt windows.
+
+Reviewed for the 1.5.9 release sync. Release numbering remains implementation
+metadata and does not change the product vision described here.

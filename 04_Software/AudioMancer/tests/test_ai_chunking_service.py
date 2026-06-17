@@ -13,7 +13,7 @@
          persists resumable state, and rebuilds chunk spans from AI boundaries.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-07
-@version 0.6.0
+@version 0.6.1
 """
 
 # IMPORTS
@@ -194,6 +194,61 @@ def test_ai_chunking_online_profile_uses_direct_context_fraction_without_paragra
     assert budget_metadata["strategy_paragraph_cap"] == 0
     assert ai_chunking_service._build_windows(paragraph_records, "scene", budget_metadata) == [
         {"start_index": 0, "end_index": 4}
+    ]
+
+
+def test_ai_chunking_context_modes_control_paragraph_caps(tmp_path, monkeypatch) -> None:
+    """
+    @brief      Verify S-0002 and REQ-FUNC-039 map chunking context modes to prompt-window caps.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-17
+    @version    0.1.0
+    """
+    prompt_root = tmp_path / "prompts"
+    prompt_root.mkdir()
+    (prompt_root / "text_chunking_user.txt").write_text("{strategy}\n{units_block}", encoding="utf-8")
+    monkeypatch.setattr(config, "APP_PROMPTS_PATH", prompt_root)
+    paragraph_records = [
+        {"unit_id": f"paragraph-{index:04d}", "text": "Short scene paragraph."} for index in range(1, 301)
+    ]
+    profile_payload = {
+        "context_window": 262144,
+        "max_output_tokens": 512,
+    }
+
+    balanced_metadata = ai_chunking_service._build_budget_metadata(
+        profile_payload,
+        "scene",
+        "scene",
+        "",
+        chunking_context_mode=config.AI_CHUNKING_CONTEXT_MODE_BALANCED,
+    )
+    wide_metadata = ai_chunking_service._build_budget_metadata(
+        profile_payload,
+        "scene",
+        "scene",
+        "",
+        chunking_context_mode=config.AI_CHUNKING_CONTEXT_MODE_WIDE_SCENE,
+    )
+    maximum_metadata = ai_chunking_service._build_budget_metadata(
+        profile_payload,
+        "scene",
+        "scene",
+        "",
+        chunking_context_mode=config.AI_CHUNKING_CONTEXT_MODE_MAXIMUM,
+    )
+
+    assert balanced_metadata["strategy_paragraph_cap"] == 128
+    assert wide_metadata["strategy_paragraph_cap"] == 256
+    assert maximum_metadata["strategy_paragraph_cap"] == 0
+    assert ai_chunking_service._build_windows(paragraph_records, "scene", balanced_metadata)[0]["end_index"] == 127
+    assert ai_chunking_service._build_windows(paragraph_records, "scene", wide_metadata)[0]["end_index"] == 255
+    assert ai_chunking_service._build_windows(paragraph_records, "scene", maximum_metadata) == [
+        {"start_index": 0, "end_index": 299}
     ]
 
 

@@ -13,7 +13,7 @@
          changes used by the settings-backed runtime UI behavior.
 @author Eng. Dan Dumitru Pasare
 @date 2026-06-09
-@version 0.7.0
+@version 0.7.1
 """
 
 # IMPORTS
@@ -251,6 +251,10 @@ def test_ai_settings_dialog_flow_strings_cover_supported_languages() -> None:
         "ai_settings.cancel",
         "ai_settings.save",
         "ai_settings.ok",
+        "ai_settings.default_context_mode",
+        "ai_settings.context_mode_balanced",
+        "ai_settings.context_mode_wide_scene",
+        "ai_settings.context_mode_maximum",
     )
 
     for language in ("en", "ro"):
