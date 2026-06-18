@@ -14,7 +14,7 @@
          share one source of truth for register parsing and test-node discovery.
 @author Eng. Dan Dumitru Pasare
 @date 2026-06-09
-@version 0.3.0
+@version 0.4.0
 """
 
 # IMPORTS
@@ -32,6 +32,7 @@ REGISTER_README = "README.md"
 REQUIREMENT_ID_PREFIX = "REQ-"
 APP_DIR = Path("04_Software/AudioMancer")
 TESTS_DIR = Path("tests")
+WORKFLOW_CLI_TESTS_DIR = Path(".agentic/cli/tests")
 TEST_FILE_PREFIX = "test_"
 TEST_FUNCTION_PREFIX = "test"
 TEST_CLASS_PREFIX = "Test"
@@ -233,12 +234,50 @@ def linked_test_file(node_id: str) -> str:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-06-09
-    @version    0.2.0
+    @version    0.3.0
     """
     file_part = node_id.split("::", maxsplit=1)[0]
-    if file_part.startswith(f"{APP_DIR.as_posix()}/"):
+    if file_part.startswith(f"{APP_DIR.as_posix()}/") or file_part.startswith(
+        ".agentic/"
+    ):
         return file_part
     return (APP_DIR / file_part).as_posix()
+
+
+def _collect_test_nodes_from_root(tests_root: Path, prefix: str) -> set[str]:
+    """
+    @brief      Collect pytest-style node identifiers from one test tree.
+    @param[in]  tests_root Absolute path to the test tree.
+    @param[in]  prefix Repository-relative prefix for emitted node IDs.
+    @return     Set of statically defined test node identifiers.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-18
+    @version    1.0.0
+    """
+    nodes: set[str] = set()
+    if not tests_root.is_dir():
+        return nodes
+    for path in sorted(tests_root.rglob(f"{TEST_FILE_PREFIX}*.py")):
+        relative = path.relative_to(tests_root).as_posix()
+        try:
+            tree = ast.parse(path.read_text(encoding="utf-8"))
+        except (SyntaxError, UnicodeDecodeError):
+            continue
+        for item in tree.body:
+            if isinstance(item, ast.FunctionDef | ast.AsyncFunctionDef):
+                if item.name.startswith(TEST_FUNCTION_PREFIX):
+                    nodes.add(f"{prefix}/{relative}::{item.name}")
+            elif isinstance(item, ast.ClassDef) and item.name.startswith(
+                TEST_CLASS_PREFIX
+            ):
+                for member in item.body:
+                    if isinstance(
+                        member, ast.FunctionDef | ast.AsyncFunctionDef
+                    ) and member.name.startswith(TEST_FUNCTION_PREFIX):
+                        nodes.add(f"{prefix}/{relative}::{item.name}::{member.name}")
+                        nodes.add(f"{prefix}/{relative}::{member.name}")
+    return nodes
 
 
 def collect_defined_test_nodes(app_dir: Path) -> set[str]:
@@ -253,33 +292,23 @@ def collect_defined_test_nodes(app_dir: Path) -> set[str]:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-06-09
-    @version    0.2.0
+    @version    0.3.0
     """
+    repo_root = app_dir.parents[1]
     tests_root = app_dir / TESTS_DIR
     nodes: set[str] = set()
-    if not tests_root.is_dir():
-        return nodes
-    for path in sorted(tests_root.rglob(f"{TEST_FILE_PREFIX}*.py")):
-        relative = path.relative_to(app_dir).as_posix()
-        try:
-            tree = ast.parse(path.read_text(encoding="utf-8"))
-        except (SyntaxError, UnicodeDecodeError):
-            continue
-        for item in tree.body:
-            if isinstance(item, ast.FunctionDef | ast.AsyncFunctionDef):
-                if item.name.startswith(TEST_FUNCTION_PREFIX):
-                    nodes.add(f"{APP_DIR.as_posix()}/{relative}::{item.name}")
-            elif isinstance(item, ast.ClassDef) and item.name.startswith(
-                TEST_CLASS_PREFIX
-            ):
-                for member in item.body:
-                    if isinstance(
-                        member, ast.FunctionDef | ast.AsyncFunctionDef
-                    ) and member.name.startswith(TEST_FUNCTION_PREFIX):
-                        nodes.add(
-                            f"{APP_DIR.as_posix()}/{relative}::{item.name}::{member.name}"
-                        )
-                        nodes.add(f"{APP_DIR.as_posix()}/{relative}::{member.name}")
+    nodes.update(
+        _collect_test_nodes_from_root(
+            tests_root,
+            f"{APP_DIR.as_posix()}/{TESTS_DIR.as_posix()}",
+        )
+    )
+    nodes.update(
+        _collect_test_nodes_from_root(
+            repo_root / WORKFLOW_CLI_TESTS_DIR,
+            WORKFLOW_CLI_TESTS_DIR.as_posix(),
+        )
+    )
     return nodes
 
 

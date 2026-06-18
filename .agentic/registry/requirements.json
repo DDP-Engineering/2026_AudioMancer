@@ -1972,21 +1972,22 @@
   },
   "REQ-TEST-009": {
     "created_on": "2026-06-09 08:08",
-    "last_updated": "2026-06-09 08:08",
+    "last_updated": "2026-06-17 20:47",
     "line_number": 20,
     "linked_tests": [],
     "priority": "Should",
-    "rationale": "Keeps the mandated function-level and file-level version tags and component documentation from drifting out of sync with behavior.",
+    "rationale": "Keeps component documentation from drifting during normal feature work without forcing unrelated README or validation-document churn.",
     "related_components": [
       "AGENTS.md",
       "02_Tools/audits/audit_documentation.py",
-      "05_SoftwareDocu/"
+      "05_SoftwareDocu/",
+      ".codex/skills/documentation-audit/SKILL.md"
     ],
     "req_id": "REQ-TEST-009",
-    "requirement": "The documentation audit, including `@version` tag discipline, shall pass before a release or delivery publish.",
+    "requirement": "The documentation audit shall require relevant `05_SoftwareDocu/` component documentation by default, while broad README, Overview, and HowToTest review shall be an explicit opt-in maintenance or release check.",
     "source_file": ".agentic/requirements/testing.md",
     "status": "Active",
-    "verification": "Manual verification: run `python 02_Tools/audits/audit_documentation.py` and confirm a clean result before delivery."
+    "verification": "Manual verification: run `python 02_Tools/audits/audit_documentation.py --changed-only` for normal feature work, and add `--include-broad-docs` when broad documentation maintenance is intended."
   },
   "REQ-TEST-010": {
     "created_on": "2026-06-09 08:08",
@@ -2004,6 +2005,36 @@
     "source_file": ".agentic/requirements/testing.md",
     "status": "Planned",
     "verification": "Automated test (planned): single deterministic pipeline run asserting stage hand-off artifacts."
+  },
+  "REQ-TEST-011": {
+    "created_on": "2026-06-18 13:30",
+    "last_updated": "2026-06-18 13:30",
+    "line_number": 22,
+    "linked_tests": [
+      ".agentic/cli/tests/test_access_mode.py::test_default_start_reports_standard_access_mode",
+      ".agentic/cli/tests/test_access_mode.py::test_legacy_graph_loading_defaults_to_standard_access_mode",
+      ".agentic/cli/tests/test_access_mode.py::test_repo_wide_start_requires_access_reason",
+      ".agentic/cli/tests/test_access_mode.py::test_set_access_mode_records_decision_and_journal",
+      ".agentic/cli/tests/test_access_mode.py::test_standard_access_denies_out_of_stage_normal_repo_file",
+      ".agentic/cli/tests/test_access_mode.py::test_repo_wide_access_allows_normal_repo_file",
+      ".agentic/cli/tests/test_access_mode.py::test_repo_wide_access_blocks_protected_paths"
+    ],
+    "priority": "Must",
+    "rationale": "Lets broad maintenance use the workflow guard without weakening the repository's protected-file boundary or losing auditability.",
+    "related_components": [
+      ".agentic/cli/src/agentic_workflow/",
+      ".agentic/cli/tests/test_access_mode.py",
+      ".agentic/hooks/guard_write_zone.py",
+      ".agentic/tools/README.md",
+      ".codex/skills/agentic-delivery/SKILL.md",
+      ".codex/skills/documentation-audit/agents/openai.yaml",
+      "02_Tools/audits/requirements_lib.py"
+    ],
+    "req_id": "REQ-TEST-011",
+    "requirement": "The embedded agentic workflow shall keep standard stage write-zone enforcement by default, allow human-reasoned `repo-wide` maintenance access for normal repository files, record access-mode decisions, and continue blocking protected Git, secret, environment, and key files.",
+    "source_file": ".agentic/requirements/testing.md",
+    "status": "Active",
+    "verification": "Automated test"
   },
   "REQ-UX-001": {
     "created_on": "2026-06-09 09:50",

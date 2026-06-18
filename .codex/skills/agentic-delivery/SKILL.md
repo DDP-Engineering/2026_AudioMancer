@@ -26,6 +26,8 @@ the final preflight.
 6. Run `agentic-workflow audit coverage`.
 7. Run `$documentation-audit` or perform the same documentation review manually
    when the target repo has no documentation audit tooling.
+   Treat broad README, overview, setup, and validation docs as opt-in or
+   scope-triggered maintenance, not a default delivery blocker.
 8. Confirm component documents under `05_SoftwareDocu/` were added or updated
    for new or materially changed components.
 9. Run `agentic-workflow delivery-preflight`.

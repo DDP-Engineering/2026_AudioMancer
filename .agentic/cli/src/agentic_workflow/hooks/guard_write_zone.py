@@ -21,6 +21,26 @@ DEFAULT_ZONES = {
     "delivery": [".agentic/**"],
 }
 
+REPO_WIDE_ZONES = ["**"]
+PROTECTED_PATH_PATTERNS = [
+    ".git/**",
+    ".env",
+    ".env.*",
+    "**/.env",
+    "**/.env.*",
+    "**/*.env",
+    "**/*.pem",
+    "**/*.key",
+    "**/*.p12",
+    "**/*.pfx",
+    "**/*_rsa",
+    "**/*_rsa.pub",
+    "**/id_rsa",
+    "**/id_rsa.pub",
+    "**/id_ed25519",
+    "**/id_ed25519.pub",
+]
+
 
 def main() -> int:
     payload = json.load(sys.stdin)
@@ -30,7 +50,12 @@ def main() -> int:
         return 0
     cwd = Path(payload.get("cwd") or ".").resolve()
     stage = read_stage(cwd)
-    zones = load_zones(cwd).get(stage, DEFAULT_ZONES.get(stage, []))
+    access_mode = read_access_mode(cwd)
+    zones = (
+        REPO_WIDE_ZONES
+        if access_mode == "repo-wide"
+        else load_zones(cwd).get(stage, DEFAULT_ZONES.get(stage, []))
+    )
     if not zones:
         return deny(f"Stage '{stage}' is read-only; file edits are not allowed.")
     command = payload.get("tool_input", {}).get("command", "")
@@ -41,6 +66,9 @@ def main() -> int:
             rel = normalize(path, cwd)
         except ValueError:
             escaped.append(path)
+            continue
+        if is_protected_path(rel):
+            blocked.append(rel)
             continue
         if not any(matches(rel, pattern) for pattern in zones):
             blocked.append(rel)
@@ -55,13 +83,40 @@ def read_stage(cwd: Path) -> str:
     current = cwd / ".agentic" / "current_run"
     if not current.exists():
         return "intake"
-    graph = cwd / ".agentic" / "runs" / current.read_text(encoding="utf-8").strip() / "graph.json"
+    graph = (
+        cwd
+        / ".agentic"
+        / "runs"
+        / current.read_text(encoding="utf-8").strip()
+        / "graph.json"
+    )
     if not graph.exists():
         return "intake"
     try:
         return json.loads(graph.read_text(encoding="utf-8")).get("stage", "intake")
     except json.JSONDecodeError:
         return "intake"
+
+
+def read_access_mode(cwd: Path) -> str:
+    current = cwd / ".agentic" / "current_run"
+    if not current.exists():
+        return "standard"
+    graph = (
+        cwd
+        / ".agentic"
+        / "runs"
+        / current.read_text(encoding="utf-8").strip()
+        / "graph.json"
+    )
+    if not graph.exists():
+        return "standard"
+    try:
+        return json.loads(graph.read_text(encoding="utf-8")).get(
+            "access_mode", "standard"
+        )
+    except json.JSONDecodeError:
+        return "standard"
 
 
 def load_zones(cwd: Path) -> dict[str, list[str]]:
@@ -93,7 +148,13 @@ def normalize(path: str, cwd: Path) -> str:
 
 def matches(path: str, pattern: str) -> bool:
     pattern = pattern.replace("\\", "/").rstrip("/")
-    return fnmatch(path.lower(), pattern.lower()) or fnmatch(path.lower(), f"{pattern.lower()}/**")
+    return fnmatch(path.lower(), pattern.lower()) or fnmatch(
+        path.lower(), f"{pattern.lower()}/**"
+    )
+
+
+def is_protected_path(path: str) -> bool:
+    return any(matches(path, pattern) for pattern in PROTECTED_PATH_PATTERNS)
 
 
 def deny(message: str) -> int:

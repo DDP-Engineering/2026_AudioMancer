@@ -9,7 +9,7 @@ import json
 from pathlib import Path
 from uuid import uuid4
 
-from .models import Evidence, Graph, Intent, Stage, now_iso
+from .models import AccessMode, Evidence, Graph, Intent, Stage, now_iso
 
 
 AGENTIC_DIR = ".agentic"
@@ -36,7 +36,9 @@ def current_run_path(repo_root: Path) -> Path:
 
 
 def new_run_id(kind: str) -> str:
-    return f"{kind}-{now_iso().replace(':', '').replace('+0000', 'Z')}-{uuid4().hex[:8]}"
+    return (
+        f"{kind}-{now_iso().replace(':', '').replace('+0000', 'Z')}-{uuid4().hex[:8]}"
+    )
 
 
 def run_dir(repo_root: Path, run_id: str) -> Path:
@@ -59,21 +61,34 @@ def write_current_run(repo_root: Path, run_id: str) -> None:
 def read_current_run(repo_root: Path) -> str:
     path = current_run_path(repo_root)
     if not path.exists():
-        raise SystemExit("No active agentic run. Start one with: agentic-workflow start")
+        raise SystemExit(
+            "No active agentic run. Start one with: agentic-workflow start"
+        )
     return path.read_text(encoding="utf-8").strip()
 
 
-def init_graph(repo_root: Path, kind: str, statement: str) -> Graph:
+def init_graph(
+    repo_root: Path,
+    kind: str,
+    statement: str,
+    access_mode: AccessMode = "standard",
+) -> Graph:
     run_id = new_run_id(kind)
     graph = Graph(
         run_id=run_id,
         stage="intake",
         intent=Intent(id="I-0001", kind=kind, statement=statement),
+        access_mode=access_mode,
     )
     run_dir(repo_root, run_id).mkdir(parents=True, exist_ok=True)
     save_graph(repo_root, graph)
     write_current_run(repo_root, run_id)
-    append_journal(repo_root, run_id, "run.started", {"kind": kind, "statement": statement})
+    append_journal(
+        repo_root,
+        run_id,
+        "run.started",
+        {"kind": kind, "statement": statement, "access_mode": access_mode},
+    )
     return graph
 
 
@@ -113,4 +128,21 @@ def set_stage(repo_root: Path, graph: Graph, stage: Stage) -> Graph:
     graph.stage = stage
     save_graph(repo_root, graph)
     append_journal(repo_root, graph.run_id, "stage.set", {"stage": stage})
+    return graph
+
+
+def set_access_mode(
+    repo_root: Path,
+    graph: Graph,
+    access_mode: AccessMode,
+    reason: str,
+) -> Graph:
+    graph.access_mode = access_mode
+    save_graph(repo_root, graph)
+    append_journal(
+        repo_root,
+        graph.run_id,
+        "access_mode.set",
+        {"access_mode": access_mode, "reason": reason},
+    )
     return graph

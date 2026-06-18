@@ -1,6 +1,7 @@
 # Agentic Workflow Report: change-2026-06-17T204743Z-c37d97e4
 
 - Stage: `delivery`
+- Access mode: `standard`
 - Intent: `I-0001` change - Relax documentation audit so normal feature work requires SoftwareDocu component updates by default and broad README/HowToTest review is explicit opt-in.
 
 ## Spec Items

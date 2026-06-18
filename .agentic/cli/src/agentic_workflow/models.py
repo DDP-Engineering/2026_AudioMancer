@@ -19,6 +19,8 @@ Stage = Literal[
     "delivery",
 ]
 
+AccessMode = Literal["standard", "repo-wide"]
+
 STAGES: list[Stage] = [
     "intake",
     "requirement",
@@ -108,6 +110,7 @@ class Graph:
     run_id: str
     stage: Stage
     intent: Intent
+    access_mode: AccessMode = "standard"
     spec_items: list[SpecItem] = field(default_factory=list)
     checks: list[Check] = field(default_factory=list)
     evidence: list[Evidence] = field(default_factory=list)
@@ -124,6 +127,7 @@ class Graph:
             run_id=data["run_id"],
             stage=data["stage"],
             intent=Intent(**data["intent"]),
+            access_mode=data.get("access_mode", "standard"),
             spec_items=[SpecItem(**item) for item in data.get("spec_items", [])],
             checks=[Check(**item) for item in data.get("checks", [])],
             evidence=[Evidence(**item) for item in data.get("evidence", [])],

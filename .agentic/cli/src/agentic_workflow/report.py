@@ -21,6 +21,7 @@ def render_report(repo_root: Path, graph: Graph) -> str:
         f"# Agentic Workflow Report: {graph.run_id}",
         "",
         f"- Stage: `{graph.stage}`",
+        f"- Access mode: `{graph.access_mode}`",
         f"- Intent: `{graph.intent.id}` {graph.intent.kind} - {graph.intent.statement}",
         "",
         "## Spec Items",
@@ -53,7 +54,9 @@ def render_report(repo_root: Path, graph: Graph) -> str:
 
     lines.extend(["", "## Traceability Audits"])
     if not traceability_issues and not coverage_issues and not registry_issues:
-        lines.append("- PASS: traceability, coverage, and registry audits have no findings.")
+        lines.append(
+            "- PASS: traceability, coverage, and registry audits have no findings."
+        )
     for issue in traceability_issues:
         lines.append(f"- `{issue.code}` {issue.message}")
     for issue in coverage_issues:
@@ -64,7 +67,9 @@ def render_report(repo_root: Path, graph: Graph) -> str:
     lines.extend(["", "## Next Prompts"])
     lines.append("- Continue the next manual gate after reviewing the report.")
     lines.append("- Ask Codex to create or update missing artifacts named above.")
-    lines.append("- When ready for delivery, prompt: `Create PR for this agentic workflow run`.")
+    lines.append(
+        "- When ready for delivery, prompt: `Create PR for this agentic workflow run`."
+    )
     lines.append("")
     return "\n".join(lines)
 

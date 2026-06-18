@@ -1,4 +1,46 @@
 {
+  ".agentic/cli/tests/test_access_mode.py::test_default_start_reports_standard_access_mode": {
+    "id": ".agentic/cli/tests/test_access_mode.py::test_default_start_reports_standard_access_mode",
+    "requirement_ids": [
+      "REQ-TEST-011"
+    ]
+  },
+  ".agentic/cli/tests/test_access_mode.py::test_legacy_graph_loading_defaults_to_standard_access_mode": {
+    "id": ".agentic/cli/tests/test_access_mode.py::test_legacy_graph_loading_defaults_to_standard_access_mode",
+    "requirement_ids": [
+      "REQ-TEST-011"
+    ]
+  },
+  ".agentic/cli/tests/test_access_mode.py::test_repo_wide_access_allows_normal_repo_file": {
+    "id": ".agentic/cli/tests/test_access_mode.py::test_repo_wide_access_allows_normal_repo_file",
+    "requirement_ids": [
+      "REQ-TEST-011"
+    ]
+  },
+  ".agentic/cli/tests/test_access_mode.py::test_repo_wide_access_blocks_protected_paths": {
+    "id": ".agentic/cli/tests/test_access_mode.py::test_repo_wide_access_blocks_protected_paths",
+    "requirement_ids": [
+      "REQ-TEST-011"
+    ]
+  },
+  ".agentic/cli/tests/test_access_mode.py::test_repo_wide_start_requires_access_reason": {
+    "id": ".agentic/cli/tests/test_access_mode.py::test_repo_wide_start_requires_access_reason",
+    "requirement_ids": [
+      "REQ-TEST-011"
+    ]
+  },
+  ".agentic/cli/tests/test_access_mode.py::test_set_access_mode_records_decision_and_journal": {
+    "id": ".agentic/cli/tests/test_access_mode.py::test_set_access_mode_records_decision_and_journal",
+    "requirement_ids": [
+      "REQ-TEST-011"
+    ]
+  },
+  ".agentic/cli/tests/test_access_mode.py::test_standard_access_denies_out_of_stage_normal_repo_file": {
+    "id": ".agentic/cli/tests/test_access_mode.py::test_standard_access_denies_out_of_stage_normal_repo_file",
+    "requirement_ids": [
+      "REQ-TEST-011"
+    ]
+  },
   "04_Software/AudioMancer/tests/test_ai_backend_service.py::test_probe_profile_maps_backend_failures": {
     "id": "04_Software/AudioMancer/tests/test_ai_backend_service.py::test_probe_profile_maps_backend_failures",
     "requirement_ids": [

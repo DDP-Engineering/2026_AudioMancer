@@ -1,4 +1,4 @@
 interface:
   display_name: "Documentation Audit"
-  short_description: "Sync docs with implementation"
-  default_prompt: "Use $documentation-audit to review AudioMancer documentation against the current implementation and update stale README, Overview, HowToTest, and 05_SoftwareDocu content."
+  short_description: "Review component docs"
+  default_prompt: "Use $documentation-audit to review changed AudioMancer implementation files against relevant 05_SoftwareDocu component documentation. Review broad README, Overview, HowToTest, setup, validation, and release docs only when explicitly requested or when this change affects their scope."
