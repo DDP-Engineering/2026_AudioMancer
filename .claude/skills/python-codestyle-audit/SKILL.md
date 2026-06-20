@@ -10,16 +10,12 @@ This software is licensed under the GNU Affero General Public License v3.0
 See the LICENSE.txt and LICENSE_NC.txt files for full license details.
 -->
 
-# Python Codestyle Audit
+# Python Code Style Audit
 
-Read and follow these workflow rule sources:
+Read and follow these shared workflow rule sources:
 
 - `AGENTS.md`
-- `.agentic/workflow.toml`
-- `.codex/skills/python-codestyle-audit/SKILL.md`
-
-Use `PROMPT_CHEATSHEET.md` only as a human operator prompt reference, not as
-an authoritative agent behavior contract.
+- `.agentic/skills/python-codestyle-audit/SKILL.md`
 
 Claude Code invocation: `/python-codestyle-audit`.
 

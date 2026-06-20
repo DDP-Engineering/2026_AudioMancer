@@ -1,32 +1,77 @@
 {
-  "$schema": "https://json.schemastore.org/claude-code-settings.json",
-  "permissions": {
-    "allow": [
-      "Bash(uv run ruff check:*)",
-      "Bash(uv run ruff format:*)",
-      "Bash(uv run python -m py_compile:*)",
-      "Bash(uv run pytest:*)",
-      "Bash(uv sync:*)",
-      "Bash(uv lock:*)",
-      "Bash(python -m py_compile:*)",
-      "Bash(python 02_Tools/audits/audit_codestyle.py:*)",
-      "Bash(python 02_Tools/audits/audit_documentation.py:*)",
-      "Bash(python 02_Tools/audits/audit_logging_coverage.py:*)",
-      "Bash(git status:*)",
-      "Bash(git diff:*)",
-      "Bash(git log:*)",
-      "Bash(git show:*)",
-      "Bash(git branch:*)",
-      "Bash(git ls-files:*)",
-      "Bash(git add:*)",
-      "Bash(git restore --staged:*)"
+  "_legal": "Copyright (c) 2026 DDP Engineering. Licensed under AGPL-3.0 with additional Non-Commercial restriction. See LICENSE.txt and LICENSE_NC.txt.",
+  "_comment": "Claude Code hook configuration for the transboarded project root. Hook commands are project-root relative.",
+  "_comment_permissions": "Outward delivery (git push, gh pr create, git merge) is denied by default and also gated by the delivery-preflight hook; a human runs those actions after preflight passes. Secret and key files are denied for read and write to mirror the Codex filesystem profile in .codex/config.toml.",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python .agentic/hooks/guard_write_zone.py",
+            "statusMessage": "Checking agentic write zone"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python .agentic/hooks/secret_scan.py",
+            "statusMessage": "Checking command for secrets"
+          },
+          {
+            "type": "command",
+            "command": "python .agentic/hooks/delivery_preflight.py",
+            "statusMessage": "Checking delivery preflight"
+          }
+        ]
+      }
     ],
+    "PostToolUse": [
+      {
+        "matcher": "Bash|Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python .agentic/hooks/post_tool_evidence.py",
+            "statusMessage": "Recording agentic tool evidence"
+          }
+        ]
+      }
+    ]
+  },
+  "permissions": {
     "deny": [
-      "Bash(git push --force:*)",
-      "Bash(git push --force-with-lease:*)",
-      "Bash(git reset --hard:*)",
-      "Bash(git clean -fd:*)",
-      "Bash(git commit --no-verify:*)"
+      "Read(.env)",
+      "Read(.env.*)",
+      "Read(**/*.env)",
+      "Read(**/*.pem)",
+      "Read(**/*.key)",
+      "Read(**/*_rsa)",
+      "Edit(.env)",
+      "Edit(.env.*)",
+      "Edit(**/*.env)",
+      "Edit(**/*.pem)",
+      "Edit(**/*.key)",
+      "Edit(**/*_rsa)",
+      "Write(.env)",
+      "Write(.env.*)",
+      "Write(**/*.env)",
+      "Write(**/*.pem)",
+      "Write(**/*.key)",
+      "Write(**/*_rsa)",
+      "MultiEdit(.env)",
+      "MultiEdit(.env.*)",
+      "MultiEdit(**/*.env)",
+      "MultiEdit(**/*.pem)",
+      "MultiEdit(**/*.key)",
+      "MultiEdit(**/*_rsa)",
+      "Bash(git push*)",
+      "Bash(gh pr create*)",
+      "Bash(git merge*)"
     ]
   }
 }

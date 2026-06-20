@@ -1,7 +1,21 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+# -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
 # (AGPL-3.0) with additional Non-Commercial restriction.
 # See the LICENSE.txt and LICENSE_NC.txt files for full license details.
+# -----------------------------------------------------------------------------
+"""
+@file models.py
+@brief Data models used by the agentic workflow state graph.
+@details Provides reusable implementation behavior for the standalone workflow template.
+@author Eng. Dan Dumitru Pasare
+@date 2026-06-20
+@version 0.1.0
+"""
+
+# IMPORTS
 
 from __future__ import annotations
 
@@ -32,11 +46,25 @@ STAGES: list[Stage] = [
 
 
 def now_iso() -> str:
+    """
+    @brief      Handle now iso workflow behavior.
+    @return     Result produced by the workflow helper.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-20
+    @version    0.1.0
+    """
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat()
 
 
 @dataclass
 class Intent:
+    """
+    @brief      Represent Intent data used by the workflow.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-20
+    @version    0.1.0
+    """
     id: str
     kind: Literal["feature", "fix", "change"]
     statement: str
@@ -47,6 +75,12 @@ class Intent:
 
 @dataclass
 class SpecItem:
+    """
+    @brief      Represent SpecItem data used by the workflow.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-20
+    @version    0.1.0
+    """
     id: str
     tag: Literal["behavior", "property"]
     statement: str
@@ -57,9 +91,16 @@ class SpecItem:
 
 @dataclass
 class Check:
+    """
+    @brief      Represent Check data used by the workflow.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-20
+    @version    0.1.0
+    """
     id: str
     level: str
     cites_spec: list[str]
+    cites_requirement: list[str] = field(default_factory=list)
     command: str | None = None
     path: str | None = None
     state: Literal["red", "green", "unknown"] = "unknown"
@@ -69,10 +110,20 @@ class Check:
 
 @dataclass
 class Evidence:
+    """
+    @brief      Represent Evidence data used by the workflow.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-20
+    @version    0.1.0
+    """
     id: str
     kind: Literal["test-run", "diff", "scan", "gate", "decision", "note"]
     result: Literal["pass", "fail", "info"]
     summary: str
+    status: Literal["active", "superseded"] = "active"
+    failure_kind: str | None = None
+    superseded_by: str | None = None
+    supersede_reason: str | None = None
     command: str | None = None
     path: str | None = None
     stage: str | None = None
@@ -81,6 +132,12 @@ class Evidence:
 
 @dataclass
 class ChangeUnit:
+    """
+    @brief      Represent ChangeUnit data used by the workflow.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-20
+    @version    0.1.0
+    """
     id: str
     touched_paths: list[str]
     evidence: list[str] = field(default_factory=list)
@@ -88,6 +145,12 @@ class ChangeUnit:
 
 @dataclass
 class Decision:
+    """
+    @brief      Represent Decision data used by the workflow.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-20
+    @version    0.1.0
+    """
     id: str
     question: str
     chosen: str
@@ -98,6 +161,12 @@ class Decision:
 
 @dataclass
 class Defect:
+    """
+    @brief      Represent Defect data used by the workflow.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-20
+    @version    0.1.0
+    """
     id: str
     statement: str
     violates_spec: str | None = None
@@ -107,6 +176,12 @@ class Defect:
 
 @dataclass
 class Graph:
+    """
+    @brief      Represent Graph data used by the workflow.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-20
+    @version    0.1.0
+    """
     run_id: str
     stage: Stage
     intent: Intent
@@ -119,10 +194,27 @@ class Graph:
     defects: list[Defect] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        @brief      Handle to dict workflow behavior.
+        @return     Result produced by the workflow helper.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-06-20
+        @version    0.1.0
+        """
         return asdict(self)
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "Graph":
+        """
+        @brief      Handle from dict workflow behavior.
+        @param[in]  data Input value used by the workflow helper.
+        @return     Result produced by the workflow helper.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-06-20
+        @version    0.1.0
+        """
         return cls(
             run_id=data["run_id"],
             stage=data["stage"],

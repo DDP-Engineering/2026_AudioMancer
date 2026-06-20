@@ -12,19 +12,14 @@ param(
 
 $ErrorActionPreference = "Stop"
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
-$ProjectRoot = Resolve-Path (Join-Path $ScriptDir "..\..")
+# @brief Project-local Python launcher for the embedded workflow CLI.
 $Launcher = Join-Path $ScriptDir "run_agentic_workflow.py"
 
+# @brief Resolve a Python launcher available on PATH.
+# @return Command name for Python, or $null when no supported launcher exists.
 function Resolve-Python {
-    $candidates = @(
-        (Join-Path $ProjectRoot "04_Software\AudioMancer\.venv\Scripts\python.exe"),
-        "python",
-        "py"
-    )
+    $candidates = @("python", "py")
     foreach ($candidate in $candidates) {
-        if (Test-Path -LiteralPath $candidate) {
-            return $candidate
-        }
         $command = Get-Command $candidate -ErrorAction SilentlyContinue
         if ($null -ne $command) {
             return $candidate

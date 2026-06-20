@@ -12,15 +12,10 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
 
 # Regression Traceability
 
-Read and follow these workflow rule sources:
+Read and follow these shared workflow rule sources:
 
 - `AGENTS.md`
-- `.agentic/requirements/README.md`
-- `.agentic/workflow.toml`
-- `.codex/skills/regression-traceability/SKILL.md`
-
-Use `PROMPT_CHEATSHEET.md` only as a human operator prompt reference, not as
-an authoritative agent behavior contract.
+- `.agentic/skills/regression-traceability/SKILL.md`
 
 Claude Code invocation: `/regression-traceability`.
 

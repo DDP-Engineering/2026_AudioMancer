@@ -6,11 +6,17 @@
 
 set -euo pipefail
 
+# @brief Directory containing this installer after transboarding.
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+# @brief Root of the target repository after the template is transboarded.
 PROJECT_ROOT="$(cd -- "$SCRIPT_DIR/../.." && pwd)"
+# @brief Embedded CLI package installed by this helper.
 CLI_ROOT="$PROJECT_ROOT/.agentic/cli"
+# @brief Local virtual environment owned by the workflow template.
 VENV_ROOT="$PROJECT_ROOT/.agentic/.venv"
 
+# @brief Resolve a Python launcher available on PATH.
+# @return Absolute path to a Python command, or a non-zero status when missing.
 resolve_python() {
   if command -v python3 >/dev/null 2>&1; then
     command -v python3

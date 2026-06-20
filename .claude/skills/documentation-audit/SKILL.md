@@ -1,30 +1,23 @@
 ---
 name: documentation-audit
-description: Review AudioMancer documentation against the current software implementation and update stale README, HowToTest, Overview, and 05_SoftwareDocu content. Use when the user asks to review, synchronize, or refresh project documentation after implementation changes.
+description: Use after implementation changes or before delivery to review changed implementation files against relevant component documentation; broad docs are opt-in or scope-triggered.
 ---
+
+<!--
+Copyright (c) 2026 DDP Engineering
+This software is licensed under the GNU Affero General Public License v3.0
+(AGPL-3.0) with additional Non-Commercial restriction.
+See the LICENSE.txt and LICENSE_NC.txt files for full license details.
+-->
 
 # Documentation Audit
 
-Use this workflow:
+Read and follow these shared workflow rule sources:
 
-1. Read `AGENTS.md` and `01_Documentation/Code_Style.md`.
-2. Run the deterministic audit:
+- `AGENTS.md`
+- `.agentic/skills/documentation-audit/SKILL.md`
 
-   ```powershell
-   python 02_Tools/audits/audit_documentation.py --changed-only
-   ```
+Claude Code invocation: `/documentation-audit`.
 
-   Omit `--changed-only` when the user asks for a full documentation review.
-3. Inspect the implementation files reported by the tool.
-4. Update stale or missing documentation directly:
-   - `README.MD`
-   - `04_Software/README.md`
-   - `04_Software/AudioMancer/README.MD`
-   - `05_SoftwareDocu/*.md`
-   - `05_SoftwareDocu/README.md`
-   - `0_Planning/Overview.md`
-   - `HowToTest*.md` when present or needed
-5. Do not describe planned behavior as implemented. Mark limitations and future work explicitly.
-6. Re-run the audit after edits and report remaining warnings that require human judgment.
-
-When creating or updating a component document, also use `$write-component-documentation`.
+If a deterministic documentation audit exists in the target repository, run it.
+Otherwise perform the manual review described by the shared skill.

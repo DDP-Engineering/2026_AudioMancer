@@ -120,7 +120,7 @@
     "req_id": "REQ-DATA-005",
     "requirement": "Settings Service shall include the chunking context mode in default settings, validate it against the supported mode tokens, repair missing or invalid values to Balanced, and preserve valid persisted selections.",
     "source_file": ".agentic/requirements/data_privacy.md",
-    "status": "Planned",
+    "status": "Active",
     "verification": "Automated test (planned): settings default, validation, and repair tests for the chunking context mode."
   },
   "REQ-FUNC-001": {
@@ -1220,7 +1220,7 @@
     "req_id": "REQ-FUNC-039",
     "requirement": "AI Chunking Service shall apply the selected chunking context mode when building AI prompt windows: Balanced keeps the current paragraph, meaning, and scene caps at 64, 96, and 128 paragraphs; Wide scene context uses 128, 192, and 256 paragraph caps; Maximum context disables the paragraph cap and relies only on the token budget.",
     "source_file": ".agentic/requirements/functional.md",
-    "status": "Planned",
+    "status": "Active",
     "verification": "Automated test (planned): focused AI chunking window-construction tests for each context mode."
   },
   "REQ-NFR-001": {
@@ -2003,7 +2003,7 @@
     "req_id": "REQ-TEST-010",
     "requirement": "A deterministic end-to-end smoke test shall exercise the offline pipeline from source import through audio assembly to guard cross-stage contracts.",
     "source_file": ".agentic/requirements/testing.md",
-    "status": "Planned",
+    "status": "Active",
     "verification": "Automated test (planned): single deterministic pipeline run asserting stage hand-off artifacts."
   },
   "REQ-TEST-011": {
@@ -2854,7 +2854,7 @@
     "req_id": "REQ-UX-034",
     "requirement": "AI Settings Page shall expose a localized Chunking Context Mode selector with exactly Balanced, Wide scene context, and Maximum context options, defaulting to Balanced for missing or invalid settings and persisting the selected mode through Save, OK, and Apply flows.",
     "source_file": ".agentic/requirements/ux_workflow.md",
-    "status": "Planned",
+    "status": "Active",
     "verification": "Automated test (planned): AI Settings page persistence and localization-parity tests."
   }
 }

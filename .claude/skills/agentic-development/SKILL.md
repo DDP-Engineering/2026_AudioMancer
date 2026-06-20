@@ -12,14 +12,10 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
 
 # Agentic Development
 
-Read and follow these workflow rule sources:
+Read and follow these shared workflow rule sources:
 
 - `AGENTS.md`
-- `.agentic/workflow.toml`
-- `.codex/skills/agentic-development/SKILL.md`
-
-Use `PROMPT_CHEATSHEET.md` only as a human operator prompt reference, not as
-an authoritative agent behavior contract.
+- `.agentic/skills/agentic-development/SKILL.md`
 
 Claude Code invocation: `/agentic-development`.
 

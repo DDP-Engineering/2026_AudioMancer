@@ -26,6 +26,7 @@ from __future__ import annotations
 # -----------------------------------------------------------------------------
 
 import io
+import importlib.util
 import json
 import os
 from pathlib import Path
@@ -34,7 +35,6 @@ import sys
 import pytest
 
 from agentic_workflow.cli import main as cli_main
-from agentic_workflow.hooks.guard_write_zone import main as guard_main
 from agentic_workflow.store import (
     agentic_root,
     graph_path,
@@ -42,6 +42,22 @@ from agentic_workflow.store import (
     load_graph,
     write_current_run,
 )
+
+
+AGENTIC_ROOT = Path(__file__).resolve().parents[2]
+GUARD_HOOK = AGENTIC_ROOT / "hooks" / "guard_write_zone.py"
+
+
+def _load_guard_main():
+    spec = importlib.util.spec_from_file_location("agentic_guard_write_zone", GUARD_HOOK)
+    assert spec is not None
+    assert spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module.main
+
+
+guard_main = _load_guard_main()
 
 
 # -----------------------------------------------------------------------------

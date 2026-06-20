@@ -6,9 +6,13 @@
 
 set -euo pipefail
 
+# @brief Directory containing this wrapper after transboarding.
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+# @brief Project-local Python launcher for the embedded workflow CLI.
 LAUNCHER="$SCRIPT_DIR/run_agentic_workflow.py"
 
+# @brief Resolve a Python launcher available on PATH.
+# @return Absolute path to a Python command, or a non-zero status when missing.
 resolve_python() {
   if command -v python3 >/dev/null 2>&1; then
     command -v python3

@@ -1,7 +1,21 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+# -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
 # (AGPL-3.0) with additional Non-Commercial restriction.
 # See the LICENSE.txt and LICENSE_NC.txt files for full license details.
+# -----------------------------------------------------------------------------
+"""
+@file invariants.py
+@brief Invariant checks for agentic workflow delivery readiness.
+@details Provides reusable implementation behavior for the standalone workflow template.
+@author Eng. Dan Dumitru Pasare
+@date 2026-06-20
+@version 0.1.0
+"""
+
+# IMPORTS
 
 from __future__ import annotations
 
@@ -13,10 +27,17 @@ from pathlib import Path
 from .config import WorkflowConfig, load_config
 from .models import Graph
 from .paths import is_allowed_path
+from .requirements import load_all_requirements
 
 
 @dataclass
 class InvariantResult:
+    """
+    @brief      Represent InvariantResult data used by the workflow.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-20
+    @version    0.1.0
+    """
     id: str
     name: str
     holds: bool
@@ -25,6 +46,17 @@ class InvariantResult:
 
 
 def evaluate(repo_root: Path, graph: Graph, config: WorkflowConfig | None = None) -> list[InvariantResult]:
+    """
+    @brief      Evaluate workflow behavior.
+    @param[in]  repo_root Input value used by the workflow helper.
+    @param[in]  graph Input value used by the workflow helper.
+    @param[in]  config Input value used by the workflow helper.
+    @return     Result produced by the workflow helper.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-20
+    @version    0.1.0
+    """
     cfg = config or load_config(repo_root)
     return [
         _coverage(graph),
@@ -34,14 +66,33 @@ def evaluate(repo_root: Path, graph: Graph, config: WorkflowConfig | None = None
         _in_scope(repo_root, graph, cfg),
         _evidence(graph),
         _clean_secrets(repo_root, cfg),
+        _green_requirements_active(repo_root, graph, cfg),
     ]
 
 
 def blocking_failures(results: list[InvariantResult]) -> list[InvariantResult]:
+    """
+    @brief      Collect blocking failures workflow behavior.
+    @param[in]  results Input value used by the workflow helper.
+    @return     Result produced by the workflow helper.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-20
+    @version    0.1.0
+    """
     return [item for item in results if item.policy in {"blocking", "non-waivable"} and not item.holds]
 
 
 def _coverage(graph: Graph) -> InvariantResult:
+    """
+    @brief      Handle coverage workflow behavior.
+    @param[in]  graph Input value used by the workflow helper.
+    @return     Result produced by the workflow helper.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-20
+    @version    0.1.0
+    """
     accepted = [item for item in graph.spec_items if item.status in {"accepted", "realized"}]
     covered_ids = {spec for check in graph.checks for spec in check.cites_spec}
     missing = [item.id for item in accepted if item.id not in covered_ids]
@@ -55,6 +106,15 @@ def _coverage(graph: Graph) -> InvariantResult:
 
 
 def _citation(graph: Graph) -> InvariantResult:
+    """
+    @brief      Handle citation workflow behavior.
+    @param[in]  graph Input value used by the workflow helper.
+    @return     Result produced by the workflow helper.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-20
+    @version    0.1.0
+    """
     spec_ids = {item.id for item in graph.spec_items}
     bad = [
         check.id
@@ -71,6 +131,15 @@ def _citation(graph: Graph) -> InvariantResult:
 
 
 def _red_before_green(graph: Graph) -> InvariantResult:
+    """
+    @brief      Handle red before green workflow behavior.
+    @param[in]  graph Input value used by the workflow helper.
+    @return     Result produced by the workflow helper.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-20
+    @version    0.1.0
+    """
     missing = [
         check.id
         for check in graph.checks
@@ -86,10 +155,20 @@ def _red_before_green(graph: Graph) -> InvariantResult:
 
 
 def _no_regression(graph: Graph) -> InvariantResult:
+    """
+    @brief      Handle no regression workflow behavior.
+    @param[in]  graph Input value used by the workflow helper.
+    @return     Result produced by the workflow helper.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-20
+    @version    0.1.0
+    """
     failed_gates = [
         item.id
         for item in graph.evidence
         if item.kind in {"gate", "test-run"} and item.stage in {"implementation", "validation", "delivery"} and item.result == "fail"
+        and item.status != "superseded"
     ]
     return InvariantResult(
         "INV-4",
@@ -100,7 +179,47 @@ def _no_regression(graph: Graph) -> InvariantResult:
     )
 
 
+def _green_requirements_active(repo_root: Path, graph: Graph, cfg: WorkflowConfig) -> InvariantResult:
+    """
+    @brief      Handle green requirements active workflow behavior.
+    @param[in]  repo_root Input value used by the workflow helper.
+    @param[in]  graph Input value used by the workflow helper.
+    @param[in]  cfg Input value used by the workflow helper.
+    @return     Result produced by the workflow helper.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-20
+    @version    0.1.0
+    """
+    cited = sorted({req_id for check in graph.checks if check.state == "green" for req_id in check.cites_requirement})
+    if not cited:
+        return InvariantResult("INV-8", "Green requirements active", True, "blocking", "No green checks cite durable requirements.")
+    rows = {row.req_id: row for row in load_all_requirements(repo_root, cfg)}
+    missing = [req_id for req_id in cited if req_id not in rows]
+    planned = [req_id for req_id in cited if req_id in rows and rows[req_id].status != "Active"]
+    failures = [*missing, *planned]
+    if not failures:
+        return InvariantResult("INV-8", "Green requirements active", True, "blocking", "Green requirement-linked checks cite Active requirements.")
+    parts = []
+    if missing:
+        parts.append(f"missing rows: {', '.join(missing)}")
+    if planned:
+        parts.append(f"not Active: {', '.join(planned)}")
+    return InvariantResult("INV-8", "Green requirements active", False, "blocking", "; ".join(parts))
+
+
 def _in_scope(repo_root: Path, graph: Graph, cfg: WorkflowConfig) -> InvariantResult:
+    """
+    @brief      Handle in scope workflow behavior.
+    @param[in]  repo_root Input value used by the workflow helper.
+    @param[in]  graph Input value used by the workflow helper.
+    @param[in]  cfg Input value used by the workflow helper.
+    @return     Result produced by the workflow helper.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-20
+    @version    0.1.0
+    """
     touched = [path for unit in graph.change_units for path in unit.touched_paths]
     if not touched:
         return InvariantResult("INV-5", "In scope", True, "advisory", "No change units recorded yet.")
@@ -121,6 +240,15 @@ def _in_scope(repo_root: Path, graph: Graph, cfg: WorkflowConfig) -> InvariantRe
 
 
 def _evidence(graph: Graph) -> InvariantResult:
+    """
+    @brief      Handle evidence workflow behavior.
+    @param[in]  graph Input value used by the workflow helper.
+    @return     Result produced by the workflow helper.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-20
+    @version    0.1.0
+    """
     has_evidence = bool(graph.evidence)
     return InvariantResult(
         "INV-6",
@@ -132,6 +260,16 @@ def _evidence(graph: Graph) -> InvariantResult:
 
 
 def _clean_secrets(repo_root: Path, cfg: WorkflowConfig) -> InvariantResult:
+    """
+    @brief      Handle clean secrets workflow behavior.
+    @param[in]  repo_root Input value used by the workflow helper.
+    @param[in]  cfg Input value used by the workflow helper.
+    @return     Result produced by the workflow helper.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-20
+    @version    0.1.0
+    """
     patterns = cfg.secret_patterns
     if not patterns:
         return InvariantResult("INV-7", "Clean secrets", True, "non-waivable", "No secret patterns configured.")
@@ -160,6 +298,15 @@ def _clean_secrets(repo_root: Path, cfg: WorkflowConfig) -> InvariantResult:
 
 
 def _root_patterns(roots: list[str]) -> list[str]:
+    """
+    @brief      Handle root patterns workflow behavior.
+    @param[in]  roots Input value used by the workflow helper.
+    @return     Result produced by the workflow helper.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-20
+    @version    0.1.0
+    """
     patterns = []
     for root in roots:
         normalized = root.replace("\\", "/").rstrip("/")

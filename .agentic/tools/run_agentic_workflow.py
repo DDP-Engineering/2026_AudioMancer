@@ -1,7 +1,21 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+# -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
 # (AGPL-3.0) with additional Non-Commercial restriction.
 # See the LICENSE.txt and LICENSE_NC.txt files for full license details.
+# -----------------------------------------------------------------------------
+"""
+@file run_agentic_workflow.py
+@brief Template launcher for the embedded agentic workflow CLI.
+@details Bootstraps the embedded CLI from a generated project checkout.
+@author Eng. Dan Dumitru Pasare
+@date 2026-06-20
+@version 0.1.0
+"""
+
+# IMPORTS
 
 from __future__ import annotations
 
@@ -10,6 +24,15 @@ from pathlib import Path
 
 
 def main(argv: list[str] | None = None) -> int:
+    """
+    @brief      Run command-line entry point workflow behavior.
+    @param[in]  argv Input value used by the workflow helper.
+    @return     Result produced by the workflow helper.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-20
+    @version    0.1.0
+    """
     if sys.version_info < (3, 11):
         print("Python 3.11 or newer is required for agentic-workflow.", file=sys.stderr)
         return 2

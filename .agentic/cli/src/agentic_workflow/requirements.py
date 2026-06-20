@@ -1,11 +1,26 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+# -----------------------------------------------------------------------------
 # Copyright (c) 2026 DDP Engineering
 # This software is licensed under the GNU Affero General Public License v3.0
 # (AGPL-3.0) with additional Non-Commercial restriction.
 # See the LICENSE.txt and LICENSE_NC.txt files for full license details.
+# -----------------------------------------------------------------------------
+"""
+@file requirements.py
+@brief Requirement registry, coverage, and traceability helpers.
+@details Provides reusable implementation behavior for the standalone workflow template.
+@author Eng. Dan Dumitru Pasare
+@date 2026-06-20
+@version 0.1.0
+"""
+
+# IMPORTS
 
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass
+from datetime import datetime, timezone
 from fnmatch import fnmatch
 import json
 import re
@@ -38,6 +53,12 @@ MANUAL_MARKERS = ("manual", "inspection")
 
 @dataclass
 class RequirementRow:
+    """
+    @brief      Represent RequirementRow data used by the workflow.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-20
+    @version    0.1.0
+    """
     req_id: str
     status: str
     priority: str
@@ -52,27 +73,75 @@ class RequirementRow:
     line_number: int
 
     def file_components(self) -> list[str]:
+        """
+        @brief      Handle file components workflow behavior.
+        @return     Result produced by the workflow helper.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-06-20
+        @version    0.1.0
+        """
         return [item for item in self.related_components if _looks_like_file(item)]
 
     def directory_components(self) -> list[str]:
+        """
+        @brief      Handle directory components workflow behavior.
+        @return     Result produced by the workflow helper.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-06-20
+        @version    0.1.0
+        """
         return [item for item in self.related_components if not _looks_like_file(item)]
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        @brief      Handle to dict workflow behavior.
+        @return     Result produced by the workflow helper.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-06-20
+        @version    0.1.0
+        """
         return asdict(self)
 
 
 @dataclass
 class AuditIssue:
+    """
+    @brief      Represent AuditIssue data used by the workflow.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-20
+    @version    0.1.0
+    """
     code: str
     message: str
     req_id: str | None = None
     path: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        @brief      Handle to dict workflow behavior.
+        @return     Result produced by the workflow helper.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-06-20
+        @version    0.1.0
+        """
         return asdict(self)
 
 
 def load_all_requirements(repo_root: Path, config: WorkflowConfig | None = None) -> list[RequirementRow]:
+    """
+    @brief      Load all requirements workflow behavior.
+    @param[in]  repo_root Input value used by the workflow helper.
+    @param[in]  config Input value used by the workflow helper.
+    @return     Result produced by the workflow helper.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-20
+    @version    0.1.0
+    """
     cfg = config or load_config(repo_root)
     rows: list[RequirementRow] = []
     for root_name in cfg.requirement_roots:
@@ -87,6 +156,16 @@ def load_all_requirements(repo_root: Path, config: WorkflowConfig | None = None)
 
 
 def parse_register_file(path: Path, repo_root: Path | None = None) -> list[RequirementRow]:
+    """
+    @brief      Parse register file workflow behavior.
+    @param[in]  path Input value used by the workflow helper.
+    @param[in]  repo_root Input value used by the workflow helper.
+    @return     Result produced by the workflow helper.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-20
+    @version    0.1.0
+    """
     text = path.read_text(encoding="utf-8")
     lines = text.splitlines()
     header_index = _find_header(lines)
@@ -120,6 +199,15 @@ def parse_register_file(path: Path, repo_root: Path | None = None) -> list[Requi
 
 
 def validate_rows(rows: list[RequirementRow]) -> list[AuditIssue]:
+    """
+    @brief      Validate rows workflow behavior.
+    @param[in]  rows Input value used by the workflow helper.
+    @return     Result produced by the workflow helper.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-20
+    @version    0.1.0
+    """
     issues: list[AuditIssue] = []
     seen: set[str] = set()
     for row in rows:
@@ -141,6 +229,16 @@ def validate_rows(rows: list[RequirementRow]) -> list[AuditIssue]:
 
 
 def audit_traceability(repo_root: Path, config: WorkflowConfig | None = None) -> list[AuditIssue]:
+    """
+    @brief      Audit traceability workflow behavior.
+    @param[in]  repo_root Input value used by the workflow helper.
+    @param[in]  config Input value used by the workflow helper.
+    @return     Result produced by the workflow helper.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-20
+    @version    0.1.0
+    """
     cfg = config or load_config(repo_root)
     rows = load_all_requirements(repo_root, cfg)
     issues = validate_rows(rows)
@@ -160,6 +258,16 @@ def audit_traceability(repo_root: Path, config: WorkflowConfig | None = None) ->
 
 
 def audit_coverage(repo_root: Path, config: WorkflowConfig | None = None) -> list[AuditIssue]:
+    """
+    @brief      Audit coverage workflow behavior.
+    @param[in]  repo_root Input value used by the workflow helper.
+    @param[in]  config Input value used by the workflow helper.
+    @return     Result produced by the workflow helper.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-20
+    @version    0.1.0
+    """
     cfg = config or load_config(repo_root)
     rows = load_all_requirements(repo_root, cfg)
     waivers = load_waivers(repo_root, cfg)
@@ -178,7 +286,54 @@ def audit_coverage(repo_root: Path, config: WorkflowConfig | None = None) -> lis
     return issues
 
 
+def activate_requirement(
+    repo_root: Path,
+    req_id: str,
+    linked_tests: list[str],
+    verification: str,
+    config: WorkflowConfig | None = None,
+) -> RequirementRow:
+    """
+    @brief      Activate requirement workflow behavior.
+    @param[in]  repo_root Input value used by the workflow helper.
+    @param[in]  req_id Input value used by the workflow helper.
+    @param[in]  linked_tests Input value used by the workflow helper.
+    @param[in]  verification Input value used by the workflow helper.
+    @param[in]  config Input value used by the workflow helper.
+    @return     Result produced by the workflow helper.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-20
+    @version    0.1.0
+    """
+    cfg = config or load_config(repo_root)
+    if not linked_tests and not any(marker in verification.lower() for marker in MANUAL_MARKERS):
+        raise ValueError("Requirement activation needs at least one linked test or manual verification text.")
+    for root_name in cfg.requirement_roots:
+        root = repo_root / root_name
+        if not root.exists():
+            continue
+        for path in sorted(root.glob("*.md")):
+            if path.name.lower() == "readme.md":
+                continue
+            updated = _activate_requirement_in_file(path, repo_root, req_id, linked_tests, verification)
+            if updated:
+                return updated
+    raise ValueError(f"Requirement not found: {req_id}")
+
+
 def impact(repo_root: Path, files: list[str] | None = None, config: WorkflowConfig | None = None) -> list[dict[str, Any]]:
+    """
+    @brief      Build impact workflow behavior.
+    @param[in]  repo_root Input value used by the workflow helper.
+    @param[in]  files Input value used by the workflow helper.
+    @param[in]  config Input value used by the workflow helper.
+    @return     Result produced by the workflow helper.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-20
+    @version    0.1.0
+    """
     cfg = config or load_config(repo_root)
     rows = load_all_requirements(repo_root, cfg)
     coverable = set(iter_coverable_files(repo_root, cfg))
@@ -201,6 +356,15 @@ def impact(repo_root: Path, files: list[str] | None = None, config: WorkflowConf
 
 
 def sync_registry(repo_root: Path) -> dict[str, int]:
+    """
+    @brief      Synchronize sync registry workflow behavior.
+    @param[in]  repo_root Input value used by the workflow helper.
+    @return     Result produced by the workflow helper.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-20
+    @version    0.1.0
+    """
     rows = load_all_requirements(repo_root)
     registry = repo_root / ".agentic" / "registry"
     registry.mkdir(parents=True, exist_ok=True)
@@ -220,6 +384,15 @@ def sync_registry(repo_root: Path) -> dict[str, int]:
 
 
 def audit_registry(repo_root: Path) -> list[AuditIssue]:
+    """
+    @brief      Audit registry workflow behavior.
+    @param[in]  repo_root Input value used by the workflow helper.
+    @return     Result produced by the workflow helper.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-20
+    @version    0.1.0
+    """
     registry = repo_root / ".agentic" / "registry"
     requirements_path = registry / "requirements.json"
     checks_path = registry / "checks.json"
@@ -243,6 +416,15 @@ def audit_registry(repo_root: Path) -> list[AuditIssue]:
 
 
 def _load_active_feature(repo_root: Path) -> dict[str, Any]:
+    """
+    @brief      Load active feature workflow behavior.
+    @param[in]  repo_root Input value used by the workflow helper.
+    @return     Result produced by the workflow helper.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-20
+    @version    0.1.0
+    """
     current = repo_root / ".agentic" / "current_run"
     if not current.exists():
         return {}
@@ -265,6 +447,16 @@ def _load_active_feature(repo_root: Path) -> dict[str, Any]:
 
 
 def load_waivers(repo_root: Path, config: WorkflowConfig) -> list[str]:
+    """
+    @brief      Load waivers workflow behavior.
+    @param[in]  repo_root Input value used by the workflow helper.
+    @param[in]  config Input value used by the workflow helper.
+    @return     Result produced by the workflow helper.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-20
+    @version    0.1.0
+    """
     for root_name in config.requirement_roots:
         path = repo_root / root_name / "coverage_waivers.txt"
         if path.exists():
@@ -277,6 +469,16 @@ def load_waivers(repo_root: Path, config: WorkflowConfig) -> list[str]:
 
 
 def iter_coverable_files(repo_root: Path, config: WorkflowConfig) -> list[str]:
+    """
+    @brief      Iterate iter coverable files workflow behavior.
+    @param[in]  repo_root Input value used by the workflow helper.
+    @param[in]  config Input value used by the workflow helper.
+    @return     Result produced by the workflow helper.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-20
+    @version    0.1.0
+    """
     extensions = set(config.source_extensions)
     found: list[str] = []
     for root_name in config.coverable_roots:
@@ -294,11 +496,31 @@ def iter_coverable_files(repo_root: Path, config: WorkflowConfig) -> list[str]:
 
 
 def rows_covering_file(rows: list[RequirementRow], relative_path: str) -> list[RequirementRow]:
+    """
+    @brief      Collect rows covering file workflow behavior.
+    @param[in]  rows Input value used by the workflow helper.
+    @param[in]  relative_path Input value used by the workflow helper.
+    @return     Result produced by the workflow helper.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-20
+    @version    0.1.0
+    """
     normalized = _normalize_relative(relative_path)
     return [row for row in rows if normalized in row.file_components()]
 
 
 def rows_touching_file(rows: list[RequirementRow], relative_path: str) -> list[RequirementRow]:
+    """
+    @brief      Collect rows touching file workflow behavior.
+    @param[in]  rows Input value used by the workflow helper.
+    @param[in]  relative_path Input value used by the workflow helper.
+    @return     Result produced by the workflow helper.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-20
+    @version    0.1.0
+    """
     normalized = _normalize_relative(relative_path)
     matches = rows_covering_file(rows, normalized)
     matches.extend(
@@ -310,6 +532,17 @@ def rows_touching_file(rows: list[RequirementRow], relative_path: str) -> list[R
 
 
 def resolve_test(repo_root: Path, test_id: str, config: WorkflowConfig) -> tuple[bool, str]:
+    """
+    @brief      Resolve test workflow behavior.
+    @param[in]  repo_root Input value used by the workflow helper.
+    @param[in]  test_id Input value used by the workflow helper.
+    @param[in]  config Input value used by the workflow helper.
+    @return     Result produced by the workflow helper.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-20
+    @version    0.1.0
+    """
     try:
         test_path, ident = _split_test_id(test_id)
     except ValueError as exc:
@@ -330,7 +563,67 @@ def resolve_test(repo_root: Path, test_id: str, config: WorkflowConfig) -> tuple
     return (True, "resolved") if resolved else (False, f"{ident} not found in {test_path}")
 
 
+def _activate_requirement_in_file(
+    path: Path,
+    repo_root: Path,
+    req_id: str,
+    linked_tests: list[str],
+    verification: str,
+) -> RequirementRow | None:
+    """
+    @brief      Activate requirement in file workflow behavior.
+    @param[in]  path Input value used by the workflow helper.
+    @param[in]  repo_root Input value used by the workflow helper.
+    @param[in]  req_id Input value used by the workflow helper.
+    @param[in]  linked_tests Input value used by the workflow helper.
+    @param[in]  verification Input value used by the workflow helper.
+    @return     Result produced by the workflow helper.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-20
+    @version    0.1.0
+    """
+    lines = path.read_text(encoding="utf-8").splitlines()
+    header_index = _find_header(lines)
+    if header_index is None:
+        return None
+    for index, line in enumerate(lines[header_index + 2 :], start=header_index + 2):
+        if not line.strip().startswith("|"):
+            continue
+        cells = _split_markdown_row(line)
+        if len(cells) != len(REGISTER_HEADER) or cells[0] != req_id:
+            continue
+        existing_tests = _split_cell(cells[7])
+        merged_tests = _merge_unique(existing_tests, [_normalize_relative(item) for item in linked_tests])
+        cells[1] = "Active"
+        cells[6] = verification
+        cells[7] = _format_list_cell(merged_tests)
+        cells[9] = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M")
+        lines[index] = "| " + " | ".join(cells) + " |"
+        path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+        # Re-parse and locate the updated row by ID instead of by line offset so
+        # activation stays correct even when the register has blank or malformed
+        # lines between the header and this row.
+        for updated_row in parse_register_file(path, repo_root):
+            if updated_row.req_id == req_id:
+                return updated_row
+        return None
+    return None
+
+
 def _is_covered(repo_root: Path, rows: list[RequirementRow], relative_path: str, config: WorkflowConfig) -> bool:
+    """
+    @brief      Check is covered workflow behavior.
+    @param[in]  repo_root Input value used by the workflow helper.
+    @param[in]  rows Input value used by the workflow helper.
+    @param[in]  relative_path Input value used by the workflow helper.
+    @param[in]  config Input value used by the workflow helper.
+    @return     Result produced by the workflow helper.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-20
+    @version    0.1.0
+    """
     for row in rows_covering_file(rows, relative_path):
         if row.status not in {"Active", "Planned"}:
             continue
@@ -340,6 +633,15 @@ def _is_covered(repo_root: Path, rows: list[RequirementRow], relative_path: str,
 
 
 def _find_header(lines: list[str]) -> int | None:
+    """
+    @brief      Handle find header workflow behavior.
+    @param[in]  lines Input value used by the workflow helper.
+    @return     Result produced by the workflow helper.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-20
+    @version    0.1.0
+    """
     expected = "| " + " | ".join(REGISTER_HEADER) + " |"
     for index, line in enumerate(lines):
         if line.strip() == expected:
@@ -348,10 +650,28 @@ def _find_header(lines: list[str]) -> int | None:
 
 
 def _split_markdown_row(line: str) -> list[str]:
+    """
+    @brief      Handle split markdown row workflow behavior.
+    @param[in]  line Input value used by the workflow helper.
+    @return     Result produced by the workflow helper.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-20
+    @version    0.1.0
+    """
     return [cell.strip() for cell in line.strip().strip("|").split("|")]
 
 
 def _split_cell(cell: str) -> list[str]:
+    """
+    @brief      Handle split cell workflow behavior.
+    @param[in]  cell Input value used by the workflow helper.
+    @return     Result produced by the workflow helper.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-20
+    @version    0.1.0
+    """
     values = re.findall(r"`([^`]+)`", cell)
     if values:
         return [_normalize_relative(value) for value in values]
@@ -360,7 +680,47 @@ def _split_cell(cell: str) -> list[str]:
     return [_normalize_relative(part.strip()) for part in cell.split(";") if part.strip()]
 
 
+def _format_list_cell(values: list[str]) -> str:
+    """
+    @brief      Handle format list cell workflow behavior.
+    @param[in]  values Input value used by the workflow helper.
+    @return     Result produced by the workflow helper.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-20
+    @version    0.1.0
+    """
+    return "; ".join(f"`{value}`" for value in values) if values else "-"
+
+
+def _merge_unique(existing: list[str], new_items: list[str]) -> list[str]:
+    """
+    @brief      Handle merge unique workflow behavior.
+    @param[in]  existing Input value used by the workflow helper.
+    @param[in]  new_items Input value used by the workflow helper.
+    @return     Result produced by the workflow helper.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-20
+    @version    0.1.0
+    """
+    merged: list[str] = []
+    for item in [*existing, *new_items]:
+        if item and item not in {"-", "None", "N/A"} and item not in merged:
+            merged.append(item)
+    return merged
+
+
 def _split_test_id(test_id: str) -> tuple[str, str]:
+    """
+    @brief      Handle split test id workflow behavior.
+    @param[in]  test_id Input value used by the workflow helper.
+    @return     Result produced by the workflow helper.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-20
+    @version    0.1.0
+    """
     if "#" in test_id:
         path, ident = test_id.split("#", 1)
         return _normalize_relative(path), ident
@@ -371,32 +731,99 @@ def _split_test_id(test_id: str) -> tuple[str, str]:
 
 
 def _resolve_python(source: str, ident: str) -> bool:
+    """
+    @brief      Resolve python workflow behavior.
+    @param[in]  source Input value used by the workflow helper.
+    @param[in]  ident Input value used by the workflow helper.
+    @return     Result produced by the workflow helper.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-20
+    @version    0.1.0
+    """
     name = ident.split("::")[-1]
     return re.search(rf"^\s*def\s+{re.escape(name)}\s*\(", source, flags=re.MULTILINE) is not None
 
 
 def _resolve_java(source: str, ident: str) -> bool:
+    """
+    @brief      Resolve java workflow behavior.
+    @param[in]  source Input value used by the workflow helper.
+    @param[in]  ident Input value used by the workflow helper.
+    @return     Result produced by the workflow helper.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-20
+    @version    0.1.0
+    """
     return re.search(rf"\b{re.escape(ident)}\s*\(", source) is not None
 
 
 def _resolve_cpp(source: str, ident: str) -> bool:
+    """
+    @brief      Resolve cpp workflow behavior.
+    @param[in]  source Input value used by the workflow helper.
+    @param[in]  ident Input value used by the workflow helper.
+    @return     Result produced by the workflow helper.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-20
+    @version    0.1.0
+    """
     test_name = ident.split(".")[-1]
     return test_name in source
 
 
 def _looks_like_file(path: str) -> bool:
+    """
+    @brief      Handle looks like file workflow behavior.
+    @param[in]  path Input value used by the workflow helper.
+    @return     Result produced by the workflow helper.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-20
+    @version    0.1.0
+    """
     return bool(Path(path).suffix)
 
 
 def _relative(path: Path, repo_root: Path) -> str:
+    """
+    @brief      Handle relative workflow behavior.
+    @param[in]  path Input value used by the workflow helper.
+    @param[in]  repo_root Input value used by the workflow helper.
+    @return     Result produced by the workflow helper.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-20
+    @version    0.1.0
+    """
     return path.resolve().relative_to(repo_root.resolve()).as_posix()
 
 
 def _normalize_relative(path: str) -> str:
+    """
+    @brief      Normalize relative workflow behavior.
+    @param[in]  path Input value used by the workflow helper.
+    @return     Result produced by the workflow helper.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-20
+    @version    0.1.0
+    """
     return path.replace("\\", "/").strip().strip("`")
 
 
 def _git_working_set(repo_root: Path) -> list[str]:
+    """
+    @brief      Handle git working set workflow behavior.
+    @param[in]  repo_root Input value used by the workflow helper.
+    @return     Result produced by the workflow helper.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-20
+    @version    0.1.0
+    """
     result = subprocess.run(
         ["git", "status", "--short"],
         cwd=repo_root,

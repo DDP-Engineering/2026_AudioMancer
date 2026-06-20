@@ -49,6 +49,9 @@ patterns = [
   "-----BEGIN (RSA |OPENSSH |EC )?PRIVATE KEY-----"
 ]
 
+[working_tree]
+blocked_patterns = []
+
 [write_zones]
 intake = [".agentic/**"]
 requirement = [".agentic/specs/**", ".agentic/requirements/**"]

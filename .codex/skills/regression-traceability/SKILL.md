@@ -10,40 +10,14 @@ This software is licensed under the GNU Affero General Public License v3.0
 See the LICENSE.txt and LICENSE_NC.txt files for full license details.
 -->
 
-
 # Regression Traceability
 
-Use this skill to preserve old behavior before changing code.
+Read and follow these shared workflow rule sources:
 
-This skill audits requirements and regression risk. Component documentation in
-`05_SoftwareDocu/` complements this process, but it does not replace durable
-requirement rows, linked tests, or explicit manual verification.
+- `AGENTS.md`
+- `.agentic/skills/regression-traceability/SKILL.md`
 
-## Procedure
+Codex invocation: `$regression-traceability`.
 
-1. Read `AGENTS.md`, `.agentic/workflow.toml`, and
-   `.agentic/requirements/README.md`.
-2. Run:
-
-   ```powershell
-   .\.venv\Scripts\python.exe -m agentic_workflow audit traceability
-   .\.venv\Scripts\python.exe -m agentic_workflow audit coverage
-   ```
-
-3. If planned or changed files are known, run:
-
-   ```powershell
-   .\.venv\Scripts\python.exe -m agentic_workflow impact <files>
-   ```
-
-   If not known, run impact after the first scoped file list is available.
-4. Treat impacted requirement rows as existing contracts. Do not change them
-   unless the human approves a requirement revision.
-5. Run linked tests reported by impact analysis. If impact reports untraced
-   coverable files, run full regression and author missing requirements/checks.
-6. For pre-existing legacy files, add waivers only with human approval and keep
-   them in `.agentic/requirements/coverage_waivers.txt`.
-7. Before delivery, run registry sync/audit and both traceability audits.
-
-Report impacted requirements, linked tests, untraced files, waivers touched,
-commands run, and remaining audit findings.
+Component documentation complements requirements and tests. It does not replace
+durable requirement rows, linked tests, or explicit manual verification.
