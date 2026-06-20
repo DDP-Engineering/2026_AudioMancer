@@ -33,6 +33,25 @@ or `python -m agentic_workflow` may also be used.
 Examples below use `<workflow>` for the selected project-local or installed
 workflow command.
 
+## Application Test Environment
+
+The agentic workflow and the AudioMancer application use separate environments;
+do not mix them. The workflow wrapper above stays independent of the
+application's language and toolchain.
+
+For the AudioMancer Python application's own tests, hygiene, and run commands,
+use the application's pinned `uv` environment from `04_Software/AudioMancer`:
+
+- Provision or repair it with `uv sync --extra dev` (installs the locked
+  `pytest`, `pytest-qt`, `ruff`, and `PyInstaller` from `uv.lock`).
+- Run everything through that environment with `uv run …`, for example
+  `uv run pytest` or `uv run ruff check …`.
+- Do not invoke the system Python directly, install packages with ad-hoc `pip`,
+  or reach into the application's virtual environment from the workflow tooling.
+
+See `04_Software/AudioMancer/README.MD` for the full setup, run, and validation
+commands.
+
 ## Durable Requirements Contract
 
 - Long-lived requirements live under `.agentic/requirements/`, one Markdown
