@@ -38,9 +38,6 @@ class WorkflowConfig:
     # @brief Repository paths scanned for executable or manually cited tests.
     test_roots: list[str] = field(default_factory=lambda: ["tests", "test"])
 
-    # @brief Paths that may contain run-local or durable specification files.
-    spec_roots: list[str] = field(default_factory=lambda: [".agentic/specs", "spec"])
-
     # @brief Markdown requirement-register roots used by traceability audits.
     requirement_roots: list[str] = field(default_factory=lambda: [".agentic/requirements"])
 
@@ -101,10 +98,9 @@ def load_config(repo_root: Path) -> WorkflowConfig:
 
     return WorkflowConfig(
         # Root sections identify where the workflow should look for project
-        # sources, tests, specifications, requirements, and documentation.
+        # sources, tests, requirements, and documentation.
         source_roots=list(data.get("source", {}).get("roots", ["src", "app", "lib"])),
         test_roots=list(data.get("tests", {}).get("roots", ["tests", "test"])),
-        spec_roots=list(data.get("spec", {}).get("roots", [".agentic/specs", "spec"])),
         requirement_roots=list(data.get("requirements", {}).get("roots", [".agentic/requirements"])),
         documentation_roots=list(documentation.get("roots", ["05_SoftwareDocu"])),
         component_documentation_template=str(

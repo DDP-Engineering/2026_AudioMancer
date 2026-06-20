@@ -226,7 +226,6 @@ def _in_scope(repo_root: Path, graph: Graph, cfg: WorkflowConfig) -> InvariantRe
     allowed = []
     allowed.extend(cfg.source_roots)
     allowed.extend(cfg.test_roots)
-    allowed.extend(cfg.spec_roots)
     allowed.extend(cfg.documentation_roots)
     allowed.extend(graph.intent.scope_hint)
     bad = [path for path in touched if not is_allowed_path(path, repo_root, _root_patterns(allowed))]

@@ -32,8 +32,8 @@ DEFAULT_ZONES = {
     # Intake may only create or update workflow bookkeeping.
     "intake": [".agentic/**"],
 
-    # Requirement work can update specs and durable requirement registers.
-    "requirement": [".agentic/specs/**", ".agentic/requirements/**", "spec/**", "docs/spec/**"],
+    # Requirement work can update durable requirement registers.
+    "requirement": [".agentic/requirements/**"],
 
     # Check work is limited to test roots so tests can be authored before code.
     "check": ["tests/**", "test/**"],
