@@ -1,8 +1,8 @@
 <!--
 Copyright (c) 2026 DDP Engineering
-This software is licensed under the GNU Affero General Public License v3.0
-(AGPL-3.0) with additional Non-Commercial restriction.
-See the LICENSE.txt and LICENSE_NC.txt files for full license details.
+This software is licensed under the PolyForm Noncommercial License 1.0.0.
+Commercial use requires a separate commercial license.
+See the LICENSE.txt in the .agentic folder for full license details. SPDX-License-Identifier: LicenseRef-PolyForm-Noncommercial-1.0.0
 -->
 
 # Agentic Workflow CLI API Reference
@@ -660,6 +660,19 @@ Writes:
 - `.agentic/runs/<run-id>/report.md`
 
 ## Hook Integration
+
+These four standalone hook scripts are the runtime source of truth and are
+reused unchanged by all three agent adapters:
+
+- **Codex** wires them through `.codex/hooks.json` (PreToolUse / PostToolUse
+  command hooks).
+- **Claude Code** wires them through `.claude/settings.json` (matching hook
+  bindings plus protected-path Read/Edit/Write denies).
+- **Pi** wires them through the `.pi/` bridge extension, which maps Pi
+  `tool_call` / `tool_result` events onto the same JSON-on-stdin hook protocol.
+  Because Pi can pass the full write/edit input, `secret_scan.py` also catches
+  secrets in file *content*, and a native check denies reads of protected
+  secret/key files. See `.pi/README.md`.
 
 ### `guard_write_zone.py`
 

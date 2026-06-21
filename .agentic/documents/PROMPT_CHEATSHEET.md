@@ -1,8 +1,8 @@
 <!--
 Copyright (c) 2026 DDP Engineering
-This software is licensed under the GNU Affero General Public License v3.0
-(AGPL-3.0) with additional Non-Commercial restriction.
-See the LICENSE.txt and LICENSE_NC.txt files for full license details.
+This software is licensed under the PolyForm Noncommercial License 1.0.0.
+Commercial use requires a separate commercial license.
+See the LICENSE.txt in the .agentic folder for full license details. SPDX-License-Identifier: LicenseRef-PolyForm-Noncommercial-1.0.0
 -->
 
 # Agentic Workflow Prompt Cheat Sheet
@@ -34,16 +34,18 @@ python 02_Tools\create_project_from_template.py D:\Path\To\NewProject
 Or copy the contents of `template/` into the new project root manually. The
 new project should receive:
 
-- `.agentic/` workflow state, hooks, requirements, specs, and config.
+- `.agentic/` workflow state, hooks, requirements, documents, and config.
 - `.agentic/cli/` bundled Python CLI for the workflow.
 - `.agentic/tools/` Windows and Bash scripts for local run/install.
 - `.agentic/skills/` shared, platform-neutral skill procedures.
 - `.codex/` Codex config, hooks config, and thin skill adapters.
 - `.claude/` Claude Code settings, hooks config, and thin skill adapters.
+- `.pi/` Pi adapter and Pi package: a bridge extension plus a `pi.skills`
+  manifest reusing `.agentic/skills/`.
 - `AGENTS.md` repository workflow instructions.
 - `CLAUDE.md` Claude Code adapter note that points back to `AGENTS.md`.
 - `CHANGELOG.md` starter release/change log.
-- `PROMPT_CHEATSHEET.md` human operator prompts for the copied workflow.
+- `.agentic/documents/PROMPT_CHEATSHEET.md` human operator prompts for the copied workflow.
 - `05_SoftwareDocu/` component documentation template and index.
 
 After copying, adjust `.agentic/workflow.toml` for the target repository's real
@@ -84,6 +86,12 @@ to `AGENTS.md`. Direct Claude skill invocations use `/agentic-development`,
 `/agentic-delivery`, `/documentation-audit`,
 `/write-component-documentation`, `/regression-traceability`, and
 `/python-codestyle-audit`.
+
+For Pi, run `pi install ./.pi` and trust the project (Pi must be installed
+beforehand). The same skills are invoked as `/skill:agentic-development`,
+`/skill:agentic-delivery`, `/skill:documentation-audit`,
+`/skill:write-component-documentation`, `/skill:regression-traceability`, and
+`/skill:python-codestyle-audit`.
 
 ## Start A Feature
 

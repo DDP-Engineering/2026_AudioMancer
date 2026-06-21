@@ -1,5 +1,5 @@
 {
-  "_legal": "Copyright (c) 2026 DDP Engineering. Licensed under AGPL-3.0 with additional Non-Commercial restriction. See LICENSE.txt and LICENSE_NC.txt.",
+  "_legal": "Copyright (c) 2026 DDP Engineering. Licensed under the PolyForm Noncommercial License 1.0.0 (LicenseRef-PolyForm-Noncommercial-1.0.0). Commercial use requires a separate commercial license. See the LICENSE.txt in the .agentic folder.",
   "_comment": "Claude Code hook configuration for the transboarded project root. Hook commands are project-root relative.",
   "_comment_permissions": "Outward delivery (git push, gh pr create, git merge) is denied by default and also gated by the delivery-preflight hook; a human runs those actions after preflight passes. Secret and key files are denied for read and write to mirror the Codex filesystem profile in .codex/config.toml.",
   "hooks": {

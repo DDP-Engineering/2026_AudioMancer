@@ -1,5 +1,5 @@
 {
-  "_legal": "Copyright (c) 2026 DDP Engineering. Licensed under AGPL-3.0 with additional Non-Commercial restriction. See LICENSE.txt and LICENSE_NC.txt.",
+  "_legal": "Copyright (c) 2026 DDP Engineering. Licensed under the PolyForm Noncommercial License 1.0.0 (LicenseRef-PolyForm-Noncommercial-1.0.0). Commercial use requires a separate commercial license. See the LICENSE.txt in the .agentic folder.",
   "_comment": "Codex hook configuration for the transboarded project root. Hook commands are project-root relative.",
   "hooks": {
     "PreToolUse": [

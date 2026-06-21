@@ -1,7 +1,7 @@
 # Copyright (c) 2026 DDP Engineering
-# This software is licensed under the GNU Affero General Public License v3.0
-# (AGPL-3.0) with additional Non-Commercial restriction.
-# See the LICENSE.txt and LICENSE_NC.txt files for full license details.
+# This software is licensed under the PolyForm Noncommercial License 1.0.0.
+# Commercial use requires a separate commercial license.
+# See the LICENSE.txt in the .agentic folder for full license details. SPDX-License-Identifier: LicenseRef-PolyForm-Noncommercial-1.0.0
 
 # Build metadata for the embedded workflow CLI copied into target projects.
 [build-system]
@@ -11,7 +11,7 @@ build-backend = "setuptools.build_meta"
 # Project metadata for the optional local install under `.agentic/.venv`.
 [project]
 name = "agentic-workflow-template"
-version = "0.1.0"
+version = "0.2.0"
 description = "Manual agentic development workflow template"
 requires-python = ">=3.11"
 dependencies = []

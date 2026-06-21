@@ -1,8 +1,8 @@
 <!--
 Copyright (c) 2026 DDP Engineering
-This software is licensed under the GNU Affero General Public License v3.0
-(AGPL-3.0) with additional Non-Commercial restriction.
-See the LICENSE.txt and LICENSE_NC.txt files for full license details.
+This software is licensed under the PolyForm Noncommercial License 1.0.0.
+Commercial use requires a separate commercial license.
+See the LICENSE.txt in the .agentic folder for full license details. SPDX-License-Identifier: LicenseRef-PolyForm-Noncommercial-1.0.0
 -->
 
 # How To Start And Adapt A New Project
@@ -18,7 +18,7 @@ optional polish.
 
 ## 1. What is this, in one paragraph?
 
-This template gives an AI coding agent (Codex or Claude Code) a disciplined way
+This template gives an AI coding agent (Codex, Claude Code, or Pi) a disciplined way
 to work on your project. Instead of letting the agent change code freely, the
 work is broken into six **gates**. At each gate the agent stops, shows you what
 it did, and waits for your approval. Every change must be tied to a written
@@ -50,7 +50,7 @@ tool, some guardrail "hooks", and instructions the agent reads automatically.
 |---|---|---|
 | **Python 3.11+** on your PATH | Runs the workflow tool and the guardrail hooks | `python --version` |
 | **Git** | The tool uses git to scan changes, find secrets, and gate delivery | `git --version` |
-| An AI agent | Codex **or** Claude Code (the template supports both) | — |
+| An AI agent | Codex, Claude Code, **or** Pi (the template supports all three) | — |
 
 > Without git, the delivery check fails on purpose and you cannot finish a run.
 > Always work inside a git repository.
@@ -81,6 +81,7 @@ flowchart TB
   subgraph ADAPTERS["Agent adapters"]
     CODEX[".codex  - for Codex"]
     CLAUDE[".claude + CLAUDE.md - for Claude Code"]
+    PI[".pi  - for Pi"]
     AGENTS["AGENTS.md - the shared rulebook"]
   end
 
@@ -107,7 +108,8 @@ python 02_Tools\create_project_from_template.py D:\Path\To\NewProject
 
 Or simply copy everything inside `04_Software/agentic-workflow-template/template/`
 into your project's root folder by hand. After this, your project root contains
-`.agentic/`, `.codex/`, `.claude/`, `AGENTS.md`, `CLAUDE.md`, and a few docs.
+`.agentic/`, `.codex/`, `.claude/`, `.pi/`, `AGENTS.md`, `CLAUDE.md`, and a few
+docs.
 
 ### Step 2 — Make sure it is a git repository
 
@@ -191,12 +193,15 @@ You usually do **not** need to edit these:
 - **Codex** — `.codex/config.toml` runs offline by default
   (`network.enabled = false`). Leave it offline unless your project genuinely
   needs network access and you approve it.
+- **Pi** — `.pi/` ships a bridge extension that wires the same guardrails. Run
+  `pi install ./.pi` and trust the project on first start. The skills surface as
+  `/skill:<name>`. See `.pi/README.md`. Python must be on your PATH.
 - `AGENTS.md`, `CLAUDE.md`, and the skills are the shared rulebook — **leave
   them as-is.**
 
 ### Step 6 — Let the agent sanity-check your setup
 
-Open your new project in Codex or Claude Code and paste this prompt. It does not
+Open your new project in Codex, Claude Code, or Pi and paste this prompt. It does not
 change anything — it just verifies your `workflow.toml` matches the real project:
 
 ```text
@@ -266,7 +271,8 @@ every gate.
       [ ] [traceability] language + source_extensions -> your language
       [ ] write_zones.implementation -> matches [source] roots  (+ 05_SoftwareDocu/**)
       [ ] write_zones.check          -> matches [tests] roots
-[ ] (Optional) review .codex/config.toml and .claude/settings.json
+[ ] (Optional) review .codex/config.toml, .claude/settings.json, and .pi/README.md
+[ ] (Pi only) pi install ./.pi and trust the project
 [ ] Run the "sanity-check" prompt with your agent
 [ ] Start your first feature
 ```

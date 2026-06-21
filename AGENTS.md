@@ -1,8 +1,8 @@
 <!--
 Copyright (c) 2026 DDP Engineering
-This software is licensed under the GNU Affero General Public License v3.0
-(AGPL-3.0) with additional Non-Commercial restriction.
-See the LICENSE.txt and LICENSE_NC.txt files for full license details.
+This software is licensed under the PolyForm Noncommercial License 1.0.0.
+Commercial use requires a separate commercial license.
+See the LICENSE.txt in the .agentic folder for full license details. SPDX-License-Identifier: LicenseRef-PolyForm-Noncommercial-1.0.0
 -->
 
 # AGENTS.md
@@ -32,6 +32,17 @@ or `python -m agentic_workflow` may also be used.
 
 Examples below use `<workflow>` for the selected project-local or installed
 workflow command.
+
+## Pi Adapter
+
+Under [Pi](https://pi.dev), this `AGENTS.md` contract applies unchanged (Pi reads
+it natively). The `.pi/` directory is a thin adapter that bridges Pi tool events
+to the same `.agentic/hooks/` guards used by the Codex and Claude adapters, so
+write-zone, secret, delivery-preflight, protected-read, and evidence rules hold
+identically. `<workflow>` still means the project-local runner under
+`.agentic/tools/`. The six skills are invoked as `/skill:<name>` (for example
+`/skill:agentic-development`). Project-local Pi resources load only after the
+project is trusted; see `.pi/README.md`.
 
 ## Application Test Environment
 
