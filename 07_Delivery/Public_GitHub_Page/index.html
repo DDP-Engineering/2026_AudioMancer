@@ -1,0 +1,771 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AudioMancer - Book Translation And Audiobook Desktop App</title>
+  <meta name="description" content="AudioMancer is a Windows desktop app for turning books into translated text, speech blocks, character voices, and audiobook audio. Work can be AI-assisted or done manually.">
+  <style>
+    :root {
+      color-scheme: light;
+      --page: #f5f7f8;
+      --surface: #ffffff;
+      --ink: #172027;
+      --muted: #5f6f7a;
+      --line: #d7e0e5;
+      --accent: #176b87;
+      --accent-dark: #0f4d62;
+      --accent-soft: #e4f2f6;
+      --gold: #b47a2c;
+      --shadow: 0 18px 45px rgba(21, 36, 45, 0.12);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      line-height: 1.55;
+      color: var(--ink);
+      background: var(--page);
+    }
+
+    a {
+      color: var(--accent);
+    }
+
+    .shell {
+      width: min(1120px, calc(100% - 32px));
+      margin: 0 auto;
+    }
+
+    .topbar {
+      background: rgba(255, 255, 255, 0.94);
+      border-bottom: 1px solid var(--line);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      backdrop-filter: blur(14px);
+    }
+
+    .topbar .shell {
+      min-height: 68px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-weight: 800;
+      color: var(--ink);
+      text-decoration: none;
+      letter-spacing: 0;
+    }
+
+    .mark {
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      display: grid;
+      place-items: center;
+      color: #ffffff;
+      background: linear-gradient(135deg, var(--accent), #273f4f);
+      box-shadow: 0 10px 26px rgba(23, 107, 135, 0.24);
+      font-size: 18px;
+    }
+
+    nav {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      font-size: 14px;
+    }
+
+    nav a {
+      color: var(--muted);
+      text-decoration: none;
+      font-weight: 700;
+    }
+
+    nav a:hover {
+      color: var(--accent);
+    }
+
+    .hero {
+      background:
+        radial-gradient(circle at 82% 18%, rgba(23, 107, 135, 0.14), transparent 30%),
+        linear-gradient(180deg, #ffffff 0%, #eef5f7 100%);
+      border-bottom: 1px solid var(--line);
+    }
+
+    .hero .shell {
+      min-height: 620px;
+      display: grid;
+      grid-template-columns: minmax(0, 1.02fr) minmax(320px, 0.98fr);
+      gap: 56px;
+      align-items: center;
+      padding: 72px 0 64px;
+    }
+
+    h1 {
+      margin: 0 0 18px;
+      max-width: 680px;
+      font-size: clamp(42px, 6vw, 76px);
+      line-height: 0.98;
+      letter-spacing: 0;
+    }
+
+    .hero-copy {
+      margin: 0 0 26px;
+      max-width: 640px;
+      color: var(--muted);
+      font-size: 20px;
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin: 26px 0 24px;
+    }
+
+    .button {
+      min-height: 46px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 6px;
+      padding: 12px 18px;
+      text-decoration: none;
+      font-weight: 800;
+      font-size: 15px;
+      border: 1px solid transparent;
+    }
+
+    .button.primary {
+      color: #ffffff;
+      background: var(--accent);
+      box-shadow: 0 12px 24px rgba(23, 107, 135, 0.22);
+    }
+
+    .button.primary:hover {
+      background: var(--accent-dark);
+    }
+
+    .button.secondary {
+      color: var(--accent);
+      background: #ffffff;
+      border-color: var(--line);
+    }
+
+    .button.secondary:hover {
+      border-color: var(--accent);
+    }
+
+    .meta-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px 18px;
+      color: var(--muted);
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    .product-panel {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 22px;
+      box-shadow: var(--shadow);
+    }
+
+    .panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .panel-title {
+      margin: 0;
+      font-size: 16px;
+      font-weight: 800;
+    }
+
+    .status {
+      color: #276749;
+      background: #e6f4ea;
+      border-radius: 999px;
+      padding: 5px 10px;
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .workflow {
+      display: grid;
+      gap: 12px;
+      margin-top: 18px;
+    }
+
+    .workflow-item {
+      display: grid;
+      grid-template-columns: 36px 1fr;
+      gap: 12px;
+      align-items: start;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fbfcfd;
+    }
+
+    .workflow-index {
+      width: 36px;
+      height: 36px;
+      display: grid;
+      place-items: center;
+      border-radius: 8px;
+      color: #ffffff;
+      background: var(--accent);
+      font-weight: 800;
+    }
+
+    .workflow-item h3 {
+      margin: 0 0 3px;
+      font-size: 15px;
+    }
+
+    .workflow-item p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    section {
+      padding: 76px 0;
+    }
+
+    section + section {
+      border-top: 1px solid var(--line);
+    }
+
+    .section-head {
+      max-width: 760px;
+      margin-bottom: 30px;
+    }
+
+    h2 {
+      margin: 0 0 12px;
+      font-size: clamp(30px, 4vw, 46px);
+      line-height: 1.08;
+      letter-spacing: 0;
+    }
+
+    .section-head p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 18px;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 18px;
+    }
+
+    .feature {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 22px;
+    }
+
+    .feature-icon {
+      width: 38px;
+      height: 38px;
+      display: grid;
+      place-items: center;
+      border-radius: 8px;
+      margin-bottom: 16px;
+      color: var(--accent);
+      background: var(--accent-soft);
+      font-weight: 900;
+      font-size: 18px;
+    }
+
+    .feature h3 {
+      margin: 0 0 8px;
+      font-size: 18px;
+    }
+
+    .feature p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 15px;
+    }
+
+    .band {
+      background: #ffffff;
+    }
+
+    .split {
+      display: grid;
+      grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+      gap: 36px;
+      align-items: start;
+    }
+
+    .download-box {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 24px;
+      box-shadow: 0 14px 34px rgba(21, 36, 45, 0.08);
+    }
+
+    .download-box h3 {
+      margin: 0 0 10px;
+      font-size: 22px;
+    }
+
+    .download-box p {
+      margin: 0 0 16px;
+      color: var(--muted);
+    }
+
+    ol,
+    ul {
+      margin: 0;
+      padding-left: 22px;
+    }
+
+    li + li {
+      margin-top: 9px;
+    }
+
+    code,
+    pre {
+      font-family: Consolas, Monaco, monospace;
+      background: #eef2f4;
+      border-radius: 5px;
+    }
+
+    code {
+      padding: 2px 5px;
+    }
+
+    pre {
+      margin: 14px 0 0;
+      padding: 14px;
+      overflow-x: auto;
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .hash {
+      word-break: break-all;
+      color: var(--muted);
+    }
+
+    .asset-list {
+      columns: 2;
+      margin-top: 12px;
+    }
+
+    .notice {
+      border-left: 4px solid var(--gold);
+      background: #fff8ed;
+      padding: 14px 16px;
+      color: #684716;
+      border-radius: 6px;
+      margin-top: 18px;
+    }
+
+    footer {
+      padding: 34px 0;
+      border-top: 1px solid var(--line);
+      color: var(--muted);
+      background: #ffffff;
+      font-size: 14px;
+    }
+
+    @media (max-width: 860px) {
+      .topbar .shell,
+      nav,
+      .hero .shell,
+      .split,
+      .grid-3 {
+        grid-template-columns: 1fr;
+      }
+
+      .topbar .shell {
+        align-items: flex-start;
+        padding: 14px 0;
+      }
+
+      nav {
+        display: none;
+      }
+
+      .hero .shell {
+        min-height: auto;
+        padding: 52px 0;
+      }
+
+      .asset-list {
+        columns: 1;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="shell">
+      <a class="brand" href="#top" aria-label="AudioMancer home">
+        <span class="mark">A</span>
+        <span>AudioMancer</span>
+      </a>
+      <nav aria-label="Page navigation">
+        <a href="#application">Application</a>
+        <a href="#videos">Videos</a>
+        <a href="#install">Install</a>
+        <a href="#voiceweaver">VoiceWeaver</a>
+        <a href="#ai-setup">AI Setup</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="top">
+    <section class="hero">
+      <div class="shell">
+        <div>
+          <h1>Translate books and prepare audiobook voices in one desktop app.</h1>
+          <p class="hero-copy">
+            AudioMancer helps you take a book from source text to translated text, narrator and character voices,
+            speech blocks, generated audio, and final WAV audiobook files. Each step can be helped by AI or handled
+            manually by the user.
+          </p>
+          <div class="actions">
+            <a class="button primary" href="https://github.com/DDP-Engineering/2026_AudioMancer/releases/tag/v1.5.8">Download Windows Release</a>
+            <a class="button secondary" href="https://youtube.com/playlist?list=PLmfmdZiRyZpmsgOZ_zEEB06OFKkILMgte&si=njtsWG64fFNkc0m7">Watch Feature Videos</a>
+            <a class="button secondary" href="#install">Installation Steps</a>
+          </div>
+          <div class="meta-row">
+            <span>Windows tested</span>
+            <span>Portable ZIP install</span>
+            <span>Local or online AI</span>
+          </div>
+        </div>
+
+        <aside class="product-panel" aria-label="AudioMancer workflow preview">
+          <div class="panel-header">
+            <p class="panel-title">Simple Workflow</p>
+            <span class="status">Windows release</span>
+          </div>
+          <div class="workflow">
+            <div class="workflow-item">
+              <div class="workflow-index">1</div>
+              <div>
+                <h3>Import a book</h3>
+                <p>Start from TXT, PDF, DOCX, EPUB, Markdown, RTF, or ODT files.</p>
+              </div>
+            </div>
+            <div class="workflow-item">
+              <div class="workflow-index">2</div>
+              <div>
+                <h3>Clean, split, and translate</h3>
+                <p>Use AI when you want speed, or edit the text yourself when you want full control.</p>
+              </div>
+            </div>
+            <div class="workflow-item">
+              <div class="workflow-index">3</div>
+              <div>
+                <h3>Prepare voices and speech</h3>
+                <p>Create narrator and character voices, then review the speech blocks before audio generation.</p>
+              </div>
+            </div>
+            <div class="workflow-item">
+              <div class="workflow-index">4</div>
+              <div>
+                <h3>Create audio</h3>
+                <p>Use VoiceWeaver for local voice generation and assemble the final WAV audiobook files.</p>
+              </div>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <section id="application">
+      <div class="shell">
+        <div class="section-head">
+          <h2>What AudioMancer does.</h2>
+          <p>
+            AudioMancer is made for long book projects. It keeps the text, translation, characters, voices,
+            speech blocks, generated audio, and final exports together in one project folder.
+          </p>
+        </div>
+        <div class="grid-3">
+          <article class="feature">
+            <div class="feature-icon">T</div>
+            <h3>Book text workflow</h3>
+            <p>Import a book, extract the text, clean it, split it into useful parts, and export reviewed text files.</p>
+          </article>
+          <article class="feature">
+            <div class="feature-icon">L</div>
+            <h3>Translation workflow</h3>
+            <p>Translate a book into the selected project language. The translation can be AI-assisted and then reviewed by you.</p>
+          </article>
+          <article class="feature">
+            <div class="feature-icon">V</div>
+            <h3>Voice workflow</h3>
+            <p>Prepare one narrator voice, or prepare narrator plus character voices for dialogue-heavy books.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section id="features" class="band">
+      <div class="shell">
+        <div class="section-head">
+          <h2>AI help is optional.</h2>
+          <p>
+            AudioMancer is not an all-or-nothing AI tool. You can use AI for the repetitive work, then review and edit the result.
+            You can also do the same steps manually when accuracy or style matters more than speed.
+          </p>
+        </div>
+        <div class="grid-3">
+          <article class="feature">
+            <div class="feature-icon">A</div>
+            <h3>AI-assisted steps</h3>
+            <p>Use AI for cleanup, chunking, translation, character discovery, and speech block creation.</p>
+          </article>
+          <article class="feature">
+            <div class="feature-icon">M</div>
+            <h3>Manual review</h3>
+            <p>Edit cleaned text, chunks, translations, characters, voices, and speech blocks before moving forward.</p>
+          </article>
+          <article class="feature">
+            <div class="feature-icon">O</div>
+            <h3>Local project files</h3>
+            <p>Projects, logs, generated audio, and final WAV files are stored on your computer.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section id="videos">
+      <div class="shell split">
+        <div>
+          <div class="section-head">
+            <h2>Watch the app in action.</h2>
+            <p>
+              The AudioMancer video playlist shows real workflows and feature demonstrations, so you can see how the
+              desktop app handles book projects, voice preparation, and audiobook production steps.
+            </p>
+          </div>
+          <div class="actions">
+            <a class="button primary" href="https://youtube.com/playlist?list=PLmfmdZiRyZpmsgOZ_zEEB06OFKkILMgte&si=njtsWG64fFNkc0m7">Open YouTube Playlist</a>
+          </div>
+        </div>
+        <div class="download-box">
+          <h3>Feature videos</h3>
+          <p>
+            Use the playlist to follow new feature demos and practical walkthroughs as AudioMancer evolves.
+          </p>
+          <ul>
+            <li>Workflow demonstrations for book translation and audiobook preparation.</li>
+            <li>Videos covering voice setup, speech blocks, and generated audio output.</li>
+            <li>Updates published on the AudioMancer YouTube channel.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section id="install">
+      <div class="shell split">
+        <div>
+          <div class="section-head">
+            <h2>Install AudioMancer on Windows.</h2>
+            <p>
+              The current public package is tested on Windows. It is portable: download it, extract it, and start the app.
+            </p>
+          </div>
+          <div class="actions">
+            <a class="button primary" href="https://github.com/DDP-Engineering/2026_AudioMancer/releases/tag/v1.5.8">Open Release Page</a>
+            <a class="button secondary" href="https://github.com/DDP-Engineering/2026_AudioMancer/releases/latest/download/SHA256SUMS.txt">Download SHA256SUMS.txt</a>
+          </div>
+        </div>
+        <div class="download-box">
+          <h3>Windows steps</h3>
+          <ol>
+            <li>Open the GitHub Release page.</li>
+            <li>Download <code>AudioMancer_Windows_x64.zip</code>.</li>
+            <li>Download <code>SHA256SUMS.txt</code> if you want to verify the file.</li>
+            <li>Extract the ZIP to a normal folder, for example <code>C:\AudioMancer</code>.</li>
+            <li>Start the app with <code>AudioMancer.exe</code> or <code>Start-AudioMancer.cmd</code>.</li>
+            <li>In the app, create a new project and choose the book language, output language, and voice mode.</li>
+          </ol>
+        </div>
+      </div>
+    </section>
+
+    <section id="voiceweaver" class="band">
+      <div class="shell split">
+        <div>
+          <div class="section-head">
+            <h2>Install VoiceWeaver for voice generation.</h2>
+            <p>
+              AudioMancer uses VoiceWeaver as the local voice engine. VoiceWeaver must be running before
+              AudioMancer can generate narrator samples, character samples, or audio blocks.
+            </p>
+          </div>
+          <div class="notice">
+            The current VoiceWeaver package links are maintained on the separate VoiceWeaver runtime release page.
+            Use the AudioMancer release page for the app and the VoiceWeaver runtime release for voice generation.
+          </div>
+        </div>
+        <div class="download-box">
+          <h3>VoiceWeaver steps</h3>
+          <ol>
+            <li>Open the <a href="https://github.com/DDP-Engineering/2026_AudioMancer/releases/tag/v1.0.0">VoiceWeaver v1.5.0 Windows runtime release</a>.</li>
+            <li>Download all 15 VoiceWeaver package parts linked in the VoiceWeaver runtime section.</li>
+            <li>Put all <code>.partNNN</code> files in the same folder.</li>
+            <li>Join the parts into one VoiceWeaver ZIP with the PowerShell command below.</li>
+            <li>Extract the VoiceWeaver ZIP to a folder, for example <code>C:\VoiceWeaver</code>.</li>
+            <li>Start VoiceWeaver with its Windows start file.</li>
+            <li>Check that the local address works: <code>http://127.0.0.1:8059/v1/health</code>.</li>
+          </ol>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="shell split">
+        <div>
+          <div class="section-head">
+            <h2>Connect AudioMancer to VoiceWeaver.</h2>
+            <p>
+              After VoiceWeaver is running, tell AudioMancer where to find it. The default local address is
+              <code>http://127.0.0.1:8059</code>.
+            </p>
+          </div>
+          <ol>
+            <li>Start VoiceWeaver first.</li>
+            <li>Start AudioMancer.</li>
+            <li>Open <code>TTS Settings</code> from the AudioMancer toolbar.</li>
+            <li>Set <code>Base URL</code> to <code>http://127.0.0.1:8059</code>.</li>
+            <li>Leave <code>API Key</code> empty for normal local use.</li>
+            <li>Press <code>Test Connection</code>.</li>
+            <li>Check that Qwen3-TTS Base and Qwen3 Voice Design are found.</li>
+            <li>Save the TTS settings.</li>
+          </ol>
+        </div>
+        <div class="download-box">
+          <h3>Join the VoiceWeaver parts</h3>
+          <pre>$outputZip = "VoiceWeaver-v1.5.0-windows-x64-cuda.zip"
+$parts = Get-ChildItem "$outputZip.part*" | Sort-Object Name
+$out = [IO.File]::Create($outputZip)
+foreach ($part in $parts) {
+    $in = [IO.File]::OpenRead($part.FullName)
+    $in.CopyTo($out)
+    $in.Dispose()
+}
+$out.Dispose()
+Get-FileHash -Algorithm SHA256 $outputZip</pre>
+          <div class="notice">
+            The expected joined VoiceWeaver ZIP SHA256 is
+            <code>6f8ae1b18033c2a7202dfcfb3b2bf437b5d19749e6e2a86a5fa0fded8b7253c9</code>.
+            Use the checksum information on the VoiceWeaver runtime release page to verify the VoiceWeaver package.
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="ai-setup" class="band">
+      <div class="shell split">
+        <div>
+          <div class="section-head">
+            <h2>Set up AI models.</h2>
+            <p>
+              AudioMancer can use local AI models on your computer or online AI models from an API provider.
+              The same app workflows can also be reviewed and corrected manually.
+            </p>
+          </div>
+          <div class="notice">
+            AI profiles are used for cleanup, chunking, translation, character discovery, and speech blocks.
+            VoiceWeaver is separate and is used for voice generation.
+          </div>
+        </div>
+        <div class="download-box">
+          <h3>Local AI with LM Studio</h3>
+          <ol>
+            <li>Install LM Studio on Windows.</li>
+            <li>Download and load a chat model in LM Studio.</li>
+            <li>Start the LM Studio local server.</li>
+            <li>In AudioMancer, open <code>AI Settings</code>.</li>
+            <li>Create or edit a profile.</li>
+            <li>Set <code>Backend Kind</code> to <code>lmstudio</code>.</li>
+            <li>Set <code>Base URL</code> to <code>http://localhost:1234/v1</code>.</li>
+            <li>Set <code>Model Name</code> to the model name shown by LM Studio.</li>
+            <li>Press the connection or model refresh button, then save the profile.</li>
+            <li>Select that profile as the default for the workflow steps you want to run locally.</li>
+          </ol>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="shell split">
+        <div class="download-box">
+          <h3>Online AI with an OpenAI-compatible API</h3>
+          <ol>
+            <li>Get an API key from your AI provider.</li>
+            <li>In AudioMancer, open <code>AI Settings</code>.</li>
+            <li>Create or edit a profile.</li>
+            <li>Set <code>Backend Kind</code> to <code>openai_compatible</code>.</li>
+            <li>Set <code>Base URL</code> to the provider URL, for example <code>https://api.openai.com/v1</code>.</li>
+            <li>Paste the API key into <code>API Key</code>.</li>
+            <li>Set the model name, context window, output tokens, timeout, and temperature.</li>
+            <li>Test or refresh the profile, then save it.</li>
+            <li>Select that profile as the default for cleanup, chunking, translation, character discovery, or speech blocks.</li>
+          </ol>
+        </div>
+        <div>
+          <div class="section-head">
+            <h2>Recommended model use.</h2>
+            <p>
+              Use stronger models for translation and character discovery. Use cheaper or smaller models for cleanup and
+              chunking if the result will be reviewed. Keep temperature low for structured steps so the answers are easier to check.
+            </p>
+          </div>
+          <ul>
+            <li><code>Cleanup</code>: fixes extraction and formatting problems.</li>
+            <li><code>Chunking</code>: splits the book into useful pieces.</li>
+            <li><code>Translation</code>: translates the book into the selected language.</li>
+            <li><code>Character Discovery</code>: finds characters and prepares voice notes.</li>
+            <li><code>Speech Blocks</code>: turns reviewed text into narrator and character lines.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="shell">
+      <p>Copyright &copy; 2026 DDP Engineering. See the license files included in each release archive.</p>
+    </div>
+  </footer>
+</body>
+</html>
