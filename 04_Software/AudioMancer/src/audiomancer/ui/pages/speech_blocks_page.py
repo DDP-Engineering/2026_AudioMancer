@@ -14,10 +14,12 @@
          controls for the Speech Blocks workflow.
 @author Eng. Dan Dumitru Pasare
 @date 2026-04-24
-@version 0.8.15
+@version 0.8.16
 """
 
 # IMPORTS
+
+from contextlib import suppress
 
 from PySide6.QtCore import Qt, QTimer, Signal
 from PySide6.QtGui import QTextCursor
@@ -59,6 +61,9 @@ _LOWER_SOURCE_MIN_WIDTH_PX = 480
 _LOWER_SOURCE_MIN_WIDTH_FRACTION = 0.40
 _LOWER_SOURCE_MIN_WIDTH_FLOOR_PX = 300
 _DEFERRED_SCROLL_RESTORE_DELAY_MS = 25
+_SOURCE_TEXT_SCROLL_SETTLE_DELAY_MS = 10
+_SOURCE_TEXT_SCROLL_FINAL_DELAY_MS = 30
+_SOURCE_TEXT_SCROLL_GUARD_DELAY_MS = 100
 
 
 class SpeechBlocksPage(QWidget):
@@ -91,7 +96,7 @@ class SpeechBlocksPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-06-09
-        @version    0.7.9
+        @version    0.7.10
         """
         super().__init__(parent)
         self._current_language = "en"
@@ -113,6 +118,7 @@ class SpeechBlocksPage(QWidget):
         self._current_chunk_id: str | None = None
         self._current_block_id: str | None = None
         self._selected_audio_playback_active = False
+        self._source_text_restore_generation = 0
 
         layout = QVBoxLayout(self)
         header_row = QHBoxLayout()
@@ -198,6 +204,7 @@ class SpeechBlocksPage(QWidget):
         self._source_layout = QVBoxLayout(self._source_group)
         self._source_text_edit = QPlainTextEdit(self)
         self._source_text_edit.setReadOnly(True)
+        self._source_text_edit.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOn)
         self._source_layout.addWidget(self._source_text_edit)
         self._source_action_row = QHBoxLayout()
         self._source_action_row.setContentsMargins(0, 0, 2, 0)
@@ -320,7 +327,7 @@ class SpeechBlocksPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-05-16
-        @version    0.1.1
+        @version    0.1.2
         """
         if not hasattr(self, "_chunk_actions_column_layout"):
             return
@@ -406,7 +413,7 @@ class SpeechBlocksPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-24
-        @version    0.4.1
+        @version    0.4.2
         """
         _ = selected_source_language
         _ = approved_block_count
@@ -432,6 +439,8 @@ class SpeechBlocksPage(QWidget):
             if selected_index >= 0:
                 self._profile_combo.setCurrentIndex(selected_index)
         current_chunk_id = self._current_chunk_id
+        selected_row = -1
+        self._chunk_list.blockSignals(True)
         self._chunk_list.clear()
         block_count_by_chunk = _block_count_by_chunk(self._speech_blocks)
         for source_chunk in self._source_chunks:
@@ -445,6 +454,9 @@ class SpeechBlocksPage(QWidget):
                         selected_row = index
                         break
             self._chunk_list.setCurrentRow(selected_row)
+        self._chunk_list.blockSignals(False)
+        if self._source_chunks:
+            self._show_selected_chunk(selected_row)
             self._select_block_by_id(current_block_id)
             self.restore_review_position(current_review_position)
         else:
@@ -734,13 +746,15 @@ class SpeechBlocksPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-05-25
-        @version    0.1.1
+        @version    0.1.2
         """
-        self._restore_source_text_position(text_position)
-        QTimer.singleShot(0, lambda: self._restore_source_text_position(text_position))
+        self._source_text_restore_generation += 1
+        restore_generation = self._source_text_restore_generation
+        self._restore_source_text_position(text_position, restore_generation)
+        QTimer.singleShot(0, lambda: self._restore_source_text_position(text_position, restore_generation))
         QTimer.singleShot(
             _DEFERRED_SCROLL_RESTORE_DELAY_MS,
-            lambda: self._restore_source_text_position(text_position),
+            lambda: self._restore_source_text_position(text_position, restore_generation),
         )
 
     def restore_review_position(self, review_position: dict[str, object]) -> None:
@@ -764,10 +778,13 @@ class SpeechBlocksPage(QWidget):
             source_text_position = {"source_scroll": int(review_position.get("source_scroll", 0) or 0)}
         chunk_list_scroll_position = int(review_position.get("chunk_list_scroll", 0) or 0)
         block_list_scroll_position = int(review_position.get("block_list_scroll", 0) or 0)
+        self._source_text_restore_generation += 1
+        restore_generation = self._source_text_restore_generation
         self._restore_review_scroll_positions(
             source_text_position,
             chunk_list_scroll_position,
             block_list_scroll_position,
+            restore_generation,
         )
         QTimer.singleShot(
             0,
@@ -775,6 +792,7 @@ class SpeechBlocksPage(QWidget):
                 source_text_position,
                 chunk_list_scroll_position,
                 block_list_scroll_position,
+                restore_generation,
             ),
         )
         QTimer.singleShot(
@@ -783,6 +801,7 @@ class SpeechBlocksPage(QWidget):
                 source_text_position,
                 chunk_list_scroll_position,
                 block_list_scroll_position,
+                restore_generation,
             ),
         )
 
@@ -893,7 +912,7 @@ class SpeechBlocksPage(QWidget):
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-04-24
-        @version    0.2.0
+        @version    0.2.1
         """
         self._speaker_combo.blockSignals(True)
         self._speaker_combo.clear()
@@ -1133,7 +1152,9 @@ class SpeechBlocksPage(QWidget):
             return
         selected_chunk = self._source_chunks[row]
         self._current_chunk_id = str(selected_chunk.get("chunk_id", ""))
-        self._source_text_edit.setPlainText(str(selected_chunk.get("text", "")))
+        selected_chunk_text = str(selected_chunk.get("text", ""))
+        if self._source_text_edit.toPlainText() != selected_chunk_text:
+            self._source_text_edit.setPlainText(selected_chunk_text)
         blocks_for_chunk = self._blocks_for_current_chunk()
         for block in blocks_for_chunk:
             self._speech_block_list.addItem(_format_speech_block_list_item(block))
@@ -1413,17 +1434,26 @@ class SpeechBlocksPage(QWidget):
         bounded_position = max(scroll_bar.minimum(), min(scroll_position, scroll_bar.maximum()))
         scroll_bar.setValue(bounded_position)
 
-    def _restore_source_text_position(self, text_position: dict[str, object]) -> None:
+    def _restore_source_text_position(
+        self,
+        text_position: dict[str, object],
+        restore_generation: int | None = None,
+    ) -> None:
         """
         @brief      Restore selected-chunk text cursor, selection, and scroll values after refresh.
         @param[in]  text_position Source text position payload.
+        @param[in]  restore_generation Optional latest-restore generation guard.
         @return     None.
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-05-25
-        @version    0.1.1
+        @version    0.2.0
         """
-        if not isValid(self) or not isValid(self._source_text_edit):
+        if (
+            not self._is_current_source_text_restore_generation(restore_generation)
+            or not isValid(self)
+            or not isValid(self._source_text_edit)
+        ):
             return
         text = self._source_text_edit.toPlainText()
         maximum_position = len(text)
@@ -1433,40 +1463,178 @@ class SpeechBlocksPage(QWidget):
             min(int(text_position.get("source_anchor_position", cursor_position) or 0), maximum_position),
         )
         cursor = self._source_text_edit.textCursor()
-        cursor.setPosition(anchor_position)
-        cursor.setPosition(cursor_position, QTextCursor.MoveMode.KeepAnchor)
-        self._source_text_edit.setTextCursor(cursor)
-        self._restore_source_scroll_position(int(text_position.get("source_scroll", 0) or 0))
-        self._restore_scroll_bar_position(
+        if int(cursor.position()) != cursor_position or int(cursor.anchor()) != anchor_position:
+            cursor.setPosition(anchor_position)
+            cursor.setPosition(cursor_position, QTextCursor.MoveMode.KeepAnchor)
+            self._source_text_edit.setTextCursor(cursor)
+        self._restore_source_text_scroll_values(text_position, restore_generation)
+        self._queue_source_text_scroll_value_restore(text_position, restore_generation)
+
+    def _restore_source_text_scroll_values(
+        self,
+        text_position: dict[str, object],
+        restore_generation: int | None = None,
+    ) -> None:
+        """
+        @brief      Restore selected-chunk text scrollbars without changing cursor selection.
+        @param[in]  text_position Source text position payload.
+        @param[in]  restore_generation Optional latest-restore generation guard.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-07-01
+        @version    0.3.0
+        """
+        if (
+            not self._is_current_source_text_restore_generation(restore_generation)
+            or not isValid(self)
+            or not isValid(self._source_text_edit)
+        ):
+            return
+        self._restore_source_scroll_bar_position_when_ready(
+            self._source_text_edit.verticalScrollBar(),
+            int(text_position.get("source_scroll", 0) or 0),
+            restore_generation,
+        )
+        self._restore_source_scroll_bar_position_when_ready(
             self._source_text_edit.horizontalScrollBar(),
             int(text_position.get("source_horizontal_scroll", 0) or 0),
+            restore_generation,
         )
+
+    def _restore_source_scroll_bar_position_when_ready(
+        self,
+        scroll_bar,
+        scroll_position: int,
+        restore_generation: int | None,
+    ) -> None:
+        """
+        @brief      Restore a source-text scrollbar and guard against delayed Qt range updates.
+        @param[in]  scroll_bar Source-text scrollbar to restore.
+        @param[in]  scroll_position Requested scrollbar value.
+        @param[in]  restore_generation Latest-restore generation guard.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-07-01
+        @version    0.1.0
+        """
+        if not self._is_current_source_text_restore_generation(restore_generation) or not isValid(scroll_bar):
+            return
+        target_position = int(scroll_position)
+
+        def apply_restore() -> bool:
+            """
+            @brief      Restore the guarded scrollbar value.
+            @return     `True` when the target range is available.
+            @version    0.1.0
+            """
+            if not self._is_current_source_text_restore_generation(restore_generation) or not isValid(scroll_bar):
+                return True
+            bounded_position = max(scroll_bar.minimum(), min(target_position, scroll_bar.maximum()))
+            if scroll_bar.value() != bounded_position:
+                scroll_bar.setValue(bounded_position)
+            return target_position <= scroll_bar.maximum() and scroll_bar.value() == bounded_position
+
+        def disconnect_restore_signals() -> None:
+            """
+            @brief      Disconnect temporary scrollbar range/value guards.
+            @return     None.
+            @version    0.1.0
+            """
+            if not isValid(scroll_bar):
+                return
+            for signal in (scroll_bar.rangeChanged, scroll_bar.valueChanged):
+                with suppress(RuntimeError, TypeError):
+                    signal.disconnect(restore_when_ready)
+
+        def restore_when_ready(*_args: object) -> None:
+            """
+            @brief      Reapply the guarded scrollbar value after a Qt scrollbar update.
+            @return     None.
+            @version    0.1.0
+            """
+            apply_restore()
+
+        apply_restore()
+        if target_position == 0:
+            return
+        try:
+            scroll_bar.rangeChanged.connect(restore_when_ready)
+            scroll_bar.valueChanged.connect(restore_when_ready)
+        except (RuntimeError, TypeError):
+            return
+        QTimer.singleShot(_SOURCE_TEXT_SCROLL_GUARD_DELAY_MS, disconnect_restore_signals)
+
+    def _queue_source_text_scroll_value_restore(
+        self,
+        text_position: dict[str, object],
+        restore_generation: int | None,
+    ) -> None:
+        """
+        @brief      Reapply selected-chunk text scrollbars after queued Qt layout updates.
+        @param[in]  text_position Source text position payload.
+        @param[in]  restore_generation Optional latest-restore generation guard.
+        @return     None.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-07-01
+        @version    0.2.0
+        """
+        saved_text_position = dict(text_position)
+        for delay_ms in (
+            0,
+            _SOURCE_TEXT_SCROLL_SETTLE_DELAY_MS,
+            _SOURCE_TEXT_SCROLL_FINAL_DELAY_MS,
+        ):
+            QTimer.singleShot(
+                delay_ms,
+                lambda saved_text_position=saved_text_position: self._restore_source_text_scroll_values(
+                    saved_text_position,
+                    restore_generation,
+                ),
+            )
+
+    def _is_current_source_text_restore_generation(self, restore_generation: int | None) -> bool:
+        """
+        @brief      Return whether a queued source-text restore still belongs to the newest refresh.
+        @param[in]  restore_generation Optional restore generation token.
+        @return     `True` when the restore may still update review state.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-07-01
+        @version    0.1.0
+        """
+        return restore_generation is None or restore_generation == self._source_text_restore_generation
 
     def _restore_review_scroll_positions(
         self,
         source_text_position: dict[str, object],
         chunk_list_scroll_position: int,
         block_list_scroll_position: int,
+        restore_generation: int | None = None,
     ) -> None:
         """
         @brief      Restore all Speech Blocks review scroll positions after a refresh.
         @param[in]  source_text_position Selected-chunk text cursor, selection, and scroll values.
         @param[in]  chunk_list_scroll_position Chunk-list scroll value.
         @param[in]  block_list_scroll_position Speech-block-list scroll value.
+        @param[in]  restore_generation Optional latest-restore generation guard.
         @return     None.
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-05-16
-        @version    0.2.1
+        @version    0.3.0
         """
         if (
-            not isValid(self)
+            not self._is_current_source_text_restore_generation(restore_generation)
+            or not isValid(self)
             or not isValid(self._source_text_edit)
             or not isValid(self._chunk_list)
             or not isValid(self._speech_block_list)
         ):
             return
-        self._restore_source_text_position(source_text_position)
+        self._restore_source_text_position(source_text_position, restore_generation)
         self._restore_scroll_bar_position(self._chunk_list.verticalScrollBar(), chunk_list_scroll_position)
         self._restore_scroll_bar_position(self._speech_block_list.verticalScrollBar(), block_list_scroll_position)
 

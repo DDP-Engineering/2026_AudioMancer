@@ -14,4 +14,4 @@ Candidate split boundaries:
 Chunk text:
 {chunk_text}
 
-Choose ordered boundary IDs that split this chunk into natural same-narrator audiobook blocks. Return one JSON object with `boundary_ids` only.
+Choose ordered boundary IDs that split this chunk into natural same-narrator audiobook blocks. Do not split inside an open quoted passage. Return one JSON object with `boundary_ids` only.

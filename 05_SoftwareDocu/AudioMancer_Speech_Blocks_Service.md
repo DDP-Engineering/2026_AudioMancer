@@ -13,12 +13,14 @@ Implements the current approval-driven `Speech Blocks` workflow in
 `AudioMancer`.
 
 It converts the chunk text selected through the locked project language into
-AI-owned ordered speech blocks, gives the operator a focused review and edit
+ordered reviewable speech blocks, gives the operator a focused review and edit
 surface, and persists the approved results as root-level Speech Blocks
-artifacts. In `narrator_and_characters` projects the AI owns dialogue and
-speaker attribution. In `same_narrator` projects the AI now chooses compact
-boundary IDs only, while AudioMancer slices the exact source text and builds
-continuous narrator-only blocks under the TTS text budget.
+artifacts. In `narrator_and_characters` projects AudioMancer first splits the
+chunk into deterministic atomic speech units, then the model assigns speaker
+IDs and content kinds to ordered unit IDs; AudioMancer reconstructs saved
+`source_text` and `text` from those atomic units. In `same_narrator` projects the AI
+chooses compact boundary IDs only, while AudioMancer slices the exact source
+text and builds continuous narrator-only blocks under the TTS text budget.
 
 ## 2. Responsibilities
 
@@ -33,29 +35,52 @@ continuous narrator-only blocks under the TTS text budget.
   tokens, prompt budget, and conservative safety margin
 - split oversized source chunks into ordered AI request segments without
   changing the public chunk identity
+- build deterministic Unicode-aware `source_spans` and `atomic_units` for
+  narrator-plus-character requests before AI dispatch, preserving exact chunk
+  text while exposing stable `uNNN` identifiers for speaker assignment
+- include Character Discovery source-language aliases and compact evidence in
+  the allowed speaker catalog so multilingual speaker attribution can use
+  inflected names, honorifics, and local alias forms without inventing speakers
+- include previous and next chunk excerpts as non-selectable attribution
+  context only; the model may use the halo to infer speakers, but can select
+  only current-chunk `atomic_units`
 - include the resolved TTS token budget and conservative word guidance in
   narrator-only requests
-- normalize model output into the new persisted speech-block schema; in
-  narrator-plus-character mode the model owns final block boundaries, while in
-  same-narrator mode the model selects candidate boundary IDs and AudioMancer
-  builds exact spans deterministically
+- normalize model output into the persisted speech-block schema; in
+  narrator-plus-character mode the model selects `unit_ids`, `speaker_id`, and
+  `content_kind`, while AudioMancer reconstructs final saved text fields from
+  atomic units; in same-narrator mode the model selects
+  candidate boundary IDs and AudioMancer builds exact spans deterministically
+- send an operation-specific JSON Schema hint for the narrator-plus-character
+  atomic-unit selection contract when the selected AI profile supports
+  structured output
+- retry exactly once with a compact repair prompt when narrator-plus-character
+  atomic-unit output is malformed JSON or fails semantic validation; the repair
+  prompt carries schema, speaker ids, unit ids, structural kinds, and compact error
+  details without full source text
 - normalize each Scene Ambience model response into individual sound-source
   Speech Blocks and defensively split comma-, semicolon-, `and`-, or
   `plus`-composed ambience prompts before persistence
 - assign speech block IDs in `CCCC-BBBBBB` format, for example
   `0001-000001`
-- persist only current source span, speaker, content kind, and text values for
+- persist only current source unit, speaker, content kind, and text values for
   each Speech Block
 - preserve exact `source_text` spans for review traceability
-- validate model source spans for source coverage, source order, and text edits
-  without replacing AI block boundaries in narrator-plus-character mode
+- validate narrator-plus-character span selections for unknown span IDs,
+  duplicate or reused spans, out-of-order spans, empty selections, incomplete
+  source coverage, and unknown speaker IDs before persistence
 - preserve source wording exactly except for stripping dialogue delimiters from
   dialogue audio text in `narrator_and_characters` mode
 - preserve quotes, guillemets, dashes, punctuation, and paragraph breaks in
   `same_narrator` mode
 - support straight quotes, curly quotes, French guillemets, and dash-led
   dialogue
-- fall back to `narrator` when speaker attribution is ambiguous or invalid
+- classify source spans and atomic units with language-neutral dialogue
+  conventions, including manageable narration sentence boundaries, repeated
+  dash-led dialogue turns, and multilingual attribution patterns
+- fall back to a safe `narrator` block when span or speaker selections are
+  unusable after the repair attempt, preserving exact `source_text` and warning
+  metadata
 - expose speaker choices from `Narrator` plus discovered characters when the
   project uses separate character voices
 - expose only `Narrator` and disable speaker reassignment in `same_narrator`
@@ -90,8 +115,11 @@ continuous narrator-only blocks under the TTS text budget.
   changes that do not alter existing Audio Blocks
 - persist resumable chunk-based operation state, report data, and AI
   transaction logs
-- resume from partially generated review state after operators approve or edit
-  already generated blocks
+- log validation and repair failures with compact failure kinds, chunk/segment
+  ids, selected span/unit ids, and selected speaker ids rather than full book
+  text
+- resume from partially generated review state only when the saved response
+  contract marker matches the current Speech Blocks implementation
 - build page state, notes, speaker catalogs, content-kind labels, generated-run
   button state, reset state, selected-audio preview availability, and
   AI-profile selector entries for the `Speech Blocks` page
@@ -122,8 +150,9 @@ The workflow is split across:
 - `04_Software/AudioMancer/src/audiomancer/ui/pages/speech_blocks_page.py`
   for the top chunk list, selected chunk preview, speech block list, selected
   block editor, manual insert/delete buttons, approval toggle button, selected
-  text character counter, selected-audio generate/play controls, and
-  selected-chunk re-split action
+  text character counter, selected-audio generate/play controls,
+  selected-chunk re-split action, and preservation of selected-chunk source
+  cursor/scroll state across page refreshes
 - `04_Software/AudioMancer/src/audiomancer/ui/controllers/speech_blocks_ui_controller.py`
   for prerequisite validation, confirmation popups, modal progress,
   cancellation, explicit reset, approve-all, selected-block approval toggle,
@@ -150,57 +179,91 @@ High-level flow:
    language, and operator-rule fingerprint, and processes each remaining chunk
    through one or more budgeted model requests with the currently selected AI
    profile/model.
-5. Each response is normalized into new speech-block payloads, including exact
-   source spans, current editable values, warning flags, approval fields,
+5. Before narrator-plus-character requests are sent, the active chunk or
+   budgeted segment is passed through
+   `speech_blocks_text_split_service.build_source_spans(...)` and
+   `speech_blocks_text_split_service.build_atomic_speech_units(...)`. Source
+   spans provide contiguous `sNNN` provenance that reconstructs the exact
+   request text. Atomic units split quoted dialogue, dash-led dialogue,
+   attribution narration, ordinary narration, separators, and mixed fragments.
+   Speakable units provide the model-facing `uNNN` vocabulary; separator-only
+   and whitespace-only units remain provenance and are not selectable. One
+   source span may produce many atomic units, and a common pattern such as
+   dialogue, attribution, dialogue, attribution, dialogue remains five ordered
+   units. For
+   narrator-plus-character requests, the prompt also includes source-language
+   character aliases/evidence, deterministic speaker hints from nearby
+   attribution, and previous/next chunk halo text marked as non-selectable
+   attribution context.
+6. Each response is normalized into speech-block payloads, including exact
+   source text reconstructed from atomic units, current editable values, warning flags, approval fields,
    chunk-local sequence indexes, and `CCCC-BBBBBB` IDs. In
-   narrator-plus-character mode, deterministic validation annotates suspicious
-   spans with warning flags such as `source_coverage_mismatch`,
-   `source_order_mismatch`, and `model_text_modified`. In same-narrator mode,
-   the response contains only ordered boundary IDs; AudioMancer slices
-   `source_text` from the original chunk and sets narrator/content fields
-   deterministically. If the boundary response is unusable, the service falls
-   back to deterministic TTS splitting and marks the first generated block with
-   `boundary_selection_fallback`. After validation or boundary slicing,
-   non-operation blocks that still exceed the safe TTS budget are split locally
-   as a safety net, preferring paragraph and sentence boundaries before hard
-   word/character splits. Hard fallback splits add `tts_hard_split`; operation
-   rows such as `pause`, `scene_ambience`, and `indication` are never split.
-6. The current `speech_blocks_report.json`, `speech_blocks_state.json`, and
+   narrator-plus-character mode, the model selects ordered `unit_ids`;
+   AudioMancer ignores model-owned `text` and `source_text` values, resolves the
+   exact selectable units, and derives saved spoken text locally. Unknown unit
+   IDs, non-selectable separator unit IDs, out-of-order units, reused units,
+   empty selections, incomplete selectable coverage, dialogue blocks that include
+   attribution/narration units, narration blocks that include dialogue units, and
+   unknown speaker IDs are rejected before
+   persistence and fall back to one warning-marked narrator block for the chunk.
+   In same-narrator mode, the
+   response contains only ordered boundary IDs; AudioMancer slices `source_text`
+   from the original chunk and sets narrator/content fields deterministically.
+   Same-narrator candidate generation suppresses normal boundaries that would
+   split inside an open quoted passage, and selected model boundaries are
+   validated against the same quote-balance rule before persistence. If the
+   boundary response is unusable, the service falls back to deterministic TTS
+   splitting and marks the first generated block with
+   `boundary_selection_fallback`. After span reconstruction or boundary
+   slicing, non-operation blocks that still exceed the safe TTS budget are split
+   locally as a safety net, preferring paragraph and sentence boundaries before
+   hard word/character splits. Hard fallback splits add `tts_hard_split`;
+   operation rows such as `pause`, `scene_ambience`, and `indication` are never
+   split.
+7. The current `speech_blocks_report.json`, `speech_blocks_state.json`, and
    transaction log metadata are rewritten after every chunk with the current
    budget metadata so cancellation can resume from the next chunk even when the
    operator selects a different AI profile/model before continuing.
-7. Finished full generation disables `Generate Speech Blocks`, enables
+8. Finished full generation disables `Generate Speech Blocks`, enables
    `Reset Speech Blocks`, resets downstream Audio Blocks plus Audio Assembly
    data, and leaves Speech Blocks in review until all blocks are approved.
-8. `Approve All Speech Blocks` marks every block approved, clears any reviewed
+9. `Approve All Speech Blocks` marks every block approved, clears any reviewed
    warning flags, advances the manifest and Home-page operation summary to
    completed `speech_blocks_ready`, and resets Audio Assembly without deleting
    generated Audio Blocks.
-9. Pressing Edit on one block asks for confirmation when that exact Speech
+10. Pressing Edit on one block asks for confirmation when that exact Speech
    Block already has generated audio, then unlocks the editor only after the
    operator accepts the impact prompt. Save commits the edit without asking
    again, deletes only that block's generated Audio Blocks WAV/metadata
    artifacts, and resets Audio Assembly.
-10. Inserting a block rewrites `speech_blocks.json`, appends after the selected
+11. Inserting a block rewrites `speech_blocks.json`, appends after the selected
     Speech Block or creates the first/end block when none is selected, updates
     only the selected chunk sequence, leaves the inserted block unapproved,
     preserves existing generated Audio Blocks, selects the inserted block,
     preserves the selected chunk review context, and resets Audio Assembly
     because playback order changed.
-11. Re-splitting one chunk uses the Scene Ambience placement from `TTS Settings`,
+12. Re-splitting one chunk uses the Scene Ambience placement from `TTS Settings`,
     asks for optional operator Speech Blocks rules,
     replaces only that chunk's Speech Blocks, rebuilds that chunk's local
     sequence indexes and block IDs, marks new blocks unapproved, rolls Speech
     Blocks back from complete, and asks Audio Blocks to delete/remap only the
     affected downstream records.
-12. The Speech Blocks page mirrors Audio Blocks selected-row audio controls:
+13. The Speech Blocks page mirrors Audio Blocks selected-row audio controls:
     `Generate Audio` asks the Audio Blocks controller to generate only the
     selected approved spoken block, and `Play`/`Stop` reuses the selected Audio
     Block local WAV player when a generated file exists.
-13. Selected manual review actions refresh the Home summary, the affected
+14. Selected manual review actions refresh the Home summary, the affected
     Speech Blocks row, and the selected detail panel incrementally. Full page
     rebuilds are still used for project open, full generation, reset, and
     selected chunk re-splitting where chunk or row ordering changes broadly.
+    During full page-state refreshes, the page captures the selected chunk,
+    selected block, selected source-text cursor/selection, vertical source
+    scroll, horizontal source scroll, and list scroll positions before
+    rebuilding list contents, then restores them after the selected chunk has
+    been repopulated. Deferred restores are guarded so stale refresh timers
+    cannot overwrite a newer review position, and the selected-chunk preview
+    keeps its vertical scrollbar allocated so no-wrap horizontal range does not
+    collapse during restore.
 
 ## 4. Dependencies
 
@@ -241,6 +304,7 @@ Inputs:
 - prompt templates:
   `04_Software/AudioMancer/prompts/speech_blocks_system.txt`
   `04_Software/AudioMancer/prompts/speech_blocks_user.txt`
+  `04_Software/AudioMancer/prompts/speech_blocks_repair_user.txt`
 - narrator-only prompt templates:
   `04_Software/AudioMancer/prompts/speech_blocks_narrator_only_system.txt`
   `04_Software/AudioMancer/prompts/speech_blocks_narrator_only_user.txt`
@@ -253,6 +317,12 @@ Outputs:
 - `speech_blocks_report.json`
 - `speech_blocks_state.json`
 - `log_ai_speech_blocks_<timestamp>.log`
+- application log entries with event token
+  `speech_blocks_source_span_validation_failed` for compact validation and
+  repair diagnostics
+- application log entries with event token
+  `speech_blocks_source_span_parse_failed` for malformed deterministic
+  source-span offset diagnostics
 - updated manifest summary for `operations["speech_blocks"]`
 - updated manifest stage `speech_blocks_ready` only after approval is complete
 - reset downstream Audio Blocks and Audio Assembly artifacts after full
@@ -298,9 +368,45 @@ Current invariants:
   updates `sequence_index` but preserves existing `speech_block_id` values for
   unchanged blocks
 - inserted blocks get the next unused chunk-local `speech_block_id`
-- AI output is the primary Speech Block list in narrator-plus-character mode;
-  deterministic helpers validate and annotate the model result but do not force
-  quote-based boundaries
+- page refreshes preserve the selected Speech Block and selected source chunk
+  text position when the selected source chunk remains the same
+- narrator-plus-character AI output uses the atomic-unit contract:
+  `{"blocks": [{"unit_ids": ["u001"], "speaker_id": "narrator",
+  "content_kind": "narration", "confidence": "high", "warning_flags": []}]}`
+- model-owned `text` and `source_text` fields are unsupported in the
+  narrator-plus-character atomic-unit contract; when present, they are ignored
+  and saved fields are reconstructed from selected atomic units
+- the production `blocks` contract requires `confidence`; missing confidence,
+  malformed unit ids, unavailable unit ids, duplicate units, out-of-order
+  units, incomplete coverage, structurally invalid dialogue/narration merges,
+  and unknown speakers trigger exactly one compact repair request before
+  deterministic fallback
+- every selectable source span has a stable `source_span_id`, `start_offset`,
+  `end_offset`, and exact `text`
+- joining all selectable source span `text` values for one request exactly
+  equals the request text; span offsets are contiguous, ordered, and local to
+  the active chunk or budgeted segment
+- every atomic unit has a stable `atomic_unit_id`, parent
+  `source_span_id`, `start_offset`, `end_offset`, exact `text`, and structural
+  kind
+- joining all atomic unit `text` values for one request exactly
+  equals the request text; unit offsets are contiguous, ordered, and local to
+  the active chunk or budgeted segment
+- separator-only and whitespace-only atomic units preserve source provenance but
+  are omitted from model-selectable prompt rows and cannot produce standalone
+  persisted Speech Blocks
+- source-span and atomic-unit construction is deterministic and Unicode-aware:
+  quote pairs, guillemets, CJK quote markers, dash-led dialogue, manageable
+  narration sentence boundaries, repeated dash-dialogue turns, and multilingual
+  attribution phrases become stable units without crossing paragraph boundaries
+- selected `unit_ids` must be non-empty, known, selectable, unique across the
+  model response, in source reading order, and cover every selectable speakable
+  unit
+- unknown unit IDs, duplicate or reused units, out-of-order units, empty unit
+  selections, incomplete coverage, structurally invalid unit merges, and
+  unknown speaker IDs create one safe narrator fallback block marked with
+  `atomic_unit_selection_invalid` or `speaker_selection_invalid` after the
+  compact repair attempt also fails
 - AI output is only a boundary-id list in same-narrator mode; exact
   `source_text`, `text`, `speaker_id`, and `content_kind` fields are built by
   AudioMancer from the original source chunk
@@ -308,11 +414,11 @@ Current invariants:
 - for metadata-only operation kinds, `speaker_kind` is `operation`,
   `speaker_id` is the content-kind token, and `speaker_display_name` is the
   operation name shown in the Speech Blocks list
-- unrecognized or ambiguous speakers fall back to narrator and add
-  `ambiguous_speaker`
+- ambiguous speaker normalization falls back to narrator and adds
+  `ambiguous_speaker` outside the strict atomic-unit contract
 - `source_text` stores the exact chunk span represented by the block
-- narration text is stored as model audio text after validation against
-  `source_text`
+- narration text is reconstructed from atomic units and trimmed for spoken text
+  while `source_text` remains exact
 - dialogue text strips only dialogue delimiters: one outer straight quote pair,
   one outer curly quote pair, one French guillemet pair, or one leading dialogue
   dash
@@ -354,7 +460,9 @@ Current invariants:
 - generation creates unapproved blocks
 - partial generated blocks remain committed progress after approval or review
   edits; pressing `Generate Speech Blocks` continues with the next unprocessed
-  source chunk
+  source chunk when the stored response contract marker is current
+- unmarked explicit `narrator_and_characters` partial state is treated as
+  non-resumable and generation restarts from the current source snapshot
 - Speech Blocks is complete only when every block is approved; generated but
   unapproved full output is persisted as `review_pending` in `project.json`
   operation metadata
@@ -379,10 +487,14 @@ Report and operation-state metadata include:
   `prompt_budget_tokens`, `text_budget_tokens`, and `safety_margin_tokens`
 - `additional_speech_block_instructions`
 - `additional_speech_block_instructions_fingerprint`
+- `speech_blocks_response_contract`, currently `atomic_unit_selection` for
+  narrator-plus-character generation and `narrator_boundary_ids` for
+  same-narrator generation
 - one current-version resume checkpoint with `next_chunk_index`,
   `run_token`, `log_relative_path`, `source_snapshot_fingerprint`,
-  `source_language`, `ai_profile_id`, and `budget_metadata`; resume validation
-  uses the source snapshot, language, and saved operator-rule fingerprint,
+  `source_language`, `ai_profile_id`, `budget_metadata`, and
+  `speech_blocks_response_contract`; resume validation uses the source
+  snapshot, language, response contract, and saved operator-rule fingerprint,
   while the stored profile and budget describe the last saved run settings
 - when approval or review updates clear the explicit resume checkpoint, the
   service restores the next chunk only from current `processed_chunk_count`
@@ -504,6 +616,9 @@ Operator path:
 Focused automated coverage exists in:
 
 - `04_Software/AudioMancer/tests/test_speech_blocks_service.py`
+- `04_Software/AudioMancer/tests/test_speech_blocks_text_split_service.py`
+- `04_Software/AudioMancer/tests/test_llm_provider_service.py` for
+  operation-specific structured-output schema hints
 - `04_Software/AudioMancer/tests/test_speech_blocks_state_service.py`
 - `04_Software/AudioMancer/tests/test_speech_blocks_page.py`
 - `04_Software/AudioMancer/tests/test_speech_blocks_ui_controller.py`
@@ -514,6 +629,22 @@ Focused automated coverage exists in:
   `test_audio_blocks_upstream_invalidation.py`,
   `test_character_voices_ui_controller.py`, and
   `test_project_workspace_service.py`
+
+Reviewed on 2026-07-01 against the implemented span-selection response
+contract, local-model schema hinting, one-repair retry, deterministic fallback,
+compact validation and parse-failure logging, resume contract marker,
+same-narrator boundary-ID preservation, and Speech Blocks page source
+cursor/scroll preservation.
+
+Reviewed on 2026-07-02 against the implemented atomic-unit response contract,
+deterministic intra-span splitting, multilingual attribution-unit detection,
+atomic `unit_ids` prompt/schema payloads, speaker hints from aliases and
+attribution context, and validation that rejects dialogue/attribution merges.
+
+Reviewed on 2026-07-02 against the same-narrator quote-safe boundary
+selection behavior, including candidate filtering for open quoted passages,
+AI-selected boundary validation, and deterministic fallback when a selected
+boundary would split quoted source text.
 
 Minimum validation after a change:
 

@@ -282,6 +282,83 @@ def test_chat_json_sends_json_schema_response_format_for_local_backends(monkeypa
     ]
 
 
+def test_chat_json_sends_operation_schema_response_format_for_local_backends(monkeypatch) -> None:
+    """
+    @brief      Verify local structured-output requests can use an operation-specific JSON Schema.
+    @details    Covers SB3-SPEC-001 and REQ-FUNC-044.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-01
+    @version    0.1.0
+    """
+    request_bodies: list[dict[str, object]] = []
+
+    def _fake_urlopen(http_request, **_kwargs):
+        """
+        @brief      Capture one operation-specific structured-output provider request.
+        @param[in]  http_request Provider HTTP request.
+        @param[in]  _kwargs Ignored keyword request arguments.
+        @return     Fake successful provider response.
+        @exception  None
+        @author     Eng. Dan Dumitru Pasare
+        @date       2026-07-01
+        @version    0.1.0
+        """
+        request_bodies.append(json.loads(http_request.data.decode("utf-8")))
+        return _FakeResponse('{"choices":[{"message":{"content":"{\\"blocks\\":[]}"}}]}')
+
+    monkeypatch.setattr(llm_provider_service.request, "urlopen", _fake_urlopen)
+    speech_blocks_schema = {
+        "type": "object",
+        "additionalProperties": False,
+        "required": ["blocks"],
+        "properties": {
+            "blocks": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "additionalProperties": False,
+                    "required": ["source_span_ids", "speaker_id", "content_kind", "confidence"],
+                    "properties": {
+                        "source_span_ids": {"type": "array", "items": {"type": "string"}, "minItems": 1},
+                        "speaker_id": {"type": "string"},
+                        "content_kind": {"type": "string"},
+                        "confidence": {"type": "string"},
+                        "warning_flags": {"type": "array", "items": {"type": "string"}},
+                    },
+                },
+            }
+        },
+    }
+
+    llm_provider_service.chat_json(
+        {
+            "id": "profile_1",
+            "backend_kind": "lmstudio",
+            "base_url": "http://127.0.0.1:1234/v1",
+            "model_name": "google/gemma-4-26b-a4b",
+            "request_timeout_seconds": 30,
+            "temperature": 0.1,
+            "max_output_tokens": 256,
+            "supports_structured_output": True,
+        },
+        "system",
+        "user",
+        response_schema=speech_blocks_schema,
+        response_schema_name="speech_blocks_source_span_selection",
+    )
+
+    assert request_bodies[0]["response_format"] == {
+        "type": "json_schema",
+        "json_schema": {
+            "name": "speech_blocks_source_span_selection",
+            "schema": speech_blocks_schema,
+        },
+    }
+
+
 def test_chat_json_omits_response_format_when_structured_output_is_not_supported(monkeypatch) -> None:
     """
     @brief      Verify profiles without structured-output support keep prompt-only JSON behavior.

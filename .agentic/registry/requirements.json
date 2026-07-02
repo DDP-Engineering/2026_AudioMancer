@@ -108,9 +108,11 @@
   },
   "REQ-DATA-005": {
     "created_on": "2026-06-17 22:24",
-    "last_updated": "2026-06-17 22:24",
+    "last_updated": "2026-07-01 12:24",
     "line_number": 16,
-    "linked_tests": [],
+    "linked_tests": [
+      "04_Software/AudioMancer/tests/test_settings_service.py::test_validate_settings_repairs_invalid_chunking_context_mode"
+    ],
     "priority": "Must",
     "rationale": "Protects operator-selected AI prompt context behavior from malformed or legacy settings payloads.",
     "related_components": [
@@ -121,7 +123,28 @@
     "requirement": "Settings Service shall include the chunking context mode in default settings, validate it against the supported mode tokens, repair missing or invalid values to Balanced, and preserve valid persisted selections.",
     "source_file": ".agentic/requirements/data_privacy.md",
     "status": "Active",
-    "verification": "Automated test (planned): settings default, validation, and repair tests for the chunking context mode."
+    "verification": "Automated test"
+  },
+  "REQ-DATA-006": {
+    "created_on": "2026-07-01 17:30",
+    "last_updated": "2026-07-01 15:00",
+    "line_number": 17,
+    "linked_tests": [
+      "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_start_generation_fallback_after_repair_failure_preserves_source_order_and_logs_compactly"
+    ],
+    "priority": "Must",
+    "rationale": "Protects unpublished book text while preserving enough diagnostic detail to tune local-model behavior.",
+    "related_components": [
+      "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py",
+      "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_normalization_service.py",
+      "04_Software/AudioMancer/src/audiomancer/services/llm_provider_service.py",
+      "05_SoftwareDocu/AudioMancer_Speech_Blocks_Service.md"
+    ],
+    "req_id": "REQ-DATA-006",
+    "requirement": "Speech Blocks validation and repair logging shall report compact failure categories, chunk or segment identifiers, and rejected speaker or span identifiers without logging full source chunk or book text through the validation-failure path.",
+    "source_file": ".agentic/requirements/data_privacy.md",
+    "status": "Active",
+    "verification": "uv run pytest -q tests/test_speech_blocks_service.py::test_start_generation_fallback_after_repair_failure_preserves_source_order_and_logs_compactly"
   },
   "REQ-FUNC-001": {
     "created_on": "2026-06-09 09:50",
@@ -1208,9 +1231,11 @@
   },
   "REQ-FUNC-039": {
     "created_on": "2026-06-17 22:24",
-    "last_updated": "2026-06-17 22:24",
+    "last_updated": "2026-07-01 12:24",
     "line_number": 50,
-    "linked_tests": [],
+    "linked_tests": [
+      "04_Software/AudioMancer/tests/test_ai_chunking_service.py::test_ai_chunking_context_modes_control_paragraph_caps"
+    ],
     "priority": "Must",
     "rationale": "Gives operators a way to keep larger scenes together when the configured model context window can support wider prompt windows.",
     "related_components": [
@@ -1221,7 +1246,359 @@
     "requirement": "AI Chunking Service shall apply the selected chunking context mode when building AI prompt windows: Balanced keeps the current paragraph, meaning, and scene caps at 64, 96, and 128 paragraphs; Wide scene context uses 128, 192, and 256 paragraph caps; Maximum context disables the paragraph cap and relies only on the token budget.",
     "source_file": ".agentic/requirements/functional.md",
     "status": "Active",
-    "verification": "Automated test (planned): focused AI chunking window-construction tests for each context mode."
+    "verification": "Automated test"
+  },
+  "REQ-FUNC-040": {
+    "created_on": "2026-07-01 05:55",
+    "last_updated": "2026-07-01 07:42",
+    "line_number": 51,
+    "linked_tests": [
+      "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_normalize_chunk_blocks_reconstructs_text_from_source_span_ids"
+    ],
+    "priority": "Must",
+    "rationale": "Prevents local or online models from rewriting audiobook text while preserving speaker attribution and downstream Speech Blocks review/export fields.",
+    "related_components": [
+      "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py",
+      "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_normalization_service.py",
+      "04_Software/AudioMancer/prompts/speech_blocks_system.txt",
+      "04_Software/AudioMancer/prompts/speech_blocks_user.txt",
+      "05_SoftwareDocu/AudioMancer_Speech_Blocks_Service.md"
+    ],
+    "req_id": "REQ-FUNC-040",
+    "requirement": "Speech Blocks Service shall normalize narrator-and-character model responses through the single span-selection contract where model-selected source span IDs, speaker IDs, content kind, confidence, and warnings are validated before persisted `source_text` and `text` are reconstructed only from the source chunk.",
+    "source_file": ".agentic/requirements/functional.md",
+    "status": "Active",
+    "verification": "Automated test"
+  },
+  "REQ-FUNC-041": {
+    "created_on": "2026-07-01 05:55",
+    "last_updated": "2026-07-01 07:43",
+    "line_number": 52,
+    "linked_tests": [
+      "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_speech_blocks_resume_restarts_previous_full_cast_state"
+    ],
+    "priority": "Must",
+    "rationale": "Avoids mixing AI-owned legacy block text with the new deterministic source-span contract.",
+    "related_components": [
+      "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py",
+      "05_SoftwareDocu/AudioMancer_Speech_Blocks_Service.md"
+    ],
+    "req_id": "REQ-FUNC-041",
+    "requirement": "Speech Blocks Service shall treat incompatible partial narrator-and-character Speech Blocks generation state from the previous implementation as non-resumable and start fresh generation while preserving the existing same-narrator boundary-ID resume behavior.",
+    "source_file": ".agentic/requirements/functional.md",
+    "status": "Active",
+    "verification": "Automated test"
+  },
+  "REQ-FUNC-042": {
+    "created_on": "2026-07-01 13:33",
+    "last_updated": "2026-07-01 11:38",
+    "line_number": 53,
+    "linked_tests": [
+      "04_Software/AudioMancer/tests/test_speech_blocks_text_split_service.py::test_build_source_spans_preserves_exact_text_and_paragraph_boundaries"
+    ],
+    "priority": "Must",
+    "rationale": "Gives local and online models a bounded selection vocabulary while keeping persisted Speech Blocks text reconstructable from app-owned source text.",
+    "related_components": [
+      "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py",
+      "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_text_split_service.py",
+      "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_normalization_service.py",
+      "05_SoftwareDocu/AudioMancer_Speech_Blocks_Service.md",
+      "05_SoftwareDocu/AudioMancer_Text_Pipeline_Support_Services.md"
+    ],
+    "req_id": "REQ-FUNC-042",
+    "requirement": "Speech Blocks Service shall build and attach deterministic `source_spans` with stable ordered IDs to every narrator-and-character source chunk or AI-budget segment before the model call, and those spans shall contiguously reconstruct the exact active text including whitespace, punctuation, and paragraph order without merging across paragraph boundaries.",
+    "source_file": ".agentic/requirements/functional.md",
+    "status": "Active",
+    "verification": "uv run pytest -q tests/test_speech_blocks_text_split_service.py tests/test_speech_blocks_service.py"
+  },
+  "REQ-FUNC-043": {
+    "created_on": "2026-07-01 13:33",
+    "last_updated": "2026-07-01 11:38",
+    "line_number": 54,
+    "linked_tests": [
+      "04_Software/AudioMancer/tests/test_speech_blocks_text_split_service.py::test_build_source_spans_classifies_multilingual_dialogue_conventions"
+    ],
+    "priority": "Must",
+    "rationale": "Improves local-model speaker and block attribution hints for multilingual books without translating or rewriting source text.",
+    "related_components": [
+      "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_text_split_service.py",
+      "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py",
+      "05_SoftwareDocu/AudioMancer_Speech_Blocks_Service.md",
+      "05_SoftwareDocu/AudioMancer_Text_Pipeline_Support_Services.md"
+    ],
+    "req_id": "REQ-FUNC-043",
+    "requirement": "Speech Blocks source-span builder shall classify spans as `dialogue_candidate`, `narration_candidate`, `attribution_candidate`, or `mixed_candidate` using Unicode dialogue punctuation and paragraph structure rather than English-only speech verbs across supported languages including Romanian.",
+    "source_file": ".agentic/requirements/functional.md",
+    "status": "Active",
+    "verification": "uv run pytest -q tests/test_speech_blocks_text_split_service.py tests/test_speech_blocks_service.py"
+  },
+  "REQ-FUNC-044": {
+    "created_on": "2026-07-01 17:30",
+    "last_updated": "2026-07-01 15:00",
+    "line_number": 55,
+    "linked_tests": [
+      "04_Software/AudioMancer/tests/test_llm_provider_service.py::test_chat_json_sends_operation_schema_response_format_for_local_backends"
+    ],
+    "priority": "Must",
+    "rationale": "Gives LM Studio and other local providers a stricter response envelope than a generic JSON object while keeping the app-owned source-span contract single-versioned.",
+    "related_components": [
+      "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py",
+      "04_Software/AudioMancer/src/audiomancer/services/llm_provider_service.py",
+      "05_SoftwareDocu/AudioMancer_Speech_Blocks_Service.md",
+      "05_SoftwareDocu/AudioMancer_LLM_Provider_Service.md"
+    ],
+    "req_id": "REQ-FUNC-044",
+    "requirement": "Speech Blocks generation shall request the narrator-and-character source-span selection contract with an operation-specific structured-output schema hint whenever the selected AI profile supports structured output.",
+    "source_file": ".agentic/requirements/functional.md",
+    "status": "Active",
+    "verification": "uv run pytest -q tests/test_llm_provider_service.py::test_chat_json_sends_operation_schema_response_format_for_local_backends"
+  },
+  "REQ-FUNC-045": {
+    "created_on": "2026-07-01 17:30",
+    "last_updated": "2026-07-01 15:00",
+    "line_number": 56,
+    "linked_tests": [
+      "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_start_generation_repairs_semantically_invalid_source_span_selection"
+    ],
+    "priority": "Must",
+    "rationale": "Makes local-model output recoverable without trusting the first response or requiring a second full prompt containing the book text.",
+    "related_components": [
+      "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py",
+      "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_normalization_service.py",
+      "04_Software/AudioMancer/prompts/speech_blocks_repair_user.txt",
+      "05_SoftwareDocu/AudioMancer_Speech_Blocks_Service.md",
+      "05_SoftwareDocu/AudioMancer_Speech_Blocks_Normalization_Service.md"
+    ],
+    "req_id": "REQ-FUNC-045",
+    "requirement": "Speech Blocks generation shall retry exactly once with a compact repair prompt when the initial narrator-and-character source-span response is malformed JSON or semantically invalid, including missing confidence, illegal span IDs, hallucinated halo span IDs, unknown speakers, duplicate spans, out-of-order spans, or incomplete coverage.",
+    "source_file": ".agentic/requirements/functional.md",
+    "status": "Active",
+    "verification": "uv run pytest -q tests/test_speech_blocks_service.py::test_start_generation_repairs_malformed_source_span_json_once tests/test_speech_blocks_service.py::test_start_generation_repairs_semantically_invalid_source_span_selection"
+  },
+  "REQ-FUNC-046": {
+    "created_on": "2026-07-01 17:30",
+    "last_updated": "2026-07-01 15:00",
+    "line_number": 57,
+    "linked_tests": [
+      "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_start_generation_fallback_after_repair_failure_preserves_source_order_and_logs_compactly"
+    ],
+    "priority": "Must",
+    "rationale": "Keeps Speech Blocks review usable after local-model failure and avoids corrupting downstream audio generation with rewritten or reordered text.",
+    "related_components": [
+      "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py",
+      "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_normalization_service.py",
+      "05_SoftwareDocu/AudioMancer_Speech_Blocks_Service.md",
+      "05_SoftwareDocu/AudioMancer_Speech_Blocks_Normalization_Service.md"
+    ],
+    "req_id": "REQ-FUNC-046",
+    "requirement": "When both the initial and repair source-span responses are unusable, Speech Blocks generation shall create deterministic fallback blocks in source order using safe narrator defaults and warning metadata while preserving exact source text reconstruction.",
+    "source_file": ".agentic/requirements/functional.md",
+    "status": "Active",
+    "verification": "uv run pytest -q tests/test_speech_blocks_service.py::test_start_generation_fallback_after_repair_failure_preserves_source_order_and_logs_compactly"
+  },
+  "REQ-FUNC-047": {
+    "created_on": "2026-07-01 18:55",
+    "last_updated": "2026-07-01 16:09",
+    "line_number": 58,
+    "linked_tests": [
+      "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_speech_blocks_production_prompt_contract_matrix"
+    ],
+    "priority": "Must",
+    "rationale": "Keeps local and online models constrained to app-owned source reconstruction across supported languages including Romanian.",
+    "related_components": [
+      "04_Software/AudioMancer/prompts/speech_blocks_system.txt",
+      "04_Software/AudioMancer/prompts/speech_blocks_user.txt",
+      "04_Software/AudioMancer/prompts/speech_blocks_repair_user.txt",
+      "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py",
+      "05_SoftwareDocu/AudioMancer_Speech_Blocks_Service.md"
+    ],
+    "req_id": "REQ-FUNC-047",
+    "requirement": "Narrator-and-character Speech Blocks prompts shall use the multilingual source-span selection contract only, include the active source language, prohibit translation or rewritten final text, require allowed `source_span_ids` only, and return JSON-only `blocks`.",
+    "source_file": ".agentic/requirements/functional.md",
+    "status": "Active",
+    "verification": "Automated pytest verifies multilingual source-span Speech Blocks prompt contract."
+  },
+  "REQ-FUNC-048": {
+    "created_on": "2026-07-01 18:55",
+    "last_updated": "2026-07-01 16:09",
+    "line_number": 59,
+    "linked_tests": [
+      "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_speaker_catalog_preserves_character_aliases_for_prompt"
+    ],
+    "priority": "Must",
+    "rationale": "Improves speaker attribution for multilingual local models while preventing halo text from being selected into saved Speech Blocks.",
+    "related_components": [
+      "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py",
+      "04_Software/AudioMancer/src/audiomancer/services/character_discovery_service.py",
+      "04_Software/AudioMancer/tests/test_speech_blocks_service.py",
+      "05_SoftwareDocu/AudioMancer_Speech_Blocks_Service.md"
+    ],
+    "req_id": "REQ-FUNC-048",
+    "requirement": "Speech Blocks prompt rendering shall expose source-language character names and aliases in the allowed speaker catalog and include previous/next chunk halo text only as non-selectable attribution context, never as selectable source spans.",
+    "source_file": ".agentic/requirements/functional.md",
+    "status": "Active",
+    "verification": "Automated pytest verifies character aliases and source-language evidence are present in Speech Blocks prompt catalogs."
+  },
+  "REQ-FUNC-049": {
+    "created_on": "2026-07-01 18:55",
+    "last_updated": "2026-07-01 16:09",
+    "line_number": 60,
+    "linked_tests": [
+      "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_speech_blocks_adjacent_prompts_preserve_dialogue_attribution_context"
+    ],
+    "priority": "Should",
+    "rationale": "Speech Blocks quality depends on upstream operations preserving the text structure that span selection and speaker attribution consume.",
+    "related_components": [
+      "04_Software/AudioMancer/prompts/text_cleanup_system.txt",
+      "04_Software/AudioMancer/prompts/text_translation_system.txt",
+      "04_Software/AudioMancer/prompts/text_chunking_system.txt",
+      "04_Software/AudioMancer/tests/test_speech_blocks_service.py",
+      "05_SoftwareDocu/AudioMancer_Speech_Blocks_Service.md",
+      "05_SoftwareDocu/AudioMancer_Text_Pipeline_Support_Services.md"
+    ],
+    "req_id": "REQ-FUNC-049",
+    "requirement": "Adjacent text cleanup, translation, and chunking prompt guidance shall preserve multilingual dialogue punctuation, paragraph shape, and nearby attribution needed by Speech Blocks source-span selection.",
+    "source_file": ".agentic/requirements/functional.md",
+    "status": "Active",
+    "verification": "Automated pytest verifies adjacent cleanup, translation, and chunking prompts preserve dialogue punctuation and attribution context for Speech Blocks."
+  },
+  "REQ-FUNC-050": {
+    "created_on": "2026-07-02 10:59",
+    "last_updated": "2026-07-02 08:19",
+    "line_number": 61,
+    "linked_tests": [
+      "04_Software/AudioMancer/tests/test_speech_blocks_text_split_service.py::test_build_atomic_speech_units_splits_many_elements_inside_one_span"
+    ],
+    "priority": "Must",
+    "rationale": "A model-selectable source span can contain several audiobook blocks, so structural splitting must happen before speaker assignment.",
+    "related_components": [
+      "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_text_split_service.py",
+      "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py",
+      "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_normalization_service.py",
+      "05_SoftwareDocu/AudioMancer_Speech_Blocks_Service.md",
+      "05_SoftwareDocu/AudioMancer_Text_Pipeline_Support_Services.md"
+    ],
+    "req_id": "REQ-FUNC-050",
+    "requirement": "Speech Blocks Service shall derive narrator-and-character Speech Blocks from deterministic atomic speech units, allowing one source span to produce multiple ordered units while preserving exact source text coverage.",
+    "source_file": ".agentic/requirements/functional.md",
+    "status": "Active",
+    "verification": "Automated pytest via uv run --project 04_Software/AudioMancer pytest -q 04_Software/AudioMancer/tests/test_speech_blocks_text_split_service.py"
+  },
+  "REQ-FUNC-051": {
+    "created_on": "2026-07-02 10:59",
+    "last_updated": "2026-07-02 08:19",
+    "line_number": 62,
+    "linked_tests": [
+      "04_Software/AudioMancer/tests/test_speech_blocks_text_split_service.py::test_build_atomic_speech_units_classifies_multilingual_attribution_patterns"
+    ],
+    "priority": "Must",
+    "rationale": "Books can use different punctuation and lexical forms, but attribution text must remain separate from spoken dialogue for audiobook generation.",
+    "related_components": [
+      "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_text_split_service.py",
+      "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py",
+      "05_SoftwareDocu/AudioMancer_Text_Pipeline_Support_Services.md"
+    ],
+    "req_id": "REQ-FUNC-051",
+    "requirement": "Speech Blocks atomic unit splitting shall classify multilingual quoted dialogue, dash-led dialogue, attribution narration, ordinary narration, and separators using Unicode dialogue punctuation and source-language attribution patterns including Romanian.",
+    "source_file": ".agentic/requirements/functional.md",
+    "status": "Active",
+    "verification": "Automated pytest via uv run --project 04_Software/AudioMancer pytest -q 04_Software/AudioMancer/tests/test_speech_blocks_text_split_service.py"
+  },
+  "REQ-FUNC-052": {
+    "created_on": "2026-07-02 10:59",
+    "last_updated": "2026-07-02 08:19",
+    "line_number": 63,
+    "linked_tests": [
+      "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_speech_blocks_prompt_uses_atomic_units_and_forbids_text_rewrites",
+      "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_normalize_chunk_blocks_rejects_dialogue_attribution_unit_merge"
+    ],
+    "priority": "Must",
+    "rationale": "Local models should help decide who speaks without being able to corrupt block boundaries or source wording.",
+    "related_components": [
+      "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py",
+      "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_normalization_service.py",
+      "04_Software/AudioMancer/prompts/speech_blocks_system.txt",
+      "04_Software/AudioMancer/prompts/speech_blocks_user.txt",
+      "04_Software/AudioMancer/prompts/speech_blocks_repair_user.txt",
+      "05_SoftwareDocu/AudioMancer_Speech_Blocks_Service.md",
+      "05_SoftwareDocu/AudioMancer_Speech_Blocks_Normalization_Service.md"
+    ],
+    "req_id": "REQ-FUNC-052",
+    "requirement": "Speech Blocks AI generation shall ask models to assign speakers to existing atomic unit IDs only, using allowed speaker IDs, confidence, and warning flags, while validation rejects skipped, duplicated, reordered, merged, rewritten, or structurally inconsistent units.",
+    "source_file": ".agentic/requirements/functional.md",
+    "status": "Active",
+    "verification": "Automated pytest via uv run --project 04_Software/AudioMancer pytest -q 04_Software/AudioMancer/tests/test_speech_blocks_service.py"
+  },
+  "REQ-FUNC-053": {
+    "created_on": "2026-07-02 10:59",
+    "last_updated": "2026-07-02 08:19",
+    "line_number": 64,
+    "linked_tests": [
+      "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_speech_blocks_atomic_prompt_includes_aliases_and_attribution_hints"
+    ],
+    "priority": "Must",
+    "rationale": "Character attribution quality depends on source-language evidence and deterministic hints, especially for local models and role speakers.",
+    "related_components": [
+      "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py",
+      "04_Software/AudioMancer/src/audiomancer/services/character_discovery_service.py",
+      "04_Software/AudioMancer/prompts/character_discovery_system.txt",
+      "04_Software/AudioMancer/prompts/character_profile_synthesis_user.txt",
+      "05_SoftwareDocu/AudioMancer_Speech_Blocks_Service.md"
+    ],
+    "req_id": "REQ-FUNC-053",
+    "requirement": "Speech Blocks speaker detection shall use source-language character aliases, role labels, nearby attribution hints, same-speaker continuations, and ambiguity warnings before falling back to narrator defaults.",
+    "source_file": ".agentic/requirements/functional.md",
+    "status": "Active",
+    "verification": "Automated pytest via uv run --project 04_Software/AudioMancer pytest -q 04_Software/AudioMancer/tests/test_speech_blocks_service.py"
+  },
+  "REQ-FUNC-054": {
+    "created_on": "2026-07-02 12:35",
+    "last_updated": "2026-07-02 09:24",
+    "line_number": 65,
+    "linked_tests": [
+      "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_speech_blocks_atomic_prompt_omits_separator_only_units",
+      "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_normalize_chunk_blocks_ignores_separator_coverage_and_rejects_separator_selection"
+    ],
+    "priority": "Must",
+    "rationale": "Newline and paragraph separator units preserve source offsets but are not audiobook content and should not burden local models or reviewers with empty rows.",
+    "related_components": [
+      "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py",
+      "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_normalization_service.py",
+      "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_text_split_service.py",
+      "04_Software/AudioMancer/prompts/speech_blocks_system.txt",
+      "04_Software/AudioMancer/prompts/speech_blocks_user.txt",
+      "04_Software/AudioMancer/prompts/speech_blocks_repair_user.txt",
+      "05_SoftwareDocu/AudioMancer_Speech_Blocks_Normalization_Service.md",
+      "05_SoftwareDocu/AudioMancer_Text_Pipeline_Support_Services.md"
+    ],
+    "req_id": "REQ-FUNC-054",
+    "requirement": "Speech Blocks atomic-unit prompting and validation shall treat separator-only or whitespace-only atomic units as non-speakable provenance so they cannot create standalone persisted Narrator or dialogue blocks with empty text, while still requiring coverage of all selectable speakable units.",
+    "source_file": ".agentic/requirements/functional.md",
+    "status": "Active",
+    "verification": "Automated pytest via uv run --project 04_Software/AudioMancer pytest -q 04_Software/AudioMancer/tests/test_speech_blocks_service.py"
+  },
+  "REQ-FUNC-055": {
+    "created_on": "2026-07-02 15:10",
+    "last_updated": "2026-07-02 14:34",
+    "line_number": 66,
+    "linked_tests": [
+      "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_narrator_boundary_candidates_skip_open_quote_sentence_boundary",
+      "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_normalize_narrator_boundary_blocks_rejects_open_quote_split"
+    ],
+    "priority": "Must",
+    "rationale": "Narrator-only mode still generates spoken review blocks, so splitting inside quoted speech makes text look corrupted even when no source text was deleted.",
+    "related_components": [
+      "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py",
+      "04_Software/AudioMancer/prompts/speech_blocks_narrator_only_system.txt",
+      "04_Software/AudioMancer/prompts/speech_blocks_narrator_only_user.txt",
+      "04_Software/AudioMancer/tests/test_speech_blocks_service.py",
+      "05_SoftwareDocu/AudioMancer_Speech_Blocks_Service.md"
+    ],
+    "req_id": "REQ-FUNC-055",
+    "requirement": "Same-narrator Speech Blocks boundary selection shall avoid normal split candidates inside open quoted passages and shall reject or warning-mark any selected boundary set that would persist blocks with unmatched opening or closing quotation marks.",
+    "source_file": ".agentic/requirements/functional.md",
+    "status": "Active",
+    "verification": "E-0045 and E-0046 prove quote-safe same-narrator boundary behavior; E-0047 and E-0048 prove focused Speech Blocks regressions remain green."
   },
   "REQ-NFR-001": {
     "created_on": "2026-06-09 09:50",
@@ -1701,6 +2078,28 @@
     "status": "Active",
     "verification": "Manual verification: review provider defaults and run non-provider workflows without network access."
   },
+  "REQ-PLAT-004": {
+    "created_on": "2026-07-01 18:55",
+    "last_updated": "2026-07-01 16:09",
+    "line_number": 15,
+    "linked_tests": [
+      "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_local_model_guidance_is_honest_about_ai_settings_and_lmstudio_presets"
+    ],
+    "priority": "Should",
+    "rationale": "Keeps operator guidance honest about what the app controls and prevents unsupported sampler settings from appearing in AudioMancer AI Settings.",
+    "related_components": [
+      "04_Software/AudioMancer/src/audiomancer/ui/pages/ai_settings_page.py",
+      "04_Software/AudioMancer/src/audiomancer/services/settings_service.py",
+      "05_SoftwareDocu/AudioMancer_LMStudio_Local_Model_Recommendations.md",
+      "05_SoftwareDocu/UserGuide/index.html",
+      "05_SoftwareDocu/UserGuide_ro/index.html"
+    ],
+    "req_id": "REQ-PLAT-004",
+    "requirement": "AudioMancer local-model guidance shall state that AI Settings sends only request-level model, context, max-output, temperature, timeout, and structured-output hints to LM Studio, while sampler controls such as top-p, top-k, repeat penalty, seed, and reasoning mode remain LM Studio preset settings unless provider payload support is intentionally added.",
+    "source_file": ".agentic/requirements/platform.md",
+    "status": "Active",
+    "verification": "Automated pytest verifies docs describe AudioMancer request settings versus LM Studio-only sampler and reasoning presets."
+  },
   "REQ-REL-001": {
     "created_on": "2026-06-09 09:50",
     "last_updated": "2026-06-09 09:50",
@@ -1991,7 +2390,7 @@
   },
   "REQ-TEST-010": {
     "created_on": "2026-06-09 08:08",
-    "last_updated": "2026-06-09 08:08",
+    "last_updated": "2026-07-01 12:24",
     "line_number": 21,
     "linked_tests": [],
     "priority": "Should",
@@ -2003,7 +2402,7 @@
     "req_id": "REQ-TEST-010",
     "requirement": "A deterministic end-to-end smoke test shall exercise the offline pipeline from source import through audio assembly to guard cross-stage contracts.",
     "source_file": ".agentic/requirements/testing.md",
-    "status": "Active",
+    "status": "Planned",
     "verification": "Automated test (planned): single deterministic pipeline run asserting stage hand-off artifacts."
   },
   "REQ-TEST-011": {
@@ -2842,9 +3241,11 @@
   },
   "REQ-UX-034": {
     "created_on": "2026-06-17 22:24",
-    "last_updated": "2026-06-17 22:24",
+    "last_updated": "2026-07-01 12:24",
     "line_number": 45,
-    "linked_tests": [],
+    "linked_tests": [
+      "04_Software/AudioMancer/tests/test_ai_settings_page.py::test_ai_settings_page_loads_and_builds_chunking_context_mode"
+    ],
     "priority": "Must",
     "rationale": "Lets operators tune AI chunking prompt breadth from the existing settings workflow without editing project files.",
     "related_components": [
@@ -2855,6 +3256,6 @@
     "requirement": "AI Settings Page shall expose a localized Chunking Context Mode selector with exactly Balanced, Wide scene context, and Maximum context options, defaulting to Balanced for missing or invalid settings and persisting the selected mode through Save, OK, and Apply flows.",
     "source_file": ".agentic/requirements/ux_workflow.md",
     "status": "Active",
-    "verification": "Automated test (planned): AI Settings page persistence and localization-parity tests."
+    "verification": "Automated test"
   }
 }

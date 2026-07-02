@@ -80,6 +80,8 @@ def chat_json(
     log_context: dict[str, object] | None = None,
     cancel_requested=None,
     structured_output: bool = True,
+    response_schema: dict[str, object] | None = None,
+    response_schema_name: str = "audiomancer_json_response",
 ) -> dict[str, object]:
     """
     @brief      Run one chat-completion request and parse JSON content.
@@ -90,6 +92,8 @@ def chat_json(
     @param[in]  log_context Optional per-request log metadata.
     @param[in]  cancel_requested Optional zero-argument cancellation callback.
     @param[in]  structured_output Enable provider JSON-object mode when the profile supports it.
+    @param[in]  response_schema Optional operation-specific JSON Schema for structured-output providers.
+    @param[in]  response_schema_name Provider-facing schema name used with `response_schema`.
     @return     Parsed JSON payload plus normalized token-usage data.
     @exception  RuntimeError Raised on provider or transport failures.
     @exception  ValueError Raised on invalid or non-object JSON output.
@@ -113,7 +117,11 @@ def chat_json(
         ),
     }
     if structured_output and bool(profile_payload.get("supports_structured_output", False)):
-        request_payload["response_format"] = _build_response_format(profile_payload)
+        request_payload["response_format"] = _build_response_format(
+            profile_payload,
+            response_schema=response_schema,
+            response_schema_name=response_schema_name,
+        )
     _append_ai_log(
         log_path,
         {
@@ -404,10 +412,16 @@ def _build_chat_endpoint(base_url: str) -> str:
     )
 
 
-def _build_response_format(profile_payload: dict[str, object]) -> dict[str, object]:
+def _build_response_format(
+    profile_payload: dict[str, object],
+    response_schema: dict[str, object] | None = None,
+    response_schema_name: str = "audiomancer_json_response",
+) -> dict[str, object]:
     """
     @brief      Build the provider-specific structured-output response format.
     @param[in]  profile_payload Normalized AI profile payload.
+    @param[in]  response_schema Optional operation-specific JSON Schema.
+    @param[in]  response_schema_name Provider-facing schema name used with `response_schema`.
     @return     Response-format payload accepted by the selected backend kind.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
@@ -415,6 +429,15 @@ def _build_response_format(profile_payload: dict[str, object]) -> dict[str, obje
     @version    0.1.0
     """
     backend_kind = str(profile_payload.get("backend_kind", "")).strip()
+    if isinstance(response_schema, dict) and response_schema:
+        schema_name = str(response_schema_name).strip() or "audiomancer_json_response"
+        return {
+            "type": "json_schema",
+            "json_schema": {
+                "name": schema_name,
+                "schema": dict(response_schema),
+            },
+        }
     if backend_kind not in {"lmstudio", "ollama"}:
         return {"type": "json_object"}
     return {

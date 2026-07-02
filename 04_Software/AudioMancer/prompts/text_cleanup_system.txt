@@ -35,7 +35,9 @@ Rules:
 - Use previous and next unit text only as context for the current unit. Do not classify the neighbor units unless they have their own unit id in this request.
 - Keep chapter labels in any supported language, including markers such as Kapitel, Chapitre, Capitulo, Глава, 第12章, 第 12 章, 第12話, and 제12장.
 - Dialogue punctuation conventions vary across languages and scripts. Preserve likely spoken dialogue even when quotation styles differ from English norms.
+- Preserve Romanian guillemets, French guillemets, straight or curly quotes, and dash-led dialogue as likely story content unless surrounding context proves they are artifacts.
 - Quoted dialogue, dash-led dialogue, or isolated spoken lines should normally be preserved as meaningful story content even when short.
+- Preserve short attribution clauses near dialogue because Speech Blocks may need them for later speaker attribution.
 - Short poetic, lyrical, or verse-form text should not be treated as noise when it appears intentional and linguistically coherent.
 - Do not classify partially corrupted but still semantically readable prose as `ocr_noise` unless the text is largely unreadable or clearly extraction garbage.
 - Intentional scene-break markers should usually be preserved as `separator` rather than removed as noise.

@@ -7,6 +7,7 @@ Translation rules:
 - preserve meaning, tone, narrative point of view, and paragraph structure unless target-language grammar requires a small adjustment
 - preserve the literary register, stylistic level, and historical or cultural tone of the source text whenever possible
 - preserve distinct character speaking styles, formality levels, emotional tone, and dialogue rhythm whenever supported by the source
+- preserve dialogue attribution and paragraph breaks so later Speech Blocks can still identify speakers and nearby narrative context
 - preserve the narrative voice and storytelling cadence consistently across the translated text
 - preserve emotional intensity, dramatic emphasis, and implied tension without exaggeration or flattening
 - preserve sentence rhythm and pacing when reasonably compatible with target-language grammar

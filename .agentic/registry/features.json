@@ -1,24 +1,57 @@
 {
-  "change-2026-06-17T204743Z-c37d97e4": {
-    "check_ids": [],
+  "feature-2026-07-02T075950Z-0d6c2869": {
+    "check_ids": [
+      "CHK-SB-ATOMIC-001",
+      "CHK-SB-ATOMIC-002",
+      "CHK-SB-ATOMIC-003",
+      "CHK-SB-ATOMIC-004",
+      "CHK-SB-ATOMIC-005",
+      "CHK-SB-ATOMIC-006",
+      "CHK-SB-NARRATOR-QUOTE-002",
+      "CHK-SB-NARRATOR-QUOTE-001"
+    ],
     "intent": {
-      "created_at": "2026-06-17T20:47:43+00:00",
+      "created_at": "2026-07-02T07:59:50+00:00",
       "id": "I-0001",
-      "kind": "change",
+      "kind": "feature",
       "scope_hint": [],
-      "statement": "Relax documentation audit so normal feature work requires SoftwareDocu component updates by default and broad README/HowToTest review is explicit opt-in.",
-      "status": "complete"
+      "statement": "Implement a new multilingual Speech Blocks pipeline based on deterministic atomic speech units, multilingual attribution detection, AI speaker assignment, validation, character hint improvements, tests, and documentation; do not preserve the old source-span-selection contract.",
+      "status": "draft"
     },
-    "report_path": ".agentic/runs/change-2026-06-17T204743Z-c37d97e4/report.md",
-    "run_id": "change-2026-06-17T204743Z-c37d97e4",
-    "spec_ids": [],
+    "report_path": ".agentic/runs/feature-2026-07-02T075950Z-0d6c2869/report.md",
+    "run_id": "feature-2026-07-02T075950Z-0d6c2869",
+    "spec_ids": [
+      "SB-ATOMIC-001",
+      "SB-ATOMIC-002",
+      "SB-ATOMIC-003",
+      "SB-ATOMIC-004",
+      "SB-ATOMIC-005",
+      "SB-NARRATOR-QUOTE-001"
+    ],
     "stage": "delivery",
     "touched_paths": [
-      ".agentic/requirements/testing.md",
-      ".agentic/workflow.toml",
-      ".codex/skills/documentation-audit/SKILL.md",
-      "02_Tools/audits/audit_documentation.py",
-      "04_Software/AudioMancer/tests/test_documentation_audit.py"
+      ".agentic/requirements/functional.md",
+      "04_Software/AudioMancer/README.MD",
+      "04_Software/AudioMancer/prompts/speech_blocks_narrator_only_system.txt",
+      "04_Software/AudioMancer/prompts/speech_blocks_narrator_only_user.txt",
+      "04_Software/AudioMancer/prompts/speech_blocks_repair_user.txt",
+      "04_Software/AudioMancer/prompts/speech_blocks_system.txt",
+      "04_Software/AudioMancer/prompts/speech_blocks_user.txt",
+      "04_Software/AudioMancer/pyproject.toml",
+      "04_Software/AudioMancer/src/audiomancer/__init__.py",
+      "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_normalization_service.py",
+      "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py",
+      "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_text_split_service.py",
+      "04_Software/AudioMancer/tests/test_package_import.py",
+      "04_Software/AudioMancer/tests/test_speech_blocks_service.py",
+      "04_Software/AudioMancer/tests/test_speech_blocks_text_split_service.py",
+      "04_Software/AudioMancer/uv.lock",
+      "05_SoftwareDocu/AudioMancer_Speech_Blocks_Normalization_Service.md",
+      "05_SoftwareDocu/AudioMancer_Speech_Blocks_Service.md",
+      "05_SoftwareDocu/AudioMancer_Text_Pipeline_Support_Services.md",
+      "05_SoftwareDocu/UserGuide/index.html",
+      "05_SoftwareDocu/UserGuide_ro/index.html",
+      "CHANGELOG.md"
     ]
   }
 }

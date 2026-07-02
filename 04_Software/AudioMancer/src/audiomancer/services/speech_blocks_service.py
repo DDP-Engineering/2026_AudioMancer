@@ -82,6 +82,8 @@ SPEECH_BLOCK_CONTENT_KINDS = speech_blocks_normalization_service.SPEECH_BLOCK_CO
 
 _NARRATOR_SPEAKER_ID = speech_blocks_normalization_service.NARRATOR_SPEAKER_ID
 _NARRATOR_DISPLAY_NAME = speech_blocks_normalization_service.NARRATOR_DISPLAY_NAME
+_SPEECH_BLOCKS_SOURCE_SPAN_SELECTION_CONTRACT = "atomic_unit_selection"
+_SPEECH_BLOCKS_NARRATOR_BOUNDARY_CONTRACT = "narrator_boundary_ids"
 _append_warning_flag = speech_blocks_normalization_service.append_warning_flag
 _approved_block_count = speech_blocks_report_state_service.approved_block_count
 _block_text_key = speech_blocks_normalization_service.block_text_key
@@ -111,13 +113,17 @@ _split_sentence_spans = speech_blocks_normalization_service.split_sentence_spans
 _split_text_for_tts_budget = speech_blocks_normalization_service.split_text_for_tts_budget
 _speech_block_id = speech_blocks_normalization_service.speech_block_id
 _speech_block_warning_reason = speech_blocks_normalization_service.speech_block_warning_reason
+_source_span_candidate_blocks = speech_blocks_normalization_service.source_span_candidate_blocks
 _tts_budget_unit_count = speech_blocks_normalization_service.tts_budget_unit_count
 _validate_ai_block_source_spans = speech_blocks_normalization_service.validate_ai_block_source_spans
 _validate_narrator_only_budget = speech_blocks_normalization_service.validate_narrator_only_budget
+_validate_source_span_response_payload = speech_blocks_normalization_service.validate_source_span_response_payload
 _warning_records_from_blocks = speech_blocks_report_state_service.warning_records_from_blocks
 _ai_paragraph_spans = speech_blocks_text_split_service.ai_paragraph_spans
 _ai_sentence_spans = speech_blocks_text_split_service.ai_sentence_spans
 _ai_word_spans = speech_blocks_text_split_service.ai_word_spans
+_build_atomic_speech_units = speech_blocks_text_split_service.build_atomic_speech_units
+_build_source_spans = speech_blocks_text_split_service.build_source_spans
 _hard_split_text_for_ai_context_budget = speech_blocks_text_split_service.hard_split_text_for_ai_context_budget
 _split_text_for_ai_context_budget = speech_blocks_text_split_service.split_text_for_ai_context_budget
 
@@ -324,8 +330,11 @@ def start_or_continue_generation(
     source_language = str(source_resolution["selected_source_language"])
     source_kind = str(source_resolution["source_kind"])
     voice_assignment_mode = _voice_assignment_mode(manifest)
+    speech_blocks_response_contract = _speech_blocks_response_contract(voice_assignment_mode)
     prompt_names = _prompt_names_for_mode(voice_assignment_mode)
     prompt_template_service.validate_required_prompts(list(prompt_names))
+    if str(voice_assignment_mode).strip() != "same_narrator":
+        prompt_template_service.validate_required_prompts(["speech_blocks_repair_user"])
     scene_ambience_settings = _resolve_scene_ambience_settings(settings_payload, scene_ambience_enabled)
     if bool(scene_ambience_settings["enabled"]):
         prompt_template_service.validate_required_prompts(["scene_ambience_system", "scene_ambience_user"])
@@ -427,6 +436,7 @@ def start_or_continue_generation(
             budget_metadata=budget_metadata,
             additional_speech_block_instructions=additional_speech_block_instructions,
             scene_ambience_settings=scene_ambience_settings,
+            speech_blocks_response_contract=speech_blocks_response_contract,
         ),
     )
     _emit_progress(
@@ -441,7 +451,7 @@ def start_or_continue_generation(
     warning_entries = list(warning_records)
     for chunk_index in range(start_chunk_index, len(source_chunks)):
         raise_if_cancelled(cancel_requested)
-        source_chunk = dict(source_chunks[chunk_index])
+        source_chunk = _source_chunk_with_attribution_context(source_chunks, chunk_index)
         chunk_blocks, chunk_warnings, chunk_token_usage = _generate_budgeted_chunk_blocks(
             ai_profile_payload,
             system_prompt,
@@ -524,6 +534,7 @@ def start_or_continue_generation(
                 budget_metadata=budget_metadata,
                 additional_speech_block_instructions=additional_speech_block_instructions,
                 scene_ambience_settings=scene_ambience_settings,
+                speech_blocks_response_contract=speech_blocks_response_contract,
             ),
         )
         _emit_progress(
@@ -567,6 +578,7 @@ def start_or_continue_generation(
         budget_metadata=budget_metadata,
         additional_speech_block_instructions=additional_speech_block_instructions,
         scene_ambience_settings=scene_ambience_settings,
+        speech_blocks_response_contract=speech_blocks_response_contract,
     )
     _persist_state(
         resolved_project_root,
@@ -1078,6 +1090,7 @@ def regenerate_chunk_speech_blocks(
     source_language = str(source_resolution["selected_source_language"])
     source_kind = str(source_resolution["source_kind"])
     voice_assignment_mode = _voice_assignment_mode(manifest)
+    speech_blocks_response_contract = _speech_blocks_response_contract(voice_assignment_mode)
     prompt_names = _prompt_names_for_mode(voice_assignment_mode)
     tts_budget = _resolve_narrator_only_budget(settings_payload)
     scene_ambience_settings = _resolve_scene_ambience_settings(settings_payload, scene_ambience_enabled)
@@ -1115,6 +1128,8 @@ def regenerate_chunk_speech_blocks(
         additional_speech_block_instructions,
     )
     raise_if_cancelled(cancel_requested)
+    selected_chunk_index = source_chunks.index(selected_chunk)
+    selected_chunk = _source_chunk_with_attribution_context(source_chunks, selected_chunk_index)
     new_blocks, _chunk_warnings, chunk_token_usage = _generate_budgeted_chunk_blocks(
         ai_profile_payload,
         system_prompt,
@@ -1195,6 +1210,7 @@ def regenerate_chunk_speech_blocks(
         budget_metadata=budget_metadata,
         additional_speech_block_instructions=additional_speech_block_instructions,
         scene_ambience_settings=scene_ambience_settings,
+        speech_blocks_response_contract=speech_blocks_response_contract,
     )
     _persist_state(
         resolved_project_root,
@@ -1241,8 +1257,52 @@ def _speaker_catalog(character_profiles: list[dict[str, object]]) -> dict[str, d
             "speaker_id": character_id,
             "speaker_kind": SPEAKER_KIND_CHARACTER,
             "display_name": str(character_profile.get("canonical_name", "")).strip() or character_id,
+            "aliases": _speaker_catalog_aliases(character_profile),
+            "source_language_evidence": _speaker_catalog_evidence(character_profile),
         }
     return catalog
+
+
+def _speaker_catalog_aliases(character_profile: dict[str, object]) -> list[str]:
+    """
+    @brief      Normalize source-language aliases for a Speech Blocks speaker catalog entry.
+    @param[in]  character_profile Persisted Character Discovery profile.
+    @return     Ordered unique alias strings.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-01
+    @version    0.1.0
+    """
+    aliases: list[str] = []
+    for raw_alias in character_profile.get("aliases", []):
+        alias = str(raw_alias).strip()
+        if alias and alias not in aliases:
+            aliases.append(alias)
+    return aliases
+
+
+def _speaker_catalog_evidence(character_profile: dict[str, object]) -> list[dict[str, object]]:
+    """
+    @brief      Build compact source-language attribution evidence for one catalog speaker.
+    @param[in]  character_profile Persisted Character Discovery profile.
+    @return     Compact evidence rows safe for prompt context.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-01
+    @version    0.1.0
+    """
+    evidence_rows: list[dict[str, object]] = []
+    for raw_evidence in character_profile.get("evidence", []):
+        if not isinstance(raw_evidence, dict):
+            continue
+        chunk_id = str(raw_evidence.get("chunk_id", "")).strip()
+        text = str(raw_evidence.get("source_excerpt", raw_evidence.get("text", ""))).strip()
+        if not chunk_id or not text:
+            continue
+        evidence_rows.append({"chunk_id": chunk_id, "text": _prompt_excerpt(text, 160)})
+        if len(evidence_rows) >= 3:
+            break
+    return evidence_rows
 
 
 def _voice_assignment_mode(manifest: dict[str, object]) -> str:
@@ -1259,6 +1319,21 @@ def _voice_assignment_mode(manifest: dict[str, object]) -> str:
     if mode in config.TTS_VOICE_ASSIGNMENT_MODE_OPTIONS:
         return mode
     return config.DEFAULT_TTS_VOICE_ASSIGNMENT_MODE
+
+
+def _speech_blocks_response_contract(voice_assignment_mode: str) -> str:
+    """
+    @brief      Resolve the active Speech Blocks AI response contract token.
+    @param[in]  voice_assignment_mode Active project voice-assignment mode.
+    @return     Response contract token persisted with resumable state.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-01
+    @version    0.1.0
+    """
+    if str(voice_assignment_mode).strip() == "same_narrator":
+        return _SPEECH_BLOCKS_NARRATOR_BOUNDARY_CONTRACT
+    return _SPEECH_BLOCKS_SOURCE_SPAN_SELECTION_CONTRACT
 
 
 def _prompt_names_for_mode(voice_assignment_mode: str) -> tuple[str, str]:
@@ -1328,6 +1403,16 @@ def _chunk_user_prompt(
             "source_language": narrator_definition_service.narrator_language_label(source_language),
             "chunk_id": str(source_chunk.get("chunk_id", "")),
             "chunk_text": str(source_chunk.get("text", "")),
+            "atomic_units_json": json.dumps(
+                _compact_atomic_units_for_prompt(source_chunk, speaker_catalog),
+                indent=2,
+                ensure_ascii=False,
+            ),
+            "source_context_json": json.dumps(
+                _compact_source_context_for_prompt(source_chunk),
+                indent=2,
+                ensure_ascii=False,
+            ),
             "speaker_catalog_json": json.dumps(list(speaker_catalog.values()), indent=2, ensure_ascii=False),
             "voice_assignment_mode": voice_assignment_mode,
             "max_tts_tokens": str(int(budget_payload.get("model_token_budget", 0))),
@@ -1530,6 +1615,33 @@ def _restore_persisted_scene_ambience_settings(
     return _resolve_scene_ambience_settings(None, False)
 
 
+def _restore_persisted_speech_blocks_response_contract(operation_state: dict[str, object] | None) -> str:
+    """
+    @brief      Restore the persisted Speech Blocks response contract from operation state.
+    @param[in]  operation_state Speech Blocks operation-state payload.
+    @return     Known response contract token or the narrator+character contract.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-01
+    @version    0.1.0
+    """
+    if not isinstance(operation_state, dict):
+        return _SPEECH_BLOCKS_SOURCE_SPAN_SELECTION_CONTRACT
+    metadata = operation_state.get("metadata", {})
+    resume_checkpoint = operation_state.get("resume_checkpoint", {})
+    response_contract = str(
+        (metadata.get("speech_blocks_response_contract") if isinstance(metadata, dict) else "")
+        or (resume_checkpoint.get("speech_blocks_response_contract") if isinstance(resume_checkpoint, dict) else "")
+        or ""
+    ).strip()
+    if response_contract in {
+        _SPEECH_BLOCKS_SOURCE_SPAN_SELECTION_CONTRACT,
+        _SPEECH_BLOCKS_NARRATOR_BOUNDARY_CONTRACT,
+    }:
+        return response_contract
+    return _SPEECH_BLOCKS_SOURCE_SPAN_SELECTION_CONTRACT
+
+
 def _normalized_additional_speech_block_instructions(value: object) -> str:
     """
     @brief      Normalize optional operator Speech Blocks rules for prompts and state storage.
@@ -1688,20 +1800,23 @@ def _generate_budgeted_chunk_blocks(
                         **dict(log_context),
                         "segment_index": segment_index,
                         "segment_total": len(chunk_segments),
-                        "response_contract": "narrator_boundary_ids",
+                        "response_contract": _SPEECH_BLOCKS_NARRATOR_BOUNDARY_CONTRACT,
                     },
                     cancel_requested,
                 )
             else:
-                response_result = llm_provider_service.chat_json(
+                response_result = _generate_source_span_selection_response(
                     ai_profile_payload,
                     system_prompt,
                     user_prompt,
+                    segment_chunk,
+                    speaker_catalog,
                     log_path=log_path,
                     log_context={
                         **dict(log_context),
                         "segment_index": segment_index,
                         "segment_total": len(chunk_segments),
+                        "response_contract": _SPEECH_BLOCKS_SOURCE_SPAN_SELECTION_CONTRACT,
                     },
                     cancel_requested=cancel_requested,
                 )
@@ -1731,6 +1846,513 @@ def _generate_budgeted_chunk_blocks(
         combined_warnings,
         chunk_token_usage,
     )
+
+
+def _generate_source_span_selection_response(
+    ai_profile_payload: dict[str, object],
+    system_prompt: str,
+    user_prompt: str,
+    source_chunk: dict[str, object],
+    speaker_catalog: dict[str, dict[str, object]],
+    log_path: Path,
+    log_context: dict[str, object],
+    cancel_requested,
+) -> dict[str, object]:
+    """
+    @brief      Request, validate, and repair one source-span selection response.
+    @param[in]  ai_profile_payload Selected validated AI profile payload.
+    @param[in]  system_prompt Rendered Speech Blocks system prompt.
+    @param[in]  user_prompt Rendered initial Speech Blocks user prompt.
+    @param[in]  source_chunk Source chunk or AI-budget segment with deterministic source spans.
+    @param[in]  speaker_catalog Allowed speaker catalog.
+    @param[in]  log_path Operation-local AI transaction log path.
+    @param[in]  log_context Base AI transaction log context.
+    @param[in]  cancel_requested Optional zero-argument cancellation callback.
+    @return     Model response result, repaired response, or one invalid response that downstream fallback handles.
+    @exception  OperationCancelledError Raised when the operator cancels the run.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-01
+    @version    0.1.0
+    """
+    response_schema = _source_span_selection_response_schema()
+    response_schema_name = "speech_blocks_source_span_selection"
+    try:
+        response_result = llm_provider_service.chat_json(
+            ai_profile_payload,
+            system_prompt,
+            user_prompt,
+            log_path=log_path,
+            log_context=log_context,
+            cancel_requested=cancel_requested,
+            structured_output=True,
+            response_schema=response_schema,
+            response_schema_name=response_schema_name,
+        )
+    except ValueError as error_object:
+        failure_reason = f"malformed_json: {error_object}"
+        _log_source_span_validation_failure(source_chunk, {}, failure_reason, log_context, repair_attempt=0)
+        return _repair_source_span_selection_response(
+            ai_profile_payload,
+            system_prompt,
+            source_chunk,
+            speaker_catalog,
+            failure_reason,
+            {},
+            log_path,
+            log_context,
+            cancel_requested,
+            response_schema,
+            response_schema_name,
+            initial_usage=None,
+        )
+
+    response_payload = dict(response_result.get("payload", {}))
+    validation_result = _validate_source_span_response_payload(source_chunk, response_payload, speaker_catalog)
+    if validation_result.is_valid:
+        return response_result
+
+    _log_source_span_validation_failure(
+        source_chunk,
+        response_payload,
+        validation_result.reason,
+        log_context,
+        repair_attempt=0,
+    )
+    return _repair_source_span_selection_response(
+        ai_profile_payload,
+        system_prompt,
+        source_chunk,
+        speaker_catalog,
+        validation_result.reason,
+        response_payload,
+        log_path,
+        log_context,
+        cancel_requested,
+        response_schema,
+        response_schema_name,
+        initial_usage=response_result.get("usage"),
+    )
+
+
+def _repair_source_span_selection_response(
+    ai_profile_payload: dict[str, object],
+    system_prompt: str,
+    source_chunk: dict[str, object],
+    speaker_catalog: dict[str, dict[str, object]],
+    failure_reason: str,
+    previous_payload: dict[str, object],
+    log_path: Path,
+    log_context: dict[str, object],
+    cancel_requested,
+    response_schema: dict[str, object],
+    response_schema_name: str,
+    initial_usage: object | None,
+) -> dict[str, object]:
+    """
+    @brief      Run exactly one compact repair request for invalid source-span output.
+    @param[in]  ai_profile_payload Selected validated AI profile payload.
+    @param[in]  system_prompt Rendered Speech Blocks system prompt.
+    @param[in]  source_chunk Source chunk or AI-budget segment with deterministic source spans.
+    @param[in]  speaker_catalog Allowed speaker catalog.
+    @param[in]  failure_reason Compact validation or JSON parse failure reason.
+    @param[in]  previous_payload Previous parsed payload, when available.
+    @param[in]  log_path Operation-local AI transaction log path.
+    @param[in]  log_context Base AI transaction log context.
+    @param[in]  cancel_requested Optional zero-argument cancellation callback.
+    @param[in]  response_schema Operation-specific JSON Schema.
+    @param[in]  response_schema_name Provider-facing schema name.
+    @param[in]  initial_usage Token usage from the initial response, when available.
+    @return     Repaired response result or an invalid response result for downstream fallback.
+    @exception  OperationCancelledError Raised when the operator cancels the run.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-01
+    @version    0.1.0
+    """
+    repair_prompt = _source_span_repair_prompt(source_chunk, speaker_catalog, failure_reason, previous_payload)
+    repair_context = {
+        **dict(log_context),
+        "repair_attempt": 1,
+        "repair_failure_kind": _source_span_failure_kind(failure_reason),
+    }
+    try:
+        repair_result = llm_provider_service.chat_json(
+            ai_profile_payload,
+            system_prompt,
+            repair_prompt,
+            log_path=log_path,
+            log_context=repair_context,
+            cancel_requested=cancel_requested,
+            structured_output=True,
+            response_schema=response_schema,
+            response_schema_name=response_schema_name,
+        )
+    except ValueError as error_object:
+        failure_payload: dict[str, object] = {"blocks": []}
+        _log_source_span_validation_failure(
+            source_chunk,
+            failure_payload,
+            f"malformed_json: {error_object}",
+            log_context,
+            repair_attempt=1,
+        )
+        return {
+            "payload": failure_payload,
+            "usage": token_usage_service.restore_token_usage(initial_usage),
+        }
+
+    merged_usage = token_usage_service.merge_token_usage(initial_usage, repair_result.get("usage"))
+    repair_result["usage"] = merged_usage
+    repair_payload = dict(repair_result.get("payload", {}))
+    validation_result = _validate_source_span_response_payload(source_chunk, repair_payload, speaker_catalog)
+    if not validation_result.is_valid:
+        _log_source_span_validation_failure(
+            source_chunk,
+            repair_payload,
+            validation_result.reason,
+            log_context,
+            repair_attempt=1,
+        )
+    return repair_result
+
+
+def _source_span_repair_prompt(
+    source_chunk: dict[str, object],
+    speaker_catalog: dict[str, dict[str, object]],
+    failure_reason: str,
+    previous_payload: dict[str, object],
+) -> str:
+    """
+    @brief      Render one compact source-span repair prompt without source text.
+    @param[in]  source_chunk Source chunk or AI-budget segment with deterministic source spans.
+    @param[in]  speaker_catalog Allowed speaker catalog.
+    @param[in]  failure_reason Compact validation or JSON parse failure reason.
+    @param[in]  previous_payload Previous parsed payload, when available.
+    @return     Rendered repair prompt.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-01
+    @version    0.1.0
+    """
+    compact_speakers = [
+        {
+            "speaker_id": str(speaker.get("speaker_id", speaker_id)).strip(),
+            "speaker_kind": str(speaker.get("speaker_kind", "")).strip(),
+        }
+        for speaker_id, speaker in speaker_catalog.items()
+    ]
+    variables = {
+        "chunk_id": str(source_chunk.get("chunk_id", "")).strip(),
+        "failure_kind": _source_span_failure_kind(failure_reason),
+        "failure_reason": str(failure_reason),
+        "atomic_units_json": json.dumps(
+            _compact_atomic_units_for_prompt(source_chunk, speaker_catalog, include_text=False),
+            indent=2,
+            ensure_ascii=False,
+        ),
+        "speaker_ids_json": json.dumps(compact_speakers, indent=2, ensure_ascii=False),
+        "previous_selection_json": json.dumps(
+            _compact_source_span_response_summary(previous_payload),
+            indent=2,
+            ensure_ascii=False,
+        ),
+        "response_schema_json": json.dumps(_source_span_selection_response_schema(), indent=2, ensure_ascii=False),
+    }
+    return _render_speech_blocks_user_prompt("speech_blocks_repair_user", variables)
+
+
+def _source_span_selection_response_schema() -> dict[str, object]:
+    """
+    @brief      Build the structured-output schema for atomic-unit Speech Blocks responses.
+    @return     JSON Schema payload.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-01
+    @version    0.1.0
+    """
+    return {
+        "type": "object",
+        "additionalProperties": False,
+        "required": ["blocks"],
+        "properties": {
+            "blocks": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                    "type": "object",
+                    "additionalProperties": False,
+                    "required": ["unit_ids", "speaker_id", "content_kind", "confidence"],
+                    "properties": {
+                        "unit_ids": {
+                            "type": "array",
+                            "items": {"type": "string", "pattern": "^u[0-9]{3}$"},
+                            "minItems": 1,
+                        },
+                        "speaker_id": {"type": "string"},
+                        "content_kind": {"type": "string", "enum": ["narration", "dialogue"]},
+                        "confidence": {"type": "string", "enum": ["high", "medium", "low"]},
+                        "warning_flags": {"type": "array", "items": {"type": "string"}},
+                    },
+                },
+            }
+        },
+    }
+
+
+def _compact_atomic_units_for_prompt(
+    source_chunk: dict[str, object],
+    speaker_catalog: dict[str, dict[str, object]],
+    include_text: bool = True,
+) -> list[dict[str, object]]:
+    """
+    @brief      Build atomic-unit prompt rows with exact local text previews and speaker hints.
+    @param[in]  source_chunk Source chunk or AI-budget segment with deterministic atomic units.
+    @param[in]  speaker_catalog Allowed speaker catalog.
+    @param[in]  include_text True when prompt rows may include source text previews.
+    @return     Compact atomic-unit rows.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-02
+    @version    0.1.0
+    """
+    raw_units = [unit for unit in source_chunk.get("atomic_units", []) if isinstance(unit, dict)]
+    compact_units: list[dict[str, object]] = []
+    for index, raw_unit in enumerate(raw_units):
+        if not _is_selectable_atomic_prompt_unit(raw_unit):
+            continue
+        hint_text = " ".join(
+            str(unit.get("text", ""))
+            for unit in (
+                raw_units[index - 1] if index > 0 else {},
+                raw_unit,
+                raw_units[index + 1] if index + 1 < len(raw_units) else {},
+            )
+            if isinstance(unit, dict)
+        )
+        compact_unit = {
+            "atomic_unit_id": str(raw_unit.get("atomic_unit_id", raw_unit.get("unit_id", ""))).strip(),
+            "source_span_id": str(raw_unit.get("source_span_id", "")).strip(),
+            "structural_kind": str(raw_unit.get("structural_kind", "")).strip(),
+            "start_offset": int(raw_unit.get("start_offset", 0) or 0),
+            "end_offset": int(raw_unit.get("end_offset", 0) or 0),
+            "speaker_hint_ids": _speaker_hint_ids_for_text(hint_text, speaker_catalog),
+        }
+        if include_text:
+            compact_unit["text"] = str(raw_unit.get("text", ""))
+        compact_units.append(compact_unit)
+    return compact_units
+
+
+def _is_selectable_atomic_prompt_unit(raw_unit: dict[str, object]) -> bool:
+    """
+    @brief      Decide whether an atomic unit should be selectable by the AI prompt.
+    @param[in]  raw_unit Atomic-unit payload.
+    @return     True for speakable units; False for whitespace separators.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-02
+    @version    0.1.0
+    """
+    structural_kind = str(raw_unit.get("structural_kind", "")).strip().casefold()
+    unit_text = str(raw_unit.get("text", ""))
+    return structural_kind != "separator" and bool(unit_text.strip())
+
+
+def _compact_source_spans_for_prompt(source_chunk: dict[str, object]) -> list[dict[str, object]]:
+    """
+    @brief      Build source-span prompt rows without carrying source text.
+    @param[in]  source_chunk Source chunk or AI-budget segment with deterministic source spans.
+    @return     Compact source-span rows.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-01
+    @version    0.1.0
+    """
+    compact_spans: list[dict[str, object]] = []
+    for raw_span in source_chunk.get("source_spans", []):
+        if not isinstance(raw_span, dict):
+            continue
+        compact_spans.append(
+            {
+                "source_span_id": str(raw_span.get("source_span_id", raw_span.get("id", ""))).strip(),
+                "candidate_kind": str(raw_span.get("candidate_kind", "")).strip(),
+                "start_offset": int(raw_span.get("start_offset", 0) or 0),
+                "end_offset": int(raw_span.get("end_offset", 0) or 0),
+            }
+        )
+    return compact_spans
+
+
+def _speaker_hint_ids_for_text(
+    text: str,
+    speaker_catalog: dict[str, dict[str, object]],
+) -> list[str]:
+    """
+    @brief      Return speaker IDs whose display name or aliases appear in local attribution text.
+    @param[in]  text Local atomic-unit context text.
+    @param[in]  speaker_catalog Allowed speaker catalog.
+    @return     Ordered matching speaker IDs.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-02
+    @version    0.1.0
+    """
+    normalized_text = _speaker_match_key(text)
+    hint_ids: list[str] = []
+    for speaker_id, speaker_entry in speaker_catalog.items():
+        if speaker_id == _NARRATOR_SPEAKER_ID:
+            continue
+        candidate_names = [
+            str(speaker_entry.get("display_name", "")),
+            *[str(alias) for alias in speaker_entry.get("aliases", []) if str(alias).strip()],
+        ]
+        if any(_speaker_match_key(candidate_name) in normalized_text for candidate_name in candidate_names):
+            hint_ids.append(str(speaker_id))
+    return hint_ids
+
+
+def _compact_source_context_for_prompt(source_chunk: dict[str, object]) -> dict[str, object]:
+    """
+    @brief      Build non-selectable attribution context for a Speech Blocks prompt.
+    @param[in]  source_chunk Source chunk or AI-budget segment payload.
+    @return     Previous/next context rows marked as non-selectable.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-01
+    @version    0.1.0
+    """
+    return {
+        "previous_context": {
+            "available": bool(str(source_chunk.get("previous_context", "")).strip()),
+            "selectable": False,
+            "text": str(source_chunk.get("previous_context", "")).strip(),
+        },
+        "next_context": {
+            "available": bool(str(source_chunk.get("next_context", "")).strip()),
+            "selectable": False,
+            "text": str(source_chunk.get("next_context", "")).strip(),
+        },
+        "rule": "This context may help attribution only. It is not selectable source text.",
+    }
+
+
+def _compact_source_span_response_summary(response_payload: dict[str, object]) -> list[dict[str, object]]:
+    """
+    @brief      Summarize a model span-selection response without source text.
+    @param[in]  response_payload Raw model response payload.
+    @return     Compact block-selection rows.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-01
+    @version    0.1.0
+    """
+    summary: list[dict[str, object]] = []
+    for raw_block in _source_span_candidate_blocks(response_payload):
+        if not isinstance(raw_block, dict):
+            continue
+        summary.append(
+            {
+                "source_span_ids": [
+                    str(source_span_id).strip()
+                    for source_span_id in raw_block.get("source_span_ids", [])
+                    if str(source_span_id).strip()
+                ]
+                if isinstance(raw_block.get("source_span_ids"), list)
+                else [],
+                "unit_ids": [str(unit_id).strip() for unit_id in raw_block.get("unit_ids", []) if str(unit_id).strip()]
+                if isinstance(raw_block.get("unit_ids"), list)
+                else [],
+                "speaker_id": str(raw_block.get("speaker_id", "")).strip(),
+                "content_kind": str(raw_block.get("content_kind", "")).strip(),
+                "confidence_present": bool(str(raw_block.get("confidence", "")).strip()),
+                "warning_flags": _normalize_warning_flags(raw_block.get("warning_flags", raw_block.get("warnings"))),
+            }
+        )
+    return summary
+
+
+def _log_source_span_validation_failure(
+    source_chunk: dict[str, object],
+    response_payload: dict[str, object],
+    failure_reason: str,
+    log_context: dict[str, object],
+    repair_attempt: int,
+) -> None:
+    """
+    @brief      Log compact source-span validation failure details without source text.
+    @param[in]  source_chunk Source chunk or AI-budget segment with deterministic source spans.
+    @param[in]  response_payload Raw model response payload.
+    @param[in]  failure_reason Compact validation or JSON parse failure reason.
+    @param[in]  log_context Base AI transaction log context.
+    @param[in]  repair_attempt Repair attempt number, where zero means initial response.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-01
+    @version    0.1.0
+    """
+    compact_blocks = _compact_source_span_response_summary(response_payload)
+    selected_span_ids = sorted(
+        {
+            str(source_span_id).strip()
+            for block in compact_blocks
+            for source_span_id in block.get("source_span_ids", [])
+            if str(source_span_id).strip()
+        }
+    )
+    selected_speaker_ids = sorted(
+        {
+            str(block.get("speaker_id", "")).strip()
+            for block in compact_blocks
+            if str(block.get("speaker_id", "")).strip()
+        }
+    )
+    selected_unit_ids = sorted(
+        {
+            str(unit_id).strip()
+            for block in compact_blocks
+            for unit_id in block.get("unit_ids", [])
+            if str(unit_id).strip()
+        }
+    )
+    _SPEECH_BLOCKS_LOGGER.info(
+        "speech_blocks_source_span_validation_failed "
+        "chunk_id=%s segment_index=%s repair_attempt=%s failure_kind=%s "
+        "selected_span_ids=%s selected_unit_ids=%s selected_speaker_ids=%s",
+        str(source_chunk.get("chunk_id", "")).strip(),
+        log_context.get("segment_index"),
+        repair_attempt,
+        _source_span_failure_kind(failure_reason),
+        ",".join(selected_span_ids),
+        ",".join(selected_unit_ids),
+        ",".join(selected_speaker_ids),
+    )
+
+
+def _source_span_failure_kind(failure_reason: str) -> str:
+    """
+    @brief      Extract a compact source-span failure kind from a validation reason.
+    @param[in]  failure_reason Validation or parse failure reason.
+    @return     Stable compact failure token.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-01
+    @version    0.1.0
+    """
+    reason_text = str(failure_reason)
+    for failure_kind in (
+        "malformed_json",
+        "missing_confidence",
+        "illegal_span_id",
+        "halo_span_id",
+        "illegal_unit_id",
+        "unavailable_unit_id",
+        "atomic_unit_selection_invalid",
+        "speaker_selection_invalid",
+        "source_span_selection_invalid",
+    ):
+        if failure_kind in reason_text:
+            return failure_kind
+    return "source_span_selection_invalid"
 
 
 def _generate_scene_ambience_blocks(
@@ -2087,8 +2709,9 @@ def _normalize_narrator_boundary_blocks(
     try:
         if str(response_payload.get("boundary_selection_error", "")).strip():
             raise ValueError(str(response_payload.get("boundary_selection_error", "")).strip())
-        candidates = _narrator_split_boundary_candidates(source_text, safe_word_count)
+        candidates = _narrator_boundary_candidates_for_chunk(source_chunk, source_text, safe_word_count)
         selected_offsets = _narrator_selected_boundary_offsets(response_payload, candidates)
+        _validate_narrator_boundary_offsets_quote_safe(source_text, selected_offsets)
         ai_blocks = _narrator_ai_blocks_from_offsets(source_text, selected_offsets)
         warning_entries: list[dict[str, object]] = []
     except ValueError:
@@ -2144,8 +2767,13 @@ def _narrator_split_boundary_candidates(source_text: str, safe_word_count: int) 
     offsets: set[int] = {len(text)}
     offsets.update(_span_end_offsets(_ai_paragraph_spans(text)))
     offsets.update(_span_end_offsets(_ai_sentence_spans(text)))
+    offsets.update(_narrator_quote_closing_boundary_offsets(text))
     offsets.update(_word_budget_boundary_offsets(text, safe_word_count))
-    ordered_offsets = sorted(offset for offset in offsets if 0 < offset <= len(text))
+    ordered_offsets = sorted(
+        offset
+        for offset in offsets
+        if 0 < offset <= len(text) and _narrator_boundary_offset_is_quote_safe(text, offset)
+    )
     previous_offset = 0
     candidates: list[dict[str, object]] = []
     for index, offset in enumerate(ordered_offsets, start=1):
@@ -2161,6 +2789,116 @@ def _narrator_split_boundary_candidates(source_text: str, safe_word_count: int) 
         )
         previous_offset = offset
     return candidates
+
+
+def _narrator_boundary_candidates_for_chunk(
+    source_chunk: dict[str, object],
+    source_text: str,
+    safe_word_count: int,
+) -> list[dict[str, object]]:
+    """
+    @brief      Resolve available same-narrator boundary candidates for a chunk.
+    @param[in]  source_chunk Source chunk or test fixture payload.
+    @param[in]  source_text Source chunk text.
+    @param[in]  safe_word_count Approximate safe TTS word budget.
+    @return     Boundary candidate payloads.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-02
+    @version    0.1.0
+    """
+    raw_candidates = source_chunk.get("narrator_boundary_candidates", [])
+    if isinstance(raw_candidates, list) and raw_candidates:
+        return [candidate for candidate in raw_candidates if isinstance(candidate, dict)]
+    return _narrator_split_boundary_candidates(source_text, safe_word_count)
+
+
+def _narrator_boundary_offset_is_quote_safe(source_text: str, offset: int) -> bool:
+    """
+    @brief      Check that a same-narrator boundary does not split an open quote.
+    @param[in]  source_text Source chunk text.
+    @param[in]  offset Candidate boundary offset.
+    @return     True when the boundary is at the end or outside open quoted text.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-02
+    @version    0.1.0
+    """
+    text = str(source_text)
+    bounded_offset = max(0, min(int(offset), len(text)))
+    return bounded_offset == len(text) or not _narrator_open_quote_stack(text[:bounded_offset])
+
+
+def _narrator_open_quote_stack(source_text: str) -> list[str]:
+    """
+    @brief      Track unclosed double-quote delimiters in a source prefix.
+    @param[in]  source_text Source prefix before a candidate boundary.
+    @return     Expected closing delimiters still open.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-02
+    @version    0.1.0
+    """
+    opening_to_closing = {
+        '"': '"',
+        "\u201c": "\u201d",
+        "\u201e": "\u201d",
+        "\u00ab": "\u00bb",
+        "\u2039": "\u203a",
+        "\u300c": "\u300d",
+        "\u300e": "\u300f",
+        "\u300a": "\u300b",
+        "\u3008": "\u3009",
+    }
+    stack: list[str] = []
+    for character in str(source_text):
+        if character == '"':
+            if stack and stack[-1] == '"':
+                stack.pop()
+            else:
+                stack.append('"')
+            continue
+        if character in opening_to_closing:
+            stack.append(opening_to_closing[character])
+            continue
+        if stack and character == stack[-1]:
+            stack.pop()
+    return stack
+
+
+def _narrator_quote_closing_boundary_offsets(source_text: str) -> set[int]:
+    """
+    @brief      Find exact offsets immediately after closing double-quote delimiters.
+    @param[in]  source_text Source chunk text.
+    @return     Safe quote-closing end offsets.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-02
+    @version    0.1.0
+    """
+    text = str(source_text)
+    offsets: set[int] = set()
+    for offset in range(1, len(text) + 1):
+        closes_quote = text[offset - 1] in {'"', "\u201d", "\u00bb", "\u203a", "\u300d", "\u300f", "\u300b", "\u3009"}
+        if closes_quote and _narrator_boundary_offset_is_quote_safe(text, offset):
+            offsets.add(offset)
+    return offsets
+
+
+def _validate_narrator_boundary_offsets_quote_safe(source_text: str, selected_offsets: list[int]) -> None:
+    """
+    @brief      Reject same-narrator boundary selections that split open quotes.
+    @param[in]  source_text Source chunk text.
+    @param[in]  selected_offsets Selected end offsets.
+    @return     None.
+    @exception  ValueError Raised when a selected boundary is inside quoted text.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-02
+    @version    0.1.0
+    """
+    for offset in selected_offsets:
+        if not _narrator_boundary_offset_is_quote_safe(source_text, offset):
+            raise ValueError("Narrator boundary response selected a boundary inside an open quote.")
 
 
 def _span_end_offsets(spans: list[str]) -> set[int]:
@@ -2318,8 +3056,71 @@ def _budgeted_source_chunk_segments(
     source_text = str(source_chunk.get("text", ""))
     text_segments = _split_text_for_ai_context_budget(source_text, text_budget_tokens)
     if not text_segments:
-        return [dict(source_chunk)]
-    return [{**dict(source_chunk), "text": text_segment} for text_segment in text_segments]
+        return [_source_chunk_with_source_spans(source_chunk)]
+    return [
+        _source_chunk_with_source_spans({**dict(source_chunk), "text": text_segment}) for text_segment in text_segments
+    ]
+
+
+def _source_chunk_with_source_spans(source_chunk: dict[str, object]) -> dict[str, object]:
+    """
+    @brief      Attach deterministic source spans to one Speech Blocks request chunk.
+    @param[in]  source_chunk Source chunk or AI-budget segment payload.
+    @return     Source chunk payload with local `source_spans` for model selection.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-01
+    @version    0.1.0
+    """
+    chunk_payload = dict(source_chunk)
+    chunk_payload["source_spans"] = _build_source_spans(str(chunk_payload.get("text", "")))
+    chunk_payload["atomic_units"] = _build_atomic_speech_units(
+        str(chunk_payload.get("text", "")),
+        list(chunk_payload.get("source_spans", [])),
+    )
+    return chunk_payload
+
+
+def _source_chunk_with_attribution_context(
+    source_chunks: list[dict[str, object]],
+    chunk_index: int,
+) -> dict[str, object]:
+    """
+    @brief      Attach previous/next non-selectable attribution context to one source chunk.
+    @param[in]  source_chunks Ordered source chunks.
+    @param[in]  chunk_index Current chunk index.
+    @return     Source chunk payload with compact attribution context fields.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-01
+    @version    0.1.0
+    """
+    source_chunk = dict(source_chunks[chunk_index])
+    previous_text = str(source_chunks[chunk_index - 1].get("text", "")) if chunk_index > 0 else ""
+    next_text = str(source_chunks[chunk_index + 1].get("text", "")) if chunk_index + 1 < len(source_chunks) else ""
+    source_chunk["previous_context"] = _prompt_excerpt(previous_text, 360, tail=True)
+    source_chunk["next_context"] = _prompt_excerpt(next_text, 360)
+    return source_chunk
+
+
+def _prompt_excerpt(text: str, limit: int, *, tail: bool = False) -> str:
+    """
+    @brief      Normalize and trim a prompt context excerpt.
+    @param[in]  text Source text.
+    @param[in]  limit Maximum character count.
+    @param[in]  tail When true, keep the tail of oversized text.
+    @return     Compact excerpt.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-01
+    @version    0.1.0
+    """
+    normalized = re.sub(r"\s+", " ", str(text)).strip()
+    if limit <= 0 or len(normalized) <= limit:
+        return normalized
+    if tail:
+        return normalized[-limit:].lstrip()
+    return normalized[:limit].rstrip()
 
 
 def _estimate_text_tokens(text: str) -> int:
@@ -2563,6 +3364,7 @@ def _build_operation_state_with_prompt_rules(
     budget_metadata: BudgetMetadataPayload | None,
     additional_speech_block_instructions: str,
     scene_ambience_settings: dict[str, object] | None = None,
+    speech_blocks_response_contract: str = _SPEECH_BLOCKS_SOURCE_SPAN_SELECTION_CONTRACT,
 ) -> OperationStatePayload:
     """
     @brief      Build Speech Blocks operation state with operator prompt-rule metadata.
@@ -2582,6 +3384,7 @@ def _build_operation_state_with_prompt_rules(
     @param[in]  next_chunk_index Next chunk index to process or `None`.
     @param[in]  budget_metadata Optional context-budget metadata.
     @param[in]  additional_speech_block_instructions Optional operator-supplied Speech Blocks rules.
+    @param[in]  speech_blocks_response_contract Active model response contract token.
     @return     Persisted operation-state payload.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
@@ -2619,12 +3422,15 @@ def _build_operation_state_with_prompt_rules(
     metadata["additional_speech_block_instructions"] = normalized_instructions
     scene_settings = scene_ambience_settings or _resolve_scene_ambience_settings(None, False)
     instruction_fingerprint = _compute_generation_rules_fingerprint(normalized_instructions, scene_settings)
+    response_contract = str(speech_blocks_response_contract).strip() or _SPEECH_BLOCKS_SOURCE_SPAN_SELECTION_CONTRACT
     metadata["additional_speech_block_instructions_fingerprint"] = instruction_fingerprint
     metadata["scene_ambience_generation"] = dict(scene_settings)
+    metadata["speech_blocks_response_contract"] = response_contract
     state["metadata"] = metadata
     resume_checkpoint = state.get("resume_checkpoint")
     if isinstance(resume_checkpoint, dict):
         resume_checkpoint["additional_speech_block_instructions_fingerprint"] = instruction_fingerprint
+        resume_checkpoint["speech_blocks_response_contract"] = response_contract
         state["resume_checkpoint"] = resume_checkpoint
     return state
 
@@ -2893,6 +3699,7 @@ def _persist_report_update(
         budget_metadata=budget_metadata,
         additional_speech_block_instructions=additional_speech_block_instructions,
         scene_ambience_settings=scene_ambience_settings,
+        speech_blocks_response_contract=_restore_persisted_speech_blocks_response_contract(operation_state),
     )
     _persist_state(
         project_root,
@@ -3202,6 +4009,8 @@ def _restore_resume_state(
     if str(metadata.get("source_language", "")).strip() != source_language:
         return [], [], 0
     resume_checkpoint_payload = resume_checkpoint if isinstance(resume_checkpoint, dict) else {}
+    if not _is_resumable_speech_blocks_response_contract(metadata, resume_checkpoint_payload):
+        return [], [], 0
     stored_instruction_fingerprint = str(
         metadata.get("additional_speech_block_instructions_fingerprint")
         or resume_checkpoint_payload.get("additional_speech_block_instructions_fingerprint")
@@ -3224,6 +4033,36 @@ def _restore_resume_state(
         warnings,
         next_chunk_index,
     )
+
+
+def _is_resumable_speech_blocks_response_contract(
+    metadata: dict[str, object],
+    resume_checkpoint: dict[str, object],
+) -> bool:
+    """
+    @brief      Return whether persisted Speech Blocks state uses a current response contract.
+    @param[in]  metadata Existing operation metadata payload.
+    @param[in]  resume_checkpoint Existing resumable checkpoint payload.
+    @return     True when the state can be resumed safely.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-01
+    @version    0.1.0
+    """
+    response_contract = str(
+        metadata.get("speech_blocks_response_contract")
+        or resume_checkpoint.get("speech_blocks_response_contract")
+        or ""
+    ).strip()
+    if response_contract in {
+        _SPEECH_BLOCKS_SOURCE_SPAN_SELECTION_CONTRACT,
+        _SPEECH_BLOCKS_NARRATOR_BOUNDARY_CONTRACT,
+    }:
+        return True
+    voice_assignment_mode = str(
+        metadata.get("voice_assignment_mode") or resume_checkpoint.get("voice_assignment_mode") or ""
+    ).strip()
+    return voice_assignment_mode not in config.TTS_VOICE_ASSIGNMENT_MODE_OPTIONS
 
 
 def _restore_next_speech_blocks_chunk_index(

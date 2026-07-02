@@ -9,7 +9,7 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>AudioMancer User Guide v1.5.9</title>
+    <title>AudioMancer User Guide v1.6.0</title>
     <link rel="stylesheet" href="assets/styles/help.css">
 </head>
 <body>
@@ -43,8 +43,8 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
             <section id="welcome">
                 <h2>Welcome</h2>
                 <div class="version-box">
-                    <p><strong>Help version:</strong> 1.5.9</p>
-                    <p><strong>Application version:</strong> 1.5.9</p>
+                    <p><strong>Help version:</strong> 1.6.0</p>
+                    <p><strong>Application version:</strong> 1.6.0</p>
                     <p><strong>Creator:</strong> Eng. Dipl. Dan Dumitru Pasare</p>
                     <p><strong>Contact:</strong> pasaredan1979@gmail.com</p>
                 </div>
@@ -225,11 +225,14 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
                         <tr><td>AI Translation</td><td><code>google/gemma-3-27b</code></td><td><code>qwen/qwen3-30b-a3b-2507</code></td><td>0.15-0.2</td><td>32768</td></tr>
                         <tr><td>Character Discovery</td><td><code>qwen/qwen3-30b-a3b-2507</code></td><td><code>mistralai/mistral-small-3.2</code></td><td>0.05</td><td>65536</td></tr>
                         <tr><td>Speech Blocks</td><td><code>qwen/qwen3-30b-a3b-2507</code></td><td><code>mistralai/mistral-small-3.2</code></td><td>0.0-0.05</td><td>65536</td></tr>
+                        <tr><td>Speech Blocks local span selection</td><td><code>qwen/qwen3.6-27b</code></td><td><code>qwen/qwen3.6-35b-a3b</code>, <code>google/gemma-4-31b</code>, or <code>openai/gpt-oss-20b</code></td><td>0.1-0.2</td><td>65535</td></tr>
                     </tbody>
                 </table>
                 <div class="note">
                     OpenAI online profiles require an API key from an OpenAI account. Keep the key private and enter it
                     only in the AudioMancer AI Settings window.
+                    For LM Studio, AudioMancer sends the selected model, context, output budget, temperature, timeout,
+                    and structured-output hint. You can configure top-p, top-k, repeat penalty, seed, and reasoning mode in LM Studio presets for the loaded model.
                 </div>
                 <figure>
                     <img src="assets/screenshots/ai-settings-dialog.png" alt="AI Settings dialog">
