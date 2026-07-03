@@ -8,7 +8,8 @@
       "CHK-SB-ATOMIC-005",
       "CHK-SB-ATOMIC-006",
       "CHK-SB-NARRATOR-QUOTE-002",
-      "CHK-SB-NARRATOR-QUOTE-001"
+      "CHK-SB-NARRATOR-QUOTE-001",
+      "NARRATOR-PREVIEW-CHECK-001"
     ],
     "intent": {
       "created_at": "2026-07-02T07:59:50+00:00",
@@ -26,12 +27,14 @@
       "SB-ATOMIC-003",
       "SB-ATOMIC-004",
       "SB-ATOMIC-005",
-      "SB-NARRATOR-QUOTE-001"
+      "SB-NARRATOR-QUOTE-001",
+      "NARRATOR-PREVIEW-001"
     ],
     "stage": "delivery",
     "touched_paths": [
       ".agentic/requirements/functional.md",
       "04_Software/AudioMancer/README.MD",
+      "04_Software/AudioMancer/prompts/narrator_profile_generation_user.txt",
       "04_Software/AudioMancer/prompts/speech_blocks_narrator_only_system.txt",
       "04_Software/AudioMancer/prompts/speech_blocks_narrator_only_user.txt",
       "04_Software/AudioMancer/prompts/speech_blocks_repair_user.txt",
@@ -39,18 +42,23 @@
       "04_Software/AudioMancer/prompts/speech_blocks_user.txt",
       "04_Software/AudioMancer/pyproject.toml",
       "04_Software/AudioMancer/src/audiomancer/__init__.py",
+      "04_Software/AudioMancer/src/audiomancer/services/narrator_profile_generation_service.py",
       "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_normalization_service.py",
       "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py",
       "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_text_split_service.py",
+      "04_Software/AudioMancer/tests/test_narrator_profile_generation_service.py",
       "04_Software/AudioMancer/tests/test_package_import.py",
       "04_Software/AudioMancer/tests/test_speech_blocks_service.py",
       "04_Software/AudioMancer/tests/test_speech_blocks_text_split_service.py",
       "04_Software/AudioMancer/uv.lock",
+      "05_SoftwareDocu/AudioMancer_Narrator_Profile_Generation_Service.md",
       "05_SoftwareDocu/AudioMancer_Speech_Blocks_Normalization_Service.md",
       "05_SoftwareDocu/AudioMancer_Speech_Blocks_Service.md",
       "05_SoftwareDocu/AudioMancer_Text_Pipeline_Support_Services.md",
       "05_SoftwareDocu/UserGuide/index.html",
       "05_SoftwareDocu/UserGuide_ro/index.html",
+      "07_Delivery/AudioMancer_Windows_x64.zip",
+      "07_Delivery/SHA256SUMS.txt",
       "CHANGELOG.md"
     ]
   }

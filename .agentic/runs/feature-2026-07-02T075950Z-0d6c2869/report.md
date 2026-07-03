@@ -11,6 +11,7 @@
 - `SB-ATOMIC-004` [property] accepted: Speech Blocks speaker detection shall use source-language character aliases, role labels, nearby attribution hints, and deterministic validation before falling back to narrator or ambiguous warning metadata.
 - `SB-ATOMIC-005` [behavior] accepted: Speech Blocks shall treat separator-only or whitespace-only atomic units as non-speakable provenance, never as standalone persisted narrator or dialogue blocks, while requiring coverage of all selectable speakable atomic units.
 - `SB-NARRATOR-QUOTE-001` [behavior] accepted: Same-narrator Speech Blocks shall not expose or accept narrator-only split boundaries that divide a quoted passage so persisted blocks appear to lose opening or closing quotation marks, unless an unavoidable TTS-budget emergency split is explicitly warning-marked.
+- `NARRATOR-PREVIEW-001` [behavior] proposed: AI narrator profile generation shall accept valid single-sentence preview text across books and languages when it satisfies configured duration and character budgets, has no embedded line breaks, and only exceeds the prompt's target word range by a bounded tolerance.
 
 ## Checks
 - `CHK-SB-ATOMIC-001` green; cites SB-ATOMIC-001
@@ -21,6 +22,7 @@
 - `CHK-SB-ATOMIC-006` green; cites SB-ATOMIC-005
 - `CHK-SB-NARRATOR-QUOTE-002` green; cites SB-NARRATOR-QUOTE-001
 - `CHK-SB-NARRATOR-QUOTE-001` green; cites SB-NARRATOR-QUOTE-001
+- `NARRATOR-PREVIEW-CHECK-001` green; cites NARRATOR-PREVIEW-001
 
 ## Evidence
 - `E-0001` test-run/fail: Atomic unit splitter API is missing, proving the new many-elements-in-one-span check is red before implementation.
@@ -101,13 +103,33 @@
 - `E-0076` gate/pass: Delivery preflight passed after assigning AudioMancer version 1.6.0 across changelog, project metadata, tests, README note, and help bundles.
 - `E-0077` gate/pass: Windows delivery package created with 02_Tools/package_windows_release.ps1 for AudioMancer 1.6.0.
 - `E-0078` scan/pass: Windows delivery archive SHA256 matches 07_Delivery/SHA256SUMS.txt and required package entries were verified in the zip.
+- `E-0079` scan/pass: Requirement-stage invariants passed on all blocking policies; traceability and coverage audits passed after adding NARRATOR-PREVIEW-001 and planned REQ-FUNC-056.
+- `E-0080` test-run/fail: Focused narrator profile generation pytest fails because a valid 25-word single-line preview is rejected by the current hard 24-word validator.
+- `E-0081` scan/pass: Check-stage invariants passed on all blocking policies; traceability and coverage audits passed after adding NARRATOR-PREVIEW-CHECK-001.
+- `E-0082` test-run/pass: Focused narrator preview tolerance pytest now passes; 25-word single-line preview is accepted within bounded tolerance.
+- `E-0083` scan/pass: py_compile, changed-only Python codestyle audit, and changed-only documentation audit passed for narrator preview implementation.
+- `E-0084` test-run/pass: Focused impact pytest set for security, package, and UI requirements passed after narrator profile generation change.
+- `E-0085` test-run/pass: Full narrator profile generation service pytest file passed after preview tolerance implementation.
+- `E-0086` scan/pass: Implementation-stage invariants, traceability audit, and coverage audit passed after narrator preview tolerance implementation and workflow check metadata repair.
+- `E-0087` scan/pass: Component documentation refresh note added after validation doc-staleness finding; changed-only documentation audit passed.
+- `E-0088` gate/pass: test: 04_Software/AudioMancer/.venv/Scripts/python.exe 02_Tools/audits/audit_traceability.py
+- `E-0089` gate/pass: test: 04_Software/AudioMancer/.venv/Scripts/python.exe 02_Tools/audits/audit_requirement_coverage.py
+- `E-0090` gate/pass: test: 04_Software/AudioMancer/.venv/Scripts/python.exe -m pytest -q 04_Software/AudioMancer/tests/test_traceability.py
+- `E-0091` gate/pass: lint: 04_Software/AudioMancer/.venv/Scripts/python.exe 02_Tools/audits/audit_codestyle.py --changed-only
+- `E-0092` scan/pass: Validation passed: workflow invariants, workflow traceability and coverage audits, app traceability and requirement coverage audits, traceability pytest file, changed-only codestyle and documentation audits, configured gates run, impact review, and diff check all passed for the narrator preview tolerance fix.
+- `E-0093` gate/pass: test: 04_Software/AudioMancer/.venv/Scripts/python.exe 02_Tools/audits/audit_traceability.py
+- `E-0094` gate/pass: test: 04_Software/AudioMancer/.venv/Scripts/python.exe 02_Tools/audits/audit_requirement_coverage.py
+- `E-0095` gate/pass: test: 04_Software/AudioMancer/.venv/Scripts/python.exe -m pytest -q 04_Software/AudioMancer/tests/test_traceability.py
+- `E-0096` gate/pass: lint: 04_Software/AudioMancer/.venv/Scripts/python.exe 02_Tools/audits/audit_codestyle.py --changed-only
+- `E-0097` gate/pass: Delivery validation passed after 1.6.1 release sync: package version smoke test, changed-only codestyle audit, changed-only documentation audit, registry sync/audit, impact review, working-tree audit, traceability audit, coverage audit, configured gates, and delivery preflight all passed.
+- `E-0098` gate/pass: Windows delivery package regenerated with 02_Tools/package_windows_release.ps1 for AudioMancer 1.6.1; archive inspection confirmed executable, launcher, release notes, changelog, cleaned settings, help bundles, and prompt templates; SHA256SUMS.txt matches AudioMancer_Windows_x64.zip; delivery preflight passed.
 
 ## Invariants
 - `INV-1` PASS (blocking): All accepted/realized spec items have checks.
 - `INV-2` PASS (blocking): All checks cite existing spec items.
 - `INV-3` PASS (blocking): Green checks have prior red evidence.
 - `INV-4` PASS (blocking): No failing implementation/validation/delivery gate evidence.
-- `INV-5` FAIL (advisory): Out-of-scope paths: 04_Software/AudioMancer/prompts/speech_blocks_system.txt, 04_Software/AudioMancer/prompts/speech_blocks_repair_user.txt, 04_Software/AudioMancer/prompts/speech_blocks_user.txt, .agentic/requirements/functional.md, 04_Software/AudioMancer/prompts/speech_blocks_user.txt, 04_Software/AudioMancer/prompts/speech_blocks_repair_user.txt, 04_Software/AudioMancer/prompts/speech_blocks_system.txt, .agentic/requirements/functional.md, 04_Software/AudioMancer/prompts/speech_blocks_narrator_only_user.txt, 04_Software/AudioMancer/prompts/speech_blocks_narrator_only_system.txt, .agentic/requirements/functional.md, CHANGELOG.md, CHANGELOG.md, 04_Software/AudioMancer/pyproject.toml, 04_Software/AudioMancer/uv.lock, 04_Software/AudioMancer/README.MD, 07_Delivery/SHA256SUMS.txt, 07_Delivery/AudioMancer_Windows_x64.zip
+- `INV-5` FAIL (advisory): Out-of-scope paths: 04_Software/AudioMancer/prompts/speech_blocks_system.txt, 04_Software/AudioMancer/prompts/speech_blocks_repair_user.txt, 04_Software/AudioMancer/prompts/speech_blocks_user.txt, .agentic/requirements/functional.md, 04_Software/AudioMancer/prompts/speech_blocks_user.txt, 04_Software/AudioMancer/prompts/speech_blocks_repair_user.txt, 04_Software/AudioMancer/prompts/speech_blocks_system.txt, .agentic/requirements/functional.md, 04_Software/AudioMancer/prompts/speech_blocks_narrator_only_user.txt, 04_Software/AudioMancer/prompts/speech_blocks_narrator_only_system.txt, .agentic/requirements/functional.md, CHANGELOG.md, CHANGELOG.md, 04_Software/AudioMancer/pyproject.toml, 04_Software/AudioMancer/uv.lock, 04_Software/AudioMancer/README.MD, 07_Delivery/SHA256SUMS.txt, 07_Delivery/AudioMancer_Windows_x64.zip, 04_Software/AudioMancer/prompts/narrator_profile_generation_user.txt
 - `INV-6` PASS (blocking): Run has recorded evidence.
 - `INV-7` PASS (non-waivable): No configured secret pattern found in diff.
 - `INV-8` PASS (blocking): Green requirement-linked checks cite Active requirements.

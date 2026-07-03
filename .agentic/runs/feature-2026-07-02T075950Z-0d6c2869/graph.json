@@ -273,6 +273,34 @@
       "touched_paths": [
         "07_Delivery/AudioMancer_Windows_x64.zip"
       ]
+    },
+    {
+      "evidence": [],
+      "id": "NARRATOR-PREVIEW-IMPL-001",
+      "touched_paths": [
+        "04_Software/AudioMancer/src/audiomancer/services/narrator_profile_generation_service.py"
+      ]
+    },
+    {
+      "evidence": [],
+      "id": "NARRATOR-PREVIEW-PROMPT-001",
+      "touched_paths": [
+        "04_Software/AudioMancer/prompts/narrator_profile_generation_user.txt"
+      ]
+    },
+    {
+      "evidence": [],
+      "id": "NARRATOR-PREVIEW-TEST-001",
+      "touched_paths": [
+        "04_Software/AudioMancer/tests/test_narrator_profile_generation_service.py"
+      ]
+    },
+    {
+      "evidence": [],
+      "id": "NARRATOR-PREVIEW-DOC-001",
+      "touched_paths": [
+        "05_SoftwareDocu/AudioMancer_Narrator_Profile_Generation_Service.md"
+      ]
     }
   ],
   "checks": [
@@ -394,6 +422,21 @@
       "level": "focused",
       "path": "04_Software/AudioMancer/tests/test_speech_blocks_service.py",
       "red_evidence": "E-0044",
+      "state": "green"
+    },
+    {
+      "cites_requirement": [
+        "REQ-FUNC-056"
+      ],
+      "cites_spec": [
+        "NARRATOR-PREVIEW-001"
+      ],
+      "command": "uv run --project 04_Software/AudioMancer pytest -q 04_Software/AudioMancer/tests/test_narrator_profile_generation_service.py::test_narrator_profile_generation_accepts_bounded_preview_word_overage",
+      "green_evidence": "E-0082",
+      "id": "NARRATOR-PREVIEW-CHECK-001",
+      "level": "test",
+      "path": "04_Software/AudioMancer/tests/test_narrator_profile_generation_service.py",
+      "red_evidence": "E-0080",
       "state": "green"
     }
   ],
@@ -525,6 +568,62 @@
       "id": "D-0016",
       "question": "Workflow stage route",
       "rationale": "Validation checks and configured gates are complete; run delivery preflight and stop for human confirmation."
+    },
+    {
+      "approver": "human",
+      "chosen": "requirement",
+      "created_at": "2026-07-03T07:48:03+00:00",
+      "id": "D-0017",
+      "question": "Workflow stage route",
+      "rationale": "Human approved routing the active run back to requirement for an agnostic narrator preview validation fix."
+    },
+    {
+      "approver": "human",
+      "chosen": "check",
+      "created_at": "2026-07-03T07:53:26+00:00",
+      "id": "D-0018",
+      "question": "Workflow stage route",
+      "rationale": "Human approved continuing narrator preview validation fix from requirement to check."
+    },
+    {
+      "approver": "human",
+      "chosen": "implementation",
+      "created_at": "2026-07-03T07:58:52+00:00",
+      "id": "D-0019",
+      "question": "Workflow stage route",
+      "rationale": "Human approved continuing narrator preview validation fix from check to implementation."
+    },
+    {
+      "approver": "human",
+      "chosen": "validation",
+      "created_at": "2026-07-03T08:09:51+00:00",
+      "id": "D-0020",
+      "question": "Workflow stage route",
+      "rationale": "Human approved continuing narrator preview validation fix from implementation to validation."
+    },
+    {
+      "approver": "human",
+      "chosen": "implementation",
+      "created_at": "2026-07-03T08:12:15+00:00",
+      "id": "D-0021",
+      "question": "Workflow stage route",
+      "rationale": "Validation documentation audit found component documentation stale after final narrator service metadata correction."
+    },
+    {
+      "approver": "human",
+      "chosen": "validation",
+      "created_at": "2026-07-03T08:13:04+00:00",
+      "id": "D-0022",
+      "question": "Workflow stage route",
+      "rationale": "Component documentation refresh completed; resume validation for narrator preview tolerance fix."
+    },
+    {
+      "approver": "human",
+      "chosen": "delivery",
+      "created_at": "2026-07-03T08:43:47+00:00",
+      "id": "D-0023",
+      "question": "Workflow stage route",
+      "rationale": "Human approved release metadata updates and continuing narrator preview validation fix from validation to delivery."
     }
   ],
   "defects": [],
@@ -1620,6 +1719,286 @@
       "summary": "Windows delivery archive SHA256 matches 07_Delivery/SHA256SUMS.txt and required package entries were verified in the zip.",
       "supersede_reason": null,
       "superseded_by": null
+    },
+    {
+      "command": "agentic-workflow invariants; agentic-workflow audit traceability; agentic-workflow audit coverage",
+      "created_at": "2026-07-03T07:51:14+00:00",
+      "failure_kind": null,
+      "id": "E-0079",
+      "kind": "scan",
+      "path": ".agentic",
+      "result": "pass",
+      "stage": "requirement",
+      "status": "active",
+      "summary": "Requirement-stage invariants passed on all blocking policies; traceability and coverage audits passed after adding NARRATOR-PREVIEW-001 and planned REQ-FUNC-056.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "uv run --project 04_Software/AudioMancer pytest -q 04_Software/AudioMancer/tests/test_narrator_profile_generation_service.py::test_narrator_profile_generation_accepts_bounded_preview_word_overage",
+      "created_at": "2026-07-03T07:55:47+00:00",
+      "failure_kind": null,
+      "id": "E-0080",
+      "kind": "test-run",
+      "path": "04_Software/AudioMancer/tests/test_narrator_profile_generation_service.py",
+      "result": "fail",
+      "stage": "check",
+      "status": "active",
+      "summary": "Focused narrator profile generation pytest fails because a valid 25-word single-line preview is rejected by the current hard 24-word validator.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "agentic-workflow invariants; agentic-workflow audit traceability; agentic-workflow audit coverage",
+      "created_at": "2026-07-03T07:56:25+00:00",
+      "failure_kind": null,
+      "id": "E-0081",
+      "kind": "scan",
+      "path": ".agentic",
+      "result": "pass",
+      "stage": "check",
+      "status": "active",
+      "summary": "Check-stage invariants passed on all blocking policies; traceability and coverage audits passed after adding NARRATOR-PREVIEW-CHECK-001.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "uv run --project 04_Software/AudioMancer pytest -q 04_Software/AudioMancer/tests/test_narrator_profile_generation_service.py::test_narrator_profile_generation_accepts_bounded_preview_word_overage",
+      "created_at": "2026-07-03T08:02:01+00:00",
+      "failure_kind": null,
+      "id": "E-0082",
+      "kind": "test-run",
+      "path": "04_Software/AudioMancer/tests/test_narrator_profile_generation_service.py",
+      "result": "pass",
+      "stage": "implementation",
+      "status": "active",
+      "summary": "Focused narrator preview tolerance pytest now passes; 25-word single-line preview is accepted within bounded tolerance.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "uv run --project 04_Software/AudioMancer python -m py_compile ...; uv run --project 04_Software/AudioMancer python 02_Tools/audits/audit_codestyle.py --changed-only; uv run --project 04_Software/AudioMancer python 02_Tools/audits/audit_documentation.py --changed-only",
+      "created_at": "2026-07-03T08:04:19+00:00",
+      "failure_kind": null,
+      "id": "E-0083",
+      "kind": "scan",
+      "path": "04_Software/AudioMancer/src/audiomancer/services/narrator_profile_generation_service.py",
+      "result": "pass",
+      "stage": "implementation",
+      "status": "active",
+      "summary": "py_compile, changed-only Python codestyle audit, and changed-only documentation audit passed for narrator preview implementation.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "uv run --project 04_Software/AudioMancer pytest -q <impact-linked tests>",
+      "created_at": "2026-07-03T08:04:19+00:00",
+      "failure_kind": null,
+      "id": "E-0084",
+      "kind": "test-run",
+      "path": "04_Software/AudioMancer/tests",
+      "result": "pass",
+      "stage": "implementation",
+      "status": "active",
+      "summary": "Focused impact pytest set for security, package, and UI requirements passed after narrator profile generation change.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "uv run --project 04_Software/AudioMancer pytest -q 04_Software/AudioMancer/tests/test_narrator_profile_generation_service.py",
+      "created_at": "2026-07-03T08:04:21+00:00",
+      "failure_kind": null,
+      "id": "E-0085",
+      "kind": "test-run",
+      "path": "04_Software/AudioMancer/tests/test_narrator_profile_generation_service.py",
+      "result": "pass",
+      "stage": "implementation",
+      "status": "active",
+      "summary": "Full narrator profile generation service pytest file passed after preview tolerance implementation.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "agentic-workflow invariants; agentic-workflow audit traceability; agentic-workflow audit coverage",
+      "created_at": "2026-07-03T08:06:30+00:00",
+      "failure_kind": null,
+      "id": "E-0086",
+      "kind": "scan",
+      "path": ".agentic",
+      "result": "pass",
+      "stage": "implementation",
+      "status": "active",
+      "summary": "Implementation-stage invariants, traceability audit, and coverage audit passed after narrator preview tolerance implementation and workflow check metadata repair.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "uv run --project 04_Software/AudioMancer python 02_Tools/audits/audit_documentation.py --changed-only",
+      "created_at": "2026-07-03T08:12:46+00:00",
+      "failure_kind": null,
+      "id": "E-0087",
+      "kind": "scan",
+      "path": "05_SoftwareDocu/AudioMancer_Narrator_Profile_Generation_Service.md",
+      "result": "pass",
+      "stage": "implementation",
+      "status": "active",
+      "summary": "Component documentation refresh note added after validation doc-staleness finding; changed-only documentation audit passed.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "04_Software/AudioMancer/.venv/Scripts/python.exe 02_Tools/audits/audit_traceability.py",
+      "created_at": "2026-07-03T08:13:21+00:00",
+      "failure_kind": null,
+      "id": "E-0088",
+      "kind": "gate",
+      "path": null,
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "test: 04_Software/AudioMancer/.venv/Scripts/python.exe 02_Tools/audits/audit_traceability.py",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "04_Software/AudioMancer/.venv/Scripts/python.exe 02_Tools/audits/audit_requirement_coverage.py",
+      "created_at": "2026-07-03T08:13:21+00:00",
+      "failure_kind": null,
+      "id": "E-0089",
+      "kind": "gate",
+      "path": null,
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "test: 04_Software/AudioMancer/.venv/Scripts/python.exe 02_Tools/audits/audit_requirement_coverage.py",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "04_Software/AudioMancer/.venv/Scripts/python.exe -m pytest -q 04_Software/AudioMancer/tests/test_traceability.py",
+      "created_at": "2026-07-03T08:13:22+00:00",
+      "failure_kind": null,
+      "id": "E-0090",
+      "kind": "gate",
+      "path": null,
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "test: 04_Software/AudioMancer/.venv/Scripts/python.exe -m pytest -q 04_Software/AudioMancer/tests/test_traceability.py",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "04_Software/AudioMancer/.venv/Scripts/python.exe 02_Tools/audits/audit_codestyle.py --changed-only",
+      "created_at": "2026-07-03T08:13:22+00:00",
+      "failure_kind": null,
+      "id": "E-0091",
+      "kind": "gate",
+      "path": null,
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "lint: 04_Software/AudioMancer/.venv/Scripts/python.exe 02_Tools/audits/audit_codestyle.py --changed-only",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "agentic-workflow invariants; agentic-workflow audit traceability; agentic-workflow audit coverage; agentic-workflow gates run; uv run --project 04_Software/AudioMancer python 02_Tools/audits/audit_traceability.py; uv run --project 04_Software/AudioMancer python 02_Tools/audits/audit_requirement_coverage.py; uv run --project 04_Software/AudioMancer pytest -q 04_Software/AudioMancer/tests/test_traceability.py; uv run --project 04_Software/AudioMancer python 02_Tools/audits/audit_codestyle.py --changed-only; uv run --project 04_Software/AudioMancer python 02_Tools/audits/audit_documentation.py --changed-only; git diff --check",
+      "created_at": "2026-07-03T08:15:16+00:00",
+      "failure_kind": null,
+      "id": "E-0092",
+      "kind": "scan",
+      "path": ".agentic",
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "Validation passed: workflow invariants, workflow traceability and coverage audits, app traceability and requirement coverage audits, traceability pytest file, changed-only codestyle and documentation audits, configured gates run, impact review, and diff check all passed for the narrator preview tolerance fix.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "04_Software/AudioMancer/.venv/Scripts/python.exe 02_Tools/audits/audit_traceability.py",
+      "created_at": "2026-07-03T08:49:36+00:00",
+      "failure_kind": null,
+      "id": "E-0093",
+      "kind": "gate",
+      "path": null,
+      "result": "pass",
+      "stage": "delivery",
+      "status": "active",
+      "summary": "test: 04_Software/AudioMancer/.venv/Scripts/python.exe 02_Tools/audits/audit_traceability.py",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "04_Software/AudioMancer/.venv/Scripts/python.exe 02_Tools/audits/audit_requirement_coverage.py",
+      "created_at": "2026-07-03T08:49:36+00:00",
+      "failure_kind": null,
+      "id": "E-0094",
+      "kind": "gate",
+      "path": null,
+      "result": "pass",
+      "stage": "delivery",
+      "status": "active",
+      "summary": "test: 04_Software/AudioMancer/.venv/Scripts/python.exe 02_Tools/audits/audit_requirement_coverage.py",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "04_Software/AudioMancer/.venv/Scripts/python.exe -m pytest -q 04_Software/AudioMancer/tests/test_traceability.py",
+      "created_at": "2026-07-03T08:49:37+00:00",
+      "failure_kind": null,
+      "id": "E-0095",
+      "kind": "gate",
+      "path": null,
+      "result": "pass",
+      "stage": "delivery",
+      "status": "active",
+      "summary": "test: 04_Software/AudioMancer/.venv/Scripts/python.exe -m pytest -q 04_Software/AudioMancer/tests/test_traceability.py",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "04_Software/AudioMancer/.venv/Scripts/python.exe 02_Tools/audits/audit_codestyle.py --changed-only",
+      "created_at": "2026-07-03T08:49:37+00:00",
+      "failure_kind": null,
+      "id": "E-0096",
+      "kind": "gate",
+      "path": null,
+      "result": "pass",
+      "stage": "delivery",
+      "status": "active",
+      "summary": "lint: 04_Software/AudioMancer/.venv/Scripts/python.exe 02_Tools/audits/audit_codestyle.py --changed-only",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": null,
+      "created_at": "2026-07-03T08:50:44+00:00",
+      "failure_kind": null,
+      "id": "E-0097",
+      "kind": "gate",
+      "path": null,
+      "result": "pass",
+      "stage": "delivery",
+      "status": "active",
+      "summary": "Delivery validation passed after 1.6.1 release sync: package version smoke test, changed-only codestyle audit, changed-only documentation audit, registry sync/audit, impact review, working-tree audit, traceability audit, coverage audit, configured gates, and delivery preflight all passed.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": ".\\02_Tools\\package_windows_release.ps1",
+      "created_at": "2026-07-03T08:59:30+00:00",
+      "failure_kind": null,
+      "id": "E-0098",
+      "kind": "gate",
+      "path": "07_Delivery/AudioMancer_Windows_x64.zip",
+      "result": "pass",
+      "stage": "delivery",
+      "status": "active",
+      "summary": "Windows delivery package regenerated with 02_Tools/package_windows_release.ps1 for AudioMancer 1.6.1; archive inspection confirmed executable, launcher, release notes, changelog, cleaned settings, help bundles, and prompt templates; SHA256SUMS.txt matches AudioMancer_Windows_x64.zip; delivery preflight passed.",
+      "supersede_reason": null,
+      "superseded_by": null
     }
   ],
   "intent": {
@@ -1691,6 +2070,16 @@
       "status": "accepted",
       "tag": "behavior",
       "threshold": null
+    },
+    {
+      "examples": [
+        "A generated English narrator preview with 25 words remains accepted when it is one sentence, within the configured character cap, and long enough for the minimum Qwen TTS reference duration."
+      ],
+      "id": "NARRATOR-PREVIEW-001",
+      "statement": "AI narrator profile generation shall accept valid single-sentence preview text across books and languages when it satisfies configured duration and character budgets, has no embedded line breaks, and only exceeds the prompt's target word range by a bounded tolerance.",
+      "status": "proposed",
+      "tag": "behavior",
+      "threshold": "Validation must not depend on a specific book title, source-language vocabulary, or English-only sentence tokens; any upper tolerance must remain bounded and documented."
     }
   ],
   "stage": "delivery"

@@ -1600,6 +1600,27 @@
     "status": "Active",
     "verification": "E-0045 and E-0046 prove quote-safe same-narrator boundary behavior; E-0047 and E-0048 prove focused Speech Blocks regressions remain green."
   },
+  "REQ-FUNC-056": {
+    "created_on": "2026-07-03 10:55",
+    "last_updated": "2026-07-03 08:02",
+    "line_number": 67,
+    "linked_tests": [
+      "04_Software/AudioMancer/tests/test_narrator_profile_generation_service.py::test_narrator_profile_generation_accepts_bounded_preview_word_overage"
+    ],
+    "priority": "Must",
+    "rationale": "AI models can produce valid narrator sample sentences for different books and languages that slightly exceed the prompt's target word range; validation should prevent unusable output without rejecting near-valid, source-agnostic previews.",
+    "related_components": [
+      "04_Software/AudioMancer/src/audiomancer/services/narrator_profile_generation_service.py",
+      "04_Software/AudioMancer/prompts/narrator_profile_generation_user.txt",
+      "04_Software/AudioMancer/tests/test_narrator_profile_generation_service.py",
+      "05_SoftwareDocu/AudioMancer_Narrator_Profile_Generation_Service.md"
+    ],
+    "req_id": "REQ-FUNC-056",
+    "requirement": "AI narrator profile generation shall validate generated preview text with language-agnostic bounded tolerance: accepted previews must remain single-line, satisfy the configured minimum TTS reference duration and character limit, and may exceed the prompt target word range only within a documented bounded overage.",
+    "source_file": ".agentic/requirements/functional.md",
+    "status": "Active",
+    "verification": "Automated pytest verifies a bounded narrator preview word-count overage remains accepted while preserving single-line, duration, and character-limit validation."
+  },
   "REQ-NFR-001": {
     "created_on": "2026-06-09 09:50",
     "last_updated": "2026-06-09 09:50",

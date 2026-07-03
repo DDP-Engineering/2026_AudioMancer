@@ -328,6 +328,51 @@ def test_narrator_profile_generation_rejects_preview_text_below_six_seconds(
     assert not narrator_definition_service.load_profiles(project_root)
 
 
+def test_narrator_profile_generation_accepts_bounded_preview_word_overage(
+    tmp_path,
+    monkeypatch,
+    mock_prompt_environment,
+) -> None:
+    """
+    @brief      Verify NARRATOR-PREVIEW-001 and REQ-FUNC-056 accept a bounded preview word-count overage.
+    @param[in]  tmp_path Temporary path fixture.
+    @param[in]  monkeypatch Pytest monkeypatch fixture.
+    @param[in]  mock_prompt_environment Prompt-root fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-03
+    @version    0.1.0
+    """
+    _write_narrator_prompts(mock_prompt_environment)
+    project_root = tmp_path / "project"
+    project_root.mkdir()
+    _write_chunks(project_root, "A multilingual chronicle moves through memory, ritual, and political consequence.")
+    preview_text = (
+        "Across distant cities and quiet rooms, the narrator carries each memory with steady warmth, clear breath, "
+        "and patient attention to unfolding change in every language."
+    )
+    monkeypatch.setattr(
+        narrator_profile_generation_service.llm_provider_service,
+        "chat_json",
+        _chat_json_factory([], _profiles_payload(2, preview_text=preview_text)),
+    )
+
+    report_payload = narrator_profile_generation_service.generate_narrator_profiles(
+        project_root,
+        {},
+        _MOCK_AI_PROFILE,
+        2,
+        "en",
+        220,
+    )
+
+    profiles = narrator_definition_service.load_profiles(project_root)
+    assert len(profiles) == 2
+    assert report_payload["generated_profile_ids"]
+    assert all(profile["preview_text"] == preview_text for profile in profiles)
+
+
 def test_narrator_profile_generation_merges_token_usage_into_report_and_state(
     tmp_path,
     monkeypatch,

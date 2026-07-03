@@ -10,6 +10,24 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [1.6.1] - 2026-07-03
+
+### Changed
+
+- Narrator profile generation prompt and component documentation now describe
+  the `15..24` spoken-word preview target with bounded tolerance up to 30
+  estimated words, keeping validation language-agnostic and provider-agnostic.
+- Project package metadata and `audiomancer.__version__` were updated to
+  `1.6.1`.
+- Offline English and Romanian help bundles were updated to version `1.6.1`.
+
+### Fixed
+
+- AI-assisted Narator Voice profile generation now accepts compact single-line
+  preview text with a bounded word-count overage, preventing near-valid narrator
+  suggestions from failing only because they are one or a few words over the
+  prompt target.
+
 ## [1.6.0] - 2026-07-02
 
 ### Added

@@ -2812,6 +2812,12 @@
       "REQ-FUNC-025"
     ]
   },
+  "04_Software/AudioMancer/tests/test_narrator_profile_generation_service.py::test_narrator_profile_generation_accepts_bounded_preview_word_overage": {
+    "id": "04_Software/AudioMancer/tests/test_narrator_profile_generation_service.py::test_narrator_profile_generation_accepts_bounded_preview_word_overage",
+    "requirement_ids": [
+      "REQ-FUNC-056"
+    ]
+  },
   "04_Software/AudioMancer/tests/test_narrator_profile_generation_service.py::test_narrator_profile_generation_adds_operator_prompt_rules": {
     "id": "04_Software/AudioMancer/tests/test_narrator_profile_generation_service.py::test_narrator_profile_generation_adds_operator_prompt_rules",
     "requirement_ids": [
