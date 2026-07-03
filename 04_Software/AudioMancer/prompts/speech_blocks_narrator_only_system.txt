@@ -12,6 +12,7 @@ Boundary selection goal:
 - Choose natural continuous-audio block ends from the provided candidate boundary list.
 - Prefer complete sentences and paragraph rhythm when they fit the safe TTS budget.
 - Keep short dialogue turns with their nearby attribution when that preserves read-aloud flow.
+- Never choose a boundary inside an open quoted passage; keep text from an opening quote through its matching closing quote in the same block unless the TTS budget makes that impossible.
 - Avoid tiny fragments unless the source itself is tiny or the TTS budget requires them.
 - Prefer boundaries at strong scene, paragraph, or sentence transitions.
 - Use coarse budget boundaries only when a sentence or paragraph would otherwise exceed the safe TTS budget.

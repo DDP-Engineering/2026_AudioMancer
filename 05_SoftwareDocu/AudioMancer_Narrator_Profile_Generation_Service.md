@@ -180,7 +180,10 @@ reference sample:
 - at least the configured minimum preview duration, currently `6.0` seconds
 - estimated with `DEFAULT_TTS_WORDS_PER_AUDIO_SECOND`, currently `2.5`
 - effectively at least `15` spoken words with the current defaults
-- still a single original sentence and still capped by the TTS preview
+- targeted at `15..24` spoken words, with a bounded implementation tolerance
+  up to `30` estimated words so near-valid model output is not rejected solely
+  for a small overage
+- still a single-line original sentence and still capped by the TTS preview
   character limit
 
 Duplicate generated display names are rejected within one AI response. Duplicate
@@ -308,6 +311,7 @@ Documentation audit status:
 
 - compact generated-profile metadata contract reviewed on 2026-05-18
 - failed and cancelled terminal checkpoint behavior reviewed on 2026-06-11
+- narrator preview-text bounded tolerance reviewed on 2026-07-03
 
 Minimum validation after changes:
 

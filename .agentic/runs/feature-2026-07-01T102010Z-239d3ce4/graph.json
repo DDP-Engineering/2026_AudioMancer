@@ -1,0 +1,815 @@
+{
+  "access_mode": "standard",
+  "change_units": [
+    {
+      "evidence": [],
+      "id": "CU-SBSPAN-001",
+      "touched_paths": [
+        "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_text_split_service.py"
+      ]
+    },
+    {
+      "evidence": [],
+      "id": "CU-SBSPAN-002",
+      "touched_paths": [
+        "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py"
+      ]
+    },
+    {
+      "evidence": [],
+      "id": "CU-SBSPAN-003",
+      "touched_paths": [
+        "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_normalization_service.py"
+      ]
+    },
+    {
+      "evidence": [],
+      "id": "CU-SBSPAN-004",
+      "touched_paths": [
+        "05_SoftwareDocu/AudioMancer_Speech_Blocks_Service.md"
+      ]
+    },
+    {
+      "evidence": [],
+      "id": "CU-SBSPAN-005",
+      "touched_paths": [
+        "05_SoftwareDocu/AudioMancer_Speech_Blocks_Normalization_Service.md"
+      ]
+    },
+    {
+      "evidence": [],
+      "id": "CU-SBSPAN-006",
+      "touched_paths": [
+        "04_Software/AudioMancer/src/audiomancer/ui/pages/speech_blocks_page.py"
+      ]
+    },
+    {
+      "evidence": [],
+      "id": "CU-SBSPAN-007",
+      "touched_paths": [
+        "05_SoftwareDocu/AudioMancer_Text_Pipeline_Support_Services.md"
+      ]
+    }
+  ],
+  "checks": [
+    {
+      "cites_requirement": [
+        "REQ-FUNC-042"
+      ],
+      "cites_spec": [
+        "SBSPAN-001",
+        "SBSPAN-003"
+      ],
+      "command": "uv run pytest -q tests/test_speech_blocks_text_split_service.py::test_build_source_spans_preserves_exact_text_and_paragraph_boundaries",
+      "green_evidence": "E-0007",
+      "id": "CHK-SBSPAN-001",
+      "level": "test",
+      "path": "04_Software/AudioMancer/tests/test_speech_blocks_text_split_service.py",
+      "red_evidence": "E-0004",
+      "state": "green"
+    },
+    {
+      "cites_requirement": [
+        "REQ-FUNC-043"
+      ],
+      "cites_spec": [
+        "SBSPAN-002",
+        "SBSPAN-003"
+      ],
+      "command": "uv run pytest -q tests/test_speech_blocks_text_split_service.py::test_build_source_spans_classifies_multilingual_dialogue_conventions",
+      "green_evidence": "E-0008",
+      "id": "CHK-SBSPAN-002",
+      "level": "test",
+      "path": "04_Software/AudioMancer/tests/test_speech_blocks_text_split_service.py",
+      "red_evidence": "E-0005",
+      "state": "green"
+    },
+    {
+      "cites_requirement": [
+        "REQ-FUNC-042"
+      ],
+      "cites_spec": [
+        "SBSPAN-001",
+        "SBSPAN-003"
+      ],
+      "command": "uv run pytest -q tests/test_speech_blocks_service.py::test_budgeted_source_chunk_segments_attach_source_spans",
+      "green_evidence": "E-0009",
+      "id": "CHK-SBSPAN-003",
+      "level": "test",
+      "path": "04_Software/AudioMancer/tests/test_speech_blocks_service.py",
+      "red_evidence": "E-0006",
+      "state": "green"
+    },
+    {
+      "cites_requirement": [
+        "REQ-FUNC-042",
+        "REQ-FUNC-043"
+      ],
+      "cites_spec": [
+        "SBSPAN-001",
+        "SBSPAN-002",
+        "SBSPAN-003"
+      ],
+      "command": "uv run pytest -q tests/test_speech_blocks_service.py::test_start_or_continue_generation_adds_scene_ambience_blocks tests/test_speech_blocks_service.py::test_start_generation_preserves_french_dash_and_guillemet_source_spans",
+      "green_evidence": "E-0012",
+      "id": "CHK-SBSPAN-004",
+      "level": "test",
+      "path": "04_Software/AudioMancer/tests/test_speech_blocks_service.py",
+      "red_evidence": "E-0011",
+      "state": "green"
+    }
+  ],
+  "decisions": [
+    {
+      "approver": "human",
+      "chosen": "requirement",
+      "created_at": "2026-07-01T10:31:26+00:00",
+      "id": "D-0001",
+      "question": "Workflow stage route",
+      "rationale": "Human approved continuing Task 2 from intake to requirement."
+    },
+    {
+      "approver": "human",
+      "chosen": "check",
+      "created_at": "2026-07-01T10:54:59+00:00",
+      "id": "D-0002",
+      "question": "Workflow stage route",
+      "rationale": "Human approved continuing Task 2 from requirement to check."
+    },
+    {
+      "approver": "human",
+      "chosen": "implementation",
+      "created_at": "2026-07-01T11:02:04+00:00",
+      "id": "D-0003",
+      "question": "Workflow stage route",
+      "rationale": "Human approved continuing Task 2 from check to implementation."
+    },
+    {
+      "approver": "human",
+      "chosen": "check",
+      "created_at": "2026-07-01T11:09:16+00:00",
+      "id": "D-0004",
+      "question": "Workflow stage route",
+      "rationale": "Human routed back from implementation to check so stale Speech Blocks generation fixtures can be updated to the Task 2 span-ID contract."
+    },
+    {
+      "approver": "human",
+      "chosen": "E-0010 -> E-0011",
+      "created_at": "2026-07-01T11:17:36+00:00",
+      "id": "D-0005",
+      "question": "Evidence superseded",
+      "rationale": "Human routed back to check; stale six-fixture implementation failure was replaced by corrected source_span_ids fixture evidence that isolates the remaining intended red granularity cases."
+    },
+    {
+      "approver": "human",
+      "chosen": "implementation",
+      "created_at": "2026-07-01T11:30:26+00:00",
+      "id": "D-0006",
+      "question": "Workflow stage route",
+      "rationale": "Human approved continuing Task 2 from corrected check stage to implementation."
+    },
+    {
+      "approver": "human",
+      "chosen": "validation",
+      "created_at": "2026-07-01T11:40:42+00:00",
+      "id": "D-0007",
+      "question": "Workflow stage route",
+      "rationale": "Human approved continuing Task 2 from implementation to validation."
+    },
+    {
+      "approver": "human",
+      "chosen": "implementation",
+      "created_at": "2026-07-01T12:14:34+00:00",
+      "id": "D-0008",
+      "question": "Workflow stage route",
+      "rationale": "Human approved routing back from validation to implementation to fix the documentation audit findings and reproducible Speech Blocks page scroll-preservation failure."
+    },
+    {
+      "approver": "human",
+      "chosen": "E-0022 -> E-0025",
+      "created_at": "2026-07-01T12:47:04+00:00",
+      "id": "D-0009",
+      "question": "Evidence superseded",
+      "rationale": "Fixed Speech Blocks page source preview restore and reran full application pytest successfully."
+    },
+    {
+      "approver": "human",
+      "chosen": "E-0024 -> E-0026",
+      "created_at": "2026-07-01T12:47:13+00:00",
+      "id": "D-0010",
+      "question": "Evidence superseded",
+      "rationale": "Fixed source preview review-state restore and reran the isolated UI test successfully."
+    },
+    {
+      "approver": "human",
+      "chosen": "E-0015 -> E-0029",
+      "created_at": "2026-07-01T12:47:32+00:00",
+      "id": "D-0011",
+      "question": "Evidence superseded",
+      "rationale": "Updated component documentation for the source-span and source-preview restore behavior, then reran the changed-only documentation audit successfully."
+    }
+  ],
+  "defects": [],
+  "evidence": [
+    {
+      "command": ".\\\\.agentic\\\\tools\\\\run.ps1 audit coverage",
+      "created_at": "2026-07-01T10:22:20+00:00",
+      "failure_kind": null,
+      "id": "E-0001",
+      "kind": "scan",
+      "path": null,
+      "result": "pass",
+      "stage": "intake",
+      "status": "active",
+      "summary": "Intake coverage audit passed with no issues.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": ".\\\\.agentic\\\\tools\\\\run.ps1 audit traceability",
+      "created_at": "2026-07-01T10:22:21+00:00",
+      "failure_kind": null,
+      "id": "E-0002",
+      "kind": "scan",
+      "path": null,
+      "result": "pass",
+      "stage": "intake",
+      "status": "active",
+      "summary": "Intake traceability audit passed with no issues.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": ".\\\\.agentic\\\\tools\\\\run.ps1 impact <planned Task 2 files>",
+      "created_at": "2026-07-01T10:22:21+00:00",
+      "failure_kind": null,
+      "id": "E-0003",
+      "kind": "scan",
+      "path": null,
+      "result": "pass",
+      "stage": "intake",
+      "status": "active",
+      "summary": "Impact analysis identified Speech Blocks service, normalization, text split service, tests, and component docs as likely Task 2 scope.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "uv run pytest -q tests/test_speech_blocks_text_split_service.py::test_build_source_spans_preserves_exact_text_and_paragraph_boundaries",
+      "created_at": "2026-07-01T10:58:04+00:00",
+      "failure_kind": null,
+      "id": "E-0004",
+      "kind": "test-run",
+      "path": "04_Software/AudioMancer/tests/test_speech_blocks_text_split_service.py",
+      "result": "fail",
+      "stage": "check",
+      "status": "active",
+      "summary": "Focused source-span builder exact-preservation test fails because speech_blocks_text_split_service.build_source_spans is not implemented.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "uv run pytest -q tests/test_speech_blocks_text_split_service.py::test_build_source_spans_classifies_multilingual_dialogue_conventions",
+      "created_at": "2026-07-01T10:58:05+00:00",
+      "failure_kind": null,
+      "id": "E-0005",
+      "kind": "test-run",
+      "path": "04_Software/AudioMancer/tests/test_speech_blocks_text_split_service.py",
+      "result": "fail",
+      "stage": "check",
+      "status": "active",
+      "summary": "Focused multilingual source-span classification test fails because speech_blocks_text_split_service.build_source_spans is not implemented.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "uv run pytest -q tests/test_speech_blocks_service.py::test_budgeted_source_chunk_segments_attach_source_spans",
+      "created_at": "2026-07-01T10:58:05+00:00",
+      "failure_kind": null,
+      "id": "E-0006",
+      "kind": "test-run",
+      "path": "04_Software/AudioMancer/tests/test_speech_blocks_service.py",
+      "result": "fail",
+      "stage": "check",
+      "status": "active",
+      "summary": "Focused Speech Blocks segment wiring test fails because budgeted source chunk segments do not include source_spans.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "uv run pytest -q tests/test_speech_blocks_text_split_service.py::test_build_source_spans_preserves_exact_text_and_paragraph_boundaries",
+      "created_at": "2026-07-01T11:06:35+00:00",
+      "failure_kind": null,
+      "id": "E-0007",
+      "kind": "test-run",
+      "path": "04_Software/AudioMancer/tests/test_speech_blocks_text_split_service.py",
+      "result": "pass",
+      "stage": "implementation",
+      "status": "active",
+      "summary": "Focused source-span exact-preservation check passed after implementing build_source_spans.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "uv run pytest -q tests/test_speech_blocks_text_split_service.py::test_build_source_spans_classifies_multilingual_dialogue_conventions",
+      "created_at": "2026-07-01T11:06:35+00:00",
+      "failure_kind": null,
+      "id": "E-0008",
+      "kind": "test-run",
+      "path": "04_Software/AudioMancer/tests/test_speech_blocks_text_split_service.py",
+      "result": "pass",
+      "stage": "implementation",
+      "status": "active",
+      "summary": "Focused multilingual source-span classification check passed after implementing build_source_spans.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "uv run pytest -q tests/test_speech_blocks_service.py::test_budgeted_source_chunk_segments_attach_source_spans",
+      "created_at": "2026-07-01T11:06:36+00:00",
+      "failure_kind": null,
+      "id": "E-0009",
+      "kind": "test-run",
+      "path": "04_Software/AudioMancer/tests/test_speech_blocks_service.py",
+      "result": "pass",
+      "stage": "implementation",
+      "status": "active",
+      "summary": "Focused Speech Blocks segment wiring check passed after attaching source_spans to budgeted segments.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "uv run pytest -q tests/test_speech_blocks_service.py",
+      "created_at": "2026-07-01T11:06:36+00:00",
+      "failure_kind": null,
+      "id": "E-0010",
+      "kind": "test-run",
+      "path": "04_Software/AudioMancer/tests/test_speech_blocks_service.py",
+      "result": "fail",
+      "stage": "implementation",
+      "status": "superseded",
+      "summary": "Full Speech Blocks service test file currently fails six older generation fixtures that still return model-owned source_text/text instead of source_span_ids after source spans are attached.",
+      "supersede_reason": "Human routed back to check; stale six-fixture implementation failure was replaced by corrected source_span_ids fixture evidence that isolates the remaining intended red granularity cases.",
+      "superseded_by": "E-0011"
+    },
+    {
+      "command": "uv run pytest -q tests/test_speech_blocks_service.py::test_start_or_continue_generation_creates_artifacts_and_normalizes_blocks tests/test_speech_blocks_service.py::test_start_or_continue_generation_adds_scene_ambience_blocks tests/test_speech_blocks_service.py::test_regenerate_selected_chunk_replaces_chunk_and_renumbers_following_blocks tests/test_speech_blocks_service.py::test_start_or_continue_generation_resumes_with_current_selected_profile tests/test_speech_blocks_service.py::test_start_or_continue_generation_resumes_after_partial_review_approval tests/test_speech_blocks_service.py::test_start_generation_preserves_french_dash_and_guillemet_source_spans",
+      "created_at": "2026-07-01T11:17:11+00:00",
+      "failure_kind": null,
+      "id": "E-0011",
+      "kind": "test-run",
+      "path": "04_Software/AudioMancer/tests/test_speech_blocks_service.py",
+      "result": "fail",
+      "stage": "check",
+      "status": "active",
+      "summary": "Updated Speech Blocks generation fixtures now mostly pass with source_span_ids, but scene ambience narration sentence splitting and French repeated dash dialogue remain red until the source span builder creates finer deterministic spans.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "uv run pytest -q tests/test_speech_blocks_service.py::test_start_or_continue_generation_adds_scene_ambience_blocks tests/test_speech_blocks_service.py::test_start_generation_preserves_french_dash_and_guillemet_source_spans",
+      "created_at": "2026-07-01T11:37:56+00:00",
+      "failure_kind": null,
+      "id": "E-0012",
+      "kind": "test-run",
+      "path": "04_Software/AudioMancer/tests/test_speech_blocks_service.py",
+      "result": "pass",
+      "stage": "implementation",
+      "status": "active",
+      "summary": "Span-builder granularity integration check passed after splitting manageable narration sentences and repeated dash-led dialogue spans.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "uv run ruff check <changed Speech Blocks Python files>; uv run python -m py_compile <changed Speech Blocks service files>; uv run python ..\\\\..\\\\02_Tools\\\\audits\\\\audit_codestyle.py --changed-only",
+      "created_at": "2026-07-01T11:37:57+00:00",
+      "failure_kind": null,
+      "id": "E-0013",
+      "kind": "scan",
+      "path": "04_Software/AudioMancer",
+      "result": "pass",
+      "stage": "implementation",
+      "status": "active",
+      "summary": "Python style, compile, Ruff, and changed-only codestyle audit passed for changed Speech Blocks Python files.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "uv run pytest -q tests/test_speech_blocks_text_split_service.py tests/test_speech_blocks_service.py",
+      "created_at": "2026-07-01T11:37:57+00:00",
+      "failure_kind": null,
+      "id": "E-0014",
+      "kind": "test-run",
+      "path": "04_Software/AudioMancer/tests",
+      "result": "pass",
+      "stage": "implementation",
+      "status": "active",
+      "summary": "Focused Speech Blocks source-span builder and service regression suite passed: 60 tests passed, 1 audioop deprecation warning.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "uv run python ..\\\\..\\\\02_Tools\\\\audits\\\\audit_documentation.py --changed-only",
+      "created_at": "2026-07-01T11:41:26+00:00",
+      "failure_kind": null,
+      "id": "E-0015",
+      "kind": "scan",
+      "path": "05_SoftwareDocu",
+      "result": "fail",
+      "stage": "validation",
+      "status": "superseded",
+      "summary": "Changed-only documentation audit reported stale component docs for AudioMancer_Speech_Blocks_Service.md and AudioMancer_Text_Pipeline_Support_Services.md.",
+      "supersede_reason": "Updated component documentation for the source-span and source-preview restore behavior, then reran the changed-only documentation audit successfully.",
+      "superseded_by": "E-0029"
+    },
+    {
+      "command": "04_Software/AudioMancer/.venv/Scripts/python.exe 02_Tools/audits/audit_traceability.py",
+      "created_at": "2026-07-01T11:41:44+00:00",
+      "failure_kind": null,
+      "id": "E-0016",
+      "kind": "gate",
+      "path": null,
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "test: 04_Software/AudioMancer/.venv/Scripts/python.exe 02_Tools/audits/audit_traceability.py",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "04_Software/AudioMancer/.venv/Scripts/python.exe 02_Tools/audits/audit_requirement_coverage.py",
+      "created_at": "2026-07-01T11:41:44+00:00",
+      "failure_kind": null,
+      "id": "E-0017",
+      "kind": "gate",
+      "path": null,
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "test: 04_Software/AudioMancer/.venv/Scripts/python.exe 02_Tools/audits/audit_requirement_coverage.py",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "04_Software/AudioMancer/.venv/Scripts/python.exe -m pytest -q 04_Software/AudioMancer/tests/test_traceability.py",
+      "created_at": "2026-07-01T11:41:46+00:00",
+      "failure_kind": null,
+      "id": "E-0018",
+      "kind": "gate",
+      "path": null,
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "test: 04_Software/AudioMancer/.venv/Scripts/python.exe -m pytest -q 04_Software/AudioMancer/tests/test_traceability.py",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "04_Software/AudioMancer/.venv/Scripts/python.exe 02_Tools/audits/audit_codestyle.py --changed-only",
+      "created_at": "2026-07-01T11:41:46+00:00",
+      "failure_kind": null,
+      "id": "E-0019",
+      "kind": "gate",
+      "path": null,
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "lint: 04_Software/AudioMancer/.venv/Scripts/python.exe 02_Tools/audits/audit_codestyle.py --changed-only",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": ".\\\\.agentic\\\\.venv\\\\Scripts\\\\agentic-workflow.exe gates run --timeout 180",
+      "created_at": "2026-07-01T11:56:29+00:00",
+      "failure_kind": null,
+      "id": "E-0020",
+      "kind": "gate",
+      "path": null,
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "Configured workflow gates completed successfully.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": ".\\\\.agentic\\\\.venv\\\\Scripts\\\\agentic-workflow.exe audit traceability; .\\\\.agentic\\\\.venv\\\\Scripts\\\\agentic-workflow.exe audit coverage; uv run python ..\\\\..\\\\02_Tools\\\\audits\\\\audit_codestyle.py --changed-only",
+      "created_at": "2026-07-01T11:56:29+00:00",
+      "failure_kind": null,
+      "id": "E-0021",
+      "kind": "scan",
+      "path": null,
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "Traceability audit, coverage audit, and changed-only codestyle audit passed.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "uv run pytest -q",
+      "created_at": "2026-07-01T11:56:30+00:00",
+      "failure_kind": null,
+      "id": "E-0022",
+      "kind": "test-run",
+      "path": "04_Software/AudioMancer/tests/test_speech_blocks_page.py",
+      "result": "fail",
+      "stage": "validation",
+      "status": "superseded",
+      "summary": "Full application pytest run failed one reproducible UI scroll-preservation test: test_speech_blocks_page_refresh_preserves_block_selection_and_source_scroll. Result before failure summary: 837 passed, 1 failed, 1 skipped, 1 deselected, 1 warning.",
+      "supersede_reason": "Fixed Speech Blocks page source preview restore and reran full application pytest successfully.",
+      "superseded_by": "E-0025"
+    },
+    {
+      "command": ".\\\\.agentic\\\\.venv\\\\Scripts\\\\agentic-workflow.exe impact --json <current tracked working-set files>",
+      "created_at": "2026-07-01T11:56:30+00:00",
+      "failure_kind": null,
+      "id": "E-0023",
+      "kind": "scan",
+      "path": null,
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "Impact analysis completed for the tracked working set; no full-regression recommendation was reported before the full pytest validation run.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "uv run pytest -q tests/test_speech_blocks_page.py::test_speech_blocks_page_refresh_preserves_block_selection_and_source_scroll",
+      "created_at": "2026-07-01T11:56:31+00:00",
+      "failure_kind": null,
+      "id": "E-0024",
+      "kind": "test-run",
+      "path": "04_Software/AudioMancer/tests/test_speech_blocks_page.py",
+      "result": "fail",
+      "stage": "validation",
+      "status": "superseded",
+      "summary": "Isolated rerun reproduced the UI scroll-preservation failure: source text vertical scrollbar reset to 0 instead of preserving the saved maximum position.",
+      "supersede_reason": "Fixed source preview review-state restore and reran the isolated UI test successfully.",
+      "superseded_by": "E-0026"
+    },
+    {
+      "command": "uv run pytest -q",
+      "created_at": "2026-07-01T12:46:57+00:00",
+      "failure_kind": null,
+      "id": "E-0025",
+      "kind": "test-run",
+      "path": null,
+      "result": "pass",
+      "stage": "implementation",
+      "status": "active",
+      "summary": "Full application pytest passed after fixing Speech Blocks page source preview restore: 838 passed, 1 skipped, 1 deselected, 1 warning.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "uv run pytest -q tests/test_speech_blocks_page.py::test_speech_blocks_page_refresh_preserves_block_selection_and_source_scroll",
+      "created_at": "2026-07-01T12:47:05+00:00",
+      "failure_kind": null,
+      "id": "E-0026",
+      "kind": "test-run",
+      "path": null,
+      "result": "pass",
+      "stage": "implementation",
+      "status": "active",
+      "summary": "Isolated UI scroll-preservation rerun passed after guarding stale source preview restores and stabilizing the selected-chunk scrollbar layout.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "uv run pytest -q tests/test_speech_blocks_page.py tests/test_speech_blocks_text_split_service.py tests/test_speech_blocks_service.py",
+      "created_at": "2026-07-01T12:47:13+00:00",
+      "failure_kind": null,
+      "id": "E-0027",
+      "kind": "test-run",
+      "path": null,
+      "result": "pass",
+      "stage": "implementation",
+      "status": "active",
+      "summary": "Focused Speech Blocks page, source-span builder, and service regression bundle passed: 83 tests passed, 1 warning.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "uv run ruff check <changed Speech Blocks Python files>; uv run python -m py_compile <changed Speech Blocks Python files>; uv run python ..\\..\\02_Tools\\audits\\audit_codestyle.py --changed-only",
+      "created_at": "2026-07-01T12:47:23+00:00",
+      "failure_kind": null,
+      "id": "E-0028",
+      "kind": "scan",
+      "path": null,
+      "result": "pass",
+      "stage": "implementation",
+      "status": "active",
+      "summary": "Ruff, py_compile, and changed-only Python codestyle audit passed for changed Speech Blocks Python files.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "uv run python ..\\..\\02_Tools\\audits\\audit_documentation.py --changed-only",
+      "created_at": "2026-07-01T12:47:23+00:00",
+      "failure_kind": null,
+      "id": "E-0029",
+      "kind": "scan",
+      "path": null,
+      "result": "pass",
+      "stage": "implementation",
+      "status": "active",
+      "summary": "Changed-only documentation audit passed after updating Speech Blocks and text-pipeline component documentation.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": ".\\.agentic\\tools\\run.ps1 audit traceability; .\\.agentic\\tools\\run.ps1 audit coverage",
+      "created_at": "2026-07-01T12:48:27+00:00",
+      "failure_kind": null,
+      "id": "E-0030",
+      "kind": "scan",
+      "path": null,
+      "result": "pass",
+      "stage": "implementation",
+      "status": "active",
+      "summary": "Traceability and coverage audits passed after implementation corrections.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "04_Software/AudioMancer/.venv/Scripts/python.exe 02_Tools/audits/audit_traceability.py",
+      "created_at": "2026-07-01T13:50:51+00:00",
+      "failure_kind": null,
+      "id": "E-0031",
+      "kind": "gate",
+      "path": null,
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "test: 04_Software/AudioMancer/.venv/Scripts/python.exe 02_Tools/audits/audit_traceability.py",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "04_Software/AudioMancer/.venv/Scripts/python.exe 02_Tools/audits/audit_requirement_coverage.py",
+      "created_at": "2026-07-01T13:50:51+00:00",
+      "failure_kind": null,
+      "id": "E-0032",
+      "kind": "gate",
+      "path": null,
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "test: 04_Software/AudioMancer/.venv/Scripts/python.exe 02_Tools/audits/audit_requirement_coverage.py",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "04_Software/AudioMancer/.venv/Scripts/python.exe -m pytest -q 04_Software/AudioMancer/tests/test_traceability.py",
+      "created_at": "2026-07-01T13:50:52+00:00",
+      "failure_kind": null,
+      "id": "E-0033",
+      "kind": "gate",
+      "path": null,
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "test: 04_Software/AudioMancer/.venv/Scripts/python.exe -m pytest -q 04_Software/AudioMancer/tests/test_traceability.py",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "04_Software/AudioMancer/.venv/Scripts/python.exe 02_Tools/audits/audit_codestyle.py --changed-only",
+      "created_at": "2026-07-01T13:50:53+00:00",
+      "failure_kind": null,
+      "id": "E-0034",
+      "kind": "gate",
+      "path": null,
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "lint: 04_Software/AudioMancer/.venv/Scripts/python.exe 02_Tools/audits/audit_codestyle.py --changed-only",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": ".\\.agentic\\tools\\run.ps1 invariants; .\\.agentic\\tools\\run.ps1 audit traceability; .\\.agentic\\tools\\run.ps1 audit coverage; uv run python ..\\..\\02_Tools\\audits\\audit_documentation.py --changed-only; uv run python ..\\..\\02_Tools\\audits\\audit_codestyle.py --changed-only; .\\.agentic\\tools\\run.ps1 impact --json <tracked diff>; .\\.agentic\\tools\\run.ps1 gates run --timeout 180; git diff --check",
+      "created_at": "2026-07-01T13:51:30+00:00",
+      "failure_kind": null,
+      "id": "E-0035",
+      "kind": "scan",
+      "path": null,
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "Validation sweep passed: invariants, traceability audit, coverage audit, changed-only documentation audit, changed-only codestyle audit, impact over tracked diff, configured gates, and git diff --check all passed. Full pytest remained covered by E-0025 with no source edits afterward.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "04_Software/AudioMancer/.venv/Scripts/python.exe 02_Tools/audits/audit_traceability.py",
+      "created_at": "2026-07-01T13:56:00+00:00",
+      "failure_kind": null,
+      "id": "E-0036",
+      "kind": "gate",
+      "path": null,
+      "result": "pass",
+      "stage": "delivery",
+      "status": "active",
+      "summary": "test: 04_Software/AudioMancer/.venv/Scripts/python.exe 02_Tools/audits/audit_traceability.py",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "04_Software/AudioMancer/.venv/Scripts/python.exe 02_Tools/audits/audit_requirement_coverage.py",
+      "created_at": "2026-07-01T13:56:00+00:00",
+      "failure_kind": null,
+      "id": "E-0037",
+      "kind": "gate",
+      "path": null,
+      "result": "pass",
+      "stage": "delivery",
+      "status": "active",
+      "summary": "test: 04_Software/AudioMancer/.venv/Scripts/python.exe 02_Tools/audits/audit_requirement_coverage.py",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "04_Software/AudioMancer/.venv/Scripts/python.exe -m pytest -q 04_Software/AudioMancer/tests/test_traceability.py",
+      "created_at": "2026-07-01T13:56:01+00:00",
+      "failure_kind": null,
+      "id": "E-0038",
+      "kind": "gate",
+      "path": null,
+      "result": "pass",
+      "stage": "delivery",
+      "status": "active",
+      "summary": "test: 04_Software/AudioMancer/.venv/Scripts/python.exe -m pytest -q 04_Software/AudioMancer/tests/test_traceability.py",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "04_Software/AudioMancer/.venv/Scripts/python.exe 02_Tools/audits/audit_codestyle.py --changed-only",
+      "created_at": "2026-07-01T13:56:01+00:00",
+      "failure_kind": null,
+      "id": "E-0039",
+      "kind": "gate",
+      "path": null,
+      "result": "pass",
+      "stage": "delivery",
+      "status": "active",
+      "summary": "lint: 04_Software/AudioMancer/.venv/Scripts/python.exe 02_Tools/audits/audit_codestyle.py --changed-only",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": ".\\.agentic\\tools\\run.ps1 delivery-preflight",
+      "created_at": "2026-07-01T13:56:22+00:00",
+      "failure_kind": null,
+      "id": "E-0040",
+      "kind": "gate",
+      "path": null,
+      "result": "pass",
+      "stage": "delivery",
+      "status": "active",
+      "summary": "Delivery preflight passed; human approval remains required before commit, push, PR, merge, or publish.",
+      "supersede_reason": null,
+      "superseded_by": null
+    }
+  ],
+  "intent": {
+    "created_at": "2026-07-01T10:20:10+00:00",
+    "id": "I-0001",
+    "kind": "feature",
+    "scope_hint": [],
+    "statement": "Implement Task 2 from 0_Planning/Multilingual_Local_Model_Speech_Blocks_Plan.md: create a deterministic Unicode-aware multilingual source span builder before Speech Blocks model calls, with stable ordered span IDs, exact text/whitespace preservation, language-neutral dialogue/narration/attribution/mixed candidates, paragraph boundary safety, and coverage for Romanian, French, German, Russian, Japanese, Chinese/CJK, and mixed narration-dialogue cases.",
+    "status": "draft"
+  },
+  "run_id": "feature-2026-07-01T102010Z-239d3ce4",
+  "spec_items": [
+    {
+      "examples": [
+        "A chunk segment exposes source_spans s001, s002, ... and model selections must reference only those IDs."
+      ],
+      "id": "SBSPAN-001",
+      "statement": "For narrator-and-character Speech Blocks generation, AudioMancer shall build ordered source spans with stable IDs before model calls and attach them to the active chunk or AI-budget segment payload.",
+      "status": "accepted",
+      "tag": "behavior",
+      "threshold": null
+    },
+    {
+      "examples": [
+        "Romanian/French/Russian guillemets, Romanian/Russian dash-led dialogue, German quote styles, English straight or curly quotes, and CJK/fullwidth quotation marks are classified consistently."
+      ],
+      "id": "SBSPAN-002",
+      "statement": "The source span builder shall classify spans as dialogue_candidate, narration_candidate, attribution_candidate, or mixed_candidate using Unicode dialogue punctuation and paragraph structure rather than English-only speech verbs.",
+      "status": "accepted",
+      "tag": "behavior",
+      "threshold": null
+    },
+    {
+      "examples": [],
+      "id": "SBSPAN-003",
+      "statement": "Built source spans shall reconstruct exactly to the active source text, preserving whitespace, punctuation, paragraph order, and contiguous coverage without merging across paragraph boundaries.",
+      "status": "accepted",
+      "tag": "property",
+      "threshold": "Joining source_spans[*].text for one active chunk or AI-budget segment must equal that payload text byte-for-byte at Python string level."
+    }
+  ],
+  "stage": "delivery"
+}

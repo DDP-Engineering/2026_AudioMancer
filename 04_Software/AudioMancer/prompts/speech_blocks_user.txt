@@ -11,15 +11,31 @@ Allowed speaker catalog:
 
 Chunk id: {chunk_id}
 
+Available atomic speech units:
+Only selectable speakable units are listed. Separator-only or whitespace-only source provenance is omitted.
+{atomic_units_json}
+
+Non-selectable attribution context:
+{source_context_json}
+
 Chunk text:
 {chunk_text}
 
-Analyze this chunk and return one JSON object with the ordered `speech_blocks` array only.
+Analyze this chunk and return one JSON object with the ordered `blocks` array only.
 
 Important:
-- Analyze only the provided chunk text as the source of `source_text`.
-- Use only the provided chunk text and allowed speaker catalog to help speaker attribution.
-- Do not copy text from the allowed speaker catalog into `source_text`.
-- Preserve the full chunk in ordered contiguous Speech Blocks.
+- Select only from the provided `atomic_unit_id` values.
+- Use only the provided chunk text, allowed speaker catalog, and non-selectable attribution context to help speaker attribution.
+- Do not select text from previous or next context. It is attribution-only context and not selectable source text.
+- Preserve the full speakable chunk content by covering every selectable speakable atomic speech unit exactly once in reading order.
+- Do not create standalone blocks for separator-only or whitespace-only source provenance.
 - Use only speaker ids from the allowed speaker catalog.
 - If speaker attribution is uncertain, use `speaker_id: "narrator"` and include `ambiguous_speaker`.
+- Include `confidence` as `high`, `medium`, or `low` for every block.
+
+Each `blocks` item must contain:
+- `unit_ids`: ordered array of one or more available atomic unit ids
+- `speaker_id`: one id from the allowed speaker catalog
+- `content_kind`: `narration` or `dialogue`
+- `confidence`: `high`, `medium`, or `low`
+- `warning_flags`: array of warning tokens, or an empty array

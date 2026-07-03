@@ -10,6 +10,64 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [1.6.1] - 2026-07-03
+
+### Changed
+
+- Narrator profile generation prompt and component documentation now describe
+  the `15..24` spoken-word preview target with bounded tolerance up to 30
+  estimated words, keeping validation language-agnostic and provider-agnostic.
+- Project package metadata and `audiomancer.__version__` were updated to
+  `1.6.1`.
+- Offline English and Romanian help bundles were updated to version `1.6.1`.
+
+### Fixed
+
+- AI-assisted Narator Voice profile generation now accepts compact single-line
+  preview text with a bounded word-count overage, preventing near-valid narrator
+  suggestions from failing only because they are one or a few words over the
+  prompt target.
+
+## [1.6.0] - 2026-07-02
+
+### Added
+
+- Added a multilingual Speech Blocks pipeline that builds deterministic atomic
+  speech units from source chunks before AI speaker assignment, including
+  quoted dialogue, dash-led dialogue, attribution narration, separator-only
+  spans, and Romanian/source-language dialogue patterns.
+- Added local-model and LM Studio Speech Blocks guidance covering recommended
+  model usage, context choices, sampler settings that remain configured in LM
+  Studio, and AudioMancer settings that are actually sent to providers.
+
+### Changed
+
+- Speech Blocks narrator-and-character generation now asks models to assign
+  speakers and content kinds to existing atomic `unit_ids` only; AudioMancer
+  reconstructs persisted `source_text` and spoken `text` from app-owned source
+  text instead of trusting model-returned wording.
+- Speech Blocks local-model handling now uses operation-specific structured
+  output hints when supported, performs one compact repair retry for malformed
+  or semantically invalid responses, and falls back deterministically with
+  review warnings when model output remains unusable.
+- Speech Blocks speaker attribution now uses source-language aliases, compact
+  character evidence, nearby attribution hints, and ambiguity warnings to
+  improve multilingual books without inventing speakers.
+- Adjacent cleanup, translation, and chunking prompts now preserve dialogue
+  punctuation, attribution context, paragraph structure, and source-language
+  cues needed by downstream Speech Blocks.
+- Project package metadata and `audiomancer.__version__` were updated to
+  `1.6.0`.
+- Offline English and Romanian help bundles were updated to version `1.6.0`.
+
+### Fixed
+
+- Fixed separator-only or whitespace-only Speech Blocks units so they preserve
+  source offsets without creating empty persisted narrator rows.
+- Fixed same-narrator Speech Blocks boundary selection so normal split
+  candidates and AI-selected boundaries do not divide open quoted passages and
+  make review text appear to lose opening or closing quotation marks.
+
 ## [1.5.9] - 2026-06-17
 
 ### Added

@@ -32,6 +32,9 @@ or TTS-sized units, and shape chunking/Speech Blocks operation reports.
 - produce AI-assisted chunk artifacts from model-selected paragraph breaks
 - rebuild Speech Blocks operation reports and warning summaries
 - split long Speech Blocks text into budget-safe AI/TTS spans
+- build deterministic Speech Blocks source spans with stable `sNNN`
+  provenance identifiers and atomic speech units with stable `uNNN` identifiers
+  before narrator-plus-character model calls
 
 They do not own text extraction, deterministic cleanup, AI provider transport,
 voice generation, or Qt widget state.
@@ -50,6 +53,8 @@ Main public entrypoints:
 - `ai_chunking_service.chunk_text(...)`
 - `speech_blocks_report_state_service.rebuild_report(...)`
 - `speech_blocks_report_state_service.build_operation_state(...)`
+- `speech_blocks_text_split_service.build_source_spans(...)`
+- `speech_blocks_text_split_service.build_atomic_speech_units(...)`
 - `speech_blocks_text_split_service.split_text_for_ai_context_budget(...)`
 - `speech_blocks_text_split_service.tts_budget_unit_count(...)`
 
@@ -68,6 +73,18 @@ paragraph cap and relies only on the token budget. The path appends optional
 operator-supplied chunking rules to each prompt, then commits only valid break
 IDs, reuses the already-built chunk list for each window checkpoint, and
 writes AI transaction logs.
+
+For Speech Blocks generation,
+`speech_blocks_text_split_service.build_source_spans(...)` creates exact,
+contiguous source-span provenance for one active chunk or AI-budget segment.
+`speech_blocks_text_split_service.build_atomic_speech_units(...)` then splits
+those spans into smaller atomic dialogue, attribution, narration, separator, or
+mixed units. One source span may produce many atomic units, such as dialogue,
+attribution, dialogue, attribution, dialogue. The builder preserves whitespace
+and punctuation, avoids merging across blank-line paragraph boundaries,
+recognizes Unicode quote pairs and dash-led dialogue, and uses multilingual
+attribution verb hints, including Romanian, so the model assigns speakers to
+app-owned unit IDs instead of rewriting source text.
 
 ## 4. Dependencies
 
@@ -98,6 +115,8 @@ Inputs:
 - default AI chunking strategy and context mode from persisted settings
 - Speech Blocks payloads and source chunk paths
 - context-budget values for AI/TTS segmentation
+- active Speech Blocks chunk or segment text for deterministic source-span and
+  atomic-unit construction
 
 Outputs:
 
@@ -107,6 +126,11 @@ Outputs:
 - AI chunking log files
 - Speech Blocks report and operation-state dictionaries
 - ordered text segment lists for AI/TTS calls
+- ordered `source_spans` containing `source_span_id`, offsets, exact `text`,
+  and candidate-kind hints for provenance
+- ordered `atomic_units` containing `atomic_unit_id`, parent `source_span_id`,
+  offsets, exact `text`, structural kind, and prompt speaker hints for Speech
+  Blocks model prompts
 
 ## 6. Data Contracts
 
@@ -133,6 +157,21 @@ with a warning instead of raising into the workflow page.
 Speech Blocks reports include stage status, approved counts, warning records,
 source metadata, and token-usage payloads.
 
+Speech Blocks source-span payloads use stable local IDs (`s001`, `s002`, ...),
+contiguous `start_offset`/`end_offset` values, exact source `text`, and a
+candidate kind of `dialogue_candidate`, `narration_candidate`,
+`attribution_candidate`, or `mixed_candidate`. Joining all span `text` values
+for one chunk or segment must equal the original active text.
+
+Speech Blocks atomic-unit payloads use stable local IDs (`u001`, `u002`, ...),
+contiguous `start_offset`/`end_offset` values, parent `source_span_id`, exact
+source `text`, and a structural kind of `dialogue`, `attribution`, `narration`,
+`separator`, or `mixed`. Joining all unit `text` values for one chunk or
+segment must equal the original active text. Speakable atomic units are the
+model-facing selection vocabulary for narrator-plus-character Speech Blocks.
+Separator-only and whitespace-only units are kept as source provenance but are
+not selectable and do not become persisted Speech Blocks.
+
 ## 7. Workflow Integration
 
 The text pipeline begins after cleanup has produced canonical cleaned text.
@@ -147,6 +186,8 @@ UI summaries aligned.
 records = cleanup_metadata_service.load_or_build_paragraph_records(project_root, cleaned_text)
 chunks = deterministic_chunking_service.chunk_text(project_root, cleaned_text)
 parts = speech_blocks_text_split_service.split_text_for_ai_context_budget(text, budget)
+source_spans = speech_blocks_text_split_service.build_source_spans(chunk_text)
+atomic_units = speech_blocks_text_split_service.build_atomic_speech_units(chunk_text, source_spans)
 ```
 
 ## 9. Validation And Tests
@@ -164,7 +205,9 @@ Focused tests:
 Minimum validation after changes:
 
 - `uv run python -m py_compile` for changed service files
-- targeted `uv run pytest` for the matching text-pipeline tests
+- targeted `uv run pytest` for the matching text-pipeline tests, especially
+  `tests/test_speech_blocks_text_split_service.py` after source-span or
+  atomic-unit changes
 
 ## 10. Limitations And Future Work
 
@@ -173,6 +216,9 @@ Minimum validation after changes:
   before committing them.
 - Text splitting uses conservative budget units rather than provider-specific
   tokenizers.
+- Source-span candidate kinds and atomic-unit structural kinds are prompt hints;
+  strict validation of model selections is owned by the Speech Blocks
+  normalization path.
 
 ## Documentation Review Notes
 

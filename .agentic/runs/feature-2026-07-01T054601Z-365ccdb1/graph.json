@@ -1,0 +1,1030 @@
+{
+  "access_mode": "standard",
+  "change_units": [
+    {
+      "evidence": [],
+      "id": "CU-SBCON-001",
+      "touched_paths": [
+        "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_normalization_service.py"
+      ]
+    },
+    {
+      "evidence": [],
+      "id": "CU-SBCON-002",
+      "touched_paths": [
+        "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py"
+      ]
+    },
+    {
+      "evidence": [],
+      "id": "CU-SBCON-003",
+      "touched_paths": [
+        "04_Software/AudioMancer/tests/test_speech_blocks_service.py"
+      ]
+    },
+    {
+      "evidence": [],
+      "id": "CU-SBCON-004",
+      "touched_paths": [
+        "05_SoftwareDocu/AudioMancer_Speech_Blocks_Service.md"
+      ]
+    },
+    {
+      "evidence": [],
+      "id": "CU-SBCON-005",
+      "touched_paths": [
+        "05_SoftwareDocu/AudioMancer_Speech_Blocks_Normalization_Service.md"
+      ]
+    },
+    {
+      "evidence": [],
+      "id": "CU-SBCON-006",
+      "touched_paths": [
+        ".agentic/requirements/functional.md"
+      ]
+    }
+  ],
+  "checks": [
+    {
+      "cites_requirement": [
+        "REQ-FUNC-040"
+      ],
+      "cites_spec": [
+        "SBCON-001",
+        "SBCON-003"
+      ],
+      "command": "uv run pytest -q tests/test_speech_blocks_service.py -k 'source_span_ids or invalid_span_or_speaker or previous_full_cast or same_narrator_boundary_state or accepts_changed_profile_and_budget_metadata or accepts_changed_scene_ambience_settings'",
+      "green_evidence": "E-0004",
+      "id": "CHK-SBCON-001",
+      "level": "test",
+      "path": "04_Software/AudioMancer/tests/test_speech_blocks_service.py",
+      "red_evidence": "E-0001",
+      "state": "green"
+    },
+    {
+      "cites_requirement": [
+        "REQ-FUNC-040"
+      ],
+      "cites_spec": [
+        "SBCON-002"
+      ],
+      "command": "uv run pytest -q tests/test_speech_blocks_service.py -k 'source_span_ids or invalid_span_or_speaker or previous_full_cast or same_narrator_boundary_state or accepts_changed_profile_and_budget_metadata or accepts_changed_scene_ambience_settings'",
+      "green_evidence": "E-0005",
+      "id": "CHK-SBCON-002",
+      "level": "test",
+      "path": "04_Software/AudioMancer/tests/test_speech_blocks_service.py",
+      "red_evidence": "E-0002",
+      "state": "green"
+    },
+    {
+      "cites_requirement": [
+        "REQ-FUNC-041"
+      ],
+      "cites_spec": [
+        "SBCON-004"
+      ],
+      "command": "uv run pytest -q tests/test_speech_blocks_service.py -k 'source_span_ids or invalid_span_or_speaker or previous_full_cast or same_narrator_boundary_state or accepts_changed_profile_and_budget_metadata or accepts_changed_scene_ambience_settings'",
+      "green_evidence": "E-0006",
+      "id": "CHK-SBCON-003",
+      "level": "test",
+      "path": "04_Software/AudioMancer/tests/test_speech_blocks_service.py",
+      "red_evidence": "E-0003",
+      "state": "green"
+    }
+  ],
+  "decisions": [
+    {
+      "approver": "human",
+      "chosen": "requirement",
+      "created_at": "2026-07-01T05:49:29+00:00",
+      "id": "D-0001",
+      "question": "Workflow stage route",
+      "rationale": "Human approved continuing from intake to requirement for Speech Blocks V2 Task 1."
+    },
+    {
+      "approver": "human",
+      "chosen": "check",
+      "created_at": "2026-07-01T05:52:44+00:00",
+      "id": "D-0002",
+      "question": "Workflow stage route",
+      "rationale": "Human approved continuing from requirement to check for Speech Blocks V2 Task 1."
+    },
+    {
+      "approver": "human",
+      "chosen": "intake",
+      "created_at": "2026-07-01T06:34:29+00:00",
+      "id": "D-0003",
+      "question": "Workflow stage route",
+      "rationale": "Human clarified Speech Blocks should be treated as a clean replacement implementation with one final contract, not a V2 compatibility layer. Redoing stages from intake."
+    },
+    {
+      "approver": "human",
+      "chosen": "requirement",
+      "created_at": "2026-07-01T07:02:25+00:00",
+      "id": "D-0004",
+      "question": "Workflow stage route",
+      "rationale": "Human approved continuing from revised intake to requirement with one final Speech Blocks span-ID contract and no V2 compatibility language."
+    },
+    {
+      "approver": "human",
+      "chosen": "check",
+      "created_at": "2026-07-01T07:17:03+00:00",
+      "id": "D-0005",
+      "question": "Workflow stage route",
+      "rationale": "Human approved continuing from revised requirement to check with single Speech Blocks span-ID contract naming."
+    },
+    {
+      "approver": "human",
+      "chosen": "implementation",
+      "created_at": "2026-07-01T07:25:38+00:00",
+      "id": "D-0006",
+      "question": "Workflow stage route",
+      "rationale": "Human approved continuing from check to implementation for the single Speech Blocks span-ID contract."
+    },
+    {
+      "approver": "human",
+      "chosen": "validation",
+      "created_at": "2026-07-01T07:47:57+00:00",
+      "id": "D-0007",
+      "question": "Workflow stage route",
+      "rationale": "Human approved continuing from implementation to validation for Task 1 Speech Blocks span-ID contract."
+    },
+    {
+      "approver": "human",
+      "chosen": "requirement",
+      "created_at": "2026-07-01T07:48:48+00:00",
+      "id": "D-0008",
+      "question": "Workflow stage route",
+      "rationale": "Validation traceability audit found REQ-FUNC-040 and REQ-FUNC-041 linked-test paths missing the repository test-root prefix."
+    },
+    {
+      "approver": "human",
+      "chosen": "validation",
+      "created_at": "2026-07-01T09:16:58+00:00",
+      "id": "D-0009",
+      "question": "Workflow stage route",
+      "rationale": "Human approved continuing from requirement correction back to validation."
+    },
+    {
+      "approver": "human",
+      "chosen": "requirement",
+      "created_at": "2026-07-01T09:24:04+00:00",
+      "id": "D-0010",
+      "question": "Workflow stage route",
+      "rationale": "Human asked to correct the traceability-test failures by fixing the requirement rows that lack valid verification."
+    },
+    {
+      "approver": "human",
+      "chosen": "E-0013 -> E-0039",
+      "created_at": "2026-07-01T09:26:09+00:00",
+      "id": "D-0011",
+      "question": "Evidence superseded",
+      "rationale": "Requirement verification rows were corrected; traceability audit now passes."
+    },
+    {
+      "approver": "human",
+      "chosen": "E-0015 -> E-0040",
+      "created_at": "2026-07-01T09:26:13+00:00",
+      "id": "D-0012",
+      "question": "Evidence superseded",
+      "rationale": "Requirement verification rows were corrected; traceability pytest now passes."
+    },
+    {
+      "approver": "human",
+      "chosen": "E-0018 -> E-0039",
+      "created_at": "2026-07-01T09:26:18+00:00",
+      "id": "D-0013",
+      "question": "Evidence superseded",
+      "rationale": "Requirement verification rows were corrected; traceability audit now passes."
+    },
+    {
+      "approver": "human",
+      "chosen": "E-0020 -> E-0040",
+      "created_at": "2026-07-01T09:26:23+00:00",
+      "id": "D-0014",
+      "question": "Evidence superseded",
+      "rationale": "Requirement verification rows were corrected; traceability pytest now passes."
+    },
+    {
+      "approver": "human",
+      "chosen": "E-0022 -> E-0039",
+      "created_at": "2026-07-01T09:26:28+00:00",
+      "id": "D-0015",
+      "question": "Evidence superseded",
+      "rationale": "Requirement verification rows were corrected; traceability audit now passes."
+    },
+    {
+      "approver": "human",
+      "chosen": "E-0029 -> E-0040",
+      "created_at": "2026-07-01T09:26:33+00:00",
+      "id": "D-0016",
+      "question": "Evidence superseded",
+      "rationale": "Requirement verification rows were corrected; traceability pytest now passes."
+    },
+    {
+      "approver": "human",
+      "chosen": "E-0033 -> E-0042",
+      "created_at": "2026-07-01T09:26:39+00:00",
+      "id": "D-0017",
+      "question": "Evidence superseded",
+      "rationale": "Requirement verification rows were corrected; configured test gate now passes."
+    },
+    {
+      "approver": "human",
+      "chosen": "validation",
+      "created_at": "2026-07-01T10:06:45+00:00",
+      "id": "D-0018",
+      "question": "Workflow stage route",
+      "rationale": "Human approved continuing from requirement corrections back to validation before delivery preflight."
+    },
+    {
+      "approver": "human",
+      "chosen": "delivery",
+      "created_at": "2026-07-01T10:15:15+00:00",
+      "id": "D-0019",
+      "question": "Workflow stage route",
+      "rationale": "Human approved continuing from validation to delivery preflight."
+    }
+  ],
+  "defects": [],
+  "evidence": [
+    {
+      "command": "uv run pytest -q tests/test_speech_blocks_service.py -k 'source_span_ids or invalid_span_or_speaker or previous_full_cast or same_narrator_boundary_state or accepts_changed_profile_and_budget_metadata or accepts_changed_scene_ambience_settings'",
+      "created_at": "2026-07-01T07:19:45+00:00",
+      "failure_kind": null,
+      "id": "E-0001",
+      "kind": "test-run",
+      "path": "04_Software/AudioMancer/tests/test_speech_blocks_service.py",
+      "result": "fail",
+      "stage": "check",
+      "status": "active",
+      "summary": "Focused Speech Blocks contract pytest run failed as expected: reconstruction still persists model-owned rewritten source_text/text instead of app-owned source spans.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "uv run pytest -q tests/test_speech_blocks_service.py -k 'source_span_ids or invalid_span_or_speaker or previous_full_cast or same_narrator_boundary_state or accepts_changed_profile_and_budget_metadata or accepts_changed_scene_ambience_settings'",
+      "created_at": "2026-07-01T07:19:57+00:00",
+      "failure_kind": null,
+      "id": "E-0002",
+      "kind": "test-run",
+      "path": "04_Software/AudioMancer/tests/test_speech_blocks_service.py",
+      "result": "fail",
+      "stage": "check",
+      "status": "active",
+      "summary": "Focused Speech Blocks contract pytest run failed as expected: invalid source span and speaker selections still fall through legacy normalization warnings instead of contract validation flags.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "uv run pytest -q tests/test_speech_blocks_service.py -k 'source_span_ids or invalid_span_or_speaker or previous_full_cast or same_narrator_boundary_state or accepts_changed_profile_and_budget_metadata or accepts_changed_scene_ambience_settings'",
+      "created_at": "2026-07-01T07:20:15+00:00",
+      "failure_kind": null,
+      "id": "E-0003",
+      "kind": "test-run",
+      "path": "04_Software/AudioMancer/tests/test_speech_blocks_service.py",
+      "result": "fail",
+      "stage": "check",
+      "status": "active",
+      "summary": "Focused Speech Blocks contract pytest run failed as expected: previous narrator-and-character partial state still resumes at next_chunk_index 1 instead of restarting.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "uv run pytest -q tests/test_speech_blocks_service.py -k 'source_span_ids or invalid_span_or_speaker or previous_full_cast or same_narrator_boundary_state or accepts_changed_profile_and_budget_metadata or accepts_changed_scene_ambience_settings'",
+      "created_at": "2026-07-01T07:41:15+00:00",
+      "failure_kind": null,
+      "id": "E-0004",
+      "kind": "test-run",
+      "path": null,
+      "result": "pass",
+      "stage": "implementation",
+      "status": "active",
+      "summary": "Focused Speech Blocks span reconstruction checks passed.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "uv run pytest -q tests/test_speech_blocks_service.py -k 'source_span_ids or invalid_span_or_speaker or previous_full_cast or same_narrator_boundary_state or accepts_changed_profile_and_budget_metadata or accepts_changed_scene_ambience_settings'",
+      "created_at": "2026-07-01T07:41:37+00:00",
+      "failure_kind": null,
+      "id": "E-0005",
+      "kind": "test-run",
+      "path": null,
+      "result": "pass",
+      "stage": "implementation",
+      "status": "active",
+      "summary": "Focused Speech Blocks invalid span and speaker selection checks passed.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "uv run pytest -q tests/test_speech_blocks_service.py -k 'source_span_ids or invalid_span_or_speaker or previous_full_cast or same_narrator_boundary_state or accepts_changed_profile_and_budget_metadata or accepts_changed_scene_ambience_settings'",
+      "created_at": "2026-07-01T07:41:49+00:00",
+      "failure_kind": null,
+      "id": "E-0006",
+      "kind": "test-run",
+      "path": null,
+      "result": "pass",
+      "stage": "implementation",
+      "status": "active",
+      "summary": "Focused Speech Blocks resume contract checks passed.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "uv run pytest -q tests/test_speech_blocks_service.py",
+      "created_at": "2026-07-01T07:42:06+00:00",
+      "failure_kind": null,
+      "id": "E-0007",
+      "kind": "test-run",
+      "path": null,
+      "result": "pass",
+      "stage": "implementation",
+      "status": "active",
+      "summary": "Full Speech Blocks service test file passed after implementation.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "uv run pytest -q tests/test_speech_blocks_normalization_service.py",
+      "created_at": "2026-07-01T07:42:15+00:00",
+      "failure_kind": null,
+      "id": "E-0008",
+      "kind": "test-run",
+      "path": null,
+      "result": "pass",
+      "stage": "implementation",
+      "status": "active",
+      "summary": "Speech Blocks normalization service tests passed after implementation.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "uv run ruff check src/audiomancer/services/speech_blocks_normalization_service.py src/audiomancer/services/speech_blocks_service.py tests/test_speech_blocks_service.py",
+      "created_at": "2026-07-01T07:42:24+00:00",
+      "failure_kind": null,
+      "id": "E-0009",
+      "kind": "scan",
+      "path": null,
+      "result": "pass",
+      "stage": "implementation",
+      "status": "active",
+      "summary": "Ruff check passed for changed Speech Blocks Python files.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "uv run python -m py_compile src/audiomancer/services/speech_blocks_normalization_service.py src/audiomancer/services/speech_blocks_service.py",
+      "created_at": "2026-07-01T07:42:36+00:00",
+      "failure_kind": null,
+      "id": "E-0010",
+      "kind": "test-run",
+      "path": null,
+      "result": "pass",
+      "stage": "implementation",
+      "status": "active",
+      "summary": "py_compile passed for changed Speech Blocks service modules.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "uv run python ../../02_Tools/audits/audit_codestyle.py --changed-only",
+      "created_at": "2026-07-01T07:46:02+00:00",
+      "failure_kind": null,
+      "id": "E-0011",
+      "kind": "scan",
+      "path": null,
+      "result": "pass",
+      "stage": "implementation",
+      "status": "active",
+      "summary": "Changed-only Python codestyle audit passed.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "agentic-workflow audit traceability",
+      "created_at": "2026-07-01T07:49:52+00:00",
+      "failure_kind": null,
+      "id": "E-0012",
+      "kind": "scan",
+      "path": null,
+      "result": "info",
+      "stage": "requirement",
+      "status": "active",
+      "summary": "Requirement linked-test paths for REQ-FUNC-040 and REQ-FUNC-041 were corrected; traceability rerun no longer reports those rows, but four pre-existing unrelated active requirements still lack resolvable verification.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "04_Software/AudioMancer/.venv/Scripts/python.exe 02_Tools/audits/audit_traceability.py",
+      "created_at": "2026-07-01T09:18:38+00:00",
+      "failure_kind": null,
+      "id": "E-0013",
+      "kind": "gate",
+      "path": null,
+      "result": "fail",
+      "stage": "validation",
+      "status": "superseded",
+      "summary": "test: 04_Software/AudioMancer/.venv/Scripts/python.exe 02_Tools/audits/audit_traceability.py",
+      "supersede_reason": "Requirement verification rows were corrected; traceability audit now passes.",
+      "superseded_by": "E-0039"
+    },
+    {
+      "command": "04_Software/AudioMancer/.venv/Scripts/python.exe 02_Tools/audits/audit_requirement_coverage.py",
+      "created_at": "2026-07-01T09:18:39+00:00",
+      "failure_kind": null,
+      "id": "E-0014",
+      "kind": "gate",
+      "path": null,
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "test: 04_Software/AudioMancer/.venv/Scripts/python.exe 02_Tools/audits/audit_requirement_coverage.py",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "04_Software/AudioMancer/.venv/Scripts/python.exe -m pytest -q 04_Software/AudioMancer/tests/test_traceability.py",
+      "created_at": "2026-07-01T09:18:40+00:00",
+      "failure_kind": null,
+      "id": "E-0015",
+      "kind": "gate",
+      "path": null,
+      "result": "fail",
+      "stage": "validation",
+      "status": "superseded",
+      "summary": "test: 04_Software/AudioMancer/.venv/Scripts/python.exe -m pytest -q 04_Software/AudioMancer/tests/test_traceability.py",
+      "supersede_reason": "Requirement verification rows were corrected; traceability pytest now passes.",
+      "superseded_by": "E-0040"
+    },
+    {
+      "command": "04_Software/AudioMancer/.venv/Scripts/python.exe 02_Tools/audits/audit_codestyle.py --changed-only",
+      "created_at": "2026-07-01T09:18:40+00:00",
+      "failure_kind": null,
+      "id": "E-0016",
+      "kind": "gate",
+      "path": null,
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "lint: 04_Software/AudioMancer/.venv/Scripts/python.exe 02_Tools/audits/audit_codestyle.py --changed-only",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "04_Software/AudioMancer/.venv/Scripts/python.exe 02_Tools/audits/audit_codestyle.py --changed-only",
+      "created_at": "2026-07-01T09:18:52+00:00",
+      "failure_kind": null,
+      "id": "E-0017",
+      "kind": "gate",
+      "path": null,
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "lint: 04_Software/AudioMancer/.venv/Scripts/python.exe 02_Tools/audits/audit_codestyle.py --changed-only",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "04_Software/AudioMancer/.venv/Scripts/python.exe 02_Tools/audits/audit_traceability.py",
+      "created_at": "2026-07-01T09:18:53+00:00",
+      "failure_kind": null,
+      "id": "E-0018",
+      "kind": "gate",
+      "path": null,
+      "result": "fail",
+      "stage": "validation",
+      "status": "superseded",
+      "summary": "test: 04_Software/AudioMancer/.venv/Scripts/python.exe 02_Tools/audits/audit_traceability.py",
+      "supersede_reason": "Requirement verification rows were corrected; traceability audit now passes.",
+      "superseded_by": "E-0039"
+    },
+    {
+      "command": "04_Software/AudioMancer/.venv/Scripts/python.exe 02_Tools/audits/audit_requirement_coverage.py",
+      "created_at": "2026-07-01T09:18:53+00:00",
+      "failure_kind": null,
+      "id": "E-0019",
+      "kind": "gate",
+      "path": null,
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "test: 04_Software/AudioMancer/.venv/Scripts/python.exe 02_Tools/audits/audit_requirement_coverage.py",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "04_Software/AudioMancer/.venv/Scripts/python.exe -m pytest -q 04_Software/AudioMancer/tests/test_traceability.py",
+      "created_at": "2026-07-01T09:18:55+00:00",
+      "failure_kind": null,
+      "id": "E-0020",
+      "kind": "gate",
+      "path": null,
+      "result": "fail",
+      "stage": "validation",
+      "status": "superseded",
+      "summary": "test: 04_Software/AudioMancer/.venv/Scripts/python.exe -m pytest -q 04_Software/AudioMancer/tests/test_traceability.py",
+      "supersede_reason": "Requirement verification rows were corrected; traceability pytest now passes.",
+      "superseded_by": "E-0040"
+    },
+    {
+      "command": "agentic-workflow invariants",
+      "created_at": "2026-07-01T09:19:26+00:00",
+      "failure_kind": null,
+      "id": "E-0021",
+      "kind": "scan",
+      "path": null,
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "Validation invariants passed; only advisory scope note for requirement register update.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "agentic-workflow audit traceability",
+      "created_at": "2026-07-01T09:19:26+00:00",
+      "failure_kind": "pre-existing-traceability-debt",
+      "id": "E-0022",
+      "kind": "scan",
+      "path": null,
+      "result": "fail",
+      "stage": "validation",
+      "status": "superseded",
+      "summary": "Traceability audit still fails on unrelated pre-existing requirements: REQ-DATA-005, REQ-FUNC-039, REQ-TEST-010, REQ-UX-034.",
+      "supersede_reason": "Requirement verification rows were corrected; traceability audit now passes.",
+      "superseded_by": "E-0039"
+    },
+    {
+      "command": "agentic-workflow audit coverage",
+      "created_at": "2026-07-01T09:19:26+00:00",
+      "failure_kind": null,
+      "id": "E-0023",
+      "kind": "scan",
+      "path": null,
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "Coverage audit passed with no issues.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "uv run python ../../02_Tools/audits/audit_documentation.py --changed-only",
+      "created_at": "2026-07-01T09:19:27+00:00",
+      "failure_kind": null,
+      "id": "E-0024",
+      "kind": "scan",
+      "path": null,
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "Changed-only documentation audit passed after component doc review notes.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "uv run python ../../02_Tools/audits/audit_codestyle.py --changed-only",
+      "created_at": "2026-07-01T09:19:40+00:00",
+      "failure_kind": null,
+      "id": "E-0025",
+      "kind": "scan",
+      "path": null,
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "Changed-only Python codestyle audit passed.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "uv run python -m py_compile src/audiomancer/services/speech_blocks_normalization_service.py src/audiomancer/services/speech_blocks_service.py",
+      "created_at": "2026-07-01T09:19:41+00:00",
+      "failure_kind": null,
+      "id": "E-0026",
+      "kind": "test-run",
+      "path": null,
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "py_compile passed for changed Speech Blocks service modules.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "uv run pytest -q tests/test_speech_blocks_service.py",
+      "created_at": "2026-07-01T09:19:41+00:00",
+      "failure_kind": null,
+      "id": "E-0027",
+      "kind": "test-run",
+      "path": null,
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "Full Speech Blocks service test file passed.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "uv run ruff check src/audiomancer/services/speech_blocks_normalization_service.py src/audiomancer/services/speech_blocks_service.py tests/test_speech_blocks_service.py",
+      "created_at": "2026-07-01T09:19:41+00:00",
+      "failure_kind": null,
+      "id": "E-0028",
+      "kind": "scan",
+      "path": null,
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "Ruff check passed for changed Python files.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "uv run pytest -q tests/test_traceability.py",
+      "created_at": "2026-07-01T09:19:53+00:00",
+      "failure_kind": "pre-existing-traceability-debt",
+      "id": "E-0029",
+      "kind": "test-run",
+      "path": null,
+      "result": "fail",
+      "stage": "validation",
+      "status": "superseded",
+      "summary": "Traceability pytest fails only on unrelated pre-existing requirements lacking verification.",
+      "supersede_reason": "Requirement verification rows were corrected; traceability pytest now passes.",
+      "superseded_by": "E-0040"
+    },
+    {
+      "command": "uv run pytest -q tests/test_speech_blocks_normalization_service.py",
+      "created_at": "2026-07-01T09:19:54+00:00",
+      "failure_kind": null,
+      "id": "E-0030",
+      "kind": "test-run",
+      "path": null,
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "Speech Blocks normalization service tests passed.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "uv run pytest -q tests/test_speech_blocks_service.py -k 'source_span_ids or invalid_span_or_speaker or previous_full_cast or same_narrator_boundary_state or accepts_changed_profile_and_budget_metadata or accepts_changed_scene_ambience_settings'",
+      "created_at": "2026-07-01T09:19:54+00:00",
+      "failure_kind": null,
+      "id": "E-0031",
+      "kind": "test-run",
+      "path": null,
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "Focused span-selection and resume-contract tests passed.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "git diff --check",
+      "created_at": "2026-07-01T09:19:55+00:00",
+      "failure_kind": null,
+      "id": "E-0032",
+      "kind": "scan",
+      "path": null,
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "git diff --check passed; only CRLF warning for functional requirement register.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "agentic-workflow gates run --name test --timeout 120",
+      "created_at": "2026-07-01T09:20:02+00:00",
+      "failure_kind": "pre-existing-traceability-debt",
+      "id": "E-0033",
+      "kind": "gate",
+      "path": null,
+      "result": "fail",
+      "stage": "validation",
+      "status": "superseded",
+      "summary": "Configured test gate fails because traceability audit and traceability pytest report unrelated pre-existing verification gaps.",
+      "supersede_reason": "Requirement verification rows were corrected; configured test gate now passes.",
+      "superseded_by": "E-0042"
+    },
+    {
+      "command": "agentic-workflow gates run --name lint --timeout 120",
+      "created_at": "2026-07-01T09:20:03+00:00",
+      "failure_kind": null,
+      "id": "E-0034",
+      "kind": "gate",
+      "path": null,
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "Configured lint gate passed.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "agentic-workflow impact --json <task files>",
+      "created_at": "2026-07-01T09:20:14+00:00",
+      "failure_kind": null,
+      "id": "E-0035",
+      "kind": "scan",
+      "path": null,
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "Impact analysis covered changed Task 1 files and did not recommend full regression.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "04_Software/AudioMancer/.venv/Scripts/python.exe 02_Tools/audits/audit_traceability.py",
+      "created_at": "2026-07-01T09:25:25+00:00",
+      "failure_kind": null,
+      "id": "E-0036",
+      "kind": "gate",
+      "path": null,
+      "result": "pass",
+      "stage": "requirement",
+      "status": "active",
+      "summary": "test: 04_Software/AudioMancer/.venv/Scripts/python.exe 02_Tools/audits/audit_traceability.py",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "04_Software/AudioMancer/.venv/Scripts/python.exe 02_Tools/audits/audit_requirement_coverage.py",
+      "created_at": "2026-07-01T09:25:26+00:00",
+      "failure_kind": null,
+      "id": "E-0037",
+      "kind": "gate",
+      "path": null,
+      "result": "pass",
+      "stage": "requirement",
+      "status": "active",
+      "summary": "test: 04_Software/AudioMancer/.venv/Scripts/python.exe 02_Tools/audits/audit_requirement_coverage.py",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "04_Software/AudioMancer/.venv/Scripts/python.exe -m pytest -q 04_Software/AudioMancer/tests/test_traceability.py",
+      "created_at": "2026-07-01T09:25:27+00:00",
+      "failure_kind": null,
+      "id": "E-0038",
+      "kind": "gate",
+      "path": null,
+      "result": "pass",
+      "stage": "requirement",
+      "status": "active",
+      "summary": "test: 04_Software/AudioMancer/.venv/Scripts/python.exe -m pytest -q 04_Software/AudioMancer/tests/test_traceability.py",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "agentic-workflow audit traceability",
+      "created_at": "2026-07-01T09:25:41+00:00",
+      "failure_kind": null,
+      "id": "E-0039",
+      "kind": "scan",
+      "path": null,
+      "result": "pass",
+      "stage": "requirement",
+      "status": "active",
+      "summary": "Requirement traceability audit passed after correcting verification links/status for prior blockers.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "uv run pytest -q tests/test_traceability.py",
+      "created_at": "2026-07-01T09:25:41+00:00",
+      "failure_kind": null,
+      "id": "E-0040",
+      "kind": "test-run",
+      "path": null,
+      "result": "pass",
+      "stage": "requirement",
+      "status": "active",
+      "summary": "Traceability pytest passed after correcting requirement verification rows.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "uv run pytest -q tests/test_settings_service.py::test_validate_settings_repairs_invalid_chunking_context_mode tests/test_ai_chunking_service.py::test_ai_chunking_context_modes_control_paragraph_caps tests/test_ai_settings_page.py::test_ai_settings_page_loads_and_builds_chunking_context_mode",
+      "created_at": "2026-07-01T09:25:42+00:00",
+      "failure_kind": null,
+      "id": "E-0041",
+      "kind": "test-run",
+      "path": null,
+      "result": "pass",
+      "stage": "requirement",
+      "status": "active",
+      "summary": "Affected requirement-linked chunking context tests passed.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "agentic-workflow gates run --name test --timeout 120",
+      "created_at": "2026-07-01T09:25:42+00:00",
+      "failure_kind": null,
+      "id": "E-0042",
+      "kind": "gate",
+      "path": null,
+      "result": "pass",
+      "stage": "requirement",
+      "status": "active",
+      "summary": "Configured test gate passed after correcting requirement verification rows.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "04_Software/AudioMancer/.venv/Scripts/python.exe 02_Tools/audits/audit_traceability.py",
+      "created_at": "2026-07-01T10:07:11+00:00",
+      "failure_kind": null,
+      "id": "E-0043",
+      "kind": "gate",
+      "path": null,
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "test: 04_Software/AudioMancer/.venv/Scripts/python.exe 02_Tools/audits/audit_traceability.py",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "04_Software/AudioMancer/.venv/Scripts/python.exe 02_Tools/audits/audit_requirement_coverage.py",
+      "created_at": "2026-07-01T10:07:11+00:00",
+      "failure_kind": null,
+      "id": "E-0044",
+      "kind": "gate",
+      "path": null,
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "test: 04_Software/AudioMancer/.venv/Scripts/python.exe 02_Tools/audits/audit_requirement_coverage.py",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "04_Software/AudioMancer/.venv/Scripts/python.exe -m pytest -q 04_Software/AudioMancer/tests/test_traceability.py",
+      "created_at": "2026-07-01T10:07:12+00:00",
+      "failure_kind": null,
+      "id": "E-0045",
+      "kind": "gate",
+      "path": null,
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "test: 04_Software/AudioMancer/.venv/Scripts/python.exe -m pytest -q 04_Software/AudioMancer/tests/test_traceability.py",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "04_Software/AudioMancer/.venv/Scripts/python.exe 02_Tools/audits/audit_codestyle.py --changed-only",
+      "created_at": "2026-07-01T10:07:13+00:00",
+      "failure_kind": null,
+      "id": "E-0046",
+      "kind": "gate",
+      "path": null,
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "lint: 04_Software/AudioMancer/.venv/Scripts/python.exe 02_Tools/audits/audit_codestyle.py --changed-only",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "agentic-workflow invariants; audit traceability; audit coverage; gates run; audit_documentation.py --changed-only; audit_codestyle.py --changed-only",
+      "created_at": "2026-07-01T10:07:24+00:00",
+      "failure_kind": null,
+      "id": "E-0047",
+      "kind": "scan",
+      "path": null,
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "Final validation invariants, traceability audit, coverage audit, documentation audit, code-style audit, and configured gates passed after requirement corrections.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "uv run pytest -q tests/test_speech_blocks_service.py tests/test_speech_blocks_normalization_service.py",
+      "created_at": "2026-07-01T10:07:25+00:00",
+      "failure_kind": null,
+      "id": "E-0048",
+      "kind": "test-run",
+      "path": null,
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "Combined Speech Blocks service and normalization tests passed.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "04_Software/AudioMancer/.venv/Scripts/python.exe 02_Tools/audits/audit_traceability.py",
+      "created_at": "2026-07-01T10:17:19+00:00",
+      "failure_kind": null,
+      "id": "E-0049",
+      "kind": "gate",
+      "path": null,
+      "result": "pass",
+      "stage": "delivery",
+      "status": "active",
+      "summary": "test: 04_Software/AudioMancer/.venv/Scripts/python.exe 02_Tools/audits/audit_traceability.py",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "04_Software/AudioMancer/.venv/Scripts/python.exe 02_Tools/audits/audit_requirement_coverage.py",
+      "created_at": "2026-07-01T10:17:19+00:00",
+      "failure_kind": null,
+      "id": "E-0050",
+      "kind": "gate",
+      "path": null,
+      "result": "pass",
+      "stage": "delivery",
+      "status": "active",
+      "summary": "test: 04_Software/AudioMancer/.venv/Scripts/python.exe 02_Tools/audits/audit_requirement_coverage.py",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "04_Software/AudioMancer/.venv/Scripts/python.exe -m pytest -q 04_Software/AudioMancer/tests/test_traceability.py",
+      "created_at": "2026-07-01T10:17:20+00:00",
+      "failure_kind": null,
+      "id": "E-0051",
+      "kind": "gate",
+      "path": null,
+      "result": "pass",
+      "stage": "delivery",
+      "status": "active",
+      "summary": "test: 04_Software/AudioMancer/.venv/Scripts/python.exe -m pytest -q 04_Software/AudioMancer/tests/test_traceability.py",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "04_Software/AudioMancer/.venv/Scripts/python.exe 02_Tools/audits/audit_codestyle.py --changed-only",
+      "created_at": "2026-07-01T10:17:21+00:00",
+      "failure_kind": null,
+      "id": "E-0052",
+      "kind": "gate",
+      "path": null,
+      "result": "pass",
+      "stage": "delivery",
+      "status": "active",
+      "summary": "lint: 04_Software/AudioMancer/.venv/Scripts/python.exe 02_Tools/audits/audit_codestyle.py --changed-only",
+      "supersede_reason": null,
+      "superseded_by": null
+    }
+  ],
+  "intent": {
+    "created_at": "2026-07-01T05:46:01+00:00",
+    "id": "I-0001",
+    "kind": "feature",
+    "scope_hint": [],
+    "statement": "Implement Task 1 from 0_Planning/Multilingual_Local_Model_Speech_Blocks_Plan.md as the single replacement Speech Blocks span-ID contract for narrator+character Speech Blocks, including internal SourceSpan, SpeechBlockModelSelection, and validation-result types; reconstruct saved block text from source spans; reject or ignore model-owned rewritten text; reset/regenerate incompatible old partial state without preserving prior contract compatibility; preserve same-narrator mode.",
+    "status": "draft"
+  },
+  "run_id": "feature-2026-07-01T054601Z-365ccdb1",
+  "spec_items": [
+    {
+      "examples": [
+        "A model block with source_span_ids ['s001', 's002'] and rewritten text still persists exact source text from spans s001 and s002."
+      ],
+      "id": "SBCON-001",
+      "statement": "For narrator-and-character Speech Blocks generation, the model response shall identify ordered source spans by stable source_span_ids, and AudioMancer shall reconstruct persisted source_text and text from those spans instead of trusting model-owned text or source_text fields.",
+      "status": "accepted",
+      "tag": "behavior",
+      "threshold": null
+    },
+    {
+      "examples": [
+        "A model block selecting ['s999'] or speaker_id 'missing-character' produces a validation failure instead of a persisted character block."
+      ],
+      "id": "SBCON-002",
+      "statement": "Speech Blocks validation shall reject unusable model selections, including unknown source span IDs, out-of-order source span selections, empty selections, duplicate selections that would reuse source text, and unknown speaker IDs.",
+      "status": "accepted",
+      "tag": "behavior",
+      "threshold": null
+    },
+    {
+      "examples": [],
+      "id": "SBCON-003",
+      "statement": "Speech Blocks shall preserve the persisted Speech Block fields required by review, UI, export, audio generation, and scene-ambience insertion, while deriving spoken source_text and text from source spans.",
+      "status": "accepted",
+      "tag": "property",
+      "threshold": "Existing same-file Speech Blocks tests that inspect persisted block IDs, approval fields, content_kind, speaker fields, source_language, source_text, text, warning_flags, and scene ambience behavior remain green after implementation."
+    },
+    {
+      "examples": [
+        "A running full-cast Speech Blocks state created before the span-ID contract restarts from chunk zero; a same_narrator state with valid boundary metadata still resumes from its recorded next chunk."
+      ],
+      "id": "SBCON-004",
+      "statement": "Speech Blocks resume shall treat narrator-and-character partial generation state created before the span-ID contract as non-resumable, but shall keep existing same-narrator boundary-ID resume behavior intact.",
+      "status": "accepted",
+      "tag": "behavior",
+      "threshold": null
+    }
+  ],
+  "stage": "delivery"
+}

@@ -96,6 +96,12 @@
       "REQ-FUNC-001"
     ]
   },
+  "04_Software/AudioMancer/tests/test_ai_chunking_service.py::test_ai_chunking_context_modes_control_paragraph_caps": {
+    "id": "04_Software/AudioMancer/tests/test_ai_chunking_service.py::test_ai_chunking_context_modes_control_paragraph_caps",
+    "requirement_ids": [
+      "REQ-FUNC-039"
+    ]
+  },
   "04_Software/AudioMancer/tests/test_ai_chunking_service.py::test_ai_chunking_continues_resume_when_budget_metadata_changes": {
     "id": "04_Software/AudioMancer/tests/test_ai_chunking_service.py::test_ai_chunking_continues_resume_when_budget_metadata_changes",
     "requirement_ids": [
@@ -282,6 +288,12 @@
     "id": "04_Software/AudioMancer/tests/test_ai_settings_page.py::test_ai_settings_page_default_selectors_are_stacked_in_workflow_order",
     "requirement_ids": [
       "REQ-UX-001"
+    ]
+  },
+  "04_Software/AudioMancer/tests/test_ai_settings_page.py::test_ai_settings_page_loads_and_builds_chunking_context_mode": {
+    "id": "04_Software/AudioMancer/tests/test_ai_settings_page.py::test_ai_settings_page_loads_and_builds_chunking_context_mode",
+    "requirement_ids": [
+      "REQ-UX-034"
     ]
   },
   "04_Software/AudioMancer/tests/test_ai_settings_page.py::test_ai_settings_page_loads_profiles_and_builds_merged_settings": {
@@ -2302,6 +2314,12 @@
       "REQ-NFR-004"
     ]
   },
+  "04_Software/AudioMancer/tests/test_llm_provider_service.py::test_chat_json_sends_operation_schema_response_format_for_local_backends": {
+    "id": "04_Software/AudioMancer/tests/test_llm_provider_service.py::test_chat_json_sends_operation_schema_response_format_for_local_backends",
+    "requirement_ids": [
+      "REQ-FUNC-044"
+    ]
+  },
   "04_Software/AudioMancer/tests/test_llm_provider_service.py::test_chat_json_sends_response_format_when_structured_output_is_supported": {
     "id": "04_Software/AudioMancer/tests/test_llm_provider_service.py::test_chat_json_sends_response_format_when_structured_output_is_supported",
     "requirement_ids": [
@@ -2792,6 +2810,12 @@
     "id": "04_Software/AudioMancer/tests/test_narrator_definition_state_service.py::test_narrator_state_service_uses_original_language_and_no_default_selection",
     "requirement_ids": [
       "REQ-FUNC-025"
+    ]
+  },
+  "04_Software/AudioMancer/tests/test_narrator_profile_generation_service.py::test_narrator_profile_generation_accepts_bounded_preview_word_overage": {
+    "id": "04_Software/AudioMancer/tests/test_narrator_profile_generation_service.py::test_narrator_profile_generation_accepts_bounded_preview_word_overage",
+    "requirement_ids": [
+      "REQ-FUNC-056"
     ]
   },
   "04_Software/AudioMancer/tests/test_narrator_profile_generation_service.py::test_narrator_profile_generation_adds_operator_prompt_rules": {
@@ -3472,6 +3496,12 @@
       "REQ-DATA-004"
     ]
   },
+  "04_Software/AudioMancer/tests/test_settings_service.py::test_validate_settings_repairs_invalid_chunking_context_mode": {
+    "id": "04_Software/AudioMancer/tests/test_settings_service.py::test_validate_settings_repairs_invalid_chunking_context_mode",
+    "requirement_ids": [
+      "REQ-DATA-005"
+    ]
+  },
   "04_Software/AudioMancer/tests/test_settings_service.py::test_validate_settings_repairs_invalid_scroll_steps": {
     "id": "04_Software/AudioMancer/tests/test_settings_service.py::test_validate_settings_repairs_invalid_scroll_steps",
     "requirement_ids": [
@@ -3726,6 +3756,18 @@
       "REQ-FUNC-032"
     ]
   },
+  "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_local_model_guidance_is_honest_about_ai_settings_and_lmstudio_presets": {
+    "id": "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_local_model_guidance_is_honest_about_ai_settings_and_lmstudio_presets",
+    "requirement_ids": [
+      "REQ-PLAT-004"
+    ]
+  },
+  "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_narrator_boundary_candidates_skip_open_quote_sentence_boundary": {
+    "id": "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_narrator_boundary_candidates_skip_open_quote_sentence_boundary",
+    "requirement_ids": [
+      "REQ-FUNC-055"
+    ]
+  },
   "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_normalize_block_text_only_strips_wrapping_dialogue_quotes": {
     "id": "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_normalize_block_text_only_strips_wrapping_dialogue_quotes",
     "requirement_ids": [
@@ -3744,6 +3786,12 @@
       "REQ-FUNC-032"
     ]
   },
+  "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_normalize_chunk_blocks_ignores_separator_coverage_and_rejects_separator_selection": {
+    "id": "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_normalize_chunk_blocks_ignores_separator_coverage_and_rejects_separator_selection",
+    "requirement_ids": [
+      "REQ-FUNC-054"
+    ]
+  },
   "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_normalize_chunk_blocks_narrator_only_preserves_delimiters": {
     "id": "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_normalize_chunk_blocks_narrator_only_preserves_delimiters",
     "requirement_ids": [
@@ -3760,6 +3808,18 @@
     "id": "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_normalize_chunk_blocks_preserves_ai_dialogue_and_attribution_boundaries",
     "requirement_ids": [
       "REQ-FUNC-032"
+    ]
+  },
+  "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_normalize_chunk_blocks_reconstructs_text_from_source_span_ids": {
+    "id": "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_normalize_chunk_blocks_reconstructs_text_from_source_span_ids",
+    "requirement_ids": [
+      "REQ-FUNC-040"
+    ]
+  },
+  "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_normalize_chunk_blocks_rejects_dialogue_attribution_unit_merge": {
+    "id": "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_normalize_chunk_blocks_rejects_dialogue_attribution_unit_merge",
+    "requirement_ids": [
+      "REQ-FUNC-052"
     ]
   },
   "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_normalize_chunk_blocks_resolves_unique_speaker_suffix_alias": {
@@ -3796,6 +3856,12 @@
     "id": "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_normalize_narrator_boundary_blocks_falls_back_on_unusable_ids",
     "requirement_ids": [
       "REQ-FUNC-032"
+    ]
+  },
+  "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_normalize_narrator_boundary_blocks_rejects_open_quote_split": {
+    "id": "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_normalize_narrator_boundary_blocks_rejects_open_quote_split",
+    "requirement_ids": [
+      "REQ-FUNC-055"
     ]
   },
   "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_null_like_started_at_creates_timestamped_speech_blocks_log": {
@@ -3852,6 +3918,30 @@
       "REQ-FUNC-032"
     ]
   },
+  "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_speaker_catalog_preserves_character_aliases_for_prompt": {
+    "id": "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_speaker_catalog_preserves_character_aliases_for_prompt",
+    "requirement_ids": [
+      "REQ-FUNC-048"
+    ]
+  },
+  "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_speech_blocks_adjacent_prompts_preserve_dialogue_attribution_context": {
+    "id": "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_speech_blocks_adjacent_prompts_preserve_dialogue_attribution_context",
+    "requirement_ids": [
+      "REQ-FUNC-049"
+    ]
+  },
+  "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_speech_blocks_atomic_prompt_includes_aliases_and_attribution_hints": {
+    "id": "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_speech_blocks_atomic_prompt_includes_aliases_and_attribution_hints",
+    "requirement_ids": [
+      "REQ-FUNC-053"
+    ]
+  },
+  "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_speech_blocks_atomic_prompt_omits_separator_only_units": {
+    "id": "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_speech_blocks_atomic_prompt_omits_separator_only_units",
+    "requirement_ids": [
+      "REQ-FUNC-054"
+    ]
+  },
   "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_speech_blocks_online_profile_uses_direct_context_fraction": {
     "id": "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_speech_blocks_online_profile_uses_direct_context_fraction",
     "requirement_ids": [
@@ -3861,7 +3951,14 @@
   "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_speech_blocks_production_prompt_contract_matrix": {
     "id": "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_speech_blocks_production_prompt_contract_matrix",
     "requirement_ids": [
-      "REQ-FUNC-032"
+      "REQ-FUNC-032",
+      "REQ-FUNC-047"
+    ]
+  },
+  "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_speech_blocks_prompt_uses_atomic_units_and_forbids_text_rewrites": {
+    "id": "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_speech_blocks_prompt_uses_atomic_units_and_forbids_text_rewrites",
+    "requirement_ids": [
+      "REQ-FUNC-052"
     ]
   },
   "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_speech_blocks_resume_accepts_changed_profile_and_budget_metadata": {
@@ -3882,10 +3979,23 @@
       "REQ-FUNC-032"
     ]
   },
+  "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_speech_blocks_resume_restarts_previous_full_cast_state": {
+    "id": "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_speech_blocks_resume_restarts_previous_full_cast_state",
+    "requirement_ids": [
+      "REQ-FUNC-041"
+    ]
+  },
   "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_start_generation_appends_and_persists_operator_speech_block_rules": {
     "id": "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_start_generation_appends_and_persists_operator_speech_block_rules",
     "requirement_ids": [
       "REQ-FUNC-032"
+    ]
+  },
+  "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_start_generation_fallback_after_repair_failure_preserves_source_order_and_logs_compactly": {
+    "id": "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_start_generation_fallback_after_repair_failure_preserves_source_order_and_logs_compactly",
+    "requirement_ids": [
+      "REQ-DATA-006",
+      "REQ-FUNC-046"
     ]
   },
   "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_start_generation_preserves_french_dash_and_guillemet_source_spans": {
@@ -3898,6 +4008,12 @@
     "id": "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_start_generation_rejects_profile_with_too_little_ai_context",
     "requirement_ids": [
       "REQ-FUNC-032"
+    ]
+  },
+  "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_start_generation_repairs_semantically_invalid_source_span_selection": {
+    "id": "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_start_generation_repairs_semantically_invalid_source_span_selection",
+    "requirement_ids": [
+      "REQ-FUNC-045"
     ]
   },
   "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_start_generation_splits_oversized_chunk_by_ai_context_budget": {
@@ -3995,6 +4111,30 @@
     "requirement_ids": [
       "REQ-FUNC-033",
       "REQ-NFR-014"
+    ]
+  },
+  "04_Software/AudioMancer/tests/test_speech_blocks_text_split_service.py::test_build_atomic_speech_units_classifies_multilingual_attribution_patterns": {
+    "id": "04_Software/AudioMancer/tests/test_speech_blocks_text_split_service.py::test_build_atomic_speech_units_classifies_multilingual_attribution_patterns",
+    "requirement_ids": [
+      "REQ-FUNC-051"
+    ]
+  },
+  "04_Software/AudioMancer/tests/test_speech_blocks_text_split_service.py::test_build_atomic_speech_units_splits_many_elements_inside_one_span": {
+    "id": "04_Software/AudioMancer/tests/test_speech_blocks_text_split_service.py::test_build_atomic_speech_units_splits_many_elements_inside_one_span",
+    "requirement_ids": [
+      "REQ-FUNC-050"
+    ]
+  },
+  "04_Software/AudioMancer/tests/test_speech_blocks_text_split_service.py::test_build_source_spans_classifies_multilingual_dialogue_conventions": {
+    "id": "04_Software/AudioMancer/tests/test_speech_blocks_text_split_service.py::test_build_source_spans_classifies_multilingual_dialogue_conventions",
+    "requirement_ids": [
+      "REQ-FUNC-043"
+    ]
+  },
+  "04_Software/AudioMancer/tests/test_speech_blocks_text_split_service.py::test_build_source_spans_preserves_exact_text_and_paragraph_boundaries": {
+    "id": "04_Software/AudioMancer/tests/test_speech_blocks_text_split_service.py::test_build_source_spans_preserves_exact_text_and_paragraph_boundaries",
+    "requirement_ids": [
+      "REQ-FUNC-042"
     ]
   },
   "04_Software/AudioMancer/tests/test_speech_blocks_text_split_service.py::test_split_text_for_ai_context_budget_preserves_ordered_segments": {

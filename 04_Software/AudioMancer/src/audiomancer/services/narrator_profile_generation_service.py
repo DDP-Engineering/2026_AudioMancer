@@ -14,7 +14,7 @@
          generation report/state sidecars without generating narrator audio.
 @author Eng. Dan Dumitru Pasare
 @date 2026-05-11
-@version 0.4.2
+@version 0.4.3
 """
 
 # IMPORTS
@@ -70,6 +70,12 @@ SOURCE_CLEANED_TEXT = "cleaned_text"
 
 # @brief Stable operation-mode token for AI-generated narrator profiles.
 NARRATOR_PROFILE_GENERATION_MODE_AI_ASSISTED = "ai_assisted"
+
+# @brief Target maximum spoken-word count requested from AI for narrator preview text.
+_NARRATOR_PREVIEW_TARGET_MAX_WORDS = 24
+
+# @brief Bounded generated-preview overage tolerated before rejecting model output.
+_NARRATOR_PREVIEW_WORD_OVERAGE_TOLERANCE = 6
 
 # @brief Persisted narrator-profile-generation report payload type.
 NarratorProfileGenerationReportPayload = dict[str, object]
@@ -1062,7 +1068,7 @@ def _validated_generated_profiles(
     @exception  ValueError Raised when the AI response does not satisfy the contract.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-05-11
-    @version    0.2.0
+    @version    0.3.0
     """
     raw_profiles = response_payload.get("profiles", [])
     if not isinstance(raw_profiles, list) or len(raw_profiles) != requested_count:
@@ -1072,6 +1078,7 @@ def _validated_generated_profiles(
     gender_counts = {"male": 0, "female": 0}
     preview_limit = max(1, int(preview_text_character_limit or config.DEFAULT_TTS_PREVIEW_TEXT_CHARACTER_LIMIT))
     min_preview_words = _minimum_preview_word_count()
+    max_preview_words = _maximum_preview_word_count()
     for index, raw_profile in enumerate(raw_profiles, start=1):
         if not isinstance(raw_profile, dict):
             raise ValueError(f"Generated narrator profile #{index} is not an object.")
@@ -1098,8 +1105,13 @@ def _validated_generated_profiles(
                 f"Generated narrator profile '{display_name}' preview_text is too short for a Qwen TTS reference "
                 f"({preview_word_count} words, minimum {min_preview_words})."
             )
-        if "\n" in preview_text or len(preview_text.split()) > 24:
+        if "\n" in preview_text:
             raise ValueError(f"Generated narrator profile '{display_name}' preview_text must be one short sentence.")
+        if preview_word_count > max_preview_words:
+            raise ValueError(
+                f"Generated narrator profile '{display_name}' preview_text is too long for a narrator sample "
+                f"({preview_word_count} words, maximum {max_preview_words})."
+            )
         if len(preview_text) > preview_limit:
             raise ValueError(
                 f"Generated narrator profile '{display_name}' preview_text exceeds {preview_limit} characters."
@@ -1137,6 +1149,18 @@ def _minimum_preview_word_count() -> int:
             + 0.999
         ),
     )
+
+
+def _maximum_preview_word_count() -> int:
+    """
+    @brief      Return the bounded maximum accepted narrator preview word estimate.
+    @return     Maximum accepted preview word estimate.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-03
+    @version    0.1.0
+    """
+    return _NARRATOR_PREVIEW_TARGET_MAX_WORDS + _NARRATOR_PREVIEW_WORD_OVERAGE_TOLERANCE
 
 
 def _build_model_settings(

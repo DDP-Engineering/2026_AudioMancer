@@ -18,7 +18,7 @@ but the profiles stay conservative because long context windows increase KV
 cache memory and can make generation much slower.
 
 The model information below was checked from LM Studio Hub and model cards on
-2026-04-27.
+2026-07-01.
 
 ## 2. LM Studio Profile Setup
 
@@ -37,6 +37,10 @@ payload and falls back once without that field if the provider rejects it. Keep
 `Structured output supported` disabled until a specific LM Studio build and
 model revision pass the prompt-contract tests for the operation.
 
+AudioMancer does not send top-p, top-k, repeat penalty, seed, or reasoning mode
+to LM Studio. Configure those sampler and reasoning controls in LM Studio
+presets for the loaded model.
+
 ## 3. Recommended Profiles
 
 | Operation | Recommended LM Studio model | Fallback model | Purpose | Temperature | Context Window | Max Output Tokens | Timeout (s) | Structured output |
@@ -45,7 +49,7 @@ model revision pass the prompt-contract tests for the operation.
 | AI Chunking | `qwen/qwen3-30b-a3b-2507` | `mistralai/mistral-small-3.2` | Long-context semantic and scene boundary detection across multilingual text. | `0.05` | `65536` | `12288` | `1200` | `false` |
 | AI Translation | `google/gemma-3-27b` | `qwen/qwen3-30b-a3b-2507` | Multilingual literary translation on a model that still fits the local hardware class. | `0.15` or `0.2` | `32768` | `8192` | `1800` | `false` |
 | Character Discovery | `qwen/qwen3-30b-a3b-2507` | `mistralai/mistral-small-3.2` | Source-grounded character identification, aliases, and voice-definition handoff quality. | `0.05` | `65536` | `12288` | `1200` | `false` |
-| Speech Blocks | `qwen/qwen3-30b-a3b-2507` | `mistralai/mistral-small-3.2` | Dialogue segmentation and speaker attribution with strong multilingual context handling. | `0.0` or `0.05` | `65536` | `16384` | `1500` | `false` |
+| Speech Blocks | `qwen/qwen3.6-27b` | `qwen/qwen3.6-35b-a3b`; quality fallback: `google/gemma-4-31b`; fast fallback: `openai/gpt-oss-20b` | Dialogue source-span selection and speaker attribution with strong multilingual and Romanian punctuation handling. | `0.1` or `0.2` | `65535`; use `131072` only for large/debug runs | `16384` | `1500` | `false` until locally verified |
 
 ## 4. Default Profile Assignment
 
@@ -55,7 +59,7 @@ Recommended default selectors:
 - `Default Chunking Profile`: `Chunking_LMStudio_Qwen3_30B_A3B_2507`
 - `Default Translation Profile`: `Translation_LMStudio_Gemma3_27B`
 - `Default Character Extraction Profile`: `CharacterDiscovery_LMStudio_Qwen3_30B_A3B_2507`
-- `Default Speech Blocks Profile`: `SpeechBlocks_LMStudio_Qwen3_30B_A3B_2507`
+- `Default Speech Blocks Profile`: `SpeechBlocks_LMStudio_Qwen3_6_27B`
 
 ## 5. Hardware And Quantization Notes
 
@@ -78,15 +82,18 @@ Recommended default selectors:
 
 - For JSON-producing operations, keep temperature near zero and prefer
   regeneration over creative sampling.
-- Use Qwen3 30B-A3B 2507 in non-thinking mode for Character Discovery and Speech
-  Blocks. The LM Studio profile is useful here because it does not emit
-  `<think>` blocks.
+- Use `qwen/qwen3.6-27b` for Speech Blocks when it fits the local hardware.
+  Configure LM Studio with temperature `0.1` to `0.2`, top-p `0.8` to `0.9`,
+  top-k `20` to `40`, repeat penalty `1.05` to `1.10`, fixed seed only for
+  evaluation reruns, and reasoning disabled or low when the model exposes that
+  control.
+- Use Qwen3 30B-A3B 2507 in non-thinking mode for Character Discovery. The LM
+  Studio profile is useful here because it does not emit `<think>` blocks.
 - Mistral Small 3.2 is the safest fallback when a local model starts producing
   invalid JSON or repetitive output.
-- gpt-oss-20b is useful as a fast local fallback for cleanup and chunking, but
-  set its LM Studio reasoning effort to low and verify JSON output before using
-  it in production workflows. Avoid it for Speech Blocks until prompt-contract
-  tests prove that reasoning text cannot leak into JSON.
+- gpt-oss-20b is useful as a fast local fallback for cleanup, chunking, and
+  emergency Speech Blocks reruns, but set its LM Studio reasoning effort to low
+  and verify JSON output before using it in production workflows.
 - Translation is the operation most likely to expose local-model quality limits.
   For final production translation, compare Gemma 3 27B and Qwen3 30B-A3B on a
   reviewed sample before committing to one model for a full book.
@@ -99,7 +106,7 @@ Suggested profile labels:
 - `Chunking_LMStudio_Qwen3_30B_A3B_2507`
 - `Translation_LMStudio_Gemma3_27B`
 - `CharacterDiscovery_LMStudio_Qwen3_30B_A3B_2507`
-- `SpeechBlocks_LMStudio_Qwen3_30B_A3B_2507`
+- `SpeechBlocks_LMStudio_Qwen3_6_27B`
 - `Fallback_LMStudio_gpt-oss-20b`
 
 Use the same local base URL for all LM Studio profiles:
