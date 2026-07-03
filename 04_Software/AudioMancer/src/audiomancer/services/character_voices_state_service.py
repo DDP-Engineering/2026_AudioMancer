@@ -32,42 +32,6 @@ from audiomancer.services import (
     voiceweaver_runtime_service,
 )
 
-
-def build_character_voices_profile_state(
-    settings_payload: dict[str, object] | None,
-    selected_profile_id: str | None = None,
-) -> dict[str, object]:
-    """
-    @brief      Build the enabled AI-profile selector state for Character Voices.
-    @param[in]  settings_payload Persisted application settings payload.
-    @param[in]  selected_profile_id Preferred profile identifier if available.
-    @return     Selector entries plus resolved selected profile id.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-23
-    @version    0.1.0
-    """
-    if not isinstance(settings_payload, dict):
-        return {"entries": [], "selected_profile_id": None}
-    raw_profiles = settings_payload.get("llm_profiles", [])
-    if not isinstance(raw_profiles, list):
-        return {"entries": [], "selected_profile_id": None}
-    entries: list[tuple[str, str | None]] = []
-    enabled_ids: list[str] = []
-    for profile in raw_profiles:
-        if not isinstance(profile, dict) or not bool(profile.get("enabled", True)):
-            continue
-        profile_id = str(profile.get("id", "")).strip()
-        if not profile_id:
-            continue
-        entries.append((str(profile.get("label", "")).strip() or profile_id, profile_id))
-        enabled_ids.append(profile_id)
-    resolved_selected_id = (
-        selected_profile_id if selected_profile_id in enabled_ids else (enabled_ids[0] if enabled_ids else None)
-    )
-    return {"entries": entries, "selected_profile_id": resolved_selected_id}
-
-
 def build_character_voices_state(
     project_root: Path | None,
     manifest: dict[str, object] | None,

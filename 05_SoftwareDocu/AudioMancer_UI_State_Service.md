@@ -178,6 +178,7 @@ button.setText(strings["speech_blocks.save_block"])
 Documentation audit status:
 
 - reviewed against the current implementation on 2026-06-08
+- Character Voices selector cleanup reviewed on 2026-07-03
 
 Focused tests:
 

@@ -553,10 +553,9 @@
   },
   "REQ-FUNC-015": {
     "created_on": "2026-06-09 09:50",
-    "last_updated": "2026-06-11 16:28",
+    "last_updated": "2026-07-03 09:45",
     "line_number": 26,
     "linked_tests": [
-      "04_Software/AudioMancer/tests/test_character_voices_state_service.py::test_character_voices_profile_state_uses_enabled_profiles",
       "04_Software/AudioMancer/tests/test_character_voices_state_service.py::test_state_contains_narrator_first_and_approved_translated_language",
       "04_Software/AudioMancer/tests/test_character_voices_state_service.py::test_state_initializes_character_preview_text_from_locked_voice_language",
       "04_Software/AudioMancer/tests/test_character_voices_state_service.py::test_state_same_narrator_mode_disables_character_edit_and_generate",
@@ -569,7 +568,7 @@
       "04_Software/AudioMancer/src/audiomancer/services/character_voices_state_service.py"
     ],
     "req_id": "REQ-FUNC-015",
-    "requirement": "Character Voices State Service shall satisfy page-state shaping, selected-language resolution, same-narrator state, missing-sample warnings, and read-only unchanged refresh behavior covered by the linked automated tests.",
+    "requirement": "Character Voices State Service shall satisfy page-state shaping, selected-language resolution, same-narrator state, missing-sample warnings, and read-only unchanged refresh behavior covered by the linked automated tests without carrying AI-profile selector state.",
     "source_file": ".agentic/requirements/functional.md",
     "status": "Active",
     "verification": "Automated test"
@@ -2647,7 +2646,7 @@
   },
   "REQ-UX-009": {
     "created_on": "2026-06-09 09:50",
-    "last_updated": "2026-06-09 09:50",
+    "last_updated": "2026-07-03 09:45",
     "line_number": 20,
     "linked_tests": [
       "04_Software/AudioMancer/tests/test_character_voices_page.py::test_character_voices_page_narrator_target_is_preview_only",
@@ -2660,12 +2659,12 @@
       "04_Software/AudioMancer/tests/test_character_voices_page.py::test_character_voices_page_matches_translation_notes_and_narrator_editor_sizing"
     ],
     "priority": "Must",
-    "rationale": "Keeps operator-facing workflow behavior predictable and aligned with persisted project state.",
+    "rationale": "Keeps operator-facing workflow behavior predictable and aligned with persisted project state, with no AI profile label or selector in the Character Voices header.",
     "related_components": [
       "04_Software/AudioMancer/src/audiomancer/ui/pages/character_voices_page.py"
     ],
     "req_id": "REQ-UX-009",
-    "requirement": "Character Voices Page shall satisfy the behavior, state transitions, validation rules, and edge cases covered by the linked automated tests.",
+    "requirement": "Character Voices Page shall satisfy the behavior, state transitions, validation rules, and edge cases covered by the linked automated tests while keeping Character Voices sample generation independent of AI-profile selection.",
     "source_file": ".agentic/requirements/ux_workflow.md",
     "status": "Active",
     "verification": "Automated test"

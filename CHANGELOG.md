@@ -10,6 +10,17 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [1.6.2] - 2026-07-03
+
+### Changed
+
+- Removed the unused Character Voices AI Profile selector and its page-state
+  wiring; character sample generation continues to use the configured
+  VoiceWeaver/Qwen TTS runtime.
+- Project package metadata and `audiomancer.__version__` were updated to
+  `1.6.2`.
+- Offline English and Romanian help bundles were updated to version `1.6.2`.
+
 ## [1.6.1] - 2026-07-03
 
 ### Changed
