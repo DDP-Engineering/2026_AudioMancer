@@ -31,30 +31,17 @@ from audiomancer.services import (
 )
 
 
-def test_character_voices_profile_state_uses_enabled_profiles() -> None:
+def test_character_voices_state_service_omits_ai_profile_selector_builder() -> None:
     """
-    @brief      Verify Character Voices AI profile selector state uses enabled profiles only.
+    @brief      Verify Character Voices no longer exposes AI-profile selector state.
+    @details    Covers SPEC-CV-AI-SELECTOR-REMOVAL and REQ-FUNC-015.
     @return     None.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-23
-    @version    0.1.0
+    @date       2026-07-03
+    @version    0.2.0
     """
-    profile_state = character_voices_state_service.build_character_voices_profile_state(
-        {
-            "llm_profiles": [
-                {"id": "disabled-profile", "label": "Disabled Profile", "enabled": False},
-                {"id": "profile-1", "label": "Profile One", "enabled": True},
-                {"id": "profile-2", "label": "Profile Two", "enabled": True},
-            ],
-        },
-        "profile-2",
-    )
-
-    assert profile_state == {
-        "entries": [("Profile One", "profile-1"), ("Profile Two", "profile-2")],
-        "selected_profile_id": "profile-2",
-    }
+    assert hasattr(character_voices_state_service, "build_character_voices_profile_state") is False
 
 
 def test_state_contains_narrator_first_and_approved_translated_language(tmp_path) -> None:

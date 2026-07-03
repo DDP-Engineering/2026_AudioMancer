@@ -38,6 +38,8 @@ It does not:
 
 - own the selected narrator profile itself
 - own the selected project voice language selector
+- own or expose an AI profile selector; sample generation uses the configured
+  VoiceWeaver runtime and discovered Qwen voice-designer capability
 - own global VoiceWeaver runtime settings
 - implement `Speech Blocks`, `Audio Blocks`, or `Audio Assembly`
 

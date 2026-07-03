@@ -23,7 +23,6 @@ from copy import deepcopy
 
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
-    QComboBox,
     QGroupBox,
     QHBoxLayout,
     QLabel,
@@ -71,7 +70,6 @@ class CharacterVoicesPage(QWidget):
         self._preview_active = False
         self._ui_language = "en"
         self._targets: list[dict[str, object]] = []
-        self._has_ai_profiles = False
         self._current_target_id: str | None = None
         self._selected_voice_language = ""
         self._loading_state = False
@@ -91,12 +89,6 @@ class CharacterVoicesPage(QWidget):
         self._title_label = QLabel("<h2>Character Voices</h2>")
         title_row.addWidget(self._title_label)
         title_row.addStretch(1)
-        self._ai_profile_label = QLabel("AI Profile", self)
-        self._ai_profile_label.setEnabled(False)
-        title_row.addWidget(self._ai_profile_label)
-        self._ai_profile_combo = QComboBox(self)
-        self._ai_profile_combo.addItem("(none)", None)
-        title_row.addWidget(self._ai_profile_combo)
         self._generate_missing_samples_button = QPushButton("Generate Character Samples", self)
         self._generate_missing_samples_button.clicked.connect(self.generate_missing_samples_requested.emit)
         title_row.addWidget(self._generate_missing_samples_button)
@@ -324,50 +316,6 @@ class CharacterVoicesPage(QWidget):
         self._status_edit.setPlainText("\n".join(line for line in status_lines if str(line).strip()))
         self._apply_control_state()
 
-    def set_ai_profiles(
-        self,
-        entries: list[tuple[str, str | None]],
-        selected_profile_id: str | None,
-    ) -> None:
-        """
-        @brief      Populate the Character Voices AI-profile selector.
-        @param[in]  entries Ordered profile label/id entries for the selector.
-        @param[in]  selected_profile_id Profile id that should be selected.
-        @return     None.
-        @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-23
-        @version    0.1.0
-        """
-        self._ai_profile_combo.blockSignals(True)
-        self._ai_profile_combo.clear()
-        if entries:
-            for label, profile_id in entries:
-                self._ai_profile_combo.addItem(label, profile_id)
-            selected_index = next(
-                (index for index, (_label, profile_id) in enumerate(entries) if profile_id == selected_profile_id),
-                0,
-            )
-            self._ai_profile_combo.setCurrentIndex(selected_index)
-        else:
-            self._ai_profile_combo.addItem(ui_state_service.translate("ai_settings.none", self._ui_language), None)
-            self._ai_profile_combo.setCurrentIndex(0)
-        self._ai_profile_combo.blockSignals(False)
-        self._has_ai_profiles = bool(entries)
-        self._apply_control_state()
-
-    def current_ai_profile_id(self) -> str | None:
-        """
-        @brief      Return the selected Character Voices AI profile id.
-        @return     Selected AI profile id or `None`.
-        @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-23
-        @version    0.1.0
-        """
-        value = self._ai_profile_combo.currentData()
-        return None if value in (None, "") else str(value)
-
     def begin_edit_mode(self) -> None:
         """
             @brief      Enter explicit prompt edit mode for the currently inspected voice target.
@@ -490,7 +438,6 @@ class CharacterVoicesPage(QWidget):
         """
         self._ui_language = language
         self._title_label.setText(f"<h2>{ui_state_service.translate('character_voices.title', language)}</h2>")
-        self._ai_profile_label.setText(ui_state_service.translate("character_voices.ai_profile", language))
         self._generate_missing_samples_button.setText(
             ui_state_service.translate("character_voices.generate_missing_samples", language)
         )
@@ -506,8 +453,6 @@ class CharacterVoicesPage(QWidget):
         self._save_prompt_button.setText(ui_state_service.translate("character_voices.save_prompt", language))
         self._generate_sample_button.setText(ui_state_service.translate("character_voices.generate_sample", language))
         self._preview_toggle_button.setText(ui_state_service.translate(self._preview_label_key(), language))
-        if not self._has_ai_profiles:
-            self._ai_profile_combo.setItemText(0, ui_state_service.translate("ai_settings.none", language))
         self._set_language_labels(self._current_original_language_text(), self._current_translated_language_text())
 
     def _apply_control_state(self) -> None:
@@ -527,11 +472,6 @@ class CharacterVoicesPage(QWidget):
             and self._current_target_is_editable
         )
         self._target_list.setEnabled(list_enabled)
-        ai_selector_enabled = (
-            self._project_active and not self._busy and not self._preview_active and not self._edit_mode
-        )
-        self._ai_profile_label.setEnabled(ai_selector_enabled and self._has_ai_profiles)
-        self._ai_profile_combo.setEnabled(ai_selector_enabled and self._has_ai_profiles)
         self._import_sample_button.setEnabled(
             self._project_active
             and not self._busy

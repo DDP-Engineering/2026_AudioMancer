@@ -545,9 +545,6 @@ class MainWindow(QMainWindow):
         @version    0.1.1
         """
         self._character_voices_page.set_project_active(project_root is not None)
-        self._character_voices_page.set_ai_profiles(
-            **character_voices_state_service.build_character_voices_profile_state(self._settings_payload)
-        )
         self._character_voices_page.set_character_voices_state(
             **character_voices_state_service.build_character_voices_state(
                 project_root,

@@ -1543,12 +1543,6 @@
       "REQ-FUNC-014"
     ]
   },
-  "04_Software/AudioMancer/tests/test_character_voices_state_service.py::test_character_voices_profile_state_uses_enabled_profiles": {
-    "id": "04_Software/AudioMancer/tests/test_character_voices_state_service.py::test_character_voices_profile_state_uses_enabled_profiles",
-    "requirement_ids": [
-      "REQ-FUNC-015"
-    ]
-  },
   "04_Software/AudioMancer/tests/test_character_voices_state_service.py::test_state_contains_narrator_first_and_approved_translated_language": {
     "id": "04_Software/AudioMancer/tests/test_character_voices_state_service.py::test_state_contains_narrator_first_and_approved_translated_language",
     "requirement_ids": [
