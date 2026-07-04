@@ -208,6 +208,49 @@ def test_ai_settings_page_loads_profiles_and_builds_merged_settings(qtbot) -> No
     assert rebuilt["default_speech_blocks_profile_id"] == "profile_a"
 
 
+def test_ai_settings_page_timeout_accepts_65535_seconds(qtbot) -> None:
+    """
+    @brief      Verify S-0001 and REQ-UX-035 preserve the overnight AI timeout cap.
+    @param[in]  qtbot Qt test helper fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-04
+    @version    0.1.0
+    """
+    page = AiSettingsPage()
+    qtbot.addWidget(page)
+
+    page.load_settings(
+        {
+            "language": "en",
+            "llm_profiles": [
+                {
+                    "id": "profile_a",
+                    "label": "Profile A",
+                    "backend_kind": "lmstudio",
+                    "base_url": "http://127.0.0.1:1234/v1",
+                    "api_key": "",
+                    "model_name": "qwen3-8b",
+                    "context_window": 16384,
+                    "max_output_tokens": 8192,
+                    "request_timeout_seconds": 65535,
+                    "temperature": 0.2,
+                    "supports_structured_output": True,
+                    "enabled": True,
+                }
+            ],
+        }
+    )
+
+    assert page._timeout_spin.maximum() == 65535
+    assert page._timeout_spin.value() == 65535
+
+    rebuilt = page.build_settings({"language": "en"})
+
+    assert rebuilt["llm_profiles"][0]["request_timeout_seconds"] == 65535
+
+
 def test_ai_settings_page_loads_and_builds_chunking_context_mode(qtbot) -> None:
     """
     @brief      Verify S-0001 and REQ-UX-034 persist the AI chunking context mode selector.

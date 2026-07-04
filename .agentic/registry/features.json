@@ -1,41 +1,29 @@
 {
-  "change-2026-07-03T094537Z-4766bdd0": {
+  "change-2026-07-04T034429Z-91042cc1": {
     "check_ids": [
-      "CHECK-CV-AI-SELECTOR-REMOVAL"
+      "C-0001"
     ],
     "intent": {
-      "created_at": "2026-07-03T09:45:37+00:00",
+      "created_at": "2026-07-04T03:44:29+00:00",
       "id": "I-0001",
       "kind": "change",
       "scope_hint": [],
-      "statement": "Remove the unused Character Voices AI profile selector and associated implementation while preserving Character Voices sample generation through the TTS runtime.",
+      "statement": "Increase the AI settings maximum request timeout from 3600 seconds to 12 hours for overnight local model runs, and analyze whether the timeout implementation can detect that the model is still working through polling or progress interrogation.",
       "status": "draft"
     },
-    "report_path": ".agentic/runs/change-2026-07-03T094537Z-4766bdd0/report.md",
-    "run_id": "change-2026-07-03T094537Z-4766bdd0",
+    "report_path": ".agentic/runs/change-2026-07-04T034429Z-91042cc1/report.md",
+    "run_id": "change-2026-07-04T034429Z-91042cc1",
     "spec_ids": [
-      "SPEC-CV-AI-SELECTOR-REMOVAL"
+      "S-0001"
     ],
     "stage": "delivery",
     "touched_paths": [
-      ".agentic/requirements/functional.md",
       ".agentic/requirements/ux_workflow.md",
-      "04_Software/AudioMancer/pyproject.toml",
-      "04_Software/AudioMancer/src/audiomancer/__init__.py",
-      "04_Software/AudioMancer/src/audiomancer/services/character_voices_state_service.py",
-      "04_Software/AudioMancer/src/audiomancer/services/ui_state_service.py",
-      "04_Software/AudioMancer/src/audiomancer/ui/main_window.py",
-      "04_Software/AudioMancer/src/audiomancer/ui/pages/character_voices_page.py",
-      "04_Software/AudioMancer/tests/test_character_voices_page.py",
-      "04_Software/AudioMancer/tests/test_character_voices_state_service.py",
-      "04_Software/AudioMancer/tests/test_package_import.py",
-      "04_Software/AudioMancer/uv.lock",
-      "05_SoftwareDocu/AudioMancer_Character_Voices_Service.md",
-      "05_SoftwareDocu/AudioMancer_Page_State_Support_Services.md",
-      "05_SoftwareDocu/AudioMancer_UI_State_Service.md",
-      "05_SoftwareDocu/UserGuide/index.html",
-      "05_SoftwareDocu/UserGuide_ro/index.html",
-      "CHANGELOG.md"
+      "04_Software/AudioMancer/src/audiomancer/ui/pages/ai_settings_page.py",
+      "04_Software/AudioMancer/tests/test_ai_settings_page.py",
+      "04_Software/AudioMancer/tests/test_settings_service.py",
+      "05_SoftwareDocu/AudioMancer_Config_And_Settings.md",
+      "05_SoftwareDocu/AudioMancer_LLM_Provider_Service.md"
     ]
   }
 }

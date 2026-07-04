@@ -69,6 +69,11 @@ Main flow:
 2. `_request_chat_completion_with_cancellation(...)` runs the blocking HTTP
    request in one worker thread so the caller can cancel cooperatively. The
    cancellation exception is propagated without retry or failure logging.
+   While the request is pending, the OpenAI-compatible non-streaming response
+   does not expose per-request progress or partial model output; AudioMancer can
+   only observe completion, transport failure, configured timeout, or
+   cooperative cancellation. Streaming responses or backend-specific job
+   polling would require a separate transport contract.
 3. `_request_chat_completion(...)` posts JSON to the resolved endpoint,
    preserves already-complete `/chat/completions` URLs, reports unsupported
    `response_format` failures back to `chat_json(...)`, and retries once with

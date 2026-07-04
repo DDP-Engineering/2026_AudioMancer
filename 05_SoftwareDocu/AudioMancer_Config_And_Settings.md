@@ -108,8 +108,9 @@ The settings scaffold currently includes fields for:
 - language and recent projects
 - default project and runtime-model paths
 - provider profile placeholders
-- LLM profile storage, default AI profile selections, default AI chunking
-  strategy, and default AI chunking context mode
+- LLM profile storage, default AI profile selections, per-profile request
+  timeout values, default AI chunking strategy, and default AI chunking context
+  mode
 
 `TRANSLATION_LANGUAGE_OPTIONS` includes the non-Chinese Qwen3-TTS language
 set plus Romanian: English, Romanian, Japanese, Korean, German, French,
@@ -134,6 +135,9 @@ Speech Blocks instead use
 `DEFAULT_ONLINE_AI_TEXT_CONTEXT_FRACTION` against the selected profile context
 window, and they skip the local cleanup-unit, chunking-paragraph, and
 character-discovery chunk-count caps.
+AI Settings allows each LLM profile request timeout to be configured up to
+65535 seconds. The settings service preserves valid positive timeout values and
+repairs only invalid non-positive or non-integer values to the default timeout.
 `DEFAULT_AUDIO_ASSEMBLY_*` constants define the WAV-only Audio Assembly
 defaults for output mode, max duration, output format, and silence gaps.
 `DEFAULT_TTS_OPERATION_TIMEOUT_SECONDS` is the shared VoiceWeaver operation

@@ -34,6 +34,8 @@ from audiomancer.services import (
     speech_blocks_service,
 )
 
+_REPO_ROOT = Path(__file__).resolve().parents[3]
+
 
 def test_resolve_source_chunks_uses_original_language_selection(tmp_path) -> None:
     """
@@ -2993,17 +2995,17 @@ def test_local_model_guidance_is_honest_about_ai_settings_and_lmstudio_presets()
     @date       2026-07-01
     @version    0.1.0
     """
-    local_model_doc = Path("05_SoftwareDocu/AudioMancer_LMStudio_Local_Model_Recommendations.md").read_text(
+    local_model_doc = (_REPO_ROOT / "05_SoftwareDocu/AudioMancer_LMStudio_Local_Model_Recommendations.md").read_text(
         encoding="utf-8"
     )
-    user_guide = Path("05_SoftwareDocu/UserGuide/index.html").read_text(encoding="utf-8")
-    user_guide_ro = Path("05_SoftwareDocu/UserGuide_ro/index.html").read_text(encoding="utf-8")
-    ai_settings_source = Path("04_Software/AudioMancer/src/audiomancer/ui/pages/ai_settings_page.py").read_text(
-        encoding="utf-8"
-    )
-    settings_source = Path("04_Software/AudioMancer/src/audiomancer/services/settings_service.py").read_text(
-        encoding="utf-8"
-    )
+    user_guide = (_REPO_ROOT / "05_SoftwareDocu/UserGuide/index.html").read_text(encoding="utf-8")
+    user_guide_ro = (_REPO_ROOT / "05_SoftwareDocu/UserGuide_ro/index.html").read_text(encoding="utf-8")
+    ai_settings_source = (
+        _REPO_ROOT / "04_Software/AudioMancer/src/audiomancer/ui/pages/ai_settings_page.py"
+    ).read_text(encoding="utf-8")
+    settings_source = (
+        _REPO_ROOT / "04_Software/AudioMancer/src/audiomancer/services/settings_service.py"
+    ).read_text(encoding="utf-8")
 
     assert "qwen/qwen3.6-27b" in local_model_doc
     assert "google/gemma-4-31b" in local_model_doc

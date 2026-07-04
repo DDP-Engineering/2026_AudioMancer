@@ -320,6 +320,12 @@
       "REQ-UX-001"
     ]
   },
+  "04_Software/AudioMancer/tests/test_ai_settings_page.py::test_ai_settings_page_timeout_accepts_65535_seconds": {
+    "id": "04_Software/AudioMancer/tests/test_ai_settings_page.py::test_ai_settings_page_timeout_accepts_65535_seconds",
+    "requirement_ids": [
+      "REQ-UX-035"
+    ]
+  },
   "04_Software/AudioMancer/tests/test_ai_state_note_service.py::test_build_token_usage_notes_renders_summary_from_report": {
     "id": "04_Software/AudioMancer/tests/test_ai_state_note_service.py::test_build_token_usage_notes_renders_summary_from_report",
     "requirement_ids": [

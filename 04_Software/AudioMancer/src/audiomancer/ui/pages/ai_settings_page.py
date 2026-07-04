@@ -169,7 +169,7 @@ class AiSettingsPage(QWidget):
         self._max_output_spin.setRange(1, 1_000_000)
 
         self._timeout_spin = QSpinBox(self)
-        self._timeout_spin.setRange(1, 3600)
+        self._timeout_spin.setRange(1, 65535)
 
         self._temperature_spin = QDoubleSpinBox(self)
         self._temperature_spin.setRange(0.0, 2.0)

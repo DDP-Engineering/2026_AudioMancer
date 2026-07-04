@@ -365,6 +365,44 @@ def test_validate_settings_heals_invalid_llm_profiles_but_keeps_non_empty_list()
     assert validated_settings["default_ai_chunking_profile_id"] is None
 
 
+def test_validate_settings_preserves_overnight_llm_timeout() -> None:
+    """
+    @brief      Verify S-0001 and REQ-UX-035 keep valid overnight LLM timeout values.
+    @return     None.
+    @exception  None.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-04
+    @version    0.1.0
+    """
+    candidate_settings = settings_service.build_default_settings()
+    candidate_settings["llm_profiles"] = [
+        {
+            "id": "profile_1",
+            "label": "Profile 1",
+            "backend_kind": config.LLM_BACKEND_OPTIONS[0],
+            "base_url": "http://127.0.0.1:1234/v1",
+            "api_key": "",
+            "model_name": "qwen3-8b",
+            "context_window": config.DEFAULT_LLM_CONTEXT_WINDOW,
+            "max_output_tokens": config.DEFAULT_LLM_MAX_OUTPUT_TOKENS,
+            "request_timeout_seconds": 65535,
+            "temperature": config.DEFAULT_LLM_TEMPERATURE,
+            "supports_structured_output": False,
+            "enabled": True,
+            "discovered_model_name": "",
+            "discovered_context_window": None,
+            "discovery_succeeded": False,
+            "discovery_message": "",
+            "user_overrode_model_name": False,
+            "user_overrode_context_window": False,
+        }
+    ]
+
+    validated_settings = settings_service.validate_settings(candidate_settings)
+
+    assert validated_settings["llm_profiles"][0]["request_timeout_seconds"] == 65535
+
+
 def test_validate_settings_keeps_valid_enabled_default_profile_ids() -> None:
     """
     @brief      Verify valid enabled AI default-profile ids are preserved.

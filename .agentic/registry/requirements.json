@@ -3277,5 +3277,23 @@
     "source_file": ".agentic/requirements/ux_workflow.md",
     "status": "Active",
     "verification": "Automated test"
+  },
+  "REQ-UX-035": {
+    "created_on": "2026-07-04 04:20",
+    "last_updated": "2026-07-04 04:20",
+    "line_number": 46,
+    "linked_tests": [
+      "04_Software/AudioMancer/tests/test_ai_settings_page.py::test_ai_settings_page_timeout_accepts_65535_seconds"
+    ],
+    "priority": "Must",
+    "rationale": "Lets operators leave large-context local model requests running overnight without editing settings files by hand.",
+    "related_components": [
+      "04_Software/AudioMancer/src/audiomancer/ui/pages/ai_settings_page.py"
+    ],
+    "req_id": "REQ-UX-035",
+    "requirement": "AI Settings Page shall allow the LLM request timeout to be configured up to 65535 seconds and persist that value through the normal settings build flow.",
+    "source_file": ".agentic/requirements/ux_workflow.md",
+    "status": "Active",
+    "verification": "Focused pytest run: tests/test_ai_settings_page.py::test_ai_settings_page_timeout_accepts_65535_seconds"
   }
 }
