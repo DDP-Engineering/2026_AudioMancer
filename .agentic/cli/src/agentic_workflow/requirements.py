@@ -12,7 +12,7 @@
 @details Provides reusable implementation behavior for the standalone workflow template.
 @author Eng. Dan Dumitru Pasare
 @date 2026-06-20
-@version 0.1.0
+@version 0.2.1
 """
 
 # IMPORTS
@@ -28,6 +28,7 @@ import subprocess
 from pathlib import Path
 from typing import Any
 
+from .components import audit_components, load_components
 from .config import WorkflowConfig, load_config
 
 
@@ -363,8 +364,9 @@ def sync_registry(repo_root: Path) -> dict[str, int]:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-06-20
-    @version    0.1.0
+    @version    0.2.0
     """
+    cfg = load_config(repo_root)
     rows = load_all_requirements(repo_root)
     registry = repo_root / ".agentic" / "registry"
     registry.mkdir(parents=True, exist_ok=True)
@@ -380,7 +382,15 @@ def sync_registry(repo_root: Path) -> dict[str, int]:
     registry.joinpath("requirements.json").write_text(json.dumps(specs, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     registry.joinpath("checks.json").write_text(json.dumps(checks, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     registry.joinpath("features.json").write_text(json.dumps(features, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-    return {"requirement_count": len(specs), "check_count": len(checks), "feature_count": len(features)}
+    components = _load_component_registry(repo_root, cfg)
+    registry.joinpath("components.json").write_text(json.dumps(components, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    return {
+        "requirement_count": len(specs),
+        "check_count": len(checks),
+        "feature_count": len(features),
+        "component_count": len(components["components"]),
+        "bundle_count": len(components["bundles"]),
+    }
 
 
 def audit_registry(repo_root: Path) -> list[AuditIssue]:
@@ -391,12 +401,13 @@ def audit_registry(repo_root: Path) -> list[AuditIssue]:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-06-20
-    @version    0.1.0
+    @version    0.2.1
     """
     registry = repo_root / ".agentic" / "registry"
     requirements_path = registry / "requirements.json"
     checks_path = registry / "checks.json"
     features_path = registry / "features.json"
+    components_path = registry / "components.json"
     issues: list[AuditIssue] = []
     if not requirements_path.exists():
         issues.append(AuditIssue("REGISTRY-MISSING", "requirements registry cache is missing; run registry sync"))
@@ -404,15 +415,52 @@ def audit_registry(repo_root: Path) -> list[AuditIssue]:
         issues.append(AuditIssue("REGISTRY-MISSING", "checks registry cache is missing; run registry sync"))
     if not features_path.exists():
         issues.append(AuditIssue("REGISTRY-MISSING", "features registry cache is missing; run registry sync"))
+    if not components_path.exists():
+        issues.append(AuditIssue("REGISTRY-MISSING", "components registry cache is missing; run registry sync"))
     if issues:
         return issues
     try:
         json.loads(requirements_path.read_text(encoding="utf-8"))
         json.loads(checks_path.read_text(encoding="utf-8"))
         json.loads(features_path.read_text(encoding="utf-8"))
+        json.loads(components_path.read_text(encoding="utf-8"))
     except json.JSONDecodeError as exc:
         issues.append(AuditIssue("REGISTRY-BAD-JSON", str(exc)))
+    for component_issue in audit_components(repo_root):
+        issues.append(
+            AuditIssue(
+                component_issue.code,
+                component_issue.message,
+                path=component_issue.path,
+            )
+        )
     return issues
+
+
+def _load_component_registry(repo_root: Path, config: WorkflowConfig) -> dict[str, Any]:
+    """
+    @brief      Load component adoption data for registry sync.
+    @param[in]  repo_root Repository root.
+    @param[in]  config Workflow configuration.
+    @return     JSON-serializable component registry payload.
+    @exception  tomllib.TOMLDecodeError Raised when component TOML is invalid.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-22
+    @version    0.1.0
+    """
+    manifest = load_components(repo_root, config.component_manifest)
+    return {
+        "generated_from": config.component_manifest,
+        "minimum_baseline": config.adoption_default_completion_level,
+        "components": {
+            name: asdict(component)
+            for name, component in sorted(manifest.components.items())
+        },
+        "bundles": {
+            name: asdict(bundle)
+            for name, bundle in sorted(manifest.bundles.items())
+        },
+    }
 
 
 def _load_active_feature(repo_root: Path) -> dict[str, Any]:

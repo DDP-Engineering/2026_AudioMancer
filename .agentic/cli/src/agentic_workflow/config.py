@@ -12,7 +12,7 @@
 @details Provides reusable implementation behavior for the standalone workflow template.
 @author Eng. Dan Dumitru Pasare
 @date 2026-06-20
-@version 0.1.0
+@version 0.3.0
 """
 
 # IMPORTS
@@ -30,7 +30,7 @@ class WorkflowConfig:
     @brief      Represent WorkflowConfig data used by the workflow.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-06-20
-    @version    0.1.0
+    @version    0.3.0
     """
     # @brief Repository paths treated as implementation source roots.
     source_roots: list[str] = field(default_factory=lambda: ["src", "app", "lib"])
@@ -42,10 +42,31 @@ class WorkflowConfig:
     requirement_roots: list[str] = field(default_factory=lambda: [".agentic/requirements"])
 
     # @brief Component documentation roots expected to track implementation changes.
-    documentation_roots: list[str] = field(default_factory=lambda: ["05_SoftwareDocu"])
+    documentation_roots: list[str] = field(default_factory=lambda: [".agentic/knowledge/components"])
 
     # @brief Template file agents should follow when creating component docs.
-    component_documentation_template: str = "05_SoftwareDocu/component_documentation_template.md"
+    component_documentation_template: str = ".agentic/knowledge/components/component_template.md"
+
+    # @brief Component manifest path used during existing-project adoption.
+    component_manifest: str = ".agentic/components.toml"
+
+    # @brief Default adoption completion level expected for usable components.
+    adoption_default_completion_level: str = "baseline-usable"
+
+    # @brief Whether adoption runs may group related components into bundles.
+    adoption_allow_component_bundles: bool = True
+
+    # @brief Maximum number of components allowed in one adoption bundle.
+    adoption_max_bundle_components: int = 5
+
+    # @brief Whether adoption work may include behavior changes by default.
+    adoption_behavior_changes_allowed: bool = False
+
+    # @brief Knowledge roots used by adoption and documentation workflows.
+    knowledge_roots: list[str] = field(default_factory=lambda: [".agentic/knowledge"])
+
+    # @brief Root path for adoption reports.
+    adoption_report_root: str = ".agentic/reports/adoption"
 
     # @brief Source language used when resolving linked test identifiers.
     traceability_language: str = "python"
@@ -74,6 +95,21 @@ class WorkflowConfig:
     # @brief Stage-to-path edit allowlists consumed by the write-zone hook.
     write_zones: dict[str, list[str]] = field(default_factory=dict)
 
+    # @brief Whether intent-alignment stages should run after intake stages.
+    alignment_enabled: bool = True
+
+    # @brief Whether open questions force a pause decision during alignment.
+    alignment_pause_on_open_questions: bool = True
+
+    # @brief Minimum risk level that forces a pause decision during alignment.
+    alignment_risk_threshold: str = "medium"
+
+    # @brief Whether complete recommended responses let question-bearing alignment proceed.
+    alignment_allow_recommended_responses: bool = True
+
+    # @brief Planned-path globs that force a pause decision during alignment.
+    alignment_protected_scope_patterns: list[str] = field(default_factory=list)
+
 
 def load_config(repo_root: Path) -> WorkflowConfig:
     """
@@ -83,7 +119,7 @@ def load_config(repo_root: Path) -> WorkflowConfig:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-06-20
-    @version    0.1.0
+    @version    0.3.0
     """
     path = repo_root / ".agentic" / "workflow.toml"
     if not path.exists():
@@ -95,6 +131,11 @@ def load_config(repo_root: Path) -> WorkflowConfig:
     gates = data.get("gates", {})
     traceability = data.get("traceability", {})
     documentation = data.get("documentation", {})
+    adoption = data.get("adoption", {})
+    components = data.get("components", {})
+    knowledge = data.get("knowledge", {})
+    reports = data.get("reports", {})
+    alignment = data.get("alignment", {})
 
     return WorkflowConfig(
         # Root sections identify where the workflow should look for project
@@ -102,10 +143,17 @@ def load_config(repo_root: Path) -> WorkflowConfig:
         source_roots=list(data.get("source", {}).get("roots", ["src", "app", "lib"])),
         test_roots=list(data.get("tests", {}).get("roots", ["tests", "test"])),
         requirement_roots=list(data.get("requirements", {}).get("roots", [".agentic/requirements"])),
-        documentation_roots=list(documentation.get("roots", ["05_SoftwareDocu"])),
+        documentation_roots=list(documentation.get("roots", [".agentic/knowledge/components"])),
         component_documentation_template=str(
-            documentation.get("component_template", "05_SoftwareDocu/component_documentation_template.md")
+            documentation.get("component_template", ".agentic/knowledge/components/component_template.md")
         ),
+        component_manifest=str(components.get("manifest", ".agentic/components.toml")),
+        adoption_default_completion_level=str(adoption.get("default_completion_level", "baseline-usable")),
+        adoption_allow_component_bundles=bool(adoption.get("allow_component_bundles", True)),
+        adoption_max_bundle_components=int(adoption.get("max_bundle_components", 5)),
+        adoption_behavior_changes_allowed=bool(adoption.get("behavior_changes_allowed", False)),
+        knowledge_roots=list(knowledge.get("roots", [".agentic/knowledge"])),
+        adoption_report_root=str(reports.get("adoption_root", ".agentic/reports/adoption")),
 
         # Traceability settings control linked-test resolution and which source
         # files must be covered by durable requirement rows or explicit waivers.
@@ -124,4 +172,9 @@ def load_config(repo_root: Path) -> WorkflowConfig:
             key: list(value)
             for key, value in data.get("write_zones", {}).items()
         },
+        alignment_enabled=bool(alignment.get("enabled", True)),
+        alignment_pause_on_open_questions=bool(alignment.get("pause_on_open_questions", True)),
+        alignment_risk_threshold=str(alignment.get("risk_threshold", "medium")),
+        alignment_allow_recommended_responses=bool(alignment.get("allow_recommended_responses", True)),
+        alignment_protected_scope_patterns=list(alignment.get("protected_scope_patterns", [])),
     )

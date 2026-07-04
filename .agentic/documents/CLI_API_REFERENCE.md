@@ -13,9 +13,9 @@ which command to run, when it is normally used in the agentic flow, and which
 workflow skills or hooks call it.
 
 This file is the single canonical copy of the reference. It lives at
-`04_Software/agentic-workflow-template/template/CLI_API_REFERENCE.md` in the
-template repository and is delivered verbatim into target repositories when the
-template is copied.
+`04_Software/agentic-workflow-template/template/.agentic/documents/CLI_API_REFERENCE.md`
+in the template repository and at `.agentic/documents/CLI_API_REFERENCE.md` in
+copied target repositories.
 
 ## How To Run Commands
 
@@ -73,11 +73,16 @@ Degraded behavior without git:
 The built-in stage order is:
 
 1. `intake`
-2. `requirement`
-3. `check`
-4. `implementation`
-5. `validation`
-6. `delivery`
+2. `alignment`
+3. `requirement`
+4. `check`
+5. `implementation`
+6. `validation`
+7. `delivery`
+
+Adoption runs use `adoption-intake`, `adoption-alignment`, `repo-discovery`,
+`component-map`, `component-adoption`, `baseline-review`, and
+`adoption-delivery`.
 
 The workflow is human-steered. Commands can be run manually, suggested by a
 skill, or invoked by a hook. The CLI records state in `.agentic/`.
@@ -87,8 +92,8 @@ skill, or invoked by a hook. The CLI records state in `.agentic/`.
 | File | Purpose | Main writers |
 | --- | --- | --- |
 | `.agentic/current_run` | Stores the active run id. | `start` |
-| `.agentic/runs/<run-id>/graph.json` | Stores current stage, intent, specs, checks, evidence, change units, decisions, and access mode. | `start`, `next`, `set-stage`, `set-access-mode`, `add-spec`, `add-check`, `record-evidence`, `record-change`, `supersede-evidence` |
-| `.agentic/runs/<run-id>/journal.jsonl` | Append-only event log for workflow events and hook evidence. | `start`, `set-stage`, `set-access-mode`, `requirement activate`, `record-evidence`, `gates run`, `post_tool_evidence.py` |
+| `.agentic/runs/<run-id>/graph.json` | Stores current stage, intent alignment, specs, checks, evidence, change units, decisions, and access mode. | `start`, `next`, `set-stage`, `set-access-mode`, `alignment`, `add-spec`, `add-check`, `record-evidence`, `record-change`, `supersede-evidence` |
+| `.agentic/runs/<run-id>/journal.jsonl` | Append-only event log for workflow events and hook evidence. | `start`, `set-stage`, `set-access-mode`, `alignment`, `requirement activate`, `record-evidence`, `gates run`, `post_tool_evidence.py` |
 | `.agentic/runs/<run-id>/report.md` | Human-readable delivery report. | `report` |
 | `.agentic/requirements/*.md` | Durable requirement registers. | Human/agent edits, `requirement activate` |
 | `.agentic/registry/requirements.json` | Requirement registry cache. | `registry sync` |
@@ -100,18 +105,21 @@ skill, or invoked by a hook. The CLI records state in `.agentic/`.
 | Flow step | Usual commands | Called through |
 | --- | --- | --- |
 | Intake | `start`, `status`, `audit traceability`, `audit coverage`, `impact` | Human prompt, `agentic-development`, `regression-traceability` |
+| Intent Alignment | `alignment`, `status`, `next`, `set-stage` | `agentic-development`, `agentic-adoption`, ticket-driven orchestrators |
 | Requirement | `add-spec`, `requirement activate`, `invariants`, `set-stage` | `agentic-development`, human approval |
 | Check | `add-check`, `record-evidence`, `set-stage` | `agentic-development`, test authoring gate |
 | Implementation | `record-evidence`, `record-change`, `gates run`, `invariants` | `agentic-development`, `write-component-documentation`, `python-codestyle-audit` |
 | Validation | `gates run`, `audit traceability`, `audit coverage`, `impact`, `invariants`, `record-evidence` | `agentic-development`, `regression-traceability`, `documentation-audit`, `python-codestyle-audit` |
 | Delivery | `registry sync`, `registry audit`, `working-tree audit`, `delivery-preflight`, `report` | `agentic-delivery`, `delivery_preflight.py` hook, human approval |
+| Adoption | `start --kind adoption`, `next`, `set-stage`, `status`, `adoption component-status`, `adoption scope-check`, `adoption baseline`, `report` | `agentic-adoption`, human approval |
 | Any stage | `status`, `next`, `set-stage`, `set-access-mode`, `supersede-evidence` | Human routing, skills, troubleshooting |
 
 ## Command Reference
 
 ### `start`
 
-Starts a new workflow run at the `intake` stage.
+Starts a new workflow run. Feature, fix, and change runs start at `intake`.
+Adoption runs start at `adoption-intake`.
 
 ```powershell
 <workflow> start --kind feature --statement "Add invoice export"
@@ -121,18 +129,23 @@ Starts a new workflow run at the `intake` stage.
 <workflow> start --kind change --statement "Refresh repository documentation" --access-mode repo-wide --access-reason "Human-approved broad documentation update"
 ```
 
+```powershell
+<workflow> start --kind adoption --statement "Adopt existing project"
+```
+
 Arguments:
 
 | Argument | Required | Meaning |
 | --- | --- | --- |
-| `--kind feature|fix|change` | Yes | Classifies the run intent. |
+| `--kind feature|fix|change|adoption` | Yes | Classifies the run intent. |
 | `--statement "<text>"` | Yes | Human-readable statement of the requested work. |
 | `--access-mode standard|repo-wide` | No | Defaults to `standard`. `repo-wide` relaxes stage write zones for normal repo files. |
 | `--access-reason "<text>"` | Required for `repo-wide` | Records why broad access was approved. |
 
-Stage: `intake`.
+Stage: `intake` for feature, fix, and change runs; `adoption-intake` for
+adoption runs.
 
-Flow caller: human prompt or `agentic-development`.
+Flow caller: human prompt, `agentic-development`, or `agentic-adoption`.
 
 Writes:
 
@@ -150,8 +163,8 @@ Prints the active run summary as JSON.
 
 Stage: any stage.
 
-Flow caller: human prompt, `agentic-development`, `agentic-delivery`, or
-manual troubleshooting.
+Flow caller: human prompt, `agentic-development`, `agentic-adoption`,
+`agentic-delivery`, or manual troubleshooting.
 
 Reads:
 
@@ -167,10 +180,14 @@ Moves the active run to the next built-in stage.
 <workflow> next
 ```
 
-Stage: any stage except the final `delivery` stage. When already in `delivery`,
-the command keeps the stage at `delivery`.
+Stage: any stage except the final stage for that run kind. When already in
+`delivery`, the command keeps a normal run at `delivery`. When already in
+`adoption-delivery`, the command keeps an adoption run at `adoption-delivery`.
+When `[alignment].enabled = false`, `next` skips `alignment` and
+`adoption-alignment`.
 
-Flow caller: human approval or a skill after a gate summary.
+Flow caller: human approval or a skill after a gate summary, including
+`agentic-adoption` during adoption stages.
 
 Writes:
 
@@ -198,8 +215,8 @@ Arguments:
 
 Stage: any stage.
 
-Flow caller: human approval, `agentic-development`, or recovery from a failed
-later gate.
+Flow caller: human approval, `agentic-development`, `agentic-adoption`, or
+recovery from a failed later gate.
 
 Writes:
 
@@ -228,7 +245,7 @@ Arguments:
 
 Stage: any stage.
 
-Flow caller: human approval or `agentic-development`.
+Flow caller: human approval, `agentic-development`, or `agentic-adoption`.
 
 Used by hook: `guard_write_zone.py` reads the resulting `access_mode` from
 `graph.json` before allowing or denying edits.
@@ -238,6 +255,56 @@ Writes:
 - `graph.json` access mode
 - `graph.json` decisions
 - `journal.jsonl` `access_mode.set` event
+
+### `alignment`
+
+Records the agent's structured understanding before requirement/spec work or
+adoption discovery proceeds.
+
+```powershell
+<workflow> alignment --source "human prompt" --understanding "Add invoice export for approved batches." --scope "in: export command; out: billing model changes" --acceptance "A CSV export can be generated from the command line." --risk low --decision proceed --reason "No open questions and low blast radius"
+```
+
+```powershell
+<workflow> alignment --source "human prompt" --understanding "Add a CSV invoice export." --scope "in: export command" --acceptance "A focused export check passes." --question "Should CSV or JSON be the first format?" --recommended-response "Use CSV as the default because the prompt names spreadsheet-style export." --risk low --decision proceed --reason "Question has a recorded recommended response for automated continuation"
+```
+
+Arguments:
+
+| Argument | Required | Meaning |
+| --- | --- | --- |
+| `--source "<ref>"` | Yes | Human prompt, ticket id, URL, or other origin reference. |
+| `--understanding "<text>"` | Yes | One-paragraph restatement of the requested work. |
+| `--scope "<text>"` | Yes | Repeatable. In-scope and out-of-scope boundaries. |
+| `--assumption "<text>"` | No | Repeatable. Assumptions used to disambiguate. |
+| `--acceptance "<text>"` | Yes | Repeatable. Acceptance criteria the run will target. |
+| `--question "<text>"` | No | Repeatable. Open questions whose answers change implementation. |
+| `--recommended-response "<text>"` | No | Repeatable. Recommended answers the agent will assume for automated continuation. |
+| `--risk low|medium|high` | Yes | Agent-assessed risk and blast radius. |
+| `--decision proceed|pause` | Yes | Whether the run may continue from alignment. |
+| `--reason "<text>"` | Yes | One-line rationale for the decision. |
+| `--planned-path <path>` | No | Repeatable. Expected touched path used by protected-scope policy. |
+
+Stage: `alignment` or `adoption-alignment`.
+
+Flow caller: `agentic-development`, `agentic-adoption`, or a ticket-driven
+orchestrator before requirement/spec work.
+
+Policy:
+
+- `decision proceed` is accepted only when `.agentic/workflow.toml`
+  `[alignment]` allows it.
+- Open questions require `pause` when `pause_on_open_questions = true` unless
+  `allow_recommended_responses = true` and each question has a recorded
+  recommended response.
+- Risk at or above `risk_threshold` requires `pause`.
+- Planned paths matching `protected_scope_patterns` require `pause`.
+- The command records alignment only; it does not move the run to the next stage.
+
+Writes:
+
+- `graph.json` latest `alignment`
+- `journal.jsonl` `alignment.recorded` event
 
 ### `add-spec`
 
@@ -345,7 +412,7 @@ Writes:
 Records the paths touched by an implementation change.
 
 ```powershell
-<workflow> record-change --id CU-001 --path src/exporter.py --path tests/test_export.py --path 05_SoftwareDocu/Exporter.md
+<workflow> record-change --id CU-001 --path src/exporter.py --path tests/test_export.py --path .agentic/knowledge/components/Exporter.md
 ```
 
 Arguments:
@@ -559,6 +626,82 @@ Reads:
 
 Exit behavior: exits with non-zero status when blocking findings exist.
 
+### `adoption component-status`
+
+Prints the configured component manifest as JSON, including component and bundle
+data.
+
+```powershell
+<workflow> adoption component-status
+```
+
+Stage: adoption intake, component map, component adoption, or manual adoption
+review.
+
+Flow caller: `agentic-adoption` or human adoption review.
+
+Reads:
+
+- `.agentic/workflow.toml` `[components]` manifest configuration
+- configured component manifest, normally `.agentic/components.toml`
+
+Exit behavior: exits zero after printing JSON.
+
+### `adoption scope-check`
+
+Checks one or more repository-relative paths against the configured component
+baseline rules. Paths mapped to a component below the required baseline are
+blocking. Unmapped paths are reported as informational and do not block.
+
+```powershell
+<workflow> adoption scope-check src/billing/invoice.py
+```
+
+```powershell
+<workflow> adoption scope-check src/billing/invoice.py docs/billing.md
+```
+
+Arguments:
+
+| Argument | Required | Meaning |
+| --- | --- | --- |
+| `path` | Yes | First repository-relative path to check. |
+| `additional-path` | No | Repeatable. Additional repository-relative paths to check. |
+
+Stage: adoption review, intake impact review, or before behavior-changing work.
+
+Flow caller: `agentic-adoption`, human adoption review, or feature/fix scope
+review before behavior-changing work.
+
+Reads:
+
+- `.agentic/workflow.toml` `[components]` and `[adoption]` configuration
+- configured component manifest, normally `.agentic/components.toml`
+
+Exit behavior: exits with status `1` when a blocking component baseline issue
+exists. Exits zero when all mapped paths meet the baseline or only informational
+unmapped-path findings are reported.
+
+### `adoption baseline`
+
+Prints a concise Markdown summary of configured component and bundle baseline
+status.
+
+```powershell
+<workflow> adoption baseline
+```
+
+Stage: adoption review, baseline review, or manual status reporting.
+
+Flow caller: `agentic-adoption` or human adoption review.
+
+Reads:
+
+- `.agentic/workflow.toml` `[components]` manifest configuration
+- configured component manifest, normally `.agentic/components.toml`
+
+Exit behavior: exits zero after printing Markdown.
+
 ### `gates run`
 
 Runs configured validation gate commands from `.agentic/workflow.toml`.
@@ -606,7 +749,8 @@ Evaluates workflow invariants against the active run.
 
 Stage: after every gate, especially requirement, validation, and delivery.
 
-Flow caller: `agentic-development` and `agentic-delivery`.
+Flow caller: `agentic-development`, `agentic-adoption`, and
+`agentic-delivery`.
 
 Reads:
 
@@ -652,8 +796,8 @@ Writes and prints the human-readable workflow report.
 
 Stage: delivery.
 
-Flow caller: `agentic-delivery` after delivery preflight passes or after
-remaining risks are understood.
+Flow caller: `agentic-delivery` or `agentic-adoption` after final adoption
+review, delivery preflight, or remaining risks are understood.
 
 Writes:
 
@@ -662,7 +806,7 @@ Writes:
 ## Hook Integration
 
 These four standalone hook scripts are the runtime source of truth and are
-reused unchanged by all three agent adapters:
+reused unchanged by all four agent adapters:
 
 - **Codex** wires them through `.codex/hooks.json` (PreToolUse / PostToolUse
   command hooks).
@@ -673,6 +817,11 @@ reused unchanged by all three agent adapters:
   Because Pi can pass the full write/edit input, `secret_scan.py` also catches
   secrets in file *content*, and a native check denies reads of protected
   secret/key files. See `.pi/README.md`.
+- **OpenCode** wires them through `.opencode/plugins/agentic-guard.mjs`, which
+  maps `tool.execute.before` / `tool.execute.after` events onto the same
+  JSON-on-stdin hook protocol. The plugin also scans write/edit content for
+  secrets and denies protected secret/key reads natively. See
+  `.opencode/README.md`.
 
 ### `guard_write_zone.py`
 
@@ -758,6 +907,8 @@ Related CLI commands: none directly, but it protects the same workflow surface.
 <workflow> audit traceability
 <workflow> audit coverage
 <workflow> impact src/exporter.py tests/test_export.py
+<workflow> next
+<workflow> alignment --source "human prompt" --understanding "Add invoice export." --scope "in: exporter command; out: invoice model changes" --acceptance "Invoice export writes a CSV file." --risk low --decision proceed --reason "No open questions and low risk"
 <workflow> add-spec --id SPEC-001 --tag behavior --statement "Invoice export writes a CSV file."
 <workflow> add-check --id CHECK-001 --cites-spec SPEC-001 --cites-requirement REQ-FUNC-001 --command "python -m pytest tests/test_export.py::test_invoice_export" --path tests/test_export.py --state red
 <workflow> record-evidence --kind test-run --result fail --stage check --check-id CHECK-001 --summary "Export test fails before implementation." --command "python -m pytest tests/test_export.py::test_invoice_export"

@@ -12,7 +12,7 @@
 @details Runs as part of the template hook layer and preserves workflow guard behavior.
 @author Eng. Dan Dumitru Pasare
 @date 2026-06-20
-@version 0.1.0
+@version 0.1.3
 """
 
 # IMPORTS
@@ -32,6 +32,13 @@ DEFAULT_ZONES = {
     # Intake may only create or update workflow bookkeeping.
     "intake": [".agentic/**"],
 
+    # Intent alignment records structured understanding in workflow state.
+    "alignment": [".agentic/**"],
+
+    # Adoption intake and alignment may update adoption workflow state.
+    "adoption-intake": [".agentic/**"],
+    "adoption-alignment": [".agentic/**"],
+
     # Requirement work can update durable requirement registers.
     "requirement": [".agentic/requirements/**"],
 
@@ -39,7 +46,7 @@ DEFAULT_ZONES = {
     "check": ["tests/**", "test/**"],
 
     # Implementation work touches product code and required component docs.
-    "implementation": ["src/**", "app/**", "lib/**", "05_SoftwareDocu/**"],
+    "implementation": ["src/**", "app/**", "lib/**", ".agentic/knowledge/components/**"],
 
     # Validation is intentionally read-only; evidence is recorded through CLI commands.
     "validation": [],
@@ -77,12 +84,24 @@ def main() -> int:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-06-20
-    @version    0.1.0
+    @version    0.1.1
     """
     payload = json.load(sys.stdin)
     if payload.get("hook_event_name") != "PreToolUse":
         return 0
-    if payload.get("tool_name") not in {"apply_patch", "Edit", "Write", "MultiEdit"}:
+    # Accept the file-editing tool names emitted by every supported adapter:
+    # Codex (`apply_patch`), Claude Code (`Edit`/`Write`/`MultiEdit`), and Qwen
+    # Code (`WriteFile`, plus the raw `write_file`/`replace` tool ids). Omitting a
+    # name here would silently bypass the write-zone guard for that adapter.
+    if payload.get("tool_name") not in {
+        "apply_patch",
+        "Edit",
+        "Write",
+        "MultiEdit",
+        "WriteFile",
+        "write_file",
+        "replace",
+    }:
         return 0
     cwd = Path(payload.get("cwd") or ".").resolve()
     stage = read_stage(cwd)
@@ -184,9 +203,10 @@ def extract_target_paths(tool_input: dict) -> list[str]:
     @brief      Collect edited paths from a tool-use payload across agents.
     @param[in]  tool_input Mapping of the intercepted tool-use arguments.
     @return     Paths the tool intends to edit, in repo-relative or absolute form.
-    @details    Supports the Codex ``apply_patch`` command envelope and the Claude
-                Code ``Edit``/``Write``/``MultiEdit`` ``file_path`` argument so the
-                write-zone guard applies identically on both agents.
+    @details    Supports the Codex ``apply_patch`` command envelope, the Claude
+                Code ``Edit``/``Write``/``MultiEdit`` ``file_path`` argument, and
+                the Qwen Code ``WriteFile``/``write_file`` ``file_path`` argument so
+                the write-zone guard applies identically across every adapter.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-06-20

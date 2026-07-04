@@ -12,7 +12,7 @@
 @details Provides reusable implementation behavior for the standalone workflow template.
 @author Eng. Dan Dumitru Pasare
 @date 2026-06-20
-@version 0.1.0
+@version 0.4.0
 """
 
 # IMPORTS
@@ -24,25 +24,50 @@ from datetime import datetime, timezone
 from typing import Any, Literal
 
 
+RunKind = Literal["feature", "fix", "change", "adoption"]
+
 Stage = Literal[
     "intake",
+    "alignment",
     "requirement",
     "check",
     "implementation",
     "validation",
     "delivery",
+    "adoption-intake",
+    "adoption-alignment",
+    "repo-discovery",
+    "component-map",
+    "component-adoption",
+    "baseline-review",
+    "adoption-delivery",
 ]
 
 AccessMode = Literal["standard", "repo-wide"]
+AlignmentRisk = Literal["low", "medium", "high"]
+AlignmentDecision = Literal["proceed", "pause"]
 
 STAGES: list[Stage] = [
     "intake",
+    "alignment",
     "requirement",
     "check",
     "implementation",
     "validation",
     "delivery",
 ]
+
+ADOPTION_STAGES: list[Stage] = [
+    "adoption-intake",
+    "adoption-alignment",
+    "repo-discovery",
+    "component-map",
+    "component-adoption",
+    "baseline-review",
+    "adoption-delivery",
+]
+
+ALL_STAGES: list[Stage] = [*STAGES, *ADOPTION_STAGES]
 
 
 def now_iso() -> str:
@@ -63,13 +88,35 @@ class Intent:
     @brief      Represent Intent data used by the workflow.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-06-20
-    @version    0.1.0
+    @version    0.2.0
     """
     id: str
-    kind: Literal["feature", "fix", "change"]
+    kind: RunKind
     statement: str
     scope_hint: list[str] = field(default_factory=list)
     status: str = "draft"
+    created_at: str = field(default_factory=now_iso)
+
+
+@dataclass
+class IntentAlignment:
+    """
+    @brief      Represent an intent-alignment record for a workflow run.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-03
+    @version    0.1.0
+    """
+    source: str
+    understanding: str
+    scope: list[str]
+    assumptions: list[str]
+    acceptance: list[str]
+    open_questions: list[str]
+    recommended_responses: list[str]
+    risk: AlignmentRisk
+    decision: AlignmentDecision
+    reason: str
+    planned_paths: list[str] = field(default_factory=list)
     created_at: str = field(default_factory=now_iso)
 
 
@@ -180,12 +227,13 @@ class Graph:
     @brief      Represent Graph data used by the workflow.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-06-20
-    @version    0.1.0
+    @version    0.4.0
     """
     run_id: str
     stage: Stage
     intent: Intent
     access_mode: AccessMode = "standard"
+    alignment: IntentAlignment | None = None
     spec_items: list[SpecItem] = field(default_factory=list)
     checks: list[Check] = field(default_factory=list)
     evidence: list[Evidence] = field(default_factory=list)
@@ -200,7 +248,7 @@ class Graph:
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-06-20
-        @version    0.1.0
+        @version    0.3.0
         """
         return asdict(self)
 
@@ -213,13 +261,17 @@ class Graph:
         @exception  None
         @author     Eng. Dan Dumitru Pasare
         @date       2026-06-20
-        @version    0.1.0
+        @version    0.2.0
         """
+        alignment = data.get("alignment") or data.get("intake_triage")
+        if alignment and "recommended_responses" not in alignment:
+            alignment = {**alignment, "recommended_responses": []}
         return cls(
             run_id=data["run_id"],
             stage=data["stage"],
             intent=Intent(**data["intent"]),
             access_mode=data.get("access_mode", "standard"),
+            alignment=IntentAlignment(**alignment) if alignment else None,
             spec_items=[SpecItem(**item) for item in data.get("spec_items", [])],
             checks=[Check(**item) for item in data.get("checks", [])],
             evidence=[Evidence(**item) for item in data.get("evidence", [])],

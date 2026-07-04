@@ -33,8 +33,8 @@ on Windows or `bash .agentic/tools/run.sh` on POSIX shells.
    when the target repo has no documentation audit tooling.
    Treat broad README, overview, setup, and validation docs as opt-in or
    scope-triggered maintenance, not a default delivery blocker.
-9. Confirm component documents under `05_SoftwareDocu/` were added or updated
-   for new or materially changed components.
+9. Confirm component documents under `05_SoftwareDocu/` were
+   added or updated for new or materially changed components.
 10. Run `<workflow> delivery-preflight`.
 11. If preflight fails, stop and report failed invariants or audit findings.
 12. If preflight passes, run or refresh `<workflow> report`.

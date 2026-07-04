@@ -25,11 +25,19 @@ next prompt options.
   `.\.agentic\tools\run.ps1` on Windows or `bash .agentic/tools/run.sh` on
   POSIX shells. If the optional local install was run, the installed
   `.agentic/.venv` executable may also be used.
+- Before any `add-spec` call, complete the Intent Alignment stage with
+  `<workflow> alignment`. If there are questions, include recommended responses
+  that state what the agent will assume in an automated flow. If the decision is
+  `pause`, stop in alignment and ask for human answers before requirement work.
 - Keep requirements/spec edits, check/test edits, source edits, validation, and
   delivery as separate manual gates.
 - Use `$write-component-documentation` when a new component is created or when
   an existing component's behavior, contracts, responsibilities, data formats,
   dependencies, or workflow integration materially change.
+- Before behavior-changing work, inspect `.agentic/components.toml` when it
+  exists. If the target component is below `baseline-usable`, stop and ask the
+  human to run `$agentic-adoption` or approve a component adoption slice before
+  implementation.
 - Use `$python-codestyle-audit` after Python implementation changes when the
   repository has Python style requirements or audit tooling.
 - Do not skip red-before-green evidence for new or changed checks.
@@ -55,10 +63,23 @@ next prompt options.
    - Inspect configured source/test/spec roots.
    - Ask clarification questions when behavior, scope, or acceptance criteria
      are ambiguous.
-   - Report impacted existing requirements/tests and any uncovered modules.
+   - Run `<workflow> next` to enter `alignment` when alignment is enabled by
+     `.agentic/workflow.toml`.
    - Stop after the intent is clear.
 
-2. Requirement
+2. Intent Alignment
+   - Record the structured understanding checkpoint with:
+     `<workflow> alignment --source "<prompt-or-ticket>" --understanding "<one paragraph>" --scope "<in/out of scope>" --acceptance "<criterion>" --risk low|medium|high --decision proceed|pause --reason "<reason>"`.
+     Add repeatable `--assumption`, `--question`, and `--planned-path` values
+     when applicable. For each question in an automated flow, add a matching
+     `--recommended-response` with the answer the agent will assume.
+   - Use `decision proceed` only when the command accepts it under
+     `.agentic/workflow.toml` policy. If policy requires `pause`, stop and ask
+     the human to answer or approve the risk.
+   - Report impacted existing requirements/tests and any uncovered modules.
+   - Stop after alignment is recorded or skipped by config.
+
+3. Requirement
    - Create or update minimal spec items: one testable sentence, `behavior` or
      `property`, examples or thresholds.
    - Create or update durable requirement rows in `.agentic/requirements/`.
@@ -69,21 +90,25 @@ next prompt options.
    - Run `<workflow> invariants`.
    - Stop and ask the human to review the spec.
 
-3. Check
+4. Check
    - Add tests/checks that cite spec IDs.
    - Also cite durable requirement IDs in test comments, docstrings, or names
      where practical.
    - For new components, include checks or review expectations that make the
-     required `05_SoftwareDocu/` documentation visible before delivery.
+     required `05_SoftwareDocu/` documentation visible before
+     delivery.
    - Run the smallest relevant command and confirm new checks fail first.
    - Record checks with `<workflow> add-check`.
    - Record failing evidence with `<workflow> record-evidence --kind test-run --result fail --check-id <id>`.
    - Stop before source implementation.
 
-4. Implementation
+5. Implementation
    - Edit only configured implementation/source roots.
-   - Update required component documentation under `05_SoftwareDocu/` in the
-     same change when component boundaries, contracts, or behavior change.
+   - Reconfirm local scope before change by checking mapped component paths
+     against `.agentic/components.toml` when present.
+   - Update required component documentation under
+     `05_SoftwareDocu/` in the same change when component
+     boundaries, contracts, or behavior change.
    - Use `$write-component-documentation` for new or materially changed
      components.
    - Run linked tests reported by impact analysis for changed files.
@@ -95,7 +120,7 @@ next prompt options.
    - Record touched paths with `<workflow> record-change`.
    - Stop for validation.
 
-5. Validation
+6. Validation
    - Run `<workflow> invariants`.
    - Run `<workflow> audit traceability`.
    - Run `<workflow> audit coverage`.

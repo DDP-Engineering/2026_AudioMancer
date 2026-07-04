@@ -12,7 +12,7 @@
 @details Provides reusable implementation behavior for the standalone workflow template.
 @author Eng. Dan Dumitru Pasare
 @date 2026-06-20
-@version 0.1.0
+@version 0.2.0
 """
 
 # IMPORTS
@@ -24,6 +24,7 @@ import re
 import subprocess
 from pathlib import Path
 
+from .components import audit_local_scope
 from .config import WorkflowConfig, load_config
 from .models import Graph
 from .paths import is_allowed_path
@@ -55,7 +56,7 @@ def evaluate(repo_root: Path, graph: Graph, config: WorkflowConfig | None = None
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-06-20
-    @version    0.1.0
+    @version    0.2.0
     """
     cfg = config or load_config(repo_root)
     return [
@@ -67,6 +68,7 @@ def evaluate(repo_root: Path, graph: Graph, config: WorkflowConfig | None = None
         _evidence(graph),
         _clean_secrets(repo_root, cfg),
         _green_requirements_active(repo_root, graph, cfg),
+        _component_baseline_scope(repo_root, graph, cfg),
     ]
 
 
@@ -206,6 +208,41 @@ def _green_requirements_active(repo_root: Path, graph: Graph, cfg: WorkflowConfi
     if planned:
         parts.append(f"not Active: {', '.join(planned)}")
     return InvariantResult("INV-8", "Green requirements active", False, "blocking", "; ".join(parts))
+
+
+def _component_baseline_scope(repo_root: Path, graph: Graph, cfg: WorkflowConfig) -> InvariantResult:
+    """
+    @brief      Verify behavior-changing runs only touch baseline-ready components.
+    @param[in]  repo_root Repository root.
+    @param[in]  graph Workflow graph to evaluate.
+    @param[in]  cfg Workflow configuration.
+    @return     Component baseline scope invariant result.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-22
+    @version    0.1.0
+    """
+    if graph.intent.kind == "adoption":
+        return InvariantResult(
+            "INV-9",
+            "Component baseline scope",
+            True,
+            "blocking",
+            "Component baseline scope does not block adoption runs.",
+        )
+    if graph.intent.kind not in {"feature", "fix", "change"}:
+        return InvariantResult("INV-9", "Component baseline scope", True, "blocking", "Run kind does not require component baseline scope.")
+    touched = [path for unit in graph.change_units for path in unit.touched_paths]
+    if not touched:
+        return InvariantResult("INV-9", "Component baseline scope", True, "blocking", "No change units recorded yet.")
+    issues = audit_local_scope(repo_root, touched, cfg.adoption_default_completion_level)
+    if not issues:
+        return InvariantResult("INV-9", "Component baseline scope", True, "blocking", "Mapped component paths meet baseline scope.")
+    messages = [
+        f"{issue.code} {issue.name or 'component'} {issue.path or ''}".strip()
+        for issue in issues
+    ]
+    return InvariantResult("INV-9", "Component baseline scope", False, "blocking", "; ".join(messages))
 
 
 def _in_scope(repo_root: Path, graph: Graph, cfg: WorkflowConfig) -> InvariantResult:

@@ -1,0 +1,79 @@
+{
+  "_legal": "Copyright (c) 2026 DDP Engineering. Licensed under the PolyForm Noncommercial License 1.0.0 (LicenseRef-PolyForm-Noncommercial-1.0.0). Commercial use requires a separate commercial license. See the LICENSE.txt in the .agentic folder.",
+  "_comment": "Qwen Code project settings for the transboarded project root. Hook commands are project-root relative and reuse the shared .agentic/hooks/ guards used by the Codex, Claude Code, Pi, and OpenCode adapters.",
+  "_comment_context": "AGENTS.md stays the authoritative workflow contract; QWEN.md is only the Qwen adapter note. Both are loaded as context files, AGENTS.md first.",
+  "_comment_permissions": "Outward delivery (git push, gh pr create, git merge) is denied by default and also gated by the delivery-preflight hook; a human runs those actions after preflight passes. Secret and key files are denied for read and write to mirror the Claude and Codex filesystem profiles.",
+  "context": {
+    "fileName": ["AGENTS.md", "QWEN.md"]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit|WriteFile|write_file|replace|apply_patch",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python .agentic/hooks/guard_write_zone.py",
+            "name": "agentic-guard-write-zone",
+            "statusMessage": "Checking agentic write zone"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python .agentic/hooks/secret_scan.py",
+            "name": "agentic-secret-scan",
+            "statusMessage": "Checking command for secrets"
+          },
+          {
+            "type": "command",
+            "command": "python .agentic/hooks/delivery_preflight.py",
+            "name": "agentic-delivery-preflight",
+            "statusMessage": "Checking delivery preflight"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Bash|Edit|Write|MultiEdit|WriteFile|write_file|replace|apply_patch",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python .agentic/hooks/post_tool_evidence.py",
+            "name": "agentic-tool-evidence",
+            "statusMessage": "Recording agentic tool evidence"
+          }
+        ]
+      }
+    ]
+  },
+  "permissions": {
+    "deny": [
+      "Read(.env)",
+      "Read(.env.*)",
+      "Read(**/*.env)",
+      "Read(**/*.pem)",
+      "Read(**/*.key)",
+      "Read(**/*_rsa)",
+      "Edit(.env)",
+      "Edit(.env.*)",
+      "Edit(**/*.env)",
+      "Edit(**/*.pem)",
+      "Edit(**/*.key)",
+      "Edit(**/*_rsa)",
+      "Write(.env)",
+      "Write(.env.*)",
+      "Write(**/*.env)",
+      "Write(**/*.pem)",
+      "Write(**/*.key)",
+      "Write(**/*_rsa)",
+      "Bash(git push*)",
+      "Bash(gh pr create*)",
+      "Bash(git merge*)"
+    ]
+  }
+}

@@ -12,7 +12,7 @@
 @details Provides reusable implementation behavior for the standalone workflow template.
 @author Eng. Dan Dumitru Pasare
 @date 2026-06-20
-@version 0.1.0
+@version 0.5.0
 """
 
 # IMPORTS
@@ -20,12 +20,16 @@
 from __future__ import annotations
 
 import argparse
+from dataclasses import asdict
+import fnmatch
 import json
 from pathlib import Path
 
+from .components import ComponentIssue, audit_components, audit_local_scope, component_for_path, load_components
+from .config import WorkflowConfig, load_config
 from .gates import run_gates
 from .invariants import blocking_failures, evaluate
-from .models import AccessMode, Check, ChangeUnit, Decision, Evidence, SpecItem, STAGES
+from .models import ADOPTION_STAGES, ALL_STAGES, AccessMode, Check, ChangeUnit, Decision, Evidence, IntentAlignment, SpecItem, STAGES
 from .requirements import (
     activate_requirement,
     audit_coverage,
@@ -38,6 +42,8 @@ from .report import render_report, write_report
 from .store import add_evidence, append_journal, init_graph, load_graph, repo_root_from, save_graph, set_access_mode, set_stage
 from .working_tree import audit_working_tree
 
+ALIGNMENT_RISK_ORDER = {"low": 0, "medium": 1, "high": 2}
+
 
 def main(argv: list[str] | None = None) -> None:
     """
@@ -47,13 +53,13 @@ def main(argv: list[str] | None = None) -> None:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-06-20
-    @version    0.1.0
+    @version    0.5.0
     """
     parser = argparse.ArgumentParser(prog="agentic-workflow")
     sub = parser.add_subparsers(dest="command", required=True)
 
     start = sub.add_parser("start")
-    start.add_argument("--kind", choices=["feature", "fix", "change"], required=True)
+    start.add_argument("--kind", choices=["feature", "fix", "change", "adoption"], required=True)
     start.add_argument("--statement", required=True)
     start.add_argument("--access-mode", choices=["standard", "repo-wide"], default="standard")
     start.add_argument("--access-reason")
@@ -65,12 +71,25 @@ def main(argv: list[str] | None = None) -> None:
     sub.add_parser("delivery-preflight")
 
     stage = sub.add_parser("set-stage")
-    stage.add_argument("stage", choices=STAGES)
+    stage.add_argument("stage", choices=ALL_STAGES)
     stage.add_argument("--reason", required=True)
 
     access = sub.add_parser("set-access-mode")
     access.add_argument("access_mode", choices=["standard", "repo-wide"])
     access.add_argument("--reason", required=True)
+
+    alignment = sub.add_parser("alignment")
+    alignment.add_argument("--source", required=True)
+    alignment.add_argument("--understanding", required=True)
+    alignment.add_argument("--scope", action="append", required=True)
+    alignment.add_argument("--assumption", action="append", default=[])
+    alignment.add_argument("--acceptance", action="append", required=True)
+    alignment.add_argument("--question", action="append", default=[])
+    alignment.add_argument("--recommended-response", action="append", default=[])
+    alignment.add_argument("--risk", choices=["low", "medium", "high"], required=True)
+    alignment.add_argument("--decision", choices=["proceed", "pause"], required=True)
+    alignment.add_argument("--reason", required=True)
+    alignment.add_argument("--planned-path", action="append", default=[])
 
     supersede = sub.add_parser("supersede-evidence")
     supersede.add_argument("--id", required=True)
@@ -101,6 +120,13 @@ def main(argv: list[str] | None = None) -> None:
     working_tree = sub.add_parser("working-tree")
     working_tree_sub = working_tree.add_subparsers(dest="working_tree_command", required=True)
     working_tree_sub.add_parser("audit")
+
+    adoption = sub.add_parser("adoption")
+    adoption_sub = adoption.add_subparsers(dest="adoption_command", required=True)
+    adoption_sub.add_parser("component-status")
+    scope_check = adoption_sub.add_parser("scope-check")
+    scope_check.add_argument("paths", nargs="+")
+    adoption_sub.add_parser("baseline")
 
     gates = sub.add_parser("gates")
     gates.add_argument("action", choices=["run"])
@@ -159,7 +185,7 @@ def main(argv: list[str] | None = None) -> None:
 
     if args.command == "next":
         graph = load_graph(root)
-        next_stage = _next_stage(graph.stage)
+        next_stage = _next_stage(root, graph.stage)
         set_stage(root, graph, next_stage)
         print(json.dumps({"run_id": graph.run_id, "stage": next_stage}, indent=2))
         return
@@ -179,11 +205,49 @@ def main(argv: list[str] | None = None) -> None:
         print(json.dumps({"run_id": graph.run_id, "access_mode": args.access_mode}, indent=2))
         return
 
+    if args.command == "alignment":
+        graph = load_graph(root)
+        alignment_record = _build_alignment(root, graph, args)
+        graph.alignment = alignment_record
+        save_graph(root, graph)
+        append_journal(root, graph.run_id, "alignment.recorded", asdict(alignment_record))
+        print(
+            json.dumps(
+                {
+                    "run_id": graph.run_id,
+                    "stage": graph.stage,
+                    "risk": alignment_record.risk,
+                    "decision": alignment_record.decision,
+                    "open_question_count": len(alignment_record.open_questions),
+                    "planned_path_count": len(alignment_record.planned_paths),
+                },
+                indent=2,
+            )
+        )
+        return
+
     if args.command == "working-tree":
         report = audit_working_tree(root)
         print(json.dumps(report, indent=2))
         if report["blocking_findings"]:
             raise SystemExit(1)
+        return
+
+    if args.command == "adoption":
+        _exit_if_component_manifest_invalid(root)
+        if args.adoption_command == "component-status":
+            print(json.dumps(_component_status(root), indent=2))
+            return
+        if args.adoption_command == "scope-check":
+            issues = [
+                *audit_local_scope(root, args.paths),
+                *_unmapped_scope_issues(root, args.paths),
+            ]
+            _print_component_issues(issues)
+            if any(issue.blocking for issue in issues):
+                raise SystemExit(1)
+            return
+        print(_component_baseline_markdown(root))
         return
 
     if args.command == "invariants":
@@ -216,6 +280,7 @@ def main(argv: list[str] | None = None) -> None:
 
     if args.command == "registry":
         if args.registry_command == "sync":
+            _exit_if_component_manifest_invalid(root)
             print(json.dumps(sync_registry(root), indent=2))
             return
         issues = audit_registry(root)
@@ -254,12 +319,14 @@ def main(argv: list[str] | None = None) -> None:
         traceability_issues = audit_traceability(root)
         coverage_issues = audit_coverage(root)
         registry_issues = audit_registry(root)
-        working_tree_report = audit_working_tree(root)
+        component_issues = audit_components(root)
+        working_tree_report = audit_working_tree(root, graph=graph)
         output = {
             "invariants": [item.__dict__ for item in results],
             "traceability_issues": [item.to_dict() for item in traceability_issues],
             "coverage_issues": [item.to_dict() for item in coverage_issues],
             "registry_issues": [item.to_dict() for item in registry_issues],
+            "component_issues": [item.to_dict() for item in component_issues],
             "working_tree": working_tree_report,
         }
         print(json.dumps(output, indent=2))
@@ -268,6 +335,7 @@ def main(argv: list[str] | None = None) -> None:
             or traceability_issues
             or coverage_issues
             or registry_issues
+            or component_issues
             or working_tree_report["blocking_findings"]
         ):
             raise SystemExit(1)
@@ -339,7 +407,7 @@ def _status(root: Path, graph) -> dict:
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-06-20
-    @version    0.1.0
+    @version    0.3.0
     """
     results = evaluate(root, graph)
     return {
@@ -347,11 +415,109 @@ def _status(root: Path, graph) -> dict:
         "stage": graph.stage,
         "access_mode": graph.access_mode,
         "intent": graph.intent.__dict__,
+        "alignment": asdict(graph.alignment) if graph.alignment else None,
         "spec_count": len(graph.spec_items),
         "check_count": len(graph.checks),
         "evidence_count": len(graph.evidence),
         "blocking_failures": [item.__dict__ for item in blocking_failures(results)],
     }
+
+
+def _build_alignment(root: Path, graph, args) -> IntentAlignment:
+    """
+    @brief      Build and validate the intent-alignment record from CLI arguments.
+    @param[in]  root Repository root.
+    @param[in]  graph Active workflow graph.
+    @param[in]  args Parsed command-line arguments.
+    @return     Validated intent-alignment record.
+    @exception  SystemExit Raised when policy requires a pause decision.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-03
+    @version    0.2.0
+    """
+    if graph.stage not in {"alignment", "adoption-alignment"}:
+        raise SystemExit("Intent alignment can only be recorded during alignment or adoption-alignment.")
+    cfg = load_config(root)
+    if not cfg.alignment_enabled:
+        raise SystemExit("Intent alignment is disabled by .agentic/workflow.toml.")
+    alignment_record = IntentAlignment(
+        source=args.source,
+        understanding=args.understanding,
+        scope=args.scope,
+        assumptions=args.assumption,
+        acceptance=args.acceptance,
+        open_questions=args.question,
+        recommended_responses=args.recommended_response,
+        risk=args.risk,
+        decision=args.decision,
+        reason=args.reason,
+        planned_paths=args.planned_path,
+    )
+    pause_reasons = _alignment_pause_reasons(alignment_record, cfg)
+    if alignment_record.decision == "proceed" and pause_reasons:
+        raise SystemExit(f"Intent alignment policy requires decision pause: {'; '.join(pause_reasons)}")
+    return alignment_record
+
+
+def _alignment_pause_reasons(alignment_record: IntentAlignment, cfg: WorkflowConfig) -> list[str]:
+    """
+    @brief      Explain why an intent-alignment record must pause.
+    @param[in]  alignment_record Intent-alignment record to evaluate.
+    @param[in]  cfg Workflow configuration.
+    @return     Human-readable pause reasons.
+    @exception  SystemExit Raised when configured risk threshold is invalid.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-03
+    @version    0.2.0
+    """
+    if cfg.alignment_risk_threshold not in ALIGNMENT_RISK_ORDER:
+        raise SystemExit(
+            "Invalid intent alignment risk threshold in .agentic/workflow.toml: "
+            f"{cfg.alignment_risk_threshold}"
+        )
+    reasons = []
+    unanswered_question_count = len(alignment_record.open_questions) - len(alignment_record.recommended_responses)
+    if (
+        cfg.alignment_pause_on_open_questions
+        and alignment_record.open_questions
+        and (
+            not cfg.alignment_allow_recommended_responses
+            or unanswered_question_count > 0
+        )
+    ):
+        if cfg.alignment_allow_recommended_responses:
+            reasons.append("open questions need recommended responses")
+        else:
+            reasons.append("open questions are present")
+    if ALIGNMENT_RISK_ORDER[alignment_record.risk] >= ALIGNMENT_RISK_ORDER[cfg.alignment_risk_threshold]:
+        reasons.append(f"risk {alignment_record.risk} meets threshold {cfg.alignment_risk_threshold}")
+    protected_paths = _alignment_protected_paths(
+        alignment_record.planned_paths,
+        cfg.alignment_protected_scope_patterns,
+    )
+    if protected_paths:
+        reasons.append(f"planned paths match protected scope: {', '.join(protected_paths)}")
+    return reasons
+
+
+def _alignment_protected_paths(planned_paths: list[str], patterns: list[str]) -> list[str]:
+    """
+    @brief      Collect planned paths matching configured protected-scope globs.
+    @param[in]  planned_paths Planned repository-relative paths.
+    @param[in]  patterns Protected path glob patterns.
+    @return     Sorted matching planned paths.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-03
+    @version    0.2.0
+    """
+    matches = set()
+    normalized_patterns = [pattern.replace("\\", "/") for pattern in patterns]
+    for path in planned_paths:
+        normalized = path.replace("\\", "/")
+        if any(fnmatch.fnmatch(normalized, pattern) for pattern in normalized_patterns):
+            matches.add(path)
+    return sorted(matches)
 
 
 def _print_issues(issues) -> None:
@@ -369,6 +535,114 @@ def _print_issues(issues) -> None:
         return
     for issue in issues:
         print(f"{issue.code}: {issue.message}")
+
+
+def _print_component_issues(issues: list[ComponentIssue]) -> None:
+    """
+    @brief      Print component scope issues in a compact CLI format.
+    @param[in]  issues Component issues to print.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-22
+    @version    0.1.0
+    """
+    if not issues:
+        print("OK: no component scope issues.")
+        return
+    for issue in issues:
+        location = f" [{issue.path}]" if issue.path else ""
+        subject = f" ({issue.name})" if issue.name else ""
+        print(f"{issue.code}{subject}{location}: {issue.message}")
+
+
+def _exit_if_component_manifest_invalid(root: Path) -> None:
+    """
+    @brief      Stop CLI commands when the component manifest is invalid.
+    @param[in]  root Repository root.
+    @return     None.
+    @exception  SystemExit Raised when blocking manifest issues exist.
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-22
+    @version    0.1.0
+    """
+    issues = audit_components(root)
+    if not any(issue.blocking for issue in issues):
+        return
+    _print_component_issues(issues)
+    raise SystemExit(1)
+
+
+def _component_status(root: Path) -> dict:
+    """
+    @brief      Build component and bundle status output.
+    @param[in]  root Repository root.
+    @return     JSON-serializable component status data.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-22
+    @version    0.1.0
+    """
+    cfg = load_config(root)
+    manifest = load_components(root, cfg.component_manifest)
+    return asdict(manifest)
+
+
+def _component_baseline_markdown(root: Path) -> str:
+    """
+    @brief      Render a concise Markdown component baseline summary.
+    @param[in]  root Repository root.
+    @return     Markdown baseline summary.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-22
+    @version    0.1.0
+    """
+    status = _component_status(root)
+    lines = ["# Component Baseline", "", "## Components"]
+    components = status["components"]
+    if not components:
+        lines.append("- No components configured.")
+    for name, component in sorted(components.items()):
+        lines.append(f"- {name}: {component['adoption_status']} ({component['criticality']})")
+    bundles = status["bundles"]
+    if bundles:
+        lines.extend(["", "## Bundles"])
+        for name, bundle in sorted(bundles.items()):
+            approved = "approved" if bundle["approved"] else "not approved"
+            components_text = ", ".join(bundle["components"]) or "none"
+            lines.append(f"- {name}: {bundle['adoption_status']} ({approved}; {components_text})")
+    return "\n".join(lines)
+
+
+def _unmapped_scope_issues(root: Path, paths: list[str]) -> list[ComponentIssue]:
+    """
+    @brief      Build informational issues for paths outside component patterns.
+    @param[in]  root Repository root.
+    @param[in]  paths Repository-relative paths to inspect.
+    @return     Informational component issues.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-06-22
+    @version    0.1.0
+    """
+    cfg = load_config(root)
+    manifest = load_components(root, cfg.component_manifest)
+    issues = []
+    for path in paths:
+        normalized = path.replace("\\", "/").strip()
+        if component_for_path(manifest, normalized) is not None:
+            continue
+        issues.append(
+            ComponentIssue(
+                code="COMPONENT-UNMAPPED",
+                message="Path is not covered by configured component patterns.",
+                path=normalized,
+                severity="info",
+                blocking=False,
+            )
+        )
+    return issues
 
 
 def _print_impact(report) -> None:
@@ -399,20 +673,27 @@ def _print_impact(report) -> None:
             print(f"  {row['req_id']} ({row['status']}) -> {tests}")
 
 
-def _next_stage(stage: str) -> str:
+def _next_stage(root: Path, stage: str) -> str:
     """
     @brief      Handle next stage workflow behavior.
+    @param[in]  root Repository root.
     @param[in]  stage Input value used by the workflow helper.
     @return     Result produced by the workflow helper.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-06-20
-    @version    0.1.0
+    @version    0.3.0
     """
-    index = STAGES.index(stage)
-    if index == len(STAGES) - 1:
+    cfg = load_config(root)
+    if stage == "intake" and not cfg.alignment_enabled:
+        return "requirement"
+    if stage == "adoption-intake" and not cfg.alignment_enabled:
+        return "repo-discovery"
+    stages = ADOPTION_STAGES if stage in ADOPTION_STAGES else STAGES
+    index = stages.index(stage)
+    if index == len(stages) - 1:
         return stage
-    return STAGES[index + 1]
+    return stages[index + 1]
 
 
 def _link_check_evidence(graph, check_id: str, evidence: Evidence) -> None:

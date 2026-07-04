@@ -1,6 +1,6 @@
 ---
 name: write-component-documentation
-description: Use to create or update component documentation under 05_SoftwareDocu for a new or materially changed software component.
+description: Use to create or update component documentation under `05_SoftwareDocu` for a new or materially changed software component.
 ---
 
 <!--
@@ -21,5 +21,5 @@ Read and follow these shared workflow rule sources:
 
 Claude Code invocation: `/write-component-documentation`.
 
-Document current implemented behavior only. Update `05_SoftwareDocu/README.md`
-when adding a new component page.
+Document current implemented behavior only. Update
+`05_SoftwareDocu/README.md` when adding a new component page.

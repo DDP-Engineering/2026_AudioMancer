@@ -1,6 +1,6 @@
 ---
 name: write-component-documentation
-description: Create or update component documentation under `05_SoftwareDocu/` for a repository using this workflow template. Use when Codex needs to document a new software component, refresh an existing component document, or keep the software documentation index aligned with implementation changes.
+description: Create or update component documentation under `05_SoftwareDocu/` for a repository using this workflow template. Use when Codex needs to document a new software component, refresh an existing component document, or keep the software component knowledge index aligned with implementation changes.
 ---
 
 <!--
@@ -21,5 +21,5 @@ Read and follow these shared workflow rule sources:
 
 Codex invocation: `$write-component-documentation`.
 
-Document current implemented behavior only. Update `05_SoftwareDocu/README.md`
-when adding a new component page.
+Document current implemented behavior only. Update
+`05_SoftwareDocu/README.md` when adding a new component page.

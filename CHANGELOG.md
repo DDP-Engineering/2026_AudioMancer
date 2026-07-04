@@ -10,6 +10,13 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Changed
+
+- Synced the embedded agentic workflow integration with the latest template,
+  adding Intent Alignment, adoption-stage support, OpenCode default-agent
+  routing, Qwen Code adapter support, updated workflow docs, and adapter parity
+  tests while preserving AudioMancer-specific gates and documentation paths.
+
 ## [1.6.2] - 2026-07-03
 
 ### Changed

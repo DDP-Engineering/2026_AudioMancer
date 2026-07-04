@@ -19,7 +19,7 @@ format. Pi reads `AGENTS.md` natively.
 ## Contents
 
 - `package.json` - Pi package manifest. Declares the `agentic-guard` extension
-  and points `pi.skills` at `../.agentic/skills` so the six neutral skills are
+  and points `pi.skills` at `../.agentic/skills` so the shared neutral skills are
   reused with **no duplication** (single source of truth, same as the Codex and
   Claude adapters).
 - `settings.json` - project-local Pi settings. Loads this directory as a package
@@ -69,12 +69,13 @@ translates Pi tool events into the existing hook payloads and reuses the Python
 
 ```powershell
 pi install ./.pi          # local path (inside a repo that has the .agentic engine), or:
-pi install git:github.com/<org>/<repo>@v0.1.0   # private git; PolyForm-NC stays private
+pi install git:github.com/<org>/<repo>@v0.2.0   # private git; PolyForm-NC stays private
 # Trust the project when prompted.
 pi                        # AGENTS.md gate contract + /skill:agentic-development active
 ```
 
-The six skills surface as `/skill:agentic-development`, `/skill:agentic-delivery`,
+The shared skills surface as `/skill:agentic-development`,
+`/skill:agentic-adoption`, `/skill:agentic-delivery`,
 `/skill:regression-traceability`, `/skill:documentation-audit`,
 `/skill:python-codestyle-audit`, and `/skill:write-component-documentation`.
 

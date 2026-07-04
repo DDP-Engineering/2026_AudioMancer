@@ -16,8 +16,8 @@ See the LICENSE.txt in the .agentic folder for full license details. SPDX-Licens
 Use this skill to preserve old behavior before changing code.
 
 This skill audits requirements and regression risk. Component documentation in
-`05_SoftwareDocu/` complements this process, but it does not replace durable
-requirement rows, linked tests, or explicit manual verification.
+`05_SoftwareDocu/` complements this process, but it does not
+replace durable requirement rows, linked tests, or explicit manual verification.
 
 ## Procedure
 

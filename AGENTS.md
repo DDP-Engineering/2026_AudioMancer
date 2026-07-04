@@ -15,10 +15,12 @@ This repository uses a manual, human-steered agentic development workflow.
 When the user asks to implement a feature, fix a bug, or change behavior:
 
 1. Start or resume an `.agentic` run.
-2. Complete only one workflow gate at a time.
-3. Keep intent/spec, checks/tests, source implementation, validation, and
+2. Complete the `alignment` Intent Alignment stage before requirement/spec work
+   when enabled.
+3. Complete only one workflow gate at a time.
+4. Keep intent/spec, checks/tests, source implementation, validation, and
    delivery as separate steps.
-4. Stop after each gate with a concise summary and next prompt options.
+5. Stop after each gate with a concise summary and next prompt options.
 
 Use the project-local wrappers when available:
 
@@ -40,9 +42,40 @@ it natively). The `.pi/` directory is a thin adapter that bridges Pi tool events
 to the same `.agentic/hooks/` guards used by the Codex and Claude adapters, so
 write-zone, secret, delivery-preflight, protected-read, and evidence rules hold
 identically. `<workflow>` still means the project-local runner under
-`.agentic/tools/`. The six skills are invoked as `/skill:<name>` (for example
+`.agentic/tools/`. Shared skills are invoked as `/skill:<name>` (for example
 `/skill:agentic-development`). Project-local Pi resources load only after the
 project is trusted; see `.pi/README.md`.
+
+## OpenCode Adapter
+
+Under [OpenCode](https://opencode.ai), this `AGENTS.md` contract applies
+unchanged. The project root `opencode.json` points OpenCode at this file and the
+workflow CLI reference, and sets the default primary agent to
+`agentic-workflow` for TUI, `opencode run`, desktop, and GitHub Action usage.
+The `.opencode/` directory provides that workflow agent, native skill wrappers,
+command prompts, and a local plugin that bridges OpenCode tool events to the
+same `.agentic/hooks/` guards used by the Codex, Claude Code, and Pi adapters.
+`<workflow>` still means the project-local runner under `.agentic/tools/`.
+Shared skills are loaded with OpenCode's native `skill` tool (for example
+`agentic-development`). Start OpenCode from the repository root so the project
+config, agent, skills, commands, and plugin load together; see
+`.opencode/README.md`.
+
+## Qwen Code Adapter
+
+Under [Qwen Code](https://github.com/QwenLM/qwen-code), this `AGENTS.md`
+contract applies unchanged. The `.qwen/settings.json` file sets
+`context.fileName` to `["AGENTS.md", "QWEN.md"]` so `AGENTS.md` loads first and
+stays authoritative, and its native `PreToolUse`/`PostToolUse` command hooks
+call the same `.agentic/hooks/` guards used by the Codex, Claude Code, Pi, and
+OpenCode adapters, so write-zone, secret, delivery-preflight, protected-read,
+and evidence rules hold identically. `<workflow>` still means the project-local
+runner under `.agentic/tools/`. Shared skills are model-invoked or selected from
+Qwen's `/skills` picker (for example `agentic-development`), and
+`.qwen/commands/` exposes `/workflow-status`, `/workflow-preflight`, and
+`/workflow-report`. Start Qwen Code from the repository root so the project
+settings, skills, and commands load together, and trust the project on first
+start; see `.qwen/README.md`.
 
 ## Application Test Environment
 
@@ -55,8 +88,7 @@ use the application's pinned `uv` environment from `04_Software/AudioMancer`:
 
 - Provision or repair it with `uv sync --extra dev` (installs the locked
   `pytest`, `pytest-qt`, `ruff`, and `PyInstaller` from `uv.lock`).
-- Run everything through that environment with `uv run …`, for example
-  `uv run pytest` or `uv run ruff check …`.
+- Run commands through that environment with `uv run`, for example`r`n  `uv run pytest` or `uv run ruff check .`.
 - Do not invoke the system Python directly, install packages with ad-hoc `pip`,
   or reach into the application's virtual environment from the workflow tooling.
 
@@ -102,14 +134,17 @@ commands.
 
 ## Required Order
 
-1. Intake: classify request and ask clarifying questions.
-2. Requirement: create or update minimal spec items and durable requirement rows.
-3. Check: create checks/tests that cite spec/requirement IDs and fail first.
-4. Implementation: edit source and required component documentation until
+1. Intake: classify request and inspect likely implementation impact.
+2. Intent Alignment: record understanding, scope, acceptance, risk, and open
+   questions with recommended responses when automated flow is acceptable; pause
+   when policy or risk requires human input.
+3. Requirement: create or update minimal spec items and durable requirement rows.
+4. Check: create checks/tests that cite spec/requirement IDs and fail first.
+5. Implementation: edit source and required component documentation until
    checks pass.
-5. Validation: run deterministic gates, documentation review, and read-only
+6. Validation: run deterministic gates, documentation review, and read-only
    review.
-6. Delivery: run preflight and ask before PR/push/merge.
+7. Delivery: run preflight and ask before PR/push/merge.
 
 ## Safety Rules
 
@@ -122,6 +157,12 @@ commands.
 - If a late failing evidence entry is proven to be an environment, command, or
   operator issue, record the passing rerun and use
   `<workflow> supersede-evidence --id <old-evidence-id> --by <new-evidence-id> --reason "<reason>"`.
+- Record Intent Alignment with
+  `<workflow> alignment --source "<ref>" --understanding "<text>" --scope "<scope>" --acceptance "<criterion>" --risk low|medium|high --decision proceed|pause --reason "<reason>"`.
+  When questions exist, include `--recommended-response "<answer to assume>"`
+  for each question if automated continuation is acceptable. Use `proceed` only
+  when `.agentic/workflow.toml` policy allows it; otherwise stop in alignment
+  and ask for human answers or risk approval.
 - Treat arbitrary untracked human files as advisory delivery context unless
   they match protected paths, configured working-tree blockers, or secret
   patterns.

@@ -20,23 +20,27 @@ optional polish.
 
 This template gives an AI coding agent (Codex, Claude Code, or Pi) a disciplined way
 to work on your project. Instead of letting the agent change code freely, the
-work is broken into six **gates**. At each gate the agent stops, shows you what
-it did, and waits for your approval. Every change must be tied to a written
-requirement and a test, so later work cannot quietly undo earlier work. You stay
-in control the whole time.
+work is broken into seven **gates**. At each gate the agent stops, shows you
+what it did, and waits for your approval. Intent Alignment is the independent
+gate after intake where the agent records what it understood, how that relates
+to the current software, open questions with default responses, risk, and the
+planned path. Every behavior change must still be tied to a written requirement
+and a test, so later work cannot quietly undo earlier work. You stay in control
+the whole time.
 
 ```mermaid
 flowchart LR
   A[Your idea or bug] --> B[Intake]
-  B --> C[Requirement]
-  C --> D[Check / test]
-  D --> E[Implementation]
-  E --> F[Validation]
-  F --> G[Delivery]
-  G --> H[You approve PR / commit]
+  B --> C[Intent Alignment]
+  C --> D[Requirement]
+  D --> E[Check / test]
+  E --> F[Implementation]
+  F --> G[Validation]
+  G --> I[Delivery]
+  I --> H[You approve PR / commit]
 
   classDef gate fill:#1f6feb22,stroke:#1f6feb,color:#111;
-  class B,C,D,E,F,G gate;
+  class B,C,D,E,F,G,I gate;
 ```
 
 You drive it with normal chat prompts. The template adds a small command-line
@@ -156,7 +160,7 @@ lint = ["python -m ruff check ."]
 
 [write_zones]
 # IMPORTANT: keep these aligned with the roots above (see the gotcha below).
-implementation = ["invoicer/**", "05_SoftwareDocu/**"]
+implementation = ["invoicer/**", ".agentic/knowledge/components/**"]
 check = ["tests/**"]
 ```
 
@@ -226,11 +230,12 @@ Implement feature: add a 10% discount for orders over 100 EUR.
 Stop at each gate and wait for my approval.
 ```
 
-The agent then walks the six gates, stopping after each one:
+The agent then walks the seven gates, stopping after each one:
 
 ```mermaid
 flowchart LR
-  I[Intake<br/>understand & ask] --> R[Requirement<br/>write it down]
+  I[Intake<br/>start the run] --> A[Alignment<br/>record understanding]
+  A --> R[Requirement<br/>write it down]
   R --> C[Check<br/>add a failing test]
   C --> M[Implementation<br/>make the test pass]
   M --> V[Validation<br/>run all checks]
@@ -239,14 +244,17 @@ flowchart LR
 
 What each gate means in plain terms:
 
-1. **Intake** — the agent understands the request and asks questions.
-2. **Requirement** — it writes the requirement down (in
+1. **Intake** - the agent starts the run and identifies the likely request type.
+2. **Intent Alignment** - it records understanding, scope, assumptions, open
+   questions with recommended default responses, risk, decision, reason, and
+   planned paths. This gate can be skipped with `[alignment].enabled = false`.
+3. **Requirement** - it writes the requirement down (in
    `.agentic/requirements/`). You approve the wording.
-3. **Check** — it adds a test that *fails first* (proving the test is real).
-4. **Implementation** — it writes code until that test passes, and only touches
+4. **Check** - it adds a test that *fails first* (proving the test is real).
+5. **Implementation** - it writes code until that test passes, and only touches
    allowed files.
-5. **Validation** — it runs your gate commands, audits, and reviews the change.
-6. **Delivery** — it runs a final preflight and asks before committing/pushing.
+6. **Validation** - it runs your gate commands, audits, and reviews the change.
+7. **Delivery** - it runs a final preflight and asks before committing/pushing.
 
 You can stop, revise, or abort at any gate. Nothing is pushed or committed
 without your explicit go-ahead.
@@ -269,7 +277,7 @@ every gate.
       [ ] coverable_roots       -> same as [source] roots
       [ ] [gates] test / lint   -> your real commands
       [ ] [traceability] language + source_extensions -> your language
-      [ ] write_zones.implementation -> matches [source] roots  (+ 05_SoftwareDocu/**)
+      [ ] write_zones.implementation -> matches [source] roots  (+ .agentic/knowledge/components/**)
       [ ] write_zones.check          -> matches [tests] roots
 [ ] (Optional) review .codex/config.toml, .claude/settings.json, and .pi/README.md
 [ ] (Pi only) pi install ./.pi and trust the project
@@ -291,8 +299,9 @@ The example above is Python. For other setups:
   name-match, which still works. Set `source_extensions` (e.g. `[".ts"]`) and
   `test_file_patterns` to fit.
 - **Docs elsewhere** — if you keep component docs somewhere other than
-  `05_SoftwareDocu/`, update `[documentation] roots`, `component_template`, and
-  the `05_SoftwareDocu/**` entry in `write_zones.implementation`.
+  `.agentic/knowledge/components/`, update `[documentation] roots`,
+  `component_template`, and the `.agentic/knowledge/components/**` entry in
+  `write_zones.implementation`.
 
 ---
 

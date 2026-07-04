@@ -46,7 +46,7 @@ new project should receive:
 - `CLAUDE.md` Claude Code adapter note that points back to `AGENTS.md`.
 - `CHANGELOG.md` starter release/change log.
 - `.agentic/documents/PROMPT_CHEATSHEET.md` human operator prompts for the copied workflow.
-- `05_SoftwareDocu/` component documentation template and index.
+- `.agentic/knowledge/components/` component documentation template and index.
 
 After copying, adjust `.agentic/workflow.toml` for the target repository's real
 source roots, test roots, gate commands, write zones, and documentation roots.
@@ -83,23 +83,78 @@ Do not edit files yet.
 
 For Claude Code, open the copied project and let `CLAUDE.md` point the session
 to `AGENTS.md`. Direct Claude skill invocations use `/agentic-development`,
-`/agentic-delivery`, `/documentation-audit`,
+`/agentic-adoption`, `/agentic-delivery`, `/documentation-audit`,
 `/write-component-documentation`, `/regression-traceability`, and
 `/python-codestyle-audit`.
 
 For Pi, run `pi install ./.pi` and trust the project (Pi must be installed
 beforehand). The same skills are invoked as `/skill:agentic-development`,
-`/skill:agentic-delivery`, `/skill:documentation-audit`,
-`/skill:write-component-documentation`, `/skill:regression-traceability`, and
-`/skill:python-codestyle-audit`.
+`/skill:agentic-adoption`, `/skill:agentic-delivery`,
+`/skill:documentation-audit`, `/skill:write-component-documentation`,
+`/skill:regression-traceability`, and `/skill:python-codestyle-audit`.
+
+## Adopt An Existing Project
+
+Start adoption mode:
+
+```text
+Use $agentic-adoption.
+Adopt this existing project into the agentic workflow.
+Rules:
+- No application behavior changes during adoption.
+- Start with adoption-intake and adoption-alignment, then repo-discovery and
+  component-map before changing adoption artifacts.
+- Default to one component at a time unless I approve a named bundle.
+- Establish local scope before change for each component-adoption slice.
+Stop after adoption-alignment and tell me the proposed scope, open questions,
+recommended default responses, risk, and planned discovery path.
+```
+
+Approve the component map:
+
+```text
+The component map is approved.
+Continue the adoption run to component-adoption for <component name>.
+Keep the scope local to that component.
+Do not change runtime behavior.
+Stop after reporting adopted artifacts, baseline status, and remaining gaps.
+```
+
+Review adoption baseline:
+
+```text
+Continue to baseline-review.
+Run:
+<workflow> adoption baseline
+<workflow> adoption component-status
+
+Tell me which components are baseline-usable, which are blocked, and what
+single-component adoption slice should run next.
+Do not edit application behavior.
+```
+
+If a feature run is blocked by adoption:
+
+```text
+This feature touches <component/path>.
+Before behavior-changing work, inspect .agentic/components.toml.
+If the target component is below baseline-usable, stop the feature run and use
+$agentic-adoption to propose the smallest component adoption slice needed to
+unblock it.
+Do not implement the feature until I approve the adoption result.
+```
 
 ## Start A Feature
 
 ```text
 Use the agentic development workflow.
 Implement feature: <feature description>.
-Before drafting requirements, run traceability and coverage audits, then map
-impact for likely changed files.
+Before drafting requirements, complete Intent Alignment: record what you
+understood, scope, assumptions, open questions with recommended default
+responses, risk, decision, reason, and planned paths.
+Then run traceability and coverage audits, and map impact for likely changed files.
+If .agentic/components.toml exists, check whether the target component is
+baseline-usable before behavior-changing work.
 Stop at each gate and wait for my approval.
 ```
 
@@ -108,9 +163,11 @@ More explicit:
 ```text
 Use the agentic development workflow.
 Start a feature run for: <feature description>.
-At intake, inspect the repo and ask clarification questions if needed.
+At intake, start the run. At alignment, inspect the repo, record understanding,
+scope, assumptions, open questions with recommended default responses, risk,
+decision, reason, and planned paths.
 Do not create requirements, tests, or implementation yet.
-Stop after the intake gate.
+Stop after the alignment gate.
 ```
 
 ## Start A Bug Fix
@@ -136,7 +193,8 @@ Allowed spec tags are only behavior and property.
 Use one testable sentence per spec item.
 Also draft/update the durable requirement rows under .agentic/requirements/.
 If this creates or materially changes a component, include the expected
-05_SoftwareDocu component-documentation update in the acceptance notes.
+.agentic/knowledge/components component-documentation update in the acceptance
+notes.
 New requirement rows start as Planned.
 Do not implement anything.
 Stop after showing me the drafted spec items for approval.
@@ -194,7 +252,7 @@ Rules:
 - Edit source/docs/config files only as needed.
 - If a new component is created or a component contract materially changes, use
   $write-component-documentation in Codex or `/write-component-documentation`
-  in Claude Code and update 05_SoftwareDocu in the same change.
+  in Claude Code and update `.agentic/knowledge/components` in the same change.
 - Do not edit tests unless you stop and ask first.
 - Run linked tests reported by impact analysis for changed files.
 - If impact reports untraced coverable files, run full regression and author missing requirements/checks.
@@ -259,7 +317,7 @@ Then inspect the diff read-only for:
 - scope creep
 - weakened or deleted tests
 - missing spec citations
-- missing or stale 05_SoftwareDocu component documentation
+- missing or stale `.agentic/knowledge/components` component documentation
 - secrets or credential files
 - mismatch between approved specs and implementation
 
@@ -290,8 +348,8 @@ Run:
 
 Run $documentation-audit or an equivalent manual documentation review before
 delivery. Confirm new or materially changed components have matching
-05_SoftwareDocu documentation. Review broad README, overview, setup, or
-validation docs only when this change affects their scope.
+`.agentic/knowledge/components` documentation. Review broad README, overview,
+setup, or validation docs only when this change affects their scope.
 
 Then inspect git status read-only.
 Stop after reporting preflight result, report path, git status summary, and whether the change is ready for a human-approved commit.
@@ -303,19 +361,21 @@ Create or update component docs:
 
 ```text
 Use $write-component-documentation.
-Create or update the 05_SoftwareDocu component document for <component>.
+Create or update the `.agentic/knowledge/components` component document for
+<component>.
 Read the current implementation files first, follow
-05_SoftwareDocu/component_documentation_template.md, update
-05_SoftwareDocu/README.md if adding a new page, and do not describe planned
-behavior as implemented.
+`.agentic/knowledge/components/component_template.md`, update
+`.agentic/knowledge/components/index.md` if adding a new page, and do not
+describe planned behavior as implemented.
 ```
 
 Audit documentation:
 
 ```text
 Use $documentation-audit.
-Review current implementation changes against relevant 05_SoftwareDocu
-component docs. Review broad README, overview, setup, or validation docs only
+Review current implementation changes against relevant
+`.agentic/knowledge/components` component docs. Review broad README, overview,
+setup, or validation docs only
 when explicitly requested or when this change affects their scope. Run any
 repository documentation audit tool in changed-only mode if present; otherwise
 perform the manual review from the skill.

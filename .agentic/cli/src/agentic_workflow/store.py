@@ -12,7 +12,7 @@
 @details Mirrors the packaged CLI implementation shipped into generated projects.
 @author Eng. Dan Dumitru Pasare
 @date 2026-06-20
-@version 0.1.0
+@version 0.2.0
 """
 
 # IMPORTS
@@ -23,7 +23,7 @@ import json
 from pathlib import Path
 from uuid import uuid4
 
-from .models import AccessMode, Evidence, Graph, Intent, Stage, now_iso
+from .models import ADOPTION_STAGES, AccessMode, Evidence, Graph, Intent, RunKind, Stage, now_iso
 
 
 AGENTIC_DIR = ".agentic"
@@ -173,7 +173,7 @@ def read_current_run(repo_root: Path) -> str:
 
 def init_graph(
     repo_root: Path,
-    kind: str,
+    kind: RunKind,
     statement: str,
     access_mode: AccessMode = "standard",
 ) -> Graph:
@@ -187,12 +187,13 @@ def init_graph(
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-06-20
-    @version    0.1.0
+    @version    0.2.0
     """
     run_id = new_run_id(kind)
+    starting_stage: Stage = ADOPTION_STAGES[0] if kind == "adoption" else "intake"
     graph = Graph(
         run_id=run_id,
-        stage="intake",
+        stage=starting_stage,
         intent=Intent(id="I-0001", kind=kind, statement=statement),
         access_mode=access_mode,
     )

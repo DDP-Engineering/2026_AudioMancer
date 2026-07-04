@@ -1,6 +1,6 @@
 ---
 name: write-component-documentation
-description: Create or update component documentation under `05_SoftwareDocu/` for a repository using this workflow template. Use when Codex needs to document a new software component, refresh an existing component document, or keep the software documentation index aligned with implementation changes.
+description: Create or update component documentation under `05_SoftwareDocu/` for a repository using this workflow template. Use when Codex needs to document a new software component, refresh an existing component document, or keep the software component knowledge index aligned with implementation changes.
 ---
 
 <!--
@@ -30,7 +30,7 @@ Use this workflow:
    current code.
 2. Follow the template structure.
    Keep the section numbering and headings from
-   `component_documentation_template.md` unless a section is clearly irrelevant.
+   `component_template.md` unless a section is clearly irrelevant.
 3. Match the repository writing style.
    Write concise engineering prose, not marketing copy. Prefer concrete
    repository paths, function names, commands, and runtime behavior over generic
@@ -42,8 +42,8 @@ Use this workflow:
    State what the component owns and what it does not own when that prevents
    confusion with nearby modules.
 6. Update the software-doc index.
-   If a new file is added under `05_SoftwareDocu/`, add a short entry to
-   `05_SoftwareDocu/README.md` in the same change.
+   If a new file is added under `05_SoftwareDocu/`, add a short
+   entry to `05_SoftwareDocu/README.md` in the same change.
 
 Content expectations by section:
 
@@ -80,7 +80,7 @@ When updating an existing component document:
 
 When creating a new component document:
 
-- name it `05_SoftwareDocu/<Component_Name>.md` using the repository's current
-  naming style
-- add one short bullet to `05_SoftwareDocu/README.md` describing the new
-  document
+- name it `05_SoftwareDocu/<Component_Name>.md` using the
+  repository's current naming style
+- add one short bullet to `05_SoftwareDocu/README.md` describing
+  the new document
