@@ -185,9 +185,10 @@ High-level flow:
    `speech_blocks_text_split_service.build_atomic_speech_units(...)`. Source
    spans provide contiguous `sNNN` provenance that reconstructs the exact
    request text. Atomic units split quoted dialogue, dash-led dialogue,
-   attribution narration, ordinary narration, separators, and mixed fragments.
-   Speakable units provide the model-facing `uNNN` vocabulary; separator-only
-   and whitespace-only units remain provenance and are not selectable. One
+   attribution narration, ordinary narration, non-spoken quoted narrator words,
+   separators, and mixed fragments. Speakable units provide the model-facing
+   `uNNN` vocabulary; separator-only and whitespace-only units remain
+   provenance and are not selectable. One
    source span may produce many atomic units, and a common pattern such as
    dialogue, attribution, dialogue, attribution, dialogue remains five ordered
    units. For
@@ -399,6 +400,9 @@ Current invariants:
   quote pairs, guillemets, CJK quote markers, dash-led dialogue, manageable
   narration sentence boundaries, repeated dash-dialogue turns, and multilingual
   attribution phrases become stable units without crossing paragraph boundaries
+- bare quoted narrator words without dialogue punctuation or nearby attribution
+  remain narration atomic units, so emphasis or mention quotes do not force a
+  narrator selection into the invalid dialogue/narration merge fallback
 - selected `unit_ids` must be non-empty, known, selectable, unique across the
   model response, in source reading order, and cover every selectable speakable
   unit
@@ -645,6 +649,11 @@ Reviewed on 2026-07-02 against the same-narrator quote-safe boundary
 selection behavior, including candidate filtering for open quoted passages,
 AI-selected boundary validation, and deterministic fallback when a selected
 boundary would split quoted source text.
+
+Reviewed on 2026-07-05 against narrator-plus-character atomic splitting for
+non-spoken quoted narrator words, preserving strict dialogue/attribution
+validation while avoiding whole-chunk narrator fallback for prose emphasis
+quotes.
 
 Minimum validation after a change:
 

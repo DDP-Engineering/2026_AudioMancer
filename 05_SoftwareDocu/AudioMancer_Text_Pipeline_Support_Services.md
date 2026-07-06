@@ -82,9 +82,10 @@ those spans into smaller atomic dialogue, attribution, narration, separator, or
 mixed units. One source span may produce many atomic units, such as dialogue,
 attribution, dialogue, attribution, dialogue. The builder preserves whitespace
 and punctuation, avoids merging across blank-line paragraph boundaries,
-recognizes Unicode quote pairs and dash-led dialogue, and uses multilingual
-attribution verb hints, including Romanian, so the model assigns speakers to
-app-owned unit IDs instead of rewriting source text.
+recognizes Unicode quote pairs and dash-led dialogue, uses multilingual
+attribution verb hints, including Romanian, and keeps bare narrator emphasis or
+mention quotes as narration so the model assigns speakers to app-owned unit IDs
+instead of rewriting source text.
 
 ## 4. Dependencies
 
@@ -171,6 +172,10 @@ segment must equal the original active text. Speakable atomic units are the
 model-facing selection vocabulary for narrator-plus-character Speech Blocks.
 Separator-only and whitespace-only units are kept as source provenance but are
 not selectable and do not become persisted Speech Blocks.
+Quoted words without dialogue punctuation or nearby attribution remain
+`narration` atomic units even when source-span provenance keeps the quote
+boundary, preventing narrator prose from being rejected as structurally invalid
+dialogue.
 
 ## 7. Workflow Integration
 

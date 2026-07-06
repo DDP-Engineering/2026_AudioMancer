@@ -515,9 +515,72 @@ def _atomic_quote_dialogue_ranges(text: str) -> list[tuple[int, int]]:
         if close_index < 0:
             cursor += 1
             continue
-        ranges.append((cursor, close_index + 1))
+        if _quoted_range_looks_like_dialogue(source_text, cursor, close_index + 1):
+            ranges.append((cursor, close_index + 1))
         cursor = close_index + 1
     return ranges
+
+
+def _quoted_range_looks_like_dialogue(text: str, start_offset: int, end_offset: int) -> bool:
+    """
+    @brief      Return whether one quoted range looks like spoken dialogue.
+    @param[in]  text Full source text containing the quoted range.
+    @param[in]  start_offset Inclusive quote opener offset.
+    @param[in]  end_offset Exclusive quote closer offset.
+    @return     True when punctuation or nearby attribution supports dialogue.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-05
+    @version    0.1.0
+    """
+    source_text = str(text)
+    quoted_text = source_text[int(start_offset) + 1 : max(int(end_offset) - 1, int(start_offset) + 1)].strip()
+    if not quoted_text:
+        return False
+    if any(character in quoted_text for character in ",.!?;:，。！？；：、"):
+        return True
+    before_context = _local_quote_context_before(source_text, int(start_offset))
+    after_context = _local_quote_context_after(source_text, int(end_offset))
+    return _looks_like_attribution(before_context) or _looks_like_attribution(after_context)
+
+
+def _local_quote_context_before(text: str, start_offset: int) -> str:
+    """
+    @brief      Return local same-sentence text before a quote opener.
+    @param[in]  text Source text.
+    @param[in]  start_offset Quote opener offset.
+    @return     Same-sentence prefix near the quote.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-05
+    @version    0.1.0
+    """
+    source_text = str(text)
+    sentence_start = max(
+        source_text.rfind(boundary, 0, int(start_offset)) for boundary in (".", "!", "?", "\n")
+    )
+    return source_text[sentence_start + 1 : int(start_offset)]
+
+
+def _local_quote_context_after(text: str, end_offset: int) -> str:
+    """
+    @brief      Return local same-sentence text after a quote closer.
+    @param[in]  text Source text.
+    @param[in]  end_offset Quote closer-exclusive offset.
+    @return     Same-sentence suffix near the quote.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-05
+    @version    0.1.0
+    """
+    source_text = str(text)
+    sentence_ends = [
+        sentence_end
+        for sentence_end in (source_text.find(boundary, int(end_offset)) for boundary in (".", "!", "?", "\n"))
+        if sentence_end >= 0
+    ]
+    sentence_end = min(sentence_ends) if sentence_ends else len(source_text)
+    return source_text[int(end_offset) : sentence_end]
 
 
 def _atomic_context_kind(text: str) -> str:

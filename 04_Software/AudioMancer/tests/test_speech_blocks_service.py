@@ -2764,6 +2764,59 @@ def test_normalize_chunk_blocks_rejects_dialogue_attribution_unit_merge() -> Non
     assert any("attribution" in str(warning["reason"]).casefold() for warning in warnings)
 
 
+def test_normalize_chunk_blocks_accepts_narration_with_non_spoken_quoted_words() -> None:
+    """
+    @brief      Verify narrator emphasis quotes do not force atomic selection fallback.
+    @details    Covers SB-ATOMIC-006 and REQ-FUNC-051.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-05
+    @version    0.1.0
+    """
+    source_text = (
+        'Not "our" Emperor, Scytale noted. "Your" Emperor. '
+        "Irulan is too much the Bene Gesserit to miss that slip."
+    )
+    speaker_catalog = {"narrator": _narrator_catalog_entry()}
+    source_chunk = speech_blocks_service._source_chunk_with_source_spans(  # noqa: SLF001
+        {
+            "chunk_id": "chunk-0001",
+            "text": source_text,
+        }
+    )
+    selectable_unit_ids = [
+        str(unit["atomic_unit_id"])
+        for unit in source_chunk["atomic_units"]
+        if unit["structural_kind"] != "separator" and str(unit.get("text", "")).strip()
+    ]
+
+    blocks, warnings = speech_blocks_service._normalize_chunk_blocks(  # noqa: SLF001
+        source_chunk,
+        {
+            "blocks": [
+                {
+                    "unit_ids": selectable_unit_ids,
+                    "speaker_id": "narrator",
+                    "content_kind": "narration",
+                    "confidence": "high",
+                    "warning_flags": [],
+                }
+            ]
+        },
+        speaker_catalog,
+        "en",
+    )
+
+    assert len(blocks) == 1
+    assert blocks[0]["speaker_id"] == "narrator"
+    assert blocks[0]["content_kind"] == speech_blocks_service.CONTENT_KIND_NARRATION
+    assert blocks[0]["source_text"] == source_text
+    assert blocks[0]["text"] == source_text
+    assert not blocks[0]["warning_flags"]
+    assert not warnings
+
+
 def test_speech_blocks_atomic_prompt_omits_separator_only_units() -> None:
     """
     @brief      Verify separator-only atomic units are not exposed as selectable prompt rows.

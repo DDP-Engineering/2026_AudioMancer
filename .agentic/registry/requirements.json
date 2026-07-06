@@ -1485,20 +1485,21 @@
   },
   "REQ-FUNC-051": {
     "created_on": "2026-07-02 10:59",
-    "last_updated": "2026-07-02 08:19",
+    "last_updated": "2026-07-05 20:55",
     "line_number": 62,
     "linked_tests": [
-      "04_Software/AudioMancer/tests/test_speech_blocks_text_split_service.py::test_build_atomic_speech_units_classifies_multilingual_attribution_patterns"
+      "04_Software/AudioMancer/tests/test_speech_blocks_text_split_service.py::test_build_atomic_speech_units_classifies_multilingual_attribution_patterns",
+      "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_normalize_chunk_blocks_accepts_narration_with_non_spoken_quoted_words"
     ],
     "priority": "Must",
-    "rationale": "Books can use different punctuation and lexical forms, but attribution text must remain separate from spoken dialogue for audiobook generation.",
+    "rationale": "Books can use different punctuation and lexical forms, but attribution text and narrator emphasis or mention quotes must remain separate from spoken dialogue for audiobook generation.",
     "related_components": [
       "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_text_split_service.py",
       "04_Software/AudioMancer/src/audiomancer/services/speech_blocks_service.py",
       "05_SoftwareDocu/AudioMancer_Text_Pipeline_Support_Services.md"
     ],
     "req_id": "REQ-FUNC-051",
-    "requirement": "Speech Blocks atomic unit splitting shall classify multilingual quoted dialogue, dash-led dialogue, attribution narration, ordinary narration, and separators using Unicode dialogue punctuation and source-language attribution patterns including Romanian.",
+    "requirement": "Speech Blocks atomic unit splitting shall classify multilingual quoted dialogue, dash-led dialogue, attribution narration, ordinary narration, non-spoken quoted narrator words, and separators using Unicode dialogue punctuation and source-language attribution patterns including Romanian.",
     "source_file": ".agentic/requirements/functional.md",
     "status": "Active",
     "verification": "Automated pytest via uv run --project 04_Software/AudioMancer pytest -q 04_Software/AudioMancer/tests/test_speech_blocks_text_split_service.py"

@@ -3774,6 +3774,12 @@
       "REQ-FUNC-032"
     ]
   },
+  "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_normalize_chunk_blocks_accepts_narration_with_non_spoken_quoted_words": {
+    "id": "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_normalize_chunk_blocks_accepts_narration_with_non_spoken_quoted_words",
+    "requirement_ids": [
+      "REQ-FUNC-051"
+    ]
+  },
   "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_normalize_chunk_blocks_flags_invalid_source_spans_and_modified_text": {
     "id": "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_normalize_chunk_blocks_flags_invalid_source_spans_and_modified_text",
     "requirement_ids": [
