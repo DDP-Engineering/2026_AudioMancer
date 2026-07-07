@@ -10,6 +10,30 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [1.6.3] - 2026-07-07
+
+### Changed
+
+- Replaced narrator-and-character Speech Blocks generation with the direct LLM
+  block contract: models now return ordered `text`, `speaker_id`,
+  `content_kind`, `confidence`, and `warning_flags` blocks, while AudioMancer
+  aligns returned text back to the source before persistence.
+- Speech Blocks generation now saves segment-level progress and resumes from
+  the next unfinished segment, while old atomic/source-span checkpoints restart
+  instead of being migrated.
+- Project package metadata and `audiomancer.__version__` were updated to
+  `1.6.3`.
+- Offline English and Romanian help bundles were updated to version `1.6.3`.
+
+### Fixed
+
+- Malformed or unusable narrator-and-character Speech Blocks responses now
+  fall back only the failed segment as narrator `needs_review` text, instead of
+  collapsing an entire chunk to one narrator block.
+- Direct Speech Blocks normalization now preserves source gaps as reviewable
+  narrator blocks and rejects unmatched model-invented text as trusted
+  audiobook content.
+
 ### Changed
 
 - Synced the embedded agentic workflow integration with the latest template,

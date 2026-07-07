@@ -102,6 +102,11 @@ def speech_block_warning_reason(warning_flag: str) -> str:
             "Narrator-only AI boundary selection was unusable and deterministic TTS splitting was used."
         ),
         "atomic_unit_selection_invalid": ("Model atomic unit selection was invalid and fell back to narrator."),
+        "needs_review": "Speech Block needs operator review.",
+        "source_gap": "Source text was not covered by the model response and was preserved for review.",
+        "unknown_speaker": "Model returned a speaker that is not in the allowed speaker catalog.",
+        "unmatched_model_text": "Model text could not be aligned to the source and was not trusted.",
+        "speech_blocks_ai_parse_failed": "Speech Blocks model response could not be parsed.",
     }.get(str(warning_flag).strip(), str(warning_flag).strip() or "Speech Block warning.")
 
 
@@ -117,7 +122,7 @@ def normalize_block_text(text: str, content_kind: str) -> str:
     @version    0.1.0
     """
     if content_kind != CONTENT_KIND_DIALOGUE:
-        return text
+        return str(text).strip()
     normalized_text = text.strip()
     normalized_text = re.sub(r"^[-–—]\s+", "", normalized_text, count=1)
     for opening_quote, closing_quote in (('"', '"'), ("“", "”"), ("‘", "’"), ("«", "»")):
@@ -347,18 +352,14 @@ def source_span_selection_contract_requested(
     @brief      Return whether the current response uses the span-selection contract.
     @param[in]  source_chunk Current source chunk payload.
     @param[in]  candidate_blocks Raw model block candidates.
-    @return     True when source spans or source-span ids are present.
+    @return     True when app-owned source spans are present.
     @exception  None
     @author     Eng. Dan Dumitru Pasare
     @date       2026-07-01
     @version    0.1.0
     """
-    if "source_spans" in source_chunk:
-        return True
-    return any(
-        isinstance(candidate_block, dict) and ("source_span_ids" in candidate_block or "unit_ids" in candidate_block)
-        for candidate_block in candidate_blocks
-    )
+    _ = candidate_blocks
+    return "source_spans" in source_chunk
 
 
 def normalize_source_span_selection_chunk_blocks(
@@ -1117,6 +1118,141 @@ def resolve_narrator_only_budget(settings_payload: dict[str, object] | None) -> 
     return tts_budget_service.resolve_cached_tts_budget(discovered_models)
 
 
+def normalize_direct_block_chunk_blocks(
+    source_chunk: dict[str, object],
+    candidate_blocks: list[object],
+    speaker_catalog: dict[str, dict[str, object]],
+    source_language: str,
+    narrator_only: bool,
+    tts_budget: dict[str, object] | None,
+) -> tuple[list[dict[str, object]], list[dict[str, object]]]:
+    """
+    @brief      Normalize direct LLM block output by aligning returned text to source.
+    @param[in]  source_chunk Current source chunk payload.
+    @param[in]  candidate_blocks Raw direct block payload list.
+    @param[in]  speaker_catalog Allowed speaker catalog.
+    @param[in]  source_language Active source language code.
+    @param[in]  narrator_only True when all spoken text uses narrator voice.
+    @param[in]  tts_budget Optional TTS budget metadata.
+    @return     Tuple of normalized chunk blocks and warning entries.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-07
+    @version    0.1.0
+    """
+    chunk_id = str(source_chunk.get("chunk_id", "")).strip()
+    chunk_text = str(source_chunk.get("text", ""))
+    aligned_ai_blocks: list[dict[str, object]] = []
+    warning_entries: list[dict[str, object]] = []
+    cursor = 0
+    for candidate_block in candidate_blocks:
+        if not isinstance(candidate_block, dict):
+            continue
+        model_text = str(candidate_block.get("source_text", candidate_block.get("text", "")))
+        if not model_text.strip():
+            continue
+        match_index = chunk_text.find(model_text, cursor)
+        if match_index < 0:
+            warning_reason = speech_block_warning_reason("unmatched_model_text")
+            warning_entries.append(
+                {"chunk_id": chunk_id, "reason": f"unmatched_model_text: {warning_reason}"}
+            )
+            continue
+        if chunk_text[cursor:match_index].strip():
+            aligned_ai_blocks.append(direct_source_gap_block(chunk_text[cursor:match_index]))
+        source_slice = chunk_text[match_index : match_index + len(model_text)]
+        aligned_ai_blocks.append(direct_aligned_ai_block(candidate_block, source_slice, speaker_catalog, narrator_only))
+        cursor = match_index + len(model_text)
+
+    if chunk_text[cursor:].strip():
+        aligned_ai_blocks.append(direct_source_gap_block(chunk_text[cursor:]))
+    if not aligned_ai_blocks:
+        aligned_ai_blocks.append(direct_source_gap_block(chunk_text))
+
+    warning_entries.extend(warning_entries_from_ai_blocks(chunk_id, aligned_ai_blocks))
+    aligned_ai_blocks, split_warnings = split_over_budget_ai_blocks(chunk_id, aligned_ai_blocks, tts_budget)
+    warning_entries.extend(split_warnings)
+    if narrator_only:
+        warning_entries.extend(validate_narrator_only_budget(chunk_id, aligned_ai_blocks, tts_budget))
+    normalized_blocks: list[dict[str, object]] = []
+    for local_sequence_index, ai_block in enumerate(aligned_ai_blocks, start=1):
+        normalized_blocks.append(
+            build_speech_block_payload(
+                chunk_id,
+                local_sequence_index,
+                source_language,
+                str(ai_block.get("speaker_kind", SPEAKER_KIND_NARRATOR)),
+                str(ai_block.get("speaker_id", NARRATOR_SPEAKER_ID)),
+                str(ai_block.get("speaker_display_name", NARRATOR_DISPLAY_NAME)),
+                str(ai_block.get("content_kind", CONTENT_KIND_NARRATION)),
+                str(ai_block.get("text", "")),
+                list(ai_block.get("warning_flags", [])),
+                source_text=str(ai_block.get("source_text", "")),
+            )
+        )
+    return normalized_blocks, warning_entries
+
+
+def direct_aligned_ai_block(
+    candidate_block: dict[str, object],
+    source_text: str,
+    speaker_catalog: dict[str, dict[str, object]],
+    narrator_only: bool,
+) -> dict[str, object]:
+    """
+    @brief      Build one trusted direct AI block from an aligned source slice.
+    @param[in]  candidate_block Raw model block.
+    @param[in]  source_text Exact source slice aligned from the chunk.
+    @param[in]  speaker_catalog Allowed speaker catalog.
+    @param[in]  narrator_only True when all speech uses narrator voice.
+    @return     AI block ready for final payload building.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-07
+    @version    0.1.0
+    """
+    aligned_candidate = dict(candidate_block)
+    aligned_candidate["source_text"] = source_text
+    aligned_candidate["text"] = source_text
+    ai_block = normalize_ai_block(aligned_candidate, speaker_catalog, narrator_only=narrator_only)
+    warning_flags = list(ai_block.get("warning_flags", []))
+    requested_speaker_id = str(candidate_block.get("speaker_id", "")).strip()
+    resolved_speaker_id = str(ai_block.get("speaker_id", NARRATOR_SPEAKER_ID)).strip()
+    if (
+        requested_speaker_id
+        and requested_speaker_id.casefold() != NARRATOR_SPEAKER_ID
+        and resolved_speaker_id == NARRATOR_SPEAKER_ID
+        and not narrator_only
+    ):
+        append_warning_flag(warning_flags, "unknown_speaker")
+        append_warning_flag(warning_flags, "needs_review")
+    if str(candidate_block.get("confidence", "")).strip().casefold() == "low":
+        append_warning_flag(warning_flags, "needs_review")
+    ai_block["warning_flags"] = normalize_warning_flags(warning_flags)
+    return ai_block
+
+
+def direct_source_gap_block(source_text: str) -> dict[str, object]:
+    """
+    @brief      Build one narrator review block for source text missed by the model.
+    @param[in]  source_text Exact missed source text.
+    @return     AI-block-like narrator review payload.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-07
+    @version    0.1.0
+    """
+    return {
+        "speaker_kind": SPEAKER_KIND_NARRATOR,
+        "speaker_id": NARRATOR_SPEAKER_ID,
+        "speaker_display_name": NARRATOR_DISPLAY_NAME,
+        "content_kind": CONTENT_KIND_NARRATION,
+        "source_text": str(source_text),
+        "text": str(source_text).strip(),
+        "warning_flags": ["source_gap", "needs_review"],
+    }
+
+
 def normalize_chunk_blocks(
     source_chunk: dict[str, object],
     response_payload: dict[str, object],
@@ -1139,8 +1275,6 @@ def normalize_chunk_blocks(
     @date       2026-04-29
     @version    0.1.0
     """
-    chunk_id = str(source_chunk.get("chunk_id", "")).strip()
-    chunk_text = str(source_chunk.get("text", ""))
     narrator_only = str(voice_assignment_mode).strip() == "same_narrator"
     candidate_blocks = response_payload.get("speech_blocks", response_payload.get("blocks", []))
     if not isinstance(candidate_blocks, list):
@@ -1158,68 +1292,14 @@ def normalize_chunk_blocks(
             require_confidence=require_confidence,
         )
 
-    ai_blocks: list[dict[str, object]] = []
-    for candidate_block in candidate_blocks:
-        if not isinstance(candidate_block, dict):
-            continue
-        ai_block = normalize_ai_block(candidate_block, speaker_catalog, narrator_only=narrator_only)
-        if str(ai_block.get("text", "")).strip():
-            ai_blocks.append(ai_block)
-
-    normalized_blocks: list[dict[str, object]] = []
-    if not ai_blocks:
-        fallback_flags = ["source_coverage_mismatch"]
-        if not narrator_only:
-            fallback_flags.append("ambiguous_speaker")
-        return (
-            [
-                build_speech_block_payload(
-                    chunk_id,
-                    1,
-                    source_language,
-                    SPEAKER_KIND_NARRATOR,
-                    NARRATOR_SPEAKER_ID,
-                    NARRATOR_DISPLAY_NAME,
-                    CONTENT_KIND_NARRATION,
-                    chunk_text,
-                    fallback_flags,
-                    source_text=chunk_text,
-                )
-            ],
-            [
-                {
-                    "chunk_id": chunk_id,
-                    "reason": "The model response did not contain usable Speech Blocks and fell back to narrator.",
-                }
-            ],
-        )
-
-    warning_entries = validate_ai_block_source_spans(chunk_id, chunk_text, ai_blocks)
-    ai_blocks, split_warnings = split_over_budget_ai_blocks(chunk_id, ai_blocks, tts_budget)
-    warning_entries.extend(split_warnings)
-    if narrator_only:
-        warning_entries.extend(validate_narrator_only_budget(chunk_id, ai_blocks, tts_budget))
-    for local_sequence_index, ai_block in enumerate(ai_blocks, start=1):
-        text = str(ai_block.get("text", ""))
-        content_kind = str(ai_block.get("content_kind", CONTENT_KIND_NARRATION))
-        warning_flags = list(ai_block.get("warning_flags", []))
-        source_text = str(ai_block.get("source_text", text))
-        normalized_blocks.append(
-            build_speech_block_payload(
-                chunk_id,
-                local_sequence_index,
-                source_language,
-                str(ai_block.get("speaker_kind", SPEAKER_KIND_NARRATOR)),
-                str(ai_block.get("speaker_id", NARRATOR_SPEAKER_ID)),
-                str(ai_block.get("speaker_display_name", NARRATOR_DISPLAY_NAME)),
-                content_kind,
-                text,
-                warning_flags,
-                source_text=source_text,
-            )
-        )
-
-    return normalized_blocks, warning_entries
+    return normalize_direct_block_chunk_blocks(
+        source_chunk,
+        candidate_blocks,
+        speaker_catalog,
+        source_language,
+        narrator_only,
+        tts_budget,
+    )
 
 
 def build_speech_block_payload(

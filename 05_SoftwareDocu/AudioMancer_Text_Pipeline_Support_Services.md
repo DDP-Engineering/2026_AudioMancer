@@ -74,18 +74,14 @@ operator-supplied chunking rules to each prompt, then commits only valid break
 IDs, reuses the already-built chunk list for each window checkpoint, and
 writes AI transaction logs.
 
-For Speech Blocks generation,
-`speech_blocks_text_split_service.build_source_spans(...)` creates exact,
-contiguous source-span provenance for one active chunk or AI-budget segment.
-`speech_blocks_text_split_service.build_atomic_speech_units(...)` then splits
-those spans into smaller atomic dialogue, attribution, narration, separator, or
-mixed units. One source span may produce many atomic units, such as dialogue,
-attribution, dialogue, attribution, dialogue. The builder preserves whitespace
-and punctuation, avoids merging across blank-line paragraph boundaries,
-recognizes Unicode quote pairs and dash-led dialogue, uses multilingual
-attribution verb hints, including Romanian, and keeps bare narrator emphasis or
-mention quotes as narration so the model assigns speakers to app-owned unit IDs
-instead of rewriting source text.
+For active narrator-plus-character Speech Blocks generation, the service splits
+source chunks into contiguous source-text request segments. Speech Blocks then
+uses a direct LLM block contract and aligns returned block text back to those
+segments before persistence. The retained
+`speech_blocks_text_split_service.build_source_spans(...)` and
+`speech_blocks_text_split_service.build_atomic_speech_units(...)` helpers still
+provide deterministic provenance and utility coverage, but atomic unit IDs are
+not the active model-facing selection contract.
 
 ## 4. Dependencies
 

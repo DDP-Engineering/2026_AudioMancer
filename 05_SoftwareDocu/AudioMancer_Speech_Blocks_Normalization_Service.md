@@ -11,8 +11,8 @@ See the LICENSE.txt and LICENSE_NC.txt files for full license details.
 
 Provides shared normalization helpers for Speech Blocks identifiers,
 content-kind values, operation rows, warning flags, dialogue text,
-narrator-plus-character atomic-unit selections, source-span provenance, and
-narrator-only TTS budget lookup.
+narrator-plus-character direct-block source alignment, legacy source-span
+provenance helpers, and narrator-only TTS budget lookup.
 
 ## 2. Responsibilities
 
@@ -24,14 +24,17 @@ narrator-only TTS budget lookup.
   chunks
 - log malformed source-span offset payloads with compact chunk/span identifiers
   instead of source text
-- validate narrator-plus-character atomic `unit_ids` payloads without trusting
-  model-owned text fields
-- expose validation results before fallback so orchestration can run one
-  compact repair retry for malformed or semantically invalid local-model output
-- reconstruct persisted `source_text` and `text` from selected atomic units
-- build safe narrator fallback blocks for invalid unit, span, or speaker selections;
-  fallback keeps exact `source_text` and removes simple straight-quote dialogue
-  delimiters from the narrator audio text
+- align narrator-plus-character direct model `text` blocks to the source
+  segment in reading order before persistence
+- insert narrator `needs_review` blocks for missed source text
+- report unmatched model text without persisting it as trusted audiobook text
+- mark unknown speakers, low-confidence attribution, parse fallback, and source
+  gaps with review warning flags
+- preserve failed direct-response segments as deterministic narrator review
+  blocks when orchestration supplies a parse-fallback block
+- retain legacy source-span and atomic-unit validation helpers for deterministic
+  utility tests and old internal callers, but keep them outside the active
+  narrator-plus-character LLM contract
 - generate stable `CCCC-BBBBBB` speech block identifiers from chunk ids
 - strip only dialogue delimiters that should not be spoken
 - resolve cached narrator-only TTS budget metadata
@@ -56,6 +59,7 @@ Main entrypoints include:
 - `speech_block_id(...)`
 - `normalize_warning_flags(...)`
 - `normalize_chunk_blocks(...)`
+- `normalize_direct_block_chunk_blocks(...)`
 - `normalize_source_span_selection_chunk_blocks(...)`
 - `validate_source_span_response_payload(...)`
 - `source_span_response_requires_confidence(...)`
@@ -86,8 +90,10 @@ Inputs:
 
 - raw content-kind strings
 - source chunks with exact `text` and optional deterministic `source_spans`
-- model blocks with `unit_ids`, `speaker_id`, `content_kind`, `confidence`,
-  and `warnings`
+- direct model blocks with `text`, `speaker_id`, `content_kind`, `confidence`,
+  and `warning_flags`
+- legacy model blocks with `unit_ids` or `source_span_ids` only when the source
+  chunk deliberately carries app-owned span/unit provenance
 - source chunk ids and sequence indexes
 - candidate dialogue text
 - persisted warning-flag payloads

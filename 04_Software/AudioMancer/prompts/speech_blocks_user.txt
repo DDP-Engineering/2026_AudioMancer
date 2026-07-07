@@ -11,30 +11,27 @@ Allowed speaker catalog:
 
 Chunk id: {chunk_id}
 
-Available atomic speech units:
-Only selectable speakable units are listed. Separator-only or whitespace-only source provenance is omitted.
-{atomic_units_json}
-
 Non-selectable attribution context:
 {source_context_json}
 
-Chunk text:
+Current chunk segment text:
 {chunk_text}
 
-Analyze this chunk and return one JSON object with the ordered `blocks` array only.
+Analyze only the current chunk segment text and return one JSON object with the ordered `blocks` array.
 
 Important:
-- Select only from the provided `atomic_unit_id` values.
-- Use only the provided chunk text, allowed speaker catalog, and non-selectable attribution context to help speaker attribution.
-- Do not select text from previous or next context. It is attribution-only context and not selectable source text.
-- Preserve the full speakable chunk content by covering every selectable speakable atomic speech unit exactly once in reading order.
-- Do not create standalone blocks for separator-only or whitespace-only source provenance.
+- Each returned `text` value must be an exact substring from the current chunk segment text.
+- Do not return text from previous or next context.
+- Do not translate, rewrite, summarize, or invent text.
+- Split narration, spoken dialogue, and attribution into the smallest useful reviewable blocks.
+- Preserve source order.
 - Use only speaker ids from the allowed speaker catalog.
-- If speaker attribution is uncertain, use `speaker_id: "narrator"` and include `ambiguous_speaker`.
+- If speaker attribution is uncertain, use `speaker_id: "narrator"`, set `confidence` to `low`, and include `ambiguous_speaker`.
 - Include `confidence` as `high`, `medium`, or `low` for every block.
+- Use an empty `warning_flags` array when no warning is needed.
 
 Each `blocks` item must contain:
-- `unit_ids`: ordered array of one or more available atomic unit ids
+- `text`: exact source substring for this speech block
 - `speaker_id`: one id from the allowed speaker catalog
 - `content_kind`: `narration` or `dialogue`
 - `confidence`: `high`, `medium`, or `low`
