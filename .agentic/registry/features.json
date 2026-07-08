@@ -1,28 +1,34 @@
 {
-  "change-2026-07-07T061139Z-81efe6e6": {
+  "fix-2026-07-08T155018Z-8e1086ab": {
     "check_ids": [
-      "CHK-SB-DIRECT-001",
-      "CHK-SB-DIRECT-002",
-      "CHK-SB-DIRECT-003",
-      "CHK-SB-DIRECT-004"
+      "CHK-AA-FINAL-PARAMS-001"
     ],
     "intent": {
-      "created_at": "2026-07-07T06:11:39+00:00",
+      "created_at": "2026-07-08T15:50:18+00:00",
       "id": "I-0001",
-      "kind": "change",
+      "kind": "fix",
       "scope_hint": [],
-      "statement": "Replace Speech Blocks narrator-and-character generation with an operator-review direct LLM block-splitting contract that preserves source text where aligned, flags uncertain output for review, uses segment-level fallback instead of whole-chunk atomic fallback, and remains interruptible and resumable.",
+      "statement": "Audio Assembly final whole-book WAV can inherit Scene Ambience stereo 44.1 kHz parameters from the first playable block, inflating output and hitting the classic WAV RIFF size limit. Make final assembly choose explicit output audio parameters, preferably mono 24 kHz PCM or first speech block parameters, so leading Scene Ambience does not upsample the full audiobook.",
       "status": "draft"
     },
-    "report_path": ".agentic/runs/change-2026-07-07T061139Z-81efe6e6/report.md",
-    "run_id": "change-2026-07-07T061139Z-81efe6e6",
+    "report_path": ".agentic/runs/fix-2026-07-08T155018Z-8e1086ab/report.md",
+    "run_id": "fix-2026-07-08T155018Z-8e1086ab",
     "spec_ids": [
-      "SB-DIRECT-001",
-      "SB-DIRECT-003",
-      "SB-DIRECT-004",
-      "SB-DIRECT-002"
+      "AA-FINAL-PARAMS-001"
     ],
     "stage": "validation",
-    "touched_paths": []
+    "touched_paths": [
+      ".agentic/requirements/functional.md",
+      "04_Software/AudioMancer/pyproject.toml",
+      "04_Software/AudioMancer/src/audiomancer/__init__.py",
+      "04_Software/AudioMancer/src/audiomancer/services/audio_assembly_service.py",
+      "04_Software/AudioMancer/tests/test_audio_assembly_service.py",
+      "04_Software/AudioMancer/tests/test_package_import.py",
+      "04_Software/AudioMancer/uv.lock",
+      "05_SoftwareDocu/AudioMancer_Audio_Assembly_Service.md",
+      "05_SoftwareDocu/UserGuide/index.html",
+      "05_SoftwareDocu/UserGuide_ro/index.html",
+      "CHANGELOG.md"
+    ]
   }
 }

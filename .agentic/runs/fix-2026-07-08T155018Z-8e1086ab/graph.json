@@ -1,0 +1,458 @@
+{
+  "access_mode": "standard",
+  "alignment": {
+    "acceptance": [
+      "A whole-book assembly with leading Scene Ambience and later mono 24 kHz speech writes a mono 24 kHz final audiobook while still including the mixed ambience, and existing Audio Assembly tests remain green."
+    ],
+    "assumptions": [
+      "Use first non-Scene-Ambience speech/source WAV parameters as the final output reference when present; retain fallback behavior for pause-only or speechless edge cases."
+    ],
+    "created_at": "2026-07-08T15:52:32+00:00",
+    "decision": "proceed",
+    "open_questions": [],
+    "planned_paths": [
+      "04_Software/AudioMancer/src/audiomancer/services/audio_assembly_service.py",
+      "04_Software/AudioMancer/tests/test_audio_assembly_service.py",
+      ".agentic/requirements/functional.md",
+      "05_SoftwareDocu/AudioMancer_Audio_Assembly_Service.md"
+    ],
+    "reason": "The user explicitly approved continuing without confirmation, and the scope is a focused Audio Assembly service fix with automated tests.",
+    "recommended_responses": [],
+    "risk": "low",
+    "scope": [
+      "In scope: Audio Assembly final composition parameter selection, focused tests proving Scene Ambience leading blocks do not force stereo 44.1 kHz output, requirement traceability, and Audio Assembly component documentation. Out of scope: adding RF64/W64/FLAC/MP3 support, changing the Audio Assembly UI, changing Scene Mix preview output parameters, or deleting/resetting the external DuneMessiah runtime artifacts."
+    ],
+    "source": "user prompt 2026-07-08",
+    "understanding": "Audio Assembly currently derives final WAV output parameters from the first playable block. When Scene Ambience is included and appears before speech, the final whole-book output can inherit stereo 44.1 kHz ambience parameters, causing speech to be upsampled and inflating the generated WAV enough to hit the classic RIFF size limit. This fix will make final assembly select explicit speech-preferred output parameters so ambience can still be mixed but cannot upsample the whole audiobook merely by being first."
+  },
+  "change_units": [
+    {
+      "evidence": [],
+      "id": "CHG-AA-FINAL-PARAMS-SERVICE",
+      "touched_paths": [
+        "04_Software/AudioMancer/src/audiomancer/services/audio_assembly_service.py"
+      ]
+    },
+    {
+      "evidence": [],
+      "id": "CHG-AA-FINAL-PARAMS-TEST",
+      "touched_paths": [
+        "04_Software/AudioMancer/tests/test_audio_assembly_service.py"
+      ]
+    },
+    {
+      "evidence": [],
+      "id": "CHG-AA-FINAL-PARAMS-REQ",
+      "touched_paths": [
+        ".agentic/requirements/functional.md"
+      ]
+    },
+    {
+      "evidence": [],
+      "id": "CHG-AA-FINAL-PARAMS-DOC",
+      "touched_paths": [
+        "05_SoftwareDocu/AudioMancer_Audio_Assembly_Service.md"
+      ]
+    },
+    {
+      "evidence": [],
+      "id": "REQ-FUNC-057",
+      "touched_paths": [
+        "CHANGELOG.md"
+      ]
+    },
+    {
+      "evidence": [],
+      "id": "REQ-FUNC-057",
+      "touched_paths": [
+        "04_Software/AudioMancer/pyproject.toml"
+      ]
+    },
+    {
+      "evidence": [],
+      "id": "REQ-FUNC-057",
+      "touched_paths": [
+        "04_Software/AudioMancer/src/audiomancer/__init__.py"
+      ]
+    },
+    {
+      "evidence": [],
+      "id": "REQ-FUNC-057",
+      "touched_paths": [
+        "04_Software/AudioMancer/tests/test_package_import.py"
+      ]
+    },
+    {
+      "evidence": [],
+      "id": "REQ-FUNC-057",
+      "touched_paths": [
+        "04_Software/AudioMancer/uv.lock"
+      ]
+    },
+    {
+      "evidence": [],
+      "id": "REQ-FUNC-057",
+      "touched_paths": [
+        "05_SoftwareDocu/UserGuide/index.html"
+      ]
+    },
+    {
+      "evidence": [],
+      "id": "REQ-FUNC-057",
+      "touched_paths": [
+        "05_SoftwareDocu/UserGuide_ro/index.html"
+      ]
+    },
+    {
+      "evidence": [],
+      "id": "REQ-FUNC-057",
+      "touched_paths": [
+        "07_Delivery/AudioMancer_Windows_x64.zip"
+      ]
+    },
+    {
+      "evidence": [],
+      "id": "REQ-FUNC-057",
+      "touched_paths": [
+        "07_Delivery/SHA256SUMS.txt"
+      ]
+    }
+  ],
+  "checks": [
+    {
+      "cites_requirement": [
+        "REQ-FUNC-057"
+      ],
+      "cites_spec": [
+        "AA-FINAL-PARAMS-001"
+      ],
+      "command": "uv run pytest -q tests/test_audio_assembly_service.py::test_audio_assembly_service_final_assembly_prefers_speech_params_when_scene_ambience_leads",
+      "green_evidence": "E-0014",
+      "id": "CHK-AA-FINAL-PARAMS-001",
+      "level": "focused",
+      "path": "04_Software/AudioMancer/tests/test_audio_assembly_service.py",
+      "red_evidence": "E-0001",
+      "state": "green"
+    }
+  ],
+  "decisions": [],
+  "defects": [],
+  "evidence": [
+    {
+      "command": "uv run pytest -q tests/test_audio_assembly_service.py::test_audio_assembly_service_final_assembly_prefers_speech_params_when_scene_ambience_leads",
+      "created_at": "2026-07-08T15:54:27+00:00",
+      "failure_kind": "expected-red",
+      "id": "E-0001",
+      "kind": "test-run",
+      "path": "04_Software/AudioMancer/tests/test_audio_assembly_service.py",
+      "result": "fail",
+      "stage": "check",
+      "status": "active",
+      "summary": "Focused Audio Assembly regression fails before implementation: leading Scene Ambience causes final WAV nchannels=2 instead of expected mono speech params.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "uv run pytest -q tests/test_audio_assembly_service.py::test_audio_assembly_service_final_assembly_prefers_speech_params_when_scene_ambience_leads",
+      "created_at": "2026-07-08T15:55:27+00:00",
+      "failure_kind": null,
+      "id": "E-0002",
+      "kind": "test-run",
+      "path": "04_Software/AudioMancer/tests/test_audio_assembly_service.py",
+      "result": "pass",
+      "stage": "implementation",
+      "status": "active",
+      "summary": "Focused Audio Assembly regression passes after implementation: leading Scene Ambience no longer forces stereo output params.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "uv run pytest -q tests/test_audio_assembly_service.py",
+      "created_at": "2026-07-08T15:55:27+00:00",
+      "failure_kind": null,
+      "id": "E-0003",
+      "kind": "test-run",
+      "path": "04_Software/AudioMancer/tests/test_audio_assembly_service.py",
+      "result": "pass",
+      "stage": "implementation",
+      "status": "active",
+      "summary": "Audio Assembly service regression suite remains green after output parameter fix.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "04_Software/AudioMancer/.venv/Scripts/python.exe 02_Tools/audits/audit_traceability.py",
+      "created_at": "2026-07-08T15:57:29+00:00",
+      "failure_kind": null,
+      "id": "E-0004",
+      "kind": "gate",
+      "path": null,
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "test: 04_Software/AudioMancer/.venv/Scripts/python.exe 02_Tools/audits/audit_traceability.py",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "04_Software/AudioMancer/.venv/Scripts/python.exe 02_Tools/audits/audit_requirement_coverage.py",
+      "created_at": "2026-07-08T15:57:29+00:00",
+      "failure_kind": null,
+      "id": "E-0005",
+      "kind": "gate",
+      "path": null,
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "test: 04_Software/AudioMancer/.venv/Scripts/python.exe 02_Tools/audits/audit_requirement_coverage.py",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "04_Software/AudioMancer/.venv/Scripts/python.exe -m pytest -q 04_Software/AudioMancer/tests/test_traceability.py",
+      "created_at": "2026-07-08T15:57:30+00:00",
+      "failure_kind": null,
+      "id": "E-0006",
+      "kind": "gate",
+      "path": null,
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "test: 04_Software/AudioMancer/.venv/Scripts/python.exe -m pytest -q 04_Software/AudioMancer/tests/test_traceability.py",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "04_Software/AudioMancer/.venv/Scripts/python.exe 02_Tools/audits/audit_codestyle.py --changed-only",
+      "created_at": "2026-07-08T15:57:30+00:00",
+      "failure_kind": null,
+      "id": "E-0007",
+      "kind": "gate",
+      "path": null,
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "lint: 04_Software/AudioMancer/.venv/Scripts/python.exe 02_Tools/audits/audit_codestyle.py --changed-only",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": ".\\.agentic\\tools\\run.ps1 gates run",
+      "created_at": "2026-07-08T15:57:40+00:00",
+      "failure_kind": null,
+      "id": "E-0008",
+      "kind": "gate",
+      "path": null,
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "Configured workflow gates passed before manual app testing handoff.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": ".\\.agentic\\tools\\run.ps1 audit traceability",
+      "created_at": "2026-07-08T15:57:49+00:00",
+      "failure_kind": null,
+      "id": "E-0009",
+      "kind": "scan",
+      "path": null,
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "Traceability audit passed with no issues.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": ".\\.agentic\\tools\\run.ps1 audit coverage",
+      "created_at": "2026-07-08T15:57:54+00:00",
+      "failure_kind": null,
+      "id": "E-0010",
+      "kind": "scan",
+      "path": null,
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "Coverage audit passed with no issues.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "04_Software\\AudioMancer\\.venv\\Scripts\\python.exe 02_Tools\\audits\\audit_documentation.py --changed-only",
+      "created_at": "2026-07-08T15:58:00+00:00",
+      "failure_kind": null,
+      "id": "E-0011",
+      "kind": "scan",
+      "path": null,
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "Changed-only documentation audit passed with no issues.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "04_Software\\AudioMancer\\.venv\\Scripts\\python.exe 02_Tools\\audits\\audit_codestyle.py --changed-only",
+      "created_at": "2026-07-08T15:58:07+00:00",
+      "failure_kind": null,
+      "id": "E-0012",
+      "kind": "scan",
+      "path": null,
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "Changed-only Python code-style audit passed with no issues.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "uv run pytest -q tests/test_audio_assembly_service.py tests/test_atomic_io_contracts.py::test_audio_assembly_state_uses_atomic_json_writer",
+      "created_at": "2026-07-08T15:58:13+00:00",
+      "failure_kind": null,
+      "id": "E-0013",
+      "kind": "test-run",
+      "path": "04_Software/AudioMancer/tests/test_audio_assembly_service.py",
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "Impacted Audio Assembly and atomic IO tests passed: 27 passed, 1 known audioop deprecation warning.",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "uv run pytest -q tests/test_package_import.py tests/test_audio_assembly_service.py tests/test_atomic_io_contracts.py::test_audio_assembly_state_uses_atomic_json_writer",
+      "created_at": "2026-07-08T16:16:08+00:00",
+      "failure_kind": null,
+      "id": "E-0014",
+      "kind": "test-run",
+      "path": null,
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "Version/package smoke plus Audio Assembly regression passed: 28 passed, 1 existing audioop deprecation warning",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "agentic registry audit; agentic audit traceability; agentic audit coverage; audit_documentation.py --changed-only; audit_codestyle.py --changed-only",
+      "created_at": "2026-07-08T16:16:52+00:00",
+      "failure_kind": null,
+      "id": "E-0015",
+      "kind": "scan",
+      "path": null,
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "Release validation audits passed: registry audit, traceability, coverage, documentation audit, and code-style audit reported no issues",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "04_Software/AudioMancer/.venv/Scripts/python.exe 02_Tools/audits/audit_traceability.py",
+      "created_at": "2026-07-08T16:16:56+00:00",
+      "failure_kind": null,
+      "id": "E-0016",
+      "kind": "gate",
+      "path": null,
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "test: 04_Software/AudioMancer/.venv/Scripts/python.exe 02_Tools/audits/audit_traceability.py",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "04_Software/AudioMancer/.venv/Scripts/python.exe 02_Tools/audits/audit_requirement_coverage.py",
+      "created_at": "2026-07-08T16:16:56+00:00",
+      "failure_kind": null,
+      "id": "E-0017",
+      "kind": "gate",
+      "path": null,
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "test: 04_Software/AudioMancer/.venv/Scripts/python.exe 02_Tools/audits/audit_requirement_coverage.py",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "04_Software/AudioMancer/.venv/Scripts/python.exe -m pytest -q 04_Software/AudioMancer/tests/test_traceability.py",
+      "created_at": "2026-07-08T16:16:57+00:00",
+      "failure_kind": null,
+      "id": "E-0018",
+      "kind": "gate",
+      "path": null,
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "test: 04_Software/AudioMancer/.venv/Scripts/python.exe -m pytest -q 04_Software/AudioMancer/tests/test_traceability.py",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "04_Software/AudioMancer/.venv/Scripts/python.exe 02_Tools/audits/audit_codestyle.py --changed-only",
+      "created_at": "2026-07-08T16:16:57+00:00",
+      "failure_kind": null,
+      "id": "E-0019",
+      "kind": "gate",
+      "path": null,
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "lint: 04_Software/AudioMancer/.venv/Scripts/python.exe 02_Tools/audits/audit_codestyle.py --changed-only",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": ".\\.agentic\\tools\\run.ps1 gates run",
+      "created_at": "2026-07-08T16:17:03+00:00",
+      "failure_kind": null,
+      "id": "E-0020",
+      "kind": "gate",
+      "path": null,
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "Workflow gates passed after version and package metadata updates",
+      "supersede_reason": null,
+      "superseded_by": null
+    },
+    {
+      "command": "='copy'; .\\02_Tools\\package_windows_release.ps1; Get-FileHash; zip content inspection",
+      "created_at": "2026-07-08T16:18:57+00:00",
+      "failure_kind": null,
+      "id": "E-0021",
+      "kind": "gate",
+      "path": "07_Delivery/AudioMancer_Windows_x64.zip",
+      "result": "pass",
+      "stage": "validation",
+      "status": "active",
+      "summary": "Windows package built with 02_Tools/package_windows_release.ps1; archive hash verified and packaged pyproject/help/changelog show version 1.6.4",
+      "supersede_reason": null,
+      "superseded_by": null
+    }
+  ],
+  "intent": {
+    "created_at": "2026-07-08T15:50:18+00:00",
+    "id": "I-0001",
+    "kind": "fix",
+    "scope_hint": [],
+    "statement": "Audio Assembly final whole-book WAV can inherit Scene Ambience stereo 44.1 kHz parameters from the first playable block, inflating output and hitting the classic WAV RIFF size limit. Make final assembly choose explicit output audio parameters, preferably mono 24 kHz PCM or first speech block parameters, so leading Scene Ambience does not upsample the full audiobook.",
+    "status": "draft"
+  },
+  "run_id": "fix-2026-07-08T155018Z-8e1086ab",
+  "spec_items": [
+    {
+      "examples": [
+        "A whole-book plan whose first block is a Scene Ambience mix followed by mono 24 kHz narration writes a mono 24 kHz audiobook."
+      ],
+      "id": "AA-FINAL-PARAMS-001",
+      "statement": "Audio Assembly final composition shall choose output WAV parameters from the first non-Scene-Ambience source WAV when one exists, so leading Scene Ambience cannot force the final audiobook into stereo 44.1 kHz output.",
+      "status": "accepted",
+      "tag": "behavior",
+      "threshold": "Final output nchannels=1 and framerate=24000 for the covered regression fixture."
+    }
+  ],
+  "stage": "delivery"
+}

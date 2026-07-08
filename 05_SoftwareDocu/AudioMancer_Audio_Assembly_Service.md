@@ -201,9 +201,9 @@ Current invariants:
   except when one individual block is already longer than the limit
 - approved Audio Blocks are assembled in canonical book order: source chunk
   order, then chunk-local `sequence_index`
-- source WAV files must be readable uncompressed PCM; final composition converts
-  mono/stereo and sample-rate differences to the output file's reference WAV
-  parameters while writing
+- source WAV files must be readable uncompressed PCM; final composition chooses
+  reference WAV parameters from the first non-Scene-Ambience source WAV when one
+  exists, then converts mono/stereo and sample-rate differences while writing
 - persisted resume requires non-default state to contain the current
   input/settings fingerprint in `audio_assembly_state.json`
 - missing or mismatched fingerprints require explicit reset

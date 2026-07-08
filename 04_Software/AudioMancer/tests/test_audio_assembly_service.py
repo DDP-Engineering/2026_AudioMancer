@@ -288,6 +288,50 @@ def test_audio_assembly_service_final_assembly_converts_scene_mix_wav_params(tmp
     assert report["outputs"][0]["block_count"] == 5
 
 
+def test_audio_assembly_service_final_assembly_prefers_speech_params_when_scene_ambience_leads(tmp_path) -> None:
+    """
+    @brief      Verify leading Scene Ambience does not upsample the final audiobook.
+    @param[in]  tmp_path Pytest temporary directory fixture.
+    @return     None.
+    @exception  None
+    @author     Eng. Dan Dumitru Pasare
+    @date       2026-07-08
+    @version    0.1.0
+    """
+    # REQ-FUNC-057: final output params must prefer speech over leading ambience.
+    project_root, manifest = _create_project_with_audio_blocks(tmp_path)
+    _insert_scene_ambience_blocks(
+        project_root,
+        approved=True,
+        with_audio=True,
+        wav_channels=2,
+        wav_frame_rate=44_100,
+        wav_frame_count=4410,
+    )
+    payload_path = project_root / config.AUDIO_BLOCKS_OUTPUT_FILE_NAME
+    payload = json.loads(payload_path.read_text(encoding="utf-8"))
+    for block in payload:
+        if block["speaker_id"] == "scene_ambience":
+            block["sequence_index"] = 0
+    payload_path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+    manifest["audio_assembly_settings"] = {
+        **audio_assembly_service.default_audio_assembly_settings(),
+        "output_mode": audio_assembly_service.OUTPUT_MODE_WHOLE_BOOK,
+        "inter_block_silence_ms": 0,
+        "inter_chunk_silence_ms": 0,
+        "include_scene_ambience": True,
+    }
+
+    report = audio_assembly_service.start_or_continue_composition(project_root, manifest)
+
+    output_path = project_root / str(report["outputs"][0]["audio_relative_path"])
+    with wave.open(str(output_path), "rb") as wav_file:
+        assert wav_file.getnchannels() == 1
+        assert wav_file.getsampwidth() == 2
+        assert wav_file.getframerate() == 24_000
+    assert report["outputs"][0]["block_count"] == 5
+
+
 def test_audio_assembly_service_missing_pause_duration_uses_default(tmp_path) -> None:
     """
     @brief      Verify pause duration no longer falls back to parsing older pause text.

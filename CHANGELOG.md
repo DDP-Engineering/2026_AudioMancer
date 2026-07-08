@@ -10,6 +10,21 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [1.6.4] - 2026-07-08
+
+### Changed
+
+- Project package metadata and `audiomancer.__version__` were updated to
+  `1.6.4`.
+- Offline English and Romanian help bundles were updated to version `1.6.4`.
+
+### Fixed
+
+- Audio Assembly final composition now chooses output WAV parameters from the
+  first non-Scene-Ambience source WAV when one exists, preventing a leading
+  stereo 44.1 kHz Scene Ambience bed from upsampling the whole audiobook and
+  pushing large whole-book WAV output toward the classic RIFF size limit.
+
 ## [1.6.3] - 2026-07-07
 
 ### Changed

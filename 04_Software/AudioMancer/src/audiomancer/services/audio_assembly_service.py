@@ -1786,18 +1786,20 @@ def _reference_wav_params(
     @param[in]  project_root Active project root folder.
     @param[in]  blocks Output Audio Blocks.
     @param[in]  fallback_relative_path Project-relative WAV used when output only contains pauses.
-    @return     Reference WAV params from the first playable source block.
+    @return     Reference WAV params from a speech-preferred playable source block.
     @exception  RuntimeError Raised when no source WAV exists for the output.
     @author     Eng. Dan Dumitru Pasare
     @date       2026-04-25
-    @version    0.1.1
+    @version    0.2.0
     """
-    for block in blocks:
-        source_path = _audio_path(project_root, block)
-        if source_path is None:
-            continue
-        with wave.open(str(source_path), "rb") as source_wav:
-            return source_wav.getparams()
+    preferred_blocks = [block for block in blocks if not _is_scene_ambience_block(block)]
+    for candidate_blocks in (preferred_blocks, blocks):
+        for block in candidate_blocks:
+            source_path = _audio_path(project_root, block)
+            if source_path is None:
+                continue
+            with wave.open(str(source_path), "rb") as source_wav:
+                return source_wav.getparams()
     fallback_path = _safe_project_artifact_path(project_root, fallback_relative_path)
     if fallback_path is not None and fallback_path.is_file():
         with wave.open(str(fallback_path), "rb") as source_wav:

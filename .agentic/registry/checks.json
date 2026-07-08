@@ -623,6 +623,12 @@
       "REQ-FUNC-007"
     ]
   },
+  "04_Software/AudioMancer/tests/test_audio_assembly_service.py::test_audio_assembly_service_final_assembly_prefers_speech_params_when_scene_ambience_leads": {
+    "id": "04_Software/AudioMancer/tests/test_audio_assembly_service.py::test_audio_assembly_service_final_assembly_prefers_speech_params_when_scene_ambience_leads",
+    "requirement_ids": [
+      "REQ-FUNC-057"
+    ]
+  },
   "04_Software/AudioMancer/tests/test_audio_assembly_service.py::test_audio_assembly_service_final_assembly_uses_mixed_scene_ambience_group": {
     "id": "04_Software/AudioMancer/tests/test_audio_assembly_service.py::test_audio_assembly_service_final_assembly_uses_mixed_scene_ambience_group",
     "requirement_ids": [

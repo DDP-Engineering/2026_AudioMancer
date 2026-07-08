@@ -1,4 +1,4 @@
-2d038b5918c10de1d19747aa7d9b507a142a982a6931b29280be75c28569c24c  AudioMancer_Windows_x64.zip
+bfbef6af8d1103de1e3d6e13a942fb85b6e102a0eb62fe0b73b4d3e8179cb344  AudioMancer_Windows_x64.zip
 393cdf6f57907d8b6651b4bf2069b8a19956b6d4830d568c0b5c0a06b0054aa2  VoiceWeaver-v1.5.0-windows-x64-cuda.zip
 5fd683c2addbcf5c7db115eb2fa8778b2d3eeb50202d5f1e3ac7852a08981453  VoiceWeaver-v1.5.0-windows-x64-cuda.zip.part001
 5dff3ee0cd01204f3a1841dcc2d55f549ca0bc644ec56e6fc0c2f44aea449dc8  VoiceWeaver-v1.5.0-windows-x64-cuda.zip.part002

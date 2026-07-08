@@ -338,7 +338,7 @@
   "REQ-FUNC-008": {
     "created_on": "2026-06-09 09:50",
     "last_updated": "2026-06-09 09:50",
-    "line_number": 19,
+    "line_number": 20,
     "linked_tests": [
       "04_Software/AudioMancer/tests/test_audio_assembly_state_service.py::test_build_audio_assembly_state_keeps_reset_disabled_for_default_metadata",
       "04_Software/AudioMancer/tests/test_audio_assembly_state_service.py::test_build_audio_assembly_state_reports_completed_outputs",
@@ -359,7 +359,7 @@
   "REQ-FUNC-009": {
     "created_on": "2026-06-09 09:50",
     "last_updated": "2026-06-09 09:50",
-    "line_number": 20,
+    "line_number": 21,
     "linked_tests": [
       "04_Software/AudioMancer/tests/test_audio_blocks_artifact_service.py::test_audio_blocks_artifact_paths_are_deterministic",
       "04_Software/AudioMancer/tests/test_audio_blocks_artifact_service.py::test_audio_blocks_artifact_wav_validation_and_stitching"
@@ -378,7 +378,7 @@
   "REQ-FUNC-010": {
     "created_on": "2026-06-09 09:50",
     "last_updated": "2026-06-10 18:15",
-    "line_number": 21,
+    "line_number": 22,
     "linked_tests": [
       "04_Software/AudioMancer/tests/test_audio_blocks_service.py::test_audio_blocks_service_generates_clone_prompts_and_ordered_wavs",
       "04_Software/AudioMancer/tests/test_audio_blocks_service.py::test_audio_blocks_service_same_narrator_mode_uses_narrator_prompt_for_characters",
@@ -429,7 +429,7 @@
   "REQ-FUNC-011": {
     "created_on": "2026-06-09 09:50",
     "last_updated": "2026-06-10 18:15",
-    "line_number": 22,
+    "line_number": 23,
     "linked_tests": [
       "04_Software/AudioMancer/tests/test_audio_blocks_state_service.py::test_build_audio_blocks_state_surfaces_progress_current_block_and_full_source_text",
       "04_Software/AudioMancer/tests/test_audio_blocks_state_service.py::test_build_audio_blocks_notes_cover_resume_and_ready_for_assembly_states",
@@ -456,7 +456,7 @@
   "REQ-FUNC-012": {
     "created_on": "2026-06-09 09:50",
     "last_updated": "2026-06-11 11:23",
-    "line_number": 23,
+    "line_number": 24,
     "linked_tests": [
       "04_Software/AudioMancer/tests/test_character_discovery_service.py::test_character_discovery_prompts_request_demographic_confidence",
       "04_Software/AudioMancer/tests/test_character_discovery_service.py::test_start_discovery_persists_outputs_and_report",
@@ -502,7 +502,7 @@
   "REQ-FUNC-013": {
     "created_on": "2026-06-09 09:50",
     "last_updated": "2026-06-11 11:23",
-    "line_number": 24,
+    "line_number": 25,
     "linked_tests": [
       "04_Software/AudioMancer/tests/test_character_discovery_state_service.py::test_profile_state_prefers_default_character_profile",
       "04_Software/AudioMancer/tests/test_character_discovery_state_service.py::test_build_character_state_exposes_manual_maintenance_flags",
@@ -523,7 +523,7 @@
   "REQ-FUNC-014": {
     "created_on": "2026-06-09 09:50",
     "last_updated": "2026-06-11 16:28",
-    "line_number": 25,
+    "line_number": 26,
     "linked_tests": [
       "04_Software/AudioMancer/tests/test_character_voices_service.py::test_build_character_default_prompt_uses_compact_character_profile",
       "04_Software/AudioMancer/tests/test_character_voices_service.py::test_build_character_default_prompt_prefers_character_owned_voice_definition_prompt",
@@ -555,7 +555,7 @@
   "REQ-FUNC-015": {
     "created_on": "2026-06-09 09:50",
     "last_updated": "2026-07-03 09:45",
-    "line_number": 26,
+    "line_number": 27,
     "linked_tests": [
       "04_Software/AudioMancer/tests/test_character_voices_state_service.py::test_state_contains_narrator_first_and_approved_translated_language",
       "04_Software/AudioMancer/tests/test_character_voices_state_service.py::test_state_initializes_character_preview_text_from_locked_voice_language",
@@ -577,7 +577,7 @@
   "REQ-FUNC-016": {
     "created_on": "2026-06-09 09:50",
     "last_updated": "2026-06-09 09:50",
-    "line_number": 27,
+    "line_number": 28,
     "linked_tests": [
       "04_Software/AudioMancer/tests/test_cleanup_metadata_service.py::test_cleanup_metadata_omits_text_and_reconstructs_from_clean_text"
     ],
@@ -595,7 +595,7 @@
   "REQ-FUNC-017": {
     "created_on": "2026-06-09 09:50",
     "last_updated": "2026-06-10 21:39",
-    "line_number": 28,
+    "line_number": 29,
     "linked_tests": [
       "04_Software/AudioMancer/tests/test_deterministic_chunking_service.py::test_chunking_writes_runtime_artifacts_and_detects_chapters",
       "04_Software/AudioMancer/tests/test_deterministic_chunking_service.py::test_chunking_uses_canonical_cleanup_output_with_compact_manifest",
@@ -620,7 +620,7 @@
   "REQ-FUNC-018": {
     "created_on": "2026-06-09 09:50",
     "last_updated": "2026-06-12 10:04",
-    "line_number": 29,
+    "line_number": 30,
     "linked_tests": [
       "04_Software/AudioMancer/tests/test_deterministic_cleanup_service.py::test_cleanup_writes_runtime_artifacts_and_preserves_structure",
       "04_Software/AudioMancer/tests/test_deterministic_cleanup_service.py::test_cleanup_requires_canonical_extracted_text_artifact",
@@ -659,7 +659,7 @@
   "REQ-FUNC-019": {
     "created_on": "2026-06-09 09:50",
     "last_updated": "2026-06-09 09:50",
-    "line_number": 30,
+    "line_number": 31,
     "linked_tests": [
       "04_Software/AudioMancer/tests/test_home_presenter_service.py::test_build_stage_statuses_marks_cleanup_as_in_progress",
       "04_Software/AudioMancer/tests/test_home_presenter_service.py::test_build_stage_statuses_keeps_chunking_not_started_after_cleanup_completion",
@@ -684,7 +684,7 @@
   "REQ-FUNC-020": {
     "created_on": "2026-06-09 09:50",
     "last_updated": "2026-06-09 09:50",
-    "line_number": 31,
+    "line_number": 32,
     "linked_tests": [
       "04_Software/AudioMancer/tests/test_import_service.py::test_import_source_accepts_supported_formats",
       "04_Software/AudioMancer/tests/test_import_service.py::test_import_source_rejects_unsupported_doc_format",
@@ -707,7 +707,7 @@
   "REQ-FUNC-021": {
     "created_on": "2026-06-09 09:50",
     "last_updated": "2026-06-09 09:50",
-    "line_number": 32,
+    "line_number": 33,
     "linked_tests": [
       "04_Software/AudioMancer/tests/test_main_window_lifecycle.py::test_main_window_can_be_created",
       "04_Software/AudioMancer/tests/test_main_window_lifecycle.py::test_main_window_show_message_does_not_create_status_bar",
@@ -740,7 +740,7 @@
   "REQ-FUNC-022": {
     "created_on": "2026-06-09 09:50",
     "last_updated": "2026-06-09 09:50",
-    "line_number": 33,
+    "line_number": 34,
     "linked_tests": [
       "04_Software/AudioMancer/tests/test_main_window_operation_shutdown.py::test_main_window_close_ignores_event_while_operation_thread_is_active"
     ],
@@ -758,7 +758,7 @@
   "REQ-FUNC-023": {
     "created_on": "2026-06-09 09:50",
     "last_updated": "2026-06-09 09:50",
-    "line_number": 34,
+    "line_number": 35,
     "linked_tests": [
       "04_Software/AudioMancer/tests/test_main_window_project_flow.py::test_main_window_creates_project_and_updates_shell",
       "04_Software/AudioMancer/tests/test_main_window_project_flow.py::test_main_window_opens_project_from_child_folder",
@@ -792,7 +792,7 @@
   "REQ-FUNC-024": {
     "created_on": "2026-06-09 09:50",
     "last_updated": "2026-06-11 13:27",
-    "line_number": 35,
+    "line_number": 36,
     "linked_tests": [
       "04_Software/AudioMancer/tests/test_narrator_definition_service.py::test_narrator_service_starts_without_predefined_profiles",
       "04_Software/AudioMancer/tests/test_narrator_definition_service.py::test_narrator_service_treats_torn_profile_json_as_empty_data",
@@ -824,7 +824,7 @@
   "REQ-FUNC-025": {
     "created_on": "2026-06-09 09:50",
     "last_updated": "2026-06-09 09:50",
-    "line_number": 36,
+    "line_number": 37,
     "linked_tests": [
       "04_Software/AudioMancer/tests/test_narrator_definition_state_service.py::test_narrator_state_service_uses_original_language_and_no_default_selection",
       "04_Software/AudioMancer/tests/test_narrator_definition_state_service.py::test_narrator_state_service_uses_cleanup_detected_original_language_when_manifest_is_empty",
@@ -846,7 +846,7 @@
   "REQ-FUNC-026": {
     "created_on": "2026-06-09 09:50",
     "last_updated": "2026-06-11 13:27",
-    "line_number": 37,
+    "line_number": 38,
     "linked_tests": [
       "04_Software/AudioMancer/tests/test_narrator_profile_generation_service.py::test_narrator_profile_generation_prefers_approved_translation_for_voice_language",
       "04_Software/AudioMancer/tests/test_narrator_profile_generation_service.py::test_narrator_profile_generation_odd_allocation_appends_without_deleting_existing",
@@ -875,7 +875,7 @@
   "REQ-FUNC-027": {
     "created_on": "2026-06-09 09:50",
     "last_updated": "2026-06-09 09:50",
-    "line_number": 38,
+    "line_number": 39,
     "linked_tests": [
       "04_Software/AudioMancer/tests/test_project_export_service.py::test_project_export_service_detects_readiness_for_all_export_types",
       "04_Software/AudioMancer/tests/test_project_export_service.py::test_project_export_service_reports_not_ready_and_missing_artifact",
@@ -903,7 +903,7 @@
   "REQ-FUNC-028": {
     "created_on": "2026-06-09 09:50",
     "last_updated": "2026-06-09 09:50",
-    "line_number": 39,
+    "line_number": 40,
     "linked_tests": [
       "04_Software/AudioMancer/tests/test_project_snapshot_service.py::test_project_snapshot_service_creates_zip_with_top_level_project_folder",
       "04_Software/AudioMancer/tests/test_project_snapshot_service.py::test_project_snapshot_service_preserves_utf8_filenames_and_content",
@@ -928,7 +928,7 @@
   "REQ-FUNC-029": {
     "created_on": "2026-06-09 09:50",
     "last_updated": "2026-06-09 09:50",
-    "line_number": 40,
+    "line_number": 41,
     "linked_tests": [
       "04_Software/AudioMancer/tests/test_project_workspace_service.py::test_create_project_creates_required_structure_and_manifest",
       "04_Software/AudioMancer/tests/test_project_workspace_service.py::test_validate_project_name_rejects_unsupported_windows_characters",
@@ -975,7 +975,7 @@
   "REQ-FUNC-030": {
     "created_on": "2026-06-09 09:50",
     "last_updated": "2026-06-09 09:50",
-    "line_number": 41,
+    "line_number": 42,
     "linked_tests": [
       "04_Software/AudioMancer/tests/test_speech_blocks_normalization_service.py::test_normalize_block_text_strips_only_dialogue_delimiters",
       "04_Software/AudioMancer/tests/test_speech_blocks_normalization_service.py::test_content_kind_and_operation_entry_normalization",
@@ -995,7 +995,7 @@
   "REQ-FUNC-031": {
     "created_on": "2026-06-09 09:50",
     "last_updated": "2026-06-09 09:50",
-    "line_number": 42,
+    "line_number": 43,
     "linked_tests": [
       "04_Software/AudioMancer/tests/test_speech_blocks_report_state_service.py::test_rebuild_report_reflects_stage_counts_and_warnings",
       "04_Software/AudioMancer/tests/test_speech_blocks_report_state_service.py::test_build_operation_state_shapes_paths_metadata_and_resume_checkpoint",
@@ -1015,7 +1015,7 @@
   "REQ-FUNC-032": {
     "created_on": "2026-06-09 09:50",
     "last_updated": "2026-06-10 18:15",
-    "line_number": 43,
+    "line_number": 44,
     "linked_tests": [
       "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_resolve_source_chunks_uses_original_language_selection",
       "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_resolve_source_chunks_requires_fully_approved_translation",
@@ -1079,7 +1079,7 @@
   "REQ-FUNC-033": {
     "created_on": "2026-06-09 09:50",
     "last_updated": "2026-06-10 18:15",
-    "line_number": 44,
+    "line_number": 45,
     "linked_tests": [
       "04_Software/AudioMancer/tests/test_speech_blocks_state_service.py::test_build_speech_blocks_profile_state_prefers_default_enabled_profile",
       "04_Software/AudioMancer/tests/test_speech_blocks_state_service.py::test_build_speech_blocks_state_loads_persisted_blocks_and_summary",
@@ -1104,7 +1104,7 @@
   "REQ-FUNC-034": {
     "created_on": "2026-06-09 09:50",
     "last_updated": "2026-06-10 21:39",
-    "line_number": 45,
+    "line_number": 46,
     "linked_tests": [
       "04_Software/AudioMancer/tests/test_text_chunking_state_service.py::test_build_text_chunking_notes_shows_in_progress_note_for_running_ai_chunking",
       "04_Software/AudioMancer/tests/test_text_chunking_state_service.py::test_build_text_chunking_notes_shows_resume_note_for_failed_ai_chunking",
@@ -1129,7 +1129,7 @@
   "REQ-FUNC-035": {
     "created_on": "2026-06-09 09:50",
     "last_updated": "2026-06-12 10:04",
-    "line_number": 46,
+    "line_number": 47,
     "linked_tests": [
       "04_Software/AudioMancer/tests/test_text_cleanup_state_service.py::test_build_manifest_after_cleanup_reset_preserves_extraction_outputs",
       "04_Software/AudioMancer/tests/test_text_cleanup_state_service.py::test_build_text_cleanup_state_loads_previews_and_notes",
@@ -1155,7 +1155,7 @@
   "REQ-FUNC-036": {
     "created_on": "2026-06-09 09:50",
     "last_updated": "2026-06-12 10:04",
-    "line_number": 47,
+    "line_number": 48,
     "linked_tests": [
       "04_Software/AudioMancer/tests/test_text_extraction_service.py::test_extract_text_writes_self_contained_artifacts_for_txt_source",
       "04_Software/AudioMancer/tests/test_text_extraction_service.py::test_extract_text_supports_document_formats",
@@ -1182,7 +1182,7 @@
   "REQ-FUNC-037": {
     "created_on": "2026-06-09 09:50",
     "last_updated": "2026-06-09 09:50",
-    "line_number": 48,
+    "line_number": 49,
     "linked_tests": [
       "04_Software/AudioMancer/tests/test_voice_sample_import_service.py::test_validate_imported_wav_sample_accepts_valid_sample",
       "04_Software/AudioMancer/tests/test_voice_sample_import_service.py::test_validate_imported_wav_sample_rejects_short_sample",
@@ -1204,7 +1204,7 @@
   "REQ-FUNC-038": {
     "created_on": "2026-06-09 09:50",
     "last_updated": "2026-06-09 09:50",
-    "line_number": 49,
+    "line_number": 50,
     "linked_tests": [
       "04_Software/AudioMancer/tests/test_voiceweaver_runtime_service.py::test_probe_runtime_normalizes_models_and_capabilities",
       "04_Software/AudioMancer/tests/test_voiceweaver_runtime_service.py::test_probe_runtime_maps_auth_failures",
@@ -1232,7 +1232,7 @@
   "REQ-FUNC-039": {
     "created_on": "2026-06-17 22:24",
     "last_updated": "2026-07-01 12:24",
-    "line_number": 50,
+    "line_number": 51,
     "linked_tests": [
       "04_Software/AudioMancer/tests/test_ai_chunking_service.py::test_ai_chunking_context_modes_control_paragraph_caps"
     ],
@@ -1251,7 +1251,7 @@
   "REQ-FUNC-040": {
     "created_on": "2026-07-01 05:55",
     "last_updated": "2026-07-07 06:30",
-    "line_number": 51,
+    "line_number": 52,
     "linked_tests": [
       "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_direct_blocks_align_mixed_narration_dialogue_to_source_text"
     ],
@@ -1273,7 +1273,7 @@
   "REQ-FUNC-041": {
     "created_on": "2026-07-01 05:55",
     "last_updated": "2026-07-07 06:30",
-    "line_number": 52,
+    "line_number": 53,
     "linked_tests": [
       "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_speech_blocks_resume_continues_from_unfinished_direct_segment"
     ],
@@ -1292,7 +1292,7 @@
   "REQ-FUNC-042": {
     "created_on": "2026-07-01 13:33",
     "last_updated": "2026-07-07 06:30",
-    "line_number": 53,
+    "line_number": 54,
     "linked_tests": [
       "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_speech_blocks_direct_generation_splits_large_chunk_by_output_safety_cap"
     ],
@@ -1314,7 +1314,7 @@
   "REQ-FUNC-043": {
     "created_on": "2026-07-01 13:33",
     "last_updated": "2026-07-07 06:30",
-    "line_number": 54,
+    "line_number": 55,
     "linked_tests": [
       "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_speech_blocks_direct_generation_splits_large_chunk_by_output_safety_cap"
     ],
@@ -1335,7 +1335,7 @@
   "REQ-FUNC-044": {
     "created_on": "2026-07-01 17:30",
     "last_updated": "2026-07-07 06:30",
-    "line_number": 55,
+    "line_number": 56,
     "linked_tests": [
       "04_Software/AudioMancer/tests/test_llm_provider_service.py::test_chat_json_sends_operation_schema_response_format_for_local_backends"
     ],
@@ -1356,7 +1356,7 @@
   "REQ-FUNC-045": {
     "created_on": "2026-07-01 17:30",
     "last_updated": "2026-07-07 06:30",
-    "line_number": 56,
+    "line_number": 57,
     "linked_tests": [
       "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_start_generation_direct_malformed_json_falls_back_for_segment_only"
     ],
@@ -1377,7 +1377,7 @@
   "REQ-FUNC-046": {
     "created_on": "2026-07-01 17:30",
     "last_updated": "2026-07-07 06:30",
-    "line_number": 57,
+    "line_number": 58,
     "linked_tests": [
       "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_direct_blocks_preserve_source_gaps_and_reject_unmatched_text",
       "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_direct_blocks_unknown_speaker_defaults_to_review_narrator"
@@ -1399,7 +1399,7 @@
   "REQ-FUNC-047": {
     "created_on": "2026-07-01 18:55",
     "last_updated": "2026-07-07 06:30",
-    "line_number": 58,
+    "line_number": 59,
     "linked_tests": [
       "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_speech_blocks_production_prompt_contract_matrix"
     ],
@@ -1420,7 +1420,7 @@
   "REQ-FUNC-048": {
     "created_on": "2026-07-01 18:55",
     "last_updated": "2026-07-07 06:30",
-    "line_number": 59,
+    "line_number": 60,
     "linked_tests": [
       "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_speaker_catalog_preserves_character_aliases_for_prompt"
     ],
@@ -1441,7 +1441,7 @@
   "REQ-FUNC-049": {
     "created_on": "2026-07-01 18:55",
     "last_updated": "2026-07-07 06:30",
-    "line_number": 60,
+    "line_number": 61,
     "linked_tests": [
       "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_speech_blocks_adjacent_prompts_preserve_dialogue_attribution_context"
     ],
@@ -1464,7 +1464,7 @@
   "REQ-FUNC-050": {
     "created_on": "2026-07-02 10:59",
     "last_updated": "2026-07-07 06:30",
-    "line_number": 61,
+    "line_number": 62,
     "linked_tests": [
       "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_direct_blocks_align_mixed_narration_dialogue_to_source_text"
     ],
@@ -1485,7 +1485,7 @@
   "REQ-FUNC-051": {
     "created_on": "2026-07-02 10:59",
     "last_updated": "2026-07-07 06:30",
-    "line_number": 62,
+    "line_number": 63,
     "linked_tests": [
       "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_direct_blocks_split_long_blocks_to_tts_budget"
     ],
@@ -1505,7 +1505,7 @@
   "REQ-FUNC-052": {
     "created_on": "2026-07-02 10:59",
     "last_updated": "2026-07-07 06:30",
-    "line_number": 63,
+    "line_number": 64,
     "linked_tests": [
       "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_direct_blocks_preserve_source_gaps_and_reject_unmatched_text"
     ],
@@ -1528,7 +1528,7 @@
   "REQ-FUNC-053": {
     "created_on": "2026-07-02 10:59",
     "last_updated": "2026-07-07 06:30",
-    "line_number": 64,
+    "line_number": 65,
     "linked_tests": [
       "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_speech_blocks_direct_prompt_includes_aliases_and_attribution_hints"
     ],
@@ -1550,7 +1550,7 @@
   "REQ-FUNC-054": {
     "created_on": "2026-07-02 12:35",
     "last_updated": "2026-07-07 06:30",
-    "line_number": 65,
+    "line_number": 66,
     "linked_tests": [
       "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_direct_blocks_ignore_whitespace_model_blocks_and_preserve_source_gaps"
     ],
@@ -1573,7 +1573,7 @@
   "REQ-FUNC-055": {
     "created_on": "2026-07-02 15:10",
     "last_updated": "2026-07-02 14:34",
-    "line_number": 66,
+    "line_number": 67,
     "linked_tests": [
       "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_narrator_boundary_candidates_skip_open_quote_sentence_boundary",
       "04_Software/AudioMancer/tests/test_speech_blocks_service.py::test_normalize_narrator_boundary_blocks_rejects_open_quote_split"
@@ -1596,7 +1596,7 @@
   "REQ-FUNC-056": {
     "created_on": "2026-07-03 10:55",
     "last_updated": "2026-07-03 08:02",
-    "line_number": 67,
+    "line_number": 68,
     "linked_tests": [
       "04_Software/AudioMancer/tests/test_narrator_profile_generation_service.py::test_narrator_profile_generation_accepts_bounded_preview_word_overage"
     ],
@@ -1613,6 +1613,25 @@
     "source_file": ".agentic/requirements/functional.md",
     "status": "Active",
     "verification": "Automated pytest verifies a bounded narrator preview word-count overage remains accepted while preserving single-line, duration, and character-limit validation."
+  },
+  "REQ-FUNC-057": {
+    "created_on": "2026-07-08 15:50",
+    "last_updated": "2026-07-08 15:55",
+    "line_number": 19,
+    "linked_tests": [
+      "04_Software/AudioMancer/tests/test_audio_assembly_service.py::test_audio_assembly_service_final_assembly_prefers_speech_params_when_scene_ambience_leads"
+    ],
+    "priority": "Must",
+    "rationale": "Keeps whole-book output size stable when ambience beds precede speech and prevents unnecessary upsampling toward the classic WAV RIFF size limit.",
+    "related_components": [
+      "04_Software/AudioMancer/src/audiomancer/services/audio_assembly_service.py",
+      "05_SoftwareDocu/AudioMancer_Audio_Assembly_Service.md"
+    ],
+    "req_id": "REQ-FUNC-057",
+    "requirement": "Audio Assembly final composition shall choose output WAV parameters from the first non-Scene-Ambience source WAV when one exists, so leading Scene Ambience cannot force the final audiobook into stereo 44.1 kHz output.",
+    "source_file": ".agentic/requirements/functional.md",
+    "status": "Active",
+    "verification": "Automated pytest focused regression plus full Audio Assembly service test file."
   },
   "REQ-NFR-001": {
     "created_on": "2026-06-09 09:50",
