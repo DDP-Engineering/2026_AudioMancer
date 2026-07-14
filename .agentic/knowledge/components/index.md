@@ -10,3 +10,7 @@ See the LICENSE.txt in the .agentic folder for full license details. SPDX-Licens
 Component documentation and implementation notes belong here. New component
 pages should follow `component_template.md` and be listed in this index when
 added.
+
+| Component | Criticality | Baseline | Knowledge page |
+| --- | --- | --- | --- |
+| AI Cleanup | High | `baseline-usable` | [AI Cleanup](ai_cleanup.md) |

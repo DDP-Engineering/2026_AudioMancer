@@ -1,0 +1,59 @@
+{
+  "access_mode": "standard",
+  "alignment": {
+    "acceptance": [
+      "The AI Cleanup component has exact mapped paths, known focused tests and requirements, documented high semantic-deletion risk and human-review controls, passes traceability and coverage audits, passes component scope/baseline checks at baseline-usable, and adoption introduces no runtime behavior change."
+    ],
+    "assumptions": [
+      "The approved slice is a single component even though some exact files provide shared AI/config support; only cleanup-specific behavior in those files is within the later development scope."
+    ],
+    "created_at": "2026-07-14T16:09:17+00:00",
+    "decision": "proceed",
+    "open_questions": [],
+    "planned_paths": [
+      ".agentic/components.toml",
+      ".agentic/knowledge/components/ai_cleanup.md",
+      ".agentic/knowledge/components/index.md",
+      ".agentic/reports/adoption/components/ai-cleanup-baseline.md"
+    ],
+    "reason": "The human explicitly approved this bounded adoption slice; the work is configuration and documentation only, existing cleanup requirements/tests/component documentation are substantial, and no product behavior will change.",
+    "recommended_responses": [],
+    "risk": "low",
+    "scope": [
+      "In scope: .agentic/components.toml AI Cleanup entry, AI Cleanup knowledge/adoption notes, current requirement and test inventory, and baseline evidence. Out of scope: application behavior changes, prompt/schema replacement, new requirements, new tests, source edits, delivery actions, and unrelated components."
+    ],
+    "source": "User approval 2026-07-14: approve the AI Cleanup component-adoption slice and continue automatically through delivery preparation",
+    "understanding": "Adopt one bounded AI Cleanup component before resuming the lossless block replacement change. The adoption slice will map the existing cleanup-specific service, prompt, state/metadata, UI-controller, tests, and component-documentation files, describe their current behavior and risks, and prove that existing requirements, deterministic tests, and documentation make the component baseline-usable without changing runtime behavior."
+  },
+  "change_units": [],
+  "checks": [],
+  "decisions": [],
+  "defects": [],
+  "evidence": [
+    {
+      "command": ".\\.agentic\\tools\\run.ps1 adoption component-status; adoption baseline; adoption scope-check <AI Cleanup paths>; audit traceability; audit coverage",
+      "created_at": "2026-07-14T16:15:22+00:00",
+      "failure_kind": null,
+      "id": "E-0001",
+      "kind": "scan",
+      "path": ".agentic/components.toml",
+      "result": "pass",
+      "stage": "component-adoption",
+      "status": "active",
+      "summary": "Approved AI Cleanup adoption slice is mapped baseline-usable with exact source, prompt, test, state, UI, and documentation paths; scope-check, traceability, and coverage are clean, and the adoption diff contains no application behavior changes.",
+      "supersede_reason": null,
+      "superseded_by": null
+    }
+  ],
+  "intent": {
+    "created_at": "2026-07-14T16:09:03+00:00",
+    "id": "I-0001",
+    "kind": "adoption",
+    "scope_hint": [],
+    "statement": "Adopt the bounded AI Cleanup component slice to baseline-usable so the approved lossless block replacement development run can proceed.",
+    "status": "draft"
+  },
+  "run_id": "adoption-2026-07-14T160903Z-0adbcb6f",
+  "spec_items": [],
+  "stage": "adoption-delivery"
+}

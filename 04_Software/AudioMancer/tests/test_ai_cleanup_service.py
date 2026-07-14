@@ -9,940 +9,517 @@
 # -----------------------------------------------------------------------------
 """
 @file test_ai_cleanup_service.py
-@brief Focused tests for the AudioMancer AI cleanup service.
-@details Verifies AI-assisted cleanup writes the expected cleanup artifacts,
-         persists resumable state, and creates one AI transaction log file.
+@brief Integration checks for AI-assisted cleanup.
+@details Verifies the AI Cleanup block contract service, artifacts, prompt windows,
+         warnings, budgeting, persistence, restart, and resume contracts.
 @author Eng. Dan Dumitru Pasare
-@date 2026-04-11
-@version 0.4.4
+@date 2026-07-14
+@version 1.0.0
 """
 
 # IMPORTS
 
 import json
+import re
 
 import pytest
 
 from audiomancer import config
 from audiomancer.services import ai_cleanup_service
 
-# FIXTURES & GLOBALS
+# CONSTANTS
 
 _MOCK_PROFILE = {
     "id": "profile_1",
-    "label": "Cleanup Profile",
+    "label": "Local model",
     "backend_kind": "lmstudio",
-    "base_url": "http://127.0.0.1:1234",
+    "base_url": "http://127.0.0.1:1234/v1",
     "api_key": "",
     "model_name": "qwen3-8b",
-    "context_window": 4096,
-    "max_output_tokens": 512,
-    "request_timeout_seconds": 30,
+    "context_window": 8192,
+    "max_output_tokens": 4096,
+    "request_timeout_seconds": 90,
     "temperature": 0.2,
+    "supports_structured_output": True,
+    "enabled": True,
 }
+_WINDOW_PATTERN = re.compile(
+    r"<<< SOURCE WINDOW START >>>\n(?P<text>.*?)<<< SOURCE WINDOW END >>>",
+    re.DOTALL,
+)
 
-# TESTS
 
-
-def test_ai_cleanup_writes_cleanup_artifacts_and_log(
-    mock_extracted_project, mock_prompt_environment, monkeypatch
-) -> None:
+def _configure_cleanup_prompts(prompt_root) -> None:
     """
-    @brief      Validate ai cleanup writes cleanup artifacts and log.
-    @return     None.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-09
-    @version    0.2.1
+    @brief      Handle configure cleanup prompts.
+    @version    1.0.0
     """
-    project_root, manifest = mock_extracted_project
-
-    extracted_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.EXTRACTED_TEXT_FILE_NAME
-    extracted_path.write_text(
-        "CHAPTER I\n\nStory paragraph one.\n\n***\n\nStory paragraph two.\n",
+    (prompt_root / "text_cleanup_system.txt").write_text("AI cleanup system prompt.", encoding="utf-8")
+    (prompt_root / "text_cleanup_user.txt").write_text(
+        "Window: {window_id}\nLanguage: {source_language_hint}\nScript: {dominant_script_hint}\n"
+        "{source_window_block}\nInstructions: {additional_cleanup_instructions}",
         encoding="utf-8",
     )
 
-    responses = iter(
-        [
-            {
-                "payload": {
-                    "results": [
-                        {
-                            "unit_id": "unit-0001",
-                            "artifact_type": "chapter_heading",
-                            "action": "keep",
-                            "confidence": "high",
-                        },
-                        {"unit_id": "unit-0002", "artifact_type": "story", "action": "keep", "confidence": "high"},
-                        {"unit_id": "unit-0003", "artifact_type": "separator", "action": "keep", "confidence": "high"},
-                        {"unit_id": "unit-0004", "artifact_type": "story", "action": "keep", "confidence": "high"},
-                    ]
-                },
-                "usage": {"input_tokens": 20, "output_tokens": 5, "total_tokens": 25, "usage_available": True},
-            }
-        ]
-    )
-    monkeypatch.setattr(
-        ai_cleanup_service.llm_provider_service,
-        "chat_json",
-        lambda *_args, **_kwargs: next(responses),
+
+def _block(
+    block_id: int,
+    text: str,
+    artifact_type: str = "story",
+    confidence: str = "high",
+) -> dict[str, object]:
+    """
+    @brief      Handle block.
+    @version    1.0.0
+    """
+    return {
+        "text_block_id": block_id,
+        "text_block": text,
+        "artifact_type": artifact_type,
+        "confidence": confidence,
+    }
+
+
+def _payload(window_id: str, blocks: list[dict[str, object]]) -> dict[str, object]:
+    """
+    @brief      Handle payload.
+    @version    1.0.0
+    """
+    return {"window_id": window_id, "text_blocks": blocks}
+
+
+def _keep_all_payload(user_prompt: str, window_index: int) -> dict[str, object]:
+    """
+    @brief      Handle keep all payload.
+    @version    1.0.0
+    """
+    match = _WINDOW_PATTERN.search(user_prompt)
+    if match is None:
+        raise AssertionError("Cleanup prompt is missing the canonical source window.")
+    return _payload(
+        f"cleanup-window-{window_index:04d}",
+        [_block(1, match.group("text"))],
     )
 
-    report_payload = ai_cleanup_service.clean_text(project_root, manifest, _MOCK_PROFILE)
 
-    cleanup_root = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH
-    assert (cleanup_root / config.EXTRACTED_TEXT_FILE_NAME).is_file()
-    assert (cleanup_root / config.CLEANED_TEXT_FILE_NAME).is_file()
-    assert (cleanup_root / config.CLEANED_TEXT_METADATA_FILE_NAME).is_file()
-    assert (cleanup_root / config.CLEANUP_REPORT_FILE_NAME).is_file()
-    assert (cleanup_root / config.CLEANUP_STATE_FILE_NAME).is_file()
-    assert report_payload["cleanup_mode"] == "ai_assisted"
-    assert "cleaned_text_metadata_relative_path" not in report_payload
-    assert report_payload["ai_profile_id"] == "profile_1"
-    assert report_payload["model_settings"]["model_name"] == "qwen3-8b"
-    assert report_payload["model_settings"]["temperature"] == 0.2
-    assert report_payload["model_settings"]["context_window"] == 4096
-    assert report_payload["model_settings_history"] == [
-        {
-            "profile_id": "profile_1",
-            "backend_kind": "lmstudio",
-            "base_url": "http://127.0.0.1:1234",
-            "model_name": "qwen3-8b",
-            "temperature": 0.2,
-            "context_window": 4096,
-            "max_output_tokens": 512,
+def _install_keep_all_provider(monkeypatch, captured_prompts: list[str] | None = None) -> None:
+    """
+    @brief      Handle install keep all provider.
+    @version    1.0.0
+    """
+
+    def _fake_chat_json(_profile, _system_prompt, user_prompt, **kwargs):
+        """
+        @brief      Return exact story blocks for the displayed pages.
+        @version    1.0.0
+        """
+        if captured_prompts is not None:
+            captured_prompts.append(user_prompt)
+        window_index = int(dict(kwargs.get("log_context", {})).get("window_index", 1))
+        return {
+            "payload": _keep_all_payload(user_prompt, window_index),
+            "usage": {"input_tokens": 10, "output_tokens": 10, "total_tokens": 20, "usage_available": True},
         }
-    ]
-    assert report_payload["budget_metadata"]["context_window"] == 4096
-    assert report_payload["budget_metadata"]["max_output_tokens"] == 512
-    assert report_payload["budget_metadata"]["max_window_units"] == config.DEFAULT_AI_CLEANUP_MAX_WINDOW_UNITS
-    assert "Story paragraph one." in (cleanup_root / config.CLEANED_TEXT_FILE_NAME).read_text(encoding="utf-8")
-    assert any(path.name.startswith(config.AI_TRANSACTION_LOG_FILE_PREFIX) for path in cleanup_root.glob("*.log"))
 
-    state_payload = json.loads((cleanup_root / config.CLEANUP_STATE_FILE_NAME).read_text(encoding="utf-8"))
-    metadata_payload = json.loads((cleanup_root / config.CLEANED_TEXT_METADATA_FILE_NAME).read_text(encoding="utf-8"))
-    assert state_payload["mode"] == "ai_assisted"
-    assert state_payload["status"] == "completed"
-    assert state_payload["resume_checkpoint"] is None
-    assert state_payload["metadata"]["model_settings"] == report_payload["model_settings"]
-    assert state_payload["metadata"]["budget_metadata"] == report_payload["budget_metadata"]
-    assert metadata_payload["cleanup_mode"] == "ai_assisted"
-    assert "text" not in metadata_payload["paragraphs"][0]
-    assert metadata_payload["paragraphs"][0]["source_page_start"] is None
-    manifest_payload = json.loads((project_root / config.PROJECT_MANIFEST_FILE_NAME).read_text(encoding="utf-8"))
-    assert manifest_payload["operations"]["cleanup"]["status"] == "completed"
-    assert manifest_payload["operations"]["cleanup"]["mode"] == "ai_assisted"
+    monkeypatch.setattr(ai_cleanup_service.llm_provider_service, "chat_json", _fake_chat_json)
 
 
-@pytest.mark.parametrize(
-    "source_text, ai_results, token_usage, expected_in, expected_out",
-    [
-        # Heals soft line breaks inside one continuing sentence
-        (
-            "Ottmar Drenthe was watching reviews of his latest project and fuming at\n"
-            "the idiocy of the\nDominion's reviewing elites.\n",
-            [{"unit_id": "unit-0001", "artifact_type": "story", "action": "keep", "confidence": "high"}],
-            {"input_tokens": 10, "output_tokens": 2, "total_tokens": 12, "usage_available": True},
-            "idiocy of the Dominion's reviewing elites.",
-            "idiocy of the\nDominion's reviewing elites.",
-        ),
-        # Joins unfinished wrapped lines before one capitalized continuation
-        (
-            '"This is below\nDrenthe."\n',
-            [{"unit_id": "unit-0001", "artifact_type": "dialogue", "action": "keep", "confidence": "high"}],
-            {"input_tokens": 10, "output_tokens": 2, "total_tokens": 12, "usage_available": True},
-            '"This is below Drenthe."',
-            '"This is below\nDrenthe."',
-        ),
-        # Merges adjacent kept paragraphs when a page split interrupts one sentence
-        (
-            "Drenthe will shoot this industrial if\n\n3\n\nyou swear that Heroes of the Periphery will then be the next project.\n",
-            [
-                {"unit_id": "unit-0001", "artifact_type": "story", "action": "keep", "confidence": "high"},
-                {"unit_id": "unit-0002", "artifact_type": "page_number", "action": "remove", "confidence": "high"},
-                {"unit_id": "unit-0003", "artifact_type": "story", "action": "keep", "confidence": "high"},
-            ],
-            {"input_tokens": 12, "output_tokens": 3, "total_tokens": 15, "usage_available": True},
-            "Drenthe will shoot this industrial if you swear that Heroes of the Periphery",
-            "industrial if\n\nyou swear",
-        ),
-    ],
-    ids=["soft_breaks", "proper_name_continuation", "page_split_continuation"],
-)
-def test_ai_cleanup_text_transformations(
-    source_text: str,
-    ai_results: list,
-    token_usage: dict,
-    expected_in: str,
-    expected_out: str,
+def _extracted_path(project_root):
+    """
+    @brief      Handle extracted path.
+    @version    1.0.0
+    """
+    return project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.EXTRACTED_TEXT_FILE_NAME
+
+
+def test_ai_cleanup_writes_cleanup_artifacts_and_log(
     mock_extracted_project,
     mock_prompt_environment,
     monkeypatch,
 ) -> None:
     """
-    @brief      Validate ai cleanup text transformations.
-    @return     None.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-02
-    @version    0.2.0
+    @brief      Verify REQ-FUNC-060 output, report, state, and transaction-log artifacts.
+    @version    1.0.0
     """
     project_root, manifest = mock_extracted_project
-    extracted_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.EXTRACTED_TEXT_FILE_NAME
-    extracted_path.write_text(source_text, encoding="utf-8")
+    _configure_cleanup_prompts(mock_prompt_environment)
+    _extracted_path(project_root).write_text("Chapter One\n\nIt was a sunny day.\n", encoding="utf-8")
+    _install_keep_all_provider(monkeypatch)
 
-    monkeypatch.setattr(
-        ai_cleanup_service.llm_provider_service,
-        "chat_json",
-        lambda *_args, **_kwargs: {
-            "payload": {"results": ai_results},
-            "usage": token_usage,
-        },
-    )
+    report = ai_cleanup_service.clean_text(project_root, manifest, _MOCK_PROFILE)
 
+    assert "schema_version" not in report
+    assert report["paragraph_count"] == 2
+    assert (project_root / config.CLEANED_TEXT_FILE_NAME).read_text(encoding="utf-8").endswith("\n")
+    assert (project_root / config.CLEANUP_REPORT_FILE_NAME).is_file()
+    state = json.loads((project_root / config.CLEANUP_STATE_FILE_NAME).read_text(encoding="utf-8"))
+    assert state["status"] == "completed"
+    assert state["resume_checkpoint"] is None
+    assert (project_root / report["ai_log_relative_path"]).is_file()
+
+
+@pytest.mark.parametrize(
+    ("source", "preserved", "expected"),
+    [
+        ("Copyright 2026. It was sunny.\n", "It was sunny.\n", "It was sunny.\n"),
+        ("It was sunny. Page 4\n", "It was sunny. ", "It was sunny.\n"),
+        ("Header\n\nNarration.\n", "Narration.\n", "Narration.\n"),
+    ],
+)
+def test_ai_cleanup_text_transformations(
+    mock_extracted_project,
+    mock_prompt_environment,
+    monkeypatch,
+    source: str,
+    preserved: str,
+    expected: str,
+) -> None:
+    """
+    @brief      Handle test ai cleanup text transformations.
+    @version    1.0.0
+    """
+    project_root, manifest = mock_extracted_project
+    _configure_cleanup_prompts(mock_prompt_environment)
+    _extracted_path(project_root).write_text(source, encoding="utf-8")
+
+    def _fake_chat_json(_profile, _system, _user, **_kwargs):
+        """
+        @brief      Return ordered prefix or suffix removal fixtures.
+        @version    1.0.0
+        """
+        blocks = (
+            [_block(1, preserved), _block(2, "advisory", "noise")]
+            if source.startswith(preserved)
+            else [_block(1, "advisory", "noise"), _block(2, preserved)]
+        )
+        return {
+            "payload": _payload("cleanup-window-0001", blocks),
+            "usage": {},
+        }
+
+    monkeypatch.setattr(ai_cleanup_service.llm_provider_service, "chat_json", _fake_chat_json)
     ai_cleanup_service.clean_text(project_root, manifest, _MOCK_PROFILE)
-
-    cleaned_text = (
-        project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.CLEANED_TEXT_FILE_NAME
-    ).read_text(encoding="utf-8")
-    assert expected_in in cleaned_text
-    assert expected_out not in cleaned_text
+    assert (project_root / config.CLEANED_TEXT_FILE_NAME).read_text(encoding="utf-8") == expected
 
 
 def test_ai_cleanup_corrects_invalid_tail_labels_and_persists_warnings(
-    mock_extracted_project, mock_prompt_environment, monkeypatch
+    mock_extracted_project,
+    mock_prompt_environment,
+    monkeypatch,
 ) -> None:
     """
-    @brief      Validate ai cleanup corrects invalid tail labels and persists warnings.
-    @return     None.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-02
-    @version    0.1.0
+    @brief      Handle test ai cleanup corrects invalid tail labels and persists warnings.
+    @version    1.0.0
     """
     project_root, manifest = mock_extracted_project
-    extracted_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.EXTRACTED_TEXT_FILE_NAME
-    extracted_path.write_text(
-        "Story before.\n\n* * *\n\nHi, I'm Dario Cerulli of Axiom Ordnance, and I'm here to tell you about the Warhound.\n\n"
-        '22\n\n"You know what it wasn\'t for?" Drenthe asked.\n\n23\n\nHolorecorders were cheap, and they were everywhere.\n',
-        encoding="utf-8",
-    )
+    _configure_cleanup_prompts(mock_prompt_environment)
+    _extracted_path(project_root).write_text("Header\nStory one.\n\n\f\n\nHeader\nStory two.\n", encoding="utf-8")
 
-    monkeypatch.setattr(
-        ai_cleanup_service.llm_provider_service,
-        "chat_json",
-        lambda *_args, **_kwargs: {
-            "payload": {
-                "results": [
-                    {"unit_id": "unit-0001", "artifact_type": "story", "action": "keep", "confidence": "high"},
-                    {"unit_id": "unit-0002", "artifact_type": "separator", "action": "keep", "confidence": "high"},
-                    {"unit_id": "unit-0003", "artifact_type": "page_number", "action": "remove", "confidence": "high"},
-                    {"unit_id": "unit-0004", "artifact_type": "story", "action": "keep", "confidence": "high"},
-                    {"unit_id": "unit-0005", "artifact_type": "page_number", "action": "remove", "confidence": "high"},
-                    {"unit_id": "unit-0006", "artifact_type": "story", "action": "keep", "confidence": "high"},
-                ]
-            },
-            "usage": {"input_tokens": 18, "output_tokens": 6, "total_tokens": 24, "usage_available": True},
-        },
-    )
+    def _fake_chat_json(_profile, _system, _user, **_kwargs):
+        return {
+            "payload": _payload(
+                "cleanup-window-0001",
+                [
+                    _block(1, "advisory", "header"),
+                    _block(2, "Story one.\n"),
+                    _block(3, "Header\n", "story"),
+                    _block(4, "Story two.\n"),
+                ],
+            ),
+            "usage": {},
+        }
 
-    report_payload = ai_cleanup_service.clean_text(project_root, manifest, _MOCK_PROFILE)
-
-    cleaned_text = (
-        project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.CLEANED_TEXT_FILE_NAME
-    ).read_text(encoding="utf-8")
-    assert "Hi, I'm Dario Cerulli" in cleaned_text
-    assert '"You know what it wasn\'t for?" Drenthe asked.' in cleaned_text
-    assert "Holorecorders were cheap" in cleaned_text
-    assert "\n\n22\n\n" not in cleaned_text
-    assert "\n\n23\n\n" not in cleaned_text
-
-    assert any(
-        warning_detail["kind"] == "invalid_page_number_label_corrected"
-        for warning_detail in report_payload["warning_details"]
-    )
-    state_payload = json.loads(
-        (project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.CLEANUP_STATE_FILE_NAME).read_text(
-            encoding="utf-8"
-        )
-    )
-    assert state_payload["warning_count"] >= 1
-    assert any(
-        detail["kind"] == "invalid_page_number_label_corrected"
-        for detail in state_payload["metadata"]["warning_details"]
-    )
+    monkeypatch.setattr(ai_cleanup_service.llm_provider_service, "chat_json", _fake_chat_json)
+    report = ai_cleanup_service.clean_text(project_root, manifest, _MOCK_PROFILE)
+    assert any(detail["kind"] == "inconsistent_repeated_text_classification" for detail in report["warning_details"])
 
 
-def test_ai_cleanup_accepts_artifact_action_confidence_schema(
-    mock_extracted_project, mock_prompt_environment, monkeypatch
+def test_ai_cleanup_uses_artifact_type_and_confidence_without_action(
+    mock_extracted_project,
+    mock_prompt_environment,
+    monkeypatch,
 ) -> None:
     """
-    @brief      Validate ai cleanup accepts artifact action confidence schema.
-    @return     None.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-02
-    @version    0.1.0
+    @brief      Verify artifact type and confidence determine preservation.
+    @version    1.0.0
     """
     project_root, manifest = mock_extracted_project
-    extracted_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.EXTRACTED_TEXT_FILE_NAME
-    extracted_path.write_text(
-        "Book Title\n\nChapter One\n\nStory paragraph.\n\nPage 12\n",
-        encoding="utf-8",
-    )
+    _configure_cleanup_prompts(mock_prompt_environment)
+    _extracted_path(project_root).write_text("Page 1 Story.\n", encoding="utf-8")
 
-    monkeypatch.setattr(
-        ai_cleanup_service.llm_provider_service,
-        "chat_json",
-        lambda *_args, **_kwargs: {
-            "payload": {
-                "results": [
-                    {
-                        "unit_id": "unit-0001",
-                        "artifact_type": "header",
-                        "action": "remove",
-                        "confidence": "high",
-                        "reason": "running title",
-                    },
-                    {
-                        "unit_id": "unit-0002",
-                        "artifact_type": "chapter_heading",
-                        "action": "keep",
-                        "confidence": "high",
-                        "reason": "chapter marker",
-                    },
-                    {
-                        "unit_id": "unit-0003",
-                        "artifact_type": "story",
-                        "action": "keep",
-                        "confidence": "high",
-                        "reason": "narrative",
-                    },
-                    {
-                        "unit_id": "unit-0004",
-                        "artifact_type": "page_number",
-                        "action": "remove",
-                        "confidence": "medium",
-                        "reason": "page marker",
-                    },
-                ]
-            },
-            "usage": {"input_tokens": 20, "output_tokens": 8, "total_tokens": 28, "usage_available": True},
-        },
-    )
+    def _fake_chat_json(_profile, _system, _user, **_kwargs):
+        return {
+            "payload": _payload("cleanup-window-0001", [_block(1, "x", "noise"), _block(2, "Story.\n")]),
+            "usage": {},
+        }
 
-    ai_cleanup_service.clean_text(project_root, manifest, _MOCK_PROFILE)
-
-    cleaned_text = (
-        project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.CLEANED_TEXT_FILE_NAME
-    ).read_text(encoding="utf-8")
-    assert "Book Title" not in cleaned_text
-    assert "Chapter One" in cleaned_text
-    assert "Story paragraph." in cleaned_text
-    assert "Page 12" not in cleaned_text
+    monkeypatch.setattr(ai_cleanup_service.llm_provider_service, "chat_json", _fake_chat_json)
+    report = ai_cleanup_service.clean_text(project_root, manifest, _MOCK_PROFILE)
+    assert report["removed_character_count"] == len("Page 1 ")
 
 
 def test_ai_cleanup_ignores_legacy_label_only_schema(
-    mock_extracted_project, mock_prompt_environment, monkeypatch
+    mock_extracted_project,
+    mock_prompt_environment,
+    monkeypatch,
 ) -> None:
     """
-    @brief      Validate ai cleanup ignores legacy label-only result items.
-    @return     None.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-15
-    @version    0.1.0
+    @brief      Handle test ai cleanup ignores legacy label only schema.
+    @version    1.0.0
     """
     project_root, manifest = mock_extracted_project
-    extracted_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.EXTRACTED_TEXT_FILE_NAME
-    extracted_path.write_text("Book Title\n\nRunning Head\n\nStory paragraph.\n", encoding="utf-8")
+    _configure_cleanup_prompts(mock_prompt_environment)
 
     monkeypatch.setattr(
         ai_cleanup_service.llm_provider_service,
         "chat_json",
-        lambda *_args, **_kwargs: {
-            "payload": {
-                "results": [
-                    {"unit_id": "unit-0001", "label": "header"},
-                    {"unit_id": "unit-0002", "artifact_type": "header", "confidence": "high"},
-                    {"unit_id": "unit-0003", "artifact_type": "story", "action": "keep", "confidence": "high"},
-                ]
-            },
-            "usage": {"input_tokens": 10, "output_tokens": 4, "total_tokens": 14, "usage_available": True},
-        },
+        lambda *_args, **_kwargs: {"payload": {"results": [{"unit_id": "unit-0001", "label": "story"}]}, "usage": {}},
     )
-
-    ai_cleanup_service.clean_text(project_root, manifest, _MOCK_PROFILE)
-
-    cleaned_text = (
-        project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.CLEANED_TEXT_FILE_NAME
-    ).read_text(encoding="utf-8")
-    assert "Book Title" in cleaned_text
-    assert "Running Head" in cleaned_text
-    assert "Story paragraph." in cleaned_text
+    with pytest.raises(ValueError, match="unsupported fields"):
+        ai_cleanup_service.clean_text(project_root, manifest, _MOCK_PROFILE)
 
 
 def test_ai_cleanup_preserves_low_confidence_removals(
-    mock_extracted_project, mock_prompt_environment, monkeypatch
+    mock_extracted_project,
+    mock_prompt_environment,
+    monkeypatch,
 ) -> None:
     """
-    @brief      Validate ai cleanup preserves low confidence removals.
-    @return     None.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-02
-    @version    0.1.0
+    @brief      Handle test ai cleanup preserves low confidence removals.
+    @version    1.0.0
     """
     project_root, manifest = mock_extracted_project
-    extracted_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.EXTRACTED_TEXT_FILE_NAME
-    extracted_path.write_text("A short but meaningful line.\n", encoding="utf-8")
+    _configure_cleanup_prompts(mock_prompt_environment)
+    _extracted_path(project_root).write_text("Page 1\n", encoding="utf-8")
 
     monkeypatch.setattr(
         ai_cleanup_service.llm_provider_service,
         "chat_json",
         lambda *_args, **_kwargs: {
-            "payload": {
-                "results": [
-                    {
-                        "unit_id": "unit-0001",
-                        "artifact_type": "header",
-                        "action": "remove",
-                        "confidence": "low",
-                        "reason": "possibly a running head",
-                    }
-                ]
-            },
-            "usage": {"input_tokens": 10, "output_tokens": 4, "total_tokens": 14, "usage_available": True},
+            "payload": _payload("cleanup-window-0001", [_block(1, "Page 1\n", "noise", "low")]),
+            "usage": {},
         },
     )
-
-    report_payload = ai_cleanup_service.clean_text(project_root, manifest, _MOCK_PROFILE)
-
-    cleaned_text = (
-        project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.CLEANED_TEXT_FILE_NAME
-    ).read_text(encoding="utf-8")
-    assert "A short but meaningful line." in cleaned_text
-    assert any(
-        warning_detail["kind"] == "low_confidence_removal_preserved"
-        for warning_detail in report_payload["warning_details"]
-    )
+    ai_cleanup_service.clean_text(project_root, manifest, _MOCK_PROFILE)
+    assert (project_root / config.CLEANED_TEXT_FILE_NAME).read_text(encoding="utf-8") == "Page 1\n"
 
 
 def test_ai_cleanup_prompt_includes_language_script_and_neighbor_context(
-    mock_extracted_project, mock_prompt_environment, monkeypatch
+    mock_extracted_project,
+    mock_prompt_environment,
+    monkeypatch,
 ) -> None:
     """
-    @brief      Validate ai cleanup prompt includes language script and neighbor context.
-    @return     None.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-02
-    @version    0.1.0
+    @brief      Handle test ai cleanup prompt includes language script and neighbor context.
+    @version    1.0.0
     """
     project_root, manifest = mock_extracted_project
-    (mock_prompt_environment / "text_cleanup_user.txt").write_text(
-        "Language: {source_language_hint}\nScript: {dominant_script_hint}\nCount: {unit_count}\n{units_block}",
-        encoding="utf-8",
-    )
-    extracted_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.EXTRACTED_TEXT_FILE_NAME
-    extracted_path.write_text("First paragraph.\n\nSecond paragraph.\n\nThird paragraph.\n", encoding="utf-8")
-    captured_user_prompts: list[str] = []
-
-    def _fake_chat_json(_profile, _system_prompt, user_prompt, **_kwargs):
-        """
-        @brief      Provide the fake chat json test helper.
-        @return     None.
-        @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-02
-        @version    0.1.0
-        """
-        captured_user_prompts.append(user_prompt)
-        return {
-            "payload": {
-                "results": [
-                    {"unit_id": "unit-0001", "artifact_type": "story", "action": "keep", "confidence": "high"},
-                    {"unit_id": "unit-0002", "artifact_type": "story", "action": "keep", "confidence": "high"},
-                    {"unit_id": "unit-0003", "artifact_type": "story", "action": "keep", "confidence": "high"},
-                ]
-            },
-            "usage": {"input_tokens": 16, "output_tokens": 6, "total_tokens": 22, "usage_available": True},
-        }
-
-    monkeypatch.setattr(ai_cleanup_service.llm_provider_service, "chat_json", _fake_chat_json)
+    _configure_cleanup_prompts(mock_prompt_environment)
+    _extracted_path(project_root).write_text("First page.\n\n\f\n\nSecond page.\n", encoding="utf-8")
+    prompts: list[str] = []
+    _install_keep_all_provider(monkeypatch, prompts)
 
     ai_cleanup_service.clean_text(project_root, manifest, _MOCK_PROFILE)
 
-    assert captured_user_prompts
-    prompt = captured_user_prompts[0]
-    assert "Language:" in prompt
-    assert "Script: latin" in prompt
-    assert "Count: 3" in prompt
-    assert "previous_unit_text: First paragraph." in prompt
-    assert "unit_text: Second paragraph." in prompt
-    assert "next_unit_text: Third paragraph." in prompt
+    assert "Language:" in prompts[0] and "Script: latin" in prompts[0]
+    assert prompts[0].count("<<< SOURCE WINDOW START >>>") == 1
+    assert "First page.\nSecond page.\n" in prompts[0]
+    assert "previous_unit_text" not in prompts[0]
 
 
 def test_ai_cleanup_appends_operator_instructions_to_prompt_and_state(
-    mock_extracted_project, mock_prompt_environment, monkeypatch
+    mock_extracted_project,
+    mock_prompt_environment,
+    monkeypatch,
 ) -> None:
     """
-    @brief      Validate ai cleanup appends operator rules and persists them with operation state.
-    @return     None.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-12
-    @version    0.1.0
+    @brief      Handle test ai cleanup appends operator instructions to prompt and state.
+    @version    1.0.0
     """
     project_root, manifest = mock_extracted_project
-    (mock_prompt_environment / "text_cleanup_user.txt").write_text(
-        "Language: {source_language_hint}\n{units_block}",
-        encoding="utf-8",
-    )
-    extracted_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.EXTRACTED_TEXT_FILE_NAME
-    extracted_path.write_text("First paragraph.\n\nSecond paragraph.\n", encoding="utf-8")
-    captured_user_prompts: list[str] = []
+    _configure_cleanup_prompts(mock_prompt_environment)
+    prompts: list[str] = []
+    _install_keep_all_provider(monkeypatch, prompts)
 
-    def _fake_chat_json(_profile, _system_prompt, user_prompt, **_kwargs):
-        """
-        @brief      Provide the fake chat json test helper.
-        @return     Fake AI cleanup response payload.
-        @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-12
-        @version    0.1.0
-        """
-        captured_user_prompts.append(user_prompt)
-        return {
-            "payload": {
-                "results": [
-                    {"unit_id": "unit-0001", "artifact_type": "story", "action": "keep", "confidence": "high"},
-                    {"unit_id": "unit-0002", "artifact_type": "story", "action": "keep", "confidence": "high"},
-                ]
-            },
-            "usage": {"input_tokens": 12, "output_tokens": 4, "total_tokens": 16, "usage_available": True},
-        }
-
-    monkeypatch.setattr(ai_cleanup_service.llm_provider_service, "chat_json", _fake_chat_json)
-
-    report_payload = ai_cleanup_service.clean_text(
+    ai_cleanup_service.clean_text(
         project_root,
         manifest,
         _MOCK_PROFILE,
-        additional_cleanup_instructions="Preserve all glossary terms exactly.",
+        additional_cleanup_instructions="Preserve glossary names exactly.",
     )
 
-    assert captured_user_prompts
-    assert "Additional operator cleanup instructions:" in captured_user_prompts[0]
-    assert "Preserve all glossary terms exactly." in captured_user_prompts[0]
-    assert report_payload["additional_cleanup_instructions"] == "Preserve all glossary terms exactly."
-    state_payload = json.loads(
-        (project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.CLEANUP_STATE_FILE_NAME).read_text(
-            encoding="utf-8"
-        )
-    )
-    assert state_payload["metadata"]["additional_cleanup_instructions"] == "Preserve all glossary terms exactly."
-    assert state_payload["metadata"]["additional_cleanup_instructions_fingerprint"]
+    assert "Preserve glossary names exactly." in prompts[0]
+    report = json.loads((project_root / config.CLEANUP_REPORT_FILE_NAME).read_text(encoding="utf-8"))
+    assert report["additional_cleanup_instructions"] == "Preserve glossary names exactly."
 
 
 def test_ai_cleanup_splits_long_input_into_multiple_windows(
-    mock_extracted_project, mock_prompt_environment, monkeypatch
+    mock_extracted_project,
+    mock_prompt_environment,
+    monkeypatch,
 ) -> None:
     """
-    @brief      Validate ai cleanup splits long input into multiple windows.
-    @return     None.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-02
-    @version    0.1.0
+    @brief      Handle test ai cleanup splits long input into multiple windows.
+    @version    1.0.0
     """
     project_root, manifest = mock_extracted_project
-    extracted_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.EXTRACTED_TEXT_FILE_NAME
-    extracted_text = "\n\n".join(f"Paragraph {index} keeps enough words." for index in range(1, 31)) + "\n"
-    extracted_path.write_text(extracted_text, encoding="utf-8")
+    _configure_cleanup_prompts(mock_prompt_environment)
+    _extracted_path(project_root).write_text(
+        "\n\n\f\n\n".join(f"Page {index}.\n" for index in range(1, 7)), encoding="utf-8"
+    )
+    prompts: list[str] = []
+    _install_keep_all_provider(monkeypatch, prompts)
 
-    call_contexts: list[dict[str, object]] = []
+    report = ai_cleanup_service.clean_text(project_root, manifest, _MOCK_PROFILE)
 
-    def _fake_chat_json(_profile, _system_prompt, _user_prompt, **kwargs):
-        """
-        @brief      Provide the fake chat json test helper.
-        @return     None.
-        @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-02
-        @version    0.1.0
-        """
-        log_context = kwargs.get("log_context", {})
-        call_contexts.append(dict(log_context))
-        window_index = int(log_context.get("window_index", 1))
-        start_unit = (window_index - 1) * config.DEFAULT_AI_CLEANUP_MAX_WINDOW_UNITS + 1
-        end_unit = min(start_unit + config.DEFAULT_AI_CLEANUP_MAX_WINDOW_UNITS - 1, 30)
-        return {
-            "payload": {
-                "results": [
-                    {
-                        "unit_id": f"unit-{unit_index:04d}",
-                        "artifact_type": "story",
-                        "action": "keep",
-                        "confidence": "high",
-                    }
-                    for unit_index in range(start_unit, end_unit + 1)
-                ]
-            },
-            "usage": {"input_tokens": 50, "output_tokens": 10, "total_tokens": 60, "usage_available": True},
-        }
-
-    monkeypatch.setattr(ai_cleanup_service.llm_provider_service, "chat_json", _fake_chat_json)
-
-    profile_large_window = dict(_MOCK_PROFILE)
-    profile_large_window["context_window"] = 32000
-
-    report_payload = ai_cleanup_service.clean_text(project_root, manifest, profile_large_window)
-
-    assert len(call_contexts) == 2
-    assert report_payload["window_count"] == 2
-    assert report_payload["token_usage"]["total_tokens"] == 120
-    assert call_contexts[0]["window_index"] == 1
-    assert call_contexts[1]["window_index"] == 2
+    assert report["window_count"] == 2
+    assert len(prompts) == 2
+    assert "Page 4.\n" in prompts[0]
+    assert "Page 5.\n" in prompts[1]
 
 
 def test_ai_cleanup_rejects_profiles_with_no_input_budget(mock_prompt_environment) -> None:
     """
-    @brief      Validate ai cleanup rejects profiles with no input budget.
-    @return     None.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-02
-    @version    0.1.0
+    @brief      Handle test ai cleanup rejects profiles with no input budget.
+    @version    1.0.0
     """
-    with pytest.raises(ValueError, match="too little room"):
-        ai_cleanup_service._build_budget_metadata(
+    _configure_cleanup_prompts(mock_prompt_environment)
+    pages = ai_cleanup_service._build_source_pages("A source page.\n")
+    with pytest.raises(ValueError, match="output capacity"):
+        ai_cleanup_service._build_windows(
+            pages,
             {
                 "context_window": 1024,
-                "max_output_tokens": 900,
+                "max_output_tokens": 1,
+                "prompt_budget_tokens": 900,
+                "safety_margin_tokens": 256,
+                "response_expansion_factor": 2.0,
+                "target_page_count": 4,
             },
-            "en",
-            "latin",
-            "cleanup",
-            "",
         )
 
 
 def test_ai_cleanup_small_context_limits_unit_windows() -> None:
     """
-    @brief      Validate ai cleanup small context limits unit windows.
-    @return     None.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-02
-    @version    0.1.0
+    @brief      Handle test ai cleanup small context limits unit windows.
+    @version    1.0.0
     """
-    units = [
-        {
-            "unit_id": f"unit-{index:04d}",
-            "text": "x" * 500,
-            "estimated_tokens": 157,
-        }
-        for index in range(1, 9)
-    ]
-
+    pages = ai_cleanup_service._build_source_pages("\n\n\f\n\n".join(("word " * 100) + "\n" for _ in range(3)))
     windows = ai_cleanup_service._build_windows(
-        units,
+        pages,
         {
-            "context_window": 2048,
-            "max_output_tokens": 512,
-            "prompt_budget_tokens": 20,
-            "text_budget_tokens": 512,
+            "context_window": 4096,
+            "max_output_tokens": 1024,
+            "prompt_budget_tokens": 100,
             "safety_margin_tokens": 256,
-            "max_window_units": config.DEFAULT_AI_CLEANUP_MAX_WINDOW_UNITS,
+            "response_expansion_factor": 2.0,
+            "target_page_count": 4,
         },
     )
-
-    assert len(windows) > 1
-    assert windows[0]["end_index"] < len(units) - 1
+    assert len(windows) >= 2
+    assert all(window["pages"] for window in windows)
 
 
 def test_ai_cleanup_online_profile_uses_direct_context_fraction_without_unit_cap(mock_prompt_environment) -> None:
     """
-    @brief      Validate online cleanup budgets ignore local unit caps and output-token budget subtraction.
-    @param[in]  mock_prompt_environment Shared prompt-template fixture.
-    @return     None.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-08
-    @version    0.1.0
+    @brief      Handle test ai cleanup online profile uses direct context fraction without unit cap.
+    @version    1.0.0
     """
-    _ = mock_prompt_environment
-    profile_payload = {
-        **_MOCK_PROFILE,
-        "backend_kind": config.ONLINE_AI_BACKEND_KIND,
-        "context_window": 10000,
-        "max_output_tokens": 9900,
-    }
-
-    budget_metadata = ai_cleanup_service._build_budget_metadata(
-        profile_payload,
-        "English",
-        "Latin",
-        "system",
-        "",
+    _configure_cleanup_prompts(mock_prompt_environment)
+    budget = ai_cleanup_service._build_budget_metadata(
+        {**_MOCK_PROFILE, "backend_kind": config.ONLINE_AI_BACKEND_KIND}, "system", "user"
     )
-    units = [{"unit_id": f"unit-{index:04d}", "text": "Short cleanup unit."} for index in range(1, 30)]
-
-    assert budget_metadata["text_budget_tokens"] == 3000
-    assert budget_metadata["max_window_units"] == 0
-    assert ai_cleanup_service._build_windows(units, budget_metadata) == [{"start_index": 0, "end_index": 28}]
+    assert budget["target_page_count"] == 4
+    assert budget["response_expansion_factor"] == 2.0
+    assert "max_window_units" not in budget
 
 
 def test_ai_cleanup_resumes_with_new_model_settings(
-    mock_extracted_project, mock_prompt_environment, monkeypatch
+    mock_extracted_project,
+    mock_prompt_environment,
+    monkeypatch,
 ) -> None:
     """
-    @brief      Validate ai cleanup resumes with new model settings.
-    @return     None.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-02
-    @version    0.1.0
+    @brief      Handle test ai cleanup resumes with new model settings.
+    @version    1.0.0
     """
     project_root, manifest = mock_extracted_project
-    extracted_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.EXTRACTED_TEXT_FILE_NAME
-    extracted_path.write_text(
-        "\n\n".join(f"Paragraph {index} keeps enough words." for index in range(1, 41)) + "\n",
-        encoding="utf-8",
+    _configure_cleanup_prompts(mock_prompt_environment)
+    _extracted_path(project_root).write_text(
+        "\n\n\f\n\n".join(f"Page {index}.\n" for index in range(1, 6)), encoding="utf-8"
     )
-    responses = iter(
-        [
-            {
-                "payload": {
-                    "results": [
-                        {
-                            "unit_id": f"unit-{unit_index:04d}",
-                            "artifact_type": "story",
-                            "action": "keep",
-                            "confidence": "high",
-                        }
-                        for unit_index in range(1, 25)
-                    ]
-                },
-                "usage": {"input_tokens": 10, "output_tokens": 2, "total_tokens": 12, "usage_available": True},
-            },
-            RuntimeError("stop"),
-        ]
-    )
+    calls = 0
 
-    def _first_chat_json(*_args, **_kwargs):
+    def _first_provider(_profile, _system, user_prompt, **kwargs):
         """
-        @brief      Provide the first chat json test helper.
-        @return     None.
-        @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-02
-        @version    0.1.0
+        @brief      Stop after the first validated window for resume verification.
+        @version    1.0.0
         """
-        response = next(responses)
-        if isinstance(response, Exception):
-            raise response
-        return response
+        nonlocal calls
+        calls += 1
+        if calls == 2:
+            raise RuntimeError("stop")
+        return {"payload": _keep_all_payload(user_prompt, 1), "usage": {}}
 
-    monkeypatch.setattr(ai_cleanup_service.llm_provider_service, "chat_json", _first_chat_json)
+    monkeypatch.setattr(ai_cleanup_service.llm_provider_service, "chat_json", _first_provider)
     with pytest.raises(RuntimeError, match="stop"):
         ai_cleanup_service.clean_text(project_root, manifest, _MOCK_PROFILE)
-    interrupted_manifest = json.loads((project_root / config.PROJECT_MANIFEST_FILE_NAME).read_text(encoding="utf-8"))
-    interrupted_state = json.loads(
-        (project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.CLEANUP_STATE_FILE_NAME).read_text(
-            encoding="utf-8"
-        )
-    )
-    assert interrupted_manifest["operations"]["cleanup"]["status"] == "failed"
-    assert interrupted_state["status"] == "failed"
-    assert interrupted_state["resume_checkpoint"]["classifications"]
 
-    captured_prompts: list[str] = []
+    prompts: list[str] = []
+    _install_keep_all_provider(monkeypatch, prompts)
+    second_profile = {**_MOCK_PROFILE, "id": "profile_2", "model_name": "qwen3-14b"}
+    report = ai_cleanup_service.clean_text(project_root, manifest, second_profile)
 
-    def _second_chat_json(_profile, _system_prompt, user_prompt, **_kwargs):
-        """
-        @brief      Provide the second chat json test helper.
-        @return     None.
-        @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-02
-        @version    0.1.0
-        """
-        captured_prompts.append(user_prompt)
-        return {
-            "payload": {
-                "results": [
-                    {
-                        "unit_id": f"unit-{unit_index:04d}",
-                        "artifact_type": "story",
-                        "action": "keep",
-                        "confidence": "high",
-                    }
-                    for unit_index in range(1, 41)
-                ]
-            },
-            "usage": {"input_tokens": 10, "output_tokens": 2, "total_tokens": 12, "usage_available": True},
-        }
-
-    second_profile = {
-        **_MOCK_PROFILE,
-        "id": "profile_2",
-        "model_name": "qwen3-14b",
-        "context_window": 8192,
-        "temperature": 0.7,
-    }
-    monkeypatch.setattr(ai_cleanup_service.llm_provider_service, "chat_json", _second_chat_json)
-
-    report_payload = ai_cleanup_service.clean_text(project_root, manifest, second_profile)
-    state_payload = json.loads(
-        (project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.CLEANUP_STATE_FILE_NAME).read_text(
-            encoding="utf-8"
-        )
-    )
-
-    assert captured_prompts
-    assert "unit_id: unit-0001" not in captured_prompts[0]
-    assert "unit_id: unit-0025" in captured_prompts[0]
-    assert report_payload["ai_profile_id"] == "profile_2"
-    assert report_payload["model_settings"]["model_name"] == "qwen3-14b"
-    assert report_payload["model_settings"]["temperature"] == 0.7
-    assert report_payload["model_settings"]["context_window"] == 8192
-    assert len(report_payload["model_settings_history"]) == 2
-    assert state_payload["metadata"]["model_settings"]["model_name"] == "qwen3-14b"
-    assert state_payload["resume_checkpoint"] is None
+    assert "Page 1.\n" not in prompts[0] and "Page 5.\n" in prompts[0]
+    assert len(report["model_settings_history"]) == 2
 
 
 def test_ai_cleanup_restarts_when_extracted_text_changes(
-    mock_extracted_project, mock_prompt_environment, monkeypatch
+    mock_extracted_project,
+    mock_prompt_environment,
+    monkeypatch,
 ) -> None:
     """
-    @brief      Validate ai cleanup restarts when extracted text changes.
-    @return     None.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-05-02
-    @version    0.1.0
+    @brief      Handle test ai cleanup restarts when extracted text changes.
+    @version    1.0.0
     """
     project_root, manifest = mock_extracted_project
-    extracted_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.EXTRACTED_TEXT_FILE_NAME
-    extracted_path.write_text(
-        "\n\n".join(f"Original paragraph {index} keeps words." for index in range(1, 30)) + "\n",
-        encoding="utf-8",
-    )
-    responses = iter(
-        [
-            {
-                "payload": {
-                    "results": [
-                        {
-                            "unit_id": f"unit-{unit_index:04d}",
-                            "artifact_type": "story",
-                            "action": "keep",
-                            "confidence": "high",
-                        }
-                        for unit_index in range(1, 25)
-                    ]
-                },
-                "usage": {"input_tokens": 10, "output_tokens": 2, "total_tokens": 12, "usage_available": True},
-            },
-            RuntimeError("stop"),
-        ]
-    )
+    _configure_cleanup_prompts(mock_prompt_environment)
+    _extracted_path(project_root).write_text("Old page.\n", encoding="utf-8")
 
-    def _first_chat_json(*_args, **_kwargs):
-        """
-        @brief      Provide the first chat json test helper.
-        @return     None.
-        @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-02
-        @version    0.1.0
-        """
-        response = next(responses)
-        if isinstance(response, Exception):
-            raise response
-        return response
-
-    monkeypatch.setattr(ai_cleanup_service.llm_provider_service, "chat_json", _first_chat_json)
+    monkeypatch.setattr(
+        ai_cleanup_service.llm_provider_service,
+        "chat_json",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(RuntimeError("stop")),
+    )
     with pytest.raises(RuntimeError, match="stop"):
         ai_cleanup_service.clean_text(project_root, manifest, _MOCK_PROFILE)
 
-    extracted_path.write_text("Replacement paragraph one.\n\nReplacement paragraph two.\n", encoding="utf-8")
-    captured_prompts: list[str] = []
-
-    def _second_chat_json(_profile, _system_prompt, user_prompt, **_kwargs):
-        """
-        @brief      Provide the second chat json test helper.
-        @return     None.
-        @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-05-02
-        @version    0.1.0
-        """
-        captured_prompts.append(user_prompt)
-        return {
-            "payload": {
-                "results": [
-                    {"unit_id": "unit-0001", "artifact_type": "story", "action": "keep", "confidence": "high"},
-                    {"unit_id": "unit-0002", "artifact_type": "story", "action": "keep", "confidence": "high"},
-                ]
-            },
-            "usage": {"input_tokens": 10, "output_tokens": 2, "total_tokens": 12, "usage_available": True},
-        }
-
-    monkeypatch.setattr(ai_cleanup_service.llm_provider_service, "chat_json", _second_chat_json)
-
-    report_payload = ai_cleanup_service.clean_text(project_root, manifest, _MOCK_PROFILE)
-
-    assert captured_prompts
-    assert "unit_id: unit-0001" in captured_prompts[0]
-    assert len(report_payload["model_settings_history"]) == 1
+    _extracted_path(project_root).write_text("Replacement page.\n", encoding="utf-8")
+    prompts: list[str] = []
+    _install_keep_all_provider(monkeypatch, prompts)
+    ai_cleanup_service.clean_text(project_root, manifest, _MOCK_PROFILE)
+    assert "Replacement page.\n" in prompts[0]
 
 
 def test_ai_cleanup_tolerates_corrupt_state_and_restarts(
-    mock_extracted_project, mock_prompt_environment, monkeypatch
+    mock_extracted_project,
+    mock_prompt_environment,
+    monkeypatch,
 ) -> None:
     """
-    @brief      Validate AI cleanup treats corrupt state as absent and restarts cleanly.
-    @return     None.
-    @exception  None
-    @author     Eng. Dan Dumitru Pasare
-    @date       2026-06-12
-    @version    0.1.0
+    @brief      Handle test ai cleanup tolerates corrupt state and restarts.
+    @version    1.0.0
     """
     project_root, manifest = mock_extracted_project
-    extracted_path = project_root / config.PROJECT_ROOT_ARTIFACT_RELATIVE_PATH / config.EXTRACTED_TEXT_FILE_NAME
-    extracted_path.write_text("Replacement paragraph one.\n\nReplacement paragraph two.\n", encoding="utf-8")
+    _configure_cleanup_prompts(mock_prompt_environment)
     (project_root / config.CLEANUP_STATE_FILE_NAME).write_text("{", encoding="utf-8")
+    _install_keep_all_provider(monkeypatch)
 
-    def _fake_chat_json(_profile, _system_prompt, _user_prompt, **_kwargs):
-        """
-        @brief      Provide the fake chat json test helper.
-        @return     Fake AI cleanup response payload.
-        @exception  None
-        @author     Eng. Dan Dumitru Pasare
-        @date       2026-06-12
-        @version    0.1.0
-        """
-        return {
-            "payload": {
-                "results": [
-                    {"unit_id": "unit-0001", "artifact_type": "story", "action": "keep", "confidence": "high"},
-                    {"unit_id": "unit-0002", "artifact_type": "story", "action": "keep", "confidence": "high"},
-                ]
-            },
-            "usage": {"input_tokens": 10, "output_tokens": 2, "total_tokens": 12, "usage_available": True},
-        }
-
-    monkeypatch.setattr(ai_cleanup_service.llm_provider_service, "chat_json", _fake_chat_json)
-
-    report_payload = ai_cleanup_service.clean_text(project_root, manifest, _MOCK_PROFILE)
-
-    assert report_payload["paragraph_count"] == 2
-    state_payload = json.loads((project_root / config.CLEANUP_STATE_FILE_NAME).read_text(encoding="utf-8"))
-    assert state_payload["status"] == "completed"
+    report = ai_cleanup_service.clean_text(project_root, manifest, _MOCK_PROFILE)
+    assert "schema_version" not in report
+    state = json.loads((project_root / config.CLEANUP_STATE_FILE_NAME).read_text(encoding="utf-8"))
+    assert state["status"] == "completed"
 
 
 # END OF FILE

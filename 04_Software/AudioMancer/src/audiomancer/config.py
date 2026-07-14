@@ -601,6 +601,15 @@ DEFAULT_AI_CLEANUP_MIN_SAFETY_MARGIN_TOKENS = 256
 
 # @brief Fraction of the context window reserved as safety margin for AI cleanup.
 DEFAULT_AI_CLEANUP_SAFETY_MARGIN_CONTEXT_FRACTION = 0.10
+# @brief Preferred count of consecutive source pages in one AI Cleanup window.
+DEFAULT_AI_CLEANUP_TARGET_PAGE_COUNT = 4
+
+# @brief Worst-case response size estimate relative to canonical source tokens.
+DEFAULT_AI_CLEANUP_RESPONSE_EXPANSION_FACTOR = 2.0
+
+# @brief Per-page JSON metadata allowance in AI Cleanup response budgeting.
+DEFAULT_AI_CLEANUP_BLOCK_OVERHEAD_TOKENS = 256
+
 
 # @brief Maximum context-window fraction used for AI cleanup unit text.
 DEFAULT_AI_CLEANUP_TEXT_CONTEXT_FRACTION = 0.60
